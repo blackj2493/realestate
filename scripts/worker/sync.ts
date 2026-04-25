@@ -9,7 +9,7 @@
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { transformListing, TransformResult } from './transformer';
-import Typesense from 'typesense';
+import Typesense, { Client } from 'typesense';
 
 // ============================================================================
 // Configuration
@@ -26,9 +26,9 @@ const BATCH_SIZE = 100;
 // Typesense Client (Admin - for writes)
 // ============================================================================
 
-let adminClient: Typesense.Client | null = null;
+let adminClient: Client | null = null;
 
-function getAdminClient(): Typesense.Client {
+function getAdminClient(): Client {
   if (!adminClient) {
     adminClient = new Typesense.Client({
       nodes: [
