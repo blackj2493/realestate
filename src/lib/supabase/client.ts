@@ -185,7 +185,7 @@ export async function batchUpsertListings(
   }
   
   return { 
-    success: data?.length || listings.length, 
+    success: (data as unknown[] | null)?.length ?? listings.length, 
     failed: 0, 
     errors: [] 
   };
