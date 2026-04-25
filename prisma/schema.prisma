@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  passwordHash   String
+  name           String?
+  phone          String?
+  emailVerified  DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  savedListings  SavedListing[]
+  searchHistory  SearchHistory[]
+  contactForms   ContactForm[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Property {
+  id                   String           @id @default(cuid())
+  listingId            String           @unique
+  MLSNumber            String?
+  address              String
+  city                 String
+  province             String           @default("ON")
+  postalCode           String?
+  price                Int
+  previousPrice        Int?
+  priceChangeDate      DateTime?
+  propertyType         String
+  listingType          String           @default("Sale")
+  bedrooms             Int?
+  bathrooms            Float?
+  halfBathrooms        Int?
+  squareFeet           Int?
+  lotSize              String?
+  yearBuilt            Int?
+  garage               String?
+  parkingSpaces        Int?
+  basement             String?
+  taxes                Int?
+  maintenanceFees      Int?
+  daysOnMarket         Int?
+  description          String?         @db.Text
+  photoUrls            String[]
+  virtualTourUrl       String?
+  latitude             Float?
+  longitude            Float?
+  brokerage            String
+  brokerageAddress     String?
+  listingDate          DateTime?
+  listingAgent         String?
+  listingOffice        String?
+  status               String           @default("Active")
+  lastUpdated         DateTime         @default(now())
+  savedBy             SavedListing[]
+  marketAnalytics     MarketAnalytics[]
+  
+  @@index([city])
+  @@index([price])
+  @@index([propertyType])
+  @@index([status])
+}
+
+model SavedListing {
+  id          String   @id @default(cuid())
+  userId      String
+  propertyId  String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+}
+
+model MarketAnalytics {
+  id              String   @id @default(cuid())
+  propertyId      String?
+  neighborhood    String
+  propertyType    String
+  avgSalePrice    Int
+  avgDaysOnMarket Int
+  totalListings   Int
+  totalSold       Int
+  pricePerSqFt    Float
+  month           Int
+  year            Int
+  createdAt       DateTime @default(now())
+  property       Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@unique([neighborhood, propertyType, month, year])
+  @@index([neighborhood])
+  @@index([year, month])
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  searchQuery String
+  filters     Json?
+  resultsCount Int?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ContactForm {
+  id          String   @id @default(cuid())
+  userId      String?
+  name        String
+  email       String
+  phone       String?
+  message     String   @db.Text
+  propertyId  String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Neighborhood {
+  id            String  @id @default(cuid())
+  name          String  @unique
+  city          String
+  province      String  @default("ON")
+  avgPrice      Int?
+  avgDaysOnMarket Int?
+  totalListings Int?
+  schoolRating  Float?
+  transitScore  Float?
+  walkScore     Float?
+  description   String? @db.Text
+  bounds        Json?
+}
