@@ -20,11 +20,11 @@ import { getServiceRoleClient } from '@/lib/supabase/client';
 import { processBatch, SyncResult } from './sync';
 
 // ============================================================================
-// Configuration
+// Configuration (sanitized to strip invisible characters)
 // ============================================================================
 
-const API_BASE_URL = process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata';
-const BEARER_TOKEN = process.env.PROPTX_IDX_TOKEN || process.env.PROPTX_VOW_TOKEN || process.env.RESO_BEARER_TOKEN;
+const API_BASE_URL = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
+const BEARER_TOKEN = (process.env.PROPTX_IDX_TOKEN || process.env.PROPTX_VOW_TOKEN || process.env.RESO_BEARER_TOKEN || '').trim();
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -100,6 +100,7 @@ async function fetchWithRetry<T>(
       
     } catch (err: any) {
       lastError = err;
+      console.error("🚨 FETCH CAUSE:", err.cause || err.message);
       console.warn(`   ⚠️  Fetch error: ${err.message}. ${retries - attempt} retries remaining.`);
       
       if (attempt < retries) {
