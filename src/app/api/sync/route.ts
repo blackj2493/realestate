@@ -1,31 +1,25 @@
-/**
- * API Route: Trigger ETL Sync
- * 
- * Fire-and-forget endpoint to trigger the ingester sync from browser.
- * Returns immediately while sync runs in background.
- */
-
 import { NextResponse } from "next/server";
-import { runDeltaSync } from "@/scripts/worker/ingester";
+import { runDeltaSync } from "../../../../scripts/worker/ingester"; // Adjust relative path if needed
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // Keep connection open up to 5 minutes
 
 export async function GET() {
-  console.log('🔔 API Sync trigger received');
-  
-  // Fire-and-forget: start sync without awaiting
-  // This prevents serverless timeout while sync runs in background
-  runDeltaSync()
-    .then(result => {
-      console.log(`✅ Background sync completed: ${result.totalRecords} records synced`);
-    })
-    .catch(err => {
-      console.error('❌ Background sync failed:', err.message);
+  try {
+    console.log("🚦 API Trigger: Starting sync and holding connection open...");
+    
+    // CRITICAL FIX: We MUST await the sync. Do not fire-and-forget.
+    const result = await runDeltaSync();
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: "Sync completed.",
+      result
     });
-  
-  // Return immediately with 200
-  return NextResponse.json({
-    success: true,
-    message: "Sync job dispatched to background."
-  });
+  } catch (error: any) {
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || "Unknown error occurred"
+    }, { status: 500 });
+  }
 }
