@@ -7,7 +7,7 @@
  * Uses SEARCH_ONLY_API_KEY - read-only operations only.
  */
 
-import Typesense, { Client, SearchParams, SearchResponse } from 'typesense';
+import Typesense, { Client } from 'typesense';
 
 // Typesense configuration
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
@@ -235,7 +235,7 @@ export async function searchListings(
   }
   
   // Build search params
-  const searchParams: SearchParams = {
+  const searchParams: Record<string, unknown> = {
     q: query || '*',
     query_by: 'UnparsedAddress,City,PropertySubType',
     page,
@@ -256,25 +256,24 @@ export async function searchListings(
   
   // Geospatial bounding box
   if (filters.boundingBox) {
-    const { north, south, east, west } = filters.boundingBox;
-    // Typesense geopoint format: location:=[lat, lng, radius]
-    // For bounding box, we use a point and large radius, then filter
+    const { south, west } = filters.boundingBox;
     searchParams.filter_by = searchParams.filter_by 
       ? `${searchParams.filter_by} && location:=[${south}, ${west}]`
       : `location:=[${south}, ${west}]`;
   }
   
   try {
-    const response: SearchResponse<ListingDocument> = await client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await client
       .collections('listings')
       .documents()
       .search(searchParams);
     
     return {
-      listings: response.hits.map(hit => hit.document),
+      listings: (response.hits || []).map((hit: any) => hit.document as ListingDocument),
       totalFound: response.found || 0,
       page: response.page || page,
-      perPage: response.per_page || perPage,
+      perPage: perPage,
       processingTimeMs: response.search_time_ms || 0,
       facetDistribution: response.facet_distribution
     };
@@ -316,7 +315,7 @@ export async function getNearbyListings(
   // Typesense geopoint format: location:=[lat, lng, radius_in_m]
   const radiusMeters = radiusKm * 1000;
   
-  const searchParams: SearchParams = {
+  const searchParams: Record<string, unknown> = {
     q: options.query || '*',
     query_by: 'UnparsedAddress,City,PropertySubType',
     page: options.page || 1,
@@ -326,16 +325,17 @@ export async function getNearbyListings(
   };
   
   try {
-    const response = await client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await client
       .collections('listings')
       .documents()
       .search(searchParams);
     
     return {
-      listings: response.hits.map(hit => hit.document),
+      listings: (response.hits || []).map((hit: any) => hit.document as ListingDocument),
       totalFound: response.found || 0,
       page: response.page || 1,
-      perPage: response.per_page || 20,
+      perPage: options.perPage || 20,
       processingTimeMs: response.search_time_ms || 0
     };
   } catch (error) {

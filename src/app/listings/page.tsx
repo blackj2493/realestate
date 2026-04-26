@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
@@ -29,7 +29,7 @@ interface PropertyResponse {
   };
 }
 
-export default function ListingsPage() {
+function ListingsPageContent() {
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<PropertyCardData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -335,5 +335,18 @@ export default function ListingsPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function ListingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <ListingsPageContent />
+    </Suspense>
   );
 }

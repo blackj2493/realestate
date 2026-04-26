@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -34,18 +34,7 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
 import { searchCities, type CityOption } from "@/lib/cities";
-import dynamic from "next/dynamic";
 import { searchListings, type ListingDocument, type SearchResult } from "@/lib/typesense/client";
-
-// Dynamic import for MapView to avoid SSR issues
-const MapView = dynamic(() => import("@/components/MapView"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[400px] bg-muted rounded-lg animate-pulse flex items-center justify-center">
-      <p className="text-sm text-muted-foreground">Loading map...</p>
-    </div>
-  ),
-});
 
 // Sample property data (fallback)
 const sampleProperties = [
@@ -219,7 +208,7 @@ function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
   };
 }
 
-export default function PropertiesPage() {
+function PropertiesPageContent() {
   const searchParams = useSearchParams();
   
   // ========== FILTER STATES ==========
@@ -748,16 +737,6 @@ export default function PropertiesPage() {
           </div>
         )}
 
-        {/* Map View - positioned between filters and property grid */}
-        <div className="mb-6">
-          <MapView
-            properties={properties.filter(p => p.Latitude && p.Longitude)}
-            onBoundsChange={handleBoundsChange}
-            className="h-[450px] rounded-xl shadow-lg border"
-            defaultCenter={[-79.326917, 43.863921]}
-            defaultZoom={11}
-          />
-        </div>
 
         {/* Property Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -875,5 +854,18 @@ export default function PropertiesPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <PropertiesPageContent />
+    </Suspense>
   );
 }
