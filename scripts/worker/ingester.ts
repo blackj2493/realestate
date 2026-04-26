@@ -129,12 +129,12 @@ export interface ListingsBatch {
 /**
  * Fetches a batch of listings (max 100) from RESO Web API.
  * 
- * @param skipUrl - Optional @odata.nextLink URL (for pagination)
+ * @param skip - Number of records to skip (for manual pagination)
  * @param lastSyncTimestamp - ISO timestamp for ModificationTimestamp filter
  * @returns Listings batch with pagination info
  */
 export async function fetchListingsBatch(
-  skipUrl?: string,
+  skip: number = 0,
   lastSyncTimestamp?: string
 ): Promise<ListingsBatch> {
   const token = BEARER_TOKEN;
@@ -143,22 +143,14 @@ export async function fetchListingsBatch(
     throw new Error('RESO_BEARER_TOKEN environment variable is not set');
   }
   
-  let url: string;
-  
-  if (skipUrl) {
-    // Use @odata.nextLink directly (already constructed by server)
-    url = skipUrl;
-    console.log('   → Following pagination link...');
-  } else {
-    // Construct initial query with delta filter
-    if (!lastSyncTimestamp) {
-      throw new Error('Either skipUrl or lastSyncTimestamp must be provided');
-    }
-    
-    const filter = encodeURIComponent(`ModificationTimestamp gt ${lastSyncTimestamp}`);
-    url = `${API_BASE_URL}/Property?$filter=${filter}&$top=100&$count=true`;
-    console.log(`   → Delta query from: ${lastSyncTimestamp}`);
+  if (!lastSyncTimestamp) {
+    throw new Error('lastSyncTimestamp must be provided');
   }
+  
+  // Manual pagination using $skip parameter
+  const filter = encodeURIComponent(`ModificationTimestamp gt ${lastSyncTimestamp}`);
+  const url = `${API_BASE_URL}/Property?$filter=${filter}&$top=100&$skip=${skip}&$count=true`;
+  console.log(`   → Delta query from: ${lastSyncTimestamp} (skip: ${skip})`);
   
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
@@ -311,14 +303,14 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
     // Mark as running
     await updateSyncState(state.lastSyncTimestamp, 0, 'running');
     
-    // Step 2: Paginate through all modified listings
-    let nextLink: string | null = null;
+    // Step 2: Paginate through all modified listings using manual $skip
+    let skip = 0;
+    let hasMore = true;
     let currentTimestamp = state.lastSyncTimestamp;
     
     do {
-      // Fetch batch
-      console.log(`\n📄 Page ${result.pagesProcessed + 1}:`);
-      const batch = await fetchListingsBatch(nextLink || undefined, nextLink ? undefined : currentTimestamp);
+      console.log(`\n📄 Page ${result.pagesProcessed + 1} (Skip: ${skip}):`);
+      const batch = await fetchListingsBatch(skip, currentTimestamp);
       
       if (batch.listings.length === 0) {
         console.log('   ℹ️  No listings found in this batch');
@@ -337,6 +329,10 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
       // Update counters
       result.totalRecords += batch.listings.length;
       result.pagesProcessed++;
+      skip += batch.listings.length;
+      
+      // If we got a full batch of 100, there is likely another page
+      hasMore = batch.listings.length === 100;
       
       console.log(`   📊 Running totals: ${result.totalRecords} records, ${result.pagesProcessed} pages`);
       
@@ -344,10 +340,7 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
       console.log(`   ⏳ Rate limiting: sleeping ${PAGE_DELAY_MS}ms...`);
       await sleep(PAGE_DELAY_MS);
       
-      // Update pagination
-      nextLink = batch.nextLink;
-      
-    } while (nextLink);
+    } while (hasMore);
     
     // Step 3: Update sync state (ONLY after all pages succeed)
     const now = new Date().toISOString();
@@ -403,7 +396,7 @@ async function main() {
     console.log(`   Token: ${token.substring(0, 20)}...`);
     
     const batch = await fetchListingsBatch(
-      undefined,
+      0,
       new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     );
     

@@ -135,13 +135,21 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     let successCount = 0;
     let failCount = 0;
     
+    // Log detailed per-document errors
+    const failedDocuments: string[] = [];
+    
     for (const res of importResults) {
       if (res.success !== undefined && res.success) {
         successCount++;
       } else {
         failCount++;
+        // Capture detailed error information
         if (res.error) {
-          result.typesense.errors.push(res.error);
+          const errorDetail = res.document ? 
+            `Document ${res.document}: ${res.error}` : 
+            res.error;
+          result.typesense.errors.push(errorDetail);
+          failedDocuments.push(errorDetail);
         }
       }
     }
@@ -151,6 +159,10 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     
     if (failCount > 0) {
       console.warn(`   ⚠️  Typesense: ${successCount} indexed, ${failCount} failed`);
+      // Log first few failures for debugging
+      failedDocuments.slice(0, 5).forEach(err => {
+        console.warn(`      📋 Error: ${err}`);
+      });
     } else {
       console.log(`   ✅ Typesense: ${successCount} documents indexed`);
     }
