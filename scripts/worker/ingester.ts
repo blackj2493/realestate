@@ -63,7 +63,8 @@ async function fetchWithRetry<T>(
     try {
       console.log(`   📡 Fetch attempt ${attempt + 1}/${retries + 1}: ${url.substring(0, 80)}...`);
       
-      console.log(`Attempting to fetch from: ${url}`);
+      console.log("🔍 DEBUG - Attempting Ampre fetch to URL:", url);
+      console.log("🔍 DEBUG - Token exists:", !!process.env.RESO_BEARER_TOKEN);
       
       const response = await fetch(url, {
         ...options,
