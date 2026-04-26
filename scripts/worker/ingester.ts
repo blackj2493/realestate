@@ -415,7 +415,7 @@ async function main() {
   } else {
     console.log(`
 Shadow MLS Ingester
-====================
+===================
 
 Usage:
   npx tsx scripts/worker/ingester.ts sync   - Run delta sync
@@ -434,7 +434,14 @@ Notes:
   }
 }
 
-main().catch(err => {
-  console.error('\n💥 Fatal error:', err.message);
-  process.exit(1);
-});
+// Only run main() when executed directly (not when imported as a module)
+// This allows the API route to import runDeltaSync without triggering CLI execution
+const isMainModule = typeof process !== 'undefined' && 
+  process.argv[1]?.includes('ingester.ts');
+
+if (isMainModule) {
+  main().catch(err => {
+    console.error('\n💥 Fatal error:', err.message);
+    process.exit(1);
+  });
+}

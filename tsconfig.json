@@ -19,7 +19,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/data/*": ["./data/*"]
+      "@/data/*": ["./data/*"],
+      "@/scripts/*": ["./scripts/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "data/*.json"],
