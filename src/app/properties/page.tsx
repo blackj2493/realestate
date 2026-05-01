@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { searchListings, type ListingDocument, type SearchResult, type SearchFilters } from "@/lib/typesense/client";
 import CommandCenterSidebar, { type PersonaType, type InvestorFilters, type ValueAddFilters } from "@/components/Sidebar/CommandCenterSidebar";
-import MapView from "@/components/MapView";
+import TerminalMap from "@/components/Map/TerminalMap";
 
 // ============================================================================
 // Typesense Data Mapping
@@ -213,11 +213,10 @@ function PropertiesPageContent() {
 
         {/* Map Area */}
         <div className="flex-1 flex flex-col">
-          {/* Map View */}
-          <div className="h-[60vh] border-b border-slate-800">
-            <MapView
-              properties={properties}
-              onBoundsChange={handleBoundsChange}
+          {/* Terminal Map - 3D Visualization */}
+          <div className="flex-1 h-full min-h-[400px] border-b border-slate-800">
+            <TerminalMap
+              properties={searchResult?.listings || []}
               className="w-full h-full"
             />
           </div>
