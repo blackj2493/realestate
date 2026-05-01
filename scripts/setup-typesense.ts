@@ -29,7 +29,8 @@ const listingsSchema = {
     
     // Property Specifications
     { name: 'BedroomsTotal', type: 'int32' as const, facet: true, optional: true },
-    { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: true, optional: true },
+    // FIX: BathroomsTotalInteger changed from int32 to float (API sends floats like "14.5")
+    { name: 'BathroomsTotalInteger', type: 'float' as const, facet: true, optional: true },
     { name: 'PropertySubType', type: 'string' as const, facet: true, optional: true },
     { name: 'PropertyType', type: 'string' as const, facet: true, optional: true },
     

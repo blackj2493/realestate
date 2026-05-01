@@ -257,17 +257,21 @@ export function transformListing(raw: any): TransformResult {
   };
 
   // Add optional fields only if they have values
+  // FIX: Use parseFloat for fields that may contain decimal values from API
   if (raw.UnparsedAddress) typesensePayload.UnparsedAddress = raw.UnparsedAddress;
   if (raw.City) typesensePayload.City = raw.City;
-  if (raw.BedroomsTotal !== undefined && raw.BedroomsTotal !== null) typesensePayload.BedroomsTotal = raw.BedroomsTotal;
-  if (raw.BathroomsTotalInteger !== undefined && raw.BathroomsTotalInteger !== null) typesensePayload.BathroomsTotalInteger = raw.BathroomsTotalInteger;
+  if (raw.BedroomsTotal !== undefined && raw.BedroomsTotal !== null) typesensePayload.BedroomsTotal = parseInt(String(raw.BedroomsTotal), 10);
+  // FIX: BathroomsTotalInteger may come as float "14.5" from API - use parseFloat for type safety
+  if (raw.BathroomsTotalInteger !== undefined && raw.BathroomsTotalInteger !== null) typesensePayload.BathroomsTotalInteger = parseFloat(String(raw.BathroomsTotalInteger));
   if (raw.PropertySubType) typesensePayload.PropertySubType = raw.PropertySubType;
   if (raw.PropertyType) typesensePayload.PropertyType = raw.PropertyType;
   if (raw.TransactionType) typesensePayload.TransactionType = raw.TransactionType;
-  if (raw.TaxAnnualAmount !== undefined && raw.TaxAnnualAmount !== null) typesensePayload.TaxAnnualAmount = raw.TaxAnnualAmount;
-  if (raw.AssociationFee !== undefined && raw.AssociationFee !== null) typesensePayload.AssociationFee = raw.AssociationFee;
-  if (raw.LotWidth !== undefined && raw.LotWidth !== null) typesensePayload.LotWidth = raw.LotWidth;
-  if (raw.LotDepth !== undefined && raw.LotDepth !== null) typesensePayload.LotDepth = raw.LotDepth;
+  // FIX: TaxAnnualAmount is decimal - use parseFloat
+  if (raw.TaxAnnualAmount !== undefined && raw.TaxAnnualAmount !== null) typesensePayload.TaxAnnualAmount = parseFloat(String(raw.TaxAnnualAmount));
+  if (raw.AssociationFee !== undefined && raw.AssociationFee !== null) typesensePayload.AssociationFee = parseFloat(String(raw.AssociationFee));
+  // FIX: LotWidth and LotDepth can be fractional - use parseFloat
+  if (raw.LotWidth !== undefined && raw.LotWidth !== null) typesensePayload.LotWidth = parseFloat(String(raw.LotWidth));
+  if (raw.LotDepth !== undefined && raw.LotDepth !== null) typesensePayload.LotDepth = parseFloat(String(raw.LotDepth));
   if (raw.ApproximateAge) typesensePayload.ApproximateAge = raw.ApproximateAge;
   if (raw.ParkingTotal !== undefined && raw.ParkingTotal !== null) typesensePayload.ParkingTotal = raw.ParkingTotal;
   if (raw.BuildingAreaTotal !== undefined && raw.BuildingAreaTotal !== null) typesensePayload.BuildingAreaTotal = raw.BuildingAreaTotal;

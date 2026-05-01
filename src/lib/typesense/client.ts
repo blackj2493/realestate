@@ -103,6 +103,7 @@ export interface SearchFilters {
   
   // Property Specs
   minBedrooms?: number;
+  maxBedrooms?: number;
   minBathrooms?: number;
   propertySubTypes?: string[];
   propertyTypes?: string[];
@@ -117,6 +118,16 @@ export interface SearchFilters {
   // Derived Metrics
   isDistressed?: boolean;
   hasSecondarySuitePotential?: boolean;
+  minTargetGrossYield?: number;
+  maxTargetGrossYield?: number;
+  
+  // Lot Dimensions (for Value-Add / Developer)
+  minLotWidth?: number;
+  maxLotWidth?: number;
+  minLotDepth?: number;
+  maxLotDepth?: number;
+  hasUnfinishedBasement?: boolean;
+  hasDetachedGarage?: boolean;
   
   // Days on Market
   minDOM?: number;
@@ -224,6 +235,33 @@ export async function searchListings(
   }
   if (filters.hasSecondarySuitePotential !== undefined) {
     filterParts.push(`hasSecondarySuitePotential:=${filters.hasSecondarySuitePotential}`);
+  }
+  
+  // Target Gross Yield filter
+  if (filters.minTargetGrossYield !== undefined) {
+    filterParts.push(`targetGrossYield >= ${filters.minTargetGrossYield}`);
+  }
+  if (filters.maxTargetGrossYield !== undefined) {
+    filterParts.push(`targetGrossYield <= ${filters.maxTargetGrossYield}`);
+  }
+  
+  // Lot dimensions (for Value-Add/Developer)
+  if (filters.minLotWidth !== undefined) {
+    filterParts.push(`LotWidth >= ${filters.minLotWidth}`);
+  }
+  if (filters.maxLotWidth !== undefined) {
+    filterParts.push(`LotWidth <= ${filters.maxLotWidth}`);
+  }
+  if (filters.minLotDepth !== undefined) {
+    filterParts.push(`LotDepth >= ${filters.minLotDepth}`);
+  }
+  if (filters.maxLotDepth !== undefined) {
+    filterParts.push(`LotDepth <= ${filters.maxLotDepth}`);
+  }
+  
+  // Bedroom range
+  if (filters.maxBedrooms !== undefined) {
+    filterParts.push(`BedroomsTotal <= ${filters.maxBedrooms}`);
   }
   
   // Days on Market
