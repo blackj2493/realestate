@@ -53,6 +53,11 @@ export interface ValueAddFilters {
   // DOM
   minDOM: number;
   maxDOM: number;
+  // Bedrooms/Bathrooms
+  minBedrooms: number;
+  maxBedrooms: number;
+  minBathrooms: number;
+  maxBathrooms: number;
 }
 
 interface CommandCenterSidebarProps {
@@ -285,6 +290,10 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
     hasDetachedGarage: false,
     minDOM: 0,
     maxDOM: 365,
+    minBedrooms: 0,
+    maxBedrooms: 10,
+    minBathrooms: 0,
+    maxBathrooms: 10,
   });
 
   // Notify parent of filter changes with 300ms debounce
@@ -305,9 +314,12 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
       <div className="p-4 border-b border-slate-800">
         <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          Command Center
+          PureProperty.ca Terminal
         </h2>
-        <p className="text-xs text-slate-500 mt-0.5">Shadow MLS Filter Layer</p>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <p className="text-[10px] text-emerald-500/70">Typesense: Connected</p>
+        </div>
       </div>
 
       {/* Persona Switcher */}
@@ -524,11 +536,11 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
               </div>
             </div>
 
-            {/* Days on Market */}
+            {/* True DOM */}
             <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/30">
               <SectionHeader icon={Calendar} title="Market Timing" />
               <RangeSlider
-                label="Days on Market"
+                label="True DOM (Days on Market)"
                 value={[valueAddFilters.minDOM, valueAddFilters.maxDOM]}
                 onChange={([min, max]) =>
                   setValueAddFilters((f) => ({ ...f, minDOM: min, maxDOM: max }))
@@ -554,6 +566,31 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
                     {days}+
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Bedrooms / Bathrooms */}
+            <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/30">
+              <SectionHeader icon={Bed} title="Unit Configuration" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-slate-400">Bedrooms</span>
+                <NumericStepper
+                  label=""
+                  value={valueAddFilters.minBedrooms}
+                  onChange={(v) => setValueAddFilters((f) => ({ ...f, minBedrooms: v }))}
+                  min={0}
+                  max={10}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400">Bathrooms</span>
+                <NumericStepper
+                  label=""
+                  value={valueAddFilters.minBathrooms}
+                  onChange={(v) => setValueAddFilters((f) => ({ ...f, minBathrooms: v }))}
+                  min={0}
+                  max={10}
+                />
               </div>
             </div>
           </div>
