@@ -11,6 +11,7 @@
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { indexListing, deleteListing } from '@/lib/typesense/client';
+import { getCoordinates, loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 
 // ============================================================================
 // Configuration
@@ -20,13 +21,10 @@ const BASELINE_RENT = 1200;  // Monthly rent placeholder per bedroom
 const FALLBACK_LAT = 43.6532;  // Toronto center latitude
 const FALLBACK_LNG = -79.3832;  // Toronto center longitude
 
-// Mock postal code to coordinate mapping (replace with full postal-codes.json lookup)
-// Tier 1 of geospatial fallback chain
-const postalMap: Record<string, { lat: number; lng: number }> = {
-  'L6P2Z1': { lat: 43.785, lng: -79.652 },  // Brampton example
-  'M5V3A1': { lat: 43.6425, lng: -79.3901 },  // Toronto downtown
-  'L4W5A1': { lat: 43.6339, lng: -79.5831 },  // Mississauga
-};
+// Initialize postal codes on module load
+if (!isDataLoaded()) {
+  loadPostalCodes();
+}
 
 // ============================================================================
 // Geospatial Resolution
@@ -39,7 +37,7 @@ interface GeolocationResult {
 
 /**
  * Resolves geolocation using strict fallback chain:
- * 1. Postal code local lookup
+ * 1. Master postal code library lookup (with FSA fallback)
  * 2. API native coordinates
  * 3. Toronto center (with needsGeocoding flag)
  */
@@ -48,23 +46,21 @@ export function resolveLocation(
   apiLat: number | null | undefined,
   apiLng: number | null | undefined
 ): GeolocationResult {
-  // Tier 1: Postal code local lookup
-  if (postalCode) {
-    const normalized = postalCode.toUpperCase().replace(/\s/g, '');
-    const coords = postalMap[normalized];
-    if (coords) {
-      return {
-        location: [coords.lat, coords.lng],
-        needsGeocoding: false
-      };
-    }
+  // Tier 1: Master postal code library lookup with FSA fallback
+  const postalCoords = getCoordinates(postalCode);
+  if (postalCoords) {
+    // Format as [longitude, latitude] for Typesense geo-point
+    return {
+      location: [postalCoords.lng, postalCoords.lat] as [number, number],
+      needsGeocoding: false
+    };
   }
 
   // Tier 2: API native coordinates
   if (apiLat !== null && apiLat !== undefined && 
       apiLng !== null && apiLng !== undefined) {
     return {
-      location: [apiLat, apiLng],
+      location: [apiLng, apiLat],
       needsGeocoding: false
     };
   }
@@ -72,7 +68,7 @@ export function resolveLocation(
   // Tier 3: Fallback to Toronto center + flag for correction
   console.warn(`[Transformer] Location fallback triggered for postal: ${postalCode || 'unknown'}`);
   return {
-    location: [FALLBACK_LAT, FALLBACK_LNG],
+    location: [FALLBACK_LNG, FALLBACK_LAT] as [number, number],
     needsGeocoding: true
   };
 }
