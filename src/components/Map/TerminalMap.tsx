@@ -1,12 +1,14 @@
 "use client";
 
+// Mapbox CSS - CRITICAL: Without this, WebGL canvas dimensions cannot be calculated
+import "mapbox-gl/dist/mapbox-gl.css";
+
 import { useState, useMemo, useCallback } from "react";
 import DeckGL from "@deck.gl/react";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { Map } from "react-map-gl/mapbox";
 import { MapViewState } from "@deck.gl/core";
-import { Layers, MapPin, Loader2 } from "lucide-react";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { Layers, MapPin } from "lucide-react";
 
 // Typesense ListingDocument type (matches src/lib/typesense/client.ts)
 interface ListingRecord {
@@ -42,12 +44,12 @@ interface TerminalMapProps {
   className?: string;
 }
 
-// GTA area initial viewport - centered on Toronto/Peel region
+// GTA area initial viewport - centered directly over Toronto
 const INITIAL_VIEW_STATE: MapViewState = {
-  longitude: -79.326917,
-  latitude: 43.720114,
+  longitude: -79.3832,
+  latitude: 43.6532,
   zoom: 9,
-  pitch: 45, // Tilted 3D perspective
+  pitch: 45, // Critical for seeing the 3D Hexagon extrusion
   bearing: 0,
 };
 
@@ -129,8 +131,10 @@ export default function TerminalMap({ properties, className = "" }: TerminalMapP
         pickable: true,
         autoHighlight: true,
         highlightColor: [0, 255, 136, 180], // Neon green highlight on hover
-        onHover: (info: { object?: unknown }) => {
+        onHover: (info) => {
           // Could show tooltip here if needed
+          void info;
+          return true;
         },
       }),
     ];
@@ -140,8 +144,11 @@ export default function TerminalMap({ properties, className = "" }: TerminalMapP
   // Viewport Handler
   // ============================================================================
 
-  const handleViewStateChange = useCallback(({ viewState: newViewState }: { viewState: MapViewState }) => {
-    setViewState(newViewState);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleViewStateChange = useCallback((params: any) => {
+    if (params.viewState) {
+      setViewState(params.viewState);
+    }
   }, []);
 
   // ============================================================================
