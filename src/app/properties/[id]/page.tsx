@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Bed, Bath, Car } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -9,8 +9,6 @@ import SpatialDistribution from "@/components/SpatialDistribution";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
-import { getServerClient } from "@/lib/supabase/client";
-import type { ListingRecord } from "@/lib/supabase/client";
 
 interface Room {
   RoomKey?: string;
@@ -98,12 +96,36 @@ function calculateDaysOnMarket(originalEntryTimestamp: string | undefined): numb
   return diffDays;
 }
 
-export default function PropertyPage({ params }: { params: { id: string } }) {
-  // In Next.js 14 and below, params is a plain object, not a Promise
-  const { id } = params;
+// Trigger background quick-sync via API
+async function triggerQuickSync(listingKey: string): Promise<void> {
+  try {
+    const response = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'quick-sync',
+        listingKey,
+        priority: 'high'
+      }),
+    });
+    
+    if (!response.ok) {
+      console.warn('[Quick-Sync] Failed to trigger sync for:', listingKey);
+    } else {
+      console.log('[Quick-Sync] Triggered for listing:', listingKey);
+    }
+  } catch (error) {
+    console.error('[Quick-Sync] Error triggering sync:', error);
+  }
+}
+
+export default function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
+  // In Next.js 15+, params is a Promise that must be unwrapped
+  const { id } = React.use(params);
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'triggering' | 'pending'>('idle');
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -111,57 +133,72 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
       setError(null);
       
       try {
-        // Use Supabase client (ANON_KEY) for server-side detail fetch
-        const supabase = getServerClient();
+        // STEP 1: Fetch from API route (server-side Supabase call)
+        console.log('[PropertyPage] Fetching listing via API:', id);
         
-        // Fetch by ListingKey (id parameter)
-        const listing = await supabase
-          .from('listings')
-          .select('*')
-          .eq('listing_key', id)
-          .single();
+        const response = await fetch(`/api/property/${id}`);
         
-        if (listing.error) {
-          if (listing.error.code === 'PGRST116') {
-            // Not found - listing might not have synced yet
-            setError(`Listing "${id}" not found in database. It may still be syncing.`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.log('[PropertyPage] Listing not in database, triggering quick-sync:', id);
+            setSyncStatus('triggering');
+            await triggerQuickSync(id);
+            setSyncStatus('pending');
+            setError(`This listing is being synchronized. It will be available shortly.`);
             setProperty(null);
-          } else {
-            throw new Error(listing.error.message);
+            setLoading(false);
+            return;
           }
+          throw new Error(`Failed to fetch: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.notFound) {
+          console.log('[PropertyPage] Listing not found, triggering quick-sync:', id);
+          setSyncStatus('triggering');
+          await triggerQuickSync(id);
+          setSyncStatus('pending');
+          setError(`This listing is being synchronized. It will be available shortly.`);
+          setProperty(null);
+          setLoading(false);
           return;
         }
         
-        const record = listing.data as ListingRecord;
-        
-        // Extract full_payload JSONB and extract heavy data
-        const fullPayload = record.full_payload as unknown as Property;
-        
-        // Extract media from media_urls array for the gallery
+        // Extract images from media_urls
         const images: Array<{ MediaURL: string; MediaCategory?: string; MediaObjectID?: string; Order?: number }> = 
-          record.media_urls.map((url, index) => ({
+          (data.media_urls || []).map((url: string, index: number) => ({
             MediaURL: url,
             MediaCategory: 'Photo',
             MediaObjectID: `extracted-${index}`,
             Order: index,
           }));
         
-        // Combine full_payload with extracted media
+        // Combine full_payload with extracted images
         const propertyData: Property = {
-          ...fullPayload,
-          // Include extracted images for MediaGallery
+          ...(data.full_payload as Property || {}),
           images,
-          // Add rooms if available in payload (from ProptX rooms endpoint)
-          rooms: fullPayload.rooms || [],
         };
         
-        console.log(`[Supabase] Fetched listing: ${id}`);
-        console.log(`[Supabase] Media URLs extracted: ${record.media_urls.length}`);
+        console.log(`[API] Fetched listing: ${id}`);
         
         setProperty(propertyData);
+        setSyncStatus('idle');
       } catch (err) {
         console.error("Error fetching property:", err);
-        setError(err instanceof Error ? err.message : "Failed to load property details");
+        const errorMessage = err instanceof Error ? err.message : "Failed to load property details";
+        
+        // If network error, try to trigger quick sync as fallback
+        if (errorMessage.toLowerCase().includes('failed to fetch') || errorMessage.toLowerCase().includes('fetch')) {
+          console.log('[PropertyPage] Network error, attempting quick-sync fallback...');
+          setSyncStatus('triggering');
+          await triggerQuickSync(id);
+          setSyncStatus('pending');
+          setError(`Unable to connect to database. The listing is being synchronized. Please refresh shortly.`);
+        } else {
+          setError(errorMessage);
+        }
+        
         setProperty(null);
       } finally {
         setLoading(false);
@@ -181,11 +218,20 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-4">Property Not Found</h1>
+          <h1 className="text-3xl font-bold mb-4">Property {syncStatus === 'pending' ? 'Syncing...' : 'Not Found'}</h1>
           <p className="text-muted-foreground mb-6">{error}</p>
-          <Link href="/properties">
-            <Button variant="outline">← Back to Listings</Button>
-          </Link>
+          {syncStatus === 'pending' ? (
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-pulse text-primary">Synchronizing listing data...</div>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Check Again
+              </Button>
+            </div>
+          ) : (
+            <Link href="/properties">
+              <Button variant="outline">← Back to Listings</Button>
+            </Link>
+          )}
         </div>
       </div>
     );

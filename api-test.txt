@@ -1,0 +1,15 @@
+[eval]:1
+(function(){const http=require('http');const req=http.request({hostname:'localhost',port:3001,path:'/api/properties/listings?type=buy',method:'GET',timeout:25000},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{console.log('Status:',res.statusCode);try{const j=JSON.parse(d);console.log('Listings:',j.listings?'count:'+j.listings.length:'undefined');if(j.error)console.log('Error:',j.error);if(j.pagination)console.log('Total:',j.pagination.total)}catch(e){console.log('Parse:',e.message);console.log('Raw:',d.substring(0,200))}});req.on('error',e=>console.log('E:',e.message));req.on('timeout',()=>{console.log('Timeout');req.destroy()});req.end()})()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+
+SyntaxError: Unexpected end of input
+    at makeContextifyScript (node:internal/vm:185:14)
+    at compileScript (node:internal/process/execution:386:10)
+    at node:internal/process/execution:450:25
+    at [eval]-wrapper:6:24
+    at runScriptInContext (node:internal/process/execution:447:60)
+    at evalFunction (node:internal/process/execution:87:30)
+    at evalScript (node:internal/process/execution:99:3)
+    at node:internal/main/eval_string:74:3
+
+Node.js v22.15.0

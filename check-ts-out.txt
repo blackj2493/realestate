@@ -1,0 +1,11 @@
+Running search test...
+(node:31988) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Total found: 63065
+Hits returned: 200
+Valid location: 200 Invalid location: 0
+
+First doc keys: BathroomsTotalInteger, BedroomsTotal, City, ListOfficeName, ListPrice, PropertySubType, PropertyType, TransactionType, UnparsedAddress, calculatedDOM, hasSecondarySuitePotential, id, isDistressed, location, targetGrossYield
+First doc location: [43.6532,-79.3832]
+
+Done!

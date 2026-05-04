@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   TrendingUp,
   BarChart3,
@@ -15,12 +15,29 @@ import {
   Loader2,
   Sparkles,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import { SearchDropdown } from "@/components/SearchDropdown";
 import { useGeolocation, getLocationDisplay } from "@/hooks/useGeolocation";
+import { searchListings } from "@/lib/typesense/client";
+
+// Haversine distance helper for calculating user-to-property distance
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export default function HomePage() {
   const [properties, setProperties] = useState<PropertyCardData[]>([]);
@@ -30,43 +47,126 @@ export default function HomePage() {
   
   const geo = useGeolocation();
 
-  // Fetch properties based on location
-  useEffect(() => {
-    async function fetchNearbyProperties() {
-      if (geo.loading) return;
+  // Transform Typesense ListingDocument to PropertyCardData
+  const transformToPropertyCard = useCallback(
+    (
+      doc: { 
+        id: string; 
+        ListPrice: number; 
+        UnparsedAddress?: string; 
+        City?: string; 
+        BedroomsTotal?: number; 
+        BathroomsTotalInteger?: number; 
+        BuildingAreaTotal?: number;
+        calculatedDOM?: number; 
+        ListOfficeName?: string; 
+        thumbnailUrl?: string;
+        PropertySubType?: string; 
+        PropertyType?: string; 
+        location?: [number, number];
+        originalEntryTimestamp?: string;
+      }, 
+      userLat?: number | null, 
+      userLng?: number | null
+    ): PropertyCardData => {
+      const propLat = doc.location?.[0];
+      const propLng = doc.location?.[1];
       
+      // Calculate distance if user location available
+      let distance: number | undefined;
+      if (userLat && userLng && propLat && propLng) {
+        distance = calculateDistance(userLat, userLng, propLat, propLng);
+      }
+      
+      return {
+        id: doc.id,
+        listingId: doc.id,
+        address: doc.UnparsedAddress || "Address Unavailable",
+        city: doc.City || "Unknown",
+        province: "ON",
+        price: doc.ListPrice || 0,
+        propertyType: doc.PropertySubType || doc.PropertyType || "Residential",
+        bedrooms: doc.BedroomsTotal || 0,
+        bathrooms: doc.BathroomsTotalInteger || 0,
+        squareFeet: doc.BuildingAreaTotal,
+        daysOnMarket: doc.calculatedDOM,
+        brokerage: doc.ListOfficeName,
+        photoUrl: doc.thumbnailUrl || null,
+        latitude: propLat,
+        longitude: propLng,
+        distance,
+      };
+    },
+    []
+  );
+
+  // Fetch properties from Typesense - filtered by user's city and sorted by newest
+  useEffect(() => {
+    async function fetchProperties() {
       setLoading(true);
       try {
-        const params = new URLSearchParams({
-          limit: "12",
-        });
-        
-        // Prefer postal code for more specific location, fall back to city
-        if (geo.postalCode) {
-          params.set("postalCode", geo.postalCode);
-        } else if (geo.city) {
-          params.set("city", geo.city);
+        // Build search options
+        const searchOptions: Parameters<typeof searchListings>[0] = {
+          query: "*",
+          perPage: 12,
+          // Sort by newest listings first (using calculatedDOM as proxy for listing age)
+          // Lower DOM = newer listing
+          sortBy: 'calculatedDOM',
+          sortOrder: 'asc',
+        };
+
+        // If user has a city set, filter by it (case-insensitive partial match)
+        if (geo.city) {
+          searchOptions.filters = {
+            city: geo.city,
+          };
         }
-        
-        const response = await fetch(`/api/nearby?${params.toString()}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          setProperties(data.properties || []);
+
+        const result = await searchListings(searchOptions);
+
+        if (result.listings && result.listings.length > 0) {
+          const transformed = result.listings.map(doc => 
+            transformToPropertyCard(doc, geo.latitude, geo.longitude)
+          );
+          setProperties(transformed);
         } else {
-          console.error("Failed to fetch properties");
-          setProperties([]);
+          // If no results for user's city, try broader search (without city filter)
+          if (geo.city) {
+            console.log(`[HomePage] No listings found in ${geo.city}, falling back to all listings`);
+            const fallbackResult = await searchListings({
+              query: "*",
+              perPage: 12,
+              sortBy: 'calculatedDOM',
+              sortOrder: 'asc',
+            });
+            
+            if (fallbackResult.listings) {
+              const transformed = fallbackResult.listings.map(doc => 
+                transformToPropertyCard(doc, geo.latitude, geo.longitude)
+              );
+              setProperties(transformed);
+            } else {
+              setProperties([]);
+            }
+          } else {
+            setProperties([]);
+          }
         }
       } catch (error) {
-        console.error("Error fetching properties:", error);
+        console.error("Error fetching properties from Typesense:", error);
         setProperties([]);
       } finally {
         setLoading(false);
       }
     }
+    
+    fetchProperties();
+  }, [geo.city, geo.latitude, geo.longitude, transformToPropertyCard]);
 
-    fetchNearbyProperties();
-  }, [geo.loading, geo.postalCode, geo.city]);
+  const handleRefresh = () => {
+    // Force re-fetch by updating a dependency
+    window.location.reload();
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +262,12 @@ export default function HomePage() {
                     "Detecting your location..."
                   ) : (
                     <>
-                      Showing properties near <span className="text-primary font-semibold">{getLocationDisplay(geo)}</span>
+                      Showing properties in <span className="text-primary font-semibold">{geo.city || getLocationDisplay(geo)}</span>
+                      {geo.city && properties.length > 0 && (
+                        <span className="text-muted-foreground ml-1">
+                          ({properties.length} listings)
+                        </span>
+                      )}
                     </>
                   )}
                 </p>
@@ -174,6 +279,15 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? "Loading..." : "Refresh"}
+              </Button>
+              <Button 
+                variant="ghost" 
                 size="sm" 
                 onClick={geo.refresh}
                 disabled={geo.loading}
@@ -193,13 +307,15 @@ export default function HomePage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-primary">Near You</span>
+                <span className="text-sm font-medium text-primary">
+                  {geo.city ? `In ${geo.city}` : 'Latest Listings'}
+                </span>
               </div>
               <h2 className="text-2xl md:text-3xl font-bold">
-                Properties {geo.city ? `in ${geo.city}` : "in Toronto"}
+                {geo.city ? `Properties in ${geo.city}` : "Latest Listings"}
               </h2>
               <p className="text-muted-foreground mt-1">
-                {loading ? "Loading..." : `${properties.length} active listings available`}
+                {loading ? "Loading..." : `${properties.length} active listing${properties.length !== 1 ? 's' : ''}`}
               </p>
             </div>
             <Link href="/properties">
@@ -237,11 +353,20 @@ export default function HomePage() {
               <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Properties Found</h3>
               <p className="text-muted-foreground mb-4">
-                We couldn't find any properties in your area. Try expanding your search.
+                {geo.city 
+                  ? `We couldn't find any properties in ${geo.city}. Try expanding your search area.`
+                  : "We couldn't find any properties. Try refreshing or expanding your search."
+                }
               </p>
-              <Link href="/properties">
-                <Button>Browse All Properties</Button>
-              </Link>
+              <div className="flex justify-center gap-4">
+                <Button onClick={handleRefresh} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+                <Link href="/properties">
+                  <Button>Browse All Properties</Button>
+                </Link>
+              </div>
             </Card>
           )}
         </div>

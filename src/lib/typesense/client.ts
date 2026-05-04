@@ -31,7 +31,7 @@ export function getTypesenseClient(): Client {
         }
       ],
       apiKey: SEARCH_API_KEY,
-      connectionTimeoutSeconds: 5
+      connectionTimeoutSeconds: 30,
     });
   }
   return client;
@@ -57,6 +57,10 @@ export interface ListingDocument {
   
   // Geopoint: [latitude, longitude]
   location: [number, number];
+  
+  // Coordinates from postal code lookup (populated by API layer)
+  Latitude?: number;
+  Longitude?: number;
   
   // Transaction
   TransactionType?: string;
@@ -177,33 +181,35 @@ export async function searchListings(
   // Build filter string
   const filterParts: string[] = [];
   
-  // City filter
+  // City filter - exact match (no operator needed for string equality)
   if (filters.city) {
-    filterParts.push(`City:${filters.city}`);
+    filterParts.push(`City:=${filters.city}`);
   }
   
-  // Price filters
+  // Price filters - Typesense requires colon before operator: FieldName:>=Value
   if (filters.minPrice !== undefined) {
-    filterParts.push(`ListPrice >= ${filters.minPrice}`);
+    const minVal = Math.floor(filters.minPrice);
+    filterParts.push(`ListPrice:>=${minVal}`);
   }
   if (filters.maxPrice !== undefined) {
-    filterParts.push(`ListPrice <= ${filters.maxPrice}`);
+    const maxVal = Math.floor(filters.maxPrice);
+    filterParts.push(`ListPrice:<=${maxVal}`);
   }
   
   // Bedroom filter
   if (filters.minBedrooms !== undefined) {
-    filterParts.push(`BedroomsTotal >= ${filters.minBedrooms}`);
+    filterParts.push(`BedroomsTotal:>=${filters.minBedrooms}`);
   }
   
   // Bathroom filter
   if (filters.minBathrooms !== undefined) {
-    filterParts.push(`BathroomsTotalInteger >= ${filters.minBathrooms}`);
+    filterParts.push(`BathroomsTotalInteger:>=${filters.minBathrooms}`);
   }
   
   // Property SubType filter (multi-select)
   if (filters.propertySubTypes && filters.propertySubTypes.length > 0) {
     const subtypeFilter = filters.propertySubTypes
-      .map(st => `PropertySubType:${st}`)
+      .map(st => `PropertySubType:=${st}`)
       .join(' || ');
     filterParts.push(`(${subtypeFilter})`);
   }
@@ -211,22 +217,22 @@ export async function searchListings(
   // Property Type filter (multi-select)
   if (filters.propertyTypes && filters.propertyTypes.length > 0) {
     const typeFilter = filters.propertyTypes
-      .map(pt => `PropertyType:${pt}`)
+      .map(pt => `PropertyType:=${pt}`)
       .join(' || ');
     filterParts.push(`(${typeFilter})`);
   }
   
   // Financial filters
   if (filters.maxTaxes !== undefined) {
-    filterParts.push(`TaxAnnualAmount <= ${filters.maxTaxes}`);
+    filterParts.push(`TaxAnnualAmount:<=${filters.maxTaxes}`);
   }
   if (filters.maxAssociationFee !== undefined) {
-    filterParts.push(`AssociationFee <= ${filters.maxAssociationFee}`);
+    filterParts.push(`AssociationFee:<=${filters.maxAssociationFee}`);
   }
   
-  // Transaction Type
+  // Transaction Type - exact match
   if (filters.transactionType) {
-    filterParts.push(`TransactionType:${filters.transactionType}`);
+    filterParts.push(`TransactionType:=${filters.transactionType}`);
   }
   
   // Derived metrics
@@ -239,37 +245,37 @@ export async function searchListings(
   
   // Target Gross Yield filter
   if (filters.minTargetGrossYield !== undefined) {
-    filterParts.push(`targetGrossYield >= ${filters.minTargetGrossYield}`);
+    filterParts.push(`targetGrossYield:>=${filters.minTargetGrossYield}`);
   }
   if (filters.maxTargetGrossYield !== undefined) {
-    filterParts.push(`targetGrossYield <= ${filters.maxTargetGrossYield}`);
+    filterParts.push(`targetGrossYield:<=${filters.maxTargetGrossYield}`);
   }
   
   // Lot dimensions (for Value-Add/Developer)
   if (filters.minLotWidth !== undefined) {
-    filterParts.push(`LotWidth >= ${filters.minLotWidth}`);
+    filterParts.push(`LotWidth:>=${filters.minLotWidth}`);
   }
   if (filters.maxLotWidth !== undefined) {
-    filterParts.push(`LotWidth <= ${filters.maxLotWidth}`);
+    filterParts.push(`LotWidth:<=${filters.maxLotWidth}`);
   }
   if (filters.minLotDepth !== undefined) {
-    filterParts.push(`LotDepth >= ${filters.minLotDepth}`);
+    filterParts.push(`LotDepth:>=${filters.minLotDepth}`);
   }
   if (filters.maxLotDepth !== undefined) {
-    filterParts.push(`LotDepth <= ${filters.maxLotDepth}`);
+    filterParts.push(`LotDepth:<=${filters.maxLotDepth}`);
   }
   
   // Bedroom range
   if (filters.maxBedrooms !== undefined) {
-    filterParts.push(`BedroomsTotal <= ${filters.maxBedrooms}`);
+    filterParts.push(`BedroomsTotal:<=${filters.maxBedrooms}`);
   }
   
   // Days on Market
   if (filters.minDOM !== undefined) {
-    filterParts.push(`calculatedDOM >= ${filters.minDOM}`);
+    filterParts.push(`calculatedDOM:>=${filters.minDOM}`);
   }
   if (filters.maxDOM !== undefined) {
-    filterParts.push(`calculatedDOM <= ${filters.maxDOM}`);
+    filterParts.push(`calculatedDOM:<=${filters.maxDOM}`);
   }
   
   // Build search params
@@ -284,7 +290,9 @@ export async function searchListings(
   
   // Apply filter string
   if (filterParts.length > 0) {
-    searchParams.filter_by = filterParts.join(' && ');
+    const filterString = filterParts.join(' && ');
+    console.log('[Typesense] Filter string:', filterString);
+    searchParams.filter_by = filterString;
   }
   
   // Custom sort
@@ -316,7 +324,13 @@ export async function searchListings(
       facetDistribution: response.facet_distribution
     };
   } catch (error) {
+    // Log detailed error info
     console.error('[Typesense] Search error:', error);
+    if (error && typeof error === 'object' && 'httpBody' in error) {
+      const tsError = error as { httpBody?: string; httpStatus?: number };
+      console.error('[Typesense] HTTP Status:', tsError.httpStatus);
+      console.error('[Typesense] HTTP Body:', tsError.httpBody);
+    }
     throw error;
   }
 }
@@ -341,6 +355,9 @@ export async function searchListingsInBounds(
 
 /**
  * Get nearby listings using geopoint
+ * 
+ * Typesense expects radius in KM, not meters
+ * Format: location:=[lat, lng, radius_in_km]
  */
 export async function getNearbyListings(
   lat: number,
@@ -350,15 +367,14 @@ export async function getNearbyListings(
 ): Promise<SearchResult> {
   const client = getTypesenseClient();
   
-  // Typesense geopoint format: location:=[lat, lng, radius_in_m]
-  const radiusMeters = radiusKm * 1000;
-  
+  // Typesense geopoint format: location:=[lat, lng, radius_in_km]
+  // Note: Typesense expects radius in km, NOT meters!
   const searchParams: Record<string, unknown> = {
     q: options.query || '*',
     query_by: 'UnparsedAddress,City,PropertySubType',
     page: options.page || 1,
     per_page: options.perPage || 20,
-    filter_by: `location:=[${lat}, ${lng}, ${radiusMeters}]`,
+    filter_by: `location:=[${lat}, ${lng}, ${radiusKm}]`,
     sort_by: 'calculatedDOM:asc'
   };
   

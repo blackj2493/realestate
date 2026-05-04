@@ -4,12 +4,26 @@
  * Dual-write database orchestrator that routes transformed listings
  * to both Supabase (storage) and Typesense (search).
  * 
+ * Phase 4 Integration: Temporal Distress Engine for True DOM calculation
+ * - Batch generates property_hash for all listings
+ * - Single Supabase query for historical matches (1 query, group locally)
+ * - Computes true_dom and total_price_drop for investor filtering
+ * 
  * Run: npx tsx scripts/worker/sync.ts
  */
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { transformListing, TransformResult } from './transformer';
 import Typesense, { Client } from 'typesense';
+import { 
+  generatePropertyHash, 
+  calculateTrueDOM, 
+  processTemporalBatch,
+  groupHistoricalByHash,
+  TemporalMetrics,
+  HistoricalListing,
+  CurrentListingInput
+} from '@/lib/typesense/TemporalDistressEngine';
 
 // ============================================================================
 // Configuration
@@ -46,6 +60,55 @@ function getAdminClient(): Client {
 }
 
 // ============================================================================
+// Historical Listing Fetching (Phase 4 - Entity Resolution)
+// ============================================================================
+
+/**
+ * Fetches historical listings for a batch of property hashes.
+ * Implements the efficient batch pattern: 1 query, group locally.
+ * 
+ * @param supabaseClient - Service role client for Supabase
+ * @param propertyHashes - Array of property hashes to fetch
+ * @param excludeListingKeys - Listing keys to exclude (current listings)
+ * @returns Historical listings grouped by property_hash
+ */
+async function fetchHistoricalListings(
+  supabaseClient: any,
+  propertyHashes: string[],
+  excludeListingKeys: string[]
+): Promise<Map<string, HistoricalListing[]>> {
+  if (propertyHashes.length === 0) {
+    return new Map();
+  }
+
+  console.log(`   📚 Fetching historical listings for ${propertyHashes.length} properties...`);
+
+  // Single query for all historical matches
+  const { data, error } = await supabaseClient
+    .from('listings')
+    .select('listing_key, property_hash, full_payload, created_at')
+    .in('property_hash', propertyHashes)
+    .not('listing_key', 'in', `(${excludeListingKeys.map(k => `'${k}'`).join(',')})`);
+
+  if (error) {
+    console.warn(`   ⚠️  Historical fetch warning: ${error.message}`);
+    return new Map();
+  }
+
+  if (!data || data.length === 0) {
+    console.log(`   ℹ️  No historical listings found`);
+    return new Map();
+  }
+
+  console.log(`   📊 Found ${data.length} historical listing records`);
+  
+  // Group locally in memory
+  const grouped = groupHistoricalByHash(data);
+  
+  return grouped;
+}
+
+// ============================================================================
 // Sync Functions
 // ============================================================================
 
@@ -68,9 +131,12 @@ export interface SyncResult {
  * 
  * Steps:
  * 1. Transform each raw listing using transformListing()
- * 2. Separate results into supabaseBatch and typesenseBatch
- * 3. Write to Supabase (storage)
- * 4. Write to Typesense (search index)
+ * 2. Generate property_hash for all listings (Phase 4)
+ * 3. Fetch historical listings in single batch query (Phase 4)
+ * 4. Calculate True DOM and price drop for each listing (Phase 4)
+ * 5. Separate results into supabaseBatch and typesenseBatch
+ * 6. Write to Supabase (storage)
+ * 7. Write to Typesense (search index)
  */
 export async function processBatch(rawListings: any[]): Promise<SyncResult> {
   console.log(`\n📦 Processing batch of ${rawListings.length} listings...`);
@@ -84,16 +150,88 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
   // Step 1: Transform all listings
   const transformed = rawListings.map(raw => transformListing(raw));
   
-  // Step 2: Separate into batches
-  const supabaseRecords = transformed.map(t => t.supabasePayload);
-  const typesenseDocuments = transformed.map(t => t.typesensePayload);
+  // ─── Phase 4: Temporal Distress Engine ───────────────────────────────────
+  // Generate property hashes and fetch historical data in batch
+  const propertyHashes: string[] = [];
+  const listingKeyToTransform = new Map<string, TransformResult>();
+  
+  for (const t of transformed) {
+    const raw = t.supabasePayload.full_payload as any;
+    const hash = generatePropertyHash(raw);
+    propertyHashes.push(hash);
+    listingKeyToTransform.set(t.supabasePayload.listing_key, t);
+  }
+  
+  // Fetch historical listings (single query for all hashes)
+  const supabaseClient = getServiceRoleClient();
+  const listingKeys = transformed.map(t => t.supabasePayload.listing_key);
+  const historicalMap = await fetchHistoricalListings(
+    supabaseClient, 
+    [...new Set(propertyHashes)],
+    listingKeys
+  );
+  
+  // Calculate temporal metrics for each listing
+  const temporalMetrics = new Map<string, TemporalMetrics>();
+  
+  for (const t of transformed) {
+    const listingKey = t.supabasePayload.listing_key;
+    const raw = t.supabasePayload.full_payload as any;
+    const hash = generatePropertyHash(raw);
+    
+    // Get historical for this property
+    const history = historicalMap.get(hash) || [];
+    
+    // Prepare current listing input
+    const currentInput: CurrentListingInput = {
+      listingKey: listingKey,
+      propertyHash: hash,
+      listPrice: raw.ListPrice || 0,
+      originalEntryTimestamp: raw.OriginalEntryTimestamp || null
+    };
+    
+    // Calculate True DOM
+    const metrics = calculateTrueDOM(currentInput, history);
+    temporalMetrics.set(listingKey, metrics);
+    
+    // Add temporal data to full payload for Supabase storage
+    (t.supabasePayload.full_payload as any).property_hash = metrics.property_hash;
+    (t.supabasePayload.full_payload as any).true_dom = metrics.true_dom;
+    (t.supabasePayload.full_payload as any).total_price_drop = metrics.total_price_drop;
+  }
+  
+  console.log(`   ⏱️  Temporal metrics calculated for ${temporalMetrics.size} listings`);
+  
+  // Log stale inventory detection
+  const staleCount = [...temporalMetrics.values()].filter(m => m.is_stale).length;
+  if (staleCount > 0) {
+    console.log(`   🚨 Stale inventory detected: ${staleCount} listings`);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Step 3: Write to Supabase (storage)
+  // Step 5: Separate into batches
+  const supabaseRecords = transformed.map(t => ({
+    ...t.supabasePayload,
+    property_hash: temporalMetrics.get(t.supabasePayload.listing_key)?.property_hash || ''
+  }));
+  
+  // Build typesense documents with temporal metrics
+  const typesenseDocuments = transformed.map(t => {
+    const tsDoc = t.typesensePayload as any;
+    const metrics = temporalMetrics.get(t.supabasePayload.listing_key);
+    
+    return {
+      ...tsDoc,
+      property_hash: metrics?.property_hash || '',
+      true_dom: metrics?.true_dom || 0,
+      total_price_drop: metrics?.total_price_drop || 0
+    };
+  });
+
+  // Step 6: Write to Supabase (storage)
   console.log('💾 Writing to Supabase...');
   try {
-    const supabaseClient = getServiceRoleClient();
-    
-    // Batch upsert to Supabase
+    // Batch upsert to Supabase (with property_hash)
     const { data, error } = await supabaseClient
       .from('listings')
       .upsert(supabaseRecords, { onConflict: 'listing_key' })
@@ -115,15 +253,14 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     console.error('❌ Supabase error:', err.message);
   }
 
-  // Step 4: Write to Typesense (search index)
+  // Step 7: Write to Typesense (search index)
   console.log('🔍 Writing to Typesense...');
   try {
     const client = getAdminClient();
     
     // Use import endpoint with upsert action
-    // This is more efficient than individual upserts
     const importResponse = await client
-      .collections('listings')
+      .collections('properties') // Updated to use 'properties' collection
       .documents()
       .import(typesenseDocuments, { action: 'upsert' });
     
@@ -135,7 +272,6 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     let successCount = 0;
     let failCount = 0;
     
-    // Log detailed per-document errors
     const failedDocuments: string[] = [];
     
     for (const res of importResults) {
@@ -143,7 +279,6 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
         successCount++;
       } else {
         failCount++;
-        // Capture detailed error information
         if (res.error) {
           const errorDetail = res.document ? 
             `Document ${res.document}: ${res.error}` : 
@@ -159,7 +294,6 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     
     if (failCount > 0) {
       console.warn(`   ⚠️  Typesense: ${successCount} indexed, ${failCount} failed`);
-      // Log first few failures for debugging
       failedDocuments.slice(0, 5).forEach(err => {
         console.warn(`      📋 Error: ${err}`);
       });
@@ -240,10 +374,6 @@ export async function processInBatches(
 /**
  * Performs a delta sync - fetches only listings modified in the last N hours.
  * This is the primary sync mechanism for the ETL worker.
- * 
- * NOTE: This function is kept for backwards compatibility but delegates to the
- * ingester's runDeltaSync() for proper rate-limiting and state management.
- * Use: npx tsx scripts/worker/ingester.ts sync
  */
 export async function deltaSync(hoursAgo: number = 24): Promise<SyncResult> {
   console.log(`\n🔄 Starting Legacy Delta Sync (last ${hoursAgo} hours)...`);
@@ -251,19 +381,16 @@ export async function deltaSync(hoursAgo: number = 24): Promise<SyncResult> {
   console.log(`   The legacy method lacks rate-limiting and state management.\n`);
   
   try {
-    // Calculate cutoff timestamp
     const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
     const cutoffIso = cutoffTime.toISOString();
     
     console.log(`   Cutoff: ${cutoffIso}`);
     
-    // Fetch from Ampre RESO Web API using RESO_BEARER_TOKEN
     const BEARER_TOKEN = process.env.RESO_BEARER_TOKEN;
     if (!BEARER_TOKEN) {
       throw new Error('RESO_BEARER_TOKEN not configured');
     }
     
-    // CRITICAL: Use $top=100 per request (rate limit compliance)
     const response = await fetch(
       `https://query.ampre.ca/odata/Property?$filter=ModificationTimestamp ge ${cutoffIso}&$top=100&$count=true`,
       {
@@ -341,7 +468,10 @@ async function main() {
         Basement: ['None'],
         KitchensTotal: 1,
         TaxAnnualAmount: 3200,
-        ListOfficeName: 'Test Realty'
+        ListOfficeName: 'Test Realty',
+        StreetNumber: '12',
+        StreetName: 'King West',
+        UnitNumber: '1605'
       },
       {
         ListingKey: 'MLS_TEST_002',
@@ -360,7 +490,10 @@ async function main() {
         Basement: ['Unfinished'],
         KitchensTotal: 1,
         TaxAnnualAmount: 5800,
-        ListOfficeName: 'Estate Agents Inc'
+        ListOfficeName: 'Estate Agents Inc',
+        StreetNumber: '45',
+        StreetName: 'Main Street North',
+        UnitNumber: null
       }
     ];
     
@@ -374,6 +507,13 @@ Shadow MLS Sync Worker
 Usage:
   npx tsx scripts/worker/sync.ts delta [hours]   - Delta sync (default: 24 hours)
   npx tsx scripts/worker/sync.ts test             - Test with mock data
+
+Phase 4 Features:
+  - True DOM calculation (Shadow DOM) via entity resolution
+  - Batch property_hash generation for all listings
+  - Historical lookup with 45-day cooling-off threshold
+  - Stale inventory detection (>60 days True DOM)
+  - Total price drop calculation from first listing in chain
 
 Examples:
   npx tsx scripts/worker/sync.ts delta            # Sync last 24 hours

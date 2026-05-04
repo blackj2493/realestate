@@ -9,8 +9,26 @@
  * Run: npx tsx scripts/worker/reindex-from-vault.ts
  */
 
+// MUST set TLS env var BEFORE importing supabase client
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Typesense from 'typesense';
+import * as https from 'https';
+
+// Import cross-fetch
+import crossFetch from 'cross-fetch';
+
+// Patch global fetch with TLS disabled agent for Supabase client
+const agent = new https.Agent({ rejectUnauthorized: false });
+const patchedFetch: typeof fetch = (url, init) => {
+  return crossFetch(url, {
+    ...init,
+    // @ts-ignore - agent is not a standard option
+    agent
+  });
+};
+(global as unknown as { fetch: typeof fetch }).fetch = patchedFetch;
 
 // ============================================================================
 // Configuration
@@ -29,6 +47,11 @@ const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY || 'B6u0qIHDNhXZ
 if (!SUPABASE_SERVICE_ROLE_KEY) {
   console.error('❌ SUPABASE_SERVICE_ROLE_KEY not set - cannot proceed without admin access to vault');
   process.exit(1);
+}
+
+// Warn about TLS setting if needed
+if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
+  console.log('⚠️  TLS certificate verification disabled (corporate proxy mode)');
 }
 
 // ============================================================================

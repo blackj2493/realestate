@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, use } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -14,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
-import { searchListings, type ListingDocument, type SearchResult, type SearchFilters } from "@/lib/typesense/client";
+import { type ListingDocument, type SearchResult, type SearchFilters } from "@/lib/typesense/client";
 import CommandCenterSidebar, { type PersonaType, type InvestorFilters, type ValueAddFilters } from "@/components/Sidebar/CommandCenterSidebar";
 import TerminalMap from "@/components/Map/TerminalMap";
 
@@ -42,6 +43,11 @@ interface PropertyForMap {
  * Maps Typesense ListingDocument to MapView Property format
  */
 function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
+  // Use Latitude/Longitude from API response (looked up from postal codes)
+  // Fall back to Typesense location only if not available
+  const lat = doc.Latitude ?? doc.location?.[0] ?? 43.6532;
+  const lng = doc.Longitude ?? doc.location?.[1] ?? -79.3832;
+  
   return {
     ListingKey: doc.id,
     ListPrice: doc.ListPrice,
@@ -53,21 +59,32 @@ function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
     BuildingAreaTotal: doc.BuildingAreaTotal,
     DaysOnMarket: doc.calculatedDOM,
     photoUrl: doc.thumbnailUrl || null,
-    // Typesense location is [lat, lng], MapView expects Lat/Lng separate
-    Latitude: doc.location[0],
-    Longitude: doc.location[1],
+    Latitude: lat,
+    Longitude: lng,
     ListOfficeName: doc.ListOfficeName,
   };
 }
 
 function PropertiesPageContent() {
+  // Get URL search params (Brampton, Toronto, etc.)
+  const searchParams = useSearchParams();
+  
   // ========== FILTER STATES ==========
   
-  // Transaction Type
-  const [intent, setIntent] = useState<"buy" | "rent">("buy");
+  // Transaction Type - read from URL
+  const [intent, setIntent] = useState<"buy" | "rent">(searchParams.get("type") === "rent" ? "rent" : "buy");
   
-  // Location
-  const [location, setLocation] = useState("");
+  // Location - read from URL search param
+  const [location, setLocation] = useState(searchParams.get("search") || searchParams.get("city") || "");
+  
+  // Sync location state with URL when it changes
+  useEffect(() => {
+    const searchCity = searchParams.get("search") || searchParams.get("city") || "";
+    if (searchCity !== location) {
+      console.log('[PropertiesPage] URL param changed:', searchCity);
+      setLocation(searchCity);
+    }
+  }, [searchParams, location]);
   
   // API state - Typesense results
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
@@ -102,37 +119,87 @@ function PropertiesPageContent() {
     setError(null);
     
     try {
-      // Build filters object
-      const filterObj: Record<string, unknown> = {
-        transactionType: intent === "buy" ? "For Sale" : "For Lease",
-        ...filters,
-      };
-
-      const result = await searchListings({
-        query: location || '*',
-        filters: filterObj as SearchFilters,
-        page: 1,
-        perPage: 200,
+      // Build query params
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '200',
+        type: intent === "buy" ? "buy" : "rent",
+        listingType: 'residential',
       });
+      
+      // Add location if set
+      if (location) {
+        params.set('city', location);
+      }
+      
+      // Add filters from Command Center
+      if (filters) {
+        if (filters.minPrice) params.set('minPrice', filters.minPrice.toString());
+        if (filters.maxPrice) params.set('maxPrice', filters.maxPrice.toString());
+        if (filters.minBedrooms) params.set('BedroomsAboveGrade', filters.minBedrooms.toString());
+        if (filters.minBathrooms) params.set('BathroomsTotalInteger', filters.minBathrooms.toString());
+        if (filters.maxTaxes) params.set('MaxAnnualTaxes', filters.maxTaxes.toString());
+        if (filters.maxDOM) params.set('MinDaysOnMarket', (365 - filters.maxDOM).toString());
+        if (filters.city) params.set('city', filters.city);
+      }
+      
+      const url = `/api/properties/listings?${params.toString()}`;
+      console.log('[PropertiesPage] Fetching:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || `API error ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform API response to SearchResult format
+      const result: SearchResult = {
+        listings: data.listings.map((p: any) => ({
+          id: p.ListingKey,
+          ListPrice: p.ListPrice,
+          UnparsedAddress: p.UnparsedAddress,
+          City: p.City,
+          PropertyType: p.PropertyType,
+          PropertySubType: p.PropertySubType,
+          BedroomsTotal: p.BedroomsTotal,
+          BathroomsTotalInteger: p.BathroomsTotalInteger,
+          BuildingAreaTotal: p.BuildingAreaTotal,
+          calculatedDOM: p.DaysOnMarket,
+          thumbnailUrl: p.photoUrl,
+          ListOfficeName: p.ListOfficeName,
+          location: p.Latitude && p.Longitude ? [p.Latitude, p.Longitude] : [43.6532, -79.3832] as [number, number],
+          isDistressed: false,
+          hasSecondarySuitePotential: false,
+        })),
+        totalFound: data.pagination?.total || data.listings.length,
+        page: data.pagination?.page || 1,
+        perPage: data.pagination?.limit || 200,
+        processingTimeMs: 0,
+      };
       
       setSearchResult(result);
       setTotalCount(result.totalFound);
       
-      console.log(`[Typesense] Found ${result.totalFound} listings in ${result.processingTimeMs}ms`);
+      console.log(`[PropertiesPage] Found ${result.totalFound} listings`);
     } catch (err) {
-      console.error("Typesense search error:", err);
-      setError("Search service temporarily unavailable. Please try again.");
+      console.error("[PropertiesPage] Search error:", err);
+      setError(err instanceof Error ? err.message : "Search service temporarily unavailable. Please try again.");
       setSearchResult(null);
     } finally {
       setIsLoading(false);
     }
   }, [location, intent]);
 
-  // Initial search on mount
+  // Re-search when location changes from URL
   useEffect(() => {
+    console.log('[PropertiesPage] Location/intent changed - re-searching');
+    console.log('[PropertiesPage] intent:', intent, 'location:', location);
     performSearch();
-  }, [performSearch]);
-
+  }, [location, intent, performSearch]);
+  
   // Handle Command Center sidebar filter changes
   const handleCommandCenterFilters = useCallback((
     _persona: PersonaType,

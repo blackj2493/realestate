@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><title>Debug Test</title></head>
+<body>
+<h1>Testing Typesense from Browser</h1>
+<button onclick="testSearch()">Test Search</button>
+<pre id="output"></pre>
+<script src="https://cdn.jsdelivr.net/npm/typesense@27.1.0/lib/typesense.min.js"></script>
+<script>
+const output = document.getElementById('output');
+const Typesense = window.Typesense;
+
+const client = new Typesense.Client({
+  nodes: [{
+    host: '9uyapwh6e5qmvl34p-1.a1.typesense.net',
+    port: 443,
+    protocol: 'https'
+  }],
+  apiKey: 'BzXkIss7SXH0U1Hb0a1COwdvEACxbhkj',
+  connectionTimeoutSeconds: 5
+});
+
+async function testSearch() {
+  output.textContent = 'Testing...';
+  try {
+    const response = await client.collections('listings').documents().search({
+      q: '*',
+      filter_by: 'TransactionType:For Sale',
+      per_page: 5
+    });
+    output.textContent = JSON.stringify({
+      found: response.found,
+      hits: response.hits?.length,
+      firstDoc: response.hits?.[0]?.document
+    }, null, 2);
+  } catch (err) {
+    output.textContent = 'Error: ' + err.message;
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Cline Rules
+
+## Core Directives
+
+### Task Memory Protocol
+**Strict:** Before starting any task, read MEMORY.md. Upon completing a task, append a bulleted summary of architectural decisions, database changes, and rule updates to MEMORY.md.
+
+## Implementation Protocol
+
+**Never write production code immediately.**
+
+Follow this sequence for every implementation:
+
+1. **Draft** - Write a step-by-step implementation plan
+2. **Test** - Write tests for the planned logic first
+3. **Execute** - Implement the code
+4. **Review** - Verify implementation against the initial spec
+
+## SOP Reference
+
+When repeatedly asked to perform a specific formatting task or data pipeline operation, a markdown file containing the exact SOP (Standard Operating Procedure) for that task should be created and stored in `/docs`. 
+
+Example: "Execute the task according to /docs/data_pipeline_sop.md."

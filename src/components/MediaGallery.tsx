@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ImageIcon } from "lucide-react";
 
 interface MediaItem {
   MediaURL: string;
@@ -15,20 +15,33 @@ interface MediaGalleryProps {
   media: MediaItem[];
 }
 
+// Fallback placeholder image
+const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200";
+
 export default function MediaGallery({ media }: MediaGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+
+  const handleImageError = (url: string) => {
+    setFailedUrls(prev => new Set(prev).add(url));
+  };
 
   // Enhanced deduplication logic - filter for photos only and remove duplicates
+  // Also filter out URLs that have failed to load
   const uniqueMedia = useMemo(() => {
     const uniqueUrls = new Map();
     
-    // First filter for photos only, then deduplicate
     return media
       .filter(item => item.MediaCategory === "Photo" || !item.MediaCategory)
       .filter(item => {
         // Clean the URL by removing any query parameters or trailing spaces
         const cleanUrl = item.MediaURL.split("?")[0].trim();
+        
+        // Skip if this URL has failed to load
+        if (failedUrls.has(cleanUrl)) {
+          return false;
+        }
         
         if (!uniqueUrls.has(cleanUrl)) {
           uniqueUrls.set(cleanUrl, true);
@@ -36,7 +49,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
         }
         return false;
       });
-  }, [media]);
+  }, [media, failedUrls]);
 
   const handlePrevious = () => {
     setSelectedIndex((prev) => (prev === 0 ? uniqueMedia.length - 1 : prev - 1));
@@ -46,10 +59,11 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
     setSelectedIndex((prev) => (prev === uniqueMedia.length - 1 ? 0 : prev + 1));
   };
 
-  // If no media or all duplicates, show placeholder
+  // If no media or all duplicates/failed, show placeholder
   if (!uniqueMedia.length) {
     return (
-      <div className="h-[600px] bg-gray-100 flex items-center justify-center rounded-lg">
+      <div className="h-[600px] bg-gray-100 flex flex-col items-center justify-center rounded-lg">
+        <ImageIcon className="h-16 w-16 text-gray-400 mb-4" />
         <p className="text-muted-foreground">No images available</p>
       </div>
     );
@@ -61,7 +75,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
       <div className="relative grid grid-cols-4 grid-rows-2 gap-2 h-[600px] mb-8 rounded-lg overflow-hidden">
         {/* Main Large Image - takes 2x2 space */}
         <div 
-          className="col-span-2 row-span-2 relative cursor-pointer"
+          className="col-span-2 row-span-2 relative cursor-pointer bg-gray-100"
           onClick={() => {
             setSelectedIndex(0);
             setShowLightbox(true);
@@ -71,6 +85,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
             src={uniqueMedia[0]?.MediaURL}
             alt={uniqueMedia[0]?.ShortDescription || "Main property photo"}
             className="w-full h-full object-cover"
+            onError={() => handleImageError(uniqueMedia[0]?.MediaURL)}
           />
         </div>
 
@@ -78,7 +93,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
         {uniqueMedia.slice(1, 5).map((item, index) => (
           <div
             key={item.MediaKey || item.MediaURL}
-            className="relative cursor-pointer"
+            className="relative cursor-pointer bg-gray-100"
             onClick={() => {
               setSelectedIndex(index + 1);
               setShowLightbox(true);
@@ -88,6 +103,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
               src={item.MediaURL}
               alt={item.ShortDescription || `Property photo ${index + 2}`}
               className="w-full h-full object-cover"
+              onError={() => handleImageError(item.MediaURL)}
             />
           </div>
         ))}
@@ -132,6 +148,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
                     src={item.MediaURL}
                     alt={item.ShortDescription || `Property photo ${index + 1}`}
                     className="w-full h-full object-cover"
+                    onError={() => handleImageError(item.MediaURL)}
                   />
                 </div>
               ))}
@@ -140,25 +157,37 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
 
           {/* Main Image */}
           <div className="flex-1 relative flex items-center justify-center p-4">
-            <img
-              src={uniqueMedia[selectedIndex]?.MediaURL}
-              alt={uniqueMedia[selectedIndex]?.ShortDescription || "Property photo"}
-              className="max-h-full max-w-full object-contain"
-            />
+            {uniqueMedia[selectedIndex]?.MediaURL ? (
+              <img
+                src={uniqueMedia[selectedIndex]?.MediaURL}
+                alt={uniqueMedia[selectedIndex]?.ShortDescription || "Property photo"}
+                className="max-h-full max-w-full object-contain"
+                onError={() => handleImageError(uniqueMedia[selectedIndex]?.MediaURL)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-white">
+                <ImageIcon className="h-16 w-16 mb-4" />
+                <p>Image not available</p>
+              </div>
+            )}
 
             {/* Navigation Buttons */}
-            <button
-              onClick={handlePrevious}
-              className="absolute left-4 text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-4 text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
+            {uniqueMedia.length > 1 && (
+              <>
+                <button
+                  onClick={handlePrevious}
+                  className="absolute left-4 text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="absolute right-4 text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              </>
+            )}
 
             {/* Image Counter */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white bg-black/50 px-3 py-1 rounded-full">

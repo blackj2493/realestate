@@ -26,8 +26,21 @@ export function loadPostalCodes(): void {
   console.log('[PostalCodes] Loading postal codes into memory...');
   const start = Date.now();
 
+  // Handle both direct array and wrapped { value: [...] } structure
+  const rawData = postalCodesData as unknown;
+  let postalCodeEntries: PostalCodeEntry[] = [];
+  
+  if (Array.isArray(rawData)) {
+    // Direct array format
+    postalCodeEntries = rawData as PostalCodeEntry[];
+  } else if (rawData && typeof rawData === 'object' && 'value' in (rawData as object)) {
+    // Wrapped format { value: [...] }
+    const wrapped = rawData as { value: PostalCodeEntry[] };
+    postalCodeEntries = wrapped.value || [];
+  }
+  
   // Load full postal codes
-  (postalCodesData as PostalCodeEntry[]).forEach((entry) => {
+  postalCodeEntries.forEach((entry) => {
     postalCodeMap.set(entry.postalCode, { lat: entry.lat, lng: entry.lng });
   });
 

@@ -53,14 +53,14 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-// Dark heatmap-style color range (low density → high density)
-// Dark blue → Purple → Magenta → Bright Cyan → Neon Green
+// High-contrast color scheme for dark background
+// Bottom = dim, Top = bright (visible against dark)
 const COLOR_RANGE: [number, number, number][] = [
-  [26, 26, 46],     // #1a1a2e - dark navy
-  [15, 52, 96],     // #0f3460 - deep blue
-  [147, 52, 96],    // #e94560 - magenta/red
-  [0, 215, 175],    // #00d7af - cyan
-  [0, 255, 136],    // #00ff88 - neon green
+  [40, 40, 60],     // Dim purple-gray (barely visible)
+  [80, 60, 120],    // Dim purple
+  [139, 92, 246],   // Violet (bright, visible)
+  [34, 197, 94],    // Emerald green (bright)
+  [251, 191, 36],   // Amber (very bright)
 ];
 
 export default function TerminalMap({ properties, className = "" }: TerminalMapProps) {
@@ -72,8 +72,16 @@ export default function TerminalMap({ properties, className = "" }: TerminalMapP
   // Data Transformation: Filter & Format for Deck.gl
   // ============================================================================
   
+  // DEBUG: Log incoming properties
+  console.log('[TerminalMap] Received properties:', properties?.length || 0);
+  
   const mapData = useMemo<MapDataPoint[]>(() => {
-    if (!properties || properties.length === 0) return [];
+    if (!properties || properties.length === 0) {
+      console.log('[TerminalMap] No properties or empty - returning empty array');
+      return [];
+    }
+    
+    console.log('[TerminalMap] First property location:', properties[0]?.location);
     
     // CRITICAL: Filter properties with valid numerical latitude/longitude
     // Silently drop properties without valid coordinates to prevent Deck.gl crashes
@@ -179,8 +187,13 @@ export default function TerminalMap({ properties, className = "" }: TerminalMapP
     );
   }
 
+  // DEBUG: Log map render state
+  console.log('[TerminalMap] Render - mapData count:', mapData.length);
+  console.log('[TerminalMap] Render - layers count:', layers.length);
+  console.log('[TerminalMap] Render - viewState:', JSON.stringify(viewState));
+  
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`}>
+    <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ minHeight: '500px', height: '100%' }}>
       <DeckGL
         viewState={viewState}
         onViewStateChange={handleViewStateChange}
@@ -200,12 +213,12 @@ export default function TerminalMap({ properties, className = "" }: TerminalMapP
       <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700 shadow-xl z-10">
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-[#1a1a2e]" />
+            <div className="w-3 h-3 rounded-sm bg-[#282840]" />
             <span className="text-slate-400">Low</span>
           </div>
-          <div className="w-20 h-1 rounded-full bg-gradient-to-r from-[#0f3460] via-[#e94560] to-[#00ff88]" />
+          <div className="w-20 h-1 rounded-full bg-gradient-to-r from-[#282840] from-10% via-[#8b5cf6] via-50% to-[#34d399] to-90%" />
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-[#00ff88]" />
+            <div className="w-3 h-3 rounded-sm bg-[#34d399]" />
             <span className="text-slate-400">High</span>
           </div>
         </div>

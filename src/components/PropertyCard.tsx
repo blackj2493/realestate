@@ -57,9 +57,9 @@ export function PropertyCard({
   const [isSaved, setIsSaved] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Use placeholder image if no photo available
+  // Use placeholder image if no photo or if image failed to load
   const placeholderImage = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800";
-  const imageUrl = property.photoUrl || placeholderImage;
+  const imageUrl = imageError || !property.photoUrl ? placeholderImage : property.photoUrl;
 
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
