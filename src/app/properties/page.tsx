@@ -11,16 +11,24 @@ import {
   Heart,
   Loader2,
   Map,
+  TrendingUp,
+  Home,
+  Hammer,
+  DollarSign,
+  Percent,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { formatPrice, cn } from "@/lib/utils";
 import { type ListingDocument, type SearchResult, type SearchFilters } from "@/lib/typesense/client";
-import CommandCenterSidebar, { type PersonaType, type InvestorFilters, type ValueAddFilters } from "@/components/Sidebar/CommandCenterSidebar";
 import TerminalMap from "@/components/Map/TerminalMap";
 
 // ============================================================================
-// Typesense Data Mapping
+// Types
 // ============================================================================
 
 interface PropertyForMap {
@@ -39,12 +47,13 @@ interface PropertyForMap {
   ListOfficeName?: string;
 }
 
-/**
- * Maps Typesense ListingDocument to MapView Property format
- */
+type PersonaType = "primary" | "yield" | "value-add";
+
+// ============================================================================
+// Data Mapping
+// ============================================================================
+
 function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
-  // Use Latitude/Longitude from API response (looked up from postal codes)
-  // Fall back to Typesense location only if not available
   const lat = doc.Latitude ?? doc.location?.[0] ?? 43.6532;
   const lng = doc.Longitude ?? doc.location?.[1] ?? -79.3832;
   
@@ -65,33 +74,347 @@ function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
   };
 }
 
+// ============================================================================
+// Developer Persona Filter Bar Component
+// ============================================================================
+
+interface DeveloperFilters {
+  minPrice: number;
+  maxPrice: number;
+  minYield: number;
+  minBedrooms: number;
+  maxDOM: number;
+  hasSuitePotential: boolean;
+  isDistressed: boolean;
+  minLotWidth: number;
+  minLotDepth: number;
+}
+
+const PERSONAS = [
+  { id: "primary" as const, label: "Primary", icon: Home },
+  { id: "yield" as const, label: "Yield", icon: TrendingUp },
+  { id: "value-add" as const, label: "Value-Add", icon: Hammer },
+];
+
+function DeveloperFilterBar({ 
+  activePersona, 
+  onPersonaChange,
+  filters,
+  onFiltersChange
+}: {
+  activePersona: PersonaType;
+  onPersonaChange: (p: PersonaType) => void;
+  filters: DeveloperFilters;
+  onFiltersChange: (f: DeveloperFilters) => void;
+}) {
+  return (
+    <div className="bg-slate-900 border-b border-slate-800 px-4 py-3">
+      <div className="flex items-center gap-6">
+        {/* Persona Switcher */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-medium">MODE:</span>
+          <div className="flex bg-slate-800 rounded-lg p-0.5">
+            {PERSONAS.map((persona) => {
+              const Icon = persona.icon;
+              return (
+                <button
+                  key={persona.id}
+                  onClick={() => onPersonaChange(persona.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                    activePersona === persona.id
+                      ? "bg-emerald-600 text-white"
+                      : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {persona.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="h-6 w-px bg-slate-700" />
+
+        {/* Price Range */}
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-slate-400" />
+          <span className="text-xs text-slate-500">Price:</span>
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              value={filters.minPrice}
+              onChange={(e) => onFiltersChange({ ...filters, minPrice: parseInt(e.target.value) || 0 })}
+              className="w-24 h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+              placeholder="Min"
+            />
+            <span className="text-slate-600">—</span>
+            <Input
+              type="number"
+              value={filters.maxPrice}
+              onChange={(e) => onFiltersChange({ ...filters, maxPrice: parseInt(e.target.value) || 5000000 })}
+              className="w-24 h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+              placeholder="Max"
+            />
+          </div>
+        </div>
+
+        {/* Yield (for Yield Investor mode) */}
+        {activePersona === "yield" && (
+          <>
+            <div className="h-6 w-px bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <Percent className="h-4 w-4 text-slate-400" />
+              <span className="text-xs text-slate-500">Min Yield:</span>
+              <div className="w-32">
+                <Slider
+                  value={[filters.minYield]}
+                  onValueChange={([v]) => onFiltersChange({ ...filters, minYield: v })}
+                  min={0}
+                  max={15}
+                  step={0.5}
+                  className="w-full"
+                />
+              </div>
+              <span className="text-xs font-mono text-emerald-400 w-10">{filters.minYield}%</span>
+            </div>
+          </>
+        )}
+
+        {/* Bedrooms (for all modes) */}
+        <div className="h-6 w-px bg-slate-700" />
+        <div className="flex items-center gap-2">
+          <Bed className="h-4 w-4 text-slate-400" />
+          <span className="text-xs text-slate-500">Beds:</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onFiltersChange({ ...filters, minBedrooms: Math.max(0, filters.minBedrooms - 1) })}
+              className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-400"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            <span className="w-8 text-center text-xs font-mono text-slate-200">{filters.minBedrooms}+</span>
+            <button
+              onClick={() => onFiltersChange({ ...filters, minBedrooms: Math.min(10, filters.minBedrooms + 1) })}
+              className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-400"
+            >
+              <ChevronUp className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Days on Market */}
+        <div className="h-6 w-px bg-slate-700" />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">Max DOM:</span>
+          <Input
+            type="number"
+            value={filters.maxDOM}
+            onChange={(e) => onFiltersChange({ ...filters, maxDOM: parseInt(e.target.value) || 365 })}
+            className="w-20 h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+          />
+        </div>
+
+        {/* Toggles */}
+        {activePersona === "yield" && (
+          <>
+            <div className="h-6 w-px bg-slate-700" />
+            <button
+              onClick={() => onFiltersChange({ ...filters, hasSuitePotential: !filters.hasSuitePotential })}
+              className={cn(
+                "px-2 py-1 rounded text-xs font-medium border transition-all",
+                filters.hasSuitePotential
+                  ? "bg-emerald-900/30 border-emerald-700 text-emerald-300"
+                  : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              Suite Potential
+            </button>
+            <button
+              onClick={() => onFiltersChange({ ...filters, isDistressed: !filters.isDistressed })}
+              className={cn(
+                "px-2 py-1 rounded text-xs font-medium border transition-all",
+                filters.isDistressed
+                  ? "bg-amber-900/30 border-amber-700 text-amber-300"
+                  : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              Distressed
+            </button>
+          </>
+        )}
+
+        {/* Value-Add specific filters */}
+        {activePersona === "value-add" && (
+          <>
+            <div className="h-6 w-px bg-slate-700" />
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-slate-500">Lot:</span>
+              <Input
+                type="number"
+                value={filters.minLotWidth}
+                onChange={(e) => onFiltersChange({ ...filters, minLotWidth: parseInt(e.target.value) || 0 })}
+                className="w-16 h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+                placeholder="Width"
+              />
+              <span className="text-slate-600">×</span>
+              <Input
+                type="number"
+                value={filters.minLotDepth}
+                onChange={(e) => onFiltersChange({ ...filters, minLotDepth: parseInt(e.target.value) || 0 })}
+                className="w-16 h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+                placeholder="Depth"
+              />
+              <span className="text-xs text-slate-500">ft</span>
+            </div>
+          </>
+        )}
+
+        {/* Reset Button */}
+        <div className="ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-slate-500 hover:text-slate-300"
+            onClick={() => onFiltersChange({
+              minPrice: 0,
+              maxPrice: 5000000,
+              minYield: 0,
+              minBedrooms: 0,
+              maxDOM: 365,
+              hasSuitePotential: false,
+              isDistressed: false,
+              minLotWidth: 0,
+              minLotDepth: 0,
+            })}
+          >
+            Reset
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Property List Item Component
+// ============================================================================
+
+function PropertyListItem({ property }: { property: PropertyForMap }) {
+  const [isSaved, setIsSaved] = useState(false);
+  
+  const placeholderImage = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400";
+  const photoUrl = property.photoUrl || placeholderImage;
+  
+  return (
+    <Link href={`/properties/${property.ListingKey}`}>
+      <Card className="group bg-slate-800/50 border-slate-700/50 overflow-hidden hover:bg-slate-800 hover:border-emerald-600/50 transition-all cursor-pointer mb-2">
+        <div className="flex">
+          {/* Thumbnail */}
+          <div className="relative w-32 h-24 shrink-0">
+            <Image
+              src={photoUrl}
+              alt={property.UnparsedAddress}
+              fill
+              className="object-cover"
+            />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsSaved(!isSaved);
+              }}
+              className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/70 hover:bg-slate-900"
+            >
+              <Heart className={cn(
+                "h-3 w-3",
+                isSaved ? "fill-red-500 text-red-500" : "text-slate-400"
+              )} />
+            </button>
+          </div>
+          
+          {/* Content */}
+          <CardContent className="p-2 flex-1 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-base font-bold text-emerald-400 font-mono">
+                  {formatPrice(property.ListPrice)}
+                </div>
+                <p className="text-xs text-slate-300 line-clamp-1">
+                  {property.UnparsedAddress}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wide">
+                  {property.PropertyType}
+                </div>
+                {property.DaysOnMarket && (
+                  <div className="text-[10px] text-amber-500 font-mono mt-0.5">
+                    {property.DaysOnMarket}d
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <span className="flex items-center gap-0.5">
+                  <Bed className="h-3 w-3" />
+                  <span className="font-mono">{property.BedroomsTotal}</span>
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <Bath className="h-3 w-3" />
+                  <span className="font-mono">{property.BathroomsTotalInteger}</span>
+                </span>
+                {property.BuildingAreaTotal && (
+                  <span className="flex items-center gap-0.5">
+                    <Square className="h-3 w-3" />
+                    <span className="font-mono">{property.BuildingAreaTotal.toLocaleString()}</span>
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-500">{property.City}</span>
+            </div>
+          </CardContent>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+// ============================================================================
+// Main Properties Page
+// ============================================================================
+
 function PropertiesPageContent() {
-  // Get URL search params (Brampton, Toronto, etc.)
   const searchParams = useSearchParams();
   
-  // ========== FILTER STATES ==========
+  // ========== STATES ==========
   
-  // Transaction Type - read from URL
   const [intent, setIntent] = useState<"buy" | "rent">(searchParams.get("type") === "rent" ? "rent" : "buy");
-  
-  // Location - read from URL search param
   const [location, setLocation] = useState(searchParams.get("search") || searchParams.get("city") || "");
   
-  // Sync location state with URL when it changes
-  useEffect(() => {
-    const searchCity = searchParams.get("search") || searchParams.get("city") || "";
-    if (searchCity !== location) {
-      console.log('[PropertiesPage] URL param changed:', searchCity);
-      setLocation(searchCity);
-    }
-  }, [searchParams, location]);
-  
-  // API state - Typesense results
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   
+  // Developer persona state
+  const [activePersona, setActivePersona] = useState<PersonaType>("yield");
+  
+  const [developerFilters, setDeveloperFilters] = useState<DeveloperFilters>({
+    minPrice: 0,
+    maxPrice: 5000000,
+    minYield: 0,
+    minBedrooms: 0,
+    maxDOM: 365,
+    hasSuitePotential: false,
+    isDistressed: false,
+    minLotWidth: 0,
+    minLotDepth: 0,
+  });
+
   // Map bounds state
   const [mapBounds, setMapBounds] = useState<{
     north: number;
@@ -103,10 +426,6 @@ function PropertiesPageContent() {
   // Convert properties to map-compatible format
   const properties = searchResult?.listings.map(mapTypesenseToProperty) || [];
 
-  const toggleSave = (id: string) => {
-    // Save functionality placeholder
-  };
-
   // Handle map bounds change
   const handleBoundsChange = useCallback((bounds: { north: number; south: number; east: number; west: number }) => {
     setMapBounds(bounds);
@@ -114,12 +433,11 @@ function PropertiesPageContent() {
 
   // ========== TYPESENSE SEARCH ==========
 
-  const performSearch = useCallback(async (filters?: SearchFilters) => {
+  const performSearch = useCallback(async (filters?: DeveloperFilters) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Build query params
       const params = new URLSearchParams({
         page: '1',
         limit: '200',
@@ -127,20 +445,15 @@ function PropertiesPageContent() {
         listingType: 'residential',
       });
       
-      // Add location if set
       if (location) {
         params.set('city', location);
       }
       
-      // Add filters from Command Center
       if (filters) {
-        if (filters.minPrice) params.set('minPrice', filters.minPrice.toString());
-        if (filters.maxPrice) params.set('maxPrice', filters.maxPrice.toString());
-        if (filters.minBedrooms) params.set('BedroomsAboveGrade', filters.minBedrooms.toString());
-        if (filters.minBathrooms) params.set('BathroomsTotalInteger', filters.minBathrooms.toString());
-        if (filters.maxTaxes) params.set('MaxAnnualTaxes', filters.maxTaxes.toString());
-        if (filters.maxDOM) params.set('MinDaysOnMarket', (365 - filters.maxDOM).toString());
-        if (filters.city) params.set('city', filters.city);
+        if (filters.minPrice > 0) params.set('minPrice', filters.minPrice.toString());
+        if (filters.maxPrice < 5000000) params.set('maxPrice', filters.maxPrice.toString());
+        if (filters.minBedrooms > 0) params.set('BedroomsAboveGrade', filters.minBedrooms.toString());
+        if (filters.maxDOM < 365) params.set('MinDaysOnMarket', (365 - filters.maxDOM).toString());
       }
       
       const url = `/api/properties/listings?${params.toString()}`;
@@ -155,7 +468,6 @@ function PropertiesPageContent() {
       
       const data = await response.json();
       
-      // Transform API response to SearchResult format
       const result: SearchResult = {
         listings: data.listings.map((p: any) => ({
           id: p.ListingKey,
@@ -186,51 +498,27 @@ function PropertiesPageContent() {
       console.log(`[PropertiesPage] Found ${result.totalFound} listings`);
     } catch (err) {
       console.error("[PropertiesPage] Search error:", err);
-      setError(err instanceof Error ? err.message : "Search service temporarily unavailable. Please try again.");
+      setError(err instanceof Error ? err.message : "Search service temporarily unavailable.");
       setSearchResult(null);
     } finally {
       setIsLoading(false);
     }
   }, [location, intent]);
 
-  // Re-search when location changes from URL
+  // Initial search
   useEffect(() => {
     console.log('[PropertiesPage] Location/intent changed - re-searching');
-    console.log('[PropertiesPage] intent:', intent, 'location:', location);
-    performSearch();
+    performSearch(developerFilters);
   }, [location, intent, performSearch]);
-  
-  // Handle Command Center sidebar filter changes
-  const handleCommandCenterFilters = useCallback((
-    _persona: PersonaType,
-    investorFilters: InvestorFilters,
-    valueAddFilters: ValueAddFilters
-  ) => {
-    // Build search filters from Command Center
-    const filters: SearchFilters = {};
 
-    // Yield Investor filters
-    if (investorFilters.minPrice > 0) filters.minPrice = investorFilters.minPrice;
-    if (investorFilters.maxPrice < 5000000) filters.maxPrice = investorFilters.maxPrice;
-    if (investorFilters.minYield > 0) filters.minTargetGrossYield = investorFilters.minYield;
-    if (investorFilters.minYield > 0) filters.maxTargetGrossYield = investorFilters.maxYield;
-    if (investorFilters.hasSuitePotential) filters.hasSecondarySuitePotential = true;
-    if (investorFilters.isDistressed) filters.isDistressed = true;
-    if (investorFilters.minBedrooms > 0) filters.minBedrooms = investorFilters.minBedrooms;
-    if (investorFilters.maxBedrooms < 10) filters.maxBedrooms = investorFilters.maxBedrooms;
-
-    // Value-Add / Developer filters (applied together with yield filters for flexibility)
-    if (valueAddFilters.minLotWidth > 0) filters.minLotWidth = valueAddFilters.minLotWidth;
-    if (valueAddFilters.maxLotWidth < 200) filters.maxLotWidth = valueAddFilters.maxLotWidth;
-    if (valueAddFilters.minLotDepth > 0) filters.minLotDepth = valueAddFilters.minLotDepth;
-    if (valueAddFilters.maxLotDepth < 500) filters.maxLotDepth = valueAddFilters.maxLotDepth;
-    if (valueAddFilters.hasUnfinishedBasement) filters.hasUnfinishedBasement = true;
-    if (valueAddFilters.hasDetachedGarage) filters.hasDetachedGarage = true;
-    if (valueAddFilters.minDOM > 0) filters.minDOM = valueAddFilters.minDOM;
-    if (valueAddFilters.maxDOM < 365) filters.maxDOM = valueAddFilters.maxDOM;
-
-    // Trigger search with new filters (debounce happens in sidebar)
-    performSearch(filters);
+  // Handle filter changes with debounce
+  const handleDeveloperFiltersChange = useCallback((newFilters: DeveloperFilters) => {
+    setDeveloperFilters(newFilters);
+    // Debounce search
+    const timer = setTimeout(() => {
+      performSearch(newFilters);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [performSearch]);
 
   return (
@@ -238,14 +526,14 @@ function PropertiesPageContent() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-slate-900/95 backdrop-blur">
         <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-14 items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">PP</span>
+              <div className="h-7 w-7 rounded-lg bg-emerald-600 flex items-center justify-center">
+                <span className="text-white font-bold text-xs">PP</span>
               </div>
-              <span className="text-xl font-bold text-slate-100">PureProperty</span>
+              <span className="text-lg font-bold text-slate-100">PureProperty</span>
             </Link>
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-4">
               <Link href="/properties" className="text-sm font-medium text-emerald-400">
                 Buy
               </Link>
@@ -253,151 +541,78 @@ function PropertiesPageContent() {
                 Rent
               </Link>
               <Link href="/analytics" className="text-sm font-medium text-slate-400 hover:text-slate-200">
-                Market Analytics
+                Analytics
               </Link>
             </nav>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button variant="ghost" className="text-slate-300">Sign In</Button>
+                <Button variant="ghost" size="sm" className="text-slate-300">Sign In</Button>
               </Link>
               <Link href="/register">
-                <Button className="bg-emerald-600 hover:bg-emerald-700">Get Started</Button>
+                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">Get Started</Button>
               </Link>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content: Sidebar + Map */}
-      <div className="flex-1 flex">
-        {/* Command Center Sidebar */}
-        <div className="w-80 flex-shrink-0 border-r border-slate-800">
-          <CommandCenterSidebar 
-            onFiltersChange={handleCommandCenterFilters}
-            className="h-[calc(100vh-4rem)]"
+      {/* Developer Persona Filter Bar */}
+      <DeveloperFilterBar
+        activePersona={activePersona}
+        onPersonaChange={setActivePersona}
+        filters={developerFilters}
+        onFiltersChange={handleDeveloperFiltersChange}
+      />
+
+      {/* Main Content: Map (left) + Property List (right) */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Map Area - Left Side (60%) */}
+        <div className="w-[60%] border-r border-slate-800">
+          <TerminalMap
+            properties={searchResult?.listings || []}
+            className="w-full h-full"
           />
         </div>
 
-        {/* Map Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Terminal Map - 3D Visualization */}
-          <div className="flex-1 h-full min-h-[400px] border-b border-slate-800">
-            <TerminalMap
-              properties={searchResult?.listings || []}
-              className="w-full h-full"
-            />
+        {/* Property List - Right Side (40%) */}
+        <div className="w-[40%] flex flex-col bg-slate-900">
+          {/* Results Header */}
+          <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+            {isLoading ? (
+              <p className="text-sm text-slate-400 flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching...
+              </p>
+            ) : (
+              <p className="text-sm text-slate-400">
+                <span className="font-semibold text-slate-100">{totalCount || properties.length}</span> properties
+                {location && <span className="text-slate-500"> in {location}</span>}
+              </p>
+            )}
+            <span className="text-xs text-slate-600">
+              PROPTX MLS®
+            </span>
           </div>
 
-          {/* Results Panel */}
-          <div className="flex-1 overflow-y-auto p-4 bg-slate-900">
-            {/* Results Count */}
-            <div className="flex items-center justify-between mb-4">
-              {isLoading ? (
-                <p className="text-sm text-slate-400 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Searching...
-                </p>
-              ) : (
-                <p className="text-sm text-slate-400">
-                  <span className="font-semibold text-slate-100">{totalCount || properties.length}</span> properties found
-                  {location && <span> in {location}</span>}
-                  {searchResult && (
-                    <span className="text-xs ml-2 text-slate-500">
-                      ({searchResult.processingTimeMs}ms)
-                    </span>
-                  )}
-                </p>
-              )}
-              <p className="text-xs text-slate-500">
-                PROPTX MLS®
-              </p>
+          {/* Error message */}
+          {error && (
+            <div className="mx-4 mt-3 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg text-sm text-amber-300">
+              {error}
             </div>
+          )}
 
-            {/* Error message */}
-            {error && (
-              <div className="mb-4 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg text-sm text-amber-300">
-                {error}
-              </div>
-            )}
-
-            {/* Property Grid */}
+          {/* Property List */}
+          <div className="flex-1 overflow-y-auto p-3">
             {properties.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {properties.map((property) => {
-                  const id = property.ListingKey;
-                  const address = property.UnparsedAddress || 'Address Unavailable';
-                  const price = property.ListPrice;
-                  const city = property.City || 'Unknown';
-                  const propertyType = property.PropertyType || 'Residential';
-                  const bedrooms = property.BedroomsTotal || 0;
-                  const bathrooms = property.BathroomsTotalInteger || 0;
-                  const squareFeet = property.BuildingAreaTotal;
-                  const brokerage = property.ListOfficeName || 'Unknown';
-                  const dom = property.DaysOnMarket || 0;
-                  const photoUrl = property.photoUrl || "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400";
-                  
-                  return (
-                    <Link key={id} href={`/properties/${id}`}>
-                      <Card className="group bg-slate-800 border-slate-700 overflow-hidden hover:border-emerald-600/50 hover:shadow-lg hover:shadow-emerald-900/20 transition-all duration-300 cursor-pointer h-full">
-                        <div className="relative aspect-[16/10]">
-                          <Image
-                            src={photoUrl}
-                            alt={address}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleSave(id);
-                            }}
-                            className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/70 hover:bg-slate-900 transition-colors z-10"
-                          >
-                            <Heart className="h-4 w-4 text-slate-300" />
-                          </button>
-                          <div className="absolute bottom-2 left-2">
-                            <span className="px-2 py-0.5 bg-slate-900/90 text-emerald-400 text-xs font-mono rounded">
-                              {dom}d
-                            </span>
-                          </div>
-                        </div>
-                        <CardContent className="p-3">
-                          <div className="text-lg font-bold text-emerald-400 font-mono mb-1">
-                            {formatPrice(price)}
-                          </div>
-                          <h3 className="text-sm font-medium text-slate-200 mb-1 line-clamp-1">
-                            {address}
-                          </h3>
-                          <p className="text-xs text-slate-500 mb-2">
-                            {city}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-slate-400">
-                            <div className="flex items-center gap-1">
-                              <Bed className="h-3 w-3" />
-                              <span className="font-mono">{bedrooms}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Bath className="h-3 w-3" />
-                              <span className="font-mono">{bathrooms}</span>
-                            </div>
-                            {squareFeet && (
-                              <div className="flex items-center gap-1">
-                                <Square className="h-3 w-3" />
-                                <span className="font-mono">{squareFeet.toLocaleString()}</span>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  );
-                })}
+              <div className="space-y-1">
+                {properties.map((property) => (
+                  <PropertyListItem key={property.ListingKey} property={property} />
+                ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Map className="h-16 w-16 text-slate-700 mb-4" />
-                <h3 className="text-sm font-medium text-slate-400 mb-2">No properties found</h3>
+                <Map className="h-12 w-12 text-slate-700 mb-3" />
+                <h3 className="text-sm font-medium text-slate-400 mb-1">No properties found</h3>
                 <p className="text-xs text-slate-500">Adjust your filters or zoom out on the map</p>
               </div>
             )}
@@ -406,7 +621,7 @@ function PropertiesPageContent() {
       </div>
 
       {/* Footer */}
-      <footer className="py-4 border-t border-slate-800 bg-slate-900">
+      <footer className="py-3 border-t border-slate-800 bg-slate-900">
         <div className="container mx-auto px-4 text-center text-xs text-slate-500">
           <p>© {new Date().getFullYear()} PureProperty. Shadow MLS Layer | PROPTX MLS®</p>
         </div>
