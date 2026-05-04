@@ -62,3 +62,11 @@ Implemented a new split-view layout for the properties page with:
 
 ### Files Modified
 - `src/app/properties/page.tsx` - Complete rewrite with new layout
+
+### Fixes (2026-05-04)
+- **Scroll Issue Fixed:** Map (left side) is now fixed, only property list (right side) scrolls
+- **Thumbnail Extraction:** Updated ETL transformer to properly extract optimal thumbnail from images array
+  - Priority: Order === 0 or 1 with ImageSizeDescription === "Medium" > "Thumbnail" > "Large"
+  - Falls back to first "Medium" image, then first available image
+  - Stores in `primaryImageUrl` field for Typesense indexing
+- **Scroll Layout:** Uses `height: calc(100vh - 8rem)` for proper viewport calculation with `shrink-0` on map container

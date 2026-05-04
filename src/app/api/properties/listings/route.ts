@@ -112,6 +112,7 @@ export async function GET(request: NextRequest) {
         DaysOnMarket: p.calculatedDOM || 0,
         ListOfficeName: p.ListOfficeName,
         photoUrl: p.thumbnailUrl || null,
+        primaryImageUrl: (p as any).primaryImageUrl || p.thumbnailUrl || null,
         Latitude: lat,
         Longitude: lng,
       };

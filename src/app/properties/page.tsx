@@ -41,7 +41,7 @@ interface PropertyForMap {
   BathroomsTotalInteger: number;
   BuildingAreaTotal?: number;
   DaysOnMarket?: number;
-  photoUrl: string | null;
+  primaryImageUrl: string | null;
   Latitude: number;
   Longitude: number;
   ListOfficeName?: string;
@@ -57,6 +57,11 @@ function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
   const lat = doc.Latitude ?? doc.location?.[0] ?? 43.6532;
   const lng = doc.Longitude ?? doc.location?.[1] ?? -79.3832;
   
+  // DEBUG: Log the document to see what fields are available
+  console.log('[PropertiesPage] Doc keys:', Object.keys(doc));
+  console.log('[PropertiesPage] thumbnailUrl:', doc.thumbnailUrl);
+  console.log('[PropertiesPage] primaryImageUrl:', (doc as any).primaryImageUrl);
+  
   return {
     ListingKey: doc.id,
     ListPrice: doc.ListPrice,
@@ -67,7 +72,8 @@ function mapTypesenseToProperty(doc: ListingDocument): PropertyForMap {
     BathroomsTotalInteger: doc.BathroomsTotalInteger || 0,
     BuildingAreaTotal: doc.BuildingAreaTotal,
     DaysOnMarket: doc.calculatedDOM,
-    photoUrl: doc.thumbnailUrl || null,
+    // Use primaryImageUrl from ETL transformer (prioritizes Order 0, Medium size)
+    primaryImageUrl: (doc as any).primaryImageUrl || doc.thumbnailUrl || null,
     Latitude: lat,
     Longitude: lng,
     ListOfficeName: doc.ListOfficeName,
@@ -303,9 +309,11 @@ function DeveloperFilterBar({
 
 function PropertyListItem({ property }: { property: PropertyForMap }) {
   const [isSaved, setIsSaved] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const placeholderImage = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400";
-  const photoUrl = property.photoUrl || placeholderImage;
+  // Use primaryImageUrl from ETL (optimized thumbnail) with fallback to placeholder
+  const photoUrl = property.primaryImageUrl && !imageError ? property.primaryImageUrl : placeholderImage;
   
   return (
     <Link href={`/properties/${property.ListingKey}`}>
@@ -318,6 +326,10 @@ function PropertyListItem({ property }: { property: PropertyForMap }) {
               alt={property.UnparsedAddress}
               fill
               className="object-cover"
+              onError={() => {
+                console.log('[PropertyListItem] Image failed to load:', property.primaryImageUrl);
+                setImageError(true);
+              }}
             />
             <button
               onClick={(e) => {
@@ -325,7 +337,7 @@ function PropertyListItem({ property }: { property: PropertyForMap }) {
                 e.stopPropagation();
                 setIsSaved(!isSaved);
               }}
-              className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/70 hover:bg-slate-900"
+              className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/70 hover:bg-slate-900 z-10"
             >
               <Heart className={cn(
                 "h-3 w-3",
@@ -481,6 +493,7 @@ function PropertiesPageContent() {
           BuildingAreaTotal: p.BuildingAreaTotal,
           calculatedDOM: p.DaysOnMarket,
           thumbnailUrl: p.photoUrl,
+          primaryImageUrl: p.primaryImageUrl,
           ListOfficeName: p.ListOfficeName,
           location: p.Latitude && p.Longitude ? [p.Latitude, p.Longitude] : [43.6532, -79.3832] as [number, number],
           isDistressed: false,
