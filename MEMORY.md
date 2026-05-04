@@ -70,3 +70,10 @@ Implemented a new split-view layout for the properties page with:
   - Falls back to first "Medium" image, then first available image
   - Stores in `primaryImageUrl` field for Typesense indexing
 - **Scroll Layout:** Uses `height: calc(100vh - 8rem)` for proper viewport calculation with `shrink-0` on map container
+
+### Image Fix (2026-05-04)
+- **Next.js Image Config:** Verified `next.config.mjs` has `trreb-image.ampre.ca` in remotePatterns (already configured)
+- **primaryImageUrl Field:** Updated ETL transformer to extract optimal thumbnail from images array (Order 0, Medium size)
+- **API Route:** Now passes `primaryImageUrl` from Typesense through to frontend
+- **PropertyListItem:** Uses `primaryImageUrl` with `onError` handler for fallback to placeholder
+- **Debug Logging:** Added console.log to track image loading in browser console

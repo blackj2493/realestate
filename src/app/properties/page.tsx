@@ -326,6 +326,7 @@ function PropertyListItem({ property }: { property: PropertyForMap }) {
               alt={property.UnparsedAddress}
               fill
               className="object-cover"
+              unoptimized={true}
               onError={() => {
                 console.log('[PropertyListItem] Image failed to load:', property.primaryImageUrl);
                 setImageError(true);
