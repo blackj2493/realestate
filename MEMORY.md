@@ -32,3 +32,33 @@ Updated `src/lib/typesense/client.ts` to use strict Typesense filter syntax:
 
 ### Files Modified
 - `src/lib/typesense/client.ts` - Fixed all filter generation to use `FieldName:>=Value` syntax
+
+## New UI: Split-View Properties Page (2026-05-04)
+
+### Feature
+Implemented a new split-view layout for the properties page with:
+- **Left side (60%):** Interactive map (TerminalMap)
+- **Right side (40%):** Scrollable property list with thumbnails
+- **Top filter bar:** Developer persona-specific filters
+
+### Filter Bar Components
+- **Persona Switcher:** Primary | Yield | Value-Add modes
+- **Price Range:** Min/Max inputs
+- **Yield Slider:** For Yield Investor mode
+- **Bedroom Stepper:** 0-10+ with increment buttons
+- **Max DOM Input:** Days on market limit
+- **Toggle Buttons:** Suite Potential, Distressed (Yield mode)
+- **Lot Dimensions:** Width × Depth inputs (Value-Add mode)
+
+### Property List Items
+- Thumbnail image (w-32 h-24)
+- Price in emerald monospace
+- Address (line-clamped)
+- Property type badge
+- Days on market
+- Bedroom/Bathroom/Square footage icons
+- City label
+- Save/heart button
+
+### Files Modified
+- `src/app/properties/page.tsx` - Complete rewrite with new layout

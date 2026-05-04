@@ -565,19 +565,19 @@ function PropertiesPageContent() {
       />
 
       {/* Main Content: Map (left) + Property List (right) */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Map Area - Left Side (60%) */}
-        <div className="w-[60%] border-r border-slate-800">
+      <div className="flex-1 flex overflow-hidden" style={{ height: 'calc(100vh - 8rem)' }}>
+        {/* Map Area - Left Side (60%) - Fixed, does not scroll */}
+        <div className="w-[60%] border-r border-slate-800 shrink-0">
           <TerminalMap
             properties={searchResult?.listings || []}
             className="w-full h-full"
           />
         </div>
 
-        {/* Property List - Right Side (40%) */}
-        <div className="w-[40%] flex flex-col bg-slate-900">
+        {/* Property List - Right Side (40%) - Scrollable */}
+        <div className="w-[40%] flex flex-col bg-slate-900 overflow-hidden">
           {/* Results Header */}
-          <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between shrink-0">
             {isLoading ? (
               <p className="text-sm text-slate-400 flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -596,12 +596,12 @@ function PropertiesPageContent() {
 
           {/* Error message */}
           {error && (
-            <div className="mx-4 mt-3 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg text-sm text-amber-300">
+            <div className="mx-4 mt-3 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg text-sm text-amber-300 shrink-0">
               {error}
             </div>
           )}
 
-          {/* Property List */}
+          {/* Property List - Scrollable */}
           <div className="flex-1 overflow-y-auto p-3">
             {properties.length > 0 ? (
               <div className="space-y-1">
