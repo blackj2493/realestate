@@ -89,6 +89,18 @@ export interface ListingDocument {
   
   // Brokerage
   ListOfficeName?: string;
+  
+  // Extended fields for Command Center
+  DaysOnMarket?: number;
+  primaryImageUrl?: string;
+  OriginalListPrice?: number;
+  KitchensBelowGrade?: number;
+  SchoolZone?: boolean;
+  PublicRemarks?: string;
+  
+  // Building Systems
+  Heating?: string;
+  Cooling?: string[];
 }
 
 export interface SearchFilters {
@@ -281,7 +293,7 @@ export async function searchListings(
   // Build search params
   const searchParams: Record<string, unknown> = {
     q: query || '*',
-    query_by: 'UnparsedAddress,City,PropertySubType',
+    query_by: 'City,UnparsedAddress,PropertySubType',
     page,
     per_page: perPage,
     facet_by: 'City,PropertySubType,PropertyType,TransactionType,ApproximateAge,isDistressed,hasSecondarySuitePotential',

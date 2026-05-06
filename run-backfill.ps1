@@ -1,0 +1,3 @@
+$env:SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emduaXZpbHhobnd6ZnJka2lxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEzODM3MSwiZXhwIjoyMDkyNzE0MzcxfQ.ziTZ7dNZbmsfuBzw6JtPXkQA4a-7cFMispCO-x-XKQ0"
+cd c:\Users\PCGamer\Projects\Realestate
+npx tsx scripts/worker/backfill-thumbnails.ts

@@ -10,18 +10,30 @@
  * Run: npx tsx scripts/worker/backfill-thumbnails.ts
  */
 
+// ============================================================================
+// Environment Loading (MUST be at top, before any other imports)
+// ============================================================================
+import * as dotenv from 'dotenv';
+
+// Load .env first (primary), then .env.local (overrides/supplements)
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local' });
+
 // MUST set TLS env var BEFORE importing supabase client
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+// ============================================================================
+// Imports
+// ============================================================================
+import { createClient } from '@supabase/supabase-js';
 import Typesense from 'typesense';
 import * as https from 'https';
-
 import crossFetch from 'cross-fetch';
 
+// Patch fetch for Supabase to handle TLS
 const agent = new https.Agent({ rejectUnauthorized: false });
 const patchedFetch: typeof fetch = (url, init) => {
-  return crossFetch(url, {
+  return crossFetch(url as string, {
     ...init,
     // @ts-ignore
     agent
@@ -33,19 +45,38 @@ const patchedFetch: typeof fetch = (url, init) => {
 // Configuration
 // ============================================================================
 
-const CHUNK_SIZE = 500;
-const TYPESENSE_COLLECTION = 'listings';
-const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
-const TYPESENSE_PORT = 443;
-
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://pyzgnivixhnwzfrdkiq.supabase.co').trim();
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY || 'B6u0qIHDNhXZH8PMw0E6J5tB5aWvLXCn';
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
 if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY not set');
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY is not set');
+  console.log('   Env vars loaded:', {
+    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  });
   process.exit(1);
 }
+
+const CHUNK_SIZE = 500;
+const TYPESENSE_COLLECTION = 'listings';
+const TYPESENSE_HOST = (process.env.NEXT_PUBLIC_TYPESENSE_HOST || '9uyapwh6e5qmvl34p-1.a1.typesense.net').trim();
+const TYPESENSE_PORT = parseInt(process.env.NEXT_PUBLIC_TYPESENSE_PORT || '443', 10);
+const TYPESENSE_PROTOCOL = (process.env.NEXT_PUBLIC_TYPESENSE_PROTOCOL || 'https').trim();
+const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY || 'B6u0qIHDNhXZH8PMw0E6J5tB5aWvLXCn';
+
+// ============================================================================
+// Typesense Client
+// ============================================================================
+
+const typesense = new Typesense.Client({
+  nodes: [{
+    host: TYPESENSE_HOST,
+    port: TYPESENSE_PORT,
+    protocol: TYPESENSE_PROTOCOL
+  }],
+  apiKey: TYPESENSE_ADMIN_KEY,
+  connectionTimeoutSeconds: 30
+});
 
 // ============================================================================
 // Thumbnail Extraction (same logic as transformer.ts)
@@ -115,24 +146,6 @@ function extractPrimaryImageUrl(raw: Record<string, unknown>): string | null {
 }
 
 // ============================================================================
-// Clients
-// ============================================================================
-
-const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false }
-});
-
-const typesense = new Typesense.Client({
-  nodes: [{
-    host: TYPESENSE_HOST,
-    port: TYPESENSE_PORT,
-    protocol: 'https'
-  }],
-  apiKey: TYPESENSE_ADMIN_KEY,
-  connectionTimeoutSeconds: 30
-});
-
-// ============================================================================
 // Process batch
 // ============================================================================
 
@@ -195,7 +208,7 @@ async function processChunk(records: { listing_key: string; full_payload: Record
 // Fetch listings from Supabase
 // ============================================================================
 
-async function fetchChunk(lastId: number | null): Promise<{ records: any[]; lastId: number | null; hasMore: boolean }> {
+async function fetchChunk(supabase: any, lastId: number | null): Promise<{ records: any[]; lastId: number | null; hasMore: boolean }> {
   let query = supabase
     .from('listings')
     .select('id, listing_key, full_payload')
@@ -230,10 +243,25 @@ async function backfill() {
   console.log('\n🔄 Shadow MLS - Thumbnail Backfill');
   console.log('=====================================\n');
   
-  // Count total
-  const { count } = await supabase
+  // Create Supabase client with service role key (bypasses RLS)
+  // Pass patched global fetch for TLS handling
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: patchedFetch as typeof fetch
+    }
+  });
+  
+  // Count total with debug logging
+  console.log('📊 Querying Supabase for listing count...');
+  const { count, error: countError } = await supabase
     .from('listings')
     .select('*', { count: 'exact', head: true });
+  
+  if (countError) {
+    console.error('❌ Count query error:', JSON.stringify(countError, null, 2));
+    throw new Error(`Count query failed: ${countError.message}`);
+  }
   
   const totalRecords = count ?? 0;
   console.log(`Total listings to process: ${totalRecords.toLocaleString()}\n`);
@@ -253,7 +281,7 @@ async function backfill() {
   while (hasMore) {
     batchNumber++;
     
-    const { records, lastId: newLastId } = await fetchChunk(lastId);
+    const { records, lastId: newLastId } = await fetchChunk(supabase, lastId);
     lastId = newLastId;
     hasMore = records.length === CHUNK_SIZE;
     

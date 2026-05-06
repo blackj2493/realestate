@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/client";
+import { getServiceRoleClient } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,8 @@ export async function GET(
   try {
     console.log(`[Property API] Fetching listing: ${listingKey}`);
     
-    const supabase = getServerClient();
+    // Use service role client to bypass RLS policies
+    const supabase = getServiceRoleClient();
     
     // Use timeout wrapper to prevent hanging
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -24,27 +25,24 @@ export async function GET(
       .from('listings')
       .select('*')
       .eq('listing_key', listingKey)
-      .single();
+      .maybeSingle();  // Returns null instead of throwing when no rows
 
     const { data: listing, error } = await Promise.race([queryPromise, timeoutPromise]);
 
+    // Handle query errors (non-PGRST116 errors)
     if (error) {
-      console.log(`[Property API] Error: ${error.code} - ${error.message}`);
-      
-      if (error.code === 'PGRST116') {
-        // Not found
-        return NextResponse.json(
-          { notFound: true, message: "Listing not found in database" },
-          { status: 404 }
-        );
-      }
-      
-      throw error;
+      console.error(`[Property API] Supabase error for ${listingKey}:`, error.code, error.message);
+      return NextResponse.json(
+        { error: "Database query failed", details: error.message },
+        { status: 500 }
+      );
     }
 
+    // .maybeSingle() returns null when 0 rows found
     if (!listing) {
+      console.log(`[Property API] Listing not found in database: ${listingKey}`);
       return NextResponse.json(
-        { notFound: true, message: "Listing not found" },
+        { notFound: true, message: "Listing not found in database" },
         { status: 404 }
       );
     }
@@ -62,7 +60,7 @@ export async function GET(
       synced_at: listing.synced_at,
     });
   } catch (error) {
-    console.error("[Property API] Error:", error);
+    console.error("[Property API] Unexpected error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     
     // If it's a not found case from timeout, return 404

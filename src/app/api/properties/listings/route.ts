@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchListings, SearchFilters } from "@/lib/typesense/client";
-import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
+import { loadPostalCodes, getCoordinates, getCityCenter } from "@/lib/postalCodes";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   // Transaction type filter (buy vs rent)
   const transactionType = searchParams.get("type") || "buy";
   
-  // Build filters for Typesense
+  // Build filters for Typesense (numeric/boolean filters only)
   const filters: SearchFilters = {
     transactionType: transactionType === "buy" ? "For Sale" : "For Lease",
   };
@@ -39,11 +39,8 @@ export async function GET(request: NextRequest) {
   // DEBUG: Log all incoming search params
   console.log('[API] Search params:', Object.fromEntries(searchParams.entries()));
   
-  // City filter
-  const city = searchParams.get("city");
-  if (city) {
-    filters.city = city;
-  }
+  // NOTE: City filter removed - location search now uses full-text query instead
+  // This handles TRREB casing inconsistencies (e.g., "BRAMPTON" vs "Brampton")
   
   // Price filters
   const minPrice = searchParams.get("minPrice");
@@ -69,13 +66,20 @@ export async function GET(request: NextRequest) {
     filters.minDOM = parseInt(minDOM);
   }
   
-    try {
+  try {
     // Ensure postal codes are loaded
     ensurePostalCodesLoaded();
     
-    // Search using Typesense
+    // Get search query for full-text search (replaces strict city filter)
+    // Uses 'search' param first, then falls back to 'city' param
+    const searchQuery = searchParams.get("search") || searchParams.get("city") || "*";
+    const query = searchQuery === "*" ? "*" : searchQuery;
+    
+    console.log('[API] Full-text query:', query);
+    
+    // Search using Typesense with full-text search
     const result = await searchListings({
-      query: '*',
+      query: query,
       filters,
       page,
       perPage: limit,
@@ -83,19 +87,53 @@ export async function GET(request: NextRequest) {
     
     // Transform to API response format with postal code lookup for coordinates
     // MLS doesn't send lat/lng, so we ALWAYS look up coordinates from postal code
+    // Fallback to city center if postal code lookup fails
     const transformedListings = result.listings.map((p) => {
       // Extract postal code from address and look up coordinates
       const address = p.UnparsedAddress || '';
       const postalCode = extractPostalCode(address);
+      const propertyCity = p.City || 'Unknown';
       let lat: number | null = null;
       let lng: number | null = null;
       
       if (postalCode) {
-        const coords = getCoordinates(postalCode);
+        // Normalize postal code: remove spaces to match data format (L6P2Z1 not L6P 2Z1)
+        const normalizedPostal = postalCode.replace(/\s+/g, '');
+        const coords = getCoordinates(normalizedPostal);
         if (coords) {
           lat = coords.lat;
           lng = coords.lng;
         }
+      }
+      
+      // Fallback to city center if postal code lookup failed
+      if (lat === null || lng === null) {
+        const cityCoords = getCityCenter(propertyCity);
+        if (cityCoords) {
+          lat = cityCoords.lat;
+          lng = cityCoords.lng;
+        }
+      }
+      
+      // DEBUG: Log coordinate resolution
+      if (!lat || !lng) {
+        console.log(`[API] Could not resolve coords for: ${address}, city: ${propertyCity}, postalCode: ${postalCode}`);
+      } else {
+        // Log sample coordinates for debugging (first 3 only)
+        const idx = transformedListings.length;
+        if (idx < 3) {
+          console.log(`[API] Resolved coords #${idx + 1}: lat=${lat}, lng=${lng}, address=${address.substring(0, 50)}`);
+        }
+      }
+      
+      // Validate coordinates are in Canada (detect Ecuador-like issues)
+      // Replace invalid coordinates with Toronto fallback
+      const CANADA_BOUNDS = { minLat: 41, maxLat: 84, minLng: -141, maxLng: -53 };
+      if (lat && lng && (lat < CANADA_BOUNDS.minLat || lat > CANADA_BOUNDS.maxLat || lng < CANADA_BOUNDS.minLng || lng > CANADA_BOUNDS.maxLng)) {
+        console.warn(`[API] ⚠️ INVALID COORDS DETECTED: lat=${lat}, lng=${lng} for ${address} - using Toronto fallback`);
+        // Replace with Toronto center fallback
+        lat = 43.6532;
+        lng = -79.3832;
       }
       
       return {

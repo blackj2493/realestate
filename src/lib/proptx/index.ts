@@ -7,6 +7,7 @@ export {
   createDlaClient,
   createVowClient,
   createClientFromEnv,
+  createIdxClientFromEnv,
   testConnection,
 } from './client';
 

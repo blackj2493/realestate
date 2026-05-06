@@ -150,11 +150,11 @@ export class ProptXClient {
 
   /**
    * Get media for a specific listing
-   * Note: The ResourceName field in Media is boolean, not string, so we only filter by ResourceRecordKey
+   * Must include ResourceName eq 'Property' per RESO spec to filter out Office/Member media
    */
   async getMedia(listingKey: string, options?: PropertySearchParams): Promise<MediaResponse> {
     const params: Record<string, string> = {
-      $filter: `ResourceRecordKey eq '${listingKey}'`,
+      $filter: `ResourceRecordKey eq '${listingKey}' and ResourceName eq 'Property'`,
       ...options as Record<string, string>,
     };
     return this.request<MediaResponse>('/Media', params);
@@ -186,7 +186,9 @@ export class ProptXClient {
     if (listingKeys.length === 0) {
       return { value: [] };
     }
-    const filter = listingKeys.map(key => `ResourceRecordKey eq '${key}'`).join(' or ');
+    // Include ResourceName eq 'Property' per RESO spec
+    const recordKeyFilter = listingKeys.map(key => `ResourceRecordKey eq '${key}'`).join(' or ');
+    const filter = `(${recordKeyFilter}) and ResourceName eq 'Property'`;
     return this.getMediaBatch(filter);
   }
 
@@ -256,20 +258,22 @@ export function createVowClient(accessToken: string): ProptXClient {
 
 /**
  * Get a client using environment variables
+ * NOTE: IDX token is currently the only working token for media access
+ * VOW and DLA tokens return 401 Unauthorized
  */
 export function createClientFromEnv(tokenType: TokenType = 'VOW'): ProptXClient {
   let token: string | undefined;
   
   switch (tokenType) {
     case 'IDX':
-      // IDX with VOW fallback - IDX is more reliable right now
-      token = process.env.PROPTX_IDX_TOKEN || process.env.PROPTX_VOW_TOKEN;
+      token = process.env.PROPTX_IDX_TOKEN;
       break;
     case 'DLA':
+      // DLA fallback to IDX
       token = process.env.PROPTX_DLA_TOKEN || process.env.PROPTX_IDX_TOKEN;
       break;
     case 'VOW':
-      // VOW with IDX fallback - in case VOW is still having issues
+      // VOW fallback to IDX (VOW token currently returns 401)
       token = process.env.PROPTX_VOW_TOKEN || process.env.PROPTX_IDX_TOKEN;
       break;
   }
@@ -279,6 +283,17 @@ export function createClientFromEnv(tokenType: TokenType = 'VOW'): ProptXClient 
   }
   
   return new ProptXClient(token, tokenType);
+}
+
+/**
+ * Get IDX client - recommended for media access
+ */
+export function createIdxClientFromEnv(): ProptXClient {
+  const token = process.env.PROPTX_IDX_TOKEN;
+  if (!token) {
+    throw new Error('IDX token not found in environment variables');
+  }
+  return new ProptXClient(token, 'IDX');
 }
 
 /**

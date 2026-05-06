@@ -1,16 +1,13 @@
 "use client";
 
-// Mapbox CSS - CRITICAL: Without this, WebGL canvas dimensions cannot be calculated
-import "mapbox-gl/dist/mapbox-gl.css";
-
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import DeckGL from "@deck.gl/react";
-import { HexagonLayer } from "@deck.gl/aggregation-layers";
-import { Map } from "react-map-gl/mapbox";
+import { ScatterplotLayer } from "@deck.gl/layers";
+import { Map, NavigationControl } from "react-map-gl/mapbox";
 import { MapViewState } from "@deck.gl/core";
-import { Layers, MapPin } from "lucide-react";
+import { MapPin, Layers } from "lucide-react";
 
-// Typesense ListingDocument type (matches src/lib/typesense/client.ts)
+// Typesense ListingDocument type
 interface ListingRecord {
   id: string;
   ListPrice: number;
@@ -30,170 +27,166 @@ interface ListingRecord {
   ListOfficeName?: string;
 }
 
-// Deck.gl data point format
-interface MapDataPoint {
-  COORDINATES: [number, number]; // [longitude, latitude]
-  weight: number;
-  id: string;
-  price: number;
-  address: string;
-}
-
 interface TerminalMapProps {
-  properties: ListingRecord[];
+  targetProperty: ListingRecord;
+  localComps: ListingRecord[];
   className?: string;
 }
 
-// GTA area initial viewport - centered directly over Toronto
-const INITIAL_VIEW_STATE: MapViewState = {
-  longitude: -79.3832,
-  latitude: 43.6532,
-  zoom: 9,
-  pitch: 45, // Critical for seeing the 3D Hexagon extrusion
-  bearing: 0,
+// Yield-based color scale
+// < 4% (Negative Leverage): Cool Blue
+// 4-6.5% (Break-Even to Moderate): Yellow
+// > 6.5% (High Yield/Alpha): Fiery Orange
+const YIELD_COLORS = {
+  low: [59, 130, 246] as [number, number, number],      // Blue (< 4%)
+  mid: [250, 204, 21] as [number, number, number],       // Yellow (4-6.5%)
+  high: [249, 115, 22] as [number, number, number],      // Orange (> 6.5%)
 };
 
-// High-contrast color scheme for dark background
-// Bottom = dim, Top = bright (visible against dark)
-const COLOR_RANGE: [number, number, number][] = [
-  [40, 40, 60],     // Dim purple-gray (barely visible)
-  [80, 60, 120],    // Dim purple
-  [139, 92, 246],   // Violet (bright, visible)
-  [34, 197, 94],    // Emerald green (bright)
-  [251, 191, 36],   // Amber (very bright)
-];
+// Target asset colors
+const TARGET_COLORS = {
+  fill: [255, 255, 255] as [number, number, number],    // Pure white
+  border: [249, 115, 22] as [number, number, number],   // Orange border
+  glow: [249, 115, 22, 40] as [number, number, number, number], // Subtle glow
+};
 
-export default function TerminalMap({ properties, className = "" }: TerminalMapProps) {
+export default function TerminalMap({ targetProperty, localComps, className = "" }: TerminalMapProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  
-  const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
+
+  // Calculate initial viewport centered on target property
+  const initialViewState = useMemo<MapViewState>(() => {
+    const lng = targetProperty.location?.[1] ?? -79.3832;
+    const lat = targetProperty.location?.[0] ?? 43.6532;
+    return {
+      longitude: lng,
+      latitude: lat,
+      zoom: 15.5, // Neighborhood-level zoom
+      pitch: 0,   // Flat view for better marker visibility
+      bearing: 0,
+    };
+  }, [targetProperty.location]);
+
+  const [viewState, setViewState] = useState<MapViewState>(initialViewState);
+
+  // Track hover state for tooltips
+  const [hoverInfo, setHoverInfo] = useState<{
+    x: number;
+    y: number;
+    object: ListingRecord | null;
+  } | null>(null);
 
   // ============================================================================
-  // Data Transformation: Filter & Format for Deck.gl
+  // Yield-based color accessor for local comps
   // ============================================================================
   
-  // DEBUG: Log incoming properties
-  console.log('[TerminalMap] Received properties:', properties?.length || 0);
-  
-  const mapData = useMemo<MapDataPoint[]>(() => {
-    if (!properties || properties.length === 0) {
-      console.log('[TerminalMap] No properties or empty - returning empty array');
-      return [];
+  const getCompFillColor = useCallback((d: ListingRecord): [number, number, number] => {
+    const yieldValue = d.targetGrossYield ?? 0;
+    if (yieldValue < 0.04) {
+      return YIELD_COLORS.low;     // Blue
+    } else if (yieldValue <= 0.065) {
+      return YIELD_COLORS.mid;    // Yellow
+    } else {
+      return YIELD_COLORS.high;   // Orange
     }
-    
-    console.log('[TerminalMap] First property location:', properties[0]?.location);
-    
-    // CRITICAL: Filter properties with valid numerical latitude/longitude
-    // Silently drop properties without valid coordinates to prevent Deck.gl crashes
-    const validProperties = properties.filter((p) => {
-      const lat = p.location?.[0];
-      const lng = p.location?.[1];
-      return (
-        typeof lat === "number" &&
-        typeof lng === "number" &&
-        !isNaN(lat) &&
-        !isNaN(lng) &&
-        lat >= -90 && lat <= 90 &&
-        lng >= -180 && lng <= 180
-      );
-    });
-
-    // Transform to Deck.gl format: [lng, lat] (GeoJSON/Deck.gl uses lng, lat)
-    // Weight based on ListPrice for density visualization
-    return validProperties.map((p) => ({
-      COORDINATES: [p.location[1], p.location[0]] as [number, number], // [lng, lat]
-      weight: p.ListPrice || 1,
-      id: p.id,
-      price: p.ListPrice || 0,
-      address: p.UnparsedAddress || "Address Unavailable",
-    }));
-  }, [properties]);
+  }, []);
 
   // ============================================================================
-  // Deck.gl Layer Configuration
+  // Deck.gl Layers
   // ============================================================================
-
+  
   const layers = useMemo(() => {
-    if (mapData.length === 0) return [];
+    const result = [];
 
-    return [
-      new HexagonLayer({
-        id: "hexagon-layer",
-        data: mapData,
-        getPosition: (d: MapDataPoint) => d.COORDINATES,
-        getElevationWeight: (d: MapDataPoint) => d.weight,
-        getColorWeight: (d: MapDataPoint) => d.weight,
-        elevationScale: 50, // Height reacts to density/value
-        extruded: true, // Enable 3D height
-        radius: 500, // 500 meter hex bins
-        coverage: 0.9,
-        upperPercentile: 100,
-        colorRange: COLOR_RANGE,
-        elevationRange: [0, 1000], // Max height in meters
-        material: {
-          ambient: 0.4,
-          diffuse: 0.6,
-          shininess: 32,
-          specularColor: [60, 64, 70],
-        },
-        pickable: true,
-        autoHighlight: true,
-        highlightColor: [0, 255, 136, 180], // Neon green highlight on hover
-        onHover: (info) => {
-          // Could show tooltip here if needed
-          void info;
-          return true;
-        },
-      }),
-    ];
-  }, [mapData]);
+    // Layer 1: Local Comps (Background) - rendered first
+    if (localComps && localComps.length > 0) {
+      result.push(
+        new ScatterplotLayer<ListingRecord>({
+          id: "local-comps-layer",
+          data: localComps,
+          getPosition: (d) => [d.location[1], d.location[0]], // [lng, lat]
+          getRadius: 8,
+          radiusUnits: "pixels",
+          getFillColor: getCompFillColor,
+          pickable: true,
+          autoHighlight: true,
+          highlightColor: [255, 255, 255, 100],
+          onHover: (info) => {
+            if (info.object) {
+              setHoverInfo({
+                x: info.x,
+                y: info.y,
+                object: info.object,
+              });
+            } else {
+              setHoverInfo(null);
+            }
+          },
+          updateTriggers: {
+            getFillColor: [localComps],
+          },
+        })
+      );
+    }
+
+    // Layer 2: Target Asset Glow (Shadow beneath main marker)
+    result.push(
+      new ScatterplotLayer({
+        id: "target-asset-glow-layer",
+        data: [targetProperty],
+        getPosition: (d: ListingRecord) => [d.location[1], d.location[0]],
+        getRadius: 24,
+        radiusUnits: "pixels",
+        getFillColor: TARGET_COLORS.glow,
+        stroked: false,
+      })
+    );
+
+    // Layer 3: Target Asset (Foreground) - rendered last (on top)
+    result.push(
+      new ScatterplotLayer<ListingRecord>({
+        id: "target-asset-layer",
+        data: [targetProperty],
+        getPosition: (d) => [d.location[1], d.location[0]], // [lng, lat]
+        getRadius: 16,
+        radiusUnits: "pixels",
+        getFillColor: TARGET_COLORS.fill,
+        stroked: true,
+        getLineColor: TARGET_COLORS.border,
+        lineWidthMinPixels: 4,
+      })
+    );
+
+    return result;
+  }, [targetProperty, localComps, getCompFillColor]);
 
   // ============================================================================
   // Viewport Handler
   // ============================================================================
-
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
-    if (params.viewState) {
-      setViewState(params.viewState);
-    }
+    if (!params.viewState) return;
+    setViewState(params.viewState);
   }, []);
 
   // ============================================================================
   // Render
   // ============================================================================
-
+  
   if (!mapboxToken || mapboxToken === "your-mapbox-token") {
     return (
-      <div className={`flex items-center justify-center bg-slate-900 rounded-lg ${className}`}>
+      <div className={`flex items-center justify-center bg-slate-950 rounded-lg ${className}`}>
         <div className="text-center p-6">
-          <MapPin className="h-12 w-12 mx-auto mb-3 text-slate-600" />
+          <MapPin className="h-12 w-12 mx-auto mb-3 text-slate-700" />
           <p className="text-slate-400 font-medium">Map not configured</p>
-          <p className="text-xs text-slate-500 mt-1">Please add NEXT_PUBLIC_MAPBOX_TOKEN to .env</p>
+          <p className="text-xs text-slate-600 mt-1">Please add NEXT_PUBLIC_MAPBOX_TOKEN to .env</p>
         </div>
       </div>
     );
   }
 
-  if (mapData.length === 0) {
-    return (
-      <div className={`flex items-center justify-center bg-slate-900 rounded-lg ${className}`}>
-        <div className="text-center p-6">
-          <Layers className="h-12 w-12 mx-auto mb-3 text-slate-600" />
-          <p className="text-slate-400 font-medium">No Data to Visualize</p>
-          <p className="text-xs text-slate-500 mt-1">Adjust filters to see property density</p>
-        </div>
-      </div>
-    );
-  }
-
-  // DEBUG: Log map render state
-  console.log('[TerminalMap] Render - mapData count:', mapData.length);
-  console.log('[TerminalMap] Render - layers count:', layers.length);
-  console.log('[TerminalMap] Render - viewState:', JSON.stringify(viewState));
-  
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ minHeight: '500px', height: '100%' }}>
+    <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ minHeight: '400px', height: '100%' }}>
       <DeckGL
         viewState={viewState}
         onViewStateChange={handleViewStateChange}
@@ -206,31 +199,66 @@ export default function TerminalMap({ properties, className = "" }: TerminalMapP
           mapStyle="mapbox://styles/mapbox/dark-v11"
           reuseMaps
           attributionControl={false}
-        />
+          scrollZoom={false} // Disabled to prevent accidental zoom in terminal layout
+        >
+          <NavigationControl position="top-right" />
+        </Map>
       </DeckGL>
 
-      {/* Legend / Stats Overlay */}
+      {/* Hover Tooltip for Local Comps */}
+      {hoverInfo && hoverInfo.object && (
+        <div
+          className="absolute pointer-events-none z-20 bg-slate-900/95 backdrop-blur-sm px-3 py-2 rounded-lg border border-slate-700 shadow-xl"
+          style={{
+            left: hoverInfo.x + 10,
+            top: hoverInfo.y + 10,
+          }}
+        >
+          <p className="text-xs text-slate-300 font-medium">
+            {hoverInfo.object.UnparsedAddress || 'Unknown Address'}
+          </p>
+          <p className="text-sm text-emerald-400 font-mono mt-1">
+            ${hoverInfo.object.ListPrice?.toLocaleString() || 'N/A'}
+          </p>
+          {hoverInfo.object.targetGrossYield !== undefined && (
+            <p className="text-xs text-slate-400 mt-0.5">
+              Yield: {(hoverInfo.object.targetGrossYield * 100).toFixed(1)}%
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Legend Overlay */}
       <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700 shadow-xl z-10">
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-[#282840]" />
-            <span className="text-slate-400">Low</span>
+        <p className="text-xs text-slate-400 font-medium mb-2">Yield Color Scale</p>
+        <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `rgb(${YIELD_COLORS.low.join(',')})` }} />
+            <span className="text-slate-500">{"<4%"}</span>
           </div>
-          <div className="w-20 h-1 rounded-full bg-gradient-to-r from-[#282840] from-10% via-[#8b5cf6] via-50% to-[#34d399] to-90%" />
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-[#34d399]" />
-            <span className="text-slate-400">High</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `rgb(${YIELD_COLORS.mid.join(',')})` }} />
+            <span className="text-slate-500">4-6.5%</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `rgb(${YIELD_COLORS.high.join(',')})` }} />
+            <span className="text-slate-500">{">6.5%"}</span>
           </div>
         </div>
-        <p className="text-[10px] text-slate-500 mt-1.5 font-mono">
-          {mapData.length} properties • Hex bins: 500m
-        </p>
       </div>
 
       {/* Property Count Badge */}
       <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-700 shadow-xl z-10">
         <p className="text-xs text-slate-300 font-mono">
-          <span className="text-emerald-400 font-semibold">{mapData.length}</span> mapped
+          <span className="text-emerald-400 font-semibold">{localComps?.length || 0}</span> local comps
+        </p>
+      </div>
+
+      {/* Target Asset Indicator */}
+      <div className="absolute top-4 right-16 bg-orange-500/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-xl z-10">
+        <p className="text-xs text-white font-semibold flex items-center gap-1.5">
+          <MapPin className="h-3 w-3" />
+          Target Asset
         </p>
       </div>
     </div>

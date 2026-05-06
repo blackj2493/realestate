@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Bed, Bath, Car } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import MediaGallery from "@/components/MediaGallery";
+import ImageBentoGrid from "@/components/Property/ImageBentoGrid";
+import MediaGalleryOverlay from "@/components/Property/MediaGalleryOverlay";
 import SpatialDistribution from "@/components/SpatialDistribution";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,6 +127,7 @@ export default function PropertyPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'triggering' | 'pending'>('idle');
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -254,9 +256,18 @@ export default function PropertyPage({ params }: { params: Promise<{ id: string 
         ← Back to Listings
       </Link>
 
-      {/* Media Gallery - Full Width */}
-      <MediaGallery 
-        media={allMedia.filter(item => item.MediaCategory === 'Photo')}
+      {/* Media Gallery - Bento Grid */}
+      <ImageBentoGrid 
+        images={allMedia.map(m => m.MediaURL).filter(Boolean)}
+        onClick={() => setIsGalleryOpen(true)}
+        className="h-[500px]"
+      />
+
+      {/* Full-Screen Media Gallery Overlay */}
+      <MediaGalleryOverlay
+        images={allMedia.map(m => m.MediaURL).filter(Boolean)}
+        isOpen={isGalleryOpen}
+        onClose={() => setIsGalleryOpen(false)}
       />
 
       {/* Property Header - Full Width */}

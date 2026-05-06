@@ -1,3 +1,177 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================================
+   Command Center Terminal Aesthetic
+   ============================================================================ */
+
+/* Hide scrollbars but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom range slider styling for terminal aesthetic */
+.terminal-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.terminal-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #1e293b, #334155);
+  height: 4px;
+  border-radius: 2px;
+}
+
+.terminal-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #064e3b;
+  margin-top: -5px;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.terminal-slider::-moz-range-track {
+  background: linear-gradient(to right, #1e293b, #334155);
+  height: 4px;
+  border-radius: 2px;
+}
+
+.terminal-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #064e3b;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+/* Badge component base styles */
+.alpha-badge {
+  @apply text-[10px] uppercase font-bold tracking-wider rounded-full px-2 py-0.5 border;
+}
+
+/* Font styling for terminal */
+.terminal-font {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', monospace;
+}
+
+/* Glow effect for primary elements */
+.glow-emerald {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3), 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+/* Status indicator pulse animation */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* Scan line effect */
+.scan-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.3), transparent);
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  0% {
+    top: 0;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+/* HUD border style */
+.hud-border {
+  @apply border border-slate-700 rounded-lg;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Terminal text colors */
+.terminal-text-primary {
+  @apply text-emerald-400;
+}
+
+.terminal-text-secondary {
+  @apply text-slate-400;
+}
+
+.terminal-text-muted {
+  @apply text-slate-500;
+}
+
+.terminal-text-warning {
+  @apply text-amber-400;
+}
+
+.terminal-text-danger {
+  @apply text-rose-400;
+}
+
+.terminal-text-info {
+  @apply text-cyan-400;
+}
+
+/* Grid line background pattern */
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Data row highlight */
+.data-row:hover {
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+/* Selection highlight */
+::selection {
+  background-color: rgba(16, 185, 129, 0.3);
+  color: #ecfdf5;
+}
