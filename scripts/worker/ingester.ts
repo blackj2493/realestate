@@ -20,6 +20,171 @@ import { getServiceRoleClient } from '@/lib/supabase/client';
 import { processBatch, SyncResult } from './sync';
 
 // ============================================================================
+// Sold Listing Types
+// ============================================================================
+
+interface SoldListingRecord {
+  listing_key: string;
+  close_price: number;
+  close_date: string;
+  city_region: string;
+  property_sub_type: string;
+  bedrooms_above_grade?: number;
+  bathrooms_total_integer?: number;
+  parking_total?: number;
+  interior_score?: number;
+  exterior_score?: number;
+  basement_score?: number;
+  list_price?: number;
+  address?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+/**
+ * Checks if a listing status indicates it has been sold/closed.
+ */
+function isSoldListing(status: string | undefined): boolean {
+  if (!status) return false;
+  const normalized = status.toLowerCase().trim();
+  return normalized === 'closed' || normalized === 'sold';
+}
+
+/**
+ * Extracts sold listing data from a raw listing for raw_vow_sold table.
+ */
+function extractSoldListingData(raw: any): SoldListingRecord | null {
+  try {
+    const status = raw.MlsStatus || raw.StandardStatus || raw.Status;
+    
+    if (!isSoldListing(status)) {
+      return null;
+    }
+
+    // Map relevant fields to raw_vow_sold schema
+    const record: SoldListingRecord = {
+      listing_key: raw.ListingKey || raw.ListingId || '',
+      close_price: raw.ClosePrice || raw.ClosePrice || 0,
+      close_date: raw.CloseDate || raw.SoldDate || new Date().toISOString(),
+      city_region: raw.CityRegion || raw.MarketArea || '',
+      property_sub_type: raw.PropertySubType || raw.PropertyType || '',
+    };
+
+    // Optional fields for AVM adjustment factors
+    if (raw.BedroomsAboveGrade !== undefined) {
+      record.bedrooms_above_grade = raw.BedroomsAboveGrade;
+    }
+    if (raw.BathroomsTotalInteger !== undefined) {
+      record.bathrooms_total_integer = raw.BathroomsTotalInteger;
+    }
+    if (raw.ParkingTotal !== undefined) {
+      record.parking_total = raw.ParkingTotal;
+    }
+    if (raw.InteriorCondition !== undefined) {
+      // InteriorScore derived from InteriorCondition (1-5 scale)
+      record.interior_score = raw.InteriorCondition;
+    }
+    if (raw.ExteriorCondition !== undefined) {
+      record.exterior_score = raw.ExteriorCondition;
+    }
+    if (raw.BasementFinishCode !== undefined) {
+      record.basement_score = raw.BasementFinishCode;
+    }
+    if (raw.ListPrice !== undefined) {
+      record.list_price = raw.ListPrice;
+    }
+    if (raw.PropertyAddress || raw.StreetNumber || raw.StreetName) {
+      record.address = [raw.StreetNumber, raw.StreetName, raw.UnitNumber].filter(Boolean).join(' ');
+    }
+    if (raw.City) {
+      record.city = raw.City;
+    }
+    if (raw.StateOrProvince) {
+      record.province = raw.StateOrProvince;
+    } else {
+      record.province = 'ON';
+    }
+    if (raw.PostalCode) {
+      record.postal_code = raw.PostalCode;
+    }
+    if (raw.Latitude) {
+      record.latitude = raw.Latitude;
+    }
+    if (raw.Longitude) {
+      record.longitude = raw.Longitude;
+    }
+
+    return record;
+  } catch (err) {
+    console.warn(`   ⚠️  Failed to extract sold listing data: ${err}`);
+    return null;
+  }
+}
+
+/**
+ * Upserts sold listings to raw_vow_sold table.
+ * Uses ON CONFLICT (listing_key) DO UPDATE to avoid duplicates.
+ */
+async function upsertSoldListings(
+  supabase: any,
+  soldRecords: SoldListingRecord[]
+): Promise<{ inserted: number; failed: number; errors: string[] }> {
+  if (soldRecords.length === 0) {
+    return { inserted: 0, failed: 0, errors: [] };
+  }
+
+  console.log(`   🏠 Upserting ${soldRecords.length} sold listings to raw_vow_sold...`);
+
+  const result = { inserted: 0, failed: 0, errors: [] as string[] };
+
+  for (const record of soldRecords) {
+    try {
+      const { error } = await supabase
+        .from('raw_vow_sold')
+        .upsert(
+          {
+            listing_key: record.listing_key,
+            close_price: record.close_price,
+            close_date: record.close_date,
+            city_region: record.city_region,
+            property_sub_type: record.property_sub_type,
+            bedrooms_above_grade: record.bedrooms_above_grade,
+            bathrooms_total_integer: record.bathrooms_total_integer,
+            parking_total: record.parking_total,
+            interior_score: record.interior_score,
+            exterior_score: record.exterior_score,
+            basement_score: record.basement_score,
+            list_price: record.list_price,
+            address: record.address,
+            city: record.city,
+            province: record.province,
+            postal_code: record.postal_code,
+            latitude: record.latitude,
+            longitude: record.longitude,
+          },
+          { onConflict: 'listing_key' }
+        );
+
+      if (error) {
+        result.errors.push(`Failed to upsert ${record.listing_key}: ${error.message}`);
+        result.failed++;
+      } else {
+        result.inserted++;
+      }
+    } catch (err: any) {
+      result.errors.push(`Exception upserting ${record.listing_key}: ${err.message}`);
+      result.failed++;
+    }
+  }
+
+  console.log(`   ✅ raw_vow_sold: ${result.inserted} upserted, ${result.failed} failed`);
+  return result;
+}
+
+// ============================================================================
 // Configuration (sanitized to strip invisible characters)
 // ============================================================================
 
@@ -316,6 +481,23 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
         console.log('   ℹ️  No listings found in this batch');
         break;
       }
+      
+      // ─── Decision A1: Route Sold/Closed listings to raw_vow_sold ─────────
+      const supabaseClient = getServiceRoleClient();
+      const soldRecords: SoldListingRecord[] = [];
+      
+      for (const rawListing of batch.listings) {
+        const soldData = extractSoldListingData(rawListing);
+        if (soldData) {
+          soldRecords.push(soldData);
+        }
+      }
+      
+      if (soldRecords.length > 0) {
+        console.log(`   🏠 Found ${soldRecords.length} sold/closed listings for raw_vow_sold`);
+        await upsertSoldListings(supabaseClient, soldRecords);
+      }
+      // ────────────────────────────────────────────────────────────────────
       
       // Process batch through ETL pipeline (sync.ts)
       console.log('   🔄 Processing batch through ETL pipeline...');
