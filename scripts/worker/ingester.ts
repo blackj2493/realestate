@@ -50,7 +50,9 @@ interface SoldListingRecord {
 function isSoldListing(status: string | undefined): boolean {
   if (!status) return false;
   const normalized = status.toLowerCase().trim();
-  return normalized === 'closed' || normalized === 'sold';
+  const isSold = normalized === 'closed' || normalized === 'sold';
+  console.log(`   🔍 isSoldListing check: status='${status}' → ${isSold ? 'SOLD' : 'ACTIVE'}`);
+  return isSold;
 }
 
 /**
@@ -175,6 +177,7 @@ async function upsertSoldListings(
         result.inserted++;
       }
     } catch (err: any) {
+      console.error(`   ❌ Exception upserting ${record.listing_key}: ${err.message}`);
       result.errors.push(`Exception upserting ${record.listing_key}: ${err.message}`);
       result.failed++;
     }
@@ -312,10 +315,17 @@ export async function fetchListingsBatch(
     throw new Error('lastSyncTimestamp must be provided');
   }
   
-  // Manual pagination using $skip parameter
-  const filter = encodeURIComponent(`ModificationTimestamp gt ${lastSyncTimestamp}`);
-  const url = `${API_BASE_URL}/Property?$filter=${filter}&$top=100&$skip=${skip}&$count=true`;
+  // FIX: Query both Active AND Sold/Closed statuses to feed raw_vow_sold for AVM anchor
+  // Build filter string first, then encode once to avoid double-encoding
+  const statusFilter = `(StandardStatus eq 'Active' or StandardStatus eq 'Closed')`;
+  const modFilter = `ModificationTimestamp gt ${lastSyncTimestamp}`;
+  const combinedFilter = `${statusFilter} and (${modFilter})`;
+  
+  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$top=100&$skip=${skip}&$count=true`;
+  
+  console.log(`   🔍 Query URL: ${url}`);
   console.log(`   → Delta query from: ${lastSyncTimestamp} (skip: ${skip})`);
+  console.log(`   → Status filter: StandardStatus eq 'Active' or 'Closed'`);
   
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
@@ -338,6 +348,12 @@ export async function fetchListingsBatch(
   console.log(`   ✅ Batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
   if (totalCount !== undefined) {
     console.log(`   📊 Total matching: ${totalCount}`);
+  }
+  
+  // Log sample of statuses received
+  if (listings.length > 0) {
+    const statuses = [...new Set(listings.map(l => l.StandardStatus || l.MlsStatus || l.Status))];
+    console.log(`   📋 Statuses in batch: ${statuses.join(', ')}`);
   }
   
   return { listings, nextLink, totalCount };
@@ -369,9 +385,9 @@ export async function readSyncState(): Promise<SyncState> {
   
   if (error) {
     if (error.code === 'PGRST116') {
-      // No row exists - create default (24 hours ago)
-      console.log('   📝 No sync_state found, initializing with 24h default...');
-      const defaultTimestamp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // No row exists - create default (48 hours ago for catch-up)
+      console.log('   📝 No sync_state found, initializing with 48h default...');
+      const defaultTimestamp = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
       await client
         .from('sync_state')
         .insert({ id: 'master', last_sync_timestamp: defaultTimestamp, status: 'idle' });
@@ -495,7 +511,10 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
       
       if (soldRecords.length > 0) {
         console.log(`   🏠 Found ${soldRecords.length} sold/closed listings for raw_vow_sold`);
-        await upsertSoldListings(supabaseClient, soldRecords);
+        const upsertResult = await upsertSoldListings(supabaseClient, soldRecords);
+        console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
+      } else {
+        console.log(`   ℹ️  No sold/closed listings in this batch`);
       }
       // ────────────────────────────────────────────────────────────────────
       
@@ -534,6 +553,7 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
     console.log(`   Records synced: ${result.totalRecords}`);
     console.log(`   Pages processed: ${result.pagesProcessed}`);
     console.log(`   New sync timestamp: ${now}`);
+    console.log(`   ⏰ Date window used: 48 hours (catch-up mode)`);
     
     if (result.errors.length > 0) {
       console.log(`   Warnings: ${result.errors.length} errors`);
