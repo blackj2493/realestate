@@ -475,11 +475,19 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
   };
   
   try {
-    // Step 1: Read current sync state
+    // TODO (revert after catch-up): Use readSyncState() for normal delta sync
+    // For now, hardcode 48h catch-up window since database is stale
+    const CATCHUP_WINDOW_HOURS = 48;
+    const catchupTimestamp = new Date(Date.now() - CATCHUP_WINDOW_HOURS * 60 * 60 * 1000).toISOString().replace('+00:00', 'Z');
+    
+    // Step 1: Read current sync state (for logging only — we use catchupTimestamp for this run)
     console.log('📖 Reading sync state from Supabase...');
     const state = await readSyncState();
-    console.log(`   Last sync: ${state.lastSyncTimestamp}`);
-    console.log(`   Status: ${state.status}\n`);
+    console.log(`   Last sync (from DB): ${state.lastSyncTimestamp}`);
+    console.log(`   Using catchup timestamp: ${catchupTimestamp}`);
+    console.log(`   Status: ${state.status}`);
+    console.log(`   ⏰ Date window: last ${CATCHUP_WINDOW_HOURS} hours (catch-up mode — will revert to readSyncState after catch-up)`);
+    console.log(`   🎯 Target statuses: Active AND Closed/Sold\n`);
     
     // Mark as running
     await updateSyncState(state.lastSyncTimestamp, 0, 'running');
@@ -487,7 +495,7 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
     // Step 2: Paginate through all modified listings using manual $skip
     let skip = 0;
     let hasMore = true;
-    let currentTimestamp = state.lastSyncTimestamp;
+    let currentTimestamp = catchupTimestamp;
     
     do {
       console.log(`\n📄 Page ${result.pagesProcessed + 1} (Skip: ${skip}):`);
