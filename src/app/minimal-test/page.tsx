@@ -20,7 +20,7 @@ export default function MinimalTest() {
                 apiKey: 'BzXkIss7SXH0U1Hb0a1COwdvEACxbhkj'
               });
               
-              const response = await client.collections('listings').documents().search({
+              const response = await client.collections('properties').documents().search({
                 q: '*',
                 filter_by: 'TransactionType:For Sale',
                 per_page: 5

@@ -20,8 +20,11 @@ export type CapExRisk = 'move-in-ready' | 'light-tlc' | 'major-work';
 
 // Smart Homebuyer specific filters
 export interface SmartHomebuyerFilters {
-  maxCarryCost: number;          // Max monthly carry cost (0-10000)
-  minTrueDOM: number;            // Min days on market (0-120+)
+  maxCarryCost: number;          // Max monthly carry cost ($0-$10,000)
+  trueDOMMin: number;            // Min True Days on Market (0-365)
+  trueDOMMax: number;            // Max True Days on Market (0-365)
+  suiteFilter: 'ALL' | 'NONE' | 'POTENTIAL_CANDIDATE' | 'EXISTING_SUITE'; // Suite status filter
+  minSuiteScore: number;         // Minimum suite score (0-6)
   mortgageHelperEnabled: boolean; // KitchensBelowGrade > 0 OR basement suite potential
   capExRisk: CapExRisk;          // Move-In Ready / Light TLC / Major Work
   biddingWarExclude: boolean;    // Exclude properties with holding offers
@@ -88,7 +91,10 @@ export interface CommandCenterState {
 
 const defaultSmartFilters: SmartHomebuyerFilters = {
   maxCarryCost: 10000,
-  minTrueDOM: 0,
+  trueDOMMin: 0,
+  trueDOMMax: 365,
+  suiteFilter: 'ALL',
+  minSuiteScore: 0,
   mortgageHelperEnabled: false,
   capExRisk: 'move-in-ready',
   biddingWarExclude: false,
@@ -169,21 +175,33 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 export function getSmartHomebuyerFilterString(filters: SmartHomebuyerFilters): string {
   const parts: string[] = [];
 
-  // Max True Carry Cost - mapped to range filter on calculated carry_cost
-  // Since we don't have carry_cost in Typesense yet, we'll use TaxAnnualAmount as proxy
-  // and assume carry_cost is roughly (ListPrice * rate / 12) + (TaxAnnualAmount / 12)
-  // For now, we'll filter by max price based on maxCarryCost
-  // Real implementation would need carry_cost field in schema
+  // Max True Carry Cost - direct filter on MonthlyCarryCost field
   if (filters.maxCarryCost < 10000) {
-    // Approximate max price based on carry cost
-    // Assuming 20% down, 7% rate, 30yr amort, carry cost roughly 0.4% of price per month
-    const approximateMaxPrice = (filters.maxCarryCost / 0.004) * 1000;
-    parts.push(`ListPrice:<=${Math.floor(approximateMaxPrice)}`);
+    parts.push(`MonthlyCarryCost:<=${filters.maxCarryCost}`);
   }
 
-  // Negotiation Leverage (True DOM)
-  if (filters.minTrueDOM > 0) {
-    parts.push(`calculatedDOM:>=${filters.minTrueDOM}`);
+  // True DOM Range
+  if (filters.trueDOMMin > 0) {
+    parts.push(`TrueDom:>=${filters.trueDOMMin}`);
+  }
+  if (filters.trueDOMMax < 365) {
+    parts.push(`TrueDom:<=${filters.trueDOMMax}`);
+  }
+
+  // Suite Status Filter
+  if (filters.suiteFilter !== 'ALL') {
+    if (filters.suiteFilter === 'NONE') {
+      parts.push(`SuiteStatus:=NONE`);
+    } else if (filters.suiteFilter === 'POTENTIAL_CANDIDATE') {
+      parts.push(`(SuiteStatus:=POTENTIAL_CANDIDATE || SuiteStatus:=EXISTING_SUITE)`);
+    } else if (filters.suiteFilter === 'EXISTING_SUITE') {
+      parts.push(`SuiteStatus:=EXISTING_SUITE`);
+    }
+  }
+
+  // Suite Score Minimum
+  if (filters.minSuiteScore > 0) {
+    parts.push(`SuiteScore:>=${filters.minSuiteScore}`);
   }
 
   // CapEx Risk - filter by ApproximateAge or text matching

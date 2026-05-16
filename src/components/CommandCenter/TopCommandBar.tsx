@@ -18,7 +18,8 @@ import {
   Calendar,
   Building2,
   ShieldAlert,
-  Ban
+  Ban,
+  HomeIcon
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
@@ -210,23 +211,48 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
 
           <div className="h-5 w-px bg-slate-700" />
 
-          {/* Negotiation Leverage (True DOM) */}
+          {/* True DOM Range Slider */}
           <div className="flex items-center gap-2 shrink-0">
             <Calendar className="h-3.5 w-3.5 text-amber-400" />
             <span className="text-[10px] text-slate-500 uppercase tracking-wider">DOM:</span>
-            <div className="w-28">
+            <div className="w-32">
               <Slider
-                value={[smartFilters.minTrueDOM]}
-                onValueChange={([value]) => updateSmartFilter('minTrueDOM', value)}
+                value={[smartFilters.trueDOMMin, smartFilters.trueDOMMax]}
+                onValueChange={([min, max]) => {
+                  updateSmartFilter('trueDOMMin', min);
+                  updateSmartFilter('trueDOMMax', max);
+                }}
                 min={0}
-                max={120}
-                step={5}
+                max={365}
+                step={10}
                 className="w-full"
               />
             </div>
-            <span className="text-xs font-mono text-amber-400 w-12 text-right">
-              {smartFilters.minTrueDOM}+d
+            <span className="text-xs font-mono text-amber-400 w-16 text-right">
+              {smartFilters.trueDOMMin}-{smartFilters.trueDOMMax}d
             </span>
+          </div>
+
+          <div className="h-5 w-px bg-slate-700" />
+
+          {/* Suite Status Dropdown */}
+          <div className="flex items-center gap-2 shrink-0">
+            <HomeIcon className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Suite:</span>
+            <Select 
+              value={smartFilters.suiteFilter} 
+              onValueChange={(value) => updateSmartFilter('suiteFilter', value as SmartHomebuyerFilters['suiteFilter'])}
+            >
+              <SelectTrigger className="h-7 bg-slate-800 border-slate-700 text-xs w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectItem value="ALL" className="text-xs">All Properties</SelectItem>
+                <SelectItem value="POTENTIAL_CANDIDATE" className="text-xs">Suite Candidate</SelectItem>
+                <SelectItem value="EXISTING_SUITE" className="text-xs">Existing Suite</SelectItem>
+                <SelectItem value="NONE" className="text-xs">No Suite Potential</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="h-5 w-px bg-slate-700" />

@@ -32,13 +32,20 @@ export default function LedgerRow({ property, onClick, isSelected }: LedgerRowPr
   const [isSaved, setIsSaved] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Calculate estimated carry cost (simplified monthly burn)
-  // In a real implementation, this would use actual mortgage calculations
-  const estimatedCarryCost = calculateCarryCost(property);
+  // Use actual MonthlyCarryCost from Typesense if available, otherwise estimate
+  const carryCost = property.MonthlyCarryCost || calculateCarryCost(property);
   
-  // Get DOM with color logic
-  const dom = property.calculatedDOM || property.DaysOnMarket || 0;
-  const domColor = dom > 45 ? 'text-emerald-400' : dom >= 14 ? 'text-amber-400' : 'text-slate-400';
+  // Get TrueDOM with color logic
+  const trueDom = property.TrueDom || property.calculatedDOM || property.DaysOnMarket || 0;
+  const domColor = trueDom > 90 ? 'text-rose-400' : trueDom > 45 ? 'text-emerald-400' : trueDom >= 14 ? 'text-amber-400' : 'text-slate-400';
+  
+  // Get suite status badge
+  const suiteStatus = property.SuiteStatus;
+  const suiteBadgeClass = suiteStatus === 'EXISTING_SUITE' 
+    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+    : suiteStatus === 'POTENTIAL_CANDIDATE'
+    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+    : 'bg-slate-700/50 text-slate-400 border-slate-600/30';
   
   // Detect badges for this property
   const badges = detectPropertyBadges(property as Parameters<typeof detectPropertyBadges>[0]);
@@ -117,7 +124,7 @@ export default function LedgerRow({ property, onClick, isSelected }: LedgerRowPr
       {/* Primary Metric: Carry Cost */}
       <div className="hidden lg:block w-20 text-right shrink-0">
         <span className="text-xs font-bold font-mono text-emerald-400">
-          ${estimatedCarryCost.toLocaleString()}
+          ${carryCost.toLocaleString()}
         </span>
         <span className="text-[10px] text-slate-500 block">/mo</span>
       </div>
@@ -125,7 +132,20 @@ export default function LedgerRow({ property, onClick, isSelected }: LedgerRowPr
       {/* Secondary Metric: True DOM */}
       <div className="hidden sm:block w-14 text-right shrink-0">
         <span className={cn("text-xs font-mono font-semibold", domColor)}>
-          {dom}d
+          {trueDom}d
+        </span>
+        {property.IsStale && (
+          <span className="text-[8px] text-rose-500 block">STALE</span>
+        )}
+      </div>
+
+      {/* Suite Status Badge */}
+      <div className="hidden xl:flex items-center gap-1 shrink-0">
+        <span className={cn(
+          "text-[9px] font-medium px-1.5 py-0.5 rounded border uppercase tracking-wider",
+          suiteBadgeClass
+        )}>
+          {suiteStatus === 'EXISTING_SUITE' ? 'EXISTING' : suiteStatus === 'POTENTIAL_CANDIDATE' ? 'CANDIDATE' : 'NONE'}
         </span>
       </div>
 

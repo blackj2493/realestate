@@ -20,15 +20,17 @@ interface LedgerPanelProps {
   className?: string;
 }
 
-// Column header configuration
+// Column header configuration - Terminal UI format
 const COLUMN_HEADERS = [
-  { label: 'ASSET', className: 'flex-1 min-w-0' },
-  { label: 'SPECS', className: 'hidden md:block w-24 shrink-0 text-center' },
-  { label: 'CARRY', className: 'hidden lg:block w-20 shrink-0 text-right' },
-  { label: 'DOM', className: 'hidden sm:block w-14 shrink-0 text-right' },
-  { label: 'FLAGS', className: 'hidden xl:block w-[180px] shrink-0' },
-  { label: 'PRICE', className: 'w-28 shrink-0 text-right' },
-  { label: '', className: 'w-6 shrink-0' },
+  { label: 'Address', className: 'flex-1 min-w-0' },
+  { label: 'ListPrice', className: 'hidden sm:block w-24 shrink-0 text-right' },
+  { label: 'Beds', className: 'hidden md:block w-12 shrink-0 text-center' },
+  { label: 'Baths', className: 'hidden md:block w-12 shrink-0 text-center' },
+  { label: 'True Carry Cost', className: 'hidden lg:block w-24 shrink-0 text-right' },
+  { label: 'True DoM', className: 'hidden sm:block w-16 shrink-0 text-right' },
+  { label: 'Suite Status', className: 'hidden xl:block w-28 shrink-0 text-center' },
+  { label: 'School', className: 'hidden xl:block w-16 shrink-0 text-center' },
+  { label: 'Transit', className: 'hidden xl:block w-16 shrink-0 text-center' },
 ];
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {

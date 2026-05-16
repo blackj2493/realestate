@@ -7,7 +7,7 @@ const client = new Typesense.Client({
 async function test() {
   try {
     console.log('Searching Typesense...');
-    const result = await client.collections('listings').documents().search({
+    const result = await client.collections('properties').documents().search({
       q: '*',
       query_by: 'UnparsedAddress,City',
       per_page: 5

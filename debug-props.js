@@ -12,7 +12,7 @@ async function debugSearch() {
   // Test 1: Basic search (what properties page does on mount)
   console.log('Test 1: Basic search with TransactionType=For Sale');
   try {
-    const result = await client.collections('listings').documents().search({
+    const result = await client.collections('properties').documents().search({
       q: '*',
       query_by: 'UnparsedAddress,City,PropertySubType',
       filter_by: 'TransactionType:For Sale',

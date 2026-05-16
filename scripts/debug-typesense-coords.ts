@@ -13,7 +13,7 @@ async function checkTypesenseCoords() {
   try {
     // Fetch a sample of documents with their location data
     const results = await (client as any)
-      .collections('listings')
+      .collections('properties')
       .documents()
       .search({
         q: '*',

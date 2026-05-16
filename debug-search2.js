@@ -36,7 +36,7 @@ async function testSearch() {
   
   console.log('Search params:', JSON.stringify(searchParams, null, 2));
   
-  const response = await client.collections('listings').documents().search(searchParams);
+  const response = await client.collections('properties').documents().search(searchParams);
   
   console.log('Result:', {
     totalFound: response.found,

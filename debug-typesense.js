@@ -10,7 +10,7 @@ async function test() {
   try {
     // Test 1: No filters - just query all
     console.log('Test 1: Query all with *');
-    const r1 = await client.collections('listings').documents().search({
+    const r1 = await client.collections('properties').documents().search({
       q: '*',
       per_page: 3
     });
@@ -22,7 +22,7 @@ async function test() {
     
     // Test 2: With TransactionType filter
     console.log('\nTest 2: With TransactionType: For Sale');
-    const r2 = await client.collections('listings').documents().search({
+    const r2 = await client.collections('properties').documents().search({
       q: '*',
       filter_by: 'TransactionType:For Sale',
       per_page: 3
@@ -31,7 +31,7 @@ async function test() {
     
     // Test 3: Check distinct TransactionType values using facets
     console.log('\nTest 3: Facets on TransactionType');
-    const r3 = await client.collections('listings').documents().search({
+    const r3 = await client.collections('properties').documents().search({
       q: '*',
       facet_by: 'TransactionType',
       max_facet_values: 10
@@ -40,7 +40,7 @@ async function test() {
     
     // Test 4: Check PropertySubType facets
     console.log('\nTest 4: Facets on PropertySubType');
-    const r4 = await client.collections('listings').documents().search({
+    const r4 = await client.collections('properties').documents().search({
       q: '*',
       facet_by: 'PropertySubType',
       max_facet_values: 20

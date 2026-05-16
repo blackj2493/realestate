@@ -382,3 +382,124 @@ For the workflow to function, these secrets must be added to the GitHub reposito
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RESO_BEARER_TOKEN`
+
+## Daily Sync for AVM Raw Vow Sold (2026-05-16)
+
+### Overview
+Implemented Daily Sync to route Sold/Closed listings from MLS feed to `raw_vow_sold` table for AVM anchor calculations. Decision A1: raw_vow_sold is append-only for daily sync, read-only for AVM queries.
+
+### Files Modified
+- `scripts/worker/ingester.ts` - Added sold listing routing with `isSoldListing()` and `extractSoldListingData()` functions
+- `scripts/worker/transformer.ts` - Added OccupantType and PossessionType fields for Typesense schema compliance (lines 1034-1038)
+- `.github/workflows/daily-sync.yml` - Created GitHub Actions workflow running at 3:00 AM UTC daily
+
+### OData Query Fix
+Fixed double-encoding issue where filter parts were encoded individually then combined and encoded again, causing `%2520` instead of `%20`.
+- Query: `(StandardStatus eq 'Active' or StandardStatus eq 'Closed' or MlsStatus eq 'Sold') and (ModificationTimestamp gt datetime'...')`
+
+### 48-Hour Catch-Up Window
+Bypassed `readSyncState()` which was returning "now" timestamp. Hardcoded 48h catch-up timestamp with Z formatting:
+- `2026-05-14T00:46:12.859Z` (48 hours before sync start)
+
+### Pending Issues (Pre-existing bugs)
+
+**1. Supabase property_hash integer error**
+- Error: `invalid input syntax for type integer: "{"propertyHash":"...","trueDOM":0,...}"`
+- Location: `scripts/worker/sync.ts` lines 219-222
+- Cause: The `supabasePayload` object contains nested `true_dom` object with temporal metrics, but `property_hash` column is integer. When spreading `t.supabasePayload`, the entire `true_dom` object (JSON string) gets passed to integer column.
+- The temporalMetrics map correctly extracts `property_hash` string, but the spread `...t.supabasePayload` brings in the nested object.
+
+**2. Typesense PossessionType missing from transformer**
+- Error: `Field 'PossessionType' has been declared in the schema, but is not found in the document.`
+- Status: FIXED - Added `typesensePayload.PossessionType = raw.PossessionType || '';` at line 1038
+- Also added `typesensePayload.OccupantType = raw.OccupantType || '';` at line 1035
+- Note: Running script uses cached code; fix takes effect on restart
+
+**3. Board data status fields empty**
+- All listings show `StandardStatus=''`, `MlsStatus=''`, `ClosePrice=0`, `CloseDate=null`
+- Board may use different field names for status or data is not populated
+- `isSoldListing()` correctly identifies all listings as ACTIVE due to empty fields
+- No sold/closed listings found in 10,960 records
+
+### Test Results (2026-05-16)
+- Sync completed: 10,960 records, 110 pages
+- Errors: 220 (all pre-existing bugs)
+- Sold listings found: 0 (board data issue)
+
+## Dual-Query Sync Architecture (2026-05-16)
+
+### Problem
+The 48-hour delta sync pulled 0 sales because this specific board does NOT reliably update `ModificationTimestamp` when a listing closes — they only update `CloseDate`. The board IS using standard RESO fields (`StandardStatus="Closed"`, `ClosePrice`, `CloseDate`).
+
+### Solution: Dual-Query Architecture
+Implemented two distinct API queries to guarantee capture of all listings:
+
+**Query A (Active Sync):**
+- Filter: `StandardStatus eq 'Active' and ModificationTimestamp gt [lastSyncTimestamp]`
+- Routes to: Typesense listings table (via `processBatch()`)
+- Query function: `fetchActiveListingsBatch()`
+
+**Query B (Sold Sync):**
+- Filter: `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold') and CloseDate ge [lastSyncDate]`
+- Routes to:
+  1. `raw_vow_sold` (AVM anchor table) via `upsertSoldListings()`
+  2. Typesense with `IsSold: true` via `processBatch(rawListings, { isSold: true })`
+  3. Supabase listings table (full document for historical charting)
+- Query function: `fetchSoldListingsBatch()`
+- Note: `CloseDate` is a Date string (e.g., `2026-05-14`), not ISO timestamp — filter formatted as `CloseDate ge 'YYYY-MM-DD'`
+
+### Execution Flow
+Sequential in `runDeltaSync()`:
+1. Query A first → paginate active listings via `ModificationTimestamp`
+2. Query B immediately after → paginate sold listings via `CloseDate` (date string)
+3. Update `sync_state.last_sync_timestamp` when both complete
+
+### isSoldListing() Reverted
+Simplified to standard RESO checks only:
+```typescript
+function isSoldListing(raw: any): boolean {
+  const standardStatus = raw.StandardStatus || '';
+  const mlStatus = raw.MlsStatus || '';
+  return standardStatus.toLowerCase().trim() === 'closed' || mlStatus.toLowerCase().trim() === 'sold';
+}
+```
+
+### Bug Fix: property_hash Integer Crash
+**Root Cause:** `supabaseRecords` used spread `{...t.supabasePayload}` which included the nested `true_dom` object. Later reassigning `property_hash` caused the entire `true_dom` JSON string to be passed to the INTEGER column.
+
+**Fix:** Build records explicitly in `sync.ts` Step 5 to avoid accidentally including nested objects:
+```typescript
+const supabaseRecords = transformed.map(t => {
+  const metrics = temporalMetrics.get(t.supabasePayload.listing_key);
+  const p = t.supabasePayload;
+  return {
+    listing_key: p.listing_key,
+    full_payload: p.full_payload,
+    // ... explicit fields only, no spread operator
+    property_hash: metrics?.property_hash || '',
+    // ...
+  };
+});
+```
+
+### Typesense Schema Update
+Added `IsSold` field (bool, facet: true) to `indexedFields` in `typesenseSchema.ts` for frontend filtering of sold listings.
+
+### Files Modified
+- `scripts/worker/ingester.ts` - Dual-Query sync loop, new fetch functions
+- `scripts/worker/sync.ts` - `processBatch()` optional `isSold` flag, explicit record building
+- `src/lib/typesense/typesenseSchema.ts` - Added `IsSold` indexed field
+
+### Known Issue: CloseDate Not Filterable
+This board's RESO API does NOT allow `CloseDate` in $filter expressions:
+- Error: `"Field not allowed in filter: CloseDate"`
+
+All OData v4 date literal formats were attempted and rejected:
+- `datetime'2026-05-16'` → "The types 'Edm.Date' and 'Edm.String' are not compatible"
+- `datetime'...'` → "The property 'datetime' is not defined"
+- `date'2026-05-16'` → "The property 'date' is not defined"
+- Unquoted `CloseDate ge 2026-05-16` → "Field not allowed in filter: CloseDate"
+
+**Current Solution:** Query B uses only the status filter `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')` with `$orderby=CloseDate desc` for server-side sorting. Client-side pruning stops pagination when CloseDates older than the 48-hour cutoff are encountered.
+
+**48-Hour Catchup Mode:** During initial catchup, we run with a hardcoded 48-hour timestamp that gates results. Once synced, subsequent runs use `readSyncState()` which provides proper time-based gating. A future enhancement would require board support for proper date filtering.

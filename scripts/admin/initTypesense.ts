@@ -67,26 +67,19 @@ async function initTypesense() {
         console.log(`   - ${field.name}: ${field.type}${field.index === false ? ' [stored]' : ''}`);
       }
 
-      // Check if it has Phase 3/4 fields
+      // Check if it has Phase 3/4 fields (check both snake_case and camelCase for compatibility)
       const fieldNames = new Set((existingSchema.fields || []).map((f: any) => f.name));
-      const hasPropertyHash = fieldNames.has('property_hash');
-      const hasTrueDom = fieldNames.has('true_dom');
-      const hasExtrapolatedCapRate = fieldNames.has('extrapolated_cap_rate');
+      const hasPropertyHash = fieldNames.has('property_hash') || fieldNames.has('PropertyHash');
+      const hasTrueDom = fieldNames.has('true_dom') || fieldNames.has('TrueDom');
+      const hasExtrapolatedCapRate = fieldNames.has('extrapolated_cap_rate') || fieldNames.has('ExtrapolatedCapRate');
 
-      if (hasPropertyHash && hasTrueDom && hasExtrapolatedCapRate) {
-        console.log('\n   ✅ Collection has Phase 3/4 fields - no recreation needed.\n');
-        console.log('==================================================');
-        console.log('✅ Typesense Collection Ready!');
-        console.log('==================================================\n');
-        return;
-      } else {
-        console.log('\n   ⚠️  Collection missing Phase 3/4 fields - recreating with full schema...\n');
-        
-        console.log('🗑️  Deleting existing collection...');
-        await client.collections(COLLECTION_NAME).delete();
-        console.log('   ✅ Deleted\n');
-        collectionExists = false;
-      }
+      // Force recreation to ensure camelCase schema is applied
+      console.log('\n   ⚠️  Forcing recreation with updated schema...\n');
+      
+      console.log('🗑️  Deleting existing collection...');
+      await client.collections(COLLECTION_NAME).delete();
+      console.log('   ✅ Deleted\n');
+      collectionExists = false;
     }
 
     // Create new collection

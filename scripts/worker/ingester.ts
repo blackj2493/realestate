@@ -46,13 +46,16 @@ interface SoldListingRecord {
 
 /**
  * Checks if a listing status indicates it has been sold/closed.
+ * Uses standard RESO fields: StandardStatus="Closed" or MlsStatus="Sold"
  */
-function isSoldListing(status: string | undefined): boolean {
-  if (!status) return false;
-  const normalized = status.toLowerCase().trim();
-  const isSold = normalized === 'closed' || normalized === 'sold';
-  console.log(`   🔍 isSoldListing check: status='${status}' → ${isSold ? 'SOLD' : 'ACTIVE'}`);
-  return isSold;
+function isSoldListing(raw: any): boolean {
+  const standardStatus = raw.StandardStatus || '';
+  const mlStatus = raw.MlsStatus || '';
+  
+  const isClosed = standardStatus.toLowerCase().trim() === 'closed';
+  const isSold = mlStatus.toLowerCase().trim() === 'sold';
+  
+  return isClosed || isSold;
 }
 
 /**
@@ -295,13 +298,14 @@ export interface ListingsBatch {
 }
 
 /**
- * Fetches a batch of listings (max 100) from RESO Web API.
+ * Fetches a batch of ACTIVE listings (max 100) from RESO Web API.
+ * Query A of the Dual-Query architecture.
  * 
  * @param skip - Number of records to skip (for manual pagination)
  * @param lastSyncTimestamp - ISO timestamp for ModificationTimestamp filter
  * @returns Listings batch with pagination info
  */
-export async function fetchListingsBatch(
+export async function fetchActiveListingsBatch(
   skip: number = 0,
   lastSyncTimestamp?: string
 ): Promise<ListingsBatch> {
@@ -315,17 +319,16 @@ export async function fetchListingsBatch(
     throw new Error('lastSyncTimestamp must be provided');
   }
   
-  // FIX: Query both Active AND Sold/Closed statuses to feed raw_vow_sold for AVM anchor
-  // Build filter string first, then encode once to avoid double-encoding
-  const statusFilter = `(StandardStatus eq 'Active' or StandardStatus eq 'Closed')`;
+  // Query A (Active Sync): StandardStatus eq 'Active' + ModificationTimestamp filter
+  // Routes to Typesense listings table
+  const statusFilter = `StandardStatus eq 'Active'`;
   const modFilter = `ModificationTimestamp gt ${lastSyncTimestamp}`;
   const combinedFilter = `${statusFilter} and (${modFilter})`;
   
   const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$top=100&$skip=${skip}&$count=true`;
   
-  console.log(`   🔍 Query URL: ${url}`);
+  console.log(`   🔍 Query A (Active): ${url.substring(0, 80)}...`);
   console.log(`   → Delta query from: ${lastSyncTimestamp} (skip: ${skip})`);
-  console.log(`   → Status filter: StandardStatus eq 'Active' or 'Closed'`);
   
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
@@ -335,7 +338,7 @@ export async function fetchListingsBatch(
   });
   
   if (!result.success || !result.data) {
-    throw new Error(`Fetch failed: ${result.error}`);
+    throw new Error(`Query A fetch failed: ${result.error}`);
   }
   
   const data = result.data;
@@ -345,7 +348,76 @@ export async function fetchListingsBatch(
   const nextLink: string | null = data['@odata.nextLink'] || null;
   const totalCount: number | undefined = data['@odata.count'];
   
-  console.log(`   ✅ Batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
+  console.log(`   ✅ Query A batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
+  if (totalCount !== undefined) {
+    console.log(`   📊 Total matching: ${totalCount}`);
+  }
+  
+  return { listings, nextLink, totalCount };
+}
+
+/**
+ * Fetches a batch of SOLD/CLOSED listings (max 100) from RESO Web API.
+ * Query B of the Dual-Query architecture.
+ * 
+ * CloseDate is typically a Date string (e.g., "2026-05-14"), not a full ISO timestamp.
+ * Uses date string format: CloseDate ge 'YYYY-MM-DD'
+ * 
+ * @param skip - Number of records to skip (for manual pagination)
+ * @param lastSyncDate - Date string (YYYY-MM-DD) for CloseDate filter
+ * @returns Listings batch with pagination info
+ */
+export async function fetchSoldListingsBatch(
+  skip: number = 0,
+  lastSyncDate?: string
+): Promise<ListingsBatch> {
+  const token = BEARER_TOKEN;
+  
+  if (!token) {
+    throw new Error('RESO_BEARER_TOKEN environment variable is not set');
+  }
+  
+  if (!lastSyncDate) {
+    throw new Error('lastSyncDate must be provided (format: YYYY-MM-DD)');
+  }
+  
+  // Query B (Sold Sync): StandardStatus eq 'Closed' OR MlsStatus eq 'Sold' + CloseDate filter
+  // Routes to: raw_vow_sold (AVM anchor) + Typesense (is_sold: true)
+  //
+  // IMPORTANT: CloseDate is NOT a filterable field on this board's RESO API.
+  // Error: "Field not allowed in filter: CloseDate"
+  // We can only filter by status. CloseDate data IS present on records (confirmed
+  // by diagnostic probe), but the server doesn't allow it in $filter expressions.
+  // 
+  // Query B must use status-only filter to avoid downloading entire sales history.
+  // Add $orderby=CloseDate desc to ensure newest sales come first (for client-side pruning).
+  const statusFilter = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`;
+  const combinedFilter = statusFilter;
+  
+  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$orderby=CloseDate%20desc&$top=100&$skip=${skip}&$count=true`;
+  
+  console.log(`   🔍 Query B (Sold): ${url.substring(0, 80)}...`);
+  console.log(`   → CloseDate filter from: ${lastSyncDate} (skip: ${skip})`);
+  
+  const result = await fetchWithRetry<any>(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    }
+  });
+  
+  if (!result.success || !result.data) {
+    throw new Error(`Query B fetch failed: ${result.error}`);
+  }
+  
+  const data = result.data;
+  
+  // Extract listings and nextLink
+  const listings: any[] = data.value || [];
+  const nextLink: string | null = data['@odata.nextLink'] || null;
+  const totalCount: number | undefined = data['@odata.count'];
+  
+  console.log(`   ✅ Query B batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
   if (totalCount !== undefined) {
     console.log(`   📊 Total matching: ${totalCount}`);
   }
@@ -436,95 +508,87 @@ export async function updateSyncState(
 }
 
 // ============================================================================
-// Main Delta Sync Orchestrator
+// Main Delta Sync Orchestrator (Dual-Query Architecture)
 // ============================================================================
 
-export interface DeltaSyncResult {
+export interface DualSyncResult {
   success: boolean;
-  totalRecords: number;
-  pagesProcessed: number;
+  activeRecords: number;
+  soldRecords: number;
+  activePages: number;
+  soldPages: number;
   errors: string[];
   lastSyncTimestamp: string;
 }
 
 /**
- * Executes a delta sync - fetches all modified listings since last run.
+ * Executes a Dual-Query delta sync.
+ * 
+ * Query A (Active Sync):
+ *   $filter=StandardStatus eq 'Active' and ModificationTimestamp gt [lastSyncTimestamp]
+ *   Routes to: Typesense listings table (via sync.ts)
+ * 
+ * Query B (Sold Sync):
+ *   $filter=(StandardStatus eq 'Closed' or MlsStatus eq 'Sold') and CloseDate ge [lastSyncDate]
+ *   Routes to: raw_vow_sold (AVM anchor) + Typesense (is_sold: true) via sync.ts
  * 
  * Algorithm:
  * 1. Read last_sync_timestamp from Supabase
- * 2. While (has nextLink):
- *    a. Fetch batch of ≤100 listings
- *    b. Process batch via sync.ts (dual-write to Supabase + Typesense)
- *    c. Sleep 1000ms (rate limit)
- *    d. Update nextLink
- * 3. Update sync_state with current timestamp
+ * 2. Run Query A: Active listings via ModificationTimestamp
+ *    a. Paginate through batches
+ *    b. Process each batch via sync.ts (Supabase + Typesense)
+ *    c. Sleep 1000ms between pages
+ * 3. Run Query B: Sold listings via CloseDate (date string format)
+ *    a. Paginate through batches
+ *    b. Process each batch via sync.ts (Supabase + Typesense with is_sold: true)
+ *    c. Extract sold data and UPSERT to raw_vow_sold
+ *    d. Sleep 1000ms between pages
+ * 4. Update sync_state with current timestamp
  * 
  * IMPORTANT: sync_state is updated ONLY after ALL pages succeed.
  */
-export async function runDeltaSync(): Promise<DeltaSyncResult> {
+export async function runDeltaSync(): Promise<DualSyncResult> {
   console.log('\n========================================');
-  console.log('  Shadow MLS - Delta Sync Starting');
+  console.log('  Shadow MLS - Dual-Query Delta Sync');
   console.log('========================================\n');
   
-  const result: DeltaSyncResult = {
+  const result: DualSyncResult = {
     success: true,
-    totalRecords: 0,
-    pagesProcessed: 0,
+    activeRecords: 0,
+    soldRecords: 0,
+    activePages: 0,
+    soldPages: 0,
     errors: [],
     lastSyncTimestamp: ''
   };
   
   try {
-    // TODO (revert after catch-up): Use readSyncState() for normal delta sync
-    // For now, hardcode 48h catch-up window since database is stale
-    const CATCHUP_WINDOW_HOURS = 48;
-    const catchupTimestamp = new Date(Date.now() - CATCHUP_WINDOW_HOURS * 60 * 60 * 1000).toISOString().replace('+00:00', 'Z');
-    
-    // Step 1: Read current sync state (for logging only — we use catchupTimestamp for this run)
+    // Read sync state from Supabase
     console.log('📖 Reading sync state from Supabase...');
     const state = await readSyncState();
-    console.log(`   Last sync (from DB): ${state.lastSyncTimestamp}`);
-    console.log(`   Using catchup timestamp: ${catchupTimestamp}`);
+    console.log(`   Last sync timestamp: ${state.lastSyncTimestamp}`);
     console.log(`   Status: ${state.status}`);
-    console.log(`   ⏰ Date window: last ${CATCHUP_WINDOW_HOURS} hours (catch-up mode — will revert to readSyncState after catch-up)`);
-    console.log(`   🎯 Target statuses: Active AND Closed/Sold\n`);
     
     // Mark as running
     await updateSyncState(state.lastSyncTimestamp, 0, 'running');
     
-    // Step 2: Paginate through all modified listings using manual $skip
-    let skip = 0;
-    let hasMore = true;
-    let currentTimestamp = catchupTimestamp;
+    // ─── Query A: Active Sync (via ModificationTimestamp) ───────────────────
+    console.log('\n════════════════════════════════════════════════');
+    console.log('  QUERY A: Active Listings Sync');
+    console.log('════════════════════════════════════════════════\n');
+    
+    let activeSkip = 0;
+    let activeHasMore = true;
+    let currentTimestamp = state.lastSyncTimestamp;
     
     do {
-      console.log(`\n📄 Page ${result.pagesProcessed + 1} (Skip: ${skip}):`);
-      const batch = await fetchListingsBatch(skip, currentTimestamp);
+      console.log(`\n📄 Active Page ${result.activePages + 1} (Skip: ${activeSkip}):`);
+      const batch = await fetchActiveListingsBatch(activeSkip, currentTimestamp);
       
       if (batch.listings.length === 0) {
-        console.log('   ℹ️  No listings found in this batch');
+        console.log('   ℹ️  No active listings found in this batch');
         break;
       }
-      
-      // ─── Decision A1: Route Sold/Closed listings to raw_vow_sold ─────────
-      const supabaseClient = getServiceRoleClient();
-      const soldRecords: SoldListingRecord[] = [];
-      
-      for (const rawListing of batch.listings) {
-        const soldData = extractSoldListingData(rawListing);
-        if (soldData) {
-          soldRecords.push(soldData);
-        }
-      }
-      
-      if (soldRecords.length > 0) {
-        console.log(`   🏠 Found ${soldRecords.length} sold/closed listings for raw_vow_sold`);
-        const upsertResult = await upsertSoldListings(supabaseClient, soldRecords);
-        console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
-      } else {
-        console.log(`   ℹ️  No sold/closed listings in this batch`);
-      }
-      // ────────────────────────────────────────────────────────────────────
       
       // Process batch through ETL pipeline (sync.ts)
       console.log('   🔄 Processing batch through ETL pipeline...');
@@ -536,50 +600,142 @@ export async function runDeltaSync(): Promise<DeltaSyncResult> {
       }
       
       // Update counters
-      result.totalRecords += batch.listings.length;
-      result.pagesProcessed++;
-      skip += batch.listings.length;
+      result.activeRecords += batch.listings.length;
+      result.activePages++;
+      activeSkip += batch.listings.length;
       
       // If we got a full batch of 100, there is likely another page
-      hasMore = batch.listings.length === 100;
+      activeHasMore = batch.listings.length === 100;
       
-      console.log(`   📊 Running totals: ${result.totalRecords} records, ${result.pagesProcessed} pages`);
+      console.log(`   📊 Running totals: ${result.activeRecords} active records, ${result.activePages} pages`);
       
       // Rate limit delay
       console.log(`   ⏳ Rate limiting: sleeping ${PAGE_DELAY_MS}ms...`);
       await sleep(PAGE_DELAY_MS);
       
-    } while (hasMore);
+    } while (activeHasMore);
     
-    // Step 3: Update sync state (ONLY after all pages succeed)
+    console.log(`\n✅ Query A Complete: ${result.activeRecords} active records, ${result.activePages} pages`);
+    
+    // ─── Query B: Sold Sync (via CloseDate) ──────────────────────────────────
+    console.log('\n════════════════════════════════════════════════');
+    console.log('  QUERY B: Sold Listings Sync');
+    console.log('════════════════════════════════════════════════\n');
+    
+    // Convert timestamp to date string for CloseDate filter (YYYY-MM-DD format)
+    // CloseDate is typically just a Date string, not full ISO timestamp
+    const lastSyncDate = state.lastSyncTimestamp.split('T')[0] || state.lastSyncTimestamp.substring(0, 10);
+    console.log(`   📅 Using lastSyncDate: ${lastSyncDate} (date string format for CloseDate filter)`);
+    
+    let soldSkip = 0;
+    let soldHasMore = true;
+    const supabaseClient = getServiceRoleClient();
+    
+    do {
+      console.log(`\n📄 Sold Page ${result.soldPages + 1} (Skip: ${soldSkip}):`);
+      const batch = await fetchSoldListingsBatch(soldSkip, lastSyncDate);
+      
+      if (batch.listings.length === 0) {
+        console.log('   ℹ️  No sold listings found in this batch');
+        break;
+      }
+      
+      // Log sample statuses
+      const statuses = [...new Set(batch.listings.map(l => l.StandardStatus || l.MlsStatus || l.Status))];
+      console.log(`   📋 Statuses in batch: ${statuses.join(', ')}`);
+      
+      // Process batch through ETL pipeline (sync.ts) with is_sold flag
+      console.log('   🔄 Processing sold batch through ETL pipeline...');
+      const syncResult = await processBatch(batch.listings, { isSold: true });
+      
+      if (!syncResult.success) {
+        result.errors.push(...syncResult.supabase.errors);
+        result.errors.push(...syncResult.typesense.errors);
+      }
+      
+      // Extract sold data for raw_vow_sold (AVM anchor table)
+      const soldRecords: SoldListingRecord[] = [];
+      for (const rawListing of batch.listings) {
+        const soldData = extractSoldListingData(rawListing);
+        if (soldData) {
+          soldRecords.push(soldData);
+        }
+      }
+      
+      if (soldRecords.length > 0) {
+        console.log(`   🏠 Found ${soldRecords.length} sold/closed listings for raw_vow_sold`);
+        const upsertResult = await upsertSoldListings(supabaseClient, soldRecords);
+        console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
+      }
+      
+      // ─── Client-Side Pruning (CloseDate guard) ─────────────────────────────
+      // Since CloseDate cannot be used in $filter (board rejects it), we use
+      // server-side sorting ($orderby=CloseDate desc) + client-side pruning.
+      // Once we hit a CloseDate older than our cutoff, everything after is older.
+      const cutoffDate = new Date(lastSyncDate);
+      let hitOldCutoff = false;
+      
+      for (const listing of batch.listings) {
+        const closeDate = listing.CloseDate || listing.SoldDate;
+        if (closeDate) {
+          const listingDate = new Date(closeDate);
+          if (listingDate < cutoffDate) {
+            console.log(`   🛑 Client-side pruning: Found CloseDate ${closeDate} older than cutoff ${lastSyncDate}`);
+            console.log(`   🛑 Aborting pagination - all subsequent listings will be older (sorted desc)`);
+            hitOldCutoff = true;
+            break;
+          }
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
+      
+      // Update counters
+      result.soldRecords += batch.listings.length;
+      result.soldPages++;
+      soldSkip += batch.listings.length;
+      
+      // If we got a full batch of 100, there is likely another page
+      // BUT also check if we hit the old cutoff date
+      soldHasMore = !hitOldCutoff && batch.listings.length === 100;
+      
+      console.log(`   📊 Running totals: ${result.soldRecords} sold records, ${result.soldPages} pages`);
+      
+      // Rate limit delay
+      console.log(`   ⏳ Rate limiting: sleeping ${PAGE_DELAY_MS}ms...`);
+      await sleep(PAGE_DELAY_MS);
+      
+    } while (soldHasMore);
+    
+    console.log(`\n✅ Query B Complete: ${result.soldRecords} sold records, ${result.soldPages} pages`);
+    
+    // ─── Finalize ───────────────────────────────────────────────────────────
     const now = new Date().toISOString();
     result.lastSyncTimestamp = now;
     
     console.log('\n========================================');
-    console.log('  Delta Sync Complete!');
+    console.log('  Dual-Query Sync Complete!');
     console.log('========================================');
-    console.log(`   Records synced: ${result.totalRecords}`);
-    console.log(`   Pages processed: ${result.pagesProcessed}`);
+    console.log(`   Active records: ${result.activeRecords} (${result.activePages} pages)`);
+    console.log(`   Sold records: ${result.soldRecords} (${result.soldPages} pages)`);
     console.log(`   New sync timestamp: ${now}`);
-    console.log(`   ⏰ Date window used: 48 hours (catch-up mode)`);
     
     if (result.errors.length > 0) {
-      console.log(`   Warnings: ${result.errors.length} errors`);
+      console.log(`   ⚠️  Warnings: ${result.errors.length} errors`);
       result.errors.slice(0, 5).forEach(e => console.log(`     - ${e}`));
     }
     
     // Update sync state with new timestamp
-    await updateSyncState(now, result.totalRecords, 'completed');
+    await updateSyncState(now, result.activeRecords + result.soldRecords, 'completed');
     
     return result;
     
   } catch (err: any) {
-    console.error('\n❌ Delta sync failed:', err.message);
+    console.error('\n❌ Dual-Query sync failed:', err.message);
     result.success = false;
     result.errors.push(err.message);
     
     // Update status to failed
-    await updateSyncState(new Date().toISOString(), result.totalRecords, 'failed');
+    await updateSyncState(new Date().toISOString(), result.activeRecords + result.soldRecords, 'failed');
     
     return result;
   }
@@ -605,7 +761,7 @@ async function main() {
     console.log('\n🧪 Testing fetch with current token...');
     console.log(`   Token: ${token.substring(0, 20)}...`);
     
-    const batch = await fetchListingsBatch(
+    const batch = await fetchActiveListingsBatch(
       0,
       new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     );

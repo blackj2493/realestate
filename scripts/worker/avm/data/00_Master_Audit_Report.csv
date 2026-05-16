@@ -1,0 +1,876 @@
+City_Region,Property_Type,Total_Sales_Analyzed,Model_Accuracy_Score (R2),Average_Error_Margin,File_Name
+1117 - Avalon West,Condo Apartment,49,0.99,3701.0,1117_-_Avalon_West_Condo_Apartment_Matrix.csv
+14 - Central City East,Condo Apartment,61,0.94,51116.0,14_-_Central_City_East_Condo_Apartment_Matrix.csv
+Rose,Townhouse,62,0.93,62423.0,Rose_Townhouse_Matrix.csv
+1013 - OO Old Oakville,Condo Apartment,40,0.91,324769.0,1013_-_OO_Old_Oakville_Condo_Apartment_Matrix.csv
+Erin Mills,Condo Apartment,70,0.9,78491.0,Erin_Mills_Condo_Apartment_Matrix.csv
+Victoria North,Townhouse,43,0.9,30895.0,Victoria_North_Townhouse_Matrix.csv
+Kingsview Village-The Westway,Condo Apartment,70,0.9,39889.0,Kingsview_Village-The_Westway_Condo_Apartment_Matrix.csv
+1005 - FA Falgarwood,Townhouse,45,0.89,45077.0,1005_-_FA_Falgarwood_Townhouse_Matrix.csv
+Lansing-Westgate,Condo Apartment,114,0.89,45678.0,Lansing-Westgate_Condo_Apartment_Matrix.csv
+East End-Danforth,Condo Apartment,51,0.89,45325.0,East_End-Danforth_Condo_Apartment_Matrix.csv
+Lakeview,Townhouse,62,0.89,63998.0,Lakeview_Townhouse_Matrix.csv
+Credit Valley,Detached,230,0.88,91385.0,Credit_Valley_Detached_Matrix.csv
+Kensington-Chinatown,Condo Apartment,139,0.88,71427.0,Kensington-Chinatown_Condo_Apartment_Matrix.csv
+18 - Central City West,Condo Apartment,44,0.87,35666.0,18_-_Central_City_West_Condo_Apartment_Matrix.csv
+South B,Townhouse,38,0.87,42887.0,South_B_Townhouse_Matrix.csv
+North N,Detached,83,0.87,61640.0,North_N_Detached_Matrix.csv
+Chaffey,Condo Apartment,50,0.86,36544.0,Chaffey_Condo_Apartment_Matrix.csv
+Orillia,Townhouse,42,0.86,44389.0,Orillia_Townhouse_Matrix.csv
+Newtonbrook East,Detached,96,0.86,180338.0,Newtonbrook_East_Detached_Matrix.csv
+Aurora Village,Detached,73,0.85,196880.0,Aurora_Village_Detached_Matrix.csv
+Observatory,Condo Apartment,45,0.85,46096.0,Observatory_Condo_Apartment_Matrix.csv
+Newtonbrook West,Detached,97,0.85,146848.0,Newtonbrook_West_Detached_Matrix.csv
+Brant,Condo Apartment,203,0.85,144279.0,Brant_Condo_Apartment_Matrix.csv
+Casa Loma,Condo Apartment,72,0.85,221275.0,Casa_Loma_Condo_Apartment_Matrix.csv
+Annex,Condo Apartment,327,0.85,146073.0,Annex_Condo_Apartment_Matrix.csv
+Aileen-Willowbrook,Townhouse,50,0.85,30826.0,Aileen-Willowbrook_Townhouse_Matrix.csv
+717 - Cornwall,Condo Apartment,49,0.85,23262.0,717_-_Cornwall_Condo_Apartment_Matrix.csv
+Humewood-Cedarvale,Condo Apartment,57,0.84,50749.0,Humewood-Cedarvale_Condo_Apartment_Matrix.csv
+Lorne Park,Detached,176,0.83,316493.0,Lorne_Park_Detached_Matrix.csv
+North I,Detached,118,0.83,29120.0,North_I_Detached_Matrix.csv
+Niagara,Townhouse,131,0.83,77118.0,Niagara_Townhouse_Matrix.csv
+443 - Lakeport,Townhouse,49,0.82,44325.0,443_-_Lakeport_Townhouse_Matrix.csv
+Woodstock - North,Townhouse,92,0.82,40410.0,Woodstock_-_North_Townhouse_Matrix.csv
+Guildwood,Condo Apartment,42,0.82,62851.0,Guildwood_Condo_Apartment_Matrix.csv
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Condo Apartment,84,0.82,35338.0,7202_-_Borden_Farm_Stewart_Farm_Carleton_Heights_Parkwood_Hills_Condo_Apartment_Matrix.csv
+Patterson,Detached,382,0.81,136865.0,Patterson_Detached_Matrix.csv
+1601 - Greely,Detached,152,0.81,115392.0,1601_-_Greely_Detached_Matrix.csv
+Willowdale East,Townhouse,90,0.81,73289.0,Willowdale_East_Townhouse_Matrix.csv
+Humewood-Cedarvale,Detached,95,0.81,288237.0,Humewood-Cedarvale_Detached_Matrix.csv
+Kortright West,Condo Apartment,43,0.8,33244.0,Kortright_West_Condo_Apartment_Matrix.csv
+Bayview Village,Condo Apartment,397,0.8,58420.0,Bayview_Village_Condo_Apartment_Matrix.csv
+Pineridge/Westminster Woods,Condo Apartment,136,0.8,41723.0,Pineridge_Westminster_Woods_Condo_Apartment_Matrix.csv
+Regent Park,Condo Apartment,178,0.8,42132.0,Regent_Park_Condo_Apartment_Matrix.csv
+Moss Park,Condo Apartment,390,0.8,56922.0,Moss_Park_Condo_Apartment_Matrix.csv
+Rural Vaughan,Detached,48,0.8,227857.0,Rural_Vaughan_Detached_Matrix.csv
+8209 - Goulbourn Twp From Franktown Rd/South To Rideau,Detached,97,0.79,33173.0,8209_-_Goulbourn_Twp_From_Franktown_Rd_South_To_Rideau_Detached_Matrix.csv
+Blake-Jones,Detached,38,0.79,193951.0,Blake-Jones_Detached_Matrix.csv
+Yonge-St. Clair,Condo Apartment,127,0.79,189748.0,Yonge-St._Clair_Condo_Apartment_Matrix.csv
+7709 - Barrhaven - Strandherd,Detached,54,0.79,32594.0,7709_-_Barrhaven_-_Strandherd_Detached_Matrix.csv
+Princess-Rosethorn,Detached,157,0.79,339100.0,Princess-Rosethorn_Detached_Matrix.csv
+1020 - WO West,Detached,228,0.78,275822.0,1020_-_WO_West_Detached_Matrix.csv
+Roseland,Detached,165,0.78,214197.0,Roseland_Detached_Matrix.csv
+Yonge-Eglinton,Condo Apartment,77,0.78,56047.0,Yonge-Eglinton_Condo_Apartment_Matrix.csv
+1105 - Fallingbrook/Pineridge,Townhouse,42,0.78,21395.0,1105_-_Fallingbrook_Pineridge_Townhouse_Matrix.csv
+Willowdale East,Detached,140,0.78,282315.0,Willowdale_East_Detached_Matrix.csv
+Waterfront Communities C1,Condo Apartment,1926,0.78,77785.0,Waterfront_Communities_C1_Condo_Apartment_Matrix.csv
+Georgetown,Townhouse,60,0.78,27169.0,Georgetown_Townhouse_Matrix.csv
+Hurontario,Townhouse,122,0.78,45494.0,Hurontario_Townhouse_Matrix.csv
+Grange Road,Detached,227,0.77,56103.0,Grange_Road_Detached_Matrix.csv
+4502 - West Centre Town,Condo Apartment,84,0.77,42752.0,4502_-_West_Centre_Town_Condo_Apartment_Matrix.csv
+7607 - Centrepointe,Townhouse,42,0.77,24249.0,7607_-_Centrepointe_Townhouse_Matrix.csv
+Islington-City Centre West,Condo Apartment,613,0.77,43526.0,Islington-City_Centre_West_Condo_Apartment_Matrix.csv
+4103 - Ottawa Centre,Condo Apartment,83,0.76,36426.0,4103_-_Ottawa_Centre_Condo_Apartment_Matrix.csv
+Woodbine-Lumsden,Detached,123,0.76,115299.0,Woodbine-Lumsden_Detached_Matrix.csv
+Unionville,Condo Apartment,430,0.76,56506.0,Unionville_Condo_Apartment_Matrix.csv
+Mount Pleasant West,Condo Apartment,612,0.76,67817.0,Mount_Pleasant_West_Condo_Apartment_Matrix.csv
+1013 - OO Old Oakville,Detached,84,0.76,797520.0,1013_-_OO_Old_Oakville_Detached_Matrix.csv
+Willowdale East,Condo Apartment,681,0.76,54960.0,Willowdale_East_Condo_Apartment_Matrix.csv
+1032 - FO Ford,Detached,95,0.75,83778.0,1032_-_FO_Ford_Detached_Matrix.csv
+North F,Detached,68,0.75,59699.0,North_F_Detached_Matrix.csv
+South Riverdale,Condo Apartment,204,0.75,81664.0,South_Riverdale_Condo_Apartment_Matrix.csv
+North St. James Town,Condo Apartment,111,0.75,68571.0,North_St._James_Town_Condo_Apartment_Matrix.csv
+Churchill Meadows,Townhouse,100,0.75,50686.0,Churchill_Meadows_Townhouse_Matrix.csv
+Central Erin Mills,Detached,140,0.75,155238.0,Central_Erin_Mills_Detached_Matrix.csv
+Yorkdale-Glen Park,Detached,67,0.75,152730.0,Yorkdale-Glen_Park_Detached_Matrix.csv
+1002 - CO Central,Detached,76,0.75,322157.0,1002_-_CO_Central_Detached_Matrix.csv
+Mimico,Condo Apartment,704,0.75,64196.0,Mimico_Condo_Apartment_Matrix.csv
+Windfields,Condo Apartment,53,0.74,27840.0,Windfields_Condo_Apartment_Matrix.csv
+Keswick South,Detached,290,0.74,68250.0,Keswick_South_Detached_Matrix.csv
+Willow West/Sugarbush/West Acres,Townhouse,62,0.74,46678.0,Willow_West_Sugarbush_West_Acres_Townhouse_Matrix.csv
+Bedford Park-Nortown,Detached,187,0.74,337347.0,Bedford_Park-Nortown_Detached_Matrix.csv
+Collingwood,Townhouse,114,0.74,115752.0,Collingwood_Townhouse_Matrix.csv
+Holland Landing,Detached,179,0.74,97749.0,Holland_Landing_Detached_Matrix.csv
+Fergus,Condo Apartment,48,0.74,45303.0,Fergus_Condo_Apartment_Matrix.csv
+Port Credit,Condo Apartment,69,0.74,177881.0,Port_Credit_Condo_Apartment_Matrix.csv
+St. Patrick's Ward,Condo Apartment,63,0.74,44981.0,St._Patrick's_Ward_Condo_Apartment_Matrix.csv
+Waterdown,Condo Apartment,91,0.73,37597.0,Waterdown_Condo_Apartment_Matrix.csv
+Clarkson,Detached,147,0.73,266113.0,Clarkson_Detached_Matrix.csv
+Belleville Ward,Townhouse,52,0.73,40900.0,Belleville_Ward_Townhouse_Matrix.csv
+Edenbridge-Humber Valley,Condo Apartment,68,0.73,68594.0,Edenbridge-Humber_Valley_Condo_Apartment_Matrix.csv
+Bram East,Detached,206,0.73,97025.0,Bram_East_Detached_Matrix.csv
+Lawrence Park North,Detached,147,0.73,250131.0,Lawrence_Park_North_Detached_Matrix.csv
+Markland Wood,Condo Apartment,74,0.73,34782.0,Markland_Wood_Condo_Apartment_Matrix.csv
+Waterfront Communities C8,Condo Apartment,515,0.73,79691.0,Waterfront_Communities_C8_Condo_Apartment_Matrix.csv
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,92,0.73,34513.0,Dovercourt-Wallace_Emerson-Junction_Condo_Apartment_Matrix.csv
+Willowdale West,Detached,82,0.73,268764.0,Willowdale_West_Detached_Matrix.csv
+444 - Carlton/Bunting,Townhouse,50,0.72,47972.0,444_-_Carlton_Bunting_Townhouse_Matrix.csv
+Erindale,Detached,82,0.72,202068.0,Erindale_Detached_Matrix.csv
+Aurora Highlands,Detached,144,0.72,154298.0,Aurora_Highlands_Detached_Matrix.csv
+Rouge Woods,Detached,98,0.72,97707.0,Rouge_Woods_Detached_Matrix.csv
+Mt Albert,Detached,76,0.72,128394.0,Mt_Albert_Detached_Matrix.csv
+Sandringham-Wellington North,Detached,67,0.72,44939.0,Sandringham-Wellington_North_Detached_Matrix.csv
+Shoreacres,Detached,162,0.72,231543.0,Shoreacres_Detached_Matrix.csv
+1015 - RO River Oaks,Townhouse,113,0.72,50483.0,1015_-_RO_River_Oaks_Townhouse_Matrix.csv
+Steeles,Detached,96,0.72,67720.0,Steeles_Detached_Matrix.csv
+Beverley Glen,Detached,45,0.72,159236.0,Beverley_Glen_Detached_Matrix.csv
+Bram West,Detached,125,0.71,92031.0,Bram_West_Detached_Matrix.csv
+Bowmanville,Detached,706,0.71,61193.0,Bowmanville_Detached_Matrix.csv
+206 - Stamford,Detached,71,0.71,72317.0,206_-_Stamford_Detached_Matrix.csv
+Victoria North,Detached,66,0.71,66333.0,Victoria_North_Detached_Matrix.csv
+Appleby,Condo Apartment,94,0.71,70908.0,Appleby_Condo_Apartment_Matrix.csv
+Baxter,Detached,80,0.7,210400.0,Baxter_Detached_Matrix.csv
+Woodstock - North,Detached,484,0.7,69314.0,Woodstock_-_North_Detached_Matrix.csv
+Rose,Detached,99,0.7,150708.0,Rose_Detached_Matrix.csv
+1003 - CP College Park,Detached,83,0.7,174116.0,1003_-_CP_College_Park_Detached_Matrix.csv
+Lynde Creek,Detached,132,0.7,110645.0,Lynde_Creek_Detached_Matrix.csv
+Niagara,Condo Apartment,772,0.7,61006.0,Niagara_Condo_Apartment_Matrix.csv
+LaSalle,Detached,148,0.7,199082.0,LaSalle_Detached_Matrix.csv
+Appleby,Townhouse,57,0.7,49254.0,Appleby_Townhouse_Matrix.csv
+1002 - CO Central,Condo Apartment,48,0.7,124644.0,1002_-_CO_Central_Condo_Apartment_Matrix.csv
+Banbury-Don Mills,Condo Apartment,277,0.7,82102.0,Banbury-Don_Mills_Condo_Apartment_Matrix.csv
+Churchill Meadows,Detached,144,0.7,86789.0,Churchill_Meadows_Detached_Matrix.csv
+1029 - DE Dempsey,Condo Apartment,81,0.7,38765.0,1029_-_DE_Dempsey_Condo_Apartment_Matrix.csv
+437 - Lakeshore,Detached,106,0.7,89581.0,437_-_Lakeshore_Detached_Matrix.csv
+Belleville Ward,Condo Apartment,51,0.69,44176.0,Belleville_Ward_Condo_Apartment_Matrix.csv
+Mineola,Detached,117,0.69,344224.0,Mineola_Detached_Matrix.csv
+East York,Detached,108,0.69,170993.0,East_York_Detached_Matrix.csv
+Sandringham-Wellington,Detached,350,0.69,66721.0,Sandringham-Wellington_Detached_Matrix.csv
+Hanover,Detached,142,0.69,64615.0,Hanover_Detached_Matrix.csv
+Edenbridge-Humber Valley,Detached,99,0.69,421766.0,Edenbridge-Humber_Valley_Detached_Matrix.csv
+South B,Detached,122,0.69,112572.0,South_B_Detached_Matrix.csv
+1023 - BE Beaty,Detached,116,0.69,80996.0,1023_-_BE_Beaty_Detached_Matrix.csv
+O'Connor-Parkview,Detached,116,0.69,160395.0,O'Connor-Parkview_Detached_Matrix.csv
+High Park North,Condo Apartment,81,0.69,81665.0,High_Park_North_Condo_Apartment_Matrix.csv
+Greensborough,Townhouse,51,0.69,135668.0,Greensborough_Townhouse_Matrix.csv
+South Riverdale,Townhouse,47,0.68,76489.0,South_Riverdale_Townhouse_Matrix.csv
+Stratford,Condo Apartment,46,0.68,82301.0,Stratford_Condo_Apartment_Matrix.csv
+Vellore Village,Detached,301,0.68,161135.0,Vellore_Village_Detached_Matrix.csv
+Kleinburg,Detached,194,0.68,233601.0,Kleinburg_Detached_Matrix.csv
+Leaside,Detached,164,0.68,318588.0,Leaside_Detached_Matrix.csv
+Heart Lake West,Detached,153,0.68,69996.0,Heart_Lake_West_Detached_Matrix.csv
+KL & Area,Detached,171,0.68,50609.0,KL_&_Area_Detached_Matrix.csv
+Bayview,Detached,50,0.68,116242.0,Bayview_Detached_Matrix.csv
+Rural Innisfil,Condo Apartment,59,0.68,39265.0,Rural_Innisfil_Condo_Apartment_Matrix.csv
+912 - Mississippi Mills (Ramsay) Twp,Detached,90,0.68,95993.0,912_-_Mississippi_Mills_(Ramsay)_Twp_Detached_Matrix.csv
+South V,Detached,186,0.67,120390.0,South_V_Detached_Matrix.csv
+Bay Ridges,Detached,83,0.67,67473.0,Bay_Ridges_Detached_Matrix.csv
+Kennedy Park,Detached,74,0.67,92265.0,Kennedy_Park_Detached_Matrix.csv
+Central Newmarket,Condo Apartment,84,0.67,31543.0,Central_Newmarket_Condo_Apartment_Matrix.csv
+Vanier,Detached,115,0.67,50646.0,Vanier_Detached_Matrix.csv
+Rural Whitchurch-Stouffville,Detached,130,0.67,358445.0,Rural_Whitchurch-Stouffville_Detached_Matrix.csv
+Newcastle,Detached,225,0.67,74987.0,Newcastle_Detached_Matrix.csv
+1005 - FA Falgarwood,Detached,88,0.67,110131.0,1005_-_FA_Falgarwood_Detached_Matrix.csv
+1019 - WM Westmount,Detached,131,0.67,130292.0,1019_-_WM_Westmount_Detached_Matrix.csv
+Rural Uxbridge,Detached,109,0.67,269104.0,Rural_Uxbridge_Detached_Matrix.csv
+Berczy,Detached,120,0.67,109010.0,Berczy_Detached_Matrix.csv
+Bay Street Corridor,Condo Apartment,619,0.66,111009.0,Bay_Street_Corridor_Condo_Apartment_Matrix.csv
+Mount Hope,Detached,61,0.66,54931.0,Mount_Hope_Detached_Matrix.csv
+Oakwood Village,Detached,145,0.66,207624.0,Oakwood_Village_Detached_Matrix.csv
+Crestwood-Springfarm-Yorkhill,Condo Apartment,167,0.66,52276.0,Crestwood-Springfarm-Yorkhill_Condo_Apartment_Matrix.csv
+Cabbagetown-South St. James Town,Condo Apartment,97,0.66,59727.0,Cabbagetown-South_St._James_Town_Condo_Apartment_Matrix.csv
+Listowel,Detached,109,0.66,81188.0,Listowel_Detached_Matrix.csv
+Lindsay,Detached,408,0.66,55476.0,Lindsay_Detached_Matrix.csv
+Bradford,Detached,383,0.66,88486.0,Bradford_Detached_Matrix.csv
+Rural Hamilton,Detached,85,0.66,115290.0,Rural_Hamilton_Detached_Matrix.csv
+North P,Detached,55,0.66,53789.0,North_P_Detached_Matrix.csv
+Vellore Village,Condo Apartment,48,0.66,75434.0,Vellore_Village_Condo_Apartment_Matrix.csv
+East I,Townhouse,49,0.66,22961.0,East_I_Townhouse_Matrix.csv
+Tam O'Shanter-Sullivan,Condo Apartment,104,0.66,50881.0,Tam_O'Shanter-Sullivan_Condo_Apartment_Matrix.csv
+1035 - OM Old Milton,Detached,71,0.66,118842.0,1035_-_OM_Old_Milton_Detached_Matrix.csv
+North C,Detached,117,0.66,36438.0,North_C_Detached_Matrix.csv
+7711 - Barrhaven - Half Moon Bay,Detached,184,0.66,45841.0,7711_-_Barrhaven_-_Half_Moon_Bay_Detached_Matrix.csv
+East G,Condo Apartment,43,0.66,14360.0,East_G_Condo_Apartment_Matrix.csv
+1007 - GA Glen Abbey,Condo Apartment,65,0.66,42103.0,1007_-_GA_Glen_Abbey_Condo_Apartment_Matrix.csv
+Lawrence Park South,Condo Apartment,42,0.66,427112.0,Lawrence_Park_South_Condo_Apartment_Matrix.csv
+562 - Hurricane/Merrittville,Detached,68,0.65,79985.0,562_-_Hurricane_Merrittville_Detached_Matrix.csv
+Cobourg,Townhouse,50,0.65,55607.0,Cobourg_Townhouse_Matrix.csv
+Lawrence Park South,Detached,145,0.65,397801.0,Lawrence_Park_South_Detached_Matrix.csv
+1033 - HA Harrison,Detached,77,0.65,84857.0,1033_-_HA_Harrison_Detached_Matrix.csv
+1007 - GA Glen Abbey,Detached,186,0.65,157488.0,1007_-_GA_Glen_Abbey_Detached_Matrix.csv
+Rural Flamborough,Detached,141,0.65,190633.0,Rural_Flamborough_Detached_Matrix.csv
+1106 - Fallingbrook/Gardenway South,Detached,79,0.65,59210.0,1106_-_Fallingbrook_Gardenway_South_Detached_Matrix.csv
+Angus,Detached,204,0.65,58503.0,Angus_Detached_Matrix.csv
+1026 - CB Cobban,Detached,79,0.65,87370.0,1026_-_CB_Cobban_Detached_Matrix.csv
+Simcoe,Detached,97,0.65,66769.0,Simcoe_Detached_Matrix.csv
+Alcona,Detached,392,0.65,90321.0,Alcona_Detached_Matrix.csv
+Middlefield,Detached,83,0.64,97883.0,Middlefield_Detached_Matrix.csv
+South F,Detached,149,0.64,71483.0,South_F_Detached_Matrix.csv
+39 - North of Taylor-Kidd Blvd,Detached,130,0.64,57879.0,39_-_North_of_Taylor-Kidd_Blvd_Detached_Matrix.csv
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,69,0.64,48394.0,7703_-_Barrhaven_-_Cedargrove_Fraserdale_Detached_Matrix.csv
+Concord,Condo Apartment,209,0.64,43117.0,Concord_Condo_Apartment_Matrix.csv
+Mimico,Detached,127,0.64,159143.0,Mimico_Detached_Matrix.csv
+7710 - Barrhaven East,Detached,84,0.64,49625.0,7710_-_Barrhaven_East_Detached_Matrix.csv
+Bayview Northeast,Detached,55,0.64,104657.0,Bayview_Northeast_Detached_Matrix.csv
+Lakeview,Condo Apartment,98,0.64,63526.0,Lakeview_Condo_Apartment_Matrix.csv
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,41,0.64,295044.0,Bridle_Path-Sunnybrook-York_Mills_Condo_Apartment_Matrix.csv
+3602 - Riverview Park,Condo Apartment,60,0.64,74343.0,3602_-_Riverview_Park_Condo_Apartment_Matrix.csv
+Northwest Brampton,Detached,287,0.64,72709.0,Northwest_Brampton_Detached_Matrix.csv
+Wychwood,Detached,61,0.63,422799.0,Wychwood_Detached_Matrix.csv
+Orchard,Detached,120,0.63,86192.0,Orchard_Detached_Matrix.csv
+Blue Mountains,Condo Apartment,66,0.63,59475.0,Blue_Mountains_Condo_Apartment_Matrix.csv
+Courtice,Detached,340,0.63,76419.0,Courtice_Detached_Matrix.csv
+Selwyn,Detached,310,0.63,143298.0,Selwyn_Detached_Matrix.csv
+Brooklin,Detached,268,0.63,104646.0,Brooklin_Detached_Matrix.csv
+Northcrest Ward 5,Detached,313,0.63,54676.0,Northcrest_Ward_5_Detached_Matrix.csv
+717 - Cornwall,Detached,624,0.63,59755.0,717_-_Cornwall_Detached_Matrix.csv
+St. Thomas,Detached,767,0.63,59684.0,St._Thomas_Detached_Matrix.csv
+New Liskeard,Detached,99,0.63,52757.0,New_Liskeard_Detached_Matrix.csv
+East K,Condo Apartment,63,0.63,61538.0,East_K_Condo_Apartment_Matrix.csv
+Flemingdon Park,Condo Apartment,146,0.63,39745.0,Flemingdon_Park_Condo_Apartment_Matrix.csv
+Erindale,Townhouse,39,0.63,58237.0,Erindale_Townhouse_Matrix.csv
+Central Erin Mills,Condo Apartment,161,0.63,48630.0,Central_Erin_Mills_Condo_Apartment_Matrix.csv
+Minto,Detached,111,0.62,97699.0,Minto_Detached_Matrix.csv
+Uxbridge,Detached,157,0.62,168156.0,Uxbridge_Detached_Matrix.csv
+Madoc,Detached,157,0.62,80603.0,Madoc_Detached_Matrix.csv
+Innis-Shore,Detached,145,0.62,80724.0,Innis-Shore_Detached_Matrix.csv
+Painswick North,Detached,82,0.62,55281.0,Painswick_North_Detached_Matrix.csv
+Meadowvale,Condo Apartment,59,0.62,29853.0,Meadowvale_Condo_Apartment_Matrix.csv
+Little Portugal,Condo Apartment,156,0.62,59672.0,Little_Portugal_Condo_Apartment_Matrix.csv
+Amberlea,Detached,148,0.62,84528.0,Amberlea_Detached_Matrix.csv
+Rural Pickering,Detached,188,0.62,132191.0,Rural_Pickering_Detached_Matrix.csv
+North Richvale,Detached,113,0.62,221556.0,North_Richvale_Detached_Matrix.csv
+Georgetown,Detached,502,0.62,119763.0,Georgetown_Detached_Matrix.csv
+Sheridan,Detached,125,0.62,278694.0,Sheridan_Detached_Matrix.csv
+335 - Ridgeway,Detached,162,0.62,121269.0,335_-_Ridgeway_Detached_Matrix.csv
+Lansing-Westgate,Detached,88,0.62,275174.0,Lansing-Westgate_Detached_Matrix.csv
+Brant,Townhouse,66,0.61,105164.0,Brant_Townhouse_Matrix.csv
+South East,Detached,223,0.61,92175.0,South_East_Detached_Matrix.csv
+Macaulay,Detached,167,0.61,100143.0,Macaulay_Detached_Matrix.csv
+North M,Detached,99,0.61,39453.0,North_M_Detached_Matrix.csv
+Rural Severn,Detached,130,0.61,207086.0,Rural_Severn_Detached_Matrix.csv
+Shelburne,Detached,139,0.61,74112.0,Shelburne_Detached_Matrix.csv
+Bolton East,Detached,92,0.61,130373.0,Bolton_East_Detached_Matrix.csv
+Rosedale-Moore Park,Condo Apartment,106,0.61,339010.0,Rosedale-Moore_Park_Condo_Apartment_Matrix.csv
+Rural Whitby,Detached,117,0.61,134530.0,Rural_Whitby_Detached_Matrix.csv
+211 - Cherrywood,Detached,100,0.6,44322.0,211_-_Cherrywood_Detached_Matrix.csv
+Town Ward 3,Detached,195,0.6,60240.0,Town_Ward_3_Detached_Matrix.csv
+South X,Detached,97,0.6,30941.0,South_X_Detached_Matrix.csv
+Lisgar,Detached,202,0.6,103324.0,Lisgar_Detached_Matrix.csv
+1015 - RO River Oaks,Detached,170,0.6,128933.0,1015_-_RO_River_Oaks_Detached_Matrix.csv
+Clarkson,Townhouse,94,0.6,76543.0,Clarkson_Townhouse_Matrix.csv
+Central,Detached,559,0.6,119601.0,Central_Detached_Matrix.csv
+1008 - GO Glenorchy,Condo Apartment,88,0.6,52486.0,1008_-_GO_Glenorchy_Condo_Apartment_Matrix.csv
+520 - Petawawa,Detached,346,0.6,63611.0,520_-_Petawawa_Detached_Matrix.csv
+Roncesvalles,Condo Apartment,71,0.6,132942.0,Roncesvalles_Condo_Apartment_Matrix.csv
+Trinity-Bellwoods,Condo Apartment,50,0.6,100218.0,Trinity-Bellwoods_Condo_Apartment_Matrix.csv
+The Beaches,Condo Apartment,77,0.6,114370.0,The_Beaches_Condo_Apartment_Matrix.csv
+1029 - DE Dempsey,Detached,58,0.6,81751.0,1029_-_DE_Dempsey_Detached_Matrix.csv
+Creditview,Detached,82,0.6,104011.0,Creditview_Detached_Matrix.csv
+Applewood,Townhouse,52,0.6,71552.0,Applewood_Townhouse_Matrix.csv
+Ardagh,Detached,145,0.59,79675.0,Ardagh_Detached_Matrix.csv
+Yonge-Eglinton,Detached,74,0.59,343029.0,Yonge-Eglinton_Detached_Matrix.csv
+Holly,Detached,193,0.59,63125.0,Holly_Detached_Matrix.csv
+Clanton Park,Detached,90,0.59,185180.0,Clanton_Park_Detached_Matrix.csv
+Streetsville,Townhouse,62,0.59,47846.0,Streetsville_Townhouse_Matrix.csv
+Penetanguishene,Detached,150,0.59,75734.0,Penetanguishene_Detached_Matrix.csv
+Beverley Glen,Condo Apartment,164,0.59,59337.0,Beverley_Glen_Condo_Apartment_Matrix.csv
+7701 - Barrhaven - Pheasant Run,Townhouse,42,0.59,25309.0,7701_-_Barrhaven_-_Pheasant_Run_Townhouse_Matrix.csv
+The Beaches,Detached,164,0.59,406125.0,The_Beaches_Detached_Matrix.csv
+Downsview-Roding-CFB,Townhouse,48,0.59,44219.0,Downsview-Roding-CFB_Townhouse_Matrix.csv
+Downsview-Roding-CFB,Condo Apartment,100,0.59,34884.0,Downsview-Roding-CFB_Condo_Apartment_Matrix.csv
+Vaughan Corporate Centre,Condo Apartment,218,0.59,38443.0,Vaughan_Corporate_Centre_Condo_Apartment_Matrix.csv
+Orillia,Condo Apartment,50,0.58,120436.0,Orillia_Condo_Apartment_Matrix.csv
+Jefferson,Detached,141,0.58,129459.0,Jefferson_Detached_Matrix.csv
+Lakeview,Detached,338,0.58,226684.0,Lakeview_Detached_Matrix.csv
+Woodstock - South,Detached,218,0.58,53381.0,Woodstock_-_South_Detached_Matrix.csv
+Brant,Detached,191,0.58,233152.0,Brant_Detached_Matrix.csv
+Rural Mono,Detached,94,0.58,227706.0,Rural_Mono_Detached_Matrix.csv
+Islington-City Centre West,Townhouse,51,0.58,107879.0,Islington-City_Centre_West_Townhouse_Matrix.csv
+Ashburnham Ward 4,Detached,224,0.58,58597.0,Ashburnham_Ward_4_Detached_Matrix.csv
+Woodbine Corridor,Detached,47,0.58,168010.0,Woodbine_Corridor_Detached_Matrix.csv
+1118 - Avalon East,Detached,106,0.58,64360.0,1118_-_Avalon_East_Detached_Matrix.csv
+Saugeen Shores,Detached,258,0.58,108600.0,Saugeen_Shores_Detached_Matrix.csv
+Central West,Detached,231,0.58,101572.0,Central_West_Detached_Matrix.csv
+Islington-City Centre West,Detached,191,0.58,204563.0,Islington-City_Centre_West_Detached_Matrix.csv
+Liverpool,Detached,173,0.57,106199.0,Liverpool_Detached_Matrix.csv
+Bedford Park-Nortown,Condo Apartment,59,0.57,230140.0,Bedford_Park-Nortown_Condo_Apartment_Matrix.csv
+Kirkendall,Detached,94,0.57,146474.0,Kirkendall_Detached_Matrix.csv
+Tillsonburg,Detached,321,0.57,63040.0,Tillsonburg_Detached_Matrix.csv
+2012 - Chapel Hill South - Orleans Village,Detached,86,0.57,54545.0,2012_-_Chapel_Hill_South_-_Orleans_Village_Detached_Matrix.csv
+Downtown,Detached,77,0.57,130901.0,Downtown_Detached_Matrix.csv
+East Woodbridge,Detached,165,0.57,192420.0,East_Woodbridge_Detached_Matrix.csv
+Northwood Park,Detached,87,0.57,74432.0,Northwood_Park_Detached_Matrix.csv
+South K,Detached,138,0.57,94637.0,South_K_Detached_Matrix.csv
+557 - Thorold Downtown,Detached,142,0.57,65902.0,557_-_Thorold_Downtown_Detached_Matrix.csv
+Westgate,Detached,113,0.57,95220.0,Westgate_Detached_Matrix.csv
+Orangeville,Detached,320,0.57,93572.0,Orangeville_Detached_Matrix.csv
+14 - Central City East,Detached,123,0.57,153181.0,14_-_Central_City_East_Detached_Matrix.csv
+Stoney Creek,Detached,296,0.57,118092.0,Stoney_Creek_Detached_Matrix.csv
+Cobourg,Detached,386,0.56,77445.0,Cobourg_Detached_Matrix.csv
+Pineridge/Westminster Woods,Townhouse,67,0.56,64383.0,Pineridge_Westminster_Woods_Townhouse_Matrix.csv
+Pineridge/Westminster Woods,Detached,111,0.56,68029.0,Pineridge_Westminster_Woods_Detached_Matrix.csv
+42 - City Northwest,Detached,271,0.56,69824.0,42_-_City_Northwest_Detached_Matrix.csv
+Rural Innisfil,Detached,236,0.56,214754.0,Rural_Innisfil_Detached_Matrix.csv
+Goderich (Town),Detached,128,0.56,66584.0,Goderich_(Town)_Detached_Matrix.csv
+Dunnville,Detached,147,0.56,94517.0,Dunnville_Detached_Matrix.csv
+1001 - BR Bronte,Detached,165,0.56,210021.0,1001_-_BR_Bronte_Detached_Matrix.csv
+Elora/Salem,Detached,131,0.56,140142.0,Elora_Salem_Detached_Matrix.csv
+Haldimand,Detached,434,0.56,102542.0,Haldimand_Detached_Matrix.csv
+Erin Mills,Townhouse,121,0.56,53611.0,Erin_Mills_Townhouse_Matrix.csv
+Rural Barrie Southeast,Detached,65,0.56,44791.0,Rural_Barrie_Southeast_Detached_Matrix.csv
+1015 - RO River Oaks,Condo Apartment,103,0.56,60810.0,1015_-_RO_River_Oaks_Condo_Apartment_Matrix.csv
+Banbury-Don Mills,Detached,117,0.56,373802.0,Banbury-Don_Mills_Detached_Matrix.csv
+54 - Amherstview,Detached,147,0.56,50574.0,54_-_Amherstview_Detached_Matrix.csv
+4003 - Sandy Hill,Condo Apartment,114,0.56,53324.0,4003_-_Sandy_Hill_Condo_Apartment_Matrix.csv
+Blue Grass Meadows,Detached,179,0.56,67629.0,Blue_Grass_Meadows_Detached_Matrix.csv
+Belleville Ward,Detached,576,0.55,64841.0,Belleville_Ward_Detached_Matrix.csv
+Collingwood,Detached,427,0.55,150033.0,Collingwood_Detached_Matrix.csv
+Kortright West,Detached,164,0.55,66568.0,Kortright_West_Detached_Matrix.csv
+Uptown,Condo Apartment,60,0.55,41578.0,Uptown_Condo_Apartment_Matrix.csv
+Headon,Townhouse,72,0.55,63238.0,Headon_Townhouse_Matrix.csv
+662 - Fonthill,Detached,186,0.55,94360.0,662_-_Fonthill_Detached_Matrix.csv
+Willow West/Sugarbush/West Acres,Detached,207,0.55,59739.0,Willow_West_Sugarbush_West_Acres_Detached_Matrix.csv
+Hurontario,Condo Apartment,256,0.55,53547.0,Hurontario_Condo_Apartment_Matrix.csv
+4001 - Lower Town/Byward Market,Condo Apartment,81,0.55,61798.0,4001_-_Lower_Town_Byward_Market_Condo_Apartment_Matrix.csv
+Ingersoll - South,Detached,169,0.55,76474.0,Ingersoll_-_South_Detached_Matrix.csv
+Birchcliffe-Cliffside,Detached,300,0.55,217342.0,Birchcliffe-Cliffside_Detached_Matrix.csv
+East G,Detached,91,0.55,49067.0,East_G_Detached_Matrix.csv
+Ancaster,Detached,293,0.55,196263.0,Ancaster_Detached_Matrix.csv
+541 - Grimsby West,Detached,82,0.55,146222.0,541_-_Grimsby_West_Detached_Matrix.csv
+Tam O'Shanter-Sullivan,Detached,118,0.54,97657.0,Tam_O'Shanter-Sullivan_Detached_Matrix.csv
+Blue Mountains,Detached,230,0.54,339682.0,Blue_Mountains_Detached_Matrix.csv
+Mount Olive-Silverstone-Jamestown,Condo Apartment,90,0.54,32995.0,Mount_Olive-Silverstone-Jamestown_Condo_Apartment_Matrix.csv
+Sidney Ward,Detached,200,0.54,76182.0,Sidney_Ward_Detached_Matrix.csv
+Samac,Townhouse,47,0.54,49657.0,Samac_Townhouse_Matrix.csv
+Brampton West,Detached,117,0.54,64045.0,Brampton_West_Detached_Matrix.csv
+Morningside,Townhouse,45,0.54,66380.0,Morningside_Townhouse_Matrix.csv
+Fairview,Condo Apartment,54,0.54,39572.0,Fairview_Condo_Apartment_Matrix.csv
+13 - Kingston East (Incl Barret Crt),Detached,177,0.54,77582.0,13_-_Kingston_East_(Incl_Barret_Crt)_Detached_Matrix.csv
+810 - Brockville,Detached,307,0.54,74409.0,810_-_Brockville_Detached_Matrix.csv
+Sarnia,Detached,100,0.54,64166.0,Sarnia_Detached_Matrix.csv
+1027 - CL Clarke,Detached,86,0.54,96493.0,1027_-_CL_Clarke_Detached_Matrix.csv
+Doncrest,Condo Apartment,69,0.53,65031.0,Doncrest_Condo_Apartment_Matrix.csv
+Bristol-London,Detached,94,0.53,88628.0,Bristol-London_Detached_Matrix.csv
+1010 - JM Joshua Meadows,Detached,43,0.53,137883.0,1010_-_JM_Joshua_Meadows_Detached_Matrix.csv
+Observatory,Detached,46,0.53,336052.0,Observatory_Detached_Matrix.csv
+1028 - CO Coates,Detached,70,0.53,67756.0,1028_-_CO_Coates_Detached_Matrix.csv
+Rosedale-Moore Park,Detached,117,0.53,1033654.0,Rosedale-Moore_Park_Detached_Matrix.csv
+High Park-Swansea,Detached,128,0.53,329809.0,High_Park-Swansea_Detached_Matrix.csv
+570 - Madawaska Valley,Detached,70,0.53,94740.0,570_-_Madawaska_Valley_Detached_Matrix.csv
+Dovercourt-Wallace Emerson-Junction,Townhouse,87,0.53,72672.0,Dovercourt-Wallace_Emerson-Junction_Townhouse_Matrix.csv
+Bridle Path-Sunnybrook-York Mills,Detached,67,0.53,1817548.0,Bridle_Path-Sunnybrook-York_Mills_Detached_Matrix.csv
+Stoney Creek Mountain,Detached,173,0.52,103670.0,Stoney_Creek_Mountain_Detached_Matrix.csv
+Northgate,Detached,131,0.52,89734.0,Northgate_Detached_Matrix.csv
+Tam O'Shanter-Sullivan,Townhouse,42,0.52,42899.0,Tam_O'Shanter-Sullivan_Townhouse_Matrix.csv
+Malvern,Townhouse,104,0.52,58449.0,Malvern_Townhouse_Matrix.csv
+337 - Crystal Beach,Detached,120,0.52,83947.0,337_-_Crystal_Beach_Detached_Matrix.csv
+Town Centre,Condo Apartment,110,0.52,54537.0,Town_Centre_Condo_Apartment_Matrix.csv
+Erin Mills,Detached,243,0.52,152533.0,Erin_Mills_Detached_Matrix.csv
+Maple,Condo Apartment,102,0.52,57492.0,Maple_Condo_Apartment_Matrix.csv
+Church-Yonge Corridor,Condo Apartment,772,0.52,81559.0,Church-Yonge_Corridor_Condo_Apartment_Matrix.csv
+Humber Heights,Detached,66,0.52,253511.0,Humber_Heights_Detached_Matrix.csv
+Hillcrest Village,Townhouse,48,0.52,67356.0,Hillcrest_Village_Townhouse_Matrix.csv
+Junction Area,Condo Apartment,77,0.52,95554.0,Junction_Area_Condo_Apartment_Matrix.csv
+Milliken,Condo Apartment,62,0.52,36285.0,Milliken_Condo_Apartment_Matrix.csv
+Rural Scugog,Detached,158,0.52,194646.0,Rural_Scugog_Detached_Matrix.csv
+1019 - WM Westmount,Townhouse,38,0.51,63314.0,1019_-_WM_Westmount_Townhouse_Matrix.csv
+South West,Detached,77,0.51,73229.0,South_West_Detached_Matrix.csv
+North R,Condo Apartment,46,0.51,52215.0,North_R_Condo_Apartment_Matrix.csv
+18 - Central City West,Detached,82,0.51,105766.0,18_-_Central_City_West_Detached_Matrix.csv
+213 - Ascot,Detached,114,0.51,56814.0,213_-_Ascot_Detached_Matrix.csv
+Englemount-Lawrence,Detached,67,0.51,324181.0,Englemount-Lawrence_Detached_Matrix.csv
+Long Branch,Detached,73,0.51,246201.0,Long_Branch_Detached_Matrix.csv
+1038 - WI Willmott,Detached,67,0.51,92196.0,1038_-_WI_Willmott_Detached_Matrix.csv
+Otonabee Ward 1,Detached,261,0.51,54637.0,Otonabee_Ward_1_Detached_Matrix.csv
+Ameliasburg Ward,Detached,100,0.51,193519.0,Ameliasburg_Ward_Detached_Matrix.csv
+Williamsburg,Detached,177,0.51,101364.0,Williamsburg_Detached_Matrix.csv
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,102,0.51,96376.0,9007_-_Kanata_-_Kanata_Lakes_Heritage_Hills_Detached_Matrix.csv
+1117 - Avalon West,Detached,66,0.5,61003.0,1117_-_Avalon_West_Detached_Matrix.csv
+Stonegate-Queensway,Condo Apartment,81,0.5,66897.0,Stonegate-Queensway_Condo_Apartment_Matrix.csv
+982 - Beamsville,Detached,166,0.5,101345.0,982_-_Beamsville_Detached_Matrix.csv
+Alliston,Detached,237,0.5,76219.0,Alliston_Detached_Matrix.csv
+Central Park,Detached,138,0.5,67943.0,Central_Park_Detached_Matrix.csv
+Commerce Valley,Condo Apartment,165,0.5,65436.0,Commerce_Valley_Condo_Apartment_Matrix.csv
+Port Whitby,Detached,51,0.5,79546.0,Port_Whitby_Detached_Matrix.csv
+Birchaven,Detached,76,0.5,112245.0,Birchaven_Detached_Matrix.csv
+05 - Gananoque,Detached,88,0.5,104129.0,05_-_Gananoque_Detached_Matrix.csv
+Gibson,Detached,92,0.5,88349.0,Gibson_Detached_Matrix.csv
+Brockton,Detached,130,0.5,118397.0,Brockton_Detached_Matrix.csv
+Rural Erin,Detached,120,0.5,245596.0,Rural_Erin_Detached_Matrix.csv
+Arran-Elderslie,Detached,91,0.49,86473.0,Arran-Elderslie_Detached_Matrix.csv
+City Centre,Condo Apartment,919,0.49,52408.0,City_Centre_Condo_Apartment_Matrix.csv
+LaSalle,Condo Apartment,42,0.49,47913.0,LaSalle_Condo_Apartment_Matrix.csv
+Henry Farm,Condo Apartment,290,0.49,49702.0,Henry_Farm_Condo_Apartment_Matrix.csv
+807 - Edwardsburgh/Cardinal Twp,Detached,85,0.49,126044.0,807_-_Edwardsburgh_Cardinal_Twp_Detached_Matrix.csv
+1036 - SC Scott,Detached,78,0.49,135918.0,1036_-_SC_Scott_Detached_Matrix.csv
+Stouffville,Detached,373,0.49,117626.0,Stouffville_Detached_Matrix.csv
+Dysart,Detached,72,0.49,161857.0,Dysart_Detached_Matrix.csv
+East Credit,Detached,285,0.49,114218.0,East_Credit_Detached_Matrix.csv
+North C,Townhouse,49,0.49,29732.0,North_C_Townhouse_Matrix.csv
+Fenelon,Detached,84,0.49,211901.0,Fenelon_Detached_Matrix.csv
+Brookhaven-Amesbury,Detached,52,0.49,123723.0,Brookhaven-Amesbury_Detached_Matrix.csv
+South Riverdale,Detached,71,0.49,252773.0,South_Riverdale_Detached_Matrix.csv
+East A,Detached,97,0.48,69944.0,East_A_Detached_Matrix.csv
+Pinecrest,Detached,178,0.48,72030.0,Pinecrest_Detached_Matrix.csv
+Letitia Heights,Detached,81,0.48,68468.0,Letitia_Heights_Detached_Matrix.csv
+58 - Greater Napanee,Detached,253,0.48,105634.0,58_-_Greater_Napanee_Detached_Matrix.csv
+Paris,Detached,180,0.48,86550.0,Paris_Detached_Matrix.csv
+9002 - Kanata - Katimavik,Townhouse,85,0.48,26112.0,9002_-_Kanata_-_Katimavik_Townhouse_Matrix.csv
+East F,Detached,46,0.48,106523.0,East_F_Detached_Matrix.csv
+451 - Downtown,Detached,175,0.48,54461.0,451_-_Downtown_Detached_Matrix.csv
+Summerhill Estates,Detached,75,0.48,102218.0,Summerhill_Estates_Detached_Matrix.csv
+Sandringham-Wellington,Townhouse,64,0.48,69324.0,Sandringham-Wellington_Townhouse_Matrix.csv
+Huron Heights-Leslie Valley,Detached,84,0.48,106170.0,Huron_Heights-Leslie_Valley_Detached_Matrix.csv
+Rolling Acres,Detached,183,0.48,87252.0,Rolling_Acres_Detached_Matrix.csv
+Vales of Castlemore,Detached,99,0.48,137341.0,Vales_of_Castlemore_Detached_Matrix.csv
+Annex,Detached,43,0.47,929836.0,Annex_Detached_Matrix.csv
+Wasaga Beach,Detached,598,0.47,95701.0,Wasaga_Beach_Detached_Matrix.csv
+Village East,Townhouse,45,0.47,31025.0,Village_East_Townhouse_Matrix.csv
+1000 - BC Bronte Creek,Detached,38,0.47,199731.0,1000_-_BC_Bronte_Creek_Detached_Matrix.csv
+Marmora Ward,Detached,93,0.47,102376.0,Marmora_Ward_Detached_Matrix.csv
+Malvern,Detached,118,0.47,67962.0,Malvern_Detached_Matrix.csv
+Malton,Detached,86,0.47,84324.0,Malton_Detached_Matrix.csv
+Westbrook,Detached,115,0.47,161869.0,Westbrook_Detached_Matrix.csv
+444 - Carlton/Bunting,Detached,132,0.47,41930.0,444_-_Carlton_Bunting_Detached_Matrix.csv
+877 - Main Street,Detached,106,0.47,102616.0,877_-_Main_Street_Detached_Matrix.csv
+West Grey,Detached,187,0.47,131089.0,West_Grey_Detached_Matrix.csv
+Stratford,Detached,439,0.47,86401.0,Stratford_Detached_Matrix.csv
+Verulam,Detached,88,0.46,221272.0,Verulam_Detached_Matrix.csv
+Snelgrove,Detached,138,0.46,102315.0,Snelgrove_Detached_Matrix.csv
+Oak Ridges,Detached,134,0.46,139101.0,Oak_Ridges_Detached_Matrix.csv
+Rathwood,Townhouse,77,0.46,37176.0,Rathwood_Townhouse_Matrix.csv
+Northwest Ajax,Detached,125,0.46,92172.0,Northwest_Ajax_Detached_Matrix.csv
+Northeast Ajax,Detached,132,0.46,77770.0,Northeast_Ajax_Detached_Matrix.csv
+Cavan Twp,Detached,127,0.46,127630.0,Cavan_Twp_Detached_Matrix.csv
+607 - Clarence/Rockland Twp,Detached,243,0.46,84196.0,607_-_Clarence_Rockland_Twp_Detached_Matrix.csv
+Rathwood,Detached,128,0.46,157808.0,Rathwood_Detached_Matrix.csv
+Woburn,Condo Apartment,192,0.46,36957.0,Woburn_Condo_Apartment_Matrix.csv
+Mount Pleasant East,Detached,94,0.46,380255.0,Mount_Pleasant_East_Detached_Matrix.csv
+Keelesdale-Eglinton West,Detached,90,0.45,63562.0,Keelesdale-Eglinton_West_Detached_Matrix.csv
+South D,Detached,78,0.45,43680.0,South_D_Detached_Matrix.csv
+Windfields,Detached,126,0.45,74983.0,Windfields_Detached_Matrix.csv
+Bay Ridges,Condo Apartment,126,0.45,42131.0,Bay_Ridges_Condo_Apartment_Matrix.csv
+Taunton North,Detached,99,0.45,91766.0,Taunton_North_Detached_Matrix.csv
+Downsview-Roding-CFB,Detached,143,0.45,80831.0,Downsview-Roding-CFB_Detached_Matrix.csv
+Cliffcrest,Detached,144,0.44,195912.0,Cliffcrest_Detached_Matrix.csv
+980 - Lincoln-Jordan/Vineland,Detached,90,0.44,159522.0,980_-_Lincoln-Jordan_Vineland_Detached_Matrix.csv
+Midland,Detached,328,0.44,79472.0,Midland_Detached_Matrix.csv
+Sturgeon Falls,Detached,134,0.44,94487.0,Sturgeon_Falls_Detached_Matrix.csv
+Muskoka (S),Detached,185,0.44,261861.0,Muskoka_(S)_Detached_Matrix.csv
+Brampton North,Townhouse,53,0.44,22288.0,Brampton_North_Townhouse_Matrix.csv
+Mount Pleasant East,Condo Apartment,39,0.44,150289.0,Mount_Pleasant_East_Condo_Apartment_Matrix.csv
+South N,Townhouse,40,0.43,55716.0,South_N_Townhouse_Matrix.csv
+Bolton West,Detached,76,0.43,104316.0,Bolton_West_Detached_Matrix.csv
+Appleby,Detached,208,0.43,133257.0,Appleby_Detached_Matrix.csv
+South J,Detached,59,0.43,36837.0,South_J_Detached_Matrix.csv
+Crestwood-Springfarm-Yorkhill,Detached,104,0.43,217651.0,Crestwood-Springfarm-Yorkhill_Detached_Matrix.csv
+1103 - Fallingbrook/Ridgemount,Detached,63,0.43,58121.0,1103_-_Fallingbrook_Ridgemount_Detached_Matrix.csv
+551 - Mcnab/Braeside Twps,Detached,114,0.43,121928.0,551_-_Mcnab_Braeside_Twps_Detached_Matrix.csv
+Grange Road,Townhouse,66,0.43,36068.0,Grange_Road_Townhouse_Matrix.csv
+Rural Middlesex Centre,Detached,62,0.42,290217.0,Rural_Middlesex_Centre_Detached_Matrix.csv
+1102 - Bilberry Creek/Queenswood Heights,Detached,102,0.42,77287.0,1102_-_Bilberry_Creek_Queenswood_Heights_Detached_Matrix.csv
+Sharon,Detached,93,0.42,180896.0,Sharon_Detached_Matrix.csv
+612 - Hawkesbury,Detached,128,0.42,55494.0,612_-_Hawkesbury_Detached_Matrix.csv
+616 - Limoges,Detached,64,0.42,55636.0,616_-_Limoges_Detached_Matrix.csv
+Meadowvale,Detached,209,0.42,84444.0,Meadowvale_Detached_Matrix.csv
+Aurora Heights,Detached,84,0.42,128929.0,Aurora_Heights_Detached_Matrix.csv
+Don Valley Village,Condo Apartment,130,0.42,104264.0,Don_Valley_Village_Condo_Apartment_Matrix.csv
+801 - Kemptville,Detached,100,0.42,106994.0,801_-_Kemptville_Detached_Matrix.csv
+Markham Village,Detached,139,0.42,109052.0,Markham_Village_Detached_Matrix.csv
+South Richvale,Detached,63,0.42,708685.0,South_Richvale_Detached_Matrix.csv
+Fletcher's Meadow,Detached,368,0.41,72846.0,Fletcher's_Meadow_Detached_Matrix.csv
+Taunton,Detached,213,0.41,95973.0,Taunton_Detached_Matrix.csv
+Bowmanville,Condo Apartment,94,0.41,27801.0,Bowmanville_Condo_Apartment_Matrix.csv
+Ferris,Detached,156,0.41,64525.0,Ferris_Detached_Matrix.csv
+Centennial Scarborough,Detached,118,0.41,162996.0,Centennial_Scarborough_Detached_Matrix.csv
+Mill Pond,Detached,120,0.41,249279.0,Mill_Pond_Detached_Matrix.csv
+Owen Sound,Detached,322,0.41,63738.0,Owen_Sound_Detached_Matrix.csv
+47 - Frontenac South,Detached,337,0.41,144414.0,47_-_Frontenac_South_Detached_Matrix.csv
+Newtonbrook East,Condo Apartment,105,0.41,68860.0,Newtonbrook_East_Condo_Apartment_Matrix.csv
+Dovercourt-Wallace Emerson-Junction,Detached,94,0.41,274539.0,Dovercourt-Wallace_Emerson-Junction_Detached_Matrix.csv
+Duffin Heights,Townhouse,85,0.41,27725.0,Duffin_Heights_Townhouse_Matrix.csv
+Fergus,Detached,289,0.41,87362.0,Fergus_Detached_Matrix.csv
+1119 - Notting Hill/Summerside,Detached,66,0.41,50905.0,1119_-_Notting_Hill_Summerside_Detached_Matrix.csv
+North S,Detached,130,0.41,91517.0,North_S_Detached_Matrix.csv
+Brownridge,Condo Apartment,86,0.41,77598.0,Brownridge_Condo_Apartment_Matrix.csv
+Monaghan Ward 2,Detached,250,0.41,59205.0,Monaghan_Ward_2_Detached_Matrix.csv
+Rural Glanbrook,Detached,110,0.41,183518.0,Rural_Glanbrook_Detached_Matrix.csv
+35 - East Gardiners Rd,Condo Apartment,48,0.41,27861.0,35_-_East_Gardiners_Rd_Condo_Apartment_Matrix.csv
+Port Hope,Detached,225,0.41,78152.0,Port_Hope_Detached_Matrix.csv
+Tyandaga,Detached,74,0.4,206775.0,Tyandaga_Detached_Matrix.csv
+580 - Whitewater Region,Detached,78,0.4,116273.0,580_-_Whitewater_Region_Detached_Matrix.csv
+King City,Detached,99,0.4,504595.0,King_City_Detached_Matrix.csv
+3404 - Vanier,Condo Apartment,69,0.4,14112.0,3404_-_Vanier_Condo_Apartment_Matrix.csv
+531 - Laurentian Valley,Detached,124,0.4,100817.0,531_-_Laurentian_Valley_Detached_Matrix.csv
+Stonegate-Queensway,Detached,235,0.4,289375.0,Stonegate-Queensway_Detached_Matrix.csv
+Orillia,Detached,514,0.4,78495.0,Orillia_Detached_Matrix.csv
+Aylmer,Detached,136,0.4,53771.0,Aylmer_Detached_Matrix.csv
+Eastdale,Detached,162,0.4,74180.0,Eastdale_Detached_Matrix.csv
+St. Marys,Detached,99,0.4,86094.0,St._Marys_Detached_Matrix.csv
+Brant Hills,Detached,112,0.4,104522.0,Brant_Hills_Detached_Matrix.csv
+558 - Confederation Heights,Detached,73,0.4,79503.0,558_-_Confederation_Heights_Detached_Matrix.csv
+Grey Highlands,Detached,200,0.39,231465.0,Grey_Highlands_Detached_Matrix.csv
+455 - Secord Woods,Detached,90,0.39,81822.0,455_-_Secord_Woods_Detached_Matrix.csv
+North R,Detached,64,0.39,169540.0,North_R_Detached_Matrix.csv
+Runnymede-Bloor West Village,Detached,107,0.39,176564.0,Runnymede-Bloor_West_Village_Detached_Matrix.csv
+Brampton South,Detached,91,0.39,87843.0,Brampton_South_Detached_Matrix.csv
+Heart Lake East,Detached,80,0.38,100723.0,Heart_Lake_East_Detached_Matrix.csv
+Grandview,Detached,43,0.38,249201.0,Grandview_Detached_Matrix.csv
+Central Park,Townhouse,47,0.38,35567.0,Central_Park_Townhouse_Matrix.csv
+8202 - Stittsville (Central),Detached,124,0.38,89891.0,8202_-_Stittsville_(Central)_Detached_Matrix.csv
+Milliken,Detached,104,0.38,105908.0,Milliken_Detached_Matrix.csv
+Ingersoll - North,Detached,90,0.38,58221.0,Ingersoll_-_North_Detached_Matrix.csv
+550 - Arnprior,Detached,149,0.38,73732.0,550_-_Arnprior_Detached_Matrix.csv
+Maple,Detached,263,0.38,120793.0,Maple_Detached_Matrix.csv
+1045 - AC Acton,Detached,152,0.38,82858.0,1045_-_AC_Acton_Detached_Matrix.csv
+Grandview,Condo Apartment,48,0.38,65496.0,Grandview_Condo_Apartment_Matrix.csv
+Campbellford,Detached,89,0.37,110491.0,Campbellford_Detached_Matrix.csv
+Thurlow Ward,Detached,184,0.37,97157.0,Thurlow_Ward_Detached_Matrix.csv
+Pringle Creek,Detached,169,0.37,99348.0,Pringle_Creek_Detached_Matrix.csv
+911 - Almonte,Detached,89,0.37,93016.0,911_-_Almonte_Detached_Matrix.csv
+O'Neill,Detached,197,0.37,63709.0,O'Neill_Detached_Matrix.csv
+773 - Lincoln/Crowland,Detached,256,0.37,70503.0,773_-_Lincoln_Crowland_Detached_Matrix.csv
+Unionville,Detached,180,0.37,195857.0,Unionville_Detached_Matrix.csv
+Picton Ward,Detached,60,0.37,157532.0,Picton_Ward_Detached_Matrix.csv
+Collingwood,Condo Apartment,139,0.37,89886.0,Collingwood_Condo_Apartment_Matrix.csv
+Minden,Detached,75,0.37,224449.0,Minden_Detached_Matrix.csv
+Otonabee-South Monaghan,Detached,85,0.37,159314.0,Otonabee-South_Monaghan_Detached_Matrix.csv
+L'Amoreaux,Condo Apartment,132,0.36,56853.0,L'Amoreaux_Condo_Apartment_Matrix.csv
+South Y,Detached,96,0.36,47671.0,South_Y_Detached_Matrix.csv
+St. Andrew-Windfields,Detached,128,0.36,543567.0,St._Andrew-Windfields_Detached_Matrix.csv
+Rural Ramara,Detached,127,0.36,104730.0,Rural_Ramara_Detached_Matrix.csv
+Georgian Drive,Detached,45,0.36,40039.0,Georgian_Drive_Detached_Matrix.csv
+L'Amoreaux,Detached,109,0.36,107119.0,L'Amoreaux_Detached_Matrix.csv
+7802 - Westcliffe Estates,Townhouse,41,0.36,19141.0,7802_-_Westcliffe_Estates_Townhouse_Matrix.csv
+Keswick North,Detached,156,0.36,93439.0,Keswick_North_Detached_Matrix.csv
+Trent Lakes,Detached,161,0.35,248195.0,Trent_Lakes_Detached_Matrix.csv
+Doncrest,Detached,63,0.35,173795.0,Doncrest_Detached_Matrix.csv
+Applewood,Condo Apartment,62,0.35,72834.0,Applewood_Condo_Apartment_Matrix.csv
+Clairlea-Birchmount,Detached,137,0.35,175014.0,Clairlea-Birchmount_Detached_Matrix.csv
+769 - Prince Charles,Detached,176,0.35,63825.0,769_-_Prince_Charles_Detached_Matrix.csv
+540 - Renfrew,Detached,145,0.35,68956.0,540_-_Renfrew_Detached_Matrix.csv
+Colborne,Detached,125,0.34,94951.0,Colborne_Detached_Matrix.csv
+Alderwood,Detached,124,0.34,162157.0,Alderwood_Detached_Matrix.csv
+Mississauga Valleys,Detached,39,0.34,78176.0,Mississauga_Valleys_Detached_Matrix.csv
+901 - Smiths Falls,Detached,185,0.34,87282.0,901_-_Smiths_Falls_Detached_Matrix.csv
+Kincardine,Detached,198,0.34,133128.0,Kincardine_Detached_Matrix.csv
+High Park-Swansea,Condo Apartment,191,0.34,118450.0,High_Park-Swansea_Condo_Apartment_Matrix.csv
+Brampton East,Detached,131,0.34,91664.0,Brampton_East_Detached_Matrix.csv
+Chaffey,Detached,262,0.34,145672.0,Chaffey_Detached_Matrix.csv
+Rural Aurora,Detached,79,0.34,141026.0,Rural_Aurora_Detached_Matrix.csv
+Clarkson,Condo Apartment,80,0.34,103471.0,Clarkson_Condo_Apartment_Matrix.csv
+Hurontario,Detached,192,0.33,91662.0,Hurontario_Detached_Matrix.csv
+Queensville,Detached,81,0.33,109053.0,Queensville_Detached_Matrix.csv
+Willowdale West,Condo Apartment,235,0.33,74547.0,Willowdale_West_Condo_Apartment_Matrix.csv
+1022 - WT West Oak Trails,Detached,110,0.33,129846.0,1022_-_WT_West_Oak_Trails_Detached_Matrix.csv
+Northern Bruce Peninsula,Detached,143,0.33,154299.0,Northern_Bruce_Peninsula_Detached_Matrix.csv
+Angus Glen,Detached,40,0.33,132264.0,Angus_Glen_Detached_Matrix.csv
+Kapuskasing,Detached,108,0.33,36455.0,Kapuskasing_Detached_Matrix.csv
+219 - Forestview,Detached,81,0.33,103935.0,219_-_Forestview_Detached_Matrix.csv
+Erin,Detached,86,0.33,181605.0,Erin_Detached_Matrix.csv
+Rural Tiny,Detached,289,0.33,230182.0,Rural_Tiny_Detached_Matrix.csv
+Sonoma Heights,Detached,94,0.33,118141.0,Sonoma_Heights_Detached_Matrix.csv
+Cooksville,Townhouse,78,0.33,63200.0,Cooksville_Townhouse_Matrix.csv
+Agincourt South-Malvern West,Detached,84,0.33,111333.0,Agincourt_South-Malvern_West_Detached_Matrix.csv
+Stayner,Detached,99,0.32,108220.0,Stayner_Detached_Matrix.csv
+Rouge E11,Detached,108,0.32,97060.0,Rouge_E11_Detached_Matrix.csv
+7706 - Barrhaven - Longfields,Detached,97,0.32,55730.0,7706_-_Barrhaven_-_Longfields_Detached_Matrix.csv
+Meadowlands,Detached,73,0.32,132340.0,Meadowlands_Detached_Matrix.csv
+462 - Rykert/Vansickle,Detached,78,0.32,97591.0,462_-_Rykert_Vansickle_Detached_Matrix.csv
+East D,Detached,124,0.32,47804.0,East_D_Detached_Matrix.csv
+Fairview,Detached,49,0.32,77513.0,Fairview_Detached_Matrix.csv
+Langstaff,Condo Apartment,260,0.32,51174.0,Langstaff_Condo_Apartment_Matrix.csv
+Mountainside,Detached,95,0.31,88758.0,Mountainside_Detached_Matrix.csv
+Meaford,Detached,197,0.31,228732.0,Meaford_Detached_Matrix.csv
+Pleasant View,Detached,47,0.31,125437.0,Pleasant_View_Detached_Matrix.csv
+Agincourt South-Malvern West,Condo Apartment,204,0.31,47596.0,Agincourt_South-Malvern_West_Condo_Apartment_Matrix.csv
+1008 - GO Glenorchy,Detached,134,0.31,120067.0,1008_-_GO_Glenorchy_Detached_Matrix.csv
+1001 - BR Bronte,Condo Apartment,101,0.31,259155.0,1001_-_BR_Bronte_Condo_Apartment_Matrix.csv
+910 - Beckwith Twp,Detached,145,0.31,166668.0,910_-_Beckwith_Twp_Detached_Matrix.csv
+Dundas,Detached,207,0.31,180678.0,Dundas_Detached_Matrix.csv
+Applewood,Detached,103,0.31,131077.0,Applewood_Detached_Matrix.csv
+Central,Townhouse,38,0.31,81151.0,Central_Townhouse_Matrix.csv
+909 - Carleton Place,Detached,160,0.3,89188.0,909_-_Carleton_Place_Detached_Matrix.csv
+Steeles,Condo Apartment,89,0.3,58854.0,Steeles_Condo_Apartment_Matrix.csv
+Port Whitby,Condo Apartment,66,0.3,56492.0,Port_Whitby_Condo_Apartment_Matrix.csv
+Rouge E10,Detached,102,0.3,96186.0,Rouge_E10_Detached_Matrix.csv
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,108,0.3,123203.0,811_-_Elizabethtown_Kitley_(Old_Kitley)_Twp_Detached_Matrix.csv
+Eglinton East,Condo Apartment,58,0.3,56907.0,Eglinton_East_Condo_Apartment_Matrix.csv
+Murray Ward,Detached,224,0.29,92211.0,Murray_Ward_Detached_Matrix.csv
+Sutton & Jackson's Point,Detached,160,0.29,122550.0,Sutton_&_Jackson's_Point_Detached_Matrix.csv
+Mississauga Valleys,Condo Apartment,112,0.29,45577.0,Mississauga_Valleys_Condo_Apartment_Matrix.csv
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,183,0.29,83719.0,9010_-_Kanata_-_Emerald_Meadows_Trailwest_Detached_Matrix.csv
+606 - Town of Rockland,Detached,179,0.29,55510.0,606_-_Town_of_Rockland_Detached_Matrix.csv
+Cobourg,Condo Apartment,49,0.29,113855.0,Cobourg_Condo_Apartment_Matrix.csv
+1006 - FD Ford,Detached,100,0.29,391974.0,1006_-_FD_Ford_Detached_Matrix.csv
+44 - City North of 401,Detached,113,0.29,153301.0,44_-_City_North_of_401_Detached_Matrix.csv
+810 - Brockville,Condo Apartment,76,0.29,89107.0,810_-_Brockville_Condo_Apartment_Matrix.csv
+Trenton Ward,Detached,289,0.28,53776.0,Trenton_Ward_Detached_Matrix.csv
+Kingsway South,Detached,122,0.28,612392.0,Kingsway_South_Detached_Matrix.csv
+8211 - Stittsville (North),Detached,129,0.28,66832.0,8211_-_Stittsville_(North)_Detached_Matrix.csv
+South U,Detached,137,0.28,56981.0,South_U_Detached_Matrix.csv
+Douro-Dummer,Detached,106,0.28,266820.0,Douro-Dummer_Detached_Matrix.csv
+Glenway Estates,Detached,66,0.28,146078.0,Glenway_Estates_Detached_Matrix.csv
+Gorham-College Manor,Detached,106,0.28,125190.0,Gorham-College_Manor_Detached_Matrix.csv
+Headon,Detached,136,0.28,121694.0,Headon_Detached_Matrix.csv
+Painswick South,Detached,132,0.27,88474.0,Painswick_South_Detached_Matrix.csv
+35 - East Gardiners Rd,Detached,75,0.27,56669.0,35_-_East_Gardiners_Rd_Detached_Matrix.csv
+605 - The Nation Municipality,Detached,116,0.27,94237.0,605_-_The_Nation_Municipality_Detached_Matrix.csv
+Pringle Creek,Townhouse,51,0.27,40208.0,Pringle_Creek_Townhouse_Matrix.csv
+Kingsview Village-The Westway,Detached,83,0.27,133886.0,Kingsview_Village-The_Westway_Detached_Matrix.csv
+Danforth Village-East York,Detached,166,0.27,198857.0,Danforth_Village-East_York_Detached_Matrix.csv
+37 - South of Taylor-Kidd Blvd,Detached,133,0.27,48674.0,37_-_South_of_Taylor-Kidd_Blvd_Detached_Matrix.csv
+2501 - Leitrim,Detached,48,0.27,70191.0,2501_-_Leitrim_Detached_Matrix.csv
+723 - South Glengarry (Charlottenburgh) Twp,Detached,120,0.26,178445.0,723_-_South_Glengarry_(Charlottenburgh)_Twp_Detached_Matrix.csv
+Rural Clarington,Detached,142,0.26,193818.0,Rural_Clarington_Detached_Matrix.csv
+North G,Detached,99,0.26,118312.0,North_G_Detached_Matrix.csv
+Oak Ridges Lake Wilcox,Detached,118,0.25,395774.0,Oak_Ridges_Lake_Wilcox_Detached_Matrix.csv
+NE,Detached,97,0.25,92991.0,NE_Detached_Matrix.csv
+9008 - Kanata - Morgan's Grant/South March,Detached,98,0.25,74458.0,9008_-_Kanata_-_Morgan's_Grant_South_March_Detached_Matrix.csv
+Rural Richmond Hill,Detached,47,0.25,350834.0,Rural_Richmond_Hill_Detached_Matrix.csv
+45 - Frontenac Centre,Detached,115,0.25,150660.0,45_-_Frontenac_Centre_Detached_Matrix.csv
+9002 - Kanata - Katimavik,Detached,60,0.25,57314.0,9002_-_Kanata_-_Katimavik_Detached_Matrix.csv
+Don Valley Village,Townhouse,41,0.25,151633.0,Don_Valley_Village_Townhouse_Matrix.csv
+Lucan,Detached,78,0.24,79207.0,Lucan_Detached_Matrix.csv
+Forest Hill South,Condo Apartment,49,0.24,162435.0,Forest_Hill_South_Condo_Apartment_Matrix.csv
+Stonehaven-Wyndham,Detached,100,0.24,141243.0,Stonehaven-Wyndham_Detached_Matrix.csv
+Meadowvale Village,Detached,82,0.24,172925.0,Meadowvale_Village_Detached_Matrix.csv
+Northwest Sandalwood Parkway,Detached,64,0.24,85982.0,Northwest_Sandalwood_Parkway_Detached_Matrix.csv
+Crown Point,Detached,229,0.23,54963.0,Crown_Point_Detached_Matrix.csv
+Brownridge,Detached,109,0.23,106476.0,Brownridge_Detached_Matrix.csv
+Donevan,Detached,219,0.23,68311.0,Donevan_Detached_Matrix.csv
+McLaughlin,Detached,195,0.23,81229.0,McLaughlin_Detached_Matrix.csv
+Centennial,Detached,140,0.23,78287.0,Centennial_Detached_Matrix.csv
+2602 - Riverside South/Gloucester Glen,Detached,123,0.23,87580.0,2602_-_Riverside_South_Gloucester_Glen_Detached_Matrix.csv
+Cooksville,Detached,115,0.23,285010.0,Cooksville_Detached_Matrix.csv
+Agincourt North,Condo Apartment,68,0.22,36007.0,Agincourt_North_Condo_Apartment_Matrix.csv
+High Park North,Detached,54,0.22,226218.0,High_Park_North_Detached_Matrix.csv
+Willowridge-Martingrove-Richview,Detached,163,0.22,224201.0,Willowridge-Martingrove-Richview_Detached_Matrix.csv
+West Humber-Clairville,Detached,115,0.22,91385.0,West_Humber-Clairville_Detached_Matrix.csv
+Malvern,Condo Apartment,123,0.22,51253.0,Malvern_Condo_Apartment_Matrix.csv
+West Hill,Detached,125,0.22,120116.0,West_Hill_Detached_Matrix.csv
+Chatsworth,Detached,88,0.22,183149.0,Chatsworth_Detached_Matrix.csv
+East I,Detached,159,0.22,42012.0,East_I_Detached_Matrix.csv
+Ardagh,Condo Apartment,74,0.22,61688.0,Ardagh_Condo_Apartment_Matrix.csv
+Stephenson,Detached,83,0.22,241458.0,Stephenson_Detached_Matrix.csv
+Morrison,Detached,53,0.22,210988.0,Morrison_Detached_Matrix.csv
+Brantford Twp,Detached,88,0.22,196328.0,Brantford_Twp_Detached_Matrix.csv
+Port Perry,Detached,220,0.21,139464.0,Port_Perry_Detached_Matrix.csv
+Harding,Condo Apartment,58,0.21,78858.0,Harding_Condo_Apartment_Matrix.csv
+8203 - Stittsville (South),Detached,161,0.21,99668.0,8203_-_Stittsville_(South)_Detached_Matrix.csv
+Crescent Town,Condo Apartment,69,0.21,46177.0,Crescent_Town_Condo_Apartment_Matrix.csv
+North I,Townhouse,39,0.21,51764.0,North_I_Townhouse_Matrix.csv
+Monck (Bracebridge),Detached,84,0.21,117496.0,Monck_(Bracebridge)_Detached_Matrix.csv
+Devonsleigh,Detached,63,0.21,123137.0,Devonsleigh_Detached_Matrix.csv
+Medora,Detached,110,0.21,1518042.0,Medora_Detached_Matrix.csv
+Central,Condo Apartment,51,0.21,73488.0,Central_Condo_Apartment_Matrix.csv
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,64,0.21,138798.0,7202_-_Borden_Farm_Stewart_Farm_Carleton_Heights_Parkwood_Hills_Detached_Matrix.csv
+602 - Embrun,Detached,132,0.21,73827.0,602_-_Embrun_Detached_Matrix.csv
+Dorset Park,Condo Apartment,100,0.21,43896.0,Dorset_Park_Condo_Apartment_Matrix.csv
+West Humber-Clairville,Condo Apartment,53,0.2,48017.0,West_Humber-Clairville_Condo_Apartment_Matrix.csv
+Westminster-Branson,Condo Apartment,97,0.2,59743.0,Westminster-Branson_Condo_Apartment_Matrix.csv
+Waterdown,Detached,246,0.2,170893.0,Waterdown_Detached_Matrix.csv
+South Bruce Peninsula,Detached,241,0.2,141068.0,South_Bruce_Peninsula_Detached_Matrix.csv
+Eringate-Centennial-West Deane,Detached,117,0.2,111399.0,Eringate-Centennial-West_Deane_Detached_Matrix.csv
+Seguin,Detached,95,0.2,687869.0,Seguin_Detached_Matrix.csv
+334 - Crescent Park,Detached,130,0.19,167569.0,334_-_Crescent_Park_Detached_Matrix.csv
+Bayview Village,Detached,74,0.19,475252.0,Bayview_Village_Detached_Matrix.csv
+Grove East,Detached,90,0.19,60201.0,Grove_East_Detached_Matrix.csv
+Exeter,Detached,92,0.19,108383.0,Exeter_Detached_Matrix.csv
+908 - Drummond N Elmsley (Drummond) Twp,Detached,76,0.19,140540.0,908_-_Drummond_N_Elmsley_(Drummond)_Twp_Detached_Matrix.csv
+542 - Grimsby East,Detached,103,0.19,99222.0,542_-_Grimsby_East_Detached_Matrix.csv
+Homeside,Detached,141,0.19,58727.0,Homeside_Detached_Matrix.csv
+Clanton Park,Condo Apartment,193,0.18,35930.0,Clanton_Park_Condo_Apartment_Matrix.csv
+540 - Grimsby Beach,Detached,104,0.18,160913.0,540_-_Grimsby_Beach_Detached_Matrix.csv
+3402 - Vanier,Condo Apartment,62,0.18,81945.0,3402_-_Vanier_Condo_Apartment_Matrix.csv
+601 - Village of Russell,Detached,108,0.17,70398.0,601_-_Village_of_Russell_Detached_Matrix.csv
+216 - Dorchester,Detached,83,0.17,71067.0,216_-_Dorchester_Detached_Matrix.csv
+332 - Central,Detached,98,0.17,44237.0,332_-_Central_Detached_Matrix.csv
+Rural Oro-Medonte,Detached,210,0.17,272208.0,Rural_Oro-Medonte_Detached_Matrix.csv
+Etobicoke West Mall,Condo Apartment,91,0.17,40634.0,Etobicoke_West_Mall_Condo_Apartment_Matrix.csv
+Wismer,Detached,103,0.17,140687.0,Wismer_Detached_Matrix.csv
+North Richvale,Condo Apartment,88,0.16,55469.0,North_Richvale_Condo_Apartment_Matrix.csv
+Downtown Whitby,Detached,124,0.16,86714.0,Downtown_Whitby_Detached_Matrix.csv
+West Woodbridge,Detached,98,0.16,108645.0,West_Woodbridge_Detached_Matrix.csv
+809 - Augusta Twp,Detached,110,0.16,83615.0,809_-_Augusta_Twp_Detached_Matrix.csv
+Bayview Village,Townhouse,50,0.16,119853.0,Bayview_Village_Townhouse_Matrix.csv
+North Kawartha,Detached,81,0.15,332899.0,North_Kawartha_Detached_Matrix.csv
+New Toronto,Detached,84,0.15,250478.0,New_Toronto_Detached_Matrix.csv
+Woburn,Detached,241,0.15,84672.0,Woburn_Detached_Matrix.csv
+606 - Town of Rockland,Condo Apartment,49,0.15,43555.0,606_-_Town_of_Rockland_Condo_Apartment_Matrix.csv
+West Woodbridge,Condo Apartment,62,0.15,121418.0,West_Woodbridge_Condo_Apartment_Matrix.csv
+Long Branch,Townhouse,59,0.14,71597.0,Long_Branch_Townhouse_Matrix.csv
+510 - Deep River,Detached,79,0.14,59694.0,510_-_Deep_River_Detached_Matrix.csv
+Fletcher's West,Detached,105,0.14,79077.0,Fletcher's_West_Detached_Matrix.csv
+442 - Vine/Linwell,Detached,161,0.13,66185.0,442_-_Vine_Linwell_Detached_Matrix.csv
+Alton,Detached,102,0.13,122326.0,Alton_Detached_Matrix.csv
+1019 - WM Westmount,Condo Apartment,63,0.13,46471.0,1019_-_WM_Westmount_Condo_Apartment_Matrix.csv
+Rockwood,Detached,92,0.13,128766.0,Rockwood_Detached_Matrix.csv
+Milliken Mills East,Detached,79,0.13,224134.0,Milliken_Mills_East_Detached_Matrix.csv
+Kennedy Park,Condo Apartment,50,0.13,55508.0,Kennedy_Park_Condo_Apartment_Matrix.csv
+Bendale,Condo Apartment,139,0.13,57529.0,Bendale_Condo_Apartment_Matrix.csv
+East End-Danforth,Detached,85,0.13,252692.0,East_End-Danforth_Detached_Matrix.csv
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,100,0.13,90850.0,2605_-_Blossom_Park_Kemp_Park_Findlay_Creek_Detached_Matrix.csv
+Brighton,Detached,196,0.12,115060.0,Brighton_Detached_Matrix.csv
+Greensborough,Detached,88,0.12,118920.0,Greensborough_Detached_Matrix.csv
+Rural Alnwick/Haldimand,Detached,101,0.12,184513.0,Rural_Alnwick_Haldimand_Detached_Matrix.csv
+Roncesvalles,Detached,43,0.12,400581.0,Roncesvalles_Detached_Matrix.csv
+South T,Detached,65,0.11,43525.0,South_T_Detached_Matrix.csv
+Queen Street Corridor,Condo Apartment,122,0.11,45473.0,Queen_Street_Corridor_Condo_Apartment_Matrix.csv
+Forest Hill South,Detached,69,0.1,1003986.0,Forest_Hill_South_Detached_Matrix.csv
+Rural Caledon,Detached,337,0.1,296899.0,Rural_Caledon_Detached_Matrix.csv
+820 - Rideau Lakes (South Elmsley) Twp,Detached,94,0.1,145507.0,820_-_Rideau_Lakes_(South_Elmsley)_Twp_Detached_Matrix.csv
+Parkwoods-Donalda,Condo Apartment,83,0.1,55189.0,Parkwoods-Donalda_Condo_Apartment_Matrix.csv
+Bathurst Manor,Detached,94,0.1,206681.0,Bathurst_Manor_Detached_Matrix.csv
+803 - North Grenville Twp (Kemptville South),Detached,160,0.1,118495.0,803_-_North_Grenville_Twp_(Kemptville_South)_Detached_Matrix.csv
+Yorkdale-Glen Park,Condo Apartment,96,0.09,63355.0,Yorkdale-Glen_Park_Condo_Apartment_Matrix.csv
+878 - Sugarloaf,Detached,126,0.09,91868.0,878_-_Sugarloaf_Detached_Matrix.csv
+Georgian Bluffs,Detached,179,0.09,180936.0,Georgian_Bluffs_Detached_Matrix.csv
+East H,Detached,130,0.09,57943.0,East_H_Detached_Matrix.csv
+Meadowvale,Townhouse,135,0.09,50525.0,Meadowvale_Townhouse_Matrix.csv
+Widdifield,Detached,91,0.09,65276.0,Widdifield_Detached_Matrix.csv
+530 - Pembroke,Detached,250,0.09,54109.0,530_-_Pembroke_Detached_Matrix.csv
+Dovercliffe Park/Old University,Townhouse,48,0.08,77855.0,Dovercliffe_Park_Old_University_Townhouse_Matrix.csv
+Stouffville,Condo Apartment,48,0.07,68332.0,Stouffville_Condo_Apartment_Matrix.csv
+Weston,Detached,58,0.07,136936.0,Weston_Detached_Matrix.csv
+Ancaster,Townhouse,65,0.07,90632.0,Ancaster_Townhouse_Matrix.csv
+Southgate,Detached,224,0.07,129546.0,Southgate_Detached_Matrix.csv
+Westminster-Branson,Townhouse,40,0.07,49889.0,Westminster-Branson_Townhouse_Matrix.csv
+Highland Creek,Detached,97,0.07,182397.0,Highland_Creek_Detached_Matrix.csv
+Newcastle,Condo Apartment,55,0.06,65902.0,Newcastle_Condo_Apartment_Matrix.csv
+Cooksville,Condo Apartment,133,0.06,61325.0,Cooksville_Condo_Apartment_Matrix.csv
+Cornell,Detached,115,0.06,114436.0,Cornell_Detached_Matrix.csv
+Roseland,Townhouse,39,0.05,84693.0,Roseland_Townhouse_Matrix.csv
+South Parkdale,Condo Apartment,63,0.05,64339.0,South_Parkdale_Condo_Apartment_Matrix.csv
+Greenwood-Coxwell,Detached,65,0.05,212103.0,Greenwood-Coxwell_Detached_Matrix.csv
+Birchcliffe-Cliffside,Condo Apartment,62,0.05,142858.0,Birchcliffe-Cliffside_Condo_Apartment_Matrix.csv
+Freeman,Detached,42,0.05,223938.0,Freeman_Detached_Matrix.csv
+East B,Detached,119,0.04,124279.0,East_B_Detached_Matrix.csv
+East Credit,Townhouse,85,0.04,48777.0,East_Credit_Townhouse_Matrix.csv
+Victoria Village,Detached,60,0.04,158854.0,Victoria_Village_Detached_Matrix.csv
+101 - Town,Detached,96,0.04,273307.0,101_-_Town_Detached_Matrix.csv
+Dovercliffe Park/Old University,Detached,101,0.04,109976.0,Dovercliffe_Park_Old_University_Detached_Matrix.csv
+Emily,Detached,102,0.04,156502.0,Emily_Detached_Matrix.csv
+West End,Detached,60,0.04,76170.0,West_End_Detached_Matrix.csv
+7708 - Barrhaven - Stonebridge,Detached,75,0.04,112364.0,7708_-_Barrhaven_-_Stonebridge_Detached_Matrix.csv
+South W,Detached,73,0.04,45201.0,South_W_Detached_Matrix.csv
+Corso Italia-Davenport,Detached,55,0.03,155865.0,Corso_Italia-Davenport_Detached_Matrix.csv
+Markland Wood,Detached,71,0.03,227031.0,Markland_Wood_Detached_Matrix.csv
+Dorset Park,Detached,83,0.03,95890.0,Dorset_Park_Detached_Matrix.csv
+Wexford-Maryvale,Detached,216,0.03,100000.0,Wexford-Maryvale_Detached_Matrix.csv
+1009 - JC Joshua Creek,Detached,71,0.02,233240.0,1009_-_JC_Joshua_Creek_Detached_Matrix.csv
+907 - Perth,Detached,96,0.02,121114.0,907_-_Perth_Detached_Matrix.csv
+North B,Detached,106,0.02,95502.0,North_B_Detached_Matrix.csv
+Rockcliffe-Smythe,Detached,110,0.02,148039.0,Rockcliffe-Smythe_Detached_Matrix.csv
+Rural New Tecumseth,Detached,84,0.02,336344.0,Rural_New_Tecumseth_Detached_Matrix.csv
+212 - Morrison,Detached,82,0.01,58833.0,212_-_Morrison_Detached_Matrix.csv
+1037 - TM Timberlea,Detached,68,0.01,89790.0,1037_-_TM_Timberlea_Detached_Matrix.csv
+Waterdown,Townhouse,49,0.01,69206.0,Waterdown_Townhouse_Matrix.csv
+210 - Downtown,Detached,78,0.0,66214.0,210_-_Downtown_Detached_Matrix.csv
+North E,Detached,73,-0.0,53938.0,North_E_Detached_Matrix.csv
+4102 - Ottawa Centre,Condo Apartment,241,0.0,63801.0,4102_-_Ottawa_Centre_Condo_Apartment_Matrix.csv
+Stoney Creek,Townhouse,50,-0.01,45635.0,Stoney_Creek_Townhouse_Matrix.csv
+542 - Greater Madawaska,Detached,70,-0.01,188533.0,542_-_Greater_Madawaska_Detached_Matrix.csv
+22 - East of Sir John A. Blvd,Detached,132,-0.01,97902.0,22_-_East_of_Sir_John_A._Blvd_Detached_Matrix.csv
+3808 - Hunt Club Park,Detached,48,-0.01,74771.0,3808_-_Hunt_Club_Park_Detached_Matrix.csv
+Central Erin Mills,Townhouse,116,-0.02,65659.0,Central_Erin_Mills_Townhouse_Matrix.csv
+Palmer,Detached,70,-0.02,109021.0,Palmer_Detached_Matrix.csv
+Briar Hill-Belgravia,Detached,62,-0.03,195940.0,Briar_Hill-Belgravia_Detached_Matrix.csv
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,63,-0.03,127875.0,2013_-_Mer_Bleue_Bradley_Estates_Anderson_Park_Detached_Matrix.csv
+Samac,Detached,144,-0.04,74911.0,Samac_Detached_Matrix.csv
+1010 - JM Joshua Meadows,Condo Apartment,61,-0.04,48844.0,1010_-_JM_Joshua_Meadows_Condo_Apartment_Matrix.csv
+York University Heights,Condo Apartment,111,-0.04,64050.0,York_University_Heights_Condo_Apartment_Matrix.csv
+Binbrook,Detached,93,-0.05,124710.0,Binbrook_Detached_Matrix.csv
+Rural Central Elgin,Detached,157,-0.05,141539.0,Rural_Central_Elgin_Detached_Matrix.csv
+Newtonbrook West,Condo Apartment,101,-0.06,56946.0,Newtonbrook_West_Condo_Apartment_Matrix.csv
+Rural Trent Hills,Detached,123,-0.06,165239.0,Rural_Trent_Hills_Detached_Matrix.csv
+057 - Smithville,Detached,70,-0.06,171804.0,057_-_Smithville_Detached_Matrix.csv
+West Hill,Townhouse,60,-0.06,92834.0,West_Hill_Townhouse_Matrix.csv
+Eglinton East,Detached,58,-0.07,173490.0,Eglinton_East_Detached_Matrix.csv
+Parkwoods-Donalda,Detached,102,-0.07,192402.0,Parkwoods-Donalda_Detached_Matrix.csv
+443 - Lakeport,Detached,102,-0.08,75262.0,443_-_Lakeport_Detached_Matrix.csv
+Rockcliffe-Smythe,Condo Apartment,40,-0.08,91322.0,Rockcliffe-Smythe_Condo_Apartment_Matrix.csv
+Delta,Detached,95,-0.09,83211.0,Delta_Detached_Matrix.csv
+Riverside Park,Detached,90,-0.09,74622.0,Riverside_Park_Detached_Matrix.csv
+Fletcher's Creek South,Detached,99,-0.1,100766.0,Fletcher's_Creek_South_Detached_Matrix.csv
+South X,Condo Apartment,62,-0.11,30854.0,South_X_Condo_Apartment_Matrix.csv
+453 - Grapeview,Detached,63,-0.11,144626.0,453_-_Grapeview_Detached_Matrix.csv
+Parry Sound,Detached,92,-0.11,117080.0,Parry_Sound_Detached_Matrix.csv
+Bobcaygeon,Detached,96,-0.13,153703.0,Bobcaygeon_Detached_Matrix.csv
+450 - E. Chester,Detached,112,-0.13,89043.0,450_-_E._Chester_Detached_Matrix.csv
+614 - Champlain Twp,Detached,97,-0.13,151789.0,614_-_Champlain_Twp_Detached_Matrix.csv
+2204 - Pineview,Townhouse,62,-0.13,32066.0,2204_-_Pineview_Townhouse_Matrix.csv
+Junction/Onward Willow,Detached,92,-0.13,116048.0,Junction_Onward_Willow_Detached_Matrix.csv
+Morningside,Detached,85,-0.13,111547.0,Morningside_Detached_Matrix.csv
+Casa Loma,Detached,38,-0.13,952452.0,Casa_Loma_Detached_Matrix.csv
+Streetsville,Detached,84,-0.14,146532.0,Streetsville_Detached_Matrix.csv
+Agincourt North,Detached,104,-0.14,115481.0,Agincourt_North_Detached_Matrix.csv
+772 - Broadway,Detached,60,-0.15,83712.0,772_-_Broadway_Detached_Matrix.csv
+Grand Bend,Detached,78,-0.15,166003.0,Grand_Bend_Detached_Matrix.csv
+1105 - Fallingbrook/Pineridge,Detached,113,-0.15,56367.0,1105_-_Fallingbrook_Pineridge_Detached_Matrix.csv
+Tottenham,Detached,125,-0.16,162118.0,Tottenham_Detached_Matrix.csv
+Bendale,Detached,174,-0.16,110235.0,Bendale_Detached_Matrix.csv
+St. Patrick's Ward,Detached,68,-0.17,53887.0,St._Patrick's_Ward_Detached_Matrix.csv
+Georgetown,Condo Apartment,43,-0.18,182759.0,Georgetown_Condo_Apartment_Matrix.csv
+2010 - Chateauneuf,Detached,76,-0.18,77364.0,2010_-_Chateauneuf_Detached_Matrix.csv
+540 - Grimsby Beach,Condo Apartment,60,-0.19,47771.0,540_-_Grimsby_Beach_Condo_Apartment_Matrix.csv
+Woodland Hill,Detached,91,-0.19,81795.0,Woodland_Hill_Detached_Matrix.csv
+East C,Detached,131,-0.19,60327.0,East_C_Detached_Matrix.csv
+Briar Hill-Belgravia,Condo Apartment,49,-0.22,75253.0,Briar_Hill-Belgravia_Condo_Apartment_Matrix.csv
+Beaverton,Detached,97,-0.22,92523.0,Beaverton_Detached_Matrix.csv
+63 - Stone Mills,Detached,130,-0.22,126416.0,63_-_Stone_Mills_Detached_Matrix.csv
+Mount Forest,Detached,95,-0.23,77622.0,Mount_Forest_Detached_Matrix.csv
+West Shore,Detached,153,-0.23,165916.0,West_Shore_Detached_Matrix.csv
+Blue Mountains,Townhouse,61,-0.23,115325.0,Blue_Mountains_Townhouse_Matrix.csv
+Brampton North,Detached,61,-0.24,78270.0,Brampton_North_Detached_Matrix.csv
+Norwich Town,Detached,70,-0.24,128074.0,Norwich_Town_Detached_Matrix.csv
+Huron-Kinloss,Detached,97,-0.26,136476.0,Huron-Kinloss_Detached_Matrix.csv
+South O,Detached,49,-0.27,39710.0,South_O_Detached_Matrix.csv
+767 - N. Welland,Detached,191,-0.27,78334.0,767_-_N._Welland_Detached_Matrix.csv
+Centennial,Townhouse,44,-0.28,60989.0,Centennial_Townhouse_Matrix.csv
+1107 - Springridge/East Village,Detached,49,-0.28,92807.0,1107_-_Springridge_East_Village_Detached_Matrix.csv
+9001 - Kanata - Beaverbrook,Detached,48,-0.28,116133.0,9001_-_Kanata_-_Beaverbrook_Detached_Matrix.csv
+Royal Orchard,Detached,68,-0.29,166624.0,Royal_Orchard_Detached_Matrix.csv
+Central Newmarket,Detached,117,-0.3,133187.0,Central_Newmarket_Detached_Matrix.csv
+Stoney Creek,Condo Apartment,56,-0.32,76217.0,Stoney_Creek_Condo_Apartment_Matrix.csv
+Don Valley Village,Detached,78,-0.32,183944.0,Don_Valley_Village_Detached_Matrix.csv
+East M,Detached,136,-0.32,46536.0,East_M_Detached_Matrix.csv
+Centre Hastings,Detached,82,-0.34,134357.0,Centre_Hastings_Detached_Matrix.csv
+Ainslie Wood,Detached,72,-0.34,68403.0,Ainslie_Wood_Detached_Matrix.csv
+9001 - Kanata - Beaverbrook,Townhouse,44,-0.35,29052.0,9001_-_Kanata_-_Beaverbrook_Townhouse_Matrix.csv
+456 - Oakdale,Detached,49,-0.36,98795.0,456_-_Oakdale_Detached_Matrix.csv
+Harding,Detached,48,-0.36,210598.0,Harding_Detached_Matrix.csv
+South N,Detached,65,-0.36,68867.0,South_N_Detached_Matrix.csv
+461 - Glendale/Glenridge,Detached,83,-0.37,168825.0,461_-_Glendale_Glenridge_Detached_Matrix.csv
+Airport,Detached,114,-0.37,133016.0,Airport_Detached_Matrix.csv
+Hillcrest Village,Condo Apartment,54,-0.38,183684.0,Hillcrest_Village_Condo_Apartment_Matrix.csv
+Lakeshore,Condo Apartment,85,-0.38,143751.0,Lakeshore_Condo_Apartment_Matrix.csv
+3502 - Overbrook/Castle Heights,Detached,49,-0.38,119896.0,3502_-_Overbrook_Castle_Heights_Detached_Matrix.csv
+South U,Townhouse,49,-0.39,48435.0,South_U_Townhouse_Matrix.csv
+9004 - Kanata - Bridlewood,Detached,148,-0.39,85109.0,9004_-_Kanata_-_Bridlewood_Detached_Matrix.csv
+610 - Alfred and Plantagenet Twp,Detached,123,-0.42,136259.0,610_-_Alfred_and_Plantagenet_Twp_Detached_Matrix.csv
+South X,Townhouse,42,-0.43,51150.0,South_X_Townhouse_Matrix.csv
+Englemount-Lawrence,Condo Apartment,72,-0.45,109486.0,Englemount-Lawrence_Condo_Apartment_Matrix.csv
+West Hill,Condo Apartment,43,-0.45,46827.0,West_Hill_Condo_Apartment_Matrix.csv
+Windfields,Townhouse,67,-0.46,36753.0,Windfields_Townhouse_Matrix.csv
+South Y,Townhouse,47,-0.5,24409.0,South_Y_Townhouse_Matrix.csv
+Crosby,Detached,64,-0.53,119072.0,Crosby_Detached_Matrix.csv
+9003 - Kanata - Glencairn/Hazeldean,Detached,72,-0.53,70288.0,9003_-_Kanata_-_Glencairn_Hazeldean_Detached_Matrix.csv
+25 - West of Sir John A. Blvd,Detached,66,-0.55,80696.0,25_-_West_of_Sir_John_A._Blvd_Detached_Matrix.csv
+Royal Orchard,Condo Apartment,48,-0.58,65174.0,Royal_Orchard_Condo_Apartment_Matrix.csv
+Mount Brydges,Detached,75,-0.59,112834.0,Mount_Brydges_Detached_Matrix.csv
+Bathurst Manor,Condo Apartment,44,-0.64,73635.0,Bathurst_Manor_Condo_Apartment_Matrix.csv
+Brampton South,Condo Apartment,44,-0.69,57039.0,Brampton_South_Condo_Apartment_Matrix.csv
+Kortright East,Detached,65,-0.7,171601.0,Kortright_East_Detached_Matrix.csv
+Mississauga Valleys,Townhouse,70,-0.71,30182.0,Mississauga_Valleys_Townhouse_Matrix.csv
+East F,Condo Apartment,75,-0.73,101502.0,East_F_Condo_Apartment_Matrix.csv
+Unionville,Townhouse,47,-0.74,97639.0,Unionville_Townhouse_Matrix.csv
+Tansley,Condo Apartment,62,-0.77,44301.0,Tansley_Condo_Apartment_Matrix.csv
+Fletcher's Creek South,Condo Apartment,46,-0.79,67123.0,Fletcher's_Creek_South_Condo_Apartment_Matrix.csv
+7701 - Barrhaven - Pheasant Run,Detached,49,-0.8,46923.0,7701_-_Barrhaven_-_Pheasant_Run_Detached_Matrix.csv
+L'Amoreaux,Townhouse,70,-0.8,66977.0,L'Amoreaux_Townhouse_Matrix.csv
+Humber Heights,Condo Apartment,53,-0.81,60594.0,Humber_Heights_Condo_Apartment_Matrix.csv
+Creditview,Condo Apartment,42,-0.83,62016.0,Creditview_Condo_Apartment_Matrix.csv
+York University Heights,Detached,39,-0.85,96870.0,York_University_Heights_Detached_Matrix.csv
+Mitchell,Detached,73,-0.88,137998.0,Mitchell_Detached_Matrix.csv
+Weston,Condo Apartment,50,-0.91,71256.0,Weston_Condo_Apartment_Matrix.csv
+Mount Olive-Silverstone-Jamestown,Detached,42,-0.93,68456.0,Mount_Olive-Silverstone-Jamestown_Detached_Matrix.csv
+Guildwood,Detached,100,-0.98,139017.0,Guildwood_Detached_Matrix.csv
+Fletcher's Creek Village,Detached,43,-1.03,101609.0,Fletcher's_Creek_Village_Detached_Matrix.csv
+East O,Detached,73,-1.08,85320.0,East_O_Detached_Matrix.csv
+Brant Hills,Townhouse,40,-1.09,71876.0,Brant_Hills_Townhouse_Matrix.csv
+Northwest Brampton,Townhouse,50,-1.1,53562.0,Northwest_Brampton_Townhouse_Matrix.csv
+Rathwood,Condo Apartment,41,-1.13,57703.0,Rathwood_Condo_Apartment_Matrix.csv
+Hillcrest Village,Detached,49,-1.13,268750.0,Hillcrest_Village_Detached_Matrix.csv
+Downtown Brampton,Detached,57,-1.27,120989.0,Downtown_Brampton_Detached_Matrix.csv
+Cornell,Townhouse,49,-1.32,103897.0,Cornell_Townhouse_Matrix.csv
+28 - City SouthWest,Detached,155,-1.61,109144.0,28_-_City_SouthWest_Detached_Matrix.csv
+Southgate,Townhouse,51,-1.65,78144.0,Southgate_Townhouse_Matrix.csv
+Eringate-Centennial-West Deane,Condo Apartment,48,-1.67,74184.0,Eringate-Centennial-West_Deane_Condo_Apartment_Matrix.csv
+Central East,Detached,48,-1.73,111580.0,Central_East_Detached_Matrix.csv
+3602 - Riverview Park,Detached,39,-1.77,90924.0,3602_-_Riverview_Park_Detached_Matrix.csv
+Dundas,Townhouse,38,-1.88,76071.0,Dundas_Townhouse_Matrix.csv
+Victoria Village,Condo Apartment,44,-2.95,42156.0,Victoria_Village_Condo_Apartment_Matrix.csv
+Aileen-Willowbrook,Detached,47,-3.3,153508.0,Aileen-Willowbrook_Detached_Matrix.csv

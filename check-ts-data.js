@@ -8,7 +8,7 @@ const c = new T.Client({
   console.log('Running search test...');
   
   // Simulate what the page does
-  const r = await c.collections('listings').documents().search({
+  const r = await c.collections('properties').documents().search({
     q: '*',
     query_by: 'UnparsedAddress,City,PropertySubType',
     page: 1,

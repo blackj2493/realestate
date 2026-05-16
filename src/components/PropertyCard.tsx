@@ -14,7 +14,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 
 export interface PropertyCardData {
   id: string;
@@ -39,6 +39,11 @@ export interface PropertyCardData {
   yearBuilt?: number | null;
   maintenance?: number;
   distance?: number;
+  // Phase 5: Suite Status
+  suiteStatus?: 'NONE' | 'POTENTIAL_CANDIDATE' | 'EXISTING_SUITE';
+  suiteScore?: number;
+  // Phase 5: Stale Inventory
+  isStale?: boolean;
 }
 
 interface PropertyCardProps {
@@ -168,8 +173,20 @@ export function PropertyCard({
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
+            {/* Suite Status Badge (top-left) - highest priority */}
+            {property.suiteStatus === 'EXISTING_SUITE' && (
+              <span className="px-2 py-1 text-xs font-mono font-semibold text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-md">
+                EXISTING DUPLEX/SUITE
+              </span>
+            )}
+            {property.suiteStatus === 'POTENTIAL_CANDIDATE' && (
+              <span className="px-2 py-1 text-xs font-mono font-semibold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-md">
+                ALPHA: SUITE CANDIDATE
+              </span>
+            )}
+            {/* New listing badge */}
             {property.daysOnMarket !== undefined && property.daysOnMarket <= 7 && (
-              <span className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded">
+              <span className="px-2 py-1 bg-emerald-500 text-white text-xs font-medium rounded">
                 New
               </span>
             )}
@@ -181,6 +198,20 @@ export function PropertyCard({
                   : `${property.distance.toFixed(1)}km`}
               </span>
             )}
+          </div>
+
+          {/* Right Side Badges */}
+          <div className="absolute top-3 right-3 flex flex-col gap-2">
+            {/* DoM Badge (bottom-right) - if > 45 days show, if > 90 show STALE */}
+            {property.isStale ? (
+              <span className="px-2 py-1 text-xs font-mono font-semibold text-rose-400 bg-rose-400/10 border border-rose-400/20 rounded-md">
+                STALE: {property.daysOnMarket || 0}d
+              </span>
+            ) : property.daysOnMarket !== undefined && property.daysOnMarket > 45 ? (
+              <span className="px-2 py-1 text-xs font-mono font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-md">
+                {property.daysOnMarket}d
+              </span>
+            ) : null}
           </div>
 
           {/* Days on Market Badge */}

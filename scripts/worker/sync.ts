@@ -12,6 +12,9 @@
  * Run: npx tsx scripts/worker/sync.ts
  */
 
+// Load .env file
+import 'dotenv/config';
+
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { transformListing, TransformResult } from './transformer';
 import Typesense, { Client } from 'typesense';
@@ -31,7 +34,10 @@ import {
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
-const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY || 'Ke8EhmC9c1Qm6JbttPt0rzSnvXa26Yxy';
+const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY;
+if (!TYPESENSE_ADMIN_KEY) {
+  throw new Error('TYPESENSE_ADMIN_API_KEY is not set in environment');
+}
 
 // Batch size for database operations
 const BATCH_SIZE = 100;
@@ -52,7 +58,7 @@ function getAdminClient(): Client {
           protocol: 'https'
         }
       ],
-      apiKey: TYPESENSE_ADMIN_KEY,
+      apiKey: TYPESENSE_ADMIN_KEY!,
       connectionTimeoutSeconds: 10
     });
   }
@@ -137,8 +143,12 @@ export interface SyncResult {
  * 5. Separate results into supabaseBatch and typesenseBatch
  * 6. Write to Supabase (storage)
  * 7. Write to Typesense (search index)
+ * 
+ * @param rawListings - Array of raw listing objects from MLS API
+ * @param options - Optional processing flags
+ * @param options.isSold - If true, marks listings as sold (is_sold: true in Typesense)
  */
-export async function processBatch(rawListings: any[]): Promise<SyncResult> {
+export async function processBatch(rawListings: any[], options?: { isSold?: boolean }): Promise<SyncResult> {
   console.log(`\n📦 Processing batch of ${rawListings.length} listings...`);
   
   const result: SyncResult = {
@@ -147,8 +157,8 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     typesense: { indexed: 0, failed: 0, errors: [] }
   };
 
-  // Step 1: Transform all listings
-  const transformed = rawListings.map(raw => transformListing(raw));
+  // Step 1: Transform all listings (async due to Supabase AVM lookups)
+  const transformed = await Promise.all(rawListings.map(raw => transformListing(raw)));
   
   // ─── Phase 4: Temporal Distress Engine ───────────────────────────────────
   // Generate property hashes and fetch historical data in batch
@@ -210,22 +220,62 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
   // ─────────────────────────────────────────────────────────────────────────
 
   // Step 5: Separate into batches
-  const supabaseRecords = transformed.map(t => ({
-    ...t.supabasePayload,
-    property_hash: temporalMetrics.get(t.supabasePayload.listing_key)?.property_hash || ''
-  }));
+  // FIX: Build records explicitly to avoid the property_hash integer bug.
+  // Previously used spread {...t.supabasePayload} which accidentally included
+  // the nested true_dom object when property_hash was later reassigned.
+  // This caused Supabase to crash with: "invalid input syntax for type integer"
+  // because the true_dom JSON string was being passed to the INTEGER column.
+  const supabaseRecords = transformed.map(t => {
+    const metrics = temporalMetrics.get(t.supabasePayload.listing_key);
+    const p = t.supabasePayload;
+    return {
+      listing_key: p.listing_key,
+      full_payload: p.full_payload,
+      media_urls: p.media_urls,
+      derived_metrics: p.derived_metrics,
+      carry_cost: p.carry_cost,
+      needs_geocoding: p.needs_geocoding,
+      city: p.city,
+      property_sub_type: p.property_sub_type,
+      list_price: p.list_price,
+      property_hash: metrics?.property_hash || '',
+      // Flat carry cost columns (migration 005)
+      monthly_carry_cost: p.monthly_carry_cost,
+      monthly_mortgage: p.monthly_mortgage,
+      monthly_property_tax: p.monthly_property_tax,
+      monthly_hoa: p.monthly_hoa,
+      monthly_insurance: p.monthly_insurance,
+      monthly_capex: p.monthly_capex,
+      // Flat suite analysis columns (migration 005)
+      suite_status: p.suite_status,
+      suite_score: p.suite_score,
+      suite_flags: p.suite_flags,
+      // Flat true DOM columns (migration 005)
+      is_stale: p.is_stale,
+      campaign_block_id: p.campaign_block_id,
+      dead_days: p.dead_days,
+    };
+  });
   
   // Build typesense documents with temporal metrics
   const typesenseDocuments = transformed.map(t => {
     const tsDoc = t.typesensePayload as any;
     const metrics = temporalMetrics.get(t.supabasePayload.listing_key);
     
-    return {
+    const doc: any = {
       ...tsDoc,
-      property_hash: metrics?.property_hash || '',
-      true_dom: metrics?.true_dom || 0,
-      total_price_drop: metrics?.total_price_drop || 0
+      PropertyHash: metrics?.property_hash || '',
+      TrueDom: metrics?.true_dom || 0,
+      TotalPriceDrop: metrics?.total_price_drop || 0
     };
+    
+    // If processing sold listings, mark them with is_sold flag
+    // so frontend can filter them out of active searches
+    if (options?.isSold) {
+      doc.IsSold = true;
+    }
+    
+    return doc;
   });
 
   // Step 6: Write to Supabase (storage)
@@ -305,6 +355,12 @@ export async function processBatch(rawListings: any[]): Promise<SyncResult> {
     result.typesense.failed = typesenseDocuments.length;
     result.success = false;
     console.error('❌ Typesense error:', err.message);
+    if (err.importResults) {
+      console.error('   Import results:', JSON.stringify(err.importResults, null, 2));
+    }
+    if (err.httpBody) {
+      console.error('   HTTP Body:', err.httpBody);
+    }
   }
 
   console.log('\n📊 Sync Result:', {
@@ -455,6 +511,7 @@ async function main() {
         ListingKey: 'MLS_TEST_001',
         ListPrice: 850000,
         City: 'Toronto',
+        CityRegion: 'Greater Toronto Area',
         PostalCode: 'M5V 3A1',
         Latitude: null,
         Longitude: null,
@@ -463,20 +520,32 @@ async function main() {
         PropertySubType: 'Condo',
         PropertyType: 'Residential',
         TransactionType: 'For Sale',
+        ParkingTotal: 1,
+        ApproximateAge: '0-5 Years',
+        Status: 'Active',
+        MlsStatus: 'Active',
+        LotWidth: 30.5,
+        LotDepth: 60.2,
         OriginalEntryTimestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         PublicRemarks: 'Modern condo in prime location. Move-in ready.',
         Basement: ['None'],
         KitchensTotal: 1,
         TaxAnnualAmount: 3200,
+        AssociationFee: 0,
         ListOfficeName: 'Test Realty',
         StreetNumber: '12',
         StreetName: 'King West',
-        UnitNumber: '1605'
+        UnitNumber: '1605',
+        media: [
+          { MediaURL: 'https://example.com/photo1.jpg', MediaStatus: 'Available', Order: 0, ImageSizeDescription: 'Medium' },
+          { MediaURL: 'https://example.com/photo2.jpg', MediaStatus: 'Available', Order: 1, ImageSizeDescription: 'Medium' }
+        ]
       },
       {
         ListingKey: 'MLS_TEST_002',
         ListPrice: 1500000,
         City: 'Brampton',
+        CityRegion: 'Greater Toronto Area',
         PostalCode: 'L6P 2Z1',
         Latitude: null,
         Longitude: null,
@@ -485,15 +554,26 @@ async function main() {
         PropertySubType: 'Detached',
         PropertyType: 'Residential',
         TransactionType: 'For Sale',
+        ParkingTotal: 2,
+        ApproximateAge: '30-50 Years',
+        Status: 'Active',
+        MlsStatus: 'Active',
+        LotWidth: 50.0,
+        LotDepth: 120.5,
         OriginalEntryTimestamp: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
         PublicRemarks: 'Estate sale. TLC needed. Handyman special. Contact contractor for details.',
         Basement: ['Unfinished'],
         KitchensTotal: 1,
         TaxAnnualAmount: 5800,
+        AssociationFee: 0,
         ListOfficeName: 'Estate Agents Inc',
         StreetNumber: '45',
         StreetName: 'Main Street North',
-        UnitNumber: null
+        UnitNumber: null,
+        media: [
+          { MediaURL: 'https://example.com/house1.jpg', MediaStatus: 'Available', Order: 0, ImageSizeDescription: 'Medium' },
+          { MediaURL: 'https://example.com/house2.jpg', MediaStatus: 'Available', Order: 1, ImageSizeDescription: 'Large' }
+        ]
       }
     ];
     

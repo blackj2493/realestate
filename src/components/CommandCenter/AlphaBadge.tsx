@@ -111,15 +111,26 @@ export function detectPropertyBadges(property: {
   calculatedDOM?: number;
   DaysOnMarket?: number;
   SchoolZone?: boolean;
+  // Phase 2: Multi-Unit Status
+  multi_unit_status?: 'NOT_VIABLE' | 'EXISTING_MULTI_UNIT' | 'PRIME_CANDIDATE' | 'MARGINAL_CANDIDATE' | string;
+  is_density_ready?: boolean;
 }): PropertyBadge[] {
   const badges: PropertyBadge[] = [];
 
-  // Income Suite badge - has secondary suite or basement kitchen
+  // Phase 2: Multi-Unit badges
+  const multiUnitStatus = property.multi_unit_status;
+  if (multiUnitStatus === 'EXISTING_MULTI_UNIT') {
+    badges.push({ variant: 'income-suite', label: 'INCOME SUITE' });
+  } else if (multiUnitStatus === 'PRIME_CANDIDATE' || multiUnitStatus === 'MARGINAL_CANDIDATE') {
+    badges.push({ variant: 'suite-potential', label: 'SUITE POTENTIAL' });
+  }
+
+  // Legacy: Income Suite badge - has secondary suite or basement kitchen
   if (property.hasSecondarySuitePotential || (property.KitchensBelowGrade && property.KitchensBelowGrade > 0)) {
     badges.push({ variant: 'income-suite', label: 'INCOME SUITE' });
   }
 
-  // Suite Potential badge - has unfinished basement potential
+  // Legacy: Suite Potential badge - has unfinished basement potential
   if (property.PublicRemarks?.toLowerCase().includes('basement') && 
       property.PublicRemarks?.toLowerCase().includes('potential')) {
     badges.push({ variant: 'suite-potential', label: 'SUITE POTENTIAL' });
@@ -157,6 +168,11 @@ export function detectPropertyBadges(property: {
   const motivatedKeywords = ['motivated', 'need to sell', 'moving', 'relocating', 'quick sale', 'price to sell'];
   if (motivatedKeywords.some(keyword => remarks.includes(keyword))) {
     badges.push({ variant: 'motivated-seller', label: 'MOTIVATED' });
+  }
+
+  // Phase 2: Density Ready badge
+  if (property.is_density_ready) {
+    badges.push({ variant: 'suite-potential', label: 'DENSITY READY' });
   }
 
   return badges;

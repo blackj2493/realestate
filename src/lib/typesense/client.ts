@@ -38,7 +38,7 @@ export function getTypesenseClient(): Client {
 }
 
 // ============================================================================
-// Type Definitions (mirrors V1 schema)
+// Type Definitions (matches updated schema with camelCase fields)
 // ============================================================================
 
 export interface ListingDocument {
@@ -91,7 +91,7 @@ export interface ListingDocument {
   ListOfficeName?: string;
   
   // Extended fields for Command Center
-  DaysOnMarket?: number;
+  TrueDom?: number;
   primaryImageUrl?: string;
   OriginalListPrice?: number;
   KitchensBelowGrade?: number;
@@ -101,6 +101,32 @@ export interface ListingDocument {
   // Building Systems
   Heating?: string;
   Cooling?: string[];
+  
+  // Cap Rate Metrics
+  TotalCapitalBasis?: number;
+  ExtrapolatedCapRate?: number;
+  CapitalBurnRateMonthly?: number;
+  
+  // Property Hash (Phase 4)
+  PropertyHash?: string;
+  
+  // Price Drop
+  TotalPriceDrop?: number;
+  
+  // ─── Phase 5: True Carry Cost ─────────────────────────────────────────
+  MonthlyCarryCost?: number;
+  MonthlyMortgage?: number;
+  MonthlyPropertyTax?: number;
+  MonthlyHOA?: number;
+  MonthlyInsurance?: number;
+  MonthlyCapEx?: number;
+  
+  // ─── Phase 5: Suite Analysis ─────────────────────────────────────────
+  SuiteStatus?: 'NONE' | 'POTENTIAL_CANDIDATE' | 'EXISTING_SUITE';
+  SuiteScore?: number;
+  
+  // ─── Phase 5: Stale Inventory ─────────────────────────────────────────
+  IsStale?: boolean;
 }
 
 export interface SearchFilters {
@@ -148,6 +174,10 @@ export interface SearchFilters {
   // Days on Market
   minDOM?: number;
   maxDOM?: number;
+  
+  // True DOM (Phase 4)
+  minTrueDom?: number;
+  maxTrueDom?: number;
 }
 
 export interface SearchOptions {
@@ -282,12 +312,20 @@ export async function searchListings(
     filterParts.push(`BedroomsTotal:<=${filters.maxBedrooms}`);
   }
   
-  // Days on Market
+  // Days on Market (calculatedDOM)
   if (filters.minDOM !== undefined) {
     filterParts.push(`calculatedDOM:>=${filters.minDOM}`);
   }
   if (filters.maxDOM !== undefined) {
     filterParts.push(`calculatedDOM:<=${filters.maxDOM}`);
+  }
+  
+  // True DOM (Phase 4)
+  if (filters.minTrueDom !== undefined) {
+    filterParts.push(`TrueDom:>=${filters.minTrueDom}`);
+  }
+  if (filters.maxTrueDom !== undefined) {
+    filterParts.push(`TrueDom:<=${filters.maxTrueDom}`);
   }
   
   // Build search params
@@ -323,10 +361,10 @@ export async function searchListings(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: any = await client
-      .collections('listings')
+      .collections('properties')
       .documents()
       .search(searchParams);
-    
+     
     return {
       listings: (response.hits || []).map((hit: any) => hit.document as ListingDocument),
       totalFound: response.found || 0,
@@ -393,7 +431,7 @@ export async function getNearbyListings(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: any = await client
-      .collections('listings')
+      .collections('properties')
       .documents()
       .search(searchParams);
     
@@ -445,7 +483,7 @@ export async function indexListing(listing: ListingDocument): Promise<void> {
   if (listing.thumbnailUrl) document.thumbnailUrl = listing.thumbnailUrl;
   if (listing.ListOfficeName) document.ListOfficeName = listing.ListOfficeName;
   
-  await client.collections('listings').documents().upsert(document);
+  await client.collections('properties').documents().upsert(document);
 }
 
 /**
@@ -453,7 +491,7 @@ export async function indexListing(listing: ListingDocument): Promise<void> {
  */
 export async function deleteListing(id: string): Promise<void> {
   const client = getTypesenseClient();
-  await client.collections('listings').documents(id).delete();
+  await client.collections('properties').documents(id).delete();
 }
 
 /**

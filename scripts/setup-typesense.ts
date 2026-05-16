@@ -15,8 +15,8 @@ const TYPESENSE_PORT = 443;
 const TYPESENSE_API_KEY = process.env.TYPESENSE_ADMIN_API_KEY || 'Ke8EhmC9c1Qm6JbttPt0rzSnvXa26Yxy';
 
 // V1 Schema Definition
-const listingsSchema = {
-  name: 'listings',
+const propertiesSchema = {
+  name: 'properties',
   
   // Core Render Fields
   fields: [
@@ -99,11 +99,11 @@ async function setupTypesense() {
     // Check if collection exists and delete for fresh start
     console.log('🔄 Checking for existing collection...');
     try {
-      const existing = await client.collections('listings').retrieve();
+      const existing = await client.collections('properties').retrieve();
       if (existing) {
-        console.log('   ⚠️  Found existing "listings" collection');
+        console.log('   ⚠️  Found existing "properties" collection');
         console.log('   🗑️  Deleting for fresh schema deployment...');
-        await client.collections('listings').delete();
+        await client.collections('properties').delete();
         console.log('   ✅ Deleted existing collection\n');
       }
     } catch (collectionError: any) {
@@ -115,9 +115,9 @@ async function setupTypesense() {
     }
     
     // Create new collection with schema
-    console.log('📦 Creating "listings" collection with V1 schema...');
+    console.log('📦 Creating "properties" collection with V1 schema...');
     console.log('   Schema fields:');
-    listingsSchema.fields.forEach(field => {
+    propertiesSchema.fields.forEach(field => {
       const optional = field.optional ? ' (optional)' : '';
       const sort = field.sort ? ' [sort]' : '';
       const facet = field.facet ? ' [facet]' : '';
@@ -125,9 +125,9 @@ async function setupTypesense() {
     });
     console.log('');
     
-    const collection = await client.collections().create(listingsSchema);
+    const collection = await client.collections().create(propertiesSchema);
     console.log(`   ✅ Created collection: ${collection.name}`);
-    console.log(`   📊 Fields configured: ${listingsSchema.fields.length}`);
+    console.log(`   📊 Fields configured: ${propertiesSchema.fields.length}`);
     console.log(`   📁 Default sorting field: ${collection.default_sorting_field}\n`);
     
     // Display geopoint field requirements
