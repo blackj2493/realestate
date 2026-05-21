@@ -70,8 +70,32 @@ function getAdminClient(): Client {
 // ============================================================================
 
 /**
+ * Helper: Split array into chunks of specified size.
+ */
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+/**
+ * Helper: Sleep utility for rate limiting.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ============================================================================
+
+/**
  * Fetches historical listings for a batch of property hashes.
  * Implements the efficient batch pattern: 1 query, group locally.
+ * 
+ * OPTIMIZATION: Chunks 100 hashes into 4x25 batches, processed sequentially.
+ * Uses explicit column selects to minimize payload size.
+ * Implements retry with exponential backoff.
  * 
  * @param supabaseClient - Service role client for Supabase
  * @param propertyHashes - Array of property hashes to fetch
@@ -89,27 +113,72 @@ async function fetchHistoricalListings(
 
   console.log(`   📚 Fetching historical listings for ${propertyHashes.length} properties...`);
 
-  // Single query for all historical matches
-  const { data, error } = await supabaseClient
-    .from('listings')
-    .select('listing_key, property_hash, full_payload, created_at')
-    .in('property_hash', propertyHashes)
-    .not('listing_key', 'in', `(${excludeListingKeys.map(k => `'${k}'`).join(',')})`);
+  // Chunk into 25-hash sub-batches for sequential processing
+  const CHUNK_SIZE = 25;
+  const chunks = chunkArray(propertyHashes, CHUNK_SIZE);
+  console.log(`   📦 Split into ${chunks.length} chunks of ${CHUNK_SIZE} hashes each`);
 
-  if (error) {
-    console.warn(`   ⚠️  Historical fetch warning: ${error.message}`);
-    return new Map();
+  // Build exclusion clause once (same for all chunks)
+  const excludeClause = `(${excludeListingKeys.map(k => `'${k}'`).join(',')})`;
+
+  // Process chunks sequentially with retry
+  const MAX_RETRIES = 3;
+  const allHistoricalData: any[] = [];
+
+  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+    const chunk = chunks[chunkIdx];
+    let success = false;
+    let attempt = 0;
+
+    while (!success && attempt < MAX_RETRIES) {
+      try {
+        // Explicit column select: minimal payload for True DOM calculation
+        // Select: id, property_hash, created_at (for campaign block timing)
+        const { data, error } = await supabaseClient
+          .from('listings')
+          .select('id, property_hash, created_at')
+          .in('property_hash', chunk)
+          .not('listing_key', 'in', excludeClause);
+
+        if (error) {
+          console.warn(`   ⚠️  Chunk ${chunkIdx + 1} attempt ${attempt + 1} warning: ${error.message}`);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          allHistoricalData.push(...data);
+        }
+
+        success = true;
+        console.log(`   ✅ Chunk ${chunkIdx + 1}/${chunks.length}: ${data?.length || 0} historical records`);
+
+      } catch (err: any) {
+        attempt++;
+        if (attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 500; // Exponential backoff: 500, 1000, 2000ms
+          console.warn(`   ⏳ Retry ${attempt}/${MAX_RETRIES} for chunk ${chunkIdx + 1} in ${delay}ms...`);
+          await sleep(delay);
+        } else {
+          console.error(`   ❌ Chunk ${chunkIdx + 1} failed after ${MAX_RETRIES} attempts: ${err.message}`);
+        }
+      }
+    }
+
+    // 50ms inter-chunk delay to regulate Supabase connection pool
+    if (chunkIdx < chunks.length - 1) {
+      await sleep(50);
+    }
   }
 
-  if (!data || data.length === 0) {
+  if (allHistoricalData.length === 0) {
     console.log(`   ℹ️  No historical listings found`);
     return new Map();
   }
 
-  console.log(`   📊 Found ${data.length} historical listing records`);
+  console.log(`   📊 Found ${allHistoricalData.length} historical listing records total`);
   
   // Group locally in memory
-  const grouped = groupHistoricalByHash(data);
+  const grouped = groupHistoricalByHash(allHistoricalData);
   
   return grouped;
 }
@@ -280,39 +349,75 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
 
   // Step 6: Write to Supabase (storage)
   console.log('💾 Writing to Supabase...');
-  try {
-    // Batch upsert to Supabase (with property_hash)
-    const { data, error } = await supabaseClient
-      .from('listings')
-      .upsert(supabaseRecords, { onConflict: 'listing_key' })
-      .select('id');
-    
-    if (error) {
-      result.supabase.errors.push(error.message);
-      result.supabase.failed = rawListings.length;
-      result.success = false;
-      console.error('❌ Supabase upsert failed:', error.message);
-    } else {
+  
+  // Retry loop for Supabase upsert (network/resiliency)
+  const MAX_RETRIES = 3;
+  let upsertSuccess = false;
+  let upsertAttempt = 0;
+
+  while (!upsertSuccess && upsertAttempt < MAX_RETRIES) {
+    try {
+      // Batch upsert to Supabase (with property_hash)
+      const { data, error } = await supabaseClient
+        .from('listings')
+        .upsert(supabaseRecords, { onConflict: 'listing_key' })
+        .select('id');
+      
+      if (error) {
+        result.supabase.errors.push(error.message);
+        result.supabase.failed = rawListings.length;
+        result.success = false;
+        console.error(`❌ Supabase upsert attempt ${upsertAttempt + 1} failed:`, error.message);
+        throw error;
+      }
+      
       result.supabase.inserted = data?.length || supabaseRecords.length;
       console.log(`   ✅ Supabase: ${result.supabase.inserted} records upserted`);
+      upsertSuccess = true;
+
+    } catch (err: any) {
+      upsertAttempt++;
+      if (upsertAttempt < MAX_RETRIES) {
+        const delay = Math.pow(2, upsertAttempt) * 500;
+        console.warn(`   ⏳ Retry ${upsertAttempt}/${MAX_RETRIES} for Supabase upsert in ${delay}ms...`);
+        await sleep(delay);
+      } else {
+        result.supabase.errors.push(err.message);
+        result.supabase.failed = rawListings.length;
+        result.success = false;
+        console.error('❌ Supabase upsert failed after 3 attempts:', err.message);
+      }
     }
-  } catch (err: any) {
-    result.supabase.errors.push(err.message);
-    result.supabase.failed = rawListings.length;
-    result.success = false;
-    console.error('❌ Supabase error:', err.message);
   }
 
-  // Step 7: Write to Typesense (search index)
-  console.log('🔍 Writing to Typesense...');
+  // Step 7: Write to Typesense (search index) — ACTIVE / available inventory only.
+  // Listings no longer available (Sold/Closed, Leased, and other terminal statuses)
+  // are never indexed: nothing in the frontend searches them and they only consume
+  // Typesense RAM (caused bulk-sync OOM). Sold/lease comps are served from Supabase;
+  // the Supabase `listings` table still keeps every status for True DOM history.
+  const NON_ACTIVE_STATUSES = new Set([
+    'sold', 'closed', 'closed sale', 'leased', 'terminated', 'expired', 'suspended',
+  ]);
+  const searchableDocs = options?.isSold
+    ? [] // entire sold batch (Query B) — never indexed
+    : typesenseDocuments.filter(
+        (d) => !NON_ACTIVE_STATUSES.has(String(d.Status ?? '').trim().toLowerCase()),
+      );
+  const skippedCount = typesenseDocuments.length - searchableDocs.length;
+
+  if (searchableDocs.length === 0) {
+    console.log(`🔍 Skipping Typesense — no active docs in batch (${skippedCount} non-active skipped)`);
+  } else {
+  if (skippedCount > 0) console.log(`🔍 Writing to Typesense (${searchableDocs.length} active, ${skippedCount} non-active skipped)...`);
+  else console.log('🔍 Writing to Typesense...');
   try {
     const client = getAdminClient();
-    
+
     // Use import endpoint with upsert action
     const importResponse = await client
       .collections('properties') // Updated to use 'properties' collection
       .documents()
-      .import(typesenseDocuments, { action: 'upsert' });
+      .import(searchableDocs, { action: 'upsert' });
     
     // Typesense import returns array of results
     const importResults = Array.isArray(importResponse) 
@@ -352,16 +457,28 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     }
   } catch (err: any) {
     result.typesense.errors.push(err.message);
-    result.typesense.failed = typesenseDocuments.length;
+    result.typesense.failed = searchableDocs.length;
     result.success = false;
     console.error('❌ Typesense error:', err.message);
-    if (err.importResults) {
-      console.error('   Import results:', JSON.stringify(err.importResults, null, 2));
+    
+    // Enhanced error verbosity: parse importResults for field-level validation failures
+    if (err.importResults && Array.isArray(err.importResults)) {
+      console.error('\n📋 Typesense Import Validation Failures:');
+      console.error('═'.repeat(60));
+      for (const item of err.importResults) {
+        if (item.success === false || item.error) {
+          const docId = item.document?.ListingKey || item.document?.id || 'unknown';
+          console.error(`   📄 Document [${docId}]: ${item.error}`);
+        }
+      }
+      console.error('═'.repeat(60));
     }
+    
     if (err.httpBody) {
       console.error('   HTTP Body:', err.httpBody);
     }
   }
+  } // end else — non-active listings excluded from the Typesense index
 
   console.log('\n📊 Sync Result:', {
     total: rawListings.length,

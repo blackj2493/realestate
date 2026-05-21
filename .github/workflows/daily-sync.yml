@@ -25,9 +25,10 @@ jobs:
 
       - name: Run Daily Sync Script
         env:
-          # We pass your secure secrets from GitHub to the script
+          # FEED ISOLATION: IDX and VOW are TWO DISTINCT TRREB tokens with no fallback.
+          # Read by scripts/worker/ingester.ts:242-243.
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RESO_BEARER_TOKEN: ${{ secrets.RESO_BEARER_TOKEN }}
-          # Add any other API keys your ingester.ts needs here
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
         run: npx tsx scripts/worker/ingester.ts sync

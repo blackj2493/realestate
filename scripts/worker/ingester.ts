@@ -27,6 +27,7 @@ interface SoldListingRecord {
   listing_key: string;
   close_price: number;
   close_date: string;
+  purchase_contract_date: string | null;
   city_region: string;
   property_sub_type: string;
   bedrooms_above_grade?: number;
@@ -46,16 +47,56 @@ interface SoldListingRecord {
 
 /**
  * Checks if a listing status indicates it has been sold/closed.
- * Uses standard RESO fields: StandardStatus="Closed" or MlsStatus="Sold"
+ * Uses strict RESO status normalization per system instructions.
+ * 
+ * Maps Canadian board sub-statuses to canonical status:
+ * - 'New', 'Active', 'Price Change', 'Extension' → { status: "ACTIVE", isSold: false }
+ * - 'Closed', 'Sold', 'Closed Sale' → { status: "CLOSED", isSold: true }
  */
 function isSoldListing(raw: any): boolean {
-  const standardStatus = raw.StandardStatus || '';
-  const mlStatus = raw.MlsStatus || '';
+  const standardStatus = (raw.StandardStatus || '').toLowerCase().trim();
+  const mlStatus = (raw.MlsStatus || '').toLowerCase().trim();
   
-  const isClosed = standardStatus.toLowerCase().trim() === 'closed';
-  const isSold = mlStatus.toLowerCase().trim() === 'sold';
+  // Active statuses (not sold)
+  const ACTIVE_STATUSES = ['new', 'active', 'price change', 'extension'];
   
-  return isClosed || isSold;
+  // Closed/Sold statuses
+  const CLOSED_STATUSES = ['closed', 'sold', 'closed sale', 'terminated'];
+  
+  // Check if it's a closed/sold status
+  if (CLOSED_STATUSES.includes(standardStatus) || CLOSED_STATUSES.includes(mlStatus)) {
+    return true;
+  }
+  
+  // Explicit check for active statuses (handles edge cases where board sends unexpected values)
+  if (ACTIVE_STATUSES.includes(standardStatus) || ACTIVE_STATUSES.includes(mlStatus)) {
+    return false;
+  }
+  
+  // Default: treat unrecognized statuses as NOT sold (safe default)
+  return false;
+}
+
+/**
+ * Returns canonical status and isSold flag for a listing.
+ * Used for defensive typing in Typesense schema compliance.
+ */
+function normalizeListingStatus(raw: any): { status: 'ACTIVE' | 'CLOSED' | 'UNKNOWN'; isSold: boolean } {
+  const standardStatus = (raw.StandardStatus || '').toLowerCase().trim();
+  const mlStatus = (raw.MlsStatus || '').toLowerCase().trim();
+  
+  const ACTIVE_STATUSES = ['new', 'active', 'price change', 'extension'];
+  const CLOSED_STATUSES = ['closed', 'sold', 'closed sale', 'terminated'];
+  
+  if (CLOSED_STATUSES.includes(standardStatus) || CLOSED_STATUSES.includes(mlStatus)) {
+    return { status: 'CLOSED', isSold: true };
+  }
+  
+  if (ACTIVE_STATUSES.includes(standardStatus) || ACTIVE_STATUSES.includes(mlStatus)) {
+    return { status: 'ACTIVE', isSold: false };
+  }
+  
+  return { status: 'UNKNOWN', isSold: false };
 }
 
 /**
@@ -63,9 +104,11 @@ function isSoldListing(raw: any): boolean {
  */
 function extractSoldListingData(raw: any): SoldListingRecord | null {
   try {
-    const status = raw.MlsStatus || raw.StandardStatus || raw.Status;
-    
-    if (!isSoldListing(status)) {
+    // isSoldListing reads raw.StandardStatus / raw.MlsStatus — it must receive the
+    // raw listing OBJECT, not an extracted status string. Passing a string made it
+    // always return false, so extractSoldListingData returned null for every record
+    // and the raw_vow_sold upsert was silently skipped on every daily sync.
+    if (!isSoldListing(raw)) {
       return null;
     }
 
@@ -74,6 +117,10 @@ function extractSoldListingData(raw: any): SoldListingRecord | null {
       listing_key: raw.ListingKey || raw.ListingId || '',
       close_price: raw.ClosePrice || raw.ClosePrice || 0,
       close_date: raw.CloseDate || raw.SoldDate || new Date().toISOString(),
+      // PurchaseContractDate = when the deal was signed (the AVM event date).
+      // Stored as a date string; null when absent (do NOT fabricate a date — a
+      // wrong contract date pollutes the AVM anchor).
+      purchase_contract_date: raw.PurchaseContractDate || null,
       city_region: raw.CityRegion || raw.MarketArea || '',
       property_sub_type: raw.PropertySubType || raw.PropertyType || '',
     };
@@ -154,6 +201,7 @@ async function upsertSoldListings(
             listing_key: record.listing_key,
             close_price: record.close_price,
             close_date: record.close_date,
+            purchase_contract_date: record.purchase_contract_date,
             city_region: record.city_region,
             property_sub_type: record.property_sub_type,
             bedrooms_above_grade: record.bedrooms_above_grade,
@@ -195,7 +243,12 @@ async function upsertSoldListings(
 // ============================================================================
 
 const API_BASE_URL = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
-const BEARER_TOKEN = (process.env.PROPTX_IDX_TOKEN || process.env.PROPTX_VOW_TOKEN || process.env.RESO_BEARER_TOKEN || '').trim();
+
+// FEED ISOLATION: Separate tokens for IDX (Active) and VOW (Sold) feeds
+// IDX_TOKEN: Used ONLY for active inventory (StandardStatus eq 'Active')
+// VOW_TOKEN: Used ONLY for historical closed/sold (StandardStatus eq 'Closed')
+const IDX_TOKEN = (process.env.PROPTX_IDX_TOKEN || '').trim();
+const VOW_TOKEN = (process.env.PROPTX_VOW_TOKEN || '').trim();
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -233,10 +286,7 @@ async function fetchWithRetry<T>(
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       console.log(`   📡 Fetch attempt ${attempt + 1}/${retries + 1}: ${url.substring(0, 80)}...`);
-      
-      console.log("🔍 DEBUG - Attempting Ampre fetch to URL:", url);
-      console.log("🔍 DEBUG - Token exists:", !!process.env.RESO_BEARER_TOKEN);
-      
+
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -309,10 +359,10 @@ export async function fetchActiveListingsBatch(
   skip: number = 0,
   lastSyncTimestamp?: string
 ): Promise<ListingsBatch> {
-  const token = BEARER_TOKEN;
+  const token = IDX_TOKEN; // IDX feed only
   
   if (!token) {
-    throw new Error('RESO_BEARER_TOKEN environment variable is not set');
+    throw new Error('PROPTX_IDX_TOKEN environment variable is not set');
   }
   
   if (!lastSyncTimestamp) {
@@ -359,45 +409,48 @@ export async function fetchActiveListingsBatch(
 /**
  * Fetches a batch of SOLD/CLOSED listings (max 100) from RESO Web API.
  * Query B of the Dual-Query architecture.
- * 
- * CloseDate is typically a Date string (e.g., "2026-05-14"), not a full ISO timestamp.
- * Uses date string format: CloseDate ge 'YYYY-MM-DD'
- * 
+ *
+ * Selection is status-only at the API ($filter); freshness is governed by
+ * $orderby=PurchaseContractDate desc + client-side pruning against lastSyncDate.
+ *
  * @param skip - Number of records to skip (for manual pagination)
- * @param lastSyncDate - Date string (YYYY-MM-DD) for CloseDate filter
+ * @param lastSyncDate - Date string (YYYY-MM-DD); client-side cutoff on PurchaseContractDate
  * @returns Listings batch with pagination info
  */
 export async function fetchSoldListingsBatch(
   skip: number = 0,
   lastSyncDate?: string
 ): Promise<ListingsBatch> {
-  const token = BEARER_TOKEN;
+  const token = VOW_TOKEN; // VOW feed only
   
   if (!token) {
-    throw new Error('RESO_BEARER_TOKEN environment variable is not set');
+    throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
   }
   
   if (!lastSyncDate) {
     throw new Error('lastSyncDate must be provided (format: YYYY-MM-DD)');
   }
-  
-  // Query B (Sold Sync): StandardStatus eq 'Closed' OR MlsStatus eq 'Sold' + CloseDate filter
+
+  // Query B (Sold Sync): StandardStatus eq 'Closed' OR MlsStatus eq 'Sold'
   // Routes to: raw_vow_sold (AVM anchor) + Typesense (is_sold: true)
   //
-  // IMPORTANT: CloseDate is NOT a filterable field on this board's RESO API.
-  // Error: "Field not allowed in filter: CloseDate"
-  // We can only filter by status. CloseDate data IS present on records (confirmed
-  // by diagnostic probe), but the server doesn't allow it in $filter expressions.
-  // 
-  // Query B must use status-only filter to avoid downloading entire sales history.
-  // Add $orderby=CloseDate desc to ensure newest sales come first (for client-side pruning).
+  // IMPORTANT: Date fields (CloseDate, PurchaseContractDate) are NOT filterable in
+  // $filter on this board's RESO API ("Field not allowed in filter"). Filter is
+  // status-only; date-based selection happens via $orderby + client-side pruning.
+  //
+  // Why PurchaseContractDate desc (not CloseDate desc):
+  //   PurchaseContractDate = when buyer/seller agreed on price (the AVM event).
+  //   CloseDate = when title transfers (30-90 days later, stale price signal).
+  //   Sorting by PurchaseContractDate puts the freshest firm deals at the top so
+  //   the client-side prune cutoff (sync_state.last_sync_timestamp) tracks the
+  //   real transaction date, not a lagging closing date.
   const statusFilter = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`;
   const combinedFilter = statusFilter;
-  
-  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$orderby=CloseDate%20desc&$top=100&$skip=${skip}&$count=true`;
-  
+
+  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$orderby=PurchaseContractDate%20desc&$top=100&$skip=${skip}&$count=true`;
+
   console.log(`   🔍 Query B (Sold): ${url.substring(0, 80)}...`);
-  console.log(`   → CloseDate filter from: ${lastSyncDate} (skip: ${skip})`);
+  console.log(`   → PurchaseContractDate cutoff: ${lastSyncDate} (skip: ${skip})`);
   
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
@@ -529,7 +582,8 @@ export interface DualSyncResult {
  *   Routes to: Typesense listings table (via sync.ts)
  * 
  * Query B (Sold Sync):
- *   $filter=(StandardStatus eq 'Closed' or MlsStatus eq 'Sold') and CloseDate ge [lastSyncDate]
+ *   $filter=(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')   (status-only — dates not filterable)
+ *   $orderby=PurchaseContractDate desc + client-side prune at [lastSyncDate]
  *   Routes to: raw_vow_sold (AVM anchor) + Typesense (is_sold: true) via sync.ts
  * 
  * Algorithm:
@@ -538,7 +592,7 @@ export interface DualSyncResult {
  *    a. Paginate through batches
  *    b. Process each batch via sync.ts (Supabase + Typesense)
  *    c. Sleep 1000ms between pages
- * 3. Run Query B: Sold listings via CloseDate (date string format)
+ * 3. Run Query B: Sold listings via PurchaseContractDate (ordered desc, client-side pruned)
  *    a. Paginate through batches
  *    b. Process each batch via sync.ts (Supabase + Typesense with is_sold: true)
  *    c. Extract sold data and UPSERT to raw_vow_sold
@@ -617,15 +671,15 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     
     console.log(`\n✅ Query A Complete: ${result.activeRecords} active records, ${result.activePages} pages`);
     
-    // ─── Query B: Sold Sync (via CloseDate) ──────────────────────────────────
+    // ─── Query B: Sold Sync (via PurchaseContractDate) ───────────────────────
     console.log('\n════════════════════════════════════════════════');
     console.log('  QUERY B: Sold Listings Sync');
     console.log('════════════════════════════════════════════════\n');
     
-    // Convert timestamp to date string for CloseDate filter (YYYY-MM-DD format)
-    // CloseDate is typically just a Date string, not full ISO timestamp
+    // Convert timestamp to date string for PurchaseContractDate cutoff (YYYY-MM-DD).
+    // PurchaseContractDate is a Date string, not a full ISO timestamp.
     const lastSyncDate = state.lastSyncTimestamp.split('T')[0] || state.lastSyncTimestamp.substring(0, 10);
-    console.log(`   📅 Using lastSyncDate: ${lastSyncDate} (date string format for CloseDate filter)`);
+    console.log(`   📅 Using lastSyncDate: ${lastSyncDate} (PurchaseContractDate cutoff)`);
     
     let soldSkip = 0;
     let soldHasMore = true;
@@ -668,19 +722,20 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
         console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
       }
       
-      // ─── Client-Side Pruning (CloseDate guard) ─────────────────────────────
-      // Since CloseDate cannot be used in $filter (board rejects it), we use
-      // server-side sorting ($orderby=CloseDate desc) + client-side pruning.
-      // Once we hit a CloseDate older than our cutoff, everything after is older.
+      // ─── Client-Side Pruning (PurchaseContractDate guard) ──────────────────
+      // Date fields cannot be used in $filter (board rejects them), so we rely on
+      // server-side sorting ($orderby=PurchaseContractDate desc) + client-side
+      // pruning. Once we hit a PurchaseContractDate older than our cutoff, every
+      // subsequent record is older too (sorted desc) and we can stop paginating.
       const cutoffDate = new Date(lastSyncDate);
       let hitOldCutoff = false;
-      
+
       for (const listing of batch.listings) {
-        const closeDate = listing.CloseDate || listing.SoldDate;
-        if (closeDate) {
-          const listingDate = new Date(closeDate);
+        const contractDate = listing.PurchaseContractDate;
+        if (contractDate) {
+          const listingDate = new Date(contractDate);
           if (listingDate < cutoffDate) {
-            console.log(`   🛑 Client-side pruning: Found CloseDate ${closeDate} older than cutoff ${lastSyncDate}`);
+            console.log(`   🛑 Client-side pruning: Found PurchaseContractDate ${contractDate} older than cutoff ${lastSyncDate}`);
             console.log(`   🛑 Aborting pagination - all subsequent listings will be older (sorted desc)`);
             hitOldCutoff = true;
             break;
@@ -751,10 +806,10 @@ async function main() {
   if (args[0] === 'sync') {
     await runDeltaSync();
   } else if (args[0] === 'test') {
-    // Test fetch with current token
-    const token = BEARER_TOKEN;
+    // Test fetch with IDX token
+    const token = IDX_TOKEN;
     if (!token) {
-      console.error('❌ RESO_BEARER_TOKEN not configured');
+      console.error('❌ PROPTX_IDX_TOKEN not configured');
       process.exit(1);
     }
     
