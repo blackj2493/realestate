@@ -5,6 +5,9 @@ node_modules/
 .next/
 out/
 
+# Downloaded source data caches (e.g. Ontario SIF XLSX for build-schools-dataset)
+.cache/
+
 # Production build
 build/
 
