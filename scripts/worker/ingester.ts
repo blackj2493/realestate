@@ -18,31 +18,82 @@ import 'dotenv/config';
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { processBatch, SyncResult } from './sync';
+import {
+  deriveInteriorTier,
+  deriveExteriorTier,
+  deriveBasementTier,
+  deriveHasFinishedBasement,
+} from '@/lib/avm/conditionScoring';
+import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 
 // ============================================================================
 // Sold Listing Types
 // ============================================================================
 
+// Mirrors the raw_vow_sold columns. Built field-by-field (CLAUDE.md §6 — never
+// spread). nullable numeric/text columns use `| null`; the NOT NULL columns
+// (listing_key, property_hash, close_price, property_sub_type, raw_payload, the
+// three tiers, has_finished_basement) always get a concrete value.
 interface SoldListingRecord {
   listing_key: string;
-  close_price: number;
-  close_date: string;
-  purchase_contract_date: string | null;
+  // Computed with the SAME generatePropertyHash() the listings table uses so
+  // AVM/temporal stitching can join the two on hash.
+  property_hash: string;
+  unparsed_address: string | null;
   city_region: string;
+  city: string | null;
+  postal_code: string | null;
   property_sub_type: string;
-  bedrooms_above_grade?: number;
-  bathrooms_total_integer?: number;
-  parking_total?: number;
-  interior_score?: number;
-  exterior_score?: number;
-  basement_score?: number;
-  list_price?: number;
-  address?: string;
-  city?: string;
-  province?: string;
-  postal_code?: string;
-  latitude?: number;
-  longitude?: number;
+  architectural_style: string | null;
+  approximate_age: string | null;
+  living_area_range: number | null;
+  building_area_total: number | null;
+  lot_width: number | null;
+  lot_depth: number | null;
+  bedrooms_above_grade: number | null;
+  bedrooms_below_grade: number | null;
+  bathrooms_total_integer: number | null;
+  rooms_above_grade: number | null;
+  rooms_below_grade: number | null;
+  kitchens_above_grade: number | null;
+  kitchens_below_grade: number | null;
+  parking_total: number | null;
+  covered_spaces: number | null;
+  tax_annual_amount: number | null;
+  association_fee: number | null;
+  list_price: number | null;
+  close_price: number;
+  purchase_contract_date: string | null;
+  close_date: string | null;
+  has_finished_basement: boolean;
+  // Deterministic condition tiers (see src/lib/avm/conditionScoring.ts):
+  // interior_tier (1-5) / exterior_tier (1-5) / basement_tier (1-9).
+  interior_tier: number;
+  exterior_tier: number;
+  basement_tier: number;
+  // Full raw VOW payload (NOT NULL JSONB). Powers re-scoring / future backfills.
+  raw_payload: Record<string, unknown>;
+}
+
+// ── small coercion helpers (messy board data; CLAUDE.md §6 fallbacks) ──────────
+function numOrNull(v: unknown): number | null {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function styleToString(v: unknown): string | null {
+  if (Array.isArray(v)) return v.length ? v.filter(Boolean).join(', ') : null;
+  return v ? String(v) : null;
+}
+// living_area_range is an INTEGER column though TRREB sends a bucket string
+// ("1500-2000"). The historical convention stores the midpoint (→ 1750).
+function livingAreaRangeToInt(v: unknown): number | null {
+  if (v === undefined || v === null || v === '') return null;
+  const s = String(v).trim();
+  const m = s.match(/(\d+)\s*-\s*(\d+)/);
+  if (m) return Math.round((Number(m[1]) + Number(m[2])) / 2);
+  const single = Number(s);
+  return Number.isFinite(single) ? Math.round(single) : null;
 }
 
 /**
@@ -112,62 +163,50 @@ function extractSoldListingData(raw: any): SoldListingRecord | null {
       return null;
     }
 
-    // Map relevant fields to raw_vow_sold schema
+    // Build the full raw_vow_sold record field-by-field (CLAUDE.md §6).
     const record: SoldListingRecord = {
       listing_key: raw.ListingKey || raw.ListingId || '',
-      close_price: raw.ClosePrice || raw.ClosePrice || 0,
-      close_date: raw.CloseDate || raw.SoldDate || new Date().toISOString(),
-      // PurchaseContractDate = when the deal was signed (the AVM event date).
-      // Stored as a date string; null when absent (do NOT fabricate a date — a
-      // wrong contract date pollutes the AVM anchor).
-      purchase_contract_date: raw.PurchaseContractDate || null,
+      property_hash: generatePropertyHash(raw),
+      unparsed_address:
+        raw.UnparsedAddress ||
+        [raw.StreetNumber, raw.StreetName, raw.UnitNumber].filter(Boolean).join(' ') ||
+        null,
       city_region: raw.CityRegion || raw.MarketArea || '',
+      city: raw.City || null,
+      postal_code: raw.PostalCode || null,
       property_sub_type: raw.PropertySubType || raw.PropertyType || '',
+      architectural_style: styleToString(raw.ArchitecturalStyle),
+      approximate_age: raw.ApproximateAge || null,
+      living_area_range: livingAreaRangeToInt(raw.LivingAreaRange),
+      building_area_total: numOrNull(raw.BuildingAreaTotal),
+      lot_width: numOrNull(raw.LotWidth),
+      lot_depth: numOrNull(raw.LotDepth),
+      bedrooms_above_grade: numOrNull(raw.BedroomsAboveGrade),
+      bedrooms_below_grade: numOrNull(raw.BedroomsBelowGrade),
+      bathrooms_total_integer: numOrNull(raw.BathroomsTotalInteger),
+      rooms_above_grade: numOrNull(raw.RoomsAboveGrade),
+      rooms_below_grade: numOrNull(raw.RoomsBelowGrade),
+      kitchens_above_grade: numOrNull(raw.KitchensAboveGrade),
+      kitchens_below_grade: numOrNull(raw.KitchensBelowGrade),
+      parking_total: numOrNull(raw.ParkingTotal),
+      covered_spaces: numOrNull(raw.CoveredSpaces),
+      tax_annual_amount: numOrNull(raw.TaxAnnualAmount),
+      association_fee: numOrNull(raw.AssociationFee),
+      list_price: numOrNull(raw.ListPrice),
+      close_price: numOrNull(raw.ClosePrice) ?? 0,
+      // PurchaseContractDate = when the deal was signed (the AVM event date).
+      // null when absent — do NOT fabricate it (a wrong date pollutes the anchor).
+      purchase_contract_date: raw.PurchaseContractDate || null,
+      // close_date prefers the real CloseDate; falls back to the contract date
+      // (real data) rather than "now" so we never invent a future closing.
+      close_date: raw.CloseDate || raw.SoldDate || raw.PurchaseContractDate || null,
+      has_finished_basement: deriveHasFinishedBasement(raw),
+      // Deterministic condition tiers (no LLM) — always a number (neutral on no signal).
+      interior_tier: deriveInteriorTier(raw),
+      exterior_tier: deriveExteriorTier(raw),
+      basement_tier: deriveBasementTier(raw),
+      raw_payload: raw,
     };
-
-    // Optional fields for AVM adjustment factors
-    if (raw.BedroomsAboveGrade !== undefined) {
-      record.bedrooms_above_grade = raw.BedroomsAboveGrade;
-    }
-    if (raw.BathroomsTotalInteger !== undefined) {
-      record.bathrooms_total_integer = raw.BathroomsTotalInteger;
-    }
-    if (raw.ParkingTotal !== undefined) {
-      record.parking_total = raw.ParkingTotal;
-    }
-    if (raw.InteriorCondition !== undefined) {
-      // InteriorScore derived from InteriorCondition (1-5 scale)
-      record.interior_score = raw.InteriorCondition;
-    }
-    if (raw.ExteriorCondition !== undefined) {
-      record.exterior_score = raw.ExteriorCondition;
-    }
-    if (raw.BasementFinishCode !== undefined) {
-      record.basement_score = raw.BasementFinishCode;
-    }
-    if (raw.ListPrice !== undefined) {
-      record.list_price = raw.ListPrice;
-    }
-    if (raw.PropertyAddress || raw.StreetNumber || raw.StreetName) {
-      record.address = [raw.StreetNumber, raw.StreetName, raw.UnitNumber].filter(Boolean).join(' ');
-    }
-    if (raw.City) {
-      record.city = raw.City;
-    }
-    if (raw.StateOrProvince) {
-      record.province = raw.StateOrProvince;
-    } else {
-      record.province = 'ON';
-    }
-    if (raw.PostalCode) {
-      record.postal_code = raw.PostalCode;
-    }
-    if (raw.Latitude) {
-      record.latitude = raw.Latitude;
-    }
-    if (raw.Longitude) {
-      record.longitude = raw.Longitude;
-    }
 
     return record;
   } catch (err) {
@@ -198,25 +237,41 @@ async function upsertSoldListings(
         .from('raw_vow_sold')
         .upsert(
           {
+            // Field-by-field, every raw_vow_sold column (CLAUDE.md §6 — never spread).
+            // Do NOT alter the table schema — it is the immutable AVM anchor.
             listing_key: record.listing_key,
-            close_price: record.close_price,
-            close_date: record.close_date,
-            purchase_contract_date: record.purchase_contract_date,
+            property_hash: record.property_hash,
+            unparsed_address: record.unparsed_address,
             city_region: record.city_region,
-            property_sub_type: record.property_sub_type,
-            bedrooms_above_grade: record.bedrooms_above_grade,
-            bathrooms_total_integer: record.bathrooms_total_integer,
-            parking_total: record.parking_total,
-            interior_score: record.interior_score,
-            exterior_score: record.exterior_score,
-            basement_score: record.basement_score,
-            list_price: record.list_price,
-            address: record.address,
             city: record.city,
-            province: record.province,
             postal_code: record.postal_code,
-            latitude: record.latitude,
-            longitude: record.longitude,
+            property_sub_type: record.property_sub_type,
+            architectural_style: record.architectural_style,
+            approximate_age: record.approximate_age,
+            living_area_range: record.living_area_range,
+            building_area_total: record.building_area_total,
+            lot_width: record.lot_width,
+            lot_depth: record.lot_depth,
+            bedrooms_above_grade: record.bedrooms_above_grade,
+            bedrooms_below_grade: record.bedrooms_below_grade,
+            bathrooms_total_integer: record.bathrooms_total_integer,
+            rooms_above_grade: record.rooms_above_grade,
+            rooms_below_grade: record.rooms_below_grade,
+            kitchens_above_grade: record.kitchens_above_grade,
+            kitchens_below_grade: record.kitchens_below_grade,
+            parking_total: record.parking_total,
+            covered_spaces: record.covered_spaces,
+            tax_annual_amount: record.tax_annual_amount,
+            association_fee: record.association_fee,
+            list_price: record.list_price,
+            close_price: record.close_price,
+            purchase_contract_date: record.purchase_contract_date,
+            close_date: record.close_date,
+            has_finished_basement: record.has_finished_basement,
+            interior_tier: record.interior_tier,
+            exterior_tier: record.exterior_tier,
+            basement_tier: record.basement_tier,
+            raw_payload: record.raw_payload,
           },
           { onConflict: 'listing_key' }
         );
