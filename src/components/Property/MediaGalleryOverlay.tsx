@@ -27,6 +27,14 @@ export default function MediaGalleryOverlay({
     }
   }, [isOpen, initialIndex]);
 
+  const goToNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  const goToPrevious = useCallback(() => {
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
   // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -47,7 +55,7 @@ export default function MediaGalleryOverlay({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, currentIndex]);
+  }, [isOpen, onClose, goToNext, goToPrevious]);
 
   // Scroll filmstrip to keep active thumbnail visible
   useEffect(() => {
@@ -62,14 +70,6 @@ export default function MediaGalleryOverlay({
       }
     }
   }, [currentIndex, isOpen]);
-
-  const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  }, [images.length]);
-
-  const goToPrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  }, [images.length]);
 
   // Lock body scroll when open
   useEffect(() => {

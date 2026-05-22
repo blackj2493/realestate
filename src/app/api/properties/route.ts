@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     
     // Transform properties for display
-    const properties = (data.value || []).map((p: any) => ({
+    const properties = (data.value || []).map((p: Record<string, string | number | null | undefined>) => ({
       id: p.ListingKey,
       listingId: p.ListingKey,
       address: `${p.StreetNumber || ""} ${p.StreetName || ""}`.trim(),

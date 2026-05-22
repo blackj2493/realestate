@@ -265,7 +265,7 @@ export default function MapView({
         mapboxAccessToken={mapboxToken}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         style={{ width: "100%", height: "100%" }}
-        onRender={(e: any) => {
+        onRender={(e: { target: { getBounds: () => { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number } | null } }) => {
           const mapBounds = e.target.getBounds();
           if (mapBounds) {
             setBounds([

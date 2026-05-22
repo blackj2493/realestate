@@ -21,10 +21,10 @@ export async function GET() {
       message: "Sync completed.",
       result
     });
-  } catch (error: any) {
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message || "Unknown error occurred"
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     }, { status: 500 });
   }
 }
@@ -136,11 +136,11 @@ export async function POST(request: NextRequest) {
       success: false, 
       error: "Unknown action or missing parameters" 
     }, { status: 400 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Quick-Sync] Error:", error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message || "Unknown error occurred" 
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     }, { status: 500 });
   }
 }

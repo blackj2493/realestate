@@ -54,10 +54,6 @@ function ListingsPageContent() {
 
   const city = searchParams?.get("city") || searchParams?.get("search") || "";
 
-  useEffect(() => {
-    fetchProperties(1);
-  }, [city]);
-
   const fetchProperties = async (pageNum: number) => {
     try {
       setLoading(true);
@@ -99,6 +95,11 @@ function ListingsPageContent() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProperties(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,7 +305,7 @@ function ListingsPageContent() {
                 <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Properties Found</h3>
                 <p className="text-muted-foreground mb-4">
-                  We couldn't find any properties matching your criteria.
+                  We couldn&apos;t find any properties matching your criteria.
                 </p>
                 <Link href="/listings">
                   <Button>Browse All Properties</Button>

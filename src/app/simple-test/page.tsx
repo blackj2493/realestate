@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { searchListings } from "@/lib/typesense/client";
 
+type SearchResult = Awaited<ReturnType<typeof searchListings>>;
+
 export default function SimpleTestPage() {
   const [status, setStatus] = useState("initial");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<SearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function SimpleTestPage() {
           <p>Processing Time: {result.processingTimeMs}ms</p>
           {result.listings && result.listings.length > 0 ? (
             <ul>
-              {result.listings.slice(0, 5).map((listing: any) => (
+              {result.listings.slice(0, 5).map((listing) => (
                 <li key={listing.id}>
                   {listing.UnparsedAddress} - ${listing.ListPrice?.toLocaleString()}
                 </li>

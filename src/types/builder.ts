@@ -154,4 +154,8 @@ export function isBuilderPropertyMetadata(obj: unknown): obj is BuilderPropertyM
   if (o.lotDimensions !== null) {
     const ld = o.lotDimensions as Record<string, unknown>;
     if (typeof ld.width !== 'number' || typeof ld.depth !== 'number') return false;
-    if (typeof ld.areaSqFt !== 'number' 
+    if (typeof ld.areaSqFt !== 'number' || typeof ld.acres !== 'number') return false;
+  }
+
+  return true;
+}

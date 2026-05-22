@@ -17,12 +17,14 @@ const eslintConfig = [
   ...typescript,
   {
     rules: {
-      // Brand-new in eslint-plugin-react-hooks v6 (pulled in by eslint-config-next
-      // 16). It flags legitimate "synchronize with external system" effects used
-      // throughout this codebase and had no equivalent under the old `next lint`
-      // setup. Keep it visible but non-blocking so the migration preserves the
-      // prior severity profile; revisit if adopting the React Compiler ruleset.
+      // Brand-new React Compiler rules in eslint-plugin-react-hooks v6 (pulled in
+      // by eslint-config-next 16). They flag legitimate patterns used throughout
+      // this codebase (sync effects; reading refs while building deck.gl layers in
+      // a render-time useMemo) and had no equivalent under the old `next lint`
+      // setup. Keep them visible but non-blocking so the migration preserves the
+      // prior severity profile; revisit if/when adopting the React Compiler.
       "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
     },
   },
   {

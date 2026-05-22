@@ -102,7 +102,7 @@ export async function GET(
         if (a.Order !== b.Order) return (a.Order || 0) - (b.Order || 0);
         return bSize - aSize;
       })
-      .reduce((acc: any[], m) => {
+      .reduce((acc: MediaResponse["value"], m) => {
         // Deduplicate by MediaObjectID - keep first (largest) occurrence
         if (!acc.find(existing => existing.MediaObjectID === m.MediaObjectID)) {
           acc.push(m);
@@ -113,7 +113,7 @@ export async function GET(
     console.log(`[Media Debug] After filtering: ${filteredMedia.length} unique media items`);
 
     // Fetch rooms if available
-    let rooms: { value: any[] } = { value: [] };
+    let rooms: Awaited<ReturnType<typeof client.getRooms>> = { value: [] };
     try {
       rooms = await client.getRooms(listingKey);
     } catch (roomsError) {

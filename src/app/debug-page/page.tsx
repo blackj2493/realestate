@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function DebugPage() {
-  const [serverResult, setServerResult] = useState<any>(null);
-  const [clientResult, setClientResult] = useState<any>(null);
+  const [serverResult, setServerResult] = useState<unknown>(null);
+  const [clientResult, setClientResult] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
 
     // Test server-side API call
@@ -64,20 +65,20 @@ export default function DebugPage() {
           >
             {loading ? "Testing..." : "Test Client Search"}
           </button>
-          {clientResult && (
+          {clientResult ? (
             <pre className="text-sm bg-slate-900 p-2 rounded overflow-auto max-h-96">
               {JSON.stringify(clientResult, null, 2)}
             </pre>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* Test if frontend page gets results */}
       <div className="mt-8 p-4 border rounded bg-slate-800">
         <h2 className="text-lg font-semibold mb-2">Frontend Page Test</h2>
-        <a href="/properties" className="text-emerald-400 hover:underline">
+        <Link href="/properties" className="text-emerald-400 hover:underline">
           Go to /properties page and check browser console
-        </a>
+        </Link>
       </div>
     </div>
   );

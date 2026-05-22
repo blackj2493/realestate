@@ -60,6 +60,21 @@ function generateMockPriceHistory(currentPrice: number, dom: number): PricePoint
   return points;
 }
 
+// Declared at module scope so it isn't recreated on every render.
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900 border border-slate-700 rounded p-2 shadow-lg">
+        <p className="text-xs text-slate-400">{label}</p>
+        <p className="text-sm font-bold font-mono text-emerald-400">
+          {formatPrice(payload[0].value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function DOMTimelineChart({
   priceHistory,
   currentPrice,
@@ -75,21 +90,6 @@ export default function DOMTimelineChart({
   const priceDropPercent = firstPrice > currentPrice 
     ? Math.round(((firstPrice - currentPrice) / firstPrice) * 100) 
     : 0;
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{value: number}>; label?: string }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-900 border border-slate-700 rounded p-2 shadow-lg">
-          <p className="text-xs text-slate-400">{label}</p>
-          <p className="text-sm font-bold font-mono text-emerald-400">
-            {formatPrice(payload[0].value)}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>

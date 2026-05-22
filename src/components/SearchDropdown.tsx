@@ -345,7 +345,7 @@ export function SearchDropdown({
         if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
           handleSuggestionClick(suggestions[highlightedIndex]);
         } else {
-          handleSubmit(e as any);
+          handleSubmit(e as unknown as React.FormEvent);
         }
         break;
       case "Escape":
