@@ -15,7 +15,7 @@ import { TopCommandBar, LedgerPanel, ListingTerminal } from "@/components/Comman
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { searchListings } from "@/lib/typesense/client";
-import { schoolScoreField } from "@/lib/schools/schoolLens";
+import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 
 // deck.gl + mapbox must load client-only
@@ -130,6 +130,11 @@ function CommandCenterContent() {
 
   const listings = searchResult?.listings ?? [];
 
+  // When the school lens is on, shade the map by the active lens's school score.
+  const mapColorConfig = school.enabled
+    ? schoolMapColor(school.level, school.system)
+    : persona.mapColor;
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950">
       <TopCommandBar className="shrink-0" />
@@ -139,7 +144,7 @@ function CommandCenterContent() {
         <div className="relative w-[70%] shrink-0 border-r border-slate-800">
           <AlphaMap
             properties={listings}
-            colorConfig={persona.mapColor}
+            colorConfig={mapColorConfig}
             defaultMapMode={persona.defaultMapMode}
             onSelectProperty={setSelectedProperty}
             currentSearchQuery={`${activePersona}:${location}`}

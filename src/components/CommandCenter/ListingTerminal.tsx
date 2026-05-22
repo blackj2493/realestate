@@ -21,7 +21,8 @@ import {
   Ruler,
   Wind,
   Snowflake,
-  AlertTriangle
+  AlertTriangle,
+  GraduationCap
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,17 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     property.hasSecondarySuitePotential ||
     property.SuiteStatus === "EXISTING_SUITE" ||
     property.SuiteStatus === "POTENTIAL_CANDIDATE";
+
+  // Nearby rated schools (nearest per panel; from EQAO open data — see schoolLens).
+  const schoolRows = [
+    { label: "Public Elementary", name: property.ElemPublicSchool, score: property.ElemPublicScore, dist: property.ElemPublicDistanceKm },
+    { label: "Catholic Elementary", name: property.ElemCatholicSchool, score: property.ElemCatholicScore, dist: property.ElemCatholicDistanceKm },
+    { label: "Public Secondary", name: property.SecPublicSchool, score: property.SecPublicScore, dist: property.SecPublicDistanceKm },
+    { label: "Catholic Secondary", name: property.SecCatholicSchool, score: property.SecCatholicScore, dist: property.SecCatholicDistanceKm },
+  ].filter((r) => r.name && r.name.trim().length > 0);
+
+  const scoreColor = (s: number) =>
+    s >= 8 ? "text-emerald-400 bg-emerald-400/10" : s >= 6 ? "text-amber-400 bg-amber-400/10" : "text-slate-400 bg-slate-700/40";
 
   // Mock room data for demo
   const rooms = [
@@ -274,6 +286,34 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 </tbody>
               </table>
             </div>
+
+            {/* Nearby Schools */}
+            {schoolRows.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-emerald-400" />
+                  Nearby Rated Schools
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {schoolRows.map((r) => (
+                    <div key={r.label} className="bg-slate-900/50 rounded-lg border border-slate-800 p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-[10px] uppercase tracking-wider text-slate-500">{r.label}</span>
+                        <span className={cn("rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", scoreColor(r.score ?? 0))}>
+                          {(r.score ?? 0).toFixed(1)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-200 leading-tight">{r.name}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{(r.dist ?? 0).toFixed(1)} km away</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[10px] text-slate-600">
+                  PureProperty School Score (0–10) from EQAO data — Government of Ontario, OGL-Ontario.
+                  Nearest rated school, not a guaranteed catchment.
+                </p>
+              </div>
+            )}
 
             {/* Room Ledger */}
             <div className="mb-6">

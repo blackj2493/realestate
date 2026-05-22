@@ -6,6 +6,7 @@
  */
 import type { SchoolLevel, SchoolSystem } from "@/lib/stores/commandCenterStore";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { type MapColorConfig, GREEN_RANGE } from "@/lib/personas/personaConfig";
 
 export type SchoolScoreField =
   | "ElemPublicScore"
@@ -47,3 +48,15 @@ export const SCHOOL_SYSTEM_LABEL: Record<SchoolSystem, string> = {
   catholic: "Catholic",
   either: "Either",
 };
+
+/** Map shading config that colors listings by the active lens's school score (0–10). */
+export function schoolMapColor(level: SchoolLevel, system: SchoolSystem): MapColorConfig {
+  const field = schoolScoreField(level, system);
+  return {
+    metric: (d: ListingDocument) => (d[field] as number | undefined) ?? 0,
+    domain: [0, 10],
+    range: GREEN_RANGE,
+    legendLow: "Lower-rated",
+    legendHigh: "Top-rated",
+  };
+}
