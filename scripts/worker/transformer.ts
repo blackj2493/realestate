@@ -21,6 +21,7 @@ import { fetchTrueValue, fetchMillRate } from './services/trueValueCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
 import { resolveLocation } from './resolveLocation';
+import { assignSchools } from '@/lib/schools/nearestSchools';
 
 // ============================================================================
 // Configuration
@@ -752,6 +753,23 @@ export interface TransformResult {
     price_per_sqft?: number;
     multiplex_by_right?: boolean;
     zoning_designation?: string;
+    // ─── School-Aware Search (nearest rated school per panel) ──────────────
+    ElemPublicScore?: number;
+    ElemPublicSchool?: string;
+    ElemPublicDistanceKm?: number;
+    ElemCatholicScore?: number;
+    ElemCatholicSchool?: string;
+    ElemCatholicDistanceKm?: number;
+    SecPublicScore?: number;
+    SecPublicSchool?: string;
+    SecPublicDistanceKm?: number;
+    SecCatholicScore?: number;
+    SecCatholicSchool?: string;
+    SecCatholicDistanceKm?: number;
+    BestElementaryScore?: number;
+    BestSecondaryScore?: number;
+    BestSchoolScoreNearby?: number;
+    NearbySchools?: string[];
   };
 }
 
@@ -1054,6 +1072,26 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   (typesensePayload as any).price_per_sqft = builderMetrics.price_per_sqft;
   (typesensePayload as any).multiplex_by_right = builderMetrics.multiplexByRight;
   (typesensePayload as any).zoning_designation = builderMetrics.zoningDesignation;
+
+  // School-Aware Search: nearest rated school per panel (deterministic, §4/§6).
+  // Every declared key is written with built-in 0/''/[] fallbacks from assignSchools.
+  const schools = assignSchools(geo.location);
+  typesensePayload.ElemPublicScore = schools.ElemPublicScore;
+  typesensePayload.ElemPublicSchool = schools.ElemPublicSchool;
+  typesensePayload.ElemPublicDistanceKm = schools.ElemPublicDistanceKm;
+  typesensePayload.ElemCatholicScore = schools.ElemCatholicScore;
+  typesensePayload.ElemCatholicSchool = schools.ElemCatholicSchool;
+  typesensePayload.ElemCatholicDistanceKm = schools.ElemCatholicDistanceKm;
+  typesensePayload.SecPublicScore = schools.SecPublicScore;
+  typesensePayload.SecPublicSchool = schools.SecPublicSchool;
+  typesensePayload.SecPublicDistanceKm = schools.SecPublicDistanceKm;
+  typesensePayload.SecCatholicScore = schools.SecCatholicScore;
+  typesensePayload.SecCatholicSchool = schools.SecCatholicSchool;
+  typesensePayload.SecCatholicDistanceKm = schools.SecCatholicDistanceKm;
+  typesensePayload.BestElementaryScore = schools.BestElementaryScore;
+  typesensePayload.BestSecondaryScore = schools.BestSecondaryScore;
+  typesensePayload.BestSchoolScoreNearby = schools.BestSchoolScoreNearby;
+  typesensePayload.NearbySchools = schools.NearbySchools;
 
   return { supabasePayload, typesensePayload };
 }

@@ -148,6 +148,24 @@ export interface ListingDocument {
   // ─── Status / DOM ────────────────────────────────────────────────────
   Status?: string;
   DaysOnMarket?: number;
+
+  // ─── School-Aware Search (nearest rated school per panel) ─────────────
+  ElemPublicScore?: number;
+  ElemCatholicScore?: number;
+  SecPublicScore?: number;
+  SecCatholicScore?: number;
+  BestElementaryScore?: number;
+  BestSecondaryScore?: number;
+  BestSchoolScoreNearby?: number;
+  NearbySchools?: string[];
+  ElemPublicSchool?: string;
+  ElemPublicDistanceKm?: number;
+  ElemCatholicSchool?: string;
+  ElemCatholicDistanceKm?: number;
+  SecPublicSchool?: string;
+  SecPublicDistanceKm?: number;
+  SecCatholicSchool?: string;
+  SecCatholicDistanceKm?: number;
 }
 
 export interface SearchFilters {

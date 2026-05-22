@@ -17,6 +17,7 @@ export interface IndexedField {
   type: string;
   facet?: boolean;
   sort?: boolean;
+  optional?: boolean;
 }
 
 // RAM POLICY (2026-05-19 — Typesense memory pressure cleanup):
@@ -108,6 +109,19 @@ export const indexedFields: IndexedField[] = [
 
   // Geolocation (for map viewport queries)
   { name: 'location', type: 'geopoint', facet: false },
+
+  // ─── School-Aware Search (nearest rated school per panel) — score sliders ──
+  // One indexed sortable field per Level×System lens + "either-system" rollups.
+  // optional: existing docs predate these; backfilled in-place (no reindex).
+  { name: 'ElemPublicScore', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'ElemCatholicScore', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'SecPublicScore', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'SecCatholicScore', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'BestElementaryScore', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'BestSecondaryScore', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'BestSchoolScoreNearby', type: 'float', facet: false, sort: true, optional: true },
+  // Target-school filter: ids of nearby schools, filterable via NearbySchools:=<id>.
+  { name: 'NearbySchools', type: 'string[]', facet: false, optional: true },
 ];
 
 /**
@@ -119,6 +133,7 @@ export interface UnindexedField {
   type: string;
   index?: boolean;
   facet?: boolean;
+  optional?: boolean;
 }
 
 export const unindexedFields: UnindexedField[] = [
@@ -128,6 +143,15 @@ export const unindexedFields: UnindexedField[] = [
   { name: 'RawImages', type: 'string[]', index: false, facet: false },
   { name: 'RawRooms', type: 'auto', index: false, facet: false },
   { name: 'PropertyHash', type: 'string', index: false, facet: false },
+  // School cargo (display only): per-panel nearest-school name + distance in km.
+  { name: 'ElemPublicSchool', type: 'string', index: false, facet: false, optional: true },
+  { name: 'ElemPublicDistanceKm', type: 'float', index: false, facet: false, optional: true },
+  { name: 'ElemCatholicSchool', type: 'string', index: false, facet: false, optional: true },
+  { name: 'ElemCatholicDistanceKm', type: 'float', index: false, facet: false, optional: true },
+  { name: 'SecPublicSchool', type: 'string', index: false, facet: false, optional: true },
+  { name: 'SecPublicDistanceKm', type: 'float', index: false, facet: false, optional: true },
+  { name: 'SecCatholicSchool', type: 'string', index: false, facet: false, optional: true },
+  { name: 'SecCatholicDistanceKm', type: 'float', index: false, facet: false, optional: true },
 ];
 
 /**
@@ -202,13 +226,32 @@ export const typesenseSchema = {
     { name: 'ApproximateAge', type: 'string' as const, facet: true },
     { name: 'EntryTimestamp', type: 'int64' as const, sort: true },
     { name: 'location', type: 'geopoint' as const, facet: false },
-    
+
+    // ─── School-Aware Search — indexed score sliders + target filter ─────────
+    { name: 'ElemPublicScore', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'ElemCatholicScore', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'SecPublicScore', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'SecCatholicScore', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'BestElementaryScore', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'BestSecondaryScore', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'BestSchoolScoreNearby', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'NearbySchools', type: 'string[]' as const, facet: false, optional: true },
+
     // ─── Unindexed Cargo ────────────────────────────────────────────────────
     { name: 'PublicRemarks', type: 'string' as const, index: false, facet: false },
     { name: 'TaxAnnualAmount', type: 'float' as const, index: false, facet: false },
     { name: 'AssociationFee', type: 'float' as const, index: false, facet: false },
     { name: 'RawImages', type: 'string[]' as const, index: false, facet: false },
     { name: 'RawRooms', type: 'auto' as const, index: false, facet: false },
+    // School cargo (display only): per-panel nearest-school name + distance.
+    { name: 'ElemPublicSchool', type: 'string' as const, index: false, facet: false, optional: true },
+    { name: 'ElemPublicDistanceKm', type: 'float' as const, index: false, facet: false, optional: true },
+    { name: 'ElemCatholicSchool', type: 'string' as const, index: false, facet: false, optional: true },
+    { name: 'ElemCatholicDistanceKm', type: 'float' as const, index: false, facet: false, optional: true },
+    { name: 'SecPublicSchool', type: 'string' as const, index: false, facet: false, optional: true },
+    { name: 'SecPublicDistanceKm', type: 'float' as const, index: false, facet: false, optional: true },
+    { name: 'SecCatholicSchool', type: 'string' as const, index: false, facet: false, optional: true },
+    { name: 'SecCatholicDistanceKm', type: 'float' as const, index: false, facet: false, optional: true },
   ],
   
   // Default sort: freshest inventory first (by entry timestamp descending)
@@ -352,6 +395,28 @@ export interface TypesensePropertyDocument {
   AssociationFee: number;
   RawImages: string[];
   RawRooms: unknown;
+
+  // ─── School-Aware Search ──────────────────────────────────────────────────
+  /** Nearest rated school score (0–10) per Level×System panel. */
+  ElemPublicScore?: number;
+  ElemCatholicScore?: number;
+  SecPublicScore?: number;
+  SecCatholicScore?: number;
+  /** "Either-system" rollups for the Level lens + default ranking. */
+  BestElementaryScore?: number;
+  BestSecondaryScore?: number;
+  BestSchoolScoreNearby?: number;
+  /** Ids of schools within ~2.5 km, filterable via NearbySchools:=<id>. */
+  NearbySchools?: string[];
+  /** Per-panel nearest-school name + distance (km) — display cargo. */
+  ElemPublicSchool?: string;
+  ElemPublicDistanceKm?: number;
+  ElemCatholicSchool?: string;
+  ElemCatholicDistanceKm?: number;
+  SecPublicSchool?: string;
+  SecPublicDistanceKm?: number;
+  SecCatholicSchool?: string;
+  SecCatholicDistanceKm?: number;
 }
 
 /**
