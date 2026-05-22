@@ -30,11 +30,21 @@ import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
 import CarryCostCalculator from './CarryCostCalculator';
 import DOMTimelineChart from './DOMTimelineChart';
 import type { ListingDocument } from '@/lib/typesense/client';
+import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
 
 interface ListingTerminalProps {
   property: ListingDocument;
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface NearbySchool {
+  id: string;
+  name: string;
+  level: 'elementary' | 'secondary';
+  system: 'public' | 'catholic';
+  score: number | null;
+  distanceKm: number;
 }
 
 // Highlight NLP flags in text (motivated, as-is, TLC, handyman special, etc.)
@@ -68,12 +78,44 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [propertyDetails, setPropertyDetails] = useState<ListingDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // School lens target (the school the user searched for, if any) — used to pin and
+  // highlight that school in the "Schools near this home" list.
+  const targetSchool = useCommandCenterStore((s) => s.school.targetSchool);
+  const [nearbySchools, setNearbySchools] = useState<NearbySchool[]>([]);
+  const [nearbyTotal, setNearbyTotal] = useState(0);
+
   // Fetch full property details when terminal opens
   useEffect(() => {
     if (isOpen && property) {
       setPropertyDetails(property);
     }
   }, [isOpen, property]);
+
+  // Fetch all schools near this home (same 2.5 km radius as the NearbySchools filter,
+  // so the searched school always appears here on a matched listing).
+  useEffect(() => {
+    if (!isOpen || !property?.location) return;
+    const [lat, lng] = property.location;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/schools/nearby?lat=${lat}&lng=${lng}`);
+        const data = await res.json();
+        if (cancelled) return;
+        setNearbySchools(Array.isArray(data?.results) ? data.results : []);
+        setNearbyTotal(typeof data?.total === 'number' ? data.total : 0);
+      } catch {
+        if (!cancelled) {
+          setNearbySchools([]);
+          setNearbyTotal(0);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, property?.location]);
 
   if (!isOpen) return null;
 
@@ -84,16 +126,45 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     property.SuiteStatus === "EXISTING_SUITE" ||
     property.SuiteStatus === "POTENTIAL_CANDIDATE";
 
-  // Nearby rated schools (nearest per panel; from EQAO open data — see schoolLens).
-  const schoolRows = [
-    { label: "Public Elementary", name: property.ElemPublicSchool, score: property.ElemPublicScore, dist: property.ElemPublicDistanceKm },
-    { label: "Catholic Elementary", name: property.ElemCatholicSchool, score: property.ElemCatholicScore, dist: property.ElemCatholicDistanceKm },
-    { label: "Public Secondary", name: property.SecPublicSchool, score: property.SecPublicScore, dist: property.SecPublicDistanceKm },
-    { label: "Catholic Secondary", name: property.SecCatholicSchool, score: property.SecCatholicScore, dist: property.SecCatholicDistanceKm },
-  ].filter((r) => r.name && r.name.trim().length > 0);
+  // "Schools near this home" — searched school pinned first (always shown), then the
+  // nearest others. Scores are 0–10 from EQAO open data (see schoolLens / build-schools).
+  const scoreColor = (s: number | null) =>
+    s === null ? "text-slate-400 bg-slate-700/40"
+      : s >= 8 ? "text-emerald-400 bg-emerald-400/10"
+      : s >= 6 ? "text-amber-400 bg-amber-400/10"
+      : "text-slate-400 bg-slate-700/40";
 
-  const scoreColor = (s: number) =>
-    s >= 8 ? "text-emerald-400 bg-emerald-400/10" : s >= 6 ? "text-amber-400 bg-amber-400/10" : "text-slate-400 bg-slate-700/40";
+  const targetRow = targetSchool ? nearbySchools.find((s) => s.id === targetSchool.id) : undefined;
+  const otherRows = nearbySchools.filter((s) => s.id !== targetRow?.id).slice(0, targetRow ? 7 : 8);
+  const shownIds = new Set([targetRow?.id, ...otherRows.map((s) => s.id)].filter(Boolean));
+  const moreCount = Math.max(0, nearbyTotal - shownIds.size);
+
+  const renderSchoolRow = (s: NearbySchool, isTarget: boolean) => (
+    <div
+      key={s.id}
+      className={cn(
+        "rounded-lg border p-3",
+        isTarget ? "border-emerald-500/60 bg-emerald-500/5" : "border-slate-800 bg-slate-900/50"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm text-slate-200 leading-tight">{s.name}</p>
+        <span className={cn("shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", scoreColor(s.score))}>
+          {s.score === null ? '—' : s.score.toFixed(1)}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+        {isTarget && (
+          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+            Searched
+          </span>
+        )}
+        <span className="capitalize">{s.system} {s.level}</span>
+        <span>·</span>
+        <span>{s.distanceKm.toFixed(1)} km away</span>
+      </div>
+    </div>
+  );
 
   // Mock room data for demo
   const rooms = [
@@ -287,30 +358,23 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
               </table>
             </div>
 
-            {/* Nearby Schools */}
-            {schoolRows.length > 0 && (
+            {/* Schools near this home */}
+            {(targetRow || otherRows.length > 0) && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <GraduationCap className="h-4 w-4 text-emerald-400" />
-                  Nearby Rated Schools
+                  Schools near this home
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {schoolRows.map((r) => (
-                    <div key={r.label} className="bg-slate-900/50 rounded-lg border border-slate-800 p-3">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[10px] uppercase tracking-wider text-slate-500">{r.label}</span>
-                        <span className={cn("rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", scoreColor(r.score ?? 0))}>
-                          {(r.score ?? 0).toFixed(1)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-200 leading-tight">{r.name}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{(r.dist ?? 0).toFixed(1)} km away</p>
-                    </div>
-                  ))}
+                  {targetRow && renderSchoolRow(targetRow, true)}
+                  {otherRows.map((s) => renderSchoolRow(s, false))}
                 </div>
+                {moreCount > 0 && (
+                  <p className="mt-2 text-[11px] text-slate-500">+{moreCount} more within 2.5 km</p>
+                )}
                 <p className="mt-2 text-[10px] text-slate-600">
                   PureProperty School Score (0–10) from EQAO data — Government of Ontario, OGL-Ontario.
-                  Nearest rated school, not a guaranteed catchment.
+                  Distances are straight-line to the school; proximity is not a guaranteed catchment.
                 </p>
               </div>
             )}
