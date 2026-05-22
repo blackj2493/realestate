@@ -15,6 +15,14 @@ export type { PersonaType } from "@/lib/personas/personaConfig";
 
 export type CommuteMode = "driving" | "walking" | "cycling";
 
+/** Current map viewport extent, used to scope the search to what's on screen. */
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 export interface CommuteState {
   enabled: boolean;
   destination: { label: string; lat: number; lng: number } | null;
@@ -78,6 +86,10 @@ export interface CommandCenterState {
   // Total found (full count, independent of the ≤100 render cap)
   totalCount: number;
   setTotalCount: (count: number) => void;
+
+  // Current map viewport (null = whole-zone, no bounding-box constraint)
+  mapBounds: MapBounds | null;
+  setMapBounds: (bounds: MapBounds | null) => void;
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
@@ -123,4 +135,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   totalCount: 0,
   setTotalCount: (count) => set({ totalCount: count }),
+
+  mapBounds: null,
+  setMapBounds: (bounds) => set({ mapBounds: bounds }),
 }));

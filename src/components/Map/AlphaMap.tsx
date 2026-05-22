@@ -5,7 +5,7 @@ import DeckGL from "@deck.gl/react";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer } from "@deck.gl/layers";
 import { Map, NavigationControl } from "react-map-gl/mapbox";
-import { MapViewState, FlyToInterpolator, type Layer } from "@deck.gl/core";
+import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
 import { Layers, MapPin } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -55,6 +55,9 @@ export default function AlphaMap({
 
   const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
   const [viewMode, setViewMode] = useState<MapMode>(defaultMapMode);
+  // Once the map has framed real results, keep it mounted even if a later
+  // viewport-scoped query returns 0 — blanking it mid-browse would trap the user.
+  const [mapReady, setMapReady] = useState(false);
   const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; object: ListingDocument | null } | null>(null);
 
   const hoveredId = useCommandCenterStore((s) => s.hoveredId);
@@ -63,6 +66,7 @@ export default function AlphaMap({
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
   const commuteDestination = useCommandCenterStore((s) => s.commute.destination);
   const totalCount = useCommandCenterStore((s) => s.totalCount);
+  const setMapBounds = useCommandCenterStore((s) => s.setMapBounds);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -73,6 +77,58 @@ export default function AlphaMap({
   const isInteracting = useRef(false);
   const lastSearchQuery = useRef(currentSearchQuery);
   const mapInitialized = useRef(false);
+
+  // Viewport-query plumbing: report the visible extent so the search scopes to
+  // what's on screen (HouseSigma-style progressive reveal under the 100-cap).
+  const programmaticRef = useRef(false);
+  const userMovedRef = useRef(false);
+  const viewStateRef = useRef<MapViewState>(INITIAL_VIEW_STATE);
+  const dimsRef = useRef<{ width: number; height: number } | null>(null);
+  const reportTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Flag an upcoming view transition as programmatic so the settle handler never
+  // mistakes an auto-fit/cluster-expand animation for a user pan (which would loop).
+  const markProgrammatic = useCallback((durationMs: number) => {
+    programmaticRef.current = true;
+    setTimeout(() => {
+      programmaticRef.current = false;
+    }, durationMs + 150);
+  }, []);
+
+  // Compute the padded viewport extent and push it to the store.
+  const computeAndReportBounds = useCallback(() => {
+    const dims = dimsRef.current;
+    const vs = viewStateRef.current;
+    if (!dims || dims.width === 0 || dims.height === 0) return;
+    try {
+      const vp = new WebMercatorViewport({
+        width: dims.width,
+        height: dims.height,
+        longitude: vs.longitude,
+        latitude: vs.latitude,
+        zoom: vs.zoom,
+        pitch: vs.pitch ?? 0,
+        bearing: vs.bearing ?? 0,
+      });
+      // getBounds() unprojects the screen corners, so a pitched (45°) trapezoid is
+      // already enclosed; a small pad guards against rounding and pin footprints.
+      const [west, south, east, north] = vp.getBounds();
+      const padLng = (east - west) * 0.05;
+      const padLat = (north - south) * 0.05;
+      setMapBounds({
+        north: north + padLat,
+        south: south - padLat,
+        east: east + padLng,
+        west: west - padLng,
+      });
+    } catch {
+      // Transient invalid viewport mid-transition — ignore.
+    }
+  }, [setMapBounds]);
+
+  useEffect(() => () => {
+    if (reportTimer.current) clearTimeout(reportTimer.current);
+  }, []);
 
   // Switching persona resets the map to that persona's default view; the user
   // can still toggle freely within a persona (prop is stable until it changes).
@@ -114,6 +170,7 @@ export default function AlphaMap({
     const maxRange = Math.max(maxLng - minLng, maxLat - minLat);
     const zoom = maxRange > 0 ? Math.max(8, Math.min(15, 12 - Math.log10(maxRange * 100))) : 10;
 
+    markProgrammatic(800);
     setViewState({
       longitude: centerLng,
       latitude: centerLat,
@@ -124,8 +181,9 @@ export default function AlphaMap({
       transitionInterpolator: new FlyToInterpolator(),
     });
     mapInitialized.current = true;
+    setMapReady(true);
     lastSearchQuery.current = currentSearchQuery;
-  }, [validProperties, currentSearchQuery, commuteRing]);
+  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic]);
 
   // Fit to the commute zone whenever the isochrone changes (frames the whole
   // reachable area, even when zero listings match).
@@ -140,6 +198,7 @@ export default function AlphaMap({
     }
     const maxRange = Math.max(maxLng - minLng, maxLat - minLat);
     const zoom = maxRange > 0 ? Math.max(8, Math.min(15, 12 - Math.log10(maxRange * 100))) : 11;
+    markProgrammatic(800);
     setViewState((vs) => ({
       ...vs,
       longitude: (minLng + maxLng) / 2,
@@ -148,7 +207,7 @@ export default function AlphaMap({
       transitionDuration: 800,
       transitionInterpolator: new FlyToInterpolator(),
     }));
-  }, [commuteRing]);
+  }, [commuteRing, markProgrammatic]);
 
   const getScatterColor = useCallback(
     (d: ListingDocument): [number, number, number] => {
@@ -194,8 +253,10 @@ export default function AlphaMap({
         transitionDuration: 600,
         transitionInterpolator: new FlyToInterpolator(),
       }));
+      // User drilled into a cluster — re-query the tighter viewport once the fly settles.
+      setTimeout(() => computeAndReportBounds(), 750);
     },
-    [clusterIndex]
+    [clusterIndex, computeAndReportBounds]
   );
 
   // Commute isochrone overlay (drawn under the listing pins so pins stay clickable).
@@ -353,13 +414,25 @@ export default function AlphaMap({
     // they'd stop clustering and stack as overlapping pills).
     const next = { ...params.viewState, zoom: Math.min(MAP_MAX_ZOOM, params.viewState.zoom ?? 0) };
     setViewState(next);
-    if (params.interactionState) {
-      isInteracting.current =
-        params.interactionState.isDragging ||
+    viewStateRef.current = next;
+    const interacting = !!(
+      params.interactionState &&
+      (params.interactionState.isDragging ||
         params.interactionState.isPanning ||
-        params.interactionState.isZooming;
-    }
-  }, []);
+        params.interactionState.isZooming)
+    );
+    isInteracting.current = interacting;
+    if (interacting) userMovedRef.current = true;
+    // Debounced settle: re-query the new viewport, but only for genuine user
+    // movement (programmatic auto-fit flies are flagged and skipped → no loop).
+    if (reportTimer.current) clearTimeout(reportTimer.current);
+    reportTimer.current = setTimeout(() => {
+      if (userMovedRef.current && !programmaticRef.current) {
+        userMovedRef.current = false;
+        computeAndReportBounds();
+      }
+    }, 350);
+  }, [computeAndReportBounds]);
 
   const handleDragEnd = useCallback(() => {
     setTimeout(() => {
@@ -379,9 +452,10 @@ export default function AlphaMap({
     );
   }
 
-  // When a commute zone is active we still render the map (with the polygon)
-  // even if zero listings match — hiding the map would feel like hidden data.
-  if (validProperties.length === 0 && !commuteRing) {
+  // Show the empty state only before the map has ever framed results. Once it's
+  // up (commute active or a prior search rendered), keep the map mounted even at
+  // 0 in-view results so viewport browsing into sparse areas isn't a dead end.
+  if (validProperties.length === 0 && !commuteRing && !mapReady) {
     return (
       <div className={`flex items-center justify-center bg-slate-950 ${className}`}>
         <div className="p-6 text-center">
@@ -400,6 +474,9 @@ export default function AlphaMap({
       <DeckGL
         viewState={viewState}
         onViewStateChange={handleViewStateChange}
+        onResize={({ width, height }) => {
+          dimsRef.current = { width, height };
+        }}
         onDragEnd={handleDragEnd}
         controller={true}
         layers={layers}
@@ -463,20 +540,14 @@ export default function AlphaMap({
           </button>
         </div>
         <div className="self-start rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 shadow-xl backdrop-blur-sm">
-          {commuteRing ? (
-            <p className="font-mono text-xs text-slate-300">
-              <span className="font-semibold text-emerald-400">{validProperties.length}</span>
-              {totalCount > validProperties.length ? ` of ${totalCount.toLocaleString()}` : ""} in commute zone
-              {totalCount > validProperties.length && (
-                <span className="ml-1.5 text-slate-500">· zoom in to see all</span>
-              )}
-            </p>
-          ) : (
-            <p className="font-mono text-xs text-slate-300">
-              <span className="font-semibold text-emerald-400">{validProperties.length}</span> mapped ·{" "}
-              {viewMode === "heatmap" ? "heatmap" : "listings"}
-            </p>
-          )}
+          <p className="font-mono text-xs text-slate-300">
+            <span className="font-semibold text-emerald-400">{validProperties.length}</span>
+            {totalCount > validProperties.length ? ` of ${totalCount.toLocaleString()}` : ""}{" "}
+            in {commuteRing ? "commute zone" : "view"}
+            {totalCount > validProperties.length && (
+              <span className="ml-1.5 text-slate-500">· zoom in to see all</span>
+            )}
+          </p>
         </div>
       </div>
     </div>

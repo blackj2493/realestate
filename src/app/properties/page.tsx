@@ -49,6 +49,8 @@ function CommandCenterContent() {
     isTerminalOpen,
     setIsTerminalOpen,
     commute,
+    mapBounds,
+    setMapBounds,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -79,6 +81,9 @@ function CommandCenterContent() {
         query: location || "*",
         rawFilterBy,
         geoPolygon,
+        // Scope the query to the current map view so the 100-cap reveals deeper
+        // inventory as the user zooms in (null until the user moves the map).
+        filters: mapBounds ? { boundingBox: mapBounds } : undefined,
         perPage: MAX_LISTINGS,
         sortBy: persona.sortBy,
         sortOrder: "desc",
@@ -93,7 +98,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, location, commute.enabled, commute.polygon, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, location, commute.enabled, commute.polygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+
+  // A fresh search (new area/persona/commute) should frame the whole zone first,
+  // then let the user drill in — so clear the viewport box. Filters are excluded
+  // on purpose: tweaking a filter re-queries in place at the current zoom.
+  useEffect(() => {
+    setMapBounds(null);
+  }, [location, activePersona, commute.enabled, commute.polygon, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
