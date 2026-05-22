@@ -21,6 +21,7 @@ import { useCommandCenterStore, type PersonaType } from "@/lib/stores/commandCen
 import { PERSONA_LIST } from "@/lib/personas/personaConfig";
 import PersonaFilterBar from "./PersonaFilterBar";
 import CommuteFilter from "./CommuteFilter";
+import SchoolFilter from "./SchoolFilter";
 
 interface TopCommandBarProps {
   className?: string;
@@ -106,6 +107,9 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
 
         {/* Commute-zone filter (global) */}
         <CommuteFilter />
+
+        {/* School-quality lens (global) */}
+        <SchoolFilter />
 
         {/* Profile */}
         <Link

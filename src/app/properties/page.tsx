@@ -15,6 +15,7 @@ import { TopCommandBar, LedgerPanel, ListingTerminal } from "@/components/Comman
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { searchListings } from "@/lib/typesense/client";
+import { schoolScoreField } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 
 // deck.gl + mapbox must load client-only
@@ -49,6 +50,7 @@ function CommandCenterContent() {
     isTerminalOpen,
     setIsTerminalOpen,
     commute,
+    school,
     mapBounds,
     setMapBounds,
   } = useCommandCenterStore();
@@ -69,7 +71,15 @@ function CommandCenterContent() {
     setError(null);
     try {
       const personaFilter = persona.buildFilterString(filters);
-      const rawFilterBy = [SALES_FLOOR, personaFilter].filter(Boolean).join(" && ");
+
+      // School-quality lens: one indexed score field drives the min-score filter,
+      // the target-school proximity filter, and the sort override (best schools first).
+      const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
+      const schoolParts: string[] = [];
+      if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
+      if (school.enabled && school.targetSchool) schoolParts.push(`NearbySchools:=\`${school.targetSchool.id}\``);
+
+      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts].filter(Boolean).join(" && ");
 
       // Commute zone: polygon is stored [lng, lat]; Typesense wants [lat, lng].
       const geoPolygon =
@@ -85,7 +95,8 @@ function CommandCenterContent() {
         // inventory as the user zooms in (null until the user moves the map).
         filters: mapBounds ? { boundingBox: mapBounds } : undefined,
         perPage: MAX_LISTINGS,
-        sortBy: persona.sortBy,
+        // When the school lens is on, rank by school score; else persona default.
+        sortBy: schoolField ?? persona.sortBy,
         sortOrder: "desc",
       });
 
@@ -98,14 +109,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, location, commute.enabled, commute.polygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, commute.enabled, commute.polygon, setMapBounds]);
+  }, [location, activePersona, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

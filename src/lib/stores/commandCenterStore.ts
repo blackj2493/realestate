@@ -40,6 +40,31 @@ const defaultCommute: CommuteState = {
   polygon: null,
 };
 
+export type SchoolLevel = "elementary" | "secondary";
+export type SchoolSystem = "public" | "catholic" | "either";
+
+/**
+ * School-quality lens (global, applies across personas). The Level×System pair
+ * resolves to one indexed Typesense score field (see schoolScoreField) that drives
+ * the min-score filter, the sort, and the map shading. `targetSchool` adds a
+ * proximity filter to a specific school (NearbySchools:=id).
+ */
+export interface SchoolState {
+  enabled: boolean;
+  level: SchoolLevel;
+  system: SchoolSystem;
+  minScore: number; // 0–10; 0 = no score filter (sort/shade only)
+  targetSchool: { id: string; name: string } | null;
+}
+
+const defaultSchool: SchoolState = {
+  enabled: false,
+  level: "elementary",
+  system: "public",
+  minScore: 0,
+  targetSchool: null,
+};
+
 export interface CommandCenterState {
   // Persona
   activePersona: PersonaType;
@@ -83,6 +108,11 @@ export interface CommandCenterState {
   setCommutePolygon: (polygon: [number, number][] | null) => void;
   resetCommute: () => void;
 
+  // School-quality lens (global, applies across personas)
+  school: SchoolState;
+  setSchool: (patch: Partial<SchoolState>) => void;
+  resetSchool: () => void;
+
   // Total found (full count, independent of the ≤100 render cap)
   totalCount: number;
   setTotalCount: (count: number) => void;
@@ -100,7 +130,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
   resetFilters: () =>
-    set({ filters: { ...defaultTerminalFilters }, commute: { ...defaultCommute } }),
+    set({
+      filters: { ...defaultTerminalFilters },
+      commute: { ...defaultCommute },
+      school: { ...defaultSchool },
+    }),
 
   selectedProperty: null,
   setSelectedProperty: (property) =>
@@ -132,6 +166,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setCommutePolygon: (polygon) =>
     set((state) => ({ commute: { ...state.commute, polygon } })),
   resetCommute: () => set({ commute: { ...defaultCommute } }),
+
+  school: { ...defaultSchool },
+  setSchool: (patch) =>
+    set((state) => ({ school: { ...state.school, ...patch } })),
+  resetSchool: () => set({ school: { ...defaultSchool } }),
 
   totalCount: 0,
   setTotalCount: (count) => set({ totalCount: count }),
