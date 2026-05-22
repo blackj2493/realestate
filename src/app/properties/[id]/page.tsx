@@ -7,9 +7,13 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ImageBentoGrid from "@/components/Property/ImageBentoGrid";
 import MediaGalleryOverlay from "@/components/Property/MediaGalleryOverlay";
 import SpatialDistribution from "@/components/SpatialDistribution";
+import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
+import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import type { AVMResult } from "@/lib/avm/types";
+import type { FeeStabilityResult } from "@/lib/condo/feeStability";
 
 interface Room {
   RoomKey?: string;
@@ -124,6 +128,8 @@ export default function PropertyPage({ params }: { params: Promise<{ id: string 
   // In Next.js 15+, params is a Promise that must be unwrapped
   const { id } = React.use(params);
   const [property, setProperty] = useState<Property | null>(null);
+  const [estimate, setEstimate] = useState<AVMResult | null>(null);
+  const [feeStability, setFeeStability] = useState<FeeStabilityResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'triggering' | 'pending'>('idle');
@@ -185,6 +191,8 @@ export default function PropertyPage({ params }: { params: Promise<{ id: string 
         console.log(`[API] Fetched listing: ${id}`);
         
         setProperty(propertyData);
+        setEstimate(data.estimate ?? null);
+        setFeeStability(data.feeStability ?? null);
         setSyncStatus('idle');
       } catch (err) {
         console.error("Error fetching property:", err);
@@ -497,6 +505,16 @@ export default function PropertyPage({ params }: { params: Promise<{ id: string 
         {/* Right Column - Contact & Mortgage Calculator */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-6">
+            {/* PureProperty Estimate */}
+            <ListingEstimateCard
+              estimate={estimate}
+              listPrice={property.ListPrice}
+              cityRegion={property.CityRegion}
+            />
+
+            {/* Condo Fee Stability (renders only for condos with enough comparable data) */}
+            <CondoFeeStabilityCard feeStability={feeStability} />
+
             {/* Contact Card */}
             <Card>
               <CardHeader>

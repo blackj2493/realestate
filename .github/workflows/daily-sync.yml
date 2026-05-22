@@ -32,3 +32,12 @@ jobs:
           PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
           PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
         run: npx tsx scripts/worker/ingester.ts sync
+
+      # Refresh precomputed condo fee/sqft aggregates from the freshly-synced VOW data.
+      # Reads raw_vow_sold READ-ONLY and writes the separate condo_fee_stats table; needs
+      # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.
+      - name: Refresh Condo Fee Stats
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-condo-fee-stats.ts --apply
