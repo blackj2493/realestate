@@ -769,7 +769,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   const geo = resolveLocation(
     raw.PostalCode,
     raw.Latitude,
-    raw.Longitude
+    raw.Longitude,
+    raw.City
   );
 
   // Calculate derived metrics

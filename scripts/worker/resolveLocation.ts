@@ -13,7 +13,7 @@
  * Supabase and avoids transformer.ts's heavy module graph.
  */
 
-import { getCoordinates, loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
+import { getCoordinates, getCityCenter, loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 
 export const FALLBACK_LAT = 43.6532; // Toronto center latitude
 export const FALLBACK_LNG = -79.3832; // Toronto center longitude
@@ -24,19 +24,26 @@ export interface GeolocationResult {
 }
 
 /**
- * Resolves a geopoint via a strict fallback chain, always as [lat, lng]:
- *   1. Postal-code library (Ontario LDU → Canada → FSA centroid)
+ * Resolves a geopoint via a strict fallback chain, always as [lat, lng], from
+ * most precise to least. The guiding rule: NEVER drop a property at downtown
+ * Toronto when a closer approximation exists — a centroid several km away adds
+ * minimal value. Toronto center is the absolute last resort only.
+ *   1. Postal-code library (Ontario LDU exact → Canada → FSA centroid)
  *   2. API-native coordinates
- *   3. Toronto center (flagged needsGeocoding)
+ *   3. City centre (approximate, flagged needsGeocoding)
+ *   4. Toronto centre (only when postal AND city are both unresolvable)
+ *
+ * `city` is optional and backward-compatible; pass it so tier 3 can fire.
  */
 export function resolveLocation(
   postalCode: string | null | undefined,
   apiLat: number | null | undefined,
-  apiLng: number | null | undefined
+  apiLng: number | null | undefined,
+  city?: string | null | undefined
 ): GeolocationResult {
   if (!isDataLoaded()) loadPostalCodes();
 
-  // Tier 1: postal-code library lookup
+  // Tier 1: postal-code library lookup (LDU exact, else FSA centroid)
   const postalCoords = getCoordinates(postalCode);
   if (postalCoords) {
     return {
@@ -53,8 +60,18 @@ export function resolveLocation(
     };
   }
 
-  // Tier 3: Toronto-center fallback, flagged for correction
-  console.warn(`[resolveLocation] location fallback for postal: ${postalCode || 'unknown'}`);
+  // Tier 3: city centre — neighbourhood-accurate enough to beat downtown Toronto.
+  const cityCoords = getCityCenter(city);
+  if (cityCoords) {
+    console.warn(`[resolveLocation] city-centre fallback for "${city}" (postal ${postalCode || 'unknown'})`);
+    return {
+      location: [cityCoords.lat, cityCoords.lng] as [number, number],
+      needsGeocoding: true,
+    };
+  }
+
+  // Tier 4: Toronto-centre fallback — absolute last resort, flagged for correction
+  console.warn(`[resolveLocation] Toronto-centre fallback (postal ${postalCode || 'unknown'}, city ${city || 'unknown'})`);
   return {
     location: [FALLBACK_LAT, FALLBACK_LNG] as [number, number],
     needsGeocoding: true,

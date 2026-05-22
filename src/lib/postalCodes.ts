@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import postalCodesData from '@/data/postal-codes.json';
 import fsaCentroidsData from '@/data/fsa-centroids.json';
+import cityCentroidsData from '@/data/city-centroids.json';
 
 // Types
 interface PostalCodeEntry {
@@ -16,12 +17,22 @@ interface FsaCentroid {
   lng: number;
 }
 
+interface CityCentroid {
+  city: string;
+  lat: number;
+  lng: number;
+}
+
 // In-memory caches
 // Ontario LDU library is the PRIMARY source (full 6-char postal codes, ~298k rows).
 // postalCodeMap (Canada-wide JSON) + fsaMap (FSA centroids) are fallbacks.
+// cityCentroidMap is the last-resort fallback BEFORE Toronto center — keyed by the
+// raw TRREB City string (e.g. "Pelham", "London North") so dirty/invalid postal
+// codes still land in the right municipality.
 const ontarioMap: Map<string, { lat: number; lng: number }> = new Map();
 const postalCodeMap: Map<string, { lat: number; lng: number }> = new Map();
 const fsaMap: Map<string, { lat: number; lng: number }> = new Map();
+const cityCentroidMap: Map<string, { lat: number; lng: number }> = new Map();
 let isLoaded = false;
 
 // Normalize a postal code to the keying convention: uppercase, no spaces.
@@ -85,11 +96,16 @@ export function loadPostalCodes(): void {
     fsaMap.set(entry.fsa, { lat: entry.lat, lng: entry.lng });
   });
 
+  // Load city centroids (keyed by uppercased, trimmed City string)
+  (cityCentroidsData as CityCentroid[]).forEach((entry) => {
+    if (entry.city) cityCentroidMap.set(entry.city.trim().toUpperCase(), { lat: entry.lat, lng: entry.lng });
+  });
+
   // Load Ontario LDU library (primary source)
   loadOntarioPostalCodes();
 
   const elapsed = Date.now() - start;
-  console.log(`[PostalCodes] Loaded ${ontarioMap.size} Ontario LDU, ${postalCodeMap.size} Canada postal codes and ${fsaMap.size} FSA centroids in ${elapsed}ms`);
+  console.log(`[PostalCodes] Loaded ${ontarioMap.size} Ontario LDU, ${postalCodeMap.size} Canada postal codes, ${fsaMap.size} FSA centroids and ${cityCentroidMap.size} city centroids in ${elapsed}ms`);
   isLoaded = true;
 }
 
@@ -158,10 +174,14 @@ export const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
   "Barrie": { lat: 44.3894, lng: -79.6903 },
 };
 
-// Get city center coordinates (for fallback)
+// Get city center coordinates (for fallback). Checks the hardcoded majors first,
+// then the data-driven city-centroids library (populated by the postal-code
+// backfill tool from the TRREB City strings it encounters).
 export function getCityCenter(cityName: string | null | undefined): { lat: number; lng: number } | null {
   if (!cityName) return null;
-  return CITY_CENTERS[cityName] || null;
+  const trimmed = cityName.trim();
+  if (CITY_CENTERS[trimmed]) return CITY_CENTERS[trimmed];
+  return cityCentroidMap.get(trimmed.toUpperCase()) || null;
 }
 
 // Check if data is loaded
