@@ -1,115 +1,99 @@
 /**
- * LedgerPanel - Right panel high-density data grid
- * Shows scrollable list of property rows with HUD styling
+ * LedgerPanel — right-hand property ledger. Columns are persona-driven.
  */
 
 "use client";
 
-import React from 'react';
-import { 
-  Loader2,
-  MapPin,
-  AlertCircle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import LedgerRow from './LedgerRow';
-import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
-import type { ListingDocument } from '@/lib/typesense/client';
+import React from "react";
+import { Loader2, MapPin, AlertCircle, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
+import LedgerRow from "./LedgerRow";
+import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 
 interface LedgerPanelProps {
   className?: string;
 }
 
-// Column header configuration - Terminal UI format
-const COLUMN_HEADERS = [
-  { label: 'Address', className: 'flex-1 min-w-0' },
-  { label: 'ListPrice', className: 'hidden sm:block w-24 shrink-0 text-right' },
-  { label: 'Beds', className: 'hidden md:block w-12 shrink-0 text-center' },
-  { label: 'Baths', className: 'hidden md:block w-12 shrink-0 text-center' },
-  { label: 'True Carry Cost', className: 'hidden lg:block w-24 shrink-0 text-right' },
-  { label: 'True DoM', className: 'hidden sm:block w-16 shrink-0 text-right' },
-  { label: 'Suite Status', className: 'hidden xl:block w-28 shrink-0 text-center' },
-  { label: 'School', className: 'hidden xl:block w-16 shrink-0 text-center' },
-  { label: 'Transit', className: 'hidden xl:block w-16 shrink-0 text-center' },
-];
-
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const {
-    searchResult,
-    isLoading,
-    error,
-    totalCount,
-    selectedProperty,
-    setSelectedProperty,
-    location,
-  } = useCommandCenterStore();
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId } =
+    useCommandCenterStore();
 
+  const columns = PERSONA_CONFIG[activePersona].columns;
   const properties = searchResult?.listings || [];
+  const ms = searchResult?.processingTimeMs ?? 0;
 
   return (
-    <div className={cn(
-      "flex flex-col bg-slate-950 border-l border-slate-800 h-full",
-      className
-    )}>
-      {/* Column Headers */}
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-slate-800 bg-slate-900/50 shrink-0">
-        {COLUMN_HEADERS.map((header, index) => (
-          <div 
-            key={index} 
+    <div className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
+      {/* Typesense stat header */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900/60 px-3 py-2">
+        <Zap className="h-3.5 w-3.5 text-emerald-400" />
+        <p className="font-mono text-[11px] text-slate-400">
+          Typesense Search:{" "}
+          <span className="font-semibold text-emerald-400">{totalCount.toLocaleString()}</span> Active Listings
+          <span className="mx-1.5 text-slate-600">|</span>
+          Instant Query <span className="text-emerald-400">&lt;{ms}ms</span>
+        </p>
+      </div>
+
+      {/* Column headers */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900/50 px-3 py-2">
+        <div className="h-px w-16 shrink-0" />
+        {columns.map((col) => (
+          <div
+            key={col.type}
             className={cn(
-              "text-[10px] uppercase tracking-wider font-semibold text-slate-500",
-              header.className
+              "text-[10px] font-semibold uppercase tracking-wider text-slate-500",
+              col.width,
+              col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
             )}
           >
-            {header.label}
+            {col.header}
           </div>
         ))}
       </div>
 
-      {/* Property List */}
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      {/* Rows */}
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 text-emerald-400 animate-spin mb-3" />
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-emerald-400" />
             <span className="text-sm text-slate-400">SCANNING MARKET DATA...</span>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4">
-            <AlertCircle className="h-8 w-8 text-rose-400 mb-3" />
-            <span className="text-sm text-rose-400 mb-1">Search Error</span>
-            <span className="text-xs text-slate-500 text-center">{error}</span>
+          <div className="flex flex-col items-center justify-center px-4 py-16">
+            <AlertCircle className="mb-3 h-8 w-8 text-rose-400" />
+            <span className="mb-1 text-sm text-rose-400">Search Error</span>
+            <span className="text-center text-xs text-slate-500">{error}</span>
           </div>
         ) : properties.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <MapPin className="h-8 w-8 text-slate-700 mb-3" />
-            <span className="text-sm text-slate-400 mb-1">No Assets Found</span>
+            <MapPin className="mb-3 h-8 w-8 text-slate-700" />
+            <span className="mb-1 text-sm text-slate-400">No Assets Found</span>
             <span className="text-xs text-slate-500">
-              {location ? `No properties in ${location}` : 'Adjust your filters to expand search'}
+              {location ? `No properties in ${location}` : "Adjust your filters to expand search"}
             </span>
           </div>
         ) : (
-          <div className="divide-y divide-slate-800/50">
-            {properties.map((property) => (
-              <LedgerRow
-                key={property.id}
-                property={property}
-                onClick={() => setSelectedProperty(property)}
-                isSelected={selectedProperty?.id === property.id}
-              />
-            ))}
-          </div>
+          properties.map((property) => (
+            <LedgerRow
+              key={property.id}
+              property={property}
+              columns={columns}
+              onClick={() => setSelectedProperty(property)}
+              isSelected={selectedProperty?.id === property.id}
+              isHovered={hoveredId === property.id}
+              onHoverChange={(hovered) => setHoveredId(hovered ? property.id : null)}
+            />
+          ))
         )}
       </div>
 
-      {/* Footer Stats */}
-      <div className="px-3 py-2 border-t border-slate-800 bg-slate-900/50 shrink-0">
+      {/* Footer */}
+      <div className="shrink-0 border-t border-slate-800 bg-slate-900/50 px-3 py-2">
         <div className="flex items-center justify-between text-[10px] text-slate-500">
-          <span>
-            {isLoading ? 'Scanning...' : `${totalCount.toLocaleString()} assets loaded`}
-          </span>
-          <span className="font-mono">
-            PROPTX MLS® | T:{new Date().toLocaleTimeString('en-US', { hour12: false })}
-          </span>
+          <span>{isLoading ? "Scanning..." : `${properties.length} shown · ${totalCount.toLocaleString()} total`}</span>
+          <span className="font-mono">PROPTX MLS®</span>
         </div>
       </div>
     </div>

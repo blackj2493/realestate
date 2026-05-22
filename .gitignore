@@ -39,3 +39,6 @@ coverage/
 
 # Misc
 *.log
+
+# Reindexer resume checkpoint (runtime state)
+scripts/.reindex-cursor

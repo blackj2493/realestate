@@ -1,205 +1,171 @@
 /**
- * LedgerRow - High-density property row for the Command Center Ledger
- * Displays scannable property summary with Alpha badges
+ * LedgerRow — persona-driven property row. Columns come from PERSONA_CONFIG.
  */
 
 "use client";
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { 
-  Bed, 
-  Bath, 
-  Square, 
-  Heart,
-  ChevronRight,
-  MapPin
-} from 'lucide-react';
-import { cn, formatPrice } from '@/lib/utils';
-import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
-import type { ListingDocument } from '@/lib/typesense/client';
+import React, { useState } from "react";
+import Image from "next/image";
+import { Heart } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { ListingDocument } from "@/lib/typesense/client";
+import type { ColumnDef } from "@/lib/personas/personaConfig";
+import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
 
 interface LedgerRowProps {
   property: ListingDocument;
+  columns: ColumnDef[];
   onClick: () => void;
   isSelected?: boolean;
+  isHovered?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
 }
 
-// Fallback image placeholder
-const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
+const PLACEHOLDER_IMAGE =
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
 
-export default function LedgerRow({ property, onClick, isSelected }: LedgerRowProps) {
+function isUsableImage(url?: string) {
+  return !!url && !url.includes("example.com");
+}
+
+function carryFor(p: ListingDocument): number {
+  if (p.MonthlyCarryCost) return Math.round(p.MonthlyCarryCost);
+  const principal = (p.ListPrice || 0) * 0.8;
+  const r = 0.07 / 12;
+  const n = 360;
+  const mortgage = principal ? (principal * (r * (1 + r) ** n)) / ((1 + r) ** n - 1) : 0;
+  return Math.round(mortgage + (p.TaxAnnualAmount || 0) / 12 + (p.AssociationFee || 0));
+}
+
+function alignClass(a: ColumnDef["align"]) {
+  return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
+}
+
+function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
+  const base = cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align));
+
+  switch (col.type) {
+    case "address": {
+      const addr = doc.UnparsedAddress?.trim() || doc.City || "Address unavailable";
+      return (
+        <div className={cn("min-w-0", col.width)}>
+          <p className="truncate pr-2 font-sans text-xs font-medium text-slate-200">{addr}</p>
+          <div className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] uppercase tracking-wide text-slate-500">
+            <span>{doc.City || "—"}</span>
+            <span className="text-slate-600">·</span>
+            <span>{doc.PropertySubType || doc.PropertyType || "Residential"}</span>
+            {doc.ListOfficeName && (
+              <>
+                <span className="text-slate-600">·</span>
+                <span className="truncate normal-case tracking-normal">{doc.ListOfficeName}</span>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+    case "trueDom": {
+      const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
+      const color = dom > 90 ? "text-rose-400" : dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-400";
+      return <div className={cn(base, color, "font-semibold")}>{dom}d</div>;
+    }
+    case "capRate": {
+      const v = doc.ExtrapolatedCapRate ?? doc.cap_rate_est;
+      return <div className={cn(base, "text-emerald-400")}>{v ? `${v.toFixed(1)}%` : "—"}</div>;
+    }
+    case "yield": {
+      const v = doc.targetGrossYield ?? doc.gross_yield_est;
+      return <div className={cn(base, "text-emerald-400")}>{v ? `${(v * 100).toFixed(1)}%` : "—"}</div>;
+    }
+    case "carryCost":
+      return (
+        <div className={cn(base, "text-emerald-400")}>
+          ${carryFor(doc).toLocaleString()}
+          <span className="text-[9px] text-slate-500">/mo</span>
+        </div>
+      );
+    case "priceDrop":
+      return (
+        <div className={cn(base, doc.TotalPriceDrop ? "text-rose-400" : "text-slate-500")}>
+          {doc.TotalPriceDrop ? `-$${doc.TotalPriceDrop.toLocaleString()}` : "—"}
+        </div>
+      );
+    case "suite":
+      return (
+        <div className={cn(base, "text-blue-300")}>
+          {doc.SuiteStatus === "EXISTING_SUITE" ? "EXISTING" : doc.SuiteStatus === "POTENTIAL_CANDIDATE" ? "CANDIDATE" : "—"}
+        </div>
+      );
+    case "lotDims": {
+      const w = doc.LotWidth ?? doc.lot_width_ft;
+      const d = doc.LotDepth ?? doc.lot_depth_ft;
+      return <div className={cn(base, "text-slate-300")}>{w ? `${w}′×${d ?? "?"}′` : "—"}</div>;
+    }
+    case "zoning":
+      return <div className={cn(base, doc.multiplex_by_right ? "text-cyan-400" : "text-slate-300")}>{doc.zoning_designation || "—"}</div>;
+    case "density":
+      return <div className={cn(base, doc.is_density_ready ? "text-cyan-400" : "text-slate-500")}>{doc.is_density_ready ? "YES" : "—"}</div>;
+    case "alphaFlag": {
+      const flag = getAlphaFlag(doc);
+      return (
+        <div className={cn("shrink-0", col.width, alignClass(col.align))}>
+          {flag.variant === "none" ? (
+            <span className="text-xs text-slate-600">—</span>
+          ) : (
+            <span className={cn("inline-block rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
+              {flag.label}
+            </span>
+          )}
+        </div>
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange }: LedgerRowProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [imageError, setImageError] = useState(false);
-
-  // Use actual MonthlyCarryCost from Typesense if available, otherwise estimate
-  const carryCost = property.MonthlyCarryCost || calculateCarryCost(property);
-  
-  // Get TrueDOM with color logic
-  const trueDom = property.TrueDom || property.calculatedDOM || property.DaysOnMarket || 0;
-  const domColor = trueDom > 90 ? 'text-rose-400' : trueDom > 45 ? 'text-emerald-400' : trueDom >= 14 ? 'text-amber-400' : 'text-slate-400';
-  
-  // Get suite status badge
-  const suiteStatus = property.SuiteStatus;
-  const suiteBadgeClass = suiteStatus === 'EXISTING_SUITE' 
-    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-    : suiteStatus === 'POTENTIAL_CANDIDATE'
-    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-    : 'bg-slate-700/50 text-slate-400 border-slate-600/30';
-  
-  // Detect badges for this property
-  const badges = detectPropertyBadges(property as Parameters<typeof detectPropertyBadges>[0]);
+  const src = !imageError && isUsableImage(property.thumbnailUrl || property.primaryImageUrl)
+    ? (property.thumbnailUrl || property.primaryImageUrl)!
+    : PLACEHOLDER_IMAGE;
 
   return (
     <div
       onClick={onClick}
+      onMouseEnter={() => onHoverChange?.(true)}
+      onMouseLeave={() => onHoverChange?.(false)}
       className={cn(
-        "group relative flex items-center gap-3 px-3 py-2 border-b border-slate-800/50 cursor-pointer transition-all hover:bg-slate-800/50",
-        isSelected && "bg-emerald-900/20 border-l-2 border-l-emerald-500"
+        "group flex cursor-pointer items-center gap-3 border-b border-slate-800/50 px-3 py-2 transition-colors hover:bg-slate-800/50",
+        isHovered && !isSelected && "bg-slate-800/50 ring-1 ring-inset ring-emerald-500/40",
+        isSelected && "border-l-2 border-l-emerald-500 bg-emerald-900/20"
       )}
     >
       {/* Thumbnail */}
-      <div className="relative w-16 h-12 rounded overflow-hidden shrink-0 bg-slate-800">
+      <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded bg-slate-800">
         <Image
-          src={imageError ? PLACEHOLDER_IMAGE : (property.thumbnailUrl || property.primaryImageUrl || PLACEHOLDER_IMAGE)}
-          alt={property.UnparsedAddress || 'Property'}
+          src={src}
+          alt={property.UnparsedAddress || "Property"}
           fill
           className="object-cover"
-          unoptimized={true}
+          unoptimized
           onError={() => setImageError(true)}
         />
-        
-        {/* Save Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             setIsSaved(!isSaved);
           }}
-          className="absolute top-0.5 right-0.5 p-1 rounded-full bg-slate-900/70 hover:bg-slate-900 z-10 transition-colors"
+          className="absolute right-0.5 top-0.5 z-10 rounded-full bg-slate-900/70 p-1 transition-colors hover:bg-slate-900"
         >
-          <Heart className={cn(
-            "h-3 w-3",
-            isSaved ? "fill-red-500 text-red-500" : "text-slate-400"
-          )} />
+          <Heart className={cn("h-3 w-3", isSaved ? "fill-red-500 text-red-500" : "text-slate-400")} />
         </button>
       </div>
 
-      {/* Property Basics */}
-      <div className="flex-1 min-w-0">
-        {/* Address */}
-        <p className="text-xs text-slate-200 font-medium truncate pr-2">
-          {property.UnparsedAddress || 'Address Unavailable'}
-        </p>
-        
-        {/* City + Property Type */}
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wide">
-            {property.City || 'Unknown'}
-          </span>
-          <span className="text-[10px] text-slate-600">·</span>
-          <span className="text-[10px] text-slate-500 uppercase tracking-wide">
-            {property.PropertySubType || property.PropertyType || 'Residential'}
-          </span>
-        </div>
-      </div>
-
-      {/* Property Specs */}
-      <div className="hidden md:flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-1 text-[10px] text-slate-400">
-          <Bed className="h-3 w-3" />
-          <span className="font-mono">{property.BedroomsTotal || 0}</span>
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-slate-400">
-          <Bath className="h-3 w-3" />
-          <span className="font-mono">{property.BathroomsTotalInteger || 0}</span>
-        </div>
-        {property.BuildingAreaTotal && (
-          <div className="flex items-center gap-1 text-[10px] text-slate-400">
-            <Square className="h-3 w-3" />
-            <span className="font-mono">{property.BuildingAreaTotal.toLocaleString()}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Primary Metric: Carry Cost */}
-      <div className="hidden lg:block w-20 text-right shrink-0">
-        <span className="text-xs font-bold font-mono text-emerald-400">
-          ${carryCost.toLocaleString()}
-        </span>
-        <span className="text-[10px] text-slate-500 block">/mo</span>
-      </div>
-
-      {/* Secondary Metric: True DOM */}
-      <div className="hidden sm:block w-14 text-right shrink-0">
-        <span className={cn("text-xs font-mono font-semibold", domColor)}>
-          {trueDom}d
-        </span>
-        {property.IsStale && (
-          <span className="text-[8px] text-rose-500 block">STALE</span>
-        )}
-      </div>
-
-      {/* Suite Status Badge */}
-      <div className="hidden xl:flex items-center gap-1 shrink-0">
-        <span className={cn(
-          "text-[9px] font-medium px-1.5 py-0.5 rounded border uppercase tracking-wider",
-          suiteBadgeClass
-        )}>
-          {suiteStatus === 'EXISTING_SUITE' ? 'EXISTING' : suiteStatus === 'POTENTIAL_CANDIDATE' ? 'CANDIDATE' : 'NONE'}
-        </span>
-      </div>
-
-      {/* Alpha Badges */}
-      <div className="hidden xl:flex items-center gap-1 shrink-0 max-w-[180px]">
-        {badges.slice(0, 2).map((badge, index) => (
-          <AlphaBadge 
-            key={index}
-            variant={badge.variant}
-            label={badge.label}
-            value={badge.value}
-          />
-        ))}
-        {badges.length > 2 && (
-          <span className="text-[10px] text-slate-500">+{badges.length - 2}</span>
-        )}
-      </div>
-
-      {/* Price */}
-      <div className="w-28 text-right shrink-0">
-        <span className="text-sm font-bold font-mono text-emerald-400">
-          {formatPrice(property.ListPrice)}
-        </span>
-      </div>
-
-      {/* Arrow */}
-      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 transition-colors shrink-0" />
+      {columns.map((col) => (
+        <Cell key={col.type} doc={property} col={col} />
+      ))}
     </div>
   );
-}
-
-/**
- * Calculate estimated monthly carry cost
- * This is a simplified calculation - real implementation would use actual mortgage formulas
- */
-function calculateCarryCost(property: ListingDocument): number {
-  const listPrice = property.ListPrice || 0;
-  const annualTaxes = property.TaxAnnualAmount || 0;
-  const monthlyFees = property.AssociationFee || 0;
-
-  // Simplified estimation assuming 20% down, 7% rate, 30yr amort
-  // Monthly mortgage payment ≈ P * [r(1+r)^n] / [(1+r)^n - 1] / 12
-  const principal = listPrice * 0.8; // 80% LTV
-  const annualRate = 0.07;
-  const monthlyRate = annualRate / 12;
-  const numPayments = 30 * 12; // 30 years
-
-  const monthlyMortgage = principal * 
-    (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
-    (Math.pow(1 + monthlyRate, numPayments) - 1);
-
-  // Monthly property taxes
-  const monthlyTax = annualTaxes / 12;
-
-  // Total monthly carry cost
-  return Math.round(monthlyMortgage + monthlyTax + monthlyFees);
 }

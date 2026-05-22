@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
     }
 
     const client = new ProptXClient(vowToken, "VOW");
-    let properties: PropertyResponse;
 
     // Build filter string from filters array
     let filterString = filters.length > 0 ? filters.join(" and ") : undefined;
@@ -64,7 +63,7 @@ export async function GET(request: NextRequest) {
         : defaultFilter;
     }
 
-    properties = await client.getProperties({
+    const properties: PropertyResponse = await client.getProperties({
       $top: 50,
       $filter: filterString,
     });
@@ -74,7 +73,7 @@ export async function GET(request: NextRequest) {
     const listingKeys = properties.value.map(p => p.ListingKey);
     // Use a map that tracks both URL and priority
     type MediaEntry = { url: string; priority: number };
-    let mediaMap: Map<string, MediaEntry> = new Map();
+    const mediaMap: Map<string, MediaEntry> = new Map();
 
     // Fetch media for properties in batches (API may have limits)
     const BATCH_SIZE = 10;
@@ -106,7 +105,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform properties and filter by listing type (residential vs commercial)
-    let transformedProperties = properties.value
+    const transformedProperties = properties.value
       .map((property) => ({
         id: property.ListingKey,
         listingId: property.ListingId || property.ListingKey,

@@ -1,0 +1,620 @@
+﻿{
+    "property":  {
+                     "ListingKey":  "W12632618",
+                     "ListPrice":  1699900,
+                     "City":  "Brampton",
+                     "StateOrProvince":  "ON",
+                     "BedroomsTotal":  4,
+                     "BathroomsTotalInteger":  5,
+                     "ListOfficeName":  "RE/MAX MILLENNIUM REAL ESTATE",
+                     "UnparsedAddress":  "40 Rampart Drive, Brampton, ON L6P 2Z1",
+                     "Utilities":  [
+
+                                   ],
+                     "Water":  "Municipal",
+                     "ExteriorFeatures":  [
+                                              "Awnings",
+                                              "Landscaped",
+                                              "Patio",
+                                              "Porch",
+                                              "Private Pond"
+                                          ],
+                     "ParkingTotal":  6,
+                     "AnnualTaxes":  8456.34,
+                     "AssociationFee":  null,
+                     "PublicRemarks":  "Located in the prestigious Vales of Castlemore North, this exceptional detached home sits on a rare, pie-shaped lot with professionally landscaped grounds and a private backyard oasis featuring a custom stone fireplace and gazebo. The grand interior welcomes you with soaring cathedral ceilings, an open-to-above foyer, and second-floor balconies overlooking both the entrance and living room, creating an airy, elegant feel. Just off the foyer, a bright flex room with French doors and a chandelier offers the perfect space for a home office, study, or personal retreat. The main floor also features hardwood flooring throughout, a cozy gas fireplace in the family room, and a spacious kitchen with ample prep and storage space. Upstairs, you\u0027ll find four large bedrooms, including a primary suite with a walk-in closet and private ensuite, a Jack \u0026 Jill 5-piece bathroom shared between the second and third bedrooms, and a fourth bedroom with its own private 4-piece ensuite. The fully finished basement adds exceptional value with a large recreation area, full bathroom, and two additional rooms that can easily be converted into bedrooms with ensuite potential. With garage access to the laundry room, a separate side entrance, and close proximity to top-rated schools, parks, and all major amenities, this home delivers luxury, flexibility, and comfort in one of Brampton\u0027s mostsought-after communities.",
+                     "TransactionType":  "For Sale",
+                     "TaxAnnualAmount":  8456.34,
+                     "PostalCode":  "L6P 2Z1",
+                     "ArchitecturalStyle":  [
+                                                "2-Storey"
+                                            ],
+                     "Basement":  [
+                                      "Full",
+                                      "Finished"
+                                  ],
+                     "DirectionFaces":  "West",
+                     "OriginalEntryTimestamp":  "2025-12-14T15:47:54Z",
+                     "BedroomsAboveGrade":  4,
+                     "BedroomsBelowGrade":  null,
+                     "CoveredSpaces":  2,
+                     "KitchensTotal":  1,
+                     "KitchensAboveGrade":  1,
+                     "KitchensBelowGrade":  null,
+                     "RoomsAboveGrade":  10,
+                     "RoomsBelowGrade":  4,
+                     "InteriorFeatures":  [
+                                              "Built-In Oven",
+                                              "Central Vacuum"
+                                          ],
+                     "ConstructionMaterials":  [
+                                                   "Brick",
+                                                   "Stone"
+                                               ],
+                     "FoundationDetails":  [
+                                               "Concrete"
+                                           ],
+                     "Roof":  [
+                                  "Shingles"
+                              ],
+                     "LotWidth":  46,
+                     "LotDepth":  117.25,
+                     "LotSizeUnits":  "Feet",
+                     "LotSizeRangeAcres":  null,
+                     "HeatType":  "Forced Air",
+                     "HeatSource":  "Electric",
+                     "Sewer":  [
+                                   "Sewer"
+                               ],
+                     "Cooling":  [
+                                     "Central Air"
+                                 ],
+                     "ParkingFeatures":  [
+                                             "Available"
+                                         ],
+                     "PropertyFeatures":  [
+
+                                          ],
+                     "CityRegion":  "Vales of Castlemore North",
+                     "PropertySubType":  "Detached",
+                     "StandardStatus":  "Active",
+                     "DaysOnMarket":  null,
+                     "images":  [
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/s2toZjPU9EdULKHUTBGG3GSesiB81h0KxAeQwMHoDcg/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202240/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMTQxOTY0ZTEtNDVhYS00NTllLWE4MWItNTk5NWE4MDdlMTJiLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "141964e1-45aa-459e-a81b-5995a807e12b",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  0
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/S5Iufp7AVq3V8szZZPzPpAQWryhUkMM-7u62dqS9efM/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202242/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNGEzZDY0ZmUtNDE2OC00ZTIyLTljYzQtYzFmYTVmYjUxNWYyLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "4a3d64fe-4168-4e22-9cc4-c1fa5fb515f2",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  2
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/31Fp8W3nR8SNLJhfKL67oFr9xpuBDiuzoT1xMSj1R0k/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202242/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvM2UwMjFiZDktMDM3Yi00NThhLTlkYTUtNThkZjJlYzIzODNhLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "3e021bd9-037b-458a-9da5-58df2ec2383a",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  3
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/d-o9L5JkCjxGx1jwN94L9dYGmeQOg4Lw7kwWxSbHF9c/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202244/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZWIyZjBkNzctYTYwZi00Mjk5LWE4MzktODc1ZTUwM2ViMGVlLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "eb2f0d77-a60f-4299-a839-875e503eb0ee",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  4
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/gYNQ7udpNIeAA53jJ0sFLDA5t55XmpcSIRUwig22nyA/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202245/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNTg3OTNiZDQtN2Q5MC00OTQ5LTkzNmEtYmE3ZDllYzI0NTMzLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "58793bd4-7d90-4949-936a-ba7d9ec24533",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  6
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/vc8ZjtKvjtm-2ncQE2iuK48t23JKmaChwfyVseRoFug/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202246/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZGQwNjU5N2EtMzJkNy00MmQ0LTljOTEtNjQxNDU0ZTcxMmM5LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "dd06597a-32d7-42d4-9c91-641454e712c9",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  7
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/qKH0fwb3P7bm7o1QsFi9dI1s2rrig0KUKzccVTf529I/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202247/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvOTkxNjQzMDgtM2YyMi00Y2JiLTkyNWItMzljMjM1OGYzYjYyLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "99164308-3f22-4cbb-925b-39c2358f3b62",
+                                        "ImageSizeDescription":  "Large",
+                                        "Order":  9
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/lPG9PuyoEDzU4ghCKIzu9Br8zo5JgilRkN-Tnt6mXyU/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202247/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNzYwZTAyOWYtMzk3My00OGM2LWI2YTItYzAwZjBjODFkNjNjLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "760e029f-3973-48c6-b6a2-c00f0c81d63c",
+                                        "ImageSizeDescription":  "Large",
+                                        "Order":  10
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/7jMooD8vx0ooZbCh4KM_HLZBFAOcr0cfdc48737TbvM/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202248/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYWE0MTFmNjAtNmE3Yi00ODljLWE4MDktYWYxMzhjMDUzMDZjLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "aa411f60-6a7b-489c-a809-af138c05306c",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  11
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/piCv1qlGcxc6BoLDbCCByS_-COQglEncZXG5JpSLSS8/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202248/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMzdmNWFiNTAtM2VkNi00NjQwLTk5OGMtYmZmN2IxMzVhNzQ4LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "37f5ab50-3ed6-4640-998c-bff7b135a748",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  12
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/d8kRAMSVkjfDWGOA6EwOFQKnxOn2Fd63Hb47HoDAVhc/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202249/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZTdhZTBiNTItMzk5MC00MGMzLTlkM2EtNDAzOTI4NmYxMjkzLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "e7ae0b52-3990-40c3-9d3a-4039286f1293",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  13
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/rnOkelQNmAP4Jco-mIXekQ4WvxCRxFLv-bRc2VFto5k/rs:fit:960:960/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202252/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNWQzOWZjMTgtYzE1MC00NGU4LTljNzYtM2M1ZGIxOTYxNDA3LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "5d39fc18-c150-44e8-9c76-3c5db1961407",
+                                        "ImageSizeDescription":  "Medium",
+                                        "Order":  18
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/18a-LwerOZo9ADDMj5fa_Ob3mq4ccYsqNaozHmSTLr8/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202253/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZjJhYmZhMGItMTVhOC00NmQ2LThhZjAtOTMwNmMxYWViY2U5LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "f2abfa0b-15a8-46d6-8af0-9306c1aebce9",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  20
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/qqRL-Ld3RpnQxOnc728P2Cn9kNESUd29CXbAsO88jWw/rs:fit:240:240/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202254/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZDZhMDA3NTgtYzk4ZC00Y2JkLTllNzItZGMwZmRjNzVhYWI4LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "d6a00758-c98d-4cbd-9e72-dc0fdc75aab8",
+                                        "ImageSizeDescription":  "Thumbnail",
+                                        "Order":  23
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/TnO1bMODOqCg3tgf5ed6ud7I5_RyWCRO28AUtYcsmJI/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202256/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZDEyMzA1ZGMtMDlmMy00ZmI0LTg5ZDUtNWE1OGFlOTc3YzJmLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "d12305dc-09f3-4fb4-89d5-5a58ae977c2f",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  25
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/GnFOUAuXIyAIIq1hNNvVIDch6Q84qJmoDp44DJ_e03Y/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202256/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYWVjOTc2NmYtMzc0Yi00MTMxLWFkNmEtZDYzOWRhMWY5OGQyLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "aec9766f-374b-4131-ad6a-d639da1f98d2",
+                                        "ImageSizeDescription":  "Large",
+                                        "Order":  26
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/7bTuZAR8VlZ2c08tzFRzeIdr0EJDvBBFlmsmuvl-5-Q/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202257/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNzNlYWRlYzYtZjc4Zi00NjBhLWJlMWYtZDdiZTc3ZDc1MDFiLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "73eadec6-f78f-460a-be1f-d7be77d7501b",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  28
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/nXuuj3aQQxCY6Zs2lTSzma8kOV7b5-o3jz-jEWm3SJQ/rs:fit:960:960/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202258/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvODVkNzgzMjktMmMzMy00MzkwLTg4NDYtZTNhYzE2NGZlODE2LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "85d78329-2c33-4390-8846-e3ac164fe816",
+                                        "ImageSizeDescription":  "Medium",
+                                        "Order":  29
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/EQwa1LP4hVUgjoURaCU3m5MblowayN-JF9IkjWh9ZOQ/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202301/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYTZkMmJmMzQtMmU4Zi00YzVlLTljZTYtZGZlOTk0ZTkyNzJkLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "a6d2bf34-2e8f-4c5e-9ce6-dfe994e9272d",
+                                        "ImageSizeDescription":  "Large",
+                                        "Order":  34
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/Cdjgc3MNhd-W8EQstB_ocTpNW4qLHfkaVjCVVWtbKjI/rs:fit:240:240/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202301/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYjIxYjFjOTctYjZhMS00NjE5LTgxNzQtOGE3YmEwNzhhZGE4LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "b21b1c97-b6a1-4619-8174-8a7ba078ada8",
+                                        "ImageSizeDescription":  "Thumbnail",
+                                        "Order":  35
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/G1OxcA1p7G--Xe7x6SMJr-T3ADzONjtNDNqY1qZqYWU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202302/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZTRkYjg4MmYtZjI0MC00NTM1LWE1YmEtZDdjOWExNTE1MjQ0LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "e4db882f-f240-4535-a5ba-d7c9a1515244",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  36
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/9I6A2JE1kgHJXDi3BTwasSMOnVppGxvhTnV7bv9GanY/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202303/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvODEzZTFjNzEtMjMyZC00MGJkLTk3ZGEtMDJmYWU4MjM2NzEzLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "813e1c71-232d-40bd-97da-02fae8236713",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  37
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/wQ1o3xCqvIvedDB8kCTInr6pjYwsgZrrKKkWY6F--KU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202303/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNTE0MjAwMDItM2UwZC00ODJlLWE5M2UtODc1MWQ1YWFhMmU1LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "51420002-3e0d-482e-a93e-8751d5aaa2e5",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  38
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/eS3x0CHQTgwHMXIVDVwt3lBBDwr4imykC0uYAYoqEPk/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202305/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMzY1MjNjZGUtODA2NS00OTFkLWFhYjUtMTg2YTg5MmU0MTFjLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "36523cde-8065-491d-aab5-186a892e411c",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  40
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/9v3h79pbacndMveS7eoD9yN_hZbJ_lKn2z_AKZWm6h8/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202307/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZGE3YzA4ZjItZjVkMi00YTQ1LTg3YTgtZjVkNmYzNDYyNTJjLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "da7c08f2-f5d2-4a45-87a8-f5d6f346252c",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  42
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/sHYVH0TyJlZ7JnuuTLMCiqLcgSzi13jKHtZFK2xgB0I/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202308/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZTgyNjc0YjAtNmU5ZC00MzhjLTgwZTYtYjIxZWQ4NjExMmRhLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "e82674b0-6e9d-438c-80e6-b21ed86112da",
+                                        "ImageSizeDescription":  "Large",
+                                        "Order":  43
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/rYmAYMTXFp5-mEb9D8UTdssEJ3K4ieaF6FopzzTFyDU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202309/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMjg0ODBjZTUtMmVhMC00ZTkzLWI3MTUtZWJjZjMzMTMzMmQyLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "28480ce5-2ea0-4e93-b715-ebcf331332d2",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  45
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/8IvPNgOjHBOmMdYsJGd8bXqUbiPFBoCAB83YRS-IkvE/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202310/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYzg2Mzk2ODktMTgzOC00YzQ1LTgwMTktYmEzNDQzZDFiZDBkLmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "c8639689-1838-4c45-8019-ba3443d1bd0d",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  47
+                                    },
+                                    {
+                                        "MediaURL":  "https://trreb-image.ampre.ca/zWzgiZc37JJAnLdIO7HsQPjrwJPbEA6zrJAgMRTpLfU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202311/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZGI0MWU3MTEtOTQ1Ni00ZTQ5LTgwMjItMjY0NTZhZWYzODY1LmpwZw.jpg",
+                                        "MediaCategory":  "Photo",
+                                        "MediaObjectID":  "db41e711-9456-4e49-8022-26456aef3865",
+                                        "ImageSizeDescription":  "Largest",
+                                        "Order":  48
+                                    }
+                                ],
+                     "media":  [
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/s2toZjPU9EdULKHUTBGG3GSesiB81h0KxAeQwMHoDcg/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202240/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMTQxOTY0ZTEtNDVhYS00NTllLWE4MWItNTk5NWE4MDdlMTJiLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "141964e1-45aa-459e-a81b-5995a807e12b",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/S5Iufp7AVq3V8szZZPzPpAQWryhUkMM-7u62dqS9efM/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202242/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNGEzZDY0ZmUtNDE2OC00ZTIyLTljYzQtYzFmYTVmYjUxNWYyLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "4a3d64fe-4168-4e22-9cc4-c1fa5fb515f2",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/31Fp8W3nR8SNLJhfKL67oFr9xpuBDiuzoT1xMSj1R0k/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202242/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvM2UwMjFiZDktMDM3Yi00NThhLTlkYTUtNThkZjJlYzIzODNhLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "3e021bd9-037b-458a-9da5-58df2ec2383a",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/d-o9L5JkCjxGx1jwN94L9dYGmeQOg4Lw7kwWxSbHF9c/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202244/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZWIyZjBkNzctYTYwZi00Mjk5LWE4MzktODc1ZTUwM2ViMGVlLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "eb2f0d77-a60f-4299-a839-875e503eb0ee",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/gYNQ7udpNIeAA53jJ0sFLDA5t55XmpcSIRUwig22nyA/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202245/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNTg3OTNiZDQtN2Q5MC00OTQ5LTkzNmEtYmE3ZDllYzI0NTMzLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "58793bd4-7d90-4949-936a-ba7d9ec24533",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/vc8ZjtKvjtm-2ncQE2iuK48t23JKmaChwfyVseRoFug/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202246/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZGQwNjU5N2EtMzJkNy00MmQ0LTljOTEtNjQxNDU0ZTcxMmM5LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "dd06597a-32d7-42d4-9c91-641454e712c9",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/qKH0fwb3P7bm7o1QsFi9dI1s2rrig0KUKzccVTf529I/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202247/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvOTkxNjQzMDgtM2YyMi00Y2JiLTkyNWItMzljMjM1OGYzYjYyLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "99164308-3f22-4cbb-925b-39c2358f3b62",
+                                       "ImageSizeDescription":  "Large"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/lPG9PuyoEDzU4ghCKIzu9Br8zo5JgilRkN-Tnt6mXyU/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202247/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNzYwZTAyOWYtMzk3My00OGM2LWI2YTItYzAwZjBjODFkNjNjLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "760e029f-3973-48c6-b6a2-c00f0c81d63c",
+                                       "ImageSizeDescription":  "Large"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/7jMooD8vx0ooZbCh4KM_HLZBFAOcr0cfdc48737TbvM/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202248/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYWE0MTFmNjAtNmE3Yi00ODljLWE4MDktYWYxMzhjMDUzMDZjLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "aa411f60-6a7b-489c-a809-af138c05306c",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/piCv1qlGcxc6BoLDbCCByS_-COQglEncZXG5JpSLSS8/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202248/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMzdmNWFiNTAtM2VkNi00NjQwLTk5OGMtYmZmN2IxMzVhNzQ4LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "37f5ab50-3ed6-4640-998c-bff7b135a748",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/d8kRAMSVkjfDWGOA6EwOFQKnxOn2Fd63Hb47HoDAVhc/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202249/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZTdhZTBiNTItMzk5MC00MGMzLTlkM2EtNDAzOTI4NmYxMjkzLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "e7ae0b52-3990-40c3-9d3a-4039286f1293",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/rnOkelQNmAP4Jco-mIXekQ4WvxCRxFLv-bRc2VFto5k/rs:fit:960:960/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202252/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNWQzOWZjMTgtYzE1MC00NGU4LTljNzYtM2M1ZGIxOTYxNDA3LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "5d39fc18-c150-44e8-9c76-3c5db1961407",
+                                       "ImageSizeDescription":  "Medium"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/18a-LwerOZo9ADDMj5fa_Ob3mq4ccYsqNaozHmSTLr8/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202253/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZjJhYmZhMGItMTVhOC00NmQ2LThhZjAtOTMwNmMxYWViY2U5LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "f2abfa0b-15a8-46d6-8af0-9306c1aebce9",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/qqRL-Ld3RpnQxOnc728P2Cn9kNESUd29CXbAsO88jWw/rs:fit:240:240/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202254/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZDZhMDA3NTgtYzk4ZC00Y2JkLTllNzItZGMwZmRjNzVhYWI4LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "d6a00758-c98d-4cbd-9e72-dc0fdc75aab8",
+                                       "ImageSizeDescription":  "Thumbnail"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/TnO1bMODOqCg3tgf5ed6ud7I5_RyWCRO28AUtYcsmJI/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202256/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZDEyMzA1ZGMtMDlmMy00ZmI0LTg5ZDUtNWE1OGFlOTc3YzJmLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "d12305dc-09f3-4fb4-89d5-5a58ae977c2f",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/GnFOUAuXIyAIIq1hNNvVIDch6Q84qJmoDp44DJ_e03Y/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202256/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYWVjOTc2NmYtMzc0Yi00MTMxLWFkNmEtZDYzOWRhMWY5OGQyLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "aec9766f-374b-4131-ad6a-d639da1f98d2",
+                                       "ImageSizeDescription":  "Large"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/7bTuZAR8VlZ2c08tzFRzeIdr0EJDvBBFlmsmuvl-5-Q/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202257/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNzNlYWRlYzYtZjc4Zi00NjBhLWJlMWYtZDdiZTc3ZDc1MDFiLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "73eadec6-f78f-460a-be1f-d7be77d7501b",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/nXuuj3aQQxCY6Zs2lTSzma8kOV7b5-o3jz-jEWm3SJQ/rs:fit:960:960/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202258/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvODVkNzgzMjktMmMzMy00MzkwLTg4NDYtZTNhYzE2NGZlODE2LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "85d78329-2c33-4390-8846-e3ac164fe816",
+                                       "ImageSizeDescription":  "Medium"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/EQwa1LP4hVUgjoURaCU3m5MblowayN-JF9IkjWh9ZOQ/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202301/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYTZkMmJmMzQtMmU4Zi00YzVlLTljZTYtZGZlOTk0ZTkyNzJkLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "a6d2bf34-2e8f-4c5e-9ce6-dfe994e9272d",
+                                       "ImageSizeDescription":  "Large"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/Cdjgc3MNhd-W8EQstB_ocTpNW4qLHfkaVjCVVWtbKjI/rs:fit:240:240/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202301/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYjIxYjFjOTctYjZhMS00NjE5LTgxNzQtOGE3YmEwNzhhZGE4LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "b21b1c97-b6a1-4619-8174-8a7ba078ada8",
+                                       "ImageSizeDescription":  "Thumbnail"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/G1OxcA1p7G--Xe7x6SMJr-T3ADzONjtNDNqY1qZqYWU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202302/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZTRkYjg4MmYtZjI0MC00NTM1LWE1YmEtZDdjOWExNTE1MjQ0LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "e4db882f-f240-4535-a5ba-d7c9a1515244",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/9I6A2JE1kgHJXDi3BTwasSMOnVppGxvhTnV7bv9GanY/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202303/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvODEzZTFjNzEtMjMyZC00MGJkLTk3ZGEtMDJmYWU4MjM2NzEzLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "813e1c71-232d-40bd-97da-02fae8236713",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/wQ1o3xCqvIvedDB8kCTInr6pjYwsgZrrKKkWY6F--KU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202303/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvNTE0MjAwMDItM2UwZC00ODJlLWE5M2UtODc1MWQ1YWFhMmU1LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "51420002-3e0d-482e-a93e-8751d5aaa2e5",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/eS3x0CHQTgwHMXIVDVwt3lBBDwr4imykC0uYAYoqEPk/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202305/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMzY1MjNjZGUtODA2NS00OTFkLWFhYjUtMTg2YTg5MmU0MTFjLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "36523cde-8065-491d-aab5-186a892e411c",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/9v3h79pbacndMveS7eoD9yN_hZbJ_lKn2z_AKZWm6h8/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202307/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZGE3YzA4ZjItZjVkMi00YTQ1LTg3YTgtZjVkNmYzNDYyNTJjLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "da7c08f2-f5d2-4a45-87a8-f5d6f346252c",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/sHYVH0TyJlZ7JnuuTLMCiqLcgSzi13jKHtZFK2xgB0I/rs:fit:1920:1920/aq:size:512000:25:75/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202308/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZTgyNjc0YjAtNmU5ZC00MzhjLTgwZTYtYjIxZWQ4NjExMmRhLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "e82674b0-6e9d-438c-80e6-b21ed86112da",
+                                       "ImageSizeDescription":  "Large"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/rYmAYMTXFp5-mEb9D8UTdssEJ3K4ieaF6FopzzTFyDU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202309/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvMjg0ODBjZTUtMmVhMC00ZTkzLWI3MTUtZWJjZjMzMTMzMmQyLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "28480ce5-2ea0-4e93-b715-ebcf331332d2",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/8IvPNgOjHBOmMdYsJGd8bXqUbiPFBoCAB83YRS-IkvE/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202310/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvYzg2Mzk2ODktMTgzOC00YzQ1LTgwMTktYmEzNDQzZDFiZDBkLmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "c8639689-1838-4c45-8019-ba3443d1bd0d",
+                                       "ImageSizeDescription":  "Largest"
+                                   },
+                                   {
+                                       "MediaURL":  "https://trreb-image.ampre.ca/zWzgiZc37JJAnLdIO7HsQPjrwJPbEA6zrJAgMRTpLfU/rs:fit/wm:.5:so:0:50:.4/wmsh:10/wmt:PHNwYW4gZm9yZWdyb3VuZD0nd2hpdGUnIGZvbnQ9JzY4Jz5SRS9NQVggTUlMTEVOTklVTSBSRUFMIEVTVEFURSwgQnJva2VyYWdlPC9zcGFuPg/cb:20251213202311/L3RycmViL2xpc3RpbmdzLzQyLzY2LzczLzk2L3AvZGI0MWU3MTEtOTQ1Ni00ZTQ5LTgwMjItMjY0NTZhZWYzODY1LmpwZw.jpg",
+                                       "MediaCategory":  "Photo",
+                                       "MediaObjectID":  "db41e711-9456-4e49-8022-26456aef3865",
+                                       "ImageSizeDescription":  "Largest"
+                                   }
+                               ],
+                     "rooms":  [
+                                   {
+                                       "RoomKey":  "6411dec6-3764-4edb-8bbe-2a666a606f33",
+                                       "RoomType":  "Kitchen",
+                                       "RoomLevel":  "Main",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  6.95,
+                                       "RoomWidth":  5.24
+                                   },
+                                   {
+                                       "RoomKey":  "a7fabe73-5ad4-486e-bea3-d8f2fe3af215",
+                                       "RoomType":  "Breakfast",
+                                       "RoomLevel":  "Main",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  6.95,
+                                       "RoomWidth":  5.24
+                                   },
+                                   {
+                                       "RoomKey":  "07bd7042-b551-42ac-9265-e332839c8b7a",
+                                       "RoomType":  "Family Room",
+                                       "RoomLevel":  "Main",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  5.3,
+                                       "RoomWidth":  4.5
+                                   },
+                                   {
+                                       "RoomKey":  "30ccc0ab-02c2-4182-a779-58a558b0c165",
+                                       "RoomType":  "Dining Room",
+                                       "RoomLevel":  "Main",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  3.86,
+                                       "RoomWidth":  6.2
+                                   },
+                                   {
+                                       "RoomKey":  "c0d034ca-68e5-4815-bf48-75da58fa2f45",
+                                       "RoomType":  "Common Room",
+                                       "RoomLevel":  "Main",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  3.45,
+                                       "RoomWidth":  3.31
+                                   },
+                                   {
+                                       "RoomKey":  "5b403604-a562-4452-80e6-b77d2dbc1e23",
+                                       "RoomType":  "Laundry",
+                                       "RoomLevel":  "Main",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  3.11,
+                                       "RoomWidth":  2.42
+                                   },
+                                   {
+                                       "RoomKey":  "e6e4e2eb-2bbd-4922-8a89-310b2e78f163",
+                                       "RoomType":  "Primary Bedroom",
+                                       "RoomLevel":  "Second",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  5.34,
+                                       "RoomWidth":  4.14
+                                   },
+                                   {
+                                       "RoomKey":  "0a29eb53-90b6-4447-8418-cb224febded8",
+                                       "RoomType":  "Bedroom 2",
+                                       "RoomLevel":  "Second",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  4.61,
+                                       "RoomWidth":  4.06
+                                   },
+                                   {
+                                       "RoomKey":  "69ae0600-6ab1-4689-8cb3-14a5adbbc40d",
+                                       "RoomType":  "Bedroom 3",
+                                       "RoomLevel":  "Second",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  4.06,
+                                       "RoomWidth":  3.46
+                                   },
+                                   {
+                                       "RoomKey":  "3f753272-4555-45e1-9b89-36435caeeba6",
+                                       "RoomType":  "Bedroom 4",
+                                       "RoomLevel":  "Second",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  4.06,
+                                       "RoomWidth":  3.26
+                                   },
+                                   {
+                                       "RoomKey":  "9bddfdd9-9a44-47dc-afdb-404d5c5190e1",
+                                       "RoomType":  "Game Room",
+                                       "RoomLevel":  "Basement",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  6.14,
+                                       "RoomWidth":  5.82
+                                   },
+                                   {
+                                       "RoomKey":  "ba949b36-aee4-42e0-9f34-3195e382f4ba",
+                                       "RoomType":  "Recreation",
+                                       "RoomLevel":  "Basement",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  6.14,
+                                       "RoomWidth":  0.82
+                                   },
+                                   {
+                                       "RoomKey":  "89eac813-5ca8-4196-b5ae-f693fd954c81",
+                                       "RoomType":  "Other",
+                                       "RoomLevel":  "Basement",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  3.46,
+                                       "RoomWidth":  5.18
+                                   },
+                                   {
+                                       "RoomKey":  "692cab5a-f3d6-4677-9cec-6412b843367b",
+                                       "RoomType":  "Other",
+                                       "RoomLevel":  "Basement",
+                                       "RoomDimensions":  null,
+                                       "RoomFeatures":  [
+
+                                                        ],
+                                       "RoomLength":  3.43,
+                                       "RoomWidth":  3.75
+                                   }
+                               ]
+                 }
+}

@@ -19,91 +19,93 @@ export interface IndexedField {
   sort?: boolean;
 }
 
+// RAM POLICY (2026-05-19 — Typesense memory pressure cleanup):
+// Numeric fields used as range filters (>=, <=, [min..max]) do NOT need `facet: true`.
+// Facets materialize per-value bucket maps in RAM — they only earn their keep for
+// low-cardinality categorical UI (dropdowns, multi-selects). Every numeric below is a
+// slider/range in the UI, so they are kept sortable but no longer faceted.
+// PostalCode demoted: ~tens of thousands of unique values = pure RAM waste.
 export const indexedFields: IndexedField[] = [
   // Identity
   { name: 'id', type: 'string', facet: false },
-  
-  // Price
-  { name: 'ListPrice', type: 'int32', facet: true, sort: true },
-  
-  // Property Classification
+
+  // Price — range slider, not a facet
+  { name: 'ListPrice', type: 'int32', facet: false, sort: true },
+
+  // Property Classification — categorical, real facets
   { name: 'PropertyType', type: 'string', facet: true },
   { name: 'PropertySubType', type: 'string', facet: true },
-  
-  // Bedrooms / Bathrooms / Parking
-  { name: 'BedroomsTotal', type: 'int32', facet: true, sort: true },
-  { name: 'BathroomsTotalInteger', type: 'int32', facet: true, sort: true },
-  { name: 'ParkingTotal', type: 'int32', facet: true, sort: true },
-  
-  // Location (for city/region dropdowns)
+
+  // Bedrooms / Bathrooms / Parking — range sliders, not facets
+  { name: 'BedroomsTotal', type: 'int32', facet: false, sort: true },
+  { name: 'BathroomsTotalInteger', type: 'int32', facet: false, sort: true },
+  { name: 'ParkingTotal', type: 'int32', facet: false, sort: true },
+
+  // Location — city/region dropdowns are real facets; PostalCode is too high-cardinality
   { name: 'City', type: 'string', facet: true },
   { name: 'CityRegion', type: 'string', facet: true },
-  { name: 'PostalCode', type: 'string', facet: true },
-  
-  // Basement & Kitchens (multi-select faceting)
+  { name: 'PostalCode', type: 'string', facet: false },
+
+  // Basement (multi-select) — real facet. KitchensTotal is a range, not a facet
   { name: 'BasementType', type: 'string[]', facet: true },
-  { name: 'KitchensTotal', type: 'int32', facet: true },
-  
-  // Lot Dimensions (for investor lot-size sliders)
-  { name: 'LotWidth', type: 'float', facet: true, sort: true },
-  { name: 'LotDepth', type: 'float', facet: true, sort: true },
-  { name: 'LotSqftTotal', type: 'float', facet: true, sort: true },
-  
-  // ─── Extrapolated Cap Rate (Phase 3) ───────────────────────────────────────
-  // Pro Forma metrics for value-add analysis (facet: true, sort: true for "Highest Yield" sort)
-  { name: 'TotalCapitalBasis', type: 'float', facet: true, sort: true },
-  { name: 'ExtrapolatedCapRate', type: 'float', facet: true, sort: true },
-  { name: 'CapitalBurnRateMonthly', type: 'float', facet: true, sort: true },
-  
-  // ─── True Carry Cost (Phase 5) ─────────────────────────────────────────
-  // Monthly carry cost breakdown (facet: true for Smart Homebuyer filters)
-  { name: 'MonthlyCarryCost', type: 'float', facet: true, sort: true },
+  { name: 'KitchensTotal', type: 'int32', facet: false },
+
+  // Lot Dimensions — range sliders, not facets
+  { name: 'LotWidth', type: 'float', facet: false, sort: true },
+  { name: 'LotDepth', type: 'float', facet: false, sort: true },
+  { name: 'LotSqftTotal', type: 'float', facet: false, sort: true },
+
+  // ─── Extrapolated Cap Rate (Phase 3) — range sliders ──────────────────────
+  { name: 'TotalCapitalBasis', type: 'float', facet: false, sort: true },
+  { name: 'ExtrapolatedCapRate', type: 'float', facet: false, sort: true },
+  { name: 'CapitalBurnRateMonthly', type: 'float', facet: false, sort: true },
+
+  // ─── True Carry Cost (Phase 5) — range sliders ────────────────────────────
+  { name: 'MonthlyCarryCost', type: 'float', facet: false, sort: true },
   { name: 'MonthlyMortgage', type: 'float', facet: false, sort: true },
   { name: 'MonthlyPropertyTax', type: 'float', facet: false, sort: true },
   { name: 'MonthlyHOA', type: 'float', facet: false, sort: true },
   { name: 'MonthlyInsurance', type: 'float', facet: false, sort: true },
   { name: 'MonthlyCapEx', type: 'float', facet: false, sort: true },
-  
-  // ─── Temporal Distress (Phase 4) ───────────────────────────────────────
-  // True DOM metrics for entity resolution and stale inventory detection
-  { name: 'TrueDom', type: 'int32', facet: true, sort: true },
+
+  // ─── Temporal Distress (Phase 4) — TrueDom is a slider, booleans are facets ─
+  { name: 'TrueDom', type: 'int32', facet: false, sort: true },
   { name: 'TotalPriceDrop', type: 'int32', sort: true },
   { name: 'IsStale', type: 'bool', facet: true },
   { name: 'IsSold', type: 'bool', facet: true },
-  
-  // ─── Suite Analysis (Phase 5) ─────────────────────────────────────────
+
+  // ─── Suite Analysis (Phase 5) — status enum is a facet, score is a slider ─
   { name: 'SuiteStatus', type: 'string', facet: true },
-  { name: 'SuiteScore', type: 'int32', facet: true, sort: true },
-  
-  // ─── Persona 2: Cashflow Investor Terminal ──────────────────────────────
-  // Derived Financial Metrics
-  { name: 'cap_rate_est', type: 'float', facet: true, sort: true },
-  { name: 'cap_rate_floor', type: 'float', facet: true, sort: true },
-  { name: 'gross_yield_est', type: 'float', facet: true, sort: true },
-  { name: 'net_monthly_cashflow', type: 'int32', facet: true, sort: true },
-  { name: 'cashflow_floor', type: 'int32', facet: true },
-  { name: 'tax_burden_ratio', type: 'float', facet: true },
+  { name: 'SuiteScore', type: 'int32', facet: false, sort: true },
+
+  // ─── Persona 2: Cashflow Investor — all numerics are sliders ──────────────
+  { name: 'cap_rate_est', type: 'float', facet: false, sort: true },
+  { name: 'cap_rate_floor', type: 'float', facet: false, sort: true },
+  { name: 'gross_yield_est', type: 'float', facet: false, sort: true },
+  { name: 'net_monthly_cashflow', type: 'int32', facet: false, sort: true },
+  { name: 'cashflow_floor', type: 'int32', facet: false },
+  { name: 'tax_burden_ratio', type: 'float', facet: false },
   { name: 'assessment_status', type: 'string', facet: true },
-  
+
   // Multi-Unit / Suite Scoring
   { name: 'multi_unit_status', type: 'string', facet: true },
   { name: 'suite_confidence', type: 'string' },
-  
+
   // Parking / Density
-  { name: 'surplus_parking_count', type: 'int32', facet: true, sort: true },
+  { name: 'surplus_parking_count', type: 'int32', facet: false, sort: true },
   { name: 'is_density_ready', type: 'bool', facet: true },
-  
-  // Standard API Inputs (ensure they are indexed)
+
+  // Standard API Inputs (low-cardinality enums)
   { name: 'OccupantType', type: 'string', facet: true },
   { name: 'PossessionType', type: 'string', facet: true },
-  
+
   // Status & Age
   { name: 'Status', type: 'string', facet: true },
   { name: 'ApproximateAge', type: 'string', facet: true },
-  
+
   // Timestamp for fast sorting by entry date
   { name: 'EntryTimestamp', type: 'int64', sort: true },
-  
+
   // Geolocation (for map viewport queries)
   { name: 'location', type: 'geopoint', facet: false },
 ];
@@ -135,70 +137,67 @@ export const unindexedFields: UnindexedField[] = [
 export const typesenseSchema = {
   name: 'properties',
   fields: [
-    // ─── Indexed Core ───────────────────────────────────────────────────────
+    // ─── Indexed Core (see RAM POLICY note above) ───────────────────────────
     { name: 'id', type: 'string' as const, facet: false },
-    { name: 'ListPrice', type: 'int32' as const, facet: true, sort: true },
+    { name: 'ListPrice', type: 'int32' as const, facet: false, sort: true },
     { name: 'PropertyType', type: 'string' as const, facet: true },
     { name: 'PropertySubType', type: 'string' as const, facet: true },
-    { name: 'BedroomsTotal', type: 'int32' as const, facet: true, sort: true },
-    { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: true, sort: true },
-    { name: 'ParkingTotal', type: 'int32' as const, facet: true, sort: true },
+    { name: 'BedroomsTotal', type: 'int32' as const, facet: false, sort: true },
+    { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: false, sort: true },
+    { name: 'ParkingTotal', type: 'int32' as const, facet: false, sort: true },
     { name: 'City', type: 'string' as const, facet: true },
     { name: 'CityRegion', type: 'string' as const, facet: true },
-    { name: 'PostalCode', type: 'string' as const, facet: true },
+    { name: 'PostalCode', type: 'string' as const, facet: false },
     { name: 'BasementType', type: 'string[]' as const, facet: true },
-    { name: 'KitchensTotal', type: 'int32' as const, facet: true },
-    { name: 'LotWidth', type: 'float' as const, facet: true, sort: true },
-    { name: 'LotDepth', type: 'float' as const, facet: true, sort: true },
-    { name: 'LotSqftTotal', type: 'float' as const, facet: true, sort: true },
-    
-    // ─── Extrapolated Cap Rate (Phase 3) ───────────────────────────────────────
-    { name: 'TotalCapitalBasis', type: 'float' as const, facet: true, sort: true },
-    { name: 'ExtrapolatedCapRate', type: 'float' as const, facet: true, sort: true },
-    { name: 'CapitalBurnRateMonthly', type: 'float' as const, facet: true, sort: true },
-    
-    // ─── True Carry Cost (Phase 5) ─────────────────────────────────────────
-    // Monthly carry cost breakdown for Smart Homebuyer persona
-    { name: 'MonthlyCarryCost', type: 'float' as const, facet: true, sort: true },
+    { name: 'KitchensTotal', type: 'int32' as const, facet: false },
+    { name: 'LotWidth', type: 'float' as const, facet: false, sort: true },
+    { name: 'LotDepth', type: 'float' as const, facet: false, sort: true },
+    { name: 'LotSqftTotal', type: 'float' as const, facet: false, sort: true },
+
+    // ─── Extrapolated Cap Rate (Phase 3) — range sliders ───────────────────
+    { name: 'TotalCapitalBasis', type: 'float' as const, facet: false, sort: true },
+    { name: 'ExtrapolatedCapRate', type: 'float' as const, facet: false, sort: true },
+    { name: 'CapitalBurnRateMonthly', type: 'float' as const, facet: false, sort: true },
+
+    // ─── True Carry Cost (Phase 5) — range sliders ─────────────────────────
+    { name: 'MonthlyCarryCost', type: 'float' as const, facet: false, sort: true },
     { name: 'MonthlyMortgage', type: 'float' as const, facet: false, sort: true },
     { name: 'MonthlyPropertyTax', type: 'float' as const, facet: false, sort: true },
     { name: 'MonthlyHOA', type: 'float' as const, facet: false, sort: true },
     { name: 'MonthlyInsurance', type: 'float' as const, facet: false, sort: true },
     { name: 'MonthlyCapEx', type: 'float' as const, facet: false, sort: true },
-    
-    // ─── Suite Analysis (Phase 5) ─────────────────────────────────────────
-    // Secondary suite potential scoring
+
+    // ─── Suite Analysis (Phase 5) ──────────────────────────────────────────
     { name: 'SuiteStatus', type: 'string' as const, facet: true },
-    { name: 'SuiteScore', type: 'int32' as const, facet: true, sort: true },
-    
+    { name: 'SuiteScore', type: 'int32' as const, facet: false, sort: true },
+
     // ─── Temporal Distress (Phase 4) ───────────────────────────────────────
     { name: 'PropertyHash', type: 'string' as const, index: false, facet: false },
-    { name: 'TrueDom', type: 'int32' as const, facet: true, sort: true },
+    { name: 'TrueDom', type: 'int32' as const, facet: false, sort: true },
     { name: 'TotalPriceDrop', type: 'int32' as const, sort: true },
     { name: 'IsStale', type: 'bool' as const, facet: true },
-    
-    // ─── Persona 2: Cashflow Investor Terminal ──────────────────────────────
-    // Derived Financial Metrics
-    { name: 'cap_rate_est', type: 'float' as const, facet: true, sort: true },
-    { name: 'cap_rate_floor', type: 'float' as const, facet: true, sort: true },
-    { name: 'gross_yield_est', type: 'float' as const, facet: true, sort: true },
-    { name: 'net_monthly_cashflow', type: 'int32' as const, facet: true, sort: true },
-    { name: 'cashflow_floor', type: 'int32' as const, facet: true },
-    { name: 'tax_burden_ratio', type: 'float' as const, facet: true },
+
+    // ─── Persona 2: Cashflow Investor — range sliders ──────────────────────
+    { name: 'cap_rate_est', type: 'float' as const, facet: false, sort: true },
+    { name: 'cap_rate_floor', type: 'float' as const, facet: false, sort: true },
+    { name: 'gross_yield_est', type: 'float' as const, facet: false, sort: true },
+    { name: 'net_monthly_cashflow', type: 'int32' as const, facet: false, sort: true },
+    { name: 'cashflow_floor', type: 'int32' as const, facet: false },
+    { name: 'tax_burden_ratio', type: 'float' as const, facet: false },
     { name: 'assessment_status', type: 'string' as const, facet: true },
-    
+
     // Multi-Unit / Suite Scoring
     { name: 'multi_unit_status', type: 'string' as const, facet: true },
     { name: 'suite_confidence', type: 'string' as const },
-    
+
     // Parking / Density
-    { name: 'surplus_parking_count', type: 'int32' as const, facet: true, sort: true },
+    { name: 'surplus_parking_count', type: 'int32' as const, facet: false, sort: true },
     { name: 'is_density_ready', type: 'bool' as const, facet: true },
-    
+
     // Standard API Inputs
     { name: 'OccupantType', type: 'string' as const, facet: true },
     { name: 'PossessionType', type: 'string' as const, facet: true },
-    
+
     { name: 'Status', type: 'string' as const, facet: true },
     { name: 'ApproximateAge', type: 'string' as const, facet: true },
     { name: 'EntryTimestamp', type: 'int64' as const, sort: true },

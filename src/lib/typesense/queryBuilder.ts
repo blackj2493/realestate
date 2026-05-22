@@ -29,6 +29,38 @@ export function buildFilterQuery(): string {
     filters.push(`tax_burden_ratio:<=${state.taxBurdenMax}`);
   }
 
+  // ─── Flipper & Deal Hunter Filters ─────────────────────────────────────
+  
+  // showOnlyDistressed → deal_type_flag:=[LEGAL_DISTRESS,ASSIGNMENT_SALE,FIXER_UPPER,MOTIVATED_SELLER]
+  if (state.showOnlyDistressed) {
+    filters.push(`deal_type_flag:=["LEGAL_DISTRESS","ASSIGNMENT_SALE","FIXER_UPPER","MOTIVATED_SELLER"]`);
+  }
+  
+  // maxHoldingCostRange → max_holding_cost:[min..max]
+  if (state.maxHoldingCostRange[0] > 0 || state.maxHoldingCostRange[1] < 10000) {
+    filters.push(`max_holding_cost:[${state.maxHoldingCostRange[0]}..${state.maxHoldingCostRange[1]}]`);
+  }
+  
+  // minTrueDomRange → true_dom:=[min..]
+  if (state.minTrueDomRange[0] > 0) {
+    filters.push(`true_dom:>=${state.minTrueDomRange[0]}`);
+  }
+  
+  // unfinishedBasementOnly → basement:=[Unfinished]
+  if (state.unfinishedBasementOnly) {
+    filters.push(`basement_type:=["Unfinished"]`);
+  }
+  
+  // vacantPossessionOnly → occupant_type:=[Vacant]
+  if (state.vacantPossessionOnly) {
+    filters.push(`occupant_type:=["Vacant"]`);
+  }
+  
+  // priceDropRange → true_price_drop_pct:[min..max]
+  if (state.priceDropRange[0] > 0 || state.priceDropRange[1] < 100) {
+    filters.push(`true_price_drop_pct:[${state.priceDropRange[0]}..${state.priceDropRange[1]}]`);
+  }
+
   return filters.join(' && ');
 }
 

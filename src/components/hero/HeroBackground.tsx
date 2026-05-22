@@ -1,0 +1,38 @@
+"use client";
+
+import dynamic from "next/dynamic";
+
+const HeroMapCanvas = dynamic(() => import("./HeroMapCanvas"), { ssr: false });
+
+export default function HeroBackground({
+  variant = "hero",
+}: {
+  variant?: "hero" | "form";
+}) {
+  // Keep the map clearly visible; only enough scrim for text legibility.
+  const scrim =
+    variant === "form"
+      ? "radial-gradient(115% 95% at 50% 35%, rgba(2,6,23,0.32) 0%, rgba(2,6,23,0.6) 100%)"
+      : "radial-gradient(115% 95% at 50% 40%, rgba(2,6,23,0.06) 0%, rgba(2,6,23,0.5) 100%)";
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-slate-950">
+      {/* Faint texture shown only until the map tiles load */}
+      <div className="grid-pattern absolute inset-0 opacity-20" />
+
+      {/* Live deck.gl + Mapbox dark map */}
+      <HeroMapCanvas />
+
+      {/* Subtle emerald top wash */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(80% 50% at 50% 0%, rgba(16,185,129,0.10) 0%, transparent 60%)",
+        }}
+      />
+      {/* Vignette + legibility scrim */}
+      <div className="absolute inset-0" style={{ background: scrim }} />
+    </div>
+  );
+}

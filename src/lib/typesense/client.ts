@@ -127,6 +127,27 @@ export interface ListingDocument {
   
   // ─── Phase 5: Stale Inventory ─────────────────────────────────────────
   IsStale?: boolean;
+
+  // ─── Cap Rate / Yield (Phase 5 estimates) ────────────────────────────
+  cap_rate_est?: number;
+  gross_yield_est?: number;
+
+  // ─── Builder / Density / Zoning ──────────────────────────────────────
+  LotSqftTotal?: number;
+  lot_width_ft?: number;
+  lot_depth_ft?: number;
+  zoning_designation?: string;
+  multiplex_by_right?: boolean;
+  multi_unit_status?: 'NOT_VIABLE' | 'EXISTING_MULTI_UNIT' | 'PRIME_CANDIDATE' | 'MARGINAL_CANDIDATE' | string;
+  is_density_ready?: boolean;
+  surplus_parking_count?: number;
+  infrastructure_flag?: string;
+  BasementType?: string[];
+  KitchensTotal?: number;
+
+  // ─── Status / DOM ────────────────────────────────────────────────────
+  Status?: string;
+  DaysOnMarket?: number;
 }
 
 export interface SearchFilters {
@@ -187,6 +208,8 @@ export interface SearchOptions {
   perPage?: number;
   sortBy?: string;  // Overrides default sort
   sortOrder?: 'asc' | 'desc';
+  rawFilterBy?: string;  // Raw Typesense filter_by string (appended via &&) for persona builders
+  geoPolygon?: [number, number][];  // Commute isochrone ring in [lat, lng] order
 }
 
 export interface SearchResult {
@@ -217,11 +240,18 @@ export async function searchListings(
     page = 1,
     perPage = 20,
     sortBy,
-    sortOrder = 'asc'
+    sortOrder = 'asc',
+    rawFilterBy,
+    geoPolygon
   } = options;
-  
+
   // Build filter string
   const filterParts: string[] = [];
+
+  // Raw filter_by passthrough (persona builders emit colon-operator strings)
+  if (rawFilterBy && rawFilterBy.trim()) {
+    filterParts.push(rawFilterBy.trim());
+  }
   
   // City filter - exact match (no operator needed for string equality)
   if (filters.city) {
@@ -331,11 +361,9 @@ export async function searchListings(
   // Build search params
   const searchParams: Record<string, unknown> = {
     q: query || '*',
-    query_by: 'City,UnparsedAddress,PropertySubType',
+    query_by: 'City,CityRegion,PropertySubType',
     page,
     per_page: perPage,
-    facet_by: 'City,PropertySubType,PropertyType,TransactionType,ApproximateAge,isDistressed,hasSecondarySuitePotential',
-    max_facet_values: 50
   };
   
   // Apply filter string
@@ -350,14 +378,26 @@ export async function searchListings(
     searchParams.sort_by = `${sortBy}:${sortOrder}`;
   }
   
-  // Geospatial bounding box
+  // Geospatial bounding box — Typesense geo filter expects a polygon of
+  // (lat, lng) pairs. Build the 4 corners from the viewport bounds.
   if (filters.boundingBox) {
-    const { south, west } = filters.boundingBox;
-    searchParams.filter_by = searchParams.filter_by 
-      ? `${searchParams.filter_by} && location:=[${south}, ${west}]`
-      : `location:=[${south}, ${west}]`;
+    const { north, south, east, west } = filters.boundingBox;
+    const geoFilter = `location:(${south}, ${west}, ${south}, ${east}, ${north}, ${east}, ${north}, ${west})`;
+    searchParams.filter_by = searchParams.filter_by
+      ? `${searchParams.filter_by} && ${geoFilter}`
+      : geoFilter;
   }
-  
+
+  // Commute isochrone polygon — same geopoint mechanism as the bounding box.
+  // geoPolygon is already [lat, lng] pairs; flatten into the location:() filter.
+  if (geoPolygon && geoPolygon.length >= 3) {
+    const coords = geoPolygon.map(([lat, lng]) => `${lat}, ${lng}`).join(', ');
+    const polyFilter = `location:(${coords})`;
+    searchParams.filter_by = searchParams.filter_by
+      ? `${searchParams.filter_by} && ${polyFilter}`
+      : polyFilter;
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: any = await client
@@ -366,7 +406,7 @@ export async function searchListings(
       .search(searchParams);
      
     return {
-      listings: (response.hits || []).map((hit: any) => hit.document as ListingDocument),
+      listings: (response.hits || []).map((hit: { document: ListingDocument }) => hit.document),
       totalFound: response.found || 0,
       page: response.page || page,
       perPage: perPage,
@@ -407,7 +447,7 @@ export async function searchListingsInBounds(
  * Get nearby listings using geopoint
  * 
  * Typesense expects radius in KM, not meters
- * Format: location:=[lat, lng, radius_in_km]
+ * Format: location:(lat, lng, radius_in_km km)
  */
 export async function getNearbyListings(
   lat: number,
@@ -416,15 +456,15 @@ export async function getNearbyListings(
   options: Partial<SearchOptions> = {}
 ): Promise<SearchResult> {
   const client = getTypesenseClient();
-  
-  // Typesense geopoint format: location:=[lat, lng, radius_in_km]
+
+  // Typesense geo radius filter: location:(lat, lng, radius km)
   // Note: Typesense expects radius in km, NOT meters!
   const searchParams: Record<string, unknown> = {
     q: options.query || '*',
-    query_by: 'UnparsedAddress,City,PropertySubType',
+    query_by: 'City,CityRegion,PropertySubType',
     page: options.page || 1,
     per_page: options.perPage || 20,
-    filter_by: `location:=[${lat}, ${lng}, ${radiusKm}]`,
+    filter_by: `location:(${lat}, ${lng}, ${radiusKm} km)`,
     sort_by: 'calculatedDOM:asc'
   };
   
@@ -436,7 +476,7 @@ export async function getNearbyListings(
       .search(searchParams);
     
     return {
-      listings: (response.hits || []).map((hit: any) => hit.document as ListingDocument),
+      listings: (response.hits || []).map((hit: { document: ListingDocument }) => hit.document),
       totalFound: response.found || 0,
       page: response.page || 1,
       perPage: options.perPage || 20,

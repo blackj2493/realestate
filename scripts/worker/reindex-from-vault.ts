@@ -1,12 +1,17 @@
 /**
  * Shadow MLS - Vault Re-Indexer (Memory-Safe Edition)
- * 
- * Re-indexes ALL listings from Supabase Vault (listings table) into Typesense.
+ *
+ * Re-indexes ACTIVE listings from Supabase Vault (listings table) into Typesense.
  * Uses cursor-based pagination to handle 90k+ records without V8 OOM crashes.
- * 
+ *
+ * Builds each document via the SAME transformListing() the daily sync uses, so the
+ * full Typesense schema (all required fields + financial metrics) is always
+ * satisfied. Non-active listings (Sold/Closed/Leased/etc.) are skipped — they are
+ * never indexed (Supabase serves sold comps; indexing them caused Typesense OOM).
+ *
  * WARNING: Uses SUPABASE_SERVICE_ROLE_KEY - NEVER expose to frontend!
- * 
- * Run: npx tsx scripts/worker/reindex-from-vault.ts
+ *
+ * Run: npx tsx --env-file=.env scripts/worker/reindex-from-vault.ts
  */
 
 // MUST set TLS env var BEFORE importing supabase client
@@ -15,6 +20,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Typesense from 'typesense';
 import * as https from 'https';
+import * as fs from 'fs';
 
 // Import cross-fetch
 import crossFetch from 'cross-fetch';
@@ -34,10 +40,33 @@ const patchedFetch: typeof fetch = (url, init) => {
 // Configuration
 // ============================================================================
 
-const CHUNK_SIZE = 500;  // Strict batch size for memory safety
+// ── Gentle / IO-frugal mode ─────────────────────────────────────────────────
+// This is a one-off bulk job competing for a finite Supabase Disk IO burst
+// budget. A previous aggressive run (CHUNK_SIZE=500, concurrency=25) drained the
+// budget and throttled the whole instance to its baseline IO rate, after which
+// even `SELECT id LIMIT 1` took ~11s and every fetch hit the statement timeout.
+// These settings keep the sustained read rate low enough that the budget refills
+// roughly as fast as we spend it, so the run can complete without re-throttling.
+const CHUNK_SIZE = 100;            // Rows per Supabase page. Small so each fetch
+                                   // (heavy full_payload JSONB) clears the
+                                   // statement timeout even near baseline IO.
+const TRANSFORM_CONCURRENCY = 4;   // Concurrent transformListing() calls per chunk.
+                                   // Each does ~3-4 Supabase AVM queries, so this
+                                   // caps instantaneous reads at ~12-16 — low on
+                                   // purpose (cf. 2026-05-19 Disk IO Budget incident).
+const BASE_BATCH_DELAY_MS = 750;   // Idle gap between batches to let IO budget refill.
+const FETCH_MAX_RETRIES = 8;       // Per-chunk fetch retries before aborting.
+const FETCH_BACKOFF_BASE_MS = 8000;  // First backoff after a timeout; doubles each retry.
+const FETCH_BACKOFF_CAP_MS = 90000;  // Max single backoff (90s).
+const CHECKPOINT_FILE = 'scripts/.reindex-cursor'; // Last indexed id, for resume.
 const TYPESENSE_COLLECTION = 'properties';
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
+
+// Listings no longer available are never indexed (mirror sync.ts:NON_ACTIVE_STATUSES).
+const NON_ACTIVE_STATUSES = new Set([
+  'sold', 'closed', 'closed sale', 'leased', 'terminated', 'expired', 'suspended',
+]);
 
 // Environment variables
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://pyzgnivixhnwzfrdkiq.supabase.co').trim();
@@ -62,20 +91,13 @@ interface ListingRecord {
   id: number;
   listing_key: string;
   full_payload: Record<string, unknown>;
-  derived_metrics: {
-    calculatedDOM: number | null;
-    targetGrossYield: number | null;
-    isDistressed: boolean;
-    hasSecondarySuitePotential: boolean;
-  };
-  needs_geocoding: boolean;
-  city: string | null;
-  property_sub_type: string | null;
+  property_hash: string | null;
 }
 
 interface TransformResult {
   success: number;
   failed: number;
+  skipped: number;  // non-active listings excluded from the index
   failedIds: string[];
   errors: string[];
 }
@@ -99,6 +121,21 @@ const typesense = new Typesense.Client({
 });
 
 // ============================================================================
+// Shared transformer (dynamic import — keeps the TLS/fetch patch above in
+// effect before transformer.ts pulls in the Supabase-backed AVM services).
+// ============================================================================
+
+type TransformListing = typeof import('./transformer')['transformListing'];
+let transformListing: TransformListing | null = null;
+
+async function ensureTransformerLoaded(): Promise<void> {
+  if (transformListing) return;
+  const mod = await import('./transformer');
+  transformListing = mod.transformListing;
+  console.log('[Reindex] Shared transformListing() loaded');
+}
+
+// ============================================================================
 // Postal Code Lookup (imported from master library)
 // ============================================================================
 
@@ -106,7 +143,7 @@ let postalCodesLoaded = false;
 
 async function ensurePostalCodesLoaded(): Promise<void> {
   if (postalCodesLoaded) return;
-  
+
   try {
     const postalCodes = await import('../../src/lib/postalCodes');
     postalCodes.loadPostalCodes();
@@ -119,112 +156,45 @@ async function ensurePostalCodesLoaded(): Promise<void> {
 }
 
 // ============================================================================
-// Location Resolution (mirrors transformer.ts logic)
+// Helpers
 // ============================================================================
 
-function resolveLocation(raw: Record<string, unknown>): { location: [number, number]; needsGeocoding: boolean } {
-  const FALLBACK_LNG = -79.3832;
-  const FALLBACK_LAT = 43.6532;
-  
-  const postalCode = raw.PostalCode as string | null;
-  const apiLat = raw.Latitude as number | null;
-  const apiLng = raw.Longitude as number | null;
-  
-  // Use the require pattern for synchronous access (module is pre-loaded)
-  let postalCoords: { lat: number; lng: number } | null = null;
-  try {
-    // Dynamic require for CommonJS interop
-    const postalCodesModule = require('../../src/lib/postalCodes');
-    postalCoords = postalCodesModule.getCoordinates(postalCode);
-  } catch {
-    // Fallback if module not found
-  }
-  
-  if (postalCoords) {
-    return {
-      location: [postalCoords.lng, postalCoords.lat] as [number, number],
-      needsGeocoding: false
-    };
-  }
-  
-  // Use API coordinates if available
-  if (apiLat !== null && apiLat !== undefined && apiLng !== null && apiLng !== undefined) {
-    return {
-      location: [apiLng, apiLat] as [number, number],
-      needsGeocoding: false
-    };
-  }
-  
-  // Final fallback to Toronto
-  return {
-    location: [FALLBACK_LNG, FALLBACK_LAT] as [number, number],
-    needsGeocoding: true
-  };
+/** Status precedence mirrors transformer.ts (Status → MlsStatus → StandardStatus). */
+function isActiveListing(raw: Record<string, unknown>): boolean {
+  const status = String(
+    (raw.Status as string) || (raw.MlsStatus as string) || (raw.StandardStatus as string) || ''
+  ).trim().toLowerCase();
+  return !NON_ACTIVE_STATUSES.has(status);
 }
 
-// ============================================================================
-// Transform a single listing record
-// ============================================================================
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-function transformRecord(record: ListingRecord): Record<string, unknown> | null {
-  try {
-    const raw = record.full_payload;
-    const geo = resolveLocation(raw);
-    const metrics = record.derived_metrics || {};
-    
-    // Build Typesense document (lean format)
-    const document: Record<string, unknown> = {
-      id: record.listing_key,
-      ListPrice: raw.ListPrice ?? 0,
-      isDistressed: metrics.isDistressed ?? false,
-      hasSecondarySuitePotential: metrics.hasSecondarySuitePotential ?? false,
-      location: geo.location
-    };
-    
-    // Add optional fields
-    if (raw.UnparsedAddress) document.UnparsedAddress = raw.UnparsedAddress;
-    if (raw.City) document.City = raw.City;
-    if (raw.BedroomsTotal !== undefined && raw.BedroomsTotal !== null) {
-      document.BedroomsTotal = parseInt(String(raw.BedroomsTotal), 10);
+/** A throttled instance surfaces as a statement timeout, or a masked empty error. */
+function isThrottleError(msg: string): boolean {
+  const m = (msg || '').toLowerCase();
+  return (
+    m === '' ||
+    m.includes('statement timeout') ||
+    m.includes('canceling statement') ||
+    m.includes('timeout') ||
+    m.includes('fetch failed')
+  );
+}
+
+/** Run an async mapper over items with a bounded concurrency pool. */
+async function mapWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const idx = cursor++;
+      await fn(items[idx]);
     }
-    if (raw.BathroomsTotalInteger !== undefined && raw.BathroomsTotalInteger !== null) {
-      document.BathroomsTotalInteger = parseFloat(String(raw.BathroomsTotalInteger));
-    }
-    if (raw.PropertySubType) document.PropertySubType = raw.PropertySubType;
-    if (raw.PropertyType) document.PropertyType = raw.PropertyType;
-    if (raw.TransactionType) document.TransactionType = raw.TransactionType;
-    if (raw.TaxAnnualAmount !== undefined && raw.TaxAnnualAmount !== null) {
-      document.TaxAnnualAmount = parseFloat(String(raw.TaxAnnualAmount));
-    }
-    if (raw.AssociationFee !== undefined && raw.AssociationFee !== null) {
-      document.AssociationFee = parseFloat(String(raw.AssociationFee));
-    }
-    if (raw.LotWidth !== undefined && raw.LotWidth !== null) {
-      document.LotWidth = parseFloat(String(raw.LotWidth));
-    }
-    if (raw.LotDepth !== undefined && raw.LotDepth !== null) {
-      document.LotDepth = parseFloat(String(raw.LotDepth));
-    }
-    if (raw.ApproximateAge) document.ApproximateAge = raw.ApproximateAge;
-    if (raw.ParkingTotal !== undefined && raw.ParkingTotal !== null) {
-      document.ParkingTotal = raw.ParkingTotal;
-    }
-    if (raw.BuildingAreaTotal !== undefined && raw.BuildingAreaTotal !== null) {
-      document.BuildingAreaTotal = parseFloat(String(raw.BuildingAreaTotal));
-    }
-    if (metrics.targetGrossYield !== null && metrics.targetGrossYield !== undefined) {
-      document.targetGrossYield = metrics.targetGrossYield;
-    }
-    if (metrics.calculatedDOM !== null && metrics.calculatedDOM !== undefined) {
-      document.calculatedDOM = metrics.calculatedDOM;
-    }
-    if (raw.ListOfficeName) document.ListOfficeName = raw.ListOfficeName;
-    if (raw.primaryImageUrl) document.primaryImageUrl = raw.primaryImageUrl;
-    
-    return document;
-  } catch (err) {
-    return null;
-  }
+  });
+  await Promise.all(workers);
 }
 
 // ============================================================================
@@ -235,25 +205,48 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
   const result: TransformResult = {
     success: 0,
     failed: 0,
+    skipped: 0,
     failedIds: [],
     errors: []
   };
-  
-  // Transform all records first
+
+  // Active-only filter BEFORE the expensive transform — avoids running AVM
+  // lookups on Sold/Closed rows we would discard anyway.
+  const active = records.filter(r => isActiveListing(r.full_payload));
+  result.skipped = records.length - active.length;
+
+  if (active.length === 0) {
+    return result;
+  }
+
+  // Transform with bounded concurrency. Reuses the canonical transformListing()
+  // (full schema), then appends the temporal fields it does not set.
   const documents: Record<string, unknown>[] = [];
-  
-  for (const record of records) {
-    const doc = transformRecord(record);
-    if (doc) {
+
+  await mapWithConcurrency(active, TRANSFORM_CONCURRENCY, async (record) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = record.full_payload as any;
+      const { typesensePayload } = await transformListing!(raw);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const doc: any = { ...typesensePayload };
+      // transformListing sets PropertyHash/TrueDom/IsStale but NOT TotalPriceDrop
+      // (a required int32). Prefer values already persisted in the vault for fidelity.
+      doc.TotalPriceDrop = (raw.total_price_drop ?? doc.TotalPriceDrop ?? 0);
+      doc.PropertyHash = record.property_hash || doc.PropertyHash || '';
+      doc.TrueDom = (raw.true_dom ?? doc.TrueDom ?? 0);
+
       documents.push(doc);
-      result.success++;
-    } else {
+    } catch (err) {
       result.failed++;
       result.failedIds.push(record.listing_key);
-      result.errors.push(`Transform failed: ${record.listing_key}`);
+      result.errors.push(
+        `Transform failed ${record.listing_key}: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
-  }
-  
+  });
+
   // Push to Typesense if we have documents
   if (documents.length > 0) {
     try {
@@ -261,28 +254,51 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
         .collections(TYPESENSE_COLLECTION)
         .documents()
         .import(documents, { action: 'upsert' });
-      
-      // Typesense returns array of results for bulk import
+
+      // On full success the client returns an array of per-doc results.
       if (Array.isArray(importResult)) {
+        let ok = 0;
+        let bad = 0;
         importResult.forEach((item, idx) => {
-          if (!item.success && item.error) {
-            result.failed++;
+          if (item.success) {
+            ok++;
+          } else {
+            bad++;
             result.failedIds.push(documents[idx].id as string);
             result.errors.push(`Typesense error for ${documents[idx].id}: ${item.error}`);
-            result.success = Math.max(0, result.success - 1);
           }
         });
+        result.success += ok;
+        result.failed += bad;
+      } else {
+        result.success += documents.length;
       }
     } catch (err) {
-      // Network/timeout error - continue to next batch
+      // typesense-js throws ImportError (with .importResults) when any doc fails.
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error(`   ⚠️ Typesense import error: ${errorMsg}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyErr = err as any;
+
+      if (anyErr?.importResults && Array.isArray(anyErr.importResults)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const failures = anyErr.importResults.filter((r: any) => r.success === false || r.error);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        failures.slice(0, 5).forEach((r: any) => {
+          const docId = r.document?.id || r.document?.ListingKey || 'unknown';
+          console.error(`      📋 [${docId}]: ${r.error}`);
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ok = anyErr.importResults.filter((r: any) => r.success).length;
+        result.success += ok;
+        result.failed += (documents.length - ok);
+      } else {
+        result.failed += documents.length;
+      }
       result.errors.push(`Batch import failed: ${errorMsg}`);
-      result.failed += documents.length;
-      result.success = 0;
     }
   }
-  
+
   return result;
 }
 
@@ -297,31 +313,53 @@ interface FetchResult {
 }
 
 async function fetchChunk(lastId: number | null): Promise<FetchResult> {
-  let query = supabase
-    .from('listings')
-    .select('id, listing_key, full_payload, derived_metrics, needs_geocoding, city, property_sub_type')
-    .order('id', { ascending: true })
-    .limit(CHUNK_SIZE);
-  
-  // Cursor-based pagination using ID
-  if (lastId !== null) {
-    query = query.gt('id', lastId);
+  // Retry the fetch with exponential backoff. A throttled instance recovers IO
+  // budget over time, so backing off (rather than hammering) is what lets the
+  // run make progress. Each attempt rebuilds the query — supabase-js builders
+  // are single-use thenables and cannot be awaited twice.
+  for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt++) {
+    let query = supabase
+      .from('listings')
+      .select('id, listing_key, full_payload, property_hash')
+      .order('id', { ascending: true })
+      .limit(CHUNK_SIZE);
+
+    if (lastId !== null) {
+      query = query.gt('id', lastId);
+    }
+
+    const { data, error } = await query;
+
+    if (!error) {
+      const records = (data || []) as unknown as ListingRecord[];
+      const lastRecordId = records.length > 0 ? records[records.length - 1].id : null;
+      return {
+        records,
+        lastId: lastRecordId,
+        hasMore: records.length === CHUNK_SIZE,
+      };
+    }
+
+    // Non-throttle errors are real bugs — fail fast, don't waste the IO budget.
+    if (!isThrottleError(error.message)) {
+      throw new Error(`Failed to fetch listings: ${error.message}`);
+    }
+
+    if (attempt === FETCH_MAX_RETRIES) {
+      throw new Error(
+        `Fetch still timing out after ${FETCH_MAX_RETRIES} retries (instance throttled): ${error.message || 'statement timeout'}`
+      );
+    }
+
+    const backoff = Math.min(FETCH_BACKOFF_CAP_MS, FETCH_BACKOFF_BASE_MS * 2 ** attempt);
+    console.warn(
+      `   ⏳ Fetch timed out (attempt ${attempt + 1}/${FETCH_MAX_RETRIES}) — instance likely IO-throttled; backing off ${Math.round(backoff / 1000)}s...`
+    );
+    await sleep(backoff);
   }
-  
-  const { data, error } = await query;
-  
-  if (error) {
-    throw new Error(`Failed to fetch listings: ${error.message}`);
-  }
-  
-  const records = (data || []) as unknown as ListingRecord[];
-  const lastRecordId = records.length > 0 ? records[records.length - 1].id : null;
-  
-  return {
-    records,
-    lastId: lastRecordId,
-    hasMore: records.length === CHUNK_SIZE
-  };
+
+  // Unreachable (loop either returns or throws), but satisfies the type checker.
+  throw new Error('Failed to fetch listings: exhausted retries');
 }
 
 // ============================================================================
@@ -331,69 +369,90 @@ async function fetchChunk(lastId: number | null): Promise<FetchResult> {
 async function reindexFromVault(): Promise<void> {
   console.log('\n🚀 Shadow MLS - Vault Re-Indexer (Memory-Safe)');
   console.log('===============================================\n');
-  
+
   console.log('📋 Configuration:');
   console.log(`   Supabase URL: ${SUPABASE_URL.split('//')[1]?.split('.')[0] || 'hidden'}.supabase.co`);
   console.log(`   Chunk size: ${CHUNK_SIZE} records`);
+  console.log(`   Transform concurrency: ${TRANSFORM_CONCURRENCY}`);
   console.log(`   Typesense collection: ${TYPESENSE_COLLECTION}`);
   console.log('');
-  
+
   // Ensure postal codes are loaded
   await ensurePostalCodesLoaded();
-  
-  // Count total for progress display
-  console.log('🔍 Counting total listings in vault...');
+
+  // Count total for the progress display only (best-effort). An `exact` count on
+  // the full 112k listings table exceeds the Postgres statement timeout (error
+  // 57014), so use the planner estimate and treat any failure as NON-FATAL — the
+  // loop paginates by cursor and does not depend on this number.
+  console.log('🔍 Estimating total listings in vault...');
+  let totalRecords = 0;
   const { count, error: countError } = await supabase
     .from('listings')
-    .select('*', { count: 'exact', head: true });
-  
+    .select('*', { count: 'estimated', head: true });
+
   if (countError) {
-    console.error('❌ Failed to count listings:', countError.message);
-    process.exit(1);
+    console.warn(`   ⚠️  Count unavailable (non-fatal): ${countError.message || 'statement timeout'} — progress % disabled`);
+  } else {
+    totalRecords = count ?? 0;
+    console.log(`   Estimated listings: ${totalRecords.toLocaleString()}`);
   }
-  
-  const totalRecords = count ?? 0;
-  console.log(`   Total listings: ${totalRecords.toLocaleString()}\n`);
-  
-  if (totalRecords === 0) {
-    console.log('✅ No listings to index. Exiting.');
-    return;
-  }
-  
+  console.log('');
+
+  // Load the shared transformer before the loop.
+  await ensureTransformerLoaded();
+
   // ========== MAIN LOOP ==========
-  console.log('📦 Starting memory-safe re-index...\n');
-  
+  console.log('📦 Starting memory-safe re-index (active inventory only)...\n');
+
+  // Resume from a prior interrupted run if a checkpoint exists. The reindex is
+  // idempotent (Typesense upsert), but resuming avoids re-reading already-done
+  // rows — i.e. avoids re-spending the scarce Disk IO budget on work we did.
   let lastId: number | null = null;
+  try {
+    if (fs.existsSync(CHECKPOINT_FILE)) {
+      const saved = parseInt(fs.readFileSync(CHECKPOINT_FILE, 'utf8').trim(), 10);
+      if (Number.isFinite(saved) && saved > 0) {
+        lastId = saved;
+        console.log(`↩️  Resuming from checkpoint: id > ${lastId} (delete ${CHECKPOINT_FILE} to start over)\n`);
+      }
+    }
+  } catch { /* checkpoint is best-effort */ }
+
   let processedCount = 0;
   let totalSuccess = 0;
   let totalFailed = 0;
+  let totalSkipped = 0;
   let batchNumber = 0;
-  
+
   // Create a flag for tracking completion
   let hasMore = true;
-  
+
   while (hasMore) {
     batchNumber++;
-    
-    // Fetch next chunk using cursor
+
+    // Fetch next chunk using cursor. fetchChunk retries timeouts internally with
+    // backoff; if it still throws, the instance hasn't recovered — abort cleanly
+    // so we stop spending IO. The checkpoint lets a later re-run resume.
     let fetchResult: FetchResult;
     try {
       fetchResult = await fetchChunk(lastId);
     } catch (err) {
-      console.error(`\n❌ Batch ${batchNumber} fetch failed:`, err);
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      continue;
+      console.error(`\n❌ ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `   Progress saved at id ${lastId ?? '(start)'} → ${CHECKPOINT_FILE}.` +
+        ` Wait for the Supabase Disk IO budget to refill, then re-run to resume.`
+      );
+      break;
     }
-    
+
     const { records, lastId: newLastId } = fetchResult;
     lastId = newLastId;
     hasMore = fetchResult.hasMore;
-    
+
     if (records.length === 0) {
       break;
     }
-    
+
     // Process the batch
     let batchResult: TransformResult;
     try {
@@ -403,59 +462,80 @@ async function reindexFromVault(): Promise<void> {
       batchResult = {
         success: 0,
         failed: records.length,
+        skipped: 0,
         failedIds: records.map(r => r.listing_key),
         errors: [String(err)]
       };
     }
-    
+
     // Update counters
     processedCount += records.length;
     totalSuccess += batchResult.success;
     totalFailed += batchResult.failed;
-    
+    totalSkipped += batchResult.skipped;
+
     // ========== Progress Logging ==========
-    const progress = ((processedCount / totalRecords) * 100).toFixed(1);
-    const eta = hasMore 
-      ? ` (ETA: ~${Math.ceil((totalRecords - processedCount) / CHUNK_SIZE)} batches)`
-      : ' (COMPLETE)';
-    
+    const haveTotal = totalRecords > 0;
+    const progress = haveTotal ? `${((processedCount / totalRecords) * 100).toFixed(1)}%` : '—';
+    const totalStr = haveTotal ? totalRecords.toLocaleString() : '?';
+    const eta = !hasMore
+      ? ' (COMPLETE)'
+      : haveTotal
+        ? ` (ETA: ~${Math.ceil((totalRecords - processedCount) / CHUNK_SIZE)} batches)`
+        : '';
+
     console.log(
-      `[Reindex] Processed ${processedCount.toLocaleString()} / ${totalRecords.toLocaleString()}` +
-      ` (${progress}%)` +
-      ` | Batch ${batchNumber} [+${batchResult.success}${batchResult.failed > 0 ? `,-${batchResult.failed}` : ''}]` +
+      `[Reindex] Processed ${processedCount.toLocaleString()} / ${totalStr}` +
+      ` (${progress})` +
+      ` | Batch ${batchNumber} [+${batchResult.success}` +
+      `${batchResult.failed > 0 ? `,-${batchResult.failed}` : ''}` +
+      `${batchResult.skipped > 0 ? `,~${batchResult.skipped} skipped` : ''}]` +
       eta
     );
-    
+
     // Log errors if any
     if (batchResult.errors.length > 0 && batchResult.errors.length <= 5) {
       batchResult.errors.forEach(e => console.log(`   ⚠️  ${e}`));
     } else if (batchResult.errors.length > 5) {
       console.log(`   ⚠️  ${batchResult.errors.length} errors in batch (truncated)`);
     }
-    
+
+    // ========== Checkpoint ==========
+    // Persist the cursor only after the batch is fully processed, so a resume
+    // never skips un-indexed rows.
+    if (lastId !== null) {
+      try { fs.writeFileSync(CHECKPOINT_FILE, String(lastId)); } catch { /* best-effort */ }
+    }
+
     // ========== Memory Cleanup ==========
     // Explicitly clear arrays to help GC
     records.length = 0;
-    
-    // Small delay between batches to prevent overwhelming the API
+
+    // Idle gap between batches to let the Disk IO burst budget refill.
     if (hasMore) {
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await sleep(BASE_BATCH_DELAY_MS);
     }
   }
-  
+
+  // Clear the checkpoint on a clean, complete pass.
+  if (!hasMore) {
+    try { if (fs.existsSync(CHECKPOINT_FILE)) fs.unlinkSync(CHECKPOINT_FILE); } catch { /* best-effort */ }
+  }
+
   // ========== Summary ==========
   console.log('\n===============================================');
   console.log('📊 Re-Index Complete!');
   console.log('===============================================');
   console.log(`   Batches processed: ${batchNumber}`);
-  console.log(`   Total records processed: ${processedCount.toLocaleString()}`);
+  console.log(`   Total records scanned: ${processedCount.toLocaleString()}`);
   console.log(`   Successfully indexed: ${totalSuccess.toLocaleString()}`);
+  console.log(`   Skipped (non-active): ${totalSkipped.toLocaleString()}`);
   console.log(`   Failed: ${totalFailed.toLocaleString()}`);
-  
+
   if (totalFailed > 0) {
     console.warn(`\n⚠️  ${totalFailed} records failed. Check logs above.`);
   }
-  
+
   // Verify Typesense count
   try {
     const stats = await typesense.collections(TYPESENSE_COLLECTION).retrieve() as { num_documents: number };
@@ -463,7 +543,7 @@ async function reindexFromVault(): Promise<void> {
   } catch (err) {
     console.log('\n⚠️  Could not verify Typesense count');
   }
-  
+
   console.log('\n');
 }
 

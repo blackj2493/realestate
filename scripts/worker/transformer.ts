@@ -12,21 +12,21 @@
 import { createHash } from 'crypto';
 import { getServiceRoleClient, ListingRecord } from '@/lib/supabase/client';
 import { indexListing, deleteListing } from '@/lib/typesense/client';
-import { getCoordinates, loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
+import { loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/ExtrapolatedCapRateEngine';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
 import { fetchRentAVM } from './services/rentAVM';
 import { fetchTrueValue, fetchMillRate } from './services/trueValueCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
+import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
+import { resolveLocation } from './resolveLocation';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 const BASELINE_RENT = 1200;  // Monthly rent placeholder per bedroom
-const FALLBACK_LAT = 43.6532;  // Toronto center latitude
-const FALLBACK_LNG = -79.3832;  // Toronto center longitude
 
 // Initialize postal codes on module load
 if (!isDataLoaded()) {
@@ -70,49 +70,10 @@ const MILL_RATES: Record<string, number> = {
 // ============================================================================
 // Geospatial Resolution
 // ============================================================================
-
-interface GeolocationResult {
-  location: [number, number];  // [lat, lng] for Typesense geopoint
-  needsGeocoding: boolean;
-}
-
-/**
- * Resolves geolocation using strict fallback chain:
- * 1. Master postal code library lookup (with FSA fallback)
- * 2. API native coordinates
- * 3. Toronto center (with needsGeocoding flag)
- */
-export function resolveLocation(
-  postalCode: string | null | undefined,
-  apiLat: number | null | undefined,
-  apiLng: number | null | undefined
-): GeolocationResult {
-  // Tier 1: Master postal code library lookup with FSA fallback
-  const postalCoords = getCoordinates(postalCode);
-  if (postalCoords) {
-    // Format as [longitude, latitude] for Typesense geo-point
-    return {
-      location: [postalCoords.lng, postalCoords.lat] as [number, number],
-      needsGeocoding: false
-    };
-  }
-
-  // Tier 2: API native coordinates
-  if (apiLat !== null && apiLat !== undefined && 
-      apiLng !== null && apiLng !== undefined) {
-    return {
-      location: [apiLng, apiLat],
-      needsGeocoding: false
-    };
-  }
-
-  // Tier 3: Fallback to Toronto center + flag for correction
-  console.warn(`[Transformer] Location fallback triggered for postal: ${postalCode || 'unknown'}`);
-  return {
-    location: [FALLBACK_LNG, FALLBACK_LAT] as [number, number],
-    needsGeocoding: true
-  };
-}
+// resolveLocation is shared with the vault reindexer (./resolveLocation) so the
+// [lat, lng] coordinate order can never drift between the two writers. Re-export
+// it here to preserve transformer.ts's public API.
+export { resolveLocation };
 
 // ============================================================================
 // 1. TRUE CARRY COST ENGINE
@@ -306,12 +267,14 @@ interface TrueDOMResult {
 }
 
 /**
- * Calculate True Days on Market using property hash and campaign block logic.
- * 
- * Campaign Block Rules:
- * - If PID appears within 45 days of termination → same campaign
- * - If gap > 90 days → new campaign, reset trueDOM to 0
- * - Calculate: currentDate - earliest OriginalEntryTimestamp in block - deadDays
+ * @deprecated DO NOT CALL. Superseded by the pure-function
+ * `calculateTrueDOM` in `src/lib/typesense/TemporalDistressEngine.ts`, which
+ * sync.ts uses with a batched, full_payload-free historical lookup.
+ *
+ * This version issues a per-listing query that SELECTs `full_payload` —
+ * exactly the IO-amplification pattern that tripped the Disk IO Budget
+ * alert on 2026-05-19. Kept here only because other modules may still
+ * import the symbol; will be deleted in a follow-up cleanup once verified.
  */
 export async function calculateTrueDOM(
   raw: any,
@@ -753,6 +716,7 @@ export interface TransformResult {
     PropertyHash?: string;
     TrueDom?: number;
     IsStale?: boolean;
+    IsSold?: boolean;
     // Suite Analysis fields
     SuiteStatus?: SuiteStatus;
     SuiteScore?: number;
@@ -777,6 +741,17 @@ export interface TransformResult {
     // Basement field for suite analysis
     BasementType?: string[];
     Status?: string;
+    // Builder/Land Development fields
+    lot_width_ft?: number;
+    lot_depth_ft?: number;
+    lot_area_sqft?: number;
+    is_covered_land?: boolean;
+    severance_candidate?: boolean;
+    infrastructure_flag?: string;
+    density_play?: string;
+    price_per_sqft?: number;
+    multiplex_by_right?: boolean;
+    zoning_designation?: string;
   };
 }
 
@@ -878,6 +853,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     multiUnitStatus: multiUnitResult.multi_unit_status,
     isCondo,
   });
+
+  // === Phase 4: Builder/Land Development Metrics ===
+  const builderMetrics = processBuilderMetrics(raw);
 
   // Extract and optimize thumbnail from images/media array
   // Priority: Order === 0 with "Medium" > "Thumbnail" > "Large" > first available
@@ -989,6 +967,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     PropertyHash: trueDOM.propertyHash,
     TrueDom: trueDOM.trueDOM,
     IsStale: trueDOM.isStale,
+    // IsSold: defaults to false, sync.ts will set true for sold listings
+    IsSold: false,
     // Suite Analysis fields
     SuiteStatus: suiteAnalysis.suiteStatus,
     SuiteScore: suiteAnalysis.suiteScore,
@@ -1061,6 +1041,18 @@ export async function transformListing(raw: any): Promise<TransformResult> {
 
   // Price discovery flag from TrueValue service
   typesensePayload.price_discovery_flag = trueValue.is_price_discovery;
+
+  // Builder/Land Development metrics
+  (typesensePayload as any).lot_width_ft = builderMetrics.lot_width_ft;
+  (typesensePayload as any).lot_depth_ft = builderMetrics.lot_depth_ft;
+  (typesensePayload as any).lot_area_sqft = builderMetrics.lot_area_sqft;
+  (typesensePayload as any).is_covered_land = builderMetrics.is_covered_land;
+  (typesensePayload as any).severance_candidate = builderMetrics.severance_candidate;
+  (typesensePayload as any).infrastructure_flag = builderMetrics.infrastructure_flag;
+  (typesensePayload as any).density_play = builderMetrics.density_play;
+  (typesensePayload as any).price_per_sqft = builderMetrics.price_per_sqft;
+  (typesensePayload as any).multiplex_by_right = builderMetrics.multiplexByRight;
+  (typesensePayload as any).zoning_designation = builderMetrics.zoningDesignation;
 
   return { supabasePayload, typesensePayload };
 }

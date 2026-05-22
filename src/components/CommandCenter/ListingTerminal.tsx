@@ -28,7 +28,6 @@ import { Button } from '@/components/ui/button';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
 import CarryCostCalculator from './CarryCostCalculator';
 import DOMTimelineChart from './DOMTimelineChart';
-import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
 import type { ListingDocument } from '@/lib/typesense/client';
 
 interface ListingTerminalProps {
@@ -67,7 +66,6 @@ function highlightNLPFlags(text: string): React.ReactNode {
 export default function ListingTerminal({ property, isOpen, onClose }: ListingTerminalProps) {
   const [propertyDetails, setPropertyDetails] = useState<ListingDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { smartFilters } = useCommandCenterStore();
 
   // Fetch full property details when terminal opens
   useEffect(() => {
@@ -80,7 +78,10 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
 
   const dom = property.calculatedDOM || property.DaysOnMarket || 0;
   const badges = detectPropertyBadges(property as Parameters<typeof detectPropertyBadges>[0]);
-  const hasMortgageHelper = smartFilters.mortgageHelperEnabled || property.hasSecondarySuitePotential;
+  const hasMortgageHelper =
+    property.hasSecondarySuitePotential ||
+    property.SuiteStatus === "EXISTING_SUITE" ||
+    property.SuiteStatus === "POTENTIAL_CANDIDATE";
 
   // Mock room data for demo
   const rooms = [

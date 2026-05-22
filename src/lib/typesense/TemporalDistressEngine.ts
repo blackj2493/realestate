@@ -362,7 +362,7 @@ export function calculateTrueDOM(
   let currentCampaignStartMs = currentStartMs;
   
   // Store the first (oldest) original price for price drop calculation
-  let firstOriginalPrice: number | null = null;
+  const firstOriginalPrice: number | null = null;
   
   // Track cumulative price from original to current
   let originalPriceInChain: number | null = null;
