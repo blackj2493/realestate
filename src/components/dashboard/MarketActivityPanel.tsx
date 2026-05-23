@@ -134,7 +134,7 @@ export default function MarketActivityPanel({
       {/* New listings (active / IDX) */}
       <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="New Listings" accent="text-cyan-400" count={newCount} />
-        <div className="max-h-[720px] overflow-y-auto">
+        <div className="max-h-[360px] overflow-y-auto">
           {newRows === null && !newErr && <Skeleton />}
           {newErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
           {newRows && newRows.length === 0 && (
@@ -165,7 +165,7 @@ export default function MarketActivityPanel({
       {/* Sold (VOW) */}
       <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="Sold" accent="text-emerald-400" count={soldCount} />
-        <div className="max-h-[720px] overflow-y-auto">
+        <div className="max-h-[360px] overflow-y-auto">
           {soldRows === null && !soldErr && <Skeleton />}
           {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
           {soldRows && soldRows.length === 0 && (
