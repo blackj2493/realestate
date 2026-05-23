@@ -56,7 +56,7 @@ export default function ActivityRow({
       href={`/properties/${id}`}
       className="group flex gap-3 border-b border-slate-800/50 p-2 transition-colors last:border-b-0 hover:bg-slate-800/50"
     >
-      <div className="relative h-16 w-24 shrink-0 overflow-hidden bg-slate-800">
+      <div className="relative h-14 w-20 shrink-0 overflow-hidden bg-slate-800">
         <Image
           src={src}
           alt={addr}
@@ -64,7 +64,7 @@ export default function ActivityRow({
           className="object-cover"
           unoptimized
           onError={() => setErr(true)}
-          sizes="96px"
+          sizes="80px"
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">

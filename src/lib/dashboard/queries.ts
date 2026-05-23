@@ -73,6 +73,21 @@ export async function fetchRegionStats(loc: string): Promise<RegionStats> {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVITY_PRICE_FLOOR = 50000; // mirror the sold feed: excludes leases/rentals
 
+// BasementType values that indicate finished living space — mirrors the sold-feed
+// derivation (deriveHasFinishedBasement: any "apartment" or non-"unfinished"
+// "finished" token). Exact "Finished" alone misses Apartment / walk-out / partial.
+const FINISHED_BASEMENT_VALUES = [
+  'Finished',
+  'Apartment',
+  'Finished with Walk-Out',
+  'Partially Finished',
+];
+
+function finishedBasementClause(): string {
+  const ors = FINISHED_BASEMENT_VALUES.map((v) => `BasementType:=\`${v}\``);
+  return `(${ors.join(' || ')})`;
+}
+
 /**
  * Typesense filter_by for "new active listings in the last N days" under a lens.
  *
@@ -92,7 +107,7 @@ export function buildActivityFilter(loc: string, lens: MarketActivityLens): stri
     lens.minBeds > 0 ? `BedroomsTotal:>=${lens.minBeds}` : undefined,
     lens.minBaths > 0 ? `BathroomsTotalInteger:>=${lens.minBaths}` : undefined,
     lens.minGarage > 0 ? `ParkingTotal:>=${lens.minGarage}` : undefined,
-    lens.basementFinished ? 'BasementType:=`Finished`' : undefined,
+    lens.basementFinished ? finishedBasementClause() : undefined,
     lens.minFrontage > 0 ? `LotWidth:>=${lens.minFrontage}` : undefined
   );
 }

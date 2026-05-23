@@ -6,11 +6,11 @@
  * the just-sold comps HouseSigma shows but Realtor.ca hides.
  *
  * Reads raw_vow_sold (read-only, RLS — CLAUDE.md §12) via the service-role client.
- * Window is keyed on `close_date` bounded to [now-Nd, now]: it represents homes
- * that actually CLOSED (changed hands) in the window. `purchase_contract_date`
- * (deal-signed date) lags badly in the VOW feed — recently-signed deals aren't
- * reported for weeks, so a 7-day signed-date window returns near zero. close_date
- * is timely; we exclude future-dated pending closings with the upper `lte now`.
+ * Window is keyed on `purchase_contract_date` — the deal-signed ("sold firm")
+ * date, which is the true SOLD date. (close_date is the completion/possession
+ * date and can be months later, so it misrepresents WHEN a home sold.) Tradeoff:
+ * the VOW feed reports sold deals with a lag, so very recent windows (1-7d) under-
+ * count and fill in over the following weeks. We bound `lte now` for safety.
  *
  * Compliance: count tiles are unrestricted, but the displayed LIST hard-caps at
  * 100 rows (TRREB §6.3(b)); every row carries the listing brokerage. Wrapped in
@@ -35,7 +35,7 @@ const MAX_LIST = 100; // TRREB per-query display cap
 const PRICE_FLOOR = 50000; // excludes lease/rental rows leaking into the sold feed
 
 const LIST_COLUMNS =
-  "listing_key, unparsed_address, close_price, list_price, close_date, " +
+  "listing_key, unparsed_address, close_price, list_price, purchase_contract_date, " +
   "property_sub_type, bedrooms_above_grade, bathrooms_total_integer, building_area_total, " +
   "city, brokerage:raw_payload->>ListOfficeName";
 
@@ -78,13 +78,13 @@ function applyFilters(
   nowISO: string
 ): SoldBuilder {
   const safe = p.region.replace(/[,()]/g, " ").trim();
-  // Bounded close_date window — homes that closed in [now-Nd, now]. The upper
-  // bound drops future-dated pending closings.
+  // Sold window keyed on purchase_contract_date (the "sold firm" date) in
+  // [now-Nd, now]. The upper bound is defensive (contract dates aren't future).
   q = q
     .or(`city.ilike.${safe},city_region.ilike.${safe}`)
     .gte("close_price", PRICE_FLOOR)
-    .gte("close_date", cutoffISO)
-    .lte("close_date", nowISO);
+    .gte("purchase_contract_date", cutoffISO)
+    .lte("purchase_contract_date", nowISO);
 
   const variants = variantsForKeys(p.typeKeys);
   if (variants.length > 0) q = q.in("property_sub_type", variants);
@@ -123,7 +123,7 @@ async function computeSold(
     cutoffISO,
     nowISO
   )
-    .order("close_date", { ascending: false })
+    .order("purchase_contract_date", { ascending: false })
     .limit(p.limit);
   if (listErr) throw new Error(listErr.message);
 
@@ -134,7 +134,7 @@ async function computeSold(
       address: (row.unparsed_address as string) ?? "",
       closePrice: Number(row.close_price) || 0,
       listPrice: row.list_price != null ? Number(row.list_price) : null,
-      soldDate: (row.close_date as string) ?? null,
+      soldDate: (row.purchase_contract_date as string) ?? null,
       propertySubType: (row.property_sub_type as string) ?? null,
       beds: row.bedrooms_above_grade != null ? Number(row.bedrooms_above_grade) : null,
       baths:
