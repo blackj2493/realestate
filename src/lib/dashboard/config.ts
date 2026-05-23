@@ -15,8 +15,6 @@ import {
 const ACCESS_KEY = 'pp_access';
 const PROFILE_KEY = 'pp_profile';
 const CONFIG_KEY = 'pp_dashboard_config';
-/** per-region "max EntryTimestamp seen" — powers unit-agnostic since-last-visit. */
-const SEEN_PREFIX = 'pp_seen_max:';
 
 export interface ApplyProfile {
   applicantType?: string;
@@ -30,11 +28,47 @@ export interface ApplyProfile {
   cadence?: string;
 }
 
+/**
+ * The global "lens" for the Market Activity panel — one window + filter set that
+ * applies to every region's New (active/IDX) and Sold (VOW) counts and lists.
+ */
+export interface MarketActivityLens {
+  /** trailing-window in days for both New and Sold counts. */
+  windowDays: number;
+  /** selected property-type option keys (see propertyTypes.ts); [] = all types. */
+  propertyTypes: string[];
+  /** minimum bedrooms (0 = any). */
+  minBeds: number;
+  /** minimum bathrooms (0 = any). */
+  minBaths: number;
+  /** minimum parking/garage spaces (0 = any). */
+  minGarage: number;
+  /** require a finished basement. */
+  basementFinished: boolean;
+  /** minimum lot frontage in feet (0 = any). */
+  minFrontage: number;
+}
+
+/** Allowed window options (days). Sold history capped at 180 for V1 — see plan. */
+export const ACTIVITY_WINDOWS = [1, 3, 7, 30, 90, 180] as const;
+
+export const DEFAULT_ACTIVITY_LENS: MarketActivityLens = {
+  windowDays: 1,
+  propertyTypes: [],
+  minBeds: 0,
+  minBaths: 0,
+  minGarage: 0,
+  basementFinished: false,
+  minFrontage: 0,
+};
+
 export interface DashboardConfig {
   /** Typesense `City` values (municipalities). */
   regions: string[];
   /** Enabled boards, in display order. */
   boards: BoardId[];
+  /** Global Market Activity lens (window + filters). */
+  marketActivity: MarketActivityLens;
 }
 
 /**
@@ -96,6 +130,24 @@ export function seedConfigFromProfile(p: ApplyProfile): DashboardConfig {
   return {
     regions: citiesFromRegions(p.regions ?? []),
     boards: orderBoardsByObjectives(p.objectives ?? []),
+    marketActivity: { ...DEFAULT_ACTIVITY_LENS },
+  };
+}
+
+/** Merge a stored (possibly partial/legacy) lens onto the defaults. */
+function mergeLens(raw: unknown): MarketActivityLens {
+  const l = (raw ?? {}) as Partial<MarketActivityLens>;
+  return {
+    windowDays:
+      typeof l.windowDays === 'number' && ACTIVITY_WINDOWS.includes(l.windowDays as 1)
+        ? l.windowDays
+        : DEFAULT_ACTIVITY_LENS.windowDays,
+    propertyTypes: Array.isArray(l.propertyTypes) ? l.propertyTypes : [],
+    minBeds: typeof l.minBeds === 'number' ? l.minBeds : 0,
+    minBaths: typeof l.minBaths === 'number' ? l.minBaths : 0,
+    minGarage: typeof l.minGarage === 'number' ? l.minGarage : 0,
+    basementFinished: l.basementFinished === true,
+    minFrontage: typeof l.minFrontage === 'number' ? l.minFrontage : 0,
   };
 }
 
@@ -116,6 +168,7 @@ export function getConfig(): DashboardConfig {
             Array.isArray(parsed.boards) && parsed.boards.length
               ? parsed.boards
               : [...DEFAULT_BOARD_ORDER],
+          marketActivity: mergeLens(parsed.marketActivity),
         };
       }
     } catch {
@@ -124,19 +177,9 @@ export function getConfig(): DashboardConfig {
     const profile = getProfile();
     if (profile) return seedConfigFromProfile(profile);
   }
-  return { regions: [], boards: [...DEFAULT_BOARD_ORDER] };
-}
-
-// ── Since-last-visit (per region, unit-agnostic) ─────────────────────────────
-/** The highest EntryTimestamp this client has already seen for a region. */
-export function getSeenMax(region: string): number | null {
-  if (!hasWindow()) return null;
-  const raw = window.localStorage.getItem(SEEN_PREFIX + region);
-  const n = raw ? Number(raw) : NaN;
-  return Number.isFinite(n) ? n : null;
-}
-export function setSeenMax(region: string, value: number): void {
-  if (hasWindow() && Number.isFinite(value)) {
-    window.localStorage.setItem(SEEN_PREFIX + region, String(value));
-  }
+  return {
+    regions: [],
+    boards: [...DEFAULT_BOARD_ORDER],
+    marketActivity: { ...DEFAULT_ACTIVITY_LENS },
+  };
 }

@@ -8,21 +8,28 @@ import {
   getConfig,
   saveConfig,
   getProfile,
+  DEFAULT_ACTIVITY_LENS,
   type DashboardConfig,
+  type MarketActivityLens,
 } from "@/lib/dashboard/config";
 import { BOARDS } from "@/lib/dashboard/boards";
 import MissionControlHeader from "@/components/dashboard/MissionControlHeader";
 import DashboardConfigPanel from "@/components/dashboard/DashboardConfigPanel";
 import PlaylistBoard from "@/components/dashboard/PlaylistBoard";
 import RegionStatTiles from "@/components/dashboard/RegionStatTiles";
-import SinceLastVisit from "@/components/dashboard/SinceLastVisit";
+import MarketActivityControls from "@/components/dashboard/MarketActivityControls";
+import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [config, setConfig] = useState<DashboardConfig>({ regions: [], boards: [] });
+  const [config, setConfig] = useState<DashboardConfig>({
+    regions: [],
+    boards: [],
+    marketActivity: { ...DEFAULT_ACTIVITY_LENS },
+  });
   const [name, setName] = useState<string | undefined>(undefined);
   const [showConfig, setShowConfig] = useState(false);
 
@@ -41,6 +48,8 @@ export default function DashboardPage() {
     setConfig(c);
     saveConfig(c);
   };
+
+  const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
 
   if (!ready) return null;
 
@@ -73,6 +82,10 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {hasRegions && (
+          <MarketActivityControls lens={config.marketActivity} onChange={updateLens} />
+        )}
+
         {hasRegions &&
           config.regions.map((loc) => (
             <section key={loc} className="space-y-3">
@@ -80,8 +93,9 @@ export default function DashboardPage() {
                 <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
                   {loc}
                 </h2>
-                <SinceLastVisit location={loc} />
               </div>
+
+              <MarketActivityPanel location={loc} lens={config.marketActivity} />
 
               <RegionStatTiles location={loc} />
 
@@ -110,6 +124,14 @@ export default function DashboardPage() {
         )}
 
         {hasRegions && <RecentlyViewed />}
+
+        {/* TRREB §6.3(i)/(k) — reliability + bona-fide-consumer notice. */}
+        <p className="border-t border-slate-800 pt-6 text-center text-[11px] leading-relaxed text-slate-600">
+          Data is deemed reliable but is not guaranteed accurate by PROPTX. Information herein
+          must only be used by consumers that have a bona fide interest in the purchase, sale, or
+          lease of real estate and may not be used for any commercial purpose. Powered by PROPTX
+          MLS®.
+        </p>
       </main>
     </div>
   );

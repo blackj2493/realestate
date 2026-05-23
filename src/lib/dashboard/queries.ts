@@ -8,6 +8,8 @@
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
 import type { BoardDef } from './boards';
+import type { MarketActivityLens } from './config';
+import { typesensePropertyTypeClause } from './propertyTypes';
 
 export function locationFilter(loc: string): string {
   const safe = loc.replace(/`/g, '');
@@ -68,25 +70,55 @@ export async function fetchRegionStats(loc: string): Promise<RegionStats> {
   };
 }
 
-/** Highest EntryTimestamp currently indexed for a location (epoch, unit unknown). */
-export async function fetchMaxEntryTimestamp(loc: string): Promise<number | null> {
-  const res = await searchListings({
-    query: '*',
-    rawFilterBy: locationFilter(loc),
-    sortBy: 'EntryTimestamp',
-    sortOrder: 'desc',
-    perPage: 1,
-  });
-  const v = res.listings[0]?.EntryTimestamp;
-  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const ACTIVITY_PRICE_FLOOR = 50000; // mirror the sold feed: excludes leases/rentals
+
+/**
+ * Typesense filter_by for "new active listings in the last N days" under a lens.
+ *
+ * NOTE: this collection has no usable `Status:=Active` flag (it stores TRREB
+ * MlsStatus sub-states like "New"/"Price Change"); the whole index is the active
+ * IDX feed, so we scope by the EntryTimestamp window only. `EntryTimestamp` is in
+ * MILLISECONDS (transformer.ts), so the cutoff is `Date.now() - days*DAY_MS`.
+ * `ListPrice:>=50000` drops lease rows (no filterable TransactionType field).
+ */
+export function buildActivityFilter(loc: string, lens: MarketActivityLens): string {
+  const cutoff = Date.now() - lens.windowDays * DAY_MS;
+  return combine(
+    locationFilter(loc),
+    `EntryTimestamp:>=${Math.floor(cutoff)}`,
+    `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`,
+    typesensePropertyTypeClause(lens.propertyTypes),
+    lens.minBeds > 0 ? `BedroomsTotal:>=${lens.minBeds}` : undefined,
+    lens.minBaths > 0 ? `BathroomsTotalInteger:>=${lens.minBaths}` : undefined,
+    lens.minGarage > 0 ? `ParkingTotal:>=${lens.minGarage}` : undefined,
+    lens.basementFinished ? 'BasementType:=`Finished`' : undefined,
+    lens.minFrontage > 0 ? `LotWidth:>=${lens.minFrontage}` : undefined
+  );
 }
 
-/** Count of listings newer than a previously-seen EntryTimestamp watermark. */
-export async function fetchCountNewerThan(loc: string, sinceTs: number): Promise<number> {
+/** Count of newly-listed active properties for a location under the lens. */
+export async function fetchNewCount(loc: string, lens: MarketActivityLens): Promise<number> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(locationFilter(loc), `EntryTimestamp:>${Math.floor(sinceTs)}`),
+    rawFilterBy: buildActivityFilter(loc, lens),
     perPage: 0,
   });
   return res.totalFound;
+}
+
+/** Newest-first list of new active listings (capped at 100 — TRREB §6.3(b)). */
+export async function fetchNewListings(
+  loc: string,
+  lens: MarketActivityLens,
+  limit = 5
+): Promise<ListingDocument[]> {
+  const res = await searchListings({
+    query: '*',
+    rawFilterBy: buildActivityFilter(loc, lens),
+    sortBy: 'EntryTimestamp',
+    sortOrder: 'desc',
+    perPage: Math.min(limit, 100),
+  });
+  return res.listings;
 }
