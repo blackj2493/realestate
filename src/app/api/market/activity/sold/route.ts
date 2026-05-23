@@ -91,7 +91,10 @@ function applyFilters(
   if (p.minBeds > 0) q = q.gte("bedrooms_above_grade", p.minBeds);
   if (p.minBaths > 0) q = q.gte("bathrooms_total_integer", p.minBaths);
   if (p.minGarage > 0) q = q.gte("parking_total", p.minGarage);
-  if (p.basementFinished) q = q.eq("has_finished_basement", true);
+  // basement_tier 1-5 = finished/partially-finished space. The flat
+  // has_finished_basement column is false on ~all historical rows (backfilled
+  // before that derivation shipped); basement_tier IS populated and accurate.
+  if (p.basementFinished) q = q.lte("basement_tier", 5);
   if (p.minFrontage > 0) q = q.gte("lot_width", p.minFrontage);
   return q;
 }
