@@ -6,8 +6,11 @@
  * the just-sold comps HouseSigma shows but Realtor.ca hides.
  *
  * Reads raw_vow_sold (read-only, RLS — CLAUDE.md §12) via the service-role client.
- * `purchase_contract_date` is the "Sold Date" (deal signed); close_date is the
- * later completion date and is frequently null/future, so it makes a poor window.
+ * Window is keyed on `close_date` bounded to [now-Nd, now]: it represents homes
+ * that actually CLOSED (changed hands) in the window. `purchase_contract_date`
+ * (deal-signed date) lags badly in the VOW feed — recently-signed deals aren't
+ * reported for weeks, so a 7-day signed-date window returns near zero. close_date
+ * is timely; we exclude future-dated pending closings with the upper `lte now`.
  *
  * Compliance: count tiles are unrestricted, but the displayed LIST hard-caps at
  * 100 rows (TRREB §6.3(b)); every row carries the listing brokerage. Wrapped in
@@ -32,9 +35,9 @@ const MAX_LIST = 100; // TRREB per-query display cap
 const PRICE_FLOOR = 50000; // excludes lease/rental rows leaking into the sold feed
 
 const LIST_COLUMNS =
-  "listing_key, unparsed_address, close_price, list_price, purchase_contract_date, " +
-  "property_sub_type, bedrooms_above_grade, bathrooms_total_integer, city, " +
-  "brokerage:raw_payload->>ListOfficeName";
+  "listing_key, unparsed_address, close_price, list_price, close_date, " +
+  "property_sub_type, bedrooms_above_grade, bathrooms_total_integer, building_area_total, " +
+  "city, brokerage:raw_payload->>ListOfficeName";
 
 interface SoldParams {
   region: string;
@@ -57,6 +60,7 @@ export interface SoldListing {
   propertySubType: string | null;
   beds: number | null;
   baths: number | null;
+  sqft: number | null;
   brokerage: string | null;
   city: string | null;
 }
@@ -67,12 +71,20 @@ type SoldBuilder = ReturnType<
 >;
 
 /** Apply the lens filters shared by the count query and the list query. */
-function applyFilters(q: SoldBuilder, p: SoldParams, cutoffISO: string): SoldBuilder {
+function applyFilters(
+  q: SoldBuilder,
+  p: SoldParams,
+  cutoffISO: string,
+  nowISO: string
+): SoldBuilder {
   const safe = p.region.replace(/[,()]/g, " ").trim();
+  // Bounded close_date window — homes that closed in [now-Nd, now]. The upper
+  // bound drops future-dated pending closings.
   q = q
     .or(`city.ilike.${safe},city_region.ilike.${safe}`)
     .gte("close_price", PRICE_FLOOR)
-    .gte("purchase_contract_date", cutoffISO);
+    .gte("close_date", cutoffISO)
+    .lte("close_date", nowISO);
 
   const variants = variantsForKeys(p.typeKeys);
   if (variants.length > 0) q = q.in("property_sub_type", variants);
@@ -87,9 +99,11 @@ function applyFilters(q: SoldBuilder, p: SoldParams, cutoffISO: string): SoldBui
 async function computeSold(
   p: SoldParams
 ): Promise<{ count: number; listings: SoldListing[] }> {
-  const cutoff = new Date();
+  const now = new Date();
+  const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() - p.windowDays);
   const cutoffISO = cutoff.toISOString();
+  const nowISO = now.toISOString();
 
   const sb = getServiceRoleClient();
 
@@ -97,7 +111,8 @@ async function computeSold(
   const { count, error: countErr } = await applyFilters(
     sb.from("raw_vow_sold").select("listing_key", { count: "exact", head: true }),
     p,
-    cutoffISO
+    cutoffISO,
+    nowISO
   );
   if (countErr) throw new Error(countErr.message);
 
@@ -105,9 +120,10 @@ async function computeSold(
   const { data, error: listErr } = await applyFilters(
     sb.from("raw_vow_sold").select(LIST_COLUMNS),
     p,
-    cutoffISO
+    cutoffISO,
+    nowISO
   )
-    .order("purchase_contract_date", { ascending: false })
+    .order("close_date", { ascending: false })
     .limit(p.limit);
   if (listErr) throw new Error(listErr.message);
 
@@ -118,11 +134,12 @@ async function computeSold(
       address: (row.unparsed_address as string) ?? "",
       closePrice: Number(row.close_price) || 0,
       listPrice: row.list_price != null ? Number(row.list_price) : null,
-      soldDate: (row.purchase_contract_date as string) ?? null,
+      soldDate: (row.close_date as string) ?? null,
       propertySubType: (row.property_sub_type as string) ?? null,
       beds: row.bedrooms_above_grade != null ? Number(row.bedrooms_above_grade) : null,
       baths:
         row.bathrooms_total_integer != null ? Number(row.bathrooms_total_integer) : null,
+      sqft: row.building_area_total != null ? Number(row.building_area_total) : null,
       brokerage: (row.brokerage as string) ?? null,
       city: (row.city as string) ?? null,
     };

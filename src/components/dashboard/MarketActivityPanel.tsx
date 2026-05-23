@@ -7,8 +7,7 @@ import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
 import type { SoldListing } from "@/app/api/market/activity/sold/route";
 import ActivityRow from "./ActivityRow";
 
-const PREVIEW = 5;
-const MAX = 100; // TRREB §6.3(b) per-query display cap
+const LIST_LIMIT = 100; // TRREB §6.3(b) per-query display cap
 const DAY_MS = 86_400_000;
 
 function relTime(ts?: number): string {
@@ -43,8 +42,8 @@ function soldQuery(location: string, lens: MarketActivityLens, limit: number): s
 function Skeleton() {
   return (
     <div className="space-y-px p-2">
-      {Array.from({ length: PREVIEW }).map((_, i) => (
-        <div key={i} className="h-10 animate-pulse bg-slate-800/40" />
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="h-20 animate-pulse bg-slate-800/40" />
       ))}
     </div>
   );
@@ -81,12 +80,10 @@ export default function MarketActivityPanel({
   const [newCount, setNewCount] = useState<number | null>(null);
   const [newRows, setNewRows] = useState<ListingDocument[] | null>(null);
   const [newErr, setNewErr] = useState(false);
-  const [newExpanded, setNewExpanded] = useState(false);
 
   const [soldCount, setSoldCount] = useState<number | null>(null);
   const [soldRows, setSoldRows] = useState<SoldListing[] | null>(null);
   const [soldErr, setSoldErr] = useState(false);
-  const [soldExpanded, setSoldExpanded] = useState(false);
 
   const lensKey = JSON.stringify(lens);
 
@@ -95,13 +92,14 @@ export default function MarketActivityPanel({
     setNewCount(null);
     setNewRows(null);
     setNewErr(false);
-    setNewExpanded(false);
     setSoldCount(null);
     setSoldRows(null);
     setSoldErr(false);
-    setSoldExpanded(false);
 
-    Promise.all([fetchNewCount(location, lens), fetchNewListings(location, lens, PREVIEW)])
+    Promise.all([
+      fetchNewCount(location, lens),
+      fetchNewListings(location, lens, LIST_LIMIT),
+    ])
       .then(([c, rows]) => {
         if (!alive) return;
         setNewCount(c);
@@ -112,7 +110,7 @@ export default function MarketActivityPanel({
         if (alive) setNewErr(true);
       });
 
-    fetch(`/api/market/activity/sold?${soldQuery(location, lens, PREVIEW)}`)
+    fetch(`/api/market/activity/sold?${soldQuery(location, lens, LIST_LIMIT)}`)
       .then((r) => r.json())
       .then((d: { count: number; listings: SoldListing[]; error?: string }) => {
         if (!alive) return;
@@ -131,91 +129,67 @@ export default function MarketActivityPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, lensKey]);
 
-  const expandNew = () => {
-    if (newCount == null) return;
-    setNewExpanded(true);
-    fetchNewListings(location, lens, Math.min(newCount, MAX))
-      .then(setNewRows)
-      .catch((e) => console.error("[MarketActivityPanel:new:all]", location, e));
-  };
-
-  const expandSold = () => {
-    if (soldCount == null) return;
-    setSoldExpanded(true);
-    fetch(`/api/market/activity/sold?${soldQuery(location, lens, Math.min(soldCount, MAX))}`)
-      .then((r) => r.json())
-      .then((d: { listings: SoldListing[] }) => setSoldRows(d.listings ?? []))
-      .catch((e) => console.error("[MarketActivityPanel:sold:all]", location, e));
-  };
-
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* New listings (active / IDX) */}
-      <div className="border border-slate-800 bg-slate-900/40">
+      <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="New Listings" accent="text-cyan-400" count={newCount} />
-        {newRows === null && !newErr && <Skeleton />}
-        {newErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
-        {newRows && newRows.length === 0 && (
-          <p className="px-3 py-6 text-center text-xs text-slate-500">
-            No new listings in this window
-          </p>
-        )}
-        {newRows?.map((l) => (
-          <ActivityRow
-            key={l.id}
-            id={l.id}
-            address={l.UnparsedAddress || ""}
-            city={l.City}
-            brokerage={l.ListOfficeName}
-            price={l.ListPrice}
-            priceLabel="LIST"
-            caption={relTime(l.EntryTimestamp)}
-          />
-        ))}
-        {newRows && newCount != null && !newExpanded && newCount > newRows.length && (
-          <button
-            type="button"
-            onClick={expandNew}
-            className="terminal-font w-full border-t border-slate-800 px-3 py-2 text-[10px] uppercase tracking-wider text-cyan-300/80 hover:bg-slate-800/50"
-          >
-            View all {Math.min(newCount, MAX).toLocaleString()}
-            {newCount > MAX ? " (max)" : ""}
-          </button>
-        )}
+        <div className="max-h-[28rem] overflow-y-auto">
+          {newRows === null && !newErr && <Skeleton />}
+          {newErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
+          {newRows && newRows.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-slate-500">
+              No new listings in this window
+            </p>
+          )}
+          {newRows?.map((l) => (
+            <ActivityRow
+              key={l.id}
+              id={l.id}
+              address={l.UnparsedAddress || ""}
+              city={l.City}
+              brokerage={l.ListOfficeName}
+              price={l.ListPrice}
+              priceLabel="LIST"
+              caption={relTime(l.EntryTimestamp)}
+              image={l.thumbnailUrl || l.primaryImageUrl}
+              propertySubType={l.PropertySubType}
+              beds={l.BedroomsTotal}
+              baths={l.BathroomsTotalInteger}
+              sqft={l.BuildingAreaTotal}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Sold (VOW) */}
-      <div className="border border-slate-800 bg-slate-900/40">
+      <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="Sold" accent="text-emerald-400" count={soldCount} />
-        {soldRows === null && !soldErr && <Skeleton />}
-        {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
-        {soldRows && soldRows.length === 0 && (
-          <p className="px-3 py-6 text-center text-xs text-slate-500">
-            No sales in this window
-          </p>
-        )}
-        {soldRows?.map((l) => (
-          <ActivityRow
-            key={l.id}
-            id={l.id}
-            address={l.address}
-            city={l.city}
-            brokerage={l.brokerage}
-            price={l.closePrice}
-            priceLabel="SOLD"
-            caption={soldDateFmt(l.soldDate)}
-          />
-        ))}
-        {soldRows && soldCount != null && !soldExpanded && soldCount > soldRows.length && (
-          <button
-            type="button"
-            onClick={expandSold}
-            className="terminal-font w-full border-t border-slate-800 px-3 py-2 text-[10px] uppercase tracking-wider text-emerald-300/80 hover:bg-slate-800/50"
-          >
-            View all {Math.min(soldCount, MAX).toLocaleString()}
-            {soldCount > MAX ? " (max)" : ""}
-          </button>
-        )}
+        <div className="max-h-[28rem] overflow-y-auto">
+          {soldRows === null && !soldErr && <Skeleton />}
+          {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
+          {soldRows && soldRows.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-slate-500">
+              No sales in this window
+            </p>
+          )}
+          {soldRows?.map((l) => (
+            <ActivityRow
+              key={l.id}
+              id={l.id}
+              address={l.address}
+              city={l.city}
+              brokerage={l.brokerage}
+              price={l.closePrice}
+              priceLabel="SOLD"
+              caption={soldDateFmt(l.soldDate)}
+              propertySubType={l.propertySubType}
+              beds={l.beds}
+              baths={l.baths}
+              sqft={l.sqft}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
