@@ -12,6 +12,7 @@ import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import { recordView } from "@/lib/dashboard/recentlyViewed";
 import type { AVMResult } from "@/lib/avm/types";
 import type { FeeStabilityResult } from "@/lib/condo/feeStability";
 
@@ -219,6 +220,18 @@ export default function PropertyPage({ params }: { params: Promise<{ id: string 
       fetchProperty();
     }
   }, [id]);
+
+  // Record this listing for the dashboard's "Recently Viewed" rail (localStorage).
+  useEffect(() => {
+    if (!property) return;
+    recordView({
+      id,
+      address: property.UnparsedAddress || property.City || "Listing",
+      price: property.ListPrice || 0,
+      thumb: property.images?.[0]?.MediaURL,
+      city: property.City,
+    });
+  }, [property, id]);
 
   // Loading state
   if (loading) return <LoadingSpinner />;

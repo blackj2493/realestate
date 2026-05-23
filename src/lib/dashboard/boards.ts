@@ -14,7 +14,6 @@ import type { ListingDocument } from '@/lib/typesense/client';
 
 export type BoardId =
   | 'cap_rate'
-  | 'gross_yield'
   | 'suite'
   | 'fresh'
   | 'price_drop'
@@ -36,6 +35,7 @@ export interface BoardDef {
   objectives: string[];
 }
 
+// ExtrapolatedCapRate is stored as a percentage (7.1 → "7.1%").
 const pct = (v: number | undefined | null) =>
   v == null || !Number.isFinite(v) ? '—' : `${v.toFixed(1)}%`;
 const money = (v: number | undefined | null) =>
@@ -57,17 +57,6 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortBy: 'ExtrapolatedCapRate',
     sortOrder: 'desc',
     rawFilterBy: 'ExtrapolatedCapRate:>0',
-    objectives: ['Analyze rental yield / cap rates'],
-  },
-  gross_yield: {
-    id: 'gross_yield',
-    title: 'Highest Gross Yield',
-    metricField: 'gross_yield_est',
-    metricLabel: 'YIELD',
-    formatMetric: pct,
-    sortBy: 'gross_yield_est',
-    sortOrder: 'desc',
-    rawFilterBy: 'gross_yield_est:>0',
     objectives: ['Analyze rental yield / cap rates'],
   },
   suite: {
@@ -130,7 +119,6 @@ export const BOARDS: Record<BoardId, BoardDef> = {
 /** Default board order when the user has no objective signal. */
 export const DEFAULT_BOARD_ORDER: BoardId[] = [
   'cap_rate',
-  'gross_yield',
   'suite',
   'fresh',
   'price_drop',
