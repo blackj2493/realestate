@@ -1,10 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
+import { hasAccess } from "@/lib/dashboard/config";
 
 export default function HomePage() {
+  const router = useRouter();
+  // Returning users (access granted) are routed straight to Mission Control.
+  // Render nothing until the check resolves to avoid flashing the marketing hero.
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (hasAccess()) {
+      router.replace("/dashboard");
+    } else {
+      setChecked(true);
+    }
+  }, [router]);
+
+  if (!checked) return null;
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
       <HeroBackground variant="hero" />

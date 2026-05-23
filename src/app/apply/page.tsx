@@ -1,17 +1,18 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import Link from "next/link";
-import {
-  Check,
-  ChevronRight,
-  ArrowLeft,
-  ShieldCheck,
-  Loader2,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
+import {
+  grantAccess,
+  saveProfile,
+  saveConfig,
+  seedConfigFromProfile,
+  type ApplyProfile,
+} from "@/lib/dashboard/config";
 
 const STEPS = [
   { n: 1, label: "Identity & Intent" },
@@ -148,8 +149,8 @@ const toggle = (arr: string[], v: string) =>
   arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
 
 export default function ApplyPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
-  const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -205,7 +206,7 @@ export default function ApplyPage() {
     setStep((s) => Math.max(1, s - 1));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const err = validateStep(3);
     if (err) {
       setError(err);
@@ -213,42 +214,41 @@ export default function ApplyPage() {
     }
     setError("");
     setIsLoading(true);
-    // TODO: persist to backend (Prisma TerminalApplication / POST /api/onboarding/apply)
-    setTimeout(() => {
-      setIsLoading(false);
-      setSubmitted(true);
-    }, 1200);
-  };
 
-  if (submitted) {
-    return (
-      <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-        <HeroBackground variant="form" />
-        <div className="relative z-10 flex min-h-screen flex-col">
-          <TopNav />
-          <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10">
-              <ShieldCheck className="h-8 w-8 text-emerald-400" />
-            </div>
-            <h1 className="mt-6 text-2xl font-black uppercase tracking-tight text-white md:text-3xl">
-              Application received
-            </h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
-              {
-                "Your access request is under manual review. Verified principals and analysts are contacted by email. We don't approve every application."
-              }
-            </p>
-            <Link
-              href="/"
-              className="terminal-font mt-10 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400 transition-colors hover:text-emerald-400"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to home
-            </Link>
-          </main>
-        </div>
-      </div>
-    );
-  }
+    const profile: ApplyProfile = {
+      applicantType,
+      fullName,
+      email,
+      entityName,
+      objectives,
+      regions,
+      capital,
+      assets,
+      cadence,
+    };
+
+    // Best-effort lead capture — never block access on a Supabase hiccup.
+    try {
+      await fetch("/api/onboarding/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...profile,
+          attestNotAgent,
+          attestBonaFide,
+          agreeTerms,
+        }),
+      });
+    } catch (e) {
+      console.warn("[apply] persist failed (granting access anyway):", e);
+    }
+
+    // Grant access + seed the personalized dashboard, then drop into Mission Control.
+    saveProfile(profile);
+    saveConfig(seedConfigFromProfile(profile));
+    grantAccess();
+    router.push("/dashboard");
+  };
 
   const currentLabel = STEPS[step - 1].label;
 

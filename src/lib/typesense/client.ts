@@ -8,6 +8,7 @@
  */
 
 import Typesense, { Client } from 'typesense';
+import { searchCities } from '@/lib/cities';
 
 // Typesense configuration
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
@@ -148,6 +149,9 @@ export interface ListingDocument {
   // ─── Status / DOM ────────────────────────────────────────────────────
   Status?: string;
   DaysOnMarket?: number;
+
+  // Entry timestamp (epoch) — sortable; powers "freshest" + since-last-visit.
+  EntryTimestamp?: number;
 
   // ─── School-Aware Search (nearest rated school per panel) ─────────────
   ElemPublicScore?: number;
@@ -440,6 +444,71 @@ export async function searchListings(
       console.error('[Typesense] HTTP Body:', tsError.httpBody);
     }
     throw error;
+  }
+}
+
+/**
+ * A location autocomplete suggestion (a City or a CityRegion/neighbourhood),
+ * with the count of active sale listings currently in it.
+ */
+export interface LocationSuggestion {
+  label: string;
+  kind: 'city' | 'neighbourhood';
+  count?: number;
+}
+
+/**
+ * Location typeahead for the terminal search bar.
+ *
+ * One faceted Typesense query: facets City + CityRegion over the docs matching
+ * `query`, then keep the facet values whose text contains the query so "ham"
+ * surfaces cities (Hamilton…) and "stoney" surfaces neighbourhoods (Stoney
+ * Creek…). Each suggestion carries its live active-listing count. Falls back to
+ * the static city list (no counts) if Typesense is unreachable.
+ */
+export async function suggestLocations(query: string): Promise<LocationSuggestion[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const needle = q.toLowerCase();
+
+  try {
+    const client = getTypesenseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await client
+      .collections('properties')
+      .documents()
+      .search({
+        q,
+        query_by: 'City,CityRegion',
+        filter_by: 'ListPrice:>=100000',
+        facet_by: 'City,CityRegion',
+        max_facet_values: 100,
+        per_page: 0,
+      });
+
+    const seen = new Set<string>();
+    const out: LocationSuggestion[] = [];
+    const facets: Array<{ field_name: string; counts: Array<{ value: string; count: number }> }> =
+      response.facet_counts || [];
+
+    for (const facet of facets) {
+      const kind: LocationSuggestion['kind'] = facet.field_name === 'City' ? 'city' : 'neighbourhood';
+      for (const { value, count } of facet.counts || []) {
+        if (!value || !value.toLowerCase().includes(needle)) continue;
+        const dedupeKey = value.toLowerCase();
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        out.push({ label: value, kind, count });
+      }
+    }
+
+    out.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+    return out.slice(0, 8);
+  } catch (error) {
+    console.error('[Typesense] Location suggest error — falling back to static cities:', error);
+    return searchCities(q)
+      .slice(0, 8)
+      .map((c) => ({ label: c.name, kind: 'city' as const }));
   }
 }
 
