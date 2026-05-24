@@ -1,582 +1,506 @@
-"use client";
+/**
+ * /properties/[id] — server-rendered, SEO-optimized listing detail page.
+ *
+ * Ported from the Command Center's ListingTerminal 70/30 layout, but fed by the
+ * full Supabase payload (real rooms, all photos, AVM estimate, condo-fee stability)
+ * and emitting per-listing <title>/meta/OpenGraph + JSON-LD for crawlers.
+ *
+ * Compliance: serves the `listings` table (active IDX) only; brokerage is displayed;
+ * all derived metrics are deterministic (no LLM transformation).
+ */
 
-import React, { useState, useEffect } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Car } from "lucide-react";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import ImageBentoGrid from "@/components/Property/ImageBentoGrid";
-import MediaGalleryOverlay from "@/components/Property/MediaGalleryOverlay";
-import SpatialDistribution from "@/components/SpatialDistribution";
+import { Bed, Bath, Square, Car, Home, Ruler, AlertTriangle, Building2 } from "lucide-react";
+import { cn, formatPrice } from "@/lib/utils";
+import { getListingDetail } from "@/lib/property/getListingDetail";
+import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
+import CarryCostCalculator from "@/components/CommandCenter/CarryCostCalculator";
+import DOMTimelineChart from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
-import { recordView } from "@/lib/dashboard/recentlyViewed";
-import type { AVMResult } from "@/lib/avm/types";
-import type { FeeStabilityResult } from "@/lib/condo/feeStability";
+import PropertyGallery from "./PropertyGallery";
+import RecordView from "./RecordView";
+import ListingActions from "./ListingActions";
+import NearbySchools from "./NearbySchools";
+import PropertyNotFound from "./PropertyNotFound";
 
-interface Room {
-  RoomKey?: string;
+export const dynamic = "force-dynamic";
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://pureproperty.ca").replace(/\/$/, "");
+
+interface RawRoom {
   RoomType?: string;
   RoomLevel?: string;
-  RoomDimensions?: string;
-  RoomFeatures?: string;
+  RoomDimensions?: string | null;
   RoomLength?: number;
   RoomWidth?: number;
 }
 
-interface Property {
-  ListingKey: string;
-  ListPrice: number;
-  City?: string;
-  StateOrProvince?: string;
-  BedroomsTotal?: number;
-  BathroomsTotalInteger?: number;
-  ListOfficeName?: string;
+interface RawListing {
+  ListingKey?: string;
+  ListPrice?: number;
+  OriginalListPrice?: number;
   UnparsedAddress?: string;
-  Utilities?: string;
-  Water?: string;
-  ExteriorFeatures?: string[];
-  ParkingTotal?: number;
-  ParkingType?: string;
-  AnnualTaxes?: number;
-  AssociationFee?: number;
-  PublicRemarks?: string;
-  TransactionType?: string;
-  rooms?: Room[];
-  media?: Array<{ MediaURL: string; MediaCategory?: string; MediaObjectID?: string }>;
-  images?: Array<{ MediaURL: string; MediaCategory?: string; MediaObjectID?: string; Order?: number }>;
-  listingHistory?: {
-    dateStart: string;
-    dateEnd?: string;
-    price: number;
-    event: string;
-    listingId: string;
-  }[];
-  TaxAnnualAmount?: number;
-  Latitude?: number;
-  Longitude?: number;
+  City?: string;
+  CityRegion?: string;
+  StateOrProvince?: string;
   PostalCode?: string;
-  ArchitecturalStyle?: string;
-  Basement?: string[];
-  DirectionFaces?: string;
-  OriginalEntryTimestamp?: string;
+  BedroomsTotal?: number;
   BedroomsAboveGrade?: number;
   BedroomsBelowGrade?: number;
-  CoveredSpaces?: number;
+  BathroomsTotalInteger?: number;
   KitchensTotal?: number;
   KitchensAboveGrade?: number;
   KitchensBelowGrade?: number;
+  RoomsTotal?: number;
   RoomsAboveGrade?: number;
   RoomsBelowGrade?: number;
-  InteriorFeatures?: string[];
-  ConstructionMaterials?: string[];
-  FoundationDetails?: string[];
-  Roof?: string[];
+  ListOfficeName?: string;
+  PropertyType?: string;
+  PropertySubType?: string;
+  ArchitecturalStyle?: string[] | string;
+  ApproximateAge?: string;
+  Basement?: string[] | string;
+  DirectionFaces?: string;
   LotWidth?: number;
   LotDepth?: number;
   LotSizeUnits?: string;
-  LotSizeRangeAcres?: string;
+  BuildingAreaTotal?: number;
+  ParkingTotal?: number;
+  CoveredSpaces?: number;
   HeatType?: string;
   HeatSource?: string;
-  Sewer?: string[];
-  Cooling?: string[];
-  Heating?: string;
-  ParkingFeatures?: string[];
-  PropertyFeatures?: string[];
-  CityRegion?: string;
-  PropertySubType?: string;
+  Cooling?: string[] | string;
+  TaxAnnualAmount?: number;
+  AssociationFee?: number;
+  PublicRemarks?: string;
   StandardStatus?: string;
   DaysOnMarket?: number;
+  OriginalEntryTimestamp?: string;
+  rooms?: RawRoom[];
 }
 
-function calculateDaysOnMarket(originalEntryTimestamp: string | undefined): number {
-  if (!originalEntryTimestamp) return 0;
-  
-  const listingDate = new Date(originalEntryTimestamp);
-  const today = new Date();
-  const diffTime = Math.abs(today.getTime() - listingDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
-  
-  return diffDays;
+function calculateDaysOnMarket(ts?: string): number {
+  if (!ts) return 0;
+  const diff = Date.now() - new Date(ts).getTime();
+  return Math.max(0, Math.ceil(diff / 86_400_000) - 1);
 }
 
-// Trigger background quick-sync via API
-async function triggerQuickSync(listingKey: string): Promise<void> {
-  try {
-    const response = await fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        action: 'quick-sync',
-        listingKey,
-        priority: 'high'
-      }),
-    });
-    
-    if (!response.ok) {
-      console.warn('[Quick-Sync] Failed to trigger sync for:', listingKey);
-    } else {
-      console.log('[Quick-Sync] Triggered for listing:', listingKey);
-    }
-  } catch (error) {
-    console.error('[Quick-Sync] Error triggering sync:', error);
-  }
+function asArray(v: string[] | string | undefined): string[] {
+  if (Array.isArray(v)) return v.filter(Boolean);
+  return v ? [v] : [];
 }
 
-export default function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
-  // In Next.js 15+, params is a Promise that must be unwrapped
-  const { id } = React.use(params);
-  const [property, setProperty] = useState<Property | null>(null);
-  const [estimate, setEstimate] = useState<AVMResult | null>(null);
-  const [feeStability, setFeeStability] = useState<FeeStabilityResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'triggering' | 'pending'>('idle');
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+function cleanDescription(remarks: string | undefined, max = 155): string {
+  if (!remarks) return "";
+  const flat = remarks.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+}
 
-  useEffect(() => {
-    const fetchProperty = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // STEP 1: Fetch from API route (server-side Supabase call)
-        console.log('[PropertyPage] Fetching listing via API:', id);
-        
-        const response = await fetch(`/api/property/${id}`);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            console.log('[PropertyPage] Listing not in database, triggering quick-sync:', id);
-            setSyncStatus('triggering');
-            await triggerQuickSync(id);
-            setSyncStatus('pending');
-            setError(`This listing is being synchronized. It will be available shortly.`);
-            setProperty(null);
-            setLoading(false);
-            return;
-          }
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.notFound) {
-          console.log('[PropertyPage] Listing not found, triggering quick-sync:', id);
-          setSyncStatus('triggering');
-          await triggerQuickSync(id);
-          setSyncStatus('pending');
-          setError(`This listing is being synchronized. It will be available shortly.`);
-          setProperty(null);
-          setLoading(false);
-          return;
-        }
-        
-        // Extract images from media_urls
-        const images: Array<{ MediaURL: string; MediaCategory?: string; MediaObjectID?: string; Order?: number }> = 
-          (data.media_urls || []).map((url: string, index: number) => ({
-            MediaURL: url,
-            MediaCategory: 'Photo',
-            MediaObjectID: `extracted-${index}`,
-            Order: index,
-          }));
-        
-        // Combine full_payload with extracted images
-        const propertyData: Property = {
-          ...(data.full_payload as Property || {}),
-          images,
-        };
-        
-        console.log(`[API] Fetched listing: ${id}`);
-        
-        setProperty(propertyData);
-        setEstimate(data.estimate ?? null);
-        setFeeStability(data.feeStability ?? null);
-        setSyncStatus('idle');
-      } catch (err) {
-        console.error("Error fetching property:", err);
-        const errorMessage = err instanceof Error ? err.message : "Failed to load property details";
-        
-        // If network error, try to trigger quick sync as fallback
-        if (errorMessage.toLowerCase().includes('failed to fetch') || errorMessage.toLowerCase().includes('fetch')) {
-          console.log('[PropertyPage] Network error, attempting quick-sync fallback...');
-          setSyncStatus('triggering');
-          await triggerQuickSync(id);
-          setSyncStatus('pending');
-          setError(`Unable to connect to database. The listing is being synchronized. Please refresh shortly.`);
-        } else {
-          setError(errorMessage);
-        }
-        
-        setProperty(null);
-      } finally {
-        setLoading(false);
-      }
+function roomDims(r: RawRoom): string {
+  if (r.RoomDimensions) return r.RoomDimensions;
+  if (r.RoomLength && r.RoomWidth) return `${r.RoomLength} x ${r.RoomWidth}`;
+  return "—";
+}
+
+// ── SEO metadata (shares the cached getListingDetail call with the page body) ──
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const detail = await getListingDetail(id).catch(() => null);
+
+  if (!detail) {
+    return {
+      title: "Property Syncing | PureProperty",
+      robots: { index: false, follow: true },
     };
+  }
 
-    if (id) {
-      fetchProperty();
-    }
-  }, [id]);
+  const p = detail.full_payload as RawListing;
+  const address = p.UnparsedAddress || detail.city || "Listing";
+  const price = p.ListPrice || 0;
+  const canonical = `${SITE_URL}/properties/${id}`;
+  const title = `${address} — ${formatPrice(price)} | PureProperty`;
+  const description =
+    cleanDescription(p.PublicRemarks) ||
+    `${address}. ${p.BedroomsTotal ?? 0} bed, ${p.BathroomsTotalInteger ?? 0} bath ${
+      p.PropertySubType || "home"
+    } listed at ${formatPrice(price)}.`;
+  const isActive = (p.StandardStatus ?? "Active") === "Active";
+  const ogImage = detail.media_urls[0];
 
-  // Record this listing for the dashboard's "Recently Viewed" rail (localStorage).
-  useEffect(() => {
-    if (!property) return;
-    recordView({
-      id,
-      address: property.UnparsedAddress || property.City || "Listing",
-      price: property.ListPrice || 0,
-      thumb: property.images?.[0]?.MediaURL,
-      city: property.City,
-    });
-  }, [property, id]);
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+    alternates: { canonical },
+    robots: isActive ? undefined : { index: false, follow: true },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      siteName: "PureProperty",
+      type: "website",
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+  };
+}
 
-  // Loading state
-  if (loading) return <LoadingSpinner />;
-  
-  // Error state with clean message
-  if (error) {
+function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDetail>>) {
+  if (!detail) return null;
+  const p = detail.full_payload as RawListing;
+  const subType = (p.PropertySubType || "").toLowerCase();
+  const schemaType = /condo|apartment/.test(subType) ? "Apartment" : "SingleFamilyResidence";
+
+  return {
+    "@context": "https://schema.org",
+    "@type": schemaType,
+    name: p.UnparsedAddress || "Property listing",
+    description: cleanDescription(p.PublicRemarks, 500) || undefined,
+    url: `${SITE_URL}/properties/${id}`,
+    image: detail.media_urls.slice(0, 8),
+    numberOfRooms: p.RoomsTotal || p.rooms?.length || undefined,
+    numberOfBedrooms: p.BedroomsTotal || undefined,
+    numberOfBathroomsTotal: p.BathroomsTotalInteger || undefined,
+    ...(p.BuildingAreaTotal
+      ? { floorSize: { "@type": "QuantitativeValue", value: p.BuildingAreaTotal, unitCode: "FTK" } }
+      : {}),
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: p.UnparsedAddress || undefined,
+      addressLocality: p.City || detail.city || undefined,
+      addressRegion: p.StateOrProvince || "ON",
+      postalCode: p.PostalCode || undefined,
+      addressCountry: "CA",
+    },
+    ...(p.OriginalEntryTimestamp ? { datePosted: p.OriginalEntryTimestamp } : {}),
+    offers: {
+      "@type": "Offer",
+      price: p.ListPrice || 0,
+      priceCurrency: "CAD",
+      availability: "https://schema.org/InStock",
+      url: `${SITE_URL}/properties/${id}`,
+      ...(p.ListOfficeName
+        ? { seller: { "@type": "RealEstateAgent", name: p.ListOfficeName } }
+        : {}),
+    },
+  };
+}
+
+export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const detail = await getListingDetail(id).catch(() => null);
+
+  if (!detail) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-4">Property {syncStatus === 'pending' ? 'Syncing...' : 'Not Found'}</h1>
-          <p className="text-muted-foreground mb-6">{error}</p>
-          {syncStatus === 'pending' ? (
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-pulse text-primary">Synchronizing listing data...</div>
-              <Button variant="outline" onClick={() => window.location.reload()}>
-                Check Again
-              </Button>
-            </div>
-          ) : (
-            <Link href="/properties">
-              <Button variant="outline">← Back to Listings</Button>
-            </Link>
-          )}
-        </div>
-      </div>
+      <main className="min-h-screen bg-slate-950">
+        <PropertyNotFound id={id} />
+      </main>
     );
   }
-  
-  // Null state (shouldn't happen after error check but safety first)
-  if (!property) return <div>Property not found</div>;
 
-  // Combine images and media for the gallery
-  const allMedia = [
-    ...(property.images || []),
-    ...(property.media || []).filter(
-      (m) => !property.images?.some((img) => img.MediaURL === m.MediaURL)
-    ),
+  const p = detail.full_payload as RawListing;
+  const address = p.UnparsedAddress || detail.city || "Address Unavailable";
+  const price = p.ListPrice || 0;
+  const dom = p.DaysOnMarket ?? calculateDaysOnMarket(p.OriginalEntryTimestamp);
+  const rooms = Array.isArray(p.rooms) ? p.rooms : [];
+  const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
+  const jsonLd = buildJsonLd(id, detail);
+
+  const badges = detectPropertyBadges({
+    hasSecondarySuitePotential: hasSuitePotential,
+    KitchensBelowGrade: p.KitchensBelowGrade,
+    PublicRemarks: p.PublicRemarks,
+    ListPrice: p.ListPrice,
+    OriginalListPrice: p.OriginalListPrice,
+    DaysOnMarket: dom,
+  });
+
+  const style = asArray(p.ArchitecturalStyle).join(", ");
+  const basement = asArray(p.Basement).join(", ");
+  const cooling = asArray(p.Cooling).join(", ");
+
+  const vitals: Array<{ label: string; value: string }> = [
+    {
+      label: "Lot Dimensions",
+      value: p.LotWidth ? `${p.LotWidth} x ${p.LotDepth ?? "N/A"} ${p.LotSizeUnits ?? ""}`.trim() : "N/A",
+    },
+    { label: "Property Age", value: p.ApproximateAge || "N/A" },
+    { label: "Heating", value: [p.HeatType, p.HeatSource].filter(Boolean).join(" · ") || "N/A" },
+    { label: "Cooling", value: cooling || "N/A" },
+    { label: "Direction Faces", value: p.DirectionFaces || "N/A" },
+    { label: "Basement", value: basement || "N/A" },
+  ];
+
+  const summary: Array<{ label: string; value: string }> = [
+    { label: "Property Type", value: p.PropertySubType || p.PropertyType || "N/A" },
+    { label: "Style", value: style || "N/A" },
+    { label: "Annual Taxes", value: p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A" },
+    {
+      label: "Kitchens",
+      value: `${p.KitchensTotal ?? 0} (${p.KitchensAboveGrade ?? 0} above · ${p.KitchensBelowGrade ?? 0} below)`,
+    },
+    {
+      label: "Rooms",
+      value: `${p.RoomsAboveGrade ?? 0} above · ${p.RoomsBelowGrade ?? 0} below`,
+    },
+    {
+      label: "Bedrooms",
+      value: `${p.BedroomsAboveGrade ?? p.BedroomsTotal ?? 0} above · ${p.BedroomsBelowGrade ?? 0} below`,
+    },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <Link href="/properties" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-        ← Back to Listings
-      </Link>
-
-      {/* Media Gallery - Bento Grid */}
-      <ImageBentoGrid 
-        images={allMedia.map(m => m.MediaURL).filter(Boolean)}
-        onClick={() => setIsGalleryOpen(true)}
-        className="h-[500px]"
+    <main className="min-h-screen bg-slate-950 text-slate-200">
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <RecordView
+        id={id}
+        address={address}
+        price={price}
+        thumb={detail.media_urls[0]}
+        city={detail.city ?? undefined}
       />
 
-      {/* Full-Screen Media Gallery Overlay */}
-      <MediaGalleryOverlay
-        images={allMedia.map(m => m.MediaURL).filter(Boolean)}
-        isOpen={isGalleryOpen}
-        onClose={() => setIsGalleryOpen(false)}
-      />
+      <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <Link
+          href="/properties"
+          className="mb-4 inline-block text-sm text-cyan-400 transition-colors hover:text-cyan-300"
+        >
+          ← Back to Command Center
+        </Link>
 
-      {/* Property Header - Full Width */}
-      <div className="mt-8">
-        <h1 className="text-3xl font-bold">{property.UnparsedAddress}</h1>
-        <div className="text-2xl font-bold text-primary mt-2">
-          ${property.ListPrice?.toLocaleString()}
-        </div>
-        <div className="flex gap-4 mt-4 text-lg">
-          <div className="flex items-center gap-2">
-            <Bed className="h-5 w-5" />
-            <span>{property.BedroomsAboveGrade || 0}+{property.BedroomsBelowGrade || 0} beds</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Bath className="h-5 w-5" />
-            <span>{property.BathroomsTotalInteger} baths</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
-            <span>{property.CoveredSpaces || 0} Garage</span>
-          </div>
-          <div className="text-muted-foreground font-bold">
-            Listed {calculateDaysOnMarket(property.OriginalEntryTimestamp)} days ago
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-        {/* Left Column - Description and Details */}
-        <div className="lg:col-span-2">
-          {/* Property Description */}
-          <section className="bg-card rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Description</h2>
-            <p className="text-muted-foreground whitespace-pre-line">
-              {property.PublicRemarks}
-            </p>
-          </section>
-
-          {/* Property Summary */}
-          <section className="mt-8 bg-card rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Property Summary</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <p className="text-muted-foreground">Property Type</p>
-                <p className="font-medium">{property.PropertySubType || "Single Family"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Building Type</p>
-                <p className="font-medium">{property.PropertySubType || "Semi-detached"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Building Style</p>
-                <p className="font-medium">{property.ArchitecturalStyle || "Not Available"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Days on Market</p>
-                <p className="font-medium">{calculateDaysOnMarket(property.OriginalEntryTimestamp)} days</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Land Size</p>
-                <p className="font-medium">{property.LotWidth} x {property.LotDepth} {property.LotSizeUnits}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Annual Property Taxes</p>
-                <p className="font-medium">{property.TaxAnnualAmount ? `$${property.TaxAnnualAmount.toLocaleString()}` : "Not Available"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Total Parking Spaces</p>
-                <p className="font-medium">{property.ParkingTotal || 0}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Basement</p>
-                <p className="font-medium">{property.Basement ? property.Basement.join(", ") : "Not Available"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Facing</p>
-                <p className="font-medium">{property.DirectionFaces || "Not Available"}</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Details Card */}
-          <section className="mt-8 bg-card rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Details</h2>
-            
-            {/* Interior */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_3fr]">
+          {/* ── LEFT (70%) ── */}
+          <div>
+            {/* Header */}
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Interior Features</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-muted-foreground">Kitchens</p>
-                  <p className="font-medium">{property.KitchensTotal || 0} ({property.KitchensAboveGrade || 0} above, {property.KitchensBelowGrade || 0} below)</p>
+              {badges.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {badges.map((b, i) => (
+                    <AlphaBadge key={i} variant={b.variant} label={b.label} value={b.value} />
+                  ))}
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Rooms</p>
-                  <p className="font-medium">{property.RoomsAboveGrade || 0} above, {property.RoomsBelowGrade || 0} below</p>
-                </div>
-                {property.InteriorFeatures && property.InteriorFeatures.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Features</p>
-                    <p className="font-medium">{property.InteriorFeatures.join(", ")}</p>
-                  </div>
-                )}
+              )}
+              <h1 className="mb-2 text-2xl font-bold text-slate-100">{address}</h1>
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="font-mono text-3xl font-bold text-emerald-400">
+                  {formatPrice(price)}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {p.City}
+                  {p.PropertySubType ? `, ${p.PropertySubType}` : ""}
+                </span>
+                <span className="text-sm font-semibold text-slate-400">
+                  Listed {dom} {dom === 1 ? "day" : "days"} ago
+                </span>
               </div>
-            </div>
-
-            {/* Construction */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Construction & Structure</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {property.ConstructionMaterials && property.ConstructionMaterials.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Materials</p>
-                    <p className="font-medium">{property.ConstructionMaterials.join(", ")}</p>
-                  </div>
-                )}
-                {property.FoundationDetails && property.FoundationDetails.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Foundation</p>
-                    <p className="font-medium">{property.FoundationDetails.join(", ")}</p>
-                  </div>
-                )}
-                {property.Roof && property.Roof.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Roof</p>
-                    <p className="font-medium">{property.Roof.join(", ")}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Lot Details */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Lot Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-muted-foreground">Lot Dimensions</p>
-                  <p className="font-medium">{property.LotWidth || "N/A"} x {property.LotDepth || "N/A"} {property.LotSizeUnits || ""}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Lot Size Range</p>
-                  <p className="font-medium">{property.LotSizeRangeAcres || "Not Available"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Direction Faces</p>
-                  <p className="font-medium">{property.DirectionFaces || "Not Available"}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Systems & Utilities */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Systems & Utilities</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {property.Cooling && property.Cooling.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Cooling</p>
-                    <p className="font-medium">{property.Cooling.join(", ")}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-muted-foreground">Heating</p>
-                  <p className="font-medium">{property.HeatType || "Not Available"} ({property.HeatSource || "N/A"})</p>
-                </div>
-                {property.Sewer && property.Sewer.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Sewer</p>
-                    <p className="font-medium">{property.Sewer.join(", ")}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Parking & Exterior */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Parking & Exterior</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {property.ParkingFeatures && property.ParkingFeatures.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Parking Features</p>
-                    <p className="font-medium">{property.ParkingFeatures.join(", ")}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-muted-foreground">Total Parking Spaces</p>
-                  <p className="font-medium">{property.ParkingTotal || 0}</p>
-                </div>
-                {property.ExteriorFeatures && property.ExteriorFeatures.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground">Exterior Features</p>
-                    <p className="font-medium">{property.ExteriorFeatures.join(", ")}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Property Features */}
-            {property.PropertyFeatures && property.PropertyFeatures.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3">Property Features</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div>
-                    <p className="text-muted-foreground">Nearby</p>
-                    <p className="font-medium">{property.PropertyFeatures.join(", ")}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Listed By Card */}
-          <section className="mt-8 bg-card rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-2">Listed By</h3>
-            <p className="text-muted-foreground">{property.ListOfficeName || "Office information not available"}</p>
-          </section>
-
-          {/* Spatial Distribution Visualizer */}
-          {property.rooms && property.rooms.length > 0 && (
-            <SpatialDistribution 
-              rooms={property.rooms} 
-              title="Room Spatial Distribution" 
-            />
-          )}
-        </div>
-
-        {/* Right Column - Contact & Mortgage Calculator */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-24 space-y-6">
-            {/* PureProperty Estimate */}
-            <ListingEstimateCard
-              estimate={estimate}
-              listPrice={property.ListPrice}
-              cityRegion={property.CityRegion}
-            />
-
-            {/* Condo Fee Stability (renders only for condos with enough comparable data) */}
-            <CondoFeeStabilityCard feeStability={feeStability} />
-
-            {/* Contact Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Interested in this property?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Contact the listing agent for more information or to schedule a viewing.
+              {p.ListOfficeName && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
+                  <Building2 className="h-4 w-4 text-slate-500" />
+                  Listed by {p.ListOfficeName}
                 </p>
-                <Button className="w-full" size="lg">
-                  Contact Agent
-                </Button>
-              </CardContent>
-            </Card>
+              )}
+            </div>
 
-            {/* Mortgage Calculator */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Mortgage Calculator</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Property Price</label>
-                    <p className="text-lg font-bold text-primary">{formatPrice(property.ListPrice)}</p>
+            {/* Gallery */}
+            <div className="mb-6">
+              <PropertyGallery images={detail.media_urls} />
+            </div>
+
+            {/* Specs */}
+            <div className="mb-6 grid grid-cols-4 gap-3">
+              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={p.BedroomsTotal ?? 0} label="Beds" />
+              <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
+              <SpecCell
+                icon={<Square className="h-5 w-5 text-purple-400" />}
+                value={p.BuildingAreaTotal ? p.BuildingAreaTotal.toLocaleString() : "N/A"}
+                label="Sqft"
+              />
+              <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
+            </div>
+
+            {/* Structural Vitals */}
+            <Section title="Structural Vitals" icon={<Home className="h-4 w-4 text-emerald-400" />}>
+              <table className="w-full border-collapse text-sm">
+                <tbody className="divide-y divide-slate-800">
+                  {vitals.map((row) => (
+                    <tr key={row.label}>
+                      <td className="w-1/3 py-2 text-slate-500">{row.label}</td>
+                      <td className="py-2 font-mono text-slate-200">{row.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+
+            {/* Property Summary (richer than the modal) */}
+            <Section title="Property Summary" icon={<Building2 className="h-4 w-4 text-emerald-400" />}>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                {summary.map((row) => (
+                  <div key={row.label}>
+                    <p className="text-xs text-slate-500">{row.label}</p>
+                    <p className="font-medium text-slate-200">{row.value}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Annual Property Tax</label>
-                    <p className="text-muted-foreground">
-                      {property.TaxAnnualAmount ? formatPrice(property.TaxAnnualAmount) : "N/A"}
-                    </p>
-                  </div>
-                  <div className="pt-4 border-t">
-                    <p className="text-sm text-muted-foreground">
-                      Estimated Monthly Payment*
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {formatPrice(Math.round(property.ListPrice / 300))}/mo
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      *Based on 20% down payment, 30-year fixed rate
-                    </p>
-                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Schools */}
+            <NearbySchools listingId={id} />
+
+            {/* Room Ledger (real data) */}
+            {rooms.length > 0 && (
+              <Section title="Room Ledger" icon={<Ruler className="h-4 w-4 text-emerald-400" />}>
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
+                      <th className="py-2 text-left">Room</th>
+                      <th className="py-2 text-left">Level</th>
+                      <th className="py-2 text-right">Dimensions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {rooms.map((r, i) => (
+                      <tr key={i} className="hover:bg-slate-900/30">
+                        <td className="py-2 text-slate-200">{r.RoomType || "—"}</td>
+                        <td className="py-2 text-slate-400">{r.RoomLevel || "—"}</td>
+                        <td className="py-2 text-right font-mono text-slate-300">{roomDims(r)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Remarks */}
+            <Section title="Unvarnished Remarks" icon={<AlertTriangle className="h-4 w-4 text-amber-400" />}>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">
+                  {p.PublicRemarks || "No remarks available."}
+                </p>
+              </div>
+            </Section>
+
+            {/* Brokerage (mandatory display) */}
+            <Section title="Listed By" icon={<Building2 className="h-4 w-4 text-emerald-400" />}>
+              <p className="text-sm text-slate-300">
+                {p.ListOfficeName || "Brokerage information not available"}
+              </p>
+            </Section>
+          </div>
+
+          {/* ── RIGHT (30%, sticky) ── */}
+          <div>
+            <div className="sticky top-6 space-y-4">
+              {/* Asset Summary */}
+              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-200">
+                  Asset Summary
+                </h3>
+                <div className="space-y-2 text-xs">
+                  <SummaryRow label="List Price" value={formatPrice(price)} valueClass="text-emerald-400" />
+                  <SummaryRow
+                    label="Annual Taxes"
+                    value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
+                  />
+                  <SummaryRow
+                    label="Monthly Fees"
+                    value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
+                  />
+                  <SummaryRow
+                    label="True DOM"
+                    value={`${dom} days`}
+                    valueClass={dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-400"}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <CarryCostCalculator
+                listPrice={price}
+                annualTaxes={p.TaxAnnualAmount || 0}
+                monthlyFees={p.AssociationFee || 0}
+                hasSuitePotential={hasSuitePotential}
+              />
+
+              <DOMTimelineChart currentPrice={price} originalPrice={p.OriginalListPrice} dom={dom} />
+
+              <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} />
+
+              <CondoFeeStabilityCard feeStability={detail.feeStability} />
+
+              <ListingActions
+                id={id}
+                address={address}
+                city={detail.city ?? undefined}
+                price={price}
+                thumb={detail.media_urls[0]}
+              />
+            </div>
           </div>
         </div>
       </div>
+    </main>
+  );
+}
+
+function SpecCell({ icon, value, label }: { icon: React.ReactNode; value: React.ReactNode; label: string }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-center">
+      <div className="mx-auto mb-1 flex justify-center">{icon}</div>
+      <span className="block font-mono text-lg font-bold text-slate-200">{value}</span>
+      <span className="block text-[10px] uppercase text-slate-500">{label}</span>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
+        {icon}
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  valueClass = "text-slate-300",
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-slate-500">{label}</span>
+      <span className={cn("font-mono", valueClass)}>{value}</span>
     </div>
   );
 }

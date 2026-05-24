@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import {
   hasAccess,
+  grantAccess,
   getConfig,
   saveConfig,
   getProfile,
@@ -12,6 +13,7 @@ import {
   type DashboardConfig,
   type MarketActivityLens,
 } from "@/lib/dashboard/config";
+import { createClient } from "@/lib/supabase/browser";
 import { BOARDS } from "@/lib/dashboard/boards";
 import MissionControlHeader from "@/components/dashboard/MissionControlHeader";
 import DashboardConfigPanel from "@/components/dashboard/DashboardConfigPanel";
@@ -21,6 +23,7 @@ import MarketActivityControls from "@/components/dashboard/MarketActivityControl
 import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
+import WatchlistSection from "@/components/dashboard/WatchlistSection";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -34,14 +37,38 @@ export default function DashboardPage() {
   const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
-    // First-timers without granted access get bounced to the velvet rope.
-    if (!hasAccess()) {
-      router.replace("/");
+    let active = true;
+
+    const enter = () => {
+      if (!active) return;
+      setConfig(getConfig());
+      setName(getProfile()?.fullName);
+      setReady(true);
+    };
+
+    // Access is granted by the localStorage velvet rope (/apply) OR by being
+    // signed in — a real account is a stronger signal than the anonymous flag.
+    if (hasAccess()) {
+      enter();
       return;
     }
-    setConfig(getConfig());
-    setName(getProfile()?.fullName);
-    setReady(true);
+
+    (async () => {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+      if (!active) return;
+      if (user) {
+        grantAccess(); // remember for instant entry next time
+        enter();
+      } else {
+        router.replace("/");
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const update = (c: DashboardConfig) => {
@@ -62,6 +89,8 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-[1600px] space-y-8 px-4 py-6">
         {showConfig && <DashboardConfigPanel config={config} onChange={update} />}
+
+        <WatchlistSection />
 
         {!hasRegions && (
           <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-16 text-center">

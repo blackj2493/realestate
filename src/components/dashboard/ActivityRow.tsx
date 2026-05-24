@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
+import WatchButton from "@/components/watchlist/WatchButton";
 
 const PLACEHOLDER =
   "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
@@ -27,6 +28,7 @@ export default function ActivityRow({
   beds,
   baths,
   sqft,
+  watchable = false,
 }: {
   id: string;
   address: string;
@@ -40,6 +42,7 @@ export default function ActivityRow({
   beds?: number | null;
   baths?: number | null;
   sqft?: number | null;
+  watchable?: boolean;
 }) {
   const [err, setErr] = useState(false);
   const src = !err && usable(image) ? image! : PLACEHOLDER;
@@ -92,6 +95,18 @@ export default function ActivityRow({
         </div>
         {caption ? (
           <div className="terminal-font text-[10px] text-slate-400">{caption}</div>
+        ) : null}
+        {watchable ? (
+          <WatchButton
+            item={{
+              listing_key: id,
+              address: addr,
+              city: city ?? undefined,
+              thumb: image ?? undefined,
+              list_price: price,
+            }}
+            size={15}
+          />
         ) : null}
       </div>
     </Link>

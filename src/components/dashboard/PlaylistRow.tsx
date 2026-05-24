@@ -6,6 +6,7 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { BoardDef } from "@/lib/dashboard/boards";
+import WatchButton from "@/components/watchlist/WatchButton";
 
 const PLACEHOLDER =
   "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
@@ -55,6 +56,18 @@ export default function PlaylistRow({
           {formatPrice(listing.ListPrice)}
         </div>
       </div>
+      <WatchButton
+        item={{
+          listing_key: listing.id,
+          address: addr,
+          city: listing.City,
+          thumb: raw,
+          list_price: listing.ListPrice,
+          status: listing.Status,
+        }}
+        className="shrink-0"
+        size={15}
+      />
     </Link>
   );
 }

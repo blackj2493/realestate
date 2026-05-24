@@ -158,6 +158,7 @@ export default function MarketActivityPanel({
               beds={l.BedroomsTotal}
               baths={l.BathroomsTotalInteger}
               sqft={l.BuildingAreaTotal}
+              watchable
             />
           ))}
         </div>
