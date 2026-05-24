@@ -49,3 +49,17 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-condo-fee-stats.ts --apply
+
+      # Email each user a digest of price drops on their watched properties, using
+      # the freshly-synced Typesense index. Additive + must never break the core
+      # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
+      - name: Send Watchlist Alerts
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/alerts.ts
