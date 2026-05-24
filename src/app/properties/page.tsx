@@ -69,6 +69,7 @@ function CommandCenterContent() {
     setMapMode,
     colorMetricId,
     colorBand,
+    drawPolygon,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -134,7 +135,16 @@ function CommandCenterContent() {
       const bandDef = colorBand ? getMapMetric(colorBand.metricId) : null;
       const bandClause = bandDef ? bandFilterClause(bandDef, colorBand!.index) : null;
 
-      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts, bandClause].filter(Boolean).join(" && ");
+      // Draw-to-search: the lasso polygon ([lng,lat]) becomes a second location()
+      // geo filter, intersecting with commute/viewport. Typesense wants "lat, lng".
+      const drawClause =
+        drawPolygon && drawPolygon.length >= 3
+          ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
+          : null;
+
+      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts, bandClause, drawClause]
+        .filter(Boolean)
+        .join(" && ");
 
       // Commute zone: polygon is stored [lng, lat]; Typesense wants [lat, lng].
       const geoPolygon =
@@ -164,7 +174,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded

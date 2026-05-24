@@ -11,12 +11,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Layers, Palette, type LucideIcon } from "lucide-react";
+import { X, Layers, Palette, PenTool, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
 import SchoolFilter from "./SchoolFilter";
 import MapColorPanel from "./MapColorPanel";
+import MapDrawPanel from "./MapDrawPanel";
 
 const TITLES: Record<RailModule, string> = {
   layers: "Data Layers",
@@ -30,7 +31,7 @@ const TITLES: Record<RailModule, string> = {
 const ICONS: Record<RailModule, LucideIcon> = {
   layers: Layers,
   color: Palette,
-  draw: Layers,
+  draw: PenTool,
   compare: Layers,
   time: Layers,
   lenses: Layers,
@@ -72,6 +73,8 @@ function renderContent(module: RailModule) {
       );
     case "color":
       return <MapColorPanel />;
+    case "draw":
+      return <MapDrawPanel />;
     default:
       return null;
   }

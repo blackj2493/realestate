@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import DeckGL from "@deck.gl/react";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
-import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer, PathLayer } from "@deck.gl/layers";
 import { Map, NavigationControl, Layer as MapboxLayer } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
 import { Layers, MapPin } from "lucide-react";
@@ -78,6 +78,11 @@ export default function AlphaMap({
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
   const commuteDestination = useCommandCenterStore((s) => s.commute.destination);
   const setMapBounds = useCommandCenterStore((s) => s.setMapBounds);
+  const isDrawing = useCommandCenterStore((s) => s.isDrawing);
+  const drawPoints = useCommandCenterStore((s) => s.drawPoints);
+  const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
+  const addDrawPoint = useCommandCenterStore((s) => s.addDrawPoint);
+  const finishDrawing = useCommandCenterStore((s) => s.finishDrawing);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -311,6 +316,57 @@ export default function AlphaMap({
     return result;
   }, [commuteRing, commuteDestination]);
 
+  // Draw-to-search overlay: in-progress vertices + edges while drawing, or the
+  // committed area polygon once finished. Drawn over everything so it's editable.
+  const drawLayers = useMemo<Layer[]>(() => {
+    if (drawPolygon) {
+      return [
+        new PolygonLayer<{ ring: [number, number][] }>({
+          id: "draw-area",
+          data: [{ ring: drawPolygon }],
+          getPolygon: (d) => d.ring,
+          filled: true,
+          stroked: true,
+          getFillColor: [34, 211, 238, 32],
+          getLineColor: [34, 211, 238, 230],
+          lineWidthUnits: "pixels",
+          getLineWidth: 2,
+          pickable: false,
+        }),
+      ];
+    }
+    if (!isDrawing || drawPoints.length === 0) return [];
+    const out: Layer[] = [];
+    if (drawPoints.length >= 2) {
+      out.push(
+        new PathLayer<{ path: [number, number][] }>({
+          id: "draw-edges",
+          data: [{ path: drawPoints }],
+          getPath: (d) => d.path,
+          getColor: [34, 211, 238, 220],
+          getWidth: 2,
+          widthUnits: "pixels",
+          pickable: false,
+        })
+      );
+    }
+    out.push(
+      new ScatterplotLayer<{ pos: [number, number]; i: number }>({
+        id: "draw-vertices",
+        data: drawPoints.map((pos, i) => ({ pos, i })),
+        getPosition: (d) => d.pos,
+        getRadius: (d) => (d.i === 0 ? 7 : 5),
+        radiusUnits: "pixels",
+        getFillColor: (d) => (d.i === 0 ? [255, 255, 255, 255] : [34, 211, 238, 255]),
+        stroked: true,
+        getLineColor: [15, 23, 42, 220],
+        lineWidthMinPixels: 1.5,
+        pickable: true,
+      })
+    );
+    return out;
+  }, [drawPolygon, isDrawing, drawPoints]);
+
   const layers = useMemo(() => {
     if (mapData.length === 0) return [...commuteLayers];
 
@@ -382,6 +438,7 @@ export default function AlphaMap({
           }
         },
         onClick: (info) => {
+          if (isDrawing) return;
           const d = info.object as MapDataPoint | undefined;
           if (!d) return;
           if (isSelectMode) toggleSelected(d.id);
@@ -411,6 +468,7 @@ export default function AlphaMap({
       lineWidthMinPixels: 1.5,
       pickable: true,
       onClick: (info) => {
+        if (isDrawing) return;
         const f = info.object as ClusterPoint | undefined;
         if (!f) return;
         const cid = (f.properties as { cluster_id: number }).cluster_id;
@@ -481,6 +539,7 @@ export default function AlphaMap({
         }
       },
       onClick: (info) => {
+        if (isDrawing) return;
         const leaf = info.object as ClusterPoint | undefined;
         if (!leaf) return;
         const listing = (leaf.properties as PinProps).listing;
@@ -497,7 +556,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [mapData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected]);
+  }, [mapData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
@@ -569,8 +628,17 @@ export default function AlphaMap({
         }}
         onDragEnd={handleDragEnd}
         controller={true}
-        layers={layers}
-        getCursor={({ isHovering }) => (isHovering ? "pointer" : "grab")}
+        layers={[...layers, ...drawLayers]}
+        onClick={(info) => {
+          if (!isDrawing || !info.coordinate) return;
+          // Clicking the first vertex closes the polygon; any other click adds one.
+          if (info.layer?.id === "draw-vertices" && (info.object as { i: number })?.i === 0 && drawPoints.length >= 3) {
+            finishDrawing();
+            return;
+          }
+          addDrawPoint([info.coordinate[0], info.coordinate[1]]);
+        }}
+        getCursor={({ isHovering }) => (isDrawing ? "crosshair" : isHovering ? "pointer" : "grab")}
       >
         <Map mapboxAccessToken={mapboxToken} mapStyle="mapbox://styles/mapbox/dark-v11" reuseMaps attributionControl={false}>
           <NavigationControl position="top-right" />

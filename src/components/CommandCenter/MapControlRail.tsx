@@ -12,7 +12,7 @@
 "use client";
 
 import React from "react";
-import { Layers, CheckSquare, Palette, type LucideIcon } from "lucide-react";
+import { Layers, CheckSquare, Palette, PenTool, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
@@ -80,6 +80,8 @@ export default function MapControlRail() {
   const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
+  const isDrawing = useCommandCenterStore((s) => s.isDrawing);
+  const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
 
   const tiles: RailTile[] = [
     {
@@ -95,6 +97,13 @@ export default function MapControlRail() {
       label: "Color By",
       icon: Palette,
       dataActive: colorMetricId !== null,
+    },
+    {
+      kind: "drawer",
+      module: "draw",
+      label: "Draw Area",
+      icon: PenTool,
+      dataActive: isDrawing || drawPolygon !== null,
     },
     {
       kind: "action",

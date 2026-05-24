@@ -157,6 +157,18 @@ export interface CommandCenterState {
   // band filters the map to that value range; switching metrics clears it.
   colorBand: { metricId: string; index: number } | null;
   setColorBand: (band: { metricId: string; index: number } | null) => void;
+
+  // Draw-to-search: a freehand polygon area filter. Points are placed by clicking
+  // the map while isDrawing; finishing (≥3 points) commits drawPolygon, which the
+  // search composes with commute/viewport as an extra geo filter. [lng, lat] order.
+  isDrawing: boolean;
+  drawPoints: [number, number][];
+  drawPolygon: [number, number][] | null;
+  startDrawing: () => void;
+  addDrawPoint: (point: [number, number]) => void;
+  undoDrawPoint: () => void;
+  finishDrawing: () => void;
+  clearDraw: () => void;
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
@@ -247,4 +259,16 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   colorBand: null,
   setColorBand: (band) => set({ colorBand: band }),
+
+  isDrawing: false,
+  drawPoints: [],
+  drawPolygon: null,
+  startDrawing: () => set({ isDrawing: true, drawPoints: [], drawPolygon: null }),
+  addDrawPoint: (point) => set((state) => ({ drawPoints: [...state.drawPoints, point] })),
+  undoDrawPoint: () => set((state) => ({ drawPoints: state.drawPoints.slice(0, -1) })),
+  finishDrawing: () =>
+    set((state) =>
+      state.drawPoints.length >= 3 ? { isDrawing: false, drawPolygon: state.drawPoints } : {}
+    ),
+  clearDraw: () => set({ isDrawing: false, drawPoints: [], drawPolygon: null }),
 }));
