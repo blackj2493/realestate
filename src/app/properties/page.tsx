@@ -23,6 +23,7 @@ import {
 } from "@/components/CommandCenter";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
+import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
@@ -66,6 +67,8 @@ function CommandCenterContent() {
     showSelectedOnly,
     totalCount,
     setMapMode,
+    colorMetricId,
+    colorBand,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -126,7 +129,12 @@ function CommandCenterContent() {
       if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
       if (school.enabled && school.targetSchool) schoolParts.push(`NearbySchools:=\`${school.targetSchool.id}\``);
 
-      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts].filter(Boolean).join(" && ");
+      // Interactive legend: a clicked band narrows the map to one value bucket
+      // of the active color metric (only when that metric is field-backed).
+      const bandDef = colorBand ? getMapMetric(colorBand.metricId) : null;
+      const bandClause = bandDef ? bandFilterClause(bandDef, colorBand!.index) : null;
+
+      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts, bandClause].filter(Boolean).join(" && ");
 
       // Commute zone: polygon is stored [lng, lat]; Typesense wants [lat, lng].
       const geoPolygon =
@@ -156,7 +164,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
@@ -179,10 +187,13 @@ function CommandCenterContent() {
   // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query).
   const displayed = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
 
-  // When the school lens is on, shade the map by the active lens's school score.
-  const mapColorConfig = school.enabled
-    ? schoolMapColor(school.level, school.system)
-    : persona.mapColor;
+  // Color precedence: an explicit "Color By" metric wins; else the School lens
+  // shades by score; else the persona's default metric. The explicit metric also
+  // dictates heat-column aggregation (count for Density, mean otherwise).
+  const activeMetric = getMapMetric(colorMetricId);
+  const mapColorConfig =
+    activeMetric ?? (school.enabled ? schoolMapColor(school.level, school.system) : persona.mapColor);
+  const heatAggregation = activeMetric?.heatAggregation ?? "mean";
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950">
@@ -194,6 +205,7 @@ function CommandCenterContent() {
           <AlphaMap
             properties={displayed}
             colorConfig={mapColorConfig}
+            heatAggregation={heatAggregation}
             onSelectProperty={setSelectedProperty}
             currentSearchQuery={`${activePersona}:${location}`}
             className="h-full w-full"
@@ -206,6 +218,7 @@ function CommandCenterContent() {
             count={displayed.length}
             total={totalCount}
             colorConfig={mapColorConfig}
+            metricDef={activeMetric}
             commuteActive={commute.enabled}
           />
           <SelectionBar />

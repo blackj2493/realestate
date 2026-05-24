@@ -148,6 +148,15 @@ export interface CommandCenterState {
   activeModule: RailModule | null;
   setActiveModule: (module: RailModule | null) => void;
   toggleModule: (module: RailModule) => void;
+
+  // "Color By" — id of the chosen map metric (null = persona/school default).
+  colorMetricId: string | null;
+  setColorMetricId: (id: string | null) => void;
+
+  // Selected legend band (the metric it belongs to + bucket index). Clicking a
+  // band filters the map to that value range; switching metrics clears it.
+  colorBand: { metricId: string; index: number } | null;
+  setColorBand: (band: { metricId: string; index: number } | null) => void;
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
@@ -231,4 +240,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setActiveModule: (module) => set({ activeModule: module }),
   toggleModule: (module) =>
     set((state) => ({ activeModule: state.activeModule === module ? null : module })),
+
+  colorMetricId: null,
+  // Changing the color metric clears any band selection (it belonged to the old metric).
+  setColorMetricId: (id) => set({ colorMetricId: id, colorBand: null }),
+
+  colorBand: null,
+  setColorBand: (band) => set({ colorBand: band }),
 }));

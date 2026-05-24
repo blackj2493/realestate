@@ -25,6 +25,8 @@ import {
 interface AlphaMapProps {
   properties: ListingDocument[];
   colorConfig: MapColorConfig;
+  /** Heatmap aggregation: "mean" of the metric, or "count" of listings (Density). */
+  heatAggregation?: "mean" | "count";
   onSelectProperty?: (d: ListingDocument) => void;
   className?: string;
   currentSearchQuery?: string;
@@ -48,6 +50,7 @@ const pitchForMode = (mode: string) => (mode === "listings" ? 0 : 45);
 export default function AlphaMap({
   properties,
   colorConfig,
+  heatAggregation = "mean",
   onSelectProperty,
   className = "",
   currentSearchQuery = "",
@@ -314,10 +317,12 @@ export default function AlphaMap({
           id: "hexagon-layer",
           data: mapData,
           getPosition: (d) => d.coordinates,
-          getColorWeight: (d) => colorConfig.metric(d),
-          getElevationWeight: (d) => colorConfig.metric(d),
-          colorAggregation: "MEAN",
-          elevationAggregation: "MEAN",
+          // Density colors/elevates by listing COUNT (weight 1, SUM); every other
+          // metric uses the MEAN of the metric value across the hex.
+          getColorWeight: heatAggregation === "count" ? () => 1 : (d) => colorConfig.metric(d),
+          getElevationWeight: heatAggregation === "count" ? () => 1 : (d) => colorConfig.metric(d),
+          colorAggregation: heatAggregation === "count" ? "SUM" : "MEAN",
+          elevationAggregation: heatAggregation === "count" ? "SUM" : "MEAN",
           colorRange: ALPHA_GLOW_RANGE,
           elevationScale: 1.15,
           elevationRange: [0, 2500],
@@ -331,7 +336,10 @@ export default function AlphaMap({
           highlightColor: [255, 255, 255, 120],
           // High ambient + low shininess = bright, luminous columns (faked glow).
           material: { ambient: 0.85, diffuse: 0.5, shininess: 8, specularColor: [40, 70, 90] },
-          updateTriggers: { getColorWeight: [colorConfig], getElevationWeight: [colorConfig] },
+          updateTriggers: {
+            getColorWeight: [colorConfig, heatAggregation],
+            getElevationWeight: [colorConfig, heatAggregation],
+          },
         }),
       ];
     }
@@ -438,7 +446,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [mapData, mapMode, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected]);
+  }, [mapData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {

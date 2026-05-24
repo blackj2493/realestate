@@ -11,11 +11,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Layers } from "lucide-react";
+import { X, Layers, Palette, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
 import SchoolFilter from "./SchoolFilter";
+import MapColorPanel from "./MapColorPanel";
 
 const TITLES: Record<RailModule, string> = {
   layers: "Data Layers",
@@ -26,11 +27,21 @@ const TITLES: Record<RailModule, string> = {
   lenses: "Lenses",
 };
 
+const ICONS: Record<RailModule, LucideIcon> = {
+  layers: Layers,
+  color: Palette,
+  draw: Layers,
+  compare: Layers,
+  time: Layers,
+  lenses: Layers,
+};
+
 function DrawerHeader({ module, onClose }: { module: RailModule; onClose: () => void }) {
+  const Icon = ICONS[module];
   return (
     <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2.5">
       <span className="flex items-center gap-2">
-        <Layers className="h-4 w-4 text-cyan-400" />
+        <Icon className="h-4 w-4 text-cyan-400" />
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
           {TITLES[module]}
         </span>
@@ -59,6 +70,8 @@ function renderContent(module: RailModule) {
           <SchoolFilter />
         </div>
       );
+    case "color":
+      return <MapColorPanel />;
     default:
       return null;
   }
