@@ -83,6 +83,7 @@ export interface CommandCenterState {
     key: K,
     value: TerminalFilterState[K]
   ) => void;
+  setFilters: (filters: TerminalFilterState) => void;
   resetFilters: () => void;
 
   // Selected property for the detail terminal
@@ -178,6 +179,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   filters: { ...defaultTerminalFilters },
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
+  setFilters: (filters) => set({ filters: { ...filters } }),
   resetFilters: () =>
     set({
       filters: { ...defaultTerminalFilters },

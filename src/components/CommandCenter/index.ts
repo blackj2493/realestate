@@ -8,7 +8,6 @@ export { default as CommuteFilter } from './CommuteFilter';
 export { default as SchoolFilter } from './SchoolFilter';
 export { default as LedgerPanel } from './LedgerPanel';
 export { default as LedgerRow } from './LedgerRow';
-export { default as SelectionBar } from './SelectionBar';
 export { default as MapControlRail } from './MapControlRail';
 export { default as MapDrawer } from './MapDrawer';
 export { default as MapModeDock } from './MapModeDock';

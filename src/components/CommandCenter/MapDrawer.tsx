@@ -11,13 +11,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Layers, Palette, PenTool, type LucideIcon } from "lucide-react";
+import { X, Layers, Palette, PenTool, GitCompareArrows, Bookmark, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
 import SchoolFilter from "./SchoolFilter";
 import MapColorPanel from "./MapColorPanel";
 import MapDrawPanel from "./MapDrawPanel";
+import MapComparePanel from "./MapComparePanel";
+import MapLensesPanel from "./MapLensesPanel";
 
 const TITLES: Record<RailModule, string> = {
   layers: "Data Layers",
@@ -32,9 +34,9 @@ const ICONS: Record<RailModule, LucideIcon> = {
   layers: Layers,
   color: Palette,
   draw: PenTool,
-  compare: Layers,
+  compare: GitCompareArrows,
   time: Layers,
-  lenses: Layers,
+  lenses: Bookmark,
 };
 
 function DrawerHeader({ module, onClose }: { module: RailModule; onClose: () => void }) {
@@ -75,6 +77,10 @@ function renderContent(module: RailModule) {
       return <MapColorPanel />;
     case "draw":
       return <MapDrawPanel />;
+    case "compare":
+      return <MapComparePanel />;
+    case "lenses":
+      return <MapLensesPanel />;
     default:
       return null;
   }

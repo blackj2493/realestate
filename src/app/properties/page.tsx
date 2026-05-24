@@ -15,7 +15,6 @@ import {
   TopCommandBar,
   LedgerPanel,
   ListingTerminal,
-  SelectionBar,
   MapControlRail,
   MapDrawer,
   MapModeDock,
@@ -231,7 +230,6 @@ function CommandCenterContent() {
             metricDef={activeMetric}
             commuteActive={commute.enabled}
           />
-          <SelectionBar />
         </div>
 
         {/* Drag handle — resize the ledger */}

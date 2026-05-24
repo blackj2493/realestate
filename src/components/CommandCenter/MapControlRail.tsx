@@ -12,12 +12,12 @@
 "use client";
 
 import React from "react";
-import { Layers, CheckSquare, Palette, PenTool, type LucideIcon } from "lucide-react";
+import { Layers, Palette, PenTool, GitCompareArrows, Bookmark, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
 type RailTile =
-  | { kind: "drawer"; module: RailModule; label: string; icon: LucideIcon; dataActive?: boolean }
+  | { kind: "drawer"; module: RailModule; label: string; icon: LucideIcon; dataActive?: boolean; badge?: number }
   | { kind: "action"; id: string; label: string; icon: LucideIcon; active?: boolean; badge?: number; onClick: () => void };
 
 function Tile({
@@ -52,8 +52,8 @@ function Tile({
         {/* Open-state accent bar */}
         {open && <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 bg-cyan-400" />}
         <Icon className="h-[18px] w-[18px]" />
-        {/* Data-active dot */}
-        {dataActive && (
+        {/* Data-active dot (suppressed when a count badge already signals state) */}
+        {dataActive && !(badge && badge > 0) && (
           <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
         )}
         {/* Count badge */}
@@ -76,8 +76,6 @@ export default function MapControlRail() {
   const toggleModule = useCommandCenterStore((s) => s.toggleModule);
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const schoolEnabled = useCommandCenterStore((s) => s.school.enabled);
-  const isSelectMode = useCommandCenterStore((s) => s.isSelectMode);
-  const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const isDrawing = useCommandCenterStore((s) => s.isDrawing);
@@ -106,13 +104,18 @@ export default function MapControlRail() {
       dataActive: isDrawing || drawPolygon !== null,
     },
     {
-      kind: "action",
-      id: "select",
+      kind: "drawer",
+      module: "compare",
       label: "Compare",
-      icon: CheckSquare,
-      active: isSelectMode,
+      icon: GitCompareArrows,
+      dataActive: selectedCount > 0,
       badge: selectedCount,
-      onClick: () => setSelectMode(!isSelectMode),
+    },
+    {
+      kind: "drawer",
+      module: "lenses",
+      label: "Lenses",
+      icon: Bookmark,
     },
   ];
 
@@ -126,6 +129,7 @@ export default function MapControlRail() {
             label={t.label}
             open={activeModule === t.module}
             dataActive={t.dataActive}
+            badge={t.badge}
             onClick={() => toggleModule(t.module)}
           />
         ) : (
