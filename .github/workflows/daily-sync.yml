@@ -31,12 +31,20 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
           PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          # ingester.ts imports sync.ts, which constructs a Typesense admin client at
+          # module load and HARD-THROWS without this key (sync.ts:38). Required for the
+          # ETL to index listings into Typesense — not optional.
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
         run: npx tsx scripts/worker/ingester.ts sync
 
       # Refresh precomputed condo fee/sqft aggregates from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate condo_fee_stats table; needs
       # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.
       - name: Refresh Condo Fee Stats
+        # Additive aggregation for a single listing-page card — must never break the
+        # core daily sync. (This step has never actually run: prior jobs always died at
+        # the sync step above, so its first real execution is unverified in CI.)
+        continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
