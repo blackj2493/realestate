@@ -3,8 +3,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import DeckGL from "@deck.gl/react";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
-import { ScatterplotLayer, TextLayer, PolygonLayer } from "@deck.gl/layers";
-import { Map, NavigationControl } from "react-map-gl/mapbox";
+import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer } from "@deck.gl/layers";
+import { Map, NavigationControl, Layer as MapboxLayer } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
 import { Layers, MapPin } from "lucide-react";
 import Supercluster from "supercluster";
@@ -43,9 +43,13 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-// Camera tilt per render mode: Listings reads best flat (2D scan); Heatmap/3D
-// tilt to reveal the extruded columns.
-const pitchForMode = (mode: string) => (mode === "listings" ? 0 : 45);
+// Camera tilt per render mode: Listings reads best flat (2D scan); Heatmap
+// tilts to reveal the hex columns; 3D Explore tilts further into the cityscape.
+const pitchForMode = (mode: string) => (mode === "listings" ? 0 : mode === "3d" ? 55 : 45);
+
+// Normalize a metric value to [0,1] within its domain (for column heights).
+const normMetric = (value: number, [lo, hi]: [number, number]) =>
+  hi > lo ? Math.min(1, Math.max(0, (value - lo) / (hi - lo))) : 0;
 
 export default function AlphaMap({
   properties,
@@ -344,6 +348,53 @@ export default function AlphaMap({
       ];
     }
 
+    // 3D Explore: each listing is a luminous value-column rising over the city
+    // (height = the active metric, color = the metric ramp). The Mapbox building
+    // extrusions render underneath via the base map.
+    if (mapMode === "3d") {
+      const valueColumns = new ColumnLayer<MapDataPoint>({
+        id: "value-columns",
+        data: mapData,
+        getPosition: (d) => d.coordinates,
+        diskResolution: 12,
+        radius: 55,
+        radiusUnits: "meters",
+        extruded: true,
+        elevationScale: 1,
+        getElevation: (d) => 120 + normMetric(colorConfig.metric(d), colorConfig.domain) * 1700,
+        getFillColor: (d) => {
+          if (selectedIds.has(d.id)) return [34, 211, 238, 255];
+          const c = getScatterColor(d);
+          return [c[0], c[1], c[2], 235];
+        },
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 120],
+        material: { ambient: 0.8, diffuse: 0.6, shininess: 32, specularColor: [60, 90, 110] },
+        onHover: (info) => {
+          const d = info.object as MapDataPoint | undefined;
+          if (d) {
+            setHoverInfo({ x: info.x, y: info.y, object: d });
+            setHoveredId(d.id);
+          } else {
+            setHoverInfo(null);
+            setHoveredId(null);
+          }
+        },
+        onClick: (info) => {
+          const d = info.object as MapDataPoint | undefined;
+          if (!d) return;
+          if (isSelectMode) toggleSelected(d.id);
+          else onSelectProperty?.(d);
+        },
+        updateTriggers: {
+          getElevation: [colorConfig],
+          getFillColor: [colorConfig, selectedIds],
+        },
+      });
+      return [...commuteLayers, valueColumns];
+    }
+
     // Listings mode: cluster bubbles + individual price pills
     const clusterBubbles = new ScatterplotLayer<ClusterPoint>({
       id: "cluster-bubbles",
@@ -523,6 +574,24 @@ export default function AlphaMap({
       >
         <Map mapboxAccessToken={mapboxToken} mapStyle="mapbox://styles/mapbox/dark-v11" reuseMaps attributionControl={false}>
           <NavigationControl position="top-right" />
+          {/* 3D building extrusions — only in Explore mode, so the value-columns
+              read against a real cityscape (dark massing + faint cyan rim). */}
+          {mapMode === "3d" && (
+            <MapboxLayer
+              id="3d-buildings"
+              type="fill-extrusion"
+              source="composite"
+              source-layer="building"
+              minzoom={12}
+              filter={["==", "extrude", "true"]}
+              paint={{
+                "fill-extrusion-color": "#1e293b",
+                "fill-extrusion-height": ["get", "height"],
+                "fill-extrusion-base": ["get", "min_height"],
+                "fill-extrusion-opacity": 0.85,
+              }}
+            />
+          )}
         </Map>
       </DeckGL>
 

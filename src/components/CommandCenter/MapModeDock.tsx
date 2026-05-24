@@ -21,8 +21,7 @@ const SEGMENTS: { id: MapMode; label: string; icon: LucideIcon }[] = [
   { id: "3d", label: "3D", icon: Box },
 ];
 
-// Modes wired up so far. Phase 3 adds "3d".
-const ENABLED: MapMode[] = ["listings", "heatmap"];
+const ENABLED: MapMode[] = ["listings", "heatmap", "3d"];
 
 export default function MapModeDock() {
   const mapMode = useCommandCenterStore((s) => s.mapMode);
