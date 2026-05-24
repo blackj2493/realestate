@@ -11,7 +11,16 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 
-import { TopCommandBar, LedgerPanel, ListingTerminal, SelectionBar } from "@/components/CommandCenter";
+import {
+  TopCommandBar,
+  LedgerPanel,
+  ListingTerminal,
+  SelectionBar,
+  MapControlRail,
+  MapDrawer,
+  MapModeDock,
+  MapStatusHUD,
+} from "@/components/CommandCenter";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { searchListings } from "@/lib/typesense/client";
@@ -55,6 +64,8 @@ function CommandCenterContent() {
     setMapBounds,
     selectedIds,
     showSelectedOnly,
+    totalCount,
+    setMapMode,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -95,6 +106,12 @@ function CommandCenterContent() {
   }, [searchParams, location, setLocation]);
 
   const persona = PERSONA_CONFIG[activePersona];
+
+  // Switching persona drops the map into that persona's default render mode
+  // (e.g. Cashflow/Builders → Heatmap). The user can re-toggle freely after.
+  useEffect(() => {
+    setMapMode(PERSONA_CONFIG[activePersona].defaultMapMode);
+  }, [activePersona, setMapMode]);
 
   const performSearch = useCallback(async () => {
     setIsLoading(true);
@@ -177,10 +194,19 @@ function CommandCenterContent() {
           <AlphaMap
             properties={displayed}
             colorConfig={mapColorConfig}
-            defaultMapMode={persona.defaultMapMode}
             onSelectProperty={setSelectedProperty}
             currentSearchQuery={`${activePersona}:${location}`}
             className="h-full w-full"
+          />
+          {/* Instrument Deck — control surface layered over the map */}
+          <MapControlRail />
+          <MapDrawer />
+          <MapModeDock />
+          <MapStatusHUD
+            count={displayed.length}
+            total={totalCount}
+            colorConfig={mapColorConfig}
+            commuteActive={commute.enabled}
           />
           <SelectionBar />
         </div>

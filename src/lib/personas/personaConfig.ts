@@ -175,11 +175,23 @@ export const DENSITY_RANGE: [number, number, number][] = [
   [103, 232, 249],
 ];
 
+// "Alpha glow" ramp for the 3D heat columns — deep teal (low) → cyan → royal
+// blue (high). Applied to the heatmap regardless of persona so the columns read
+// as luminous density rather than the per-persona metric hue.
+export const ALPHA_GLOW_RANGE: [number, number, number][] = [
+  [8, 51, 68],
+  [12, 110, 138],
+  [13, 165, 196],
+  [34, 211, 238],
+  [56, 130, 246],
+  [99, 110, 247],
+];
+
 // ============================================================================
 // Persona definitions
 // ============================================================================
 
-export type MapMode = "listings" | "heatmap";
+export type MapMode = "listings" | "heatmap" | "3d";
 
 export interface PersonaDef {
   id: PersonaType;

@@ -8,12 +8,19 @@ import type { ListingDocument, SearchResult } from "@/lib/typesense/client";
 import {
   type PersonaType,
   type TerminalFilterState,
+  type MapMode,
   defaultTerminalFilters,
 } from "@/lib/personas/personaConfig";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
 export type CommuteMode = "driving" | "walking" | "cycling";
+
+/**
+ * Instrument Deck — which rail module's drawer is open (null = none). Only one
+ * drawer is open at a time so the map is never buried under stacked panels.
+ */
+export type RailModule = "layers" | "color" | "draw" | "compare" | "time" | "lenses";
 
 /** Current map viewport extent, used to scope the search to what's on screen. */
 export interface MapBounds {
@@ -131,6 +138,16 @@ export interface CommandCenterState {
   // Current map viewport (null = whole-zone, no bounding-box constraint)
   mapBounds: MapBounds | null;
   setMapBounds: (bounds: MapBounds | null) => void;
+
+  // Map render mode (Instrument Deck mode dock). Lifted out of AlphaMap so the
+  // rail/dock can drive it. Reset to the persona default on persona change.
+  mapMode: MapMode;
+  setMapMode: (mode: MapMode) => void;
+
+  // Which rail module's drawer is open (null = closed). One at a time.
+  activeModule: RailModule | null;
+  setActiveModule: (module: RailModule | null) => void;
+  toggleModule: (module: RailModule) => void;
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
@@ -206,4 +223,12 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   mapBounds: null,
   setMapBounds: (bounds) => set({ mapBounds: bounds }),
+
+  mapMode: "listings",
+  setMapMode: (mode) => set({ mapMode: mode }),
+
+  activeModule: null,
+  setActiveModule: (module) => set({ activeModule: module }),
+  toggleModule: (module) =>
+    set((state) => ({ activeModule: state.activeModule === module ? null : module })),
 }));

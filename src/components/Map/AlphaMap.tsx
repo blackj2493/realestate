@@ -6,14 +6,12 @@ import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer } from "@deck.gl/layers";
 import { Map, NavigationControl } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
-import { Layers, MapPin, CheckSquare } from "lucide-react";
+import { Layers, MapPin } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
-import type { MapColorConfig, MapMode } from "@/lib/personas/personaConfig";
+import { ALPHA_GLOW_RANGE, type MapColorConfig } from "@/lib/personas/personaConfig";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import MapLayersPanel from "@/components/CommandCenter/MapLayersPanel";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
@@ -27,7 +25,6 @@ import {
 interface AlphaMapProps {
   properties: ListingDocument[];
   colorConfig: MapColorConfig;
-  defaultMapMode?: MapMode;
   onSelectProperty?: (d: ListingDocument) => void;
   className?: string;
   currentSearchQuery?: string;
@@ -40,26 +37,17 @@ const INITIAL_VIEW_STATE: MapViewState = {
   longitude: -79.3832,
   latitude: 43.6532,
   zoom: 10,
-  pitch: 45,
+  pitch: 0,
   bearing: 0,
 };
 
-// "Alpha glow" ramp for the 3D hex columns — deep teal (low) → cyan → royal
-// blue (high). Style prototype: applied to the heatmap regardless of persona so
-// the columns read as luminous density rather than the per-persona metric hue.
-const ALPHA_GLOW_RANGE: [number, number, number][] = [
-  [8, 51, 68],
-  [12, 110, 138],
-  [13, 165, 196],
-  [34, 211, 238],
-  [56, 130, 246],
-  [99, 110, 247],
-];
+// Camera tilt per render mode: Listings reads best flat (2D scan); Heatmap/3D
+// tilt to reveal the extruded columns.
+const pitchForMode = (mode: string) => (mode === "listings" ? 0 : 45);
 
 export default function AlphaMap({
   properties,
   colorConfig,
-  defaultMapMode = "listings",
   onSelectProperty,
   className = "",
   currentSearchQuery = "",
@@ -67,22 +55,21 @@ export default function AlphaMap({
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
-  const [viewMode, setViewMode] = useState<MapMode>(defaultMapMode);
   // Once the map has framed real results, keep it mounted even if a later
   // viewport-scoped query returns 0 — blanking it mid-browse would trap the user.
   const [mapReady, setMapReady] = useState(false);
   const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; object: ListingDocument | null } | null>(null);
 
+  // Render mode is lifted to the store so the Mode dock / rail can drive it.
+  const mapMode = useCommandCenterStore((s) => s.mapMode);
   const hoveredId = useCommandCenterStore((s) => s.hoveredId);
   const setHoveredId = useCommandCenterStore((s) => s.setHoveredId);
   const selectedIds = useCommandCenterStore((s) => s.selectedIds);
   const isSelectMode = useCommandCenterStore((s) => s.isSelectMode);
-  const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
   const commuteDestination = useCommandCenterStore((s) => s.commute.destination);
-  const totalCount = useCommandCenterStore((s) => s.totalCount);
   const setMapBounds = useCommandCenterStore((s) => s.setMapBounds);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
@@ -147,11 +134,16 @@ export default function AlphaMap({
     if (reportTimer.current) clearTimeout(reportTimer.current);
   }, []);
 
-  // Switching persona resets the map to that persona's default view; the user
-  // can still toggle freely within a persona (prop is stable until it changes).
+  // Mode change re-tilts the camera (flat for Listings, pitched for Heatmap/3D)
+  // with an animated transition so switching modes feels physical, not a cut.
   useEffect(() => {
-    setViewMode(defaultMapMode);
-  }, [defaultMapMode]);
+    setViewState((vs) => ({
+      ...vs,
+      pitch: pitchForMode(mapMode),
+      transitionDuration: 500,
+      transitionInterpolator: new FlyToInterpolator(),
+    }));
+  }, [mapMode]);
 
   // location is stored as [lat, lng] (Typesense geopoint convention)
   const validProperties = useMemo(() => {
@@ -192,7 +184,7 @@ export default function AlphaMap({
       longitude: centerLng,
       latitude: centerLat,
       zoom,
-      pitch: 45,
+      pitch: pitchForMode(mapMode),
       bearing: 0,
       transitionDuration: 800,
       transitionInterpolator: new FlyToInterpolator(),
@@ -200,7 +192,7 @@ export default function AlphaMap({
     mapInitialized.current = true;
     setMapReady(true);
     lastSearchQuery.current = currentSearchQuery;
-  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic]);
+  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode]);
 
   // Fit to the commute zone whenever the isochrone changes (frames the whole
   // reachable area, even when zero listings match).
@@ -315,7 +307,7 @@ export default function AlphaMap({
   const layers = useMemo(() => {
     if (mapData.length === 0) return [...commuteLayers];
 
-    if (viewMode === "heatmap") {
+    if (mapMode === "heatmap") {
       return [
         ...commuteLayers,
         new HexagonLayer<MapDataPoint>({
@@ -446,7 +438,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [mapData, viewMode, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected]);
+  }, [mapData, mapMode, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
@@ -508,10 +500,6 @@ export default function AlphaMap({
     );
   }
 
-  const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
-  // Heatmap columns use the alpha-glow ramp; listings pins keep the persona hue.
-  const legendRange = viewMode === "heatmap" ? ALPHA_GLOW_RANGE : colorConfig.range;
-
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ minHeight: "400px", height: "100%" }}>
       <DeckGL
@@ -544,75 +532,12 @@ export default function AlphaMap({
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-10 rounded-none border border-slate-700 bg-slate-900/90 px-4 py-3 backdrop-blur-sm">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-500">{colorConfig.legendLow}</span>
-          <div
-            className="h-1.5 w-20 rounded-full"
-            style={{ background: `linear-gradient(to right, ${rgb(legendRange[0])}, ${rgb(legendRange[legendRange.length - 1])})` }}
-          />
-          <span className="text-slate-300">{colorConfig.legendHigh}</span>
+      {/* Select-mode hint — centered toast so it clears the left rail/drawer. */}
+      {isSelectMode && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md">
+          <p className="font-mono text-xs text-cyan-200">Tap properties to add to your selection</p>
         </div>
-      </div>
-
-      {/* View-mode toggle + count */}
-      <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
-        <div className="flex overflow-hidden rounded-none border border-slate-700 bg-slate-900/90 backdrop-blur-sm">
-          <button
-            type="button"
-            onClick={() => setViewMode("listings")}
-            className={cn(
-              "flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors",
-              viewMode === "listings" ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-200"
-            )}
-          >
-            <MapPin className="h-4 w-4" />
-            Listings
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("heatmap")}
-            className={cn(
-              "flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors",
-              viewMode === "heatmap" ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-200"
-            )}
-          >
-            <Layers className="h-4 w-4" />
-            Heatmap
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectMode(!isSelectMode)}
-            aria-pressed={isSelectMode}
-            className={cn(
-              "flex items-center gap-1.5 border-l border-slate-700 px-3.5 py-2 text-sm font-medium transition-colors",
-              isSelectMode ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-200"
-            )}
-          >
-            <CheckSquare className="h-4 w-4" />
-            Select
-          </button>
-        </div>
-
-        <MapLayersPanel />
-
-        {isSelectMode && (
-          <div className="self-start rounded-none border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-2 backdrop-blur-sm">
-            <p className="font-mono text-sm text-cyan-200">Tap properties to add to your selection</p>
-          </div>
-        )}
-        <div className="self-start rounded-none border border-slate-700 bg-slate-900/90 px-3.5 py-2 backdrop-blur-sm">
-          <p className="font-mono text-sm text-slate-300">
-            <span className="font-semibold text-cyan-400">{validProperties.length}</span>
-            {totalCount > validProperties.length ? ` of ${totalCount.toLocaleString()}` : ""}{" "}
-            in {commuteRing ? "commute zone" : "view"}
-            {totalCount > validProperties.length && (
-              <span className="ml-1.5 text-slate-500">· zoom in to see all</span>
-            )}
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
