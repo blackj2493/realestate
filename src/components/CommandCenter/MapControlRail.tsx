@@ -12,7 +12,7 @@
 "use client";
 
 import React from "react";
-import { Layers, Palette, PenTool, GitCompareArrows, Bookmark, type LucideIcon } from "lucide-react";
+import { Layers, Palette, PenTool, GitCompareArrows, Bookmark, Clock, Command, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
@@ -80,6 +80,9 @@ export default function MapControlRail() {
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const isDrawing = useCommandCenterStore((s) => s.isDrawing);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
+  const timelineActive = useCommandCenterStore((s) => s.timelineActive);
+  const setTimelineActive = useCommandCenterStore((s) => s.setTimelineActive);
+  const togglePalette = useCommandCenterStore((s) => s.togglePalette);
 
   const tiles: RailTile[] = [
     {
@@ -116,6 +119,21 @@ export default function MapControlRail() {
       module: "lenses",
       label: "Lenses",
       icon: Bookmark,
+    },
+    {
+      kind: "action",
+      id: "time",
+      label: "Timeline",
+      icon: Clock,
+      active: timelineActive,
+      onClick: () => setTimelineActive(!timelineActive),
+    },
+    {
+      kind: "action",
+      id: "palette",
+      label: "Command (Ctrl/⌘ K)",
+      icon: Command,
+      onClick: togglePalette,
     },
   ];
 

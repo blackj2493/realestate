@@ -170,6 +170,20 @@ export interface CommandCenterState {
   undoDrawPoint: () => void;
   finishDrawing: () => void;
   clearDraw: () => void;
+
+  // Temporal scrubber: a True-DOM time window swept over the loaded listings
+  // (Temporal Distress Engine, made visual — client-side, no re-query).
+  timelineActive: boolean;
+  setTimelineActive: (on: boolean) => void;
+  domCenter: number; // center day of the visible DOM window
+  setDomCenter: (day: number) => void;
+  timelinePlaying: boolean;
+  setTimelinePlaying: (on: boolean) => void;
+
+  // ⌘K command palette
+  paletteOpen: boolean;
+  setPaletteOpen: (open: boolean) => void;
+  togglePalette: () => void;
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
@@ -273,4 +287,15 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       state.drawPoints.length >= 3 ? { isDrawing: false, drawPolygon: state.drawPoints } : {}
     ),
   clearDraw: () => set({ isDrawing: false, drawPoints: [], drawPolygon: null }),
+
+  timelineActive: false,
+  setTimelineActive: (on) => set({ timelineActive: on, timelinePlaying: on ? false : false }),
+  domCenter: 45,
+  setDomCenter: (day) => set({ domCenter: day }),
+  timelinePlaying: false,
+  setTimelinePlaying: (on) => set({ timelinePlaying: on }),
+
+  paletteOpen: false,
+  setPaletteOpen: (open) => set({ paletteOpen: open }),
+  togglePalette: () => set((state) => ({ paletteOpen: !state.paletteOpen })),
 }));

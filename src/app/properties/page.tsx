@@ -19,6 +19,8 @@ import {
   MapDrawer,
   MapModeDock,
   MapStatusHUD,
+  MapTimeline,
+  MapCommandPalette,
 } from "@/components/CommandCenter";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
@@ -223,6 +225,7 @@ function CommandCenterContent() {
           <MapControlRail />
           <MapDrawer />
           <MapModeDock />
+          <MapTimeline />
           <MapStatusHUD
             count={displayed.length}
             total={totalCount}
@@ -257,6 +260,8 @@ function CommandCenterContent() {
           onClose={() => setIsTerminalOpen(false)}
         />
       )}
+
+      <MapCommandPalette />
     </div>
   );
 }

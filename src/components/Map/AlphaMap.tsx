@@ -51,6 +51,9 @@ const pitchForMode = (mode: string) => (mode === "listings" ? 0 : mode === "3d" 
 const normMetric = (value: number, [lo, hi]: [number, number]) =>
   hi > lo ? Math.min(1, Math.max(0, (value - lo) / (hi - lo))) : 0;
 
+// Half-width (days) of the temporal scrubber's visible True-DOM window.
+const DOM_WINDOW_HALF = 22;
+
 export default function AlphaMap({
   properties,
   colorConfig,
@@ -83,6 +86,8 @@ export default function AlphaMap({
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
   const addDrawPoint = useCommandCenterStore((s) => s.addDrawPoint);
   const finishDrawing = useCommandCenterStore((s) => s.finishDrawing);
+  const timelineActive = useCommandCenterStore((s) => s.timelineActive);
+  const domCenter = useCommandCenterStore((s) => s.domCenter);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -169,6 +174,19 @@ export default function AlphaMap({
     [validProperties]
   );
 
+  // Temporal scrubber: when active, render only listings whose True DOM falls in
+  // the swept window. Client-side filter (no re-query) so playback stays smooth;
+  // auto-fit/empty-state stay keyed on the full set so the map never jumps.
+  const renderData = useMemo<MapDataPoint[]>(() => {
+    if (!timelineActive) return mapData;
+    const lo = domCenter - DOM_WINDOW_HALF;
+    const hi = domCenter + DOM_WINDOW_HALF;
+    return mapData.filter((d) => {
+      const dom = d.TrueDom ?? d.calculatedDOM ?? 0;
+      return dom >= lo && dom <= hi;
+    });
+  }, [mapData, timelineActive, domCenter]);
+
   // Auto-fit when the result set changes (and the user isn't interacting).
   // When a commute zone is active, the polygon-fit effect below governs framing.
   useEffect(() => {
@@ -244,14 +262,14 @@ export default function AlphaMap({
   const clusterIndex = useMemo(() => {
     const index = new Supercluster<PinProps>({ ...CLUSTER_OPTIONS });
     index.load(
-      mapData.map((p) => ({
+      renderData.map((p) => ({
         type: "Feature" as const,
         geometry: { type: "Point" as const, coordinates: p.coordinates },
         properties: { listing: p as ListingDocument },
       }))
     );
     return index;
-  }, [mapData]);
+  }, [renderData]);
 
   const clusters = useMemo(
     () => clusterIndex.getClusters([-180, -85, 180, 85], Math.round(viewState.zoom)),
@@ -368,14 +386,14 @@ export default function AlphaMap({
   }, [drawPolygon, isDrawing, drawPoints]);
 
   const layers = useMemo(() => {
-    if (mapData.length === 0) return [...commuteLayers];
+    if (renderData.length === 0) return [...commuteLayers];
 
     if (mapMode === "heatmap") {
       return [
         ...commuteLayers,
         new HexagonLayer<MapDataPoint>({
           id: "hexagon-layer",
-          data: mapData,
+          data: renderData,
           getPosition: (d) => d.coordinates,
           // Density colors/elevates by listing COUNT (weight 1, SUM); every other
           // metric uses the MEAN of the metric value across the hex.
@@ -410,7 +428,7 @@ export default function AlphaMap({
     if (mapMode === "3d") {
       const valueColumns = new ColumnLayer<MapDataPoint>({
         id: "value-columns",
-        data: mapData,
+        data: renderData,
         getPosition: (d) => d.coordinates,
         diskResolution: 12,
         radius: 55,
@@ -556,7 +574,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [mapData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
+  }, [renderData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
