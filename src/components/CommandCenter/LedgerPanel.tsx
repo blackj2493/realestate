@@ -16,29 +16,31 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected } =
     useCommandCenterStore();
 
   const columns = PERSONA_CONFIG[activePersona].columns;
-  const properties = searchResult?.listings || [];
+  const allProperties = searchResult?.listings || [];
+  const properties = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
   const ms = searchResult?.processingTimeMs ?? 0;
 
   return (
     <div className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
       {/* Typesense stat header */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900/60 px-3 py-2">
-        <Zap className="h-3.5 w-3.5 text-emerald-400" />
-        <p className="font-mono text-[11px] text-slate-400">
+      <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
+        <Zap className="h-3.5 w-3.5 text-cyan-400" />
+        <p className="font-mono text-xs text-slate-400">
           Typesense Search:{" "}
-          <span className="font-semibold text-emerald-400">{totalCount.toLocaleString()}</span> Active Listings
+          <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
           <span className="mx-1.5 text-slate-600">|</span>
-          Instant Query <span className="text-emerald-400">&lt;{ms}ms</span>
+          Instant Query <span className="text-cyan-400">&lt;{ms}ms</span>
         </p>
       </div>
 
       {/* Column headers */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900/50 px-3 py-2">
-        <div className="h-px w-16 shrink-0" />
+      <div className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2">
+        <div className="w-5 shrink-0" />
+        <div className="h-px w-24 shrink-0" />
         {columns.map((col) => (
           <div
             key={col.type}
@@ -57,7 +59,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="mb-3 h-8 w-8 animate-spin text-emerald-400" />
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-cyan-400" />
             <span className="text-sm text-slate-400">SCANNING MARKET DATA...</span>
           </div>
         ) : error ? (
@@ -84,14 +86,16 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               isSelected={selectedProperty?.id === property.id}
               isHovered={hoveredId === property.id}
               onHoverChange={(hovered) => setHoveredId(hovered ? property.id : null)}
+              isChecked={selectedIds.has(property.id)}
+              onToggleSelect={() => toggleSelected(property.id)}
             />
           ))
         )}
       </div>
 
       {/* Footer */}
-      <div className="shrink-0 border-t border-slate-800 bg-slate-900/50 px-3 py-2">
-        <div className="flex items-center justify-between text-[10px] text-slate-500">
+      <div className="shrink-0 border-t border-slate-800 bg-slate-900 px-3 py-2">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500">
           <span>{isLoading ? "Scanning..." : `${properties.length} shown · ${totalCount.toLocaleString()} total`}</span>
           <span className="font-mono">PROPTX MLS®</span>
         </div>

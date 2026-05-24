@@ -1,0 +1,131 @@
+/**
+ * /share/[token] — public, read-only view of a shared property selection.
+ *
+ * Re-hydrates listings live by listing_key (we stored keys only) so the recipient
+ * always sees current data with the brokerage shown — TRREB-compliant. No auth.
+ */
+
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getServiceRoleClient } from "@/lib/supabase/client";
+import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
+
+export const dynamic = "force-dynamic";
+
+interface ListingRow {
+  listing_key: string;
+  full_payload: Record<string, unknown> | null;
+  media_urls: string[] | null;
+  city: string | null;
+  property_sub_type: string | null;
+}
+
+function num(v: unknown): number | undefined {
+  const n = typeof v === "string" ? parseFloat(v) : (v as number);
+  return typeof n === "number" && Number.isFinite(n) ? n : undefined;
+}
+
+function toCardData(row: ListingRow): PropertyCardData {
+  const p = row.full_payload ?? {};
+  return {
+    id: row.listing_key,
+    listingId: row.listing_key,
+    address: (p.UnparsedAddress as string) || "Address unavailable",
+    city: (p.City as string) || row.city || "",
+    province: p.StateOrProvince as string | undefined,
+    price: num(p.ListPrice) ?? 0,
+    propertyType:
+      (p.PropertySubType as string) || row.property_sub_type || (p.PropertyType as string) || "Residential",
+    bedrooms: num(p.BedroomsTotal) ?? 0,
+    bathrooms: num(p.BathroomsTotalInteger) ?? 0,
+    squareFeet: num(p.BuildingAreaTotal),
+    daysOnMarket: num(p.DaysOnMarket),
+    brokerage: (p.ListOfficeName as string) || "Unknown",
+    photoUrl: row.media_urls?.[0] ?? null,
+    maintenance: num(p.AssociationFee),
+  };
+}
+
+export default async function SharePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const supabase = getServiceRoleClient();
+
+  const { data: collection } = await supabase
+    .from("shared_collections")
+    .select("listing_keys, expires_at, note")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (!collection) notFound();
+  if (collection.expires_at && new Date(collection.expires_at as string) < new Date()) notFound();
+
+  const keys: string[] = (collection.listing_keys as string[]) ?? [];
+
+  let cards: PropertyCardData[] = [];
+  if (keys.length > 0) {
+    const { data: rows } = await supabase
+      .from("listings")
+      .select("listing_key, full_payload, media_urls, city, property_sub_type")
+      .in("listing_key", keys);
+
+    // Preserve the order the sharer selected; drop any listing that's no longer available.
+    const byKey = new Map((rows as ListingRow[] | null)?.map((r) => [r.listing_key, r]) ?? []);
+    cards = keys.map((k) => byKey.get(k)).filter((r): r is ListingRow => Boolean(r)).map(toCardData);
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <span className="text-sm font-bold text-primary-foreground">PP</span>
+            </div>
+            <span className="text-xl font-bold">PureProperty</span>
+          </Link>
+          <Link href="/properties" className="text-sm font-medium hover:text-primary">
+            Explore the terminal →
+          </Link>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Shared property selection</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {cards.length} {cards.length === 1 ? "property" : "properties"} shared with you
+            {collection.note ? ` — “${collection.note as string}”` : ""}
+          </p>
+        </div>
+
+        {cards.length === 0 ? (
+          <div className="rounded-xl border bg-card p-12 text-center">
+            <h3 className="mb-2 text-lg font-semibold">These listings are no longer available</h3>
+            <p className="mb-4 text-muted-foreground">
+              The shared properties may have sold or been removed.
+            </p>
+            <Link href="/properties" className="text-primary underline">
+              Browse current listings
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {cards.map((property) => (
+              <PropertyCard key={property.id} property={property} showSaveButton={false} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <footer className="mt-8 border-t py-8">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} PureProperty. All rights reserved.</p>
+          <p className="mt-2 text-xs">
+            Listing data provided by PROPTX MLS®. The information provided herein must only be used by
+            consumers that have a bona fide interest in the purchase, sale, or lease of real estate.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}

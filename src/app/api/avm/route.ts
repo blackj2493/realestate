@@ -6,9 +6,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerClient, getServiceRoleClient } from '@/lib/supabase/client';
+import { getServiceRoleClient } from '@/lib/supabase/client';
 import { calculateAVM } from '@/lib/avm/calculator';
 import { AVMInputSchema } from '@/lib/avm/validation';
+import { normalizePropertySubType } from '@/lib/avm/normalizeType';
+import type { AVMInput } from '@/lib/avm/types';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +25,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const input = parseResult.data;
+    const v = parseResult.data;
+    // The manual calculator doesn't collect square footage / lot width → null
+    // (skipped). Treat the supplied property type as both raw and normalized.
+    const input: AVMInput = {
+      cityRegion: v.cityRegion,
+      propertySubType: normalizePropertySubType(v.propertySubType),
+      rawPropertySubType: v.propertySubType,
+      buildingAreaTotal: null,
+      lotWidth: null,
+      bedroomsAboveGrade: v.bedroomsAboveGrade,
+      bathroomsTotalInteger: v.bathroomsTotalInteger,
+      parkingTotal: v.parkingTotal,
+      interiorTier: v.interiorTier,
+      exteriorTier: v.exteriorTier,
+      basementTier: v.basementTier,
+    };
 
     // Use service role client to bypass RLS on raw_vow_sold table
     const supabase = getServiceRoleClient();

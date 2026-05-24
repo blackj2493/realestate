@@ -6,12 +6,12 @@
 
 "use client";
 
-import React, { useEffect, useCallback, useRef, Suspense } from "react";
+import React, { useEffect, useCallback, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 
-import { TopCommandBar, LedgerPanel, ListingTerminal } from "@/components/CommandCenter";
+import { TopCommandBar, LedgerPanel, ListingTerminal, SelectionBar } from "@/components/CommandCenter";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { searchListings } from "@/lib/typesense/client";
@@ -23,7 +23,7 @@ const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center bg-slate-950">
-      <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+      <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
     </div>
   ),
 });
@@ -53,10 +53,40 @@ function CommandCenterContent() {
     school,
     mapBounds,
     setMapBounds,
+    selectedIds,
+    showSelectedOnly,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
   useCommuteIsochrone();
+
+  // Drag-resizable ledger width (persisted). Map fills the remaining space.
+  const LEDGER_MIN = 400;
+  const LEDGER_MAX = 1000;
+  const [ledgerWidth, setLedgerWidth] = useState(620);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem("ledgerWidth"));
+    if (saved >= LEDGER_MIN && saved <= LEDGER_MAX) setLedgerWidth(saved);
+  }, []);
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) =>
+      setLedgerWidth(Math.min(LEDGER_MAX, Math.max(LEDGER_MIN, window.innerWidth - ev.clientX)));
+    const onUp = () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      setLedgerWidth((w) => {
+        localStorage.setItem("ledgerWidth", String(Math.round(w)));
+        return w;
+      });
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, []);
 
   // Seed location from URL (?city= / ?search=)
   useEffect(() => {
@@ -129,6 +159,8 @@ function CommandCenterContent() {
   }, [performSearch]);
 
   const listings = searchResult?.listings ?? [];
+  // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query).
+  const displayed = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
 
   // When the school lens is on, shade the map by the active lens's school score.
   const mapColorConfig = school.enabled
@@ -140,20 +172,33 @@ function CommandCenterContent() {
       <TopCommandBar className="shrink-0" />
 
       <div className="flex min-h-0 flex-1">
-        {/* Map — left 70% */}
-        <div className="relative w-[70%] shrink-0 border-r border-slate-800">
+        {/* Map — fills remaining width */}
+        <div className="relative min-w-0 flex-1">
           <AlphaMap
-            properties={listings}
+            properties={displayed}
             colorConfig={mapColorConfig}
             defaultMapMode={persona.defaultMapMode}
             onSelectProperty={setSelectedProperty}
             currentSearchQuery={`${activePersona}:${location}`}
             className="h-full w-full"
           />
+          <SelectionBar />
         </div>
 
-        {/* Ledger — right 30% */}
-        <div className="flex w-[30%] shrink-0 flex-col bg-slate-950">
+        {/* Drag handle — resize the ledger */}
+        <div
+          onMouseDown={startResize}
+          role="separator"
+          aria-orientation="vertical"
+          title="Drag to resize"
+          className="group relative w-1.5 shrink-0 cursor-col-resize bg-slate-800 transition-colors hover:bg-cyan-500/60"
+        >
+          {/* Wider invisible hit area for easier grabbing */}
+          <div className="absolute inset-y-0 -left-2 -right-2" />
+        </div>
+
+        {/* Ledger — user-resizable width */}
+        <div className="flex shrink-0 flex-col bg-slate-950" style={{ width: ledgerWidth }}>
           <LedgerPanel className="flex-1 min-h-0" />
         </div>
       </div>
@@ -175,7 +220,7 @@ export default function PropertiesPage() {
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-950">
           <div className="text-center">
-            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-emerald-400" />
+            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-cyan-400" />
             <p className="text-slate-400">Initializing Command Center...</p>
           </div>
         </div>

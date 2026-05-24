@@ -2,42 +2,58 @@
  * GET /api/market/activity/sold
  *
  * Recently-SOLD (VOW) count + capped list for one market area under the dashboard
- * Market Activity lens. Powers the "Sold" column of the dashboard activity panel —
- * the just-sold comps HouseSigma shows but Realtor.ca hides.
+ * Market Activity lens. Powers the "Sold" column — the just-sold comps HouseSigma
+ * shows and Realtor.ca hides.
  *
- * Reads raw_vow_sold (read-only, RLS — CLAUDE.md §12) via the service-role client.
- * Window is keyed on `purchase_contract_date` — the deal-signed ("sold firm")
- * date, which is the true SOLD date. (close_date is the completion/possession
- * date and can be months later, so it misrepresents WHEN a home sold.) Tradeoff:
- * the VOW feed reports sold deals with a lag, so very recent windows (1-7d) under-
- * count and fill in over the following weeks. We bound `lte now` for safety.
+ * DATA PATH: queries the bounded `sold_listings` Typesense collection (in-memory,
+ * ~tens of ms), NOT Supabase. The collection holds a rolling 180-day window indexed
+ * by the ETL worker (scripts/worker/soldIndexer.ts); the full ~217k historical record
+ * stays in `raw_vow_sold` for AVM. This replaced a direct `raw_vow_sold` scan that
+ * did a full sequential scan (~2-8s) plus a per-request JSONB detoast.
  *
- * Compliance: count tiles are unrestricted, but the displayed LIST hard-caps at
- * 100 rows (TRREB §6.3(b)); every row carries the listing brokerage. Wrapped in
- * unstable_cache (24h) so repeated dashboard loads never re-scan the 217k-row
- * table — the data only refreshes daily and the Supabase IO budget is finite
- * (memory supabase-io-budget). All filtering is deterministic SQL (no AI, §4).
+ * COMPLIANCE: VOW sold has stricter display rules than IDX, so this collection is read
+ * SERVER-SIDE ONLY using the admin key (never the public browser search key). The list
+ * is hard-capped at 100 rows (TRREB §6.3(b)); the count tile is unrestricted. Every row
+ * carries the listing brokerage (ListOfficeName). All filtering is deterministic (§4).
  *
- * Query params:
- *   region (required), windowDays, types (comma keys), minBeds, minBaths,
+ * The window is keyed on `PurchaseContractDate` (epoch ms) — the deal-signed ("sold
+ * firm") date, the true SOLD date. The VOW feed reports sold deals with a lag, so very
+ * recent windows (1-7d) undercount and fill in over the following weeks.
+ *
+ * Query params: region (required), windowDays, types (comma keys), minBeds, minBaths,
  *   minGarage, basement (1/0), minFrontage, limit.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
-import { getServiceRoleClient } from "@/lib/supabase/client";
+import Typesense, { Client } from "typesense";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
 
-export const dynamic = "force-dynamic"; // caching handled per-key by unstable_cache
+export const dynamic = "force-dynamic";
 
 const MAX_WINDOW_DAYS = 180;
 const MAX_LIST = 100; // TRREB per-query display cap
 const PRICE_FLOOR = 50000; // excludes lease/rental rows leaking into the sold feed
+const DAY_MS = 86_400_000;
 
-const LIST_COLUMNS =
-  "listing_key, unparsed_address, close_price, list_price, purchase_contract_date, " +
-  "property_sub_type, bedrooms_above_grade, bathrooms_total_integer, building_area_total, " +
-  "city, brokerage:raw_payload->>ListOfficeName";
+const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
+const TYPESENSE_PORT = 443;
+
+let soldClient: Client | null = null;
+
+/** Server-only Typesense client (admin key) — must never run in the browser. */
+function getSoldClient(): Client {
+  if (!soldClient) {
+    const key = process.env.TYPESENSE_ADMIN_API_KEY;
+    if (!key) throw new Error("TYPESENSE_ADMIN_API_KEY is not set");
+    soldClient = new Typesense.Client({
+      nodes: [{ host: TYPESENSE_HOST, port: TYPESENSE_PORT, protocol: "https" }],
+      apiKey: key,
+      connectionTimeoutSeconds: 10,
+    });
+  }
+  return soldClient;
+}
 
 interface SoldParams {
   region: string;
@@ -65,90 +81,73 @@ export interface SoldListing {
   city: string | null;
 }
 
-/** A PostgREST query builder for raw_vow_sold (select already applied). */
-type SoldBuilder = ReturnType<
-  ReturnType<ReturnType<typeof getServiceRoleClient>["from"]>["select"]
->;
-
-/** Apply the lens filters shared by the count query and the list query. */
-function applyFilters(
-  q: SoldBuilder,
-  p: SoldParams,
-  cutoffISO: string,
-  nowISO: string
-): SoldBuilder {
-  const safe = p.region.replace(/[,()]/g, " ").trim();
-  // Sold window keyed on purchase_contract_date (the "sold firm" date) in
-  // [now-Nd, now]. The upper bound is defensive (contract dates aren't future).
-  q = q
-    .or(`city.ilike.${safe},city_region.ilike.${safe}`)
-    .gte("close_price", PRICE_FLOOR)
-    .gte("purchase_contract_date", cutoffISO)
-    .lte("purchase_contract_date", nowISO);
+/** Build the Typesense filter_by string for the sold lens (mirrors buildActivityFilter). */
+function buildSoldFilter(p: SoldParams): string {
+  const safe = p.region.replace(/`/g, "");
+  const cutoffMs = Math.floor(Date.now() - p.windowDays * DAY_MS);
+  const clauses: string[] = [
+    `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`,
+    `PurchaseContractDate:>=${cutoffMs}`,
+    `PurchaseContractDate:<=${Date.now()}`, // defensive: no future contract dates
+    `ClosePrice:>=${PRICE_FLOOR}`,
+  ];
 
   const variants = variantsForKeys(p.typeKeys);
-  if (variants.length > 0) q = q.in("property_sub_type", variants);
-  if (p.minBeds > 0) q = q.gte("bedrooms_above_grade", p.minBeds);
-  if (p.minBaths > 0) q = q.gte("bathrooms_total_integer", p.minBaths);
-  if (p.minGarage > 0) q = q.gte("parking_total", p.minGarage);
-  // basement_tier 1-5 = finished/partially-finished space. The flat
-  // has_finished_basement column is false on ~all historical rows (backfilled
-  // before that derivation shipped); basement_tier IS populated and accurate.
-  if (p.basementFinished) q = q.lte("basement_tier", 5);
-  if (p.minFrontage > 0) q = q.gte("lot_width", p.minFrontage);
-  return q;
+  if (variants.length > 0) {
+    const ors = variants.map((v) => `PropertySubType:=\`${v.replace(/`/g, "")}\``);
+    clauses.push(`(${ors.join(" || ")})`);
+  }
+  if (p.minBeds > 0) clauses.push(`BedroomsTotal:>=${p.minBeds}`);
+  if (p.minBaths > 0) clauses.push(`BathroomsTotalInteger:>=${p.minBaths}`);
+  if (p.minGarage > 0) clauses.push(`ParkingTotal:>=${p.minGarage}`);
+  // BasementTier 1-5 = finished/partially-finished space (deterministic tier).
+  if (p.basementFinished) clauses.push(`BasementTier:<=5`);
+  if (p.minFrontage > 0) clauses.push(`LotWidth:>=${p.minFrontage}`);
+
+  return clauses.join(" && ");
 }
+
+const posOrNull = (v: unknown): number | null => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
 
 async function computeSold(
   p: SoldParams
 ): Promise<{ count: number; listings: SoldListing[] }> {
-  const now = new Date();
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - p.windowDays);
-  const cutoffISO = cutoff.toISOString();
-  const nowISO = now.toISOString();
+  // A single Typesense search returns BOTH the total match count (`found`,
+  // unrestricted — for the tile) and the capped hit list (per_page ≤ 100).
+  const res = await getSoldClient()
+    .collections(SOLD_LISTINGS_COLLECTION)
+    .documents()
+    .search({
+      q: "*",
+      query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
+      filter_by: buildSoldFilter(p),
+      sort_by: "PurchaseContractDate:desc",
+      per_page: p.limit,
+      page: 1,
+    });
 
-  const sb = getServiceRoleClient();
-
-  // 1) Exact count — head:true returns no rows (cheap, no payload transfer).
-  const { count, error: countErr } = await applyFilters(
-    sb.from("raw_vow_sold").select("listing_key", { count: "exact", head: true }),
-    p,
-    cutoffISO,
-    nowISO
-  );
-  if (countErr) throw new Error(countErr.message);
-
-  // 2) Capped list — extracts ListOfficeName from JSONB server-side (no full blob).
-  const { data, error: listErr } = await applyFilters(
-    sb.from("raw_vow_sold").select(LIST_COLUMNS),
-    p,
-    cutoffISO,
-    nowISO
-  )
-    .order("purchase_contract_date", { ascending: false })
-    .limit(p.limit);
-  if (listErr) throw new Error(listErr.message);
-
-  const listings: SoldListing[] = (data ?? []).map((r) => {
-    const row = r as Record<string, unknown>;
+  const listings: SoldListing[] = (res.hits ?? []).map((h) => {
+    const d = h.document as Record<string, unknown>;
+    const ms = Number(d.PurchaseContractDate);
     return {
-      id: String(row.listing_key ?? ""),
-      address: (row.unparsed_address as string) ?? "",
-      closePrice: Number(row.close_price) || 0,
-      listPrice: row.list_price != null ? Number(row.list_price) : null,
-      soldDate: (row.purchase_contract_date as string) ?? null,
-      propertySubType: (row.property_sub_type as string) ?? null,
-      beds: row.bedrooms_above_grade != null ? Number(row.bedrooms_above_grade) : null,
-      baths:
-        row.bathrooms_total_integer != null ? Number(row.bathrooms_total_integer) : null,
-      sqft: row.building_area_total != null ? Number(row.building_area_total) : null,
-      brokerage: (row.brokerage as string) ?? null,
-      city: (row.city as string) ?? null,
+      id: String(d.id ?? ""),
+      address: (d.UnparsedAddress as string) || "",
+      closePrice: Number(d.ClosePrice) || 0,
+      listPrice: posOrNull(d.ListPrice),
+      soldDate: Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null,
+      propertySubType: (d.PropertySubType as string) || null,
+      beds: posOrNull(d.BedroomsTotal),
+      baths: posOrNull(d.BathroomsTotalInteger),
+      sqft: posOrNull(d.BuildingAreaTotal),
+      brokerage: (d.ListOfficeName as string) || null,
+      city: (d.City as string) || null,
     };
   });
 
-  return { count: count ?? 0, listings };
+  return { count: res.found ?? 0, listings };
 }
 
 export async function GET(req: NextRequest) {
@@ -174,10 +173,7 @@ export async function GET(req: NextRequest) {
   };
 
   try {
-    const key = JSON.stringify({ ...params, region: region.toLowerCase() });
-    const result = await unstable_cache(() => computeSold(params), ["market-activity-sold", key], {
-      revalidate: 86400,
-    })();
+    const result = await computeSold(params);
     return NextResponse.json({ region, ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";

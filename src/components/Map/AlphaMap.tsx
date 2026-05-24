@@ -6,13 +6,14 @@ import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer } from "@deck.gl/layers";
 import { Map, NavigationControl } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
-import { Layers, MapPin } from "lucide-react";
+import { Layers, MapPin, CheckSquare } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { MapColorConfig, MapMode } from "@/lib/personas/personaConfig";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import MapLayersPanel from "@/components/CommandCenter/MapLayersPanel";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
@@ -43,6 +44,18 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
+// "Alpha glow" ramp for the 3D hex columns — deep teal (low) → cyan → royal
+// blue (high). Style prototype: applied to the heatmap regardless of persona so
+// the columns read as luminous density rather than the per-persona metric hue.
+const ALPHA_GLOW_RANGE: [number, number, number][] = [
+  [8, 51, 68],
+  [12, 110, 138],
+  [13, 165, 196],
+  [34, 211, 238],
+  [56, 130, 246],
+  [99, 110, 247],
+];
+
 export default function AlphaMap({
   properties,
   colorConfig,
@@ -62,6 +75,10 @@ export default function AlphaMap({
 
   const hoveredId = useCommandCenterStore((s) => s.hoveredId);
   const setHoveredId = useCommandCenterStore((s) => s.setHoveredId);
+  const selectedIds = useCommandCenterStore((s) => s.selectedIds);
+  const isSelectMode = useCommandCenterStore((s) => s.isSelectMode);
+  const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
+  const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
   const commuteDestination = useCommandCenterStore((s) => s.commute.destination);
@@ -269,8 +286,8 @@ export default function AlphaMap({
         getPolygon: (d) => d.ring,
         filled: true,
         stroked: true,
-        getFillColor: [16, 185, 129, 38],
-        getLineColor: [16, 185, 129, 220],
+        getFillColor: [34, 211, 238, 38],
+        getLineColor: [34, 211, 238, 220],
         lineWidthUnits: "pixels",
         getLineWidth: 2,
         pickable: false,
@@ -284,7 +301,7 @@ export default function AlphaMap({
           getPosition: (d) => [d.lng, d.lat],
           getRadius: 8,
           radiusUnits: "pixels",
-          getFillColor: [16, 185, 129, 255],
+          getFillColor: [34, 211, 238, 255],
           stroked: true,
           getLineColor: [255, 255, 255, 255],
           lineWidthMinPixels: 2,
@@ -309,17 +326,19 @@ export default function AlphaMap({
           getElevationWeight: (d) => colorConfig.metric(d),
           colorAggregation: "MEAN",
           elevationAggregation: "MEAN",
-          colorRange: colorConfig.range,
-          elevationScale: 1,
+          colorRange: ALPHA_GLOW_RANGE,
+          elevationScale: 1.15,
           elevationRange: [0, 2500],
           extruded: true,
-          radius: 1000,
-          coverage: 1,
+          radius: 800,
+          coverage: 0.9,
           upperPercentile: 100,
+          opacity: 0.92,
           pickable: true,
           autoHighlight: true,
-          highlightColor: [255, 255, 255, 90],
-          material: { ambient: 0.45, diffuse: 0.6, shininess: 32, specularColor: [60, 64, 70] },
+          highlightColor: [255, 255, 255, 120],
+          // High ambient + low shininess = bright, luminous columns (faked glow).
+          material: { ambient: 0.85, diffuse: 0.5, shininess: 8, specularColor: [40, 70, 90] },
           updateTriggers: { getColorWeight: [colorConfig], getElevationWeight: [colorConfig] },
         }),
       ];
@@ -330,9 +349,12 @@ export default function AlphaMap({
       id: "cluster-bubbles",
       data: groups,
       getPosition: (f) => f.geometry.coordinates as [number, number],
-      getRadius: (f) => 14 + Math.min(26, ((f.properties as { point_count: number }).point_count ?? 0) * 1.4),
+      getRadius: (f) => 16 + Math.min(28, ((f.properties as { point_count: number }).point_count ?? 0) * 1.4),
       radiusUnits: "pixels",
-      getFillColor: [16, 185, 129, 210],
+      // Billboard so the bubble stays a true circle under the 45° map pitch
+      // (a ground-plane circle foreshortens into an oval that clips the count).
+      billboard: true,
+      getFillColor: [34, 211, 238, 210],
       stroked: true,
       getLineColor: [255, 255, 255, 170],
       lineWidthMinPixels: 1.5,
@@ -352,7 +374,7 @@ export default function AlphaMap({
       getPosition: (f) => f.geometry.coordinates as [number, number],
       getText: (f) => String((f.properties as { point_count: number }).point_count ?? ""),
       getColor: [255, 255, 255, 255],
-      getSize: 13,
+      getSize: 15,
       sizeUnits: "pixels",
       fontWeight: "bold",
       getTextAnchor: "middle",
@@ -364,9 +386,13 @@ export default function AlphaMap({
       id: "listing-pins",
       data: singles,
       getPosition: (f) => f.geometry.coordinates as [number, number],
-      getText: (f) => formatPriceShort((f.properties as PinProps).listing.ListPrice),
+      getText: (f) => {
+        const listing = (f.properties as PinProps).listing;
+        const price = formatPriceShort(listing.ListPrice);
+        return selectedIds.has(listing.id) ? `✓ ${price}` : price;
+      },
       getColor: [255, 255, 255, 255],
-      getSize: 13,
+      getSize: 14,
       sizeUnits: "pixels",
       fontWeight: "bold",
       getTextAnchor: "middle",
@@ -374,13 +400,23 @@ export default function AlphaMap({
       characterSet: "auto",
       background: true,
       getBackgroundColor: (f) => {
-        const c = getScatterColor((f.properties as PinProps).listing);
+        const listing = (f.properties as PinProps).listing;
+        // Selected pins read as a solid emerald chip regardless of the metric color.
+        if (selectedIds.has(listing.id)) return [34, 211, 238, 255];
+        const c = getScatterColor(listing);
         return [c[0], c[1], c[2], 235];
       },
       backgroundPadding: [8, 4, 8, 4],
-      getBorderColor: (f) =>
-        hoveredId === (f.properties as PinProps).listing.id ? [255, 255, 255, 255] : [15, 23, 42, 180],
-      getBorderWidth: (f) => (hoveredId === (f.properties as PinProps).listing.id ? 2 : 1),
+      getBorderColor: (f) => {
+        const listing = (f.properties as PinProps).listing;
+        if (selectedIds.has(listing.id)) return [255, 255, 255, 255];
+        return hoveredId === listing.id ? [255, 255, 255, 255] : [15, 23, 42, 180];
+      },
+      getBorderWidth: (f) => {
+        const listing = (f.properties as PinProps).listing;
+        if (selectedIds.has(listing.id)) return 2.5;
+        return hoveredId === listing.id ? 2 : 1;
+      },
       pickable: true,
       onHover: (info) => {
         const leaf = info.object as ClusterPoint | undefined;
@@ -395,17 +431,22 @@ export default function AlphaMap({
       },
       onClick: (info) => {
         const leaf = info.object as ClusterPoint | undefined;
-        if (leaf) onSelectProperty?.((leaf.properties as PinProps).listing);
+        if (!leaf) return;
+        const listing = (leaf.properties as PinProps).listing;
+        // In select mode a tap toggles membership; otherwise it opens the terminal.
+        if (isSelectMode) toggleSelected(listing.id);
+        else onSelectProperty?.(listing);
       },
       updateTriggers: {
-        getBackgroundColor: [colorConfig],
-        getBorderColor: [hoveredId],
-        getBorderWidth: [hoveredId],
+        getText: [selectedIds],
+        getBackgroundColor: [colorConfig, selectedIds],
+        getBorderColor: [hoveredId, selectedIds],
+        getBorderWidth: [hoveredId, selectedIds],
       },
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [mapData, viewMode, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers]);
+  }, [mapData, viewMode, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
@@ -468,6 +509,8 @@ export default function AlphaMap({
   }
 
   const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
+  // Heatmap columns use the alpha-glow ramp; listings pins keep the persona hue.
+  const legendRange = viewMode === "heatmap" ? ALPHA_GLOW_RANGE : colorConfig.range;
 
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ minHeight: "400px", height: "100%" }}>
@@ -489,25 +532,25 @@ export default function AlphaMap({
 
       {hoverInfo?.object && (
         <div
-          className="pointer-events-none absolute z-20 rounded-lg border border-slate-700 bg-slate-900/95 px-3 py-2 shadow-xl backdrop-blur-sm"
+          className="pointer-events-none absolute z-20 rounded-none border border-slate-700 bg-slate-900/95 px-3 py-2 backdrop-blur-sm"
           style={{ left: hoverInfo.x + 10, top: hoverInfo.y + 10 }}
         >
           <p className="text-xs font-medium text-slate-300">
             {hoverInfo.object.UnparsedAddress || hoverInfo.object.City || "Unknown location"}
           </p>
-          <p className="mt-1 font-mono text-sm text-emerald-400">
+          <p className="mt-1 font-mono text-sm text-cyan-400">
             ${hoverInfo.object.ListPrice?.toLocaleString() || "N/A"}
           </p>
         </div>
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-slate-700 bg-slate-900/90 px-4 py-3 shadow-xl backdrop-blur-sm">
+      <div className="absolute bottom-4 left-4 z-10 rounded-none border border-slate-700 bg-slate-900/90 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-2 text-xs">
           <span className="text-slate-500">{colorConfig.legendLow}</span>
           <div
             className="h-1.5 w-20 rounded-full"
-            style={{ background: `linear-gradient(to right, ${rgb(colorConfig.range[0])}, ${rgb(colorConfig.range[colorConfig.range.length - 1])})` }}
+            style={{ background: `linear-gradient(to right, ${rgb(legendRange[0])}, ${rgb(legendRange[legendRange.length - 1])})` }}
           />
           <span className="text-slate-300">{colorConfig.legendHigh}</span>
         </div>
@@ -515,33 +558,53 @@ export default function AlphaMap({
 
       {/* View-mode toggle + count */}
       <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
-        <div className="flex overflow-hidden rounded-lg border border-slate-700 bg-slate-900/90 shadow-xl backdrop-blur-sm">
+        <div className="flex overflow-hidden rounded-none border border-slate-700 bg-slate-900/90 backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setViewMode("listings")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
-              viewMode === "listings" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:text-slate-200"
+              "flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors",
+              viewMode === "listings" ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-200"
             )}
           >
-            <MapPin className="h-3.5 w-3.5" />
+            <MapPin className="h-4 w-4" />
             Listings
           </button>
           <button
             type="button"
             onClick={() => setViewMode("heatmap")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
-              viewMode === "heatmap" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:text-slate-200"
+              "flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors",
+              viewMode === "heatmap" ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-200"
             )}
           >
-            <Layers className="h-3.5 w-3.5" />
+            <Layers className="h-4 w-4" />
             Heatmap
           </button>
+          <button
+            type="button"
+            onClick={() => setSelectMode(!isSelectMode)}
+            aria-pressed={isSelectMode}
+            className={cn(
+              "flex items-center gap-1.5 border-l border-slate-700 px-3.5 py-2 text-sm font-medium transition-colors",
+              isSelectMode ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-200"
+            )}
+          >
+            <CheckSquare className="h-4 w-4" />
+            Select
+          </button>
         </div>
-        <div className="self-start rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 shadow-xl backdrop-blur-sm">
-          <p className="font-mono text-xs text-slate-300">
-            <span className="font-semibold text-emerald-400">{validProperties.length}</span>
+
+        <MapLayersPanel />
+
+        {isSelectMode && (
+          <div className="self-start rounded-none border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-2 backdrop-blur-sm">
+            <p className="font-mono text-sm text-cyan-200">Tap properties to add to your selection</p>
+          </div>
+        )}
+        <div className="self-start rounded-none border border-slate-700 bg-slate-900/90 px-3.5 py-2 backdrop-blur-sm">
+          <p className="font-mono text-sm text-slate-300">
+            <span className="font-semibold text-cyan-400">{validProperties.length}</span>
             {totalCount > validProperties.length ? ` of ${totalCount.toLocaleString()}` : ""}{" "}
             in {commuteRing ? "commute zone" : "view"}
             {totalCount > validProperties.length && (

@@ -100,38 +100,42 @@ export default function CommuteFilter() {
   };
 
   return (
-    <div className="relative shrink-0" ref={panelRef}>
+    <div className="relative" ref={panelRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-all",
+          "flex w-full items-center justify-between gap-2 border px-3 py-2 text-xs font-mono uppercase tracking-wider transition-all",
           active
-            ? "border-emerald-600/50 bg-emerald-900/30 text-emerald-300"
-            : "border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200"
+            ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
+            : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
         )}
       >
-        <Clock className="h-3.5 w-3.5" />
-        {active && commute.destination ? (
-          <span className="max-w-[180px] truncate">
-            {commute.minutes}m {MODE_LABEL[commute.mode]} · {commute.destination.label.split(",")[0]}
-          </span>
-        ) : (
-          "Commute"
-        )}
-        {active && (
+        <span className="flex min-w-0 items-center gap-2">
+          <Clock className="h-4 w-4 shrink-0" />
+          {active && commute.destination ? (
+            <span className="truncate normal-case">
+              {commute.minutes}m {MODE_LABEL[commute.mode]} · {commute.destination.label.split(",")[0]}
+            </span>
+          ) : (
+            "Commute Layer"
+          )}
+        </span>
+        {active ? (
           <X
-            className="h-3.5 w-3.5 text-emerald-400/70 hover:text-emerald-200"
+            className="h-4 w-4 shrink-0 text-cyan-400/70 hover:text-cyan-200"
             onClick={(e) => {
               e.stopPropagation();
               clear();
             }}
           />
+        ) : (
+          <span className="h-1.5 w-1.5 shrink-0 bg-slate-600" />
         )}
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-2xl">
+        <div className="absolute left-full top-0 z-30 ml-2 w-80 rounded-none border border-slate-700 bg-slate-900 p-4">
           {/* Destination */}
           <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
             Commute to
@@ -147,7 +151,7 @@ export default function CommuteFilter() {
             />
           </div>
           {(results.length > 0 || searching) && (
-            <div className="mt-1 overflow-hidden rounded-md border border-slate-700 bg-slate-950">
+            <div className="mt-1 overflow-hidden rounded-none border border-slate-700 bg-slate-950">
               {searching && results.length === 0 && (
                 <div className="px-3 py-2 text-xs text-slate-500">Searching…</div>
               )}
@@ -178,9 +182,9 @@ export default function CommuteFilter() {
                   type="button"
                   onClick={() => setCommute({ mode: m.id })}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition-all",
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-none border px-2 py-1.5 text-xs font-medium transition-all",
                     selected
-                      ? "border-emerald-600/50 bg-emerald-900/30 text-emerald-300"
+                      ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-300"
                       : "border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -197,7 +201,7 @@ export default function CommuteFilter() {
             <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
               Max time
             </label>
-            <span className="font-mono text-xs text-emerald-300">{commute.minutes} min</span>
+            <span className="font-mono text-xs text-cyan-300">{commute.minutes} min</span>
           </div>
           <Slider
             value={[commute.minutes]}
@@ -219,7 +223,7 @@ export default function CommuteFilter() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-md bg-emerald-600/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600"
+              className="rounded-none bg-cyan-600/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-600"
             >
               Done
             </button>

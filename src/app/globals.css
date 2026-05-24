@@ -3,6 +3,37 @@
 @tailwind utilities;
 
 /* ============================================================================
+   Design tokens — shadcn/ui theme variables (slate/emerald dark theme).
+   tailwind.config.ts maps colors to hsl(var(--token)); without these the
+   ui/ primitives (Button, Card, Slider, Input, Select) render colorless.
+   App is dark-first, so the dark palette lives directly on :root.
+   ============================================================================ */
+@layer base {
+  :root {
+    --background: 229 84% 5%; /* slate-950 */
+    --foreground: 214 32% 91%; /* slate-200 */
+    --card: 222 47% 11%; /* slate-900 */
+    --card-foreground: 214 32% 91%;
+    --popover: 222 47% 11%; /* slate-900 */
+    --popover-foreground: 214 32% 91%;
+    --primary: 189 94% 43%; /* cyan-500 */
+    --primary-foreground: 229 84% 5%;
+    --secondary: 217 33% 17%; /* slate-800 */
+    --secondary-foreground: 214 32% 91%;
+    --muted: 217 33% 17%; /* slate-800 */
+    --muted-foreground: 215 20% 65%; /* slate-400 */
+    --accent: 217 33% 17%; /* slate-800 */
+    --accent-foreground: 214 32% 91%;
+    --destructive: 0 72% 51%; /* red-600 */
+    --destructive-foreground: 214 32% 91%;
+    --border: 215 28% 17%; /* slate-800 */
+    --input: 215 28% 17%; /* slate-800 */
+    --ring: 189 94% 43%; /* cyan-500 */
+    --radius: 0rem; /* sharp geometry — zero rounded corners */
+  }
+}
+
+/* ============================================================================
    Command Center Terminal Aesthetic
    ============================================================================ */
 
@@ -35,11 +66,9 @@
   appearance: none;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
-  background: #10b981;
-  border: 2px solid #064e3b;
+  background: #22d3ee;
+  border: 2px solid #155e75;
   margin-top: -5px;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
 
 .terminal-slider::-moz-range-track {
@@ -51,10 +80,8 @@
 .terminal-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border-radius: 50%;
-  background: #10b981;
-  border: 2px solid #064e3b;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  background: #22d3ee;
+  border: 2px solid #155e75;
 }
 
 /* Badge component base styles */
@@ -172,6 +199,6 @@
 
 /* Selection highlight */
 ::selection {
-  background-color: rgba(16, 185, 129, 0.3);
-  color: #ecfdf5;
+  background-color: rgba(34, 211, 238, 0.3);
+  color: #ecfeff;
 }

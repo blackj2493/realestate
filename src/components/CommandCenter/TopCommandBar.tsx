@@ -1,126 +1,103 @@
 /**
- * TopCommandBar — wordmark + persona selector + search + profile, with the
- * persona-driven filter bar below.
+ * TopCommandBar — compact context bar: wordmark + location search (left), the
+ * segmented PERSONA selector (center), and profile (right). The persona-driven
+ * parameter ribbon renders below. Commute/School layers live in the map panel.
  */
 
 "use client";
 
-import React from "react";
 import Link from "next/link";
-import { ChevronLeft, Search, X } from "lucide-react";
+import { ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCommandCenterStore, type PersonaType } from "@/lib/stores/commandCenterStore";
 import { PERSONA_LIST } from "@/lib/personas/personaConfig";
 import PersonaFilterBar from "./PersonaFilterBar";
-import CommuteFilter from "./CommuteFilter";
-import SchoolFilter from "./SchoolFilter";
+import LocationSearch from "./LocationSearch";
 
 interface TopCommandBarProps {
   className?: string;
 }
 
+// Short, terminal-style labels for the segmented selector.
+const PERSONA_SHORT: Record<PersonaType, string> = {
+  smart: "SMART HOMEBUYER",
+  cashflow: "CASHFLOW INVESTOR",
+  flippers: "FLIPPER",
+  builders: "BUILDER",
+};
+
 export default function TopCommandBar({ className }: TopCommandBarProps) {
-  const { activePersona, setActivePersona, location, setLocation } = useCommandCenterStore();
-  const [searchValue, setSearchValue] = React.useState(location);
-
-  React.useEffect(() => setSearchValue(location), [location]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocation(searchValue);
-  };
+  const { activePersona, setActivePersona } = useCommandCenterStore();
 
   return (
     <div className={cn("border-b border-slate-800 bg-slate-950", className)}>
-      {/* Main bar */}
-      <div className="flex items-center gap-4 px-4 py-2.5">
-        {/* Wordmark */}
-        <Link href="/" className="group flex shrink-0 items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900/60 text-slate-300 transition-all group-hover:border-emerald-500/60 group-hover:text-emerald-400">
-            <ChevronLeft className="h-4 w-4" strokeWidth={2.75} />
-          </span>
-          <span className="terminal-font text-lg font-bold tracking-tight">
-            <span className="text-white">PURE</span>
-            <span className="text-slate-400">PROPERTY</span>
-            <span className="text-emerald-400">.ca</span>
-          </span>
-        </Link>
+      {/* Context bar */}
+      <div className="flex h-12 items-center gap-4 px-4">
+        {/* Left: wordmark + search */}
+        <div className="flex shrink-0 items-center gap-3">
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2 border border-slate-700 px-3 py-1.5 transition-colors hover:border-cyan-500/60"
+          >
+            <ChevronsRight
+              className="h-5 w-5 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.75)]"
+              strokeWidth={3}
+            />
+            <span className="terminal-font text-[17px] font-bold tracking-wider">
+              <span className="text-white">PURE</span>
+              <span className="text-slate-400">PROPERTY</span>
+              <span className="text-cyan-400">.CA</span>
+            </span>
+          </Link>
 
-        <div className="h-6 w-px bg-slate-800" />
-
-        {/* Persona selector */}
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Mode:</span>
-          <Select value={activePersona} onValueChange={(v) => setActivePersona(v as PersonaType)}>
-            <SelectTrigger className="h-8 w-[200px] border-slate-700 bg-slate-900 text-xs font-medium">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="border-slate-700 bg-slate-900">
-              {PERSONA_LIST.map((p) => {
-                const Icon = p.icon;
-                return (
-                  <SelectItem key={p.id} value={p.id} className={cn("text-xs", activePersona === p.id && "text-emerald-400")}>
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-3.5 w-3.5" />
-                      {p.label}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+          <LocationSearch className="w-64 lg:w-96" />
         </div>
 
-        {/* Search */}
-        <form onSubmit={submit} className="max-w-md flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <Input
-              type="text"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Search city, neighbourhood, or address..."
-              className="h-9 border-slate-700 bg-slate-900 pl-10 pr-10 text-sm text-slate-200 placeholder:text-slate-500"
-            />
-            {searchValue && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchValue("");
-                  setLocation("");
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+        {/* Flexible gap (smaller on the left nudges the persona cluster right) */}
+        <div className="flex-[2]" />
+
+        {/* Center-right: segmented PERSONA selector */}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <span className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">
+            [ Persona: ]
+          </span>
+          <div className="flex border border-slate-700">
+            {PERSONA_LIST.map((p) => {
+              const isActive = activePersona === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setActivePersona(p.id)}
+                  className={cn(
+                    "border-r border-slate-700 px-3.5 py-2 text-[13px] font-semibold uppercase tracking-wider transition-colors last:border-r-0",
+                    isActive
+                      ? "bg-cyan-400 text-slate-950"
+                      : "bg-slate-950 text-slate-300 hover:bg-slate-900 hover:text-white"
+                  )}
+                >
+                  {PERSONA_SHORT[p.id]}
+                </button>
+              );
+            })}
           </div>
-        </form>
+        </div>
 
-        {/* Commute-zone filter (global) */}
-        <CommuteFilter />
+        {/* Flexible gap (larger on the right) */}
+        <div className="flex-1" />
 
-        {/* School-quality lens (global) */}
-        <SchoolFilter />
-
-        {/* Profile */}
-        <Link
-          href="/dashboard"
-          className="terminal-font shrink-0 text-xs tracking-[0.2em] text-slate-400 transition-colors hover:text-emerald-400"
-        >
-          [ PROFILE ]
-        </Link>
+        {/* Right: profile */}
+        <div className="flex shrink-0 items-center justify-end">
+          <Link
+            href="/dashboard"
+            className="terminal-font shrink-0 text-[15px] tracking-[0.2em] text-slate-400 transition-colors hover:text-cyan-400"
+          >
+            [ PROFILE ]
+          </Link>
+        </div>
       </div>
 
-      {/* Persona filter bar */}
+      {/* Parameter ribbon */}
       <PersonaFilterBar />
     </div>
   );

@@ -7,7 +7,8 @@ import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
 import type { SoldListing } from "@/app/api/market/activity/sold/route";
 import ActivityRow from "./ActivityRow";
 
-const LIST_LIMIT = 100; // TRREB §6.3(b) per-query display cap
+const LIST_LIMIT = 100; // New side (Typesense, free) — TRREB §6.3(b) per-query display cap
+const SOLD_LIST_LIMIT = 25; // Sold side: only ~5 visible (scroll); smaller payload, same cap rules
 const DAY_MS = 86_400_000;
 
 function relTime(ts?: number): string {
@@ -110,7 +111,7 @@ export default function MarketActivityPanel({
         if (alive) setNewErr(true);
       });
 
-    fetch(`/api/market/activity/sold?${soldQuery(location, lens, LIST_LIMIT)}`)
+    fetch(`/api/market/activity/sold?${soldQuery(location, lens, SOLD_LIST_LIMIT)}`)
       .then((r) => r.json())
       .then((d: { count: number; listings: SoldListing[]; error?: string }) => {
         if (!alive) return;

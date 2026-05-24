@@ -1,21 +1,27 @@
 /**
- * AVM Calculator — Core Two-Tier Rule
- * 
- * Implements the decision tree:
- * - Condition A (R² >= 0.50): Apply coefficient multipliers
- * - Condition B (R² < 0.50 or missing): Return anchor only (fallback)
- * 
- * Score Conversion Logic:
- * - Interior score = 6 - interiorTier (Tier 1 → score 5, Tier 5 → score 1)
- * - Exterior score = 5 - exteriorTier (Tier 1 → score 4, Tier 5 → score 0)
- * - Basement score = 10 - basementTier (Tier 1 → score 9, Tier 9 → score 1)
+ * AVM Calculator — anchor-and-adjust over an interpretable standardized model.
+ *
+ * estimate = anchor × exp( clamp( Σ beta_i · clamp((x_i − mean_i)/std_i, ±Z), ±ADJ ) )
+ *
+ * A typical home (every present feature at its market mean → all z=0) returns
+ * exactly the anchor. Per-feature beta/mean/std come from the offline RidgeCV fit
+ * (avm_multiplier_matrix); they are constants, so this is deterministic arithmetic
+ * with no AI at request time (CLAUDE.md §4).
+ *
+ * Score conventions (must match the export + ingester):
+ *   interior_score = 6 − interiorTier,  exterior_score = 5 − exteriorTier,
+ *   basement_score = 10 − basementTier.
+ *
+ * Gate: coefficients apply only when audit R² ≥ 0.50; otherwise anchor-only.
+ * Anchor: live 90-day median when comps ≥ MIN_ANCHOR_COMPS, else Base_Price,
+ * else estimate unavailable.
  */
 
 import type { AVMInput, AVMResult, AVMAdjustmentBreakdown } from './types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchAnchorPrice } from './anchorService';
-import { fetchR2Score } from './auditService';
-import { fetchCoefficients, type CoefficientRow } from './matrixService';
+import { fetchAnchor } from './anchorService';
+import { fetchAuditInfo } from './auditService';
+import { fetchCoefficients } from './matrixService';
 import {
   ENGINE_MODE_COEFFICIENT_ADJUSTED,
   ENGINE_MODE_ANCHOR_ONLY,
@@ -24,61 +30,68 @@ import {
   CONFIDENCE_LOW,
   COEFFICIENT_ENGINE_THRESHOLD,
   HIGH_CONFIDENCE_THRESHOLD,
+  Z_CLAMP,
+  ADJ_CLAMP,
+  MIN_ANCHOR_COMPS,
 } from './types';
 
-const THRESHOLD = COEFFICIENT_ENGINE_THRESHOLD;
-const HIGH_CONF = HIGH_CONFIDENCE_THRESHOLD;
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
 
 export async function calculateAVM(
   supabase: SupabaseClient,
   input: AVMInput
 ): Promise<AVMResult> {
-  // STEP 1: Fetch anchor price (always needed)
-  const anchorPrice = await fetchAnchorPrice(
-    supabase,
-    input.cityRegion,
-    input.propertySubType
-  );
+  // Anchor and audit are independent → fetch in parallel.
+  const [anchorRes, audit] = await Promise.all([
+    fetchAnchor(supabase, input.cityRegion, input.propertySubType, input.rawPropertySubType),
+    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
+  ]);
 
-  if (!anchorPrice) {
+  // Anchor selection ladder: live median (enough comps) → Base_Price → unavailable.
+  let anchor: number | null = null;
+  let usedFallback = false;
+  if (anchorRes.anchor !== null && anchorRes.comps >= MIN_ANCHOR_COMPS) {
+    anchor = anchorRes.anchor;
+  } else if (audit.basePrice !== null) {
+    anchor = audit.basePrice;
+    usedFallback = true;
+  }
+
+  if (anchor === null) {
     return {
       estimatedValue: 0,
       anchorPrice: 0,
       totalAdjustmentPct: 0,
       engineMode: ENGINE_MODE_ANCHOR_ONLY,
-      r2Score: null,
+      r2Score: audit.r2,
       breakdown: blankBreakdown(),
       confidence: CONFIDENCE_LOW,
     };
   }
 
-  // STEP 2: Fetch R² score for gating decision
-  const r2Score = await fetchR2Score(
-    supabase,
-    input.cityRegion,
-    input.propertySubType
-  );
-
-  // STEP 3: Apply Two-Tier Rule
-  if (r2Score !== null && r2Score >= THRESHOLD) {
-    return calculateWithCoefficients(supabase, anchorPrice, r2Score, input);
-  } else {
-    return {
-      estimatedValue: anchorPrice,
-      anchorPrice,
-      totalAdjustmentPct: 0,
-      engineMode: ENGINE_MODE_ANCHOR_ONLY,
-      r2Score,
-      breakdown: blankBreakdown(),
-      confidence: r2Score !== null ? CONFIDENCE_MEDIUM : CONFIDENCE_LOW,
-    };
+  // Gate: coefficient engine only when the market model is accurate enough.
+  if (audit.r2 !== null && audit.r2 >= COEFFICIENT_ENGINE_THRESHOLD) {
+    return calculateWithCoefficients(supabase, anchor, audit.r2, usedFallback, input);
   }
+
+  return {
+    estimatedValue: anchor,
+    anchorPrice: anchor,
+    totalAdjustmentPct: 0,
+    engineMode: ENGINE_MODE_ANCHOR_ONLY,
+    r2Score: audit.r2,
+    breakdown: blankBreakdown(),
+    confidence: audit.r2 !== null ? CONFIDENCE_MEDIUM : CONFIDENCE_LOW,
+  };
 }
 
 async function calculateWithCoefficients(
   supabase: SupabaseClient,
-  anchorPrice: number,
+  anchor: number,
   r2Score: number,
+  usedFallback: boolean,
   input: AVMInput
 ): Promise<AVMResult> {
   const coefficients = await fetchCoefficients(
@@ -87,45 +100,52 @@ async function calculateWithCoefficients(
     input.propertySubType
   );
 
-  // Convert tiers to model scores (matches the Python extraction logic)
+  const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
+
+  // Live feature values. Condition is in SCORE space; counts/continuous are raw.
+  // null → field absent → skip (≡ training mean-imputation, z=0).
   const interiorScore = 6 - input.interiorTier;
   const exteriorScore = 5 - input.exteriorTier;
   const basementScore = 10 - input.basementTier;
 
-  // Helper: get the per-unit coefficient for a feature
-  const getCoefficient = (feature: string): number => {
-    const row = coefficients.find((c) => c.featureName === feature);
-    return row?.multiplier ?? 0;
-  };
+  const features: { name: string; value: number | null; key: keyof AVMAdjustmentBreakdown }[] = [
+    { name: 'building_area_total', value: input.buildingAreaTotal, key: 'buildingAreaAdjustment' },
+    { name: 'lot_width', value: input.lotWidth, key: 'lotWidthAdjustment' },
+    { name: 'bedrooms_above_grade', value: input.bedroomsAboveGrade, key: 'bedroomsAdjustment' },
+    { name: 'bathrooms_total_integer', value: input.bathroomsTotalInteger, key: 'bathroomsAdjustment' },
+    { name: 'parking_total', value: input.parkingTotal, key: 'parkingAdjustment' },
+    { name: 'basement_score', value: basementScore, key: 'basementAdjustment' },
+    { name: 'interior_score', value: interiorScore, key: 'interiorAdjustment' },
+    { name: 'exterior_score', value: exteriorScore, key: 'exteriorAdjustment' },
+  ];
 
-  // MULTIPLY the user's input by the feature's coefficient
-  const bedroomMult = getCoefficient('bedrooms_above_grade') * input.bedroomsAboveGrade;
-  const bathroomMult = getCoefficient('bathrooms_total_integer') * input.bathroomsTotalInteger;
-  const parkingMult = getCoefficient('parking_total') * input.parkingTotal;
-  const interiorMult = getCoefficient('interior_score') * interiorScore;
-  const exteriorMult = getCoefficient('exterior_score') * exteriorScore;
-  const basementMult = getCoefficient('basement_score') * basementScore;
+  const breakdown = blankBreakdown();
+  let total = 0;
 
-  const totalMultiplier =
-    bedroomMult + bathroomMult + parkingMult + interiorMult + exteriorMult + basementMult;
+  for (const f of features) {
+    if (f.value === null) continue;
+    const c = coeff.get(f.name);
+    if (!c || c.beta === 0 || !(c.std > 0)) continue;
+    const z = clamp((f.value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
+    const contribution = c.beta * z;
+    total += contribution;
+    // First-order $ attribution (sums ≈ the total adjustment for small values).
+    breakdown[f.key] = Math.round(anchor * contribution);
+  }
 
-  const breakdown: AVMAdjustmentBreakdown = {
-    bedroomsAdjustment: Math.round(anchorPrice * bedroomMult),
-    bathroomsAdjustment: Math.round(anchorPrice * bathroomMult),
-    parkingAdjustment: Math.round(anchorPrice * parkingMult),
-    interiorAdjustment: Math.round(anchorPrice * interiorMult),
-    exteriorAdjustment: Math.round(anchorPrice * exteriorMult),
-    basementAdjustment: Math.round(anchorPrice * basementMult),
-  };
+  total = clamp(total, -ADJ_CLAMP, ADJ_CLAMP);
+  const estimatedValue = Math.round(anchor * Math.exp(total));
 
-  const estimatedValue = Math.round(anchorPrice * (1 + totalMultiplier));
-
-  const confidence = r2Score >= HIGH_CONF ? CONFIDENCE_HIGH : CONFIDENCE_MEDIUM;
+  const confidence = usedFallback
+    ? CONFIDENCE_MEDIUM
+    : r2Score >= HIGH_CONFIDENCE_THRESHOLD
+    ? CONFIDENCE_HIGH
+    : CONFIDENCE_MEDIUM;
 
   return {
     estimatedValue,
-    anchorPrice,
-    totalAdjustmentPct: totalMultiplier,
+    anchorPrice: anchor,
+    totalAdjustmentPct: Math.exp(total) - 1,
     engineMode: ENGINE_MODE_COEFFICIENT_ADJUSTED,
     r2Score,
     breakdown,
@@ -135,6 +155,8 @@ async function calculateWithCoefficients(
 
 function blankBreakdown(): AVMAdjustmentBreakdown {
   return {
+    buildingAreaAdjustment: 0,
+    lotWidthAdjustment: 0,
     bedroomsAdjustment: 0,
     bathroomsAdjustment: 0,
     parkingAdjustment: 0,

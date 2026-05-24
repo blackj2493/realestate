@@ -42,9 +42,13 @@ export const indexedFields: IndexedField[] = [
   { name: 'BathroomsTotalInteger', type: 'int32', facet: false, sort: true },
   { name: 'ParkingTotal', type: 'int32', facet: false, sort: true },
 
-  // Location — city/region dropdowns are real facets; PostalCode is too high-cardinality
+  // Location — city/region dropdowns are real facets; PostalCode is too high-cardinality.
+  // UnparsedAddress: indexed (not faceted) so the search bar can typeahead street
+  // addresses. Default prefix matching covers "99 vic" → "99 Victoria…"; no infix
+  // (RAM policy). High-cardinality, so never facet it.
   { name: 'City', type: 'string', facet: true },
   { name: 'CityRegion', type: 'string', facet: true },
+  { name: 'UnparsedAddress', type: 'string', facet: false, optional: true },
   { name: 'PostalCode', type: 'string', facet: false },
 
   // Basement (multi-select) — real facet. KitchensTotal is a range, not a facet
@@ -171,6 +175,7 @@ export const typesenseSchema = {
     { name: 'ParkingTotal', type: 'int32' as const, facet: false, sort: true },
     { name: 'City', type: 'string' as const, facet: true },
     { name: 'CityRegion', type: 'string' as const, facet: true },
+    { name: 'UnparsedAddress', type: 'string' as const, facet: false, optional: true },
     { name: 'PostalCode', type: 'string' as const, facet: false },
     { name: 'BasementType', type: 'string[]' as const, facet: true },
     { name: 'KitchensTotal', type: 'int32' as const, facet: false },

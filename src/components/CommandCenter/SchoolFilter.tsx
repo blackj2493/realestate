@@ -41,9 +41,9 @@ const SYSTEMS: { id: SchoolSystem; label: string }[] = [
 
 const segBtn = (selected: boolean) =>
   cn(
-    "flex flex-1 items-center justify-center rounded-md border px-2 py-1.5 text-xs font-medium transition-all",
+    "flex flex-1 items-center justify-center rounded-none border px-2 py-1.5 text-xs font-medium transition-all",
     selected
-      ? "border-emerald-600/50 bg-emerald-900/30 text-emerald-300"
+      ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-300"
       : "border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200"
   );
 
@@ -120,32 +120,36 @@ export default function SchoolFilter() {
   };
 
   return (
-    <div className="relative shrink-0" ref={panelRef}>
+    <div className="relative" ref={panelRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-all",
+          "flex w-full items-center justify-between gap-2 border px-3 py-2 text-xs font-mono uppercase tracking-wider transition-all",
           school.enabled
-            ? "border-emerald-600/50 bg-emerald-900/30 text-emerald-300"
-            : "border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200"
+            ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
+            : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
         )}
       >
-        <GraduationCap className="h-3.5 w-3.5" />
-        {school.enabled ? <span className="max-w-[180px] truncate">{summary()}</span> : "Schools"}
-        {school.enabled && (
+        <span className="flex min-w-0 items-center gap-2">
+          <GraduationCap className="h-4 w-4 shrink-0" />
+          {school.enabled ? <span className="truncate normal-case">{summary()}</span> : "School Layer"}
+        </span>
+        {school.enabled ? (
           <X
-            className="h-3.5 w-3.5 text-emerald-400/70 hover:text-emerald-200"
+            className="h-4 w-4 shrink-0 text-cyan-400/70 hover:text-cyan-200"
             onClick={(e) => {
               e.stopPropagation();
               clear();
             }}
           />
+        ) : (
+          <span className="h-1.5 w-1.5 shrink-0 bg-slate-600" />
         )}
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-2xl">
+        <div className="absolute left-full top-0 z-30 ml-2 w-80 rounded-none border border-slate-700 bg-slate-900 p-4">
           {/* Level */}
           <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
             School level
@@ -185,7 +189,7 @@ export default function SchoolFilter() {
             <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
               Min school score
             </label>
-            <span className="font-mono text-xs text-emerald-300">
+            <span className="font-mono text-xs text-cyan-300">
               {school.minScore > 0 ? `${school.minScore.toFixed(1)} / 10` : "Any"}
             </span>
           </div>
@@ -215,7 +219,7 @@ export default function SchoolFilter() {
             />
           </div>
           {(results.length > 0 || searching) && (
-            <div className="mt-1 max-h-56 overflow-y-auto rounded-md border border-slate-700 bg-slate-950">
+            <div className="mt-1 max-h-56 overflow-y-auto rounded-none border border-slate-700 bg-slate-950">
               {searching && results.length === 0 && (
                 <div className="px-3 py-2 text-xs text-slate-500">Searching…</div>
               )}
@@ -229,7 +233,7 @@ export default function SchoolFilter() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-xs text-slate-200">{r.name}</span>
                     {r.score !== null && (
-                      <span className="shrink-0 font-mono text-[10px] text-emerald-300">{r.score.toFixed(1)}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-cyan-300">{r.score.toFixed(1)}</span>
                     )}
                   </div>
                   <div className="truncate text-[10px] text-slate-500">
@@ -248,7 +252,7 @@ export default function SchoolFilter() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-md bg-emerald-600/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600"
+              className="rounded-none bg-cyan-600/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-600"
             >
               Done
             </button>

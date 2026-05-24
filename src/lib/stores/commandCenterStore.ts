@@ -88,6 +88,17 @@ export interface CommandCenterState {
   hoveredId: string | null;
   setHoveredId: (id: string | null) => void;
 
+  // Multi-select — chosen listing ids (id = ListingKey), shared by map + ledger
+  selectedIds: Set<string>;
+  toggleSelected: (id: string) => void;
+  clearSelected: () => void;
+  // Map tap-to-select mode: when on, clicking a pin toggles selection
+  isSelectMode: boolean;
+  setSelectMode: (on: boolean) => void;
+  // Collapse both panes to just the current selection
+  showSelectedOnly: boolean;
+  setShowSelectedOnly: (on: boolean) => void;
+
   // Search results
   searchResult: SearchResult | null;
   setSearchResult: (result: SearchResult | null) => void;
@@ -148,6 +159,24 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   hoveredId: null,
   setHoveredId: (id) => set({ hoveredId: id }),
+
+  selectedIds: new Set<string>(),
+  toggleSelected: (id) =>
+    set((state) => {
+      const next = new Set(state.selectedIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      // Leaving zero selected exits the isolated view so the user isn't stranded.
+      return {
+        selectedIds: next,
+        showSelectedOnly: next.size === 0 ? false : state.showSelectedOnly,
+      };
+    }),
+  clearSelected: () => set({ selectedIds: new Set<string>(), showSelectedOnly: false }),
+  isSelectMode: false,
+  setSelectMode: (on) => set({ isSelectMode: on }),
+  showSelectedOnly: false,
+  setShowSelectedOnly: (on) => set({ showSelectedOnly: on }),
 
   searchResult: null,
   setSearchResult: (result) => set({ searchResult: result }),

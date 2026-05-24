@@ -448,8 +448,138 @@ export async function searchListings(
 }
 
 /**
- * A location autocomplete suggestion (a City or a CityRegion/neighbourhood),
- * with the count of active sale listings currently in it.
+ * A search-bar autocomplete suggestion. Places (city / neighbourhood) carry a
+ * live active-listing `count`; addresses and MLS hits carry the full `listing`
+ * so selecting one can open that property directly.
+ */
+export interface SearchSuggestion {
+  kind: 'city' | 'neighbourhood' | 'address' | 'mls';
+  label: string;
+  sublabel?: string;            // e.g. the address under an MLS#
+  count?: number;               // city / neighbourhood only
+  listing?: ListingDocument;    // address / mls only
+}
+
+const SALES_FLOOR = 'ListPrice:>=100000';
+// TRREB MLS keys look like a board letter + 6–9 digits (e.g. W12632618, X13162416).
+const MLS_RE = /^[A-Za-z]\d{6,9}$/;
+
+/** Pull place suggestions (city / neighbourhood) from a faceted response. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function placesFromFacets(response: any, needle: string): SearchSuggestion[] {
+  const seen = new Set<string>();
+  const places: SearchSuggestion[] = [];
+  const facets: Array<{ field_name: string; counts: Array<{ value: string; count: number }> }> =
+    response.facet_counts || [];
+  for (const facet of facets) {
+    const kind: SearchSuggestion['kind'] = facet.field_name === 'City' ? 'city' : 'neighbourhood';
+    for (const { value, count } of facet.counts || []) {
+      if (!value || !value.toLowerCase().includes(needle)) continue;
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      places.push({ kind, label: value, count });
+    }
+  }
+  places.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  return places;
+}
+
+/**
+ * Terminal search-bar typeahead. Surfaces, in priority order:
+ *   1. an exact MLS# match (input looks like a listing key) → opens that listing,
+ *   2. street-address matches (when the query has a digit, i.e. street-number intent),
+ *   3. cities / neighbourhoods with their live active-listing counts.
+ *
+ * One faceted query does double duty: its `hits` are address matches and its
+ * `facet_counts` are the city/region suggestions. If `UnparsedAddress` isn't
+ * indexed yet (pre-migration), it retries place-only so city/region typeahead
+ * keeps working; total failure falls back to the static city list.
+ */
+export async function suggestSearch(query: string): Promise<SearchSuggestion[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const needle = q.toLowerCase();
+  const client = getTypesenseClient();
+  const out: SearchSuggestion[] = [];
+
+  // 1) MLS# exact lookup — the MLS key IS the Typesense document id.
+  if (MLS_RE.test(q)) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r: any = await client.collections('properties').documents().search({
+        q: '*',
+        query_by: 'City',
+        filter_by: `id:=${q.toUpperCase()}`,
+        per_page: 1,
+      });
+      const doc = r.hits?.[0]?.document as ListingDocument | undefined;
+      if (doc) out.push({ kind: 'mls', label: `MLS# ${doc.id}`, sublabel: doc.UnparsedAddress, listing: doc });
+    } catch {
+      /* MLS lookup failed — fall through to the place/address search */
+    }
+  }
+
+  // 2) Combined address-hits + place-facets. Retry place-only if address isn't indexed.
+  const baseParams = {
+    q,
+    filter_by: SALES_FLOOR,
+    facet_by: 'City,CityRegion',
+    max_facet_values: 100,
+    per_page: 6,
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let response: any = null;
+  let addressSearchable = true;
+  try {
+    response = await client.collections('properties').documents().search({
+      ...baseParams,
+      query_by: 'UnparsedAddress,City,CityRegion',
+    });
+  } catch {
+    addressSearchable = false;
+    try {
+      response = await client.collections('properties').documents().search({
+        ...baseParams,
+        query_by: 'City,CityRegion',
+      });
+    } catch (error) {
+      console.error('[Typesense] suggestSearch error — falling back to static cities:', error);
+    }
+  }
+
+  if (response) {
+    const places = placesFromFacets(response, needle);
+
+    // Show address hits only when the query carries a street number (digit) or
+    // there are no place matches — otherwise a plain city name floods the list
+    // with that city's listings (their addresses all contain the city name).
+    const addresses: SearchSuggestion[] = [];
+    if (addressSearchable && (/\d/.test(q) || places.length === 0)) {
+      const seenAddr = new Set<string>();
+      for (const h of (response.hits || []) as Array<{ document: ListingDocument }>) {
+        const doc = h.document;
+        if (!doc?.UnparsedAddress || seenAddr.has(doc.id)) continue;
+        seenAddr.add(doc.id);
+        addresses.push({ kind: 'address', label: doc.UnparsedAddress, listing: doc });
+      }
+    }
+
+    out.push(...addresses.slice(0, 4), ...places.slice(0, 6));
+  }
+
+  if (out.length === 0) {
+    return searchCities(q)
+      .slice(0, 8)
+      .map((c) => ({ kind: 'city' as const, label: c.name }));
+  }
+
+  return out.slice(0, 8);
+}
+
+/**
+ * Places-only typeahead (city / neighbourhood). Thin wrapper over suggestSearch,
+ * retained for the dashboard config panel which only picks markets, not listings.
  */
 export interface LocationSuggestion {
   label: string;
@@ -457,59 +587,11 @@ export interface LocationSuggestion {
   count?: number;
 }
 
-/**
- * Location typeahead for the terminal search bar.
- *
- * One faceted Typesense query: facets City + CityRegion over the docs matching
- * `query`, then keep the facet values whose text contains the query so "ham"
- * surfaces cities (Hamilton…) and "stoney" surfaces neighbourhoods (Stoney
- * Creek…). Each suggestion carries its live active-listing count. Falls back to
- * the static city list (no counts) if Typesense is unreachable.
- */
 export async function suggestLocations(query: string): Promise<LocationSuggestion[]> {
-  const q = query.trim();
-  if (q.length < 2) return [];
-  const needle = q.toLowerCase();
-
-  try {
-    const client = getTypesenseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response: any = await client
-      .collections('properties')
-      .documents()
-      .search({
-        q,
-        query_by: 'City,CityRegion',
-        filter_by: 'ListPrice:>=100000',
-        facet_by: 'City,CityRegion',
-        max_facet_values: 100,
-        per_page: 0,
-      });
-
-    const seen = new Set<string>();
-    const out: LocationSuggestion[] = [];
-    const facets: Array<{ field_name: string; counts: Array<{ value: string; count: number }> }> =
-      response.facet_counts || [];
-
-    for (const facet of facets) {
-      const kind: LocationSuggestion['kind'] = facet.field_name === 'City' ? 'city' : 'neighbourhood';
-      for (const { value, count } of facet.counts || []) {
-        if (!value || !value.toLowerCase().includes(needle)) continue;
-        const dedupeKey = value.toLowerCase();
-        if (seen.has(dedupeKey)) continue;
-        seen.add(dedupeKey);
-        out.push({ label: value, kind, count });
-      }
-    }
-
-    out.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
-    return out.slice(0, 8);
-  } catch (error) {
-    console.error('[Typesense] Location suggest error — falling back to static cities:', error);
-    return searchCities(q)
-      .slice(0, 8)
-      .map((c) => ({ label: c.name, kind: 'city' as const }));
-  }
+  const results = await suggestSearch(query);
+  return results
+    .filter((s) => s.kind === 'city' || s.kind === 'neighbourhood')
+    .map((s) => ({ label: s.label, kind: s.kind as 'city' | 'neighbourhood', count: s.count }));
 }
 
 /**
