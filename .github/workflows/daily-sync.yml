@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Or whichever version you use
+          node-version: '22' # was '20'; @supabase/realtime-js needs native WebSocket (Node >=22)
 
       - name: Install Dependencies
         run: npm ci # Uses package-lock.json for a clean install
