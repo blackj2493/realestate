@@ -58,9 +58,16 @@ const ROW_LIMIT = limitArg
   : Infinity;
 
 // ── IO pacing (deliberately gentle) ──────────────────────────────────────────
-const CHUNK_SIZE = 1000; // light rows per read page (few small columns each)
+// NOTE: the two JSONB sub-keys in the select (raw_payload->CondoCorpNumber /
+// ->AssociationFeeIncludes) force Postgres to DETOAST the full raw_payload blob
+// per row — these reads are not "light". So we (a) pre-filter the trailing window
+// in SQL so only in-window rows detoast, (b) keep pages small enough to finish
+// under statement_timeout even when the Disk IO burst budget is depleted, and
+// (c) retry with backoff on timeout (= budget exhaustion; cf. memory supabase-io-budget).
+const CHUNK_SIZE = 500; // rows per read page (each detoasts full raw_payload)
 const UPSERT_CHUNK = 200; // rows per array-upsert
-const INTER_CHUNK_DELAY_MS = 200;
+const INTER_CHUNK_DELAY_MS = 400; // gentler pacing so the IO burst budget can refill
+const MAX_READ_RETRIES = 5; // statement timeout = IO budget exhausted → back off + retry
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
 const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -109,6 +116,56 @@ interface CorpAcc {
 const areaMap = new Map<string, AreaAcc>();
 const corpMap = new Map<string, CorpAcc>();
 
+/**
+ * Reads one keyset page of raw_vow_sold with retry + exponential backoff.
+ *
+ * The trailing-window pre-filter (`close_date >= cutoff OR close_date IS NULL`)
+ * is what makes this affordable: Postgres only detoasts raw_payload (for the
+ * corp/inclusions sub-keys) on rows that pass it, instead of all ~217k. Keeping
+ * `close_date IS NULL` rows lets the in-memory `close_date || contract_date`
+ * fallback still decide them, so excluded rows are exactly the ones the loop would
+ * `continue` past anyway — behavior-preserving.
+ *
+ * A statement timeout here is the IO burst-budget exhaustion pattern; backing off
+ * a few seconds lets the budget refill and the same page then succeeds.
+ */
+async function readPage(
+  cursor: string,
+  pageSize: number,
+  cutoffDate: string
+): Promise<SoldRow[] | null> {
+  let attempt = 0;
+  for (;;) {
+    const { data, error } = await sb
+      .from('raw_vow_sold')
+      .select(
+        'listing_key, association_fee, living_area_range, building_area_total, ' +
+          'property_sub_type, city_region, close_date, purchase_contract_date, ' +
+          'corp:raw_payload->CondoCorpNumber, incl:raw_payload->AssociationFeeIncludes'
+      )
+      .gt('listing_key', cursor)
+      .or(`close_date.gte.${cutoffDate},close_date.is.null`)
+      .order('listing_key', { ascending: true })
+      .limit(pageSize);
+
+    if (!error) return data as unknown as SoldRow[] | null;
+
+    attempt++;
+    const isTimeout = /timeout|57014|canceling statement/i.test(error.message);
+    if (attempt > MAX_READ_RETRIES) {
+      throw new Error(
+        `read failed at cursor "${cursor}" after ${MAX_READ_RETRIES} retries: ${error.message}`
+      );
+    }
+    const backoff = Math.min(30000, 3000 * 2 ** (attempt - 1)); // 3s,6s,12s,24s,30s
+    console.warn(
+      `   ⏳ Read ${isTimeout ? 'timed out' : 'errored'} at cursor "${cursor}" ` +
+        `(attempt ${attempt}/${MAX_READ_RETRIES}): ${error.message} — backing off ${backoff}ms…`
+    );
+    await sleep(backoff);
+  }
+}
+
 function windowCutoff(): Date {
   const d = new Date();
   d.setMonth(d.getMonth() - WINDOW_MONTHS);
@@ -124,6 +181,7 @@ async function main() {
   console.log('========================================\n');
 
   const cutoff = windowCutoff();
+  const cutoffDate = cutoff.toISOString().slice(0, 10); // YYYY-MM-DD for the close_date filter
   let cursor = '';
   let scanned = 0;
   let condos = 0;
@@ -132,19 +190,11 @@ async function main() {
 
   while (scanned < ROW_LIMIT) {
     const pageSize = Math.min(CHUNK_SIZE, ROW_LIMIT - scanned);
-    const { data, error } = await sb
-      .from('raw_vow_sold')
-      .select(
-        'listing_key, association_fee, living_area_range, building_area_total, ' +
-          'property_sub_type, city_region, close_date, purchase_contract_date, ' +
-          'corp:raw_payload->CondoCorpNumber, incl:raw_payload->AssociationFeeIncludes'
-      )
-      .gt('listing_key', cursor)
-      .order('listing_key', { ascending: true })
-      .limit(pageSize);
-
-    if (error) {
-      console.error(`❌ Read failed at cursor "${cursor}": ${error.message}`);
+    let data: SoldRow[] | null;
+    try {
+      data = await readPage(cursor, pageSize, cutoffDate);
+    } catch (e) {
+      console.error(`❌ ${e instanceof Error ? e.message : String(e)}`);
       process.exitCode = 1;
       return;
     }
