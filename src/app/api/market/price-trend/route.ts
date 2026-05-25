@@ -142,12 +142,17 @@ async function computeTrend(region: string, propertyType: string): Promise<Trend
       sales: b.prices.length,
     }));
 
-  // monthlyVelocity: average monthly sales over the 6 COMPLETE months before the current
-  // (partial, lag-affected) one. Missing months count as 0 so quiet months aren't ignored.
+  // monthlyVelocity: average monthly sales over 6 SETTLED months. We skip not only the
+  // current (partial) month but ALSO the most-recently-completed one (i starts at 2):
+  // sales are keyed by purchase_contract_date, which keeps accruing for weeks after a month
+  // ends because deals report to the feed late. So the latest "complete" month is still
+  // under-reported when the dashboard is loaded early in the following month — including it
+  // would crater velocity and spike months-of-supply. Averaging months 2..7 back keeps the
+  // figure stable regardless of view date. Missing months count as 0 (genuine quiet months).
   const salesByMonth = new Map(points.map((p) => [p.month, p.sales]));
   const now = new Date();
   let velSum = 0;
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 2; i <= 7; i++) {
     const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     velSum += salesByMonth.get(monthKey(m)) ?? 0;
   }
@@ -175,9 +180,10 @@ export async function GET(req: NextRequest) {
   try {
     const { points, summary } = await unstable_cache(
       () => computeTrend(region, propertyType),
-      // v3 = added the property-type filter. Bumping the key abandons stale cache entries;
-      // propertyType is part of the key so each type variant caches independently.
-      ["market-price-trend", "v3", region.toLowerCase(), propertyType],
+      // v4 = lag-robust monthlyVelocity window (skip the still-accruing latest month).
+      // v3 = added the property-type filter. propertyType is part of the key so each type
+      // variant caches independently; bumping the version abandons stale entries.
+      ["market-price-trend", "v4", region.toLowerCase(), propertyType],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, points, summary });
