@@ -1,21 +1,19 @@
 "use client";
 
 /**
- * RoomMap — the Proportional Room Map.
+ * RoomMap — per-floor room-size treemaps.
  *
- * Draws every room as a rectangle at its TRUE dimensions on a single shared scale,
- * grouped by floor, so size differences are instantly readable (a 6.95×5.24 kitchen
- * visibly dwarfs a 3.46×3.26 bedroom). This is the differentiator over the plain
- * room table HouseSigma/realtor.ca show.
+ * One treemap PER FLOOR, stacked top-to-bottom (top floor first, basement last).
+ * Within each floor, room tiles are sized proportionally to their area; across
+ * floors a SHARED scale is used (each floor's height is proportional to that floor's
+ * total area), so you can compare room sizes both within and between floors. This is
+ * the differentiator over the plain room table HouseSigma / realtor.ca show.
  *
- * Honesty: we have dimensions but NOT room positions/adjacency, so the layout is a
- * schematic packing — relative sizes are accurate, the arrangement is not an
- * architectural floor plan. Captioned as such.
+ * Honesty: areas are proportional and dimensions are as listed, but we have no room
+ * positions/adjacency — this is NOT an architectural floor plan. Captioned as such.
  *
- * Compliance (CLAUDE.md §4): pure deterministic SVG from numeric dimensions — no LLM.
- *
- * All geometry is computed in METRES; the SVG viewBox is in metres and scales to the
- * container width, so packing is identical at every screen size.
+ * Compliance (CLAUDE.md §4): deterministic squarified-treemap layout from numeric
+ * areas — no LLM.
  */
 
 import React, { useMemo, useState } from "react";
@@ -32,18 +30,6 @@ import {
   type ProcessedRoom,
 } from "@/lib/room-utils";
 
-// ── Layout constants (metres) ────────────────────────────────────────────────
-const GAP = 0.4; // gap between rooms
-const PAD = 0.4; // outer padding
-const ROW_BUDGET = 13; // target row width before wrapping
-const LABEL_H = 1.5; // floor-label band height
-const LEVEL_GAP = 1.0; // gap between floors
-const FONT_NAME = 0.46;
-const FONT_DIM = 0.4;
-const FONT_AREA = 0.38;
-const FONT_LEVEL = 0.78;
-const STROKE = 0.06;
-
 // Display floors top-to-bottom like a building cross-section (top floor first).
 const LEVEL_ORDER: Record<string, number> = {
   Third: 0,
@@ -55,21 +41,42 @@ const LEVEL_ORDER: Record<string, number> = {
   Basement: 6,
 };
 
+// Treemap coordinate space (viewBox units; each floor SVG scales to container width).
+const VB_W = 1000;
+const H_TOTAL = 540; // total viewBox height shared across all floors (∝ area)
+const MIN_FLOOR_VBH = 96; // floor band floor so a tiny floor stays usable
+const OUTER_PAD = 3;
+const ROOM_GAP = 3; // inset between room tiles
+
 type Unit = "sqm" | "sqft";
 type Mode = "map" | "list";
 
-interface PlacedRoom extends ProcessedRoom {
+interface TItem {
+  id: string;
+  value: number;
+  room?: ProcessedRoom;
+}
+interface Rect {
   x: number;
   y: number;
-  w: number; // landscape: max(length,width)
-  h: number; // min(length,width)
+  w: number;
+  h: number;
 }
-
-interface PlacedLevel {
-  level: string;
+interface Tile extends Rect {
+  item: TItem;
+}
+interface RoomTile extends Rect {
+  room: ProcessedRoom;
   color: string;
-  labelY: number;
-  rooms: PlacedRoom[];
+  floor: string;
+}
+interface FloorSection {
+  floor: string;
+  color: string;
+  count: number;
+  areaMeters: number;
+  vbH: number;
+  tiles: RoomTile[];
 }
 
 function normalize(value: string | string[] | undefined): string {
@@ -91,58 +98,116 @@ function orderedLevels(levels: string[]): string[] {
   });
 }
 
-/** Shelf/row bin-packing in metre space across floors on one shared scale. */
-function layout(processed: ProcessedRoom[]): { levels: PlacedLevel[]; width: number; height: number } {
-  const grouped = groupRoomsByLevel(processed);
-  const levels = orderedLevels(getUniqueLevels(processed));
+/**
+ * Squarified treemap (Bruls et al.). Tiles `items` into the rect so areas are
+ * proportional to `value` and tiles stay close to square. Deterministic.
+ */
+function squarify(items: TItem[], rect: Rect): Tile[] {
+  const tiles: Tile[] = [];
+  const total = items.reduce((s, it) => s + it.value, 0);
+  if (total <= 0 || rect.w <= 0 || rect.h <= 0) return tiles;
 
-  // Budget must fit the single widest room.
-  const maxRoomW = processed.reduce((m, r) => Math.max(m, Math.max(r.length, r.width)), 0);
-  const budget = Math.max(maxRoomW, ROW_BUDGET);
+  const scale = (rect.w * rect.h) / total;
+  const nodes = items
+    .map((it) => ({ it, a: Math.max(it.value * scale, 1e-6) }))
+    .sort((p, q) => q.a - p.a);
 
-  const placedLevels: PlacedLevel[] = [];
-  let cursorY = PAD;
-  let contentRight = 0;
+  let { x, y, w, h } = rect;
 
-  for (const level of levels) {
-    const rooms = (grouped.get(level) ?? [])
-      .slice()
-      .sort((a, b) => b.areaMeters - a.areaMeters);
+  const worst = (areas: number[], side: number): number => {
+    const s = areas.reduce((acc, a) => acc + a, 0);
+    const rmax = Math.max(...areas);
+    const rmin = Math.min(...areas);
+    const side2 = side * side;
+    const s2 = s * s;
+    return Math.max((side2 * rmax) / s2, s2 / (side2 * rmin));
+  };
 
-    const labelY = cursorY;
-    const blockTop = cursorY + LABEL_H;
-
-    let rowX = 0;
-    let rowY = 0;
-    let rowH = 0;
-    const placed: PlacedRoom[] = [];
-
-    for (const r of rooms) {
-      const w = Math.max(r.length, r.width);
-      const h = Math.min(r.length, r.width);
-      if (rowX > 0 && rowX + GAP + w > budget) {
-        rowX = 0;
-        rowY += rowH + GAP;
-        rowH = 0;
+  const layoutRow = (row: { it: TItem; a: number }[]) => {
+    const side = Math.min(w, h);
+    const rowSum = row.reduce((s, e) => s + e.a, 0);
+    const thickness = rowSum / side;
+    if (w >= h) {
+      let cy = y;
+      for (const e of row) {
+        const th = e.a / thickness;
+        tiles.push({ x, y: cy, w: thickness, h: th, item: e.it });
+        cy += th;
       }
-      placed.push({ ...r, x: PAD + rowX, y: blockTop + rowY, w, h });
-      contentRight = Math.max(contentRight, PAD + rowX + w);
-      rowX += w + GAP;
-      rowH = Math.max(rowH, h);
+      x += thickness;
+      w -= thickness;
+    } else {
+      let cx = x;
+      for (const e of row) {
+        const tw = e.a / thickness;
+        tiles.push({ x: cx, y, w: tw, h: thickness, item: e.it });
+        cx += tw;
+      }
+      y += thickness;
+      h -= thickness;
     }
+  };
 
-    const blockH = rowY + rowH;
-    placedLevels.push({ level, color: getLevelColor(level), labelY, rooms: placed });
-    cursorY = blockTop + blockH + LEVEL_GAP;
+  let row: { it: TItem; a: number }[] = [];
+  let idx = 0;
+  while (idx < nodes.length) {
+    const side = Math.min(w, h);
+    const cand = nodes[idx];
+    const rowAreas = row.map((r) => r.a);
+    if (row.length === 0 || worst([...rowAreas, cand.a], side) <= worst(rowAreas, side)) {
+      row.push(cand);
+      idx++;
+    } else {
+      layoutRow(row);
+      row = [];
+    }
   }
+  if (row.length) layoutRow(row);
 
-  const width = Math.max(contentRight + PAD, budget + 2 * PAD);
-  const height = Math.max(cursorY - LEVEL_GAP + PAD, PAD * 2);
-  return { levels: placedLevels, width, height };
+  return tiles;
 }
 
-function truncate(s: string, w: number, fontW = 0.27): string {
-  const max = Math.max(2, Math.floor((w - 0.4) / fontW));
+function inset(r: Rect, gap: number): Rect {
+  const g = Math.max(0, Math.min(gap, r.w / 2 - 0.5, r.h / 2 - 0.5));
+  return { x: r.x + g, y: r.y + g, w: r.w - 2 * g, h: r.h - 2 * g };
+}
+
+/** One treemap section per floor; floor band height ∝ floor area (shared scale). */
+function buildFloorSections(
+  rooms: ProcessedRoom[],
+  levelFilter: string | null
+): FloorSection[] {
+  const visible = levelFilter ? rooms.filter((r) => r.level === levelFilter) : rooms;
+  if (visible.length === 0) return [];
+
+  const grouped = groupRoomsByLevel(visible);
+  const levels = orderedLevels(getUniqueLevels(visible));
+  const totalArea = visible.reduce((s, r) => s + r.areaMeters, 0) || 1;
+
+  const sections: FloorSection[] = [];
+  for (const floor of levels) {
+    const lvlRooms = (grouped.get(floor) ?? [])
+      .slice()
+      .sort((a, b) => b.areaMeters - a.areaMeters);
+    if (lvlRooms.length === 0) continue;
+    const floorArea = lvlRooms.reduce((s, r) => s + r.areaMeters, 0);
+    const vbH = Math.max(MIN_FLOOR_VBH, (floorArea / totalArea) * H_TOTAL);
+    const color = getLevelColor(floor);
+    const rect: Rect = { x: OUTER_PAD, y: OUTER_PAD, w: VB_W - 2 * OUTER_PAD, h: vbH - 2 * OUTER_PAD };
+    const items: TItem[] = lvlRooms.map((r) => ({ id: r.id, value: r.areaMeters, room: r }));
+    const tiles: RoomTile[] = [];
+    for (const t of squarify(items, rect)) {
+      if (!t.item.room) continue;
+      tiles.push({ ...inset(t, ROOM_GAP), room: t.item.room, color, floor });
+    }
+    sections.push({ floor, color, count: lvlRooms.length, areaMeters: floorArea, vbH, tiles });
+  }
+  return sections;
+}
+
+function truncate(s: string, tileW: number, fontSize: number): string {
+  const max = Math.max(0, Math.floor((tileW - 10) / (fontSize * 0.56)));
+  if (max <= 1) return "";
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
@@ -157,39 +222,35 @@ export default function RoomMap({
   const processed = useMemo(() => processRooms(raw), [raw]);
   const hasScaled = processed.length > 0;
 
-  const [unit, setUnit] = useState<Unit>("sqm");
+  const [unit, setUnit] = useState<Unit>("sqft");
   const [mode, setMode] = useState<Mode>(hasScaled ? "map" : "list");
   const [levelFilter, setLevelFilter] = useState<string | null>(null);
-  const [active, setActive] = useState<PlacedRoom | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const filtered = useMemo(
-    () => (levelFilter ? processed.filter((r) => r.level === levelFilter) : processed),
+  const sections = useMemo(
+    () => buildFloorSections(processed, levelFilter),
     [processed, levelFilter]
   );
-  const { levels, width, height } = useMemo(() => layout(filtered), [filtered]);
   const filterLevels = useMemo(() => orderedLevels(getUniqueLevels(processed)), [processed]);
+  const active = useMemo(() => {
+    for (const s of sections) {
+      const t = s.tiles.find((t) => t.room.id === activeId);
+      if (t) return t;
+    }
+    return null;
+  }, [sections, activeId]);
 
-  // List view rows include EVERY room (even dimensionless ones the map drops).
+  // List view rows include EVERY room (even dimensionless ones the treemap drops).
   const listRooms = useMemo(
-    () =>
-      raw.filter((r) => {
-        if (!levelFilter) return true;
-        return normalize(r.RoomLevel) === levelFilter;
-      }),
+    () => raw.filter((r) => (levelFilter ? normalize(r.RoomLevel) === levelFilter : true)),
     [raw, levelFilter]
   );
 
   if (raw.length === 0) {
     return (
       <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
-        <Header
-          unit={unit}
-          setUnit={setUnit}
-          mode={mode}
-          setMode={setMode}
-          showMapToggle={false}
-        />
-        <p className="py-3 text-center text-xs text-slate-500">
+        <Header unit={unit} setUnit={setUnit} mode={mode} setMode={setMode} showToggle={false} />
+        <p className="py-2 text-center text-xs text-slate-500">
           Room details unavailable for this listing.
         </p>
       </div>
@@ -198,15 +259,9 @@ export default function RoomMap({
 
   return (
     <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
-      <Header
-        unit={unit}
-        setUnit={setUnit}
-        mode={mode}
-        setMode={setMode}
-        showMapToggle={hasScaled}
-      />
+      <Header unit={unit} setUnit={setUnit} mode={mode} setMode={setMode} showToggle={hasScaled} />
 
-      {/* Level filter pills */}
+      {/* Level filter pills (double as the floor legend) */}
       {filterLevels.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           <FilterPill active={levelFilter === null} onClick={() => setLevelFilter(null)}>
@@ -227,145 +282,141 @@ export default function RoomMap({
 
       {mode === "map" && hasScaled ? (
         <>
-          <svg
-            viewBox={`0 0 ${width} ${height}`}
-            width="100%"
-            preserveAspectRatio="xMidYMid meet"
-            className="block"
-            role="img"
-            aria-label="Scaled map of room dimensions grouped by floor"
-            style={{ maxHeight: "70vh" }}
-          >
-            <defs>
-              <pattern
-                id="rm-comb"
-                width="0.7"
-                height="0.7"
-                patternUnits="userSpaceOnUse"
-                patternTransform="rotate(45)"
-              >
-                <rect width="0.7" height="0.7" fill="transparent" />
-                <line x1="0" y1="0" x2="0" y2="0.7" stroke="#e2e8f0" strokeWidth="0.07" opacity="0.18" />
-              </pattern>
-            </defs>
-
-            {levels.map((lvl) => (
-              <g key={lvl.level}>
-                {/* Floor label band */}
-                <text
-                  x={PAD}
-                  y={lvl.labelY + FONT_LEVEL}
-                  fontSize={FONT_LEVEL}
-                  className="font-semibold uppercase"
-                  fill={lvl.color}
-                  style={{ letterSpacing: "0.04em" }}
+          <div className="space-y-4">
+            {sections.map((sec) => (
+              <section key={sec.floor}>
+                <div className="mb-1.5 flex items-center gap-2">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: sec.color }}
+                    aria-hidden
+                  />
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+                    {sec.floor}
+                  </h4>
+                  <span className="text-[10px] text-slate-500">
+                    {sec.count} {sec.count === 1 ? "room" : "rooms"} · {formatArea(sec.areaMeters, unit)}
+                  </span>
+                </div>
+                <svg
+                  viewBox={`0 0 ${VB_W} ${sec.vbH}`}
+                  width={VB_W}
+                  height={sec.vbH}
+                  className="block h-auto w-full"
+                  role="img"
+                  aria-label={`${sec.floor} room sizes, to scale`}
                 >
-                  {lvl.level}
-                </text>
-
-                {lvl.rooms.map((r) => {
-                  const showName = r.w > 2.2 && r.h > 1.2;
-                  const showDim = r.w > 2.8 && r.h > 2.0;
-                  const showArea = r.w > 2.8 && r.h > 2.9;
-                  const isActive = active?.id === r.id;
-                  return (
-                    <g
-                      key={r.id}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`${r.name}, ${lvl.level}, ${formatDimensions(r.length, r.width)}, ${formatArea(r.areaMeters, unit)}`}
-                      onMouseEnter={() => setActive(r)}
-                      onMouseLeave={() => setActive((cur) => (cur?.id === r.id ? null : cur))}
-                      onFocus={() => setActive(r)}
-                      onBlur={() => setActive((cur) => (cur?.id === r.id ? null : cur))}
-                      style={{ cursor: "pointer", outline: "none" }}
-                    >
-                      <title>
-                        {r.name} · {lvl.level} · {formatDimensions(r.length, r.width)} ·{" "}
-                        {formatArea(r.areaMeters, unit)}
-                        {r.isLikelyCombinedSpace ? " · likely combined space" : ""}
-                      </title>
-                      <rect
-                        x={r.x}
-                        y={r.y}
-                        width={r.w}
-                        height={r.h}
-                        rx={0.12}
-                        fill={lvl.color}
-                        fillOpacity={isActive ? 0.34 : 0.18}
-                        stroke={lvl.color}
-                        strokeWidth={isActive ? STROKE * 2 : STROKE}
-                      />
-                      {r.isLikelyCombinedSpace && (
+                  {sec.tiles.map((t) => {
+                    const isActive = active?.room.id === t.room.id;
+                    const showName = t.w > 64 && t.h > 30;
+                    const showArea = t.w > 64 && t.h > 50;
+                    const showDim = t.w > 96 && t.h > 70;
+                    return (
+                      <g
+                        key={t.room.id}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`${t.room.name}, ${t.floor}, ${formatDimensions(
+                          t.room.length,
+                          t.room.width
+                        )}, ${formatArea(t.room.areaMeters, unit)}`}
+                        onMouseEnter={() => setActiveId(t.room.id)}
+                        onMouseLeave={() => setActiveId((c) => (c === t.room.id ? null : c))}
+                        onFocus={() => setActiveId(t.room.id)}
+                        onBlur={() => setActiveId((c) => (c === t.room.id ? null : c))}
+                        style={{ cursor: "pointer", outline: "none" }}
+                      >
+                        <title>
+                          {t.room.name} · {t.floor} · {formatDimensions(t.room.length, t.room.width)} ·{" "}
+                          {formatArea(t.room.areaMeters, unit)}
+                          {t.room.isLikelyCombinedSpace ? " · likely combined space" : ""}
+                        </title>
                         <rect
-                          x={r.x}
-                          y={r.y}
-                          width={r.w}
-                          height={r.h}
-                          rx={0.12}
-                          fill="url(#rm-comb)"
-                          pointerEvents="none"
+                          x={t.x}
+                          y={t.y}
+                          width={t.w}
+                          height={t.h}
+                          rx={4}
+                          fill={t.color}
+                          fillOpacity={isActive ? 0.5 : 0.26}
+                          stroke={t.color}
+                          strokeWidth={isActive ? 2.5 : 1.25}
                         />
-                      )}
-                      {showName && (
-                        <text
-                          x={r.x + 0.25}
-                          y={r.y + 0.25 + FONT_NAME}
-                          fontSize={FONT_NAME}
-                          fill="#e2e8f0"
-                          className="font-medium"
-                          pointerEvents="none"
-                        >
-                          {truncate(r.name, r.w)}
-                        </text>
-                      )}
-                      {showDim && (
-                        <text
-                          x={r.x + 0.25}
-                          y={r.y + 0.25 + FONT_NAME + 0.15 + FONT_DIM}
-                          fontSize={FONT_DIM}
-                          fill="#94a3b8"
-                          fontFamily="monospace"
-                          pointerEvents="none"
-                        >
-                          {r.length.toFixed(2)}×{r.width.toFixed(2)}m
-                        </text>
-                      )}
-                      {showArea && (
-                        <text
-                          x={r.x + 0.25}
-                          y={r.y + 0.25 + FONT_NAME + 0.15 + FONT_DIM + 0.12 + FONT_AREA}
-                          fontSize={FONT_AREA}
-                          fill="#64748b"
-                          fontFamily="monospace"
-                          pointerEvents="none"
-                        >
-                          {formatArea(r.areaMeters, unit)}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
-              </g>
+                        {t.room.isLikelyCombinedSpace && (
+                          <rect
+                            x={t.x + 2}
+                            y={t.y + 2}
+                            width={Math.max(0, t.w - 4)}
+                            height={Math.max(0, t.h - 4)}
+                            rx={3}
+                            fill="none"
+                            stroke="#fbbf24"
+                            strokeOpacity={0.6}
+                            strokeWidth={1}
+                            strokeDasharray="4 3"
+                            pointerEvents="none"
+                          />
+                        )}
+                        {showName && (
+                          <text
+                            x={t.x + 7}
+                            y={t.y + 19}
+                            fontSize={16}
+                            className="font-semibold"
+                            fill="#f1f5f9"
+                            pointerEvents="none"
+                          >
+                            {truncate(t.room.name, t.w, 16)}
+                          </text>
+                        )}
+                        {showArea && (
+                          <text
+                            x={t.x + 7}
+                            y={t.y + 37}
+                            fontSize={13}
+                            fontFamily="monospace"
+                            fill="#cbd5e1"
+                            pointerEvents="none"
+                          >
+                            {formatArea(t.room.areaMeters, unit)}
+                          </text>
+                        )}
+                        {showDim && (
+                          <text
+                            x={t.x + 7}
+                            y={t.y + 53}
+                            fontSize={12}
+                            fontFamily="monospace"
+                            fill="#94a3b8"
+                            pointerEvents="none"
+                          >
+                            {t.room.length.toFixed(2)} × {t.room.width.toFixed(2)} m
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              </section>
             ))}
-          </svg>
+          </div>
 
           {/* Hover/focus detail strip */}
           <div className="mt-2 h-5 text-xs">
             {active ? (
               <span className="flex flex-wrap items-center gap-x-2 text-slate-300">
-                <span className="font-semibold text-slate-100">{active.name}</span>
+                <span className="font-semibold text-slate-100">{active.room.name}</span>
                 <span className="text-slate-500">·</span>
-                <span className="text-slate-400">{active.level}</span>
+                <span className="text-slate-400">{active.floor}</span>
                 <span className="text-slate-500">·</span>
                 <span className="font-mono text-slate-300">
-                  {formatDimensions(active.length, active.width)}
+                  {formatDimensions(active.room.length, active.room.width)}
                 </span>
                 <span className="text-slate-500">·</span>
                 <span className="font-mono text-emerald-400">
-                  {formatArea(active.areaMeters, unit)}
+                  {formatArea(active.room.areaMeters, unit)}
                 </span>
-                {active.isLikelyCombinedSpace && (
+                {active.room.isLikelyCombinedSpace && (
                   <span className="text-amber-400/80">· likely combined space</span>
                 )}
               </span>
@@ -376,36 +427,38 @@ export default function RoomMap({
         </>
       ) : (
         // ── List view (the ledger) — shows every room, even dimensionless ones ──
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
-              <th className="py-2 text-left">Room</th>
-              <th className="py-2 text-left">Level</th>
-              <th className="py-2 text-right">Dimensions</th>
-              <th className="py-2 text-right">Area</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/50">
-            {listRooms.map((r, i) => {
-              const hasDims = !!(r.RoomLength && r.RoomWidth);
-              return (
-                <tr key={i} className="hover:bg-slate-900/30">
-                  <td className="py-2 text-slate-200">{normalize(r.RoomType) || "—"}</td>
-                  <td className="py-2 text-slate-400">{normalize(r.RoomLevel) || "—"}</td>
-                  <td className="py-2 text-right font-mono text-slate-300">{rawDims(r)}</td>
-                  <td className="py-2 text-right font-mono text-slate-400">
-                    {hasDims ? formatArea(r.RoomLength! * r.RoomWidth!, unit) : "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-hidden rounded-md border border-slate-800">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-900/60 text-xs uppercase text-slate-500">
+                <th className="px-3 py-2 text-left font-medium">Room</th>
+                <th className="px-3 py-2 text-left font-medium">Level</th>
+                <th className="px-3 py-2 text-right font-medium">Dimensions</th>
+                <th className="px-3 py-2 text-right font-medium">Area</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {listRooms.map((r, i) => {
+                const hasDims = !!(r.RoomLength && r.RoomWidth);
+                return (
+                  <tr key={i} className="hover:bg-slate-900/40">
+                    <td className="px-3 py-2 text-slate-200">{normalize(r.RoomType) || "—"}</td>
+                    <td className="px-3 py-2 text-slate-400">{normalize(r.RoomLevel) || "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono text-slate-300">{rawDims(r)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-slate-400">
+                      {hasDims ? formatArea(r.RoomLength! * r.RoomWidth!, unit) : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
-        Drawn to scale from listed room dimensions. Relative sizes are accurate; the
-        layout is schematic — not an architectural floor plan.
+        Each floor is shown separately; tile size = room area (shared scale across floors).
+        Dimensions as listed — schematic, not an architectural floor plan.
       </p>
     </div>
   );
@@ -418,13 +471,13 @@ function Header({
   setUnit,
   mode,
   setMode,
-  showMapToggle,
+  showToggle,
 }: {
   unit: Unit;
   setUnit: (u: Unit) => void;
   mode: Mode;
   setMode: (m: Mode) => void;
-  showMapToggle: boolean;
+  showToggle: boolean;
 }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
@@ -449,13 +502,14 @@ function Header({
             </button>
           ))}
         </div>
-        {/* map/list toggle */}
-        {showMapToggle && (
+        {/* treemap/list toggle */}
+        {showToggle && (
           <div className="flex overflow-hidden rounded border border-slate-700">
             <button
               type="button"
               onClick={() => setMode("map")}
-              title="Map view"
+              title="Treemap view"
+              aria-label="Treemap view"
               className={cn(
                 "flex items-center px-1.5 py-1 transition-colors",
                 mode === "map" ? "bg-slate-700 text-emerald-400" : "text-slate-400 hover:text-slate-200"
@@ -467,6 +521,7 @@ function Header({
               type="button"
               onClick={() => setMode("list")}
               title="List view"
+              aria-label="List view"
               className={cn(
                 "flex items-center px-1.5 py-1 transition-colors",
                 mode === "list" ? "bg-slate-700 text-emerald-400" : "text-slate-400 hover:text-slate-200"
