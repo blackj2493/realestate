@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
 import AccountButton from "@/components/auth/AccountButton";
+import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 
 export default function MissionControlHeader({
   name,
@@ -55,6 +56,7 @@ export default function MissionControlHeader({
         >
           <SlidersHorizontal className="h-3.5 w-3.5" /> Customize
         </button>
+        <WatchlistAlertsBell />
         <AccountButton />
       </div>
 

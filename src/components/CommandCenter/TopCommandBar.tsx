@@ -13,6 +13,7 @@ import { useCommandCenterStore, type PersonaType } from "@/lib/stores/commandCen
 import { PERSONA_LIST } from "@/lib/personas/personaConfig";
 import PersonaFilterBar from "./PersonaFilterBar";
 import LocationSearch from "./LocationSearch";
+import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 
 interface TopCommandBarProps {
   className?: string;
@@ -86,8 +87,9 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         {/* Flexible gap (larger on the right) */}
         <div className="flex-1" />
 
-        {/* Right: profile */}
-        <div className="flex shrink-0 items-center justify-end">
+        {/* Right: alerts + profile */}
+        <div className="flex shrink-0 items-center justify-end gap-3">
+          <WatchlistAlertsBell />
           <Link
             href="/dashboard"
             className="terminal-font shrink-0 text-[15px] tracking-[0.2em] text-slate-400 transition-colors hover:text-cyan-400"

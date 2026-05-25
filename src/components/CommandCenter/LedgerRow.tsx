@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
+import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
+import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -134,6 +136,7 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
   const src = !imageError && isUsableImage(property.thumbnailUrl || property.primaryImageUrl)
     ? (property.thumbnailUrl || property.primaryImageUrl)!
     : PLACEHOLDER_IMAGE;
+  const deal = dealScoreFromDocument(property);
 
   return (
     <div
@@ -176,6 +179,13 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
           unoptimized
           onError={() => setImageError(true)}
         />
+        {deal.score !== null && (
+          <DealScoreGradePill
+            score={deal.score}
+            grade={deal.grade}
+            className="absolute left-1 top-1 z-10 backdrop-blur-sm"
+          />
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();

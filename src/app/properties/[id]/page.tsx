@@ -19,6 +19,7 @@ import CarryCostCalculator from "@/components/CommandCenter/CarryCostCalculator"
 import DOMTimelineChart from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
+import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -308,6 +309,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <span className="text-sm font-semibold text-slate-400">
                   Listed {dom} {dom === 1 ? "day" : "days"} ago
                 </span>
+                <DealScoreBadge score={detail.dealScore.score} grade={detail.dealScore.grade} />
               </div>
               {p.ListOfficeName && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
@@ -407,6 +409,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           {/* ── RIGHT (30%, sticky) ── */}
           <div>
             <div className="sticky top-6 space-y-4">
+              {/* Deal Score — flagship signal, pinned to the top of the rail */}
+              <DealScoreCard dealScore={detail.dealScore} />
+
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-200">

@@ -7,30 +7,46 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { 
-  X, 
-  Bed, 
-  Bath, 
-  Car, 
-  Square, 
-  Calendar, 
-  MapPin,
-  ChevronRight,
+import Link from 'next/link';
+import {
+  X,
+  Bed,
+  Bath,
+  Car,
+  Square,
   Home,
   Ruler,
-  Wind,
-  Snowflake,
   AlertTriangle,
-  GraduationCap
+  GraduationCap,
+  ExternalLink,
+  GitCompareArrows,
+  Check
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
 import CarryCostCalculator from './CarryCostCalculator';
 import DOMTimelineChart from './DOMTimelineChart';
+import ImageBentoGrid from '@/components/Property/ImageBentoGrid';
+import MediaGalleryOverlay from '@/components/Property/MediaGalleryOverlay';
+import DealScoreCard, { DealScoreBadge } from '@/components/Property/DealScoreCard';
+import type { DealScoreResult } from '@/lib/dealScore/computeDealScore';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
+
+interface TerminalRoom {
+  RoomType?: string;
+  RoomLevel?: string;
+  RoomDimensions?: string | null;
+  RoomLength?: number;
+  RoomWidth?: number;
+}
+
+function terminalRoomDims(r: TerminalRoom): string {
+  if (r.RoomDimensions) return r.RoomDimensions;
+  if (r.RoomLength && r.RoomWidth) return `${r.RoomLength} x ${r.RoomWidth}`;
+  return '—';
+}
 
 interface ListingTerminalProps {
   property: ListingDocument;
@@ -84,6 +100,14 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [nearbySchools, setNearbySchools] = useState<NearbySchool[]>([]);
   const [nearbyTotal, setNearbyTotal] = useState(0);
 
+  // Multi-select (comparison) + real media/rooms hydrated from the Vault on open.
+  const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
+  const isSelected = useCommandCenterStore((s) => s.selectedIds.has(property.id));
+  const [media, setMedia] = useState<string[]>([]);
+  const [detailRooms, setDetailRooms] = useState<TerminalRoom[]>([]);
+  const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
   // Fetch full property details when terminal opens
   useEffect(() => {
     if (isOpen && property) {
@@ -116,6 +140,34 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
       cancelled = true;
     };
   }, [isOpen, property?.location]);
+
+  // Hydrate real photos + rooms from the Vault (the search index only carries a
+  // single thumbnail and no room ledger). Falls back to index fields while loading.
+  useEffect(() => {
+    if (!isOpen || !property?.id) return;
+    let cancelled = false;
+    setMedia([]);
+    setDetailRooms([]);
+    setDealScore(null);
+    setIsGalleryOpen(false);
+    (async () => {
+      try {
+        const res = await fetch(`/api/property/${property.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setMedia(Array.isArray(data?.media_urls) ? data.media_urls : []);
+        const r = data?.full_payload?.rooms;
+        setDetailRooms(Array.isArray(r) ? (r as TerminalRoom[]) : []);
+        setDealScore(data?.dealScore ?? null);
+      } catch {
+        /* keep index-only fallbacks */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, property?.id]);
 
   if (!isOpen) return null;
 
@@ -166,15 +218,11 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     </div>
   );
 
-  // Mock room data for demo
-  const rooms = [
-    { type: 'Living', level: 'Main', dimensions: '20 x 15' },
-    { type: 'Kitchen', level: 'Main', dimensions: '12 x 10' },
-    { type: 'Primary Bedroom', level: 'Upper', dimensions: '15 x 12' },
-    { type: 'Bedroom 2', level: 'Upper', dimensions: '12 x 10' },
-    { type: 'Bedroom 3', level: 'Upper', dimensions: '11 x 10' },
-    { type: 'Laundry', level: 'Basement', dimensions: '10 x 8' },
-  ];
+  // Real photos from the Vault; fall back to the index thumbnail while loading.
+  const galleryImages =
+    media.length > 0
+      ? media
+      : ([property.primaryImageUrl, property.thumbnailUrl].filter(Boolean) as string[]);
 
   return (
     <>
@@ -216,88 +264,26 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
               <h1 className="text-2xl font-bold text-slate-100 mb-2">
                 {property.UnparsedAddress || 'Address Unavailable'}
               </h1>
-              <div className="flex items-baseline gap-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span className="text-3xl font-bold font-mono text-emerald-400">
                   {formatPrice(property.ListPrice)}
                 </span>
                 <span className="text-sm text-slate-500">
                   {property.City}, {property.PropertySubType || property.PropertyType}
                 </span>
+                {dealScore && (
+                  <DealScoreBadge score={dealScore.score} grade={dealScore.grade} />
+                )}
               </div>
             </div>
 
-            {/* Media Bento Grid */}
+            {/* Media Bento Grid (real photos from the Vault) */}
             <div className="mb-6">
-              <div className="grid grid-cols-4 grid-rows-2 gap-2 rounded-lg overflow-hidden h-[400px]">
-                {/* Hero Image - spans 2 columns and 2 rows */}
-                <div className="col-span-2 row-span-2 relative bg-slate-800">
-                  {property.primaryImageUrl || property.thumbnailUrl ? (
-                    <Image
-                      src={property.primaryImageUrl || property.thumbnailUrl || ''}
-                      alt="Property main view"
-                      fill
-                      className="object-cover"
-                      unoptimized={true}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-slate-600">
-                      No Image
-                    </div>
-                  )}
-                </div>
-                
-                {/* Thumbnail 2 */}
-                <div className="col-span-1 row-span-1 relative bg-slate-800">
-                  {property.primaryImageUrl && (
-                    <Image
-                      src={property.primaryImageUrl}
-                      alt="Property view 2"
-                      fill
-                      className="object-cover opacity-70"
-                      unoptimized={true}
-                    />
-                  )}
-                </div>
-                
-                {/* Thumbnail 3 */}
-                <div className="col-span-1 row-span-1 relative bg-slate-800">
-                  {property.primaryImageUrl && (
-                    <Image
-                      src={property.primaryImageUrl}
-                      alt="Property view 3"
-                      fill
-                      className="object-cover opacity-70"
-                      unoptimized={true}
-                    />
-                  )}
-                </div>
-                
-                {/* Thumbnail 4 */}
-                <div className="col-span-1 row-span-1 relative bg-slate-800">
-                  {property.primaryImageUrl && (
-                    <Image
-                      src={property.primaryImageUrl}
-                      alt="Property view 4"
-                      fill
-                      className="object-cover opacity-70"
-                      unoptimized={true}
-                    />
-                  )}
-                </div>
-                
-                {/* Thumbnail 5 */}
-                <div className="col-span-1 row-span-1 relative bg-slate-800">
-                  {property.primaryImageUrl && (
-                    <Image
-                      src={property.primaryImageUrl}
-                      alt="Property view 5"
-                      fill
-                      className="object-cover opacity-70"
-                      unoptimized={true}
-                    />
-                  )}
-                </div>
-              </div>
+              <ImageBentoGrid
+                images={galleryImages}
+                onClick={() => galleryImages.length > 0 && setIsGalleryOpen(true)}
+                className="h-[400px]"
+              />
             </div>
 
             {/* Property Specs Grid */}
@@ -394,13 +380,21 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
-                  {rooms.map((room, index) => (
-                    <tr key={index} className="hover:bg-slate-900/30">
-                      <td className="py-2 text-slate-200">{room.type}</td>
-                      <td className="py-2 text-slate-400">{room.level}</td>
-                      <td className="py-2 text-slate-300 font-mono text-right">{room.dimensions}</td>
+                  {detailRooms.length > 0 ? (
+                    detailRooms.map((room, index) => (
+                      <tr key={index} className="hover:bg-slate-900/30">
+                        <td className="py-2 text-slate-200">{room.RoomType || '—'}</td>
+                        <td className="py-2 text-slate-400">{room.RoomLevel || '—'}</td>
+                        <td className="py-2 text-slate-300 font-mono text-right">{terminalRoomDims(room)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="py-3 text-center text-xs text-slate-500">
+                        Room details unavailable for this listing.
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -422,6 +416,22 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
           {/* RIGHT PANEL - Calculator & Ledger (30%, Sticky) */}
           <div className="w-[30%] h-full overflow-y-auto no-scrollbar bg-slate-900/30 border-l border-slate-800 p-4">
             <div className="space-y-4">
+              {/* Deal Score — flagship signal, pinned to the top of the rail */}
+              {dealScore ? (
+                <DealScoreCard dealScore={dealScore} />
+              ) : (
+                <div className="animate-pulse rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+                  <div className="mb-3 h-3 w-24 rounded bg-slate-800" />
+                  <div className="flex items-center gap-4">
+                    <div className="h-[88px] w-[88px] rounded-full bg-slate-800" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-full rounded bg-slate-800" />
+                      <div className="h-3 w-2/3 rounded bg-slate-800" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Property Summary Card */}
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4">
                 <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3">
@@ -473,7 +483,28 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
 
               {/* Actions */}
               <div className="space-y-2 pt-4">
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Link
+                  href={`/properties/${property.id}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open Full Report
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => toggleSelected(property.id)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors',
+                    isSelected
+                      ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25'
+                      : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                  )}
+                >
+                  {isSelected ? <Check className="h-4 w-4" /> : <GitCompareArrows className="h-4 w-4" />}
+                  {isSelected ? 'Added to Comparison' : 'Add to Comparison'}
+                </button>
+                <Button className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100">
                   Schedule Viewing
                 </Button>
                 <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800">
@@ -484,6 +515,13 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
           </div>
         </div>
       </div>
+
+      {/* Full-screen photo gallery */}
+      <MediaGalleryOverlay
+        images={galleryImages}
+        isOpen={isGalleryOpen}
+        onClose={() => setIsGalleryOpen(false)}
+      />
     </>
   );
 }
