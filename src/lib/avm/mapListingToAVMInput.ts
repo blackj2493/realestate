@@ -7,10 +7,12 @@
  * the model was standardized on. Missing fields stay `null` → the calculator
  * skips them (≡ training mean-imputation, z=0); a genuine `0` is kept.
  *
- * One deliberate, flagged extension: building_area_total falls back to the
- * LivingAreaRange bucket midpoint (via resolveSqft) when BuildingAreaTotal is
- * absent — a coverage win (critical for condos) on the same sqft scale as the
- * trained column.
+ * building_area_total is resolved via resolveLivingArea (./livingArea): exact
+ * BuildingAreaTotal → measured GLA from room dimensions (when `opts.rooms` is
+ * supplied) → calibrated bucket median (when `opts.bucketCalibration` is supplied)
+ * → naive LivingAreaRange midpoint. BuildingAreaTotal is ~never filled for houses,
+ * so the room-dimension measurement is what keeps large homes from being valued
+ * off an inflated 1,500-sqft-wide range bucket.
  *
  * Condition tiers come from the shared scoring module (./conditionScoring), so
  * active/IDX and VOW-sold listings score identically. Tiers only affect the
@@ -20,7 +22,7 @@
 import type { AVMInput } from './types';
 import { deriveInteriorTier, deriveExteriorTier, deriveBasementTier } from './conditionScoring';
 import { normalizePropertySubType } from './normalizeType';
-import { resolveSqft } from '@/lib/condo/feeStability';
+import { resolveLivingArea, type ResolveLivingAreaOpts } from './livingArea';
 
 /** Mirror of ingester.ts numOrNull: empty/missing/non-finite → null; else the number. */
 function numOrNull(v: unknown): number | null {
@@ -30,7 +32,8 @@ function numOrNull(v: unknown): number | null {
 }
 
 export function mapListingToAVMInput(
-  payload: Record<string, unknown> | null | undefined
+  payload: Record<string, unknown> | null | undefined,
+  opts: ResolveLivingAreaOpts = {}
 ): AVMInput | null {
   if (!payload) return null;
 
@@ -48,7 +51,7 @@ export function mapListingToAVMInput(
     cityRegion,
     propertySubType: normalizePropertySubType(rawPropertySubType),
     rawPropertySubType,
-    buildingAreaTotal: resolveSqft(payload),
+    buildingAreaTotal: resolveLivingArea(payload, opts).sqft,
     lotWidth,
     bedroomsAboveGrade: numOrNull(payload.BedroomsAboveGrade),
     bathroomsTotalInteger: numOrNull(payload.BathroomsTotalInteger),

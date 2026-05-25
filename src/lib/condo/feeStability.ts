@@ -45,8 +45,8 @@ export const PSF_MIN = 0.05;
 export const PSF_MAX = 3.0;
 
 // Living-area sanity bounds (sqft).
-const SQFT_MIN = 100;
-const SQFT_MAX = 20000;
+export const SQFT_MIN = 100;
+export const SQFT_MAX = 20000;
 
 // PropertySubType tokens that identify a condo/strata interest.
 const CONDO_SUBTYPE_TOKENS = [

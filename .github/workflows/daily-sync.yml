@@ -62,6 +62,19 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-property-sale-history.ts --apply
 
+      # Refresh the AVM sqft-calibration table (median grossed room-sum GLA per
+      # CityRegion + sub-type + LivingAreaRange bucket) from active listings' room
+      # dimensions. It's the AVM's no-rooms fallback so a coarse MLS range can't
+      # drive the estimate. Reads listings only, writes the separate
+      # avm_sqft_calibration table; Supabase creds only. Additive — must never
+      # break the core sync, so continue-on-error.
+      - name: Refresh AVM Sqft Calibration
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-sqft-calibration.ts --apply
+
       # Email each user a digest of price drops on their watched properties, using
       # the freshly-synced Typesense index. Additive + must never break the core
       # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
