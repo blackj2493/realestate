@@ -20,6 +20,7 @@ import DOMTimelineChart from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
+import SocialProofBar from "@/components/Property/SocialProofBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -318,6 +319,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 </p>
               )}
             </div>
+
+            {/* Social proof — honest, deterministic activity counters */}
+            <SocialProofBar listingId={id} className="mb-6" />
 
             {/* Gallery */}
             <div className="mb-6">

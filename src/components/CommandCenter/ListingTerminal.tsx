@@ -30,6 +30,7 @@ import DOMTimelineChart from './DOMTimelineChart';
 import ImageBentoGrid from '@/components/Property/ImageBentoGrid';
 import MediaGalleryOverlay from '@/components/Property/MediaGalleryOverlay';
 import DealScoreCard, { DealScoreBadge } from '@/components/Property/DealScoreCard';
+import SocialProofBar from '@/components/Property/SocialProofBar';
 import type { DealScoreResult } from '@/lib/dealScore/computeDealScore';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
@@ -276,6 +277,9 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 )}
               </div>
             </div>
+
+            {/* Social proof — honest, deterministic activity counters */}
+            <SocialProofBar listingId={property.id} className="mb-6" />
 
             {/* Media Bento Grid (real photos from the Vault) */}
             <div className="mb-6">
