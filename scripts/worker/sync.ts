@@ -112,15 +112,20 @@ function rowToHistoricalListing(row: any): HistoricalListing {
 }
 
 /**
- * Fetches prior SOLD campaigns (raw_vow_sold) for a batch of property hashes and
- * maps each into a HistoricalListing so the engine can stitch ACROSS feeds. A
- * property that previously sold and is now relisted folds its prior campaign into
- * the chain — true_dom and the chain's original list price reflect the full
- * history, not just the current Active campaign. The 35-day stitch window keeps
- * genuine resales (months/years apart) from being merged.
+ * Fetches prior SOLD campaigns for a batch of property hashes from the precomputed
+ * property_sale_history table and maps each sale event into a HistoricalListing so the
+ * engine can stitch ACROSS feeds. A property that previously sold and is now relisted
+ * folds its prior campaign into the chain — true_dom and the chain's original list
+ * price reflect the full history. The 35-day stitch window keeps genuine resales
+ * (months/years apart) from being merged.
  *
- * READ-ONLY, light projected columns only — never raw_payload (Disk IO budget,
- * CLAUDE.md §12). Returns Map<property_hash, HistoricalListing[]>.
+ * We read the precompute (small, PK-indexed, refreshed nightly) rather than scanning
+ * raw_vow_sold directly because raw_vow_sold.property_hash is an un-hashed address
+ * string for ~all of the historical archive and never matches a listing's SHA-256.
+ * property_sale_history is re-keyed with the SAME generatePropertyHash() listings use
+ * (see scripts/admin/refresh-property-sale-history.ts), so these lookups join correctly.
+ *
+ * Returns Map<property_hash, HistoricalListing[]>.
  */
 async function fetchSoldCampaigns(
   supabaseClient: any,
@@ -128,7 +133,7 @@ async function fetchSoldCampaigns(
 ): Promise<Map<string, HistoricalListing[]>> {
   if (propertyHashes.length === 0) return new Map();
 
-  const CHUNK_SIZE = 25;
+  const CHUNK_SIZE = 50;
   const chunks = chunkArray(propertyHashes, CHUNK_SIZE);
   const grouped = new Map<string, HistoricalListing[]>();
   const MAX_RETRIES = 3;
@@ -141,12 +146,8 @@ async function fetchSoldCampaigns(
     while (!success && attempt < MAX_RETRIES) {
       try {
         const { data, error } = await supabaseClient
-          .from('raw_vow_sold')
-          .select(
-            'listing_key, property_hash, list_price, ' +
-              'purchase_contract_date, close_date, ' +
-              'OriginalEntryTimestamp:raw_payload->OriginalEntryTimestamp'
-          )
+          .from('property_sale_history')
+          .select('property_hash, sale_events')
           .in('property_hash', chunk);
 
         if (error) throw error;
@@ -154,25 +155,28 @@ async function fetchSoldCampaigns(
         for (const row of (data as any[]) || []) {
           const hash = row.property_hash;
           if (!hash) continue;
-          // Start = original entry ts (fallback: contract date so the campaign has a
-          // start anchor). End = close_date || contract_date, mapped to
-          // CancellationDate so getListingEndDate() resolves it. ListPrice =
-          // list_price so a prior campaign can become the chain's original price.
-          const start = row.OriginalEntryTimestamp || row.purchase_contract_date || null;
-          const end = row.close_date || row.purchase_contract_date || null;
-          const mapped: HistoricalListing = {
-            listing_key: row.listing_key,
-            property_hash: hash,
-            created_at: end ?? '',
-            full_payload: {
-              OriginalEntryTimestamp: start ?? undefined,
-              ListPrice: row.list_price ?? undefined,
-              CancellationDate: end ?? undefined,
-            },
-          };
-          const existing = grouped.get(hash);
-          if (existing) existing.push(mapped);
-          else grouped.set(hash, [mapped]);
+          const events = Array.isArray(row.sale_events) ? row.sale_events : [];
+          for (const e of events) {
+            // Start = contract date (the "sold date") so the campaign has a start
+            // anchor. End = close_date || contract_date, mapped to CancellationDate so
+            // getListingEndDate() resolves it. ListPrice = list_price so a prior
+            // campaign can become the chain's original price.
+            const start = e.contract_date || e.close_date || null;
+            const end = e.close_date || e.contract_date || null;
+            const mapped: HistoricalListing = {
+              listing_key: e.listing_key || `${hash}-sold`,
+              property_hash: hash,
+              created_at: end ?? '',
+              full_payload: {
+                OriginalEntryTimestamp: start ?? undefined,
+                ListPrice: e.list_price ?? undefined,
+                CancellationDate: end ?? undefined,
+              },
+            };
+            const existing = grouped.get(hash);
+            if (existing) existing.push(mapped);
+            else grouped.set(hash, [mapped]);
+          }
         }
 
         success = true;

@@ -25,6 +25,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import { createClient } from '@supabase/supabase-js';
 import * as https from 'https';
 import crossFetch from 'cross-fetch';
+import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 
 // Patch global fetch with a TLS-relaxed agent for the Supabase client.
 const agent = new https.Agent({ rejectUnauthorized: false });
@@ -59,15 +60,23 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY, {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-// Raw row shape from the projected select.
+// Raw row shape from the projected select. NOTE: we do NOT trust the stored
+// property_hash — most of the historical archive was bulk-loaded with it set to an
+// un-hashed address string that never matches listings' SHA-256. We recompute the
+// hash from the address components with the SAME generatePropertyHash() the listings
+// table uses, so the precompute keys join correctly at read time.
 interface SoldRow {
   listing_key: string;
-  property_hash: string | null;
   list_price: number | string | null;
   close_price: number | string | null;
   purchase_contract_date: string | null;
   close_date: string | null;
   property_sub_type: string | null;
+  StreetNumber: unknown;
+  StreetName: unknown;
+  City: unknown;
+  UnitNumber: unknown;
+  UnparsedAddress: unknown;
 }
 
 // One prior sale campaign as stored in sale_events[].
@@ -117,8 +126,10 @@ async function main() {
     const { data, error } = await sb
       .from('raw_vow_sold')
       .select(
-        'listing_key, property_hash, list_price, close_price, ' +
-          'purchase_contract_date, close_date, property_sub_type'
+        'listing_key, list_price, close_price, purchase_contract_date, close_date, property_sub_type, ' +
+          'StreetNumber:raw_payload->StreetNumber, StreetName:raw_payload->StreetName, ' +
+          'City:raw_payload->City, UnitNumber:raw_payload->UnitNumber, ' +
+          'UnparsedAddress:raw_payload->UnparsedAddress'
       )
       .gt('listing_key', cursor)
       .order('listing_key', { ascending: true })
@@ -138,17 +149,21 @@ async function main() {
     for (const r of rows) {
       scanned++;
 
-      const hash = (r.property_hash || '').trim();
-      if (!hash) continue;
-      // Keep ONLY canonical SHA-256 hashes (64 lowercase hex). A subset of the
-      // historical raw_vow_sold archive (Ottawa/OREB region) was bulk-loaded with
-      // property_hash set to the raw un-hashed address string instead of a hash —
-      // those overflow varchar(64) AND can never join to `listings` (always SHA-256),
-      // so they're unmatchable; dropping them keeps the table to lookup-able keys only.
-      if (!/^[0-9a-f]{64}$/.test(hash)) {
+      // Recompute the canonical hash from address components (same fn as listings),
+      // because the stored property_hash is an un-hashed address string for ~all rows.
+      const hasAddr = (r.StreetNumber && r.StreetName) || r.UnparsedAddress;
+      if (!hasAddr) {
         skippedBadHash++;
         continue;
       }
+      const hash = generatePropertyHash({
+        StreetNumber: r.StreetNumber,
+        StreetName: r.StreetName,
+        City: r.City,
+        UnitNumber: r.UnitNumber,
+        UnparsedAddress: r.UnparsedAddress,
+      });
+      if (!hash) continue;
 
       const closePrice = numOrNull(r.close_price);
       const event: SaleEvent = {
@@ -216,7 +231,7 @@ async function main() {
   // ── Summary (verify-first diagnostic) ─────────────────────────────────────────
   console.log('\n──────── Summary ────────');
   console.log(`Rows scanned:        ${scanned}`);
-  console.log(`Skipped (non-SHA256): ${skippedBadHash}`);
+  console.log(`Skipped (no address): ${skippedBadHash}`);
   console.log(`Usable sale events:  ${usable}`);
   console.log(`Distinct properties: ${byHash.size}`);
   console.log(`Multi-sale (>1):     ${multiSale}`);
