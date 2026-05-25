@@ -1,0 +1,163 @@
+/**
+ * Region Scorecard data layer — assembles one comparable RegionScore per market area
+ * from two server-side endpoints, both of which compute TRUTHFUL full-population
+ * aggregates (no Typesense 100-row sampling):
+ *   - /api/market/price-trend  → sold-side: median price, $/sqft, YoY, sold-to-list, velocity
+ *   - /api/market/region-stats → active-side: median/top cap rate, active count, % stale
+ *
+ * Every value is deterministic arithmetic (§4: no LLM). Missing/untrustworthy inputs
+ * surface as null so the UI shows "—" rather than a guess.
+ */
+
+export interface RegionScore {
+  region: string;
+  medianPrice: number | null;
+  priceSeries: { month: string; v: number }[]; // months present in the trailing ~12 (sparkline)
+  yoyPct: number | null;
+  medianPpsf: number | null;
+  ppsfYoyPct: number | null;
+  activeCount: number | null;
+  monthsOfSupply: number | null;
+  soldToListPct: number | null;
+  pctOverAsking: number | null;
+  medianCapRate: number | null;
+  topCapRate: number | null;
+  stalePct: number | null;
+  temperature: "hot" | "balanced" | "cold" | null;
+}
+
+interface TrendPoint {
+  month: string;
+  medianPrice: number;
+  medianPpsf: number | null;
+  sales: number;
+}
+
+interface PriceTrendResp {
+  region: string;
+  points: TrendPoint[];
+  summary: {
+    soldToListPct: number | null;
+    pctOverAsking: number | null;
+    listPriceCoverage: number;
+    sales90: number;
+    monthlyVelocity: number | null;
+  };
+  error?: string;
+}
+
+interface RegionStatsResp {
+  region: string;
+  stats: {
+    activeCount: number;
+    capSample: number;
+    medianCapRate: number | null;
+    avgCapRate: number | null;
+    topCapRate: number | null;
+    staleCount: number;
+  };
+  error?: string;
+}
+
+/** Shift a "YYYY-MM" key back 12 months (same month, prior year). */
+function priorYearKey(key: string): string {
+  const [y, m] = key.split("-");
+  return `${Number(y) - 1}-${m}`;
+}
+
+/**
+ * 3-month-smoothed YoY for a TrendPoint field, ALIGNED BY MONTH LABEL (price-trend omits
+ * zero-sale months, so never index by array position). Compares mean(last 3 available
+ * months) vs mean(those same 3 months a year earlier). null unless both windows present.
+ * Exported for reuse by Market Pulse (Phase 4).
+ */
+export function smoothedYoY(points: TrendPoint[], key: "medianPrice" | "medianPpsf"): number | null {
+  const valByMonth = new Map<string, number>();
+  for (const p of points) {
+    const v = p[key];
+    if (v != null && Number.isFinite(v) && v > 0) valByMonth.set(p.month, v);
+  }
+  const monthsWithVal = points.map((p) => p.month).filter((m) => valByMonth.has(m));
+  if (monthsWithVal.length < 3) return null;
+
+  const recent = monthsWithVal.slice(-3);
+  const recentVals = recent.map((m) => valByMonth.get(m)!);
+  const priorVals: number[] = [];
+  for (const m of recent) {
+    const pv = valByMonth.get(priorYearKey(m));
+    if (pv == null) return null; // need the matching month a year earlier
+    priorVals.push(pv);
+  }
+
+  const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / a.length;
+  const prior = mean(priorVals);
+  if (prior <= 0) return null;
+  return Math.round(((mean(recentVals) / prior - 1) * 100) * 10) / 10;
+}
+
+function temperatureOf(
+  monthsOfSupply: number | null,
+  soldToListPct: number | null
+): RegionScore["temperature"] {
+  if (monthsOfSupply == null || soldToListPct == null) return null;
+  if (monthsOfSupply < 2 && soldToListPct >= 100) return "hot";
+  if (monthsOfSupply > 4 || soldToListPct < 97) return "cold";
+  return "balanced";
+}
+
+async function getJson<T>(url: string): Promise<T | null> {
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return (await res.json()) as T;
+}
+
+export async function fetchRegionScore(
+  region: string,
+  propertyType: string = "all"
+): Promise<RegionScore> {
+  const q = encodeURIComponent(region);
+  const t = `&propertyType=${encodeURIComponent(propertyType)}`;
+  const [trendR, statsR] = await Promise.allSettled([
+    getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${t}`),
+    getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${t}`),
+  ]);
+
+  const trend = trendR.status === "fulfilled" ? trendR.value : null;
+  const stats = statsR.status === "fulfilled" ? statsR.value : null;
+
+  const points = trend?.points ?? [];
+  const latest = points.length ? points[points.length - 1] : null;
+  const latestPpsf = [...points].reverse().find((p) => p.medianPpsf != null)?.medianPpsf ?? null;
+
+  const activeCount = stats?.stats.activeCount ?? null;
+  const monthlyVelocity = trend?.summary.monthlyVelocity ?? null;
+  const monthsOfSupply =
+    activeCount != null && activeCount > 0 && monthlyVelocity != null && monthlyVelocity > 0
+      ? Math.round((activeCount / monthlyVelocity) * 10) / 10
+      : null;
+
+  const soldToListPct = trend?.summary.soldToListPct ?? null;
+  const capSample = stats?.stats.capSample ?? 0;
+
+  const staleCount = stats?.stats.staleCount ?? 0;
+  const stalePct =
+    activeCount && activeCount > 0 ? Math.round((staleCount / activeCount) * 1000) / 10 : null;
+
+  return {
+    region,
+    medianPrice: latest?.medianPrice ?? null,
+    priceSeries: points.slice(-12).map((p) => ({ month: p.month, v: p.medianPrice })),
+    yoyPct: smoothedYoY(points, "medianPrice"),
+    medianPpsf: latestPpsf,
+    ppsfYoyPct: smoothedYoY(points, "medianPpsf"),
+    activeCount,
+    monthsOfSupply,
+    soldToListPct,
+    pctOverAsking: trend?.summary.pctOverAsking ?? null,
+    // Median over a tiny sample is noise — require ≥5 priced active listings.
+    medianCapRate: capSample >= 5 ? stats?.stats.medianCapRate ?? null : null,
+    topCapRate: stats?.stats.topCapRate ?? null,
+    stalePct,
+    temperature: temperatureOf(monthsOfSupply, soldToListPct),
+  };
+}

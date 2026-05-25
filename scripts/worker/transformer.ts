@@ -652,8 +652,10 @@ export interface TransformResult {
     true_dom: TrueDOMResult;
     needs_geocoding: boolean;
     city: string | null;
+    city_region: string | null;
     property_sub_type: string | null;
     list_price: number;
+    extrapolated_cap_rate: number;
     property_hash: string;
     // Flat carry cost columns (migration 005)
     monthly_carry_cost: number;
@@ -934,6 +936,15 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     }
   }
 
+  // Extrapolated Cap Rate (§4: derived metric computed in the Node ETL). Computed here so
+  // it can be both persisted to Supabase (for region aggregation) and set on the Typesense
+  // doc below.
+  const proForma = calculateProForma(raw.ListPrice, {
+    listPrice: raw.ListPrice,
+    taxAnnualAmount: raw.TaxAnnualAmount ?? null,
+    associationFee: raw.AssociationFee ?? null
+  });
+
   // Build Supabase payload (full document)
   const supabasePayload = {
     listing_key: raw.ListingKey,
@@ -943,8 +954,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     carry_cost: carryCost,
     needs_geocoding: geo.needsGeocoding,
     city: raw.City || null,
+    city_region: raw.CityRegion || null,
     property_sub_type: raw.PropertySubType || null,
     list_price: raw.ListPrice || 0,
+    extrapolated_cap_rate: proForma.extrapolated_cap_rate,
     property_hash: trueDOM.propertyHash,
     // Flat carry cost columns (migration 005)
     monthly_carry_cost: carryCost.trueCarryCost,
@@ -1036,12 +1049,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // PossessionType - also required by Typesense schema
   typesensePayload.PossessionType = raw.PossessionType || '';
 
-  // Phase 3: Extrapolated Cap Rate calculation
-  const proForma = calculateProForma(raw.ListPrice, {
-    listPrice: raw.ListPrice,
-    taxAnnualAmount: raw.TaxAnnualAmount ?? null,
-    associationFee: raw.AssociationFee ?? null
-  });
+  // Phase 3: Extrapolated Cap Rate (proForma computed above, before the Supabase payload).
   typesensePayload.TotalCapitalBasis = proForma.total_capital_basis;
   typesensePayload.ExtrapolatedCapRate = proForma.extrapolated_cap_rate;
   typesensePayload.CapitalBurnRateMonthly = proForma.capital_burn_rate_monthly;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import {
@@ -23,7 +24,21 @@ import MarketActivityControls from "@/components/dashboard/MarketActivityControl
 import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
+import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
+
+// deck.gl + mapbox touch the DOM at module load → client-only, no SSR.
+const DashboardHeatTile = dynamic(
+  () => import("@/components/dashboard/DashboardHeatTile"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-64 items-center justify-center border border-slate-800 bg-slate-950">
+        <p className="terminal-font text-xs text-slate-500">Loading map…</p>
+      </div>
+    ),
+  }
+);
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -115,6 +130,8 @@ export default function DashboardPage() {
           <MarketActivityControls lens={config.marketActivity} onChange={updateLens} />
         )}
 
+        {hasRegions && <RegionScorecard regions={config.regions} />}
+
         {hasRegions &&
           config.regions.map((loc) => (
             <section key={loc} className="space-y-3">
@@ -142,7 +159,9 @@ export default function DashboardPage() {
             </section>
           ))}
 
-        {/* One Market Pulse chart for the primary region (V1 — see plan). */}
+        {/* Primary-region intelligence: neighbourhood heat + price trend (V1). */}
+        {hasRegions && <DashboardHeatTile region={config.regions[0]} />}
+
         {hasRegions && (
           <section className="space-y-3">
             <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">

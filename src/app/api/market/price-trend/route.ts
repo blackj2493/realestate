@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
 
 export const dynamic = "force-dynamic"; // caching is handled by unstable_cache per region
 
@@ -30,6 +31,29 @@ interface TrendPoint {
   sales: number;
 }
 
+// Region-level sold-side summary (Region Scorecard). Coverage-gated: sold-to-list is
+// only trustworthy where list_price is actually populated, so it nulls out below 50%.
+interface TrendSummary {
+  soldToListPct: number | null; // avg(close/list)*100 over last 90d, list_price>0
+  pctOverAsking: number | null; // share of those that sold above ask
+  listPriceCoverage: number; // 0..1 — rows with list_price / rows, last 90d
+  sales90: number; // sold count in the trailing 90 days (laggy near the edge)
+  monthlyVelocity: number | null; // avg monthly sales over the 6 complete months before this one
+}
+
+interface TrendResult {
+  points: TrendPoint[];
+  summary: TrendSummary;
+}
+
+const EMPTY_SUMMARY: TrendSummary = {
+  soldToListPct: null,
+  pctOverAsking: null,
+  listPriceCoverage: 0,
+  sales90: 0,
+  monthlyVelocity: null,
+};
+
 function median(nums: number[]): number {
   if (nums.length === 0) return 0;
   const s = [...nums].sort((a, b) => a - b);
@@ -37,34 +61,54 @@ function median(nums: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-async function computeTrend(region: string): Promise<TrendPoint[]> {
+function monthKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+async function computeTrend(region: string, propertyType: string): Promise<TrendResult> {
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MONTHS);
+  const cutoff90 = new Date();
+  cutoff90.setDate(cutoff90.getDate() - 90);
 
   const sb = getServiceRoleClient();
   // Match either municipality (city) or community (city_region). ilike = case-insensitive.
   const safe = region.replace(/[,()]/g, " ").trim();
   // PurchaseContractDate = the "Sold Date" (deal signed). close_date is the later
   // completion date and is frequently null/future, so it makes a poor trend axis.
-  const { data, error } = await sb
+  let query = sb
     .from("raw_vow_sold")
-    .select("close_price, purchase_contract_date, building_area_total")
+    .select("close_price, list_price, purchase_contract_date, building_area_total")
     .or(`city.ilike.${safe},city_region.ilike.${safe}`)
     // $50k floor excludes lease/rental rows that leak into the sold feed (e.g. $2,200).
     .gte("close_price", 50000)
-    .gte("purchase_contract_date", cutoff.toISOString())
+    .gte("purchase_contract_date", cutoff.toISOString());
+
+  // Property-type filter: exact spelling match (incl. trailing-space "Semi-Detached ").
+  // Empty ⇒ all types (unchanged behaviour).
+  const variants = variantsForKeys([propertyType]);
+  if (variants.length) query = query.in("property_sub_type", variants);
+
+  const { data, error } = await query
     .order("purchase_contract_date", { ascending: false })
     .limit(MAX_ROWS);
 
   if (error) throw new Error(error.message);
 
   const buckets = new Map<string, { prices: number[]; ppsf: number[] }>();
+  // Trailing-90-day sold-to-list accumulators (current market heat).
+  let r90 = 0; // sold rows in last 90d
+  let r90WithList = 0; // ...with a usable list price
+  let ratioSum = 0;
+  let overAsk = 0;
+
   for (const row of data ?? []) {
     const d = row.purchase_contract_date ? new Date(row.purchase_contract_date as string) : null;
     if (!d || Number.isNaN(d.getTime())) continue;
     const price = Number(row.close_price);
     if (!Number.isFinite(price) || price <= 0) continue;
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+
+    const key = monthKey(d);
     let b = buckets.get(key);
     if (!b) {
       b = { prices: [], ppsf: [] };
@@ -73,9 +117,23 @@ async function computeTrend(region: string): Promise<TrendPoint[]> {
     b.prices.push(price);
     const sqft = Number(row.building_area_total);
     if (Number.isFinite(sqft) && sqft > 0) b.ppsf.push(price / sqft);
+
+    if (d >= cutoff90) {
+      r90++;
+      const list = Number(row.list_price);
+      // $50k floor mirrors close_price; ratio sanity bounds drop data-entry errors.
+      if (Number.isFinite(list) && list >= 50000) {
+        const ratio = price / list;
+        if (ratio > 0.5 && ratio < 2) {
+          r90WithList++;
+          ratioSum += ratio;
+          if (price > list) overAsk++;
+        }
+      }
+    }
   }
 
-  return [...buckets.entries()]
+  const points = [...buckets.entries()]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([month, b]) => ({
       month,
@@ -83,22 +141,49 @@ async function computeTrend(region: string): Promise<TrendPoint[]> {
       medianPpsf: b.ppsf.length ? Math.round(median(b.ppsf)) : null,
       sales: b.prices.length,
     }));
+
+  // monthlyVelocity: average monthly sales over the 6 COMPLETE months before the current
+  // (partial, lag-affected) one. Missing months count as 0 so quiet months aren't ignored.
+  const salesByMonth = new Map(points.map((p) => [p.month, p.sales]));
+  const now = new Date();
+  let velSum = 0;
+  for (let i = 1; i <= 6; i++) {
+    const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    velSum += salesByMonth.get(monthKey(m)) ?? 0;
+  }
+  const monthlyVelocity = velSum > 0 ? velSum / 6 : null;
+
+  const coverage = r90 > 0 ? r90WithList / r90 : 0;
+  const trustworthy = coverage >= 0.5 && r90WithList >= 10;
+  const summary: TrendSummary = {
+    soldToListPct: trustworthy ? Math.round((ratioSum / r90WithList) * 1000) / 10 : null,
+    pctOverAsking: trustworthy ? Math.round((overAsk / r90WithList) * 1000) / 10 : null,
+    listPriceCoverage: Math.round(coverage * 100) / 100,
+    sales90: r90,
+    monthlyVelocity,
+  };
+
+  return { points, summary };
 }
 
 export async function GET(req: NextRequest) {
-  const region = (new URL(req.url).searchParams.get("region") || "").trim();
-  if (!region) return NextResponse.json({ region: "", points: [] });
+  const params = new URL(req.url).searchParams;
+  const region = (params.get("region") || "").trim();
+  const propertyType = (params.get("propertyType") || "all").trim().toLowerCase();
+  if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
 
   try {
-    const points = await unstable_cache(
-      () => computeTrend(region),
-      ["market-price-trend", region.toLowerCase()],
+    const { points, summary } = await unstable_cache(
+      () => computeTrend(region, propertyType),
+      // v3 = added the property-type filter. Bumping the key abandons stale cache entries;
+      // propertyType is part of the key so each type variant caches independently.
+      ["market-price-trend", "v3", region.toLowerCase(), propertyType],
       { revalidate: 86400 }
     )();
-    return NextResponse.json({ region, points });
+    return NextResponse.json({ region, points, summary });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/price-trend]", region, msg);
-    return NextResponse.json({ region, points: [], error: msg }, { status: 500 });
+    console.error("[market/price-trend]", region, propertyType, msg);
+    return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, error: msg }, { status: 500 });
   }
 }
