@@ -1,66 +1,140 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, Loader2, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 
 /**
- * Passwordless sign-in. Sends a Supabase magic link to the user's email; the link
- * lands on /auth/callback (PKCE) and establishes a cookie session. Magic link is
- * the primary identity and the universal fallback — passkeys (Face ID / fingerprint)
- * layer on top later without changing this flow or the data model.
+ * Passwordless sign-in via a 6-digit email code (Supabase OTP).
+ *
+ * Step 1: signInWithOtp(email) → Supabase emails a code (template must include
+ *         {{ .Token }}).
+ * Step 2: verifyOtp(email, code, type 'email') → establishes the cookie session.
+ *
+ * A typed code can't be pre-consumed by email link-scanners and works across
+ * devices, which sidesteps the magic-link prefetch/PKCE failures. Code is the
+ * primary identity and stays passkey-ready (Face ID / fingerprint) for later.
  */
 export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }) {
+  const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [code, setCode] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "verifying">("idle");
   const [error, setError] = useState("");
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doSend = async () => {
     const addr = email.trim();
     if (!addr) return;
     setStatus("sending");
     setError("");
 
-    const supabase = createClient();
-    const redirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error: err } = await supabase.auth.signInWithOtp({
+    const { error: err } = await createClient().auth.signInWithOtp({
       email: addr,
-      options: { emailRedirectTo: redirect },
+      options: { shouldCreateUser: true },
     });
 
+    setStatus("idle");
     if (err) {
-      setStatus("error");
       setError(err.message);
     } else {
-      setStatus("sent");
+      setStep("code");
     }
   };
 
-  if (status === "sent") {
+  const sendCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    void doSend();
+  };
+
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = code.trim();
+    if (token.length < 6) return;
+    setStatus("verifying");
+    setError("");
+
+    const { error: err } = await createClient().auth.verifyOtp({
+      email: email.trim(),
+      token,
+      type: "email",
+    });
+
+    if (err) {
+      setStatus("idle");
+      setError(err.message || "That code is invalid or has expired.");
+      return;
+    }
+    // Full navigation so middleware + server components pick up the new session cookie.
+    window.location.assign(next.startsWith("/") ? next : "/dashboard");
+  };
+
+  if (step === "code") {
     return (
-      <div className="border border-emerald-500/40 bg-emerald-500/5 p-6 text-center">
-        <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400" />
-        <h3 className="terminal-font mt-3 text-sm font-bold uppercase tracking-widest text-emerald-200">
-          Check your email
-        </h3>
-        <p className="mt-2 text-sm text-slate-300">
-          We sent a sign-in link to <span className="text-slate-100">{email.trim()}</span>.
-          Open it on this device to enter the terminal.
+      <form onSubmit={verify} className="space-y-3">
+        <p className="text-sm text-slate-400">
+          Enter the 6-digit code we sent to{" "}
+          <span className="text-slate-200">{email.trim()}</span>.
         </p>
+        <div className="relative">
+          <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            id="otp-code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            maxLength={6}
+            required
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="123456"
+            className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-lg tracking-[0.4em] text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
+          />
+        </div>
+
+        {error && <p className="text-xs text-rose-400">{error}</p>}
+
         <button
-          type="button"
-          onClick={() => setStatus("idle")}
-          className="terminal-font mt-4 text-[11px] uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-cyan-300 hover:underline"
+          type="submit"
+          disabled={status === "verifying" || code.length < 6}
+          className="terminal-font flex w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-2.5 text-xs uppercase tracking-wider text-cyan-200 transition-colors hover:bg-cyan-500/20 disabled:opacity-50"
         >
-          Use a different email
+          {status === "verifying" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Verifying…
+            </>
+          ) : (
+            "Verify & sign in"
+          )}
         </button>
-      </div>
+
+        <div className="flex items-center justify-between text-[11px]">
+          <button
+            type="button"
+            onClick={() => {
+              setStep("email");
+              setCode("");
+              setError("");
+            }}
+            className="terminal-font uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+          >
+            ← Change email
+          </button>
+          <button
+            type="button"
+            disabled={status === "sending"}
+            onClick={() => void doSend()}
+            className="terminal-font uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-cyan-300 hover:underline disabled:opacity-50"
+          >
+            Resend code
+          </button>
+        </div>
+      </form>
     );
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <form onSubmit={sendCode} className="space-y-3">
       <label
         htmlFor="magic-email"
         className="terminal-font block text-[10px] uppercase tracking-wider text-slate-500"
@@ -81,9 +155,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
         />
       </div>
 
-      {status === "error" && (
-        <p className="text-xs text-rose-400">{error || "Could not send the link. Try again."}</p>
-      )}
+      {error && <p className="text-xs text-rose-400">{error}</p>}
 
       <button
         type="submit"
@@ -92,15 +164,15 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
       >
         {status === "sending" ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+            <Loader2 className="h-4 w-4 animate-spin" /> Sending code…
           </>
         ) : (
-          "Send sign-in link"
+          "Email me a sign-in code"
         )}
       </button>
 
       <p className="text-center text-[11px] leading-relaxed text-slate-600">
-        No password needed. We email you a secure one-time link.
+        No password needed. We email you a 6-digit code that expires shortly.
       </p>
     </form>
   );
