@@ -5,7 +5,8 @@ import { Mail, Loader2, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 
 /**
- * Passwordless sign-in via a 6-digit email code (Supabase OTP).
+ * Passwordless sign-in via a one-time email code (Supabase OTP; length is set by
+ * the project's "Email OTP Length", commonly 6–8 digits).
  *
  * Step 1: signInWithOtp(email) → Supabase emails a code (template must include
  *         {{ .Token }}).
@@ -72,7 +73,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
     return (
       <form onSubmit={verify} className="space-y-3">
         <p className="text-sm text-slate-400">
-          Enter the 6-digit code we sent to{" "}
+          Enter the code we sent to{" "}
           <span className="text-slate-200">{email.trim()}</span>.
         </p>
         <div className="relative">
@@ -82,13 +83,13 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
             inputMode="numeric"
             autoComplete="one-time-code"
             pattern="[0-9]*"
-            maxLength={6}
+            maxLength={10}
             required
             autoFocus
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="123456"
-            className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-lg tracking-[0.4em] text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            placeholder="Enter code"
+            className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-lg tracking-[0.4em] text-slate-200 outline-none placeholder:text-slate-600 placeholder:tracking-normal focus:border-cyan-500/60"
           />
         </div>
 
@@ -172,7 +173,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
       </button>
 
       <p className="text-center text-[11px] leading-relaxed text-slate-600">
-        No password needed. We email you a 6-digit code that expires shortly.
+        No password needed. We email you a one-time code that expires shortly.
       </p>
     </form>
   );
