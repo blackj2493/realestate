@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getListingDetail } from "@/lib/property/getListingDetail";
+import { getListingDetail, gateSaleHistory } from "@/lib/property/getListingDetail";
+import { getCurrentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,10 @@ export async function GET(
       );
     }
 
+    // VOW gating: sold prices/dates are stripped for anonymous users (§4).
+    const user = await getCurrentUser();
+    const saleHistory = gateSaleHistory(detail.saleHistory, !!user);
+
     return NextResponse.json({
       listing_key: detail.listing_key,
       full_payload: detail.full_payload,
@@ -33,6 +38,10 @@ export async function GET(
       estimate: detail.estimate,
       feeStability: detail.feeStability,
       dealScore: detail.dealScore,
+      saleHistory,
+      isAuthed: !!user,
+      priceTimeline: detail.priceTimeline,
+      rooms: detail.rooms,
     });
   } catch (error) {
     console.error("[Property API] Unexpected error:", error);

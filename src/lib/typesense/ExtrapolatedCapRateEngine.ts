@@ -400,8 +400,9 @@ export function runProFormaTests(): void {
   console.log('✅ All Pro Forma tests completed\n');
 }
 
-// Run if executed directly
-if (require.main === module) {
+// Run if executed directly (Node only). Guarded so the engine can be imported into
+// the client bundle — `module`/`require` don't exist in the browser.
+if (typeof require !== "undefined" && typeof module !== "undefined" && require.main === module) {
   runProFormaTests();
 }
 

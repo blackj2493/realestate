@@ -18,11 +18,12 @@ import 'dotenv/config';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { transformListing, TransformResult } from './transformer';
 import Typesense, { Client } from 'typesense';
-import { 
-  generatePropertyHash, 
-  calculateTrueDOM, 
+import {
+  generatePropertyHash,
+  calculateTrueDOM,
   processTemporalBatch,
   groupHistoricalByHash,
+  STITCH_WINDOW_DAYS,
   TemporalMetrics,
   HistoricalListing,
   CurrentListingInput
@@ -92,6 +93,114 @@ function sleep(ms: number): Promise<void> {
 // ============================================================================
 
 /**
+ * Re-wraps a flat aliased `listings` row (from the projected JSONB select) back
+ * into the HistoricalListing shape the Temporal Distress Engine expects.
+ */
+function rowToHistoricalListing(row: any): HistoricalListing {
+  return {
+    listing_key: row.listing_key,
+    property_hash: row.property_hash,
+    created_at: row.created_at ?? '',
+    full_payload: {
+      OriginalEntryTimestamp: row.OriginalEntryTimestamp ?? undefined,
+      ListPrice: row.ListPrice ?? undefined,
+      CancellationDate: row.CancellationDate ?? undefined,
+      ModificationTimestamp: row.ModificationTimestamp ?? undefined,
+      SystemModificationTimestamp: row.SystemModificationTimestamp ?? undefined,
+    },
+  };
+}
+
+/**
+ * Fetches prior SOLD campaigns (raw_vow_sold) for a batch of property hashes and
+ * maps each into a HistoricalListing so the engine can stitch ACROSS feeds. A
+ * property that previously sold and is now relisted folds its prior campaign into
+ * the chain — true_dom and the chain's original list price reflect the full
+ * history, not just the current Active campaign. The 35-day stitch window keeps
+ * genuine resales (months/years apart) from being merged.
+ *
+ * READ-ONLY, light projected columns only — never raw_payload (Disk IO budget,
+ * CLAUDE.md §12). Returns Map<property_hash, HistoricalListing[]>.
+ */
+async function fetchSoldCampaigns(
+  supabaseClient: any,
+  propertyHashes: string[]
+): Promise<Map<string, HistoricalListing[]>> {
+  if (propertyHashes.length === 0) return new Map();
+
+  const CHUNK_SIZE = 25;
+  const chunks = chunkArray(propertyHashes, CHUNK_SIZE);
+  const grouped = new Map<string, HistoricalListing[]>();
+  const MAX_RETRIES = 3;
+
+  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+    const chunk = chunks[chunkIdx];
+    let success = false;
+    let attempt = 0;
+
+    while (!success && attempt < MAX_RETRIES) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('raw_vow_sold')
+          .select(
+            'listing_key, property_hash, list_price, ' +
+              'purchase_contract_date, close_date, ' +
+              'OriginalEntryTimestamp:raw_payload->OriginalEntryTimestamp'
+          )
+          .in('property_hash', chunk);
+
+        if (error) throw error;
+
+        for (const row of (data as any[]) || []) {
+          const hash = row.property_hash;
+          if (!hash) continue;
+          // Start = original entry ts (fallback: contract date so the campaign has a
+          // start anchor). End = close_date || contract_date, mapped to
+          // CancellationDate so getListingEndDate() resolves it. ListPrice =
+          // list_price so a prior campaign can become the chain's original price.
+          const start = row.OriginalEntryTimestamp || row.purchase_contract_date || null;
+          const end = row.close_date || row.purchase_contract_date || null;
+          const mapped: HistoricalListing = {
+            listing_key: row.listing_key,
+            property_hash: hash,
+            created_at: end ?? '',
+            full_payload: {
+              OriginalEntryTimestamp: start ?? undefined,
+              ListPrice: row.list_price ?? undefined,
+              CancellationDate: end ?? undefined,
+            },
+          };
+          const existing = grouped.get(hash);
+          if (existing) existing.push(mapped);
+          else grouped.set(hash, [mapped]);
+        }
+
+        success = true;
+      } catch (err: any) {
+        attempt++;
+        if (attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 500;
+          console.warn(`   ⏳ Retry ${attempt}/${MAX_RETRIES} for sold-campaign chunk ${chunkIdx + 1} in ${delay}ms...`);
+          await sleep(delay);
+        } else {
+          console.error(`   ❌ Sold-campaign chunk ${chunkIdx + 1} failed after ${MAX_RETRIES} attempts: ${err.message}`);
+        }
+      }
+    }
+
+    if (chunkIdx < chunks.length - 1) {
+      await sleep(50);
+    }
+  }
+
+  const total = [...grouped.values()].reduce((n, arr) => n + arr.length, 0);
+  if (total > 0) {
+    console.log(`   🏷️  Found ${total} prior sold campaign(s) across ${grouped.size} properties`);
+  }
+  return grouped;
+}
+
+/**
  * Fetches historical listings for a batch of property hashes.
  * Implements the efficient batch pattern: 1 query, group locally.
  * 
@@ -134,11 +243,22 @@ async function fetchHistoricalListings(
 
     while (!success && attempt < MAX_RETRIES) {
       try {
-        // Explicit column select: minimal payload for True DOM calculation
-        // Select: id, property_hash, created_at (for campaign block timing)
+        // Project ONLY the JSONB keys calculateTrueDOM reads, then re-wrap into a
+        // synthetic full_payload below. Selecting just `id, property_hash` (the old
+        // behavior) starved the engine — every historical record was skipped and
+        // true_dom collapsed to the current campaign with total_price_drop = 0.
+        // `listing_key` is required so the current-listing self-exclusion works.
+        // Light projection avoids detoasting the whole JSONB blob (Disk IO budget).
         const { data, error } = await supabaseClient
           .from('listings')
-          .select('id, property_hash, created_at')
+          .select(
+            'listing_key, property_hash, created_at, ' +
+              'OriginalEntryTimestamp:full_payload->OriginalEntryTimestamp, ' +
+              'ListPrice:full_payload->ListPrice, ' +
+              'CancellationDate:full_payload->CancellationDate, ' +
+              'ModificationTimestamp:full_payload->ModificationTimestamp, ' +
+              'SystemModificationTimestamp:full_payload->SystemModificationTimestamp'
+          )
           .in('property_hash', chunk)
           .not('listing_key', 'in', excludeClause);
 
@@ -148,7 +268,11 @@ async function fetchHistoricalListings(
         }
 
         if (data && data.length > 0) {
-          allHistoricalData.push(...data);
+          // Re-wrap the flat aliased rows back into HistoricalListing shape so the
+          // engine sees full_payload.{OriginalEntryTimestamp,ListPrice,...}.
+          for (const row of data as any[]) {
+            allHistoricalData.push(rowToHistoricalListing(row));
+          }
         }
 
         success = true;
@@ -243,14 +367,17 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     listingKeyToTransform.set(t.supabasePayload.listing_key, t);
   }
   
-  // Fetch historical listings (single query for all hashes)
+  // Fetch historical listings (single query for all hashes) + prior sold campaigns
+  // from the VOW archive, so True DOM stitches across BOTH feeds.
   const supabaseClient = getServiceRoleClient();
   const listingKeys = transformed.map(t => t.supabasePayload.listing_key);
+  const uniqueHashes = [...new Set(propertyHashes)];
   const historicalMap = await fetchHistoricalListings(
-    supabaseClient, 
-    [...new Set(propertyHashes)],
+    supabaseClient,
+    uniqueHashes,
     listingKeys
   );
+  const soldCampaignMap = await fetchSoldCampaigns(supabaseClient, uniqueHashes);
   
   // Calculate temporal metrics for each listing
   const temporalMetrics = new Map<string, TemporalMetrics>();
@@ -260,9 +387,13 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     const raw = t.supabasePayload.full_payload as any;
     const hash = generatePropertyHash(raw);
     
-    // Get historical for this property
-    const history = historicalMap.get(hash) || [];
-    
+    // Get historical for this property — prior Active campaigns (listings table)
+    // PLUS prior sold campaigns (raw_vow_sold), merged into one chain.
+    const history = [
+      ...(historicalMap.get(hash) || []),
+      ...(soldCampaignMap.get(hash) || []),
+    ];
+
     // Prepare current listing input
     const currentInput: CurrentListingInput = {
       listingKey: listingKey,
@@ -270,9 +401,11 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       listPrice: raw.ListPrice || 0,
       originalEntryTimestamp: raw.OriginalEntryTimestamp || null
     };
-    
-    // Calculate True DOM
-    const metrics = calculateTrueDOM(currentInput, history);
+
+    // Calculate True DOM (35-day stitch window defeats cancel-and-relist resets)
+    const metrics = calculateTrueDOM(currentInput, history, {
+      coolingOffDays: STITCH_WINDOW_DAYS,
+    });
     temporalMetrics.set(listingKey, metrics);
     
     // Add temporal data to full payload for Supabase storage

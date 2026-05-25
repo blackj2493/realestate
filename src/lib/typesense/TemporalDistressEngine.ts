@@ -20,10 +20,20 @@ import { createHash } from 'crypto';
 // ============================================================================
 
 /**
- * Cooling-off threshold in days.
- * Listings relisted within this window are considered the same campaign.
+ * Stitching window in days — the maximum gap between one campaign ending
+ * (cancellation/close) and the next relisting for the two to count as ONE
+ * continuous campaign. This is the rule that defeats the realtor
+ * cancel-and-relist tactic (relist the same address a few weeks later to reset
+ * the public DaysOnMarket clock). Default 35 (mid of the 30–40 day range we
+ * want to catch); tunable per call via calculateTrueDOM options.
  */
-export const COOLING_OFF_DAYS = 45;
+export const STITCH_WINDOW_DAYS = 35;
+
+/**
+ * @deprecated Use STITCH_WINDOW_DAYS. Retained as an alias so existing imports
+ * keep working; both now resolve to the same window.
+ */
+export const COOLING_OFF_DAYS = STITCH_WINDOW_DAYS;
 
 /**
  * Staleness threshold in days.
@@ -197,6 +207,99 @@ export function generatePropertyHashBatch(
 }
 
 // ============================================================================
+// Similar-Address Matching (catches address-tweak relists) — Phase 2
+// ============================================================================
+//
+// Layered ON TOP of the exact property_hash (never replacing it). The exact hash
+// is unit-aware (unit|number|street|city); these helpers gather *candidate*
+// relistings that the exact hash can miss — e.g. the same unit relisted with a
+// street-name format change ("King St W" vs "King Street West") — while refusing
+// to merge genuinely different units. The exact hash always stays the trust anchor;
+// fuzzy only ADDS guarded candidates.
+
+/**
+ * Loose candidate key — normalized `streetNumber|streetName|city`, WITHOUT the unit.
+ * Used ONLY to gather possible relisting candidates; never stored as a property_hash.
+ */
+export function generateLooseKey(listing: Record<string, unknown>): string {
+  const streetNumber = normalizeAddressComponent(listing.StreetNumber);
+  const streetName = normalizeAddressComponent(listing.StreetName);
+  const city = normalizeAddressComponent(listing.City);
+  if (!streetNumber || !streetName) {
+    const unparsed = normalizeAddressComponent(listing.UnparsedAddress);
+    return unparsed ? `${city}|${unparsed}` : '';
+  }
+  return `${streetNumber}|${streetName}|${city}`;
+}
+
+/** Condo/apartment/co-op detection from PropertySubType (deterministic). */
+function isCondoSubType(subType: unknown): boolean {
+  const s = String(subType ?? '').toLowerCase();
+  return s.includes('condo') || s.includes('apartment') || s.includes('co-op') || s.includes('co op');
+}
+
+/**
+ * Whether two listings' units are compatible for merging into one chain.
+ * - Condo/apartment OR a unit present on either side → require EXACT normalized
+ *   UnitNumber (distinct units NEVER merge; an empty-vs-present unit never merges).
+ * - Freehold with no unit on either side → the loose key alone suffices.
+ */
+export function unitsMatchForMerge(
+  a: { UnitNumber?: unknown; PropertySubType?: unknown },
+  b: { UnitNumber?: unknown; PropertySubType?: unknown }
+): boolean {
+  const aUnit = normalizeAddressComponent(a.UnitNumber);
+  const bUnit = normalizeAddressComponent(b.UnitNumber);
+  if (isCondoSubType(a.PropertySubType) || isCondoSubType(b.PropertySubType) || aUnit || bUnit) {
+    return aUnit !== '' && aUnit === bUnit;
+  }
+  return true;
+}
+
+/** Forward Sortation Area (first 3 postal chars), uppercased and space-stripped. */
+function fsaOf(postal: unknown): string {
+  return String(postal ?? '').toUpperCase().replace(/\s+/g, '').slice(0, 3);
+}
+
+/** A loose candidate carries enough payload to apply the merge guards. */
+export interface LooseCandidate extends HistoricalListing {
+  looseKey?: string;
+  /** Address fields used by the merge guards (UnitNumber/PropertySubType/PostalCode). */
+  matchFields?: Record<string, unknown>;
+}
+
+/**
+ * Resolves the historical candidate pool for a current listing:
+ * exact-hash matches are ALWAYS included; a loose match is added only when its
+ * loose key equals the current listing's loose key AND units are compatible AND
+ * (when both have a postal code) the FSA agrees.
+ */
+export function resolveHistoricalCandidates(
+  current: { looseKey: string; matchFields: Record<string, unknown> },
+  exactMatches: HistoricalListing[],
+  looseCandidates: LooseCandidate[]
+): HistoricalListing[] {
+  const result = [...exactMatches];
+  const seen = new Set(exactMatches.map((m) => m.listing_key));
+  const currentFsa = fsaOf(current.matchFields.PostalCode);
+
+  for (const cand of looseCandidates) {
+    if (!current.looseKey || (cand.looseKey ?? '') !== current.looseKey) continue;
+    if (seen.has(cand.listing_key)) continue;
+
+    const candFields = cand.matchFields ?? {};
+    if (!unitsMatchForMerge(current.matchFields, candFields)) continue;
+
+    const candFsa = fsaOf(candFields.PostalCode);
+    if (currentFsa && candFsa && currentFsa !== candFsa) continue;
+
+    result.push(cand);
+    seen.add(cand.listing_key);
+  }
+  return result;
+}
+
+// ============================================================================
 // Date Parsing Utilities
 // ============================================================================
 
@@ -328,7 +431,7 @@ export function calculateTrueDOM(
   historicalListings: HistoricalListing[],
   options: { coolingOffDays?: number; staleThresholdDays?: number } = {}
 ): TemporalMetrics {
-  const coolingOffDays = options.coolingOffDays ?? COOLING_OFF_DAYS;
+  const coolingOffDays = options.coolingOffDays ?? STITCH_WINDOW_DAYS;
   const staleThresholdDays = options.staleThresholdDays ?? STALE_THRESHOLD_DAYS;
   
   // Handle empty historical list
@@ -773,6 +876,54 @@ export function runTemporalTests(): void {
   console.log('   BATCH_3 price drop:', batchResults[2].total_price_drop);
   console.log('   ✅ Batch processing works correctly');
   
+  // ── Test 9: Similar-Address Matching (Phase 2) ────────────────────────────
+  console.log('\n🏷️  Test 9: Similar-Address Matching');
+
+  // Same unit + same loose key but different street-name FORMAT → exact hash differs,
+  // loose key matches → should be a candidate.
+  const condoA = { StreetNumber: '12', StreetName: 'King Street West', City: 'Toronto', UnitNumber: '1605', PropertySubType: 'Condo Apartment', PostalCode: 'M5V 3A1' };
+  const condoB = { StreetNumber: '12', StreetName: 'King St W', City: 'Toronto', UnitNumber: '1605', PropertySubType: 'Condo Apartment', PostalCode: 'M5V 3A1' };
+  console.assert(generatePropertyHash(condoA) !== generatePropertyHash(condoB), 'Street-name format diff → different exact hash');
+  console.assert(generateLooseKey(condoA) !== generateLooseKey(condoB), 'Loose key still differs on street-name format (number|street|city)');
+  console.assert(unitsMatchForMerge(condoA, condoB), 'Same unit condo → units match for merge');
+
+  // Different units in the same building → must NEVER merge.
+  const condoC = { ...condoB, UnitNumber: '1606' };
+  console.assert(!unitsMatchForMerge(condoA, condoC), 'Different condo units must NOT merge');
+
+  // Freehold, no unit either side → units compatible (loose key carries it).
+  const houseA = { StreetNumber: '45', StreetName: 'Main Street North', City: 'Brampton', PropertySubType: 'Detached' };
+  const houseB = { StreetNumber: '45', StreetName: 'Main Street North', City: 'Brampton', PropertySubType: 'Detached' };
+  console.assert(unitsMatchForMerge(houseA, houseB), 'Freehold no-unit → units compatible');
+  console.assert(generateLooseKey(houseA) === generateLooseKey(houseB), 'Same freehold address → same loose key');
+
+  // resolveHistoricalCandidates: loose candidate added only when guards pass.
+  const currentHouse = { looseKey: generateLooseKey(houseA), matchFields: houseA as Record<string, unknown> };
+  const looseCand: LooseCandidate = {
+    listing_key: 'HOUSE_OLD',
+    property_hash: 'different_exact_hash',
+    full_payload: { ListPrice: 900000, OriginalEntryTimestamp: new Date(Date.now() - 80 * 86400000).toISOString() },
+    created_at: '',
+    looseKey: generateLooseKey(houseB),
+    matchFields: houseB as Record<string, unknown>,
+  };
+  const resolved = resolveHistoricalCandidates(currentHouse, [], [looseCand]);
+  console.assert(resolved.length === 1 && resolved[0].listing_key === 'HOUSE_OLD', 'Loose candidate merged when guards pass');
+
+  // FSA mismatch blocks the merge.
+  const looseCandFarFsa: LooseCandidate = {
+    ...looseCand,
+    listing_key: 'HOUSE_OTHER_FSA',
+    matchFields: { ...houseB, PostalCode: 'L9X 1A1' },
+  };
+  const resolvedFsa = resolveHistoricalCandidates(
+    { looseKey: generateLooseKey(houseA), matchFields: { ...houseA, PostalCode: 'L6P 2Z1' } },
+    [],
+    [looseCandFarFsa]
+  );
+  console.assert(resolvedFsa.length === 0, 'FSA mismatch blocks loose merge');
+  console.log('   ✅ Similar-address matching guards behave correctly');
+
   console.log('\n' + '='.repeat(60));
   console.log('✅ All temporal distress tests completed\n');
 }
@@ -789,7 +940,11 @@ export default {
   parseTimestamp,
   daysBetween,
   groupHistoricalByHash,
+  generateLooseKey,
+  unitsMatchForMerge,
+  resolveHistoricalCandidates,
   runTemporalTests,
+  STITCH_WINDOW_DAYS,
   COOLING_OFF_DAYS,
   STALE_THRESHOLD_DAYS
 };

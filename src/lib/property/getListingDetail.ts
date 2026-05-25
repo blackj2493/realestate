@@ -24,6 +24,62 @@ import {
 } from "@/lib/condo/feeStability";
 import { calculateProForma } from "@/lib/typesense/ExtrapolatedCapRateEngine";
 import { computeDealScore, type DealScoreResult } from "@/lib/dealScore/computeDealScore";
+import { generatePropertyHash } from "@/lib/typesense/TemporalDistressEngine";
+import { ProptXClient } from "@/lib/proptx/client";
+import type { RoomData } from "@/lib/room-utils";
+
+/** One prior sold campaign for this physical property (from property_sale_history). */
+export interface SaleEvent {
+  listing_key: string;
+  list_price: number | null;
+  close_price: number | null;
+  contract_date: string | null;
+  close_date: string | null;
+  sub_type: string | null;
+}
+
+/**
+ * Prior-sale ledger. `events` carries the VOW-sensitive sold prices/dates and is
+ * stripped for anonymous users at the API/page boundary (see route.ts); `saleCount`
+ * stays so the UI can render blurred placeholder rows + a sign-in CTA.
+ */
+export interface SaleHistory {
+  available: boolean;
+  saleCount: number;
+  events: SaleEvent[];
+  lastClosePrice: number | null;
+  lastCloseDate: string | null;
+}
+
+/**
+ * List-price movement for the listing (IDX-class data, not gated). Sold prices/dates
+ * never appear here — those live in SaleHistory.events.
+ */
+export interface PriceTimeline {
+  currentPrice: number | null;
+  /** First asking in the chain (list price); null when there's no recorded change. */
+  originalPrice: number | null;
+  /** Cumulative $ off the original asking (≥0). */
+  totalPriceDrop: number;
+  /** True DOM (stitched across relists); falls back to derived DOM. */
+  trueDom: number | null;
+}
+
+/**
+ * VOW gating (CLAUDE.md §4): strip sold prices/dates for anonymous users, keeping
+ * only `saleCount` so the UI can render blurred placeholder rows + a sign-in CTA.
+ * Apply at every server→client boundary (API route + server page).
+ */
+export function gateSaleHistory(sh: SaleHistory, isAuthed: boolean): SaleHistory {
+  if (isAuthed) return sh;
+  return {
+    available: sh.available,
+    saleCount: sh.saleCount,
+    events: [],
+    lastClosePrice: null,
+    lastCloseDate: null,
+  };
+}
 
 export interface ListingDetail {
   listing_key: string;
@@ -35,6 +91,10 @@ export interface ListingDetail {
   estimate: AVMResult | null;
   feeStability: FeeStabilityResult;
   dealScore: DealScoreResult;
+  saleHistory: SaleHistory;
+  priceTimeline: PriceTimeline;
+  /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
+  rooms: RoomData[];
 }
 
 /** Days on market: prefer the feed's DaysOnMarket, else derive from entry timestamp. */
@@ -54,6 +114,36 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
     setTimeout(() => reject(new Error(`${label} timeout`)), ms);
   });
   return Promise.race([promise, timeout]);
+}
+
+/**
+ * Per-room dimensions are NOT in the stored `listings.full_payload` — they're a
+ * separate ProptX resource (/PropertyRooms). Fetch them live, best-effort: any
+ * failure/timeout degrades to [] so the page still renders. Prefer the IDX token
+ * (the detail page serves active listings); fall back to VOW.
+ */
+async function fetchListingRooms(listingKey: string): Promise<RoomData[]> {
+  const idx = process.env.PROPTX_IDX_TOKEN;
+  const vow = process.env.PROPTX_VOW_TOKEN;
+  const token = idx || vow;
+  if (!token) return [];
+  try {
+    const client = new ProptXClient(token, idx ? "IDX" : "VOW");
+    const res = await withTimeout(client.getRooms(listingKey), 6000, "Rooms");
+    const value = Array.isArray(res?.value) ? res.value : [];
+    return value.map((r) => ({
+      RoomKey: r.RoomKey,
+      RoomType: r.RoomType,
+      RoomLevel: r.RoomLevel,
+      RoomLength: r.RoomLength,
+      RoomWidth: r.RoomWidth,
+      RoomDimensions: r.RoomDimensions,
+      RoomFeatures: r.RoomFeatures,
+    }));
+  } catch (roomsErr) {
+    console.error(`[getListingDetail] Rooms fetch failed for ${listingKey}:`, roomsErr);
+    return [];
+  }
 }
 
 /**
@@ -80,6 +170,16 @@ export const getListingDetail = cache(
     if (!listing) {
       return null;
     }
+
+    // Prefer per-room dimensions already persisted into full_payload by the ETL
+    // (ingester enriches active listings via /PropertyRooms) — no external call.
+    // Rows synced before room-ingestion, and sold listings, fall back to the live
+    // /PropertyRooms fetch (kicked off in parallel, awaited just before return).
+    const storedRooms: RoomData[] = Array.isArray((listing.full_payload as Record<string, unknown>)?.["rooms"])
+      ? ((listing.full_payload as Record<string, unknown>)["rooms"] as RoomData[])
+      : [];
+    const roomsPromise: Promise<RoomData[]> =
+      storedRooms.length > 0 ? Promise.resolve(storedRooms) : fetchListingRooms(listingKey);
 
     // Best-effort PureProperty Estimate (AVM). Never blocks the listing.
     let estimate: AVMResult | null = null;
@@ -176,6 +276,68 @@ export const getListingDetail = cache(
       capRatePct: proForma.extrapolated_cap_rate > 0 ? proForma.extrapolated_cap_rate : null,
     });
 
+    // Best-effort prior-sale ledger — ONE indexed PK point-lookup on the precomputed
+    // property_sale_history table (never scans raw_vow_sold at request time, §12/Disk IO).
+    let saleHistory: SaleHistory = {
+      available: false,
+      saleCount: 0,
+      events: [],
+      lastClosePrice: null,
+      lastCloseDate: null,
+    };
+    try {
+      const propertyHash =
+        (typeof listing.property_hash === "string" && listing.property_hash) ||
+        generatePropertyHash(payload);
+      if (propertyHash) {
+        const { data: shRow } = await withTimeout(
+          supabase
+            .from("property_sale_history")
+            .select("sale_events, sale_count, last_close_price, last_close_date")
+            .eq("property_hash", propertyHash)
+            .maybeSingle(),
+          8000,
+          "Sale history"
+        );
+        if (shRow) {
+          const events = (shRow.sale_events as SaleEvent[]) ?? [];
+          saleHistory = {
+            available: events.length > 0,
+            saleCount: Number(shRow.sale_count) || events.length,
+            events,
+            lastClosePrice:
+              shRow.last_close_price != null ? Number(shRow.last_close_price) : null,
+            lastCloseDate: (shRow.last_close_date as string) ?? null,
+          };
+        }
+      }
+    } catch (saleErr) {
+      console.error(`[getListingDetail] Sale history failed for ${listingKey}:`, saleErr);
+    }
+
+    // Price timeline — list-price movement only (IDX-class). total_price_drop / true_dom
+    // are the deterministic fields the Temporal Distress Engine persisted to full_payload.
+    const totalPriceDrop =
+      typeof payload["total_price_drop"] === "number" && payload["total_price_drop"] > 0
+        ? (payload["total_price_drop"] as number)
+        : 0;
+    const trueDom =
+      typeof payload["true_dom"] === "number"
+        ? (payload["true_dom"] as number)
+        : deriveDomDays(payload);
+    const originalPrice =
+      originalListPrice && listPrice && originalListPrice > listPrice
+        ? originalListPrice
+        : totalPriceDrop > 0 && listPrice
+          ? listPrice + totalPriceDrop
+          : null;
+    const priceTimeline: PriceTimeline = {
+      currentPrice: listPrice,
+      originalPrice,
+      totalPriceDrop,
+      trueDom,
+    };
+
     return {
       listing_key: listing.listing_key,
       full_payload: payload,
@@ -186,6 +348,9 @@ export const getListingDetail = cache(
       estimate,
       feeStability,
       dealScore,
+      saleHistory,
+      priceTimeline,
+      rooms: await roomsPromise,
     };
   }
 );

@@ -15,7 +15,6 @@ import {
   Car,
   Square,
   Home,
-  Ruler,
   AlertTriangle,
   GraduationCap,
   ExternalLink,
@@ -25,29 +24,21 @@ import {
 import { cn, formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
-import CarryCostCalculator from './CarryCostCalculator';
-import DOMTimelineChart from './DOMTimelineChart';
+import UnderwritingSandbox from '@/components/Property/UnderwritingSandbox';
+import DOMTimelineChart, { type SaleMarker } from './DOMTimelineChart';
+import SaleHistorySection from '@/components/Property/SaleHistorySection';
+import type { SaleHistory, PriceTimeline } from '@/lib/property/getListingDetail';
 import ImageBentoGrid from '@/components/Property/ImageBentoGrid';
 import MediaGalleryOverlay from '@/components/Property/MediaGalleryOverlay';
 import DealScoreCard, { DealScoreBadge } from '@/components/Property/DealScoreCard';
+import ListingEstimateCard from '@/components/Property/ListingEstimateCard';
 import SocialProofBar from '@/components/Property/SocialProofBar';
+import RoomMap from '@/components/Property/RoomMap';
+import type { RoomData } from '@/lib/room-utils';
 import type { DealScoreResult } from '@/lib/dealScore/computeDealScore';
+import type { AVMResult } from '@/lib/avm/types';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
-
-interface TerminalRoom {
-  RoomType?: string;
-  RoomLevel?: string;
-  RoomDimensions?: string | null;
-  RoomLength?: number;
-  RoomWidth?: number;
-}
-
-function terminalRoomDims(r: TerminalRoom): string {
-  if (r.RoomDimensions) return r.RoomDimensions;
-  if (r.RoomLength && r.RoomWidth) return `${r.RoomLength} x ${r.RoomWidth}`;
-  return '—';
-}
 
 interface ListingTerminalProps {
   property: ListingDocument;
@@ -105,8 +96,12 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const isSelected = useCommandCenterStore((s) => s.selectedIds.has(property.id));
   const [media, setMedia] = useState<string[]>([]);
-  const [detailRooms, setDetailRooms] = useState<TerminalRoom[]>([]);
+  const [detailRooms, setDetailRooms] = useState<RoomData[]>([]);
   const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
+  const [estimate, setEstimate] = useState<AVMResult | null>(null);
+  const [saleHistory, setSaleHistory] = useState<SaleHistory | null>(null);
+  const [priceTimeline, setPriceTimeline] = useState<PriceTimeline | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   // Fetch full property details when terminal opens
@@ -150,6 +145,10 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     setMedia([]);
     setDetailRooms([]);
     setDealScore(null);
+    setEstimate(null);
+    setSaleHistory(null);
+    setPriceTimeline(null);
+    setIsAuthed(false);
     setIsGalleryOpen(false);
     (async () => {
       try {
@@ -158,9 +157,13 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
         const data = await res.json();
         if (cancelled) return;
         setMedia(Array.isArray(data?.media_urls) ? data.media_urls : []);
-        const r = data?.full_payload?.rooms;
-        setDetailRooms(Array.isArray(r) ? (r as TerminalRoom[]) : []);
+        const r = data?.rooms ?? data?.full_payload?.rooms;
+        setDetailRooms(Array.isArray(r) ? (r as RoomData[]) : []);
         setDealScore(data?.dealScore ?? null);
+        setEstimate(data?.estimate ?? null);
+        setSaleHistory(data?.saleHistory ?? null);
+        setPriceTimeline(data?.priceTimeline ?? null);
+        setIsAuthed(!!data?.isAuthed);
       } catch {
         /* keep index-only fallbacks */
       }
@@ -173,6 +176,11 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   if (!isOpen) return null;
 
   const dom = property.calculatedDOM || property.DaysOnMarket || 0;
+  // True DOM (stitched) + prior sold markers come from the API; both fall back gracefully.
+  const trueDom = priceTimeline?.trueDom ?? dom;
+  const saleMarkers: SaleMarker[] = (saleHistory?.events ?? [])
+    .filter((e) => e.close_price && e.close_price > 0 && (e.contract_date || e.close_date))
+    .map((e) => ({ date: (e.contract_date || e.close_date) as string, price: e.close_price as number }));
   const badges = detectPropertyBadges(property as Parameters<typeof detectPropertyBadges>[0]);
   const hasMortgageHelper =
     property.hasSecondarySuitePotential ||
@@ -369,39 +377,8 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
               </div>
             )}
 
-            {/* Room Ledger */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Ruler className="h-4 w-4 text-emerald-400" />
-                Room Ledger
-              </h3>
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="text-xs text-slate-500 uppercase border-b border-slate-800">
-                    <th className="py-2 text-left">Room</th>
-                    <th className="py-2 text-left">Level</th>
-                    <th className="py-2 text-right">Dimensions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {detailRooms.length > 0 ? (
-                    detailRooms.map((room, index) => (
-                      <tr key={index} className="hover:bg-slate-900/30">
-                        <td className="py-2 text-slate-200">{room.RoomType || '—'}</td>
-                        <td className="py-2 text-slate-400">{room.RoomLevel || '—'}</td>
-                        <td className="py-2 text-slate-300 font-mono text-right">{terminalRoomDims(room)}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={3} className="py-3 text-center text-xs text-slate-500">
-                        Room details unavailable for this listing.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {/* Room Dimensions — proportional, drawn-to-scale room map */}
+            <RoomMap rooms={detailRooms} className="mb-6" />
 
             {/* Unvarnished Remarks */}
             <div className="mb-6">
@@ -435,6 +412,13 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                   </div>
                 </div>
               )}
+
+              {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
+              <ListingEstimateCard
+                estimate={estimate}
+                listPrice={property.ListPrice}
+                cityRegion={property.City}
+              />
 
               {/* Property Summary Card */}
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4">
@@ -470,8 +454,9 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 </div>
               </div>
 
-              {/* Carry Cost Calculator */}
-              <CarryCostCalculator
+              {/* Underwriting Sandbox */}
+              <UnderwritingSandbox
+                listingId={property.id}
                 listPrice={property.ListPrice}
                 annualTaxes={property.TaxAnnualAmount || 0}
                 monthlyFees={property.AssociationFee || 0}
@@ -481,9 +466,16 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
               {/* DOM Timeline Chart */}
               <DOMTimelineChart
                 currentPrice={property.ListPrice}
-                originalPrice={property.OriginalListPrice}
-                dom={dom}
+                originalPrice={priceTimeline?.originalPrice ?? property.OriginalListPrice}
+                priceDrop={priceTimeline?.totalPriceDrop ?? property.TotalPriceDrop}
+                dom={trueDom}
+                saleMarkers={saleMarkers}
               />
+
+              {/* Sale History — prior sold campaigns (VOW-gated; blurred for anonymous) */}
+              {saleHistory && (saleHistory.available || saleHistory.saleCount > 0) && (
+                <SaleHistorySection saleHistory={saleHistory} isAuthed={isAuthed} />
+              )}
 
               {/* Actions */}
               <div className="space-y-2 pt-4">

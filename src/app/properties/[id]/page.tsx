@@ -11,14 +11,17 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Square, Car, Home, Ruler, AlertTriangle, Building2 } from "lucide-react";
+import { Bed, Bath, Square, Car, Home, AlertTriangle, Building2 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
-import { getListingDetail } from "@/lib/property/getListingDetail";
+import { getListingDetail, gateSaleHistory } from "@/lib/property/getListingDetail";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
-import CarryCostCalculator from "@/components/CommandCenter/CarryCostCalculator";
-import DOMTimelineChart from "@/components/CommandCenter/DOMTimelineChart";
+import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
+import RoomMap from "@/components/Property/RoomMap";
+import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
+import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import PropertyGallery from "./PropertyGallery";
@@ -30,14 +33,6 @@ import PropertyNotFound from "./PropertyNotFound";
 export const dynamic = "force-dynamic";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://pureproperty.ca").replace(/\/$/, "");
-
-interface RawRoom {
-  RoomType?: string;
-  RoomLevel?: string;
-  RoomDimensions?: string | null;
-  RoomLength?: number;
-  RoomWidth?: number;
-}
 
 interface RawListing {
   ListingKey?: string;
@@ -80,7 +75,6 @@ interface RawListing {
   StandardStatus?: string;
   DaysOnMarket?: number;
   OriginalEntryTimestamp?: string;
-  rooms?: RawRoom[];
 }
 
 function calculateDaysOnMarket(ts?: string): number {
@@ -98,12 +92,6 @@ function cleanDescription(remarks: string | undefined, max = 155): string {
   if (!remarks) return "";
   const flat = remarks.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
-}
-
-function roomDims(r: RawRoom): string {
-  if (r.RoomDimensions) return r.RoomDimensions;
-  if (r.RoomLength && r.RoomWidth) return `${r.RoomLength} x ${r.RoomWidth}`;
-  return "—";
 }
 
 // ── SEO metadata (shares the cached getListingDetail call with the page body) ──
@@ -171,7 +159,7 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
     description: cleanDescription(p.PublicRemarks, 500) || undefined,
     url: `${SITE_URL}/properties/${id}`,
     image: detail.media_urls.slice(0, 8),
-    numberOfRooms: p.RoomsTotal || p.rooms?.length || undefined,
+    numberOfRooms: p.RoomsTotal || detail.rooms.length || undefined,
     numberOfBedrooms: p.BedroomsTotal || undefined,
     numberOfBathroomsTotal: p.BathroomsTotalInteger || undefined,
     ...(p.BuildingAreaTotal
@@ -211,11 +199,21 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  // VOW gating: strip sold prices/dates for anonymous users (§4).
+  const isAuthed = !!(await getCurrentUser());
+  const saleHistory = gateSaleHistory(detail.saleHistory, isAuthed);
+  // Prior sold prices for the price-history chart — authed only (events are empty otherwise).
+  const saleMarkers: SaleMarker[] = saleHistory.events
+    .filter((e) => e.close_price && e.close_price > 0 && (e.contract_date || e.close_date))
+    .map((e) => ({ date: (e.contract_date || e.close_date) as string, price: e.close_price as number }));
+
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Address Unavailable";
   const price = p.ListPrice || 0;
   const dom = p.DaysOnMarket ?? calculateDaysOnMarket(p.OriginalEntryTimestamp);
-  const rooms = Array.isArray(p.rooms) ? p.rooms : [];
+  // True DOM (stitched across relists) from the Temporal Distress Engine; falls back to raw DOM.
+  const trueDom = detail.priceTimeline.trueDom ?? dom;
+  const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
   const jsonLd = buildJsonLd(id, detail);
 
@@ -369,29 +367,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             {/* Schools */}
             <NearbySchools listingId={id} />
 
-            {/* Room Ledger (real data) */}
-            {rooms.length > 0 && (
-              <Section title="Room Ledger" icon={<Ruler className="h-4 w-4 text-emerald-400" />}>
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
-                      <th className="py-2 text-left">Room</th>
-                      <th className="py-2 text-left">Level</th>
-                      <th className="py-2 text-right">Dimensions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50">
-                    {rooms.map((r, i) => (
-                      <tr key={i} className="hover:bg-slate-900/30">
-                        <td className="py-2 text-slate-200">{r.RoomType || "—"}</td>
-                        <td className="py-2 text-slate-400">{r.RoomLevel || "—"}</td>
-                        <td className="py-2 text-right font-mono text-slate-300">{roomDims(r)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Section>
-            )}
+            {/* Room Dimensions — proportional, drawn-to-scale room map */}
+            {rooms.length > 0 && <RoomMap rooms={rooms} className="mb-6" />}
 
             {/* Remarks */}
             <Section title="Unvarnished Remarks" icon={<AlertTriangle className="h-4 w-4 text-amber-400" />}>
@@ -416,6 +393,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {/* Deal Score — flagship signal, pinned to the top of the rail */}
               <DealScoreCard dealScore={detail.dealScore} />
 
+              {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
+              <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} />
+
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-200">
@@ -433,24 +413,31 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   />
                   <SummaryRow
                     label="True DOM"
-                    value={`${dom} days`}
-                    valueClass={dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-400"}
+                    value={`${trueDom} days`}
+                    valueClass={trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-slate-400"}
                   />
                 </div>
               </div>
 
-              <CarryCostCalculator
+              <UnderwritingSandbox
+                listingId={id}
                 listPrice={price}
                 annualTaxes={p.TaxAnnualAmount || 0}
                 monthlyFees={p.AssociationFee || 0}
                 hasSuitePotential={hasSuitePotential}
               />
 
-              <DOMTimelineChart currentPrice={price} originalPrice={p.OriginalListPrice} dom={dom} />
-
-              <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} />
+              <DOMTimelineChart
+                currentPrice={price}
+                originalPrice={detail.priceTimeline.originalPrice ?? undefined}
+                priceDrop={detail.priceTimeline.totalPriceDrop}
+                dom={trueDom}
+                saleMarkers={saleMarkers}
+              />
 
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
+
+              <SaleHistorySection saleHistory={saleHistory} isAuthed={isAuthed} />
 
               <ListingActions
                 id={id}

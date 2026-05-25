@@ -19,6 +19,13 @@ import 'dotenv/config';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { processBatch, SyncResult } from './sync';
 import {
+  getSoldAdminClient,
+  toSoldDocument,
+  importSoldBatch,
+  pruneOldSold,
+} from './soldIndexer';
+import type { SoldListingDocument } from '@/lib/typesense/soldListingsSchema';
+import {
   deriveInteriorTier,
   deriveExteriorTier,
   deriveBasementTier,
@@ -540,6 +547,127 @@ export async function fetchSoldListingsBatch(
 }
 
 // ============================================================================
+// PropertyRooms Enrichment (Active sync)
+// ============================================================================
+//
+// Per-room dimensions live in a SEPARATE RESO resource (/PropertyRooms), NOT in
+// the /Property payload. We fetch them per active page and attach `rooms` onto
+// each raw listing BEFORE the ETL runs, so they persist into listings.full_payload
+// (full_payload === raw — no transformer change needed). This removes the
+// per-detail-view external call getListingDetail used to make; it now reads
+// full_payload.rooms directly.
+//
+// Cost control: rooms are OR-batched into chunks (NOT one call per listing) with
+// nextLink pagination, mirroring the media-batch pattern. Scoped to Query A
+// (active) only — Query B (sold) is high-volume and the detail page reads active
+// rooms from full_payload; sold rooms keep the live fallback.
+
+const ROOMS_CHUNK_SIZE = 25;        // listing keys per /PropertyRooms request (short URLs, modest responses)
+const ROOMS_REQUEST_DELAY_MS = 300; // polite delay between room requests
+
+interface StoredRoom {
+  RoomKey?: string;
+  RoomType?: string | string[];
+  RoomLevel?: string | string[];
+  RoomLength?: number;
+  RoomWidth?: number;
+  RoomDimensions?: string | null;
+  RoomFeatures?: string[];
+}
+
+// Trim each /PropertyRooms record to the fields the visualizer consumes (matches
+// getListingDetail's mapping + the VOW example payload's `rooms` shape).
+function toStoredRoom(r: any): StoredRoom {
+  return {
+    RoomKey: r.RoomKey,
+    RoomType: r.RoomType,
+    RoomLevel: r.RoomLevel,
+    RoomLength: r.RoomLength,
+    RoomWidth: r.RoomWidth,
+    RoomDimensions: r.RoomDimensions ?? null,
+    RoomFeatures: r.RoomFeatures,
+  };
+}
+
+/**
+ * Fetches /PropertyRooms for a set of ListingKeys (IDX token), OR-batched into
+ * chunks with nextLink pagination. Returns Map<ListingKey, StoredRoom[]> sorted by
+ * Order. Best-effort: a failed chunk is skipped (those listings sync without rooms;
+ * the detail page's live fallback still covers them).
+ */
+async function fetchRoomsForKeys(keys: string[]): Promise<Map<string, StoredRoom[]>> {
+  const grouped = new Map<string, StoredRoom[]>();
+  const token = IDX_TOKEN;
+  if (!token || keys.length === 0) return grouped;
+
+  // Accumulate raw rooms (with Order) so we can sort per listing after grouping.
+  const rawByKey = new Map<string, any[]>();
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < keys.length; i += ROOMS_CHUNK_SIZE) {
+    chunks.push(keys.slice(i, i + ROOMS_CHUNK_SIZE));
+  }
+
+  for (const chunk of chunks) {
+    const orFilter = `(${chunk.map(k => `ListingKey eq '${k}'`).join(' or ')})`;
+    let url: string | null =
+      `${API_BASE_URL}/PropertyRooms?$filter=${encodeURIComponent(orFilter)}&$orderby=ListingKey,Order&$top=100&$count=true`;
+
+    // Follow @odata.nextLink until the chunk's rooms are exhausted (a 25-listing
+    // chunk can exceed the 100-record page cap).
+    while (url) {
+      const result: FetchResult<any> = await fetchWithRetry<any>(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!result.success || !result.data) {
+        console.warn(`   ⚠️  Rooms chunk fetch failed (non-fatal): ${result.error}`);
+        break; // skip remaining pages for this chunk
+      }
+      const rooms: any[] = result.data.value || [];
+      for (const room of rooms) {
+        const lk = room.ListingKey;
+        if (!lk) continue;
+        const arr = rawByKey.get(lk);
+        if (arr) arr.push(room);
+        else rawByKey.set(lk, [room]);
+      }
+      url = result.data['@odata.nextLink'] || null;
+      await sleep(ROOMS_REQUEST_DELAY_MS);
+    }
+  }
+
+  for (const [lk, rooms] of rawByKey) {
+    rooms.sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0));
+    grouped.set(lk, rooms.map(toStoredRoom));
+  }
+  return grouped;
+}
+
+/**
+ * Attaches `rooms` onto each raw active listing (mutates in place) so they persist
+ * into full_payload. Best-effort: any failure leaves listings room-less and is
+ * logged, never throwing — room data is non-critical and the sync must not fail on it.
+ */
+async function enrichActiveListingsWithRooms(listings: any[]): Promise<number> {
+  const keys = listings.map(l => l.ListingKey).filter(Boolean);
+  if (keys.length === 0) return 0;
+  try {
+    const roomsMap = await fetchRoomsForKeys(keys);
+    let withRooms = 0;
+    for (const listing of listings) {
+      const rooms = roomsMap.get(listing.ListingKey) || [];
+      listing.rooms = rooms;
+      if (rooms.length > 0) withRooms++;
+    }
+    return withRooms;
+  } catch (err: any) {
+    console.warn(`   ⚠️  Room enrichment failed (non-fatal): ${err.message}`);
+    return 0;
+  }
+}
+
+// ============================================================================
 // Sync State Management (Supabase)
 // ============================================================================
 
@@ -698,7 +826,14 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
         console.log('   ℹ️  No active listings found in this batch');
         break;
       }
-      
+
+      // Enrich with per-room dimensions (separate /PropertyRooms resource) so they
+      // persist into full_payload — the detail page then needs no per-view API call.
+      // Best-effort: never blocks/fails the sync.
+      console.log('   📐 Enriching batch with room dimensions...');
+      const roomsAttached = await enrichActiveListingsWithRooms(batch.listings);
+      console.log(`   📐 Rooms attached to ${roomsAttached}/${batch.listings.length} listings`);
+
       // Process batch through ETL pipeline (sync.ts)
       console.log('   🔄 Processing batch through ETL pipeline...');
       const syncResult = await processBatch(batch.listings);
@@ -762,19 +897,35 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
         result.errors.push(...syncResult.typesense.errors);
       }
       
-      // Extract sold data for raw_vow_sold (AVM anchor table)
+      // Extract sold data for raw_vow_sold (AVM anchor table). In the same pass,
+      // build lean docs for the bounded `sold_listings` Typesense collection —
+      // ListOfficeName comes straight off the in-memory raw JSON (no JSONB detoast).
       const soldRecords: SoldListingRecord[] = [];
+      const soldDocs: SoldListingDocument[] = [];
       for (const rawListing of batch.listings) {
         const soldData = extractSoldListingData(rawListing);
         if (soldData) {
           soldRecords.push(soldData);
+          const doc = toSoldDocument(soldData, rawListing.ListOfficeName ?? null);
+          if (doc) soldDocs.push(doc);
         }
       }
-      
+
       if (soldRecords.length > 0) {
         console.log(`   🏠 Found ${soldRecords.length} sold/closed listings for raw_vow_sold`);
         const upsertResult = await upsertSoldListings(supabaseClient, soldRecords);
         console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
+      }
+
+      // Index the same batch into Typesense `sold_listings` (non-fatal on error —
+      // raw_vow_sold remains the source of truth and the backfill can rebuild it).
+      if (soldDocs.length > 0) {
+        try {
+          const { success, failed } = await importSoldBatch(getSoldAdminClient(), soldDocs);
+          console.log(`   🔎 sold_listings indexed: ${success} ok, ${failed} failed`);
+        } catch (err: any) {
+          console.warn(`   ⚠️  sold_listings indexing failed (non-fatal): ${err.message}`);
+        }
       }
       
       // ─── Client-Side Pruning (PurchaseContractDate guard) ──────────────────
@@ -817,7 +968,14 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     } while (soldHasMore);
     
     console.log(`\n✅ Query B Complete: ${result.soldRecords} sold records, ${result.soldPages} pages`);
-    
+
+    // Keep the bounded sold_listings collection within its rolling window (non-fatal).
+    try {
+      await pruneOldSold(getSoldAdminClient());
+    } catch (err: any) {
+      console.warn(`   ⚠️  sold_listings prune failed (non-fatal): ${err.message}`);
+    }
+
     // ─── Finalize ───────────────────────────────────────────────────────────
     const now = new Date().toISOString();
     result.lastSyncTimestamp = now;
