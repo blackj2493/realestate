@@ -32,6 +32,7 @@ import {
   deriveHasFinishedBasement,
 } from '@/lib/avm/conditionScoring';
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
+import { fetchRoomsForKeys } from './roomsEnrichment';
 
 // ============================================================================
 // Sold Listing Types
@@ -550,99 +551,11 @@ export async function fetchSoldListingsBatch(
 // PropertyRooms Enrichment (Active sync)
 // ============================================================================
 //
-// Per-room dimensions live in a SEPARATE RESO resource (/PropertyRooms), NOT in
-// the /Property payload. We fetch them per active page and attach `rooms` onto
-// each raw listing BEFORE the ETL runs, so they persist into listings.full_payload
-// (full_payload === raw — no transformer change needed). This removes the
-// per-detail-view external call getListingDetail used to make; it now reads
-// full_payload.rooms directly.
-//
-// Cost control: rooms are OR-batched into chunks (NOT one call per listing) with
-// nextLink pagination, mirroring the media-batch pattern. Scoped to Query A
-// (active) only — Query B (sold) is high-volume and the detail page reads active
-// rooms from full_payload; sold rooms keep the live fallback.
-
-const ROOMS_CHUNK_SIZE = 25;        // listing keys per /PropertyRooms request (short URLs, modest responses)
-const ROOMS_REQUEST_DELAY_MS = 300; // polite delay between room requests
-
-interface StoredRoom {
-  RoomKey?: string;
-  RoomType?: string | string[];
-  RoomLevel?: string | string[];
-  RoomLength?: number;
-  RoomWidth?: number;
-  RoomDimensions?: string | null;
-  RoomFeatures?: string[];
-}
-
-// Trim each /PropertyRooms record to the fields the visualizer consumes (matches
-// getListingDetail's mapping + the VOW example payload's `rooms` shape).
-function toStoredRoom(r: any): StoredRoom {
-  return {
-    RoomKey: r.RoomKey,
-    RoomType: r.RoomType,
-    RoomLevel: r.RoomLevel,
-    RoomLength: r.RoomLength,
-    RoomWidth: r.RoomWidth,
-    RoomDimensions: r.RoomDimensions ?? null,
-    RoomFeatures: r.RoomFeatures,
-  };
-}
-
-/**
- * Fetches /PropertyRooms for a set of ListingKeys (IDX token), OR-batched into
- * chunks with nextLink pagination. Returns Map<ListingKey, StoredRoom[]> sorted by
- * Order. Best-effort: a failed chunk is skipped (those listings sync without rooms;
- * the detail page's live fallback still covers them).
- */
-async function fetchRoomsForKeys(keys: string[]): Promise<Map<string, StoredRoom[]>> {
-  const grouped = new Map<string, StoredRoom[]>();
-  const token = IDX_TOKEN;
-  if (!token || keys.length === 0) return grouped;
-
-  // Accumulate raw rooms (with Order) so we can sort per listing after grouping.
-  const rawByKey = new Map<string, any[]>();
-
-  const chunks: string[][] = [];
-  for (let i = 0; i < keys.length; i += ROOMS_CHUNK_SIZE) {
-    chunks.push(keys.slice(i, i + ROOMS_CHUNK_SIZE));
-  }
-
-  for (const chunk of chunks) {
-    const orFilter = `(${chunk.map(k => `ListingKey eq '${k}'`).join(' or ')})`;
-    let url: string | null =
-      `${API_BASE_URL}/PropertyRooms?$filter=${encodeURIComponent(orFilter)}&$orderby=ListingKey,Order&$top=100&$count=true`;
-
-    // Follow @odata.nextLink until the chunk's rooms are exhausted (a 25-listing
-    // chunk can exceed the 100-record page cap).
-    while (url) {
-      const result: FetchResult<any> = await fetchWithRetry<any>(url, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!result.success || !result.data) {
-        console.warn(`   ⚠️  Rooms chunk fetch failed (non-fatal): ${result.error}`);
-        break; // skip remaining pages for this chunk
-      }
-      const rooms: any[] = result.data.value || [];
-      for (const room of rooms) {
-        const lk = room.ListingKey;
-        if (!lk) continue;
-        const arr = rawByKey.get(lk);
-        if (arr) arr.push(room);
-        else rawByKey.set(lk, [room]);
-      }
-      url = result.data['@odata.nextLink'] || null;
-      await sleep(ROOMS_REQUEST_DELAY_MS);
-    }
-  }
-
-  for (const [lk, rooms] of rawByKey) {
-    rooms.sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0));
-    grouped.set(lk, rooms.map(toStoredRoom));
-  }
-  return grouped;
-}
+// fetchRoomsForKeys/toStoredRoom + their constants/types live in
+// ./roomsEnrichment so the one-time backfill script (scripts/admin/
+// backfill-listing-rooms.ts) can share them WITHOUT pulling in this file's
+// Typesense-side-effect imports. The per-batch wrapper below stays here because
+// it mutates the active-listing array in flight (ingester-specific glue).
 
 /**
  * Attaches `rooms` onto each raw active listing (mutates in place) so they persist
