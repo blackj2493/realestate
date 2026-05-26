@@ -40,6 +40,25 @@ export const MIN_DIM_ROOMS = 4;
  */
 const FEET_DIMENSION_THRESHOLD = 25;
 
+/**
+ * TRREB sometimes sends `RoomLength = 1, RoomWidth = 1` as a placeholder while
+ * stashing the actual dimensions in the `RoomDimensions` string field — a row we
+ * cannot trust until Phase 1.6 stores `RoomLengthWidthUnits` and parses the
+ * string. Drop any room whose BOTH dimensions are at or below this threshold.
+ * The number is generous (a real bedroom edge is rarely under ~2 m / 6.5 ft);
+ * any non-placeholder valid edge will exceed 1.5 in any unit.
+ */
+const PLACEHOLDER_DIM_THRESHOLD = 1.5;
+
+/**
+ * If a LivingAreaRange bucket midpoint exists and the rooms-sum GLA collapses to
+ * a fraction this small of it, the room list is almost certainly incomplete (only
+ * a few rooms have dimensions filled in). Reject the rooms path and let the
+ * resolver fall through to the calibrated bucket — better a coarse but right-
+ * sized fallback than a confidently-wrong measurement.
+ */
+const ROOMS_SUM_VS_BUCKET_FLOOR = 0.5;
+
 export type LivingAreaSource = 'exact' | 'rooms' | 'calibrated' | 'range_midpoint' | 'none';
 
 export interface LivingAreaResult {
@@ -94,6 +113,8 @@ export function roomSumSqft(
     const l = Number(r.RoomLength);
     const w = Number(r.RoomWidth);
     if (!(l > 0) || !(w > 0)) continue;
+    // Drop placeholder rows (TRREB stashes real dims in RoomDimensions string when both are 1).
+    if (l <= PLACEHOLDER_DIM_THRESHOLD && w <= PLACEHOLDER_DIM_THRESHOLD) continue;
     maxDim = Math.max(maxDim, l, w);
     if (isAboveGrade(r.RoomLevel)) above.push({ l, w });
   }
@@ -116,11 +137,22 @@ export function resolveLivingArea(
   const exact = numOrNull(payload?.['BuildingAreaTotal']);
   if (exact !== null && inRange(exact)) return { sqft: exact, source: 'exact' };
 
-  // 2. Measured GLA from room dimensions (allowed to fall below the MLS range).
+  // 2. Measured GLA from room dimensions. Allowed to fall below the MLS range
+  //    in either direction, but if a LivingAreaRange bucket exists and the
+  //    rooms-sum is dramatically smaller than its midpoint, the room list is
+  //    almost certainly incomplete — fall through to calibrated rather than
+  //    publish a confidently-wrong measurement.
   const rs = roomSumSqft(opts.rooms);
   if (rs) {
     const gla = Math.round(rs.rawSqft * GLA_GROSSUP);
-    if (inRange(gla)) return { sqft: gla, source: 'rooms' };
+    if (inRange(gla)) {
+      const bucketMid = parseLivingAreaRange(payload?.['LivingAreaRange']);
+      const bucketSane = bucketMid !== null && inRange(bucketMid);
+      if (!bucketSane || gla >= bucketMid * ROOMS_SUM_VS_BUCKET_FLOOR) {
+        return { sqft: gla, source: 'rooms' };
+      }
+      // else: rooms sum is < 50% of the seller-declared bucket → distrust, fall through.
+    }
   }
 
   // 3. Calibrated typical GLA for this market / sub-type / range bucket.

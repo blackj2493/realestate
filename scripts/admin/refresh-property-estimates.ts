@@ -70,6 +70,37 @@ const TERMINAL_STATUSES = new Set([
   'suspended',
 ]);
 
+// PropertySubType values the AVM was never trained on — running them produces
+// noise (Parking Space estimated at $24k from a stray coefficient, etc.). For
+// these we still compute GLA/ppsf so Compare can render $/sqft when present, but
+// we leave estimated_value=null so the UI shows "Insufficient comps".
+const NON_RESIDENTIAL_SUBTYPES = new Set([
+  'parking space',
+  'locker',
+  'vacant land',
+  'mobile/trailer',
+  'sale of business',
+]);
+const NON_RESIDENTIAL_PREFIXES = ['office', 'commercial', 'industrial', 'retail'];
+
+function isNonResidentialSubType(sub: unknown): boolean {
+  const s = String(sub ?? '').toLowerCase().trim();
+  if (!s) return false;
+  if (NON_RESIDENTIAL_SUBTYPES.has(s)) return true;
+  return NON_RESIDENTIAL_PREFIXES.some((p) => s.startsWith(p));
+}
+
+// Schema bounds for property_estimates NUMERIC columns. Used to drop rows that
+// would otherwise sink an entire 200-row upsert batch on overflow.
+const MAX_ESTIMATED_VALUE = 9_999_999_999.99;   // NUMERIC(12,2)
+const MAX_ANCHOR_PRICE    = 9_999_999_999.99;   // NUMERIC(12,2)
+const MAX_PPSF            = 99_999_999.99;      // NUMERIC(10,2)
+const MAX_GLA_SQFT        = 99_999_999.99;      // NUMERIC(10,2)
+const MAX_R2_SCORE        = 9.9999;             // NUMERIC(5,4)
+// total_adjustment_pct is NUMERIC(8,5) → ±999.99999. Clamp to ±5 (well above the
+// model's ±0.4 ADJ_CLAMP) so a math anomaly never overflows the column.
+const ADJUSTMENT_PCT_CLAMP = 5;
+
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
 const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
@@ -286,13 +317,18 @@ async function main() {
       if (glaSqft) withGla++;
 
       // PureProperty Estimate (AVM), via the shared request-time core.
+      // Gate out non-residential sub-types (Parking/Locker/Vacant Land/etc.) — the
+      // AVM has no meaningful coefficients there and the noise contaminates Compare.
       let estimated_value: number | null = null;
       let confidence: string | null = null;
       let r2_score: number | null = null;
       let anchor_price: number | null = null;
       let total_adjustment_pct: number | null = null;
 
-      const avmInput = mapListingToAVMInput(payload, { rooms, bucketCalibration });
+      const subType = payload['PropertySubType'];
+      const avmEligible = !isNonResidentialSubType(subType);
+
+      const avmInput = avmEligible ? mapListingToAVMInput(payload, { rooms, bucketCalibration }) : null;
       if (avmInput) {
         const staticData = await getMarketStatic(avmInput.cityRegion, avmInput.propertySubType);
         const anchor = await fetchAnchor(
@@ -309,17 +345,43 @@ async function main() {
         };
         const est = estimateFromMarketData(avmInput, market);
         if (est.estimatedValue > 0) {
-          estimated_value = est.estimatedValue;
-          confidence = est.confidence;
-          r2_score = est.r2Score;
-          anchor_price = est.anchorPrice;
-          total_adjustment_pct = Math.round(est.totalAdjustmentPct * 100000) / 100000;
-          withEstimate++;
+          // Per-row write guards: clamp + validate before any value reaches the
+          // upsert. NUMERIC overflow on a single row used to sink the whole 200-row
+          // batch (~75 batches × 200 = ~15k phantom "failures"). Now bad math drops
+          // the AVM result with a one-line warning and we keep the GLA/ppsf row.
+          const clampedAdjPct = Math.max(
+            -ADJUSTMENT_PCT_CLAMP,
+            Math.min(ADJUSTMENT_PCT_CLAMP, est.totalAdjustmentPct)
+          );
+          const r2 = est.r2Score;
+
+          if (
+            est.estimatedValue <= MAX_ESTIMATED_VALUE &&
+            (est.anchorPrice === null || Math.abs(est.anchorPrice) <= MAX_ANCHOR_PRICE) &&
+            (r2 === null || Math.abs(r2) <= MAX_R2_SCORE)
+          ) {
+            estimated_value = est.estimatedValue;
+            confidence = est.confidence;
+            r2_score = r2;
+            anchor_price = est.anchorPrice;
+            total_adjustment_pct = Math.round(clampedAdjPct * 100000) / 100000;
+            withEstimate++;
+          } else {
+            console.warn(
+              `   ⚠️  ${r.listing_key} AVM result out of column bounds — dropping estimate ` +
+                `(est=${est.estimatedValue}, anchor=${est.anchorPrice}, r2=${r2})`
+            );
+          }
         }
       }
 
+      // Guard GLA / ppsf the same way — a 0.5-sqft listing × $50M list would
+      // overflow ppsf NUMERIC(10,2). Drop the offending column rather than the row.
+      const safeGla = glaSqft !== null && glaSqft <= MAX_GLA_SQFT ? glaSqft : null;
+      const safePpsf = ppsf !== null && ppsf <= MAX_PPSF ? ppsf : null;
+
       // Skip totally-empty rows (no estimate AND no GLA) — nothing useful to cache.
-      if (estimated_value === null && glaSqft === null) continue;
+      if (estimated_value === null && safeGla === null) continue;
 
       const row: EstimateRow = {
         listing_key: r.listing_key,
@@ -328,8 +390,8 @@ async function main() {
         r2_score,
         anchor_price,
         total_adjustment_pct,
-        gla_sqft: glaSqft,
-        ppsf,
+        gla_sqft: safeGla,
+        ppsf: safePpsf,
         computed_at: new Date().toISOString(),
       };
       batch.push(row);
