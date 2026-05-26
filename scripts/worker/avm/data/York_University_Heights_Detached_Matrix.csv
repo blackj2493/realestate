@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0333
-lot_width,-0.0166
-bedrooms_above_grade,-0.0031
-bathrooms_total_integer,0.046
-parking_total,0.0269
-basement_score,0.016
-interior_score,0.01
-exterior_score,-0.0014
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+York University Heights,Detached,building_area_total,0.040168,1827.5862,639.583136
+York University Heights,Detached,lot_width,-0.014885,49.2282,15.921012
+York University Heights,Detached,bedrooms_above_grade,0.016443,3.7949,1.651409
+York University Heights,Detached,bathrooms_total_integer,0.011616,3.3333,2.017022
+York University Heights,Detached,parking_total,-0.004378,4.6154,1.595111
+York University Heights,Detached,basement_score,0.013313,6.2308,1.731481
+York University Heights,Detached,interior_score,0.009072,2.9744,0.919509
+York University Heights,Detached,exterior_score,0.007596,2.5128,0.81246

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0472
-lot_width,0.0
-bedrooms_above_grade,-0.0145
-bathrooms_total_integer,0.072
-parking_total,0.0082
-basement_score,0.0
-interior_score,0.0229
-exterior_score,0.0217
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Dorset Park,Condo Apartment,building_area_total,0.018218,894.5,184.241011
+Dorset Park,Condo Apartment,lot_width,0.0,0.0,1.0
+Dorset Park,Condo Apartment,bedrooms_above_grade,0.008694,1.82,0.589576
+Dorset Park,Condo Apartment,bathrooms_total_integer,0.063231,1.34,0.473709
+Dorset Park,Condo Apartment,parking_total,0.016703,1.04,0.195959
+Dorset Park,Condo Apartment,basement_score,-0.001819,1.04,0.397995
+Dorset Park,Condo Apartment,interior_score,0.01818,3.58,0.763937
+Dorset Park,Condo Apartment,exterior_score,0.022536,1.97,0.590847

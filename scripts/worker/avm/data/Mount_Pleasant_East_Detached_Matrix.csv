@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0388
-lot_width,0.0371
-bedrooms_above_grade,0.0399
-bathrooms_total_integer,0.1546
-parking_total,0.013
-basement_score,-0.0079
-interior_score,0.0152
-exterior_score,-0.011
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mount Pleasant East,Detached,building_area_total,0.091016,1875.7353,639.133872
+Mount Pleasant East,Detached,lot_width,0.037997,26.5807,5.429986
+Mount Pleasant East,Detached,bedrooms_above_grade,0.02454,3.1915,0.828695
+Mount Pleasant East,Detached,bathrooms_total_integer,0.118464,3.234,1.143209
+Mount Pleasant East,Detached,parking_total,0.018921,2.0213,1.202645
+Mount Pleasant East,Detached,basement_score,0.024231,6.1596,1.852561
+Mount Pleasant East,Detached,interior_score,0.046037,3.5745,1.189398
+Mount Pleasant East,Detached,exterior_score,0.008008,2.7128,0.882722

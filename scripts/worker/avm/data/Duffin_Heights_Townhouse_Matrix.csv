@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0208
-lot_width,0.0
-bedrooms_above_grade,0.0226
-bathrooms_total_integer,0.0212
-parking_total,0.0231
-basement_score,-0.0035
-interior_score,0.0151
-exterior_score,0.0166
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Duffin Heights,Townhouse,building_area_total,0.026894,1313.4259,372.405002
+Duffin Heights,Townhouse,lot_width,0.0,21.9552,4.490639
+Duffin Heights,Townhouse,bedrooms_above_grade,0.044874,2.4454,0.560574
+Duffin Heights,Townhouse,bathrooms_total_integer,0.044027,2.7563,0.647768
+Duffin Heights,Townhouse,parking_total,0.034588,1.9412,0.791702
+Duffin Heights,Townhouse,basement_score,0.022662,2.0588,1.950195
+Duffin Heights,Townhouse,interior_score,-0.003813,3.8824,0.567709
+Duffin Heights,Townhouse,exterior_score,0.01689,2.3361,1.006511

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1382
-lot_width,0.0548
-bedrooms_above_grade,-0.0227
-bathrooms_total_integer,0.0385
-parking_total,0.0196
-basement_score,-0.0086
-interior_score,0.0106
-exterior_score,0.0124
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South V,Detached,building_area_total,0.123196,2393.092,790.234792
+South V,Detached,lot_width,0.033668,67.1108,72.964971
+South V,Detached,bedrooms_above_grade,-0.002658,3.4839,0.791255
+South V,Detached,bathrooms_total_integer,0.089918,3.5108,1.137055
+South V,Detached,parking_total,0.034901,5.5188,2.344273
+South V,Detached,basement_score,0.004299,5.1075,1.359652
+South V,Detached,interior_score,0.014555,3.7473,1.171167
+South V,Detached,exterior_score,0.047081,2.7043,0.825457

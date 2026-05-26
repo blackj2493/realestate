@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0495
-lot_width,0.026
-bedrooms_above_grade,0.0203
-bathrooms_total_integer,0.005
-parking_total,0.0054
-basement_score,-0.0156
-interior_score,0.0131
-exterior_score,0.0256
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3808 - Hunt Club Park,Detached,building_area_total,0.047982,2032.2581,505.062817
+3808 - Hunt Club Park,Detached,lot_width,0.016353,42.1585,10.217235
+3808 - Hunt Club Park,Detached,bedrooms_above_grade,0.032679,3.5208,0.499566
+3808 - Hunt Club Park,Detached,bathrooms_total_integer,-0.00052,3.2917,0.610953
+3808 - Hunt Club Park,Detached,parking_total,0.009905,5.0625,1.420186
+3808 - Hunt Club Park,Detached,basement_score,-0.039057,4.7083,0.575845
+3808 - Hunt Club Park,Detached,interior_score,0.012589,3.8333,0.745356
+3808 - Hunt Club Park,Detached,exterior_score,0.020392,2.5625,0.788095

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Tyandaga,Townhouse,building_area_total,0.105323,1625.0,256.372277
+Tyandaga,Townhouse,lot_width,0.0,16.7544,5.346686
+Tyandaga,Townhouse,bedrooms_above_grade,0.022175,2.907,0.473186
+Tyandaga,Townhouse,bathrooms_total_integer,-0.013909,3.093,0.640274
+Tyandaga,Townhouse,parking_total,0.027075,2.2093,0.508447
+Tyandaga,Townhouse,basement_score,0.011359,4.7674,1.998106
+Tyandaga,Townhouse,interior_score,0.023144,3.8605,0.794791
+Tyandaga,Townhouse,exterior_score,-0.020138,2.9302,1.02061

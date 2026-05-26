@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+St. Thomas,Townhouse,building_area_total,0.048445,1627.8409,310.205939
+St. Thomas,Townhouse,lot_width,0.028877,25.3533,4.830729
+St. Thomas,Townhouse,bedrooms_above_grade,-0.042645,2.88,0.474974
+St. Thomas,Townhouse,bathrooms_total_integer,0.056531,3.4,0.663325
+St. Thomas,Townhouse,parking_total,-0.010816,2.76,0.970773
+St. Thomas,Townhouse,basement_score,0.008901,4.78,0.501597
+St. Thomas,Townhouse,interior_score,-0.011916,3.64,1.053755
+St. Thomas,Townhouse,exterior_score,0.014258,2.36,0.557136

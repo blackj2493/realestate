@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0876
-lot_width,0.0604
-bedrooms_above_grade,0.0039
-bathrooms_total_integer,0.0076
-parking_total,0.0056
-basement_score,0.006
-interior_score,0.005
-exterior_score,0.0231
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1015 - RO River Oaks,Detached,building_area_total,0.090598,2587.6387,673.813901
+1015 - RO River Oaks,Detached,lot_width,0.030681,46.8671,14.463762
+1015 - RO River Oaks,Detached,bedrooms_above_grade,0.016548,3.8353,0.591052
+1015 - RO River Oaks,Detached,bathrooms_total_integer,0.032919,3.8059,0.761555
+1015 - RO River Oaks,Detached,parking_total,0.02144,4.8176,1.524018
+1015 - RO River Oaks,Detached,basement_score,0.010989,5.2588,1.159644
+1015 - RO River Oaks,Detached,interior_score,0.016625,4.0176,0.916987
+1015 - RO River Oaks,Detached,exterior_score,0.011389,2.8882,0.972796

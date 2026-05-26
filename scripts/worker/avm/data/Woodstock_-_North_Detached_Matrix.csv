@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0678
-lot_width,0.0323
-bedrooms_above_grade,-0.0122
-bathrooms_total_integer,0.1148
-parking_total,0.0242
-basement_score,0.0111
-interior_score,0.0225
-exterior_score,0.0212
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Woodstock - North,Detached,building_area_total,0.08969,1797.6534,678.480849
+Woodstock - North,Detached,lot_width,0.01208,54.9682,29.016372
+Woodstock - North,Detached,bedrooms_above_grade,0.006172,3.1302,0.809039
+Woodstock - North,Detached,bathrooms_total_integer,0.102381,2.5702,0.994418
+Woodstock - North,Detached,parking_total,0.024956,4.4411,2.918335
+Woodstock - North,Detached,basement_score,0.025487,4.8657,1.261534
+Woodstock - North,Detached,interior_score,0.036286,3.469,0.960517
+Woodstock - North,Detached,exterior_score,0.026985,2.5785,0.904553

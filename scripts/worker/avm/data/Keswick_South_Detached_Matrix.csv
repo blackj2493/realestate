@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0409
-lot_width,0.0217
-bedrooms_above_grade,0.0202
-bathrooms_total_integer,0.0775
-parking_total,0.0339
-basement_score,0.0399
-interior_score,0.0243
-exterior_score,0.0077
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Keswick South,Detached,building_area_total,0.074951,1718.8053,683.181578
+Keswick South,Detached,lot_width,0.005264,52.6396,17.903755
+Keswick South,Detached,bedrooms_above_grade,0.023586,3.1138,0.69789
+Keswick South,Detached,bathrooms_total_integer,0.071278,2.4793,1.024486
+Keswick South,Detached,parking_total,0.044798,5.3966,2.241379
+Keswick South,Detached,basement_score,0.045072,3.8207,2.280862
+Keswick South,Detached,interior_score,0.030667,3.5138,0.976349
+Keswick South,Detached,exterior_score,0.020384,2.3966,0.853788

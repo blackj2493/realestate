@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7706 - Barrhaven - Longfields,Townhouse,building_area_total,0.028523,1516.3636,282.690731
+7706 - Barrhaven - Longfields,Townhouse,lot_width,0.000175,22.7922,9.257164
+7706 - Barrhaven - Longfields,Townhouse,bedrooms_above_grade,0.038219,2.8228,0.545627
+7706 - Barrhaven - Longfields,Townhouse,bathrooms_total_integer,0.033673,2.8228,0.651376
+7706 - Barrhaven - Longfields,Townhouse,parking_total,0.008325,2.6392,0.873074
+7706 - Barrhaven - Longfields,Townhouse,basement_score,0.037524,4.481,1.117873
+7706 - Barrhaven - Longfields,Townhouse,interior_score,0.009535,3.8101,0.56425
+7706 - Barrhaven - Longfields,Townhouse,exterior_score,0.012819,2.2342,0.647954

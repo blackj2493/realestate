@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East Woodbridge,Townhouse,building_area_total,0.055963,1538.6792,419.528206
+East Woodbridge,Townhouse,lot_width,-0.006153,24.4321,6.232236
+East Woodbridge,Townhouse,bedrooms_above_grade,0.058077,2.7679,0.462565
+East Woodbridge,Townhouse,bathrooms_total_integer,0.029313,3.0179,0.719401
+East Woodbridge,Townhouse,parking_total,0.011952,2.0893,0.950128
+East Woodbridge,Townhouse,basement_score,0.012938,4.7143,2.616666
+East Woodbridge,Townhouse,interior_score,0.023586,3.6429,1.025193
+East Woodbridge,Townhouse,exterior_score,0.00121,2.4464,0.822011

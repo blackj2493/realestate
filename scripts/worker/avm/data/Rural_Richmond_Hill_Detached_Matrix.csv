@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.018
-lot_width,0.0738
-bedrooms_above_grade,-0.0013
-bathrooms_total_integer,0.1668
-parking_total,0.0381
-basement_score,0.0241
-interior_score,0.0028
-exterior_score,-0.0078
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Richmond Hill,Detached,building_area_total,0.047631,3075.0,870.450357
+Rural Richmond Hill,Detached,lot_width,0.036334,91.0749,78.940428
+Rural Richmond Hill,Detached,bedrooms_above_grade,-0.015659,4.1064,0.77827
+Rural Richmond Hill,Detached,bathrooms_total_integer,0.096286,4.7234,1.266628
+Rural Richmond Hill,Detached,parking_total,0.079535,7.7021,4.876845
+Rural Richmond Hill,Detached,basement_score,0.03712,5.5532,2.019148
+Rural Richmond Hill,Detached,interior_score,-0.001237,3.9787,1.175809
+Rural Richmond Hill,Detached,exterior_score,-0.025648,2.5532,1.027464

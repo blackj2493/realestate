@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.19
-lot_width,0.0
-bedrooms_above_grade,0.0268
-bathrooms_total_integer,0.0154
-parking_total,-0.0055
-basement_score,0.0009
-interior_score,0.0339
-exterior_score,-0.0295
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Appleby,Condo Apartment,building_area_total,0.152125,1119.2979,264.783807
+Appleby,Condo Apartment,lot_width,0.0,0.0,1.0
+Appleby,Condo Apartment,bedrooms_above_grade,0.076014,1.6596,0.473852
+Appleby,Condo Apartment,bathrooms_total_integer,0.058913,1.766,0.423399
+Appleby,Condo Apartment,parking_total,0.022983,1.0532,0.224415
+Appleby,Condo Apartment,basement_score,0.005838,1.0851,0.57722
+Appleby,Condo Apartment,interior_score,0.044764,3.5638,0.905756
+Appleby,Condo Apartment,exterior_score,0.019165,2.7021,0.932051

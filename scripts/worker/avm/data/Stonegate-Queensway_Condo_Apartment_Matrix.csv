@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2843
-lot_width,0.0
-bedrooms_above_grade,-0.0413
-bathrooms_total_integer,0.0158
-parking_total,0.0179
-basement_score,0.0
-interior_score,0.0218
-exterior_score,-0.0135
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stonegate-Queensway,Condo Apartment,building_area_total,0.279563,895.0617,281.925143
+Stonegate-Queensway,Condo Apartment,lot_width,0.0,0.0,1.0
+Stonegate-Queensway,Condo Apartment,bedrooms_above_grade,-0.002724,1.7037,0.597204
+Stonegate-Queensway,Condo Apartment,bathrooms_total_integer,-0.00788,1.6667,0.566558
+Stonegate-Queensway,Condo Apartment,parking_total,0.012299,1.0988,0.460942
+Stonegate-Queensway,Condo Apartment,basement_score,0.0,1.0,1.0
+Stonegate-Queensway,Condo Apartment,interior_score,0.005296,4.1481,0.787418
+Stonegate-Queensway,Condo Apartment,exterior_score,-0.019061,2.6543,0.891115

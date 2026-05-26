@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0247
-lot_width,0.0684
-bedrooms_above_grade,-0.0019
-bathrooms_total_integer,0.0025
-parking_total,0.0056
-basement_score,-0.0037
-interior_score,-0.0043
-exterior_score,0.0131
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1010 - JM Joshua Meadows,Detached,building_area_total,0.032628,3076.2439,478.858846
+1010 - JM Joshua Meadows,Detached,lot_width,0.0154,37.8928,10.674163
+1010 - JM Joshua Meadows,Detached,bedrooms_above_grade,-0.003248,4.0465,0.21059
+1010 - JM Joshua Meadows,Detached,bathrooms_total_integer,0.00686,3.9535,0.568699
+1010 - JM Joshua Meadows,Detached,parking_total,0.045456,3.6744,0.769202
+1010 - JM Joshua Meadows,Detached,basement_score,-0.0166,4.9535,1.010491
+1010 - JM Joshua Meadows,Detached,interior_score,0.007577,4.4186,0.722803
+1010 - JM Joshua Meadows,Detached,exterior_score,0.02493,2.6047,0.810958

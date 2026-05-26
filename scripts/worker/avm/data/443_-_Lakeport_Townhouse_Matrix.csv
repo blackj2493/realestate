@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0295
-lot_width,0.0
-bedrooms_above_grade,-0.0633
-bathrooms_total_integer,-0.0036
-parking_total,0.1047
-basement_score,-0.0167
-interior_score,0.0284
-exterior_score,0.0046
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+443 - Lakeport,Townhouse,building_area_total,0.043993,1191.3208,206.650537
+443 - Lakeport,Townhouse,lot_width,0.0,22.494,1.553816
+443 - Lakeport,Townhouse,bedrooms_above_grade,-0.042811,2.7925,0.526952
+443 - Lakeport,Townhouse,bathrooms_total_integer,0.024643,2.2453,0.430255
+443 - Lakeport,Townhouse,parking_total,0.080944,1.3774,0.62121
+443 - Lakeport,Townhouse,basement_score,0.002819,4.434,0.687062
+443 - Lakeport,Townhouse,interior_score,0.039338,3.4151,0.856363
+443 - Lakeport,Townhouse,exterior_score,0.019461,2.6226,0.975674

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Trinity-Bellwoods,Townhouse,building_area_total,0.074931,1438.4615,349.947164
+Trinity-Bellwoods,Townhouse,lot_width,-0.015256,15.7934,2.189104
+Trinity-Bellwoods,Townhouse,bedrooms_above_grade,-0.01284,3.0308,0.876518
+Trinity-Bellwoods,Townhouse,bathrooms_total_integer,0.047362,2.5231,0.843212
+Trinity-Bellwoods,Townhouse,parking_total,0.031702,0.8462,0.644044
+Trinity-Bellwoods,Townhouse,basement_score,0.004335,5.3846,2.209715
+Trinity-Bellwoods,Townhouse,interior_score,0.048359,3.5231,1.110893
+Trinity-Bellwoods,Townhouse,exterior_score,0.036672,2.3692,0.66954

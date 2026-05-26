@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0824
-lot_width,0.0316
-bedrooms_above_grade,0.0132
-bathrooms_total_integer,0.0188
-parking_total,-0.006
-basement_score,0.0066
-interior_score,0.0092
-exterior_score,-0.0113
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1009 - JC Joshua Creek,Detached,building_area_total,0.066559,3323.8824,819.087235
+1009 - JC Joshua Creek,Detached,lot_width,0.015209,52.3407,13.955691
+1009 - JC Joshua Creek,Detached,bedrooms_above_grade,0.036537,3.9718,0.691433
+1009 - JC Joshua Creek,Detached,bathrooms_total_integer,0.024051,4.2817,0.808112
+1009 - JC Joshua Creek,Detached,parking_total,-0.00788,4.7887,1.17384
+1009 - JC Joshua Creek,Detached,basement_score,-0.001098,6.0986,1.737368
+1009 - JC Joshua Creek,Detached,interior_score,0.009376,4.0704,0.939343
+1009 - JC Joshua Creek,Detached,exterior_score,0.009092,3.0845,0.915385

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0364
-lot_width,0.0
-bedrooms_above_grade,0.0054
-bathrooms_total_integer,0.0116
-parking_total,0.0065
-basement_score,0.0089
-interior_score,0.008
-exterior_score,-0.0151
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1019 - WM Westmount,Townhouse,building_area_total,0.064959,1543.7895,382.077108
+1019 - WM Westmount,Townhouse,lot_width,0.018641,22.5673,5.305094
+1019 - WM Westmount,Townhouse,bedrooms_above_grade,0.074764,2.7563,0.50925
+1019 - WM Westmount,Townhouse,bathrooms_total_integer,0.016737,2.9688,0.665412
+1019 - WM Westmount,Townhouse,parking_total,0.018808,2.1844,0.728058
+1019 - WM Westmount,Townhouse,basement_score,0.029534,4.7313,2.895518
+1019 - WM Westmount,Townhouse,interior_score,0.010849,4.05,0.589491
+1019 - WM Westmount,Townhouse,exterior_score,0.01187,2.2125,0.801464

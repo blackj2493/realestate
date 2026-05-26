@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2383
-lot_width,0.0
-bedrooms_above_grade,-0.0177
-bathrooms_total_integer,0.0019
-parking_total,0.0186
-basement_score,0.0
-interior_score,0.0173
-exterior_score,-0.0364
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Guildwood,Condo Apartment,building_area_total,0.226598,1259.5238,304.575836
+Guildwood,Condo Apartment,lot_width,0.0,0.0,1.0
+Guildwood,Condo Apartment,bedrooms_above_grade,-0.031398,1.8333,0.372678
+Guildwood,Condo Apartment,bathrooms_total_integer,-0.000108,1.9762,0.152455
+Guildwood,Condo Apartment,parking_total,0.058065,1.5,0.5
+Guildwood,Condo Apartment,basement_score,0.0,1.0,1.0
+Guildwood,Condo Apartment,interior_score,0.012764,4.0238,0.73963
+Guildwood,Condo Apartment,exterior_score,-0.02599,2.2381,1.171274

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0176
-lot_width,-0.0285
-bedrooms_above_grade,0.0233
-bathrooms_total_integer,0.0135
-parking_total,0.0475
-basement_score,0.0029
-interior_score,0.0174
-exterior_score,0.0151
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1118 - Avalon East,Detached,building_area_total,0.029739,2359.6154,489.836295
+1118 - Avalon East,Detached,lot_width,0.00286,41.9245,11.271015
+1118 - Avalon East,Detached,bedrooms_above_grade,0.028103,3.5377,0.689196
+1118 - Avalon East,Detached,bathrooms_total_integer,0.011368,3.5094,0.633131
+1118 - Avalon East,Detached,parking_total,0.054821,4.7358,1.326806
+1118 - Avalon East,Detached,basement_score,0.0136,4.8774,0.405221
+1118 - Avalon East,Detached,interior_score,0.002097,3.9528,0.850994
+1118 - Avalon East,Detached,exterior_score,0.012612,2.7453,0.801665

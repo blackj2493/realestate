@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0154
-lot_width,0.0
-bedrooms_above_grade,0.0406
-bathrooms_total_integer,0.0854
-parking_total,0.0005
-basement_score,0.0
-interior_score,0.0468
-exterior_score,0.0219
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Eglinton East,Condo Apartment,building_area_total,0.013806,968.9655,233.936992
+Eglinton East,Condo Apartment,lot_width,0.0,0.0,1.0
+Eglinton East,Condo Apartment,bedrooms_above_grade,0.040613,1.8103,0.628542
+Eglinton East,Condo Apartment,bathrooms_total_integer,0.072854,1.6034,0.489181
+Eglinton East,Condo Apartment,parking_total,0.002384,1.0,0.262613
+Eglinton East,Condo Apartment,basement_score,0.0,1.0,1.0
+Eglinton East,Condo Apartment,interior_score,0.033856,3.7759,0.743781
+Eglinton East,Condo Apartment,exterior_score,0.032581,1.7759,0.810345

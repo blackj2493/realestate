@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ashburnham Ward 4,Townhouse,building_area_total,0.018864,1147.3684,189.857068
+Ashburnham Ward 4,Townhouse,lot_width,0.0,19.006,0.632569
+Ashburnham Ward 4,Townhouse,bedrooms_above_grade,-0.04381,2.2895,0.60297
+Ashburnham Ward 4,Townhouse,bathrooms_total_integer,0.086825,1.9211,0.421874
+Ashburnham Ward 4,Townhouse,parking_total,0.076458,1.8684,0.766779
+Ashburnham Ward 4,Townhouse,basement_score,-0.027811,2.9211,2.453586
+Ashburnham Ward 4,Townhouse,interior_score,0.020859,3.5526,0.750346
+Ashburnham Ward 4,Townhouse,exterior_score,-0.012283,2.7105,0.824235

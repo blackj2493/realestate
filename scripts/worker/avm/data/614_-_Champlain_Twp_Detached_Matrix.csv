@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0502
-lot_width,0.0848
-bedrooms_above_grade,0.0229
-bathrooms_total_integer,0.1551
-parking_total,0.0259
-basement_score,0.007
-interior_score,0.0441
-exterior_score,-0.0082
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+614 - Champlain Twp,Detached,building_area_total,0.083539,1774.1935,712.828415
+614 - Champlain Twp,Detached,lot_width,0.049631,225.0084,233.260319
+614 - Champlain Twp,Detached,bedrooms_above_grade,0.023527,2.866,0.832694
+614 - Champlain Twp,Detached,bathrooms_total_integer,0.118181,2.3093,0.865857
+614 - Champlain Twp,Detached,parking_total,0.044179,8.8866,10.052313
+614 - Champlain Twp,Detached,basement_score,0.005188,4.866,1.440424
+614 - Champlain Twp,Detached,interior_score,0.037225,3.5155,1.006304
+614 - Champlain Twp,Detached,exterior_score,0.039261,2.6289,0.955932

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0908
-lot_width,0.0
-bedrooms_above_grade,-0.0036
-bathrooms_total_integer,0.2247
-parking_total,0.0
-basement_score,0.0
-interior_score,0.0453
-exterior_score,-0.0294
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Royal Orchard,Condo Apartment,building_area_total,0.080064,1207.2917,200.777028
+Royal Orchard,Condo Apartment,lot_width,0.0,0.0,1.0
+Royal Orchard,Condo Apartment,bedrooms_above_grade,0.030859,2.4792,0.53966
+Royal Orchard,Condo Apartment,bathrooms_total_integer,0.220483,2.0417,0.199826
+Royal Orchard,Condo Apartment,parking_total,0.0,1.0,1.0
+Royal Orchard,Condo Apartment,basement_score,0.0,1.0,1.0
+Royal Orchard,Condo Apartment,interior_score,0.043566,3.6667,0.824958
+Royal Orchard,Condo Apartment,exterior_score,0.01162,2.7083,0.934486

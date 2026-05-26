@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7711 - Barrhaven - Half Moon Bay,Townhouse,building_area_total,0.01424,1533.4507,284.810403
+7711 - Barrhaven - Half Moon Bay,Townhouse,lot_width,0.010113,23.4644,5.584749
+7711 - Barrhaven - Half Moon Bay,Townhouse,bedrooms_above_grade,0.028185,2.8186,0.536681
+7711 - Barrhaven - Half Moon Bay,Townhouse,bathrooms_total_integer,0.031139,2.9116,0.622526
+7711 - Barrhaven - Half Moon Bay,Townhouse,parking_total,0.00247,2.4791,0.608681
+7711 - Barrhaven - Half Moon Bay,Townhouse,basement_score,0.029745,4.0326,1.771574
+7711 - Barrhaven - Half Moon Bay,Townhouse,interior_score,0.011312,3.8698,0.676356
+7711 - Barrhaven - Half Moon Bay,Townhouse,exterior_score,-0.000945,2.1256,0.499345

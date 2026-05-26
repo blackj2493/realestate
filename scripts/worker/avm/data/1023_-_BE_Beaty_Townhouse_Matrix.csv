@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1023 - BE Beaty,Townhouse,building_area_total,0.023834,1389.36,212.145399
+1023 - BE Beaty,Townhouse,lot_width,-0.003417,23.0564,4.571757
+1023 - BE Beaty,Townhouse,bedrooms_above_grade,0.02198,2.8727,0.333278
+1023 - BE Beaty,Townhouse,bathrooms_total_integer,0.008989,2.7818,0.7309
+1023 - BE Beaty,Townhouse,parking_total,0.003539,2.4182,0.679329
+1023 - BE Beaty,Townhouse,basement_score,0.020714,4.1091,1.591714
+1023 - BE Beaty,Townhouse,interior_score,0.00195,3.7818,0.7309
+1023 - BE Beaty,Townhouse,exterior_score,0.004512,2.1091,0.77864

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fergus,Townhouse,building_area_total,0.047894,1528.991,372.429591
+Fergus,Townhouse,lot_width,-0.000669,22.9187,8.16618
+Fergus,Townhouse,bedrooms_above_grade,-0.013984,2.7538,0.702321
+Fergus,Townhouse,bathrooms_total_integer,0.011251,2.7231,0.690768
+Fergus,Townhouse,parking_total,0.036874,2.4462,0.911985
+Fergus,Townhouse,basement_score,0.047294,4.4154,1.275718
+Fergus,Townhouse,interior_score,0.024185,3.4308,0.743572
+Fergus,Townhouse,exterior_score,0.001361,2.4,0.627572

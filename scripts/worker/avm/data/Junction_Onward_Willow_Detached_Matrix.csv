@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0494
-lot_width,0.0173
-bedrooms_above_grade,-0.0126
-bathrooms_total_integer,0.0223
-parking_total,-0.0151
-basement_score,0.0277
-interior_score,0.0154
-exterior_score,0.0249
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Junction/Onward Willow,Detached,building_area_total,0.046487,1252.183,359.726386
+Junction/Onward Willow,Detached,lot_width,0.020975,53.6702,15.390882
+Junction/Onward Willow,Detached,bedrooms_above_grade,0.018148,2.8152,0.624314
+Junction/Onward Willow,Detached,bathrooms_total_integer,0.045752,1.8696,0.646351
+Junction/Onward Willow,Detached,parking_total,-0.010952,3.7391,1.614268
+Junction/Onward Willow,Detached,basement_score,0.032463,5.1739,1.619237
+Junction/Onward Willow,Detached,interior_score,0.018006,3.087,0.996212
+Junction/Onward Willow,Detached,exterior_score,0.043359,2.2826,0.631184

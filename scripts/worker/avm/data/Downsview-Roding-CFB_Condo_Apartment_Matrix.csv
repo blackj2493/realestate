@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0429
-lot_width,0.0
-bedrooms_above_grade,0.0172
-bathrooms_total_integer,0.0906
-parking_total,-0.0042
-basement_score,0.0
-interior_score,-0.017
-exterior_score,0.0187
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Downsview-Roding-CFB,Condo Apartment,building_area_total,0.040889,658.0,165.789023
+Downsview-Roding-CFB,Condo Apartment,lot_width,0.0,0.0,1.0
+Downsview-Roding-CFB,Condo Apartment,bedrooms_above_grade,0.018914,1.36,0.538888
+Downsview-Roding-CFB,Condo Apartment,bathrooms_total_integer,0.066032,1.46,0.498397
+Downsview-Roding-CFB,Condo Apartment,parking_total,0.003835,0.92,0.305941
+Downsview-Roding-CFB,Condo Apartment,basement_score,0.0,1.0,1.0
+Downsview-Roding-CFB,Condo Apartment,interior_score,-0.009233,3.74,0.743236
+Downsview-Roding-CFB,Condo Apartment,exterior_score,0.019657,2.44,0.930806

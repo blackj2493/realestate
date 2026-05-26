@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Humber-Clairville,Townhouse,building_area_total,0.031314,1398.5714,164.093055
+West Humber-Clairville,Townhouse,lot_width,0.0,17.83,5.947332
+West Humber-Clairville,Townhouse,bedrooms_above_grade,-0.023268,3.2195,0.413916
+West Humber-Clairville,Townhouse,bathrooms_total_integer,0.09024,2.9024,0.849817
+West Humber-Clairville,Townhouse,parking_total,0.040987,1.6341,0.956521
+West Humber-Clairville,Townhouse,basement_score,-0.034951,4.3659,1.692971
+West Humber-Clairville,Townhouse,interior_score,0.035513,3.439,0.884798
+West Humber-Clairville,Townhouse,exterior_score,0.011532,2.1707,0.580262

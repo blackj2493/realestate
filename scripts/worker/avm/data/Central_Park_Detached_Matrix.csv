@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0841
-lot_width,0.0298
-bedrooms_above_grade,0.0063
-bathrooms_total_integer,0.0502
-parking_total,0.0268
-basement_score,0.0124
-interior_score,-0.011
-exterior_score,-0.005
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central Park,Detached,building_area_total,0.100482,1448.9891,512.566592
+Central Park,Detached,lot_width,0.012933,38.0366,13.409905
+Central Park,Detached,bedrooms_above_grade,-0.016869,3.3551,0.562097
+Central Park,Detached,bathrooms_total_integer,0.071041,2.6667,0.801569
+Central Park,Detached,parking_total,0.044249,4.2681,1.709055
+Central Park,Detached,basement_score,0.030491,5.413,1.468156
+Central Park,Detached,interior_score,0.01013,3.3261,0.933771
+Central Park,Detached,exterior_score,0.002852,2.6739,0.772377

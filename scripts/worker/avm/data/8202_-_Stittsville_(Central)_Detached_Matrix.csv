@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0708
-lot_width,0.0342
-bedrooms_above_grade,0.023
-bathrooms_total_integer,0.0243
-parking_total,0.0097
-basement_score,-0.0028
-interior_score,0.0211
-exterior_score,0.0068
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+8202 - Stittsville (Central),Detached,building_area_total,0.069035,2235.1852,639.706937
+8202 - Stittsville (Central),Detached,lot_width,0.04096,64.6931,51.191723
+8202 - Stittsville (Central),Detached,bedrooms_above_grade,0.01075,3.4597,0.817147
+8202 - Stittsville (Central),Detached,bathrooms_total_integer,0.047967,3.1935,0.643546
+8202 - Stittsville (Central),Detached,parking_total,0.035763,5.4113,1.373787
+8202 - Stittsville (Central),Detached,basement_score,-0.010034,4.8226,0.86181
+8202 - Stittsville (Central),Detached,interior_score,0.030889,3.8145,0.936422
+8202 - Stittsville (Central),Detached,exterior_score,0.007663,3.2339,0.833849

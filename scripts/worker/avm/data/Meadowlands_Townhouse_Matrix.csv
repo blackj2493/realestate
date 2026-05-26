@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Meadowlands,Townhouse,building_area_total,0.023513,1612.431,356.373695
+Meadowlands,Townhouse,lot_width,-0.007164,21.6749,5.669963
+Meadowlands,Townhouse,bedrooms_above_grade,-0.008383,2.7667,0.460676
+Meadowlands,Townhouse,bathrooms_total_integer,0.026798,3.0333,0.515321
+Meadowlands,Townhouse,parking_total,0.02867,2.5667,0.989388
+Meadowlands,Townhouse,basement_score,0.019604,4.4833,1.648147
+Meadowlands,Townhouse,interior_score,0.026646,3.8167,0.921804
+Meadowlands,Townhouse,exterior_score,0.015936,2.25,0.808806

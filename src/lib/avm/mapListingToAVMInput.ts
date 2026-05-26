@@ -44,11 +44,18 @@ export function mapListingToAVMInput(
   // Anchor + matrix lookups key on these — without them no estimate is possible.
   if (!cityRegion || !rawPropertySubType) return null;
 
+  // Municipality — drives the city-level trend de-staling. Optional: TRREB
+  // payloads almost always have it, but if missing the anchor pipeline falls
+  // back to treating cityRegion as the trend group.
+  const cityRaw = typeof payload.City === 'string' ? payload.City.trim() : '';
+  const city = cityRaw || null;
+
   const lotWidthRaw = numOrNull(payload.LotWidth);
   const lotWidth = lotWidthRaw !== null && lotWidthRaw > 0 ? lotWidthRaw : null;
 
   return {
     cityRegion,
+    city,
     propertySubType: normalizePropertySubType(rawPropertySubType),
     rawPropertySubType,
     buildingAreaTotal: resolveLivingArea(payload, opts).sqft,

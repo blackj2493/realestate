@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0204
-lot_width,0.0759
-bedrooms_above_grade,0.0294
-bathrooms_total_integer,0.1122
-parking_total,0.019
-basement_score,0.0241
-interior_score,0.0271
-exterior_score,0.0314
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East End-Danforth,Detached,building_area_total,0.034297,1541.8367,403.852233
+East End-Danforth,Detached,lot_width,0.040694,26.5233,9.724549
+East End-Danforth,Detached,bedrooms_above_grade,0.050687,3.0706,0.732253
+East End-Danforth,Detached,bathrooms_total_integer,0.076003,2.6471,1.037031
+East End-Danforth,Detached,parking_total,0.03088,1.5588,0.918476
+East End-Danforth,Detached,basement_score,0.000719,6.1412,1.64605
+East End-Danforth,Detached,interior_score,0.064496,3.3412,1.163695
+East End-Danforth,Detached,exterior_score,0.035538,2.4235,0.962551

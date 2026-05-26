@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Innis-Shore,Townhouse,building_area_total,0.034703,1447.08,251.383758
+Innis-Shore,Townhouse,lot_width,0.019551,22.9082,5.374584
+Innis-Shore,Townhouse,bedrooms_above_grade,0.003041,2.8644,0.535443
+Innis-Shore,Townhouse,bathrooms_total_integer,0.022868,2.9661,0.68806
+Innis-Shore,Townhouse,parking_total,0.004703,2.3559,0.575273
+Innis-Shore,Townhouse,basement_score,0.021148,3.3898,2.08316
+Innis-Shore,Townhouse,interior_score,-0.004645,3.7966,0.707817
+Innis-Shore,Townhouse,exterior_score,0.001052,1.9661,0.843039

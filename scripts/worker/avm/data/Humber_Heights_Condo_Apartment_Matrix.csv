@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0176
-lot_width,0.0
-bedrooms_above_grade,0.0089
-bathrooms_total_integer,0.0
-parking_total,-0.0024
-basement_score,0.0
-interior_score,0.0416
-exterior_score,0.0261
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Humber Heights,Condo Apartment,building_area_total,-0.000458,1229.3019,168.853133
+Humber Heights,Condo Apartment,lot_width,0.0,0.0,1.0
+Humber Heights,Condo Apartment,bedrooms_above_grade,0.009327,2.3396,0.547495
+Humber Heights,Condo Apartment,bathrooms_total_integer,0.028667,1.9623,0.190557
+Humber Heights,Condo Apartment,parking_total,-0.010237,1.0566,0.231084
+Humber Heights,Condo Apartment,basement_score,0.0,1.0,1.0
+Humber Heights,Condo Apartment,interior_score,0.03381,3.6226,0.782507
+Humber Heights,Condo Apartment,exterior_score,0.026003,2.3774,0.95614

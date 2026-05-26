@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1455
-lot_width,0.0809
-bedrooms_above_grade,0.0236
-bathrooms_total_integer,0.0994
-parking_total,0.0218
-basement_score,0.0444
-interior_score,0.0273
-exterior_score,0.0446
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Blue Mountains,Detached,building_area_total,0.171485,2501.2285,984.373105
+Blue Mountains,Detached,lot_width,0.061352,120.1161,160.973869
+Blue Mountains,Detached,bedrooms_above_grade,0.025815,3.513,1.053897
+Blue Mountains,Detached,bathrooms_total_integer,0.114224,3.1565,1.268969
+Blue Mountains,Detached,parking_total,0.000116,5.9804,3.995194
+Blue Mountains,Detached,basement_score,0.033258,4.5043,1.812392
+Blue Mountains,Detached,interior_score,0.052726,3.8435,1.088208
+Blue Mountains,Detached,exterior_score,0.05098,3.0957,0.973331

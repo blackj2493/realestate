@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0371
-lot_width,0.0191
-bedrooms_above_grade,-0.0105
-bathrooms_total_integer,0.0614
-parking_total,0.0263
-basement_score,0.0192
-interior_score,0.0219
-exterior_score,0.0235
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ashburnham Ward 4,Detached,building_area_total,0.042627,1260.6952,456.319909
+Ashburnham Ward 4,Detached,lot_width,0.014501,54.1165,20.896072
+Ashburnham Ward 4,Detached,bedrooms_above_grade,-0.012159,2.7902,0.704382
+Ashburnham Ward 4,Detached,bathrooms_total_integer,0.073452,2.1652,0.76441
+Ashburnham Ward 4,Detached,parking_total,0.010043,3.9487,1.623845
+Ashburnham Ward 4,Detached,basement_score,0.033863,5.4464,1.858087
+Ashburnham Ward 4,Detached,interior_score,0.027664,3.1518,0.87841
+Ashburnham Ward 4,Detached,exterior_score,0.023659,2.5848,0.802864

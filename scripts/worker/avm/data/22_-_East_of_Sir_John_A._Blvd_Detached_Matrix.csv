@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0488
-lot_width,-0.0459
-bedrooms_above_grade,0.0498
-bathrooms_total_integer,0.0476
-parking_total,0.02
-basement_score,0.0289
-interior_score,0.0309
-exterior_score,0.0071
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+22 - East of Sir John A. Blvd,Detached,building_area_total,0.042456,1181.2673,370.259763
+22 - East of Sir John A. Blvd,Detached,lot_width,-0.017155,39.8906,11.466791
+22 - East of Sir John A. Blvd,Detached,bedrooms_above_grade,0.058089,2.7652,0.936304
+22 - East of Sir John A. Blvd,Detached,bathrooms_total_integer,0.047131,1.7121,0.571154
+22 - East of Sir John A. Blvd,Detached,parking_total,0.001817,2.8068,1.289009
+22 - East of Sir John A. Blvd,Detached,basement_score,0.046588,4.4167,1.918971
+22 - East of Sir John A. Blvd,Detached,interior_score,0.042883,3.0758,0.82224
+22 - East of Sir John A. Blvd,Detached,exterior_score,0.019575,2.5682,0.653582

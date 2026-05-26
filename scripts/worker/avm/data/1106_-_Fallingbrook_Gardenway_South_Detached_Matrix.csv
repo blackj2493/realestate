@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0117
-lot_width,-0.0288
-bedrooms_above_grade,0.0561
-bathrooms_total_integer,0.0142
-parking_total,0.0173
-basement_score,0.0032
-interior_score,0.0209
-exterior_score,0.0074
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1106 - Fallingbrook/Gardenway South,Detached,building_area_total,0.04189,2034.0426,458.385973
+1106 - Fallingbrook/Gardenway South,Detached,lot_width,0.005539,40.3592,8.945041
+1106 - Fallingbrook/Gardenway South,Detached,bedrooms_above_grade,0.035197,3.3671,0.696778
+1106 - Fallingbrook/Gardenway South,Detached,bathrooms_total_integer,0.02765,3.2025,0.752712
+1106 - Fallingbrook/Gardenway South,Detached,parking_total,0.020858,5.1139,1.211625
+1106 - Fallingbrook/Gardenway South,Detached,basement_score,0.005852,4.8608,0.470232
+1106 - Fallingbrook/Gardenway South,Detached,interior_score,0.023093,3.9114,0.697008
+1106 - Fallingbrook/Gardenway South,Detached,exterior_score,0.012618,2.6456,0.872041

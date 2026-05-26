@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1036 - SC Scott,Townhouse,building_area_total,0.014136,1749.3429,229.138878
+1036 - SC Scott,Townhouse,lot_width,0.027805,24.3961,4.505271
+1036 - SC Scott,Townhouse,bedrooms_above_grade,0.010791,3.0732,0.260417
+1036 - SC Scott,Townhouse,bathrooms_total_integer,-0.001102,3.2439,0.482902
+1036 - SC Scott,Townhouse,parking_total,-0.006034,2.5854,0.623742
+1036 - SC Scott,Townhouse,basement_score,0.008946,4.5122,1.363674
+1036 - SC Scott,Townhouse,interior_score,0.027675,3.7073,1.064823
+1036 - SC Scott,Townhouse,exterior_score,0.005796,2.5854,0.854703

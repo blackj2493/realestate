@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0882
-lot_width,0.0
-bedrooms_above_grade,0.0423
-bathrooms_total_integer,0.0065
-parking_total,0.0256
-basement_score,0.0
-interior_score,0.022
-exterior_score,0.0105
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stouffville,Condo Apartment,building_area_total,0.055323,1015.625,195.297916
+Stouffville,Condo Apartment,lot_width,0.0,0.0,1.0
+Stouffville,Condo Apartment,bedrooms_above_grade,0.04381,1.7917,0.45453
+Stouffville,Condo Apartment,bathrooms_total_integer,0.014026,1.9375,0.474616
+Stouffville,Condo Apartment,parking_total,0.03336,1.25,0.433013
+Stouffville,Condo Apartment,basement_score,0.0,1.0,1.0
+Stouffville,Condo Apartment,interior_score,0.028162,4.3333,0.687184
+Stouffville,Condo Apartment,exterior_score,-0.003494,1.7708,0.549226

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.3403
-lot_width,-0.0041
-bedrooms_above_grade,0.0361
-bathrooms_total_integer,0.045
-parking_total,0.0108
-basement_score,0.0107
-interior_score,-0.0078
-exterior_score,0.0459
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+14 - Central City East,Condo Apartment,building_area_total,0.156037,883.8841,669.989061
+14 - Central City East,Condo Apartment,lot_width,0.0,0.0,1.0
+14 - Central City East,Condo Apartment,bedrooms_above_grade,0.05314,1.6885,0.690473
+14 - Central City East,Condo Apartment,bathrooms_total_integer,0.054709,1.4098,0.554477
+14 - Central City East,Condo Apartment,parking_total,0.061994,0.7213,0.483537
+14 - Central City East,Condo Apartment,basement_score,0.038766,1.2295,0.875784
+14 - Central City East,Condo Apartment,interior_score,0.046596,3.6721,0.762251
+14 - Central City East,Condo Apartment,exterior_score,0.09283,2.6066,0.979774

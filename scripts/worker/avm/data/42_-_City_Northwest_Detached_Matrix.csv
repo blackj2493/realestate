@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0953
-lot_width,-0.0285
-bedrooms_above_grade,0.0091
-bathrooms_total_integer,0.0217
-parking_total,0.0439
-basement_score,0.0128
-interior_score,0.0261
-exterior_score,0.0089
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+42 - City Northwest,Detached,building_area_total,0.087737,1919.8669,614.086634
+42 - City Northwest,Detached,lot_width,0.001108,50.5024,113.663876
+42 - City Northwest,Detached,bedrooms_above_grade,0.014381,3.0886,0.702853
+42 - City Northwest,Detached,bathrooms_total_integer,0.035574,2.8413,0.824391
+42 - City Northwest,Detached,parking_total,0.018802,4.0959,1.388548
+42 - City Northwest,Detached,basement_score,0.010998,5.3358,1.440637
+42 - City Northwest,Detached,interior_score,0.039185,3.5978,0.966522
+42 - City Northwest,Detached,exterior_score,0.017122,2.5387,0.701457

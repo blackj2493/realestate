@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0259
-lot_width,0.0
-bedrooms_above_grade,0.0064
-bathrooms_total_integer,0.0077
-parking_total,0.0832
-basement_score,-0.0183
-interior_score,-0.0051
-exterior_score,-0.009
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7701 - Barrhaven - Pheasant Run,Townhouse,building_area_total,0.014175,1257.8125,297.150366
+7701 - Barrhaven - Pheasant Run,Townhouse,lot_width,0.0,31.7971,4.376867
+7701 - Barrhaven - Pheasant Run,Townhouse,bedrooms_above_grade,0.025697,2.9592,0.197864
+7701 - Barrhaven - Pheasant Run,Townhouse,bathrooms_total_integer,0.017739,2.3265,0.681767
+7701 - Barrhaven - Pheasant Run,Townhouse,parking_total,0.090235,1.5102,0.785648
+7701 - Barrhaven - Pheasant Run,Townhouse,basement_score,-0.002902,4.1837,1.48012
+7701 - Barrhaven - Pheasant Run,Townhouse,interior_score,0.017929,3.7551,0.590075
+7701 - Barrhaven - Pheasant Run,Townhouse,exterior_score,-0.009833,2.2245,0.580827

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0092
-lot_width,-0.06
-bedrooms_above_grade,-0.0155
-bathrooms_total_integer,0.0842
-parking_total,0.0586
-basement_score,0.024
-interior_score,0.1009
-exterior_score,0.0095
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+901 - Smiths Falls,Detached,building_area_total,-0.047715,1425.8333,509.819549
+901 - Smiths Falls,Detached,lot_width,0.00939,64.1303,48.000029
+901 - Smiths Falls,Detached,bedrooms_above_grade,0.014053,2.8703,0.808357
+901 - Smiths Falls,Detached,bathrooms_total_integer,0.130546,1.9568,0.755714
+901 - Smiths Falls,Detached,parking_total,0.056876,3.7784,1.797767
+901 - Smiths Falls,Detached,basement_score,0.04595,4.6378,1.411794
+901 - Smiths Falls,Detached,interior_score,0.110545,3.2595,0.945961
+901 - Smiths Falls,Detached,exterior_score,-0.004291,2.3838,0.770228

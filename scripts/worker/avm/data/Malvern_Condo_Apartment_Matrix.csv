@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0376
-lot_width,0.0
-bedrooms_above_grade,0.0851
-bathrooms_total_integer,0.0186
-parking_total,-0.0048
-basement_score,0.0
-interior_score,0.0215
-exterior_score,0.018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Malvern,Condo Apartment,building_area_total,0.005575,896.748,183.765917
+Malvern,Condo Apartment,lot_width,0.0,0.0,1.0
+Malvern,Condo Apartment,bedrooms_above_grade,0.037562,1.6829,0.560445
+Malvern,Condo Apartment,bathrooms_total_integer,0.03451,1.5366,0.49866
+Malvern,Condo Apartment,parking_total,0.004297,1.065,0.354755
+Malvern,Condo Apartment,basement_score,0.0,1.0,1.0
+Malvern,Condo Apartment,interior_score,0.026088,3.6341,0.677973
+Malvern,Condo Apartment,exterior_score,-0.005665,2.252,0.619382

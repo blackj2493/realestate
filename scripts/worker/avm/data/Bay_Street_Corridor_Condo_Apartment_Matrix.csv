@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1663
-lot_width,0.0
-bedrooms_above_grade,0.0883
-bathrooms_total_integer,0.0223
-parking_total,0.0436
-basement_score,-0.0002
-interior_score,0.0319
-exterior_score,0.0311
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bay Street Corridor,Condo Apartment,building_area_total,0.17872,792.8883,340.612121
+Bay Street Corridor,Condo Apartment,lot_width,0.0,0.0,1.0
+Bay Street Corridor,Condo Apartment,bedrooms_above_grade,0.060193,1.4055,0.624256
+Bay Street Corridor,Condo Apartment,bathrooms_total_integer,0.059126,1.5202,0.569127
+Bay Street Corridor,Condo Apartment,parking_total,0.03375,0.5953,0.529999
+Bay Street Corridor,Condo Apartment,basement_score,0.003013,1.0194,0.277792
+Bay Street Corridor,Condo Apartment,interior_score,0.038845,4.0323,0.910674
+Bay Street Corridor,Condo Apartment,exterior_score,0.016364,2.0533,0.555834

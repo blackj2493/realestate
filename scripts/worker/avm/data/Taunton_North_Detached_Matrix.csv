@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0396
-lot_width,0.0992
-bedrooms_above_grade,0.0066
-bathrooms_total_integer,0.0474
-parking_total,0.009
-basement_score,0.0125
-interior_score,0.0244
-exterior_score,0.0105
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Taunton North,Detached,building_area_total,0.078271,2142.5,584.117925
+Taunton North,Detached,lot_width,0.05393,40.3321,12.076348
+Taunton North,Detached,bedrooms_above_grade,0.007914,3.4444,0.713821
+Taunton North,Detached,bathrooms_total_integer,0.037395,3.4949,0.757104
+Taunton North,Detached,parking_total,0.01832,4.3586,1.555441
+Taunton North,Detached,basement_score,0.023654,5.1616,1.461334
+Taunton North,Detached,interior_score,0.011216,3.8687,0.928194
+Taunton North,Detached,exterior_score,0.027623,2.9495,0.957414

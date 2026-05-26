@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0222
-lot_width,0.0859
-bedrooms_above_grade,0.0929
-bathrooms_total_integer,0.1199
-parking_total,0.0718
-basement_score,0.0046
-interior_score,0.0153
-exterior_score,0.0277
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+King City,Detached,building_area_total,0.051656,3058.5238,1147.609605
+King City,Detached,lot_width,0.088081,109.4873,80.454898
+King City,Detached,bedrooms_above_grade,0.058954,3.8586,0.840996
+King City,Detached,bathrooms_total_integer,0.141341,4.4646,1.695586
+King City,Detached,parking_total,0.047196,8.899,5.509395
+King City,Detached,basement_score,0.006995,6.404,1.969049
+King City,Detached,interior_score,0.028814,4.0707,1.130411
+King City,Detached,exterior_score,0.015543,2.7576,1.137878

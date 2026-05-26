@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     // (skipped). Treat the supplied property type as both raw and normalized.
     const input: AVMInput = {
       cityRegion: v.cityRegion,
+      city: v.city ?? null,
       propertySubType: normalizePropertySubType(v.propertySubType),
       rawPropertySubType: v.propertySubType,
       buildingAreaTotal: null,

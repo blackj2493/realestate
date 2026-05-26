@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0273
-lot_width,0.0292
-bedrooms_above_grade,0.0144
-bathrooms_total_integer,0.021
-parking_total,0.0162
-basement_score,0.0147
-interior_score,0.0092
-exterior_score,0.0446
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+769 - Prince Charles,Detached,building_area_total,0.034227,1460.3059,521.82695
+769 - Prince Charles,Detached,lot_width,0.029925,63.0898,16.230012
+769 - Prince Charles,Detached,bedrooms_above_grade,-0.022699,3.1534,0.77187
+769 - Prince Charles,Detached,bathrooms_total_integer,0.051639,2.1193,0.614661
+769 - Prince Charles,Detached,parking_total,0.026698,4.7784,1.894756
+769 - Prince Charles,Detached,basement_score,0.020824,5.2784,1.664055
+769 - Prince Charles,Detached,interior_score,0.02063,3.1307,0.994286
+769 - Prince Charles,Detached,exterior_score,0.04521,2.5398,0.928469

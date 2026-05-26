@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0745
-lot_width,0.0
-bedrooms_above_grade,-0.0109
-bathrooms_total_integer,0.0234
-parking_total,0.0003
-basement_score,0.0
-interior_score,0.0566
-exterior_score,0.0264
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rockcliffe-Smythe,Condo Apartment,building_area_total,0.055552,1031.25,143.041733
+Rockcliffe-Smythe,Condo Apartment,lot_width,0.0,0.0,1.0
+Rockcliffe-Smythe,Condo Apartment,bedrooms_above_grade,0.010437,1.925,0.685109
+Rockcliffe-Smythe,Condo Apartment,bathrooms_total_integer,0.033132,1.6,0.489898
+Rockcliffe-Smythe,Condo Apartment,parking_total,0.005499,1.025,0.156125
+Rockcliffe-Smythe,Condo Apartment,basement_score,0.0,1.0,1.0
+Rockcliffe-Smythe,Condo Apartment,interior_score,0.034565,3.825,0.862772
+Rockcliffe-Smythe,Condo Apartment,exterior_score,0.001901,2.525,1.161626

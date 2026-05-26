@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1385
-lot_width,0.0
-bedrooms_above_grade,0.0831
-bathrooms_total_integer,0.0304
-parking_total,0.0065
-basement_score,0.0
-interior_score,0.015
-exterior_score,-0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mimico,Condo Apartment,building_area_total,0.120549,820.5057,296.343191
+Mimico,Condo Apartment,lot_width,0.0,0.0,1.0
+Mimico,Condo Apartment,bedrooms_above_grade,0.068704,1.4759,0.537764
+Mimico,Condo Apartment,bathrooms_total_integer,0.049044,1.5526,0.559087
+Mimico,Condo Apartment,parking_total,0.011901,1.0923,0.313064
+Mimico,Condo Apartment,basement_score,0.0,1.0,1.0
+Mimico,Condo Apartment,interior_score,0.020532,4.1349,0.808496
+Mimico,Condo Apartment,exterior_score,-0.001347,3.1861,1.055709

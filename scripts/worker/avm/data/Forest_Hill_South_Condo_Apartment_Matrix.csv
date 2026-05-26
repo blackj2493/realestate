@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2131
-lot_width,0.0
-bedrooms_above_grade,-0.0455
-bathrooms_total_integer,0.0574
-parking_total,0.0264
-basement_score,0.0
-interior_score,0.0317
-exterior_score,0.0363
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Forest Hill South,Condo Apartment,building_area_total,0.158618,1347.449,355.756054
+Forest Hill South,Condo Apartment,lot_width,0.0,0.0,1.0
+Forest Hill South,Condo Apartment,bedrooms_above_grade,0.063809,2.0,0.451754
+Forest Hill South,Condo Apartment,bathrooms_total_integer,-0.015556,1.9796,0.514674
+Forest Hill South,Condo Apartment,parking_total,0.119356,1.2653,0.441496
+Forest Hill South,Condo Apartment,basement_score,0.0,1.0,1.0
+Forest Hill South,Condo Apartment,interior_score,0.065896,4.102,1.054531
+Forest Hill South,Condo Apartment,exterior_score,0.078115,2.4898,0.90627

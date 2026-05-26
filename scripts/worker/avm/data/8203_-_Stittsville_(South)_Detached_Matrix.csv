@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0712
-lot_width,0.0459
-bedrooms_above_grade,0.0254
-bathrooms_total_integer,0.0124
-parking_total,0.0174
-basement_score,0.0107
-interior_score,0.0256
-exterior_score,0.0048
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+8203 - Stittsville (South),Detached,building_area_total,0.091051,2398.0198,707.279014
+8203 - Stittsville (South),Detached,lot_width,0.017374,56.5348,36.638634
+8203 - Stittsville (South),Detached,bedrooms_above_grade,0.013425,3.5466,0.686609
+8203 - Stittsville (South),Detached,bathrooms_total_integer,0.034743,3.472,0.819499
+8203 - Stittsville (South),Detached,parking_total,0.028298,5.6025,2.000868
+8203 - Stittsville (South),Detached,basement_score,0.031762,5.0807,0.984193
+8203 - Stittsville (South),Detached,interior_score,0.02561,3.9627,0.977309
+8203 - Stittsville (South),Detached,exterior_score,0.019799,2.8261,0.881594

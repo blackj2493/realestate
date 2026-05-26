@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,building_area_total,0.034294,1472.0,239.407602
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,lot_width,0.002241,23.6847,9.142759
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,bedrooms_above_grade,0.025442,2.9737,0.323374
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,bathrooms_total_integer,0.009479,3.0658,0.614207
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,parking_total,0.005824,2.6974,0.628694
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,basement_score,0.010054,4.7105,1.20105
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,interior_score,0.00983,3.7105,0.624411
+7703 - Barrhaven - Cedargrove/Fraserdale,Townhouse,exterior_score,0.009557,2.2763,0.680532

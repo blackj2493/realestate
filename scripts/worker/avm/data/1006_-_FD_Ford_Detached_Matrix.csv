@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1863
-lot_width,0.035
-bedrooms_above_grade,0.0201
-bathrooms_total_integer,0.0145
-parking_total,0.0758
-basement_score,0.008
-interior_score,0.0311
-exterior_score,0.0367
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1006 - FD Ford,Detached,building_area_total,0.117399,2732.7704,991.728912
+1006 - FD Ford,Detached,lot_width,0.048849,69.6514,21.532213
+1006 - FD Ford,Detached,bedrooms_above_grade,0.003602,3.88,0.620967
+1006 - FD Ford,Detached,bathrooms_total_integer,0.045983,3.54,1.004191
+1006 - FD Ford,Detached,parking_total,0.065658,5.265,1.905853
+1006 - FD Ford,Detached,basement_score,0.020615,5.06,1.056598
+1006 - FD Ford,Detached,interior_score,0.041335,3.99,1.099955
+1006 - FD Ford,Detached,exterior_score,0.041464,3.05,1.089725

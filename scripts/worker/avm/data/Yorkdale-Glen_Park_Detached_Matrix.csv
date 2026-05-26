@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0831
-lot_width,0.0548
-bedrooms_above_grade,0.0067
-bathrooms_total_integer,0.0266
-parking_total,0.0482
-basement_score,0.0153
-interior_score,0.0258
-exterior_score,0.0054
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Yorkdale-Glen Park,Detached,building_area_total,0.084993,1630.2222,659.63791
+Yorkdale-Glen Park,Detached,lot_width,0.056644,45.3642,12.241838
+Yorkdale-Glen Park,Detached,bedrooms_above_grade,0.025549,2.9701,0.80983
+Yorkdale-Glen Park,Detached,bathrooms_total_integer,0.064246,2.5522,1.237277
+Yorkdale-Glen Park,Detached,parking_total,0.021788,4.9403,2.037928
+Yorkdale-Glen Park,Detached,basement_score,0.007657,6.1045,1.837701
+Yorkdale-Glen Park,Detached,interior_score,0.033562,2.7612,1.107499
+Yorkdale-Glen Park,Detached,exterior_score,0.016312,2.1791,0.544316

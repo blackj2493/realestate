@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9008 - Kanata - Morgan's Grant/South March,Townhouse,building_area_total,0.037745,1625.9843,270.232504
+9008 - Kanata - Morgan's Grant/South March,Townhouse,lot_width,0.020346,22.6005,9.197975
+9008 - Kanata - Morgan's Grant/South March,Townhouse,bedrooms_above_grade,-0.008147,2.9677,0.474095
+9008 - Kanata - Morgan's Grant/South March,Townhouse,bathrooms_total_integer,0.032066,2.9194,0.576373
+9008 - Kanata - Morgan's Grant/South March,Townhouse,parking_total,0.023651,2.6237,0.724591
+9008 - Kanata - Morgan's Grant/South March,Townhouse,basement_score,0.029144,4.7473,1.464864
+9008 - Kanata - Morgan's Grant/South March,Townhouse,interior_score,0.017853,3.7204,0.731262
+9008 - Kanata - Morgan's Grant/South March,Townhouse,exterior_score,0.010633,2.371,0.716185

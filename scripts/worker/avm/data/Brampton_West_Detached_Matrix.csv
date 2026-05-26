@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0241
-lot_width,0.0322
-bedrooms_above_grade,0.0228
-bathrooms_total_integer,0.0506
-parking_total,0.019
-basement_score,0.0063
-interior_score,-0.0035
-exterior_score,0.001
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brampton West,Detached,building_area_total,0.044949,1560.5,512.55707
+Brampton West,Detached,lot_width,0.014737,36.5989,10.610435
+Brampton West,Detached,bedrooms_above_grade,0.021938,3.1282,0.722513
+Brampton West,Detached,bathrooms_total_integer,0.039846,3.0256,0.891187
+Brampton West,Detached,parking_total,0.025585,4.7479,1.208276
+Brampton West,Detached,basement_score,0.020536,5.6239,1.325145
+Brampton West,Detached,interior_score,0.004761,3.2991,0.963123
+Brampton West,Detached,exterior_score,0.004965,2.2564,0.897802

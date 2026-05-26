@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3104 - CFB Rockcliffe and Area,Townhouse,building_area_total,0.027618,1491.4634,413.625027
+3104 - CFB Rockcliffe and Area,Townhouse,lot_width,0.046194,20.6402,3.661396
+3104 - CFB Rockcliffe and Area,Townhouse,bedrooms_above_grade,0.016456,2.661,0.875469
+3104 - CFB Rockcliffe and Area,Townhouse,bathrooms_total_integer,0.169249,2.6102,0.863908
+3104 - CFB Rockcliffe and Area,Townhouse,parking_total,0.058425,1.8898,0.797601
+3104 - CFB Rockcliffe and Area,Townhouse,basement_score,0.038174,2.5763,2.180059
+3104 - CFB Rockcliffe and Area,Townhouse,interior_score,-0.016051,4.1356,0.769275
+3104 - CFB Rockcliffe and Area,Townhouse,exterior_score,0.011218,2.3559,0.683032

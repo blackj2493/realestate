@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+2602 - Riverside South/Gloucester Glen,Townhouse,building_area_total,0.044023,1656.5625,312.193443
+2602 - Riverside South/Gloucester Glen,Townhouse,lot_width,0.002127,24.0421,9.697151
+2602 - Riverside South/Gloucester Glen,Townhouse,bedrooms_above_grade,0.057432,2.8675,0.573239
+2602 - Riverside South/Gloucester Glen,Townhouse,bathrooms_total_integer,0.02823,3.047,0.607935
+2602 - Riverside South/Gloucester Glen,Townhouse,parking_total,0.009914,2.7821,0.862031
+2602 - Riverside South/Gloucester Glen,Townhouse,basement_score,0.000489,4.6795,0.922097
+2602 - Riverside South/Gloucester Glen,Townhouse,interior_score,0.009681,3.9744,0.767519
+2602 - Riverside South/Gloucester Glen,Townhouse,exterior_score,0.011919,2.2949,0.802384

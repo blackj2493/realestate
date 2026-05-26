@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1482
-lot_width,-0.0212
-bedrooms_above_grade,0.0117
-bathrooms_total_integer,0.007
-parking_total,0.0751
-basement_score,-0.0211
-interior_score,0.0357
-exterior_score,0.046
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East F,Detached,building_area_total,0.08179,1570.3902,806.668091
+East F,Detached,lot_width,-0.00588,35.5733,11.558704
+East F,Detached,bedrooms_above_grade,0.018261,2.9783,1.151353
+East F,Detached,bathrooms_total_integer,0.086199,1.9783,0.736889
+East F,Detached,parking_total,0.062874,3.1304,1.727133
+East F,Detached,basement_score,-0.020319,4.4783,1.347125
+East F,Detached,interior_score,0.084701,3.4565,1.097557
+East F,Detached,exterior_score,0.018453,2.4348,0.741684

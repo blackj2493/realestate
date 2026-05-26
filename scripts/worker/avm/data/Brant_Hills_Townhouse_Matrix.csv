@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0326
-lot_width,0.0
-bedrooms_above_grade,-0.0186
-bathrooms_total_integer,0.0638
-parking_total,-0.0027
-basement_score,-0.0478
-interior_score,0.0266
-exterior_score,-0.0261
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brant Hills,Townhouse,building_area_total,-0.006124,1294.381,241.882493
+Brant Hills,Townhouse,lot_width,0.0,25.0,1.0
+Brant Hills,Townhouse,bedrooms_above_grade,-0.045931,2.9535,0.526219
+Brant Hills,Townhouse,bathrooms_total_integer,0.023012,2.5116,0.694567
+Brant Hills,Townhouse,parking_total,0.00051,2.2326,1.216881
+Brant Hills,Townhouse,basement_score,-0.011565,6.0233,2.107444
+Brant Hills,Townhouse,interior_score,0.023723,3.7907,0.630914
+Brant Hills,Townhouse,exterior_score,0.023673,2.4651,0.872016

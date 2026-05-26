@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0768
-lot_width,0.0
-bedrooms_above_grade,-0.0413
-bathrooms_total_integer,-0.0119
-parking_total,-0.0075
-basement_score,-0.023
-interior_score,0.0233
-exterior_score,-0.0054
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North I,Townhouse,building_area_total,0.049472,1405.3043,349.365628
+North I,Townhouse,lot_width,0.0,24.29,3.160881
+North I,Townhouse,bedrooms_above_grade,0.017855,2.8913,0.5606
+North I,Townhouse,bathrooms_total_integer,0.039872,2.8261,0.669339
+North I,Townhouse,parking_total,0.004662,2.1957,0.769516
+North I,Townhouse,basement_score,0.014005,4.2174,1.473137
+North I,Townhouse,interior_score,0.017313,3.8696,0.823795
+North I,Townhouse,exterior_score,0.010725,2.2391,0.426553

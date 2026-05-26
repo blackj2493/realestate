@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0498
-lot_width,0.0205
-bedrooms_above_grade,0.0135
-bathrooms_total_integer,0.0239
-parking_total,0.023
-basement_score,0.0074
-interior_score,0.0185
-exterior_score,0.0056
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North M,Detached,building_area_total,0.042756,1820.0,449.653461
+North M,Detached,lot_width,0.001794,47.7998,37.351702
+North M,Detached,bedrooms_above_grade,0.022238,3.3232,0.693815
+North M,Detached,bathrooms_total_integer,0.021112,3.2121,0.728534
+North M,Detached,parking_total,0.026387,3.9495,1.313287
+North M,Detached,basement_score,0.00744,5.0101,1.30651
+North M,Detached,interior_score,0.020462,3.4343,1.026533
+North M,Detached,exterior_score,-0.002511,2.6263,0.811357

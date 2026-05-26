@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0091
-lot_width,0.0687
-bedrooms_above_grade,0.0303
-bathrooms_total_integer,0.0008
-parking_total,-0.0024
-basement_score,-0.0004
-interior_score,0.0097
-exterior_score,0.0086
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1119 - Notting Hill/Summerside,Detached,building_area_total,0.030539,2307.0444,557.086786
+1119 - Notting Hill/Summerside,Detached,lot_width,0.021315,39.865,10.977063
+1119 - Notting Hill/Summerside,Detached,bedrooms_above_grade,0.02446,3.5758,0.675561
+1119 - Notting Hill/Summerside,Detached,bathrooms_total_integer,0.002173,3.3788,0.597093
+1119 - Notting Hill/Summerside,Detached,parking_total,0.01994,5.4242,1.142308
+1119 - Notting Hill/Summerside,Detached,basement_score,0.001187,4.9091,0.28748
+1119 - Notting Hill/Summerside,Detached,interior_score,0.019884,3.9848,0.945362
+1119 - Notting Hill/Summerside,Detached,exterior_score,0.010203,2.8333,0.845368

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0699
-lot_width,0.0
-bedrooms_above_grade,-0.0071
-bathrooms_total_integer,-0.0043
-parking_total,0.006
-basement_score,0.0
-interior_score,0.0245
-exterior_score,-0.021
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South X,Condo Apartment,building_area_total,0.056878,753.171,167.029462
+South X,Condo Apartment,lot_width,0.0,0.0,1.0
+South X,Condo Apartment,bedrooms_above_grade,0.016411,1.629,0.574565
+South X,Condo Apartment,bathrooms_total_integer,0.002606,1.0645,0.24567
+South X,Condo Apartment,parking_total,0.006391,1.1129,0.363888
+South X,Condo Apartment,basement_score,0.0,1.0,1.0
+South X,Condo Apartment,interior_score,0.032137,3.4516,0.711142
+South X,Condo Apartment,exterior_score,-5.1e-05,1.8387,0.676651

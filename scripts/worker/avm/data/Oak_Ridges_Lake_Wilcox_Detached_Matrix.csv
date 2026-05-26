@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0633
-lot_width,0.0773
-bedrooms_above_grade,0.0261
-bathrooms_total_integer,0.104
-parking_total,0.0115
-basement_score,0.0155
-interior_score,0.0094
-exterior_score,-0.0078
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Oak Ridges Lake Wilcox,Detached,building_area_total,0.106551,2706.1111,800.549387
+Oak Ridges Lake Wilcox,Detached,lot_width,0.072575,46.619,17.453478
+Oak Ridges Lake Wilcox,Detached,bedrooms_above_grade,0.038603,3.7627,0.633499
+Oak Ridges Lake Wilcox,Detached,bathrooms_total_integer,0.078468,4.0339,0.91995
+Oak Ridges Lake Wilcox,Detached,parking_total,0.037066,5.1017,1.852117
+Oak Ridges Lake Wilcox,Detached,basement_score,-0.004874,5.7373,1.623075
+Oak Ridges Lake Wilcox,Detached,interior_score,0.033079,3.9153,1.078105
+Oak Ridges Lake Wilcox,Detached,exterior_score,0.00476,3.0593,1.035737

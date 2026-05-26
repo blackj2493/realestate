@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0096
-lot_width,0.0
-bedrooms_above_grade,0.0407
-bathrooms_total_integer,0.0022
-parking_total,0.0238
-basement_score,0.0
-interior_score,0.0624
-exterior_score,-0.0141
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Markland Wood,Condo Apartment,building_area_total,0.002568,1294.5946,167.567568
+Markland Wood,Condo Apartment,lot_width,0.0,0.0,1.0
+Markland Wood,Condo Apartment,bedrooms_above_grade,0.031163,2.5135,0.499817
+Markland Wood,Condo Apartment,bathrooms_total_integer,0.006013,2.0946,0.335669
+Markland Wood,Condo Apartment,parking_total,0.025647,1.1351,0.379342
+Markland Wood,Condo Apartment,basement_score,0.0,1.0,1.0
+Markland Wood,Condo Apartment,interior_score,0.056346,3.8784,1.012793
+Markland Wood,Condo Apartment,exterior_score,-0.010779,2.6892,1.051713

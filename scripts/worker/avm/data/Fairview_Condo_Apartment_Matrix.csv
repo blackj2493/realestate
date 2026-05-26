@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0326
-lot_width,0.0
-bedrooms_above_grade,0.0686
-bathrooms_total_integer,0.0109
-parking_total,0.0064
-basement_score,-0.0008
-interior_score,0.0421
-exterior_score,0.0075
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fairview,Condo Apartment,building_area_total,-0.055622,788.8889,187.741614
+Fairview,Condo Apartment,lot_width,0.0,0.0,1.0
+Fairview,Condo Apartment,bedrooms_above_grade,0.098599,1.5741,0.494483
+Fairview,Condo Apartment,bathrooms_total_integer,0.033154,1.7407,0.438228
+Fairview,Condo Apartment,parking_total,0.006027,1.2222,0.458123
+Fairview,Condo Apartment,basement_score,-0.006295,1.0556,0.404451
+Fairview,Condo Apartment,interior_score,0.034817,4.3148,0.715544
+Fairview,Condo Apartment,exterior_score,-0.007127,2.0,0.430331

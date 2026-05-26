@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1476
-lot_width,0.0
-bedrooms_above_grade,0.0388
-bathrooms_total_integer,0.0188
-parking_total,0.0224
-basement_score,0.0
-interior_score,0.0137
-exterior_score,-0.0398
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Don Valley Village,Condo Apartment,building_area_total,0.099983,939.2308,423.083217
+Don Valley Village,Condo Apartment,lot_width,0.0,0.0,1.0
+Don Valley Village,Condo Apartment,bedrooms_above_grade,0.028453,1.6077,0.588298
+Don Valley Village,Condo Apartment,bathrooms_total_integer,0.050024,1.6231,0.585273
+Don Valley Village,Condo Apartment,parking_total,0.044469,1.1077,0.598024
+Don Valley Village,Condo Apartment,basement_score,0.0,1.0,1.0
+Don Valley Village,Condo Apartment,interior_score,0.04861,3.8462,0.788977
+Don Valley Village,Condo Apartment,exterior_score,-0.016024,2.1923,0.734807

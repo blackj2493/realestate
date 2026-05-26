@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0513
-lot_width,0.0309
-bedrooms_above_grade,0.0141
-bathrooms_total_integer,0.0259
-parking_total,0.0111
-basement_score,0.0087
-interior_score,0.0256
-exterior_score,0.0254
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brant Hills,Detached,building_area_total,0.058309,1744.3333,534.916749
+Brant Hills,Detached,lot_width,0.020955,46.4929,14.774957
+Brant Hills,Detached,bedrooms_above_grade,0.025712,3.3929,0.617558
+Brant Hills,Detached,bathrooms_total_integer,0.029902,2.9107,0.714062
+Brant Hills,Detached,parking_total,0.00245,4.375,1.311862
+Brant Hills,Detached,basement_score,0.015717,5.4196,1.683101
+Brant Hills,Detached,interior_score,0.039083,3.6161,0.868553
+Brant Hills,Detached,exterior_score,0.013826,2.8304,0.943856

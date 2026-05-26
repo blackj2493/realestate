@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0515
-lot_width,0.0688
-bedrooms_above_grade,-0.0373
-bathrooms_total_integer,0.1494
-parking_total,0.0587
-basement_score,0.0048
-interior_score,0.0239
-exterior_score,0.0202
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,building_area_total,0.034642,1536.7361,628.67663
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,lot_width,0.040285,242.9858,282.734022
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,bedrooms_above_grade,-0.077315,2.8796,0.703399
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,bathrooms_total_integer,0.180085,1.9815,0.892162
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,parking_total,0.055753,7.3889,3.817196
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,basement_score,0.034552,4.5556,1.765583
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,interior_score,0.041,3.4352,0.945488
+811 - Elizabethtown Kitley (Old Kitley) Twp,Detached,exterior_score,0.070728,2.5926,0.913247

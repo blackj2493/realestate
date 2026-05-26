@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0367
-lot_width,-0.0
-bedrooms_above_grade,0.0812
-bathrooms_total_integer,-0.0057
-parking_total,0.0
-basement_score,-0.0023
-interior_score,0.0137
-exterior_score,0.0097
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kortright West,Condo Apartment,building_area_total,-0.036136,1020.0016,192.327998
+Kortright West,Condo Apartment,lot_width,0.0,153.0,153.0
+Kortright West,Condo Apartment,bedrooms_above_grade,0.15656,2.6047,0.810958
+Kortright West,Condo Apartment,bathrooms_total_integer,-0.044835,2.186,1.062157
+Kortright West,Condo Apartment,parking_total,-0.002661,1.0233,0.150715
+Kortright West,Condo Apartment,basement_score,-0.004477,1.0698,0.452145
+Kortright West,Condo Apartment,interior_score,0.014807,3.5581,0.692227
+Kortright West,Condo Apartment,exterior_score,-0.00565,2.2558,0.685159

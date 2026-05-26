@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0764
-lot_width,0.0
-bedrooms_above_grade,-0.0283
-bathrooms_total_integer,0.026
-parking_total,-0.0073
-basement_score,-0.0003
-interior_score,0.0708
-exterior_score,0.0131
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Newtonbrook West,Condo Apartment,building_area_total,0.029451,922.7723,213.472556
+Newtonbrook West,Condo Apartment,lot_width,0.0,0.0,1.0
+Newtonbrook West,Condo Apartment,bedrooms_above_grade,0.009496,2.1782,0.680653
+Newtonbrook West,Condo Apartment,bathrooms_total_integer,0.019799,1.802,0.422623
+Newtonbrook West,Condo Apartment,parking_total,-0.034757,1.1683,0.374147
+Newtonbrook West,Condo Apartment,basement_score,0.003675,1.0297,0.29703
+Newtonbrook West,Condo Apartment,interior_score,0.054328,3.8911,0.942936
+Newtonbrook West,Condo Apartment,exterior_score,0.01,2.0099,0.455876

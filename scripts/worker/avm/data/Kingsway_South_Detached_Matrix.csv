@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1672
-lot_width,-0.0371
-bedrooms_above_grade,0.0146
-bathrooms_total_integer,0.118
-parking_total,0.0413
-basement_score,-0.0254
-interior_score,0.0338
-exterior_score,0.011
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kingsway South,Detached,building_area_total,0.139899,2414.5161,902.790794
+Kingsway South,Detached,lot_width,-0.027097,44.9446,14.981893
+Kingsway South,Detached,bedrooms_above_grade,0.02762,3.5902,0.743872
+Kingsway South,Detached,bathrooms_total_integer,0.144687,3.6639,1.376683
+Kingsway South,Detached,parking_total,0.025549,4.3279,1.479048
+Kingsway South,Detached,basement_score,-0.033627,5.5984,1.58714
+Kingsway South,Detached,interior_score,0.027967,3.8033,1.177935
+Kingsway South,Detached,exterior_score,0.021973,2.918,0.946002

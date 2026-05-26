@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0255
-lot_width,0.0
-bedrooms_above_grade,0.0096
-bathrooms_total_integer,0.0465
-parking_total,-0.0272
-basement_score,0.0017
-interior_score,0.0313
-exterior_score,0.071
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+606 - Town of Rockland,Condo Apartment,building_area_total,0.04369,1154.2857,124.425209
+606 - Town of Rockland,Condo Apartment,lot_width,0.0,0.0,1.0
+606 - Town of Rockland,Condo Apartment,bedrooms_above_grade,0.018948,1.9388,0.313516
+606 - Town of Rockland,Condo Apartment,bathrooms_total_integer,0.048623,1.449,0.573611
+606 - Town of Rockland,Condo Apartment,parking_total,-0.029498,1.3878,0.487238
+606 - Town of Rockland,Condo Apartment,basement_score,-0.015539,1.1633,0.791458
+606 - Town of Rockland,Condo Apartment,interior_score,0.011337,3.9388,0.682378
+606 - Town of Rockland,Condo Apartment,exterior_score,0.061222,2.8163,0.962002

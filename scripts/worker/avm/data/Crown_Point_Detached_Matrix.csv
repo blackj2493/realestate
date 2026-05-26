@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0253
-lot_width,0.025
-bedrooms_above_grade,0.0167
-bathrooms_total_integer,0.0542
-parking_total,0.0428
-basement_score,0.0068
-interior_score,0.0516
-exterior_score,0.0109
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Crown Point,Detached,building_area_total,0.017366,1167.1401,304.280072
+Crown Point,Detached,lot_width,0.002709,26.4787,6.863299
+Crown Point,Detached,bedrooms_above_grade,0.011334,2.9127,0.706345
+Crown Point,Detached,bathrooms_total_integer,0.051087,1.69,0.623369
+Crown Point,Detached,parking_total,0.034989,1.6747,1.205905
+Crown Point,Detached,basement_score,0.010208,4.9301,1.362123
+Crown Point,Detached,interior_score,0.061002,3.1834,1.066146
+Crown Point,Detached,exterior_score,0.028086,2.1834,0.60672

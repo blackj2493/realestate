@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1487
-lot_width,0.0
-bedrooms_above_grade,-0.0137
-bathrooms_total_integer,0.0614
-parking_total,0.0165
-basement_score,0.0
-interior_score,-0.0232
-exterior_score,-0.0159
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Roncesvalles,Condo Apartment,building_area_total,0.125933,800.2113,212.205781
+Roncesvalles,Condo Apartment,lot_width,0.0,0.0,1.0
+Roncesvalles,Condo Apartment,bedrooms_above_grade,0.033948,1.507,0.602185
+Roncesvalles,Condo Apartment,bathrooms_total_integer,0.053105,1.507,0.52737
+Roncesvalles,Condo Apartment,parking_total,0.026968,0.7606,0.42674
+Roncesvalles,Condo Apartment,basement_score,0.0,1.0,1.0
+Roncesvalles,Condo Apartment,interior_score,-0.016544,3.7465,0.745282
+Roncesvalles,Condo Apartment,exterior_score,0.001489,2.169,0.838945

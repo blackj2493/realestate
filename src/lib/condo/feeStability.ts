@@ -113,7 +113,7 @@ export interface FeeStabilityResult {
     p25Psf: number;
     p75Psf: number;
     position: AreaPosition;
-    pctVsMedian: number; // signed % vs area median (−19 = 19% below)
+    pctVsMedian: number; // signed % vs area median, 2-decimal (−19.25 = 19.25% below)
     sampleCount: number;
     inclusionsMixed: boolean;
   };
@@ -260,7 +260,7 @@ export function classifyAreaPosition(
   else if (unitPsf > stats.p75Psf) position = 'above';
   const pctVsMedian =
     stats.medianPsf > 0
-      ? Math.round(((unitPsf - stats.medianPsf) / stats.medianPsf) * 100)
+      ? Math.round(((unitPsf - stats.medianPsf) / stats.medianPsf) * 10000) / 100
       : 0;
   return { position, pctVsMedian };
 }

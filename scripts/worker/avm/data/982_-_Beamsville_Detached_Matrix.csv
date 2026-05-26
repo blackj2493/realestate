@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.074
-lot_width,0.0279
-bedrooms_above_grade,0.0041
-bathrooms_total_integer,0.0421
-parking_total,0.0226
-basement_score,0.0078
-interior_score,0.0189
-exterior_score,0.0064
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+982 - Beamsville,Detached,building_area_total,0.081558,1737.013,630.303586
+982 - Beamsville,Detached,lot_width,-0.001995,60.8651,42.908001
+982 - Beamsville,Detached,bedrooms_above_grade,0.00137,3.1687,0.655271
+982 - Beamsville,Detached,bathrooms_total_integer,0.066429,2.6928,0.882669
+982 - Beamsville,Detached,parking_total,0.051249,5.2199,2.488799
+982 - Beamsville,Detached,basement_score,0.018967,5.1386,1.396668
+982 - Beamsville,Detached,interior_score,0.015774,3.4277,1.065993
+982 - Beamsville,Detached,exterior_score,0.020534,2.6566,0.819299

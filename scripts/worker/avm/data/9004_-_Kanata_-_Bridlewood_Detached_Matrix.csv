@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0861
-lot_width,0.0233
-bedrooms_above_grade,0.0109
-bathrooms_total_integer,0.0419
-parking_total,0.0218
-basement_score,-0.007
-interior_score,0.0172
-exterior_score,0.0208
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9004 - Kanata - Bridlewood,Detached,building_area_total,0.079763,2155.4455,637.790935
+9004 - Kanata - Bridlewood,Detached,lot_width,0.010907,43.3579,12.786732
+9004 - Kanata - Bridlewood,Detached,bedrooms_above_grade,0.008999,3.4865,0.586866
+9004 - Kanata - Bridlewood,Detached,bathrooms_total_integer,0.048743,3.25,0.645933
+9004 - Kanata - Bridlewood,Detached,parking_total,0.008461,4.9527,1.316909
+9004 - Kanata - Bridlewood,Detached,basement_score,-0.005623,4.7635,0.903159
+9004 - Kanata - Bridlewood,Detached,interior_score,0.032716,3.8243,0.867711
+9004 - Kanata - Bridlewood,Detached,exterior_score,0.046587,2.7365,0.81673

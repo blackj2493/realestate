@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,building_area_total,0.023937,1629.8193,302.685217
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,lot_width,0.013299,26.5456,12.603958
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,bedrooms_above_grade,-0.023539,2.8347,0.565497
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,bathrooms_total_integer,0.043896,2.9835,0.497655
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,parking_total,0.035746,3.1818,0.962091
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,basement_score,0.025167,5.0744,1.647263
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,interior_score,-0.005396,3.9917,0.787252
+9007 - Kanata - Kanata Lakes/Heritage Hills,Townhouse,exterior_score,0.007733,2.5868,0.799477

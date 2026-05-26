@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0223
-lot_width,0.0778
-bedrooms_above_grade,0.0089
-bathrooms_total_integer,0.0075
-parking_total,0.0127
-basement_score,0.0046
-interior_score,-0.0105
-exterior_score,-0.0055
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1008 - GO Glenorchy,Detached,building_area_total,0.057445,3148.4454,718.517553
+1008 - GO Glenorchy,Detached,lot_width,0.030706,41.6963,9.511861
+1008 - GO Glenorchy,Detached,bedrooms_above_grade,0.019215,4.0746,0.416576
+1008 - GO Glenorchy,Detached,bathrooms_total_integer,0.018778,4.4701,0.759913
+1008 - GO Glenorchy,Detached,parking_total,0.021649,3.7985,0.730772
+1008 - GO Glenorchy,Detached,basement_score,0.008647,5.1716,1.149472
+1008 - GO Glenorchy,Detached,interior_score,-0.009605,4.0821,1.086199
+1008 - GO Glenorchy,Detached,exterior_score,0.002476,2.403,0.847467

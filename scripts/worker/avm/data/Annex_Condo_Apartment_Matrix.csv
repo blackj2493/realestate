@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.3876
-lot_width,0.0
-bedrooms_above_grade,-0.0138
-bathrooms_total_integer,0.0988
-parking_total,0.0887
-basement_score,-0.0008
-interior_score,0.0486
-exterior_score,0.0123
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Annex,Condo Apartment,building_area_total,0.282471,1071.9419,622.647111
+Annex,Condo Apartment,lot_width,0.0,0.0,1.0
+Annex,Condo Apartment,bedrooms_above_grade,0.033172,1.6055,0.585529
+Annex,Condo Apartment,bathrooms_total_integer,0.151593,1.8807,0.746754
+Annex,Condo Apartment,parking_total,0.069013,0.8257,0.67517
+Annex,Condo Apartment,basement_score,-0.019009,1.0122,0.220862
+Annex,Condo Apartment,interior_score,0.047357,4.4862,0.845365
+Annex,Condo Apartment,exterior_score,0.013013,2.2232,0.714

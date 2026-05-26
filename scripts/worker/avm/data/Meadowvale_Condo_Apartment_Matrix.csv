@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0729
-lot_width,0.0
-bedrooms_above_grade,0.0117
-bathrooms_total_integer,-0.0083
-parking_total,0.006
-basement_score,0.0
-interior_score,0.0235
-exterior_score,0.0131
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Meadowvale,Condo Apartment,building_area_total,0.042626,926.3181,202.966711
+Meadowvale,Condo Apartment,lot_width,0.0,0.0,1.0
+Meadowvale,Condo Apartment,bedrooms_above_grade,0.040201,2.0678,0.660365
+Meadowvale,Condo Apartment,bathrooms_total_integer,-0.004418,1.4576,0.498201
+Meadowvale,Condo Apartment,parking_total,0.011781,1.6949,0.80789
+Meadowvale,Condo Apartment,basement_score,0.0,1.0,1.0
+Meadowvale,Condo Apartment,interior_score,0.032762,3.7458,0.703339
+Meadowvale,Condo Apartment,exterior_score,0.006131,1.7119,0.76026

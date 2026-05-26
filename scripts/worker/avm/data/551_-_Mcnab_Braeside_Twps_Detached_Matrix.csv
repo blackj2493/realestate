@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0519
-lot_width,0.0683
-bedrooms_above_grade,-0.006
-bathrooms_total_integer,0.0916
-parking_total,0.0495
-basement_score,0.0497
-interior_score,0.028
-exterior_score,-0.0042
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+551 - Mcnab/Braeside Twps,Detached,building_area_total,0.087523,1486.1538,504.099173
+551 - Mcnab/Braeside Twps,Detached,lot_width,0.035005,171.7908,176.50302
+551 - Mcnab/Braeside Twps,Detached,bedrooms_above_grade,0.016009,2.9123,0.789863
+551 - Mcnab/Braeside Twps,Detached,bathrooms_total_integer,0.109458,1.9825,0.805491
+551 - Mcnab/Braeside Twps,Detached,parking_total,0.042196,7.0263,3.160781
+551 - Mcnab/Braeside Twps,Detached,basement_score,0.087602,4.6404,1.887759
+551 - Mcnab/Braeside Twps,Detached,interior_score,0.060496,3.3596,1.035571
+551 - Mcnab/Braeside Twps,Detached,exterior_score,0.00725,2.5789,0.857319

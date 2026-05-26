@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1669
-lot_width,0.0
-bedrooms_above_grade,0.0323
-bathrooms_total_integer,0.0382
-parking_total,-0.0033
-basement_score,0.0
-interior_score,0.0594
-exterior_score,0.026
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Hillcrest Village,Condo Apartment,building_area_total,0.174208,1781.0185,418.32822
+Hillcrest Village,Condo Apartment,lot_width,0.0,0.0,1.0
+Hillcrest Village,Condo Apartment,bedrooms_above_grade,-0.001464,2.1481,0.44752
+Hillcrest Village,Condo Apartment,bathrooms_total_integer,0.039114,2.3148,0.502736
+Hillcrest Village,Condo Apartment,parking_total,-0.045806,1.6667,0.666667
+Hillcrest Village,Condo Apartment,basement_score,0.0,1.0,1.0
+Hillcrest Village,Condo Apartment,interior_score,0.069261,4.1852,0.963675
+Hillcrest Village,Condo Apartment,exterior_score,0.031436,2.2222,0.895806

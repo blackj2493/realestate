@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0138
-lot_width,0.0296
-bedrooms_above_grade,0.0084
-bathrooms_total_integer,0.0465
-parking_total,0.022
-basement_score,0.0175
-interior_score,0.0515
-exterior_score,0.0325
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Eringate-Centennial-West Deane,Detached,building_area_total,0.034444,1501.534,428.006449
+Eringate-Centennial-West Deane,Detached,lot_width,-0.003812,48.1938,9.037819
+Eringate-Centennial-West Deane,Detached,bedrooms_above_grade,0.012088,3.1453,0.397964
+Eringate-Centennial-West Deane,Detached,bathrooms_total_integer,0.048656,2.5299,0.790679
+Eringate-Centennial-West Deane,Detached,parking_total,0.0316,4.1197,1.372267
+Eringate-Centennial-West Deane,Detached,basement_score,0.010406,5.9231,1.680221
+Eringate-Centennial-West Deane,Detached,interior_score,0.042419,3.2222,1.086916
+Eringate-Centennial-West Deane,Detached,exterior_score,0.030626,2.6154,0.941413

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0704
-lot_width,-0.0602
-bedrooms_above_grade,-0.0205
-bathrooms_total_integer,0.0584
-parking_total,0.0674
-basement_score,0.0426
-interior_score,0.0099
-exterior_score,0.0259
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Parry Sound,Detached,building_area_total,0.021729,1564.5192,618.370417
+Parry Sound,Detached,lot_width,0.019179,76.7837,57.44608
+Parry Sound,Detached,bedrooms_above_grade,-0.038381,3.0109,0.949766
+Parry Sound,Detached,bathrooms_total_integer,0.087424,2.0978,0.847756
+Parry Sound,Detached,parking_total,0.048061,4.1196,1.667088
+Parry Sound,Detached,basement_score,0.019983,5.0217,2.216432
+Parry Sound,Detached,interior_score,0.017857,3.1087,0.90237
+Parry Sound,Detached,exterior_score,0.045667,2.663,1.013787

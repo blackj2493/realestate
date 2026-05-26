@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.058
-lot_width,0.0
-bedrooms_above_grade,-0.0143
-bathrooms_total_integer,0.0266
-parking_total,-0.0082
-basement_score,-0.0039
-interior_score,-0.0103
-exterior_score,-0.021
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Dovercourt-Wallace Emerson-Junction,Townhouse,building_area_total,0.121265,1260.9615,297.392577
+Dovercourt-Wallace Emerson-Junction,Townhouse,lot_width,0.0,15.2479,6.208486
+Dovercourt-Wallace Emerson-Junction,Townhouse,bedrooms_above_grade,-0.015584,2.6357,0.600128
+Dovercourt-Wallace Emerson-Junction,Townhouse,bathrooms_total_integer,0.036085,2.2429,0.558971
+Dovercourt-Wallace Emerson-Junction,Townhouse,parking_total,0.024464,1.1536,0.597305
+Dovercourt-Wallace Emerson-Junction,Townhouse,basement_score,0.072616,2.7214,2.795578
+Dovercourt-Wallace Emerson-Junction,Townhouse,interior_score,0.011908,3.6143,0.858451
+Dovercourt-Wallace Emerson-Junction,Townhouse,exterior_score,0.00127,2.2,0.803563

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.047
-lot_width,0.118
-bedrooms_above_grade,0.0375
-bathrooms_total_integer,0.0172
-parking_total,0.0037
-basement_score,0.0055
-interior_score,0.0089
-exterior_score,0.0222
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Angus Glen,Detached,building_area_total,0.071382,3204.5455,710.992013
+Angus Glen,Detached,lot_width,0.087613,42.2613,11.853411
+Angus Glen,Detached,bedrooms_above_grade,0.00936,4.025,0.790174
+Angus Glen,Detached,bathrooms_total_integer,0.01084,4.4,0.830662
+Angus Glen,Detached,parking_total,0.01594,4.45,1.430909
+Angus Glen,Detached,basement_score,0.008777,4.95,1.413329
+Angus Glen,Detached,interior_score,0.01429,4.575,0.627993
+Angus Glen,Detached,exterior_score,0.025057,2.725,1.117754

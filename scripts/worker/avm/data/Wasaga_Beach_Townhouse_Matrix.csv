@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Wasaga Beach,Townhouse,building_area_total,0.037118,1530.5,338.479855
+Wasaga Beach,Townhouse,lot_width,0.017009,21.1855,24.390247
+Wasaga Beach,Townhouse,bedrooms_above_grade,-0.009528,2.6338,0.633333
+Wasaga Beach,Townhouse,bathrooms_total_integer,0.032313,2.831,0.804668
+Wasaga Beach,Townhouse,parking_total,0.026101,2.5211,0.793622
+Wasaga Beach,Townhouse,basement_score,0.05135,3.3521,2.581618
+Wasaga Beach,Townhouse,interior_score,-0.002874,3.6549,0.778639
+Wasaga Beach,Townhouse,exterior_score,0.000107,2.8099,0.941478

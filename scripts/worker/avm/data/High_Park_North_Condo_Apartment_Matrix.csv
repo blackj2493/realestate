@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1618
-lot_width,0.0
-bedrooms_above_grade,0.0535
-bathrooms_total_integer,0.0057
-parking_total,0.0057
-basement_score,0.0
-interior_score,0.0339
-exterior_score,0.0189
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+High Park North,Condo Apartment,building_area_total,0.097953,865.4321,223.004453
+High Park North,Condo Apartment,lot_width,0.0,0.0,1.0
+High Park North,Condo Apartment,bedrooms_above_grade,0.084302,1.7531,0.676426
+High Park North,Condo Apartment,bathrooms_total_integer,0.039365,1.6914,0.512606
+High Park North,Condo Apartment,parking_total,-0.000729,1.0617,0.425881
+High Park North,Condo Apartment,basement_score,0.0,1.0,1.0
+High Park North,Condo Apartment,interior_score,0.031485,3.9506,0.784121
+High Park North,Condo Apartment,exterior_score,0.019218,2.1358,0.73288

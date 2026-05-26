@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+8203 - Stittsville (South),Townhouse,building_area_total,0.007423,1754.0816,192.151284
+8203 - Stittsville (South),Townhouse,lot_width,0.012906,22.6368,10.292483
+8203 - Stittsville (South),Townhouse,bedrooms_above_grade,0.023924,2.9865,0.307265
+8203 - Stittsville (South),Townhouse,bathrooms_total_integer,0.0001,3.0946,0.292654
+8203 - Stittsville (South),Townhouse,parking_total,0.016447,2.5541,0.548755
+8203 - Stittsville (South),Townhouse,basement_score,0.021375,4.7568,1.459459
+8203 - Stittsville (South),Townhouse,interior_score,0.003936,3.7432,0.789471
+8203 - Stittsville (South),Townhouse,exterior_score,0.014662,2.2973,0.609158

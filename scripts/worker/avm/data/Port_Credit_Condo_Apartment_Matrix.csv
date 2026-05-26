@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2442
-lot_width,0.0
-bedrooms_above_grade,0.0195
-bathrooms_total_integer,0.0192
-parking_total,0.0316
-basement_score,0.0
-interior_score,0.015
-exterior_score,-0.0273
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Port Credit,Condo Apartment,building_area_total,0.231811,1074.6377,413.286859
+Port Credit,Condo Apartment,lot_width,0.0,0.0,1.0
+Port Credit,Condo Apartment,bedrooms_above_grade,0.022601,1.8551,0.545744
+Port Credit,Condo Apartment,bathrooms_total_integer,0.047774,1.942,0.586912
+Port Credit,Condo Apartment,parking_total,0.054211,1.1449,0.459217
+Port Credit,Condo Apartment,basement_score,0.0,1.0,1.0
+Port Credit,Condo Apartment,interior_score,0.009985,4.2754,0.88275
+Port Credit,Condo Apartment,exterior_score,-0.004609,2.8841,1.245703

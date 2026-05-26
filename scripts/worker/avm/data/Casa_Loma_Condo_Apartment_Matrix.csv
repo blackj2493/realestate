@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.32
-lot_width,0.0
-bedrooms_above_grade,0.0416
-bathrooms_total_integer,0.0623
-parking_total,0.0678
-basement_score,0.0
-interior_score,0.0585
-exterior_score,0.0081
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Casa Loma,Condo Apartment,building_area_total,0.260894,1130.2083,572.199362
+Casa Loma,Condo Apartment,lot_width,0.0,0.0,1.0
+Casa Loma,Condo Apartment,bedrooms_above_grade,0.048599,1.7917,0.599479
+Casa Loma,Condo Apartment,bathrooms_total_integer,0.1295,1.9722,0.686623
+Casa Loma,Condo Apartment,parking_total,0.113923,1.1389,0.584655
+Casa Loma,Condo Apartment,basement_score,-0.088288,1.1111,0.936239
+Casa Loma,Condo Apartment,interior_score,0.065906,4.1806,0.932833
+Casa Loma,Condo Apartment,exterior_score,-0.010676,2.5,0.866025

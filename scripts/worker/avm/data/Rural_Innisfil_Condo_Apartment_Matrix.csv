@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0359
-lot_width,0.0
-bedrooms_above_grade,0.1059
-bathrooms_total_integer,-0.0127
-parking_total,-0.0008
-basement_score,0.0
-interior_score,-0.0215
-exterior_score,-0.0151
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Innisfil,Condo Apartment,building_area_total,0.04651,747.4576,186.271109
+Rural Innisfil,Condo Apartment,lot_width,0.0,0.0,1.0
+Rural Innisfil,Condo Apartment,bedrooms_above_grade,0.064406,1.6102,0.552865
+Rural Innisfil,Condo Apartment,bathrooms_total_integer,0.011062,1.678,0.467256
+Rural Innisfil,Condo Apartment,parking_total,0.00391,1.0508,0.219686
+Rural Innisfil,Condo Apartment,basement_score,0.0,1.0,1.0
+Rural Innisfil,Condo Apartment,interior_score,-0.006476,4.0847,1.029862
+Rural Innisfil,Condo Apartment,exterior_score,-0.00022,3.2542,0.793901

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0777
-lot_width,0.1629
-bedrooms_above_grade,0.0175
-bathrooms_total_integer,0.1288
-parking_total,0.0337
-basement_score,0.0219
-interior_score,0.0222
-exterior_score,0.0117
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rosedale-Moore Park,Detached,building_area_total,0.088768,3077.7108,960.021743
+Rosedale-Moore Park,Detached,lot_width,0.064719,42.9692,15.062549
+Rosedale-Moore Park,Detached,bedrooms_above_grade,0.054028,4.3504,1.080647
+Rosedale-Moore Park,Detached,bathrooms_total_integer,0.180105,4.3248,1.232252
+Rosedale-Moore Park,Detached,parking_total,0.095664,3.2393,1.791001
+Rosedale-Moore Park,Detached,basement_score,0.01923,5.5983,1.617531
+Rosedale-Moore Park,Detached,interior_score,0.019909,3.7521,1.176014
+Rosedale-Moore Park,Detached,exterior_score,-0.006757,3.2393,0.91193

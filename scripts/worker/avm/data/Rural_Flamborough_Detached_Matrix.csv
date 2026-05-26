@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0895
-lot_width,0.0789
-bedrooms_above_grade,-0.01
-bathrooms_total_integer,0.0748
-parking_total,0.0775
-basement_score,0.025
-interior_score,0.0372
-exterior_score,0.014
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Flamborough,Detached,building_area_total,0.058955,2074.2088,838.404165
+Rural Flamborough,Detached,lot_width,0.054032,233.2324,284.850505
+Rural Flamborough,Detached,bedrooms_above_grade,0.013032,3.2411,0.770932
+Rural Flamborough,Detached,bathrooms_total_integer,0.11318,2.5532,0.977952
+Rural Flamborough,Detached,parking_total,0.114712,10.6738,5.354784
+Rural Flamborough,Detached,basement_score,0.022185,5.3617,1.902878
+Rural Flamborough,Detached,interior_score,0.032799,3.4468,1.151167
+Rural Flamborough,Detached,exterior_score,0.01103,2.6454,1.011528

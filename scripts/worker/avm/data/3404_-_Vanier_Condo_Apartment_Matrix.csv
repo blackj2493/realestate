@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0152
-lot_width,0.0
-bedrooms_above_grade,0.0201
-bathrooms_total_integer,0.0651
-parking_total,0.0
-basement_score,0.0026
-interior_score,0.0312
-exterior_score,-0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3404 - Vanier,Condo Apartment,building_area_total,0.001175,971.2766,204.664926
+3404 - Vanier,Condo Apartment,lot_width,0.0,0.0,1.0
+3404 - Vanier,Condo Apartment,bedrooms_above_grade,0.033799,2.1594,0.403721
+3404 - Vanier,Condo Apartment,bathrooms_total_integer,0.075624,1.3043,0.519318
+3404 - Vanier,Condo Apartment,parking_total,0.0,1.0,1.0
+3404 - Vanier,Condo Apartment,basement_score,0.002962,1.1449,0.707626
+3404 - Vanier,Condo Apartment,interior_score,0.038148,3.6522,0.776952
+3404 - Vanier,Condo Apartment,exterior_score,-0.013824,2.087,0.473627

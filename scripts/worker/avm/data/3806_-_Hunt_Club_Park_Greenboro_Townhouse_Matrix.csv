@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3806 - Hunt Club Park/Greenboro,Townhouse,building_area_total,0.055474,1489.7059,261.719262
+3806 - Hunt Club Park/Greenboro,Townhouse,lot_width,-0.005589,20.9576,7.886076
+3806 - Hunt Club Park/Greenboro,Townhouse,bedrooms_above_grade,0.012552,2.9681,0.370512
+3806 - Hunt Club Park/Greenboro,Townhouse,bathrooms_total_integer,0.016428,2.9681,0.65966
+3806 - Hunt Club Park/Greenboro,Townhouse,parking_total,0.046216,2.6277,0.699301
+3806 - Hunt Club Park/Greenboro,Townhouse,basement_score,-7e-06,4.8617,0.870327
+3806 - Hunt Club Park/Greenboro,Townhouse,interior_score,0.023994,3.6702,0.690179
+3806 - Hunt Club Park/Greenboro,Townhouse,exterior_score,0.005607,2.266,0.746275

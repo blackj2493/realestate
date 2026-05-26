@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.018
-lot_width,0.0416
-bedrooms_above_grade,0.0147
-bathrooms_total_integer,0.1028
-parking_total,0.046
-basement_score,0.0092
-interior_score,0.0415
-exterior_score,0.039
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+907 - Perth,Detached,building_area_total,0.030358,1382.2034,377.296663
+907 - Perth,Detached,lot_width,0.03166,57.8098,15.601268
+907 - Perth,Detached,bedrooms_above_grade,0.021585,2.8438,0.634562
+907 - Perth,Detached,bathrooms_total_integer,0.114926,2.0,0.721688
+907 - Perth,Detached,parking_total,0.054694,3.5938,1.468972
+907 - Perth,Detached,basement_score,0.000657,4.6771,1.113317
+907 - Perth,Detached,interior_score,0.040751,3.375,0.880932
+907 - Perth,Detached,exterior_score,0.049098,2.4375,0.674112

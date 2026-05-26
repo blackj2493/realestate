@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0547
-lot_width,0.0303
-bedrooms_above_grade,0.0154
-bathrooms_total_integer,0.0235
-parking_total,0.0148
-basement_score,0.0085
-interior_score,0.008
-exterior_score,0.006
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northeast Ajax,Detached,building_area_total,0.06614,2399.0099,555.44025
+Northeast Ajax,Detached,lot_width,0.017403,39.1986,8.125681
+Northeast Ajax,Detached,bedrooms_above_grade,0.019078,3.8106,0.462742
+Northeast Ajax,Detached,bathrooms_total_integer,0.030979,3.7803,0.781552
+Northeast Ajax,Detached,parking_total,0.026925,4.0152,1.014925
+Northeast Ajax,Detached,basement_score,0.012411,5.5227,1.549516
+Northeast Ajax,Detached,interior_score,0.007141,3.7045,1.020536
+Northeast Ajax,Detached,exterior_score,-0.001566,2.697,0.878527

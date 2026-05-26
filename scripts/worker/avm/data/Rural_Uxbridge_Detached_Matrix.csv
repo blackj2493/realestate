@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0903
-lot_width,0.066
-bedrooms_above_grade,0.0404
-bathrooms_total_integer,0.1323
-parking_total,0.0753
-basement_score,-0.0172
-interior_score,0.0166
-exterior_score,0.013
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Uxbridge,Detached,building_area_total,0.085222,2375.0,916.856041
+Rural Uxbridge,Detached,lot_width,0.041861,257.1902,309.905212
+Rural Uxbridge,Detached,bedrooms_above_grade,0.053583,3.3211,0.855428
+Rural Uxbridge,Detached,bathrooms_total_integer,0.135433,3.055,1.163945
+Rural Uxbridge,Detached,parking_total,0.055311,11.367,5.296546
+Rural Uxbridge,Detached,basement_score,0.007007,6.0183,2.334353
+Rural Uxbridge,Detached,interior_score,0.049079,3.6055,1.108916
+Rural Uxbridge,Detached,exterior_score,0.031484,2.789,0.996078

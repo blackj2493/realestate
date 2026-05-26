@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1271
-lot_width,0.0
-bedrooms_above_grade,0.0075
-bathrooms_total_integer,0.1274
-parking_total,0.0088
-basement_score,-0.0128
-interior_score,-0.029
-exterior_score,0.0111
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3602 - Riverview Park,Condo Apartment,building_area_total,0.126317,1279.2553,413.094161
+3602 - Riverview Park,Condo Apartment,lot_width,0.0,0.0,1.0
+3602 - Riverview Park,Condo Apartment,bedrooms_above_grade,0.027906,2.0333,0.546707
+3602 - Riverview Park,Condo Apartment,bathrooms_total_integer,0.138565,1.8,0.509902
+3602 - Riverview Park,Condo Apartment,parking_total,0.029033,1.1833,0.38694
+3602 - Riverview Park,Condo Apartment,basement_score,0.004071,1.4167,1.173196
+3602 - Riverview Park,Condo Apartment,interior_score,0.032068,4.0667,0.771722
+3602 - Riverview Park,Condo Apartment,exterior_score,0.036301,1.7167,0.818366

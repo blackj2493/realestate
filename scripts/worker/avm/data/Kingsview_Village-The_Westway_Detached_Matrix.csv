@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0539
-lot_width,0.0297
-bedrooms_above_grade,-0.0018
-bathrooms_total_integer,0.0468
-parking_total,-0.0163
-basement_score,0.0268
-interior_score,0.021
-exterior_score,0.016
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kingsview Village-The Westway,Detached,building_area_total,0.032278,1556.25,585.316039
+Kingsview Village-The Westway,Detached,lot_width,0.024948,51.0312,16.946607
+Kingsview Village-The Westway,Detached,bedrooms_above_grade,0.014861,3.2892,0.503724
+Kingsview Village-The Westway,Detached,bathrooms_total_integer,0.065685,2.5181,0.869309
+Kingsview Village-The Westway,Detached,parking_total,-0.012483,4.6627,1.55445
+Kingsview Village-The Westway,Detached,basement_score,0.0246,6.1084,1.628156
+Kingsview Village-The Westway,Detached,interior_score,0.034766,3.0843,1.077758
+Kingsview Village-The Westway,Detached,exterior_score,0.021575,2.3012,0.901604

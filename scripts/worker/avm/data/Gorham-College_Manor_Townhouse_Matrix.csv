@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Gorham-College Manor,Townhouse,building_area_total,0.036118,1381.25,277.568498
+Gorham-College Manor,Townhouse,lot_width,-0.001993,21.235,8.366887
+Gorham-College Manor,Townhouse,bedrooms_above_grade,-0.007008,2.9216,0.33391
+Gorham-College Manor,Townhouse,bathrooms_total_integer,0.024544,2.9608,0.684873
+Gorham-College Manor,Townhouse,parking_total,0.007023,2.5294,0.871171
+Gorham-College Manor,Townhouse,basement_score,0.004178,6.3333,2.054805
+Gorham-College Manor,Townhouse,interior_score,0.007443,3.8824,0.675831
+Gorham-College Manor,Townhouse,exterior_score,0.00753,2.5294,0.871171

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0658
-lot_width,0.0486
-bedrooms_above_grade,-0.0113
-bathrooms_total_integer,0.0514
-parking_total,0.0104
-basement_score,0.0254
-interior_score,0.0127
-exterior_score,0.0205
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+911 - Almonte,Detached,building_area_total,0.068111,1469.2982,366.796754
+911 - Almonte,Detached,lot_width,-0.007753,67.6383,35.829573
+911 - Almonte,Detached,bedrooms_above_grade,-0.001174,2.9101,0.664348
+911 - Almonte,Detached,bathrooms_total_integer,0.085674,2.3933,0.773406
+911 - Almonte,Detached,parking_total,0.027984,4.4607,1.565471
+911 - Almonte,Detached,basement_score,0.020231,4.3483,1.529494
+911 - Almonte,Detached,interior_score,0.03641,3.4944,0.995762
+911 - Almonte,Detached,exterior_score,0.020811,2.4944,0.780717

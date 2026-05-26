@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0228
-lot_width,0.0237
-bedrooms_above_grade,0.0692
-bathrooms_total_integer,0.0332
-parking_total,-0.0036
-basement_score,0.0044
-interior_score,0.01
-exterior_score,-0.0044
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7709 - Barrhaven - Strandherd,Detached,building_area_total,0.03647,2171.0526,421.874198
+7709 - Barrhaven - Strandherd,Detached,lot_width,0.020388,43.8644,10.554975
+7709 - Barrhaven - Strandherd,Detached,bedrooms_above_grade,0.03875,3.5556,0.566558
+7709 - Barrhaven - Strandherd,Detached,bathrooms_total_integer,0.02637,3.4815,0.568974
+7709 - Barrhaven - Strandherd,Detached,parking_total,0.017477,3.8889,1.383322
+7709 - Barrhaven - Strandherd,Detached,basement_score,0.01751,4.8704,0.335896
+7709 - Barrhaven - Strandherd,Detached,interior_score,0.023795,3.8148,0.862255
+7709 - Barrhaven - Strandherd,Detached,exterior_score,0.009423,2.3333,0.666667

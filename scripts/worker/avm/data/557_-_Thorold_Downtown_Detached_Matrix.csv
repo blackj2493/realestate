@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0506
-lot_width,0.0346
-bedrooms_above_grade,-0.014
-bathrooms_total_integer,0.0539
-parking_total,0.0299
-basement_score,0.02
-interior_score,0.0323
-exterior_score,0.0043
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+557 - Thorold Downtown,Detached,building_area_total,0.060343,1420.2581,589.414593
+557 - Thorold Downtown,Detached,lot_width,0.045384,50.0294,19.381141
+557 - Thorold Downtown,Detached,bedrooms_above_grade,-0.020042,3.0986,0.944292
+557 - Thorold Downtown,Detached,bathrooms_total_integer,0.100116,2.2746,0.873268
+557 - Thorold Downtown,Detached,parking_total,0.057342,4.1021,1.876972
+557 - Thorold Downtown,Detached,basement_score,0.034963,5.1479,1.363236
+557 - Thorold Downtown,Detached,interior_score,0.049953,3.0352,0.937572
+557 - Thorold Downtown,Detached,exterior_score,-0.004834,2.2042,0.792027

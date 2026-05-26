@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0601
-lot_width,0.0
-bedrooms_above_grade,0.0696
-bathrooms_total_integer,0.0421
-parking_total,0.0067
-basement_score,0.0
-interior_score,0.0095
-exterior_score,-0.0106
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Willowdale West,Condo Apartment,building_area_total,0.066212,832.3404,260.802467
+Willowdale West,Condo Apartment,lot_width,0.0,0.0,1.0
+Willowdale West,Condo Apartment,bedrooms_above_grade,0.035636,1.6936,0.604735
+Willowdale West,Condo Apartment,bathrooms_total_integer,0.052308,1.6681,0.538361
+Willowdale West,Condo Apartment,parking_total,0.014853,1.034,0.317756
+Willowdale West,Condo Apartment,basement_score,0.0,1.0,1.0
+Willowdale West,Condo Apartment,interior_score,0.023705,4.0723,0.803636
+Willowdale West,Condo Apartment,exterior_score,-0.009128,2.0553,0.506472

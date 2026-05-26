@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1157
-lot_width,0.0
-bedrooms_above_grade,0.008
-bathrooms_total_integer,-0.0051
-parking_total,0.0
-basement_score,0.0
-interior_score,0.0567
-exterior_score,0.0161
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East G,Condo Apartment,building_area_total,0.072756,737.2093,118.661637
+East G,Condo Apartment,lot_width,0.0,0.0,1.0
+East G,Condo Apartment,bedrooms_above_grade,0.042806,1.5814,0.49333
+East G,Condo Apartment,bathrooms_total_integer,-0.013249,1.0465,0.30143
+East G,Condo Apartment,parking_total,0.0,1.0,1.0
+East G,Condo Apartment,basement_score,0.0,1.0,1.0
+East G,Condo Apartment,interior_score,0.03664,3.3023,0.699996
+East G,Condo Apartment,exterior_score,0.01803,1.3023,0.459266

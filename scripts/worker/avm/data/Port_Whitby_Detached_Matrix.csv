@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0567
-lot_width,0.0162
-bedrooms_above_grade,0.0164
-bathrooms_total_integer,0.0168
-parking_total,0.016
-basement_score,0.0066
-interior_score,0.0173
-exterior_score,-0.0105
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Port Whitby,Detached,building_area_total,0.047689,2050.0,340.692572
+Port Whitby,Detached,lot_width,0.015028,38.7229,12.691589
+Port Whitby,Detached,bedrooms_above_grade,0.018345,3.451,0.604354
+Port Whitby,Detached,bathrooms_total_integer,0.018279,3.3725,0.624995
+Port Whitby,Detached,parking_total,0.027199,4.5882,1.255208
+Port Whitby,Detached,basement_score,0.011263,5.2745,1.086069
+Port Whitby,Detached,interior_score,0.008339,3.7451,0.966967
+Port Whitby,Detached,exterior_score,0.008133,2.6863,1.244442

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1709
-lot_width,0.0
-bedrooms_above_grade,0.0366
-bathrooms_total_integer,0.0326
-parking_total,0.052
-basement_score,0.0
-interior_score,0.0414
-exterior_score,0.0135
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Waterfront Communities C8,Condo Apartment,building_area_total,0.168334,767.6738,276.999131
+Waterfront Communities C8,Condo Apartment,lot_width,0.0,0.0,1.0
+Waterfront Communities C8,Condo Apartment,bedrooms_above_grade,0.006764,1.5029,0.608588
+Waterfront Communities C8,Condo Apartment,bathrooms_total_integer,0.067145,1.5631,0.589057
+Waterfront Communities C8,Condo Apartment,parking_total,0.062386,0.6214,0.552426
+Waterfront Communities C8,Condo Apartment,basement_score,-0.015388,1.0078,0.17609
+Waterfront Communities C8,Condo Apartment,interior_score,0.038839,3.9612,0.900079
+Waterfront Communities C8,Condo Apartment,exterior_score,0.012891,2.9282,1.046809

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1303
-lot_width,0.0
-bedrooms_above_grade,0.0427
-bathrooms_total_integer,0.0107
-parking_total,0.0314
-basement_score,0.0
-interior_score,0.0156
-exterior_score,0.0072
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mount Pleasant West,Condo Apartment,building_area_total,0.122336,736.8382,227.796015
+Mount Pleasant West,Condo Apartment,lot_width,0.0,0.0,1.0
+Mount Pleasant West,Condo Apartment,bedrooms_above_grade,0.038743,1.4853,0.570041
+Mount Pleasant West,Condo Apartment,bathrooms_total_integer,0.036727,1.6275,0.537877
+Mount Pleasant West,Condo Apartment,parking_total,0.052267,0.6389,0.525796
+Mount Pleasant West,Condo Apartment,basement_score,0.0,1.0,1.0
+Mount Pleasant West,Condo Apartment,interior_score,0.017722,3.982,0.799103
+Mount Pleasant West,Condo Apartment,exterior_score,0.007482,2.2271,0.749106

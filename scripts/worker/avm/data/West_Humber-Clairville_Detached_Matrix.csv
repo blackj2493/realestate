@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0344
-lot_width,-0.025
-bedrooms_above_grade,0.011
-bathrooms_total_integer,0.0336
-parking_total,0.0249
-basement_score,0.0139
-interior_score,0.0352
-exterior_score,0.0109
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Humber-Clairville,Detached,building_area_total,0.077899,1532.1928,442.639467
+West Humber-Clairville,Detached,lot_width,0.008892,42.3129,10.013616
+West Humber-Clairville,Detached,bedrooms_above_grade,-0.002184,3.3739,0.56662
+West Humber-Clairville,Detached,bathrooms_total_integer,0.021274,2.6261,0.828418
+West Humber-Clairville,Detached,parking_total,0.029188,3.887,1.343359
+West Humber-Clairville,Detached,basement_score,0.041204,5.9043,1.910947
+West Humber-Clairville,Detached,interior_score,0.034365,3.087,0.974146
+West Humber-Clairville,Detached,exterior_score,0.013779,2.3565,0.814983

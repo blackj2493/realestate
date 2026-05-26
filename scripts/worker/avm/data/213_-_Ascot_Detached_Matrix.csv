@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0498
-lot_width,-0.0332
-bedrooms_above_grade,-0.0034
-bathrooms_total_integer,0.0427
-parking_total,0.0323
-basement_score,0.0082
-interior_score,0.0059
-exterior_score,0.0163
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+213 - Ascot,Detached,building_area_total,0.054624,1461.8378,460.713382
+213 - Ascot,Detached,lot_width,-0.038909,57.1625,25.700617
+213 - Ascot,Detached,bedrooms_above_grade,-0.008403,2.9649,0.605962
+213 - Ascot,Detached,bathrooms_total_integer,0.056505,2.3596,0.773772
+213 - Ascot,Detached,parking_total,0.043566,4.9167,1.615328
+213 - Ascot,Detached,basement_score,0.00639,5.4035,1.437098
+213 - Ascot,Detached,interior_score,0.013201,3.2281,0.964593
+213 - Ascot,Detached,exterior_score,0.027607,2.5088,0.808351

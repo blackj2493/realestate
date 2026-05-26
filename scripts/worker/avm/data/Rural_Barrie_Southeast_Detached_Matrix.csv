@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0169
-lot_width,0.0471
-bedrooms_above_grade,0.0045
-bathrooms_total_integer,0.0132
-parking_total,0.0031
-basement_score,0.0107
-interior_score,0.0238
-exterior_score,0.002
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Barrie Southeast,Detached,building_area_total,0.037065,2428.1607,457.087432
+Rural Barrie Southeast,Detached,lot_width,-0.006343,39.5531,20.841649
+Rural Barrie Southeast,Detached,bedrooms_above_grade,0.006087,4.0615,0.698943
+Rural Barrie Southeast,Detached,bathrooms_total_integer,0.02115,3.7385,0.827915
+Rural Barrie Southeast,Detached,parking_total,0.009353,4.3538,1.155998
+Rural Barrie Southeast,Detached,basement_score,0.021799,5.5538,1.163956
+Rural Barrie Southeast,Detached,interior_score,0.016786,3.6,1.07846
+Rural Barrie Southeast,Detached,exterior_score,0.006744,2.3231,0.913281

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.028
-lot_width,0.0399
-bedrooms_above_grade,0.0243
-bathrooms_total_integer,0.0197
-parking_total,0.0113
-basement_score,-0.0112
-interior_score,0.0095
-exterior_score,0.0037
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Painswick South,Detached,building_area_total,0.039371,1863.7949,551.596991
+Painswick South,Detached,lot_width,0.037726,41.9639,11.220294
+Painswick South,Detached,bedrooms_above_grade,-0.005964,3.2727,0.739481
+Painswick South,Detached,bathrooms_total_integer,0.035519,3.2273,0.723951
+Painswick South,Detached,parking_total,0.017821,4.7197,1.148546
+Painswick South,Detached,basement_score,0.001608,5.5833,1.642438
+Painswick South,Detached,interior_score,0.016474,3.2576,1.05616
+Painswick South,Detached,exterior_score,0.003372,2.4545,1.032529

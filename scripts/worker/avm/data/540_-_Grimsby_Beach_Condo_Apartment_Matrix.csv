@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1405
-lot_width,0.0
-bedrooms_above_grade,0.0244
-bathrooms_total_integer,-0.0069
-parking_total,0.0078
-basement_score,0.0
-interior_score,0.0446
-exterior_score,0.028
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+540 - Grimsby Beach,Condo Apartment,building_area_total,0.129696,787.2333,180.553165
+540 - Grimsby Beach,Condo Apartment,lot_width,0.0,0.0,1.0
+540 - Grimsby Beach,Condo Apartment,bedrooms_above_grade,0.040513,1.3167,0.465176
+540 - Grimsby Beach,Condo Apartment,bathrooms_total_integer,-0.025019,1.4333,0.495536
+540 - Grimsby Beach,Condo Apartment,parking_total,0.006842,1.15,0.40104
+540 - Grimsby Beach,Condo Apartment,basement_score,0.0,1.0,1.0
+540 - Grimsby Beach,Condo Apartment,interior_score,0.027071,4.0833,0.801907
+540 - Grimsby Beach,Condo Apartment,exterior_score,0.025719,3.4833,0.93971

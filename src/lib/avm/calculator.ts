@@ -1,27 +1,31 @@
 /**
  * AVM Calculator — anchor-and-adjust over an interpretable standardized model.
  *
- * estimate = anchor × exp( clamp( Σ beta_i · clamp((x_i − mean_i)/std_i, ±Z), ±ADJ ) )
+ *   estimate = anchor × exp( clamp( Σ beta_i · clamp((x_i − mean_i)/std_i, ±Z), ±ADJ ) )
  *
  * A typical home (every present feature at its market mean → all z=0) returns
- * exactly the anchor. Per-feature beta/mean/std come from the offline RidgeCV fit
- * (avm_multiplier_matrix); they are constants, so this is deterministic arithmetic
- * with no AI at request time (CLAUDE.md §4).
+ * exactly the anchor. Per-feature beta/mean/std come from the offline RidgeCV
+ * fit (avm_multiplier_matrix); they are constants, so this is deterministic
+ * arithmetic with no AI at request time (CLAUDE.md §4).
  *
  * Score conventions (must match the export + ingester):
  *   interior_score = 6 − interiorTier,  exterior_score = 5 − exteriorTier,
  *   basement_score = 10 − basementTier.
  *
- * Gate: coefficients apply only when audit R² ≥ 0.50; otherwise anchor-only.
- * Anchor: live 90-day median when comps ≥ MIN_ANCHOR_COMPS, else Base_Price,
- * else estimate unavailable.
+ * Anchor: see anchorService.ts — de-staled, recency-weighted, robust + shrunk
+ * local-level with a predictive SD. Replaces the old "≥5 90-day comps or
+ * Base_Price fallback" gate; confidence is now derived from the band width,
+ * not from a comp-count threshold.
+ *
+ * Gate: coefficient engine applies only when audit R² ≥ COEFFICIENT_ENGINE_THRESHOLD;
+ * otherwise the result is anchor + band only.
  */
 
-import type { AVMInput, AVMResult, AVMAdjustmentBreakdown } from './types';
+import type { AVMInput, AVMResult, AVMAdjustmentBreakdown, AnchorBasis } from './types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchAnchor } from './anchorService';
+import { fetchAnchor, type AnchorResult } from './anchorService';
 import { fetchAuditInfo } from './auditService';
-import { fetchCoefficients } from './matrixService';
+import { fetchCoefficients, type CoefficientRow } from './matrixService';
 import {
   ENGINE_MODE_COEFFICIENT_ADJUSTED,
   ENGINE_MODE_ANCHOR_ONLY,
@@ -29,81 +33,94 @@ import {
   CONFIDENCE_MEDIUM,
   CONFIDENCE_LOW,
   COEFFICIENT_ENGINE_THRESHOLD,
-  HIGH_CONFIDENCE_THRESHOLD,
   Z_CLAMP,
   ADJ_CLAMP,
-  MIN_ANCHOR_COMPS,
+  BAND_HIGH,
+  BAND_MED,
+  BAND_LOW,
 } from './types';
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
+/**
+ * Pre-loaded per-market constants the estimate needs. Lets the request-time
+ * path (calculateAVM) and the nightly batch precompute share ONE implementation
+ * of the model math.
+ */
+export interface AVMMarketData {
+  /** Anchor pipeline output: log-level + predictive SD + n_eff + basis. */
+  anchor: AnchorResult;
+  /** Model accuracy — gates the coefficient engine. */
+  r2: number | null;
+  /** Audit Base_Price — surfaced for legacy display; anchor service uses it as a fallback prior. */
+  basePrice: number | null;
+  /** Per-feature standardized coefficients (beta/mean/std) for this market. */
+  coefficients: CoefficientRow[];
+}
+
 export async function calculateAVM(
   supabase: SupabaseClient,
   input: AVMInput
 ): Promise<AVMResult> {
-  // Anchor and audit are independent → fetch in parallel.
-  const [anchorRes, audit] = await Promise.all([
-    fetchAnchor(supabase, input.cityRegion, input.propertySubType, input.rawPropertySubType),
+  // Coefficients + audit are needed by the anchor (for per-comp adjustment and
+  // basePrice fallback), so fetch them first, then call fetchAnchor.
+  const [coefficients, audit] = await Promise.all([
+    fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
     fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
   ]);
+  const anchor = await fetchAnchor(supabase, input, coefficients, audit.basePrice);
 
-  // Anchor selection ladder: live median (enough comps) → Base_Price → unavailable.
-  let anchor: number | null = null;
-  let usedFallback = false;
-  if (anchorRes.anchor !== null && anchorRes.comps >= MIN_ANCHOR_COMPS) {
-    anchor = anchorRes.anchor;
-  } else if (audit.basePrice !== null) {
-    anchor = audit.basePrice;
-    usedFallback = true;
-  }
-
-  if (anchor === null) {
-    return {
-      estimatedValue: 0,
-      anchorPrice: 0,
-      totalAdjustmentPct: 0,
-      engineMode: ENGINE_MODE_ANCHOR_ONLY,
-      r2Score: audit.r2,
-      breakdown: blankBreakdown(),
-      confidence: CONFIDENCE_LOW,
-    };
-  }
-
-  // Gate: coefficient engine only when the market model is accurate enough.
-  if (audit.r2 !== null && audit.r2 >= COEFFICIENT_ENGINE_THRESHOLD) {
-    return calculateWithCoefficients(supabase, anchor, audit.r2, usedFallback, input);
-  }
-
-  return {
-    estimatedValue: anchor,
-    anchorPrice: anchor,
-    totalAdjustmentPct: 0,
-    engineMode: ENGINE_MODE_ANCHOR_ONLY,
-    r2Score: audit.r2,
-    breakdown: blankBreakdown(),
-    confidence: audit.r2 !== null ? CONFIDENCE_MEDIUM : CONFIDENCE_LOW,
-  };
+  return estimateFromMarketData(input, {
+    anchor,
+    r2: audit.r2,
+    basePrice: audit.basePrice,
+    coefficients,
+  });
 }
 
-async function calculateWithCoefficients(
-  supabase: SupabaseClient,
-  anchor: number,
-  r2Score: number,
-  usedFallback: boolean,
-  input: AVMInput
-): Promise<AVMResult> {
-  const coefficients = await fetchCoefficients(
-    supabase,
-    input.cityRegion,
-    input.propertySubType
-  );
+/**
+ * Pure, deterministic estimate from a listing's features + pre-loaded market
+ * data. Identical inputs always yield an identical result; no I/O, no AI.
+ */
+export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): AVMResult {
+  const { anchor } = market;
 
+  // Anchor unavailable: render "estimate unavailable" downstream.
+  if (anchor.basis === 'none' || !Number.isFinite(anchor.anchorLevel)) {
+    return unavailable(market);
+  }
+
+  const baseAnchor = Math.exp(anchor.anchorLevel);
+
+  // Gate: coefficient engine only when the market model is accurate enough.
+  if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD) {
+    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients);
+  }
+
+  // Anchor-only: estimate = anchor; band derived directly from predSD.
+  return finish({
+    estimatedValue: Math.round(baseAnchor),
+    anchorPrice: Math.round(baseAnchor),
+    totalAdjustmentPct: 0,
+    engineMode: ENGINE_MODE_ANCHOR_ONLY,
+    r2Score: market.r2,
+    breakdown: blankBreakdown(),
+    adjustmentLog: 0,
+    anchor,
+  });
+}
+
+function calculateWithCoefficients(
+  baseAnchor: number,
+  anchor: AnchorResult,
+  r2Score: number,
+  input: AVMInput,
+  coefficients: CoefficientRow[]
+): AVMResult {
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
 
-  // Live feature values. Condition is in SCORE space; counts/continuous are raw.
-  // null → field absent → skip (≡ training mean-imputation, z=0).
   const interiorScore = 6 - input.interiorTier;
   const exteriorScore = 5 - input.exteriorTier;
   const basementScore = 10 - input.basementTier;
@@ -129,27 +146,97 @@ async function calculateWithCoefficients(
     const z = clamp((f.value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
     const contribution = c.beta * z;
     total += contribution;
-    // First-order $ attribution (sums ≈ the total adjustment for small values).
-    breakdown[f.key] = Math.round(anchor * contribution);
+    breakdown[f.key] = Math.round(baseAnchor * contribution);
   }
 
   total = clamp(total, -ADJ_CLAMP, ADJ_CLAMP);
-  const estimatedValue = Math.round(anchor * Math.exp(total));
+  const estimatedValue = Math.round(baseAnchor * Math.exp(total));
 
-  const confidence = usedFallback
-    ? CONFIDENCE_MEDIUM
-    : r2Score >= HIGH_CONFIDENCE_THRESHOLD
-    ? CONFIDENCE_HIGH
-    : CONFIDENCE_MEDIUM;
-
-  return {
+  return finish({
     estimatedValue,
-    anchorPrice: anchor,
+    anchorPrice: Math.round(baseAnchor),
     totalAdjustmentPct: Math.exp(total) - 1,
     engineMode: ENGINE_MODE_COEFFICIENT_ADJUSTED,
     r2Score,
     breakdown,
+    adjustmentLog: total,
+    anchor,
+  });
+}
+
+/**
+ * Apply the symmetric log-space band to the point estimate and derive confidence
+ * from its relative half-width. SUPPRESS the estimate entirely when the band is
+ * wider than BAND_LOW — we don't publish a number we can't stand behind.
+ */
+function finish(args: {
+  estimatedValue: number;
+  anchorPrice: number;
+  totalAdjustmentPct: number;
+  engineMode: AVMResult['engineMode'];
+  r2Score: number | null;
+  breakdown: AVMAdjustmentBreakdown;
+  adjustmentLog: number; // total adjustment in log-space (already clamped)
+  anchor: AnchorResult;
+}): AVMResult {
+  const { anchor, adjustmentLog } = args;
+
+  // Band on price: exp(level ± SD) × exp(feature adjustment).
+  const lowBand = Math.round(Math.exp(anchor.anchorLevel - anchor.predSD + adjustmentLog));
+  const highBand = Math.round(Math.exp(anchor.anchorLevel + anchor.predSD + adjustmentLog));
+
+  // Relative half-width on price ≈ predSD itself in log-space (1-σ band).
+  const relHalfWidth = anchor.predSD;
+  let confidence: AVMResult['confidence'];
+  let estimatedValue = args.estimatedValue;
+  let basis: AnchorBasis = anchor.basis;
+
+  if (!Number.isFinite(relHalfWidth) || relHalfWidth > BAND_LOW) {
+    // Range too wide to publish — degrade to "unavailable" without erasing the
+    // anchor/band (caller can still surface diagnostics).
+    confidence = CONFIDENCE_LOW;
+    estimatedValue = 0;
+    basis = 'none';
+  } else if (relHalfWidth < BAND_HIGH) {
+    confidence = CONFIDENCE_HIGH;
+  } else if (relHalfWidth < BAND_MED) {
+    confidence = CONFIDENCE_MEDIUM;
+  } else {
+    confidence = CONFIDENCE_LOW;
+  }
+
+  return {
+    estimatedValue,
+    anchorPrice: args.anchorPrice,
+    totalAdjustmentPct: args.totalAdjustmentPct,
+    engineMode: args.engineMode,
+    r2Score: args.r2Score,
+    breakdown: args.breakdown,
     confidence,
+    comps: anchor.comps,
+    nEff: Math.round(anchor.nEff * 100) / 100,
+    basis,
+    lowBand: estimatedValue > 0 ? lowBand : 0,
+    highBand: estimatedValue > 0 ? highBand : 0,
+    predictiveSD: relHalfWidth,
+  };
+}
+
+function unavailable(market: AVMMarketData): AVMResult {
+  return {
+    estimatedValue: 0,
+    anchorPrice: 0,
+    totalAdjustmentPct: 0,
+    engineMode: ENGINE_MODE_ANCHOR_ONLY,
+    r2Score: market.r2,
+    breakdown: blankBreakdown(),
+    confidence: CONFIDENCE_LOW,
+    comps: market.anchor.comps,
+    nEff: 0,
+    basis: 'none',
+    lowBand: 0,
+    highBand: 0,
+    predictiveSD: Infinity,
   };
 }
 

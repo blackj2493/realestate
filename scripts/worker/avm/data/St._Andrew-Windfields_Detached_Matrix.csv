@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0277
-lot_width,0.0592
-bedrooms_above_grade,0.0149
-bathrooms_total_integer,0.2085
-parking_total,0.0582
-basement_score,0.0151
-interior_score,0.0453
-exterior_score,0.0269
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+St. Andrew-Windfields,Detached,building_area_total,0.055464,3189.0805,1000.787773
+St. Andrew-Windfields,Detached,lot_width,0.02907,65.5096,16.75379
+St. Andrew-Windfields,Detached,bedrooms_above_grade,0.002872,4.1484,0.729831
+St. Andrew-Windfields,Detached,bathrooms_total_integer,0.154315,4.8203,1.782877
+St. Andrew-Windfields,Detached,parking_total,0.061716,6.4141,2.230917
+St. Andrew-Windfields,Detached,basement_score,0.020083,6.0859,1.854165
+St. Andrew-Windfields,Detached,interior_score,0.079249,3.8906,1.193959
+St. Andrew-Windfields,Detached,exterior_score,0.03319,2.8047,0.96062

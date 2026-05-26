@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Little Portugal,Townhouse,building_area_total,0.046917,1388.4146,288.821067
+Little Portugal,Townhouse,lot_width,-0.050831,15.7161,3.764968
+Little Portugal,Townhouse,bedrooms_above_grade,0.051799,2.8958,0.549226
+Little Portugal,Townhouse,bathrooms_total_integer,-0.007874,2.5625,0.761201
+Little Portugal,Townhouse,parking_total,0.019304,0.9375,0.642464
+Little Portugal,Townhouse,basement_score,0.00281,5.4375,2.474084
+Little Portugal,Townhouse,interior_score,0.02668,3.2292,1.122489
+Little Portugal,Townhouse,exterior_score,0.030738,2.5417,0.840593

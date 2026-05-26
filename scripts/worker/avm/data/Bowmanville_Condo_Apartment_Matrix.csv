@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.038
-lot_width,0.0
-bedrooms_above_grade,0.0323
-bathrooms_total_integer,0.0259
-parking_total,0.0163
-basement_score,0.0
-interior_score,0.0196
-exterior_score,0.0117
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bowmanville,Condo Apartment,building_area_total,0.020888,787.766,129.583246
+Bowmanville,Condo Apartment,lot_width,0.0,0.0,1.0
+Bowmanville,Condo Apartment,bedrooms_above_grade,0.028697,1.6702,0.470136
+Bowmanville,Condo Apartment,bathrooms_total_integer,0.045003,1.2553,0.43604
+Bowmanville,Condo Apartment,parking_total,0.022676,1.266,0.465296
+Bowmanville,Condo Apartment,basement_score,0.0,1.0,1.0
+Bowmanville,Condo Apartment,interior_score,0.018294,3.7766,0.621499
+Bowmanville,Condo Apartment,exterior_score,-0.000594,2.0426,0.650939

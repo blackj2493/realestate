@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1502
-lot_width,0.0
-bedrooms_above_grade,0.0163
-bathrooms_total_integer,0.0177
-parking_total,0.0298
-basement_score,0.0
-interior_score,-0.0112
-exterior_score,-0.0082
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Regent Park,Condo Apartment,building_area_total,0.123136,668.2584,202.417414
+Regent Park,Condo Apartment,lot_width,0.0,0.0,1.0
+Regent Park,Condo Apartment,bedrooms_above_grade,0.035465,1.3371,0.635005
+Regent Park,Condo Apartment,bathrooms_total_integer,0.03637,1.382,0.485882
+Regent Park,Condo Apartment,parking_total,0.030074,0.5787,0.493775
+Regent Park,Condo Apartment,basement_score,0.0,1.0,1.0
+Regent Park,Condo Apartment,interior_score,-0.000478,3.8315,0.760484
+Regent Park,Condo Apartment,exterior_score,-0.019608,2.3146,0.688517

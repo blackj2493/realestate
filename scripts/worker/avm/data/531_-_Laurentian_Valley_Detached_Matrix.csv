@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.027
-lot_width,0.0359
-bedrooms_above_grade,0.0279
-bathrooms_total_integer,0.1014
-parking_total,0.0566
-basement_score,-0.0209
-interior_score,-0.0044
-exterior_score,0.0308
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+531 - Laurentian Valley,Detached,building_area_total,0.035714,1362.987,462.306653
+531 - Laurentian Valley,Detached,lot_width,0.043862,165.1287,197.617936
+531 - Laurentian Valley,Detached,bedrooms_above_grade,0.037826,2.7903,0.675304
+531 - Laurentian Valley,Detached,bathrooms_total_integer,0.141679,2.121,0.819055
+531 - Laurentian Valley,Detached,parking_total,0.036535,7.4637,3.464784
+531 - Laurentian Valley,Detached,basement_score,0.01908,4.5968,1.250286
+531 - Laurentian Valley,Detached,interior_score,0.026545,3.3145,0.936422
+531 - Laurentian Valley,Detached,exterior_score,0.059796,2.5645,0.795572

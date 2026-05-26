@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Clairlea-Birchmount,Townhouse,building_area_total,0.065022,1492.3611,365.970904
+Clairlea-Birchmount,Townhouse,lot_width,0.006218,19.9635,5.350983
+Clairlea-Birchmount,Townhouse,bedrooms_above_grade,0.028853,2.8026,0.562413
+Clairlea-Birchmount,Townhouse,bathrooms_total_integer,0.044005,2.7237,0.718161
+Clairlea-Birchmount,Townhouse,parking_total,0.016767,1.9605,0.715262
+Clairlea-Birchmount,Townhouse,basement_score,0.000435,2.3947,2.248268
+Clairlea-Birchmount,Townhouse,interior_score,0.022585,3.6579,0.770383
+Clairlea-Birchmount,Townhouse,exterior_score,0.00575,2.1711,0.636358

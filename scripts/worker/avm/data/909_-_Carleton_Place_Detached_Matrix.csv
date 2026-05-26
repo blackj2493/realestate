@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0317
-lot_width,0.03
-bedrooms_above_grade,-0.0159
-bathrooms_total_integer,0.1098
-parking_total,0.0342
-basement_score,0.0176
-interior_score,0.0193
-exterior_score,0.0206
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+909 - Carleton Place,Detached,building_area_total,0.049787,1636.2245,559.554333
+909 - Carleton Place,Detached,lot_width,-0.003643,61.5336,41.629206
+909 - Carleton Place,Detached,bedrooms_above_grade,-0.014608,3.0875,0.769639
+909 - Carleton Place,Detached,bathrooms_total_integer,0.090544,2.4937,0.782599
+909 - Carleton Place,Detached,parking_total,0.058674,4.1937,1.697413
+909 - Carleton Place,Detached,basement_score,0.040859,4.5875,1.530472
+909 - Carleton Place,Detached,interior_score,0.041409,3.6375,0.890839
+909 - Carleton Place,Detached,exterior_score,0.020439,2.7,0.906918

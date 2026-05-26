@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1029 - DE Dempsey,Townhouse,building_area_total,0.028972,1484.7317,298.272999
+1029 - DE Dempsey,Townhouse,lot_width,0.017692,22.7165,2.812382
+1029 - DE Dempsey,Townhouse,bedrooms_above_grade,0.03974,2.6889,0.462948
+1029 - DE Dempsey,Townhouse,bathrooms_total_integer,-0.00801,2.9778,0.393779
+1029 - DE Dempsey,Townhouse,parking_total,-0.010101,2.1778,0.796908
+1029 - DE Dempsey,Townhouse,basement_score,0.037557,3.5111,1.821138
+1029 - DE Dempsey,Townhouse,interior_score,-0.003215,3.8889,0.60451
+1029 - DE Dempsey,Townhouse,exterior_score,-0.00505,2.0,0.557773

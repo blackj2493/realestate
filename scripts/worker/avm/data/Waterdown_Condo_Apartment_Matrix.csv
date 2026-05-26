@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0628
-lot_width,0.0
-bedrooms_above_grade,0.0402
-bathrooms_total_integer,0.0194
-parking_total,0.0109
-basement_score,0.0066
-interior_score,0.01
-exterior_score,0.0078
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Waterdown,Condo Apartment,building_area_total,0.076242,690.3516,161.907542
+Waterdown,Condo Apartment,lot_width,0.0,0.0,1.0
+Waterdown,Condo Apartment,bedrooms_above_grade,0.050879,1.2527,0.434587
+Waterdown,Condo Apartment,bathrooms_total_integer,0.0116,1.1429,0.349927
+Waterdown,Condo Apartment,parking_total,0.01472,1.2418,0.428149
+Waterdown,Condo Apartment,basement_score,0.01148,1.1758,0.735197
+Waterdown,Condo Apartment,interior_score,0.010688,3.978,0.610855
+Waterdown,Condo Apartment,exterior_score,0.000948,2.011,0.583557

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rouge E11,Townhouse,building_area_total,0.073437,1381.3559,416.288922
+Rouge E11,Townhouse,lot_width,0.019471,23.8932,13.810834
+Rouge E11,Townhouse,bedrooms_above_grade,0.012826,2.8333,0.880484
+Rouge E11,Townhouse,bathrooms_total_integer,0.025965,2.8636,0.850782
+Rouge E11,Townhouse,parking_total,0.052369,2.0455,0.94439
+Rouge E11,Townhouse,basement_score,0.020045,4.3788,2.632922
+Rouge E11,Townhouse,interior_score,0.015319,3.5455,0.873548
+Rouge E11,Townhouse,exterior_score,0.008381,2.1061,0.630747

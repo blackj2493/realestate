@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.042
-lot_width,0.0498
-bedrooms_above_grade,-0.0322
-bathrooms_total_integer,0.054
-parking_total,0.0647
-basement_score,0.0185
-interior_score,0.0418
-exterior_score,0.0043
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Port Perry,Detached,building_area_total,0.076679,1847.2727,547.729599
+Port Perry,Detached,lot_width,0.027502,76.724,89.36339
+Port Perry,Detached,bedrooms_above_grade,-0.073822,2.9773,0.881338
+Port Perry,Detached,bathrooms_total_integer,0.08474,2.8682,0.839852
+Port Perry,Detached,parking_total,0.063648,5.9045,3.194096
+Port Perry,Detached,basement_score,0.011012,5.5318,1.671659
+Port Perry,Detached,interior_score,0.04251,3.7273,1.012729
+Port Perry,Detached,exterior_score,0.01353,2.9409,0.991399

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0522
-lot_width,0.0545
-bedrooms_above_grade,-0.0211
-bathrooms_total_integer,0.1894
-parking_total,0.1468
-basement_score,0.0418
-interior_score,0.0955
-exterior_score,0.0197
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Whitchurch-Stouffville,Detached,building_area_total,0.064274,2616.4773,1031.154516
+Rural Whitchurch-Stouffville,Detached,lot_width,0.059208,191.5121,162.394704
+Rural Whitchurch-Stouffville,Detached,bedrooms_above_grade,0.022695,3.7154,1.151819
+Rural Whitchurch-Stouffville,Detached,bathrooms_total_integer,0.201397,3.8846,1.756897
+Rural Whitchurch-Stouffville,Detached,parking_total,0.122498,10.8154,5.575751
+Rural Whitchurch-Stouffville,Detached,basement_score,0.040627,5.9923,2.409903
+Rural Whitchurch-Stouffville,Detached,interior_score,0.080139,3.6538,1.134844
+Rural Whitchurch-Stouffville,Detached,exterior_score,-0.010737,2.6231,1.061678

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0185
-lot_width,0.0437
-bedrooms_above_grade,0.0411
-bathrooms_total_integer,0.0116
-parking_total,0.0105
-basement_score,0.0031
-interior_score,0.0112
-exterior_score,0.0181
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7706 - Barrhaven - Longfields,Detached,building_area_total,0.0445,1976.5625,495.918399
+7706 - Barrhaven - Longfields,Detached,lot_width,0.043229,38.1265,6.359057
+7706 - Barrhaven - Longfields,Detached,bedrooms_above_grade,0.011938,3.268,0.696315
+7706 - Barrhaven - Longfields,Detached,bathrooms_total_integer,0.0172,3.4227,0.670975
+7706 - Barrhaven - Longfields,Detached,parking_total,0.013267,4.4124,1.257985
+7706 - Barrhaven - Longfields,Detached,basement_score,0.004287,4.8763,0.70722
+7706 - Barrhaven - Longfields,Detached,interior_score,0.019562,3.9691,0.710069
+7706 - Barrhaven - Longfields,Detached,exterior_score,0.003246,2.5979,0.869409

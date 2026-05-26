@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0301
-lot_width,0.0394
-bedrooms_above_grade,0.0752
-bathrooms_total_integer,0.0965
-parking_total,-0.0107
-basement_score,-0.018
-interior_score,0.0334
-exterior_score,-0.0226
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South Riverdale,Detached,building_area_total,0.085751,1600.0,435.996092
+South Riverdale,Detached,lot_width,-0.010019,22.0587,4.600621
+South Riverdale,Detached,bedrooms_above_grade,0.024444,3.0986,0.921648
+South Riverdale,Detached,bathrooms_total_integer,0.080144,2.831,1.061303
+South Riverdale,Detached,parking_total,0.013486,1.6197,1.117923
+South Riverdale,Detached,basement_score,-4.5e-05,5.7887,1.971026
+South Riverdale,Detached,interior_score,0.065359,3.338,1.186113
+South Riverdale,Detached,exterior_score,-0.02101,2.4789,0.869825

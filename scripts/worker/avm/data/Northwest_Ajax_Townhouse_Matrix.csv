@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northwest Ajax,Townhouse,building_area_total,0.036859,1794.6429,306.139349
+Northwest Ajax,Townhouse,lot_width,0.020114,25.1725,9.787749
+Northwest Ajax,Townhouse,bedrooms_above_grade,-0.001799,3.0882,0.283637
+Northwest Ajax,Townhouse,bathrooms_total_integer,0.018639,3.3088,0.492812
+Northwest Ajax,Townhouse,parking_total,0.015288,2.3382,0.609008
+Northwest Ajax,Townhouse,basement_score,-0.000232,5.2794,2.381581
+Northwest Ajax,Townhouse,interior_score,0.00296,3.8529,0.878915
+Northwest Ajax,Townhouse,exterior_score,0.011597,2.5882,0.943013

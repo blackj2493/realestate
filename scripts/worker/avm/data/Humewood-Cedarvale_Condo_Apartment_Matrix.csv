@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1699
-lot_width,0.0
-bedrooms_above_grade,0.015
-bathrooms_total_integer,0.0383
-parking_total,0.0401
-basement_score,0.0
-interior_score,0.015
-exterior_score,0.0176
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Humewood-Cedarvale,Condo Apartment,building_area_total,0.108189,631.5789,253.853041
+Humewood-Cedarvale,Condo Apartment,lot_width,0.0,0.0,1.0
+Humewood-Cedarvale,Condo Apartment,bedrooms_above_grade,0.028799,1.3158,0.625704
+Humewood-Cedarvale,Condo Apartment,bathrooms_total_integer,0.048254,1.3333,0.471405
+Humewood-Cedarvale,Condo Apartment,parking_total,0.057639,0.5965,0.490601
+Humewood-Cedarvale,Condo Apartment,basement_score,0.0,1.0,1.0
+Humewood-Cedarvale,Condo Apartment,interior_score,0.042079,4.0877,0.822506
+Humewood-Cedarvale,Condo Apartment,exterior_score,0.004781,2.2281,0.701316

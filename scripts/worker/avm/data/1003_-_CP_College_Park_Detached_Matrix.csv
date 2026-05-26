@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0376
-lot_width,0.0483
-bedrooms_above_grade,0.0114
-bathrooms_total_integer,0.1246
-parking_total,0.0209
-basement_score,-0.0092
-interior_score,0.046
-exterior_score,0.0082
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1003 - CP College Park,Detached,building_area_total,0.083415,1823.2059,866.676063
+1003 - CP College Park,Detached,lot_width,0.063325,56.8935,17.307461
+1003 - CP College Park,Detached,bedrooms_above_grade,0.01884,3.4217,0.660786
+1003 - CP College Park,Detached,bathrooms_total_integer,0.096025,2.9157,1.077758
+1003 - CP College Park,Detached,parking_total,-0.002237,5.1687,2.280453
+1003 - CP College Park,Detached,basement_score,0.007162,5.494,1.660117
+1003 - CP College Park,Detached,interior_score,0.066956,3.3012,1.209749
+1003 - CP College Park,Detached,exterior_score,0.009728,2.7349,1.042291

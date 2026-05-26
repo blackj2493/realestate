@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0213
-lot_width,0.0246
-bedrooms_above_grade,0.0292
-bathrooms_total_integer,0.0108
-parking_total,0.0119
-basement_score,0.0114
-interior_score,0.0098
-exterior_score,0.0161
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Woodland Hill,Detached,building_area_total,0.033875,2387.6712,503.670148
+Woodland Hill,Detached,lot_width,0.012969,40.7043,9.948893
+Woodland Hill,Detached,bedrooms_above_grade,0.020951,3.7802,0.570371
+Woodland Hill,Detached,bathrooms_total_integer,0.013036,3.8571,0.621438
+Woodland Hill,Detached,parking_total,0.011267,5.2637,1.14676
+Woodland Hill,Detached,basement_score,0.007415,5.9011,1.748186
+Woodland Hill,Detached,interior_score,0.007666,3.9121,0.979441
+Woodland Hill,Detached,exterior_score,0.013561,2.5275,0.929855

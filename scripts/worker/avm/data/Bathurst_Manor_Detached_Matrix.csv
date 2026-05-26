@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0688
-lot_width,-0.0231
-bedrooms_above_grade,0.0112
-bathrooms_total_integer,0.0365
-parking_total,0.016
-basement_score,0.0064
-interior_score,0.0499
-exterior_score,0.0177
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bathurst Manor,Detached,building_area_total,0.057047,1860.4839,856.151229
+Bathurst Manor,Detached,lot_width,-0.002384,54.3297,9.909739
+Bathurst Manor,Detached,bedrooms_above_grade,0.027046,3.3191,0.587327
+Bathurst Manor,Detached,bathrooms_total_integer,0.059462,3.0319,1.105616
+Bathurst Manor,Detached,parking_total,0.028463,5.266,1.306087
+Bathurst Manor,Detached,basement_score,0.002406,6.2447,1.426841
+Bathurst Manor,Detached,interior_score,0.038586,2.8191,1.051471
+Bathurst Manor,Detached,exterior_score,0.013316,2.2234,0.81416

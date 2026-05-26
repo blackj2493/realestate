@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Pickering,Townhouse,building_area_total,0.056293,1722.2727,332.045066
+Rural Pickering,Townhouse,lot_width,0.006927,21.7873,5.61437
+Rural Pickering,Townhouse,bedrooms_above_grade,0.016777,3.1575,0.567148
+Rural Pickering,Townhouse,bathrooms_total_integer,-0.00465,3.1811,0.385103
+Rural Pickering,Townhouse,parking_total,0.007252,2.3976,0.72725
+Rural Pickering,Townhouse,basement_score,0.044114,3.8268,2.227581
+Rural Pickering,Townhouse,interior_score,0.011352,3.9764,0.846154
+Rural Pickering,Townhouse,exterior_score,-0.003542,2.189,0.706909

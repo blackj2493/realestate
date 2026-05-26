@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0441
-lot_width,0.0372
-bedrooms_above_grade,0.0145
-bathrooms_total_integer,0.1571
-parking_total,0.0188
-basement_score,0.0493
-interior_score,0.018
-exterior_score,0.0109
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Willowdale East,Detached,building_area_total,0.069548,3038.0952,1135.666865
+Willowdale East,Detached,lot_width,0.011209,46.9179,8.733058
+Willowdale East,Detached,bedrooms_above_grade,-0.010089,3.9286,0.752547
+Willowdale East,Detached,bathrooms_total_integer,0.139077,4.6,1.904131
+Willowdale East,Detached,parking_total,0.048688,5.2,1.605571
+Willowdale East,Detached,basement_score,0.050475,7.1214,1.778715
+Willowdale East,Detached,interior_score,0.04045,3.6786,1.321622
+Willowdale East,Detached,exterior_score,0.00382,2.3857,0.722947

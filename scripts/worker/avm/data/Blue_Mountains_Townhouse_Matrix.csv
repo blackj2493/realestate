@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2752
-lot_width,-0.0039
-bedrooms_above_grade,0.0139
-bathrooms_total_integer,-0.0038
-parking_total,0.0614
-basement_score,-0.0446
-interior_score,0.0247
-exterior_score,0.0165
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Blue Mountains,Townhouse,building_area_total,0.210555,1751.8736,559.323521
+Blue Mountains,Townhouse,lot_width,0.0,13.8109,12.128607
+Blue Mountains,Townhouse,bedrooms_above_grade,0.015399,2.8714,0.843825
+Blue Mountains,Townhouse,bathrooms_total_integer,-0.001755,2.9571,0.885369
+Blue Mountains,Townhouse,parking_total,0.099253,1.8429,0.872365
+Blue Mountains,Townhouse,basement_score,-0.031963,3.5,2.488545
+Blue Mountains,Townhouse,interior_score,0.003087,3.7286,0.924607
+Blue Mountains,Townhouse,exterior_score,0.016274,3.1286,0.893171

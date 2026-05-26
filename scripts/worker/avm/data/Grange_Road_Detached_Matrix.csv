@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0727
-lot_width,0.0242
-bedrooms_above_grade,0.0245
-bathrooms_total_integer,0.0308
-parking_total,0.0135
-basement_score,0.0091
-interior_score,0.0084
-exterior_score,0.0052
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Grange Road,Detached,building_area_total,0.066859,1609.5288,556.302329
+Grange Road,Detached,lot_width,0.00946,41.1811,16.128445
+Grange Road,Detached,bedrooms_above_grade,0.0247,3.1189,0.635889
+Grange Road,Detached,bathrooms_total_integer,0.055191,2.696,0.910116
+Grange Road,Detached,parking_total,0.018965,3.5969,1.110359
+Grange Road,Detached,basement_score,0.015462,5.5859,1.597182
+Grange Road,Detached,interior_score,0.007146,3.4097,0.995361
+Grange Road,Detached,exterior_score,0.016075,2.5198,0.798293

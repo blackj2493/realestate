@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0582
-lot_width,0.0
-bedrooms_above_grade,0.0
-bathrooms_total_integer,0.0
-parking_total,0.0112
-basement_score,0.0
-interior_score,0.0211
-exterior_score,-0.0114
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Milliken,Condo Apartment,building_area_total,0.047969,1101.6129,179.373404
+Milliken,Condo Apartment,lot_width,0.0,0.0,1.0
+Milliken,Condo Apartment,bedrooms_above_grade,0.016887,1.9032,0.29565
+Milliken,Condo Apartment,bathrooms_total_integer,0.00421,1.871,0.335236
+Milliken,Condo Apartment,parking_total,0.009274,1.1613,0.409309
+Milliken,Condo Apartment,basement_score,0.0,1.0,1.0
+Milliken,Condo Apartment,interior_score,0.026423,3.7419,0.670471
+Milliken,Condo Apartment,exterior_score,-0.017399,1.7258,0.765577

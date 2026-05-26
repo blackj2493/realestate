@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Woodland Hill,Townhouse,building_area_total,0.032757,1662.8205,305.235922
+Woodland Hill,Townhouse,lot_width,0.009749,23.7265,3.593777
+Woodland Hill,Townhouse,bedrooms_above_grade,-0.003236,2.9796,0.141392
+Woodland Hill,Townhouse,bathrooms_total_integer,0.008338,3.3061,0.460881
+Woodland Hill,Townhouse,parking_total,0.011384,3.1224,0.520308
+Woodland Hill,Townhouse,basement_score,0.014413,5.3265,1.718896
+Woodland Hill,Townhouse,interior_score,0.004477,3.8367,0.583688
+Woodland Hill,Townhouse,exterior_score,-0.008304,2.102,0.416246

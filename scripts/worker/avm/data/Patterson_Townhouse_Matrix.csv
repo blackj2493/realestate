@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Patterson,Townhouse,building_area_total,0.069643,2022.4713,395.920721
+Patterson,Townhouse,lot_width,0.003285,22.1041,3.946947
+Patterson,Townhouse,bedrooms_above_grade,0.001697,3.2381,0.461684
+Patterson,Townhouse,bathrooms_total_integer,0.013828,3.7407,0.574117
+Patterson,Townhouse,parking_total,0.012914,3.1693,1.128238
+Patterson,Townhouse,basement_score,-0.00284,5.164,2.189338
+Patterson,Townhouse,interior_score,0.01383,4.0212,0.835443
+Patterson,Townhouse,exterior_score,0.0092,2.1323,0.841054

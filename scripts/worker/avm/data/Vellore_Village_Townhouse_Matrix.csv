@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Vellore Village,Townhouse,building_area_total,0.047838,1917.8282,312.425964
+Vellore Village,Townhouse,lot_width,0.004089,21.9652,4.960082
+Vellore Village,Townhouse,bedrooms_above_grade,-0.005203,3.1828,0.386499
+Vellore Village,Townhouse,bathrooms_total_integer,0.017808,3.629,0.483064
+Vellore Village,Townhouse,parking_total,0.008021,2.9624,0.851111
+Vellore Village,Townhouse,basement_score,0.01609,5.4892,1.545856
+Vellore Village,Townhouse,interior_score,0.01567,3.8978,0.877004
+Vellore Village,Townhouse,exterior_score,0.011316,2.2957,0.728589

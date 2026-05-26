@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0232
-lot_width,-0.0428
-bedrooms_above_grade,0.0101
-bathrooms_total_integer,0.0717
-parking_total,0.0123
-basement_score,0.0067
-interior_score,0.017
-exterior_score,0.01
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+54 - Amherstview,Detached,building_area_total,0.033488,1553.092,479.963481
+54 - Amherstview,Detached,lot_width,-0.009535,60.1688,62.248825
+54 - Amherstview,Detached,bedrooms_above_grade,0.00858,2.8776,0.604945
+54 - Amherstview,Detached,bathrooms_total_integer,0.080266,2.517,0.811094
+54 - Amherstview,Detached,parking_total,0.015641,4.6293,1.922025
+54 - Amherstview,Detached,basement_score,0.019,5.0612,1.457911
+54 - Amherstview,Detached,interior_score,0.02582,3.3537,0.924369
+54 - Amherstview,Detached,exterior_score,0.00494,2.7959,0.880157

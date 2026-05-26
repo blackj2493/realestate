@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0294
-lot_width,0.0
-bedrooms_above_grade,0.0055
-bathrooms_total_integer,0.0201
-parking_total,0.0501
-basement_score,0.0122
-interior_score,0.0213
-exterior_score,0.0131
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7607 - Centrepointe,Townhouse,building_area_total,0.023952,1552.439,336.037022
+7607 - Centrepointe,Townhouse,lot_width,0.0,23.105,5.729373
+7607 - Centrepointe,Townhouse,bedrooms_above_grade,0.015774,2.9107,0.543691
+7607 - Centrepointe,Townhouse,bathrooms_total_integer,0.045262,3.0714,0.529728
+7607 - Centrepointe,Townhouse,parking_total,0.061649,2.2321,0.981818
+7607 - Centrepointe,Townhouse,basement_score,0.006424,4.1964,1.70524
+7607 - Centrepointe,Townhouse,interior_score,0.020117,3.8571,0.638877
+7607 - Centrepointe,Townhouse,exterior_score,0.007804,2.1071,0.587931

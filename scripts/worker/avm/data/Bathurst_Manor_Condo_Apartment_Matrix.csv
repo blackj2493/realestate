@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0529
-lot_width,0.0
-bedrooms_above_grade,0.0
-bathrooms_total_integer,-0.0008
-parking_total,-0.0103
-basement_score,0.0
-interior_score,0.052
-exterior_score,0.0193
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bathurst Manor,Condo Apartment,building_area_total,0.005051,895.4545,166.111334
+Bathurst Manor,Condo Apartment,lot_width,0.0,0.0,1.0
+Bathurst Manor,Condo Apartment,bedrooms_above_grade,0.011274,1.9545,0.366466
+Bathurst Manor,Condo Apartment,bathrooms_total_integer,0.044452,1.8409,0.423362
+Bathurst Manor,Condo Apartment,parking_total,-0.019648,1.0455,0.298065
+Bathurst Manor,Condo Apartment,basement_score,0.0,1.0,1.0
+Bathurst Manor,Condo Apartment,interior_score,0.037715,4.0,0.707107
+Bathurst Manor,Condo Apartment,exterior_score,-0.000376,1.6818,0.512247

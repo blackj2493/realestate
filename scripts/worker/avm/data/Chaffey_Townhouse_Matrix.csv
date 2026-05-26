@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Chaffey,Townhouse,building_area_total,0.006448,1366.432,254.084067
+Chaffey,Townhouse,lot_width,-0.019353,23.5679,11.144883
+Chaffey,Townhouse,bedrooms_above_grade,-0.000433,2.5435,0.539989
+Chaffey,Townhouse,bathrooms_total_integer,0.005413,2.5,0.773192
+Chaffey,Townhouse,parking_total,0.054645,2.1739,0.701066
+Chaffey,Townhouse,basement_score,0.073356,4.1304,2.802241
+Chaffey,Townhouse,interior_score,0.014185,3.4348,0.798155
+Chaffey,Townhouse,exterior_score,0.020073,2.6739,0.809035

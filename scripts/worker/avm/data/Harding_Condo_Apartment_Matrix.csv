@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.057
-lot_width,0.0
-bedrooms_above_grade,0.0815
-bathrooms_total_integer,-0.0039
-parking_total,0.0239
-basement_score,0.0
-interior_score,0.0136
-exterior_score,0.0229
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Harding,Condo Apartment,building_area_total,0.06029,1080.1724,229.305483
+Harding,Condo Apartment,lot_width,0.0,0.0,1.0
+Harding,Condo Apartment,bedrooms_above_grade,0.046707,1.7759,0.417013
+Harding,Condo Apartment,bathrooms_total_integer,0.006072,1.8276,0.37774
+Harding,Condo Apartment,parking_total,0.026412,1.1724,0.37774
+Harding,Condo Apartment,basement_score,0.0,1.0,1.0
+Harding,Condo Apartment,interior_score,0.026972,3.6207,0.92527
+Harding,Condo Apartment,exterior_score,0.013704,2.0,0.870988

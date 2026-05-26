@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.026
-lot_width,0.0491
-bedrooms_above_grade,0.0218
-bathrooms_total_integer,0.1381
-parking_total,0.0357
-basement_score,0.0143
-interior_score,0.0219
-exterior_score,0.0241
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mill Pond,Detached,building_area_total,0.114,2805.9778,1127.502786
+Mill Pond,Detached,lot_width,0.026278,56.4763,17.862807
+Mill Pond,Detached,bedrooms_above_grade,0.006872,3.8083,0.809278
+Mill Pond,Detached,bathrooms_total_integer,0.088546,3.725,1.290752
+Mill Pond,Detached,parking_total,0.04297,6.1,2.087263
+Mill Pond,Detached,basement_score,-0.002834,5.475,1.642977
+Mill Pond,Detached,interior_score,0.045645,3.6083,1.171152
+Mill Pond,Detached,exterior_score,0.033896,2.6667,0.915909

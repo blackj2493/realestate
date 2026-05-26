@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0972
-lot_width,-0.0256
-bedrooms_above_grade,0.0063
-bathrooms_total_integer,0.0316
-parking_total,0.0144
-basement_score,-0.0057
-interior_score,0.0408
-exterior_score,0.0138
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stoney Creek Mountain,Detached,building_area_total,0.100434,1911.1226,638.606096
+Stoney Creek Mountain,Detached,lot_width,-0.009064,45.0917,15.910416
+Stoney Creek Mountain,Detached,bedrooms_above_grade,0.007888,3.3468,0.613861
+Stoney Creek Mountain,Detached,bathrooms_total_integer,0.038555,3.0173,0.970513
+Stoney Creek Mountain,Detached,parking_total,0.036987,4.3382,1.498493
+Stoney Creek Mountain,Detached,basement_score,0.004622,5.2775,1.108772
+Stoney Creek Mountain,Detached,interior_score,0.031867,3.4566,0.999783
+Stoney Creek Mountain,Detached,exterior_score,0.024333,2.7399,0.941327

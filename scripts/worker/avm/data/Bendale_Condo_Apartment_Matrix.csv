@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0264
-lot_width,0.0
-bedrooms_above_grade,0.0981
-bathrooms_total_integer,0.0183
-parking_total,0.0117
-basement_score,0.0
-interior_score,0.0145
-exterior_score,-0.0043
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bendale,Condo Apartment,building_area_total,0.033998,796.4029,219.682594
+Bendale,Condo Apartment,lot_width,0.0,0.0,1.0
+Bendale,Condo Apartment,bedrooms_above_grade,0.03766,1.5252,0.615518
+Bendale,Condo Apartment,bathrooms_total_integer,0.039043,1.4892,0.499884
+Bendale,Condo Apartment,parking_total,0.01517,1.0576,0.355224
+Bendale,Condo Apartment,basement_score,0.0,1.0,1.0
+Bendale,Condo Apartment,interior_score,0.017423,3.9424,0.775245
+Bendale,Condo Apartment,exterior_score,-0.002232,1.9928,0.501744

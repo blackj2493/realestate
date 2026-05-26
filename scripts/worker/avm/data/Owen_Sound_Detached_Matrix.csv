@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0385
-lot_width,-0.0358
-bedrooms_above_grade,-0.0121
-bathrooms_total_integer,0.0938
-parking_total,0.0633
-basement_score,0.0095
-interior_score,0.0224
-exterior_score,0.0238
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Owen Sound,Detached,building_area_total,0.060615,1480.23,556.128372
+Owen Sound,Detached,lot_width,0.003202,78.7677,366.366159
+Owen Sound,Detached,bedrooms_above_grade,-0.032551,2.9658,0.789339
+Owen Sound,Detached,bathrooms_total_integer,0.105013,2.0155,0.737046
+Owen Sound,Detached,parking_total,0.074563,3.8447,1.677617
+Owen Sound,Detached,basement_score,0.025254,4.7609,1.485527
+Owen Sound,Detached,interior_score,0.052266,3.2888,0.87785
+Owen Sound,Detached,exterior_score,0.022534,2.5031,0.89251

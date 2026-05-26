@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0796
-lot_width,0.092
-bedrooms_above_grade,-0.0103
-bathrooms_total_integer,0.0476
-parking_total,0.1759
-basement_score,0.016
-interior_score,0.0286
-exterior_score,0.0714
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Grey,Detached,building_area_total,0.09482,1753.7904,684.368523
+West Grey,Detached,lot_width,0.111144,276.7083,458.218301
+West Grey,Detached,bedrooms_above_grade,0.002084,2.7701,0.7981
+West Grey,Detached,bathrooms_total_integer,0.093122,2.2193,0.820886
+West Grey,Detached,parking_total,0.142532,8.3209,5.430528
+West Grey,Detached,basement_score,0.02267,5.2834,2.328593
+West Grey,Detached,interior_score,0.059691,3.3048,0.958011
+West Grey,Detached,exterior_score,0.067071,2.3529,0.903664

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0798
-lot_width,0.0
-bedrooms_above_grade,0.0137
-bathrooms_total_integer,0.0299
-parking_total,0.0161
-basement_score,0.0136
-interior_score,0.0105
-exterior_score,0.0019
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Grange Road,Townhouse,building_area_total,0.052527,1424.0758,380.992777
+Grange Road,Townhouse,lot_width,0.012138,24.2881,7.842781
+Grange Road,Townhouse,bedrooms_above_grade,0.019024,2.7447,0.563729
+Grange Road,Townhouse,bathrooms_total_integer,0.062503,2.6879,0.892321
+Grange Road,Townhouse,parking_total,0.025255,2.1135,0.763458
+Grange Road,Townhouse,basement_score,0.026875,4.5745,2.060207
+Grange Road,Townhouse,interior_score,0.00245,3.5461,0.709362
+Grange Road,Townhouse,exterior_score,0.005436,2.4397,0.828301

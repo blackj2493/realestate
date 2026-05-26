@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Port Whitby,Townhouse,building_area_total,0.017542,1616.8919,241.340153
+Port Whitby,Townhouse,lot_width,-0.014114,22.2621,8.848528
+Port Whitby,Townhouse,bedrooms_above_grade,0.004522,2.9787,0.144305
+Port Whitby,Townhouse,bathrooms_total_integer,0.031537,3.0426,0.503496
+Port Whitby,Townhouse,parking_total,0.010033,2.4043,0.704381
+Port Whitby,Townhouse,basement_score,-0.012093,5.2553,1.75606
+Port Whitby,Townhouse,interior_score,-0.010178,4.0638,0.755244
+Port Whitby,Townhouse,exterior_score,0.006309,2.766,1.241358

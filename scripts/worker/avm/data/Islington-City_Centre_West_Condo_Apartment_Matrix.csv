@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0675
-lot_width,0.0
-bedrooms_above_grade,0.0466
-bathrooms_total_integer,0.0342
-parking_total,0.0087
-basement_score,0.0
-interior_score,0.0097
-exterior_score,0.0074
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Islington-City Centre West,Condo Apartment,building_area_total,0.089695,780.1147,250.112268
+Islington-City Centre West,Condo Apartment,lot_width,0.0,0.0,1.0
+Islington-City Centre West,Condo Apartment,bedrooms_above_grade,0.024619,1.522,0.555196
+Islington-City Centre West,Condo Apartment,bathrooms_total_integer,0.046771,1.5237,0.524921
+Islington-City Centre West,Condo Apartment,parking_total,0.023201,1.0179,0.358542
+Islington-City Centre West,Condo Apartment,basement_score,0.0,1.0,1.0
+Islington-City Centre West,Condo Apartment,interior_score,0.008082,3.9005,0.77998
+Islington-City Centre West,Condo Apartment,exterior_score,0.002358,2.186,0.77143

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Barrie Southeast,Townhouse,building_area_total,0.03773,1441.8529,261.211671
+Rural Barrie Southeast,Townhouse,lot_width,2.9e-05,21.5366,3.146086
+Rural Barrie Southeast,Townhouse,bedrooms_above_grade,0.01398,2.8684,0.468539
+Rural Barrie Southeast,Townhouse,bathrooms_total_integer,0.017223,2.8158,0.450454
+Rural Barrie Southeast,Townhouse,parking_total,-0.014736,2.1053,0.383164
+Rural Barrie Southeast,Townhouse,basement_score,0.010293,4.3947,2.580692
+Rural Barrie Southeast,Townhouse,interior_score,0.008073,3.5789,0.963316
+Rural Barrie Southeast,Townhouse,exterior_score,0.000583,2.1053,0.552005

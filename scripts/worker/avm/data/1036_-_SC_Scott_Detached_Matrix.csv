@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.087
-lot_width,0.0395
-bedrooms_above_grade,0.0092
-bathrooms_total_integer,0.0142
-parking_total,0.0165
-basement_score,0.0095
-interior_score,0.0095
-exterior_score,0.0216
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1036 - SC Scott,Detached,building_area_total,0.075215,2615.0423,581.177397
+1036 - SC Scott,Detached,lot_width,0.051412,45.2154,25.184838
+1036 - SC Scott,Detached,bedrooms_above_grade,0.009707,3.8333,0.58653
+1036 - SC Scott,Detached,bathrooms_total_integer,0.038215,3.9359,0.867353
+1036 - SC Scott,Detached,parking_total,0.023134,4.4359,1.276913
+1036 - SC Scott,Detached,basement_score,0.013726,5.4231,1.235368
+1036 - SC Scott,Detached,interior_score,0.004111,4.0385,1.079438
+1036 - SC Scott,Detached,exterior_score,0.026784,2.9487,0.945942

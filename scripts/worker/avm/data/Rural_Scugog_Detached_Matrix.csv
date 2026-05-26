@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.063
-lot_width,0.0621
-bedrooms_above_grade,0.0105
-bathrooms_total_integer,0.1337
-parking_total,0.1234
-basement_score,0.0241
-interior_score,0.0427
-exterior_score,0.0372
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Scugog,Detached,building_area_total,0.12206,1575.8621,677.198933
+Rural Scugog,Detached,lot_width,0.055694,155.5687,227.05661
+Rural Scugog,Detached,bedrooms_above_grade,0.010699,2.7911,0.763518
+Rural Scugog,Detached,bathrooms_total_integer,0.110816,2.1899,0.955675
+Rural Scugog,Detached,parking_total,0.08126,8.2785,4.707419
+Rural Scugog,Detached,basement_score,0.076219,5.443,2.798041
+Rural Scugog,Detached,interior_score,0.06387,3.2911,0.995584
+Rural Scugog,Detached,exterior_score,0.023918,2.9684,1.027599

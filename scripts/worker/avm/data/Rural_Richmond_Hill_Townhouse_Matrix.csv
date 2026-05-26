@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Richmond Hill,Townhouse,building_area_total,0.086638,1761.6667,473.348004
+Rural Richmond Hill,Townhouse,lot_width,0.001098,22.8051,7.564233
+Rural Richmond Hill,Townhouse,bedrooms_above_grade,0.069834,3.0098,0.649209
+Rural Richmond Hill,Townhouse,bathrooms_total_integer,-0.009583,3.2549,0.478688
+Rural Richmond Hill,Townhouse,parking_total,0.035496,2.5196,1.177655
+Rural Richmond Hill,Townhouse,basement_score,0.055998,3.9216,2.080188
+Rural Richmond Hill,Townhouse,interior_score,-0.011157,4.0392,0.803443
+Rural Richmond Hill,Townhouse,exterior_score,0.003527,2.2059,0.867024

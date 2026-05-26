@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7704 - Barrhaven - Heritage Park,Townhouse,building_area_total,0.03265,1456.1798,281.430957
+7704 - Barrhaven - Heritage Park,Townhouse,lot_width,-5.7e-05,22.5818,7.555379
+7704 - Barrhaven - Heritage Park,Townhouse,bedrooms_above_grade,0.017576,2.6697,0.559407
+7704 - Barrhaven - Heritage Park,Townhouse,bathrooms_total_integer,0.064498,2.6697,0.704573
+7704 - Barrhaven - Heritage Park,Townhouse,parking_total,0.03424,2.1376,0.783639
+7704 - Barrhaven - Heritage Park,Townhouse,basement_score,0.022261,3.2936,1.945603
+7704 - Barrhaven - Heritage Park,Townhouse,interior_score,0.000806,4.1101,0.580089
+7704 - Barrhaven - Heritage Park,Townhouse,exterior_score,0.004435,2.0917,0.418413

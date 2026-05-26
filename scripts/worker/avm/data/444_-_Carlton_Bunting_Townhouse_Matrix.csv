@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0522
-lot_width,0.0
-bedrooms_above_grade,-0.0257
-bathrooms_total_integer,0.0835
-parking_total,0.0499
-basement_score,-0.0161
-interior_score,0.0126
-exterior_score,0.0157
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+444 - Carlton/Bunting,Townhouse,building_area_total,0.045076,1154.0577,233.526593
+444 - Carlton/Bunting,Townhouse,lot_width,0.0,27.82,1.0
+444 - Carlton/Bunting,Townhouse,bedrooms_above_grade,-0.037662,2.6346,0.519943
+444 - Carlton/Bunting,Townhouse,bathrooms_total_integer,0.096372,1.9231,0.780684
+444 - Carlton/Bunting,Townhouse,parking_total,0.04745,1.6154,0.654976
+444 - Carlton/Bunting,Townhouse,basement_score,0.022867,4.1154,1.589071
+444 - Carlton/Bunting,Townhouse,interior_score,0.004034,3.5769,0.689095
+444 - Carlton/Bunting,Townhouse,exterior_score,0.032892,2.3077,0.666173

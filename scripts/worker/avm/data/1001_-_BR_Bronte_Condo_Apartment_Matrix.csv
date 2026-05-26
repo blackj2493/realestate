@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1622
-lot_width,0.0
-bedrooms_above_grade,0.0115
-bathrooms_total_integer,0.0649
-parking_total,0.0176
-basement_score,0.0
-interior_score,0.0712
-exterior_score,-0.022
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1001 - BR Bronte,Condo Apartment,building_area_total,0.19501,1361.7228,373.13558
+1001 - BR Bronte,Condo Apartment,lot_width,0.0,0.0,1.0
+1001 - BR Bronte,Condo Apartment,bedrooms_above_grade,-0.000733,1.9307,0.428153
+1001 - BR Bronte,Condo Apartment,bathrooms_total_integer,0.119574,1.9208,0.459943
+1001 - BR Bronte,Condo Apartment,parking_total,0.02842,1.396,0.56427
+1001 - BR Bronte,Condo Apartment,basement_score,0.0,1.0,1.0
+1001 - BR Bronte,Condo Apartment,interior_score,0.078795,4.1584,0.817297
+1001 - BR Bronte,Condo Apartment,exterior_score,-0.011309,2.9604,1.089289

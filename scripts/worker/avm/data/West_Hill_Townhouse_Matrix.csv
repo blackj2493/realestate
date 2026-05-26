@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0255
-lot_width,0.0
-bedrooms_above_grade,0.0065
-bathrooms_total_integer,0.024
-parking_total,0.0453
-basement_score,-0.0119
-interior_score,0.005
-exterior_score,-0.0185
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Hill,Townhouse,building_area_total,0.024468,1343.9189,283.791023
+West Hill,Townhouse,lot_width,0.0,19.9233,2.957717
+West Hill,Townhouse,bedrooms_above_grade,0.007688,2.9481,0.423225
+West Hill,Townhouse,bathrooms_total_integer,0.036962,2.4286,0.653235
+West Hill,Townhouse,parking_total,0.064181,1.7403,0.611632
+West Hill,Townhouse,basement_score,-0.005271,4.7922,3.284508
+West Hill,Townhouse,interior_score,0.005544,3.4805,0.799519
+West Hill,Townhouse,exterior_score,-0.014942,2.1558,0.757044

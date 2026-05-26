@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0659
-lot_width,0.0
-bedrooms_above_grade,0.0744
-bathrooms_total_integer,0.0008
-parking_total,0.0174
-basement_score,0.0
-interior_score,0.0164
-exterior_score,0.0359
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Port Whitby,Condo Apartment,building_area_total,0.065766,949.2424,281.566562
+Port Whitby,Condo Apartment,lot_width,0.0,0.0,1.0
+Port Whitby,Condo Apartment,bedrooms_above_grade,0.047219,1.5758,0.494227
+Port Whitby,Condo Apartment,bathrooms_total_integer,0.0242,1.6212,0.485085
+Port Whitby,Condo Apartment,parking_total,0.010962,1.2576,0.437299
+Port Whitby,Condo Apartment,basement_score,0.0,1.0,1.0
+Port Whitby,Condo Apartment,interior_score,0.015218,3.9848,0.768557
+Port Whitby,Condo Apartment,exterior_score,0.024233,2.0455,1.248415

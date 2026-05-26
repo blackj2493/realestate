@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Courtice,Townhouse,building_area_total,0.023071,1338.5417,312.539928
+Courtice,Townhouse,lot_width,0.008199,22.8681,5.46405
+Courtice,Townhouse,bedrooms_above_grade,0.033072,2.8175,0.540441
+Courtice,Townhouse,bathrooms_total_integer,0.030939,2.8095,0.763391
+Courtice,Townhouse,parking_total,0.039274,2.4444,0.802333
+Courtice,Townhouse,basement_score,0.015012,4.2857,2.232008
+Courtice,Townhouse,interior_score,0.017241,3.8413,0.728258
+Courtice,Townhouse,exterior_score,-0.007773,2.7698,0.736386

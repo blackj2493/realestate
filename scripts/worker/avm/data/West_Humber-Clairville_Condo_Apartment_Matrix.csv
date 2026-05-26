@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0115
-lot_width,0.0
-bedrooms_above_grade,0.1148
-bathrooms_total_integer,0.0168
-parking_total,0.007
-basement_score,0.0
-interior_score,0.0099
-exterior_score,0.0121
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Humber-Clairville,Condo Apartment,building_area_total,0.016968,823.5849,188.490472
+West Humber-Clairville,Condo Apartment,lot_width,0.0,0.0,1.0
+West Humber-Clairville,Condo Apartment,bedrooms_above_grade,0.084232,1.6038,0.526276
+West Humber-Clairville,Condo Apartment,bathrooms_total_integer,0.012134,1.566,0.53233
+West Humber-Clairville,Condo Apartment,parking_total,-0.009556,1.1509,0.407303
+West Humber-Clairville,Condo Apartment,basement_score,-0.018349,1.0377,0.272117
+West Humber-Clairville,Condo Apartment,interior_score,0.002744,3.8679,0.972019
+West Humber-Clairville,Condo Apartment,exterior_score,0.016839,2.9434,0.877713

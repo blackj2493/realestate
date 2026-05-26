@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0553
-lot_width,0.0
-bedrooms_above_grade,0.0393
-bathrooms_total_integer,0.03
-parking_total,0.03
-basement_score,-0.0005
-interior_score,0.0291
-exterior_score,0.0365
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central Newmarket,Condo Apartment,building_area_total,0.008956,946.4286,241.496539
+Central Newmarket,Condo Apartment,lot_width,0.0,0.0,1.0
+Central Newmarket,Condo Apartment,bedrooms_above_grade,0.030085,1.7857,0.691297
+Central Newmarket,Condo Apartment,bathrooms_total_integer,0.037328,1.619,0.485621
+Central Newmarket,Condo Apartment,parking_total,0.039878,1.131,0.337348
+Central Newmarket,Condo Apartment,basement_score,0.006293,1.0714,0.650745
+Central Newmarket,Condo Apartment,interior_score,0.032756,3.7024,0.752453
+Central Newmarket,Condo Apartment,exterior_score,0.037659,2.25,0.753958

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0325
-lot_width,0.0693
-bedrooms_above_grade,0.0068
-bathrooms_total_integer,0.0218
-parking_total,0.0029
-basement_score,0.0014
-interior_score,0.0153
-exterior_score,0.015
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7708 - Barrhaven - Stonebridge,Detached,building_area_total,0.055343,2923.4694,593.768838
+7708 - Barrhaven - Stonebridge,Detached,lot_width,0.038829,48.3652,10.307479
+7708 - Barrhaven - Stonebridge,Detached,bedrooms_above_grade,0.000969,3.8667,0.618241
+7708 - Barrhaven - Stonebridge,Detached,bathrooms_total_integer,0.023307,3.68,0.695893
+7708 - Barrhaven - Stonebridge,Detached,parking_total,-0.008363,4.9067,0.995635
+7708 - Barrhaven - Stonebridge,Detached,basement_score,0.000313,4.8533,0.422479
+7708 - Barrhaven - Stonebridge,Detached,interior_score,0.024002,4.0,0.966092
+7708 - Barrhaven - Stonebridge,Detached,exterior_score,0.02228,3.36,0.810596

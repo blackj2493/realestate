@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0158
-lot_width,0.0625
-bedrooms_above_grade,0.0229
-bathrooms_total_integer,0.0749
-parking_total,0.0298
-basement_score,0.0171
-interior_score,-0.0052
-exterior_score,-0.0132
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Agincourt South-Malvern West,Detached,building_area_total,0.075451,1868.8679,658.416225
+Agincourt South-Malvern West,Detached,lot_width,0.045488,49.6557,15.906108
+Agincourt South-Malvern West,Detached,bedrooms_above_grade,-0.015925,3.6429,0.666241
+Agincourt South-Malvern West,Detached,bathrooms_total_integer,0.052728,3.1548,1.258249
+Agincourt South-Malvern West,Detached,parking_total,0.03188,4.5357,1.451161
+Agincourt South-Malvern West,Detached,basement_score,0.02945,5.8333,1.486714
+Agincourt South-Malvern West,Detached,interior_score,0.000187,2.9167,1.002477
+Agincourt South-Malvern West,Detached,exterior_score,-0.00929,2.381,0.898474

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2262
-lot_width,0.0585
-bedrooms_above_grade,-0.0074
-bathrooms_total_integer,0.0603
-parking_total,0.0161
-basement_score,-0.0184
-interior_score,0.0326
-exterior_score,0.0352
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+206 - Stamford,Detached,building_area_total,0.139182,1684.8971,697.205264
+206 - Stamford,Detached,lot_width,0.000277,65.5641,39.529401
+206 - Stamford,Detached,bedrooms_above_grade,0.018366,3.2394,0.721204
+206 - Stamford,Detached,bathrooms_total_integer,0.092825,2.507,0.784951
+206 - Stamford,Detached,parking_total,0.021865,5.0493,1.811845
+206 - Stamford,Detached,basement_score,-0.008978,5.1268,1.149765
+206 - Stamford,Detached,interior_score,0.048719,3.3944,1.16859
+206 - Stamford,Detached,exterior_score,0.033366,2.5352,0.946915

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0315
-lot_width,-0.0264
-bedrooms_above_grade,0.0036
-bathrooms_total_integer,0.0796
-parking_total,0.0354
-basement_score,0.0097
-interior_score,0.0224
-exterior_score,0.0046
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Woodstock - South,Detached,building_area_total,0.039214,1418.7554,441.858247
+Woodstock - South,Detached,lot_width,-0.009712,51.7446,17.804427
+Woodstock - South,Detached,bedrooms_above_grade,0.004459,2.8624,0.649176
+Woodstock - South,Detached,bathrooms_total_integer,0.079206,2.2248,0.840452
+Woodstock - South,Detached,parking_total,0.045319,3.8028,1.618441
+Woodstock - South,Detached,basement_score,0.00794,4.9817,1.622557
+Woodstock - South,Detached,interior_score,0.035196,3.1284,0.857786
+Woodstock - South,Detached,exterior_score,0.009658,2.3349,0.773871

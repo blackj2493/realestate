@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0708
-lot_width,0.0415
-bedrooms_above_grade,0.0095
-bathrooms_total_integer,0.0547
-parking_total,-0.0093
-basement_score,0.0109
-interior_score,0.0204
-exterior_score,0.0073
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Highland Creek,Detached,building_area_total,0.080527,2466.9231,629.363349
+Highland Creek,Detached,lot_width,0.03949,45.1077,15.481512
+Highland Creek,Detached,bedrooms_above_grade,0.021043,3.8144,0.580258
+Highland Creek,Detached,bathrooms_total_integer,0.042464,3.8041,0.91538
+Highland Creek,Detached,parking_total,-0.001408,5.2732,2.231477
+Highland Creek,Detached,basement_score,0.021296,5.8969,1.614908
+Highland Creek,Detached,interior_score,0.023729,3.2577,1.133177
+Highland Creek,Detached,exterior_score,8.4e-05,2.4845,0.862906

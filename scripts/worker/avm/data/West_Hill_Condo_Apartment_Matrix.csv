@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0444
-lot_width,0.0
-bedrooms_above_grade,0.0197
-bathrooms_total_integer,0.0397
-parking_total,0.005
-basement_score,0.0
-interior_score,-0.0234
-exterior_score,0.0336
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Hill,Condo Apartment,building_area_total,-0.031073,1000.0,220.200754
+West Hill,Condo Apartment,lot_width,0.0,0.0,1.0
+West Hill,Condo Apartment,bedrooms_above_grade,0.021911,2.0465,0.680406
+West Hill,Condo Apartment,bathrooms_total_integer,0.049635,1.6047,0.488925
+West Hill,Condo Apartment,parking_total,0.001544,1.0465,0.30143
+West Hill,Condo Apartment,basement_score,0.011277,1.186,1.205719
+West Hill,Condo Apartment,interior_score,-0.006022,3.6279,0.61088
+West Hill,Condo Apartment,exterior_score,0.030039,1.9302,0.789328

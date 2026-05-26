@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0267
-lot_width,0.0
-bedrooms_above_grade,-0.009
-bathrooms_total_integer,0.0443
-parking_total,0.0739
-basement_score,0.013
-interior_score,0.066
-exterior_score,0.0356
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South B,Townhouse,building_area_total,0.038141,1503.6364,311.914185
+South B,Townhouse,lot_width,0.0,27.3386,5.433842
+South B,Townhouse,bedrooms_above_grade,-0.007689,2.6,0.679869
+South B,Townhouse,bathrooms_total_integer,0.065621,2.7333,0.573488
+South B,Townhouse,parking_total,0.072932,2.8667,1.146977
+South B,Townhouse,basement_score,0.006101,4.8444,1.699092
+South B,Townhouse,interior_score,0.035384,3.5333,1.066667
+South B,Townhouse,exterior_score,0.023661,2.6889,0.783786

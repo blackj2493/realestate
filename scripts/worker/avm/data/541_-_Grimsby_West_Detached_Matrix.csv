@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1513
-lot_width,-0.0302
-bedrooms_above_grade,0.0092
-bathrooms_total_integer,0.0441
-parking_total,0.0402
-basement_score,0.0109
-interior_score,0.0362
-exterior_score,-0.0081
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+541 - Grimsby West,Detached,building_area_total,0.113688,1842.2278,674.241739
+541 - Grimsby West,Detached,lot_width,0.006325,60.0089,27.28823
+541 - Grimsby West,Detached,bedrooms_above_grade,0.0207,3.1951,0.633208
+541 - Grimsby West,Detached,bathrooms_total_integer,0.064035,2.7195,0.966189
+541 - Grimsby West,Detached,parking_total,0.041417,5.1402,2.070811
+541 - Grimsby West,Detached,basement_score,0.012431,4.8049,1.301397
+541 - Grimsby West,Detached,interior_score,0.05581,3.5976,1.113769
+541 - Grimsby West,Detached,exterior_score,0.015408,2.5732,1.000372

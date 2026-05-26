@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0391
-lot_width,0.0419
-bedrooms_above_grade,0.0228
-bathrooms_total_integer,0.0224
-parking_total,0.0241
-basement_score,0.0026
-interior_score,0.007
-exterior_score,0.0243
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bolton East,Detached,building_area_total,0.069738,2108.1014,563.217366
+Bolton East,Detached,lot_width,0.035667,51.4104,27.941567
+Bolton East,Detached,bedrooms_above_grade,0.009788,3.4783,0.561021
+Bolton East,Detached,bathrooms_total_integer,0.043523,3.413,0.88652
+Bolton East,Detached,parking_total,0.024642,5.7174,1.607226
+Bolton East,Detached,basement_score,0.004334,5.7391,1.593939
+Bolton East,Detached,interior_score,0.03592,3.4674,1.01565
+Bolton East,Detached,exterior_score,0.016068,2.7391,0.965374

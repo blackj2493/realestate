@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0258
-lot_width,0.0343
-bedrooms_above_grade,0.0229
-bathrooms_total_integer,0.1656
-parking_total,0.0709
-basement_score,0.0324
-interior_score,0.0212
-exterior_score,0.0497
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+334 - Crescent Park,Detached,building_area_total,0.090563,1504.3621,667.412766
+334 - Crescent Park,Detached,lot_width,0.009112,80.2217,36.303419
+334 - Crescent Park,Detached,bedrooms_above_grade,0.05817,3.1154,0.856061
+334 - Crescent Park,Detached,bathrooms_total_integer,0.085162,2.0923,0.956324
+334 - Crescent Park,Detached,parking_total,0.017651,5.9808,2.882576
+334 - Crescent Park,Detached,basement_score,0.044189,4.1538,2.261591
+334 - Crescent Park,Detached,interior_score,0.028776,3.1077,0.921922
+334 - Crescent Park,Detached,exterior_score,0.091123,2.6692,0.862808

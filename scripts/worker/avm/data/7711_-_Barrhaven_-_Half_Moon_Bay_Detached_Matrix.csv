@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0164
-lot_width,0.0297
-bedrooms_above_grade,0.0355
-bathrooms_total_integer,0.0132
-parking_total,0.0548
-basement_score,0.0037
-interior_score,0.0057
-exterior_score,-0.0055
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7711 - Barrhaven - Half Moon Bay,Detached,building_area_total,0.050255,2193.9024,426.91869
+7711 - Barrhaven - Half Moon Bay,Detached,lot_width,0.002328,36.123,15.86863
+7711 - Barrhaven - Half Moon Bay,Detached,bedrooms_above_grade,0.045855,3.5978,0.512025
+7711 - Barrhaven - Half Moon Bay,Detached,bathrooms_total_integer,0.022907,3.7554,1.492726
+7711 - Barrhaven - Half Moon Bay,Detached,parking_total,0.03386,3.75,1.225854
+7711 - Barrhaven - Half Moon Bay,Detached,basement_score,0.010222,4.962,0.583904
+7711 - Barrhaven - Half Moon Bay,Detached,interior_score,0.01052,3.9674,0.920197
+7711 - Barrhaven - Half Moon Bay,Detached,exterior_score,0.005528,2.4511,0.79932

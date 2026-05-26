@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North M,Townhouse,building_area_total,0.05114,1480.9375,317.396073
+North M,Townhouse,lot_width,0.0,25.414,12.581828
+North M,Townhouse,bedrooms_above_grade,-0.06293,2.9388,0.766869
+North M,Townhouse,bathrooms_total_integer,0.076564,3.0408,0.698663
+North M,Townhouse,parking_total,0.015408,2.551,0.809667
+North M,Townhouse,basement_score,-0.005516,4.7551,1.974641
+North M,Townhouse,interior_score,-0.013002,3.6327,0.849823
+North M,Townhouse,exterior_score,0.00863,2.3878,0.599875

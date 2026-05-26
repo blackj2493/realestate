@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0209
-lot_width,0.0
-bedrooms_above_grade,0.0324
-bathrooms_total_integer,0.0
-parking_total,-0.003
-basement_score,0.0
-interior_score,0.043
-exterior_score,0.018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fletcher's Creek South,Condo Apartment,building_area_total,0.012845,1302.1739,289.481644
+Fletcher's Creek South,Condo Apartment,lot_width,0.0,0.0,1.0
+Fletcher's Creek South,Condo Apartment,bedrooms_above_grade,0.041466,2.413,0.534712
+Fletcher's Creek South,Condo Apartment,bathrooms_total_integer,-0.000328,1.9348,0.246909
+Fletcher's Creek South,Condo Apartment,parking_total,0.012076,1.3261,0.513062
+Fletcher's Creek South,Condo Apartment,basement_score,0.0,1.0,1.0
+Fletcher's Creek South,Condo Apartment,interior_score,0.001659,3.7174,0.924616
+Fletcher's Creek South,Condo Apartment,exterior_score,0.002016,2.3043,1.018728

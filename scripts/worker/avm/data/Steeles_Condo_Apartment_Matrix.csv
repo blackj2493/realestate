@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0788
-lot_width,0.0
-bedrooms_above_grade,-0.003
-bathrooms_total_integer,0.0056
-parking_total,0.0113
-basement_score,0.0
-interior_score,0.0362
-exterior_score,-0.0165
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Steeles,Condo Apartment,building_area_total,0.072476,1157.3034,268.950369
+Steeles,Condo Apartment,lot_width,0.0,0.0,1.0
+Steeles,Condo Apartment,bedrooms_above_grade,0.011449,1.8315,0.502487
+Steeles,Condo Apartment,bathrooms_total_integer,0.004394,1.809,0.420711
+Steeles,Condo Apartment,parking_total,0.023188,1.3933,0.510958
+Steeles,Condo Apartment,basement_score,0.0,1.0,1.0
+Steeles,Condo Apartment,interior_score,0.041935,3.764,0.924358
+Steeles,Condo Apartment,exterior_score,-0.010053,2.0787,0.782171

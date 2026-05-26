@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0907
-lot_width,0.0494
-bedrooms_above_grade,-0.0102
-bathrooms_total_integer,0.2385
-parking_total,0.0534
-basement_score,-0.0073
-interior_score,0.0312
-exterior_score,0.0717
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ameliasburg Ward,Detached,building_area_total,0.101896,2013.4061,801.919472
+Ameliasburg Ward,Detached,lot_width,0.036088,197.0719,404.557495
+Ameliasburg Ward,Detached,bedrooms_above_grade,-0.03044,3.08,0.945304
+Ameliasburg Ward,Detached,bathrooms_total_integer,0.199344,2.44,1.032666
+Ameliasburg Ward,Detached,parking_total,0.030581,8.195,3.905058
+Ameliasburg Ward,Detached,basement_score,0.053983,4.63,2.722701
+Ameliasburg Ward,Detached,interior_score,0.076498,3.27,0.978315
+Ameliasburg Ward,Detached,exterior_score,0.085195,2.93,1.022301

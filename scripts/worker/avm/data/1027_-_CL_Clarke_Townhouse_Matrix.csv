@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1027 - CL Clarke,Townhouse,building_area_total,0.022501,1592.5566,276.407686
+1027 - CL Clarke,Townhouse,lot_width,0.015192,23.9737,5.286255
+1027 - CL Clarke,Townhouse,bedrooms_above_grade,0.024121,3.0085,0.379468
+1027 - CL Clarke,Townhouse,bathrooms_total_integer,0.025586,3.0763,0.523301
+1027 - CL Clarke,Townhouse,parking_total,-0.001673,2.5254,0.685341
+1027 - CL Clarke,Townhouse,basement_score,0.021104,4.4492,2.097607
+1027 - CL Clarke,Townhouse,interior_score,0.010771,3.8559,0.805441
+1027 - CL Clarke,Townhouse,exterior_score,-0.005175,2.1441,0.70441

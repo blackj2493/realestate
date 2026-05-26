@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0295
-lot_width,0.0509
-bedrooms_above_grade,0.0619
-bathrooms_total_integer,0.1659
-parking_total,0.0055
-basement_score,0.0262
-interior_score,0.0166
-exterior_score,0.0138
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East York,Detached,building_area_total,0.04927,1481.6456,589.742339
+East York,Detached,lot_width,0.012595,32.8547,9.231344
+East York,Detached,bedrooms_above_grade,0.087757,2.8796,0.846754
+East York,Detached,bathrooms_total_integer,0.120085,2.713,1.155109
+East York,Detached,parking_total,0.030188,3.0741,1.531785
+East York,Detached,basement_score,0.003886,6.3519,1.701387
+East York,Detached,interior_score,0.027502,3.1852,1.187498
+East York,Detached,exterior_score,0.022531,2.6481,0.864043

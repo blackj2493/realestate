@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0312
-lot_width,-0.038
-bedrooms_above_grade,-0.0037
-bathrooms_total_integer,0.0327
-parking_total,0.0189
-basement_score,0.0128
-interior_score,0.0302
-exterior_score,0.0111
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+767 - N. Welland,Detached,building_area_total,0.0438,1427.6445,422.731594
+767 - N. Welland,Detached,lot_width,-0.022083,58.9699,14.422076
+767 - N. Welland,Detached,bedrooms_above_grade,-0.002262,3.0576,0.773807
+767 - N. Welland,Detached,bathrooms_total_integer,0.030867,2.2723,0.723006
+767 - N. Welland,Detached,parking_total,0.017312,4.9869,1.767533
+767 - N. Welland,Detached,basement_score,0.006096,5.5759,1.688658
+767 - N. Welland,Detached,interior_score,0.034502,3.0471,0.961499
+767 - N. Welland,Detached,exterior_score,0.024884,2.5759,0.845837

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Monaghan Ward 2,Townhouse,building_area_total,0.021733,1393.2432,419.968172
+Monaghan Ward 2,Townhouse,lot_width,0.006091,28.4897,11.314132
+Monaghan Ward 2,Townhouse,bedrooms_above_grade,0.002404,2.2391,0.913302
+Monaghan Ward 2,Townhouse,bathrooms_total_integer,0.036265,2.5217,0.683315
+Monaghan Ward 2,Townhouse,parking_total,0.056232,3.0326,0.611504
+Monaghan Ward 2,Townhouse,basement_score,0.009211,5.3043,1.717804
+Monaghan Ward 2,Townhouse,interior_score,0.006013,3.4348,0.924361
+Monaghan Ward 2,Townhouse,exterior_score,-0.028501,2.587,0.709442

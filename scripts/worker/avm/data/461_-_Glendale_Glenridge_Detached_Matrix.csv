@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1065
-lot_width,0.0694
-bedrooms_above_grade,-0.0105
-bathrooms_total_integer,0.1032
-parking_total,0.042
-basement_score,0.0252
-interior_score,0.0575
-exterior_score,0.0379
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+461 - Glendale/Glenridge,Detached,building_area_total,0.138068,1664.2208,892.121266
+461 - Glendale/Glenridge,Detached,lot_width,0.021201,68.3393,17.481986
+461 - Glendale/Glenridge,Detached,bedrooms_above_grade,-0.03105,3.3614,0.858386
+461 - Glendale/Glenridge,Detached,bathrooms_total_integer,0.055624,2.7229,1.264085
+461 - Glendale/Glenridge,Detached,parking_total,0.084746,5.3614,2.19297
+461 - Glendale/Glenridge,Detached,basement_score,0.04045,5.7952,1.70583
+461 - Glendale/Glenridge,Detached,interior_score,0.056248,2.9759,0.993666
+461 - Glendale/Glenridge,Detached,exterior_score,0.031225,2.6988,1.002827

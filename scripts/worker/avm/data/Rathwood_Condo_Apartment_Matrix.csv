@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0805
-lot_width,0.0
-bedrooms_above_grade,0.0429
-bathrooms_total_integer,0.0321
-parking_total,-0.0067
-basement_score,0.0
-interior_score,-0.0143
-exterior_score,0.0174
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rathwood,Condo Apartment,building_area_total,0.04678,1043.2439,234.430163
+Rathwood,Condo Apartment,lot_width,0.0,0.0,1.0
+Rathwood,Condo Apartment,bedrooms_above_grade,0.031433,1.8537,0.565727
+Rathwood,Condo Apartment,bathrooms_total_integer,0.024689,1.7073,0.454994
+Rathwood,Condo Apartment,parking_total,0.016653,1.3659,0.529892
+Rathwood,Condo Apartment,basement_score,0.0,1.0,1.0
+Rathwood,Condo Apartment,interior_score,-0.005369,3.7073,0.772828
+Rathwood,Condo Apartment,exterior_score,0.007552,1.9512,0.622788

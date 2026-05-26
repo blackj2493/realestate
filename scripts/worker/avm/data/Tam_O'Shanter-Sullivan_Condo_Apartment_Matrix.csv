@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0934
-lot_width,0.0
-bedrooms_above_grade,0.0229
-bathrooms_total_integer,0.0362
-parking_total,0.0055
-basement_score,0.0
-interior_score,0.0259
-exterior_score,0.0178
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Tam O'Shanter-Sullivan,Condo Apartment,building_area_total,0.045369,915.3846,338.980153
+Tam O'Shanter-Sullivan,Condo Apartment,lot_width,0.0,0.0,1.0
+Tam O'Shanter-Sullivan,Condo Apartment,bedrooms_above_grade,0.050093,1.5962,0.612674
+Tam O'Shanter-Sullivan,Condo Apartment,bathrooms_total_integer,0.049074,1.5865,0.492454
+Tam O'Shanter-Sullivan,Condo Apartment,parking_total,0.028975,1.1058,0.337362
+Tam O'Shanter-Sullivan,Condo Apartment,basement_score,0.0,1.0,1.0
+Tam O'Shanter-Sullivan,Condo Apartment,interior_score,0.003696,4.1923,0.734807
+Tam O'Shanter-Sullivan,Condo Apartment,exterior_score,-0.004585,2.4038,1.051731

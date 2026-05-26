@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0642
-lot_width,0.0
-bedrooms_above_grade,0.0375
-bathrooms_total_integer,0.0097
-parking_total,0.009
-basement_score,0.0
-interior_score,0.0099
-exterior_score,0.0114
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Concord,Condo Apartment,building_area_total,0.062974,740.9091,143.232125
+Concord,Condo Apartment,lot_width,0.0,0.0,1.0
+Concord,Condo Apartment,bedrooms_above_grade,0.037765,1.4163,0.502552
+Concord,Condo Apartment,bathrooms_total_integer,0.020017,1.8373,0.406107
+Concord,Condo Apartment,parking_total,0.018901,1.0048,0.285161
+Concord,Condo Apartment,basement_score,0.0,1.0,1.0
+Concord,Condo Apartment,interior_score,0.005707,4.0526,0.765341
+Concord,Condo Apartment,exterior_score,0.008219,2.1388,0.548927

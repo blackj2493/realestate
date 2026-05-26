@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0859
-lot_width,0.057
-bedrooms_above_grade,0.0063
-bathrooms_total_integer,0.0689
-parking_total,0.0873
-basement_score,0.0328
-interior_score,0.0333
-exterior_score,0.0687
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Georgian Bluffs,Detached,building_area_total,0.094275,1797.9093,781.432918
+Georgian Bluffs,Detached,lot_width,0.068173,191.8524,202.417578
+Georgian Bluffs,Detached,bedrooms_above_grade,-0.004435,2.9497,0.82064
+Georgian Bluffs,Detached,bathrooms_total_integer,0.069602,2.2011,0.793689
+Georgian Bluffs,Detached,parking_total,0.102651,8.2905,3.466434
+Georgian Bluffs,Detached,basement_score,0.057194,4.7709,2.518766
+Georgian Bluffs,Detached,interior_score,0.068154,3.2793,1.041147
+Georgian Bluffs,Detached,exterior_score,0.08428,2.676,0.989347

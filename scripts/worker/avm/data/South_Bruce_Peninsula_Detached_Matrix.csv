@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0342
-lot_width,0.0643
-bedrooms_above_grade,0.009
-bathrooms_total_integer,0.0952
-parking_total,0.0584
-basement_score,0.0133
-interior_score,0.0453
-exterior_score,0.0631
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South Bruce Peninsula,Detached,building_area_total,0.011219,1521.2668,598.903816
+South Bruce Peninsula,Detached,lot_width,0.073383,120.2342,134.853585
+South Bruce Peninsula,Detached,bedrooms_above_grade,-0.018978,2.9751,0.819499
+South Bruce Peninsula,Detached,bathrooms_total_integer,0.138385,1.888,0.819815
+South Bruce Peninsula,Detached,parking_total,0.038709,6.3299,3.431623
+South Bruce Peninsula,Detached,basement_score,0.008332,4.0456,2.601067
+South Bruce Peninsula,Detached,interior_score,0.085084,3.1411,0.922749
+South Bruce Peninsula,Detached,exterior_score,0.076131,2.6017,0.919497

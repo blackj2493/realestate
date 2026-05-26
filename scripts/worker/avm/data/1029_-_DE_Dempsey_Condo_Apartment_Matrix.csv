@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0497
-lot_width,0.0
-bedrooms_above_grade,0.0392
-bathrooms_total_integer,0.0402
-parking_total,0.002
-basement_score,0.0
-interior_score,0.0206
-exterior_score,-0.0065
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1029 - DE Dempsey,Condo Apartment,building_area_total,0.032514,925.679,210.069761
+1029 - DE Dempsey,Condo Apartment,lot_width,0.0,0.0,1.0
+1029 - DE Dempsey,Condo Apartment,bedrooms_above_grade,0.048534,1.679,0.605064
+1029 - DE Dempsey,Condo Apartment,bathrooms_total_integer,0.048496,1.5802,0.493518
+1029 - DE Dempsey,Condo Apartment,parking_total,-0.007195,1.2099,0.40722
+1029 - DE Dempsey,Condo Apartment,basement_score,0.0,1.0,1.0
+1029 - DE Dempsey,Condo Apartment,interior_score,0.021412,3.7531,0.793972
+1029 - DE Dempsey,Condo Apartment,exterior_score,-0.000394,2.2346,0.653039

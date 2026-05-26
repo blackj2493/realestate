@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0166
-lot_width,0.0793
-bedrooms_above_grade,-0.0068
-bathrooms_total_integer,0.1436
-parking_total,0.0595
-basement_score,0.0188
-interior_score,0.0372
-exterior_score,0.0175
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+610 - Alfred and Plantagenet Twp,Detached,building_area_total,0.067867,1576.5432,545.977797
+610 - Alfred and Plantagenet Twp,Detached,lot_width,0.048973,192.2453,277.894745
+610 - Alfred and Plantagenet Twp,Detached,bedrooms_above_grade,-0.024536,2.6667,0.880379
+610 - Alfred and Plantagenet Twp,Detached,bathrooms_total_integer,0.12314,2.1138,0.798405
+610 - Alfred and Plantagenet Twp,Detached,parking_total,0.039733,7.3577,3.531807
+610 - Alfred and Plantagenet Twp,Detached,basement_score,0.059699,4.813,1.584219
+610 - Alfred and Plantagenet Twp,Detached,interior_score,0.034327,3.561,0.837596
+610 - Alfred and Plantagenet Twp,Detached,exterior_score,0.035513,2.7724,0.908971

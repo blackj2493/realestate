@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1106 - Fallingbrook/Gardenway South,Townhouse,building_area_total,0.016811,1420.1754,227.082883
+1106 - Fallingbrook/Gardenway South,Townhouse,lot_width,0.005633,22.4065,4.007317
+1106 - Fallingbrook/Gardenway South,Townhouse,bedrooms_above_grade,0.010246,3.012,0.109101
+1106 - Fallingbrook/Gardenway South,Townhouse,bathrooms_total_integer,0.017371,2.7952,0.575798
+1106 - Fallingbrook/Gardenway South,Townhouse,parking_total,-0.004218,2.9518,0.512579
+1106 - Fallingbrook/Gardenway South,Townhouse,basement_score,-0.000882,4.7952,0.554479
+1106 - Fallingbrook/Gardenway South,Townhouse,interior_score,0.022176,3.6145,0.875797
+1106 - Fallingbrook/Gardenway South,Townhouse,exterior_score,-0.005512,2.1325,0.532579

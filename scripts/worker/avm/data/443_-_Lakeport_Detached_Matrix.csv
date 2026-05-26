@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0176
-lot_width,0.0264
-bedrooms_above_grade,0.0021
-bathrooms_total_integer,0.0276
-parking_total,-0.0072
-basement_score,0.0202
-interior_score,0.0213
-exterior_score,0.0371
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+443 - Lakeport,Detached,building_area_total,0.020955,1252.734,396.685206
+443 - Lakeport,Detached,lot_width,0.010181,56.4667,15.601159
+443 - Lakeport,Detached,bedrooms_above_grade,0.013373,2.9608,0.462762
+443 - Lakeport,Detached,bathrooms_total_integer,0.042484,2.0588,0.415945
+443 - Lakeport,Detached,parking_total,-0.006961,5.0196,1.476817
+443 - Lakeport,Detached,basement_score,0.012141,5.5294,1.68445
+443 - Lakeport,Detached,interior_score,0.026554,3.3039,0.997931
+443 - Lakeport,Detached,exterior_score,0.020451,2.6078,0.794057

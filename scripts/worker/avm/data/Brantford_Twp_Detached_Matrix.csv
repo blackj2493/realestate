@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0351
-lot_width,0.1242
-bedrooms_above_grade,-0.0144
-bathrooms_total_integer,0.173
-parking_total,0.0841
-basement_score,-0.0035
-interior_score,0.0234
-exterior_score,0.0104
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brantford Twp,Detached,building_area_total,0.064736,1604.343,561.735673
+Brantford Twp,Detached,lot_width,0.038235,103.008,121.802404
+Brantford Twp,Detached,bedrooms_above_grade,-0.043096,3.0568,0.680206
+Brantford Twp,Detached,bathrooms_total_integer,0.159458,2.2955,0.893907
+Brantford Twp,Detached,parking_total,0.114585,6.5625,5.063131
+Brantford Twp,Detached,basement_score,0.002296,5.0909,1.427302
+Brantford Twp,Detached,interior_score,0.028996,3.4659,1.021906
+Brantford Twp,Detached,exterior_score,-0.006777,2.4886,0.878976

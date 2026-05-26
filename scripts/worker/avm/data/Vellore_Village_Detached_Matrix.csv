@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1143
-lot_width,0.0286
-bedrooms_above_grade,0.0236
-bathrooms_total_integer,0.0343
-parking_total,0.0142
-basement_score,0.0077
-interior_score,0.0304
-exterior_score,0.0105
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Vellore Village,Detached,building_area_total,0.130433,2658.9641,807.034142
+Vellore Village,Detached,lot_width,0.004086,41.0418,19.535318
+Vellore Village,Detached,bedrooms_above_grade,0.020762,3.6944,0.620471
+Vellore Village,Detached,bathrooms_total_integer,0.041894,4.113,0.851341
+Vellore Village,Detached,parking_total,0.024676,5.0266,1.559227
+Vellore Village,Detached,basement_score,0.006021,5.5183,1.408505
+Vellore Village,Detached,interior_score,0.0306,3.8405,1.057084
+Vellore Village,Detached,exterior_score,0.020182,2.5415,0.80845

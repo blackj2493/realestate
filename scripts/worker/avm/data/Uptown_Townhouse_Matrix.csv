@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Uptown,Townhouse,building_area_total,0.032923,1417.5682,238.537056
+Uptown,Townhouse,lot_width,0.019885,23.1365,13.048849
+Uptown,Townhouse,bedrooms_above_grade,0.049503,2.8298,0.37582
+Uptown,Townhouse,bathrooms_total_integer,0.01563,2.9574,0.682843
+Uptown,Townhouse,parking_total,0.026345,2.4681,0.578003
+Uptown,Townhouse,basement_score,0.001879,4.7234,1.539579
+Uptown,Townhouse,interior_score,0.022158,3.8723,0.761215
+Uptown,Townhouse,exterior_score,0.013051,2.6596,0.951518

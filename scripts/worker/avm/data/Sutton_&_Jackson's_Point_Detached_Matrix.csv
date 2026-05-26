@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0289
-lot_width,0.0265
-bedrooms_above_grade,-0.0072
-bathrooms_total_integer,0.0573
-parking_total,0.0378
-basement_score,0.1237
-interior_score,0.019
-exterior_score,-0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Sutton & Jackson's Point,Detached,building_area_total,0.044088,1698.7179,729.754131
+Sutton & Jackson's Point,Detached,lot_width,0.007877,63.869,40.622912
+Sutton & Jackson's Point,Detached,bedrooms_above_grade,0.003123,3.0562,0.963372
+Sutton & Jackson's Point,Detached,bathrooms_total_integer,0.087123,2.4875,1.089653
+Sutton & Jackson's Point,Detached,parking_total,0.056239,5.2406,2.86464
+Sutton & Jackson's Point,Detached,basement_score,0.085925,4.05,2.246664
+Sutton & Jackson's Point,Detached,interior_score,0.039218,3.4125,0.964284
+Sutton & Jackson's Point,Detached,exterior_score,-0.004411,2.6812,0.917686

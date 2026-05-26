@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7708 - Barrhaven - Stonebridge,Townhouse,building_area_total,0.044565,1604.717,308.567009
+7708 - Barrhaven - Stonebridge,Townhouse,lot_width,0.042484,25.604,9.524671
+7708 - Barrhaven - Stonebridge,Townhouse,bedrooms_above_grade,-0.008065,2.7647,0.476434
+7708 - Barrhaven - Stonebridge,Townhouse,bathrooms_total_integer,0.015171,3.0118,0.496911
+7708 - Barrhaven - Stonebridge,Townhouse,parking_total,0.040343,2.8353,1.14632
+7708 - Barrhaven - Stonebridge,Townhouse,basement_score,0.053351,4.7176,1.035962
+7708 - Barrhaven - Stonebridge,Townhouse,interior_score,-0.014114,3.7059,0.716586
+7708 - Barrhaven - Stonebridge,Townhouse,exterior_score,0.01475,2.9059,0.940882

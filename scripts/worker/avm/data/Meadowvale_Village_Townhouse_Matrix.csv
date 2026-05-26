@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Meadowvale Village,Townhouse,building_area_total,0.033708,1602.2727,265.423021
+Meadowvale Village,Townhouse,lot_width,0.0,23.6762,6.940544
+Meadowvale Village,Townhouse,bedrooms_above_grade,0.011851,3.0,0.208514
+Meadowvale Village,Townhouse,bathrooms_total_integer,0.006691,3.1739,0.563543
+Meadowvale Village,Townhouse,parking_total,0.017567,2.4565,1.057201
+Meadowvale Village,Townhouse,basement_score,0.022371,6.2826,1.884295
+Meadowvale Village,Townhouse,interior_score,0.00066,3.7391,0.705099
+Meadowvale Village,Townhouse,exterior_score,0.012402,2.5217,1.037118

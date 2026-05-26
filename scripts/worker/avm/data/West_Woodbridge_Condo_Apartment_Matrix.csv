@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1971
-lot_width,0.0
-bedrooms_above_grade,0.009
-bathrooms_total_integer,0.0071
-parking_total,0.0317
-basement_score,0.0
-interior_score,0.0315
-exterior_score,-0.0221
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Woodbridge,Condo Apartment,building_area_total,0.117208,1006.4516,294.503939
+West Woodbridge,Condo Apartment,lot_width,0.0,0.0,1.0
+West Woodbridge,Condo Apartment,bedrooms_above_grade,0.041555,1.6129,0.487086
+West Woodbridge,Condo Apartment,bathrooms_total_integer,0.026649,1.629,0.515372
+West Woodbridge,Condo Apartment,parking_total,0.030319,1.2419,0.464393
+West Woodbridge,Condo Apartment,basement_score,0.0,1.0,1.0
+West Woodbridge,Condo Apartment,interior_score,0.020254,3.8548,0.714973
+West Woodbridge,Condo Apartment,exterior_score,0.004768,2.371,0.766935

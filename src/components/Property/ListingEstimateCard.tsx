@@ -2,12 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
-import type { AVMResult } from "@/lib/avm/types";
+import type { AVMResult, AnchorBasis } from "@/lib/avm/types";
 
 interface ListingEstimateCardProps {
   estimate: AVMResult | null;
   listPrice: number;
   cityRegion?: string;
+  city?: string;
 }
 
 const CONFIDENCE_STYLES: Record<AVMResult["confidence"], string> = {
@@ -30,6 +31,7 @@ export default function ListingEstimateCard({
   estimate,
   listPrice,
   cityRegion,
+  city,
 }: ListingEstimateCardProps) {
   const unavailable =
     !estimate || estimate.estimatedValue <= 0 || estimate.anchorPrice <= 0;
@@ -46,9 +48,10 @@ export default function ListingEstimateCard({
               Estimate unavailable
             </p>
             <p className="text-sm text-muted-foreground">
-              Not enough recent comparable sales
-              {cityRegion ? ` in ${cityRegion}` : ""} to estimate this property
-              yet.
+              We can&apos;t produce a confident estimate
+              {cityRegion ? ` in ${cityRegion}` : ""} for this property yet —
+              too few comparable sales and the precomputed prior is missing
+              or noisy.
             </p>
           </div>
         ) : (
@@ -57,6 +60,11 @@ export default function ListingEstimateCard({
               <p className="text-3xl font-bold text-primary">
                 {formatPrice(estimate.estimatedValue)}
               </p>
+              {estimate.lowBand > 0 && estimate.highBand > 0 && (
+                <p className="mt-1 text-xs font-mono text-muted-foreground">
+                  Range {formatPrice(estimate.lowBand)} – {formatPrice(estimate.highBand)}
+                </p>
+              )}
               <DeltaVsAsking
                 estimatedValue={estimate.estimatedValue}
                 listPrice={listPrice}
@@ -65,13 +73,15 @@ export default function ListingEstimateCard({
 
             <div className="flex items-center justify-between pt-2 border-t">
               <ConfidenceChip confidence={estimate.confidence} />
+              <span className="text-[10px] font-mono text-muted-foreground">
+                ±{(estimate.predictiveSD * 100).toFixed(1)}%
+              </span>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Based on 90-day comparable sales
-              {cityRegion ? ` in ${cityRegion}` : ""}
+              {basisCopy(estimate.basis, estimate.comps, cityRegion, city)}
               {estimate.engineMode === "COEFFICIENT_ADJUSTED"
-                ? " · adjusted for beds/baths/parking"
+                ? " · adjusted for size/beds/baths/parking/condition"
                 : ""}
               . Our estimate — not an MLS or TRREB figure.
             </p>
@@ -80,6 +90,35 @@ export default function ListingEstimateCard({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Translates the anchor pipeline's `basis` into a plain-English provenance
+ * line. We tell the user EXACTLY where the level came from — measurably more
+ * transparent than HouseSigma/Realtor.ca (CLAUDE.md §10).
+ */
+function basisCopy(
+  basis: AnchorBasis,
+  comps: number,
+  cityRegion: string | undefined,
+  city: string | undefined
+): string {
+  const here = cityRegion ?? city ?? "this area";
+  switch (basis) {
+    case "local":
+      return `Based on ${comps} recent ${here} sales, trend-adjusted to today`;
+    case "blend":
+      return `Blends ${comps} recent ${here} sales with a trend-adjusted ${here} baseline`;
+    case "prior":
+      return `Trend-adjusted ${here} baseline (no recent local comps in the past year)`;
+    case "parent":
+      return city
+        ? `Based on adjacent ${city} sales (no local ${here} baseline yet)`
+        : "Based on adjacent city-level sales";
+    case "none":
+    default:
+      return `Insufficient data to confidently estimate ${here}`;
+  }
 }
 
 function DeltaVsAsking({

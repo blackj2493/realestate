@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1416
-lot_width,0.0
-bedrooms_above_grade,0.0192
-bathrooms_total_integer,0.0062
-parking_total,0.0076
-basement_score,0.0
-interior_score,0.0022
-exterior_score,0.0211
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Vellore Village,Condo Apartment,building_area_total,0.155457,806.25,210.808217
+Vellore Village,Condo Apartment,lot_width,0.0,0.0,1.0
+Vellore Village,Condo Apartment,bedrooms_above_grade,0.006218,1.5208,0.499566
+Vellore Village,Condo Apartment,bathrooms_total_integer,-0.002795,2.1042,0.585932
+Vellore Village,Condo Apartment,parking_total,0.064126,1.1042,0.3674
+Vellore Village,Condo Apartment,basement_score,0.0,1.0,1.0
+Vellore Village,Condo Apartment,interior_score,0.018487,4.3542,0.594754
+Vellore Village,Condo Apartment,exterior_score,0.006266,2.3958,0.699392

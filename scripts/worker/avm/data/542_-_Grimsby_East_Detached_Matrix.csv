@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0982
-lot_width,0.0338
-bedrooms_above_grade,-0.003
-bathrooms_total_integer,0.0344
-parking_total,0.0154
-basement_score,0.0067
-interior_score,0.0224
-exterior_score,0.025
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+542 - Grimsby East,Detached,building_area_total,0.056797,1829.2059,596.42182
+542 - Grimsby East,Detached,lot_width,0.034565,63.067,23.456634
+542 - Grimsby East,Detached,bedrooms_above_grade,0.006829,3.1456,0.755662
+542 - Grimsby East,Detached,bathrooms_total_integer,0.07013,2.9029,0.960527
+542 - Grimsby East,Detached,parking_total,0.016849,5.5097,2.139527
+542 - Grimsby East,Detached,basement_score,0.008076,5.1456,1.210053
+542 - Grimsby East,Detached,interior_score,0.025682,3.5243,1.012971
+542 - Grimsby East,Detached,exterior_score,0.022638,2.6796,0.936981

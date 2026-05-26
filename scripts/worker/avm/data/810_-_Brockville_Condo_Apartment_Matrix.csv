@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.094
-lot_width,-0.0056
-bedrooms_above_grade,-0.0103
-bathrooms_total_integer,0.1638
-parking_total,-0.0221
-basement_score,0.0023
-interior_score,0.0434
-exterior_score,0.0341
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+810 - Brockville,Condo Apartment,building_area_total,0.188812,831.0484,207.164297
+810 - Brockville,Condo Apartment,lot_width,0.0,210.08,1.0
+810 - Brockville,Condo Apartment,bedrooms_above_grade,-0.027425,1.8553,0.387432
+810 - Brockville,Condo Apartment,bathrooms_total_integer,0.131644,1.2237,0.416713
+810 - Brockville,Condo Apartment,parking_total,-0.032246,0.9605,0.194719
+810 - Brockville,Condo Apartment,basement_score,0.009289,1.0789,0.480218
+810 - Brockville,Condo Apartment,interior_score,0.035786,3.3158,0.764518
+810 - Brockville,Condo Apartment,exterior_score,0.042449,2.2632,0.749885

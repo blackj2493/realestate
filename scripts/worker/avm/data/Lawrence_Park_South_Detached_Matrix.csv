@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0737
-lot_width,0.1268
-bedrooms_above_grade,0.0542
-bathrooms_total_integer,0.1011
-parking_total,0.0162
-basement_score,0.018
-interior_score,0.0469
-exterior_score,0.0059
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lawrence Park South,Detached,building_area_total,0.074606,2450.0,815.250285
+Lawrence Park South,Detached,lot_width,0.061588,40.5301,19.37242
+Lawrence Park South,Detached,bedrooms_above_grade,0.084178,3.7586,0.79025
+Lawrence Park South,Detached,bathrooms_total_integer,0.115303,3.5517,1.197302
+Lawrence Park South,Detached,parking_total,0.034604,3.0103,1.663471
+Lawrence Park South,Detached,basement_score,-0.010963,5.6897,1.555933
+Lawrence Park South,Detached,interior_score,0.045004,3.8483,1.116219
+Lawrence Park South,Detached,exterior_score,0.02088,2.7586,0.956112

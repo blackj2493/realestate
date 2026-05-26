@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7709 - Barrhaven - Strandherd,Townhouse,building_area_total,0.007526,1468.8679,297.033512
+7709 - Barrhaven - Strandherd,Townhouse,lot_width,-0.006637,24.8679,5.882588
+7709 - Barrhaven - Strandherd,Townhouse,bedrooms_above_grade,0.088706,2.5476,0.968612
+7709 - Barrhaven - Strandherd,Townhouse,bathrooms_total_integer,0.02673,3.0357,0.448448
+7709 - Barrhaven - Strandherd,Townhouse,parking_total,0.034746,2.3333,0.979958
+7709 - Barrhaven - Strandherd,Townhouse,basement_score,0.056716,4.1071,1.519852
+7709 - Barrhaven - Strandherd,Townhouse,interior_score,0.015708,3.7143,0.664964
+7709 - Barrhaven - Strandherd,Townhouse,exterior_score,0.010198,2.2024,0.572791

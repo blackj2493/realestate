@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0564
-lot_width,0.0561
-bedrooms_above_grade,0.0217
-bathrooms_total_integer,0.1267
-parking_total,0.0441
-basement_score,-0.0152
-interior_score,0.0317
-exterior_score,0.0633
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+47 - Frontenac South,Detached,building_area_total,0.059151,1717.1955,820.787142
+47 - Frontenac South,Detached,lot_width,0.061793,338.7455,645.846292
+47 - Frontenac South,Detached,bedrooms_above_grade,0.028814,2.9139,0.87921
+47 - Frontenac South,Detached,bathrooms_total_integer,0.129637,2.0148,0.896624
+47 - Frontenac South,Detached,parking_total,0.059921,8.1098,4.276406
+47 - Frontenac South,Detached,basement_score,0.012968,5.0237,2.641716
+47 - Frontenac South,Detached,interior_score,0.043844,3.2641,0.952111
+47 - Frontenac South,Detached,exterior_score,0.06481,2.7537,0.984385

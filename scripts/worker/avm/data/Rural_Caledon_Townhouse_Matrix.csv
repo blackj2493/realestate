@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Caledon,Townhouse,building_area_total,0.032091,1850.0,290.940655
+Rural Caledon,Townhouse,lot_width,0.009748,22.4626,5.49438
+Rural Caledon,Townhouse,bedrooms_above_grade,0.009754,3.1739,0.379035
+Rural Caledon,Townhouse,bathrooms_total_integer,0.019437,3.3739,0.638761
+Rural Caledon,Townhouse,parking_total,0.011352,3.1565,1.282601
+Rural Caledon,Townhouse,basement_score,0.018763,4.6174,1.541217
+Rural Caledon,Townhouse,interior_score,0.009895,3.8783,0.943148
+Rural Caledon,Townhouse,exterior_score,0.006171,2.0435,0.445095

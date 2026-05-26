@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0561
-lot_width,0.0373
-bedrooms_above_grade,0.0222
-bathrooms_total_integer,0.0126
-parking_total,0.0072
-basement_score,0.0297
-interior_score,0.0154
-exterior_score,0.0246
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East Credit,Detached,building_area_total,0.0807,2438.8412,587.662815
+East Credit,Detached,lot_width,0.037323,43.2429,28.693263
+East Credit,Detached,bedrooms_above_grade,0.013309,3.7579,0.581271
+East Credit,Detached,bathrooms_total_integer,0.028922,3.8947,0.717799
+East Credit,Detached,parking_total,0.020908,5.093,1.268769
+East Credit,Detached,basement_score,0.025613,5.6491,1.577153
+East Credit,Detached,interior_score,0.021154,3.4351,1.029476
+East Credit,Detached,exterior_score,0.021165,2.6526,0.945183

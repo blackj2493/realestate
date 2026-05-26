@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0296
-lot_width,0.0
-bedrooms_above_grade,0.1031
-bathrooms_total_integer,0.0248
-parking_total,-0.0072
-basement_score,0.0
-interior_score,-0.0062
-exterior_score,-0.0103
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central Erin Mills,Condo Apartment,building_area_total,-0.002918,768.8199,158.405796
+Central Erin Mills,Condo Apartment,lot_width,0.0,0.0,1.0
+Central Erin Mills,Condo Apartment,bedrooms_above_grade,0.080092,1.5714,0.542759
+Central Erin Mills,Condo Apartment,bathrooms_total_integer,0.063804,1.6211,0.485109
+Central Erin Mills,Condo Apartment,parking_total,-0.007641,1.1056,0.307312
+Central Erin Mills,Condo Apartment,basement_score,0.0,1.0,1.0
+Central Erin Mills,Condo Apartment,interior_score,0.000506,3.9503,0.762484
+Central Erin Mills,Condo Apartment,exterior_score,-0.007537,2.2547,0.62335

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+42 - City Northwest,Townhouse,building_area_total,0.022887,1627.6874,234.170295
+42 - City Northwest,Townhouse,lot_width,0.013247,24.502,7.340169
+42 - City Northwest,Townhouse,bedrooms_above_grade,-0.023828,2.9048,0.293544
+42 - City Northwest,Townhouse,bathrooms_total_integer,0.011346,2.7619,0.52597
+42 - City Northwest,Townhouse,parking_total,0.002453,2.7083,0.690963
+42 - City Northwest,Townhouse,basement_score,0.000223,5.5238,1.948603
+42 - City Northwest,Townhouse,interior_score,0.00859,3.8452,0.681281
+42 - City Northwest,Townhouse,exterior_score,0.016042,2.2976,0.593211

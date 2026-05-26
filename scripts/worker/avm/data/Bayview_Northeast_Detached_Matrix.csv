@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0536
-lot_width,0.0456
-bedrooms_above_grade,0.0091
-bathrooms_total_integer,0.0195
-parking_total,0.0189
-basement_score,-0.0105
-interior_score,-0.0065
-exterior_score,0.03
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bayview Northeast,Detached,building_area_total,0.091314,2751.0417,719.554954
+Bayview Northeast,Detached,lot_width,0.012169,42.18,10.142878
+Bayview Northeast,Detached,bedrooms_above_grade,-0.015985,3.9818,0.646414
+Bayview Northeast,Detached,bathrooms_total_integer,0.033544,4.1818,0.833196
+Bayview Northeast,Detached,parking_total,0.030409,5.0182,1.198346
+Bayview Northeast,Detached,basement_score,-0.028298,5.3818,1.183076
+Bayview Northeast,Detached,interior_score,-0.010164,3.8727,0.973364
+Bayview Northeast,Detached,exterior_score,0.027175,2.3818,0.924237

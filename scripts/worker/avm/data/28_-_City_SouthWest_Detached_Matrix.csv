@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1212
-lot_width,0.0249
-bedrooms_above_grade,0.0215
-bathrooms_total_integer,0.0429
-parking_total,0.0397
-basement_score,0.0208
-interior_score,0.0236
-exterior_score,0.0199
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+28 - City SouthWest,Detached,building_area_total,0.077774,1595.7794,561.64226
+28 - City SouthWest,Detached,lot_width,0.013893,59.7991,14.348756
+28 - City SouthWest,Detached,bedrooms_above_grade,0.022517,3.0903,0.712721
+28 - City SouthWest,Detached,bathrooms_total_integer,0.064847,2.4581,0.903318
+28 - City SouthWest,Detached,parking_total,0.025838,4.5839,1.537509
+28 - City SouthWest,Detached,basement_score,0.020066,5.2452,1.383506
+28 - City SouthWest,Detached,interior_score,0.041475,3.3677,0.970662
+28 - City SouthWest,Detached,exterior_score,0.034712,2.9871,0.943481

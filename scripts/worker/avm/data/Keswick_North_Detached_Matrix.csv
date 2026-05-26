@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.022
-lot_width,0.0273
-bedrooms_above_grade,0.036
-bathrooms_total_integer,0.1038
-parking_total,0.0193
-basement_score,0.0399
-interior_score,0.0259
-exterior_score,0.0068
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Keswick North,Detached,building_area_total,0.040434,1904.1322,725.383534
+Keswick North,Detached,lot_width,0.026354,55.0671,27.963735
+Keswick North,Detached,bedrooms_above_grade,0.041766,3.2244,0.712289
+Keswick North,Detached,bathrooms_total_integer,0.086004,2.8397,1.118016
+Keswick North,Detached,parking_total,0.020755,5.5224,2.339285
+Keswick North,Detached,basement_score,0.055249,4.7051,2.310006
+Keswick North,Detached,interior_score,0.036421,3.4808,1.034477
+Keswick North,Detached,exterior_score,-0.015475,2.5962,0.904255

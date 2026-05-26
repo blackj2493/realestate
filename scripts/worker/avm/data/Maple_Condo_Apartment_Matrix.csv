@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.047
-lot_width,0.0
-bedrooms_above_grade,0.0843
-bathrooms_total_integer,0.0026
-parking_total,-0.0228
-basement_score,0.0
-interior_score,0.0116
-exterior_score,-0.0154
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Maple,Condo Apartment,building_area_total,0.050958,893.1373,193.147208
+Maple,Condo Apartment,lot_width,0.0,0.0,1.0
+Maple,Condo Apartment,bedrooms_above_grade,0.06061,1.598,0.490294
+Maple,Condo Apartment,bathrooms_total_integer,0.020137,1.7059,0.455645
+Maple,Condo Apartment,parking_total,-0.013506,1.1961,0.657375
+Maple,Condo Apartment,basement_score,0.0,1.0,1.0
+Maple,Condo Apartment,interior_score,-0.001139,3.9216,0.812721
+Maple,Condo Apartment,exterior_score,0.011492,2.402,0.877383

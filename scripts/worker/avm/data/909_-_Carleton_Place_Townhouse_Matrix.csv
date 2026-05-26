@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+909 - Carleton Place,Townhouse,building_area_total,0.029498,1420.1493,398.978145
+909 - Carleton Place,Townhouse,lot_width,0.010321,24.1286,6.933301
+909 - Carleton Place,Townhouse,bedrooms_above_grade,0.017811,2.8911,0.611782
+909 - Carleton Place,Townhouse,bathrooms_total_integer,0.051602,2.6634,0.734944
+909 - Carleton Place,Townhouse,parking_total,0.046261,2.604,0.784493
+909 - Carleton Place,Townhouse,basement_score,0.038712,4.7822,1.324588
+909 - Carleton Place,Townhouse,interior_score,0.010168,3.7327,0.932272
+909 - Carleton Place,Townhouse,exterior_score,-0.017601,2.2376,0.52931

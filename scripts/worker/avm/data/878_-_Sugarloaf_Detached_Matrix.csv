@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.034
-lot_width,0.0583
-bedrooms_above_grade,-0.0085
-bathrooms_total_integer,0.0853
-parking_total,0.0209
-basement_score,0.0121
-interior_score,0.0116
-exterior_score,0.0276
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+878 - Sugarloaf,Detached,building_area_total,0.061823,1518.3483,465.102599
+878 - Sugarloaf,Detached,lot_width,0.01974,56.0131,15.719803
+878 - Sugarloaf,Detached,bedrooms_above_grade,-0.034823,3.0556,0.737925
+878 - Sugarloaf,Detached,bathrooms_total_integer,0.058282,1.9921,0.66064
+878 - Sugarloaf,Detached,parking_total,0.033904,4.4683,1.966733
+878 - Sugarloaf,Detached,basement_score,0.009163,4.9841,1.501238
+878 - Sugarloaf,Detached,interior_score,0.037638,3.3651,0.947873
+878 - Sugarloaf,Detached,exterior_score,0.043052,2.7381,0.977351

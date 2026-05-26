@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1088
-lot_width,0.0427
-bedrooms_above_grade,0.0073
-bathrooms_total_integer,0.0116
-parking_total,0.0371
-basement_score,0.0015
-interior_score,-0.0087
-exterior_score,0.0011
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1000 - BC Bronte Creek,Detached,building_area_total,0.075066,2875.7105,921.676245
+1000 - BC Bronte Creek,Detached,lot_width,0.037276,45.2279,9.457772
+1000 - BC Bronte Creek,Detached,bedrooms_above_grade,0.031114,3.6579,0.618841
+1000 - BC Bronte Creek,Detached,bathrooms_total_integer,0.022816,4.0,0.888523
+1000 - BC Bronte Creek,Detached,parking_total,0.040485,4.3289,1.424764
+1000 - BC Bronte Creek,Detached,basement_score,-0.004676,5.5,1.371707
+1000 - BC Bronte Creek,Detached,interior_score,-0.001673,4.2105,1.07991
+1000 - BC Bronte Creek,Detached,exterior_score,0.019353,3.3158,0.891635

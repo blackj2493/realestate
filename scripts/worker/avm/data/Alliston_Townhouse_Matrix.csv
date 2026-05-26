@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Alliston,Townhouse,building_area_total,0.051015,1444.697,290.523142
+Alliston,Townhouse,lot_width,0.013546,23.5786,6.005309
+Alliston,Townhouse,bedrooms_above_grade,0.005853,2.8846,0.554256
+Alliston,Townhouse,bathrooms_total_integer,0.031296,2.7821,0.612842
+Alliston,Townhouse,parking_total,0.012699,3.1282,0.852733
+Alliston,Townhouse,basement_score,-0.000879,4.7564,0.949843
+Alliston,Townhouse,interior_score,0.02755,3.6154,0.771791
+Alliston,Townhouse,exterior_score,-0.009664,2.6282,0.818206

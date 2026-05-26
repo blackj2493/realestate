@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.042
-lot_width,-0.049
-bedrooms_above_grade,0.0268
-bathrooms_total_integer,0.0651
-parking_total,0.112
-basement_score,-0.0093
-interior_score,0.0467
-exterior_score,0.0346
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+910 - Beckwith Twp,Detached,building_area_total,0.072536,1710.5263,582.909885
+910 - Beckwith Twp,Detached,lot_width,-0.003999,251.6019,274.17915
+910 - Beckwith Twp,Detached,bedrooms_above_grade,0.031687,3.0069,0.817874
+910 - Beckwith Twp,Detached,bathrooms_total_integer,0.081754,2.5517,0.953621
+910 - Beckwith Twp,Detached,parking_total,0.083755,9.1448,3.947901
+910 - Beckwith Twp,Detached,basement_score,0.001734,4.8552,1.777171
+910 - Beckwith Twp,Detached,interior_score,0.057457,3.7034,1.011139
+910 - Beckwith Twp,Detached,exterior_score,0.028138,2.6621,0.911389

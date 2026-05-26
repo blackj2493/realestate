@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.4243
-lot_width,0.0
-bedrooms_above_grade,-0.037
-bathrooms_total_integer,0.088
-parking_total,0.0402
-basement_score,0.0
-interior_score,0.0604
-exterior_score,-0.0413
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rosedale-Moore Park,Condo Apartment,building_area_total,0.330327,1277.5832,534.729177
+Rosedale-Moore Park,Condo Apartment,lot_width,0.0,0.0,1.0
+Rosedale-Moore Park,Condo Apartment,bedrooms_above_grade,-0.026565,1.8868,0.537653
+Rosedale-Moore Park,Condo Apartment,bathrooms_total_integer,0.067362,1.9057,0.622356
+Rosedale-Moore Park,Condo Apartment,parking_total,0.100722,1.1038,0.581625
+Rosedale-Moore Park,Condo Apartment,basement_score,-0.014226,1.0377,0.386677
+Rosedale-Moore Park,Condo Apartment,interior_score,0.085201,3.9057,0.986018
+Rosedale-Moore Park,Condo Apartment,exterior_score,0.004804,2.8302,1.059296

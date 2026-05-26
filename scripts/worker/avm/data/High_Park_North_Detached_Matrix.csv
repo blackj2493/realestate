@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0236
-lot_width,0.0375
-bedrooms_above_grade,0.0182
-bathrooms_total_integer,0.0952
-parking_total,0.0072
-basement_score,-0.0183
-interior_score,0.0196
-exterior_score,0.0382
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+High Park North,Detached,building_area_total,0.056626,1919.5122,402.564651
+High Park North,Detached,lot_width,0.036028,28.4776,5.543559
+High Park North,Detached,bedrooms_above_grade,-0.009964,3.9259,0.939895
+High Park North,Detached,bathrooms_total_integer,0.044645,2.8148,0.924443
+High Park North,Detached,parking_total,0.03418,2.0,1.186342
+High Park North,Detached,basement_score,-0.015408,6.2037,1.532121
+High Park North,Detached,interior_score,0.039403,3.5556,1.181127
+High Park North,Detached,exterior_score,0.039309,2.7963,0.889853

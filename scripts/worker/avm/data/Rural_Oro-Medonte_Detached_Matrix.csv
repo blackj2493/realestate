@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0805
-lot_width,0.0579
-bedrooms_above_grade,0.011
-bathrooms_total_integer,0.0947
-parking_total,0.0317
-basement_score,0.0249
-interior_score,0.079
-exterior_score,0.0408
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Oro-Medonte,Detached,building_area_total,0.111803,1893.7565,771.860459
+Rural Oro-Medonte,Detached,lot_width,0.025336,209.8486,238.586326
+Rural Oro-Medonte,Detached,bedrooms_above_grade,-0.019339,2.9476,0.857526
+Rural Oro-Medonte,Detached,bathrooms_total_integer,0.123134,2.6762,1.082284
+Rural Oro-Medonte,Detached,parking_total,0.024101,9.9571,4.10117
+Rural Oro-Medonte,Detached,basement_score,0.00243,5.6429,2.406553
+Rural Oro-Medonte,Detached,interior_score,0.073248,3.4,1.083205
+Rural Oro-Medonte,Detached,exterior_score,0.056883,2.7762,0.952393

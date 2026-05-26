@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0242
-lot_width,0.0229
-bedrooms_above_grade,-0.0051
-bathrooms_total_integer,0.0919
-parking_total,0.0362
-basement_score,0.0087
-interior_score,0.0158
-exterior_score,0.0114
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northcrest Ward 5,Detached,building_area_total,0.041675,1300.3953,443.686321
+Northcrest Ward 5,Detached,lot_width,0.020694,54.0982,21.238389
+Northcrest Ward 5,Detached,bedrooms_above_grade,-0.004824,2.8786,0.739974
+Northcrest Ward 5,Detached,bathrooms_total_integer,0.096412,2.2013,0.811891
+Northcrest Ward 5,Detached,parking_total,0.027928,3.8115,1.35347
+Northcrest Ward 5,Detached,basement_score,0.013695,5.3514,1.713825
+Northcrest Ward 5,Detached,interior_score,0.021708,3.1054,0.852586
+Northcrest Ward 5,Detached,exterior_score,0.012848,2.4026,0.765214

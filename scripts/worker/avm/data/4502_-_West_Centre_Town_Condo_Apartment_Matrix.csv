@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1645
-lot_width,0.0
-bedrooms_above_grade,0.0465
-bathrooms_total_integer,0.0414
-parking_total,0.2232
-basement_score,0.0029
-interior_score,0.0262
-exterior_score,0.0149
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+4502 - West Centre Town,Condo Apartment,building_area_total,0.149352,695.082,377.405391
+4502 - West Centre Town,Condo Apartment,lot_width,0.0,0.0,1.0
+4502 - West Centre Town,Condo Apartment,bedrooms_above_grade,0.088081,1.369,0.736461
+4502 - West Centre Town,Condo Apartment,bathrooms_total_integer,0.038629,1.381,0.509546
+4502 - West Centre Town,Condo Apartment,parking_total,0.156013,0.5714,0.6227
+4502 - West Centre Town,Condo Apartment,basement_score,-0.000118,1.0952,0.609821
+4502 - West Centre Town,Condo Apartment,interior_score,0.024541,4.2262,0.661009
+4502 - West Centre Town,Condo Apartment,exterior_score,0.049473,1.7024,0.720115

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0607
-lot_width,0.0406
-bedrooms_above_grade,0.0471
-bathrooms_total_integer,0.2144
-parking_total,0.0368
-basement_score,-0.009
-interior_score,-0.0073
-exterior_score,0.0129
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Casa Loma,Detached,building_area_total,0.106694,3106.4516,887.433954
+Casa Loma,Detached,lot_width,0.072465,44.1413,23.01807
+Casa Loma,Detached,bedrooms_above_grade,-0.100113,4.2368,1.134024
+Casa Loma,Detached,bathrooms_total_integer,0.282398,4.3421,1.509205
+Casa Loma,Detached,parking_total,0.077516,3.2105,1.703833
+Casa Loma,Detached,basement_score,-0.0835,5.9474,1.63751
+Casa Loma,Detached,interior_score,0.012708,3.8947,1.252145
+Casa Loma,Detached,exterior_score,0.049306,3.0526,1.049997

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bayview Northeast,Townhouse,building_area_total,0.03473,1796.3415,325.237295
+Bayview Northeast,Townhouse,lot_width,-0.016049,21.4576,3.873095
+Bayview Northeast,Townhouse,bedrooms_above_grade,0.024603,3.0909,0.467983
+Bayview Northeast,Townhouse,bathrooms_total_integer,0.009017,3.3864,0.572709
+Bayview Northeast,Townhouse,parking_total,0.031113,2.8182,0.683332
+Bayview Northeast,Townhouse,basement_score,-0.004896,5.6591,2.077402
+Bayview Northeast,Townhouse,interior_score,0.023755,3.8864,0.681439
+Bayview Northeast,Townhouse,exterior_score,0.042277,2.25,1.002837

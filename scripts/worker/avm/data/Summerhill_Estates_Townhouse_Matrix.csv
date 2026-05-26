@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Summerhill Estates,Townhouse,building_area_total,0.048686,1597.9167,293.3212
+Summerhill Estates,Townhouse,lot_width,0.00986,23.1755,14.487043
+Summerhill Estates,Townhouse,bedrooms_above_grade,0.01222,3.0333,0.179505
+Summerhill Estates,Townhouse,bathrooms_total_integer,0.022446,3.2333,0.715697
+Summerhill Estates,Townhouse,parking_total,0.030885,2.8667,0.561743
+Summerhill Estates,Townhouse,basement_score,0.001723,5.5333,1.575507
+Summerhill Estates,Townhouse,interior_score,0.001373,3.6333,0.930352
+Summerhill Estates,Townhouse,exterior_score,0.008746,2.3833,0.896134

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1079
-lot_width,0.0
-bedrooms_above_grade,0.0669
-bathrooms_total_integer,0.0
-parking_total,0.02
-basement_score,0.0001
-interior_score,0.0172
-exterior_score,0.0129
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Windfields,Condo Apartment,building_area_total,0.065649,540.566,172.94797
+Windfields,Condo Apartment,lot_width,0.0,0.0,1.0
+Windfields,Condo Apartment,bedrooms_above_grade,0.131786,1.0755,0.74856
+Windfields,Condo Apartment,bathrooms_total_integer,-0.034967,1.3019,0.459076
+Windfields,Condo Apartment,parking_total,0.02309,0.8302,0.422743
+Windfields,Condo Apartment,basement_score,-0.001029,1.0566,0.408176
+Windfields,Condo Apartment,interior_score,-0.006778,3.7358,0.704459
+Windfields,Condo Apartment,exterior_score,-0.003815,1.9057,0.591262

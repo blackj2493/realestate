@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Sandringham-Wellington North,Townhouse,building_area_total,0.054683,1926.8293,352.706878
+Sandringham-Wellington North,Townhouse,lot_width,0.009899,24.1144,5.932391
+Sandringham-Wellington North,Townhouse,bedrooms_above_grade,0.015232,3.3404,0.473852
+Sandringham-Wellington North,Townhouse,bathrooms_total_integer,0.050015,3.3617,0.633314
+Sandringham-Wellington North,Townhouse,parking_total,0.003733,2.7979,0.73412
+Sandringham-Wellington North,Townhouse,basement_score,-0.000941,5.0851,1.673699
+Sandringham-Wellington North,Townhouse,interior_score,0.036142,3.8511,0.874673
+Sandringham-Wellington North,Townhouse,exterior_score,-0.012342,2.0213,0.483311

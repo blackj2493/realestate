@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0227
-lot_width,0.0
-bedrooms_above_grade,-0.0019
-bathrooms_total_integer,0.0378
-parking_total,0.0021
-basement_score,0.0211
-interior_score,-0.0184
-exterior_score,-0.0208
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central Park,Townhouse,building_area_total,0.027622,1312.2449,130.356893
+Central Park,Townhouse,lot_width,0.0,23.955,1.710972
+Central Park,Townhouse,bedrooms_above_grade,-0.012801,2.9808,0.137335
+Central Park,Townhouse,bathrooms_total_integer,0.028846,2.3269,0.544947
+Central Park,Townhouse,parking_total,0.016642,2.0385,0.61898
+Central Park,Townhouse,basement_score,0.002873,5.7308,2.104166
+Central Park,Townhouse,interior_score,0.001765,3.5577,0.818382
+Central Park,Townhouse,exterior_score,-0.009521,2.4808,0.843308

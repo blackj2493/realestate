@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0206
-lot_width,0.0
-bedrooms_above_grade,0.0602
-bathrooms_total_integer,0.0247
-parking_total,0.0169
-basement_score,0.0
-interior_score,0.0313
-exterior_score,0.0112
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Queen Street Corridor,Condo Apartment,building_area_total,0.016787,1029.5082,249.569638
+Queen Street Corridor,Condo Apartment,lot_width,0.0,0.0,1.0
+Queen Street Corridor,Condo Apartment,bedrooms_above_grade,0.022611,1.9754,0.620195
+Queen Street Corridor,Condo Apartment,bathrooms_total_integer,0.033859,1.5902,0.491803
+Queen Street Corridor,Condo Apartment,parking_total,0.026603,1.2623,0.458137
+Queen Street Corridor,Condo Apartment,basement_score,0.0,1.0,1.0
+Queen Street Corridor,Condo Apartment,interior_score,0.02992,3.6885,0.820655
+Queen Street Corridor,Condo Apartment,exterior_score,-0.003268,2.0574,0.771407

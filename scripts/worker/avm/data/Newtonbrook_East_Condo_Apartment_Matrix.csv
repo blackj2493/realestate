@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.033
-lot_width,0.0
-bedrooms_above_grade,0.0937
-bathrooms_total_integer,0.044
-parking_total,0.0124
-basement_score,0.0
-interior_score,0.0165
-exterior_score,-0.012
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Newtonbrook East,Condo Apartment,building_area_total,0.033875,853.8095,256.412543
+Newtonbrook East,Condo Apartment,lot_width,0.0,0.0,1.0
+Newtonbrook East,Condo Apartment,bedrooms_above_grade,0.054619,1.6381,0.536724
+Newtonbrook East,Condo Apartment,bathrooms_total_integer,0.055665,1.6381,0.518676
+Newtonbrook East,Condo Apartment,parking_total,0.023932,1.019,0.364651
+Newtonbrook East,Condo Apartment,basement_score,0.0,1.0,1.0
+Newtonbrook East,Condo Apartment,interior_score,0.017545,3.8286,0.888628
+Newtonbrook East,Condo Apartment,exterior_score,-0.015456,2.0381,0.567766

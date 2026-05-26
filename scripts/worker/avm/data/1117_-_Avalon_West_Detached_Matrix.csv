@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0646
-lot_width,0.0134
-bedrooms_above_grade,0.024
-bathrooms_total_integer,0.015
-parking_total,0.033
-basement_score,-0.0051
-interior_score,0.0071
-exterior_score,0.0249
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1117 - Avalon West,Detached,building_area_total,0.067165,2320.5882,573.959115
+1117 - Avalon West,Detached,lot_width,0.006832,34.9559,11.836032
+1117 - Avalon West,Detached,bedrooms_above_grade,0.006761,3.5909,0.602451
+1117 - Avalon West,Detached,bathrooms_total_integer,0.028045,3.5909,0.627097
+1117 - Avalon West,Detached,parking_total,0.038944,4.5758,1.18143
+1117 - Avalon West,Detached,basement_score,-0.004207,4.803,0.467738
+1117 - Avalon West,Detached,interior_score,0.0247,4.1515,0.783203
+1117 - Avalon West,Detached,exterior_score,0.016589,2.5606,0.781001

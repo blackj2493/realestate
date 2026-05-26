@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0979
-lot_width,0.0
-bedrooms_above_grade,0.0275
-bathrooms_total_integer,0.0277
-parking_total,0.0074
-basement_score,-0.0173
-interior_score,0.0256
-exterior_score,-0.0064
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1015 - RO River Oaks,Townhouse,building_area_total,0.089052,1325.1234,405.506343
+1015 - RO River Oaks,Townhouse,lot_width,0.0,21.3987,11.370783
+1015 - RO River Oaks,Townhouse,bedrooms_above_grade,0.049063,2.5127,0.559581
+1015 - RO River Oaks,Townhouse,bathrooms_total_integer,0.052582,2.538,0.652513
+1015 - RO River Oaks,Townhouse,parking_total,0.053894,1.8829,0.871794
+1015 - RO River Oaks,Townhouse,basement_score,-0.000933,2.7342,2.627551
+1015 - RO River Oaks,Townhouse,interior_score,0.028193,3.943,0.731252
+1015 - RO River Oaks,Townhouse,exterior_score,-0.003983,2.2278,0.841177

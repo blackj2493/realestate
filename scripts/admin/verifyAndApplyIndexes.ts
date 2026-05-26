@@ -7,11 +7,18 @@
  * `raw_vow_sold` anchor query cause seq scans on every sync batch, which
  * is the #1 IO killer.
  *
- * Uses the IPv4 Session Pooler (same connection as scripts/admin/forceIndexes.ts)
- * because local IPv6 is blocked.
+ * CONNECTION (memory: supabase-migration-connectivity):
+ *   - Reads `DATABASE_URL` from env. Must be the Supabase **Session pooler**
+ *     string (port 5432, NOT the Transaction pooler on 6543) — Session is
+ *     required because CONCURRENTLY indexes need a session-level connection.
+ *   - Get it from Supabase Dashboard → Settings → Database → Connection
+ *     string → Session pooler. Put it in .env.local (never commit it).
+ *   - The direct DB host (db.<ref>.supabase.co) is IPv6-only and won't
+ *     resolve here, so it WILL NOT work for this script.
+ *   - Pass via `--env-file=.env.local` on the command line.
  *
- * Run:  npx tsx scripts/admin/verifyAndApplyIndexes.ts          (read-only audit)
- *       npx tsx scripts/admin/verifyAndApplyIndexes.ts --apply  (create missing)
+ * Run:  npx tsx --env-file=.env.local scripts/admin/verifyAndApplyIndexes.ts          (read-only audit)
+ *       npx tsx --env-file=.env.local scripts/admin/verifyAndApplyIndexes.ts --apply  (create missing)
  */
 
 import { Client } from 'pg';
@@ -19,8 +26,23 @@ import { Client } from 'pg';
 // Note: do NOT include `sslmode=...` in the URL. Modern pg versions promote it
 // to `verify-full` even when `rejectUnauthorized: false` is set in the client
 // options, which fails against the pooler's self-signed cert chain.
-const CONNECTION_STRING =
-  'postgresql://postgres.pyzgnivilxhnwzfrdkiq:Tanshal4002%21@aws-0-ca-central-1.pooler.supabase.com:5432/postgres';
+const CONNECTION_STRING = (process.env.DATABASE_URL || '').trim();
+if (!CONNECTION_STRING) {
+  console.error(
+    '❌ DATABASE_URL not set. This script needs the Supabase Session pooler\n' +
+      '   string (port 5432). See the comment block at the top of this file.\n' +
+      '   Tip: pass `--env-file=.env.local` on the command line.'
+  );
+  process.exit(1);
+}
+if (CONNECTION_STRING.includes(':6543')) {
+  console.error(
+    '❌ DATABASE_URL points at the Transaction pooler (:6543). This script needs\n' +
+      '   the Session pooler (:5432) because CONCURRENTLY indexes require a\n' +
+      '   session-level connection that survives across statements.'
+  );
+  process.exit(1);
+}
 
 // Expected indexes. CONCURRENTLY = non-blocking; required for hot prod tables.
 // Each entry's `sql` MUST be idempotent (CREATE INDEX IF NOT EXISTS / CONCURRENTLY).
@@ -52,6 +74,13 @@ const EXPECTED: ExpectedIndex[] = [
     reason: 'AVM anchorService 90-day avg query: (city_region, property_sub_type, close_date)',
     sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_vow_sold_anchor
             ON public.raw_vow_sold USING btree (city_region, property_sub_type, close_date DESC);`,
+  },
+  {
+    name: 'idx_raw_vow_sold_anchor_contract',
+    table: 'raw_vow_sold',
+    reason: 'AVM anchor pipeline (Phase 1 redesign) pulls comps by purchase_contract_date — the deal-signing timestamp matching the trend index period bucketing',
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_vow_sold_anchor_contract
+            ON public.raw_vow_sold USING btree (city_region, property_sub_type, purchase_contract_date DESC);`,
   },
   {
     name: 'idx_raw_vow_sold_listing_key',
@@ -121,10 +150,18 @@ async function main() {
       }
     }
 
-    console.log('\n🧹 Running ANALYZE on touched tables ...');
+    // ANALYZE is best-effort: on large tables it often exceeds the pooler's
+    // statement_timeout, but Postgres autovacuum will pick the new indexes up
+    // on its own pass. Don't fail the whole run because a stats refresh stalled.
+    console.log('\n🧹 Running ANALYZE on touched tables (best-effort) ...');
     for (const t of new Set(missing.map((m) => m.table))) {
-      await client.query(`ANALYZE public.${t};`);
-      console.log(`   ✅ ANALYZE ${t}`);
+      try {
+        await client.query(`ANALYZE public.${t};`);
+        console.log(`   ✅ ANALYZE ${t}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`   ⚠️  ANALYZE ${t} skipped (${msg}) — autovacuum will catch up.`);
+      }
     }
   } finally {
     await client.end();

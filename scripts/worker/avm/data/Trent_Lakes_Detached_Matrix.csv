@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0459
-lot_width,-0.0567
-bedrooms_above_grade,0.0322
-bathrooms_total_integer,0.0684
-parking_total,0.0925
-basement_score,0.0264
-interior_score,0.1192
-exterior_score,0.0361
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Trent Lakes,Detached,building_area_total,0.016159,1530.7185,617.4362
+Trent Lakes,Detached,lot_width,-0.018583,201.0815,208.804234
+Trent Lakes,Detached,bedrooms_above_grade,0.051618,2.7826,0.684302
+Trent Lakes,Detached,bathrooms_total_integer,0.146954,1.9689,0.859166
+Trent Lakes,Detached,parking_total,0.072056,8.2764,4.283038
+Trent Lakes,Detached,basement_score,0.042466,4.4658,3.264777
+Trent Lakes,Detached,interior_score,0.112879,3.3354,0.97129
+Trent Lakes,Detached,exterior_score,0.058544,3.1242,1.013926

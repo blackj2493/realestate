@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bram East,Townhouse,building_area_total,0.036848,1560.3448,388.604779
+Bram East,Townhouse,lot_width,-0.003686,20.6734,5.485407
+Bram East,Townhouse,bedrooms_above_grade,0.041286,2.8525,0.673529
+Bram East,Townhouse,bathrooms_total_integer,0.024365,3.3279,1.003621
+Bram East,Townhouse,parking_total,0.007693,2.2623,0.973445
+Bram East,Townhouse,basement_score,0.033428,5.0492,2.999597
+Bram East,Townhouse,interior_score,-0.007507,3.623,0.833006
+Bram East,Townhouse,exterior_score,0.005877,2.2295,1.046359

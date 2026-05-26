@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0267
-lot_width,0.0226
-bedrooms_above_grade,0.0247
-bathrooms_total_integer,0.0088
-parking_total,0.0418
-basement_score,0.007
-interior_score,0.0033
-exterior_score,0.0144
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1027 - CL Clarke,Detached,building_area_total,0.051017,2151.8378,409.111563
+1027 - CL Clarke,Detached,lot_width,0.011786,39.1035,8.125258
+1027 - CL Clarke,Detached,bedrooms_above_grade,0.016743,3.593,0.49127
+1027 - CL Clarke,Detached,bathrooms_total_integer,0.020848,3.7093,0.567866
+1027 - CL Clarke,Detached,parking_total,0.032897,4.0814,1.101955
+1027 - CL Clarke,Detached,basement_score,-0.002191,5.4767,1.207792
+1027 - CL Clarke,Detached,interior_score,0.003533,3.8372,0.950648
+1027 - CL Clarke,Detached,exterior_score,0.016653,2.4535,0.884715

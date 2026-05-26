@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0947
-lot_width,0.0474
-bedrooms_above_grade,0.0314
-bathrooms_total_integer,0.0283
-parking_total,0.0423
-basement_score,0.0383
-interior_score,0.043
-exterior_score,0.0155
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+05 - Gananoque,Detached,building_area_total,0.075749,1388.5241,475.385981
+05 - Gananoque,Detached,lot_width,0.026861,65.6102,65.162367
+05 - Gananoque,Detached,bedrooms_above_grade,0.016985,2.9091,0.763312
+05 - Gananoque,Detached,bathrooms_total_integer,0.057009,1.9205,0.710659
+05 - Gananoque,Detached,parking_total,0.075145,3.6534,1.905968
+05 - Gananoque,Detached,basement_score,0.027632,4.9659,1.909598
+05 - Gananoque,Detached,interior_score,0.119342,3.3295,0.90103
+05 - Gananoque,Detached,exterior_score,0.05166,3.0341,0.858763

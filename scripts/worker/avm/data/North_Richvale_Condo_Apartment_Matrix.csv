@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0892
-lot_width,0.0
-bedrooms_above_grade,0.0145
-bathrooms_total_integer,0.0206
-parking_total,-0.0144
-basement_score,0.0
-interior_score,0.0446
-exterior_score,0.0208
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North Richvale,Condo Apartment,building_area_total,0.042294,1120.4545,287.291067
+North Richvale,Condo Apartment,lot_width,0.0,0.0,1.0
+North Richvale,Condo Apartment,bedrooms_above_grade,0.055146,2.0,0.738549
+North Richvale,Condo Apartment,bathrooms_total_integer,0.029913,1.7955,0.403369
+North Richvale,Condo Apartment,parking_total,-0.025991,1.5455,0.520251
+North Richvale,Condo Apartment,basement_score,0.0,1.0,1.0
+North Richvale,Condo Apartment,interior_score,0.043727,3.8864,0.803852
+North Richvale,Condo Apartment,exterior_score,0.027227,2.0341,0.681723

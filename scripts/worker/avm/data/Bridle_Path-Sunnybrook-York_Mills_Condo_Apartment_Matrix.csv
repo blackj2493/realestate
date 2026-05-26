@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.226
-lot_width,0.0
-bedrooms_above_grade,0.0363
-bathrooms_total_integer,0.1205
-parking_total,0.0047
-basement_score,0.0
-interior_score,-0.0105
-exterior_score,-0.0223
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,building_area_total,0.220404,1497.561,675.119792
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,lot_width,0.0,0.0,1.0
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,bedrooms_above_grade,0.067714,1.8049,0.453685
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,bathrooms_total_integer,0.110971,2.3171,0.678557
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,parking_total,0.052289,1.5366,0.49866
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,basement_score,0.0,1.0,1.0
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,interior_score,-0.029358,4.439,0.856789
+Bridle Path-Sunnybrook-York Mills,Condo Apartment,exterior_score,0.01225,3.1707,0.880755

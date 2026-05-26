@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1478
-lot_width,0.0
-bedrooms_above_grade,0.0276
-bathrooms_total_integer,-0.0116
-parking_total,-0.0206
-basement_score,0.0002
-interior_score,0.0392
-exterior_score,-0.0172
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+St. Patrick's Ward,Condo Apartment,building_area_total,0.198645,944.9424,311.183486
+St. Patrick's Ward,Condo Apartment,lot_width,0.0,0.0,1.0
+St. Patrick's Ward,Condo Apartment,bedrooms_above_grade,0.028465,1.4921,0.499937
+St. Patrick's Ward,Condo Apartment,bathrooms_total_integer,-0.046213,1.4286,0.494872
+St. Patrick's Ward,Condo Apartment,parking_total,-0.01641,1.0476,0.415133
+St. Patrick's Ward,Condo Apartment,basement_score,0.006896,1.0635,0.499937
+St. Patrick's Ward,Condo Apartment,interior_score,0.032083,4.0317,0.835108
+St. Patrick's Ward,Condo Apartment,exterior_score,-0.012338,1.8095,0.752923

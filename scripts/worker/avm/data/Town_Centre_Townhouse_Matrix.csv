@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Town Centre,Townhouse,building_area_total,-0.001407,1416.2162,290.166321
+Town Centre,Townhouse,lot_width,0.0,17.882,3.159461
+Town Centre,Townhouse,bedrooms_above_grade,0.018446,2.5854,0.539901
+Town Centre,Townhouse,bathrooms_total_integer,0.008864,2.7073,0.454994
+Town Centre,Townhouse,parking_total,0.030936,1.4634,0.545382
+Town Centre,Townhouse,basement_score,0.026455,1.7073,1.469095
+Town Centre,Townhouse,interior_score,-0.000213,3.878,0.592437
+Town Centre,Townhouse,exterior_score,0.002481,1.9268,0.63975

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mimico,Townhouse,building_area_total,0.069899,1671.2121,395.865049
+Mimico,Townhouse,lot_width,-0.029456,16.3664,3.509284
+Mimico,Townhouse,bedrooms_above_grade,0.022679,2.7042,0.541109
+Mimico,Townhouse,bathrooms_total_integer,0.024449,2.8169,0.634897
+Mimico,Townhouse,parking_total,0.043095,1.9296,0.564787
+Mimico,Townhouse,basement_score,0.025,4.6056,3.069518
+Mimico,Townhouse,interior_score,0.015828,4.0845,0.834916
+Mimico,Townhouse,exterior_score,0.005764,3.1549,1.002081

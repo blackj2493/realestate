@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0771
-lot_width,-0.0251
-bedrooms_above_grade,0.0059
-bathrooms_total_integer,0.0186
-parking_total,0.0152
-basement_score,0.0096
-interior_score,0.0216
-exterior_score,0.0161
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+37 - South of Taylor-Kidd Blvd,Detached,building_area_total,0.054915,1544.4945,597.376937
+37 - South of Taylor-Kidd Blvd,Detached,lot_width,-0.024704,65.0989,19.542506
+37 - South of Taylor-Kidd Blvd,Detached,bedrooms_above_grade,0.0127,3.0752,0.656077
+37 - South of Taylor-Kidd Blvd,Detached,bathrooms_total_integer,0.047411,2.2331,0.68152
+37 - South of Taylor-Kidd Blvd,Detached,parking_total,0.011782,4.6541,1.734416
+37 - South of Taylor-Kidd Blvd,Detached,basement_score,0.015763,5.5414,1.638408
+37 - South of Taylor-Kidd Blvd,Detached,interior_score,0.023181,3.3233,0.854434
+37 - South of Taylor-Kidd Blvd,Detached,exterior_score,0.024825,2.8571,0.823917

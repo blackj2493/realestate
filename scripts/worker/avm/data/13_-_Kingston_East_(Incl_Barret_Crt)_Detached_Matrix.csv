@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0836
-lot_width,0.047
-bedrooms_above_grade,0.0387
-bathrooms_total_integer,0.0252
-parking_total,0.0339
-basement_score,0.017
-interior_score,0.0113
-exterior_score,-0.016
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+13 - Kingston East (Incl Barret Crt),Detached,building_area_total,0.105852,1858.5781,620.472392
+13 - Kingston East (Incl Barret Crt),Detached,lot_width,0.030136,45.1707,20.006309
+13 - Kingston East (Incl Barret Crt),Detached,bedrooms_above_grade,0.016978,3.1638,0.673336
+13 - Kingston East (Incl Barret Crt),Detached,bathrooms_total_integer,0.021871,3.2542,1.118815
+13 - Kingston East (Incl Barret Crt),Detached,parking_total,0.02892,4.0254,1.420463
+13 - Kingston East (Incl Barret Crt),Detached,basement_score,0.03979,5.2542,1.368655
+13 - Kingston East (Incl Barret Crt),Detached,interior_score,0.005686,3.7627,0.751773
+13 - Kingston East (Incl Barret Crt),Detached,exterior_score,-0.0035,2.774,0.777365

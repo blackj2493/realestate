@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lindsay,Townhouse,building_area_total,0.040406,1485.7143,413.916091
+Lindsay,Townhouse,lot_width,0.012724,24.1509,4.735629
+Lindsay,Townhouse,bedrooms_above_grade,-0.013817,2.614,0.766729
+Lindsay,Townhouse,bathrooms_total_integer,0.049607,2.614,0.668971
+Lindsay,Townhouse,parking_total,0.002904,2.4211,0.619773
+Lindsay,Townhouse,basement_score,0.003501,4.9298,0.834763
+Lindsay,Townhouse,interior_score,-0.021808,3.4912,0.775113
+Lindsay,Townhouse,exterior_score,-0.003224,2.4035,0.722074

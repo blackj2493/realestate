@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1022 - WT West Oak Trails,Townhouse,building_area_total,0.040814,1499.8276,245.883918
+1022 - WT West Oak Trails,Townhouse,lot_width,-0.004167,24.175,7.739856
+1022 - WT West Oak Trails,Townhouse,bedrooms_above_grade,0.021298,2.75,0.433013
+1022 - WT West Oak Trails,Townhouse,bathrooms_total_integer,0.021551,3.15,0.542371
+1022 - WT West Oak Trails,Townhouse,parking_total,0.024596,2.6167,0.932589
+1022 - WT West Oak Trails,Townhouse,basement_score,0.04152,4.5,1.617611
+1022 - WT West Oak Trails,Townhouse,interior_score,0.008369,3.7833,0.877338
+1022 - WT West Oak Trails,Townhouse,exterior_score,0.00123,2.3833,0.838484

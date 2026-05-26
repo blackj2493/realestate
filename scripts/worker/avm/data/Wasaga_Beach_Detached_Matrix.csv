@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0594
-lot_width,0.0384
-bedrooms_above_grade,0.0208
-bathrooms_total_integer,0.0749
-parking_total,0.0383
-basement_score,0.0187
-interior_score,0.0226
-exterior_score,0.0225
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Wasaga Beach,Detached,building_area_total,0.061442,1720.2433,683.780379
+Wasaga Beach,Detached,lot_width,0.044251,58.6068,30.564939
+Wasaga Beach,Detached,bedrooms_above_grade,0.021028,2.7124,0.826534
+Wasaga Beach,Detached,bathrooms_total_integer,0.075494,2.5284,0.942331
+Wasaga Beach,Detached,parking_total,0.039748,5.3913,2.508992
+Wasaga Beach,Detached,basement_score,0.055403,4.495,1.992245
+Wasaga Beach,Detached,interior_score,0.031759,3.3428,0.980345
+Wasaga Beach,Detached,exterior_score,0.032142,2.6957,0.894622

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0259
-lot_width,0.0425
-bedrooms_above_grade,0.0254
-bathrooms_total_integer,0.0682
-parking_total,0.0213
-basement_score,0.0126
-interior_score,0.0147
-exterior_score,0.0129
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Hillcrest Village,Detached,building_area_total,0.052174,1829.0323,698.243671
+Hillcrest Village,Detached,lot_width,0.034921,51.7208,8.186236
+Hillcrest Village,Detached,bedrooms_above_grade,0.02554,3.6735,0.549128
+Hillcrest Village,Detached,bathrooms_total_integer,0.037565,3.1633,1.056504
+Hillcrest Village,Detached,parking_total,0.034898,4.3469,1.2046
+Hillcrest Village,Detached,basement_score,0.043943,5.7551,1.597583
+Hillcrest Village,Detached,interior_score,0.02967,3.5714,0.947607
+Hillcrest Village,Detached,exterior_score,0.028298,2.0816,1.046603

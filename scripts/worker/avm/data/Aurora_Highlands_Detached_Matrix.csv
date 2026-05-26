@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0835
-lot_width,0.0349
-bedrooms_above_grade,0.0438
-bathrooms_total_integer,0.055
-parking_total,0.0258
-basement_score,0.0062
-interior_score,0.0428
-exterior_score,0.0196
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Aurora Highlands,Detached,building_area_total,0.101376,2659.0541,1005.139611
+Aurora Highlands,Detached,lot_width,0.016417,52.7145,11.848269
+Aurora Highlands,Detached,bedrooms_above_grade,0.046007,3.6528,0.710237
+Aurora Highlands,Detached,bathrooms_total_integer,0.075648,3.7292,1.156015
+Aurora Highlands,Detached,parking_total,0.032262,5.7465,1.620181
+Aurora Highlands,Detached,basement_score,0.007733,5.8403,1.71862
+Aurora Highlands,Detached,interior_score,0.043083,3.8264,0.988334
+Aurora Highlands,Detached,exterior_score,0.024381,2.8958,0.933324

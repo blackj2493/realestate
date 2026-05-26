@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0254
-lot_width,0.0352
-bedrooms_above_grade,0.0501
-bathrooms_total_integer,0.0529
-parking_total,0.0143
-basement_score,0.0134
-interior_score,0.0162
-exterior_score,0.0234
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1005 - FA Falgarwood,Detached,building_area_total,0.030206,1843.0519,468.37694
+1005 - FA Falgarwood,Detached,lot_width,0.032799,53.6336,18.885835
+1005 - FA Falgarwood,Detached,bedrooms_above_grade,0.044515,3.4773,0.543082
+1005 - FA Falgarwood,Detached,bathrooms_total_integer,0.045496,2.8636,0.919261
+1005 - FA Falgarwood,Detached,parking_total,0.01983,4.9205,1.38352
+1005 - FA Falgarwood,Detached,basement_score,-0.009045,5.2273,1.267848
+1005 - FA Falgarwood,Detached,interior_score,0.031976,3.4773,1.055045
+1005 - FA Falgarwood,Detached,exterior_score,0.021391,2.7727,1.063092

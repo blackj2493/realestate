@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Agincourt North,Townhouse,building_area_total,0.022576,1393.3333,151.877143
+Agincourt North,Townhouse,lot_width,0.0,22.9206,4.557149
+Agincourt North,Townhouse,bedrooms_above_grade,-0.009904,3.2449,0.430027
+Agincourt North,Townhouse,bathrooms_total_integer,0.022973,2.7347,0.802433
+Agincourt North,Townhouse,parking_total,0.037853,2.2857,0.606092
+Agincourt North,Townhouse,basement_score,0.011845,5.6735,1.670729
+Agincourt North,Townhouse,interior_score,0.009895,3.2653,0.802433
+Agincourt North,Townhouse,exterior_score,0.003066,2.4694,0.859569

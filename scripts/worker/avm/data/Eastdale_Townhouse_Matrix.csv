@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Eastdale,Townhouse,building_area_total,0.031339,1384.6154,400.184869
+Eastdale,Townhouse,lot_width,0.0,23.1905,3.934813
+Eastdale,Townhouse,bedrooms_above_grade,0.019782,3.2558,0.436318
+Eastdale,Townhouse,bathrooms_total_integer,0.049425,2.5581,0.815613
+Eastdale,Townhouse,parking_total,0.050124,2.2093,0.700768
+Eastdale,Townhouse,basement_score,-0.025657,5.8605,2.348492
+Eastdale,Townhouse,interior_score,0.013059,3.6047,0.839145
+Eastdale,Townhouse,exterior_score,-0.015047,2.3023,0.876963

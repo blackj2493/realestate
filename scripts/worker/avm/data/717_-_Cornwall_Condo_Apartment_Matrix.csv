@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0938
-lot_width,0.0
-bedrooms_above_grade,0.0186
-bathrooms_total_integer,0.0358
-parking_total,-0.0033
-basement_score,-0.0206
-interior_score,0.0109
-exterior_score,0.0491
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+717 - Cornwall,Condo Apartment,building_area_total,0.118722,1063.3333,266.124449
+717 - Cornwall,Condo Apartment,lot_width,0.0,0.0,1.0
+717 - Cornwall,Condo Apartment,bedrooms_above_grade,0.043355,1.8163,0.481217
+717 - Cornwall,Condo Apartment,bathrooms_total_integer,0.030991,1.4898,0.539177
+717 - Cornwall,Condo Apartment,parking_total,0.021724,1.0816,0.340272
+717 - Cornwall,Condo Apartment,basement_score,0.004416,1.7959,1.677943
+717 - Cornwall,Condo Apartment,interior_score,0.004437,3.6531,0.656242
+717 - Cornwall,Condo Apartment,exterior_score,0.043578,2.7143,1.049781

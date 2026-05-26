@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0302
-lot_width,0.0
-bedrooms_above_grade,-0.0032
-bathrooms_total_integer,0.0316
-parking_total,0.1207
-basement_score,0.0505
-interior_score,0.0118
-exterior_score,0.0072
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1005 - FA Falgarwood,Townhouse,building_area_total,0.014711,1431.5962,280.782647
+1005 - FA Falgarwood,Townhouse,lot_width,0.0,26.5344,17.635439
+1005 - FA Falgarwood,Townhouse,bedrooms_above_grade,-0.027615,3.1321,0.550737
+1005 - FA Falgarwood,Townhouse,bathrooms_total_integer,0.069039,2.3019,0.715987
+1005 - FA Falgarwood,Townhouse,parking_total,0.069797,1.9245,0.797379
+1005 - FA Falgarwood,Townhouse,basement_score,0.081644,3.9057,2.191443
+1005 - FA Falgarwood,Townhouse,interior_score,0.030237,3.7358,0.730752
+1005 - FA Falgarwood,Townhouse,exterior_score,0.012938,2.3962,0.918153

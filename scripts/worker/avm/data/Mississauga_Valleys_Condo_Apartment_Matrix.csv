@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0611
-lot_width,0.0
-bedrooms_above_grade,0.0278
-bathrooms_total_integer,0.0227
-parking_total,0.0048
-basement_score,0.0
-interior_score,0.0359
-exterior_score,0.015
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mississauga Valleys,Condo Apartment,building_area_total,0.015207,1096.4286,226.75056
+Mississauga Valleys,Condo Apartment,lot_width,0.0,0.0,1.0
+Mississauga Valleys,Condo Apartment,bedrooms_above_grade,0.032497,2.1875,0.688311
+Mississauga Valleys,Condo Apartment,bathrooms_total_integer,0.035264,1.7321,0.442843
+Mississauga Valleys,Condo Apartment,parking_total,-0.011428,1.3125,0.567439
+Mississauga Valleys,Condo Apartment,basement_score,0.0,1.0,1.0
+Mississauga Valleys,Condo Apartment,interior_score,0.048205,3.7857,0.784089
+Mississauga Valleys,Condo Apartment,exterior_score,0.012687,2.0446,0.794944

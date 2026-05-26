@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+606 - Town of Rockland,Townhouse,building_area_total,-0.001768,1350.0,185.965947
+606 - Town of Rockland,Townhouse,lot_width,0.004397,20.5391,4.21546
+606 - Town of Rockland,Townhouse,bedrooms_above_grade,0.038572,2.8933,0.308689
+606 - Town of Rockland,Townhouse,bathrooms_total_integer,0.006994,2.5867,0.713551
+606 - Town of Rockland,Townhouse,parking_total,0.001926,2.48,0.64
+606 - Town of Rockland,Townhouse,basement_score,0.003013,4.5467,1.508141
+606 - Town of Rockland,Townhouse,interior_score,0.038947,4.04,0.575963
+606 - Town of Rockland,Townhouse,exterior_score,0.006956,2.88,0.96554

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0685
-lot_width,0.0726
-bedrooms_above_grade,0.0162
-bathrooms_total_integer,0.0187
-parking_total,0.011
-basement_score,0.0101
-interior_score,0.0124
-exterior_score,0.002
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Credit Valley,Detached,building_area_total,0.099966,3019.2893,726.813155
+Credit Valley,Detached,lot_width,0.024928,44.681,17.431958
+Credit Valley,Detached,bedrooms_above_grade,0.031109,4.113,0.506741
+Credit Valley,Detached,bathrooms_total_integer,0.034656,4.6565,0.982156
+Credit Valley,Detached,parking_total,0.043742,5.5739,1.432911
+Credit Valley,Detached,basement_score,0.005034,6.2696,1.502588
+Credit Valley,Detached,interior_score,0.015954,3.7522,1.17005
+Credit Valley,Detached,exterior_score,0.011326,2.5696,0.974427

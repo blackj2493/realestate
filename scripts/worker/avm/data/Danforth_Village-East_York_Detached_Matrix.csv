@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0115
-lot_width,0.056
-bedrooms_above_grade,0.0895
-bathrooms_total_integer,0.1468
-parking_total,-0.009
-basement_score,0.0146
-interior_score,0.0196
-exterior_score,0.0226
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Danforth Village-East York,Detached,building_area_total,0.031462,1391.7391,569.512776
+Danforth Village-East York,Detached,lot_width,-0.018088,37.1461,133.452405
+Danforth Village-East York,Detached,bedrooms_above_grade,0.110569,2.8072,0.79846
+Danforth Village-East York,Detached,bathrooms_total_integer,0.09655,2.6988,1.094729
+Danforth Village-East York,Detached,parking_total,0.028831,2.256,1.280928
+Danforth Village-East York,Detached,basement_score,0.017324,6.3554,1.586901
+Danforth Village-East York,Detached,interior_score,0.048181,3.259,1.176736
+Danforth Village-East York,Detached,exterior_score,0.009525,2.3795,0.732591

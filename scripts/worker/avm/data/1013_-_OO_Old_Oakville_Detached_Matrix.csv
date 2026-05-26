@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.079
-lot_width,0.0372
-bedrooms_above_grade,-0.0287
-bathrooms_total_integer,0.1493
-parking_total,0.1315
-basement_score,0.0674
-interior_score,0.0218
-exterior_score,0.0109
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1013 - OO Old Oakville,Detached,building_area_total,0.168353,2788.7872,891.38068
+1013 - OO Old Oakville,Detached,lot_width,0.034456,73.5321,27.862606
+1013 - OO Old Oakville,Detached,bedrooms_above_grade,-0.023021,3.5357,0.778375
+1013 - OO Old Oakville,Detached,bathrooms_total_integer,0.199376,3.8452,1.562157
+1013 - OO Old Oakville,Detached,parking_total,0.073519,6.25,3.541001
+1013 - OO Old Oakville,Detached,basement_score,0.034608,5.2024,1.510123
+1013 - OO Old Oakville,Detached,interior_score,0.046566,3.9405,1.127061
+1013 - OO Old Oakville,Detached,exterior_score,0.019824,2.631,1.020968

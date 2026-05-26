@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1317
-lot_width,0.0489
-bedrooms_above_grade,0.0466
-bathrooms_total_integer,0.1086
-parking_total,0.0201
-basement_score,-0.0104
-interior_score,0.0277
-exterior_score,0.0114
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Islington-City Centre West,Detached,building_area_total,0.132054,2004.0146,958.653603
+Islington-City Centre West,Detached,lot_width,0.034775,48.2468,11.688644
+Islington-City Centre West,Detached,bedrooms_above_grade,0.035735,3.3194,0.692209
+Islington-City Centre West,Detached,bathrooms_total_integer,0.110508,3.089,1.398366
+Islington-City Centre West,Detached,parking_total,0.021726,5.0131,1.654309
+Islington-City Centre West,Detached,basement_score,-0.004089,6.2304,1.68744
+Islington-City Centre West,Detached,interior_score,0.041489,3.3194,1.243872
+Islington-City Centre West,Detached,exterior_score,0.012349,2.5969,0.970664

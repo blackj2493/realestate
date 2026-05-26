@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0125
-lot_width,0.0
-bedrooms_above_grade,0.0128
-bathrooms_total_integer,0.0126
-parking_total,0.0031
-basement_score,0.026
-interior_score,-0.0068
-exterior_score,-0.0136
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Pringle Creek,Townhouse,building_area_total,0.023691,1434.8,282.061979
+Pringle Creek,Townhouse,lot_width,0.008662,21.6352,7.208866
+Pringle Creek,Townhouse,bedrooms_above_grade,0.021358,2.8553,0.450262
+Pringle Creek,Townhouse,bathrooms_total_integer,0.032977,2.75,0.745601
+Pringle Creek,Townhouse,parking_total,0.019877,2.3158,0.711013
+Pringle Creek,Townhouse,basement_score,0.002638,4.7632,1.935597
+Pringle Creek,Townhouse,interior_score,0.007034,3.6711,0.84118
+Pringle Creek,Townhouse,exterior_score,-0.001755,2.0921,0.566095

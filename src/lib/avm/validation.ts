@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 export const AVMInputSchema = z.object({
   cityRegion: z.string().min(1, 'City/Region is required'),
+  city: z.string().nullable().optional(),
   propertySubType: z.string().min(1, 'Property type is required'),
   bedroomsAboveGrade: z.number().int().min(0).max(10),
   bathroomsTotalInteger: z.number().int().min(0).max(10),

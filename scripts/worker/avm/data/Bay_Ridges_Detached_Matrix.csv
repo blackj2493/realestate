@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0971
-lot_width,0.036
-bedrooms_above_grade,0.0281
-bathrooms_total_integer,0.075
-parking_total,0.0145
-basement_score,0.015
-interior_score,0.0171
-exterior_score,-0.0066
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bay Ridges,Detached,building_area_total,0.104249,1537.2727,639.901852
+Bay Ridges,Detached,lot_width,0.030672,49.3599,14.255106
+Bay Ridges,Detached,bedrooms_above_grade,0.034671,3.241,0.505163
+Bay Ridges,Detached,bathrooms_total_integer,0.0728,2.6024,1.017199
+Bay Ridges,Detached,parking_total,0.029536,4.7651,1.471286
+Bay Ridges,Detached,basement_score,0.00808,5.8434,1.675349
+Bay Ridges,Detached,interior_score,0.034806,3.3253,1.173076
+Bay Ridges,Detached,exterior_score,0.002218,2.6024,1.279493

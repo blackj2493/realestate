@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0138
-lot_width,0.0
-bedrooms_above_grade,0.0204
-bathrooms_total_integer,0.0213
-parking_total,0.0779
-basement_score,-0.0128
-interior_score,0.0212
-exterior_score,-0.0027
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9002 - Kanata - Katimavik,Townhouse,building_area_total,0.02343,1287.7841,245.701521
+9002 - Kanata - Katimavik,Townhouse,lot_width,0.0,26.2539,20.775367
+9002 - Kanata - Katimavik,Townhouse,bedrooms_above_grade,0.037854,2.8583,0.52115
+9002 - Kanata - Katimavik,Townhouse,bathrooms_total_integer,0.043876,2.525,0.605014
+9002 - Kanata - Katimavik,Townhouse,parking_total,0.105959,2.0,0.82664
+9002 - Kanata - Katimavik,Townhouse,basement_score,0.001893,4.0,1.746425
+9002 - Kanata - Katimavik,Townhouse,interior_score,0.018901,3.6583,0.735933
+9002 - Kanata - Katimavik,Townhouse,exterior_score,0.010865,2.25,0.686173

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0228
-lot_width,0.0238
-bedrooms_above_grade,0.0192
-bathrooms_total_integer,0.0953
-parking_total,-0.0102
-basement_score,-0.0176
-interior_score,0.0231
-exterior_score,0.0258
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Don Valley Village,Detached,building_area_total,0.055316,1885.9649,463.279157
+Don Valley Village,Detached,lot_width,-0.003823,54.8506,12.11503
+Don Valley Village,Detached,bedrooms_above_grade,0.003447,3.859,0.674144
+Don Valley Village,Detached,bathrooms_total_integer,0.074324,3.2179,1.161867
+Don Valley Village,Detached,parking_total,-0.016857,4.3846,1.416304
+Don Valley Village,Detached,basement_score,-0.001049,5.6795,1.523269
+Don Valley Village,Detached,interior_score,0.037888,3.0,1.037749
+Don Valley Village,Detached,exterior_score,0.004553,2.6154,1.076923

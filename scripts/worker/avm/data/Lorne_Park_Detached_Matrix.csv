@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0578
-lot_width,0.0675
-bedrooms_above_grade,0.0193
-bathrooms_total_integer,0.0993
-parking_total,0.1299
-basement_score,0.0071
-interior_score,0.0235
-exterior_score,0.0334
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lorne Park,Detached,building_area_total,0.099328,2793.6103,965.02939
+Lorne Park,Detached,lot_width,0.073127,77.0662,29.884339
+Lorne Park,Detached,bedrooms_above_grade,0.008523,3.7955,0.748621
+Lorne Park,Detached,bathrooms_total_integer,0.103746,3.9432,1.185691
+Lorne Park,Detached,parking_total,0.074125,6.7273,2.219374
+Lorne Park,Detached,basement_score,0.002167,5.6023,1.675626
+Lorne Park,Detached,interior_score,0.051321,3.9773,1.081637
+Lorne Park,Detached,exterior_score,0.033229,3.2557,0.957905

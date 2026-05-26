@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Glanbrook,Townhouse,building_area_total,0.018583,1571.875,241.718295
+Rural Glanbrook,Townhouse,lot_width,0.005695,23.2167,3.655317
+Rural Glanbrook,Townhouse,bedrooms_above_grade,-0.011265,2.7959,0.605404
+Rural Glanbrook,Townhouse,bathrooms_total_integer,0.010392,3.0,0.451754
+Rural Glanbrook,Townhouse,parking_total,0.01174,2.2041,0.450831
+Rural Glanbrook,Townhouse,basement_score,0.03668,4.4694,1.126708
+Rural Glanbrook,Townhouse,interior_score,0.013079,3.7755,0.863437
+Rural Glanbrook,Townhouse,exterior_score,0.016258,2.551,0.784056

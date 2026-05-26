@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Whitby,Townhouse,building_area_total,0.014572,1887.5,246.749704
+Rural Whitby,Townhouse,lot_width,0.009261,22.912,4.490001
+Rural Whitby,Townhouse,bedrooms_above_grade,0.019917,3.3299,0.491613
+Rural Whitby,Townhouse,bathrooms_total_integer,0.005603,3.1959,0.396874
+Rural Whitby,Townhouse,parking_total,0.016188,2.6082,0.725908
+Rural Whitby,Townhouse,basement_score,0.017835,4.4536,1.436064
+Rural Whitby,Townhouse,interior_score,0.000768,3.8454,0.816583
+Rural Whitby,Townhouse,exterior_score,0.003117,2.2268,0.617697

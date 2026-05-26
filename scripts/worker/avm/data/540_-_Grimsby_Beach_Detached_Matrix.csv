@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0938
-lot_width,-0.0268
-bedrooms_above_grade,0.0076
-bathrooms_total_integer,0.0891
-parking_total,0.0101
-basement_score,0.0166
-interior_score,0.0163
-exterior_score,0.0308
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+540 - Grimsby Beach,Detached,building_area_total,0.082589,1608.5204,529.436478
+540 - Grimsby Beach,Detached,lot_width,0.001162,59.6936,17.690066
+540 - Grimsby Beach,Detached,bedrooms_above_grade,0.013051,2.9423,0.690971
+540 - Grimsby Beach,Detached,bathrooms_total_integer,0.094794,2.3654,0.94113
+540 - Grimsby Beach,Detached,parking_total,0.030788,4.8413,1.828283
+540 - Grimsby Beach,Detached,basement_score,0.030032,4.9712,1.410515
+540 - Grimsby Beach,Detached,interior_score,0.016859,3.3846,1.031314
+540 - Grimsby Beach,Detached,exterior_score,0.010369,2.9904,1.014275

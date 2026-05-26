@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0661
-lot_width,0.0838
-bedrooms_above_grade,0.0174
-bathrooms_total_integer,0.1978
-parking_total,0.0469
-basement_score,0.029
-interior_score,0.0489
-exterior_score,-0.0119
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Banbury-Don Mills,Detached,building_area_total,0.058843,2559.6591,1084.2587
+Banbury-Don Mills,Detached,lot_width,0.031435,63.3935,16.819741
+Banbury-Don Mills,Detached,bedrooms_above_grade,0.019037,3.7949,0.84265
+Banbury-Don Mills,Detached,bathrooms_total_integer,0.150733,3.7778,1.585787
+Banbury-Don Mills,Detached,parking_total,0.064456,5.406,2.19939
+Banbury-Don Mills,Detached,basement_score,0.028454,5.6496,1.731144
+Banbury-Don Mills,Detached,interior_score,0.066518,3.3932,1.267323
+Banbury-Don Mills,Detached,exterior_score,0.022696,2.8718,0.862698

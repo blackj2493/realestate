@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0613
-lot_width,0.0352
-bedrooms_above_grade,-0.0049
-bathrooms_total_integer,0.0086
-parking_total,0.0264
-basement_score,0.0114
-interior_score,0.0239
-exterior_score,0.0366
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,building_area_total,0.052896,1486.9565,385.531082
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,lot_width,0.023918,58.9711,19.256982
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,bedrooms_above_grade,0.013915,3.2344,0.579391
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,bathrooms_total_integer,0.038225,2.7812,0.856387
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,parking_total,0.029254,4.5,1.5
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,basement_score,-0.001981,4.7656,0.631026
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,interior_score,0.025538,3.5,1.075291
+7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills,Detached,exterior_score,0.057109,2.5625,0.747391

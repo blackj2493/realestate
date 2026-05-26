@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0313
-lot_width,0.024
-bedrooms_above_grade,0.0716
-bathrooms_total_integer,0.0422
-parking_total,0.0138
-basement_score,0.0064
-interior_score,0.0171
-exterior_score,-0.0077
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northwood Park,Detached,building_area_total,0.05197,1958.6557,617.913116
+Northwood Park,Detached,lot_width,0.008556,46.6782,11.395117
+Northwood Park,Detached,bedrooms_above_grade,0.031473,3.5977,0.702373
+Northwood Park,Detached,bathrooms_total_integer,0.062861,3.3333,1.089835
+Northwood Park,Detached,parking_total,0.019118,5.1379,1.399281
+Northwood Park,Detached,basement_score,-0.013378,5.8736,1.537311
+Northwood Park,Detached,interior_score,0.01945,3.2414,1.082414
+Northwood Park,Detached,exterior_score,0.001023,2.3678,0.859229

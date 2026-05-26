@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0602
-lot_width,0.0324
-bedrooms_above_grade,-0.0212
-bathrooms_total_integer,0.0103
-parking_total,0.0158
-basement_score,0.0296
-interior_score,0.021
-exterior_score,0.0024
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Riverside Park,Detached,building_area_total,0.069559,1458.2894,581.834749
+Riverside Park,Detached,lot_width,0.009631,58.9612,16.574405
+Riverside Park,Detached,bedrooms_above_grade,-0.027933,3.0222,0.745025
+Riverside Park,Detached,bathrooms_total_integer,0.023915,2.1111,0.566558
+Riverside Park,Detached,parking_total,0.016539,3.9111,1.160885
+Riverside Park,Detached,basement_score,0.015581,5.4778,1.543645
+Riverside Park,Detached,interior_score,0.057747,3.1444,1.038815
+Riverside Park,Detached,exterior_score,0.020835,2.4667,0.884433

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+54 - Amherstview,Townhouse,building_area_total,0.016259,1388.3059,252.381957
+54 - Amherstview,Townhouse,lot_width,-0.006878,24.3594,5.343763
+54 - Amherstview,Townhouse,bedrooms_above_grade,-0.056256,2.8889,0.378431
+54 - Amherstview,Townhouse,bathrooms_total_integer,0.06543,2.4667,0.77746
+54 - Amherstview,Townhouse,parking_total,0.091103,2.4444,0.857789
+54 - Amherstview,Townhouse,basement_score,0.013467,4.6444,1.899188
+54 - Amherstview,Townhouse,interior_score,-0.016516,3.1111,0.766586
+54 - Amherstview,Townhouse,exterior_score,-0.03352,2.7333,0.879394

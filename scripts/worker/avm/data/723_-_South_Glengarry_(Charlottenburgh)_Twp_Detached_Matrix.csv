@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1197
-lot_width,0.0465
-bedrooms_above_grade,-0.0465
-bathrooms_total_integer,0.0775
-parking_total,0.0398
-basement_score,-0.0087
-interior_score,0.0292
-exterior_score,0.0941
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+723 - South Glengarry (Charlottenburgh) Twp,Detached,building_area_total,0.106518,1642.6316,571.239116
+723 - South Glengarry (Charlottenburgh) Twp,Detached,lot_width,0.00454,206.1525,152.500993
+723 - South Glengarry (Charlottenburgh) Twp,Detached,bedrooms_above_grade,0.018904,2.9167,0.936156
+723 - South Glengarry (Charlottenburgh) Twp,Detached,bathrooms_total_integer,0.068658,2.225,1.036521
+723 - South Glengarry (Charlottenburgh) Twp,Detached,parking_total,0.073287,8.2333,4.545572
+723 - South Glengarry (Charlottenburgh) Twp,Detached,basement_score,0.026197,4.4167,1.700898
+723 - South Glengarry (Charlottenburgh) Twp,Detached,interior_score,0.08104,3.3083,0.989914
+723 - South Glengarry (Charlottenburgh) Twp,Detached,exterior_score,0.101477,2.5417,0.88408

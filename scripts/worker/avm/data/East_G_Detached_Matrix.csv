@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0102
-lot_width,0.0306
-bedrooms_above_grade,0.0205
-bathrooms_total_integer,0.0823
-parking_total,0.0165
-basement_score,0.0175
-interior_score,0.0212
-exterior_score,0.0113
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East G,Detached,building_area_total,0.017871,1166.7534,351.280233
+East G,Detached,lot_width,0.019322,36.9466,11.639532
+East G,Detached,bedrooms_above_grade,0.032058,2.7033,0.687318
+East G,Detached,bathrooms_total_integer,0.082543,1.7363,0.708429
+East G,Detached,parking_total,0.032313,3.011,1.305058
+East G,Detached,basement_score,0.042782,4.7143,1.234003
+East G,Detached,interior_score,0.034698,3.1758,0.920981
+East G,Detached,exterior_score,0.010594,2.2747,0.756887

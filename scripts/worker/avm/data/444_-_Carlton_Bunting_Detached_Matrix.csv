@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0561
-lot_width,0.0151
-bedrooms_above_grade,0.0061
-bathrooms_total_integer,0.0097
-parking_total,0.0171
-basement_score,0.0188
-interior_score,0.017
-exterior_score,0.0144
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+444 - Carlton/Bunting,Detached,building_area_total,0.046897,1208.561,378.473531
+444 - Carlton/Bunting,Detached,lot_width,0.007643,58.3735,9.111381
+444 - Carlton/Bunting,Detached,bedrooms_above_grade,0.00979,2.8636,0.422344
+444 - Carlton/Bunting,Detached,bathrooms_total_integer,0.029777,1.9848,0.577151
+444 - Carlton/Bunting,Detached,parking_total,0.010183,4.6326,1.536007
+444 - Carlton/Bunting,Detached,basement_score,0.021579,5.2803,1.7851
+444 - Carlton/Bunting,Detached,interior_score,0.014961,3.053,0.890305
+444 - Carlton/Bunting,Detached,exterior_score,0.017398,2.3712,0.752826

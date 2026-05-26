@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Wismer,Townhouse,building_area_total,0.039463,1884.0164,279.711238
+Wismer,Townhouse,lot_width,0.027974,20.82,4.601333
+Wismer,Townhouse,bedrooms_above_grade,0.016196,3.1579,0.364642
+Wismer,Townhouse,bathrooms_total_integer,0.021017,3.6184,0.648218
+Wismer,Townhouse,parking_total,-0.000642,2.6053,0.726907
+Wismer,Townhouse,basement_score,-0.007989,4.8026,0.429802
+Wismer,Townhouse,interior_score,0.011804,3.9211,0.702686
+Wismer,Townhouse,exterior_score,-0.001357,1.9474,0.666782

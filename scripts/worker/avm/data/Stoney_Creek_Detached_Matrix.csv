@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0843
-lot_width,0.0266
-bedrooms_above_grade,-0.0047
-bathrooms_total_integer,0.0627
-parking_total,0.0212
-basement_score,-0.0061
-interior_score,0.0345
-exterior_score,0.019
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stoney Creek,Detached,building_area_total,0.104209,1803.0303,622.837397
+Stoney Creek,Detached,lot_width,0.012354,72.1033,312.232173
+Stoney Creek,Detached,bedrooms_above_grade,0.004383,3.277,0.681026
+Stoney Creek,Detached,bathrooms_total_integer,0.068938,2.7162,0.937511
+Stoney Creek,Detached,parking_total,0.035087,5.1723,2.199288
+Stoney Creek,Detached,basement_score,-0.002594,5.3243,1.305996
+Stoney Creek,Detached,interior_score,0.056523,3.2973,1.068337
+Stoney Creek,Detached,exterior_score,0.017102,2.6453,0.996198

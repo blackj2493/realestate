@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1207
-lot_width,0.0
-bedrooms_above_grade,-0.0166
-bathrooms_total_integer,0.0093
-parking_total,0.0496
-basement_score,-0.0004
-interior_score,0.031
-exterior_score,0.0305
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Clarkson,Condo Apartment,building_area_total,0.161779,1041.05,279.638646
+Clarkson,Condo Apartment,lot_width,0.0,0.0,1.0
+Clarkson,Condo Apartment,bedrooms_above_grade,-0.109599,1.925,0.685109
+Clarkson,Condo Apartment,bathrooms_total_integer,0.027635,1.7,0.509902
+Clarkson,Condo Apartment,parking_total,0.004046,1.3,0.533854
+Clarkson,Condo Apartment,basement_score,-0.006781,1.025,0.222205
+Clarkson,Condo Apartment,interior_score,0.049189,3.875,0.796477
+Clarkson,Condo Apartment,exterior_score,0.013064,2.475,1.09516

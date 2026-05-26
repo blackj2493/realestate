@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9004 - Kanata - Bridlewood,Townhouse,building_area_total,0.017649,1482.7273,224.66504
+9004 - Kanata - Bridlewood,Townhouse,lot_width,0.010395,26.913,16.015275
+9004 - Kanata - Bridlewood,Townhouse,bedrooms_above_grade,-0.062489,2.7436,0.517288
+9004 - Kanata - Bridlewood,Townhouse,bathrooms_total_integer,0.025002,2.8846,0.530621
+9004 - Kanata - Bridlewood,Townhouse,parking_total,0.048159,3.1538,0.948371
+9004 - Kanata - Bridlewood,Townhouse,basement_score,0.03882,4.8718,1.284613
+9004 - Kanata - Bridlewood,Townhouse,interior_score,0.006194,3.8077,0.785407
+9004 - Kanata - Bridlewood,Townhouse,exterior_score,0.00156,2.5385,0.710585

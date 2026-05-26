@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0164
-lot_width,0.0267
-bedrooms_above_grade,-0.0188
-bathrooms_total_integer,0.2591
-parking_total,0.0548
-basement_score,0.0275
-interior_score,0.0183
-exterior_score,-0.0077
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Willowdale West,Detached,building_area_total,0.089188,2405.5556,1140.892546
+Willowdale West,Detached,lot_width,-0.002261,48.1529,6.7816
+Willowdale West,Detached,bedrooms_above_grade,-0.010605,3.5,0.873038
+Willowdale West,Detached,bathrooms_total_integer,0.208587,3.378,1.708231
+Willowdale West,Detached,parking_total,-0.005726,11.2073,54.338087
+Willowdale West,Detached,basement_score,0.022488,6.2927,1.941132
+Willowdale West,Detached,interior_score,0.018904,3.439,1.298194
+Willowdale West,Detached,exterior_score,-0.011179,2.5244,0.872697

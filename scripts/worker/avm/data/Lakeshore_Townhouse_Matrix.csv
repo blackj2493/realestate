@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lakeshore,Townhouse,building_area_total,0.046443,1516.4634,248.262852
+Lakeshore,Townhouse,lot_width,-0.01946,23.0012,6.569149
+Lakeshore,Townhouse,bedrooms_above_grade,-0.051557,2.6905,0.555839
+Lakeshore,Townhouse,bathrooms_total_integer,0.045861,3.0714,0.632187
+Lakeshore,Townhouse,parking_total,0.0302,2.3095,0.706706
+Lakeshore,Townhouse,basement_score,0.043737,4.4762,2.095779
+Lakeshore,Townhouse,interior_score,0.006305,3.7143,0.824786
+Lakeshore,Townhouse,exterior_score,0.022084,2.881,1.05113

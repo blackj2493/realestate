@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0947
-lot_width,0.0
-bedrooms_above_grade,0.0054
-bathrooms_total_integer,0.0336
-parking_total,0.022
-basement_score,0.0
-interior_score,0.018
-exterior_score,0.0267
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Newcastle,Condo Apartment,building_area_total,0.057095,928.1818,214.001622
+Newcastle,Condo Apartment,lot_width,0.0,0.0,1.0
+Newcastle,Condo Apartment,bedrooms_above_grade,0.028523,1.6364,0.551482
+Newcastle,Condo Apartment,bathrooms_total_integer,0.040541,1.6909,0.462119
+Newcastle,Condo Apartment,parking_total,0.042272,1.1818,0.385695
+Newcastle,Condo Apartment,basement_score,0.0,1.0,1.0
+Newcastle,Condo Apartment,interior_score,0.029745,4.0,0.738549
+Newcastle,Condo Apartment,exterior_score,0.00141,2.9273,0.969621

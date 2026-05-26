@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0139
-lot_width,0.024
-bedrooms_above_grade,0.0408
-bathrooms_total_integer,0.0335
-parking_total,0.0186
-basement_score,0.0076
-interior_score,0.0278
-exterior_score,0.0161
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Blue Grass Meadows,Detached,building_area_total,0.031215,1894.916,492.765758
+Blue Grass Meadows,Detached,lot_width,0.00776,55.9761,23.200352
+Blue Grass Meadows,Detached,bedrooms_above_grade,0.012583,3.4693,0.581757
+Blue Grass Meadows,Detached,bathrooms_total_integer,0.036622,3.1341,0.874154
+Blue Grass Meadows,Detached,parking_total,0.018666,5.3855,1.691917
+Blue Grass Meadows,Detached,basement_score,-0.000317,5.5922,1.792643
+Blue Grass Meadows,Detached,interior_score,0.025481,3.4413,1.019733
+Blue Grass Meadows,Detached,exterior_score,0.022996,2.6927,0.963294

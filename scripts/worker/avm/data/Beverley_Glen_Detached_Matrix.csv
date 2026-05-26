@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0167
-lot_width,0.0481
-bedrooms_above_grade,-0.006
-bathrooms_total_integer,0.0784
-parking_total,-0.0065
-basement_score,-0.005
-interior_score,0.0324
-exterior_score,0.0162
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Beverley Glen,Detached,building_area_total,0.035802,3321.4286,757.277616
+Beverley Glen,Detached,lot_width,0.020593,45.7584,11.749999
+Beverley Glen,Detached,bedrooms_above_grade,0.011923,4.1556,0.514482
+Beverley Glen,Detached,bathrooms_total_integer,0.058328,4.5778,0.829696
+Beverley Glen,Detached,parking_total,0.012747,5.4778,1.639633
+Beverley Glen,Detached,basement_score,0.004624,5.2667,0.997775
+Beverley Glen,Detached,interior_score,0.040621,4.0444,1.114661
+Beverley Glen,Detached,exterior_score,0.01016,2.8222,0.949594

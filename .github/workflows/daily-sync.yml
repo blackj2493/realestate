@@ -75,6 +75,35 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-sqft-calibration.ts --apply
 
+      # Refresh the AVM trend index + community offset (migration 024) from the
+      # freshly-synced VOW data. Splits price into city × sub-type half-year trend
+      # and community vs city offset so the AVM anchor can be both LOCAL in level
+      # and CURRENT in trend, even when 0 recent local comps exist. Reads
+      # raw_vow_sold READ-ONLY (scalar columns only — respects the Disk IO budget)
+      # and writes the separate avm_trend_index / avm_community_offset tables;
+      # Supabase creds only. Additive — must never break the core sync, so
+      # continue-on-error.
+      - name: Refresh AVM Trend + Offset
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-avm-trend-offset.ts --apply
+
+      # Precompute the PureProperty Estimate (AVM) + resolved GLA/$psf per active
+      # listing into property_estimates, so the Compare page reads a ready-made
+      # estimate in one batched lookup instead of running the multi-query AVM live.
+      # Runs AFTER the sqft-calibration step so it can use the fresh no-rooms
+      # fallback; reads listings + raw_vow_sold (anchor) READ-ONLY, writes the
+      # separate property_estimates table; Supabase creds only. Additive — must
+      # never break the core sync, so continue-on-error.
+      - name: Refresh Property Estimates
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-property-estimates.ts --apply
+
       # Email each user a digest of price drops on their watched properties, using
       # the freshly-synced Typesense index. Additive + must never break the core
       # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0475
-lot_width,0.0398
-bedrooms_above_grade,0.0793
-bathrooms_total_integer,0.0263
-parking_total,0.0172
-basement_score,0.0172
-interior_score,0.0222
-exterior_score,0.0165
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central West,Detached,building_area_total,0.082356,2133.237,745.318287
+Central West,Detached,lot_width,0.021505,44.4684,16.303133
+Central West,Detached,bedrooms_above_grade,0.047122,3.4892,0.609176
+Central West,Detached,bathrooms_total_integer,0.044531,3.355,0.889797
+Central West,Detached,parking_total,0.025927,4.7338,1.637463
+Central West,Detached,basement_score,0.017422,5.4199,1.526488
+Central West,Detached,interior_score,0.028801,3.5584,1.004236
+Central West,Detached,exterior_score,0.016683,2.5325,0.979236

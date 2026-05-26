@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0457
-lot_width,0.0
-bedrooms_above_grade,0.0268
-bathrooms_total_integer,0.0309
-parking_total,0.0536
-basement_score,0.0
-interior_score,0.0592
-exterior_score,0.0763
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Georgetown,Condo Apartment,building_area_total,0.009319,1156.1628,209.517267
+Georgetown,Condo Apartment,lot_width,0.0,0.0,1.0
+Georgetown,Condo Apartment,bedrooms_above_grade,0.033409,1.814,0.389144
+Georgetown,Condo Apartment,bathrooms_total_integer,0.0632,1.9767,0.402803
+Georgetown,Condo Apartment,parking_total,0.074787,1.2326,0.422463
+Georgetown,Condo Apartment,basement_score,0.0,1.0,1.0
+Georgetown,Condo Apartment,interior_score,0.06726,4.0698,0.846205
+Georgetown,Condo Apartment,exterior_score,0.00342,2.6512,0.937183

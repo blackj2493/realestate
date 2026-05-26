@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0657
-lot_width,0.0282
-bedrooms_above_grade,0.0061
-bathrooms_total_integer,0.0347
-parking_total,0.0727
-basement_score,0.0208
-interior_score,0.0201
-exterior_score,0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Pickering,Detached,building_area_total,0.077362,2413.3117,550.089786
+Rural Pickering,Detached,lot_width,0.006597,83.8051,289.440415
+Rural Pickering,Detached,bedrooms_above_grade,0.002463,3.8085,0.664872
+Rural Pickering,Detached,bathrooms_total_integer,0.057215,3.5904,0.987859
+Rural Pickering,Detached,parking_total,0.081941,4.5824,2.823224
+Rural Pickering,Detached,basement_score,0.03747,5.4681,1.677144
+Rural Pickering,Detached,interior_score,0.016262,3.6117,1.140768
+Rural Pickering,Detached,exterior_score,0.024925,2.4628,0.895436

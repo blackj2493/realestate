@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0422
-lot_width,0.0
-bedrooms_above_grade,0.0026
-bathrooms_total_integer,0.0146
-parking_total,-0.055
-basement_score,0.0
-interior_score,0.0156
-exterior_score,-0.0217
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brampton South,Condo Apartment,building_area_total,0.006674,1131.8182,257.631456
+Brampton South,Condo Apartment,lot_width,0.0,0.0,1.0
+Brampton South,Condo Apartment,bedrooms_above_grade,0.024964,1.75,0.482654
+Brampton South,Condo Apartment,bathrooms_total_integer,0.00622,1.7273,0.445362
+Brampton South,Condo Apartment,parking_total,-0.04643,1.5909,0.535901
+Brampton South,Condo Apartment,basement_score,-0.009219,1.0682,0.447098
+Brampton South,Condo Apartment,interior_score,0.016346,3.6364,0.642824
+Brampton South,Condo Apartment,exterior_score,0.001774,2.4091,1.093746

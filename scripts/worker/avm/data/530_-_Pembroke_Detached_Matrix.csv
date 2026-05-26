@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0133
-lot_width,-0.0444
-bedrooms_above_grade,0.0072
-bathrooms_total_integer,0.0938
-parking_total,0.0328
-basement_score,0.0281
-interior_score,0.0316
-exterior_score,0.0268
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+530 - Pembroke,Detached,building_area_total,0.011471,1296.2194,458.1293
+530 - Pembroke,Detached,lot_width,-0.001579,64.2481,24.398362
+530 - Pembroke,Detached,bedrooms_above_grade,-0.012382,2.932,0.784459
+530 - Pembroke,Detached,bathrooms_total_integer,0.117337,1.868,0.677182
+530 - Pembroke,Detached,parking_total,0.044205,4.188,1.610173
+530 - Pembroke,Detached,basement_score,0.037647,4.472,1.117683
+530 - Pembroke,Detached,interior_score,0.055994,3.176,0.844407
+530 - Pembroke,Detached,exterior_score,0.029327,2.344,0.738691

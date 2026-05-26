@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2987
-lot_width,0.0
-bedrooms_above_grade,-0.0476
-bathrooms_total_integer,0.0074
-parking_total,0.0247
-basement_score,-0.0023
-interior_score,0.0442
-exterior_score,0.0351
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lakeshore,Condo Apartment,building_area_total,0.335389,987.5412,341.999159
+Lakeshore,Condo Apartment,lot_width,0.0,0.0,1.0
+Lakeshore,Condo Apartment,bedrooms_above_grade,-0.197059,1.5412,0.604939
+Lakeshore,Condo Apartment,bathrooms_total_integer,0.064525,1.6118,0.555065
+Lakeshore,Condo Apartment,parking_total,0.057096,1.2235,0.443952
+Lakeshore,Condo Apartment,basement_score,-0.028959,1.0353,0.323476
+Lakeshore,Condo Apartment,interior_score,0.075707,4.0118,0.759165
+Lakeshore,Condo Apartment,exterior_score,0.008062,2.9647,1.259758

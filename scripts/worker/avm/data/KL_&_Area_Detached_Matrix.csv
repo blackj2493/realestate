@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0534
-lot_width,0.1133
-bedrooms_above_grade,0.0273
-bathrooms_total_integer,0.0662
-parking_total,0.1379
-basement_score,0.0522
-interior_score,0.055
-exterior_score,-0.0238
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+KL & Area,Detached,building_area_total,0.03575,1214.1935,354.908204
+KL & Area,Detached,lot_width,-0.034889,54.9623,100.275284
+KL & Area,Detached,bedrooms_above_grade,0.090169,2.7719,0.878946
+KL & Area,Detached,bathrooms_total_integer,0.092102,1.5673,0.692384
+KL & Area,Detached,parking_total,0.193829,2.8304,1.622362
+KL & Area,Detached,basement_score,0.103803,3.9006,1.562181
+KL & Area,Detached,interior_score,0.114428,3.0585,0.746983
+KL & Area,Detached,exterior_score,-0.001948,2.0877,0.600605

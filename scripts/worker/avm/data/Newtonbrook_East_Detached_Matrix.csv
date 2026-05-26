@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0126
-lot_width,0.0362
-bedrooms_above_grade,-0.0105
-bathrooms_total_integer,0.1851
-parking_total,0.0156
-basement_score,0.0311
-interior_score,0.0575
-exterior_score,0.0221
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Newtonbrook East,Detached,building_area_total,0.107395,2455.0,1205.675566
+Newtonbrook East,Detached,lot_width,0.001453,52.8733,14.819808
+Newtonbrook East,Detached,bedrooms_above_grade,-0.019897,3.7188,0.850283
+Newtonbrook East,Detached,bathrooms_total_integer,0.113672,3.7604,1.724485
+Newtonbrook East,Detached,parking_total,0.020799,5.3958,1.623263
+Newtonbrook East,Detached,basement_score,0.027193,6.3229,1.992145
+Newtonbrook East,Detached,interior_score,0.059815,3.2083,1.322219
+Newtonbrook East,Detached,exterior_score,0.044434,2.6562,0.922272

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0182
-lot_width,0.0508
-bedrooms_above_grade,0.0065
-bathrooms_total_integer,0.0223
-parking_total,0.0512
-basement_score,-0.0033
-interior_score,0.0128
-exterior_score,0.016
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9001 - Kanata - Beaverbrook,Detached,building_area_total,-0.005673,1992.3077,487.87063
+9001 - Kanata - Beaverbrook,Detached,lot_width,0.015989,68.0952,20.147991
+9001 - Kanata - Beaverbrook,Detached,bedrooms_above_grade,0.01573,3.6042,0.603448
+9001 - Kanata - Beaverbrook,Detached,bathrooms_total_integer,0.033855,3.0833,0.606676
+9001 - Kanata - Beaverbrook,Detached,parking_total,0.041097,5.0625,1.40544
+9001 - Kanata - Beaverbrook,Detached,basement_score,-0.005222,4.75,0.629153
+9001 - Kanata - Beaverbrook,Detached,interior_score,0.019015,3.75,0.853913
+9001 - Kanata - Beaverbrook,Detached,exterior_score,0.016257,2.7292,0.906908

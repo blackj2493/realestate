@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0713
-lot_width,0.0262
-bedrooms_above_grade,0.0109
-bathrooms_total_integer,0.0424
-parking_total,0.0364
-basement_score,0.007
-interior_score,0.0361
-exterior_score,0.0343
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+451 - Downtown,Detached,building_area_total,0.08404,1241.4268,347.466796
+451 - Downtown,Detached,lot_width,-0.003501,36.4431,8.155983
+451 - Downtown,Detached,bedrooms_above_grade,0.001447,2.8,0.69282
+451 - Downtown,Detached,bathrooms_total_integer,0.060075,1.7886,0.655426
+451 - Downtown,Detached,parking_total,0.033477,2.6343,1.431471
+451 - Downtown,Detached,basement_score,0.018303,4.8343,1.205213
+451 - Downtown,Detached,interior_score,0.030515,3.2171,0.967319
+451 - Downtown,Detached,exterior_score,0.043716,2.3086,0.768439

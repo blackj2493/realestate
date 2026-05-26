@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0384
-lot_width,0.0583
-bedrooms_above_grade,-0.0145
-bathrooms_total_integer,0.0849
-parking_total,0.068
-basement_score,0.061
-interior_score,0.0137
-exterior_score,0.0384
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Trent Hills,Detached,building_area_total,-0.021895,1516.4894,591.040747
+Rural Trent Hills,Detached,lot_width,0.008771,2424.1481,24591.426597
+Rural Trent Hills,Detached,bedrooms_above_grade,0.036898,2.8293,0.772572
+Rural Trent Hills,Detached,bathrooms_total_integer,0.092946,2.0081,0.811462
+Rural Trent Hills,Detached,parking_total,0.094014,7.9797,4.177173
+Rural Trent Hills,Detached,basement_score,0.086531,4.7642,3.068543
+Rural Trent Hills,Detached,interior_score,0.056868,3.1138,0.938804
+Rural Trent Hills,Detached,exterior_score,0.037069,3.0163,0.970992

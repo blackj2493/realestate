@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0299
-lot_width,0.0227
-bedrooms_above_grade,0.0107
-bathrooms_total_integer,0.0882
-parking_total,0.0123
-basement_score,0.0073
-interior_score,0.0282
-exterior_score,0.0206
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1045 - AC Acton,Detached,building_area_total,0.037053,1650.8908,561.246697
+1045 - AC Acton,Detached,lot_width,0.012228,55.4089,22.400184
+1045 - AC Acton,Detached,bedrooms_above_grade,0.009896,3.1776,0.679609
+1045 - AC Acton,Detached,bathrooms_total_integer,0.069873,2.4539,0.857159
+1045 - AC Acton,Detached,parking_total,0.005097,4.7796,1.793385
+1045 - AC Acton,Detached,basement_score,0.017918,5.1711,1.458984
+1045 - AC Acton,Detached,interior_score,0.045671,3.3882,0.925155
+1045 - AC Acton,Detached,exterior_score,0.037008,2.4934,0.938901

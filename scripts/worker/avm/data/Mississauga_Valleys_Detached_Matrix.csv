@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0318
-lot_width,-0.0236
-bedrooms_above_grade,-0.0005
-bathrooms_total_integer,0.0225
-parking_total,-0.0041
-basement_score,0.0091
-interior_score,0.0088
-exterior_score,0.03
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mississauga Valleys,Detached,building_area_total,0.030788,1668.5185,496.496643
+Mississauga Valleys,Detached,lot_width,0.002928,55.4859,12.003828
+Mississauga Valleys,Detached,bedrooms_above_grade,-0.005461,3.4872,0.63536
+Mississauga Valleys,Detached,bathrooms_total_integer,0.035214,2.6667,0.727952
+Mississauga Valleys,Detached,parking_total,0.002231,5.1667,1.725872
+Mississauga Valleys,Detached,basement_score,0.013272,5.6923,1.417
+Mississauga Valleys,Detached,interior_score,0.000668,3.2051,1.113541
+Mississauga Valleys,Detached,exterior_score,0.031488,2.8205,0.84343

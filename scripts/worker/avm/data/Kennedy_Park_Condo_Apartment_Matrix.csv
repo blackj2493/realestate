@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0831
-lot_width,0.0
-bedrooms_above_grade,-0.0281
-bathrooms_total_integer,0.0083
-parking_total,0.0118
-basement_score,0.0
-interior_score,-0.0169
-exterior_score,0.0167
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kennedy Park,Condo Apartment,building_area_total,0.050571,942.0,243.794996
+Kennedy Park,Condo Apartment,lot_width,0.0,0.0,1.0
+Kennedy Park,Condo Apartment,bedrooms_above_grade,-0.017555,1.74,0.593633
+Kennedy Park,Condo Apartment,bathrooms_total_integer,0.054615,1.64,0.48
+Kennedy Park,Condo Apartment,parking_total,0.014611,1.14,0.346987
+Kennedy Park,Condo Apartment,basement_score,0.0,1.0,1.0
+Kennedy Park,Condo Apartment,interior_score,-0.005873,3.82,0.792212
+Kennedy Park,Condo Apartment,exterior_score,-0.00058,1.8,0.959166

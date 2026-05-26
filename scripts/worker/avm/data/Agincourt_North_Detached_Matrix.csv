@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0154
-lot_width,0.0496
-bedrooms_above_grade,0.0134
-bathrooms_total_integer,0.0344
-parking_total,0.0146
-basement_score,0.0109
-interior_score,0.0214
-exterior_score,0.0125
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Agincourt North,Detached,building_area_total,0.037259,1868.8312,352.084605
+Agincourt North,Detached,lot_width,0.042611,43.1525,11.28638
+Agincourt North,Detached,bedrooms_above_grade,0.007769,3.7212,0.627215
+Agincourt North,Detached,bathrooms_total_integer,0.039437,3.375,0.822607
+Agincourt North,Detached,parking_total,0.009536,4.1298,1.186858
+Agincourt North,Detached,basement_score,0.013425,5.4135,1.471594
+Agincourt North,Detached,interior_score,0.017058,3.0481,0.944415
+Agincourt North,Detached,exterior_score,0.005385,2.5192,0.887745

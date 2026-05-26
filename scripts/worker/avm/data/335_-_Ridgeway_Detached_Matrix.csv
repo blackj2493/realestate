@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0824
-lot_width,-0.0428
-bedrooms_above_grade,-0.0266
-bathrooms_total_integer,0.0764
-parking_total,0.0349
-basement_score,0.0421
-interior_score,0.027
-exterior_score,0.0422
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+335 - Ridgeway,Detached,building_area_total,0.094414,1563.2389,574.523703
+335 - Ridgeway,Detached,lot_width,-0.005628,81.2103,39.050295
+335 - Ridgeway,Detached,bedrooms_above_grade,-0.049835,2.8025,0.792243
+335 - Ridgeway,Detached,bathrooms_total_integer,0.109698,2.1049,0.865013
+335 - Ridgeway,Detached,parking_total,0.048803,6.1327,3.400614
+335 - Ridgeway,Detached,basement_score,0.048591,4.3827,1.947254
+335 - Ridgeway,Detached,interior_score,0.046567,3.3086,0.99557
+335 - Ridgeway,Detached,exterior_score,0.028476,2.5494,0.87526

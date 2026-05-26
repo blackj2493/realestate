@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3602 - Riverview Park,Townhouse,building_area_total,0.031897,1343.1034,293.529103
+3602 - Riverview Park,Townhouse,lot_width,-0.015735,27.6664,17.052211
+3602 - Riverview Park,Townhouse,bedrooms_above_grade,0.029926,2.8205,0.499836
+3602 - Riverview Park,Townhouse,bathrooms_total_integer,0.052142,2.8974,0.810029
+3602 - Riverview Park,Townhouse,parking_total,0.090122,1.8462,0.661717
+3602 - Riverview Park,Townhouse,basement_score,-0.01423,4.6667,1.117078
+3602 - Riverview Park,Townhouse,interior_score,0.031943,3.8205,0.71151
+3602 - Riverview Park,Townhouse,exterior_score,0.020784,1.4103,0.775191

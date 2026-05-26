@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0439
-lot_width,0.0646
-bedrooms_above_grade,-0.0112
-bathrooms_total_integer,0.0929
-parking_total,0.0376
-basement_score,0.0141
-interior_score,0.0091
-exterior_score,-0.0057
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+801 - Kemptville,Detached,building_area_total,0.050341,1521.3333,503.201307
+801 - Kemptville,Detached,lot_width,0.060281,76.8799,61.369617
+801 - Kemptville,Detached,bedrooms_above_grade,0.029563,3.02,0.79975
+801 - Kemptville,Detached,bathrooms_total_integer,0.111995,2.43,0.815537
+801 - Kemptville,Detached,parking_total,0.027034,5.63,4.500344
+801 - Kemptville,Detached,basement_score,0.013372,4.83,1.086784
+801 - Kemptville,Detached,interior_score,0.024689,3.61,1.03822
+801 - Kemptville,Detached,exterior_score,0.002686,2.57,0.897274

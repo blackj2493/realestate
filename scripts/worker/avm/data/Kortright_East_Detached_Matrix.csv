@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0714
-lot_width,-0.0382
-bedrooms_above_grade,0.0034
-bathrooms_total_integer,0.0039
-parking_total,-0.0136
-basement_score,0.0107
-interior_score,0.0293
-exterior_score,0.0221
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kortright East,Detached,building_area_total,0.069694,2440.2188,700.336637
+Kortright East,Detached,lot_width,0.013424,59.4658,22.425094
+Kortright East,Detached,bedrooms_above_grade,0.015197,3.3231,0.610364
+Kortright East,Detached,bathrooms_total_integer,0.001427,3.4923,0.825052
+Kortright East,Detached,parking_total,0.008288,4.8538,1.418892
+Kortright East,Detached,basement_score,0.008798,5.8615,1.538
+Kortright East,Detached,interior_score,0.02594,3.4154,1.121706
+Kortright East,Detached,exterior_score,0.003795,2.5077,0.91354

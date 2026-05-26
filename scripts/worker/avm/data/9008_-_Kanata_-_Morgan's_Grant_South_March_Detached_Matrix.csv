@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0157
-lot_width,0.0202
-bedrooms_above_grade,0.0589
-bathrooms_total_integer,0.0099
-parking_total,-0.0136
-basement_score,0.005
-interior_score,0.0062
-exterior_score,0.0084
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9008 - Kanata - Morgan's Grant/South March,Detached,building_area_total,0.040296,2306.8966,593.894821
+9008 - Kanata - Morgan's Grant/South March,Detached,lot_width,0.003246,46.5056,27.847883
+9008 - Kanata - Morgan's Grant/South March,Detached,bedrooms_above_grade,0.045805,3.7041,0.519206
+9008 - Kanata - Morgan's Grant/South March,Detached,bathrooms_total_integer,0.005439,3.5306,0.557034
+9008 - Kanata - Morgan's Grant/South March,Detached,parking_total,0.014832,4.8571,1.46385
+9008 - Kanata - Morgan's Grant/South March,Detached,basement_score,0.015518,4.9592,0.946728
+9008 - Kanata - Morgan's Grant/South March,Detached,interior_score,0.007975,3.9184,0.665068
+9008 - Kanata - Morgan's Grant/South March,Detached,exterior_score,0.00137,2.6327,0.885112

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.017
-lot_width,0.0
-bedrooms_above_grade,0.002
-bathrooms_total_integer,0.0293
-parking_total,0.0196
-basement_score,0.0126
-interior_score,0.0209
-exterior_score,0.0018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South U,Townhouse,building_area_total,0.023788,1596.0145,319.72087
+South U,Townhouse,lot_width,0.0,22.4971,5.989035
+South U,Townhouse,bedrooms_above_grade,0.003334,2.7671,0.767857
+South U,Townhouse,bathrooms_total_integer,0.010797,3.3014,0.612315
+South U,Townhouse,parking_total,0.024913,2.2877,0.802043
+South U,Townhouse,basement_score,0.012616,3.9863,1.642694
+South U,Townhouse,interior_score,0.014379,3.8082,1.002156
+South U,Townhouse,exterior_score,-0.004667,2.2192,0.624754

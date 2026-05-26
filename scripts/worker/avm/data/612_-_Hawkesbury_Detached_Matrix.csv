@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0111
-lot_width,0.127
-bedrooms_above_grade,0.0032
-bathrooms_total_integer,0.0592
-parking_total,-0.0345
-basement_score,0.0419
-interior_score,0.0243
-exterior_score,0.049
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+612 - Hawkesbury,Detached,building_area_total,-0.011308,1270.2381,413.256453
+612 - Hawkesbury,Detached,lot_width,0.082768,63.1512,27.31924
+612 - Hawkesbury,Detached,bedrooms_above_grade,0.002465,2.6797,0.660653
+612 - Hawkesbury,Detached,bathrooms_total_integer,0.083285,1.8594,0.692982
+612 - Hawkesbury,Detached,parking_total,0.034741,3.9219,1.885841
+612 - Hawkesbury,Detached,basement_score,0.06754,4.4609,1.462566
+612 - Hawkesbury,Detached,interior_score,0.047351,3.3281,0.88485
+612 - Hawkesbury,Detached,exterior_score,0.055609,2.6094,0.821911

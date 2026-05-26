@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1007 - GA Glen Abbey,Townhouse,building_area_total,0.044623,1643.2555,422.785248
+1007 - GA Glen Abbey,Townhouse,lot_width,-0.001982,23.5818,4.934787
+1007 - GA Glen Abbey,Townhouse,bedrooms_above_grade,0.005385,2.875,0.469559
+1007 - GA Glen Abbey,Townhouse,bathrooms_total_integer,0.051424,2.9861,0.65602
+1007 - GA Glen Abbey,Townhouse,parking_total,0.048823,2.75,0.877971
+1007 - GA Glen Abbey,Townhouse,basement_score,0.011351,4.5417,2.303002
+1007 - GA Glen Abbey,Townhouse,interior_score,0.011639,4.1111,0.635862
+1007 - GA Glen Abbey,Townhouse,exterior_score,0.011327,2.4444,1.039349

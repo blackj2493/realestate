@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Williamsburg,Townhouse,building_area_total,0.017297,1551.25,302.590379
+Williamsburg,Townhouse,lot_width,0.004975,21.7583,3.847998
+Williamsburg,Townhouse,bedrooms_above_grade,-0.011085,3.0364,0.267217
+Williamsburg,Townhouse,bathrooms_total_integer,0.023444,3.0,0.53936
+Williamsburg,Townhouse,parking_total,0.002443,2.6727,0.787506
+Williamsburg,Townhouse,basement_score,0.006643,4.8,1.380382
+Williamsburg,Townhouse,interior_score,0.015217,3.8909,0.77864
+Williamsburg,Townhouse,exterior_score,0.003612,2.5091,0.828421

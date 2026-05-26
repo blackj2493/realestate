@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7710 - Barrhaven East,Townhouse,building_area_total,0.025316,1441.8605,288.526778
+7710 - Barrhaven East,Townhouse,lot_width,-0.00096,106.1361,590.148629
+7710 - Barrhaven East,Townhouse,bedrooms_above_grade,0.026679,2.8909,0.311753
+7710 - Barrhaven East,Townhouse,bathrooms_total_integer,0.025511,2.8,0.51874
+7710 - Barrhaven East,Townhouse,parking_total,0.008001,2.9455,0.818384
+7710 - Barrhaven East,Townhouse,basement_score,0.046667,4.5273,1.109538
+7710 - Barrhaven East,Townhouse,interior_score,0.009839,3.7455,0.666556
+7710 - Barrhaven East,Townhouse,exterior_score,0.013687,2.3273,0.714895

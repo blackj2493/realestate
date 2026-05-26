@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1883
-lot_width,0.0
-bedrooms_above_grade,-0.0361
-bathrooms_total_integer,-0.0095
-parking_total,0.0252
-basement_score,0.0
-interior_score,0.0295
-exterior_score,-0.0435
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Junction Area,Condo Apartment,building_area_total,0.098822,810.3896,230.095641
+Junction Area,Condo Apartment,lot_width,0.0,0.0,1.0
+Junction Area,Condo Apartment,bedrooms_above_grade,0.030884,1.6364,0.66272
+Junction Area,Condo Apartment,bathrooms_total_integer,0.031688,1.5455,0.570838
+Junction Area,Condo Apartment,parking_total,0.050479,0.6883,0.516224
+Junction Area,Condo Apartment,basement_score,0.0,1.0,1.0
+Junction Area,Condo Apartment,interior_score,0.021825,3.7792,0.783323
+Junction Area,Condo Apartment,exterior_score,-0.024476,1.961,0.545145

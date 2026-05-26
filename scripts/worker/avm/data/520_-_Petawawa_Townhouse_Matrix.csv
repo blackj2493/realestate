@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+520 - Petawawa,Townhouse,building_area_total,0.020981,1259.2593,207.291634
+520 - Petawawa,Townhouse,lot_width,0.004448,25.5553,10.929104
+520 - Petawawa,Townhouse,bedrooms_above_grade,0.063333,2.1702,1.172725
+520 - Petawawa,Townhouse,bathrooms_total_integer,0.052594,2.4894,0.648151
+520 - Petawawa,Townhouse,parking_total,0.003237,2.7234,0.790963
+520 - Petawawa,Townhouse,basement_score,-0.007203,4.5957,0.762403
+520 - Petawawa,Townhouse,interior_score,0.018889,3.617,0.730875
+520 - Petawawa,Townhouse,exterior_score,0.012245,2.1702,0.475759

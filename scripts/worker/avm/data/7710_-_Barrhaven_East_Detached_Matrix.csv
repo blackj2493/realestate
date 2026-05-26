@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0223
-lot_width,0.0563
-bedrooms_above_grade,0.0548
-bathrooms_total_integer,0.023
-parking_total,0.0144
-basement_score,0.0002
-interior_score,0.0074
-exterior_score,0.0168
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7710 - Barrhaven East,Detached,building_area_total,0.023283,2158.7719,516.238318
+7710 - Barrhaven East,Detached,lot_width,0.049767,45.4239,13.293865
+7710 - Barrhaven East,Detached,bedrooms_above_grade,0.036923,3.4762,0.747634
+7710 - Barrhaven East,Detached,bathrooms_total_integer,0.002805,3.3929,0.636543
+7710 - Barrhaven East,Detached,parking_total,0.031035,4.7619,1.532342
+7710 - Barrhaven East,Detached,basement_score,0.004213,4.9762,0.616754
+7710 - Barrhaven East,Detached,interior_score,0.021175,3.8214,0.847415
+7710 - Barrhaven East,Detached,exterior_score,0.018886,2.8571,0.914732

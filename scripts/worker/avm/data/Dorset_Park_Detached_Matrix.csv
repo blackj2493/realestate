@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0254
-lot_width,-0.0259
-bedrooms_above_grade,-0.0097
-bathrooms_total_integer,0.0514
-parking_total,-0.0143
-basement_score,0.0165
-interior_score,0.0225
-exterior_score,0.0079
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Dorset Park,Detached,building_area_total,0.024059,1130.3571,334.967825
+Dorset Park,Detached,lot_width,-0.013964,45.0904,17.638264
+Dorset Park,Detached,bedrooms_above_grade,-0.013076,3.1446,0.583561
+Dorset Park,Detached,bathrooms_total_integer,0.061616,2.3614,0.737601
+Dorset Park,Detached,parking_total,-0.00645,3.9337,1.316648
+Dorset Park,Detached,basement_score,0.00696,5.9157,1.584601
+Dorset Park,Detached,interior_score,0.025549,3.1325,0.991179
+Dorset Park,Detached,exterior_score,-0.006501,2.1807,0.679202

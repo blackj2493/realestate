@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0553
-lot_width,-0.0368
-bedrooms_above_grade,-0.0023
-bathrooms_total_integer,0.0084
-parking_total,0.0089
-basement_score,0.024
-interior_score,0.0186
-exterior_score,0.0206
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+212 - Morrison,Detached,building_area_total,0.061924,1330.9726,513.731233
+212 - Morrison,Detached,lot_width,0.000473,60.4428,17.077955
+212 - Morrison,Detached,bedrooms_above_grade,-0.000133,3.0732,0.462772
+212 - Morrison,Detached,bathrooms_total_integer,0.022771,2.1707,0.580262
+212 - Morrison,Detached,parking_total,0.00535,4.6585,1.458528
+212 - Morrison,Detached,basement_score,0.009781,5.3902,1.575391
+212 - Morrison,Detached,interior_score,0.023693,3.1585,0.943133
+212 - Morrison,Detached,exterior_score,0.029956,2.5122,0.800059

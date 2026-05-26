@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.032
-lot_width,0.0201
-bedrooms_above_grade,0.0344
-bathrooms_total_integer,0.0026
-parking_total,0.0092
-basement_score,0.0074
-interior_score,0.0265
-exterior_score,0.0044
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Woodbridge,Detached,building_area_total,0.035774,2442.5926,491.289002
+West Woodbridge,Detached,lot_width,0.011423,42.9964,15.344023
+West Woodbridge,Detached,bedrooms_above_grade,0.031721,3.8571,0.534522
+West Woodbridge,Detached,bathrooms_total_integer,0.006925,3.7755,0.721826
+West Woodbridge,Detached,parking_total,0.009627,5.2092,1.414076
+West Woodbridge,Detached,basement_score,0.006536,6.4592,1.636125
+West Woodbridge,Detached,interior_score,0.033608,3.2041,1.160218
+West Woodbridge,Detached,exterior_score,0.008265,2.7245,0.866386

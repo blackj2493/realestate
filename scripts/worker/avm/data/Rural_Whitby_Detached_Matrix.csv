@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0627
-lot_width,0.0726
-bedrooms_above_grade,0.0146
-bathrooms_total_integer,0.0338
-parking_total,0.0332
-basement_score,0.0132
-interior_score,0.006
-exterior_score,-0.0063
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Whitby,Detached,building_area_total,0.087624,2501.6304,653.146693
+Rural Whitby,Detached,lot_width,0.05732,56.6239,79.565149
+Rural Whitby,Detached,bedrooms_above_grade,0.026489,3.9402,0.511251
+Rural Whitby,Detached,bathrooms_total_integer,0.065714,3.8205,0.975034
+Rural Whitby,Detached,parking_total,0.081923,5.1453,3.105729
+Rural Whitby,Detached,basement_score,-0.015738,5.906,1.6895
+Rural Whitby,Detached,interior_score,0.002713,3.7179,1.052844
+Rural Whitby,Detached,exterior_score,0.000432,2.5128,0.883035

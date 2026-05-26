@@ -112,7 +112,7 @@ export default function MapDrawer() {
   return (
     <div
       className={cn(
-        "absolute left-14 top-0 z-20 w-72 border-r border-slate-800 bg-slate-950/95 backdrop-blur-md transition-all duration-200",
+        "absolute left-[68px] top-0 z-20 w-72 border-r border-slate-800 bg-slate-950/95 backdrop-blur-md transition-all duration-200",
         shown ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-0"
       )}
     >

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0197
-lot_width,0.0
-bedrooms_above_grade,0.0008
-bathrooms_total_integer,0.0238
-parking_total,0.0061
-basement_score,-0.0027
-interior_score,0.0171
-exterior_score,0.0144
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brampton North,Townhouse,building_area_total,0.04545,1306.1728,179.571286
+Brampton North,Townhouse,lot_width,0.0,20.5381,5.086442
+Brampton North,Townhouse,bedrooms_above_grade,-0.001105,3.0,0.150756
+Brampton North,Townhouse,bathrooms_total_integer,0.030946,2.625,0.608883
+Brampton North,Townhouse,parking_total,0.019135,2.2727,0.516264
+Brampton North,Townhouse,basement_score,-0.010776,5.4659,1.731715
+Brampton North,Townhouse,interior_score,0.010741,3.6591,0.705278
+Brampton North,Townhouse,exterior_score,0.009311,2.4432,0.951768

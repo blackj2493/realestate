@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0277
-lot_width,-0.026
-bedrooms_above_grade,-0.0037
-bathrooms_total_integer,0.1084
-parking_total,0.0687
-basement_score,0.0149
-interior_score,0.0162
-exterior_score,0.0009
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Keelesdale-Eglinton West,Detached,building_area_total,0.053264,1240.625,469.114442
+Keelesdale-Eglinton West,Detached,lot_width,-0.004842,27.3546,5.736673
+Keelesdale-Eglinton West,Detached,bedrooms_above_grade,0.003033,2.6111,0.784495
+Keelesdale-Eglinton West,Detached,bathrooms_total_integer,0.096187,2.2667,0.85375
+Keelesdale-Eglinton West,Detached,parking_total,0.058487,2.6,1.569147
+Keelesdale-Eglinton West,Detached,basement_score,0.004842,6.4,2.053723
+Keelesdale-Eglinton West,Detached,interior_score,0.03079,2.5667,0.931546
+Keelesdale-Eglinton West,Detached,exterior_score,7.9e-05,2.2333,0.633333

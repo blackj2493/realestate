@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1038 - WI Willmott,Townhouse,building_area_total,0.025302,1544.4632,290.578002
+1038 - WI Willmott,Townhouse,lot_width,-0.006441,23.3429,6.619921
+1038 - WI Willmott,Townhouse,bedrooms_above_grade,0.013729,2.8411,0.566173
+1038 - WI Willmott,Townhouse,bathrooms_total_integer,0.025136,2.9813,0.669514
+1038 - WI Willmott,Townhouse,parking_total,-0.000516,2.4393,0.598715
+1038 - WI Willmott,Townhouse,basement_score,0.032389,3.1308,2.109543
+1038 - WI Willmott,Townhouse,interior_score,-0.00417,3.8972,0.696246
+1038 - WI Willmott,Townhouse,exterior_score,0.008384,2.0093,0.633863

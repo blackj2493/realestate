@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1486
-lot_width,0.0482
-bedrooms_above_grade,-0.0093
-bathrooms_total_integer,0.0726
-parking_total,0.0269
-basement_score,0.0116
-interior_score,0.0154
-exterior_score,0.0093
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South K,Detached,building_area_total,0.134746,2143.0328,781.3184
+South K,Detached,lot_width,0.02171,61.4778,52.445937
+South K,Detached,bedrooms_above_grade,-0.01053,3.3841,0.74525
+South K,Detached,bathrooms_total_integer,0.080155,3.3551,0.938707
+South K,Detached,parking_total,0.045613,4.7804,1.474511
+South K,Detached,basement_score,0.018306,5.3333,1.699673
+South K,Detached,interior_score,0.026988,3.8261,0.992092
+South K,Detached,exterior_score,0.011658,2.8623,0.886223

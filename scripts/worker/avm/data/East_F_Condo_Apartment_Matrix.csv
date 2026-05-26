@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2404
-lot_width,0.0
-bedrooms_above_grade,0.0036
-bathrooms_total_integer,-0.0057
-parking_total,-0.0189
-basement_score,0.0059
-interior_score,0.0441
-exterior_score,-0.0259
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East F,Condo Apartment,building_area_total,0.253482,1225.3333,271.95261
+East F,Condo Apartment,lot_width,0.0,0.0,1.0
+East F,Condo Apartment,bedrooms_above_grade,-0.028517,1.92,0.356277
+East F,Condo Apartment,bathrooms_total_integer,-0.046437,1.8667,0.339935
+East F,Condo Apartment,parking_total,-0.016053,1.1067,0.385516
+East F,Condo Apartment,basement_score,0.042453,1.0267,0.229395
+East F,Condo Apartment,interior_score,0.069391,4.0667,0.805536
+East F,Condo Apartment,exterior_score,-0.033363,2.2533,0.63442

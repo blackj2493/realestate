@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+540 - Grimsby Beach,Townhouse,building_area_total,0.059988,1618.1786,237.173393
+540 - Grimsby Beach,Townhouse,lot_width,-0.002965,22.8365,4.823149
+540 - Grimsby Beach,Townhouse,bedrooms_above_grade,0.006287,2.7541,0.467141
+540 - Grimsby Beach,Townhouse,bathrooms_total_integer,0.01758,3.0328,0.626393
+540 - Grimsby Beach,Townhouse,parking_total,0.0071,2.2623,0.766119
+540 - Grimsby Beach,Townhouse,basement_score,0.040033,4.4426,1.946199
+540 - Grimsby Beach,Townhouse,interior_score,0.044683,3.8361,0.890392
+540 - Grimsby Beach,Townhouse,exterior_score,0.028482,3.0656,0.955894

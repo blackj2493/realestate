@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1867
-lot_width,0.0
-bedrooms_above_grade,0.0073
-bathrooms_total_integer,0.0325
-parking_total,0.0155
-basement_score,-0.0
-interior_score,0.0159
-exterior_score,0.0087
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South Riverdale,Condo Apartment,building_area_total,0.162682,754.2892,237.809364
+South Riverdale,Condo Apartment,lot_width,0.0,0.0,1.0
+South Riverdale,Condo Apartment,bedrooms_above_grade,0.007661,1.4902,0.555632
+South Riverdale,Condo Apartment,bathrooms_total_integer,0.0593,1.4314,0.505069
+South Riverdale,Condo Apartment,parking_total,0.040768,0.7843,0.456488
+South Riverdale,Condo Apartment,basement_score,-0.015172,1.0196,0.279369
+South Riverdale,Condo Apartment,interior_score,0.016783,3.7304,0.78644
+South Riverdale,Condo Apartment,exterior_score,0.00251,1.9559,0.688145

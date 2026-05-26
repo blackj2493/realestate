@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0418
-lot_width,0.025
-bedrooms_above_grade,0.0826
-bathrooms_total_integer,0.0379
-parking_total,0.0115
-basement_score,0.0094
-interior_score,0.0053
-exterior_score,-0.0074
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Heart Lake East,Detached,building_area_total,0.053203,1913.7097,647.275266
+Heart Lake East,Detached,lot_width,0.009628,39.8255,12.87541
+Heart Lake East,Detached,bedrooms_above_grade,0.046518,3.4125,0.517053
+Heart Lake East,Detached,bathrooms_total_integer,0.037409,3.25,0.873212
+Heart Lake East,Detached,parking_total,0.029139,5.0563,1.438301
+Heart Lake East,Detached,basement_score,0.027462,5.9375,1.653358
+Heart Lake East,Detached,interior_score,0.012401,3.475,0.974359
+Heart Lake East,Detached,exterior_score,0.004074,3.075,1.081376

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Vincent,Townhouse,building_area_total,0.064372,1333.0233,296.94205
+Vincent,Townhouse,lot_width,0.0,21.1229,3.132437
+Vincent,Townhouse,bedrooms_above_grade,0.017368,3.1395,0.346504
+Vincent,Townhouse,bathrooms_total_integer,0.067738,2.4651,0.872016
+Vincent,Townhouse,parking_total,0.056177,2.093,0.709207
+Vincent,Townhouse,basement_score,0.03631,4.9302,1.515737
+Vincent,Townhouse,interior_score,0.025164,3.5116,0.845566
+Vincent,Townhouse,exterior_score,0.004933,2.3953,0.892854

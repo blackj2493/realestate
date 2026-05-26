@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Oak Ridges,Townhouse,building_area_total,0.054178,1725.625,316.918143
+Oak Ridges,Townhouse,lot_width,-0.000365,25.6535,10.628987
+Oak Ridges,Townhouse,bedrooms_above_grade,0.009726,3.03,0.434856
+Oak Ridges,Townhouse,bathrooms_total_integer,0.008709,3.52,0.51923
+Oak Ridges,Townhouse,parking_total,0.030241,2.69,1.016809
+Oak Ridges,Townhouse,basement_score,0.023533,4.87,1.78132
+Oak Ridges,Townhouse,interior_score,-0.005647,4.03,0.853874
+Oak Ridges,Townhouse,exterior_score,-0.001628,2.37,0.934398

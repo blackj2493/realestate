@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0132
-lot_width,0.0221
-bedrooms_above_grade,0.1258
-bathrooms_total_integer,0.0865
-parking_total,0.0467
-basement_score,0.02
-interior_score,0.0238
-exterior_score,0.01
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lawrence Park North,Detached,building_area_total,0.048309,1845.7944,492.282567
+Lawrence Park North,Detached,lot_width,0.034421,26.7742,7.287817
+Lawrence Park North,Detached,bedrooms_above_grade,0.046948,3.3741,0.630418
+Lawrence Park North,Detached,bathrooms_total_integer,0.119789,3.2313,1.234802
+Lawrence Park North,Detached,parking_total,0.030673,1.9218,1.076497
+Lawrence Park North,Detached,basement_score,0.003139,6.0816,1.812692
+Lawrence Park North,Detached,interior_score,0.052631,3.7075,1.207746
+Lawrence Park North,Detached,exterior_score,0.031798,2.5578,0.774854

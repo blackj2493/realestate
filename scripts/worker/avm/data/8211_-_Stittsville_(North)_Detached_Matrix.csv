@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0224
-lot_width,-0.026
-bedrooms_above_grade,0.0282
-bathrooms_total_integer,0.0169
-parking_total,0.0557
-basement_score,-0.0015
-interior_score,0.0205
-exterior_score,0.0109
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+8211 - Stittsville (North),Detached,building_area_total,0.039876,2120.8861,438.8281
+8211 - Stittsville (North),Detached,lot_width,-0.012684,40.8772,15.650712
+8211 - Stittsville (North),Detached,bedrooms_above_grade,0.027696,3.4961,0.624115
+8211 - Stittsville (North),Detached,bathrooms_total_integer,0.016485,3.4264,0.567535
+8211 - Stittsville (North),Detached,parking_total,0.053109,4.2636,1.491679
+8211 - Stittsville (North),Detached,basement_score,0.004262,5.0155,0.767403
+8211 - Stittsville (North),Detached,interior_score,0.022516,3.876,0.897954
+8211 - Stittsville (North),Detached,exterior_score,0.023052,2.7054,0.829711

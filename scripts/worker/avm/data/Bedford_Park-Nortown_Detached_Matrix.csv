@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0438
-lot_width,0.0511
-bedrooms_above_grade,0.0759
-bathrooms_total_integer,0.0802
-parking_total,0.0493
-basement_score,-0.0185
-interior_score,0.0213
-exterior_score,0.0339
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bedford Park-Nortown,Detached,building_area_total,0.119201,2731.4926,905.090205
+Bedford Park-Nortown,Detached,lot_width,0.004959,41.9486,12.289627
+Bedford Park-Nortown,Detached,bedrooms_above_grade,0.045009,3.6684,0.691599
+Bedford Park-Nortown,Detached,bathrooms_total_integer,0.094243,4.1925,1.338587
+Bedford Park-Nortown,Detached,parking_total,0.049962,4.5267,1.860605
+Bedford Park-Nortown,Detached,basement_score,-0.010069,6.5294,2.037861
+Bedford Park-Nortown,Detached,interior_score,0.039096,4.1604,1.087575
+Bedford Park-Nortown,Detached,exterior_score,0.036758,2.754,0.926971

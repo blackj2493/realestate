@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.025
-lot_width,0.0
-bedrooms_above_grade,0.0826
-bathrooms_total_integer,0.0135
-parking_total,0.0021
-basement_score,0.0
-interior_score,0.0122
-exterior_score,-0.0105
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Woburn,Condo Apartment,building_area_total,0.035482,812.7604,231.123129
+Woburn,Condo Apartment,lot_width,0.0,0.0,1.0
+Woburn,Condo Apartment,bedrooms_above_grade,0.045178,1.6667,0.606676
+Woburn,Condo Apartment,bathrooms_total_integer,0.038973,1.6354,0.522809
+Woburn,Condo Apartment,parking_total,-1.5e-05,1.0885,0.405013
+Woburn,Condo Apartment,basement_score,0.0,1.0,1.0
+Woburn,Condo Apartment,interior_score,0.015788,3.7604,0.7872
+Woburn,Condo Apartment,exterior_score,-0.003871,2.1823,0.687007

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1475
-lot_width,0.0
-bedrooms_above_grade,0.0338
-bathrooms_total_integer,0.0573
-parking_total,0.0202
-basement_score,0.0
-interior_score,0.025
-exterior_score,-0.0278
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Cabbagetown-South St. James Town,Condo Apartment,building_area_total,0.097257,734.0206,365.122236
+Cabbagetown-South St. James Town,Condo Apartment,lot_width,0.0,0.0,1.0
+Cabbagetown-South St. James Town,Condo Apartment,bedrooms_above_grade,0.074687,1.4639,0.610254
+Cabbagetown-South St. James Town,Condo Apartment,bathrooms_total_integer,0.07261,1.3918,0.508823
+Cabbagetown-South St. James Town,Condo Apartment,parking_total,0.010905,0.7526,0.454778
+Cabbagetown-South St. James Town,Condo Apartment,basement_score,0.0,1.0,1.0
+Cabbagetown-South St. James Town,Condo Apartment,interior_score,0.041837,3.7113,0.811753
+Cabbagetown-South St. James Town,Condo Apartment,exterior_score,0.02056,2.2474,0.626411

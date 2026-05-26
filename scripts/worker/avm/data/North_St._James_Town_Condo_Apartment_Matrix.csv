@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1562
-lot_width,0.0
-bedrooms_above_grade,0.0449
-bathrooms_total_integer,0.0213
-parking_total,0.0318
-basement_score,0.0
-interior_score,0.0085
-exterior_score,0.0057
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North St. James Town,Condo Apartment,building_area_total,0.087053,726.1261,196.345766
+North St. James Town,Condo Apartment,lot_width,0.0,0.0,1.0
+North St. James Town,Condo Apartment,bedrooms_above_grade,0.073207,1.4505,0.54918
+North St. James Town,Condo Apartment,bathrooms_total_integer,0.039228,1.5405,0.533285
+North St. James Town,Condo Apartment,parking_total,0.05245,0.4685,0.516743
+North St. James Town,Condo Apartment,basement_score,0.0,1.0,1.0
+North St. James Town,Condo Apartment,interior_score,4.6e-05,4.1802,0.871968
+North St. James Town,Condo Apartment,exterior_score,0.008333,2.4955,0.847613

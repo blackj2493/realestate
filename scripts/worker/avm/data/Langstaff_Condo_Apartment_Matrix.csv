@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0301
-lot_width,0.0
-bedrooms_above_grade,0.0206
-bathrooms_total_integer,0.0913
-parking_total,0.0051
-basement_score,0.0
-interior_score,0.0167
-exterior_score,0.0084
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Langstaff,Condo Apartment,building_area_total,0.050307,752.3077,160.989911
+Langstaff,Condo Apartment,lot_width,0.0,0.0,1.0
+Langstaff,Condo Apartment,bedrooms_above_grade,0.022066,1.45,0.512723
+Langstaff,Condo Apartment,bathrooms_total_integer,0.056479,1.4769,0.499467
+Langstaff,Condo Apartment,parking_total,0.007909,1.0923,0.370989
+Langstaff,Condo Apartment,basement_score,0.0,1.0,1.0
+Langstaff,Condo Apartment,interior_score,0.007901,4.0808,0.752697
+Langstaff,Condo Apartment,exterior_score,0.004201,1.9692,0.655608

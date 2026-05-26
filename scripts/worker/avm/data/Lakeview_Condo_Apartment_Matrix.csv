@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0477
-lot_width,0.0
-bedrooms_above_grade,0.0287
-bathrooms_total_integer,0.035
-parking_total,-0.0145
-basement_score,0.0
-interior_score,0.0273
-exterior_score,-0.0225
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lakeview,Condo Apartment,building_area_total,0.083867,1172.9592,288.572168
+Lakeview,Condo Apartment,lot_width,0.0,0.0,1.0
+Lakeview,Condo Apartment,bedrooms_above_grade,-0.024928,2.1429,0.782461
+Lakeview,Condo Apartment,bathrooms_total_integer,0.091715,1.9082,0.496657
+Lakeview,Condo Apartment,parking_total,-0.012351,1.4898,0.539177
+Lakeview,Condo Apartment,basement_score,0.0,1.0,1.0
+Lakeview,Condo Apartment,interior_score,0.030245,3.8367,0.816837
+Lakeview,Condo Apartment,exterior_score,-0.022332,2.5204,1.255434

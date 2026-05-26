@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0329
-lot_width,-0.0372
-bedrooms_above_grade,0.0145
-bathrooms_total_integer,0.062
-parking_total,0.0604
-basement_score,0.0239
-interior_score,0.0113
-exterior_score,-0.0101
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+606 - Town of Rockland,Detached,building_area_total,0.050404,1644.3478,515.278111
+606 - Town of Rockland,Detached,lot_width,-0.027742,50.973,17.982346
+606 - Town of Rockland,Detached,bedrooms_above_grade,-0.005229,2.9162,0.633087
+606 - Town of Rockland,Detached,bathrooms_total_integer,0.057318,2.5642,0.776798
+606 - Town of Rockland,Detached,parking_total,0.06563,4.5587,1.521052
+606 - Town of Rockland,Detached,basement_score,0.021509,4.9721,1.343015
+606 - Town of Rockland,Detached,interior_score,0.018903,3.6313,0.920483
+606 - Town of Rockland,Detached,exterior_score,0.006584,2.6592,0.878713

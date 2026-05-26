@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0644
-lot_width,0.0246
-bedrooms_above_grade,0.0549
-bathrooms_total_integer,0.0152
-parking_total,0.0119
-basement_score,-0.0036
-interior_score,0.0265
-exterior_score,0.0108
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1007 - GA Glen Abbey,Detached,building_area_total,0.103166,2953.2498,805.756537
+1007 - GA Glen Abbey,Detached,lot_width,0.020731,50.1024,15.439942
+1007 - GA Glen Abbey,Detached,bedrooms_above_grade,0.034489,3.9194,0.594736
+1007 - GA Glen Abbey,Detached,bathrooms_total_integer,0.020482,3.9086,0.896367
+1007 - GA Glen Abbey,Detached,parking_total,0.002506,4.4704,1.065307
+1007 - GA Glen Abbey,Detached,basement_score,-0.00652,5.0215,0.822774
+1007 - GA Glen Abbey,Detached,interior_score,0.029426,4.0538,1.003923
+1007 - GA Glen Abbey,Detached,exterior_score,0.004573,3.0323,1.172733

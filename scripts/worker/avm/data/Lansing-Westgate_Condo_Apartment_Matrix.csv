@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1251
-lot_width,0.0
-bedrooms_above_grade,0.0265
-bathrooms_total_integer,0.0343
-parking_total,0.0102
-basement_score,0.0
-interior_score,0.0146
-exterior_score,0.0094
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lansing-Westgate,Condo Apartment,building_area_total,0.082123,910.5263,342.749057
+Lansing-Westgate,Condo Apartment,lot_width,0.0,0.0,1.0
+Lansing-Westgate,Condo Apartment,bedrooms_above_grade,0.043649,1.5877,0.543081
+Lansing-Westgate,Condo Apartment,bathrooms_total_integer,0.085978,1.6579,0.474415
+Lansing-Westgate,Condo Apartment,parking_total,0.004229,1.0702,0.391114
+Lansing-Westgate,Condo Apartment,basement_score,0.0,1.0,1.0
+Lansing-Westgate,Condo Apartment,interior_score,0.00103,4.0526,0.825494
+Lansing-Westgate,Condo Apartment,exterior_score,-0.007016,2.0702,0.525145

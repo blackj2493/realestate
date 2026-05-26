@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0277
-lot_width,0.0449
-bedrooms_above_grade,0.0035
-bathrooms_total_integer,0.0255
-parking_total,0.0281
-basement_score,0.0159
-interior_score,0.0262
-exterior_score,0.0071
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Eglinton East,Detached,building_area_total,0.034844,1234.2105,293.146556
+Eglinton East,Detached,lot_width,0.039111,47.6743,11.802324
+Eglinton East,Detached,bedrooms_above_grade,0.014709,3.1207,0.325766
+Eglinton East,Detached,bathrooms_total_integer,0.059865,2.3276,0.796283
+Eglinton East,Detached,parking_total,0.018676,4.2931,1.562035
+Eglinton East,Detached,basement_score,0.010557,6.069,1.483961
+Eglinton East,Detached,interior_score,0.014988,2.8448,1.030596
+Eglinton East,Detached,exterior_score,0.015456,2.3621,0.922857

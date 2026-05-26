@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.276
-lot_width,-0.0072
-bedrooms_above_grade,0.0076
-bathrooms_total_integer,0.0789
-parking_total,0.0303
-basement_score,0.0
-interior_score,0.0681
-exterior_score,0.0347
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1002 - CO Central,Condo Apartment,building_area_total,0.294336,901.8333,266.941889
+1002 - CO Central,Condo Apartment,lot_width,0.0,0.0,1.0
+1002 - CO Central,Condo Apartment,bedrooms_above_grade,-0.111188,1.7083,0.498261
+1002 - CO Central,Condo Apartment,bathrooms_total_integer,0.080314,1.5625,0.536433
+1002 - CO Central,Condo Apartment,parking_total,0.009671,1.2083,0.406116
+1002 - CO Central,Condo Apartment,basement_score,0.0,1.0,1.0
+1002 - CO Central,Condo Apartment,interior_score,0.044107,4.3125,0.617665
+1002 - CO Central,Condo Apartment,exterior_score,0.027705,2.2708,0.99456

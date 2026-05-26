@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1613
-lot_width,-0.0603
-bedrooms_above_grade,0.0547
-bathrooms_total_integer,0.0146
-parking_total,-0.0242
-basement_score,0.027
-interior_score,0.0351
-exterior_score,-0.0092
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+14 - Central City East,Detached,building_area_total,0.152888,1700.2344,562.760468
+14 - Central City East,Detached,lot_width,-0.003076,44.5237,13.291371
+14 - Central City East,Detached,bedrooms_above_grade,0.065459,3.8211,1.442855
+14 - Central City East,Detached,bathrooms_total_integer,0.046735,2.3252,0.840982
+14 - Central City East,Detached,parking_total,-0.039106,3.0976,1.472869
+14 - Central City East,Detached,basement_score,0.005236,4.7724,1.41888
+14 - Central City East,Detached,interior_score,0.060118,3.374,0.940493
+14 - Central City East,Detached,exterior_score,0.010465,2.6098,0.861405

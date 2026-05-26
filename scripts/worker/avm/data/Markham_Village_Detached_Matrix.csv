@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0306
-lot_width,0.0243
-bedrooms_above_grade,0.0353
-bathrooms_total_integer,0.0519
-parking_total,0.0198
-basement_score,0.0052
-interior_score,0.0259
-exterior_score,0.0042
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Markham Village,Detached,building_area_total,0.052942,2178.4314,524.988786
+Markham Village,Detached,lot_width,0.018335,57.5676,20.977668
+Markham Village,Detached,bedrooms_above_grade,0.023339,3.7122,0.483462
+Markham Village,Detached,bathrooms_total_integer,0.032771,3.3453,0.793066
+Markham Village,Detached,parking_total,0.02642,5.3381,1.327918
+Markham Village,Detached,basement_score,0.01123,4.9137,1.042148
+Markham Village,Detached,interior_score,0.030005,3.5971,1.015842
+Markham Village,Detached,exterior_score,0.002899,2.7482,0.945215

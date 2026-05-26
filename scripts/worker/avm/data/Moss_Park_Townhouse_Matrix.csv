@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Moss Park,Townhouse,building_area_total,0.068475,1379.4872,453.436727
+Moss Park,Townhouse,lot_width,-0.038181,16.4956,4.30601
+Moss Park,Townhouse,bedrooms_above_grade,0.045234,2.7234,0.735198
+Moss Park,Townhouse,bathrooms_total_integer,0.059775,2.234,0.777688
+Moss Park,Townhouse,parking_total,0.002051,1.0851,0.709503
+Moss Park,Townhouse,basement_score,0.05152,3.6809,2.415433
+Moss Park,Townhouse,interior_score,0.048324,3.6383,0.976872
+Moss Park,Townhouse,exterior_score,0.011653,2.4255,0.916624

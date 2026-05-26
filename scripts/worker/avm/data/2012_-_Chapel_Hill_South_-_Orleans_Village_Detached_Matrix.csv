@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0604
-lot_width,0.0228
-bedrooms_above_grade,0.0225
-bathrooms_total_integer,0.0041
-parking_total,-0.0084
-basement_score,0.0049
-interior_score,0.011
-exterior_score,0.0096
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+2012 - Chapel Hill South - Orleans Village,Detached,building_area_total,0.072744,2195.9677,453.952036
+2012 - Chapel Hill South - Orleans Village,Detached,lot_width,3.4e-05,42.6142,8.332696
+2012 - Chapel Hill South - Orleans Village,Detached,bedrooms_above_grade,0.019253,3.6047,0.703464
+2012 - Chapel Hill South - Orleans Village,Detached,bathrooms_total_integer,0.013857,3.407,0.578247
+2012 - Chapel Hill South - Orleans Village,Detached,parking_total,0.005528,4.7791,1.223806
+2012 - Chapel Hill South - Orleans Village,Detached,basement_score,-2.7e-05,4.9884,0.723271
+2012 - Chapel Hill South - Orleans Village,Detached,interior_score,0.014952,3.9767,0.714904
+2012 - Chapel Hill South - Orleans Village,Detached,exterior_score,0.018705,2.7326,0.894745

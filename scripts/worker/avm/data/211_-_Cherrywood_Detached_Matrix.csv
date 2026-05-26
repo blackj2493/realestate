@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0489
-lot_width,0.0584
-bedrooms_above_grade,-0.0086
-bathrooms_total_integer,0.0584
-parking_total,0.0227
-basement_score,0.0287
-interior_score,0.008
-exterior_score,0.0266
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+211 - Cherrywood,Detached,building_area_total,0.029976,1251.3991,367.158821
+211 - Cherrywood,Detached,lot_width,0.030607,47.0871,13.865644
+211 - Cherrywood,Detached,bedrooms_above_grade,0.002993,3.03,0.754387
+211 - Cherrywood,Detached,bathrooms_total_integer,0.056459,1.87,0.673127
+211 - Cherrywood,Detached,parking_total,0.033187,4.005,1.610116
+211 - Cherrywood,Detached,basement_score,0.034732,5.26,1.397283
+211 - Cherrywood,Detached,interior_score,0.029432,2.91,1.020735
+211 - Cherrywood,Detached,exterior_score,0.029625,2.13,0.658103

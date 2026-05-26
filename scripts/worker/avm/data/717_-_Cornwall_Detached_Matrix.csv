@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0242
-lot_width,0.064
-bedrooms_above_grade,0.0105
-bathrooms_total_integer,0.0609
-parking_total,0.032
-basement_score,0.0106
-interior_score,0.0457
-exterior_score,0.0289
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+717 - Cornwall,Detached,building_area_total,0.024574,1261.2348,385.09725
+717 - Cornwall,Detached,lot_width,0.053283,55.2401,19.514839
+717 - Cornwall,Detached,bedrooms_above_grade,0.025291,2.7933,0.747144
+717 - Cornwall,Detached,bathrooms_total_integer,0.09915,1.9439,0.750039
+717 - Cornwall,Detached,parking_total,0.049664,3.8926,1.587111
+717 - Cornwall,Detached,basement_score,0.019617,4.609,1.019513
+717 - Cornwall,Detached,interior_score,0.061558,3.3029,0.893132
+717 - Cornwall,Detached,exterior_score,0.029754,2.4888,0.748847

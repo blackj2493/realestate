@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0085
-lot_width,0.0176
-bedrooms_above_grade,0.0187
-bathrooms_total_integer,0.0669
-parking_total,0.0289
-basement_score,0.0108
-interior_score,0.0281
-exterior_score,0.018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brampton East,Detached,building_area_total,0.037713,1467.5824,443.535597
+Brampton East,Detached,lot_width,-0.001377,54.6143,11.618819
+Brampton East,Detached,bedrooms_above_grade,0.006653,3.3969,0.58843
+Brampton East,Detached,bathrooms_total_integer,0.061025,2.5115,0.775251
+Brampton East,Detached,parking_total,0.041224,5.3588,1.890388
+Brampton East,Detached,basement_score,0.003534,5.6565,1.450301
+Brampton East,Detached,interior_score,0.024479,3.2137,1.152545
+Brampton East,Detached,exterior_score,0.009605,2.6947,0.915458

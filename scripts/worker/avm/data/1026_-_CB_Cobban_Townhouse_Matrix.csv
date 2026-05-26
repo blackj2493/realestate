@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1026 - CB Cobban,Townhouse,building_area_total,0.029846,1588.5246,297.137083
+1026 - CB Cobban,Townhouse,lot_width,0.013069,23.8235,8.041863
+1026 - CB Cobban,Townhouse,bedrooms_above_grade,0.020288,3.0588,0.511122
+1026 - CB Cobban,Townhouse,bathrooms_total_integer,0.018771,3.0441,0.361119
+1026 - CB Cobban,Townhouse,parking_total,0.008833,2.25,0.49631
+1026 - CB Cobban,Townhouse,basement_score,0.036025,2.7794,1.97667
+1026 - CB Cobban,Townhouse,interior_score,-0.003358,4.0,0.857493
+1026 - CB Cobban,Townhouse,exterior_score,-0.003993,2.1765,0.746387

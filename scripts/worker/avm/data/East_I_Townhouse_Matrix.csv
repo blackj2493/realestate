@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0393
-lot_width,0.0
-bedrooms_above_grade,0.0321
-bathrooms_total_integer,0.015
-parking_total,0.0179
-basement_score,-0.0206
-interior_score,0.0359
-exterior_score,0.0038
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East I,Townhouse,building_area_total,0.039666,1122.8431,224.944993
+East I,Townhouse,lot_width,0.0,20.0,1.0
+East I,Townhouse,bedrooms_above_grade,0.040859,2.6471,0.477885
+East I,Townhouse,bathrooms_total_integer,0.028244,2.0392,0.441068
+East I,Townhouse,parking_total,0.017531,1.5294,0.572334
+East I,Townhouse,basement_score,-0.003051,4.1961,1.386484
+East I,Townhouse,interior_score,0.037563,3.4314,0.720972
+East I,Townhouse,exterior_score,-0.001982,2.1961,0.686555

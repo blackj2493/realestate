@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0193
-lot_width,0.0
-bedrooms_above_grade,0.0371
-bathrooms_total_integer,0.033
-parking_total,0.0753
-basement_score,0.0
-interior_score,0.0105
-exterior_score,-0.0076
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Vaughan Corporate Centre,Condo Apartment,building_area_total,0.035261,621.3624,137.49863
+Vaughan Corporate Centre,Condo Apartment,lot_width,0.0,0.0,1.0
+Vaughan Corporate Centre,Condo Apartment,bedrooms_above_grade,0.029959,1.4679,0.559633
+Vaughan Corporate Centre,Condo Apartment,bathrooms_total_integer,0.031529,1.5092,0.499916
+Vaughan Corporate Centre,Condo Apartment,parking_total,0.071919,0.6468,0.496791
+Vaughan Corporate Centre,Condo Apartment,basement_score,0.0,1.0,1.0
+Vaughan Corporate Centre,Condo Apartment,interior_score,-0.003252,3.8073,0.801112
+Vaughan Corporate Centre,Condo Apartment,exterior_score,-0.009734,2.156,0.60083

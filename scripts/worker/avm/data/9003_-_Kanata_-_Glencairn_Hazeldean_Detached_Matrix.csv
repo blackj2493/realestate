@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0077
-lot_width,0.0127
-bedrooms_above_grade,-0.0082
-bathrooms_total_integer,0.0213
-parking_total,0.0093
-basement_score,0.0094
-interior_score,0.0191
-exterior_score,0.0362
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9003 - Kanata - Glencairn/Hazeldean,Detached,building_area_total,0.019305,1350.9259,297.129904
+9003 - Kanata - Glencairn/Hazeldean,Detached,lot_width,0.02047,53.3025,15.920807
+9003 - Kanata - Glencairn/Hazeldean,Detached,bedrooms_above_grade,-0.007699,3.1528,0.518002
+9003 - Kanata - Glencairn/Hazeldean,Detached,bathrooms_total_integer,0.023033,2.2222,0.477907
+9003 - Kanata - Glencairn/Hazeldean,Detached,parking_total,0.025398,4.1667,1.312335
+9003 - Kanata - Glencairn/Hazeldean,Detached,basement_score,0.016335,4.6389,0.732301
+9003 - Kanata - Glencairn/Hazeldean,Detached,interior_score,0.02738,3.5278,0.927545
+9003 - Kanata - Glencairn/Hazeldean,Detached,exterior_score,0.008505,2.7222,0.90096

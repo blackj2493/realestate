@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Credit Valley,Townhouse,building_area_total,0.017912,1767.0,330.546517
+Credit Valley,Townhouse,lot_width,0.017394,21.0625,4.970093
+Credit Valley,Townhouse,bedrooms_above_grade,-0.002676,3.1964,0.397296
+Credit Valley,Townhouse,bathrooms_total_integer,0.012141,3.7679,1.052057
+Credit Valley,Townhouse,parking_total,0.015696,2.6071,0.617558
+Credit Valley,Townhouse,basement_score,-0.003168,5.1786,1.722821
+Credit Valley,Townhouse,interior_score,-0.023535,3.6429,0.832993
+Credit Valley,Townhouse,exterior_score,0.006218,2.125,0.907558

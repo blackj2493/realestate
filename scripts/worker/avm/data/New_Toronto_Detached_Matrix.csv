@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0487
-lot_width,0.0564
-bedrooms_above_grade,0.0541
-bathrooms_total_integer,0.1437
-parking_total,0.0124
-basement_score,-0.0175
-interior_score,0.0175
-exterior_score,0.0476
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+New Toronto,Detached,building_area_total,0.107432,1452.459,533.733082
+New Toronto,Detached,lot_width,0.056844,28.8168,6.534812
+New Toronto,Detached,bedrooms_above_grade,0.039292,2.8095,0.698232
+New Toronto,Detached,bathrooms_total_integer,0.074863,2.5714,1.126369
+New Toronto,Detached,parking_total,-0.01722,2.7679,1.482932
+New Toronto,Detached,basement_score,-0.006421,5.9643,1.636244
+New Toronto,Detached,interior_score,0.02691,3.3929,1.069244
+New Toronto,Detached,exterior_score,0.046883,2.8452,1.117971

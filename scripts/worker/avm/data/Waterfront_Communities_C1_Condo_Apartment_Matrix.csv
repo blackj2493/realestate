@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1918
-lot_width,0.0
-bedrooms_above_grade,0.0576
-bathrooms_total_integer,0.0222
-parking_total,0.0245
-basement_score,0.0
-interior_score,0.0272
-exterior_score,-0.0165
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Waterfront Communities C1,Condo Apartment,building_area_total,0.178181,754.9076,295.971715
+Waterfront Communities C1,Condo Apartment,lot_width,0.0,0.0,1.0
+Waterfront Communities C1,Condo Apartment,bedrooms_above_grade,0.058252,1.4283,0.611253
+Waterfront Communities C1,Condo Apartment,bathrooms_total_integer,0.046907,1.4434,0.538898
+Waterfront Communities C1,Condo Apartment,parking_total,0.034387,0.6184,0.535601
+Waterfront Communities C1,Condo Apartment,basement_score,0.003075,1.0042,0.128831
+Waterfront Communities C1,Condo Apartment,interior_score,0.025023,4.0436,0.857541
+Waterfront Communities C1,Condo Apartment,exterior_score,-0.012132,2.6454,1.018722

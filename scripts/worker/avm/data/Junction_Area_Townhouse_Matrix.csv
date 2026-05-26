@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Junction Area,Townhouse,building_area_total,0.075855,1422.8571,235.233275
+Junction Area,Townhouse,lot_width,-0.052782,16.5796,3.827848
+Junction Area,Townhouse,bedrooms_above_grade,0.044401,3.0238,0.73963
+Junction Area,Townhouse,bathrooms_total_integer,-0.003692,2.5,0.823754
+Junction Area,Townhouse,parking_total,0.005059,1.3095,0.82341
+Junction Area,Townhouse,basement_score,0.061568,3.881,2.382499
+Junction Area,Townhouse,interior_score,0.030908,3.5714,0.954759
+Junction Area,Townhouse,exterior_score,0.013568,2.1667,0.61399

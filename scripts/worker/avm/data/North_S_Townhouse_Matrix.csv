@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North S,Townhouse,building_area_total,0.012798,1625.0,286.893172
+North S,Townhouse,lot_width,0.0,20.8337,8.622443
+North S,Townhouse,bedrooms_above_grade,-0.008046,2.975,0.473682
+North S,Townhouse,bathrooms_total_integer,-0.005034,3.4,0.583095
+North S,Townhouse,parking_total,0.035822,2.5,0.707107
+North S,Townhouse,basement_score,0.018197,4.4,1.3
+North S,Townhouse,interior_score,0.019549,4.1,0.734847
+North S,Townhouse,exterior_score,-0.003995,2.425,0.666615

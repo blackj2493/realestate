@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0743
-lot_width,0.0282
-bedrooms_above_grade,0.0053
-bathrooms_total_integer,0.007
-parking_total,0.0338
-basement_score,0.0043
-interior_score,0.0139
-exterior_score,0.004
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1033 - HA Harrison,Detached,building_area_total,0.064624,2284.9863,517.239578
+1033 - HA Harrison,Detached,lot_width,0.024893,37.3252,7.746067
+1033 - HA Harrison,Detached,bedrooms_above_grade,0.011794,3.7143,0.451754
+1033 - HA Harrison,Detached,bathrooms_total_integer,0.008948,3.7662,0.642562
+1033 - HA Harrison,Detached,parking_total,0.027829,3.9351,1.18801
+1033 - HA Harrison,Detached,basement_score,0.018061,5.0519,1.247294
+1033 - HA Harrison,Detached,interior_score,0.025466,4.013,0.986842
+1033 - HA Harrison,Detached,exterior_score,0.003787,2.6234,0.83804

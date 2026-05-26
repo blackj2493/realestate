@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brooklin,Townhouse,building_area_total,0.025923,1717.2535,363.269377
+Brooklin,Townhouse,lot_width,-0.000709,24.6583,11.040282
+Brooklin,Townhouse,bedrooms_above_grade,0.009793,3.0114,0.464521
+Brooklin,Townhouse,bathrooms_total_integer,0.008343,3.1477,0.512121
+Brooklin,Townhouse,parking_total,0.012575,2.75,0.920104
+Brooklin,Townhouse,basement_score,-0.006914,5.0341,1.132664
+Brooklin,Townhouse,interior_score,0.009406,3.8977,0.917504
+Brooklin,Townhouse,exterior_score,0.016163,2.4886,0.797643

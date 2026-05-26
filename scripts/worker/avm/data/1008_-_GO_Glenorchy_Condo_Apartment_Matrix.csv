@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1027
-lot_width,0.0
-bedrooms_above_grade,0.0171
-bathrooms_total_integer,0.0082
-parking_total,-0.0016
-basement_score,-0.003
-interior_score,-0.015
-exterior_score,0.01
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1008 - GO Glenorchy,Condo Apartment,building_area_total,0.070548,762.3636,199.495567
+1008 - GO Glenorchy,Condo Apartment,lot_width,0.0,0.0,1.0
+1008 - GO Glenorchy,Condo Apartment,bedrooms_above_grade,0.046129,1.4886,0.583764
+1008 - GO Glenorchy,Condo Apartment,bathrooms_total_integer,0.005506,1.5227,0.583432
+1008 - GO Glenorchy,Condo Apartment,parking_total,0.012889,1.0795,0.270588
+1008 - GO Glenorchy,Condo Apartment,basement_score,-0.013786,1.0909,0.847944
+1008 - GO Glenorchy,Condo Apartment,interior_score,0.015759,4.2159,0.714284
+1008 - GO Glenorchy,Condo Apartment,exterior_score,0.006054,2.0341,0.573047

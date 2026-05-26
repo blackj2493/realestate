@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2413
-lot_width,-0.0002
-bedrooms_above_grade,-0.0145
-bathrooms_total_integer,-0.0354
-parking_total,0.0014
-basement_score,0.0
-interior_score,0.0724
-exterior_score,-0.0181
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stratford,Condo Apartment,building_area_total,0.329733,970.9972,373.90279
+Stratford,Condo Apartment,lot_width,0.0,0.0,1.0
+Stratford,Condo Apartment,bedrooms_above_grade,-0.128374,1.6304,0.482687
+Stratford,Condo Apartment,bathrooms_total_integer,-0.051382,1.413,0.492381
+Stratford,Condo Apartment,parking_total,0.03739,0.9783,0.441791
+Stratford,Condo Apartment,basement_score,0.0,1.0,1.0
+Stratford,Condo Apartment,interior_score,0.032509,3.4783,0.902632
+Stratford,Condo Apartment,exterior_score,-0.031423,2.1957,0.494296

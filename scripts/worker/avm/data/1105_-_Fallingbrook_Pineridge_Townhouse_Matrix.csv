@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.028
-lot_width,0.0
-bedrooms_above_grade,0.0855
-bathrooms_total_integer,-0.0154
-parking_total,-0.0082
-basement_score,-0.005
-interior_score,0.0064
-exterior_score,-0.0168
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1105 - Fallingbrook/Pineridge,Townhouse,building_area_total,0.02295,1158.1633,260.561979
+1105 - Fallingbrook/Pineridge,Townhouse,lot_width,0.0,23.0781,6.680719
+1105 - Fallingbrook/Pineridge,Townhouse,bedrooms_above_grade,0.043312,2.5556,0.79238
+1105 - Fallingbrook/Pineridge,Townhouse,bathrooms_total_integer,0.023564,2.2063,0.693707
+1105 - Fallingbrook/Pineridge,Townhouse,parking_total,0.068037,2.1905,0.773718
+1105 - Fallingbrook/Pineridge,Townhouse,basement_score,0.002146,4.7937,0.539215
+1105 - Fallingbrook/Pineridge,Townhouse,interior_score,0.016585,3.6508,0.716223
+1105 - Fallingbrook/Pineridge,Townhouse,exterior_score,-0.011348,2.5397,0.638087

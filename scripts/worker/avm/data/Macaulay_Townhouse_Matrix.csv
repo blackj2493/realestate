@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Macaulay,Townhouse,building_area_total,0.046685,1420.5645,274.446781
+Macaulay,Townhouse,lot_width,-0.003955,23.4252,7.274442
+Macaulay,Townhouse,bedrooms_above_grade,0.033445,2.8049,0.633208
+Macaulay,Townhouse,bathrooms_total_integer,0.024061,2.8049,0.772058
+Macaulay,Townhouse,parking_total,0.023604,2.4634,0.913251
+Macaulay,Townhouse,basement_score,0.011381,5.3171,1.827153
+Macaulay,Townhouse,interior_score,-0.000517,3.5854,0.882779
+Macaulay,Townhouse,exterior_score,0.016115,3.0732,0.808197

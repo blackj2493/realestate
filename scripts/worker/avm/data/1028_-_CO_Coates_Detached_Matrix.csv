@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0234
-lot_width,0.019
-bedrooms_above_grade,0.0166
-bathrooms_total_integer,0.0143
-parking_total,0.0425
-basement_score,0.0071
-interior_score,0.0049
-exterior_score,0.0024
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1028 - CO Coates,Detached,building_area_total,0.034412,2375.3,378.917946
+1028 - CO Coates,Detached,lot_width,0.003697,38.1956,9.091603
+1028 - CO Coates,Detached,bedrooms_above_grade,0.019779,3.9143,0.438923
+1028 - CO Coates,Detached,bathrooms_total_integer,0.016243,3.7,0.724076
+1028 - CO Coates,Detached,parking_total,0.028139,4.0286,1.230231
+1028 - CO Coates,Detached,basement_score,-0.006151,5.0,1.133893
+1028 - CO Coates,Detached,interior_score,0.014885,3.7429,1.009748
+1028 - CO Coates,Detached,exterior_score,-0.000949,2.4286,0.820652

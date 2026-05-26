@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0147
-lot_width,0.0345
-bedrooms_above_grade,0.0651
-bathrooms_total_integer,0.0169
-parking_total,0.0223
-basement_score,-0.0069
-interior_score,0.0168
-exterior_score,0.0122
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1022 - WT West Oak Trails,Detached,building_area_total,0.046751,2149.2778,453.156267
+1022 - WT West Oak Trails,Detached,lot_width,0.035626,40.5128,7.821224
+1022 - WT West Oak Trails,Detached,bedrooms_above_grade,0.041039,3.5455,0.56627
+1022 - WT West Oak Trails,Detached,bathrooms_total_integer,0.014384,3.5182,0.642889
+1022 - WT West Oak Trails,Detached,parking_total,0.029291,4.15,1.214589
+1022 - WT West Oak Trails,Detached,basement_score,0.002747,5.3545,1.338835
+1022 - WT West Oak Trails,Detached,interior_score,0.020292,4.0818,0.81052
+1022 - WT West Oak Trails,Detached,exterior_score,0.019006,2.8273,1.01676

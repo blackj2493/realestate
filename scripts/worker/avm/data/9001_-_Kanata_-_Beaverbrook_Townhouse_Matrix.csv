@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0161
-lot_width,0.0
-bedrooms_above_grade,-0.0071
-bathrooms_total_integer,-0.0051
-parking_total,-0.0289
-basement_score,-0.0147
-interior_score,0.0123
-exterior_score,0.0188
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9001 - Kanata - Beaverbrook,Townhouse,building_area_total,0.036345,1432.0755,220.653904
+9001 - Kanata - Beaverbrook,Townhouse,lot_width,0.0,24.2564,8.058863
+9001 - Kanata - Beaverbrook,Townhouse,bedrooms_above_grade,-0.024306,2.9306,0.713489
+9001 - Kanata - Beaverbrook,Townhouse,bathrooms_total_integer,0.086101,2.4583,0.599479
+9001 - Kanata - Beaverbrook,Townhouse,parking_total,0.001289,2.4306,1.211363
+9001 - Kanata - Beaverbrook,Townhouse,basement_score,0.01151,4.5139,0.957326
+9001 - Kanata - Beaverbrook,Townhouse,interior_score,0.006967,3.7778,0.730719
+9001 - Kanata - Beaverbrook,Townhouse,exterior_score,0.022452,2.4861,0.799185

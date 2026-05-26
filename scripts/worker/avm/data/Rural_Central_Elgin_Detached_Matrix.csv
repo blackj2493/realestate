@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0234
-lot_width,0.0646
-bedrooms_above_grade,0.0118
-bathrooms_total_integer,0.0708
-parking_total,0.0379
-basement_score,0.0083
-interior_score,0.0161
-exterior_score,0.0304
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Central Elgin,Detached,building_area_total,0.054545,1658.7652,559.166179
+Rural Central Elgin,Detached,lot_width,0.013129,91.2268,104.459667
+Rural Central Elgin,Detached,bedrooms_above_grade,0.001825,2.9172,0.773459
+Rural Central Elgin,Detached,bathrooms_total_integer,0.09511,2.414,0.782325
+Rural Central Elgin,Detached,parking_total,0.071814,6.5478,3.503312
+Rural Central Elgin,Detached,basement_score,-0.014521,4.2548,1.599779
+Rural Central Elgin,Detached,interior_score,0.031024,3.465,0.899601
+Rural Central Elgin,Detached,exterior_score,0.032183,2.7643,0.93168

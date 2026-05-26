@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0571
-lot_width,-0.0298
-bedrooms_above_grade,0.0215
-bathrooms_total_integer,0.1064
-parking_total,0.021
-basement_score,0.0224
-interior_score,0.0335
-exterior_score,0.0121
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Humber Heights,Detached,building_area_total,0.077466,1812.7907,967.800973
+Humber Heights,Detached,lot_width,0.006778,50.1976,14.569275
+Humber Heights,Detached,bedrooms_above_grade,0.040834,3.0758,0.6351
+Humber Heights,Detached,bathrooms_total_integer,0.105807,2.7121,1.111444
+Humber Heights,Detached,parking_total,0.036083,4.8333,2.219632
+Humber Heights,Detached,basement_score,0.028658,6.3788,1.798696
+Humber Heights,Detached,interior_score,0.037293,3.197,1.221272
+Humber Heights,Detached,exterior_score,0.022507,2.3485,0.929197

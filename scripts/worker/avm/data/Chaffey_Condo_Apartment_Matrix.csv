@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.3026
-lot_width,-0.0077
-bedrooms_above_grade,-0.0543
-bathrooms_total_integer,0.0048
-parking_total,0.0132
-basement_score,0.0
-interior_score,0.0531
-exterior_score,0.058
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Chaffey,Condo Apartment,building_area_total,0.394033,964.7938,408.978257
+Chaffey,Condo Apartment,lot_width,0.0,0.0,1.0
+Chaffey,Condo Apartment,bedrooms_above_grade,-0.126101,1.56,0.60531
+Chaffey,Condo Apartment,bathrooms_total_integer,0.039526,1.46,0.573062
+Chaffey,Condo Apartment,parking_total,0.009192,1.78,3.584913
+Chaffey,Condo Apartment,basement_score,0.0,1.0,1.0
+Chaffey,Condo Apartment,interior_score,0.129447,3.48,0.854166
+Chaffey,Condo Apartment,exterior_score,-0.033049,2.84,1.065082

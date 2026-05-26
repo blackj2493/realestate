@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0275
-lot_width,0.1156
-bedrooms_above_grade,0.0104
-bathrooms_total_integer,0.1125
-parking_total,0.1329
-basement_score,0.0306
-interior_score,0.0302
-exterior_score,0.0247
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bridle Path-Sunnybrook-York Mills,Detached,building_area_total,0.059442,3390.2778,921.865518
+Bridle Path-Sunnybrook-York Mills,Detached,lot_width,0.153268,83.6282,46.424377
+Bridle Path-Sunnybrook-York Mills,Detached,bedrooms_above_grade,0.024817,3.9552,1.138641
+Bridle Path-Sunnybrook-York Mills,Detached,bathrooms_total_integer,0.046685,4.9403,2.278259
+Bridle Path-Sunnybrook-York Mills,Detached,parking_total,0.123099,6.4851,3.29288
+Bridle Path-Sunnybrook-York Mills,Detached,basement_score,0.034735,6.194,2.240994
+Bridle Path-Sunnybrook-York Mills,Detached,interior_score,0.094356,3.5821,1.394544
+Bridle Path-Sunnybrook-York Mills,Detached,exterior_score,0.019529,2.9552,0.953123

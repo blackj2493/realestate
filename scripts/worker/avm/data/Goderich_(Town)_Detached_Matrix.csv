@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.046
-lot_width,-0.0407
-bedrooms_above_grade,-0.0228
-bathrooms_total_integer,0.0575
-parking_total,0.0335
-basement_score,-0.0074
-interior_score,0.0346
-exterior_score,0.0324
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Goderich (Town),Detached,building_area_total,0.028839,1572.8424,523.13117
+Goderich (Town),Detached,lot_width,0.011649,66.0258,17.748646
+Goderich (Town),Detached,bedrooms_above_grade,-0.029383,2.8438,0.774975
+Goderich (Town),Detached,bathrooms_total_integer,0.104968,2.0312,0.660699
+Goderich (Town),Detached,parking_total,0.02302,4.1797,1.811136
+Goderich (Town),Detached,basement_score,-0.000204,4.7344,1.259243
+Goderich (Town),Detached,interior_score,0.07228,3.1953,0.935904
+Goderich (Town),Detached,exterior_score,0.03414,2.6328,0.789295

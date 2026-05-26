@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0374
-lot_width,-0.0036
-bedrooms_above_grade,0.0112
-bathrooms_total_integer,0.0162
-parking_total,0.0154
-basement_score,0.0
-interior_score,0.0163
-exterior_score,0.0241
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mount Olive-Silverstone-Jamestown,Condo Apartment,building_area_total,0.048325,1127.2222,156.198078
+Mount Olive-Silverstone-Jamestown,Condo Apartment,lot_width,0.0,0.0,1.0
+Mount Olive-Silverstone-Jamestown,Condo Apartment,bedrooms_above_grade,0.004316,2.0222,0.393779
+Mount Olive-Silverstone-Jamestown,Condo Apartment,bathrooms_total_integer,0.025827,1.9111,0.284583
+Mount Olive-Silverstone-Jamestown,Condo Apartment,parking_total,0.010799,1.2222,0.466137
+Mount Olive-Silverstone-Jamestown,Condo Apartment,basement_score,0.0,1.0,1.0
+Mount Olive-Silverstone-Jamestown,Condo Apartment,interior_score,0.034245,3.6889,0.811644
+Mount Olive-Silverstone-Jamestown,Condo Apartment,exterior_score,0.000721,2.3333,0.881917

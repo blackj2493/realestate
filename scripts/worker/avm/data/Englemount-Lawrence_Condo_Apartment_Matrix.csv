@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0537
-lot_width,0.0
-bedrooms_above_grade,0.1152
-bathrooms_total_integer,0.0182
-parking_total,0.0012
-basement_score,0.0
-interior_score,0.029
-exterior_score,-0.0175
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Englemount-Lawrence,Condo Apartment,building_area_total,0.04435,831.9444,305.312403
+Englemount-Lawrence,Condo Apartment,lot_width,0.0,0.0,1.0
+Englemount-Lawrence,Condo Apartment,bedrooms_above_grade,0.049506,1.6111,0.678142
+Englemount-Lawrence,Condo Apartment,bathrooms_total_integer,0.060144,1.5417,0.525397
+Englemount-Lawrence,Condo Apartment,parking_total,0.022716,0.9028,0.339923
+Englemount-Lawrence,Condo Apartment,basement_score,0.0,1.0,1.0
+Englemount-Lawrence,Condo Apartment,interior_score,0.014853,3.7222,0.88541
+Englemount-Lawrence,Condo Apartment,exterior_score,-0.020353,1.9306,0.732696

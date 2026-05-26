@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0204
-lot_width,0.0318
-bedrooms_above_grade,0.0666
-bathrooms_total_integer,0.0145
-parking_total,0.0135
-basement_score,0.0051
-interior_score,0.0057
-exterior_score,0.0133
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,building_area_total,0.041308,2307.7778,612.912497
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,lot_width,0.02223,40.6626,10.461882
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,bedrooms_above_grade,0.04123,3.4783,0.580072
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,bathrooms_total_integer,0.023219,3.4638,0.603845
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,parking_total,0.02281,4.4565,1.166374
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,basement_score,0.008278,4.8406,0.438151
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,interior_score,0.016851,3.6522,1.060846
+7703 - Barrhaven - Cedargrove/Fraserdale,Detached,exterior_score,-0.000745,2.9565,0.824178

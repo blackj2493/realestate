@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0821
-lot_width,0.0
-bedrooms_above_grade,-0.0215
-bathrooms_total_integer,0.0048
-parking_total,0.0289
-basement_score,-0.0504
-interior_score,0.0219
-exterior_score,0.0171
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bayview Village,Townhouse,building_area_total,0.092005,1380.3922,351.757274
+Bayview Village,Townhouse,lot_width,0.0,26.655,1.655
+Bayview Village,Townhouse,bedrooms_above_grade,-0.017942,2.8462,0.600788
+Bayview Village,Townhouse,bathrooms_total_integer,0.033958,2.75,0.646737
+Bayview Village,Townhouse,parking_total,0.026251,1.6731,0.508435
+Bayview Village,Townhouse,basement_score,-0.031232,3.4808,2.274359
+Bayview Village,Townhouse,interior_score,0.032174,4.0577,0.92847
+Bayview Village,Townhouse,exterior_score,0.021418,2.1923,0.785407

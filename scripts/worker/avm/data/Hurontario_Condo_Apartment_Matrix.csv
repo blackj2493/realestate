@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0932
-lot_width,0.0
-bedrooms_above_grade,0.0149
-bathrooms_total_integer,0.0164
-parking_total,-0.0092
-basement_score,0.0
-interior_score,0.0245
-exterior_score,-0.018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Hurontario,Condo Apartment,building_area_total,0.12154,973.0273,290.298949
+Hurontario,Condo Apartment,lot_width,0.0,0.0,1.0
+Hurontario,Condo Apartment,bedrooms_above_grade,0.007766,1.7773,0.501204
+Hurontario,Condo Apartment,bathrooms_total_integer,0.010895,1.7227,0.464811
+Hurontario,Condo Apartment,parking_total,-0.011201,1.3164,0.535356
+Hurontario,Condo Apartment,basement_score,0.0,1.0,1.0
+Hurontario,Condo Apartment,interior_score,0.022684,3.9453,0.783707
+Hurontario,Condo Apartment,exterior_score,-0.01496,2.2773,0.793796

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Jefferson,Townhouse,building_area_total,0.077281,1823.8889,362.263546
+Jefferson,Townhouse,lot_width,-0.002588,25.0489,11.401799
+Jefferson,Townhouse,bedrooms_above_grade,0.017063,3.1845,0.49752
+Jefferson,Townhouse,bathrooms_total_integer,0.033548,3.5728,0.691164
+Jefferson,Townhouse,parking_total,0.032254,2.7282,0.987241
+Jefferson,Townhouse,basement_score,0.033685,5.0485,2.517429
+Jefferson,Townhouse,interior_score,0.01629,3.7379,0.891831
+Jefferson,Townhouse,exterior_score,0.019939,2.2621,1.051685

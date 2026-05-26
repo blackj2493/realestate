@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.222
-lot_width,0.0
-bedrooms_above_grade,-0.0108
-bathrooms_total_integer,0.0048
-parking_total,-0.0137
-basement_score,-0.0037
-interior_score,0.0334
-exterior_score,0.0363
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Belleville Ward,Condo Apartment,building_area_total,0.265389,950.9804,289.775132
+Belleville Ward,Condo Apartment,lot_width,0.0,0.0,1.0
+Belleville Ward,Condo Apartment,bedrooms_above_grade,-0.033893,1.8431,0.414092
+Belleville Ward,Condo Apartment,bathrooms_total_integer,0.031379,1.3725,0.522467
+Belleville Ward,Condo Apartment,parking_total,-0.040636,1.0,0.19803
+Belleville Ward,Condo Apartment,basement_score,-0.061227,1.2745,1.373109
+Belleville Ward,Condo Apartment,interior_score,0.00763,3.6863,0.727343
+Belleville Ward,Condo Apartment,exterior_score,0.023386,2.8627,0.950121

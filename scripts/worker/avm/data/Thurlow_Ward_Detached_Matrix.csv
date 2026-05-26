@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0248
-lot_width,0.033
-bedrooms_above_grade,0.0102
-bathrooms_total_integer,0.1219
-parking_total,0.0262
-basement_score,0.0231
-interior_score,0.039
-exterior_score,0.0117
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Thurlow Ward,Detached,building_area_total,0.052701,1756.0148,593.134914
+Thurlow Ward,Detached,lot_width,0.046394,125.5057,176.350232
+Thurlow Ward,Detached,bedrooms_above_grade,0.005699,3.0163,0.797248
+Thurlow Ward,Detached,bathrooms_total_integer,0.111145,2.5978,0.834836
+Thurlow Ward,Detached,parking_total,-0.012233,6.5136,3.31844
+Thurlow Ward,Detached,basement_score,0.039537,4.9185,1.734837
+Thurlow Ward,Detached,interior_score,0.064909,3.5543,0.987576
+Thurlow Ward,Detached,exterior_score,0.046122,2.6467,0.807701

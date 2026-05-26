@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0736
-lot_width,0.0577
-bedrooms_above_grade,-0.0053
-bathrooms_total_integer,0.1205
-parking_total,0.033
-basement_score,0.0162
-interior_score,0.0458
-exterior_score,0.0349
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+44 - City North of 401,Detached,building_area_total,0.0451,1865.4735,864.523374
+44 - City North of 401,Detached,lot_width,0.033272,205.5652,175.876783
+44 - City North of 401,Detached,bedrooms_above_grade,0.014224,2.9823,0.678133
+44 - City North of 401,Detached,bathrooms_total_integer,0.141334,2.1504,0.800677
+44 - City North of 401,Detached,parking_total,0.063944,7.9204,3.304975
+44 - City North of 401,Detached,basement_score,-0.002859,4.9735,1.984275
+44 - City North of 401,Detached,interior_score,0.034407,3.1681,0.861185
+44 - City North of 401,Detached,exterior_score,0.053557,2.6372,0.82077

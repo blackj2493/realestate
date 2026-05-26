@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0718
-lot_width,0.0387
-bedrooms_above_grade,0.012
-bathrooms_total_integer,0.0249
-parking_total,0.0113
-basement_score,0.0123
-interior_score,0.0141
-exterior_score,0.0181
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Oak Ridges,Detached,building_area_total,0.089451,2720.6897,648.973625
+Oak Ridges,Detached,lot_width,0.053617,47.1179,24.299191
+Oak Ridges,Detached,bedrooms_above_grade,0.008693,3.9254,0.593835
+Oak Ridges,Detached,bathrooms_total_integer,0.019994,4.0597,0.740726
+Oak Ridges,Detached,parking_total,0.014263,5.1716,1.379629
+Oak Ridges,Detached,basement_score,0.016514,5.6866,1.566524
+Oak Ridges,Detached,interior_score,0.012704,3.791,1.072552
+Oak Ridges,Detached,exterior_score,0.016896,2.8134,0.939736

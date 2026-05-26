@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0938
-lot_width,0.0348
-bedrooms_above_grade,0.0065
-bathrooms_total_integer,0.0867
-parking_total,0.0719
-basement_score,0.0596
-interior_score,0.0756
-exterior_score,0.055
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Severn,Detached,building_area_total,0.115527,1849.6403,818.448881
+Rural Severn,Detached,lot_width,0.015372,241.7412,260.443352
+Rural Severn,Detached,bedrooms_above_grade,0.032847,2.9538,0.77322
+Rural Severn,Detached,bathrooms_total_integer,0.116015,2.4077,1.012963
+Rural Severn,Detached,parking_total,0.088365,10.8923,5.982341
+Rural Severn,Detached,basement_score,0.041994,4.4692,2.493649
+Rural Severn,Detached,interior_score,0.083246,3.3077,1.101371
+Rural Severn,Detached,exterior_score,0.052962,2.8154,1.050894

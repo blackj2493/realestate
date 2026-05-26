@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0484
-lot_width,0.0418
-bedrooms_above_grade,0.0114
-bathrooms_total_integer,0.0848
-parking_total,0.0212
-basement_score,0.029
-interior_score,0.0161
-exterior_score,0.0083
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+773 - Lincoln/Crowland,Detached,building_area_total,0.053224,1296.815,437.848194
+773 - Lincoln/Crowland,Detached,lot_width,0.021458,46.4024,14.768722
+773 - Lincoln/Crowland,Detached,bedrooms_above_grade,0.012688,2.9219,0.815948
+773 - Lincoln/Crowland,Detached,bathrooms_total_integer,0.097793,1.9297,0.807035
+773 - Lincoln/Crowland,Detached,parking_total,0.035002,3.9004,1.94023
+773 - Lincoln/Crowland,Detached,basement_score,0.048398,4.9219,1.850293
+773 - Lincoln/Crowland,Detached,interior_score,0.012911,2.9258,0.963372
+773 - Lincoln/Crowland,Detached,exterior_score,0.02442,2.1133,0.660595

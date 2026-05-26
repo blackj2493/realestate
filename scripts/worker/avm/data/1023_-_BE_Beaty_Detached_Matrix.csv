@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0673
-lot_width,0.0299
-bedrooms_above_grade,0.0207
-bathrooms_total_integer,0.012
-parking_total,0.0069
-basement_score,-0.0097
-interior_score,0.009
-exterior_score,0.0057
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1023 - BE Beaty,Detached,building_area_total,0.06294,2245.7059,573.021534
+1023 - BE Beaty,Detached,lot_width,0.036451,42.9701,8.332358
+1023 - BE Beaty,Detached,bedrooms_above_grade,0.006289,3.5948,0.642979
+1023 - BE Beaty,Detached,bathrooms_total_integer,0.015498,3.6034,0.59999
+1023 - BE Beaty,Detached,parking_total,0.02074,3.9828,1.15208
+1023 - BE Beaty,Detached,basement_score,0.013476,5.1897,1.016364
+1023 - BE Beaty,Detached,interior_score,0.009106,3.8534,0.912124
+1023 - BE Beaty,Detached,exterior_score,0.003732,2.5,0.88571

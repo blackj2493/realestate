@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0938
-lot_width,0.04
-bedrooms_above_grade,-0.0027
-bathrooms_total_integer,0.0388
-parking_total,0.0331
-basement_score,-0.0141
-interior_score,0.0296
-exterior_score,0.0259
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central Newmarket,Detached,building_area_total,0.100514,1527.5281,515.109415
+Central Newmarket,Detached,lot_width,0.037659,55.1272,19.850416
+Central Newmarket,Detached,bedrooms_above_grade,-0.007906,3.1795,0.661717
+Central Newmarket,Detached,bathrooms_total_integer,0.04278,2.4872,0.746678
+Central Newmarket,Detached,parking_total,0.042955,4.6282,1.873287
+Central Newmarket,Detached,basement_score,0.001069,5.5641,1.691531
+Central Newmarket,Detached,interior_score,0.028245,3.453,1.09775
+Central Newmarket,Detached,exterior_score,0.022229,2.3504,0.860493

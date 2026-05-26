@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0803
-lot_width,0.0
-bedrooms_above_grade,-0.0177
-bathrooms_total_integer,0.0688
-parking_total,0.0001
-basement_score,0.0
-interior_score,0.0703
-exterior_score,-0.019
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Briar Hill-Belgravia,Condo Apartment,building_area_total,0.035635,997.9592,225.867756
+Briar Hill-Belgravia,Condo Apartment,lot_width,0.0,0.0,1.0
+Briar Hill-Belgravia,Condo Apartment,bedrooms_above_grade,0.037524,2.0204,0.742027
+Briar Hill-Belgravia,Condo Apartment,bathrooms_total_integer,0.062343,1.6122,0.487238
+Briar Hill-Belgravia,Condo Apartment,parking_total,0.008335,0.9592,0.197864
+Briar Hill-Belgravia,Condo Apartment,basement_score,0.0,1.0,1.0
+Briar Hill-Belgravia,Condo Apartment,interior_score,0.040626,3.898,0.814283
+Briar Hill-Belgravia,Condo Apartment,exterior_score,-0.028194,1.8776,0.658776

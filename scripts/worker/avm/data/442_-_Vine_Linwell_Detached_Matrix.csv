@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0233
-lot_width,0.0255
-bedrooms_above_grade,0.01
-bathrooms_total_integer,0.0384
-parking_total,0.0142
-basement_score,0.0111
-interior_score,0.0352
-exterior_score,0.0159
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+442 - Vine/Linwell,Detached,building_area_total,0.024401,1252.0458,400.546528
+442 - Vine/Linwell,Detached,lot_width,0.004627,63.6814,16.437044
+442 - Vine/Linwell,Detached,bedrooms_above_grade,0.019723,2.8882,0.589702
+442 - Vine/Linwell,Detached,bathrooms_total_integer,0.040843,2.0559,0.48899
+442 - Vine/Linwell,Detached,parking_total,0.022023,4.9348,1.610457
+442 - Vine/Linwell,Detached,basement_score,0.018252,5.2236,1.260854
+442 - Vine/Linwell,Detached,interior_score,0.03647,3.3292,1.044217
+442 - Vine/Linwell,Detached,exterior_score,0.019954,2.6087,0.979123

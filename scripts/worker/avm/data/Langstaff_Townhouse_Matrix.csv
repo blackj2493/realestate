@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Langstaff,Townhouse,building_area_total,0.030876,1635.2941,233.95452
+Langstaff,Townhouse,lot_width,0.01723,21.9953,5.839714
+Langstaff,Townhouse,bedrooms_above_grade,0.004982,3.0167,0.341158
+Langstaff,Townhouse,bathrooms_total_integer,0.03526,3.4667,0.590668
+Langstaff,Townhouse,parking_total,0.024797,2.6,0.820569
+Langstaff,Townhouse,basement_score,-0.005344,5.0333,1.712373
+Langstaff,Townhouse,interior_score,0.025284,3.7167,0.732386
+Langstaff,Townhouse,exterior_score,0.015773,1.6833,0.645282

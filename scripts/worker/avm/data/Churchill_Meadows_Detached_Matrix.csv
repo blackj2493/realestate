@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0645
-lot_width,0.0289
-bedrooms_above_grade,0.0259
-bathrooms_total_integer,0.0211
-parking_total,-0.0065
-basement_score,0.0084
-interior_score,0.0064
-exterior_score,0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Churchill Meadows,Detached,building_area_total,0.078786,2509.3333,576.022211
+Churchill Meadows,Detached,lot_width,0.009494,40.8753,9.576656
+Churchill Meadows,Detached,bedrooms_above_grade,0.037536,3.8472,0.476087
+Churchill Meadows,Detached,bathrooms_total_integer,0.027675,4.0069,0.692184
+Churchill Meadows,Detached,parking_total,0.001485,4.6111,1.112499
+Churchill Meadows,Detached,basement_score,0.001238,5.4444,1.262591
+Churchill Meadows,Detached,interior_score,0.006223,3.8264,1.043032
+Churchill Meadows,Detached,exterior_score,0.014139,2.3472,0.937783

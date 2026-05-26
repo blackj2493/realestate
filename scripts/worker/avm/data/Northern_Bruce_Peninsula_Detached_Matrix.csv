@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0266
-lot_width,0.0762
-bedrooms_above_grade,0.0108
-bathrooms_total_integer,0.1549
-parking_total,0.0166
-basement_score,0.0303
-interior_score,0.0665
-exterior_score,0.1003
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northern Bruce Peninsula,Detached,building_area_total,0.04402,1504.7032,564.958312
+Northern Bruce Peninsula,Detached,lot_width,0.030188,201.7746,317.438995
+Northern Bruce Peninsula,Detached,bedrooms_above_grade,0.057712,2.6993,0.946358
+Northern Bruce Peninsula,Detached,bathrooms_total_integer,0.115566,1.7273,0.837761
+Northern Bruce Peninsula,Detached,parking_total,0.040131,6.472,3.393111
+Northern Bruce Peninsula,Detached,basement_score,0.041889,3.8951,2.714152
+Northern Bruce Peninsula,Detached,interior_score,0.080699,3.1888,0.876668
+Northern Bruce Peninsula,Detached,exterior_score,0.116405,2.7902,1.076469

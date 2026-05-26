@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Heart Lake East,Townhouse,building_area_total,0.023427,1567.9487,270.442937
+Heart Lake East,Townhouse,lot_width,-0.005673,56.2614,249.427037
+Heart Lake East,Townhouse,bedrooms_above_grade,-0.005209,3.0784,0.268849
+Heart Lake East,Townhouse,bathrooms_total_integer,0.012598,3.0784,0.882135
+Heart Lake East,Townhouse,parking_total,-0.004483,2.7451,1.081813
+Heart Lake East,Townhouse,basement_score,0.002117,5.7451,1.856025
+Heart Lake East,Townhouse,interior_score,0.001245,3.5294,0.915079
+Heart Lake East,Townhouse,exterior_score,0.005656,2.8431,1.126726

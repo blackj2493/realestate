@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0145
-lot_width,0.0549
-bedrooms_above_grade,0.0174
-bathrooms_total_integer,0.0492
-parking_total,0.0718
-basement_score,0.0464
-interior_score,0.0358
-exterior_score,0.0255
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+605 - The Nation Municipality,Detached,building_area_total,0.041195,1390.411,415.673866
+605 - The Nation Municipality,Detached,lot_width,0.011927,153.7365,96.993781
+605 - The Nation Municipality,Detached,bedrooms_above_grade,0.004293,2.7155,0.87893
+605 - The Nation Municipality,Detached,bathrooms_total_integer,0.098693,1.931,0.678794
+605 - The Nation Municipality,Detached,parking_total,0.096339,7.181,3.487908
+605 - The Nation Municipality,Detached,basement_score,0.058172,4.2759,1.387047
+605 - The Nation Municipality,Detached,interior_score,0.039538,3.3276,0.898043
+605 - The Nation Municipality,Detached,exterior_score,0.03025,2.431,0.853231

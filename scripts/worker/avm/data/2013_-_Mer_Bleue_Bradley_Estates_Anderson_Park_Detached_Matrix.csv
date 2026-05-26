@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0423
-lot_width,0.0392
-bedrooms_above_grade,0.0506
-bathrooms_total_integer,0.0273
-parking_total,0.006
-basement_score,-0.0051
-interior_score,0.0221
-exterior_score,0.0201
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,building_area_total,0.056447,2341.1111,514.920586
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,lot_width,-3e-05,41.0852,15.236918
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,bedrooms_above_grade,0.009001,3.4603,0.773066
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,bathrooms_total_integer,0.048794,3.3175,0.662496
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,parking_total,0.004323,4.8571,1.307574
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,basement_score,-0.000139,4.9206,0.513364
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,interior_score,0.004572,3.9683,0.925276
+2013 - Mer Bleue/Bradley Estates/Anderson Park,Detached,exterior_score,0.046105,2.873,0.826007

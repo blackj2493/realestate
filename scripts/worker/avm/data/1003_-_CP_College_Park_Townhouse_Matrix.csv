@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1003 - CP College Park,Townhouse,building_area_total,0.03329,1497.381,285.051203
+1003 - CP College Park,Townhouse,lot_width,0.0,16.024,2.814499
+1003 - CP College Park,Townhouse,bedrooms_above_grade,-0.021981,3.0,0.213201
+1003 - CP College Park,Townhouse,bathrooms_total_integer,0.006236,2.4773,0.543082
+1003 - CP College Park,Townhouse,parking_total,0.053687,2.1477,0.758134
+1003 - CP College Park,Townhouse,basement_score,-0.013141,5.6364,2.514421
+1003 - CP College Park,Townhouse,interior_score,-0.004393,3.9091,0.701239
+1003 - CP College Park,Townhouse,exterior_score,0.00162,2.2045,0.893907

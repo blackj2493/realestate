@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0263
-lot_width,-0.0277
-bedrooms_above_grade,-0.011
-bathrooms_total_integer,0.0537
-parking_total,0.0482
-basement_score,0.0164
-interior_score,0.0092
-exterior_score,0.0189
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Otonabee Ward 1,Detached,building_area_total,0.037463,1206.9378,419.372054
+Otonabee Ward 1,Detached,lot_width,0.002174,49.1331,14.646723
+Otonabee Ward 1,Detached,bedrooms_above_grade,-0.005895,2.6628,0.701202
+Otonabee Ward 1,Detached,bathrooms_total_integer,0.07383,2.023,0.710787
+Otonabee Ward 1,Detached,parking_total,0.04484,3.8238,1.734695
+Otonabee Ward 1,Detached,basement_score,0.025296,5.2759,1.558733
+Otonabee Ward 1,Detached,interior_score,0.019435,3.0843,0.880059
+Otonabee Ward 1,Detached,exterior_score,0.029035,2.3678,0.734194

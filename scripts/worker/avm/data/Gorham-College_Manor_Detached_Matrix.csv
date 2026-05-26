@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0287
-lot_width,-0.032
-bedrooms_above_grade,0.0164
-bathrooms_total_integer,0.1124
-parking_total,0.0189
-basement_score,-0.0135
-interior_score,0.0298
-exterior_score,0.0095
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Gorham-College Manor,Detached,building_area_total,0.057905,1708.9012,555.745781
+Gorham-College Manor,Detached,lot_width,-0.005327,52.5308,17.804799
+Gorham-College Manor,Detached,bedrooms_above_grade,0.028797,3.3208,0.720942
+Gorham-College Manor,Detached,bathrooms_total_integer,0.087981,2.8868,0.993571
+Gorham-College Manor,Detached,parking_total,0.022742,5.3821,1.627523
+Gorham-College Manor,Detached,basement_score,0.006273,5.8113,1.908834
+Gorham-College Manor,Detached,interior_score,0.044053,3.2642,1.048826
+Gorham-College Manor,Detached,exterior_score,-0.00081,2.4906,0.973665

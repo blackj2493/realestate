@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0284
-lot_width,0.0735
-bedrooms_above_grade,0.0595
-bathrooms_total_integer,0.0149
-parking_total,0.0113
-basement_score,0.0128
-interior_score,0.0056
-exterior_score,0.0025
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Downtown Brampton,Detached,building_area_total,0.048207,1729.5789,623.677111
+Downtown Brampton,Detached,lot_width,0.031858,49.6614,22.086979
+Downtown Brampton,Detached,bedrooms_above_grade,0.066458,3.1404,0.825867
+Downtown Brampton,Detached,bathrooms_total_integer,0.027016,2.5263,0.839909
+Downtown Brampton,Detached,parking_total,0.001343,4.8772,1.67615
+Downtown Brampton,Detached,basement_score,0.020732,5.8596,1.680002
+Downtown Brampton,Detached,interior_score,0.026112,3.0877,1.047649
+Downtown Brampton,Detached,exterior_score,0.012619,2.5263,0.993051

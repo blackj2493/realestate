@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0636
-lot_width,0.0
-bedrooms_above_grade,0.0821
-bathrooms_total_integer,0.0192
-parking_total,0.0035
-basement_score,-0.0002
-interior_score,0.0136
-exterior_score,0.015
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Willowdale East,Condo Apartment,building_area_total,0.07766,858.5903,268.027676
+Willowdale East,Condo Apartment,lot_width,0.0,0.0,1.0
+Willowdale East,Condo Apartment,bedrooms_above_grade,0.052036,1.5977,0.546993
+Willowdale East,Condo Apartment,bathrooms_total_integer,0.045189,1.6035,0.518316
+Willowdale East,Condo Apartment,parking_total,0.00907,1.0294,0.309925
+Willowdale East,Condo Apartment,basement_score,-0.002841,1.0029,0.076584
+Willowdale East,Condo Apartment,interior_score,0.013709,4.0235,0.817956
+Willowdale East,Condo Apartment,exterior_score,0.00245,2.072,0.577953

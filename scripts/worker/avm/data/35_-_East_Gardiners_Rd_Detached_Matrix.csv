@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0751
-lot_width,0.0186
-bedrooms_above_grade,0.0159
-bathrooms_total_integer,0.008
-parking_total,0.0117
-basement_score,0.0111
-interior_score,0.0223
-exterior_score,0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+35 - East Gardiners Rd,Detached,building_area_total,0.050003,1651.2949,476.666269
+35 - East Gardiners Rd,Detached,lot_width,0.00854,45.0384,13.95067
+35 - East Gardiners Rd,Detached,bedrooms_above_grade,0.004912,3.0267,0.610428
+35 - East Gardiners Rd,Detached,bathrooms_total_integer,0.041646,2.8533,0.811473
+35 - East Gardiners Rd,Detached,parking_total,0.018881,4.3267,1.260934
+35 - East Gardiners Rd,Detached,basement_score,0.018183,5.28,1.554006
+35 - East Gardiners Rd,Detached,interior_score,0.016706,3.4933,0.899975
+35 - East Gardiners Rd,Detached,exterior_score,-0.005992,2.6667,0.821922

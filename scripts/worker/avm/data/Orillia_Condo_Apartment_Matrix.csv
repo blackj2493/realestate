@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1844
-lot_width,-0.0007
-bedrooms_above_grade,-0.0083
-bathrooms_total_integer,0.0439
-parking_total,-0.0229
-basement_score,-0.0133
-interior_score,0.0471
-exterior_score,0.093
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Orillia,Condo Apartment,building_area_total,0.115544,1160.36,291.063001
+Orillia,Condo Apartment,lot_width,0.0,0.0,1.0
+Orillia,Condo Apartment,bedrooms_above_grade,0.011213,1.84,0.463033
+Orillia,Condo Apartment,bathrooms_total_integer,0.134188,1.84,0.504381
+Orillia,Condo Apartment,parking_total,-0.042487,2.18,7.420755
+Orillia,Condo Apartment,basement_score,-0.023014,1.22,1.118749
+Orillia,Condo Apartment,interior_score,0.050589,3.68,0.835225
+Orillia,Condo Apartment,exterior_score,0.086178,3.1,1.024695

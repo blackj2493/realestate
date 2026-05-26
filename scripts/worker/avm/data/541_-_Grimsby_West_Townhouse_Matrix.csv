@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+541 - Grimsby West,Townhouse,building_area_total,0.02539,1460.2273,232.716064
+541 - Grimsby West,Townhouse,lot_width,-0.010498,21.462,6.829682
+541 - Grimsby West,Townhouse,bedrooms_above_grade,0.003841,2.6875,0.463512
+541 - Grimsby West,Townhouse,bathrooms_total_integer,0.051927,2.5833,0.731247
+541 - Grimsby West,Townhouse,parking_total,0.028146,2.3542,1.010148
+541 - Grimsby West,Townhouse,basement_score,0.007265,4.9375,1.930093
+541 - Grimsby West,Townhouse,interior_score,0.013462,3.5625,0.674112
+541 - Grimsby West,Townhouse,exterior_score,0.011581,2.3542,0.749711

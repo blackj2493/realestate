@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1032 - FO Ford,Townhouse,building_area_total,0.022508,1686.7723,285.025164
+1032 - FO Ford,Townhouse,lot_width,0.011581,51.9754,207.800196
+1032 - FO Ford,Townhouse,bedrooms_above_grade,0.024722,3.0702,0.557553
+1032 - FO Ford,Townhouse,bathrooms_total_integer,0.007797,3.193,0.493416
+1032 - FO Ford,Townhouse,parking_total,0.00321,2.4737,0.533287
+1032 - FO Ford,Townhouse,basement_score,0.041657,3.0088,2.010916
+1032 - FO Ford,Townhouse,interior_score,0.006558,3.9386,0.840688
+1032 - FO Ford,Townhouse,exterior_score,0.003108,2.2105,0.754794

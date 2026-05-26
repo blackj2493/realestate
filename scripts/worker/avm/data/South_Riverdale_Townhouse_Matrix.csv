@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0799
-lot_width,0.0
-bedrooms_above_grade,-0.0192
-bathrooms_total_integer,0.0541
-parking_total,0.006
-basement_score,-0.0345
-interior_score,0.0229
-exterior_score,0.0492
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South Riverdale,Townhouse,building_area_total,0.100769,1353.7383,400.974335
+South Riverdale,Townhouse,lot_width,-0.022089,12.4633,26.280852
+South Riverdale,Townhouse,bedrooms_above_grade,0.038761,2.672,0.666645
+South Riverdale,Townhouse,bathrooms_total_integer,0.045066,2.216,0.765078
+South Riverdale,Townhouse,parking_total,0.014672,1.012,0.722396
+South Riverdale,Townhouse,basement_score,0.054254,3.944,2.39434
+South Riverdale,Townhouse,interior_score,0.071103,3.712,0.994513
+South Riverdale,Townhouse,exterior_score,0.021722,2.36,0.741889

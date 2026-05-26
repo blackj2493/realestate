@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1056
-lot_width,-0.0779
-bedrooms_above_grade,0.025
-bathrooms_total_integer,0.0346
-parking_total,0.0547
-basement_score,0.0073
-interior_score,0.0443
-exterior_score,0.0076
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+New Liskeard,Detached,building_area_total,0.048795,1276.2626,380.280561
+New Liskeard,Detached,lot_width,0.018828,67.3611,40.647088
+New Liskeard,Detached,bedrooms_above_grade,0.038906,2.8788,0.819864
+New Liskeard,Detached,bathrooms_total_integer,0.068449,2.0303,0.673519
+New Liskeard,Detached,parking_total,0.069035,4.4444,3.327942
+New Liskeard,Detached,basement_score,0.06446,4.6162,0.960924
+New Liskeard,Detached,interior_score,0.04737,3.202,0.840632
+New Liskeard,Detached,exterior_score,-0.007188,2.1919,0.720224

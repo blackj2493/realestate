@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2833
-lot_width,0.0
-bedrooms_above_grade,0.046
-bathrooms_total_integer,0.0608
-parking_total,-0.0062
-basement_score,0.0
-interior_score,-0.0208
-exterior_score,-0.034
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Blue Mountains,Condo Apartment,building_area_total,0.164573,761.7424,347.454654
+Blue Mountains,Condo Apartment,lot_width,0.0,0.0,1.0
+Blue Mountains,Condo Apartment,bedrooms_above_grade,0.159341,1.3636,0.864035
+Blue Mountains,Condo Apartment,bathrooms_total_integer,0.029979,1.4394,0.630747
+Blue Mountains,Condo Apartment,parking_total,-0.002596,1.0909,0.336077
+Blue Mountains,Condo Apartment,basement_score,-0.021216,1.0606,0.488622
+Blue Mountains,Condo Apartment,interior_score,-0.020296,3.5909,0.904153
+Blue Mountains,Condo Apartment,exterior_score,-0.039014,2.7424,0.803602

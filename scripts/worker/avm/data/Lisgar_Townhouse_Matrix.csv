@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lisgar,Townhouse,building_area_total,0.059609,1455.3571,291.345182
+Lisgar,Townhouse,lot_width,0.003811,19.8777,5.72392
+Lisgar,Townhouse,bedrooms_above_grade,0.007396,2.9242,0.316736
+Lisgar,Townhouse,bathrooms_total_integer,0.049844,2.8788,0.861907
+Lisgar,Townhouse,parking_total,0.02173,2.3939,0.736058
+Lisgar,Townhouse,basement_score,-0.003207,5.0455,1.862158
+Lisgar,Townhouse,interior_score,0.031711,3.803,0.838825
+Lisgar,Townhouse,exterior_score,0.007732,2.0303,0.852264

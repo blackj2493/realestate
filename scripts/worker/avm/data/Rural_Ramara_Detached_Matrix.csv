@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.047
-lot_width,-0.0609
-bedrooms_above_grade,-0.0147
-bathrooms_total_integer,0.1309
-parking_total,0.0422
-basement_score,-0.0329
-interior_score,0.0296
-exterior_score,0.0458
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Ramara,Detached,building_area_total,0.02306,1520.9914,534.34203
+Rural Ramara,Detached,lot_width,0.009828,144.3577,210.277741
+Rural Ramara,Detached,bedrooms_above_grade,-0.011417,2.9921,0.97606
+Rural Ramara,Detached,bathrooms_total_integer,0.145556,1.937,0.848788
+Rural Ramara,Detached,parking_total,0.041285,7.7638,3.744722
+Rural Ramara,Detached,basement_score,-0.016379,3.6142,2.839672
+Rural Ramara,Detached,interior_score,0.076379,3.189,0.985983
+Rural Ramara,Detached,exterior_score,0.075178,3.0866,1.050112

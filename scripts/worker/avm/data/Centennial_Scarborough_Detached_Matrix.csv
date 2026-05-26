@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0394
-lot_width,0.0236
-bedrooms_above_grade,0.0482
-bathrooms_total_integer,0.05
-parking_total,0.0143
-basement_score,0.0092
-interior_score,0.0135
-exterior_score,0.0206
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Centennial Scarborough,Detached,building_area_total,0.089127,2106.1798,711.456025
+Centennial Scarborough,Detached,lot_width,-0.000151,52.3842,20.430017
+Centennial Scarborough,Detached,bedrooms_above_grade,0.0171,3.6186,0.609522
+Centennial Scarborough,Detached,bathrooms_total_integer,0.040204,3.2119,0.832107
+Centennial Scarborough,Detached,parking_total,0.025328,4.6729,1.69579
+Centennial Scarborough,Detached,basement_score,0.01216,5.4831,1.769483
+Centennial Scarborough,Detached,interior_score,0.024228,3.5085,1.087259
+Centennial Scarborough,Detached,exterior_score,0.009136,2.8559,1.22319

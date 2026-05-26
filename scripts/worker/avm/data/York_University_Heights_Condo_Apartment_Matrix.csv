@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.046
-lot_width,0.0
-bedrooms_above_grade,-0.0166
-bathrooms_total_integer,0.085
-parking_total,0.0065
-basement_score,0.0
-interior_score,-0.0211
-exterior_score,-0.025
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+York University Heights,Condo Apartment,building_area_total,0.042741,836.8886,266.442324
+York University Heights,Condo Apartment,lot_width,0.0,0.0,1.0
+York University Heights,Condo Apartment,bedrooms_above_grade,-0.01502,1.6937,0.756864
+York University Heights,Condo Apartment,bathrooms_total_integer,0.080009,1.4955,0.534804
+York University Heights,Condo Apartment,parking_total,0.001824,0.9099,0.316215
+York University Heights,Condo Apartment,basement_score,0.0,1.0,1.0
+York University Heights,Condo Apartment,interior_score,-0.004301,3.6937,0.668369
+York University Heights,Condo Apartment,exterior_score,-0.034468,2.0991,0.599624

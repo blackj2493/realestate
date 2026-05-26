@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0567
-lot_width,0.0526
-bedrooms_above_grade,0.0109
-bathrooms_total_integer,0.0197
-parking_total,0.0076
-basement_score,-0.0042
-interior_score,0.006
-exterior_score,0.0031
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bram East,Detached,building_area_total,0.068812,2850.5917,728.904263
+Bram East,Detached,lot_width,0.034147,46.1206,19.170109
+Bram East,Detached,bedrooms_above_grade,0.027617,4.0194,0.557048
+Bram East,Detached,bathrooms_total_integer,0.035928,4.5097,0.953992
+Bram East,Detached,parking_total,0.029752,5.8204,2.154645
+Bram East,Detached,basement_score,-0.008855,6.3981,1.486769
+Bram East,Detached,interior_score,0.00988,3.6068,1.026708
+Bram East,Detached,exterior_score,0.002359,2.432,0.849182

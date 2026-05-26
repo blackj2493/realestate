@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South East,Townhouse,building_area_total,0.051363,1590.241,265.102735
+South East,Townhouse,lot_width,-0.003997,20.9937,3.341499
+South East,Townhouse,bedrooms_above_grade,0.002523,3.0938,0.410237
+South East,Townhouse,bathrooms_total_integer,0.041354,3.2083,0.67572
+South East,Townhouse,parking_total,-0.000741,2.3646,0.723415
+South East,Townhouse,basement_score,-0.007993,5.0521,1.769945
+South East,Townhouse,interior_score,0.014904,3.75,0.841625
+South East,Townhouse,exterior_score,-0.003427,2.6458,1.089526

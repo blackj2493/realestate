@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0788
-lot_width,0.0396
-bedrooms_above_grade,0.0079
-bathrooms_total_integer,0.0403
-parking_total,0.0339
-basement_score,-0.0015
-interior_score,0.0243
-exterior_score,0.0122
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mt Albert,Detached,building_area_total,0.088851,2167.2131,815.771045
+Mt Albert,Detached,lot_width,0.018786,62.2545,39.380706
+Mt Albert,Detached,bedrooms_above_grade,0.0071,3.3553,0.755749
+Mt Albert,Detached,bathrooms_total_integer,0.071774,3.1316,1.184795
+Mt Albert,Detached,parking_total,0.038577,6.4605,4.780555
+Mt Albert,Detached,basement_score,0.009177,5.6053,1.906215
+Mt Albert,Detached,interior_score,0.003965,3.6053,1.052303
+Mt Albert,Detached,exterior_score,0.025345,2.6184,0.931427

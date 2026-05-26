@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Tillsonburg,Townhouse,building_area_total,0.071106,1581.7749,265.127416
+Tillsonburg,Townhouse,lot_width,0.018579,26.0586,4.707113
+Tillsonburg,Townhouse,bedrooms_above_grade,-0.039202,2.7183,0.535582
+Tillsonburg,Townhouse,bathrooms_total_integer,0.073408,2.7887,0.603172
+Tillsonburg,Townhouse,parking_total,0.034907,2.7958,0.951565
+Tillsonburg,Townhouse,basement_score,-0.028436,4.6901,1.181924
+Tillsonburg,Townhouse,interior_score,-0.000221,3.1549,1.083134
+Tillsonburg,Townhouse,exterior_score,-0.003067,2.3662,0.736177

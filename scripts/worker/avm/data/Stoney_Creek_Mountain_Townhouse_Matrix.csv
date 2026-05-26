@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stoney Creek Mountain,Townhouse,building_area_total,0.024773,1612.3282,253.610251
+Stoney Creek Mountain,Townhouse,lot_width,0.02599,22.7234,7.362895
+Stoney Creek Mountain,Townhouse,bedrooms_above_grade,0.005477,2.9536,0.311751
+Stoney Creek Mountain,Townhouse,bathrooms_total_integer,0.043606,3.0397,0.550506
+Stoney Creek Mountain,Townhouse,parking_total,0.014116,2.3245,0.705228
+Stoney Creek Mountain,Townhouse,basement_score,0.00562,4.4768,2.102772
+Stoney Creek Mountain,Townhouse,interior_score,0.002894,3.7086,0.85807
+Stoney Creek Mountain,Townhouse,exterior_score,0.007677,2.4437,0.881268

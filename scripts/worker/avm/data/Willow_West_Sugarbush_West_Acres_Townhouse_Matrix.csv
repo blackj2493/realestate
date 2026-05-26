@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0836
-lot_width,0.0024
-bedrooms_above_grade,-0.0027
-bathrooms_total_integer,0.0274
-parking_total,0.0144
-basement_score,-0.008
-interior_score,0.011
-exterior_score,-0.0099
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Willow West/Sugarbush/West Acres,Townhouse,building_area_total,0.062318,1379.4023,316.836934
+Willow West/Sugarbush/West Acres,Townhouse,lot_width,0.0,21.3771,8.476229
+Willow West/Sugarbush/West Acres,Townhouse,bedrooms_above_grade,0.009674,2.9091,0.357909
+Willow West/Sugarbush/West Acres,Townhouse,bathrooms_total_integer,0.066061,2.3295,0.734253
+Willow West/Sugarbush/West Acres,Townhouse,parking_total,0.044281,1.8523,0.885999
+Willow West/Sugarbush/West Acres,Townhouse,basement_score,0.009038,4.7273,1.311897
+Willow West/Sugarbush/West Acres,Townhouse,interior_score,0.011786,3.5455,0.890724
+Willow West/Sugarbush/West Acres,Townhouse,exterior_score,0.003925,2.4205,0.821882

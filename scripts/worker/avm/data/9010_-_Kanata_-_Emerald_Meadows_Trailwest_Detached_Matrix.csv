@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.04
-lot_width,0.0297
-bedrooms_above_grade,0.0354
-bathrooms_total_integer,0.0137
-parking_total,0.0119
-basement_score,0.0033
-interior_score,0.0243
-exterior_score,0.0063
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,building_area_total,0.042,2252.9412,539.497475
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,lot_width,0.032286,38.8985,9.793607
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,bedrooms_above_grade,0.036409,3.6393,0.717451
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,bathrooms_total_integer,0.014115,3.5355,0.625152
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,parking_total,0.018962,4.6066,1.18661
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,basement_score,0.00853,4.9672,0.809112
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,interior_score,0.026993,4.1421,0.81752
+9010 - Kanata - Emerald Meadows/Trailwest,Detached,exterior_score,0.015022,2.6776,0.86832

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0463
-lot_width,0.0
-bedrooms_above_grade,0.0058
-bathrooms_total_integer,0.0303
-parking_total,0.006
-basement_score,0.0
-interior_score,0.0357
-exterior_score,0.0131
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Agincourt North,Condo Apartment,building_area_total,0.044021,850.0,188.843228
+Agincourt North,Condo Apartment,lot_width,0.0,0.0,1.0
+Agincourt North,Condo Apartment,bedrooms_above_grade,0.005523,1.6471,0.56268
+Agincourt North,Condo Apartment,bathrooms_total_integer,0.027429,1.5882,0.492153
+Agincourt North,Condo Apartment,parking_total,0.009882,1.1618,0.368235
+Agincourt North,Condo Apartment,basement_score,0.0,1.0,1.0
+Agincourt North,Condo Apartment,interior_score,0.023812,3.75,0.8973
+Agincourt North,Condo Apartment,exterior_score,0.010975,2.2794,0.744501

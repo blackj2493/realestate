@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0685
-lot_width,0.0
-bedrooms_above_grade,0.0144
-bathrooms_total_integer,0.0174
-parking_total,0.0139
-basement_score,0.0
-interior_score,0.0235
-exterior_score,0.0189
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+L'Amoreaux,Condo Apartment,building_area_total,0.081561,1337.5,269.073537
+L'Amoreaux,Condo Apartment,lot_width,0.0,0.0,1.0
+L'Amoreaux,Condo Apartment,bedrooms_above_grade,0.00578,2.1136,0.623379
+L'Amoreaux,Condo Apartment,bathrooms_total_integer,0.017779,1.9242,0.401158
+L'Amoreaux,Condo Apartment,parking_total,0.018053,1.2273,0.436774
+L'Amoreaux,Condo Apartment,basement_score,0.0,1.0,1.0
+L'Amoreaux,Condo Apartment,interior_score,0.028409,3.5606,0.846182
+L'Amoreaux,Condo Apartment,exterior_score,0.004605,2.3258,0.75374

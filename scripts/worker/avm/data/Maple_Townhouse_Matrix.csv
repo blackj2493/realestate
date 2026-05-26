@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Maple,Townhouse,building_area_total,0.035894,1569.3038,334.416868
+Maple,Townhouse,lot_width,0.018516,21.3522,8.95687
+Maple,Townhouse,bedrooms_above_grade,0.012786,3.0103,0.393107
+Maple,Townhouse,bathrooms_total_integer,0.0248,3.3093,0.647928
+Maple,Townhouse,parking_total,0.01564,2.701,0.898624
+Maple,Townhouse,basement_score,7e-05,5.5464,2.341999
+Maple,Townhouse,interior_score,-0.000473,3.8144,0.77765
+Maple,Townhouse,exterior_score,0.00135,2.2165,0.852248

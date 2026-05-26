@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1068
-lot_width,0.0
-bedrooms_above_grade,0.0082
-bathrooms_total_integer,0.0014
-parking_total,0.0089
-basement_score,0.0
-interior_score,0.0359
-exterior_score,0.0256
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fergus,Condo Apartment,building_area_total,0.058656,1069.5892,237.955019
+Fergus,Condo Apartment,lot_width,0.0,0.0,1.0
+Fergus,Condo Apartment,bedrooms_above_grade,0.00723,1.9792,0.47826
+Fergus,Condo Apartment,bathrooms_total_integer,0.007435,1.4583,0.498261
+Fergus,Condo Apartment,parking_total,0.020561,1.1667,0.372678
+Fergus,Condo Apartment,basement_score,0.0,1.0,1.0
+Fergus,Condo Apartment,interior_score,0.061469,3.8542,0.816231
+Fergus,Condo Apartment,exterior_score,0.031458,2.3333,0.552771

@@ -1,0 +1,9 @@
+Feature,Percentage_Multiplier
+building_area_total,0.0329
+lot_width,-0.0372
+bedrooms_above_grade,0.0145
+bathrooms_total_integer,0.062
+parking_total,0.0604
+basement_score,0.0239
+interior_score,0.0113
+exterior_score,-0.0101

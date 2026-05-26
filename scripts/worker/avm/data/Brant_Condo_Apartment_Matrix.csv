@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2169
-lot_width,0.0
-bedrooms_above_grade,0.0261
-bathrooms_total_integer,0.0958
-parking_total,0.0606
-basement_score,0.0
-interior_score,0.1147
-exterior_score,0.0321
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brant,Condo Apartment,building_area_total,0.193685,1191.7192,435.744214
+Brant,Condo Apartment,lot_width,0.0,0.0,1.0
+Brant,Condo Apartment,bedrooms_above_grade,0.010957,1.7685,0.496878
+Brant,Condo Apartment,bathrooms_total_integer,0.09768,1.8424,0.574309
+Brant,Condo Apartment,parking_total,0.082777,1.3793,0.594694
+Brant,Condo Apartment,basement_score,0.00098,1.0739,0.524717
+Brant,Condo Apartment,interior_score,0.128092,4.2266,0.835117
+Brant,Condo Apartment,exterior_score,0.025618,2.9803,1.127186

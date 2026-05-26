@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1001 - BR Bronte,Townhouse,building_area_total,0.146708,1812.6905,438.757037
+1001 - BR Bronte,Townhouse,lot_width,-0.003033,27.1278,18.575344
+1001 - BR Bronte,Townhouse,bedrooms_above_grade,0.021577,2.9302,0.397396
+1001 - BR Bronte,Townhouse,bathrooms_total_integer,0.036503,3.3256,0.738349
+1001 - BR Bronte,Townhouse,parking_total,0.046216,2.5349,0.923815
+1001 - BR Bronte,Townhouse,basement_score,-0.001251,5.0,2.230862
+1001 - BR Bronte,Townhouse,interior_score,-0.001557,3.9767,0.848758
+1001 - BR Bronte,Townhouse,exterior_score,0.031271,2.6512,1.23672

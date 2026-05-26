@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0322
-lot_width,0.0
-bedrooms_above_grade,0.0616
-bathrooms_total_integer,0.0169
-parking_total,-0.0076
-basement_score,0.0007
-interior_score,0.0142
-exterior_score,-0.0222
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+City Centre,Condo Apartment,building_area_total,0.051297,849.1382,235.070553
+City Centre,Condo Apartment,lot_width,0.0,0.0,1.0
+City Centre,Condo Apartment,bedrooms_above_grade,0.042505,1.5963,0.529055
+City Centre,Condo Apartment,bathrooms_total_integer,0.027255,1.6518,0.489914
+City Centre,Condo Apartment,parking_total,-0.006831,1.1012,0.363738
+City Centre,Condo Apartment,basement_score,0.007912,1.0174,0.322736
+City Centre,Condo Apartment,interior_score,0.021697,4.0131,0.75787
+City Centre,Condo Apartment,exterior_score,-0.007188,2.296,0.799548

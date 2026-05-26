@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0338
-lot_width,0.1766
-bedrooms_above_grade,-0.0317
-bathrooms_total_integer,0.1253
-parking_total,0.1944
-basement_score,0.0081
-interior_score,-0.0094
-exterior_score,0.0073
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Vaughan,Detached,building_area_total,0.084754,2583.3333,827.759135
+Rural Vaughan,Detached,lot_width,0.051291,81.0452,80.651307
+Rural Vaughan,Detached,bedrooms_above_grade,-0.016931,3.9792,1.070233
+Rural Vaughan,Detached,bathrooms_total_integer,0.171448,4.7917,1.707317
+Rural Vaughan,Detached,parking_total,0.185574,8.5833,5.525823
+Rural Vaughan,Detached,basement_score,-0.001418,6.5417,1.892511
+Rural Vaughan,Detached,interior_score,0.007623,3.7917,1.117257
+Rural Vaughan,Detached,exterior_score,0.019361,2.875,1.072866

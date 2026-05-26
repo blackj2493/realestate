@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+8211 - Stittsville (North),Townhouse,building_area_total,0.0225,1598.6842,261.570872
+8211 - Stittsville (North),Townhouse,lot_width,0.009807,23.2866,6.20974
+8211 - Stittsville (North),Townhouse,bedrooms_above_grade,0.023044,2.918,0.505546
+8211 - Stittsville (North),Townhouse,bathrooms_total_integer,0.013741,2.9836,0.58651
+8211 - Stittsville (North),Townhouse,parking_total,0.00953,2.4918,0.590164
+8211 - Stittsville (North),Townhouse,basement_score,0.036041,3.6557,1.889446
+8211 - Stittsville (North),Townhouse,interior_score,0.00757,3.8115,0.716686
+8211 - Stittsville (North),Townhouse,exterior_score,0.004181,2.2377,0.678152

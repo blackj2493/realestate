@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1033 - HA Harrison,Townhouse,building_area_total,0.019483,1433.8205,323.94253
+1033 - HA Harrison,Townhouse,lot_width,0.00864,23.7969,7.141135
+1033 - HA Harrison,Townhouse,bedrooms_above_grade,0.034702,2.6977,0.529804
+1033 - HA Harrison,Townhouse,bathrooms_total_integer,0.032549,2.686,0.669287
+1033 - HA Harrison,Townhouse,parking_total,0.002719,2.5581,0.567628
+1033 - HA Harrison,Townhouse,basement_score,0.013926,2.7326,2.344833
+1033 - HA Harrison,Townhouse,interior_score,0.005989,3.8372,0.760362
+1033 - HA Harrison,Townhouse,exterior_score,0.002136,2.314,0.766472

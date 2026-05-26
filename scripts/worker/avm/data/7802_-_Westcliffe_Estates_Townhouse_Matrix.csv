@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0182
-lot_width,0.0
-bedrooms_above_grade,0.0277
-bathrooms_total_integer,-0.0007
-parking_total,0.0002
-basement_score,0.0138
-interior_score,0.0225
-exterior_score,-0.0127
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+7802 - Westcliffe Estates,Townhouse,building_area_total,0.053033,1211.7647,301.725144
+7802 - Westcliffe Estates,Townhouse,lot_width,0.0,22.6244,10.646052
+7802 - Westcliffe Estates,Townhouse,bedrooms_above_grade,0.007368,2.4933,0.619103
+7802 - Westcliffe Estates,Townhouse,bathrooms_total_integer,0.032923,2.2,0.565685
+7802 - Westcliffe Estates,Townhouse,parking_total,0.106154,1.8133,1.015787
+7802 - Westcliffe Estates,Townhouse,basement_score,0.03072,4.2267,1.778189
+7802 - Westcliffe Estates,Townhouse,interior_score,0.016834,3.68,0.714796
+7802 - Westcliffe Estates,Townhouse,exterior_score,0.011852,2.1333,0.498888

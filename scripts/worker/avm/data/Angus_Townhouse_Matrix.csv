@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Angus,Townhouse,building_area_total,0.023233,1454.3913,261.020251
+Angus,Townhouse,lot_width,-0.007802,24.4026,6.538898
+Angus,Townhouse,bedrooms_above_grade,0.02138,3.0811,0.27296
+Angus,Townhouse,bathrooms_total_integer,0.019698,2.9459,0.695388
+Angus,Townhouse,parking_total,0.023697,3.1216,0.614085
+Angus,Townhouse,basement_score,-0.002761,5.0,1.208081
+Angus,Townhouse,interior_score,0.004226,3.5946,0.820661
+Angus,Townhouse,exterior_score,0.009617,2.4595,0.738684

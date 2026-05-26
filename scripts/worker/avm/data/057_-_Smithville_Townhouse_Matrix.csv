@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+057 - Smithville,Townhouse,building_area_total,0.045982,1462.1622,282.939542
+057 - Smithville,Townhouse,lot_width,0.020713,24.6026,5.879403
+057 - Smithville,Townhouse,bedrooms_above_grade,-0.039143,2.6154,0.624926
+057 - Smithville,Townhouse,bathrooms_total_integer,0.038697,2.8205,0.63536
+057 - Smithville,Townhouse,parking_total,0.033673,2.5385,0.682986
+057 - Smithville,Townhouse,basement_score,0.000846,5.0,1.320451
+057 - Smithville,Townhouse,interior_score,0.007512,3.4103,0.979742
+057 - Smithville,Townhouse,exterior_score,0.033589,2.5385,0.901456

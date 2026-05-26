@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0419
-lot_width,0.0655
-bedrooms_above_grade,0.0029
-bathrooms_total_integer,0.0988
-parking_total,0.0263
-basement_score,-0.0083
-interior_score,0.0199
-exterior_score,0.0293
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+453 - Grapeview,Detached,building_area_total,0.092038,1996.5919,626.171846
+453 - Grapeview,Detached,lot_width,0.035024,53.8959,19.994787
+453 - Grapeview,Detached,bedrooms_above_grade,0.02873,3.0794,0.673809
+453 - Grapeview,Detached,bathrooms_total_integer,0.063354,2.7778,0.898755
+453 - Grapeview,Detached,parking_total,0.026876,5.0873,2.477742
+453 - Grapeview,Detached,basement_score,-0.02034,5.1905,1.25808
+453 - Grapeview,Detached,interior_score,0.031861,3.4603,1.066449
+453 - Grapeview,Detached,exterior_score,0.035522,2.5238,0.813715

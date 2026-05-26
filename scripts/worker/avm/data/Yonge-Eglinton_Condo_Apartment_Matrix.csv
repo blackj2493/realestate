@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1349
-lot_width,0.0
-bedrooms_above_grade,-0.0149
-bathrooms_total_integer,0.0365
-parking_total,0.0263
-basement_score,0.0
-interior_score,0.016
-exterior_score,0.0059
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Yonge-Eglinton,Condo Apartment,building_area_total,0.087234,699.3506,191.286402
+Yonge-Eglinton,Condo Apartment,lot_width,0.0,0.0,1.0
+Yonge-Eglinton,Condo Apartment,bedrooms_above_grade,0.010721,1.5195,0.49962
+Yonge-Eglinton,Condo Apartment,bathrooms_total_integer,0.05326,1.5455,0.523362
+Yonge-Eglinton,Condo Apartment,parking_total,0.043539,0.5844,0.492822
+Yonge-Eglinton,Condo Apartment,basement_score,0.0,1.0,1.0
+Yonge-Eglinton,Condo Apartment,interior_score,0.013824,4.1039,0.765904
+Yonge-Eglinton,Condo Apartment,exterior_score,0.00149,2.1948,0.581957

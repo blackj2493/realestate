@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.028
-lot_width,0.0557
-bedrooms_above_grade,-0.0068
-bathrooms_total_integer,0.1605
-parking_total,0.0597
-basement_score,0.0066
-interior_score,0.0282
-exterior_score,0.019
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1601 - Greely,Detached,building_area_total,0.039002,2414.7368,839.920851
+1601 - Greely,Detached,lot_width,0.043006,126.5007,57.849431
+1601 - Greely,Detached,bedrooms_above_grade,0.030423,3.2632,0.723086
+1601 - Greely,Detached,bathrooms_total_integer,0.166899,3.2434,0.931868
+1601 - Greely,Detached,parking_total,0.080678,8.9638,3.306743
+1601 - Greely,Detached,basement_score,0.011534,4.7829,1.081652
+1601 - Greely,Detached,interior_score,0.044734,3.8684,1.036722
+1601 - Greely,Detached,exterior_score,0.052369,3.0329,0.927772

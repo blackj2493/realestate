@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0297
-lot_width,0.0
-bedrooms_above_grade,0.0325
-bathrooms_total_integer,0.0664
-parking_total,0.006
-basement_score,0.0
-interior_score,0.0143
-exterior_score,-0.0134
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Agincourt South-Malvern West,Condo Apartment,building_area_total,-0.000555,831.2304,300.168026
+Agincourt South-Malvern West,Condo Apartment,lot_width,0.0,0.0,1.0
+Agincourt South-Malvern West,Condo Apartment,bedrooms_above_grade,0.038152,1.6324,0.616069
+Agincourt South-Malvern West,Condo Apartment,bathrooms_total_integer,0.067197,1.5686,0.495268
+Agincourt South-Malvern West,Condo Apartment,parking_total,-0.007219,1.0735,0.261004
+Agincourt South-Malvern West,Condo Apartment,basement_score,0.0,1.0,1.0
+Agincourt South-Malvern West,Condo Apartment,interior_score,0.004182,3.902,0.891241
+Agincourt South-Malvern West,Condo Apartment,exterior_score,-0.013666,2.3088,0.719287

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0216
-lot_width,0.0
-bedrooms_above_grade,0.0149
-bathrooms_total_integer,0.0204
-parking_total,0.2019
-basement_score,0.023
-interior_score,0.0097
-exterior_score,-0.0248
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Victoria North,Townhouse,building_area_total,0.035569,1538.0784,348.995917
+Victoria North,Townhouse,lot_width,0.0,19.7276,5.573923
+Victoria North,Townhouse,bedrooms_above_grade,0.019003,2.5385,0.878406
+Victoria North,Townhouse,bathrooms_total_integer,0.050918,2.6615,0.707692
+Victoria North,Townhouse,parking_total,0.101279,1.8615,0.926149
+Victoria North,Townhouse,basement_score,0.052315,4.8769,2.310562
+Victoria North,Townhouse,interior_score,0.020858,3.7231,0.868379
+Victoria North,Townhouse,exterior_score,0.00134,2.7846,0.919738

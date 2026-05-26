@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1114
-lot_width,0.0
-bedrooms_above_grade,0.0465
-bathrooms_total_integer,0.0495
-parking_total,0.0097
-basement_score,0.0
-interior_score,0.0309
-exterior_score,-0.045
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+High Park-Swansea,Condo Apartment,building_area_total,0.169972,889.7906,288.638178
+High Park-Swansea,Condo Apartment,lot_width,0.0,0.0,1.0
+High Park-Swansea,Condo Apartment,bedrooms_above_grade,-0.022564,1.6387,0.588161
+High Park-Swansea,Condo Apartment,bathrooms_total_integer,0.081245,1.6021,0.53053
+High Park-Swansea,Condo Apartment,parking_total,0.003212,0.9948,0.315355
+High Park-Swansea,Condo Apartment,basement_score,-0.002935,1.0209,0.288671
+High Park-Swansea,Condo Apartment,interior_score,0.042707,3.9581,0.879269
+High Park-Swansea,Condo Apartment,exterior_score,-0.002221,2.7592,0.994544

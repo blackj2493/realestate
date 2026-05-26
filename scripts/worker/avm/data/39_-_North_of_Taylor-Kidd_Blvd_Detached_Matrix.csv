@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0514
-lot_width,-0.0276
-bedrooms_above_grade,0.008
-bathrooms_total_integer,0.0379
-parking_total,0.0349
-basement_score,0.0122
-interior_score,0.0153
-exterior_score,0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+39 - North of Taylor-Kidd Blvd,Detached,building_area_total,0.055238,1897.3654,591.507111
+39 - North of Taylor-Kidd Blvd,Detached,lot_width,-0.009567,55.6182,25.902515
+39 - North of Taylor-Kidd Blvd,Detached,bedrooms_above_grade,0.013301,3.2538,0.611575
+39 - North of Taylor-Kidd Blvd,Detached,bathrooms_total_integer,0.052581,2.8154,0.772455
+39 - North of Taylor-Kidd Blvd,Detached,parking_total,0.027003,4.6846,1.340405
+39 - North of Taylor-Kidd Blvd,Detached,basement_score,0.01517,5.5538,1.864905
+39 - North of Taylor-Kidd Blvd,Detached,interior_score,0.016916,3.4769,0.929974
+39 - North of Taylor-Kidd Blvd,Detached,exterior_score,0.027964,2.7462,0.737058

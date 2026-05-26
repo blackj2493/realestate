@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0456
-lot_width,0.0724
-bedrooms_above_grade,-0.0219
-bathrooms_total_integer,0.0845
-parking_total,0.0246
-basement_score,0.0273
-interior_score,0.029
-exterior_score,0.0451
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Town Ward 3,Detached,building_area_total,0.058379,1431.1728,524.581415
+Town Ward 3,Detached,lot_width,0.040499,46.347,18.12584
+Town Ward 3,Detached,bedrooms_above_grade,-0.034033,3.1436,0.966037
+Town Ward 3,Detached,bathrooms_total_integer,0.112736,1.8821,0.695359
+Town Ward 3,Detached,parking_total,0.055986,3.2256,1.417965
+Town Ward 3,Detached,basement_score,0.042181,4.9385,1.334477
+Town Ward 3,Detached,interior_score,0.053955,3.2718,0.935332
+Town Ward 3,Detached,exterior_score,0.037654,2.4308,0.693617

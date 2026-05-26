@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1000 - BC Bronte Creek,Townhouse,building_area_total,0.088502,1976.4062,537.003745
+1000 - BC Bronte Creek,Townhouse,lot_width,0.013981,26.3706,9.404079
+1000 - BC Bronte Creek,Townhouse,bedrooms_above_grade,0.023012,3.0423,0.425809
+1000 - BC Bronte Creek,Townhouse,bathrooms_total_integer,0.048177,3.3662,0.859732
+1000 - BC Bronte Creek,Townhouse,parking_total,0.068606,3.3239,1.30842
+1000 - BC Bronte Creek,Townhouse,basement_score,0.043332,4.4648,2.10185
+1000 - BC Bronte Creek,Townhouse,interior_score,0.019011,4.1972,0.798233
+1000 - BC Bronte Creek,Townhouse,exterior_score,0.024582,2.5493,0.946286

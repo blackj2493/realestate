@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0498
-lot_width,0.0
-bedrooms_above_grade,0.0053
-bathrooms_total_integer,0.0117
-parking_total,0.0248
-basement_score,0.0153
-interior_score,0.0321
-exterior_score,0.0221
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stoney Creek,Townhouse,building_area_total,0.058752,1498.0769,273.977389
+Stoney Creek,Townhouse,lot_width,0.006036,22.7512,5.613501
+Stoney Creek,Townhouse,bedrooms_above_grade,-0.00672,2.8905,0.412909
+Stoney Creek,Townhouse,bathrooms_total_integer,0.028906,2.9197,0.651314
+Stoney Creek,Townhouse,parking_total,0.03199,2.3139,0.780715
+Stoney Creek,Townhouse,basement_score,0.0059,4.5182,1.941112
+Stoney Creek,Townhouse,interior_score,0.027452,3.708,0.793777
+Stoney Creek,Townhouse,exterior_score,0.006657,2.5839,0.901275

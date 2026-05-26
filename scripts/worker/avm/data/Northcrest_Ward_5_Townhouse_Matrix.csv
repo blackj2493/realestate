@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northcrest Ward 5,Townhouse,building_area_total,0.035051,1370.8333,381.994946
+Northcrest Ward 5,Townhouse,lot_width,0.0,22.7389,5.790803
+Northcrest Ward 5,Townhouse,bedrooms_above_grade,-0.034733,2.0526,0.916152
+Northcrest Ward 5,Townhouse,bathrooms_total_integer,0.010855,2.8421,0.539313
+Northcrest Ward 5,Townhouse,parking_total,0.044942,3.3158,1.102754
+Northcrest Ward 5,Townhouse,basement_score,-0.012564,5.3684,1.476501
+Northcrest Ward 5,Townhouse,interior_score,-0.002738,3.6053,0.844159
+Northcrest Ward 5,Townhouse,exterior_score,-0.007695,2.2632,0.593128

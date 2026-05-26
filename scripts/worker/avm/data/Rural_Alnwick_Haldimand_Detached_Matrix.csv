@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0127
-lot_width,0.0774
-bedrooms_above_grade,-0.0101
-bathrooms_total_integer,0.0708
-parking_total,0.1238
-basement_score,0.0177
-interior_score,0.0572
-exterior_score,0.0192
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Alnwick/Haldimand,Detached,building_area_total,0.024508,1844.5946,735.148798
+Rural Alnwick/Haldimand,Detached,lot_width,0.068377,272.0899,298.532608
+Rural Alnwick/Haldimand,Detached,bedrooms_above_grade,-0.057004,2.901,0.873198
+Rural Alnwick/Haldimand,Detached,bathrooms_total_integer,0.119646,2.3564,0.88535
+Rural Alnwick/Haldimand,Detached,parking_total,0.106513,8.2822,4.459619
+Rural Alnwick/Haldimand,Detached,basement_score,0.038793,5.6634,2.45061
+Rural Alnwick/Haldimand,Detached,interior_score,0.073143,3.2673,1.061394
+Rural Alnwick/Haldimand,Detached,exterior_score,0.042166,2.5644,0.937828

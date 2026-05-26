@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1033
-lot_width,-0.0359
-bedrooms_above_grade,0.0465
-bathrooms_total_integer,0.0384
-parking_total,0.0206
-basement_score,0.0187
-interior_score,0.0259
-exterior_score,0.0052
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lynde Creek,Detached,building_area_total,0.082432,2051.1111,739.105231
+Lynde Creek,Detached,lot_width,-0.000776,47.3331,13.172468
+Lynde Creek,Detached,bedrooms_above_grade,0.041848,3.4697,0.644786
+Lynde Creek,Detached,bathrooms_total_integer,0.064577,3.0833,0.961704
+Lynde Creek,Detached,parking_total,0.042966,4.6856,1.441282
+Lynde Creek,Detached,basement_score,0.004345,5.6591,1.501663
+Lynde Creek,Detached,interior_score,0.041079,3.7576,1.0949
+Lynde Creek,Detached,exterior_score,0.020493,2.7803,1.017382

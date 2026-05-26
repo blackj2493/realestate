@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.031
-lot_width,0.045
-bedrooms_above_grade,0.0156
-bathrooms_total_integer,0.1093
-parking_total,0.0224
-basement_score,0.0065
-interior_score,0.0322
-exterior_score,0.0155
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Markland Wood,Detached,building_area_total,0.071272,1872.0,681.333986
+Markland Wood,Detached,lot_width,0.014061,54.5356,11.513373
+Markland Wood,Detached,bedrooms_above_grade,0.012473,3.4507,0.666898
+Markland Wood,Detached,bathrooms_total_integer,0.081693,2.9014,1.009182
+Markland Wood,Detached,parking_total,0.029064,5.4014,1.938527
+Markland Wood,Detached,basement_score,0.012359,5.662,1.799403
+Markland Wood,Detached,interior_score,0.036748,3.3099,1.157846
+Markland Wood,Detached,exterior_score,0.016075,2.9296,0.939343

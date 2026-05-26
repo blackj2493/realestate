@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0433
-lot_width,-0.0297
-bedrooms_above_grade,0.0271
-bathrooms_total_integer,0.1815
-parking_total,0.016
-basement_score,0.0225
-interior_score,0.0687
-exterior_score,0.0024
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Newtonbrook West,Detached,building_area_total,0.100367,2039.3939,1085.493714
+Newtonbrook West,Detached,lot_width,0.011698,51.7656,10.881924
+Newtonbrook West,Detached,bedrooms_above_grade,0.023711,3.4536,0.703755
+Newtonbrook West,Detached,bathrooms_total_integer,0.114053,3.2577,1.487254
+Newtonbrook West,Detached,parking_total,0.015551,5.0309,1.657247
+Newtonbrook West,Detached,basement_score,0.028817,6.1856,1.651802
+Newtonbrook West,Detached,interior_score,0.071176,3.0309,1.239002
+Newtonbrook West,Detached,exterior_score,-0.011721,2.2371,0.670024

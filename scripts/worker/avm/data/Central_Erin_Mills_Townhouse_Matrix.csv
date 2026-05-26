@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0297
-lot_width,0.0
-bedrooms_above_grade,-0.0034
-bathrooms_total_integer,0.0265
-parking_total,0.0087
-basement_score,0.0107
-interior_score,0.0238
-exterior_score,-0.0074
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Central Erin Mills,Townhouse,building_area_total,0.028716,1474.187,214.085666
+Central Erin Mills,Townhouse,lot_width,0.0,23.656,2.313008
+Central Erin Mills,Townhouse,bedrooms_above_grade,0.008969,2.9365,0.302005
+Central Erin Mills,Townhouse,bathrooms_total_integer,0.024206,3.2698,0.609615
+Central Erin Mills,Townhouse,parking_total,0.024293,2.2302,0.691934
+Central Erin Mills,Townhouse,basement_score,0.000556,5.1587,1.985714
+Central Erin Mills,Townhouse,interior_score,0.022489,3.746,0.677724
+Central Erin Mills,Townhouse,exterior_score,-0.000749,2.1587,0.694796

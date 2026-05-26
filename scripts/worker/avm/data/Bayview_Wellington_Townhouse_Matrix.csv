@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bayview Wellington,Townhouse,building_area_total,0.041923,1511.5385,292.526908
+Bayview Wellington,Townhouse,lot_width,0.013532,21.9491,6.212908
+Bayview Wellington,Townhouse,bedrooms_above_grade,-0.003446,3.0638,0.380607
+Bayview Wellington,Townhouse,bathrooms_total_integer,0.011279,3.0638,0.432915
+Bayview Wellington,Townhouse,parking_total,0.008069,2.5106,0.614448
+Bayview Wellington,Townhouse,basement_score,0.009257,6.0,1.879339
+Bayview Wellington,Townhouse,interior_score,0.005488,3.8936,0.691408
+Bayview Wellington,Townhouse,exterior_score,-0.01174,2.0426,0.74255

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0685
-lot_width,0.0
-bedrooms_above_grade,0.0306
-bathrooms_total_integer,0.0107
-parking_total,0.0039
-basement_score,-0.0034
-interior_score,0.0074
-exterior_score,-0.0147
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Long Branch,Townhouse,building_area_total,0.05942,1359.0694,256.121896
+Long Branch,Townhouse,lot_width,0.0,13.7808,6.587367
+Long Branch,Townhouse,bedrooms_above_grade,0.043729,2.3784,0.512089
+Long Branch,Townhouse,bathrooms_total_integer,0.004415,2.7297,0.444099
+Long Branch,Townhouse,parking_total,0.055178,1.2703,0.444099
+Long Branch,Townhouse,basement_score,-0.004544,1.5,1.741776
+Long Branch,Townhouse,interior_score,0.020914,4.2162,0.721677
+Long Branch,Townhouse,exterior_score,-0.009124,2.6892,1.14992

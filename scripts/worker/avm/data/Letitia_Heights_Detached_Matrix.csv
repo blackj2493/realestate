@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.019
-lot_width,0.0356
-bedrooms_above_grade,0.003
-bathrooms_total_integer,0.0549
-parking_total,0.0268
-basement_score,0.0184
-interior_score,0.0212
-exterior_score,0.0144
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Letitia Heights,Detached,building_area_total,0.021195,1531.4783,433.426209
+Letitia Heights,Detached,lot_width,0.022348,46.8049,13.87276
+Letitia Heights,Detached,bedrooms_above_grade,-0.005239,3.0123,0.67575
+Letitia Heights,Detached,bathrooms_total_integer,0.048885,2.6296,0.760838
+Letitia Heights,Detached,parking_total,0.035697,4.321,1.438682
+Letitia Heights,Detached,basement_score,0.031862,5.8395,1.965485
+Letitia Heights,Detached,interior_score,0.031978,3.2469,1.012647
+Letitia Heights,Detached,exterior_score,0.003824,2.6543,0.970688

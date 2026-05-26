@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bradford,Townhouse,building_area_total,0.008478,1651.8817,245.229664
+Bradford,Townhouse,lot_width,0.011674,21.6765,5.566201
+Bradford,Townhouse,bedrooms_above_grade,0.009575,3.0481,0.290219
+Bradford,Townhouse,bathrooms_total_integer,0.052998,3.0577,0.568854
+Bradford,Townhouse,parking_total,0.029975,2.4519,0.745239
+Bradford,Townhouse,basement_score,0.012754,4.2981,2.311675
+Bradford,Townhouse,interior_score,0.006271,3.7692,0.823113
+Bradford,Townhouse,exterior_score,0.019142,2.125,0.566492

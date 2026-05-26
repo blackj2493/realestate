@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0467
-lot_width,0.0226
-bedrooms_above_grade,0.0243
-bathrooms_total_integer,0.0067
-parking_total,0.0029
-basement_score,0.0082
-interior_score,0.0061
-exterior_score,-0.0137
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Sonoma Heights,Detached,building_area_total,0.052493,2290.2597,548.672481
+Sonoma Heights,Detached,lot_width,0.01544,40.2503,8.321942
+Sonoma Heights,Detached,bedrooms_above_grade,0.019214,3.5957,0.570911
+Sonoma Heights,Detached,bathrooms_total_integer,0.013947,3.7553,0.630538
+Sonoma Heights,Detached,parking_total,0.01071,5.3511,0.975306
+Sonoma Heights,Detached,basement_score,0.004303,5.6277,1.296345
+Sonoma Heights,Detached,interior_score,0.002321,3.7553,1.048669
+Sonoma Heights,Detached,exterior_score,0.009671,2.7021,0.908937

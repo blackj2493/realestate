@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0579
-lot_width,0.0634
-bedrooms_above_grade,0.0335
-bathrooms_total_integer,0.0455
-parking_total,0.013
-basement_score,0.0114
-interior_score,0.0197
-exterior_score,0.0176
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Erin Mills,Detached,building_area_total,0.092639,2316.3211,638.697892
+Erin Mills,Detached,lot_width,0.041446,47.159,17.388716
+Erin Mills,Detached,bedrooms_above_grade,0.03501,3.6996,0.56317
+Erin Mills,Detached,bathrooms_total_integer,0.040801,3.6008,0.770548
+Erin Mills,Detached,parking_total,0.02136,4.9733,1.414324
+Erin Mills,Detached,basement_score,0.017335,5.3086,1.357576
+Erin Mills,Detached,interior_score,0.031328,3.5844,0.991778
+Erin Mills,Detached,exterior_score,0.01755,2.7572,0.926685

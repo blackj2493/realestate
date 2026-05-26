@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.077
-lot_width,-0.0358
-bedrooms_above_grade,-0.0288
-bathrooms_total_integer,0.0682
-parking_total,0.0192
-basement_score,0.0108
-interior_score,0.0379
-exterior_score,0.0115
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mount Forest,Detached,building_area_total,0.057363,1569.2702,600.291856
+Mount Forest,Detached,lot_width,-0.017976,66.9846,22.572018
+Mount Forest,Detached,bedrooms_above_grade,-0.027105,2.8737,0.784617
+Mount Forest,Detached,bathrooms_total_integer,0.083817,2.1789,0.695534
+Mount Forest,Detached,parking_total,0.044541,5.1737,1.775222
+Mount Forest,Detached,basement_score,0.045974,5.0632,1.471201
+Mount Forest,Detached,interior_score,0.050511,3.4526,0.948888
+Mount Forest,Detached,exterior_score,-0.001842,2.6421,0.793603

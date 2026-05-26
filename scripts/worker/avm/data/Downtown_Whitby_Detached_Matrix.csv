@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0427
-lot_width,0.0242
-bedrooms_above_grade,0.0175
-bathrooms_total_integer,0.0508
-parking_total,0.0125
-basement_score,0.0124
-interior_score,0.0224
-exterior_score,0.0063
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Downtown Whitby,Detached,building_area_total,0.061171,1410.5556,505.99157
+Downtown Whitby,Detached,lot_width,0.032372,55.2515,14.869629
+Downtown Whitby,Detached,bedrooms_above_grade,0.03171,3.0887,0.582155
+Downtown Whitby,Detached,bathrooms_total_integer,0.046259,2.371,0.884159
+Downtown Whitby,Detached,parking_total,0.019673,4.5524,1.639751
+Downtown Whitby,Detached,basement_score,0.017139,5.5806,1.545528
+Downtown Whitby,Detached,interior_score,0.022568,3.379,1.036377
+Downtown Whitby,Detached,exterior_score,0.005192,2.2581,0.990853

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0195
-lot_width,0.0775
-bedrooms_above_grade,0.0113
-bathrooms_total_integer,0.0909
-parking_total,0.0375
-basement_score,0.0222
-interior_score,0.0246
-exterior_score,0.027
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+540 - Renfrew,Detached,building_area_total,0.020143,1271.4286,355.424437
+540 - Renfrew,Detached,lot_width,0.02012,65.5647,28.025998
+540 - Renfrew,Detached,bedrooms_above_grade,0.026931,2.8483,0.833199
+540 - Renfrew,Detached,bathrooms_total_integer,0.116543,1.7517,0.669854
+540 - Renfrew,Detached,parking_total,0.049979,4.1586,1.621731
+540 - Renfrew,Detached,basement_score,0.028748,4.5448,1.237234
+540 - Renfrew,Detached,interior_score,0.041812,3.2138,0.848416
+540 - Renfrew,Detached,exterior_score,-0.003853,2.2828,0.819617

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0408
-lot_width,0.0541
-bedrooms_above_grade,0.002
-bathrooms_total_integer,0.0111
-parking_total,-0.0132
-basement_score,0.003
-interior_score,0.0284
-exterior_score,0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fletcher's Creek South,Detached,building_area_total,0.054697,2184.3323,490.215838
+Fletcher's Creek South,Detached,lot_width,0.028652,37.6292,11.078458
+Fletcher's Creek South,Detached,bedrooms_above_grade,0.018218,3.697,0.55876
+Fletcher's Creek South,Detached,bathrooms_total_integer,0.032442,3.899,0.65897
+Fletcher's Creek South,Detached,parking_total,0.002905,5.0657,1.418931
+Fletcher's Creek South,Detached,basement_score,0.007168,6.0404,1.54344
+Fletcher's Creek South,Detached,interior_score,0.020902,3.3939,1.023148
+Fletcher's Creek South,Detached,exterior_score,0.007569,2.4141,0.910213

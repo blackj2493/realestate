@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0887
-lot_width,0.0338
-bedrooms_above_grade,-0.0254
-bathrooms_total_integer,0.0609
-parking_total,0.0171
-basement_score,0.0076
-interior_score,0.0498
-exterior_score,0.0309
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+662 - Fonthill,Detached,building_area_total,0.11841,2037.6627,717.860232
+662 - Fonthill,Detached,lot_width,0.038541,66.6775,30.070492
+662 - Fonthill,Detached,bedrooms_above_grade,-0.058205,3.1505,0.746983
+662 - Fonthill,Detached,bathrooms_total_integer,0.095639,2.9194,0.921051
+662 - Fonthill,Detached,parking_total,0.008214,5.8898,2.550554
+662 - Fonthill,Detached,basement_score,0.019282,5.2957,1.720741
+662 - Fonthill,Detached,interior_score,0.046006,3.5914,1.07999
+662 - Fonthill,Detached,exterior_score,0.032293,2.9839,0.894883

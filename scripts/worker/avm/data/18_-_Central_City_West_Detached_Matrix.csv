@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0497
-lot_width,-0.0363
-bedrooms_above_grade,0.0141
-bathrooms_total_integer,0.0614
-parking_total,0.0139
-basement_score,0.0274
-interior_score,0.0409
-exterior_score,0.0111
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+18 - Central City West,Detached,building_area_total,0.051429,1595.3776,589.405399
+18 - Central City West,Detached,lot_width,-0.009179,59.944,19.864833
+18 - Central City West,Detached,bedrooms_above_grade,-0.010466,3.3049,0.919823
+18 - Central City West,Detached,bathrooms_total_integer,0.05459,2.2195,0.644383
+18 - Central City West,Detached,parking_total,0.03203,4.061,1.373509
+18 - Central City West,Detached,basement_score,0.035063,5.1098,1.801125
+18 - Central City West,Detached,interior_score,0.075661,3.1098,1.000074
+18 - Central City West,Detached,exterior_score,0.03252,2.6829,0.794463

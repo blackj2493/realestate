@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Shoreacres,Townhouse,building_area_total,0.003287,1457.0476,221.258839
+Shoreacres,Townhouse,lot_width,-0.003605,22.2773,7.424245
+Shoreacres,Townhouse,bedrooms_above_grade,0.003556,2.8222,0.484832
+Shoreacres,Townhouse,bathrooms_total_integer,0.024214,2.6889,0.626178
+Shoreacres,Townhouse,parking_total,-0.007192,2.2444,0.478681
+Shoreacres,Townhouse,basement_score,0.011998,4.8,2.28619
+Shoreacres,Townhouse,interior_score,0.01623,3.8222,0.824322
+Shoreacres,Townhouse,exterior_score,0.010707,2.4,0.904311

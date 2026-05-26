@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1234
-lot_width,0.0
-bedrooms_above_grade,0.0121
-bathrooms_total_integer,0.0104
-parking_total,0.0188
-basement_score,0.0
-interior_score,0.0169
-exterior_score,0.013
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Little Portugal,Condo Apartment,building_area_total,0.129841,641.0897,170.119015
+Little Portugal,Condo Apartment,lot_width,0.0,0.0,1.0
+Little Portugal,Condo Apartment,bedrooms_above_grade,-0.009547,1.5192,0.49963
+Little Portugal,Condo Apartment,bathrooms_total_integer,0.039032,1.3333,0.471405
+Little Portugal,Condo Apartment,parking_total,0.015798,0.6667,0.497859
+Little Portugal,Condo Apartment,basement_score,0.0,1.0,1.0
+Little Portugal,Condo Apartment,interior_score,0.008556,3.8846,0.742152
+Little Portugal,Condo Apartment,exterior_score,0.020288,2.0577,0.612272

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0463
-lot_width,0.0404
-bedrooms_above_grade,0.0132
-bathrooms_total_integer,0.112
-parking_total,0.0303
-basement_score,0.0143
-interior_score,0.0223
-exterior_score,0.0114
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Murray Ward,Detached,building_area_total,0.057239,1621.7208,582.656452
+Murray Ward,Detached,lot_width,0.006021,125.7437,141.498893
+Murray Ward,Detached,bedrooms_above_grade,0.01389,2.817,0.742509
+Murray Ward,Detached,bathrooms_total_integer,0.110442,2.4286,0.84213
+Murray Ward,Detached,parking_total,0.022183,7.2612,3.126408
+Murray Ward,Detached,basement_score,0.003762,5.3036,1.809397
+Murray Ward,Detached,interior_score,0.024042,3.4286,0.863075
+Murray Ward,Detached,exterior_score,0.026528,2.6518,0.85262

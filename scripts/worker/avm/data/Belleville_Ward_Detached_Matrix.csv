@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0246
-lot_width,0.0296
-bedrooms_above_grade,-0.0104
-bathrooms_total_integer,0.1016
-parking_total,0.0319
-basement_score,0.0206
-interior_score,0.0271
-exterior_score,0.0289
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Belleville Ward,Detached,building_area_total,0.031016,1401.7352,486.702333
+Belleville Ward,Detached,lot_width,0.003975,58.7135,26.165775
+Belleville Ward,Detached,bedrooms_above_grade,-0.015178,2.9375,0.807678
+Belleville Ward,Detached,bathrooms_total_integer,0.119921,2.0642,0.815032
+Belleville Ward,Detached,parking_total,0.043426,4.5885,1.873603
+Belleville Ward,Detached,basement_score,0.048063,4.5226,1.68722
+Belleville Ward,Detached,interior_score,0.042455,3.1042,0.933324
+Belleville Ward,Detached,exterior_score,0.039181,2.559,0.81436

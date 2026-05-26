@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Uxbridge,Townhouse,building_area_total,0.052578,1695.3488,550.983682
+Uxbridge,Townhouse,lot_width,0.051155,30.9178,7.648212
+Uxbridge,Townhouse,bedrooms_above_grade,0.036861,2.5625,0.573957
+Uxbridge,Townhouse,bathrooms_total_integer,0.064441,3.0,0.790569
+Uxbridge,Townhouse,parking_total,0.017539,3.5417,1.368672
+Uxbridge,Townhouse,basement_score,-0.0021,5.1667,1.961434
+Uxbridge,Townhouse,interior_score,-0.004572,3.9375,0.899218
+Uxbridge,Townhouse,exterior_score,0.024533,2.7292,0.929596

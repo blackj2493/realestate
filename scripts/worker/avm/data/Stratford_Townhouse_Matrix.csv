@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stratford,Townhouse,building_area_total,0.05208,1525.6114,385.095983
+Stratford,Townhouse,lot_width,0.003071,22.7434,10.945494
+Stratford,Townhouse,bedrooms_above_grade,-0.037453,2.6923,0.573064
+Stratford,Townhouse,bathrooms_total_integer,0.028079,2.7885,0.716201
+Stratford,Townhouse,parking_total,0.026027,2.3269,0.777599
+Stratford,Townhouse,basement_score,0.036942,5.2692,1.819926
+Stratford,Townhouse,interior_score,-0.004118,3.4423,0.744556
+Stratford,Townhouse,exterior_score,0.025632,2.3077,0.605693

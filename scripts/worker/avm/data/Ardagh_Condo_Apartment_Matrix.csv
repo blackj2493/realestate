@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0377
-lot_width,0.0
-bedrooms_above_grade,-0.0037
-bathrooms_total_integer,0.1156
-parking_total,-0.0104
-basement_score,0.0
-interior_score,0.0304
-exterior_score,-0.0191
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ardagh,Condo Apartment,building_area_total,0.076213,1088.6216,266.305033
+Ardagh,Condo Apartment,lot_width,0.0,0.0,1.0
+Ardagh,Condo Apartment,bedrooms_above_grade,-0.009678,1.9595,0.645969
+Ardagh,Condo Apartment,bathrooms_total_integer,0.061662,1.473,0.525639
+Ardagh,Condo Apartment,parking_total,0.004126,1.1351,0.413434
+Ardagh,Condo Apartment,basement_score,-0.000787,1.1081,0.923676
+Ardagh,Condo Apartment,interior_score,0.032912,3.8919,0.780983
+Ardagh,Condo Apartment,exterior_score,-0.006568,2.527,0.90379

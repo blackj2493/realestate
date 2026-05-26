@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0874
-lot_width,0.0
-bedrooms_above_grade,0.0307
-bathrooms_total_integer,0.0176
-parking_total,0.0238
-basement_score,0.0
-interior_score,0.0145
-exterior_score,0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Clanton Park,Condo Apartment,building_area_total,0.078888,656.2176,212.407113
+Clanton Park,Condo Apartment,lot_width,0.0,0.0,1.0
+Clanton Park,Condo Apartment,bedrooms_above_grade,0.02938,1.6114,0.5752
+Clanton Park,Condo Apartment,bathrooms_total_integer,0.026601,1.544,0.498057
+Clanton Park,Condo Apartment,parking_total,0.034175,0.8653,0.434863
+Clanton Park,Condo Apartment,basement_score,0.0,1.0,1.0
+Clanton Park,Condo Apartment,interior_score,0.006021,3.7876,0.80249
+Clanton Park,Condo Apartment,exterior_score,0.007045,2.2176,0.552245

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1007
-lot_width,0.0853
-bedrooms_above_grade,0.025
-bathrooms_total_integer,0.0767
-parking_total,0.0433
-basement_score,0.0508
-interior_score,0.0548
-exterior_score,0.048
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Tiny,Detached,building_area_total,0.074392,1747.0161,755.2651
+Rural Tiny,Detached,lot_width,0.067169,146.7968,203.24601
+Rural Tiny,Detached,bedrooms_above_grade,0.027904,3.0,0.802246
+Rural Tiny,Detached,bathrooms_total_integer,0.119274,2.2111,0.970365
+Rural Tiny,Detached,parking_total,-0.013143,7.5813,4.074921
+Rural Tiny,Detached,basement_score,0.059161,4.7785,2.627922
+Rural Tiny,Detached,interior_score,0.093438,3.1938,0.943286
+Rural Tiny,Detached,exterior_score,0.071733,2.7059,0.926354

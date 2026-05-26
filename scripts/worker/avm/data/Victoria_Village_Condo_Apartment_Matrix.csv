@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0223
-lot_width,0.0
-bedrooms_above_grade,-0.0081
-bathrooms_total_integer,0.0397
-parking_total,0.0077
-basement_score,0.0019
-interior_score,0.037
-exterior_score,0.0232
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Victoria Village,Condo Apartment,building_area_total,0.020409,992.0455,159.880347
+Victoria Village,Condo Apartment,lot_width,0.0,0.0,1.0
+Victoria Village,Condo Apartment,bedrooms_above_grade,0.023889,2.4545,0.810571
+Victoria Village,Condo Apartment,bathrooms_total_integer,0.01822,1.6818,0.46577
+Victoria Village,Condo Apartment,parking_total,0.019562,1.0909,0.28748
+Victoria Village,Condo Apartment,basement_score,0.007925,1.0455,0.298065
+Victoria Village,Condo Apartment,interior_score,0.034839,3.5909,0.778056
+Victoria Village,Condo Apartment,exterior_score,0.02096,2.2727,0.835672

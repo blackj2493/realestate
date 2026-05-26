@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1174
-lot_width,0.0
-bedrooms_above_grade,0.0193
-bathrooms_total_integer,0.0642
-parking_total,0.0217
-basement_score,0.0
-interior_score,0.0196
-exterior_score,0.0173
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South Parkdale,Condo Apartment,building_area_total,0.071272,673.8095,171.329336
+South Parkdale,Condo Apartment,lot_width,0.0,0.0,1.0
+South Parkdale,Condo Apartment,bedrooms_above_grade,0.059391,1.619,0.575383
+South Parkdale,Condo Apartment,bathrooms_total_integer,0.073684,1.5238,0.530263
+South Parkdale,Condo Apartment,parking_total,0.007873,0.6984,0.458947
+South Parkdale,Condo Apartment,basement_score,0.0,1.0,1.0
+South Parkdale,Condo Apartment,interior_score,0.022355,3.9206,0.741119
+South Parkdale,Condo Apartment,exterior_score,-0.001203,2.4762,0.888322

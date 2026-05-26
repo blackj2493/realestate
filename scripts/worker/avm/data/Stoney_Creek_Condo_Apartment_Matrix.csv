@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0564
-lot_width,0.0
-bedrooms_above_grade,-0.0049
-bathrooms_total_integer,0.0206
-parking_total,-0.0058
-basement_score,0.0041
-interior_score,0.0372
-exterior_score,0.0324
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stoney Creek,Condo Apartment,building_area_total,0.034584,883.0357,283.831688
+Stoney Creek,Condo Apartment,lot_width,0.0,0.0,1.0
+Stoney Creek,Condo Apartment,bedrooms_above_grade,0.01451,1.5714,0.562429
+Stoney Creek,Condo Apartment,bathrooms_total_integer,0.031675,1.5,0.534522
+Stoney Creek,Condo Apartment,parking_total,0.000662,1.125,0.330719
+Stoney Creek,Condo Apartment,basement_score,-0.000724,1.1071,0.556731
+Stoney Creek,Condo Apartment,interior_score,0.014632,3.75,0.761812
+Stoney Creek,Condo Apartment,exterior_score,0.014988,2.6429,1.025193

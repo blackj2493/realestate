@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0578
-lot_width,-0.0323
-bedrooms_above_grade,-0.0091
-bathrooms_total_integer,0.0822
-parking_total,-0.0295
-basement_score,0.025
-interior_score,0.0616
-exterior_score,-0.0066
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Briar Hill-Belgravia,Detached,building_area_total,0.059326,1211.25,347.038813
+Briar Hill-Belgravia,Detached,lot_width,0.036117,26.7106,5.171222
+Briar Hill-Belgravia,Detached,bedrooms_above_grade,0.024312,2.629,0.723653
+Briar Hill-Belgravia,Detached,bathrooms_total_integer,0.075543,2.3548,0.764046
+Briar Hill-Belgravia,Detached,parking_total,-0.005155,2.5565,1.391521
+Briar Hill-Belgravia,Detached,basement_score,0.031253,6.7097,1.600273
+Briar Hill-Belgravia,Detached,interior_score,0.034004,2.9194,1.004801
+Briar Hill-Belgravia,Detached,exterior_score,-0.010395,2.2258,0.657938

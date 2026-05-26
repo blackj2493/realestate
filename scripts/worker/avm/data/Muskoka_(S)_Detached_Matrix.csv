@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1439
-lot_width,0.1527
-bedrooms_above_grade,0.025
-bathrooms_total_integer,0.0405
-parking_total,0.0259
-basement_score,-0.0115
-interior_score,0.0291
-exterior_score,0.0297
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Muskoka (S),Detached,building_area_total,0.08363,1686.5827,776.602926
+Muskoka (S),Detached,lot_width,0.072933,114.5209,135.549605
+Muskoka (S),Detached,bedrooms_above_grade,0.089234,2.7676,0.983665
+Muskoka (S),Detached,bathrooms_total_integer,0.073396,2.1135,0.896287
+Muskoka (S),Detached,parking_total,0.075292,5.5,2.560089
+Muskoka (S),Detached,basement_score,-0.046594,4.4324,2.117374
+Muskoka (S),Detached,interior_score,0.0665,3.2811,1.006422
+Muskoka (S),Detached,exterior_score,0.060327,2.7081,0.947936

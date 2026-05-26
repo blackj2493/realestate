@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Painswick South,Townhouse,building_area_total,0.037163,1383.3333,310.831404
+Painswick South,Townhouse,lot_width,-0.003448,21.4785,6.105629
+Painswick South,Townhouse,bedrooms_above_grade,-0.011571,2.9306,0.346666
+Painswick South,Townhouse,bathrooms_total_integer,0.031431,2.7778,0.785674
+Painswick South,Townhouse,parking_total,-0.000467,2.6528,0.72953
+Painswick South,Townhouse,basement_score,0.010296,4.75,1.15169
+Painswick South,Townhouse,interior_score,0.00826,3.7083,0.771677
+Painswick South,Townhouse,exterior_score,-0.006205,2.4861,0.927857

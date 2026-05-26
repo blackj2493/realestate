@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0286
-lot_width,0.0764
-bedrooms_above_grade,-0.013
-bathrooms_total_integer,0.0131
-parking_total,0.0299
-basement_score,-0.0128
-interior_score,0.0019
-exterior_score,0.018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+219 - Forestview,Detached,building_area_total,0.058666,2199.6947,654.33672
+219 - Forestview,Detached,lot_width,0.042627,48.9242,21.828199
+219 - Forestview,Detached,bedrooms_above_grade,0.009838,3.4198,0.783537
+219 - Forestview,Detached,bathrooms_total_integer,0.014357,3.2099,0.748926
+219 - Forestview,Detached,parking_total,0.020624,5.5,1.625415
+219 - Forestview,Detached,basement_score,-0.005835,5.1605,1.059429
+219 - Forestview,Detached,interior_score,0.016386,3.5062,1.06717
+219 - Forestview,Detached,exterior_score,0.034993,2.679,0.813879

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Observatory,Townhouse,building_area_total,0.070517,1586.3636,673.218494
+Observatory,Townhouse,lot_width,0.0,21.384,7.153299
+Observatory,Townhouse,bedrooms_above_grade,0.038797,2.8478,0.509364
+Observatory,Townhouse,bathrooms_total_integer,0.023274,2.913,0.855318
+Observatory,Townhouse,parking_total,0.064518,2.0652,0.869837
+Observatory,Townhouse,basement_score,0.040381,3.4783,2.939529
+Observatory,Townhouse,interior_score,0.018767,3.8261,0.867389
+Observatory,Townhouse,exterior_score,0.003499,2.087,0.686075

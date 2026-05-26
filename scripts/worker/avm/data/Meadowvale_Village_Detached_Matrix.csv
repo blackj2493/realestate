@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0695
-lot_width,0.034
-bedrooms_above_grade,0.0173
-bathrooms_total_integer,0.0043
-parking_total,0.0159
-basement_score,0.0038
-interior_score,-0.0103
-exterior_score,0.0269
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Meadowvale Village,Detached,building_area_total,0.078401,2570.8333,498.522121
+Meadowvale Village,Detached,lot_width,0.037279,45.6052,19.95599
+Meadowvale Village,Detached,bedrooms_above_grade,0.024385,3.8293,0.489023
+Meadowvale Village,Detached,bathrooms_total_integer,0.017174,4.0244,0.869197
+Meadowvale Village,Detached,parking_total,0.01697,5.5976,1.583911
+Meadowvale Village,Detached,basement_score,-0.001276,5.6341,1.418623
+Meadowvale Village,Detached,interior_score,0.012006,3.8049,1.029315
+Meadowvale Village,Detached,exterior_score,0.026334,2.8537,0.925545

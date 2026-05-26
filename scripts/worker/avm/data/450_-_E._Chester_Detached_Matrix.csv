@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0104
-lot_width,0.0641
-bedrooms_above_grade,0.0048
-bathrooms_total_integer,0.0861
-parking_total,0.0434
-basement_score,0.0243
-interior_score,0.0158
-exterior_score,0.0094
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+450 - E. Chester,Detached,building_area_total,0.004987,1083.734,264.913642
+450 - E. Chester,Detached,lot_width,0.046676,42.8095,13.518244
+450 - E. Chester,Detached,bedrooms_above_grade,0.027116,2.5804,0.751646
+450 - E. Chester,Detached,bathrooms_total_integer,0.066665,1.7232,0.615424
+450 - E. Chester,Detached,parking_total,0.026833,2.9955,1.62911
+450 - E. Chester,Detached,basement_score,0.043463,4.8929,1.358552
+450 - E. Chester,Detached,interior_score,0.029786,3.0,0.963624
+450 - E. Chester,Detached,exterior_score,0.031738,2.1875,0.738377

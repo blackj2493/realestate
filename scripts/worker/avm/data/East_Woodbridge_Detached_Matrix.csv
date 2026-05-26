@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0395
-lot_width,0.0462
-bedrooms_above_grade,0.0173
-bathrooms_total_integer,0.0235
-parking_total,0.0967
-basement_score,-0.0081
-interior_score,0.0351
-exterior_score,0.0275
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East Woodbridge,Detached,building_area_total,0.059564,2848.1111,763.750703
+East Woodbridge,Detached,lot_width,0.062864,52.041,21.183262
+East Woodbridge,Detached,bedrooms_above_grade,0.027166,3.8303,0.47513
+East Woodbridge,Detached,bathrooms_total_integer,0.038068,3.9636,0.913806
+East Woodbridge,Detached,parking_total,0.071266,5.9545,1.895623
+East Woodbridge,Detached,basement_score,-0.009327,6.4848,1.408227
+East Woodbridge,Detached,interior_score,0.039849,3.2303,1.163194
+East Woodbridge,Detached,exterior_score,0.021796,2.7333,0.89533

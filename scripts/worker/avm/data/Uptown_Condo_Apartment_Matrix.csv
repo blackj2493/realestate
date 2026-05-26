@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1213
-lot_width,0.0
-bedrooms_above_grade,-0.0046
-bathrooms_total_integer,-0.0061
-parking_total,0.0184
-basement_score,0.0
-interior_score,0.021
-exterior_score,0.0029
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Uptown,Condo Apartment,building_area_total,0.071647,903.6,241.766154
+Uptown,Condo Apartment,lot_width,0.0,0.0,1.0
+Uptown,Condo Apartment,bedrooms_above_grade,0.036079,1.6167,0.660597
+Uptown,Condo Apartment,bathrooms_total_integer,0.002912,1.7167,0.519348
+Uptown,Condo Apartment,parking_total,0.025729,1.1833,0.38694
+Uptown,Condo Apartment,basement_score,0.0,1.0,1.0
+Uptown,Condo Apartment,interior_score,0.008761,3.8167,0.670613
+Uptown,Condo Apartment,exterior_score,-0.001529,2.0333,0.515321

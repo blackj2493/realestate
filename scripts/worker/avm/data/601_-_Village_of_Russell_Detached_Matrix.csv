@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0092
-lot_width,-0.0494
-bedrooms_above_grade,0.016
-bathrooms_total_integer,0.0707
-parking_total,0.0152
-basement_score,-0.0018
-interior_score,0.017
-exterior_score,0.0055
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+601 - Village of Russell,Detached,building_area_total,0.053095,1869.5652,532.373506
+601 - Village of Russell,Detached,lot_width,-0.018999,69.8473,37.50095
+601 - Village of Russell,Detached,bedrooms_above_grade,0.001112,3.25,0.708742
+601 - Village of Russell,Detached,bathrooms_total_integer,0.063411,2.8704,0.695123
+601 - Village of Russell,Detached,parking_total,0.010151,5.6852,1.697755
+601 - Village of Russell,Detached,basement_score,-0.009447,4.6944,0.673002
+601 - Village of Russell,Detached,interior_score,0.031115,3.7222,0.931281
+601 - Village of Russell,Detached,exterior_score,0.008084,2.8796,0.899769

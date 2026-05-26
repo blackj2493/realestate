@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0821
-lot_width,0.0599
-bedrooms_above_grade,0.0302
-bathrooms_total_integer,0.0111
-parking_total,0.0072
-basement_score,0.0066
-interior_score,0.0118
-exterior_score,-0.0066
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bram West,Detached,building_area_total,0.093338,2724.3243,683.718795
+Bram West,Detached,lot_width,0.03497,45.3425,25.654606
+Bram West,Detached,bedrooms_above_grade,0.048885,3.92,0.627375
+Bram West,Detached,bathrooms_total_integer,0.023982,4.072,0.939583
+Bram West,Detached,parking_total,0.028675,5.44,2.313093
+Bram West,Detached,basement_score,-0.009565,5.944,1.566162
+Bram West,Detached,interior_score,0.002976,3.576,1.195083
+Bram West,Detached,exterior_score,0.015302,2.336,0.954518

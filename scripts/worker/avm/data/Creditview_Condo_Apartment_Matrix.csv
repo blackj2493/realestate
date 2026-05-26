@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0366
-lot_width,0.0
-bedrooms_above_grade,-0.0004
-bathrooms_total_integer,0.113
-parking_total,0.0239
-basement_score,0.0
-interior_score,0.0138
-exterior_score,-0.0367
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Creditview,Condo Apartment,building_area_total,0.017907,839.2857,221.342149
+Creditview,Condo Apartment,lot_width,0.0,0.0,1.0
+Creditview,Condo Apartment,bedrooms_above_grade,0.035762,1.6667,0.519462
+Creditview,Condo Apartment,bathrooms_total_integer,0.063575,1.619,0.485621
+Creditview,Condo Apartment,parking_total,0.019202,1.119,0.390505
+Creditview,Condo Apartment,basement_score,0.0,1.0,1.0
+Creditview,Condo Apartment,interior_score,-0.004263,4.1667,0.651616
+Creditview,Condo Apartment,exterior_score,-0.018369,2.1905,0.626331

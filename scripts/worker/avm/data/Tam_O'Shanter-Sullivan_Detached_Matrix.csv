@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0147
-lot_width,0.0271
-bedrooms_above_grade,0.0395
-bathrooms_total_integer,0.0533
-parking_total,0.0245
-basement_score,0.0126
-interior_score,0.0202
-exterior_score,0.0067
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Tam O'Shanter-Sullivan,Detached,building_area_total,0.037724,1691.5584,519.952707
+Tam O'Shanter-Sullivan,Detached,lot_width,0.015259,49.5006,12.240011
+Tam O'Shanter-Sullivan,Detached,bedrooms_above_grade,0.020135,3.5339,0.646794
+Tam O'Shanter-Sullivan,Detached,bathrooms_total_integer,0.051817,2.7797,1.017937
+Tam O'Shanter-Sullivan,Detached,parking_total,0.012743,4.3729,1.779338
+Tam O'Shanter-Sullivan,Detached,basement_score,0.024107,5.7797,1.727816
+Tam O'Shanter-Sullivan,Detached,interior_score,0.023336,3.1271,1.004622
+Tam O'Shanter-Sullivan,Detached,exterior_score,0.006279,2.5,0.870904

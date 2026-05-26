@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Stouffville,Townhouse,building_area_total,0.045418,1582.2368,331.037439
+Stouffville,Townhouse,lot_width,0.001735,20.9876,4.49898
+Stouffville,Townhouse,bedrooms_above_grade,0.022303,2.8298,0.585976
+Stouffville,Townhouse,bathrooms_total_integer,0.01433,3.1968,0.659296
+Stouffville,Townhouse,parking_total,0.036809,2.75,0.841889
+Stouffville,Townhouse,basement_score,0.019231,3.5426,2.144587
+Stouffville,Townhouse,interior_score,0.010284,3.8617,0.766327
+Stouffville,Townhouse,exterior_score,0.002867,2.0266,0.788437

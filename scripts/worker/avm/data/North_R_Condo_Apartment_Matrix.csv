@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1326
-lot_width,0.0
-bedrooms_above_grade,0.0077
-bathrooms_total_integer,0.0143
-parking_total,0.0298
-basement_score,0.0
-interior_score,-0.0049
-exterior_score,0.0295
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North R,Condo Apartment,building_area_total,0.097019,1546.1957,323.322064
+North R,Condo Apartment,lot_width,0.0,0.0,1.0
+North R,Condo Apartment,bedrooms_above_grade,0.026286,1.8043,0.396702
+North R,Condo Apartment,bathrooms_total_integer,0.028344,1.8696,0.447636
+North R,Condo Apartment,parking_total,0.035663,1.587,0.492381
+North R,Condo Apartment,basement_score,0.0,1.0,1.0
+North R,Condo Apartment,interior_score,0.01211,4.587,0.57393
+North R,Condo Apartment,exterior_score,0.016893,2.6522,0.937559

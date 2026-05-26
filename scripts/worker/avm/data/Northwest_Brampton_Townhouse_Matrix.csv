@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0208
-lot_width,0.0
-bedrooms_above_grade,0.0194
-bathrooms_total_integer,0.0155
-parking_total,0.013
-basement_score,-0.0015
-interior_score,0.0093
-exterior_score,0.0172
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northwest Brampton,Townhouse,building_area_total,0.052047,1679.5918,305.475507
+Northwest Brampton,Townhouse,lot_width,0.003722,22.8557,8.861255
+Northwest Brampton,Townhouse,bedrooms_above_grade,0.019629,3.1814,0.627355
+Northwest Brampton,Townhouse,bathrooms_total_integer,0.012644,3.25,0.714863
+Northwest Brampton,Townhouse,parking_total,0.027342,2.6225,0.899172
+Northwest Brampton,Townhouse,basement_score,0.010596,4.8676,2.621018
+Northwest Brampton,Townhouse,interior_score,-0.004,3.8676,0.832627
+Northwest Brampton,Townhouse,exterior_score,0.00359,2.0,0.560112

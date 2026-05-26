@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0964
-lot_width,0.0236
-bedrooms_above_grade,0.0096
-bathrooms_total_integer,0.0134
-parking_total,0.0142
-basement_score,0.0045
-interior_score,0.0138
-exterior_score,0.0174
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1019 - WM Westmount,Detached,building_area_total,0.085856,2414.879,621.50488
+1019 - WM Westmount,Detached,lot_width,0.015882,40.8414,9.686951
+1019 - WM Westmount,Detached,bedrooms_above_grade,0.031172,3.6718,0.53063
+1019 - WM Westmount,Detached,bathrooms_total_integer,0.017579,3.8702,0.724668
+1019 - WM Westmount,Detached,parking_total,0.038699,3.8435,1.124135
+1019 - WM Westmount,Detached,basement_score,0.005281,5.1221,0.941194
+1019 - WM Westmount,Detached,interior_score,0.013675,4.1069,0.93492
+1019 - WM Westmount,Detached,exterior_score,0.022869,2.6489,0.948471

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0497
-lot_width,0.0979
-bedrooms_above_grade,-0.0164
-bathrooms_total_integer,0.2489
-parking_total,0.0199
-basement_score,0.0098
-interior_score,0.054
-exterior_score,0.0171
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Forest Hill South,Detached,building_area_total,0.091327,2953.5714,911.069025
+Forest Hill South,Detached,lot_width,0.105114,48.6741,13.35874
+Forest Hill South,Detached,bedrooms_above_grade,-0.016505,4.3188,1.014286
+Forest Hill South,Detached,bathrooms_total_integer,0.203544,4.7536,1.609805
+Forest Hill South,Detached,parking_total,0.042158,4.8478,2.364141
+Forest Hill South,Detached,basement_score,0.002516,5.8261,1.727497
+Forest Hill South,Detached,interior_score,0.048779,3.6522,1.272064
+Forest Hill South,Detached,exterior_score,0.017131,2.7826,0.990821

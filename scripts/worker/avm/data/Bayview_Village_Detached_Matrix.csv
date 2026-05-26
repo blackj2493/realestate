@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0463
-lot_width,0.0249
-bedrooms_above_grade,-0.0465
-bathrooms_total_integer,0.1899
-parking_total,0.0298
-basement_score,0.0285
-interior_score,0.0303
-exterior_score,0.0265
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bayview Village,Detached,building_area_total,0.130869,2342.8571,1010.203051
+Bayview Village,Detached,lot_width,0.0307,61.9253,15.380219
+Bayview Village,Detached,bedrooms_above_grade,-0.062492,3.4054,0.836966
+Bayview Village,Detached,bathrooms_total_integer,0.172473,3.973,1.524334
+Bayview Village,Detached,parking_total,0.048339,6.3919,1.496099
+Bayview Village,Detached,basement_score,0.045237,6.7162,1.759302
+Bayview Village,Detached,interior_score,-0.008101,3.6216,1.193481
+Bayview Village,Detached,exterior_score,0.073436,3.0405,1.095928

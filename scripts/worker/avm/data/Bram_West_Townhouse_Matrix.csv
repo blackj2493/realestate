@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bram West,Townhouse,building_area_total,0.027748,1825.5814,344.51636
+Bram West,Townhouse,lot_width,0.011398,25.9143,12.179047
+Bram West,Townhouse,bedrooms_above_grade,0.033371,3.303,0.626914
+Bram West,Townhouse,bathrooms_total_integer,0.021904,3.5657,0.622176
+Bram West,Townhouse,parking_total,0.023608,2.6162,0.812865
+Bram West,Townhouse,basement_score,0.020267,4.8283,2.807063
+Bram West,Townhouse,interior_score,0.014945,3.697,0.958266
+Bram West,Townhouse,exterior_score,0.012587,2.1919,0.761136

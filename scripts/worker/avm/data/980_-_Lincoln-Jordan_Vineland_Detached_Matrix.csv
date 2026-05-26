@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0542
-lot_width,0.0691
-bedrooms_above_grade,0.054
-bathrooms_total_integer,0.0545
-parking_total,0.0999
-basement_score,0.0126
-interior_score,0.0397
-exterior_score,0.0264
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+980 - Lincoln-Jordan/Vineland,Detached,building_area_total,0.094257,1779.4699,680.438826
+980 - Lincoln-Jordan/Vineland,Detached,lot_width,0.097451,93.9402,90.679702
+980 - Lincoln-Jordan/Vineland,Detached,bedrooms_above_grade,0.043557,2.9889,0.96026
+980 - Lincoln-Jordan/Vineland,Detached,bathrooms_total_integer,0.057111,2.5778,0.894151
+980 - Lincoln-Jordan/Vineland,Detached,parking_total,0.057818,6.4444,3.812585
+980 - Lincoln-Jordan/Vineland,Detached,basement_score,0.046078,5.1556,1.26413
+980 - Lincoln-Jordan/Vineland,Detached,interior_score,0.050166,3.5222,0.957169
+980 - Lincoln-Jordan/Vineland,Detached,exterior_score,0.020304,2.9444,0.958716

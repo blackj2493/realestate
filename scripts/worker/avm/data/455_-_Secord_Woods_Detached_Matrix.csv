@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0124
-lot_width,0.0249
-bedrooms_above_grade,0.0237
-bathrooms_total_integer,0.0544
-parking_total,-0.0096
-basement_score,0.0215
-interior_score,0.0401
-exterior_score,0.0217
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+455 - Secord Woods,Detached,building_area_total,0.005908,1117.359,275.195361
+455 - Secord Woods,Detached,lot_width,0.009328,51.1532,15.801707
+455 - Secord Woods,Detached,bedrooms_above_grade,0.026894,2.9,0.683943
+455 - Secord Woods,Detached,bathrooms_total_integer,0.058415,1.9,0.578312
+455 - Secord Woods,Detached,parking_total,0.028765,3.8056,1.570022
+455 - Secord Woods,Detached,basement_score,0.040323,5.2667,1.396822
+455 - Secord Woods,Detached,interior_score,0.066586,3.0556,0.981621
+455 - Secord Woods,Detached,exterior_score,0.031958,2.4222,0.918668

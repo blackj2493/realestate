@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0648
-lot_width,0.0349
-bedrooms_above_grade,0.0202
-bathrooms_total_integer,0.0118
-parking_total,0.022
-basement_score,0.0017
-interior_score,0.0093
-exterior_score,0.0029
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rouge Woods,Detached,building_area_total,0.060034,2503.4247,543.474916
+Rouge Woods,Detached,lot_width,0.024354,36.5196,7.303193
+Rouge Woods,Detached,bedrooms_above_grade,0.022216,4.0102,0.543888
+Rouge Woods,Detached,bathrooms_total_integer,0.008095,4.1939,0.77799
+Rouge Woods,Detached,parking_total,0.016838,5.0306,1.07337
+Rouge Woods,Detached,basement_score,-0.004435,5.6633,1.470415
+Rouge Woods,Detached,interior_score,0.022368,3.7347,1.025701
+Rouge Woods,Detached,exterior_score,0.008789,2.1837,0.861263

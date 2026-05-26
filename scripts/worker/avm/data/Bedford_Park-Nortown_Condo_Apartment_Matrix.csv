@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.3335
-lot_width,0.0
-bedrooms_above_grade,-0.0088
-bathrooms_total_integer,0.023
-parking_total,0.0376
-basement_score,0.0
-interior_score,0.0435
-exterior_score,0.052
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bedford Park-Nortown,Condo Apartment,building_area_total,0.259366,1486.4407,472.334673
+Bedford Park-Nortown,Condo Apartment,lot_width,0.0,0.0,1.0
+Bedford Park-Nortown,Condo Apartment,bedrooms_above_grade,-0.068223,1.8983,0.398936
+Bedford Park-Nortown,Condo Apartment,bathrooms_total_integer,0.129791,2.2881,0.553903
+Bedford Park-Nortown,Condo Apartment,parking_total,0.060124,1.6271,0.549215
+Bedford Park-Nortown,Condo Apartment,basement_score,0.0,1.0,1.0
+Bedford Park-Nortown,Condo Apartment,interior_score,-0.003505,4.1864,0.87284
+Bedford Park-Nortown,Condo Apartment,exterior_score,-0.030134,2.4068,0.958789

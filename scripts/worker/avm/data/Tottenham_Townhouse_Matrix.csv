@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Tottenham,Townhouse,building_area_total,0.041152,1616.9318,259.563042
+Tottenham,Townhouse,lot_width,0.024253,21.4493,8.716832
+Tottenham,Townhouse,bedrooms_above_grade,0.007195,3.0,0.288675
+Tottenham,Townhouse,bathrooms_total_integer,0.023738,3.0,0.612372
+Tottenham,Townhouse,parking_total,-0.004302,2.5417,0.644151
+Tottenham,Townhouse,basement_score,0.02578,4.4375,0.976948
+Tottenham,Townhouse,interior_score,0.01556,3.7708,0.742731
+Tottenham,Townhouse,exterior_score,-0.007058,2.4792,0.735685

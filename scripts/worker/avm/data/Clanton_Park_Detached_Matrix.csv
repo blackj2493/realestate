@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0315
-lot_width,-0.0338
-bedrooms_above_grade,0.0679
-bathrooms_total_integer,0.1478
-parking_total,0.0178
-basement_score,0.0274
-interior_score,0.0569
-exterior_score,-0.0134
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Clanton Park,Detached,building_area_total,0.142869,2089.4737,1008.548412
+Clanton Park,Detached,lot_width,0.002346,48.256,8.391486
+Clanton Park,Detached,bedrooms_above_grade,0.027365,3.2667,0.85375
+Clanton Park,Detached,bathrooms_total_integer,0.09766,3.3,1.394035
+Clanton Park,Detached,parking_total,0.02443,4.7722,1.586683
+Clanton Park,Detached,basement_score,-0.025776,6.1444,1.767365
+Clanton Park,Detached,interior_score,0.065821,3.1667,1.176152
+Clanton Park,Detached,exterior_score,-0.005017,2.3556,0.793181

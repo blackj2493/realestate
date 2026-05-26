@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1010 - JM Joshua Meadows,Townhouse,building_area_total,0.052905,1850.236,395.203262
+1010 - JM Joshua Meadows,Townhouse,lot_width,0.00263,22.17,5.904502
+1010 - JM Joshua Meadows,Townhouse,bedrooms_above_grade,0.026046,3.1648,0.715046
+1010 - JM Joshua Meadows,Townhouse,bathrooms_total_integer,0.022671,3.3846,0.722773
+1010 - JM Joshua Meadows,Townhouse,parking_total,0.017784,2.2967,0.828669
+1010 - JM Joshua Meadows,Townhouse,basement_score,0.035692,3.9121,2.009036
+1010 - JM Joshua Meadows,Townhouse,interior_score,-0.011655,4.0659,0.809317
+1010 - JM Joshua Meadows,Townhouse,exterior_score,0.019922,2.2088,0.832268

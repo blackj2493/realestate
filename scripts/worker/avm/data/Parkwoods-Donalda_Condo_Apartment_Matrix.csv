@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0312
-lot_width,0.0
-bedrooms_above_grade,-0.0172
-bathrooms_total_integer,0.0689
-parking_total,0.0019
-basement_score,0.0
-interior_score,0.033
-exterior_score,0.0262
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Parkwoods-Donalda,Condo Apartment,building_area_total,-0.002548,827.7108,201.538213
+Parkwoods-Donalda,Condo Apartment,lot_width,0.0,0.0,1.0
+Parkwoods-Donalda,Condo Apartment,bedrooms_above_grade,0.015354,1.8434,0.68516
+Parkwoods-Donalda,Condo Apartment,bathrooms_total_integer,0.069741,1.6747,0.468487
+Parkwoods-Donalda,Condo Apartment,parking_total,0.021391,1.1084,0.310927
+Parkwoods-Donalda,Condo Apartment,basement_score,0.0,1.0,1.0
+Parkwoods-Donalda,Condo Apartment,interior_score,0.029855,3.9759,0.760087
+Parkwoods-Donalda,Condo Apartment,exterior_score,0.027243,2.7229,0.985598

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0116
-lot_width,0.0214
-bedrooms_above_grade,-0.0163
-bathrooms_total_integer,0.0546
-parking_total,0.023
-basement_score,0.0171
-interior_score,0.0549
-exterior_score,0.0072
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Victoria Village,Detached,building_area_total,0.041002,1579.7619,425.812881
+Victoria Village,Detached,lot_width,0.032952,54.6755,8.955933
+Victoria Village,Detached,bedrooms_above_grade,-0.012984,3.25,0.504149
+Victoria Village,Detached,bathrooms_total_integer,0.014097,2.3333,0.649786
+Victoria Village,Detached,parking_total,0.014097,4.7167,1.170351
+Victoria Village,Detached,basement_score,0.033849,5.9833,1.784112
+Victoria Village,Detached,interior_score,0.04539,3.2667,0.997775
+Victoria Village,Detached,exterior_score,0.032717,3.1833,0.921804

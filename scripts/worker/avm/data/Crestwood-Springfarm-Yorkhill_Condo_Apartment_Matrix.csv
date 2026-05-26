@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1738
-lot_width,0.0
-bedrooms_above_grade,0.0134
-bathrooms_total_integer,0.0089
-parking_total,0.0232
-basement_score,0.0
-interior_score,0.0555
-exterior_score,0.0185
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Crestwood-Springfarm-Yorkhill,Condo Apartment,building_area_total,0.168479,1192.9641,369.939773
+Crestwood-Springfarm-Yorkhill,Condo Apartment,lot_width,0.0,0.0,1.0
+Crestwood-Springfarm-Yorkhill,Condo Apartment,bedrooms_above_grade,0.009176,1.8383,0.414084
+Crestwood-Springfarm-Yorkhill,Condo Apartment,bathrooms_total_integer,0.013887,1.8982,0.446339
+Crestwood-Springfarm-Yorkhill,Condo Apartment,parking_total,0.026285,1.3293,0.506758
+Crestwood-Springfarm-Yorkhill,Condo Apartment,basement_score,-0.009696,1.024,0.308601
+Crestwood-Springfarm-Yorkhill,Condo Apartment,interior_score,0.046449,3.976,0.934707
+Crestwood-Springfarm-Yorkhill,Condo Apartment,exterior_score,0.01875,2.2874,0.72675

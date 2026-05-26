@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.032
-lot_width,0.0
-bedrooms_above_grade,-0.0067
-bathrooms_total_integer,0.0459
-parking_total,0.0033
-basement_score,0.0103
-interior_score,0.0048
-exterior_score,0.0128
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Village East,Townhouse,building_area_total,0.019993,1475.8929,309.303808
+Village East,Townhouse,lot_width,0.0,20.9023,2.321051
+Village East,Townhouse,bedrooms_above_grade,-0.007774,3.0,0.321634
+Village East,Townhouse,bathrooms_total_integer,0.047394,2.5862,0.695663
+Village East,Townhouse,parking_total,0.007988,2.1724,0.37774
+Village East,Townhouse,basement_score,-0.002108,4.5,3.470317
+Village East,Townhouse,interior_score,0.008749,3.6379,0.781208
+Village East,Townhouse,exterior_score,0.013586,2.0862,0.725983

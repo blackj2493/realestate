@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2647
-lot_width,0.0
-bedrooms_above_grade,-0.0148
-bathrooms_total_integer,0.0235
-parking_total,0.0637
-basement_score,-0.007
-interior_score,0.029
-exterior_score,-0.016
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Trinity-Bellwoods,Condo Apartment,building_area_total,0.149357,810.0,255.147016
+Trinity-Bellwoods,Condo Apartment,lot_width,0.0,0.0,1.0
+Trinity-Bellwoods,Condo Apartment,bedrooms_above_grade,0.033599,1.44,0.535164
+Trinity-Bellwoods,Condo Apartment,bathrooms_total_integer,0.069018,1.48,0.607947
+Trinity-Bellwoods,Condo Apartment,parking_total,0.070477,0.66,0.514198
+Trinity-Bellwoods,Condo Apartment,basement_score,-0.017029,1.08,0.56
+Trinity-Bellwoods,Condo Apartment,interior_score,0.00999,4.26,0.795236
+Trinity-Bellwoods,Condo Apartment,exterior_score,0.000325,2.04,0.631189

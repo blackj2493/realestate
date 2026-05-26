@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0463
-lot_width,0.0384
-bedrooms_above_grade,-0.011
-bathrooms_total_integer,0.0171
-parking_total,0.0821
-basement_score,0.0271
-interior_score,0.0157
-exterior_score,0.0098
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+877 - Main Street,Detached,building_area_total,0.076997,1445.4792,588.255064
+877 - Main Street,Detached,lot_width,0.002226,60.6434,24.715868
+877 - Main Street,Detached,bedrooms_above_grade,0.002107,2.9906,0.745999
+877 - Main Street,Detached,bathrooms_total_integer,0.058904,1.9434,0.787044
+877 - Main Street,Detached,parking_total,0.082303,5.2689,2.90102
+877 - Main Street,Detached,basement_score,0.044904,4.6887,1.934606
+877 - Main Street,Detached,interior_score,0.017828,2.8962,0.867976
+877 - Main Street,Detached,exterior_score,0.030699,2.3679,0.827881

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0195
-lot_width,0.0
-bedrooms_above_grade,0.1114
-bathrooms_total_integer,0.0415
-parking_total,0.0171
-basement_score,0.0168
-interior_score,0.0072
-exterior_score,-0.0063
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Churchill Meadows,Townhouse,building_area_total,0.067605,1436.0938,485.506717
+Churchill Meadows,Townhouse,lot_width,0.0,24.3183,12.955439
+Churchill Meadows,Townhouse,bedrooms_above_grade,0.076137,2.6395,0.688996
+Churchill Meadows,Townhouse,bathrooms_total_integer,0.041009,3.0465,0.861407
+Churchill Meadows,Townhouse,parking_total,0.05425,1.9593,0.923577
+Churchill Meadows,Townhouse,basement_score,0.0207,3.5872,2.284543
+Churchill Meadows,Townhouse,interior_score,0.006815,3.8953,0.762936
+Churchill Meadows,Townhouse,exterior_score,-0.002183,1.9942,0.711182

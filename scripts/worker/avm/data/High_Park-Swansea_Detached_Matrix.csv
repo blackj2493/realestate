@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0535
-lot_width,0.0501
-bedrooms_above_grade,0.0637
-bathrooms_total_integer,0.1436
-parking_total,0.0329
-basement_score,-0.0182
-interior_score,0.0188
-exterior_score,0.0223
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+High Park-Swansea,Detached,building_area_total,0.10159,2126.1782,824.577424
+High Park-Swansea,Detached,lot_width,0.031506,31.627,8.840466
+High Park-Swansea,Detached,bedrooms_above_grade,0.017917,3.7734,1.153899
+High Park-Swansea,Detached,bathrooms_total_integer,0.14444,3.2344,1.221451
+High Park-Swansea,Detached,parking_total,0.03371,2.5391,1.690517
+High Park-Swansea,Detached,basement_score,-0.019957,6.1484,1.745932
+High Park-Swansea,Detached,interior_score,0.030025,3.3906,1.21343
+High Park-Swansea,Detached,exterior_score,0.006717,2.8125,0.949918

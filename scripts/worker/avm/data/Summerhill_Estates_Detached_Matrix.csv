@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0356
-lot_width,0.0308
-bedrooms_above_grade,0.0492
-bathrooms_total_integer,-0.0109
-parking_total,0.0084
-basement_score,0.0164
-interior_score,0.0117
-exterior_score,0.0104
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Summerhill Estates,Detached,building_area_total,0.0599,2163.5593,580.679797
+Summerhill Estates,Detached,lot_width,-0.004799,34.532,13.666302
+Summerhill Estates,Detached,bedrooms_above_grade,0.045254,3.5467,0.617378
+Summerhill Estates,Detached,bathrooms_total_integer,0.006794,3.56,0.787231
+Summerhill Estates,Detached,parking_total,0.022466,5.3467,1.232811
+Summerhill Estates,Detached,basement_score,0.019072,5.96,1.969365
+Summerhill Estates,Detached,interior_score,0.023864,3.6667,1.074968
+Summerhill Estates,Detached,exterior_score,0.018747,2.8133,0.919323

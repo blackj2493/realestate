@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0327
-lot_width,0.0355
-bedrooms_above_grade,0.0382
-bathrooms_total_integer,0.0205
-parking_total,0.0144
-basement_score,0.0241
-interior_score,0.0078
-exterior_score,-0.0076
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1029 - DE Dempsey,Detached,building_area_total,0.048283,2148.44,494.392401
+1029 - DE Dempsey,Detached,lot_width,0.040597,38.4503,8.211743
+1029 - DE Dempsey,Detached,bedrooms_above_grade,0.037286,3.6379,0.547668
+1029 - DE Dempsey,Detached,bathrooms_total_integer,0.008322,3.7414,0.842008
+1029 - DE Dempsey,Detached,parking_total,0.002521,4.1207,1.232849
+1029 - DE Dempsey,Detached,basement_score,0.015188,5.5172,1.192525
+1029 - DE Dempsey,Detached,interior_score,0.015027,3.8103,0.990592
+1029 - DE Dempsey,Detached,exterior_score,0.008883,2.569,0.966902

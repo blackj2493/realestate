@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0921
-lot_width,0.0383
-bedrooms_above_grade,-0.0034
-bathrooms_total_integer,0.0247
-parking_total,0.0211
-basement_score,0.0134
-interior_score,0.0339
-exterior_score,-0.0094
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+462 - Rykert/Vansickle,Detached,building_area_total,0.091935,1720.5616,617.451124
+462 - Rykert/Vansickle,Detached,lot_width,-0.016811,51.8104,9.675176
+462 - Rykert/Vansickle,Detached,bedrooms_above_grade,-0.002464,3.2564,0.758472
+462 - Rykert/Vansickle,Detached,bathrooms_total_integer,0.028637,2.7949,0.896703
+462 - Rykert/Vansickle,Detached,parking_total,0.013804,4.6538,1.599895
+462 - Rykert/Vansickle,Detached,basement_score,-0.011471,5.2179,1.287488
+462 - Rykert/Vansickle,Detached,interior_score,0.055259,3.4231,0.993817
+462 - Rykert/Vansickle,Detached,exterior_score,0.01079,2.6667,0.901091

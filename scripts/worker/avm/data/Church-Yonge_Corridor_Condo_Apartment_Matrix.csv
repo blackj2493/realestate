@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0872
-lot_width,0.0
-bedrooms_above_grade,0.0586
-bathrooms_total_integer,0.0738
-parking_total,0.0298
-basement_score,0.0
-interior_score,0.0303
-exterior_score,0.0075
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Church-Yonge Corridor,Condo Apartment,building_area_total,0.086089,710.557,294.061387
+Church-Yonge Corridor,Condo Apartment,lot_width,0.0,0.0,1.0
+Church-Yonge Corridor,Condo Apartment,bedrooms_above_grade,0.0658,1.3834,0.617646
+Church-Yonge Corridor,Condo Apartment,bathrooms_total_integer,0.059787,1.3964,0.514945
+Church-Yonge Corridor,Condo Apartment,parking_total,0.040001,0.4689,0.526812
+Church-Yonge Corridor,Condo Apartment,basement_score,0.0,1.0,1.0
+Church-Yonge Corridor,Condo Apartment,interior_score,0.029436,3.9378,0.871999
+Church-Yonge Corridor,Condo Apartment,exterior_score,0.004312,2.158,0.607296

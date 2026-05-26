@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Westbrook,Townhouse,building_area_total,0.044119,1931.25,286.479166
+Westbrook,Townhouse,lot_width,-0.005173,23.4465,5.92479
+Westbrook,Townhouse,bedrooms_above_grade,0.007306,3.1698,0.422743
+Westbrook,Townhouse,bathrooms_total_integer,0.010418,3.5472,0.568548
+Westbrook,Townhouse,parking_total,0.033838,3.0377,1.30257
+Westbrook,Townhouse,basement_score,-0.022097,5.5283,2.319757
+Westbrook,Townhouse,interior_score,0.006868,4.1509,0.595462
+Westbrook,Townhouse,exterior_score,-0.006542,2.8113,1.047127

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.232
-lot_width,0.0
-bedrooms_above_grade,0.0123
-bathrooms_total_integer,0.0416
-parking_total,0.0161
-basement_score,0.0
-interior_score,0.0361
-exterior_score,-0.02
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Erin Mills,Condo Apartment,building_area_total,0.234615,1168.8429,446.881117
+Erin Mills,Condo Apartment,lot_width,0.0,0.0,1.0
+Erin Mills,Condo Apartment,bedrooms_above_grade,-0.023497,1.7286,0.475738
+Erin Mills,Condo Apartment,bathrooms_total_integer,0.077281,1.8571,0.61611
+Erin Mills,Condo Apartment,parking_total,0.014966,1.5714,0.494872
+Erin Mills,Condo Apartment,basement_score,0.0,1.0,1.0
+Erin Mills,Condo Apartment,interior_score,-0.001856,4.0857,0.76984
+Erin Mills,Condo Apartment,exterior_score,0.01593,2.5429,1.023798

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1624
-lot_width,0.0
-bedrooms_above_grade,0.0333
-bathrooms_total_integer,0.0286
-parking_total,0.0376
-basement_score,0.0
-interior_score,0.0364
-exterior_score,-0.0104
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Edenbridge-Humber Valley,Condo Apartment,building_area_total,0.099251,902.2059,337.533639
+Edenbridge-Humber Valley,Condo Apartment,lot_width,0.0,0.0,1.0
+Edenbridge-Humber Valley,Condo Apartment,bedrooms_above_grade,0.046012,1.5441,0.49805
+Edenbridge-Humber Valley,Condo Apartment,bathrooms_total_integer,0.069303,1.75,0.672463
+Edenbridge-Humber Valley,Condo Apartment,parking_total,0.061958,1.1176,0.403274
+Edenbridge-Humber Valley,Condo Apartment,basement_score,0.0,1.0,1.0
+Edenbridge-Humber Valley,Condo Apartment,interior_score,0.022821,4.0735,0.896335
+Edenbridge-Humber Valley,Condo Apartment,exterior_score,-0.013456,2.3235,0.961634

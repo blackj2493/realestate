@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0596
-lot_width,0.079
-bedrooms_above_grade,0.0099
-bathrooms_total_integer,0.1056
-parking_total,0.0779
-basement_score,-0.0229
-interior_score,0.0282
-exterior_score,0.0356
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+63 - Stone Mills,Detached,building_area_total,0.043505,1758.0596,648.147135
+63 - Stone Mills,Detached,lot_width,0.074488,389.1698,809.995547
+63 - Stone Mills,Detached,bedrooms_above_grade,0.012646,2.9692,0.876518
+63 - Stone Mills,Detached,bathrooms_total_integer,0.107131,2.0615,0.720618
+63 - Stone Mills,Detached,parking_total,0.101798,7.7885,3.6241
+63 - Stone Mills,Detached,basement_score,0.006639,4.8385,2.342923
+63 - Stone Mills,Detached,interior_score,0.039064,3.3538,0.943492
+63 - Stone Mills,Detached,exterior_score,0.059365,2.6077,0.854816

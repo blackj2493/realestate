@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1059
-lot_width,0.0
-bedrooms_above_grade,0.0123
-bathrooms_total_integer,0.0001
-parking_total,-0.0077
-basement_score,0.0
-interior_score,0.0556
-exterior_score,0.0147
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brownridge,Condo Apartment,building_area_total,0.076746,1168.5465,256.189504
+Brownridge,Condo Apartment,lot_width,0.0,0.0,1.0
+Brownridge,Condo Apartment,bedrooms_above_grade,0.055115,1.8721,0.367155
+Brownridge,Condo Apartment,bathrooms_total_integer,-0.000394,1.8721,0.333986
+Brownridge,Condo Apartment,parking_total,0.00784,1.2209,0.414874
+Brownridge,Condo Apartment,basement_score,0.01062,1.0698,0.643224
+Brownridge,Condo Apartment,interior_score,0.038796,4.0698,0.774457
+Brownridge,Condo Apartment,exterior_score,0.007007,2.1628,0.626182

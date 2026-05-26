@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2562
-lot_width,0.0
-bedrooms_above_grade,0.0
-bathrooms_total_integer,0.1924
-parking_total,0.0028
-basement_score,0.0
-interior_score,-0.0468
-exterior_score,0.0197
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Lawrence Park South,Condo Apartment,building_area_total,0.326093,1304.7619,481.603166
+Lawrence Park South,Condo Apartment,lot_width,0.0,0.0,1.0
+Lawrence Park South,Condo Apartment,bedrooms_above_grade,0.010695,1.9762,0.407553
+Lawrence Park South,Condo Apartment,bathrooms_total_integer,0.175385,2.1667,0.573903
+Lawrence Park South,Condo Apartment,parking_total,0.009876,1.4524,0.497727
+Lawrence Park South,Condo Apartment,basement_score,0.0,1.0,1.0
+Lawrence Park South,Condo Apartment,interior_score,0.061218,4.0238,1.144097
+Lawrence Park South,Condo Apartment,exterior_score,0.091043,2.5476,0.956242

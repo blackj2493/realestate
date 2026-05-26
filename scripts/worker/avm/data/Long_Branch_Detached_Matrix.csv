@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0524
-lot_width,0.0415
-bedrooms_above_grade,0.0287
-bathrooms_total_integer,0.1507
-parking_total,0.0122
-basement_score,0.009
-interior_score,0.0346
-exterior_score,-0.017
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Long Branch,Detached,building_area_total,0.050345,1616.8679,680.099272
+Long Branch,Detached,lot_width,0.022946,38.2248,11.719094
+Long Branch,Detached,bedrooms_above_grade,0.049299,3.0411,0.928076
+Long Branch,Detached,bathrooms_total_integer,0.145057,2.7671,1.188075
+Long Branch,Detached,parking_total,0.028861,3.7877,1.839293
+Long Branch,Detached,basement_score,0.026824,6.1507,2.130478
+Long Branch,Detached,interior_score,0.027231,3.2329,1.164786
+Long Branch,Detached,exterior_score,-0.008499,2.7123,1.17601

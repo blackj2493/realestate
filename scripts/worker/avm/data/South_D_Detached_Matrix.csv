@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0087
-lot_width,0.0234
-bedrooms_above_grade,-0.003
-bathrooms_total_integer,0.0374
-parking_total,0.0152
-basement_score,0.0077
-interior_score,0.0432
-exterior_score,0.0132
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South D,Detached,building_area_total,0.01868,1151.8841,329.184611
+South D,Detached,lot_width,0.002372,57.9822,11.874423
+South D,Detached,bedrooms_above_grade,-0.000541,2.8974,0.611634
+South D,Detached,bathrooms_total_integer,0.026513,1.9487,0.552325
+South D,Detached,parking_total,0.022686,4.8974,1.822859
+South D,Detached,basement_score,0.023573,4.8974,1.266833
+South D,Detached,interior_score,0.040156,3.141,0.99646
+South D,Detached,exterior_score,0.022098,2.6538,0.874524

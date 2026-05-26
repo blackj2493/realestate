@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0549
-lot_width,0.0165
-bedrooms_above_grade,0.0319
-bathrooms_total_integer,0.0472
-parking_total,0.0219
-basement_score,0.0069
-interior_score,0.0149
-exterior_score,0.0096
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Heart Lake West,Detached,building_area_total,0.049772,1908.4071,606.670248
+Heart Lake West,Detached,lot_width,0.02197,40.668,14.314013
+Heart Lake West,Detached,bedrooms_above_grade,0.035654,3.4641,0.54863
+Heart Lake West,Detached,bathrooms_total_integer,0.05305,3.281,0.932055
+Heart Lake West,Detached,parking_total,0.024042,4.8693,1.540065
+Heart Lake West,Detached,basement_score,0.005472,5.7778,1.673407
+Heart Lake West,Detached,interior_score,0.023603,3.281,0.945975
+Heart Lake West,Detached,exterior_score,0.014692,2.6993,0.922379

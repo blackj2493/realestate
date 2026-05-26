@@ -8,6 +8,7 @@
 
 import type { Metadata } from "next";
 import CompareClient from "./CompareClient";
+import { getCompareData } from "@/lib/property/getCompareData";
 
 export const metadata: Metadata = {
   title: "Compare Properties | PureProperty",
@@ -28,9 +29,13 @@ export default async function ComparePage({
     .filter(Boolean)
     .slice(0, MAX_COLUMNS);
 
+  // Fetch listings + their precomputed estimates server-side so the valuation rows
+  // and corrected $/sqft render instantly (no live AVM round-trip).
+  const { listings, estimates } = await getCompareData(idList);
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
-      <CompareClient ids={idList} />
+      <CompareClient listings={listings} estimates={estimates} />
     </main>
   );
 }

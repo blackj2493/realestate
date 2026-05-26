@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2194
-lot_width,0.0
-bedrooms_above_grade,0.0087
-bathrooms_total_integer,-0.0426
-parking_total,0.0158
-basement_score,0.0
-interior_score,-0.0106
-exterior_score,0.0178
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,building_area_total,0.20151,741.8478,191.288135
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,lot_width,0.0,0.0,1.0
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,bedrooms_above_grade,0.020997,1.3696,0.482687
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,bathrooms_total_integer,-0.020277,1.4348,0.630809
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,parking_total,0.010148,0.75,0.480602
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,basement_score,0.0,1.0,1.0
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,interior_score,0.019706,3.8478,0.569797
+Dovercourt-Wallace Emerson-Junction,Condo Apartment,exterior_score,-0.006462,2.0652,0.704093

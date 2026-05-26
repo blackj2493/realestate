@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.006
-lot_width,0.0285
-bedrooms_above_grade,0.0262
-bathrooms_total_integer,0.0344
-parking_total,0.032
-basement_score,0.0105
-interior_score,0.0266
-exterior_score,0.0235
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Hill,Detached,building_area_total,0.009741,1548.8764,452.767863
+West Hill,Detached,lot_width,0.03777,50.0975,12.95874
+West Hill,Detached,bedrooms_above_grade,0.035065,3.232,0.595127
+West Hill,Detached,bathrooms_total_integer,0.059772,2.576,0.931785
+West Hill,Detached,parking_total,0.031925,4.8,2.066882
+West Hill,Detached,basement_score,0.014112,6.048,1.814854
+West Hill,Detached,interior_score,0.028737,2.744,1.034632
+West Hill,Detached,exterior_score,0.002915,2.44,1.03846

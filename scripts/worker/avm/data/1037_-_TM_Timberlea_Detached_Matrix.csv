@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0122
-lot_width,0.08
-bedrooms_above_grade,0.0368
-bathrooms_total_integer,0.017
-parking_total,0.0243
-basement_score,-0.0037
-interior_score,0.0224
-exterior_score,0.01
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1037 - TM Timberlea,Detached,building_area_total,0.02202,1828.6911,453.285862
+1037 - TM Timberlea,Detached,lot_width,0.023301,47.2676,15.031265
+1037 - TM Timberlea,Detached,bedrooms_above_grade,0.023509,3.2794,0.854841
+1037 - TM Timberlea,Detached,bathrooms_total_integer,0.03971,2.9559,0.756031
+1037 - TM Timberlea,Detached,parking_total,0.050155,4.5588,1.657269
+1037 - TM Timberlea,Detached,basement_score,-0.015756,4.9412,0.872494
+1037 - TM Timberlea,Detached,interior_score,0.023012,3.6765,0.881863
+1037 - TM Timberlea,Detached,exterior_score,0.000356,2.8235,1.02815

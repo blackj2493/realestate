@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+602 - Embrun,Townhouse,building_area_total,0.04568,1530.7692,267.134698
+602 - Embrun,Townhouse,lot_width,0.00076,22.6631,10.589818
+602 - Embrun,Townhouse,bedrooms_above_grade,-0.008727,2.9048,0.478566
+602 - Embrun,Townhouse,bathrooms_total_integer,0.028218,2.8571,0.709508
+602 - Embrun,Townhouse,parking_total,-0.000866,2.8571,1.186661
+602 - Embrun,Townhouse,basement_score,0.029433,4.4524,1.073543
+602 - Embrun,Townhouse,interior_score,-0.008729,3.6667,0.917208
+602 - Embrun,Townhouse,exterior_score,0.019454,2.5,0.932227

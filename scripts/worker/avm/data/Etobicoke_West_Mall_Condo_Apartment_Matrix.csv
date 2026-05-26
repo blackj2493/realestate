@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0225
-lot_width,0.0
-bedrooms_above_grade,0.0178
-bathrooms_total_integer,0.0704
-parking_total,0.0055
-basement_score,0.0
-interior_score,0.0264
-exterior_score,0.0044
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Etobicoke West Mall,Condo Apartment,building_area_total,0.001015,989.5604,295.433792
+Etobicoke West Mall,Condo Apartment,lot_width,0.0,0.0,1.0
+Etobicoke West Mall,Condo Apartment,bedrooms_above_grade,0.018335,1.9341,0.723274
+Etobicoke West Mall,Condo Apartment,bathrooms_total_integer,0.055707,1.5055,0.49997
+Etobicoke West Mall,Condo Apartment,parking_total,0.024857,1.0549,0.271853
+Etobicoke West Mall,Condo Apartment,basement_score,0.0,1.0,1.0
+Etobicoke West Mall,Condo Apartment,interior_score,0.029688,3.9231,0.787691
+Etobicoke West Mall,Condo Apartment,exterior_score,0.01262,1.8242,0.639254

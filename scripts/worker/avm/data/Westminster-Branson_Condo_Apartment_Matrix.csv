@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0475
-lot_width,0.0
-bedrooms_above_grade,0.0329
-bathrooms_total_integer,0.0019
-parking_total,-0.0162
-basement_score,0.0
-interior_score,0.0646
-exterior_score,0.0186
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Westminster-Branson,Condo Apartment,building_area_total,0.030229,1267.7835,248.758742
+Westminster-Branson,Condo Apartment,lot_width,0.0,0.0,1.0
+Westminster-Branson,Condo Apartment,bedrooms_above_grade,0.030057,2.1649,0.397943
+Westminster-Branson,Condo Apartment,bathrooms_total_integer,0.021161,2.0,0.203069
+Westminster-Branson,Condo Apartment,parking_total,-0.009161,1.3093,0.483987
+Westminster-Branson,Condo Apartment,basement_score,0.0,1.0,1.0
+Westminster-Branson,Condo Apartment,interior_score,0.064097,3.7526,0.919782
+Westminster-Branson,Condo Apartment,exterior_score,0.025074,2.0103,0.75293

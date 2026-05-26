@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0565
-lot_width,0.0229
-bedrooms_above_grade,0.0083
-bathrooms_total_integer,0.0349
-parking_total,0.033
-basement_score,0.009
-interior_score,0.0187
-exterior_score,0.0151
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brampton South,Detached,building_area_total,0.068364,1701.7397,539.206521
+Brampton South,Detached,lot_width,0.019071,51.3581,14.314042
+Brampton South,Detached,bedrooms_above_grade,0.012718,3.5385,0.580028
+Brampton South,Detached,bathrooms_total_integer,0.045711,2.989,0.95497
+Brampton South,Detached,parking_total,0.028813,5.0714,1.373956
+Brampton South,Detached,basement_score,0.017605,5.8462,1.405821
+Brampton South,Detached,interior_score,0.0207,3.2527,1.095379
+Brampton South,Detached,exterior_score,0.017271,2.6923,1.023808

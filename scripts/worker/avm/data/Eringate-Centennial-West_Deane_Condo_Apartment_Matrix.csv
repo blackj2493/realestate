@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0318
-lot_width,0.0
-bedrooms_above_grade,0.023
-bathrooms_total_integer,0.078
-parking_total,0.0
-basement_score,0.003
-interior_score,0.0207
-exterior_score,0.0455
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Eringate-Centennial-West Deane,Condo Apartment,building_area_total,-0.002819,1168.2292,239.45139
+Eringate-Centennial-West Deane,Condo Apartment,lot_width,0.0,0.0,1.0
+Eringate-Centennial-West Deane,Condo Apartment,bedrooms_above_grade,0.0494,2.125,0.599479
+Eringate-Centennial-West Deane,Condo Apartment,bathrooms_total_integer,0.059888,1.7083,0.498261
+Eringate-Centennial-West Deane,Condo Apartment,parking_total,0.002883,1.0208,0.142826
+Eringate-Centennial-West Deane,Condo Apartment,basement_score,0.004138,1.0833,0.571305
+Eringate-Centennial-West Deane,Condo Apartment,interior_score,0.017876,3.8125,0.807678
+Eringate-Centennial-West Deane,Condo Apartment,exterior_score,0.012189,2.4167,0.996522

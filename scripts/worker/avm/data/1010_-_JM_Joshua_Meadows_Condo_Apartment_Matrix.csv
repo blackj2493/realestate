@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0742
-lot_width,0.0
-bedrooms_above_grade,0.0
-bathrooms_total_integer,0.0
-parking_total,0.0025
-basement_score,-0.0009
-interior_score,0.014
-exterior_score,-0.0052
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1010 - JM Joshua Meadows,Condo Apartment,building_area_total,0.088919,666.541,113.69813
+1010 - JM Joshua Meadows,Condo Apartment,lot_width,0.0,0.0,1.0
+1010 - JM Joshua Meadows,Condo Apartment,bedrooms_above_grade,0.045685,1.1803,0.38446
+1010 - JM Joshua Meadows,Condo Apartment,bathrooms_total_integer,-0.040746,1.1639,0.370216
+1010 - JM Joshua Meadows,Condo Apartment,parking_total,0.014012,1.0656,0.247536
+1010 - JM Joshua Meadows,Condo Apartment,basement_score,-0.003767,1.0492,0.380949
+1010 - JM Joshua Meadows,Condo Apartment,interior_score,0.008139,4.377,0.727987
+1010 - JM Joshua Meadows,Condo Apartment,exterior_score,0.007706,2.0328,0.403558

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.2324
-lot_width,0.0
-bedrooms_above_grade,0.0324
-bathrooms_total_integer,-0.0154
-parking_total,0.0267
-basement_score,-0.0034
-interior_score,0.0335
-exterior_score,-0.0177
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kingsview Village-The Westway,Condo Apartment,building_area_total,0.144738,1238.9286,359.504513
+Kingsview Village-The Westway,Condo Apartment,lot_width,0.0,0.0,1.0
+Kingsview Village-The Westway,Condo Apartment,bedrooms_above_grade,0.000219,2.3,0.594018
+Kingsview Village-The Westway,Condo Apartment,bathrooms_total_integer,0.062155,1.5286,0.527025
+Kingsview Village-The Westway,Condo Apartment,parking_total,0.064606,1.1571,0.363935
+Kingsview Village-The Westway,Condo Apartment,basement_score,0.001753,1.0571,0.474664
+Kingsview Village-The Westway,Condo Apartment,interior_score,0.032559,3.8571,0.945451
+Kingsview Village-The Westway,Condo Apartment,exterior_score,0.003892,2.0143,0.801656

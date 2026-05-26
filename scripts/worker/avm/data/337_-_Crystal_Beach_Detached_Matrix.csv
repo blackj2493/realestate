@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0354
-lot_width,0.0433
-bedrooms_above_grade,-0.0125
-bathrooms_total_integer,0.1516
-parking_total,0.0371
-basement_score,0.0462
-interior_score,0.0241
-exterior_score,0.0234
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+337 - Crystal Beach,Detached,building_area_total,0.039682,1367.1228,512.725006
+337 - Crystal Beach,Detached,lot_width,0.010703,124.0242,726.277881
+337 - Crystal Beach,Detached,bedrooms_above_grade,0.016309,2.9083,0.974644
+337 - Crystal Beach,Detached,bathrooms_total_integer,0.113117,1.95,0.911501
+337 - Crystal Beach,Detached,parking_total,0.063528,3.7042,2.222513
+337 - Crystal Beach,Detached,basement_score,0.062661,3.0333,2.045048
+337 - Crystal Beach,Detached,interior_score,0.073553,3.2583,1.044795
+337 - Crystal Beach,Detached,exterior_score,0.028079,2.5417,0.921012

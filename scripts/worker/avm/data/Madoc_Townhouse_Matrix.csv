@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Madoc,Townhouse,building_area_total,0.039856,1243.4783,99.240976
+Madoc,Townhouse,lot_width,-0.006753,20.8011,3.241976
+Madoc,Townhouse,bedrooms_above_grade,-0.011786,3.0189,0.136059
+Madoc,Townhouse,bathrooms_total_integer,0.016115,2.2642,0.519468
+Madoc,Townhouse,parking_total,0.035247,2.1321,1.14986
+Madoc,Townhouse,basement_score,0.026351,4.9623,1.045426
+Madoc,Townhouse,interior_score,0.014686,3.6226,0.806259
+Madoc,Townhouse,exterior_score,-0.004761,2.1509,0.595462

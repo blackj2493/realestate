@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0286
-lot_width,0.0
-bedrooms_above_grade,0.0064
-bathrooms_total_integer,-0.0123
-parking_total,0.0439
-basement_score,0.0241
-interior_score,0.0183
-exterior_score,0.0219
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Tam O'Shanter-Sullivan,Townhouse,building_area_total,0.042459,1285.7143,269.763061
+Tam O'Shanter-Sullivan,Townhouse,lot_width,0.0,0.0,1.0
+Tam O'Shanter-Sullivan,Townhouse,bedrooms_above_grade,0.008617,2.9286,0.457366
+Tam O'Shanter-Sullivan,Townhouse,bathrooms_total_integer,-0.007906,2.2619,0.490846
+Tam O'Shanter-Sullivan,Townhouse,parking_total,0.022743,1.4524,0.697013
+Tam O'Shanter-Sullivan,Townhouse,basement_score,0.033677,4.1667,2.092124
+Tam O'Shanter-Sullivan,Townhouse,interior_score,0.019572,3.5476,0.850837
+Tam O'Shanter-Sullivan,Townhouse,exterior_score,0.017088,2.3571,0.995739

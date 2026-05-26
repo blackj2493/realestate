@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0142
-lot_width,-0.0598
-bedrooms_above_grade,0.0425
-bathrooms_total_integer,0.0468
-parking_total,0.0105
-basement_score,0.0041
-interior_score,0.0077
-exterior_score,0.0151
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+602 - Embrun,Detached,building_area_total,0.020352,1844.6237,407.091861
+602 - Embrun,Detached,lot_width,-0.048973,59.52,32.263708
+602 - Embrun,Detached,bedrooms_above_grade,0.036048,3.2727,0.769602
+602 - Embrun,Detached,bathrooms_total_integer,0.038537,2.9242,0.9895
+602 - Embrun,Detached,parking_total,0.032335,5.553,1.681289
+602 - Embrun,Detached,basement_score,0.005496,4.7955,0.693461
+602 - Embrun,Detached,interior_score,0.017714,3.7273,0.905295
+602 - Embrun,Detached,exterior_score,0.012606,2.7727,0.849161

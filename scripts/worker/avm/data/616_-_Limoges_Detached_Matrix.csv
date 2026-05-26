@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.053
-lot_width,0.0269
-bedrooms_above_grade,0.0086
-bathrooms_total_integer,0.0542
-parking_total,0.0131
-basement_score,0.0349
-interior_score,0.011
-exterior_score,0.0063
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+616 - Limoges,Detached,building_area_total,0.056165,1592.3913,346.248119
+616 - Limoges,Detached,lot_width,-0.018052,59.913,24.802757
+616 - Limoges,Detached,bedrooms_above_grade,0.004407,2.9062,0.491132
+616 - Limoges,Detached,bathrooms_total_integer,0.029115,2.4844,0.883745
+616 - Limoges,Detached,parking_total,0.030749,5.2031,1.830127
+616 - Limoges,Detached,basement_score,0.05225,4.7969,1.301198
+616 - Limoges,Detached,interior_score,0.044399,3.4688,0.983755
+616 - Limoges,Detached,exterior_score,0.014969,2.5938,0.842592

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0335
-lot_width,0.0214
-bedrooms_above_grade,-0.0181
-bathrooms_total_integer,0.0891
-parking_total,0.0276
-basement_score,0.0063
-interior_score,0.0318
-exterior_score,0.0132
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+437 - Lakeshore,Detached,building_area_total,0.051415,1430.9072,459.526271
+437 - Lakeshore,Detached,lot_width,0.003248,62.2733,14.984237
+437 - Lakeshore,Detached,bedrooms_above_grade,-0.019377,3.1415,0.665011
+437 - Lakeshore,Detached,bathrooms_total_integer,0.087975,2.283,0.655236
+437 - Lakeshore,Detached,parking_total,0.03122,4.9434,1.731126
+437 - Lakeshore,Detached,basement_score,0.006156,5.5,1.442286
+437 - Lakeshore,Detached,interior_score,0.02607,3.3868,1.023965
+437 - Lakeshore,Detached,exterior_score,0.017664,3.3019,0.982582

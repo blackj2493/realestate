@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0181
-lot_width,0.0538
-bedrooms_above_grade,0.0107
-bathrooms_total_integer,-0.0097
-parking_total,0.0652
-basement_score,0.0155
-interior_score,-0.0218
-exterior_score,0.0179
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1107 - Springridge/East Village,Detached,building_area_total,0.044261,2315.7143,624.01596
+1107 - Springridge/East Village,Detached,lot_width,0.046705,46.4727,20.998745
+1107 - Springridge/East Village,Detached,bedrooms_above_grade,0.019283,3.3878,0.921762
+1107 - Springridge/East Village,Detached,bathrooms_total_integer,0.004987,3.4694,0.702823
+1107 - Springridge/East Village,Detached,parking_total,0.039022,5.2449,1.635457
+1107 - Springridge/East Village,Detached,basement_score,0.031684,4.9796,0.795133
+1107 - Springridge/East Village,Detached,interior_score,0.028033,3.898,0.952867
+1107 - Springridge/East Village,Detached,exterior_score,0.017262,3.0408,0.879684

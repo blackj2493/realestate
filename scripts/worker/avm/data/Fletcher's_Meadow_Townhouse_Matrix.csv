@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fletcher's Meadow,Townhouse,building_area_total,0.013062,1748.4375,339.458294
+Fletcher's Meadow,Townhouse,lot_width,0.025581,24.6655,5.887596
+Fletcher's Meadow,Townhouse,bedrooms_above_grade,0.022266,3.2619,0.490846
+Fletcher's Meadow,Townhouse,bathrooms_total_integer,0.019159,3.5238,0.545025
+Fletcher's Meadow,Townhouse,parking_total,0.007931,3.3333,0.745356
+Fletcher's Meadow,Townhouse,basement_score,0.003169,5.4048,2.059352
+Fletcher's Meadow,Townhouse,interior_score,-0.004156,3.4762,0.906014
+Fletcher's Meadow,Townhouse,exterior_score,-0.00124,2.0714,0.883523

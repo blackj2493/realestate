@@ -77,3 +77,29 @@ export function rawVariantsOf(normalized: string, rawFallback?: string | null): 
   const fb = (rawFallback ?? normalized ?? '').trim();
   return fb ? [fb] : [];
 }
+
+/**
+ * Candidate `city_region` strings to try when matching matrices/audit/offset rows
+ * to a listing or raw_vow_sold record. See memory `avm-matrix-city-region-prefix`
+ * for the full reason: the matrix/audit CSVs are stored verbatim from source and
+ * MIX clean ("Brampton East", "Bedford Park-Nortown") with legacy prefixed forms
+ * ("1001 - BR Bronte", "3104 - CFB Rockcliffe and Area", "7709 - Barrhaven -
+ * Strandherd"), while `raw_vow_sold.city_region` is the clean TRREB CityRegion.
+ * `.ilike(key)` with no wildcards is case-insensitive `.eq` → prefixed cohorts
+ * silently miss in production. The 2–3-letter "tag" is ambiguous (BR/OO are tags,
+ * CFB is part of a name), so we cannot strip with one rule — we try multiple
+ * candidate spellings and let whichever matches win.
+ *
+ * Order: [verbatim, strip-leading-number, strip-leading-number-plus-2-3-letter-tag].
+ * Duplicates and empty strings are removed.
+ */
+export function cityRegionLookupCandidates(cityRegion: string): string[] {
+  const v = (cityRegion ?? '').trim();
+  if (!v) return [];
+  const out: string[] = [v];
+  const stripNum = v.replace(/^\d+\s*-\s*/, '').trim();
+  if (stripNum && stripNum !== v) out.push(stripNum);
+  const stripNumTag = v.replace(/^\d+\s*-\s*[A-Z]{1,3}\s+/, '').trim();
+  if (stripNumTag && stripNumTag !== v && stripNumTag !== stripNum) out.push(stripNumTag);
+  return out;
+}

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1072
-lot_width,0.0
-bedrooms_above_grade,0.0261
-bathrooms_total_integer,0.029
-parking_total,0.0216
-basement_score,0.0
-interior_score,0.0241
-exterior_score,0.0133
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mount Pleasant East,Condo Apartment,building_area_total,0.075578,825.641,243.86624
+Mount Pleasant East,Condo Apartment,lot_width,0.0,0.0,1.0
+Mount Pleasant East,Condo Apartment,bedrooms_above_grade,0.051369,1.6154,0.582452
+Mount Pleasant East,Condo Apartment,bathrooms_total_integer,0.027956,1.6154,0.536627
+Mount Pleasant East,Condo Apartment,parking_total,0.055471,0.7949,0.515378
+Mount Pleasant East,Condo Apartment,basement_score,0.0,1.0,1.0
+Mount Pleasant East,Condo Apartment,interior_score,0.031483,4.0256,0.80023
+Mount Pleasant East,Condo Apartment,exterior_score,-0.007822,2.0,0.679366

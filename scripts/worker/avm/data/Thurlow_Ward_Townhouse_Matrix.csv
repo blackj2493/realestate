@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Thurlow Ward,Townhouse,building_area_total,0.049422,1309.0909,308.086604
+Thurlow Ward,Townhouse,lot_width,0.001154,19.4752,11.23493
+Thurlow Ward,Townhouse,bedrooms_above_grade,-0.023544,2.2419,0.688277
+Thurlow Ward,Townhouse,bathrooms_total_integer,0.046192,2.5323,0.712056
+Thurlow Ward,Townhouse,parking_total,0.047598,2.8548,0.997526
+Thurlow Ward,Townhouse,basement_score,0.064359,4.5968,1.560187
+Thurlow Ward,Townhouse,interior_score,0.039698,3.4839,0.817982
+Thurlow Ward,Townhouse,exterior_score,0.006767,2.3226,0.589538

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0629
-lot_width,0.0252
-bedrooms_above_grade,0.0247
-bathrooms_total_integer,0.0244
-parking_total,0.0094
-basement_score,0.0081
-interior_score,0.0063
-exterior_score,-0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northwest Ajax,Detached,building_area_total,0.055542,2544.8598,578.829571
+Northwest Ajax,Detached,lot_width,0.007817,43.7816,11.291274
+Northwest Ajax,Detached,bedrooms_above_grade,0.029201,3.8,0.644981
+Northwest Ajax,Detached,bathrooms_total_integer,0.043473,3.912,0.858054
+Northwest Ajax,Detached,parking_total,0.01635,4.404,1.335209
+Northwest Ajax,Detached,basement_score,0.010469,5.704,1.701877
+Northwest Ajax,Detached,interior_score,0.015026,3.736,1.036486
+Northwest Ajax,Detached,exterior_score,0.001634,2.72,0.96

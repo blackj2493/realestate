@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South W,Townhouse,building_area_total,0.054131,1569.1463,356.685115
+South W,Townhouse,lot_width,0.0,21.8987,9.899687
+South W,Townhouse,bedrooms_above_grade,0.023592,2.7442,0.685159
+South W,Townhouse,bathrooms_total_integer,0.038402,2.7442,0.685159
+South W,Townhouse,parking_total,0.057608,2.4884,0.997021
+South W,Townhouse,basement_score,0.032053,3.7442,2.262876
+South W,Townhouse,interior_score,-0.000674,3.4884,0.845566
+South W,Townhouse,exterior_score,-0.008628,2.1395,0.461615

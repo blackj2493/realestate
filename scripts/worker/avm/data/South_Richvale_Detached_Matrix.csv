@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0817
-lot_width,0.0947
-bedrooms_above_grade,0.0163
-bathrooms_total_integer,0.1558
-parking_total,0.1722
-basement_score,0.0122
-interior_score,0.0329
-exterior_score,0.0075
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South Richvale,Detached,building_area_total,0.085827,3003.1702,1194.662141
+South Richvale,Detached,lot_width,0.113266,64.7795,38.201279
+South Richvale,Detached,bedrooms_above_grade,0.04211,3.9841,0.806562
+South Richvale,Detached,bathrooms_total_integer,0.145618,5.0159,1.906481
+South Richvale,Detached,parking_total,0.106043,7.5159,3.994012
+South Richvale,Detached,basement_score,0.01414,6.2063,2.024914
+South Richvale,Detached,interior_score,0.083035,3.9206,1.158839
+South Richvale,Detached,exterior_score,0.017224,2.4762,0.940401

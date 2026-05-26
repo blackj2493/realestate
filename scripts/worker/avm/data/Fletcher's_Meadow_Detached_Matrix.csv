@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0282
-lot_width,0.0179
-bedrooms_above_grade,0.0492
-bathrooms_total_integer,0.0184
-parking_total,0.0137
-basement_score,0.0103
-interior_score,0.0104
-exterior_score,0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Fletcher's Meadow,Detached,building_area_total,0.050731,2155.3381,491.844494
+Fletcher's Meadow,Detached,lot_width,0.013975,38.486,7.741423
+Fletcher's Meadow,Detached,bedrooms_above_grade,0.023926,3.6277,0.585136
+Fletcher's Meadow,Detached,bathrooms_total_integer,0.017059,3.7908,0.636073
+Fletcher's Meadow,Detached,parking_total,0.022271,4.7391,1.284266
+Fletcher's Meadow,Detached,basement_score,0.014151,5.837,1.402848
+Fletcher's Meadow,Detached,interior_score,0.011201,3.4212,1.031718
+Fletcher's Meadow,Detached,exterior_score,0.009035,2.3098,0.854472

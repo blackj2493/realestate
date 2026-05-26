@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0542
-lot_width,0.0
-bedrooms_above_grade,0.0194
-bathrooms_total_integer,0.0216
-parking_total,0.0329
-basement_score,0.0181
-interior_score,0.012
-exterior_score,0.0115
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Erin Mills,Townhouse,building_area_total,0.059772,1403.2787,267.443705
+Erin Mills,Townhouse,lot_width,0.0,23.3133,1.192653
+Erin Mills,Townhouse,bedrooms_above_grade,0.021769,2.7581,0.464393
+Erin Mills,Townhouse,bathrooms_total_integer,0.03032,3.1048,0.681774
+Erin Mills,Townhouse,parking_total,0.020207,2.1653,0.936969
+Erin Mills,Townhouse,basement_score,0.023265,4.2258,1.891572
+Erin Mills,Townhouse,interior_score,0.016006,3.8629,0.786321
+Erin Mills,Townhouse,exterior_score,0.010865,2.2742,0.744211

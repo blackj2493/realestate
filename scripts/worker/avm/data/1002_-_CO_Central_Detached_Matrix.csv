@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.157
-lot_width,0.0498
-bedrooms_above_grade,-0.004
-bathrooms_total_integer,0.0299
-parking_total,0.031
-basement_score,-0.05
-interior_score,0.0548
-exterior_score,0.0251
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1002 - CO Central,Detached,building_area_total,0.12319,1695.7857,833.903179
+1002 - CO Central,Detached,lot_width,0.048173,57.2838,15.092147
+1002 - CO Central,Detached,bedrooms_above_grade,-0.013571,2.9079,0.491443
+1002 - CO Central,Detached,bathrooms_total_integer,0.137047,2.5658,1.030272
+1002 - CO Central,Detached,parking_total,0.006872,4.6974,1.432882
+1002 - CO Central,Detached,basement_score,-0.040276,5.4737,1.446172
+1002 - CO Central,Detached,interior_score,0.079256,3.4342,1.26007
+1002 - CO Central,Detached,exterior_score,0.050277,2.5921,1.053536

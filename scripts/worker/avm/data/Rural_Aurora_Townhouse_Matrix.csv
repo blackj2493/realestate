@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Aurora,Townhouse,building_area_total,0.03714,1776.7857,363.244017
+Rural Aurora,Townhouse,lot_width,0.016098,23.0524,5.81598
+Rural Aurora,Townhouse,bedrooms_above_grade,0.023648,3.0408,0.401994
+Rural Aurora,Townhouse,bathrooms_total_integer,0.017947,3.3673,0.560389
+Rural Aurora,Townhouse,parking_total,-0.00792,2.7347,0.598485
+Rural Aurora,Townhouse,basement_score,0.029913,4.6327,2.318461
+Rural Aurora,Townhouse,interior_score,0.028632,3.8163,0.849333
+Rural Aurora,Townhouse,exterior_score,0.012797,2.1633,0.888634

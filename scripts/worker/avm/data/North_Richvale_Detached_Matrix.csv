@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0311
-lot_width,0.0887
-bedrooms_above_grade,0.0302
-bathrooms_total_integer,0.0422
-parking_total,0.0331
-basement_score,0.0107
-interior_score,0.0489
-exterior_score,0.019
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North Richvale,Detached,building_area_total,0.070676,2265.6125,880.814971
+North Richvale,Detached,lot_width,0.070523,43.8191,13.785602
+North Richvale,Detached,bedrooms_above_grade,0.021458,3.5044,0.581787
+North Richvale,Detached,bathrooms_total_integer,0.064277,3.6903,0.912835
+North Richvale,Detached,parking_total,0.032957,5.0752,1.649915
+North Richvale,Detached,basement_score,0.022035,5.8761,1.529259
+North Richvale,Detached,interior_score,0.041766,3.4336,1.079791
+North Richvale,Detached,exterior_score,0.012509,2.646,0.985922

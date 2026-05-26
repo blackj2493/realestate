@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1979
-lot_width,-0.0004
-bedrooms_above_grade,-0.0462
-bathrooms_total_integer,0.0386
-parking_total,0.0981
-basement_score,-0.0028
-interior_score,0.0853
-exterior_score,0.0499
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Collingwood,Condo Apartment,building_area_total,0.179031,997.7986,245.217454
+Collingwood,Condo Apartment,lot_width,0.0,0.0,1.0
+Collingwood,Condo Apartment,bedrooms_above_grade,-0.050985,1.9065,0.534993
+Collingwood,Condo Apartment,bathrooms_total_integer,0.056995,1.705,0.501124
+Collingwood,Condo Apartment,parking_total,0.064057,1.1727,0.414279
+Collingwood,Condo Apartment,basement_score,-0.006569,1.1439,0.744874
+Collingwood,Condo Apartment,interior_score,0.108857,3.8129,0.835958
+Collingwood,Condo Apartment,exterior_score,0.052337,2.9928,1.069501

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0655
-lot_width,0.0378
-bedrooms_above_grade,0.0208
-bathrooms_total_integer,0.0416
-parking_total,0.0149
-basement_score,0.0138
-interior_score,0.024
-exterior_score,0.0108
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+25 - West of Sir John A. Blvd,Detached,building_area_total,0.027526,1618.2634,609.033092
+25 - West of Sir John A. Blvd,Detached,lot_width,0.036995,64.7161,24.07544
+25 - West of Sir John A. Blvd,Detached,bedrooms_above_grade,0.01969,3.1667,0.729951
+25 - West of Sir John A. Blvd,Detached,bathrooms_total_integer,0.046584,2.3182,0.721091
+25 - West of Sir John A. Blvd,Detached,parking_total,0.047508,4.6061,2.180345
+25 - West of Sir John A. Blvd,Detached,basement_score,0.021844,5.0455,1.248415
+25 - West of Sir John A. Blvd,Detached,interior_score,0.045723,3.2121,1.066219
+25 - West of Sir John A. Blvd,Detached,exterior_score,0.013042,2.4242,0.697628

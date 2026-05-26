@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0178
-lot_width,-0.0386
-bedrooms_above_grade,0.0518
-bathrooms_total_integer,0.1321
-parking_total,0.0322
-basement_score,0.0291
-interior_score,0.034
-exterior_score,0.0169
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+West Shore,Detached,building_area_total,0.043422,1705.128,681.680265
+West Shore,Detached,lot_width,-0.026786,54.4122,19.399232
+West Shore,Detached,bedrooms_above_grade,0.087337,3.2026,0.778464
+West Shore,Detached,bathrooms_total_integer,0.116197,2.6405,1.082326
+West Shore,Detached,parking_total,0.03382,5.0882,2.202285
+West Shore,Detached,basement_score,0.028914,5.2745,2.061902
+West Shore,Detached,interior_score,0.014864,3.4248,1.039688
+West Shore,Detached,exterior_score,0.015541,2.719,1.212449

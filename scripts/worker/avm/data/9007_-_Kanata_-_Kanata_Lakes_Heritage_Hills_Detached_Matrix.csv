@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0518
-lot_width,0.0473
-bedrooms_above_grade,0.0466
-bathrooms_total_integer,0.0417
-parking_total,0.0074
-basement_score,0.0012
-interior_score,0.0221
-exterior_score,0.0343
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,building_area_total,0.085132,2569.6721,677.70579
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,lot_width,0.024035,46.9576,11.862041
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,bedrooms_above_grade,0.038325,3.7451,0.65209
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,bathrooms_total_integer,0.056297,3.5784,0.759725
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,parking_total,0.005894,5.2353,1.284725
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,basement_score,0.013653,4.9706,0.879571
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,interior_score,0.019007,3.9314,0.888486
+9007 - Kanata - Kanata Lakes/Heritage Hills,Detached,exterior_score,0.029301,2.7255,0.86497

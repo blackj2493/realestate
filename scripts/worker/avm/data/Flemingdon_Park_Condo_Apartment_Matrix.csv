@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0339
-lot_width,0.0
-bedrooms_above_grade,0.0171
-bathrooms_total_integer,0.1104
-parking_total,0.0116
-basement_score,0.0
-interior_score,0.0183
-exterior_score,-0.0105
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Flemingdon Park,Condo Apartment,building_area_total,0.045062,973.2877,248.568806
+Flemingdon Park,Condo Apartment,lot_width,0.0,0.0,1.0
+Flemingdon Park,Condo Apartment,bedrooms_above_grade,-0.024559,2.1438,0.692323
+Flemingdon Park,Condo Apartment,bathrooms_total_integer,0.091137,1.5548,0.496988
+Flemingdon Park,Condo Apartment,parking_total,0.032524,1.0,0.331042
+Flemingdon Park,Condo Apartment,basement_score,0.0,1.0,1.0
+Flemingdon Park,Condo Apartment,interior_score,0.030093,3.6712,0.88449
+Flemingdon Park,Condo Apartment,exterior_score,0.004466,2.5411,1.129473

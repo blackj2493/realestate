@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0334
-lot_width,0.0416
-bedrooms_above_grade,0.0445
-bathrooms_total_integer,0.0499
-parking_total,0.045
-basement_score,0.0098
-interior_score,0.0381
-exterior_score,0.0129
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+912 - Mississippi Mills (Ramsay) Twp,Detached,building_area_total,0.025541,1975.0,832.991597
+912 - Mississippi Mills (Ramsay) Twp,Detached,lot_width,0.02572,280.3012,394.284077
+912 - Mississippi Mills (Ramsay) Twp,Detached,bedrooms_above_grade,0.043115,3.2111,0.795745
+912 - Mississippi Mills (Ramsay) Twp,Detached,bathrooms_total_integer,0.07816,2.8556,0.913614
+912 - Mississippi Mills (Ramsay) Twp,Detached,parking_total,0.060116,8.0333,3.640665
+912 - Mississippi Mills (Ramsay) Twp,Detached,basement_score,0.010509,5.1333,1.904381
+912 - Mississippi Mills (Ramsay) Twp,Detached,interior_score,0.061366,3.7,1.089852
+912 - Mississippi Mills (Ramsay) Twp,Detached,exterior_score,-0.009955,2.6778,0.800386

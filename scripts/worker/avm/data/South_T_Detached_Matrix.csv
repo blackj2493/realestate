@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0108
-lot_width,-0.0198
-bedrooms_above_grade,0.003
-bathrooms_total_integer,0.0393
-parking_total,0.0231
-basement_score,0.0104
-interior_score,0.0093
-exterior_score,0.0101
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South T,Detached,building_area_total,0.018597,1359.8462,349.26579
+South T,Detached,lot_width,8.1e-05,49.5272,15.966642
+South T,Detached,bedrooms_above_grade,0.008628,3.0308,0.428566
+South T,Detached,bathrooms_total_integer,0.03011,2.1077,0.499941
+South T,Detached,parking_total,0.018647,3.7538,1.324686
+South T,Detached,basement_score,0.016096,4.6615,0.916128
+South T,Detached,interior_score,0.015858,3.2615,0.899178
+South T,Detached,exterior_score,0.015299,2.5385,0.766148

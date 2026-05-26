@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.043
-lot_width,0.0429
-bedrooms_above_grade,0.0109
-bathrooms_total_integer,0.0541
-parking_total,0.0399
-basement_score,0.007
-interior_score,0.0289
-exterior_score,0.0167
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+607 - Clarence/Rockland Twp,Detached,building_area_total,0.088197,1628.5714,532.875596
+607 - Clarence/Rockland Twp,Detached,lot_width,0.012644,124.5553,105.199348
+607 - Clarence/Rockland Twp,Detached,bedrooms_above_grade,-0.001868,2.893,0.712089
+607 - Clarence/Rockland Twp,Detached,bathrooms_total_integer,0.076455,2.5021,0.798014
+607 - Clarence/Rockland Twp,Detached,parking_total,0.042646,7.5412,2.982865
+607 - Clarence/Rockland Twp,Detached,basement_score,0.014508,4.7778,1.125828
+607 - Clarence/Rockland Twp,Detached,interior_score,0.041768,3.6461,1.001159
+607 - Clarence/Rockland Twp,Detached,exterior_score,0.02178,2.6132,0.85017

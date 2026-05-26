@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1256
-lot_width,0.0646
-bedrooms_above_grade,0.0072
-bathrooms_total_integer,0.0682
-parking_total,0.022
-basement_score,0.0124
-interior_score,0.0165
-exterior_score,0.0065
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Glanbrook,Detached,building_area_total,0.109096,2040.3163,693.195508
+Rural Glanbrook,Detached,lot_width,0.088201,131.1775,269.213694
+Rural Glanbrook,Detached,bedrooms_above_grade,-0.004767,3.4182,0.718354
+Rural Glanbrook,Detached,bathrooms_total_integer,0.061013,2.7364,1.084412
+Rural Glanbrook,Detached,parking_total,0.050115,7.4818,3.393796
+Rural Glanbrook,Detached,basement_score,0.033789,5.0636,1.252469
+Rural Glanbrook,Detached,interior_score,0.038172,3.5818,1.20892
+Rural Glanbrook,Detached,exterior_score,0.026649,2.5636,0.995693

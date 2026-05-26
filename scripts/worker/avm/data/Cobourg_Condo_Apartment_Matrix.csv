@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1547
-lot_width,0.0
-bedrooms_above_grade,-0.0296
-bathrooms_total_integer,0.0977
-parking_total,-0.0056
-basement_score,0.0
-interior_score,0.0559
-exterior_score,0.0476
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Cobourg,Condo Apartment,building_area_total,0.131417,1040.3061,282.608852
+Cobourg,Condo Apartment,lot_width,0.0,0.0,1.0
+Cobourg,Condo Apartment,bedrooms_above_grade,0.020487,1.6939,0.503217
+Cobourg,Condo Apartment,bathrooms_total_integer,0.092732,1.6735,0.468944
+Cobourg,Condo Apartment,parking_total,0.005813,1.0204,0.318786
+Cobourg,Condo Apartment,basement_score,0.0,1.0,1.0
+Cobourg,Condo Apartment,interior_score,0.035947,3.7959,0.807606
+Cobourg,Condo Apartment,exterior_score,0.022799,3.102,1.015088

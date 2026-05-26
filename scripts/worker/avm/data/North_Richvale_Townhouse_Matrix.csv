@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+North Richvale,Townhouse,building_area_total,0.035605,1526.6667,328.565907
+North Richvale,Townhouse,lot_width,0.0,37.7952,18.127319
+North Richvale,Townhouse,bedrooms_above_grade,0.011549,3.1224,0.327804
+North Richvale,Townhouse,bathrooms_total_integer,0.0512,2.8776,0.798791
+North Richvale,Townhouse,parking_total,0.061135,2.3469,0.715742
+North Richvale,Townhouse,basement_score,0.00431,5.3673,1.710638
+North Richvale,Townhouse,interior_score,-0.00607,3.6735,0.866326
+North Richvale,Townhouse,exterior_score,-0.012673,2.4694,0.949802

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,-0.0565
-lot_width,0.0
-bedrooms_above_grade,0.013
-bathrooms_total_integer,0.1459
-parking_total,-0.0122
-basement_score,0.0
-interior_score,0.0259
-exterior_score,-0.0171
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Weston,Condo Apartment,building_area_total,0.017924,898.0,294.611609
+Weston,Condo Apartment,lot_width,0.0,0.0,1.0
+Weston,Condo Apartment,bedrooms_above_grade,0.007546,1.76,0.68
+Weston,Condo Apartment,bathrooms_total_integer,0.091401,1.64,0.48
+Weston,Condo Apartment,parking_total,-0.031559,1.1,0.360555
+Weston,Condo Apartment,basement_score,0.0,1.0,1.0
+Weston,Condo Apartment,interior_score,0.035973,3.64,0.974885
+Weston,Condo Apartment,exterior_score,0.010794,2.14,0.80025

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1875
-lot_width,0.0
-bedrooms_above_grade,0.0326
-bathrooms_total_integer,0.0351
-parking_total,-0.0141
-basement_score,0.0
-interior_score,0.0499
-exterior_score,-0.0184
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Banbury-Don Mills,Condo Apartment,building_area_total,0.109677,1030.7762,432.395344
+Banbury-Don Mills,Condo Apartment,lot_width,0.0,0.0,1.0
+Banbury-Don Mills,Condo Apartment,bedrooms_above_grade,0.073896,1.6715,0.567166
+Banbury-Don Mills,Condo Apartment,bathrooms_total_integer,0.083038,1.7798,0.599539
+Banbury-Don Mills,Condo Apartment,parking_total,-0.010439,1.2094,0.440936
+Banbury-Don Mills,Condo Apartment,basement_score,0.0,1.0,1.0
+Banbury-Don Mills,Condo Apartment,interior_score,0.034767,4.065,0.851481
+Banbury-Don Mills,Condo Apartment,exterior_score,-0.022168,2.5596,0.850286

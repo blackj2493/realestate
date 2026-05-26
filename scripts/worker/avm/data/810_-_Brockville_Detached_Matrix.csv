@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0435
-lot_width,0.0576
-bedrooms_above_grade,0.0058
-bathrooms_total_integer,0.0983
-parking_total,0.0586
-basement_score,0.0106
-interior_score,0.0404
-exterior_score,0.024
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+810 - Brockville,Detached,building_area_total,0.04237,1389.3333,457.310416
+810 - Brockville,Detached,lot_width,0.031492,57.919,25.127555
+810 - Brockville,Detached,bedrooms_above_grade,0.013736,2.9446,0.660812
+810 - Brockville,Detached,bathrooms_total_integer,0.136954,2.0358,0.787951
+810 - Brockville,Detached,parking_total,0.058488,3.8485,1.633532
+810 - Brockville,Detached,basement_score,0.02405,4.5733,1.131574
+810 - Brockville,Detached,interior_score,0.057764,3.43,0.88646
+810 - Brockville,Detached,exterior_score,0.027754,2.5472,0.865678

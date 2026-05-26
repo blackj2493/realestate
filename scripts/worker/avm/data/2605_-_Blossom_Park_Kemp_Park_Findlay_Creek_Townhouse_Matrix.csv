@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,building_area_total,0.091593,1612.5,305.79473
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,lot_width,-0.0105,23.1915,7.539891
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,bedrooms_above_grade,-0.015032,2.9503,0.483276
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,bathrooms_total_integer,0.051268,3.0248,0.599693
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,parking_total,0.046796,2.5528,0.862616
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,basement_score,0.013292,4.5839,1.19813
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,interior_score,0.023803,3.9255,0.784578
+2605 - Blossom Park/Kemp Park/Findlay Creek,Townhouse,exterior_score,0.014656,2.2981,0.703538

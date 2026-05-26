@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0653
-lot_width,-0.0204
-bedrooms_above_grade,-0.0115
-bathrooms_total_integer,0.0171
-parking_total,0.0387
-basement_score,0.0255
-interior_score,-0.0083
-exterior_score,0.0018
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ainslie Wood,Detached,building_area_total,0.064617,1194.9231,384.592184
+Ainslie Wood,Detached,lot_width,0.003292,43.0211,10.615569
+Ainslie Wood,Detached,bedrooms_above_grade,-0.016033,3.375,1.252082
+Ainslie Wood,Detached,bathrooms_total_integer,0.034903,2.1389,0.584655
+Ainslie Wood,Detached,parking_total,0.041535,3.3056,1.655285
+Ainslie Wood,Detached,basement_score,0.026927,5.5278,1.452701
+Ainslie Wood,Detached,interior_score,-0.004385,2.6667,0.881917
+Ainslie Wood,Detached,exterior_score,-0.009729,2.2361,0.676861

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0187
-lot_width,0.0419
-bedrooms_above_grade,-0.0157
-bathrooms_total_integer,0.1073
-parking_total,0.0476
-basement_score,0.0439
-interior_score,0.035
-exterior_score,0.0153
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+550 - Arnprior,Detached,building_area_total,0.02565,1508.8235,480.012855
+550 - Arnprior,Detached,lot_width,0.022532,64.2401,32.353633
+550 - Arnprior,Detached,bedrooms_above_grade,-0.019158,2.9463,0.757825
+550 - Arnprior,Detached,bathrooms_total_integer,0.121696,2.2416,0.832648
+550 - Arnprior,Detached,parking_total,0.04293,4.3289,1.747262
+550 - Arnprior,Detached,basement_score,0.063383,4.4362,1.286597
+550 - Arnprior,Detached,interior_score,0.067417,3.3557,0.990382
+550 - Arnprior,Detached,exterior_score,0.03577,2.4564,0.8784

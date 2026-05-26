@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0737
-lot_width,0.0367
-bedrooms_above_grade,0.0056
-bathrooms_total_integer,0.1378
-parking_total,0.0227
-basement_score,0.0028
-interior_score,0.028
-exterior_score,-0.0127
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1001 - BR Bronte,Detached,building_area_total,0.135758,2263.7047,850.274306
+1001 - BR Bronte,Detached,lot_width,0.020156,56.7998,18.852884
+1001 - BR Bronte,Detached,bedrooms_above_grade,-0.00875,3.5333,0.674499
+1001 - BR Bronte,Detached,bathrooms_total_integer,0.066083,3.4909,1.209148
+1001 - BR Bronte,Detached,parking_total,0.041757,4.7606,1.652902
+1001 - BR Bronte,Detached,basement_score,-0.005699,4.9212,0.978483
+1001 - BR Bronte,Detached,interior_score,0.020515,3.8364,1.05193
+1001 - BR Bronte,Detached,exterior_score,-0.005897,2.903,1.107682

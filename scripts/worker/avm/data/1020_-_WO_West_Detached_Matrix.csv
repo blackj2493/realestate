@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0536
-lot_width,0.0394
-bedrooms_above_grade,0.0323
-bathrooms_total_integer,0.2468
-parking_total,0.0131
-basement_score,0.0121
-interior_score,0.0295
-exterior_score,0.0199
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1020 - WO West,Detached,building_area_total,0.135845,2041.0153,1058.211439
+1020 - WO West,Detached,lot_width,0.041966,64.3204,11.453985
+1020 - WO West,Detached,bedrooms_above_grade,-0.003663,3.3553,0.629061
+1020 - WO West,Detached,bathrooms_total_integer,0.163461,3.1754,1.579727
+1020 - WO West,Detached,parking_total,0.029175,5.7105,1.818997
+1020 - WO West,Detached,basement_score,0.00701,5.4254,1.468578
+1020 - WO West,Detached,interior_score,0.066064,3.5351,1.218856
+1020 - WO West,Detached,exterior_score,0.024897,2.5921,0.993544

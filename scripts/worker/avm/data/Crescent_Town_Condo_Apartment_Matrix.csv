@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.011
-lot_width,0.0
-bedrooms_above_grade,0.0648
-bathrooms_total_integer,0.0
-parking_total,0.0068
-basement_score,0.0
-interior_score,0.0324
-exterior_score,0.0263
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Crescent Town,Condo Apartment,building_area_total,0.01951,1010.1449,192.161562
+Crescent Town,Condo Apartment,lot_width,0.0,0.0,1.0
+Crescent Town,Condo Apartment,bedrooms_above_grade,0.060985,1.9565,0.600357
+Crescent Town,Condo Apartment,bathrooms_total_integer,0.020607,1.1594,0.366068
+Crescent Town,Condo Apartment,parking_total,-0.000412,0.5072,0.528141
+Crescent Town,Condo Apartment,basement_score,0.0,1.0,1.0
+Crescent Town,Condo Apartment,interior_score,0.029197,3.4928,0.878457
+Crescent Town,Condo Apartment,exterior_score,0.001213,2.0725,1.053893

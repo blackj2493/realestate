@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0373
-lot_width,0.0468
-bedrooms_above_grade,-0.0126
-bathrooms_total_integer,0.1059
-parking_total,0.0781
-basement_score,0.0065
-interior_score,0.0316
-exterior_score,0.0187
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Cavan Twp,Detached,building_area_total,0.048875,2089.5455,792.782655
+Cavan Twp,Detached,lot_width,0.040164,227.3346,389.128853
+Cavan Twp,Detached,bedrooms_above_grade,-0.026243,3.2835,0.662822
+Cavan Twp,Detached,bathrooms_total_integer,0.127959,2.8425,0.959209
+Cavan Twp,Detached,parking_total,0.086319,8.9213,5.357835
+Cavan Twp,Detached,basement_score,0.004048,5.6535,1.925289
+Cavan Twp,Detached,interior_score,0.044001,3.4803,1.114333
+Cavan Twp,Detached,exterior_score,0.010551,2.7795,0.84101

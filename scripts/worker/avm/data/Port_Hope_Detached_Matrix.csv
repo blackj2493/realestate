@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0203
-lot_width,0.0358
-bedrooms_above_grade,-0.0068
-bathrooms_total_integer,0.1064
-parking_total,0.016
-basement_score,0.0132
-interior_score,0.0178
-exterior_score,0.0298
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Port Hope,Detached,building_area_total,0.04639,1488.75,525.385275
+Port Hope,Detached,lot_width,0.008855,54.0422,23.354583
+Port Hope,Detached,bedrooms_above_grade,-0.001189,2.7422,0.70883
+Port Hope,Detached,bathrooms_total_integer,0.101889,2.2933,0.839682
+Port Hope,Detached,parking_total,0.040804,4.1956,1.944103
+Port Hope,Detached,basement_score,0.026907,5.0044,1.809844
+Port Hope,Detached,interior_score,0.026502,3.3644,0.884724
+Port Hope,Detached,exterior_score,0.030944,2.7333,0.909212

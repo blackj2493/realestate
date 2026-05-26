@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0308
-lot_width,0.018
-bedrooms_above_grade,0.0088
-bathrooms_total_integer,0.0874
-parking_total,0.0271
-basement_score,0.0104
-interior_score,0.0187
-exterior_score,-0.0108
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Kennedy Park,Detached,building_area_total,0.054276,1304.2553,542.730467
+Kennedy Park,Detached,lot_width,0.027195,41.9765,10.415401
+Kennedy Park,Detached,bedrooms_above_grade,0.014934,3.0135,0.532542
+Kennedy Park,Detached,bathrooms_total_integer,0.085195,2.2973,0.849956
+Kennedy Park,Detached,parking_total,0.031198,3.9378,1.627774
+Kennedy Park,Detached,basement_score,0.018383,6.0676,1.695232
+Kennedy Park,Detached,interior_score,0.026428,2.5946,0.97147
+Kennedy Park,Detached,exterior_score,-0.016033,2.0541,0.868237

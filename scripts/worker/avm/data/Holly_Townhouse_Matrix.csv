@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Holly,Townhouse,building_area_total,0.012489,1284.697,259.291165
+Holly,Townhouse,lot_width,0.010144,21.3811,10.551887
+Holly,Townhouse,bedrooms_above_grade,0.031459,2.8421,0.460338
+Holly,Townhouse,bathrooms_total_integer,0.030274,2.4605,0.801984
+Holly,Townhouse,parking_total,0.009918,2.6842,0.611524
+Holly,Townhouse,basement_score,0.001183,4.2368,1.738635
+Holly,Townhouse,interior_score,0.018558,3.5658,0.848149
+Holly,Townhouse,exterior_score,-0.000702,2.4737,0.895511

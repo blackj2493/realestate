@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0287
-lot_width,-0.0685
-bedrooms_above_grade,0.0151
-bathrooms_total_integer,0.0349
-parking_total,0.0219
-basement_score,0.0064
-interior_score,0.0234
-exterior_score,0.0867
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+803 - North Grenville Twp (Kemptville South),Detached,building_area_total,0.047175,1795.045,560.242666
+803 - North Grenville Twp (Kemptville South),Detached,lot_width,-0.029982,195.6753,319.765532
+803 - North Grenville Twp (Kemptville South),Detached,bedrooms_above_grade,0.004262,3.0063,0.745796
+803 - North Grenville Twp (Kemptville South),Detached,bathrooms_total_integer,0.061474,2.625,0.927025
+803 - North Grenville Twp (Kemptville South),Detached,parking_total,0.03685,6.9375,3.403468
+803 - North Grenville Twp (Kemptville South),Detached,basement_score,0.013249,4.65,1.428286
+803 - North Grenville Twp (Kemptville South),Detached,interior_score,0.049821,3.6313,1.022386
+803 - North Grenville Twp (Kemptville South),Detached,exterior_score,0.07619,2.7812,0.906034

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0357
-lot_width,0.0586
-bedrooms_above_grade,0.0179
-bathrooms_total_integer,0.016
-parking_total,-0.0133
-basement_score,-0.0026
-interior_score,0.0257
-exterior_score,-0.0113
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+2602 - Riverside South/Gloucester Glen,Detached,building_area_total,0.064167,2523.3333,570.876519
+2602 - Riverside South/Gloucester Glen,Detached,lot_width,0.005787,42.6901,15.65834
+2602 - Riverside South/Gloucester Glen,Detached,bedrooms_above_grade,0.021979,3.8293,0.833323
+2602 - Riverside South/Gloucester Glen,Detached,bathrooms_total_integer,0.0147,3.6748,1.232988
+2602 - Riverside South/Gloucester Glen,Detached,parking_total,-0.00183,5.2439,1.433294
+2602 - Riverside South/Gloucester Glen,Detached,basement_score,-0.007909,4.8455,0.556302
+2602 - Riverside South/Gloucester Glen,Detached,interior_score,0.023537,3.9431,1.022517
+2602 - Riverside South/Gloucester Glen,Detached,exterior_score,0.007773,2.6992,0.918951

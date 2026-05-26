@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1094
-lot_width,0.1352
-bedrooms_above_grade,0.0181
-bathrooms_total_integer,0.0733
-parking_total,0.1058
-basement_score,0.0562
-interior_score,0.0549
-exterior_score,0.0235
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Grey Highlands,Detached,building_area_total,0.072728,1825.9561,832.281714
+Grey Highlands,Detached,lot_width,0.041892,279.9497,556.473076
+Grey Highlands,Detached,bedrooms_above_grade,0.033818,2.93,0.863192
+Grey Highlands,Detached,bathrooms_total_integer,0.128706,2.25,0.810864
+Grey Highlands,Detached,parking_total,0.142724,8.595,5.511667
+Grey Highlands,Detached,basement_score,0.049945,5.31,2.216732
+Grey Highlands,Detached,interior_score,0.064184,3.255,0.974667
+Grey Highlands,Detached,exterior_score,0.076322,2.67,0.906146

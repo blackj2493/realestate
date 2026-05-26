@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Cabbagetown-South St. James Town,Townhouse,building_area_total,0.136133,1378.125,617.433891
+Cabbagetown-South St. James Town,Townhouse,lot_width,-0.043709,16.2777,2.660447
+Cabbagetown-South St. James Town,Townhouse,bedrooms_above_grade,0.050316,2.5778,0.881637
+Cabbagetown-South St. James Town,Townhouse,bathrooms_total_integer,0.14856,2.1778,0.995298
+Cabbagetown-South St. James Town,Townhouse,parking_total,0.027753,0.7556,0.637898
+Cabbagetown-South St. James Town,Townhouse,basement_score,0.104143,3.9111,2.942578
+Cabbagetown-South St. James Town,Townhouse,interior_score,0.039381,3.8222,0.876581
+Cabbagetown-South St. James Town,Townhouse,exterior_score,-0.009564,2.4889,0.748991

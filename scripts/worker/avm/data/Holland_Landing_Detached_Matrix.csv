@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0207
-lot_width,-0.0305
-bedrooms_above_grade,0.0373
-bathrooms_total_integer,0.1142
-parking_total,0.0255
-basement_score,0.0107
-interior_score,0.0255
-exterior_score,0.0059
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Holland Landing,Detached,building_area_total,0.080689,2239.8551,877.396499
+Holland Landing,Detached,lot_width,-0.016683,58.9774,23.004023
+Holland Landing,Detached,bedrooms_above_grade,0.017525,3.5307,0.69548
+Holland Landing,Detached,bathrooms_total_integer,0.106199,3.2346,1.103942
+Holland Landing,Detached,parking_total,0.046215,6.7318,2.784262
+Holland Landing,Detached,basement_score,0.017222,5.7542,1.757958
+Holland Landing,Detached,interior_score,0.023178,3.5251,1.13511
+Holland Landing,Detached,exterior_score,0.005355,2.5642,0.963035

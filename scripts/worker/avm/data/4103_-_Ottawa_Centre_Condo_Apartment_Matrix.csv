@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0564
-lot_width,0.0
-bedrooms_above_grade,0.1176
-bathrooms_total_integer,-0.0053
-parking_total,0.0577
-basement_score,-0.0013
-interior_score,0.0092
-exterior_score,0.0217
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+4103 - Ottawa Centre,Condo Apartment,building_area_total,0.141221,843.0769,292.321862
+4103 - Ottawa Centre,Condo Apartment,lot_width,0.0,0.0,1.0
+4103 - Ottawa Centre,Condo Apartment,bedrooms_above_grade,0.062496,1.3976,0.579567
+4103 - Ottawa Centre,Condo Apartment,bathrooms_total_integer,-0.011908,1.4699,0.522675
+4103 - Ottawa Centre,Condo Apartment,parking_total,0.052588,0.7349,0.51681
+4103 - Ottawa Centre,Condo Apartment,basement_score,-0.017777,1.1446,0.746599
+4103 - Ottawa Centre,Condo Apartment,interior_score,0.013646,4.0723,0.635935
+4103 - Ottawa Centre,Condo Apartment,exterior_score,-0.001699,2.0602,0.796822

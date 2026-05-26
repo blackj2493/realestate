@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0407
-lot_width,0.0266
-bedrooms_above_grade,0.0408
-bathrooms_total_integer,0.0671
-parking_total,0.0112
-basement_score,0.0081
-interior_score,0.017
-exterior_score,0.0143
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+South West,Detached,building_area_total,0.090562,1794.1176,574.084699
+South West,Detached,lot_width,0.050584,45.7197,15.230246
+South West,Detached,bedrooms_above_grade,0.002897,3.3636,0.532309
+South West,Detached,bathrooms_total_integer,0.061412,2.7143,0.850625
+South West,Detached,parking_total,0.002347,4.1494,1.3795
+South West,Detached,basement_score,0.020155,5.2597,1.498073
+South West,Detached,interior_score,0.026129,3.5325,0.974805
+South West,Detached,exterior_score,0.006952,3.1818,1.101678

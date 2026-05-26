@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0738
-lot_width,0.0413
-bedrooms_above_grade,0.0326
-bathrooms_total_integer,0.1198
-parking_total,0.1096
-basement_score,0.0257
-interior_score,0.0624
-exterior_score,0.0054
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Aurora Village,Detached,building_area_total,0.107105,2124.5614,779.96417
+Aurora Village,Detached,lot_width,0.007782,57.7653,34.972507
+Aurora Village,Detached,bedrooms_above_grade,0.014629,3.3836,0.837971
+Aurora Village,Detached,bathrooms_total_integer,0.103066,3.3288,1.303891
+Aurora Village,Detached,parking_total,0.120056,5.3151,2.182601
+Aurora Village,Detached,basement_score,0.04401,5.5205,1.553693
+Aurora Village,Detached,interior_score,0.082285,3.9863,0.898906
+Aurora Village,Detached,exterior_score,-0.003382,2.5479,1.123121

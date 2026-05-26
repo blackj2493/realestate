@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0703
-lot_width,0.0256
-bedrooms_above_grade,0.0083
-bathrooms_total_integer,0.0284
-parking_total,0.0151
-basement_score,-0.0052
-interior_score,0.0126
-exterior_score,0.0022
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Northwest Brampton,Detached,building_area_total,0.068853,2501.8861,581.907115
+Northwest Brampton,Detached,lot_width,0.01789,39.1733,30.925604
+Northwest Brampton,Detached,bedrooms_above_grade,0.022151,3.9582,0.492092
+Northwest Brampton,Detached,bathrooms_total_integer,0.039201,4.3066,1.013871
+Northwest Brampton,Detached,parking_total,0.02707,4.3397,1.564666
+Northwest Brampton,Detached,basement_score,-0.002079,6.122,1.558087
+Northwest Brampton,Detached,interior_score,0.010382,3.4111,1.176844
+Northwest Brampton,Detached,exterior_score,0.00271,2.2892,0.80719

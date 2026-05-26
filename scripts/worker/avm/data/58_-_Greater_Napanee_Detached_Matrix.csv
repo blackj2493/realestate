@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0493
-lot_width,0.0336
-bedrooms_above_grade,-0.0161
-bathrooms_total_integer,0.0938
-parking_total,0.0593
-basement_score,0.0148
-interior_score,0.0269
-exterior_score,0.0561
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+58 - Greater Napanee,Detached,building_area_total,0.059444,1568.0449,638.259769
+58 - Greater Napanee,Detached,lot_width,0.011222,172.1026,281.757353
+58 - Greater Napanee,Detached,bedrooms_above_grade,-0.029727,2.8972,0.752671
+58 - Greater Napanee,Detached,bathrooms_total_integer,0.099333,2.0395,0.809051
+58 - Greater Napanee,Detached,parking_total,0.070072,6.6126,3.70212
+58 - Greater Napanee,Detached,basement_score,0.039651,4.834,1.997061
+58 - Greater Napanee,Detached,interior_score,0.061218,3.3004,0.860118
+58 - Greater Napanee,Detached,exterior_score,0.054035,2.6719,0.923498

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1184
-lot_width,0.0
-bedrooms_above_grade,0.0327
-bathrooms_total_integer,0.0208
-parking_total,0.0021
-basement_score,0.0
-interior_score,0.0205
-exterior_score,0.0062
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Unionville,Condo Apartment,building_area_total,0.098232,797.5581,217.837875
+Unionville,Condo Apartment,lot_width,0.0,0.0,1.0
+Unionville,Condo Apartment,bedrooms_above_grade,0.04647,1.4581,0.547184
+Unionville,Condo Apartment,bathrooms_total_integer,0.0377,1.7372,0.581307
+Unionville,Condo Apartment,parking_total,0.005851,1.093,0.328064
+Unionville,Condo Apartment,basement_score,0.0,1.0,1.0
+Unionville,Condo Apartment,interior_score,0.019482,4.2791,0.741638
+Unionville,Condo Apartment,exterior_score,0.000145,1.9674,0.704709

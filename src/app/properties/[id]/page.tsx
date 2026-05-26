@@ -394,7 +394,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <DealScoreCard dealScore={detail.dealScore} />
 
               {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
-              <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} />
+              <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} city={p.City} />
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">

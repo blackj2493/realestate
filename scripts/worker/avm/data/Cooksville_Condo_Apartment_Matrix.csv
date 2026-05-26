@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0295
-lot_width,0.0
-bedrooms_above_grade,0.0223
-bathrooms_total_integer,0.0069
-parking_total,0.006
-basement_score,0.0
-interior_score,0.0101
-exterior_score,-0.0126
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Cooksville,Condo Apartment,building_area_total,0.020598,1026.8327,161.369662
+Cooksville,Condo Apartment,lot_width,0.0,0.0,1.0
+Cooksville,Condo Apartment,bedrooms_above_grade,-0.003052,1.9173,0.562555
+Cooksville,Condo Apartment,bathrooms_total_integer,0.0228,1.5414,0.498287
+Cooksville,Condo Apartment,parking_total,0.021565,1.1729,0.397573
+Cooksville,Condo Apartment,basement_score,0.0,1.0,1.0
+Cooksville,Condo Apartment,interior_score,0.018289,3.7068,0.669215
+Cooksville,Condo Apartment,exterior_score,0.004718,2.0752,0.75218

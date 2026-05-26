@@ -3,9 +3,18 @@
  *
  * Fetches the model accuracy (R²) — which gates the engine mode — and the
  * Base_Price (fallback anchor used when there are no recent comps).
+ *
+ * The `avm_audit_report.city_region` column is stored verbatim from the source
+ * CSVs, which MIX clean spellings ("Brampton East", "Bedford Park-Nortown")
+ * with legacy prefixed forms ("1001 - BR Bronte", "3104 - CFB Rockcliffe and
+ * Area"). Live listings carry the clean TRREB CityRegion, so prefixed cohorts
+ * would silently miss on a case-insensitive `.eq`. We try every candidate
+ * spelling in one `.in()` round-trip and pick the highest-priority match;
+ * see normalizeType.cityRegionLookupCandidates for the rationale.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { cityRegionLookupCandidates } from './normalizeType';
 
 export interface AuditInfo {
   r2: number | null;
@@ -17,22 +26,29 @@ export async function fetchAuditInfo(
   cityRegion: string,
   propertySubType: string
 ): Promise<AuditInfo> {
-  const regionKey = cityRegion.toLowerCase().trim();
+  const candidates = cityRegionLookupCandidates(cityRegion);
+  if (candidates.length === 0) return { r2: null, basePrice: null };
   const typeKey = propertySubType.toLowerCase().trim();
 
   const { data, error } = await supabase
     .from('avm_audit_report')
-    .select('model_accuracy_score, base_price')
-    .ilike('city_region', regionKey)
+    .select('city_region, model_accuracy_score, base_price')
+    .in('city_region', candidates)
     .ilike('property_sub_type', typeKey)
-    .maybeSingle();
+    .limit(candidates.length);
 
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     console.warn(`[AVM] Audit lookup failed for ${cityRegion}/${propertySubType}`);
     return { r2: null, basePrice: null };
   }
 
+  // Pick the row matching the highest-priority candidate (verbatim wins over stripped).
+  const order = new Map(candidates.map((c, i) => [c, i]));
+  const best = data.reduce((acc, row) =>
+    (order.get(row.city_region) ?? 999) < (order.get(acc.city_region) ?? 999) ? row : acc
+  );
+
   const basePrice =
-    typeof data.base_price === 'number' && data.base_price > 0 ? data.base_price : null;
-  return { r2: data.model_accuracy_score ?? null, basePrice };
+    typeof best.base_price === 'number' && best.base_price > 0 ? best.base_price : null;
+  return { r2: best.model_accuracy_score ?? null, basePrice };
 }

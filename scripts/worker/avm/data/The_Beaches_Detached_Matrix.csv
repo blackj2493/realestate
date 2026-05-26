@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0431
-lot_width,0.0811
-bedrooms_above_grade,0.0125
-bathrooms_total_integer,0.1421
-parking_total,0.0425
-basement_score,0.0028
-interior_score,0.0222
-exterior_score,0.0185
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+The Beaches,Detached,building_area_total,0.087569,2175.4386,707.300453
+The Beaches,Detached,lot_width,0.049528,30.273,9.865753
+The Beaches,Detached,bedrooms_above_grade,0.019038,3.5732,0.841463
+The Beaches,Detached,bathrooms_total_integer,0.141148,3.3415,1.176181
+The Beaches,Detached,parking_total,0.045829,2.1646,1.449463
+The Beaches,Detached,basement_score,0.013739,6.0366,1.844207
+The Beaches,Detached,interior_score,0.040139,3.8354,1.122266
+The Beaches,Detached,exterior_score,0.031358,2.939,0.928513

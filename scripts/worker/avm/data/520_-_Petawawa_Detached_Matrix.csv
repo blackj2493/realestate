@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0207
-lot_width,-0.0411
-bedrooms_above_grade,0.0191
-bathrooms_total_integer,0.0934
-parking_total,0.0431
-basement_score,0.0061
-interior_score,0.0132
-exterior_score,0.0128
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+520 - Petawawa,Detached,building_area_total,0.033195,1254.4061,333.462233
+520 - Petawawa,Detached,lot_width,-0.0159,84.4629,78.885569
+520 - Petawawa,Detached,bedrooms_above_grade,0.00669,2.8035,0.600183
+520 - Petawawa,Detached,bathrooms_total_integer,0.099615,2.159,0.618261
+520 - Petawawa,Detached,parking_total,0.053102,5.4249,2.166512
+520 - Petawawa,Detached,basement_score,0.017926,4.6908,1.075086
+520 - Petawawa,Detached,interior_score,0.036318,3.5087,0.830199
+520 - Petawawa,Detached,exterior_score,0.011313,2.4364,0.723473

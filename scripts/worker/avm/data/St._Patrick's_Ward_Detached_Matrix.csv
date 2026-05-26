@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0222
-lot_width,0.0552
-bedrooms_above_grade,0.0398
-bathrooms_total_integer,0.0259
-parking_total,0.0087
-basement_score,0.0115
-interior_score,0.0325
-exterior_score,0.0159
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+St. Patrick's Ward,Detached,building_area_total,0.028662,1193.6132,285.076297
+St. Patrick's Ward,Detached,lot_width,0.040309,40.3701,13.18624
+St. Patrick's Ward,Detached,bedrooms_above_grade,0.031316,2.5588,0.829287
+St. Patrick's Ward,Detached,bathrooms_total_integer,0.032148,1.6912,0.691489
+St. Patrick's Ward,Detached,parking_total,0.018235,3.0,1.706389
+St. Patrick's Ward,Detached,basement_score,0.011972,4.7206,1.551523
+St. Patrick's Ward,Detached,interior_score,0.045775,3.0441,1.020868
+St. Patrick's Ward,Detached,exterior_score,0.025267,2.3824,0.891618

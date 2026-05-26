@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0626
-lot_width,0.0
-bedrooms_above_grade,0.1345
-bathrooms_total_integer,0.0074
-parking_total,0.0383
-basement_score,0.019
-interior_score,0.0242
-exterior_score,-0.0117
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+4003 - Sandy Hill,Condo Apartment,building_area_total,0.073125,850.0,287.518115
+4003 - Sandy Hill,Condo Apartment,lot_width,0.0,0.0,1.0
+4003 - Sandy Hill,Condo Apartment,bedrooms_above_grade,0.038905,1.4649,0.548999
+4003 - Sandy Hill,Condo Apartment,bathrooms_total_integer,0.045798,1.4649,0.532782
+4003 - Sandy Hill,Condo Apartment,parking_total,0.072812,0.7456,0.509754
+4003 - Sandy Hill,Condo Apartment,basement_score,0.012337,1.2807,1.055552
+4003 - Sandy Hill,Condo Apartment,interior_score,0.035468,3.9211,0.807256
+4003 - Sandy Hill,Condo Apartment,exterior_score,0.000439,2.0877,0.811771

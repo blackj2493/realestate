@@ -12,6 +12,10 @@
 
 export interface AVMInput {
   cityRegion: string;
+  /** Municipality (raw_vow_sold.city / payload.City) — used for city-level
+   * trend de-staling. Optional: when missing, anchor falls back to using
+   * cityRegion as the trend-lookup group. */
+  city: string | null;
   /** Canonical type for matrix/audit lookups (normalizePropertySubType output). */
   propertySubType: string;
   /** Verbatim listing PropertySubType — used to pool raw_vow_sold anchor variants. */
@@ -26,6 +30,14 @@ export interface AVMInput {
   basementTier: number; // 1-9
 }
 
+/** Where the anchor's level estimate came from — surfaced in the UI basis line. */
+export type AnchorBasis =
+  | 'local'   // recent local comps drove the level (low shrinkage to prior)
+  | 'blend'   // local comps + de-staled prior shrunk together
+  | 'prior'   // no usable local comps; prior (g(t₀)+δ_c) carried the level
+  | 'parent'  // community offset missing; parent city × sub-type level used
+  | 'none';   // truly nothing — render "estimate unavailable"
+
 export interface AVMResult {
   estimatedValue: number;
   anchorPrice: number;
@@ -34,6 +46,19 @@ export interface AVMResult {
   r2Score: number | null;
   breakdown: AVMAdjustmentBreakdown;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+
+  /** Number of raw recent comps consulted (pre-Huber weighting). */
+  comps: number;
+  /** Kish-effective sample size (Σw)² / Σw² after recency + robust weights. */
+  nEff: number;
+  /** Which leg of the anchor pipeline produced the level. */
+  basis: AnchorBasis;
+  /** Lower bound of the 1-SD predictive band on price (= exp(level - SD) × feature multiplier). */
+  lowBand: number;
+  /** Upper bound of the 1-SD predictive band on price. */
+  highBand: number;
+  /** Predictive SD in log-space (combined local + prior variance). */
+  predictiveSD: number;
 }
 
 export interface AVMAdjustmentBreakdown {
@@ -67,13 +92,31 @@ export const COEFFICIENT_ENGINE_THRESHOLD = 0.5;
 export const HIGH_CONFIDENCE_THRESHOLD = 0.7;
 
 /**
- * Standardized log-space formula bounds and anchor requirements.
+ * Standardized log-space formula bounds.
  *   z_i      = clamp((x_i − mean_i) / std_i, ±Z_CLAMP)
  *   total    = clamp(Σ beta_i · z_i, ±ADJ_CLAMP)
  *   estimate = anchor × exp(total)
- * MIN_ANCHOR_COMPS: minimum 90-day comps before trusting the live median anchor;
- * below it we fall back to the audit Base_Price.
  */
 export const Z_CLAMP = 3;
 export const ADJ_CLAMP = 0.4;
-export const MIN_ANCHOR_COMPS = 5;
+
+/**
+ * Anchor-pipeline tuning. Defaults shipped Phase 1; Phase 2 will fit them via
+ * cross-validation against raw_vow_sold (see plan concurrent-prancing-owl).
+ *
+ *   H_DAYS    — exponential recency half-life on comp weights (~4 mo).
+ *   TAU2      — between-community variance in log-space (prior strength).
+ *   SIGMA2    — residual variance per comp (Kish-effective denominator).
+ *   COMP_WINDOW_MO — trailing months of comps to consider local.
+ *   HUBER_K   — Huber threshold (std-units) on the comp ℓ residual.
+ *   BAND_*    — relative half-width thresholds for confidence; above BAND_LOW,
+ *               suppress the estimate ("range too wide to publish").
+ */
+export const H_DAYS = 120;
+export const TAU2 = 0.02;
+export const SIGMA2 = 0.04;
+export const COMP_WINDOW_MO = 12;
+export const HUBER_K = 1.345;
+export const BAND_HIGH = 0.08;
+export const BAND_MED = 0.15;
+export const BAND_LOW = 0.25;

@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Berczy,Townhouse,building_area_total,0.068453,1715.6716,266.431498
+Berczy,Townhouse,lot_width,0.021675,20.1611,6.861218
+Berczy,Townhouse,bedrooms_above_grade,0.01959,3.1071,0.463369
+Berczy,Townhouse,bathrooms_total_integer,0.000297,3.4881,0.545415
+Berczy,Townhouse,parking_total,0.032493,2.4881,0.62667
+Berczy,Townhouse,basement_score,0.008595,4.869,0.768111
+Berczy,Townhouse,interior_score,0.01418,3.9524,0.738479
+Berczy,Townhouse,exterior_score,0.017571,2.0476,0.770046

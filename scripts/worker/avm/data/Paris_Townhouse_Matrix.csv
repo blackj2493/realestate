@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Paris,Townhouse,building_area_total,0.022523,1540.5172,281.690846
+Paris,Townhouse,lot_width,-0.001632,21.3804,6.532207
+Paris,Townhouse,bedrooms_above_grade,-0.005771,2.8226,0.422137
+Paris,Townhouse,bathrooms_total_integer,0.021456,2.8548,0.434287
+Paris,Townhouse,parking_total,0.03467,2.379,0.633
+Paris,Townhouse,basement_score,0.021699,4.1129,1.832545
+Paris,Townhouse,interior_score,-0.000279,3.7419,0.860148
+Paris,Townhouse,exterior_score,0.01816,2.129,0.706739

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0357
-lot_width,0.0
-bedrooms_above_grade,0.111
-bathrooms_total_integer,0.0245
-parking_total,0.0033
-basement_score,0.0
-interior_score,0.0212
-exterior_score,0.0177
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Beverley Glen,Condo Apartment,building_area_total,0.07638,741.7178,189.223778
+Beverley Glen,Condo Apartment,lot_width,0.0,0.0,1.0
+Beverley Glen,Condo Apartment,bedrooms_above_grade,0.054714,1.3902,0.487805
+Beverley Glen,Condo Apartment,bathrooms_total_integer,0.030615,1.6037,0.501448
+Beverley Glen,Condo Apartment,parking_total,0.014759,1.0427,0.230339
+Beverley Glen,Condo Apartment,basement_score,0.0,1.0,1.0
+Beverley Glen,Condo Apartment,interior_score,0.018667,4.0671,0.716794
+Beverley Glen,Condo Apartment,exterior_score,0.010747,2.3476,0.649526

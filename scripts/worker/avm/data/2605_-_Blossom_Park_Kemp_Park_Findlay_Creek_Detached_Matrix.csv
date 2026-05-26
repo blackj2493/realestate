@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.029
-lot_width,0.0268
-bedrooms_above_grade,0.0195
-bathrooms_total_integer,0.0087
-parking_total,0.0073
-basement_score,0.0031
-interior_score,0.0116
-exterior_score,0.0102
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,building_area_total,0.044636,2556.9444,612.616517
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,lot_width,0.018678,41.614,12.238308
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,bedrooms_above_grade,0.015156,3.68,0.76
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,bathrooms_total_integer,0.008529,3.61,0.936963
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,parking_total,0.002386,4.74,1.082774
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,basement_score,0.016596,4.93,1.002547
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,interior_score,0.005871,3.99,1.03436
+2605 - Blossom Park/Kemp Park/Findlay Creek,Detached,exterior_score,0.017491,2.57,0.803181

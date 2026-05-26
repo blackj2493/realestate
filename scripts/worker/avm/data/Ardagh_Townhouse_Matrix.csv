@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ardagh,Townhouse,building_area_total,0.040506,1241.8103,220.009205
+Ardagh,Townhouse,lot_width,0.0,20.9453,5.959164
+Ardagh,Townhouse,bedrooms_above_grade,-0.017921,2.7705,0.420517
+Ardagh,Townhouse,bathrooms_total_integer,0.021286,2.3443,0.80745
+Ardagh,Townhouse,parking_total,0.077509,2.082,0.68461
+Ardagh,Townhouse,basement_score,0.009804,4.6557,2.598141
+Ardagh,Townhouse,interior_score,0.019519,3.5902,0.710046
+Ardagh,Townhouse,exterior_score,-0.003072,2.541,0.801101

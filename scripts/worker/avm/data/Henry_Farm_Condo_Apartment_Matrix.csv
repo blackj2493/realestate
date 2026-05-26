@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0479
-lot_width,0.0
-bedrooms_above_grade,-0.009
-bathrooms_total_integer,0.0821
-parking_total,0.002
-basement_score,0.0
-interior_score,0.0107
-exterior_score,0.0072
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Henry Farm,Condo Apartment,building_area_total,0.029678,689.8276,165.180062
+Henry Farm,Condo Apartment,lot_width,0.0,0.0,1.0
+Henry Farm,Condo Apartment,bedrooms_above_grade,0.008752,1.4379,0.542608
+Henry Farm,Condo Apartment,bathrooms_total_integer,0.073104,1.4862,0.49981
+Henry Farm,Condo Apartment,parking_total,0.009839,0.9759,0.193257
+Henry Farm,Condo Apartment,basement_score,0.0,1.0,1.0
+Henry Farm,Condo Apartment,interior_score,0.003421,3.9034,0.816419
+Henry Farm,Condo Apartment,exterior_score,0.014049,2.1379,0.464174

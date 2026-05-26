@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1042
-lot_width,0.0
-bedrooms_above_grade,0.0199
-bathrooms_total_integer,0.0135
-parking_total,-0.0154
-basement_score,0.0
-interior_score,0.0232
-exterior_score,0.0067
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+East End-Danforth,Condo Apartment,building_area_total,0.084395,735.2941,187.421648
+East End-Danforth,Condo Apartment,lot_width,0.0,0.0,1.0
+East End-Danforth,Condo Apartment,bedrooms_above_grade,0.035635,1.6471,0.6515
+East End-Danforth,Condo Apartment,bathrooms_total_integer,0.020193,1.5686,0.495268
+East End-Danforth,Condo Apartment,parking_total,0.006374,0.6471,0.5539
+East End-Danforth,Condo Apartment,basement_score,0.0,1.0,1.0
+East End-Danforth,Condo Apartment,interior_score,0.030394,3.8235,0.733134
+East End-Danforth,Condo Apartment,exterior_score,0.021179,1.7647,0.580339

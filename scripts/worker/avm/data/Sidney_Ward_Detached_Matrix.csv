@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0807
-lot_width,0.062
-bedrooms_above_grade,-0.0171
-bathrooms_total_integer,0.0607
-parking_total,0.0289
-basement_score,-0.0216
-interior_score,0.0202
-exterior_score,0.0197
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Sidney Ward,Detached,building_area_total,0.098489,1563.6774,598.662067
+Sidney Ward,Detached,lot_width,0.027998,128.087,108.28634
+Sidney Ward,Detached,bedrooms_above_grade,-0.042561,2.905,0.682624
+Sidney Ward,Detached,bathrooms_total_integer,0.085448,2.155,0.800609
+Sidney Ward,Detached,parking_total,0.035876,7.3675,3.336719
+Sidney Ward,Detached,basement_score,-0.013186,4.93,2.14595
+Sidney Ward,Detached,interior_score,0.037263,3.27,0.887187
+Sidney Ward,Detached,exterior_score,0.029289,2.69,0.874014

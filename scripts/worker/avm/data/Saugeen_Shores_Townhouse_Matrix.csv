@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Saugeen Shores,Townhouse,building_area_total,0.062064,1285.7857,205.802325
+Saugeen Shores,Townhouse,lot_width,0.0,35.48,8.558289
+Saugeen Shores,Townhouse,bedrooms_above_grade,-0.059402,2.2857,0.628138
+Saugeen Shores,Townhouse,bathrooms_total_integer,0.015752,2.4524,0.697013
+Saugeen Shores,Townhouse,parking_total,0.080268,2.381,1.022424
+Saugeen Shores,Townhouse,basement_score,-0.033661,4.0238,1.625512
+Saugeen Shores,Townhouse,interior_score,0.037624,3.4762,0.763391
+Saugeen Shores,Townhouse,exterior_score,0.006518,2.2143,0.599036

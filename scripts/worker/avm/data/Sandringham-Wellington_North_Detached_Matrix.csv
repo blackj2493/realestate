@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0291
-lot_width,0.0212
-bedrooms_above_grade,0.0002
-bathrooms_total_integer,0.0036
-parking_total,0.0075
-basement_score,0.029
-interior_score,0.0183
-exterior_score,-0.012
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Sandringham-Wellington North,Detached,building_area_total,0.055788,2663.7931,295.628072
+Sandringham-Wellington North,Detached,lot_width,0.015091,40.9834,8.102088
+Sandringham-Wellington North,Detached,bedrooms_above_grade,0.00574,4.0597,0.293237
+Sandringham-Wellington North,Detached,bathrooms_total_integer,0.022311,4.2388,0.625086
+Sandringham-Wellington North,Detached,parking_total,0.015732,4.597,1.146828
+Sandringham-Wellington North,Detached,basement_score,0.007378,5.6418,1.599454
+Sandringham-Wellington North,Detached,interior_score,0.009984,4.0746,0.869267
+Sandringham-Wellington North,Detached,exterior_score,0.000487,2.1045,0.812851

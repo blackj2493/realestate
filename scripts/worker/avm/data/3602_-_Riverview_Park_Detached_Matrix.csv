@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0094
-lot_width,0.0148
-bedrooms_above_grade,0.0096
-bathrooms_total_integer,0.0588
-parking_total,0.0444
-basement_score,-0.0127
-interior_score,0.0286
-exterior_score,-0.0037
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3602 - Riverview Park,Detached,building_area_total,0.018724,1289.1304,232.639169
+3602 - Riverview Park,Detached,lot_width,-0.002644,55.7562,12.55362
+3602 - Riverview Park,Detached,bedrooms_above_grade,0.013043,3.2051,0.75717
+3602 - Riverview Park,Detached,bathrooms_total_integer,0.039651,2.2308,0.732454
+3602 - Riverview Park,Detached,parking_total,0.033007,3.8205,1.083011
+3602 - Riverview Park,Detached,basement_score,-0.00827,4.5385,1.05845
+3602 - Riverview Park,Detached,interior_score,0.036308,3.3846,0.950449
+3602 - Riverview Park,Detached,exterior_score,0.004437,1.5385,0.84265

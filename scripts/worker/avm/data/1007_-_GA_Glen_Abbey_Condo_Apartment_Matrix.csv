@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1791
-lot_width,0.0
-bedrooms_above_grade,-0.0343
-bathrooms_total_integer,0.0208
-parking_total,0.0061
-basement_score,0.0
-interior_score,0.023
-exterior_score,-0.0131
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1007 - GA Glen Abbey,Condo Apartment,building_area_total,0.157911,1058.7492,257.493958
+1007 - GA Glen Abbey,Condo Apartment,lot_width,0.0,0.0,1.0
+1007 - GA Glen Abbey,Condo Apartment,bedrooms_above_grade,-0.063843,1.9846,0.66777
+1007 - GA Glen Abbey,Condo Apartment,bathrooms_total_integer,0.058194,1.4769,0.499467
+1007 - GA Glen Abbey,Condo Apartment,parking_total,0.022523,1.2,0.436771
+1007 - GA Glen Abbey,Condo Apartment,basement_score,0.0,1.0,1.0
+1007 - GA Glen Abbey,Condo Apartment,interior_score,0.031843,3.9231,0.686299
+1007 - GA Glen Abbey,Condo Apartment,exterior_score,0.003832,2.5385,0.895749

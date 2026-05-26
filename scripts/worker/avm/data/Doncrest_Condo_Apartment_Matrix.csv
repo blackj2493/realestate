@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.085
-lot_width,0.0
-bedrooms_above_grade,0.0234
-bathrooms_total_integer,0.0171
-parking_total,-0.0087
-basement_score,0.0
-interior_score,0.0465
-exterior_score,-0.0228
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Doncrest,Condo Apartment,building_area_total,0.024592,847.8261,285.448386
+Doncrest,Condo Apartment,lot_width,0.0,0.0,1.0
+Doncrest,Condo Apartment,bedrooms_above_grade,0.039712,1.5797,0.623357
+Doncrest,Condo Apartment,bathrooms_total_integer,0.061659,1.6377,0.563915
+Doncrest,Condo Apartment,parking_total,0.015286,1.1884,0.391036
+Doncrest,Condo Apartment,basement_score,0.0,1.0,1.0
+Doncrest,Condo Apartment,interior_score,0.051614,4.029,0.779651
+Doncrest,Condo Apartment,exterior_score,-0.0317,2.1304,0.79697

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0865
-lot_width,0.0302
-bedrooms_above_grade,-0.0104
-bathrooms_total_integer,0.0026
-parking_total,0.0122
-basement_score,0.0127
-interior_score,0.0067
-exterior_score,-0.0236
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Aurora,Detached,building_area_total,0.101054,3063.4328,639.705045
+Rural Aurora,Detached,lot_width,-0.005959,40.6254,9.931132
+Rural Aurora,Detached,bedrooms_above_grade,-0.006951,4.038,0.335383
+Rural Aurora,Detached,bathrooms_total_integer,0.027751,4.2658,0.758227
+Rural Aurora,Detached,parking_total,0.018924,5.0127,1.163731
+Rural Aurora,Detached,basement_score,0.012186,6.1139,1.855456
+Rural Aurora,Detached,interior_score,-0.000681,4.1899,1.019754
+Rural Aurora,Detached,exterior_score,0.000876,2.519,1.112197

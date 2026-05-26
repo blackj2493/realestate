@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0163
-lot_width,0.0382
-bedrooms_above_grade,-0.0048
-bathrooms_total_integer,0.0796
-parking_total,0.0228
-basement_score,0.0192
-interior_score,0.0447
-exterior_score,0.0038
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Ingersoll - North,Detached,building_area_total,0.036847,1418.1781,425.468878
+Ingersoll - North,Detached,lot_width,-0.003336,56.7837,21.333239
+Ingersoll - North,Detached,bedrooms_above_grade,-0.028898,2.7778,0.53287
+Ingersoll - North,Detached,bathrooms_total_integer,0.091083,2.0556,0.807756
+Ingersoll - North,Detached,parking_total,0.054358,4.4722,1.445993
+Ingersoll - North,Detached,basement_score,0.019946,5.2222,1.799863
+Ingersoll - North,Detached,interior_score,0.043819,3.2778,1.000309
+Ingersoll - North,Detached,exterior_score,0.003226,2.3778,0.913817

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.051
-lot_width,0.0478
-bedrooms_above_grade,-0.0052
-bathrooms_total_integer,0.0478
-parking_total,-0.0156
-basement_score,0.0257
-interior_score,0.0126
-exterior_score,0.0048
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rouge E10,Detached,building_area_total,0.049662,1690.9091,537.292834
+Rouge E10,Detached,lot_width,0.040029,51.9648,17.674984
+Rouge E10,Detached,bedrooms_above_grade,-0.003736,3.3333,0.758395
+Rouge E10,Detached,bathrooms_total_integer,0.074451,3.0392,1.09295
+Rouge E10,Detached,parking_total,0.01249,5.1127,1.706256
+Rouge E10,Detached,basement_score,0.031073,6.049,1.947233
+Rouge E10,Detached,interior_score,0.015506,3.3333,1.087661
+Rouge E10,Detached,exterior_score,0.000129,2.3431,1.368376

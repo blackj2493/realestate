@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0684
-lot_width,0.0001
-bedrooms_above_grade,0.0109
-bathrooms_total_integer,0.0124
-parking_total,0.048
-basement_score,0.003
-interior_score,0.0157
-exterior_score,-0.0051
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Pineridge/Westminster Woods,Townhouse,building_area_total,0.057587,1620.069,388.711625
+Pineridge/Westminster Woods,Townhouse,lot_width,0.0,25.3457,10.672867
+Pineridge/Westminster Woods,Townhouse,bedrooms_above_grade,0.004892,2.8409,0.395611
+Pineridge/Westminster Woods,Townhouse,bathrooms_total_integer,0.018867,3.2386,0.690756
+Pineridge/Westminster Woods,Townhouse,parking_total,0.050574,2.625,1.003545
+Pineridge/Westminster Woods,Townhouse,basement_score,0.010321,4.7386,1.48855
+Pineridge/Westminster Woods,Townhouse,interior_score,0.011129,3.7614,0.825645
+Pineridge/Westminster Woods,Townhouse,exterior_score,0.016187,2.2727,0.634738

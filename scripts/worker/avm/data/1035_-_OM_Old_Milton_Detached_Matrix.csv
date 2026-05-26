@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1266
-lot_width,0.0256
-bedrooms_above_grade,0.0128
-bathrooms_total_integer,0.0412
-parking_total,0.0444
-basement_score,0.0105
-interior_score,0.0184
-exterior_score,-0.0041
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1035 - OM Old Milton,Detached,building_area_total,0.076195,1569.6932,745.536391
+1035 - OM Old Milton,Detached,lot_width,0.01189,64.8441,19.464315
+1035 - OM Old Milton,Detached,bedrooms_above_grade,0.036983,2.9718,0.670754
+1035 - OM Old Milton,Detached,bathrooms_total_integer,0.086299,2.169,0.78697
+1035 - OM Old Milton,Detached,parking_total,0.053395,5.5,2.193139
+1035 - OM Old Milton,Detached,basement_score,0.013963,5.3521,1.268231
+1035 - OM Old Milton,Detached,interior_score,0.036918,3.3099,1.082401
+1035 - OM Old Milton,Detached,exterior_score,0.004857,2.4507,0.868684

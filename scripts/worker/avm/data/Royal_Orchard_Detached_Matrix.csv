@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0869
-lot_width,0.0403
-bedrooms_above_grade,0.0189
-bathrooms_total_integer,0.0209
-parking_total,0.0385
-basement_score,0.02
-interior_score,0.022
-exterior_score,0.0052
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Royal Orchard,Detached,building_area_total,0.083313,1956.8627,615.089632
+Royal Orchard,Detached,lot_width,0.029372,56.0943,11.499185
+Royal Orchard,Detached,bedrooms_above_grade,0.008785,3.7206,0.56479
+Royal Orchard,Detached,bathrooms_total_integer,0.055931,3.2059,0.948045
+Royal Orchard,Detached,parking_total,0.041278,5.75,1.321485
+Royal Orchard,Detached,basement_score,0.020419,6.0,1.653872
+Royal Orchard,Detached,interior_score,0.029247,3.4412,1.241232
+Royal Orchard,Detached,exterior_score,0.029118,3.3824,1.0436

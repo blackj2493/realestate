@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1037 - TM Timberlea,Townhouse,building_area_total,0.062184,1453.9432,222.062094
+1037 - TM Timberlea,Townhouse,lot_width,0.0,18.5209,6.443259
+1037 - TM Timberlea,Townhouse,bedrooms_above_grade,-0.00673,2.95,0.44441
+1037 - TM Timberlea,Townhouse,bathrooms_total_integer,0.039986,2.625,0.578252
+1037 - TM Timberlea,Townhouse,parking_total,0.015607,2.1,0.6245
+1037 - TM Timberlea,Townhouse,basement_score,-0.000623,4.675,1.766175
+1037 - TM Timberlea,Townhouse,interior_score,-0.009264,3.725,0.836286
+1037 - TM Timberlea,Townhouse,exterior_score,0.002407,2.575,0.945714

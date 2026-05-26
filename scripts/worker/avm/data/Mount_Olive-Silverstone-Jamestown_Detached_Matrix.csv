@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0084
-lot_width,0.0161
-bedrooms_above_grade,0.0007
-bathrooms_total_integer,0.0388
-parking_total,0.0226
-basement_score,0.0157
-interior_score,0.0041
-exterior_score,0.0038
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Mount Olive-Silverstone-Jamestown,Detached,building_area_total,0.016258,1484.4828,452.979304
+Mount Olive-Silverstone-Jamestown,Detached,lot_width,-0.002584,48.2607,8.527676
+Mount Olive-Silverstone-Jamestown,Detached,bedrooms_above_grade,0.01386,3.2857,0.628138
+Mount Olive-Silverstone-Jamestown,Detached,bathrooms_total_integer,0.024533,2.5714,0.903508
+Mount Olive-Silverstone-Jamestown,Detached,parking_total,0.008485,4.4762,1.239011
+Mount Olive-Silverstone-Jamestown,Detached,basement_score,0.017309,5.5952,1.890572
+Mount Olive-Silverstone-Jamestown,Detached,interior_score,-0.015805,2.9524,0.949997
+Mount Olive-Silverstone-Jamestown,Detached,exterior_score,0.009618,2.3571,0.610286

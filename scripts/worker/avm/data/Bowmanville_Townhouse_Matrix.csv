@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Bowmanville,Townhouse,building_area_total,0.036532,1468.6416,350.828959
+Bowmanville,Townhouse,lot_width,0.015969,21.8652,6.093782
+Bowmanville,Townhouse,bedrooms_above_grade,0.005459,2.9816,0.418062
+Bowmanville,Townhouse,bathrooms_total_integer,0.044799,2.8848,0.712365
+Bowmanville,Townhouse,parking_total,0.022066,2.5346,0.718392
+Bowmanville,Townhouse,basement_score,0.001886,5.0369,2.236794
+Bowmanville,Townhouse,interior_score,0.01153,3.6544,0.839899
+Bowmanville,Townhouse,exterior_score,0.001711,2.5023,0.896097

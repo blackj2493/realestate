@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1119 - Notting Hill/Summerside,Townhouse,building_area_total,0.016465,1589.3617,258.254404
+1119 - Notting Hill/Summerside,Townhouse,lot_width,0.013208,22.4453,4.683525
+1119 - Notting Hill/Summerside,Townhouse,bedrooms_above_grade,0.018792,2.8,0.4
+1119 - Notting Hill/Summerside,Townhouse,bathrooms_total_integer,0.022443,2.8286,0.506287
+1119 - Notting Hill/Summerside,Townhouse,parking_total,0.005344,2.8429,0.576584
+1119 - Notting Hill/Summerside,Townhouse,basement_score,0.018348,4.4857,1.227574
+1119 - Notting Hill/Summerside,Townhouse,interior_score,0.013725,3.9143,0.649018
+1119 - Notting Hill/Summerside,Townhouse,exterior_score,0.005938,2.3429,0.652155

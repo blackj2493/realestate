@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.5159
-lot_width,0.0
-bedrooms_above_grade,-0.0115
-bathrooms_total_integer,0.0155
-parking_total,0.0149
-basement_score,0.0022
-interior_score,0.0315
-exterior_score,-0.0165
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1013 - OO Old Oakville,Condo Apartment,building_area_total,0.523155,1511.425,693.837225
+1013 - OO Old Oakville,Condo Apartment,lot_width,0.0,0.0,1.0
+1013 - OO Old Oakville,Condo Apartment,bedrooms_above_grade,-0.023394,1.925,0.468375
+1013 - OO Old Oakville,Condo Apartment,bathrooms_total_integer,0.061631,2.175,0.627993
+1013 - OO Old Oakville,Condo Apartment,parking_total,0.048865,1.55,0.589491
+1013 - OO Old Oakville,Condo Apartment,basement_score,-0.032419,1.1,0.6245
+1013 - OO Old Oakville,Condo Apartment,interior_score,0.066273,4.275,0.741198
+1013 - OO Old Oakville,Condo Apartment,exterior_score,0.054973,2.575,1.069755

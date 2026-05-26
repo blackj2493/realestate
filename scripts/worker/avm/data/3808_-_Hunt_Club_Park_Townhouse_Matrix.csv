@@ -1,0 +1,9 @@
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+3808 - Hunt Club Park,Townhouse,building_area_total,0.022738,1322.0588,174.132799
+3808 - Hunt Club Park,Townhouse,lot_width,-0.003698,23.1913,6.746626
+3808 - Hunt Club Park,Townhouse,bedrooms_above_grade,0.036868,2.5366,0.886142
+3808 - Hunt Club Park,Townhouse,bathrooms_total_integer,0.038142,2.7073,0.634146
+3808 - Hunt Club Park,Townhouse,parking_total,0.09675,2.1707,0.985318
+3808 - Hunt Club Park,Townhouse,basement_score,0.037277,3.8537,1.746927
+3808 - Hunt Club Park,Townhouse,interior_score,0.028909,3.561,0.734142
+3808 - Hunt Club Park,Townhouse,exterior_score,-0.001928,2.3659,0.68986

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1201
-lot_width,0.0
-bedrooms_above_grade,0.0112
-bathrooms_total_integer,0.0288
-parking_total,0.0064
-basement_score,0.0
-interior_score,-0.0181
-exterior_score,0.0107
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1019 - WM Westmount,Condo Apartment,building_area_total,0.056694,671.0,169.512185
+1019 - WM Westmount,Condo Apartment,lot_width,0.0,0.0,1.0
+1019 - WM Westmount,Condo Apartment,bedrooms_above_grade,0.039612,1.3016,0.458947
+1019 - WM Westmount,Condo Apartment,bathrooms_total_integer,0.037039,1.3651,0.481452
+1019 - WM Westmount,Condo Apartment,parking_total,0.033555,1.0635,0.350646
+1019 - WM Westmount,Condo Apartment,basement_score,0.0,1.0,1.0
+1019 - WM Westmount,Condo Apartment,interior_score,-0.008104,4.1746,0.724617
+1019 - WM Westmount,Condo Apartment,exterior_score,-0.000771,2.3492,0.759255

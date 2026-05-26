@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0802
-lot_width,0.0
-bedrooms_above_grade,0.018
-bathrooms_total_integer,0.0133
-parking_total,-0.0001
-basement_score,0.0058
-interior_score,0.0116
-exterior_score,-0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1117 - Avalon West,Condo Apartment,building_area_total,0.031838,905.2632,238.633576
+1117 - Avalon West,Condo Apartment,lot_width,0.0,0.0,1.0
+1117 - Avalon West,Condo Apartment,bedrooms_above_grade,0.025838,1.5918,0.726141
+1117 - Avalon West,Condo Apartment,bathrooms_total_integer,0.044416,1.6939,0.676247
+1117 - Avalon West,Condo Apartment,parking_total,0.003448,1.0204,0.141392
+1117 - Avalon West,Condo Apartment,basement_score,0.028481,1.8163,1.612116
+1117 - Avalon West,Condo Apartment,interior_score,-0.01087,4.3469,0.555162
+1117 - Avalon West,Condo Apartment,exterior_score,0.00843,1.7347,0.693277

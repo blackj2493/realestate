@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0339
-lot_width,0.0809
-bedrooms_above_grade,-0.0131
-bathrooms_total_integer,0.0759
-parking_total,0.1344
-basement_score,0.0118
-interior_score,0.022
-exterior_score,0.0253
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Rural Caledon,Detached,building_area_total,0.060425,2589.3116,717.76366
+Rural Caledon,Detached,lot_width,0.072477,132.8521,183.831454
+Rural Caledon,Detached,bedrooms_above_grade,-0.020716,3.7685,0.836743
+Rural Caledon,Detached,bathrooms_total_integer,0.092841,3.8398,1.200083
+Rural Caledon,Detached,parking_total,0.122201,8.3442,6.067272
+Rural Caledon,Detached,basement_score,0.015157,6.0979,1.861502
+Rural Caledon,Detached,interior_score,0.023114,3.6706,1.127534
+Rural Caledon,Detached,exterior_score,0.028029,2.638,0.917735

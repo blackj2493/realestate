@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0518
-lot_width,-0.041
-bedrooms_above_grade,0.016
-bathrooms_total_integer,0.0953
-parking_total,0.002
-basement_score,-0.0039
-interior_score,0.0376
-exterior_score,-0.0037
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+057 - Smithville,Detached,building_area_total,0.07719,1717.5469,581.09772
+057 - Smithville,Detached,lot_width,-0.011102,59.0701,17.910139
+057 - Smithville,Detached,bedrooms_above_grade,0.007292,3.1571,0.82177
+057 - Smithville,Detached,bathrooms_total_integer,0.095563,2.4714,0.873767
+057 - Smithville,Detached,parking_total,0.049784,5.3286,3.446412
+057 - Smithville,Detached,basement_score,0.002301,5.2286,1.197276
+057 - Smithville,Detached,interior_score,0.032794,3.5,0.967323
+057 - Smithville,Detached,exterior_score,0.023103,2.5714,0.949758

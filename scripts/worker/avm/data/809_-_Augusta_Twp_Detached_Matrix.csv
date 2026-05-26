@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0381
-lot_width,-0.0386
-bedrooms_above_grade,0.0195
-bathrooms_total_integer,0.1109
-parking_total,0.0448
-basement_score,0.0124
-interior_score,0.0529
-exterior_score,0.0209
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+809 - Augusta Twp,Detached,building_area_total,0.050566,1501.3333,355.150047
+809 - Augusta Twp,Detached,lot_width,0.002975,262.3855,320.885632
+809 - Augusta Twp,Detached,bedrooms_above_grade,0.041627,2.8636,0.624897
+809 - Augusta Twp,Detached,bathrooms_total_integer,0.117721,1.8909,0.742789
+809 - Augusta Twp,Detached,parking_total,0.059926,7.2,2.742925
+809 - Augusta Twp,Detached,basement_score,0.022253,4.2182,1.696959
+809 - Augusta Twp,Detached,interior_score,0.049445,3.2818,1.036882
+809 - Augusta Twp,Detached,exterior_score,0.021842,2.3364,0.812149

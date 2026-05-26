@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1043
-lot_width,0.0
-bedrooms_above_grade,-0.0196
-bathrooms_total_integer,0.0218
-parking_total,0.0
-basement_score,0.0
-interior_score,0.0356
-exterior_score,0.0326
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Applewood,Condo Apartment,building_area_total,0.119529,1020.1613,192.282487
+Applewood,Condo Apartment,lot_width,0.0,0.0,1.0
+Applewood,Condo Apartment,bedrooms_above_grade,-0.044266,2.0323,0.717697
+Applewood,Condo Apartment,bathrooms_total_integer,0.064058,1.4516,0.497653
+Applewood,Condo Apartment,parking_total,0.026118,1.0161,0.219379
+Applewood,Condo Apartment,basement_score,0.020975,1.129,1.007774
+Applewood,Condo Apartment,interior_score,0.026073,3.6935,0.794918
+Applewood,Condo Apartment,exterior_score,0.008115,2.1129,0.863318

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0727
-lot_width,0.0
-bedrooms_above_grade,-0.0225
-bathrooms_total_integer,0.1478
-parking_total,0.0139
-basement_score,0.0
-interior_score,0.0129
-exterior_score,0.0339
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+LaSalle,Condo Apartment,building_area_total,0.030864,879.7619,279.25486
+LaSalle,Condo Apartment,lot_width,0.0,0.0,1.0
+LaSalle,Condo Apartment,bedrooms_above_grade,-0.013576,1.5238,0.587087
+LaSalle,Condo Apartment,bathrooms_total_integer,0.076463,1.4048,0.537167
+LaSalle,Condo Apartment,parking_total,0.093405,1.2381,0.478566
+LaSalle,Condo Apartment,basement_score,0.0,1.0,1.0
+LaSalle,Condo Apartment,interior_score,0.012533,3.9048,0.609821
+LaSalle,Condo Apartment,exterior_score,0.033776,2.1905,0.879342

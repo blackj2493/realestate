@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0866
-lot_width,0.065
-bedrooms_above_grade,0.0086
-bathrooms_total_integer,0.1259
-parking_total,0.0526
-basement_score,-0.0158
-interior_score,0.0227
-exterior_score,-0.0147
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Edenbridge-Humber Valley,Detached,building_area_total,0.124476,2723.125,935.579491
+Edenbridge-Humber Valley,Detached,lot_width,0.051104,60.3219,12.574239
+Edenbridge-Humber Valley,Detached,bedrooms_above_grade,-0.030855,3.6465,0.686274
+Edenbridge-Humber Valley,Detached,bathrooms_total_integer,0.129144,3.9495,1.104387
+Edenbridge-Humber Valley,Detached,parking_total,0.049734,5.9091,1.842763
+Edenbridge-Humber Valley,Detached,basement_score,-0.00147,6.1414,1.901674
+Edenbridge-Humber Valley,Detached,interior_score,0.057009,3.7677,1.212963
+Edenbridge-Humber Valley,Detached,exterior_score,0.00981,2.9697,1.058439

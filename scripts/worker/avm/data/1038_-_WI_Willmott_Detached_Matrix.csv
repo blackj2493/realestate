@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0903
-lot_width,0.0199
-bedrooms_above_grade,0.0029
-bathrooms_total_integer,0.0262
-parking_total,0.0035
-basement_score,0.0016
-interior_score,0.0111
-exterior_score,0.0088
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1038 - WI Willmott,Detached,building_area_total,0.089917,2093.6491,503.770607
+1038 - WI Willmott,Detached,lot_width,-0.011332,35.0064,4.858202
+1038 - WI Willmott,Detached,bedrooms_above_grade,0.013091,3.5522,0.497264
+1038 - WI Willmott,Detached,bathrooms_total_integer,0.029895,3.597,0.67048
+1038 - WI Willmott,Detached,parking_total,0.025604,3.8657,1.131576
+1038 - WI Willmott,Detached,basement_score,0.004791,5.3433,1.000779
+1038 - WI Willmott,Detached,interior_score,0.00569,3.5224,1.137662
+1038 - WI Willmott,Detached,exterior_score,0.001729,2.3134,1.067973

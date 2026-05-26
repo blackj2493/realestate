@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.096
-lot_width,0.0432
-bedrooms_above_grade,-0.0191
-bathrooms_total_integer,0.045
-parking_total,0.0468
-basement_score,0.0383
-interior_score,0.0168
-exterior_score,0.0434
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+St. Marys,Detached,building_area_total,0.078251,1625.2309,559.045832
+St. Marys,Detached,lot_width,0.044538,62.9963,33.260968
+St. Marys,Detached,bedrooms_above_grade,0.003822,2.697,0.758182
+St. Marys,Detached,bathrooms_total_integer,0.085766,2.202,0.75183
+St. Marys,Detached,parking_total,0.048964,4.9141,1.821644
+St. Marys,Detached,basement_score,0.047314,5.2222,1.547599
+St. Marys,Detached,interior_score,0.037943,3.4343,0.900747
+St. Marys,Detached,exterior_score,0.036673,2.5455,0.794841

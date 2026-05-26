@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0339
-lot_width,0.0
-bedrooms_above_grade,0.0708
-bathrooms_total_integer,0.0376
-parking_total,0.0075
-basement_score,0.0
-interior_score,0.0199
-exterior_score,-0.015
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Commerce Valley,Condo Apartment,building_area_total,0.027919,812.2182,216.783989
+Commerce Valley,Condo Apartment,lot_width,0.0,0.0,1.0
+Commerce Valley,Condo Apartment,bedrooms_above_grade,0.038235,1.4667,0.52262
+Commerce Valley,Condo Apartment,bathrooms_total_integer,0.074558,1.6,0.514045
+Commerce Valley,Condo Apartment,parking_total,0.006407,1.1697,0.375366
+Commerce Valley,Condo Apartment,basement_score,0.0,1.0,1.0
+Commerce Valley,Condo Apartment,interior_score,0.016214,3.9636,0.769816
+Commerce Valley,Condo Apartment,exterior_score,-0.000209,1.9333,0.731402

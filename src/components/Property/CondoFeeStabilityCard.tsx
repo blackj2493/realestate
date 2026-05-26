@@ -1,6 +1,16 @@
 "use client";
 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BASELINE_INFLATION_24MO } from "@/lib/condo/feeStability";
 import type {
   FeeStabilityResult,
   TrendBand,
@@ -71,18 +81,23 @@ export default function CondoFeeStabilityCard({
             <div className="pt-3 border-t space-y-2">
               <div className="flex items-center justify-between">
                 <p className={`text-sm font-semibold ${TREND_STYLES[trend.band].text}`}>
-                  {trend.pctChange24mo >= 0 ? "↑" : "↓"} {Math.abs(trend.pctChange24mo)}% over{" "}
+                  {trend.pctChange24mo >= 0 ? "↑" : "↓"} {Math.abs(trend.pctChange24mo).toFixed(2)}% over{" "}
                   {trend.buckets.length >= 2 ? "24 mo" : "the period"} · {trend.band}
                 </p>
                 <span
+                  title={`${trend.confidence} confidence — based on ${trend.sampleCount} sold units across ${trend.buckets.length} half-year periods`}
                   className={`text-xs font-medium px-2 py-0.5 border rounded ${CONFIDENCE_STYLES[trend.confidence]}`}
                 >
-                  {trend.confidence}
+                  {trend.confidence} CONF.
                 </span>
               </div>
-              <TrendBars buckets={trend.buckets} />
+              <TrendLineChart buckets={trend.buckets} />
               <p className="text-xs text-muted-foreground">
-                Median fee/sqft for this building, {trend.sampleCount} sold units.
+                This building&apos;s median fee/sqft {trend.pctChange24mo >= 0 ? "rose" : "fell"}{" "}
+                {Math.abs(trend.pctChange24mo).toFixed(2)}% over the window —{" "}
+                <span className={TREND_STYLES[trend.band].text}>{trend.band}</span> vs the
+                {" "}~{BASELINE_INFLATION_24MO}% expected from inflation alone. Confidence reflects the{" "}
+                {trend.sampleCount} sold units across {trend.buckets.length} half-years.
               </p>
             </div>
           )}
@@ -122,7 +137,7 @@ function AreaPosition({
   const below = position === "below";
   return (
     <p className={`text-sm font-medium mt-1 ${below ? "text-green-600" : "text-red-600"}`}>
-      {below ? "↓" : "↑"} {Math.abs(pctVsMedian)}% {below ? "below" : "above"} area median
+      {below ? "↓" : "↑"} {Math.abs(pctVsMedian).toFixed(2)}% {below ? "below" : "above"} area median
     </p>
   );
 }
@@ -176,26 +191,72 @@ function PercentileBar({
   );
 }
 
-function TrendBars({
+function TrendTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: { period: string; medianPsf: number; n: number } }>;
+}) {
+  if (!active || !payload?.length) return null;
+  const b = payload[0].payload;
+  return (
+    <div className="rounded border border-border bg-background px-2 py-1 shadow-lg">
+      <p className="text-[10px] text-muted-foreground">{b.period}</p>
+      <p className="text-xs font-mono font-semibold text-primary">{psf(b.medianPsf)}</p>
+      <p className="text-[10px] text-muted-foreground">{b.n} sold</p>
+    </div>
+  );
+}
+
+/**
+ * Line chart of the building's median fee/sqft per half-year. The Y domain is
+ * padded around the data (not anchored to 0) so a small real change is legible —
+ * the axis labels show the true $/sqft scale, so it stays honest.
+ */
+function TrendLineChart({
   buckets,
 }: {
   buckets: { period: string; medianPsf: number; n: number }[];
 }) {
-  const max = Math.max(...buckets.map((b) => b.medianPsf), 0.0001);
+  const vals = buckets.map((b) => b.medianPsf);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.4 || 0.05;
+  const domain: [number, number] = [Math.max(0, lo - pad), hi + pad];
+  const data = buckets.map((b) => ({ ...b, label: b.period.replace(/^\d{2}(\d{2})-/, "'$1-") }));
+
   return (
-    <div className="flex items-end gap-1 h-16">
-      {buckets.map((b) => (
-        <div key={b.period} className="flex-1 flex flex-col items-center gap-1">
-          <div
-            className="w-full rounded-t bg-primary/70"
-            style={{ height: `${Math.max(6, (b.medianPsf / max) * 100)}%` }}
-            title={`${b.period}: ${psf(b.medianPsf)} (${b.n})`}
+    <div className="h-24 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 28% 17%)" vertical={false} />
+          <XAxis
+            dataKey="label"
+            tick={{ fill: "hsl(215 20% 65%)", fontSize: 9 }}
+            tickLine={false}
+            axisLine={{ stroke: "hsl(215 28% 17%)" }}
           />
-          <span className="text-[9px] text-muted-foreground leading-none">
-            {b.period.replace("-", "‑")}
-          </span>
-        </div>
-      ))}
+          <YAxis
+            width={42}
+            domain={domain}
+            tickCount={3}
+            tick={{ fill: "hsl(215 20% 65%)", fontSize: 9 }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v) => `$${Number(v).toFixed(2)}`}
+          />
+          <Tooltip content={<TrendTooltip />} cursor={{ stroke: "hsl(215 28% 17%)" }} />
+          <Line
+            type="monotone"
+            dataKey="medianPsf"
+            stroke="hsl(189 94% 43%)"
+            strokeWidth={2}
+            dot={{ fill: "hsl(189 94% 43%)", r: 3 }}
+            activeDot={{ r: 5 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }

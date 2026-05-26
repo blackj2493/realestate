@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0443
-lot_width,-0.0508
-bedrooms_above_grade,-0.0012
-bathrooms_total_integer,0.0755
-parking_total,0.0148
-basement_score,0.0029
-interior_score,0.0193
-exterior_score,0.0215
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Victoria North,Detached,building_area_total,0.056569,1565.5176,627.835419
+Victoria North,Detached,lot_width,-0.011136,50.4518,19.983839
+Victoria North,Detached,bedrooms_above_grade,-0.01438,3.0909,0.753321
+Victoria North,Detached,bathrooms_total_integer,0.067525,2.4697,0.701075
+Victoria North,Detached,parking_total,0.028242,3.9091,0.964951
+Victoria North,Detached,basement_score,0.012436,5.697,1.435161
+Victoria North,Detached,interior_score,0.022882,3.2424,1.115464
+Victoria North,Detached,exterior_score,0.016274,2.9242,0.909722

@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0285
-lot_width,-0.0381
-bedrooms_above_grade,-0.0066
-bathrooms_total_integer,0.109
-parking_total,0.0358
-basement_score,0.0084
-interior_score,0.01
-exterior_score,0.0243
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+St. Thomas,Detached,building_area_total,0.046207,1388.6137,426.228827
+St. Thomas,Detached,lot_width,-0.002517,55.0948,146.618091
+St. Thomas,Detached,bedrooms_above_grade,-0.022826,2.884,0.693303
+St. Thomas,Detached,bathrooms_total_integer,0.126875,2.2347,0.812033
+St. Thomas,Detached,parking_total,0.044537,4.191,1.833261
+St. Thomas,Detached,basement_score,0.022116,4.6767,1.187622
+St. Thomas,Detached,interior_score,0.025031,3.3168,0.937425
+St. Thomas,Detached,exterior_score,0.029614,2.6336,0.871131

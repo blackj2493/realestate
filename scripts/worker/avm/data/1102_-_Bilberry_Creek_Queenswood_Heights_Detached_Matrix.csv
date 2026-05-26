@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0209
-lot_width,0.0196
-bedrooms_above_grade,0.0693
-bathrooms_total_integer,0.0162
-parking_total,0.0337
-basement_score,-0.0025
-interior_score,0.0141
-exterior_score,0.0095
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+1102 - Bilberry Creek/Queenswood Heights,Detached,building_area_total,0.043238,1438.4058,497.686308
+1102 - Bilberry Creek/Queenswood Heights,Detached,lot_width,0.008581,56.4273,12.332327
+1102 - Bilberry Creek/Queenswood Heights,Detached,bedrooms_above_grade,0.045338,3.2941,0.552858
+1102 - Bilberry Creek/Queenswood Heights,Detached,bathrooms_total_integer,0.035662,2.6275,0.873595
+1102 - Bilberry Creek/Queenswood Heights,Detached,parking_total,0.016752,4.7059,1.445671
+1102 - Bilberry Creek/Queenswood Heights,Detached,basement_score,0.004114,4.6667,0.732084
+1102 - Bilberry Creek/Queenswood Heights,Detached,interior_score,0.037659,3.4314,0.975281
+1102 - Bilberry Creek/Queenswood Heights,Detached,exterior_score,0.018584,2.4902,0.904727

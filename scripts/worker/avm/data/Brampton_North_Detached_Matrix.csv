@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.0291
-lot_width,0.0194
-bedrooms_above_grade,0.0232
-bathrooms_total_integer,0.0172
-parking_total,0.0218
-basement_score,0.0095
-interior_score,0.0078
-exterior_score,0.0026
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Brampton North,Detached,building_area_total,0.040253,1546.6667,469.188898
+Brampton North,Detached,lot_width,0.009791,45.0562,19.811975
+Brampton North,Detached,bedrooms_above_grade,0.023589,3.082,0.521507
+Brampton North,Detached,bathrooms_total_integer,0.017372,2.6885,0.80043
+Brampton North,Detached,parking_total,0.011958,5.0,1.536443
+Brampton North,Detached,basement_score,0.010604,5.2295,1.673256
+Brampton North,Detached,interior_score,0.001402,3.2787,0.977302
+Brampton North,Detached,exterior_score,0.013414,2.2131,0.791652

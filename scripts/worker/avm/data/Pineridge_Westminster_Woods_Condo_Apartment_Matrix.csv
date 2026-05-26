@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.1864
-lot_width,0.0
-bedrooms_above_grade,-0.0203
-bathrooms_total_integer,0.0136
-parking_total,0.0056
-basement_score,0.0
-interior_score,0.0235
-exterior_score,0.0169
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Pineridge/Westminster Woods,Condo Apartment,building_area_total,0.203161,965.0388,286.429843
+Pineridge/Westminster Woods,Condo Apartment,lot_width,0.0,0.0,1.0
+Pineridge/Westminster Woods,Condo Apartment,bedrooms_above_grade,-0.01723,1.7647,0.584547
+Pineridge/Westminster Woods,Condo Apartment,bathrooms_total_integer,-0.000671,1.4412,0.525311
+Pineridge/Westminster Woods,Condo Apartment,parking_total,0.011938,1.1544,0.381149
+Pineridge/Westminster Woods,Condo Apartment,basement_score,0.0,1.0,1.0
+Pineridge/Westminster Woods,Condo Apartment,interior_score,0.024175,4.0882,0.761873
+Pineridge/Westminster Woods,Condo Apartment,exterior_score,0.015433,2.2941,0.665512

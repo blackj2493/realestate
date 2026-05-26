@@ -1,9 +1,9 @@
-Feature,Percentage_Multiplier
-building_area_total,0.3668
-lot_width,0.0
-bedrooms_above_grade,0.0506
-bathrooms_total_integer,0.0206
-parking_total,0.0157
-basement_score,0.0
-interior_score,0.0415
-exterior_score,-0.0213
+City_Region,Property_Type,Feature,Beta,Mean,StdDev
+Yonge-St. Clair,Condo Apartment,building_area_total,0.258293,1101.1811,496.353418
+Yonge-St. Clair,Condo Apartment,lot_width,0.0,0.0,1.0
+Yonge-St. Clair,Condo Apartment,bedrooms_above_grade,0.10267,1.6693,0.547796
+Yonge-St. Clair,Condo Apartment,bathrooms_total_integer,0.084743,1.8583,0.695593
+Yonge-St. Clair,Condo Apartment,parking_total,0.050541,1.0551,0.605839
+Yonge-St. Clair,Condo Apartment,basement_score,-0.000162,1.0315,0.353542
+Yonge-St. Clair,Condo Apartment,interior_score,0.025495,4.2362,0.827259
+Yonge-St. Clair,Condo Apartment,exterior_score,0.010849,2.315,0.84835
