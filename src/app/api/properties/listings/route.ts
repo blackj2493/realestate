@@ -20,10 +20,14 @@ function extractPostalCode(address: string): string | null {
   return match ? match[0].toUpperCase().replace(/\s+/, ' ') : null;
 }
 
+// CLAUDE.md §4: TRREB display rules cap any user search to ≤100 listings.
+const MAX_LIMIT = 100;
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "50", 10);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const rawLimit = parseInt(searchParams.get("limit") || "50", 10);
+  const limit = Math.min(MAX_LIMIT, Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 50));
   
   // Listing type filter (residential vs commercial)
   const listingType = searchParams.get("listingType") || "residential";
@@ -115,15 +119,8 @@ export async function GET(request: NextRequest) {
         }
       }
       
-      // DEBUG: Log coordinate resolution
       if (!lat || !lng) {
         console.log(`[API] Could not resolve coords for: ${address}, city: ${propertyCity}, postalCode: ${postalCode}`);
-      } else {
-        // Log sample coordinates for debugging (first 3 only)
-        const idx = transformedListings.length;
-        if (idx < 3) {
-          console.log(`[API] Resolved coords #${idx + 1}: lat=${lat}, lng=${lng}, address=${address.substring(0, 50)}`);
-        }
       }
       
       // Validate coordinates are in Canada (detect Ecuador-like issues)
