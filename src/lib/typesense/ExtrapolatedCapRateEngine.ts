@@ -12,6 +12,8 @@
  * (>0.08) in Typesense filter expressions.
  */
 
+import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
+
 // ============================================================================
 // Output Interface
 // ============================================================================
@@ -108,32 +110,16 @@ const DEFAULT_INSURANCE_MO = 150;   // $150/month homeowners insurance
 // ============================================================================
 
 /**
- * Calculates the monthly mortgage payment using the standard amortization formula.
- * 
- * Formula: M = P [ r(1 + r)^n ] / [ (1 + r)^n - 1 ]
- * 
- * @param principal - Loan principal amount
- * @param annualRate - Annual interest rate (e.g., 0.05 for 5%)
- * @param years - Loan amortization period in years
- * @returns Monthly payment amount
+ * Monthly mortgage payment under Canadian semi-annual compounding (the
+ * legally-mandated convention; see @/lib/finance/canadianMortgage).
+ * Takes YEARS — the helper takes months, so we multiply.
  */
 export function calculateMonthlyMortgage(
   principal: number,
   annualRate: number,
   years: number
 ): number {
-  if (principal <= 0) return 0;
-  if (annualRate <= 0) return 0;
-  if (years <= 0) return 0;
-  
-  const monthlyRate = annualRate / 12;
-  const numPayments = years * 12;
-  
-  // M = P [ r(1 + r)^n ] / [ (1 + r)^n - 1 ]
-  const compoundFactor = Math.pow(1 + monthlyRate, numPayments);
-  const monthlyPayment = principal * (monthlyRate * compoundFactor) / (compoundFactor - 1);
-  
-  return monthlyPayment;
+  return calculateCanadianMonthlyMortgage(principal, annualRate, years * 12);
 }
 
 /**

@@ -13,10 +13,12 @@ describe('calculateMonthlyMortgage', () => {
     expect(calculateMonthlyMortgage(-100_000, 0.05, 30)).toBe(0);
   });
 
-  it('matches the standard amortization formula on a known principal', () => {
-    // $500k @ 5% / 30yr → monthly ≈ $2,684.11 (US-style monthly compounding).
+  it('uses Canadian semi-annual compounding — $500k @ 5% / 30yr ≈ $2,668.45/mo', () => {
+    // Lower than the US-style $2,684.11 by ~$15/mo because Canadian compounds
+    // less frequently → slightly lower effective monthly rate. See
+    // @/lib/finance/canadianMortgage for the canonical formula + dedicated tests.
     const monthly = calculateMonthlyMortgage(500_000, 0.05, 30);
-    expect(monthly).toBeCloseTo(2684.11, 1);
+    expect(monthly).toBeCloseTo(2668.45, 1);
   });
 });
 

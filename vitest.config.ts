@@ -7,6 +7,7 @@ const FILES_UNDER_GATE = [
   'src/lib/dealScore/computeDealScore.ts',
   'src/lib/avm/conditionScoring.ts',
   'src/lib/avm/calculator.ts',
+  'src/lib/finance/canadianMortgage.ts',
   'src/lib/typesense/queryBuilder.ts',
   'src/lib/typesense/ExtrapolatedCapRateEngine.ts',
   'src/lib/typesense/TemporalDistressEngine.ts',
@@ -38,6 +39,7 @@ export default defineConfig({
         'src/lib/dealScore/computeDealScore.ts': DEFAULT_GATE,
         'src/lib/avm/conditionScoring.ts': DEFAULT_GATE,
         'src/lib/avm/calculator.ts': DEFAULT_GATE,
+        'src/lib/finance/canadianMortgage.ts': DEFAULT_GATE,
         'src/lib/typesense/queryBuilder.ts': DEFAULT_GATE,
         'scripts/worker/services/financialMetrics.ts': DEFAULT_GATE,
         // ExtrapolatedCapRateEngine.ts + TemporalDistressEngine.ts each contain

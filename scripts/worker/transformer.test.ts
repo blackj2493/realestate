@@ -46,15 +46,12 @@ describe('calculateCanadianMortgage', () => {
     expect(calculateCanadianMortgage(-1, 0.04, 360)).toBe(0);
   });
 
-  // REVIEW (locked behavior, NOT a recommendation): the production formula uses
-  // `monthlyRate = annualRate / 24`, which is half the US monthly rate (annualRate / 12),
-  // NOT the proper Canadian effective monthly rate ((1 + r/2)^(1/6) − 1 ≈ r/12 for small r).
-  // On $500k @ 5% / 25yr this returns ~$2,243/mo, vs. the correct ~$2,908. The test below
-  // pins the CURRENT behavior so a regression is caught, but the underlying formula
-  // appears under-billed — flag for a separate fix.
-  it('locks current behavior on $500k @ 5% / 25yr (≈ $2,243.08/mo, see REVIEW above)', () => {
+  it('uses Canadian semi-annual compounding — $500k @ 5% / 25yr ≈ $2,908.02/mo', () => {
+    // The canonical Canadian payment under the Interest Act of Canada s.6:
+    // effective monthly rate = (1 + r/2)^(1/6) − 1. Delegates to
+    // @/lib/finance/canadianMortgage, which has its own dedicated test suite.
     const monthly = calculateCanadianMortgage(500_000, 0.05, 300);
-    expect(monthly).toBeCloseTo(2_243.08, 1);
+    expect(monthly).toBeCloseTo(2_908.02, 1);
   });
 
   it('payment scales linearly with principal', () => {

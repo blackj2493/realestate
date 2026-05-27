@@ -7,6 +7,7 @@
  */
 
 import 'dotenv/config';
+import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
 
 export interface FinancialMetricsInput {
   // From AVM
@@ -117,11 +118,9 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   const grossYieldEst = price > 0 ? (annualRevenue / price) * 100 : 0;
 
   // === MONTHLY CASHFLOW ===
-  // Mortgage: 80% LTV, 4.04%, 360 months (P+I)
+  // Mortgage: 80% LTV, 4.04%, 360 months under Canadian semi-annual compounding.
   const loanAmount = listPrice * 0.80;
-  const monthlyRate = 0.0404 / 12;
-  const numPayments = 360;
-  const mortgageMonthly = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+  const mortgageMonthly = calculateCanadianMonthlyMortgage(loanAmount, 0.0404, 360);
 
   // Monthly cashflow
   const monthlyGrossRent = annualRevenue / 12;

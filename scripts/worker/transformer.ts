@@ -14,6 +14,7 @@ import { getServiceRoleClient, ListingRecord } from '@/lib/supabase/client';
 import { indexListing, deleteListing } from '@/lib/typesense/client';
 import { loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/ExtrapolatedCapRateEngine';
+import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
 import { fetchRentAVM } from './services/rentAVM';
@@ -81,27 +82,17 @@ export { resolveLocation };
 // ============================================================================
 
 /**
- * Canadian mortgage calculation with semi-annual compounding.
- * Formula for bi-weekly accelerated:
- * Monthly Payment = P * [r(1+r)^n] / [(1+r)^n - 1]
- * Where r = semi-annual rate / 2 / 12 = annualRate / 24
+ * Canadian mortgage calculation — delegates to the canonical helper in
+ * @/lib/finance/canadianMortgage which uses the correct effective monthly
+ * rate `(1 + annualRate/2)^(1/6) − 1` per the Interest Act of Canada s.6.
+ * Signature kept for backwards compatibility with existing callers + tests.
  */
 export function calculateCanadianMortgage(
   principal: number,
   annualRate: number,
   amortizationMonths: number
 ): number {
-  if (principal <= 0 || annualRate <= 0 || amortizationMonths <= 0) {
-    return 0;
-  }
-  
-  const monthlyRate = annualRate / 24;  // Semi-annual compounding → monthly rate
-  const numPayments = amortizationMonths;
-  
-  const compoundFactor = Math.pow(1 + monthlyRate, numPayments);
-  const monthlyPayment = principal * (monthlyRate * compoundFactor) / (compoundFactor - 1);
-  
-  return monthlyPayment;
+  return calculateCanadianMonthlyMortgage(principal, annualRate, amortizationMonths);
 }
 
 /**
