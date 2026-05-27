@@ -33,6 +33,7 @@ import {
 } from '@/lib/avm/conditionScoring';
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 import { fetchRoomsForKeys } from './roomsEnrichment';
+import { nextSyncCursor } from './syncCursor';
 
 // ============================================================================
 // Sold Listing Types
@@ -711,11 +712,16 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     errors: [],
     lastSyncTimestamp: ''
   };
-  
+
+  // Captured outside the try so the catch block can still read it for the
+  // sync_state cursor decision (CLAUDE.md §12 — failure must NOT advance).
+  let previousCursor: string | null = null;
+
   try {
     // Read sync state from Supabase
     console.log('📖 Reading sync state from Supabase...');
     const state = await readSyncState();
+    previousCursor = state.lastSyncTimestamp;
     console.log(`   Last sync timestamp: ${state.lastSyncTimestamp}`);
     console.log(`   Status: ${state.status}`);
     
@@ -906,18 +912,21 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     }
     
     // Update sync state with new timestamp
-    await updateSyncState(now, result.activeRecords + result.soldRecords, 'completed');
-    
+    const successCursor = nextSyncCursor('completed', previousCursor, now);
+    await updateSyncState(successCursor, result.activeRecords + result.soldRecords, 'completed');
+
     return result;
-    
+
   } catch (err: any) {
     console.error('\n❌ Dual-Query sync failed:', err.message);
     result.success = false;
     result.errors.push(err.message);
-    
-    // Update status to failed
-    await updateSyncState(new Date().toISOString(), result.activeRecords + result.soldRecords, 'failed');
-    
+
+    // Preserve the previous cursor on failure so the next attempt re-runs the
+    // same window. Advancing on failure leaves an unrecoverable gap (§12).
+    const failureCursor = nextSyncCursor('failed', previousCursor, new Date().toISOString());
+    await updateSyncState(failureCursor, result.activeRecords + result.soldRecords, 'failed');
+
     return result;
   }
 }

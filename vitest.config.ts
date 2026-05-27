@@ -12,6 +12,7 @@ const FILES_UNDER_GATE = [
   'src/lib/typesense/ExtrapolatedCapRateEngine.ts',
   'src/lib/typesense/TemporalDistressEngine.ts',
   'scripts/worker/services/financialMetrics.ts',
+  'scripts/worker/syncCursor.ts',
 ];
 
 // Plan target was 85 lines / 90 branches. Branches relaxed to 80 because the
@@ -42,6 +43,7 @@ export default defineConfig({
         'src/lib/finance/canadianMortgage.ts': DEFAULT_GATE,
         'src/lib/typesense/queryBuilder.ts': DEFAULT_GATE,
         'scripts/worker/services/financialMetrics.ts': DEFAULT_GATE,
+        'scripts/worker/syncCursor.ts': DEFAULT_GATE,
         // ExtrapolatedCapRateEngine.ts + TemporalDistressEngine.ts each contain
         // a legacy `runFooTests()` self-test (200–300 lines) that is dead code in
         // prod and obsoleted by the real tests in this directory. They are
