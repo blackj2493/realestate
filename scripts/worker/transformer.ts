@@ -718,6 +718,7 @@ export interface TransformResult {
     // True DOM fields
     PropertyHash?: string;
     TrueDom?: number;
+    TotalPriceDrop?: number;
     IsStale?: boolean;
     IsSold?: boolean;
     // Suite Analysis fields
@@ -998,6 +999,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // True DOM fields
     PropertyHash: trueDOM.propertyHash,
     TrueDom: trueDOM.trueDOM,
+    // TotalPriceDrop is a Typesense-required int32; sync.ts overwrites it with
+    // the real chain delta after the historical lookup, but we emit a 0
+    // placeholder here so the schema contract holds for any other caller.
+    TotalPriceDrop: 0,
     IsStale: trueDOM.isStale,
     // IsSold: defaults to false, sync.ts will set true for sold listings
     IsSold: false,

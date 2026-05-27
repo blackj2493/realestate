@@ -48,7 +48,7 @@ interface Current {
   thumb?: string;
 }
 
-interface DropAlert {
+export interface DropAlert {
   listing_key: string;
   address: string;
   city: string | null;
@@ -89,7 +89,7 @@ async function fetchCurrent(ts: Client, key: string): Promise<Current | null> {
   }
 }
 
-function renderDigest(drops: DropAlert[]): { subject: string; html: string; text: string } {
+export function renderDigest(drops: DropAlert[]): { subject: string; html: string; text: string } {
   const n = drops.length;
   const subject = `${n} price drop${n === 1 ? '' : 's'} on your watchlist`;
 
@@ -248,7 +248,14 @@ async function main() {
   );
 }
 
-main().catch((e) => {
-  console.error('[alerts] Fatal:', e instanceof Error ? e.message : e);
-  process.exit(1);
-});
+// Only run the CLI when executed directly (matches sync.ts / transformer.ts).
+// Importing this module (e.g. from tests) must not fire main() — that would
+// call Supabase + Resend at import time and crash any consumer.
+const isMainModule =
+  typeof process !== 'undefined' && process.argv[1]?.includes('alerts.ts');
+if (isMainModule) {
+  main().catch((e) => {
+    console.error('[alerts] Fatal:', e instanceof Error ? e.message : e);
+    process.exit(1);
+  });
+}
