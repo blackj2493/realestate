@@ -9,9 +9,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LineChart, Line } from "recharts";
 import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
 import { fetchRegionScore, type RegionScore } from "@/lib/dashboard/marketAggregates";
+import {
+  TEMP,
+  YoY,
+  Sparkline,
+  TemperatureBadge,
+  compactPrice,
+  orDash,
+} from "@/components/dashboard/metricViz";
 
 type SortKey =
   | "region"
@@ -27,12 +34,6 @@ type SortKey =
 
 const GRID =
   "grid-cols-[minmax(130px,1.5fr)_minmax(150px,1.4fr)_minmax(96px,1fr)_minmax(72px,0.8fr)_minmax(92px,0.9fr)_minmax(86px,0.9fr)_minmax(84px,0.9fr)_minmax(80px,0.9fr)_minmax(74px,0.8fr)_minmax(78px,0.8fr)]";
-
-const TEMP: Record<NonNullable<RegionScore["temperature"]>, { label: string; cls: string; rank: number }> = {
-  hot: { label: "Hot", cls: "text-rose-400 bg-rose-400/10 border-rose-400/30", rank: 3 },
-  balanced: { label: "Balanced", cls: "text-amber-400 bg-amber-400/10 border-amber-400/30", rank: 2 },
-  cold: { label: "Cold", cls: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30", rank: 1 },
-};
 
 const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "region", label: "Region", align: "left" },
@@ -56,35 +57,6 @@ const TYPE_FILTERS: { key: string; label: string }[] = [
   { key: "town", label: "Town" },
   { key: "condo", label: "Condo" },
 ];
-
-function compactPrice(n: number): string {
-  if (n >= 1_000_000) return `$${(Math.round((n / 1_000_000) * 100) / 100).toString()}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1000)}K`;
-  return `$${Math.round(n)}`;
-}
-
-const dash = "—";
-const orDash = (v: number | null | undefined, fn: (n: number) => string) =>
-  v == null ? dash : fn(v);
-
-function YoY({ pct }: { pct: number | null }) {
-  if (pct == null) return null;
-  const up = pct >= 0;
-  return (
-    <span className={`terminal-font text-[10px] ${up ? "text-emerald-400" : "text-rose-400"}`}>
-      {up ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
-    </span>
-  );
-}
-
-function Sparkline({ data }: { data: { month: string; v: number }[] }) {
-  if (data.length < 2) return null;
-  return (
-    <LineChart width={84} height={26} data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-      <Line type="monotone" dataKey="v" stroke="#22d3ee" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-    </LineChart>
-  );
-}
 
 function sortValue(s: RegionScore, key: SortKey): number | string | null {
   if (key === "region") return s.region.toLowerCase();
@@ -257,15 +229,7 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
 
                   {/* Temperature */}
                   <div className="flex justify-end px-2 py-3">
-                    {s.temperature ? (
-                      <span
-                        className={`terminal-font rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${TEMP[s.temperature].cls}`}
-                      >
-                        {TEMP[s.temperature].label}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-600">{dash}</span>
-                    )}
+                    <TemperatureBadge temperature={s.temperature} />
                   </div>
                 </div>
               ))}

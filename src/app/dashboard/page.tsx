@@ -26,6 +26,7 @@ import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
+import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import { regionArea } from "@/lib/dashboard/area";
@@ -143,6 +144,10 @@ export default function DashboardPage() {
         )}
 
         {hasRegions && <RegionScorecard regions={config.regions} />}
+
+        {hasRegions && (
+          <RegionComparisonTiles regions={config.regions} persona={config.persona} />
+        )}
 
         {hasRegions &&
           config.regions.map((loc) => {
