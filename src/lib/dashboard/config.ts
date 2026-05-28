@@ -11,6 +11,18 @@ import {
   DEFAULT_BOARD_ORDER,
   orderBoardsByObjectives,
 } from './boards';
+import { PERSONA_CONFIG, type PersonaType } from '@/lib/personas/personaConfig';
+
+/**
+ * Dashboard persona — reuses the Command Center's PersonaType vocabulary, but
+ * persisted here (localStorage) and scoped to the dashboard. The Command Center's
+ * own `commandCenterStore.activePersona` is a SEPARATE in-memory value (a transient
+ * analysis session); the two are intentionally not shared.
+ */
+export const DEFAULT_PERSONA: PersonaType = 'smart';
+
+const isPersona = (v: unknown): v is PersonaType =>
+  typeof v === 'string' && v in PERSONA_CONFIG;
 
 const ACCESS_KEY = 'pp_access';
 const PROFILE_KEY = 'pp_profile';
@@ -69,6 +81,13 @@ export interface DashboardConfig {
   boards: BoardId[];
   /** Global Market Activity lens (window + filters). */
   marketActivity: MarketActivityLens;
+  /** Active dashboard persona — reshapes which metrics/boards lead. */
+  persona: PersonaType;
+  /**
+   * Epoch ms of the user's PREVIOUS visit — the cutoff the action feed compares
+   * against ("what changed since you last looked"). Null until the first stamp.
+   */
+  lastVisitAt: number | null;
 }
 
 /**
@@ -126,11 +145,27 @@ export function citiesFromRegions(regions: string[]): string[] {
 }
 
 // ── Dashboard config ─────────────────────────────────────────────────────────
+
+/**
+ * Best-effort seed of the dashboard persona from the /apply objectives. Falls
+ * back to "smart" (the default) when nothing matches — the user can always
+ * switch personas at runtime.
+ */
+export function personaFromProfile(p: ApplyProfile | null): PersonaType {
+  const objectives = p?.objectives ?? [];
+  if (objectives.includes('Land assembly / development')) return 'builders';
+  if (objectives.includes('Target distressed & off-market deals')) return 'flippers';
+  if (objectives.includes('Analyze rental yield / cap rates')) return 'cashflow';
+  return DEFAULT_PERSONA;
+}
+
 export function seedConfigFromProfile(p: ApplyProfile): DashboardConfig {
   return {
     regions: citiesFromRegions(p.regions ?? []),
     boards: orderBoardsByObjectives(p.objectives ?? []),
     marketActivity: { ...DEFAULT_ACTIVITY_LENS },
+    persona: personaFromProfile(p),
+    lastVisitAt: null,
   };
 }
 
@@ -169,6 +204,9 @@ export function getConfig(): DashboardConfig {
               ? parsed.boards
               : [...DEFAULT_BOARD_ORDER],
           marketActivity: mergeLens(parsed.marketActivity),
+          persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
+          lastVisitAt:
+            typeof parsed.lastVisitAt === 'number' ? parsed.lastVisitAt : null,
         };
       }
     } catch {
@@ -181,5 +219,26 @@ export function getConfig(): DashboardConfig {
     regions: [],
     boards: [...DEFAULT_BOARD_ORDER],
     marketActivity: { ...DEFAULT_ACTIVITY_LENS },
+    persona: DEFAULT_PERSONA,
+    lastVisitAt: null,
   };
+}
+
+// ── Action-feed "last visit" cursor ──────────────────────────────────────────
+
+/** Epoch ms of the previous visit (the action-feed cutoff), or null if first-ever. */
+export function getLastVisit(): number | null {
+  return getConfig().lastVisitAt;
+}
+
+/**
+ * Stamp the current visit as `lastVisitAt = now`, returning the PREVIOUS value so
+ * the caller can use it as the feed cutoff. Call once per dashboard mount, after
+ * capturing the returned cutoff for the render.
+ */
+export function stampVisit(): number | null {
+  const cfg = getConfig();
+  const previous = cfg.lastVisitAt;
+  if (hasWindow()) saveConfig({ ...cfg, lastVisitAt: Date.now() });
+  return previous;
 }

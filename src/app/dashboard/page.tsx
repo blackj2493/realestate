@@ -11,6 +11,7 @@ import {
   saveConfig,
   getProfile,
   DEFAULT_ACTIVITY_LENS,
+  DEFAULT_PERSONA,
   type DashboardConfig,
   type MarketActivityLens,
 } from "@/lib/dashboard/config";
@@ -26,6 +27,7 @@ import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
+import type { PersonaType } from "@/lib/personas/personaConfig";
 
 // deck.gl + mapbox touch the DOM at module load → client-only, no SSR.
 const DashboardHeatTile = dynamic(
@@ -47,6 +49,8 @@ export default function DashboardPage() {
     regions: [],
     boards: [],
     marketActivity: { ...DEFAULT_ACTIVITY_LENS },
+    persona: DEFAULT_PERSONA,
+    lastVisitAt: null,
   });
   const [name, setName] = useState<string | undefined>(undefined);
   const [showConfig, setShowConfig] = useState(false);
@@ -92,6 +96,7 @@ export default function DashboardPage() {
   };
 
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
+  const updatePersona = (persona: PersonaType) => update({ ...config, persona });
 
   if (!ready) return null;
 
@@ -100,7 +105,12 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <MissionControlHeader name={name} onToggleConfig={() => setShowConfig((v) => !v)} />
+      <MissionControlHeader
+        name={name}
+        persona={config.persona}
+        onPersonaChange={updatePersona}
+        onToggleConfig={() => setShowConfig((v) => !v)}
+      />
 
       <main className="mx-auto max-w-[1600px] space-y-8 px-4 py-6">
         {showConfig && <DashboardConfigPanel config={config} onChange={update} />}

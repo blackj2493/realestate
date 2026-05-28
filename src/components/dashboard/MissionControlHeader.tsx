@@ -6,12 +6,18 @@ import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
 import AccountButton from "@/components/auth/AccountButton";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
+import PersonaSwitcher from "@/components/dashboard/PersonaSwitcher";
+import type { PersonaType } from "@/lib/personas/personaConfig";
 
 export default function MissionControlHeader({
   name,
+  persona,
+  onPersonaChange,
   onToggleConfig,
 }: {
   name?: string;
+  persona: PersonaType;
+  onPersonaChange: (p: PersonaType) => void;
   onToggleConfig: () => void;
 }) {
   const router = useRouter();
@@ -60,13 +66,18 @@ export default function MissionControlHeader({
         <AccountButton />
       </div>
 
-      {name && (
-        <div className="border-t border-slate-800/60 px-4 py-1.5">
-          <span className="terminal-font text-[11px] uppercase tracking-[0.2em] text-slate-400">
-            Workspace: <span className="text-slate-200">{name}</span> · Mission Control
-          </span>
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-3 border-t border-slate-800/60 px-4 py-1.5">
+        <span className="terminal-font text-[11px] uppercase tracking-[0.2em] text-slate-400">
+          {name ? (
+            <>
+              Workspace: <span className="text-slate-200">{name}</span> · Mission Control
+            </>
+          ) : (
+            "Mission Control"
+          )}
+        </span>
+        <PersonaSwitcher persona={persona} onChange={onPersonaChange} />
+      </div>
     </header>
   );
 }
