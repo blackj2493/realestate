@@ -40,6 +40,7 @@ import type { BoardDef } from "@/lib/dashboard/boards";
 import MarketActivityPanel from "./MarketActivityPanel";
 import RegionStatTiles from "./RegionStatTiles";
 import PlaylistBoard from "./PlaylistBoard";
+import RegionDrilldown from "./RegionDrilldown";
 
 interface Props {
   bubble: Bubble;
@@ -192,26 +193,22 @@ export default function BubbleMarketSection({
   const Icon = AREA_ICON[bubble.area_type];
 
   return (
-    <section
+    <RegionDrilldown
       id={`bubble-section-${bubble.id}`}
       className={cn(
-        "space-y-3 rounded-sm transition-shadow",
         highlight && "ring-2 ring-cyan-500/70 ring-offset-2 ring-offset-slate-950"
       )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-300">
-            <Icon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="terminal-font truncate text-sm font-bold uppercase tracking-widest text-slate-100">
-              {bubble.name}
-            </h2>
-            <p className="truncate text-[11px] text-slate-500">{tagline(bubble)}</p>
-          </div>
+      // Deep-linked bubble (?bubble=<id>) opens expanded so the flash lands on data.
+      defaultExpanded={highlight}
+      icon={
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-300">
+          <Icon className="h-4 w-4" />
         </div>
-        <div className="flex items-center gap-1">
+      }
+      title={bubble.name}
+      subtitle={tagline(bubble)}
+      actions={
+        <>
           <button
             type="button"
             onClick={() =>
@@ -222,9 +219,9 @@ export default function BubbleMarketSection({
             <ExternalLink className="h-3 w-3" /> Open in Terminal
           </button>
           <BubbleSectionMenu bubble={bubble} />
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <MarketActivityPanel area={area} lens={lens} />
 
       <RegionStatTiles area={area} />
@@ -240,6 +237,6 @@ export default function BubbleMarketSection({
           ))}
         </div>
       )}
-    </section>
+    </RegionDrilldown>
   );
 }

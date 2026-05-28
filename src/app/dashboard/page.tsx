@@ -18,16 +18,17 @@ import {
 } from "@/lib/dashboard/config";
 import { createClient } from "@/lib/supabase/browser";
 import { BOARDS } from "@/lib/dashboard/boards";
+import { orderBoardsForPersona } from "@/lib/dashboard/personaDashboard";
 import MissionControlHeader from "@/components/dashboard/MissionControlHeader";
 import DashboardConfigPanel from "@/components/dashboard/DashboardConfigPanel";
 import PlaylistBoard from "@/components/dashboard/PlaylistBoard";
-import RegionStatTiles from "@/components/dashboard/RegionStatTiles";
 import MarketActivityControls from "@/components/dashboard/MarketActivityControls";
 import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles";
+import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
@@ -112,7 +113,11 @@ export default function DashboardPage() {
 
   if (!ready) return null;
 
-  const enabledBoards = config.boards.map((id) => BOARDS[id]).filter(Boolean);
+  // Persona reorders which boards lead (non-destructive — config.boards stays the
+  // user's enable/disable set).
+  const enabledBoards = orderBoardsForPersona(config.persona, config.boards)
+    .map((id) => BOARDS[id])
+    .filter(Boolean);
   const hasRegions = config.regions.length > 0;
 
   return (
@@ -169,16 +174,8 @@ export default function DashboardPage() {
           config.regions.map((loc) => {
             const area = regionArea(loc);
             return (
-              <section key={loc} className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                  <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
-                    {loc}
-                  </h2>
-                </div>
-
+              <RegionDrilldown key={loc} title={loc}>
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
-
-                <RegionStatTiles area={area} />
 
                 {enabledBoards.length === 0 ? (
                   <p className="text-xs text-slate-500">
@@ -191,7 +188,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 )}
-              </section>
+              </RegionDrilldown>
             );
           })}
 
