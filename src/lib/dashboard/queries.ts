@@ -106,11 +106,19 @@ function finishedBasementClause(): string {
  * MILLISECONDS (transformer.ts), so the cutoff is `Date.now() - days*DAY_MS`.
  * `ListPrice:>=50000` drops lease rows (no filterable TransactionType field).
  */
-export function buildActivityFilter(area: Area, lens: MarketActivityLens): string {
-  const cutoff = Date.now() - lens.windowDays * DAY_MS;
+/**
+ * Lens filter for "new active listings since an ABSOLUTE cutoff (epoch ms)".
+ * `buildActivityFilter` is the rolling-window special case; the action feed
+ * passes the user's previous-visit timestamp instead.
+ */
+export function buildSinceFilter(
+  area: Area,
+  lens: MarketActivityLens,
+  sinceMs: number
+): string {
   return combine(
     areaFilter(area),
-    `EntryTimestamp:>=${Math.floor(cutoff)}`,
+    `EntryTimestamp:>=${Math.floor(sinceMs)}`,
     `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`,
     typesensePropertyTypeClause(lens.propertyTypes),
     lens.minBeds > 0 ? `BedroomsTotal:>=${lens.minBeds}` : undefined,
@@ -119,6 +127,10 @@ export function buildActivityFilter(area: Area, lens: MarketActivityLens): strin
     lens.basementFinished ? finishedBasementClause() : undefined,
     lens.minFrontage > 0 ? `LotWidth:>=${lens.minFrontage}` : undefined
   );
+}
+
+export function buildActivityFilter(area: Area, lens: MarketActivityLens): string {
+  return buildSinceFilter(area, lens, Date.now() - lens.windowDays * DAY_MS);
 }
 
 /** Count of newly-listed active properties for an area under the lens. */
@@ -140,6 +152,29 @@ export async function fetchNewListings(
   const res = await searchListings({
     query: '*',
     rawFilterBy: buildActivityFilter(area, lens),
+    sortBy: 'EntryTimestamp',
+    sortOrder: 'desc',
+    perPage: Math.min(limit, 100),
+  });
+  return res.listings;
+}
+
+/**
+ * Action-feed source: newest-first listings entered SINCE the user's last visit,
+ * optionally narrowed by `extraFilter` (the active persona's lead-board clause, so
+ * "new" means "new AND relevant to how this user invests"). Newest-first, capped
+ * at 100 (TRREB §6.3(b)).
+ */
+export async function fetchNewSinceVisit(
+  area: Area,
+  lens: MarketActivityLens,
+  sinceMs: number,
+  opts: { extraFilter?: string; limit?: number } = {}
+): Promise<ListingDocument[]> {
+  const { extraFilter, limit = 10 } = opts;
+  const res = await searchListings({
+    query: '*',
+    rawFilterBy: combine(buildSinceFilter(area, lens, sinceMs), extraFilter),
     sortBy: 'EntryTimestamp',
     sortOrder: 'desc',
     perPage: Math.min(limit, 100),

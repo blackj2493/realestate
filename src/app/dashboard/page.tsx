@@ -10,6 +10,7 @@ import {
   getConfig,
   saveConfig,
   getProfile,
+  stampVisit,
   DEFAULT_ACTIVITY_LENS,
   DEFAULT_PERSONA,
   type DashboardConfig,
@@ -29,8 +30,11 @@ import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
+import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // deck.gl + mapbox touch the DOM at module load → client-only, no SSR.
 const DashboardHeatTile = dynamic(
@@ -57,6 +61,9 @@ export default function DashboardPage() {
   });
   const [name, setName] = useState<string | undefined>(undefined);
   const [showConfig, setShowConfig] = useState(false);
+  // The previous-visit cutoff for the action feed. Captured + re-stamped once on
+  // entry so "since last visit" compares against the PRIOR session, not now.
+  const [sinceVisit, setSinceVisit] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -65,6 +72,8 @@ export default function DashboardPage() {
       if (!active) return;
       setConfig(getConfig());
       setName(getProfile()?.fullName);
+      const previous = stampVisit();
+      setSinceVisit(previous ?? Date.now() - SEVEN_DAYS_MS);
       setReady(true);
     };
 
@@ -117,6 +126,13 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-[1600px] space-y-8 px-4 py-6">
         {showConfig && <DashboardConfigPanel config={config} onChange={update} />}
+
+        <ActionFeed
+          regions={config.regions}
+          lens={config.marketActivity}
+          persona={config.persona}
+          sinceMs={sinceVisit}
+        />
 
         <WatchlistSection />
 
