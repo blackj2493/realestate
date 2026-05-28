@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
+import { areaKey, type Area } from "@/lib/dashboard/area";
 import type { SoldListing } from "@/app/api/market/activity/sold/route";
 import ActivityRow from "./ActivityRow";
 
@@ -25,12 +26,26 @@ function soldDateFmt(s?: string | null): string {
     : d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
 }
 
-function soldQuery(location: string, lens: MarketActivityLens, limit: number): string {
+/**
+ * Build the GET query string for /api/market/activity/sold from any Area kind.
+ * Region areas pass `?region=`; polygon areas pass `?polygon=lat,lng,...`;
+ * school areas pass `?nearby_school=<key>`. Lens filters are shared.
+ *
+ * A 32-vertex circle polygon serializes to ~770 chars; a typical drawn ring
+ * ≤ 20 vertices is well under the 2 KB GET threshold.
+ */
+function soldQueryParams(area: Area, lens: MarketActivityLens, limit: number): string {
   const p = new URLSearchParams({
-    region: location,
     windowDays: String(lens.windowDays),
     limit: String(limit),
   });
+  if (area.kind === "region") {
+    p.set("region", area.name);
+  } else if (area.kind === "school") {
+    p.set("nearby_school", area.schoolKey);
+  } else {
+    p.set("polygon", area.polygon.map(([lat, lng]) => `${lat},${lng}`).join(","));
+  }
   if (lens.propertyTypes.length) p.set("types", lens.propertyTypes.join(","));
   if (lens.minBeds > 0) p.set("minBeds", String(lens.minBeds));
   if (lens.minBaths > 0) p.set("minBaths", String(lens.minBaths));
@@ -72,10 +87,10 @@ function CountHeader({
 }
 
 export default function MarketActivityPanel({
-  location,
+  area,
   lens,
 }: {
-  location: string;
+  area: Area;
   lens: MarketActivityLens;
 }) {
   const [newCount, setNewCount] = useState<number | null>(null);
@@ -87,6 +102,7 @@ export default function MarketActivityPanel({
   const [soldErr, setSoldErr] = useState(false);
 
   const lensKey = JSON.stringify(lens);
+  const key = areaKey(area);
 
   useEffect(() => {
     let alive = true;
@@ -98,8 +114,8 @@ export default function MarketActivityPanel({
     setSoldErr(false);
 
     Promise.all([
-      fetchNewCount(location, lens),
-      fetchNewListings(location, lens, LIST_LIMIT),
+      fetchNewCount(area, lens),
+      fetchNewListings(area, lens, LIST_LIMIT),
     ])
       .then(([c, rows]) => {
         if (!alive) return;
@@ -107,11 +123,13 @@ export default function MarketActivityPanel({
         setNewRows(rows);
       })
       .catch((e) => {
-        console.error("[MarketActivityPanel:new]", location, e);
+        console.error("[MarketActivityPanel:new]", key, e);
         if (alive) setNewErr(true);
       });
 
-    fetch(`/api/market/activity/sold?${soldQuery(location, lens, SOLD_LIST_LIMIT)}`)
+    // SOLD column now works for every area kind — the sold_listings collection
+    // gained `location` + `NearbySchools` in Phase 2B (see soldListingsSchema.ts).
+    fetch(`/api/market/activity/sold?${soldQueryParams(area, lens, SOLD_LIST_LIMIT)}`)
       .then((r) => r.json())
       .then((d: { count: number; listings: SoldListing[]; error?: string }) => {
         if (!alive) return;
@@ -120,15 +138,16 @@ export default function MarketActivityPanel({
         setSoldRows(d.listings);
       })
       .catch((e) => {
-        console.error("[MarketActivityPanel:sold]", location, e);
+        console.error("[MarketActivityPanel:sold]", key, e);
         if (alive) setSoldErr(true);
       });
 
     return () => {
       alive = false;
     };
+    // `area` captured via `key`; lens via `lensKey`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, lensKey]);
+  }, [key, lensKey]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">

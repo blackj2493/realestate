@@ -27,6 +27,8 @@ import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
+import BubbleSections from "@/components/dashboard/BubbleSections";
+import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
 // deck.gl + mapbox touch the DOM at module load → client-only, no SSR.
@@ -143,31 +145,40 @@ export default function DashboardPage() {
         {hasRegions && <RegionScorecard regions={config.regions} />}
 
         {hasRegions &&
-          config.regions.map((loc) => (
-            <section key={loc} className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
-                  {loc}
-                </h2>
-              </div>
-
-              <MarketActivityPanel location={loc} lens={config.marketActivity} />
-
-              <RegionStatTiles location={loc} />
-
-              {enabledBoards.length === 0 ? (
-                <p className="text-xs text-slate-500">
-                  No boards enabled — add metrics via Customize.
-                </p>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {enabledBoards.map((b) => (
-                    <PlaylistBoard key={b.id} board={b} location={loc} />
-                  ))}
+          config.regions.map((loc) => {
+            const area = regionArea(loc);
+            return (
+              <section key={loc} className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                  <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
+                    {loc}
+                  </h2>
                 </div>
-              )}
-            </section>
-          ))}
+
+                <MarketActivityPanel area={area} lens={config.marketActivity} />
+
+                <RegionStatTiles area={area} />
+
+                {enabledBoards.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    No boards enabled — add metrics via Customize.
+                  </p>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {enabledBoards.map((b) => (
+                      <PlaylistBoard key={b.id} board={b} area={area} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+
+        {/* Saved Market Bubbles get the same per-region treatment. */}
+        <BubbleSections
+          lens={config.marketActivity}
+          enabledBoards={enabledBoards}
+        />
 
         {/* Primary-region intelligence: neighbourhood heat + price trend (V1). */}
         {hasRegions && <DashboardHeatTile region={config.regions[0]} />}

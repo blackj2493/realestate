@@ -1,34 +1,43 @@
 /**
  * Dashboard data helpers — thin wrappers over the client-side Typesense search.
  *
- * A "location" is a user-chosen market area. It can be a municipality (Typesense
- * `City`) or a neighbourhood (`CityRegion`), so every query matches BOTH. Values are
- * backtick-quoted because names contain spaces (e.g. "Richmond Hill", "Stoney Creek").
+ * An "area" is the market the user is asking about. It can be a TRREB region
+ * string (City / CityRegion), a saved bubble's polygon, or a saved school
+ * catchment. See src/lib/dashboard/area.ts — `areaFilter(area)` produces the
+ * Typesense filter fragment so the call sites here don't branch on kind.
+ *
+ * The original `locationFilter(loc: string)` is preserved as a re-export from
+ * area.ts (it now lives there as the `region` arm of `areaFilter`).
  */
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
 import type { BoardDef } from './boards';
 import type { MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
+import { areaFilter, type Area } from './area';
 
+/**
+ * Region-only filter — kept for any caller that still passes a raw string
+ * (e.g. /api/market/region-stats internally). Equivalent to
+ * `areaFilter({ kind: 'region', name: loc })`.
+ */
 export function locationFilter(loc: string): string {
-  const safe = loc.replace(/`/g, '');
-  return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
+  return areaFilter({ kind: 'region', name: loc });
 }
 
 function combine(...clauses: (string | undefined)[]): string {
   return clauses.filter(Boolean).join(' && ');
 }
 
-/** Top-N listings for one board within one location. */
+/** Top-N listings for one board within one area. */
 export async function fetchBoard(
   board: BoardDef,
-  loc: string,
+  area: Area,
   perPage = 5
 ): Promise<ListingDocument[]> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(locationFilter(loc), board.rawFilterBy),
+    rawFilterBy: combine(areaFilter(area), board.rawFilterBy),
     sortBy: board.sortBy,
     sortOrder: board.sortOrder,
     perPage,
@@ -42,24 +51,24 @@ export interface RegionStats {
   suiteCandidates: number; // count of listings with SuiteScore >= 3
 }
 
-/** Exact, point-in-time stats for a location (no time-series — see plan §deferred). */
-export async function fetchRegionStats(loc: string): Promise<RegionStats> {
+/** Exact, point-in-time stats for an area (no time-series — see plan §deferred). */
+export async function fetchRegionStats(area: Area): Promise<RegionStats> {
   const [active, cap, suite] = await Promise.all([
     searchListings({
       query: '*',
-      rawFilterBy: combine(locationFilter(loc), 'ListPrice:>0'),
+      rawFilterBy: combine(areaFilter(area), 'ListPrice:>0'),
       perPage: 0,
     }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(locationFilter(loc), 'ExtrapolatedCapRate:>0'),
+      rawFilterBy: combine(areaFilter(area), 'ExtrapolatedCapRate:>0'),
       sortBy: 'ExtrapolatedCapRate',
       sortOrder: 'desc',
       perPage: 1,
     }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(locationFilter(loc), 'SuiteScore:>=3'),
+      rawFilterBy: combine(areaFilter(area), 'SuiteScore:>=3'),
       perPage: 0,
     }),
   ]);
@@ -97,10 +106,10 @@ function finishedBasementClause(): string {
  * MILLISECONDS (transformer.ts), so the cutoff is `Date.now() - days*DAY_MS`.
  * `ListPrice:>=50000` drops lease rows (no filterable TransactionType field).
  */
-export function buildActivityFilter(loc: string, lens: MarketActivityLens): string {
+export function buildActivityFilter(area: Area, lens: MarketActivityLens): string {
   const cutoff = Date.now() - lens.windowDays * DAY_MS;
   return combine(
-    locationFilter(loc),
+    areaFilter(area),
     `EntryTimestamp:>=${Math.floor(cutoff)}`,
     `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`,
     typesensePropertyTypeClause(lens.propertyTypes),
@@ -112,11 +121,11 @@ export function buildActivityFilter(loc: string, lens: MarketActivityLens): stri
   );
 }
 
-/** Count of newly-listed active properties for a location under the lens. */
-export async function fetchNewCount(loc: string, lens: MarketActivityLens): Promise<number> {
+/** Count of newly-listed active properties for an area under the lens. */
+export async function fetchNewCount(area: Area, lens: MarketActivityLens): Promise<number> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: buildActivityFilter(loc, lens),
+    rawFilterBy: buildActivityFilter(area, lens),
     perPage: 0,
   });
   return res.totalFound;
@@ -124,13 +133,13 @@ export async function fetchNewCount(loc: string, lens: MarketActivityLens): Prom
 
 /** Newest-first list of new active listings (capped at 100 — TRREB §6.3(b)). */
 export async function fetchNewListings(
-  loc: string,
+  area: Area,
   lens: MarketActivityLens,
   limit = 5
 ): Promise<ListingDocument[]> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: buildActivityFilter(loc, lens),
+    rawFilterBy: buildActivityFilter(area, lens),
     sortBy: 'EntryTimestamp',
     sortOrder: 'desc',
     perPage: Math.min(limit, 100),

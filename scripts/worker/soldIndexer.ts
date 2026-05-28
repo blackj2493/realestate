@@ -27,6 +27,8 @@ import {
   SOLD_LISTINGS_COLLECTION,
   type SoldListingDocument,
 } from '../../src/lib/typesense/soldListingsSchema';
+import { resolveLocation } from './resolveLocation';
+import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { selectPrimaryImage } from '../../src/lib/etl/selectPrimaryImage';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
@@ -69,6 +71,8 @@ export interface SoldIndexInput {
   unparsed_address: string | null;
   city_region: string | null;
   city: string | null;
+  /** Required for Tier-1 geocoding → location + NearbySchools (Phase 2B). */
+  postal_code: string | null;
   property_sub_type: string | null;
   building_area_total: number | null;
   lot_width: number | null;
@@ -85,6 +89,12 @@ export interface SoldIndexInput {
  * Map a raw_vow_sold row → Typesense sold document. Returns null (skip) when there is
  * no valid `purchase_contract_date`, since the window filter keys on it and such a row
  * could never be queried anyway (mirrors the old route's `.gte(purchase_contract_date)`).
+ *
+ * Geocoding (Phase 2B): postal-code Tier 1 only. We deliberately pass `null` for the
+ * API-native lat/lng inputs of `resolveLocation` so a postal miss falls through to
+ * tiers 3-4 (city centre / Toronto centre) and gets `needsGeocoding === true` — at
+ * which point we DROP the `location` field rather than ship a noisy fallback that
+ * would silently match every Toronto-overlapping polygon. Same for NearbySchools.
  */
 export function toSoldDocument(
   r: SoldIndexInput,
@@ -123,6 +133,15 @@ export function toSoldDocument(
     PurchaseContractDate: ms,
   };
   if (primaryImageUrl) doc.primaryImageUrl = primaryImageUrl;
+
+  const geo = resolveLocation(r.postal_code, null, null, r.city);
+  if (!geo.needsGeocoding) {
+    doc.location = geo.location;
+    const schools = assignSchools(geo.location);
+    if (schools.NearbySchools.length > 0) {
+      doc.NearbySchools = schools.NearbySchools;
+    }
+  }
 
   return doc;
 }
@@ -192,7 +211,7 @@ async function backfill(): Promise<void> {
   const cutoffISO = new Date(windowCutoffMs()).toISOString();
   const nowISO = new Date().toISOString();
   const columns =
-    'listing_key, unparsed_address, city_region, city, property_sub_type, ' +
+    'listing_key, unparsed_address, city_region, city, postal_code, property_sub_type, ' +
     'building_area_total, lot_width, bedrooms_above_grade, bathrooms_total_integer, ' +
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
     'brokerage:raw_payload->>ListOfficeName, ' +

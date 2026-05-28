@@ -22,12 +22,14 @@ import {
   MapTimeline,
   MapCommandPalette,
 } from "@/components/CommandCenter";
+import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
+import { useBubbleHydration } from "@/hooks/useBubbleHydration";
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -75,6 +77,9 @@ function CommandCenterContent() {
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
   useCommuteIsochrone();
+
+  // If the user landed via /properties?bubble=<id>, restore that saved state.
+  useBubbleHydration();
 
   // Drag-resizable ledger width (persisted). Map fills the remaining space.
   const LEDGER_MIN = 400;
@@ -233,6 +238,11 @@ function CommandCenterContent() {
             metricDef={activeMetric}
             commuteActive={commute.enabled}
           />
+          {/* Save the current custom area as a Market Bubble. Self-hides when no
+              draw / commute / school filter is active. */}
+          <div className="pointer-events-auto absolute right-3 top-3 z-30">
+            <SaveBubbleButton />
+          </div>
         </div>
 
         {/* Drag handle — resize the ledger */}

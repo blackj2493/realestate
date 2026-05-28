@@ -170,6 +170,8 @@ export interface CommandCenterState {
   undoDrawPoint: () => void;
   finishDrawing: () => void;
   clearDraw: () => void;
+  /** Direct setter used when rehydrating a saved market bubble (skips the click loop). */
+  setDrawPolygon: (polygon: [number, number][] | null) => void;
 
   // Temporal scrubber: a True-DOM time window swept over the loaded listings
   // (Temporal Distress Engine, made visual — client-side, no re-query).
@@ -287,6 +289,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       state.drawPoints.length >= 3 ? { isDrawing: false, drawPolygon: state.drawPoints } : {}
     ),
   clearDraw: () => set({ isDrawing: false, drawPoints: [], drawPolygon: null }),
+  setDrawPolygon: (polygon) => set({ isDrawing: false, drawPoints: [], drawPolygon: polygon }),
 
   timelineActive: false,
   setTimelineActive: (on) => set({ timelineActive: on, timelinePlaying: on ? false : false }),

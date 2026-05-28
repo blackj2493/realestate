@@ -55,8 +55,22 @@ function getSoldClient(): Client {
   return soldClient;
 }
 
+/**
+ * Area scoping for a sold query. Exactly one variant must be set; precedence at
+ * the call site (GET handler) is polygon > nearby_school > region so a caller
+ * accidentally passing multiple gets the most-specific filter.
+ *
+ *   - region:        traditional city/neighbourhood scoping (existing behaviour)
+ *   - polygon:       [lat, lng, lat, lng, ...] from a draw / commute bubble
+ *   - nearbySchool:  exact NearbySchools id (school catchment bubble)
+ */
+type SoldArea =
+  | { kind: "region"; region: string }
+  | { kind: "polygon"; polygon: [number, number][] }
+  | { kind: "school"; schoolKey: string };
+
 interface SoldParams {
-  region: string;
+  area: SoldArea;
   windowDays: number;
   typeKeys: string[];
   minBeds: number;
@@ -83,12 +97,25 @@ export interface SoldListing {
   primaryImageUrl: string | null;
 }
 
+/** Build the Typesense area clause (one per kind) — see SoldArea docstring. */
+function buildAreaClause(area: SoldArea): string {
+  if (area.kind === "polygon") {
+    const coords = area.polygon.map(([lat, lng]) => `${lat}, ${lng}`).join(", ");
+    return `location:(${coords})`;
+  }
+  if (area.kind === "school") {
+    const safe = area.schoolKey.replace(/`/g, "");
+    return `NearbySchools:=\`${safe}\``;
+  }
+  const safe = area.region.replace(/`/g, "");
+  return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
+}
+
 /** Build the Typesense filter_by string for the sold lens (mirrors buildActivityFilter). */
 function buildSoldFilter(p: SoldParams): string {
-  const safe = p.region.replace(/`/g, "");
   const cutoffMs = Math.floor(Date.now() - p.windowDays * DAY_MS);
   const clauses: string[] = [
-    `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`,
+    buildAreaClause(p.area),
     `PurchaseContractDate:>=${cutoffMs}`,
     `PurchaseContractDate:<=${Date.now()}`, // defensive: no future contract dates
     `ClosePrice:>=${PRICE_FLOOR}`,
@@ -107,6 +134,23 @@ function buildSoldFilter(p: SoldParams): string {
   if (p.minFrontage > 0) clauses.push(`LotWidth:>=${p.minFrontage}`);
 
   return clauses.join(" && ");
+}
+
+/**
+ * Parse a flat `lat,lng,lat,lng,...` polygon param. Returns null on any shape
+ * issue (odd count, < 3 vertices, non-finite values) so the caller can fail
+ * the request cleanly rather than ship a degenerate filter to Typesense.
+ */
+function parsePolygonParam(raw: string): [number, number][] | null {
+  const nums = raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n));
+  if (nums.length % 2 !== 0) return null;
+  if (nums.length < 6) return null; // ≥ 3 vertices required by Typesense
+  const out: [number, number][] = [];
+  for (let i = 0; i < nums.length; i += 2) out.push([nums[i], nums[i + 1]]);
+  return out;
 }
 
 const posOrNull = (v: unknown): number | null => {
@@ -153,10 +197,34 @@ async function computeSold(
   return { count: res.found ?? 0, listings };
 }
 
+/** Precedence: polygon > nearby_school > region. Returns null if none supplied. */
+function pickArea(sp: URLSearchParams): SoldArea | null {
+  const polygonRaw = sp.get("polygon");
+  if (polygonRaw && polygonRaw.trim()) {
+    const polygon = parsePolygonParam(polygonRaw);
+    if (polygon) return { kind: "polygon", polygon };
+  }
+  const schoolKey = (sp.get("nearby_school") || "").trim();
+  if (schoolKey) return { kind: "school", schoolKey };
+
+  const region = (sp.get("region") || "").trim();
+  if (region) return { kind: "region", region };
+  return null;
+}
+
+function areaLabel(area: SoldArea): string {
+  if (area.kind === "region") return area.region;
+  if (area.kind === "school") return `school:${area.schoolKey}`;
+  return `polygon:${area.polygon.length}pts`;
+}
+
 export async function GET(req: NextRequest) {
   const sp = new URL(req.url).searchParams;
-  const region = (sp.get("region") || "").trim();
-  if (!region) return NextResponse.json({ region: "", count: 0, listings: [] });
+  const area = pickArea(sp);
+  // Backwards-compatible empty response: callers passing no area get the same
+  // shape (with `region: ""`) they used to get pre-Phase-2B.
+  if (!area)
+    return NextResponse.json({ region: "", count: 0, listings: [] });
 
   const num = (k: string, d = 0) => {
     const n = Number(sp.get(k));
@@ -164,7 +232,7 @@ export async function GET(req: NextRequest) {
   };
 
   const params: SoldParams = {
-    region,
+    area,
     windowDays: Math.min(num("windowDays", 1), MAX_WINDOW_DAYS),
     typeKeys: (sp.get("types") || "").split(",").map((s) => s.trim()).filter(Boolean),
     minBeds: num("minBeds"),
@@ -175,12 +243,19 @@ export async function GET(req: NextRequest) {
     limit: Math.min(num("limit", 5), MAX_LIST),
   };
 
+  // Echo the original `region` value (or "" for non-region areas) so the
+  // existing client response shape is preserved.
+  const regionEcho = area.kind === "region" ? area.region : "";
+
   try {
     const result = await computeSold(params);
-    return NextResponse.json({ region, ...result });
+    return NextResponse.json({ region: regionEcho, ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/activity/sold]", region, msg);
-    return NextResponse.json({ region, count: 0, listings: [], error: msg }, { status: 500 });
+    console.error("[market/activity/sold]", areaLabel(area), msg);
+    return NextResponse.json(
+      { region: regionEcho, count: 0, listings: [], error: msg },
+      { status: 500 }
+    );
   }
 }

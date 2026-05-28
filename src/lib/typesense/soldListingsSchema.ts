@@ -47,6 +47,13 @@ export const soldListingsSchema = {
     { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },
     // "Sold firm" date as epoch ms — window filter + default desc sort.
     { name: 'PurchaseContractDate', type: 'int64' as const, facet: false, sort: true },
+    // ─── Polygon / school-catchment filtering (Phase 2B, Market Bubbles) ──────
+    // Both optional so docs whose postal code didn't resolve simply omit the
+    // fields and naturally drop out of `location:(polygon)` / `NearbySchools:=`
+    // queries while remaining queryable by City / CityRegion. Mirrors the
+    // entries on the active `properties` collection (typesenseSchema.ts).
+    { name: 'location', type: 'geopoint' as const, facet: false, optional: true },
+    { name: 'NearbySchools', type: 'string[]' as const, facet: false, optional: true },
   ],
   default_sorting_field: 'PurchaseContractDate',
 };
@@ -70,4 +77,8 @@ export interface SoldListingDocument {
   /** Best-fit thumbnail URL picked at index time from raw_payload media/images. */
   primaryImageUrl?: string;
   PurchaseContractDate: number; // epoch ms
+  /** [lat, lng] — present only when postal-code resolution was a Tier-1 hit. */
+  location?: [number, number];
+  /** School ids within NEARBY_RADIUS_KM (2.5) — populated alongside `location`. */
+  NearbySchools?: string[];
 }

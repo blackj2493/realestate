@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchRegionStats, type RegionStats } from "@/lib/dashboard/queries";
+import { areaKey, type Area } from "@/lib/dashboard/area";
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
@@ -14,19 +15,24 @@ function Tile({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function RegionStatTiles({ location }: { location: string }) {
+export default function RegionStatTiles({ area }: { area: Area }) {
   const [s, setS] = useState<RegionStats | null>(null);
+  // Stable string identity so an inline `bubbleToArea(b)` parent doesn't refire
+  // the effect on every render (each call returns a new object reference).
+  const key = areaKey(area);
 
   useEffect(() => {
     let alive = true;
     setS(null);
-    fetchRegionStats(location)
+    fetchRegionStats(area)
       .then((r) => alive && setS(r))
       .catch(() => alive && setS({ activeCount: 0, topCapRate: null, suiteCandidates: 0 }));
     return () => {
       alive = false;
     };
-  }, [location]);
+    // `area` is captured via `key` — re-fetch only when the identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   const dash = "—";
   const active = s ? s.activeCount.toLocaleString() : dash;
