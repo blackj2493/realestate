@@ -23,6 +23,7 @@ import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
 import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '@/lib/schools/nearestSchools';
+import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 
 // ============================================================================
 // Configuration
@@ -870,63 +871,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // === Phase 4: Builder/Land Development Metrics ===
   const builderMetrics = processBuilderMetrics(raw);
 
-  // Extract and optimize thumbnail from images/media array
-  // Priority: Order === 0 with "Medium" > "Thumbnail" > "Large" > first available
-  let primaryThumbnailUrl: string | null = null;
-  const mediaUrls: string[] = [];
-
-  // Process media array
-  if (raw.media && Array.isArray(raw.media)) {
-    raw.media.forEach((m: { MediaURL?: string; MediaStatus?: string; Order?: number; ImageSizeDescription?: string }) => {
-      if (m.MediaURL && m.MediaStatus !== 'Deleted') {
-        mediaUrls.push(m.MediaURL);
-        
-        // Find optimal thumbnail
-        if (!primaryThumbnailUrl && m.MediaURL) {
-          // Prefer Order === 0 or 1
-          if (m.Order === 0 || m.Order === 1) {
-            // Prefer Medium size, then Thumbnail, then Large
-            if (m.ImageSizeDescription === 'Medium' || m.ImageSizeDescription === 'Thumbnail' || m.ImageSizeDescription === 'Large') {
-              primaryThumbnailUrl = m.MediaURL;
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Process images array (alternative format)
-  if (raw.images && Array.isArray(raw.images)) {
-    raw.images.forEach((m: { MediaURL?: string; MediaStatus?: string; Order?: number; ImageSizeDescription?: string }) => {
-      if (m.MediaURL && !mediaUrls.includes(m.MediaURL)) {
-        mediaUrls.push(m.MediaURL);
-        
-        // Find optimal thumbnail if not already found
-        if (!primaryThumbnailUrl && m.MediaURL) {
-          if (m.Order === 0 || m.Order === 1) {
-            if (m.ImageSizeDescription === 'Medium' || m.ImageSizeDescription === 'Thumbnail' || m.ImageSizeDescription === 'Large') {
-              primaryThumbnailUrl = m.MediaURL;
-            }
-          }
-        }
-      }
-    });
-    
-    // Fallback: if no thumbnail found by order/size, grab first "Medium" image
-    if (!primaryThumbnailUrl) {
-      const mediumImage = raw.images.find((m: { MediaURL?: string; ImageSizeDescription?: string }) => 
-        m.MediaURL && m.ImageSizeDescription === 'Medium'
-      );
-      if (mediumImage?.MediaURL) {
-        primaryThumbnailUrl = mediumImage.MediaURL;
-      }
-    }
-
-    // Final fallback: if no thumbnail found, use first image
-    if (!primaryThumbnailUrl && mediaUrls.length > 0) {
-      primaryThumbnailUrl = mediaUrls[0];
-    }
-  }
+  // Thumbnail + full image list — shared helper so the sold indexer applies the
+  // same selection rule (see src/lib/etl/selectPrimaryImage.ts for priority).
+  const primaryThumbnailUrl = selectPrimaryImage(raw);
+  const mediaUrls = collectMediaUrls(raw);
 
   // Extrapolated Cap Rate (§4: derived metric computed in the Node ETL). Computed here so
   // it can be both persisted to Supabase (for region aggregation) and set on the Typesense

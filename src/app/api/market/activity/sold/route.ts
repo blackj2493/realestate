@@ -79,6 +79,8 @@ export interface SoldListing {
   sqft: number | null;
   brokerage: string | null;
   city: string | null;
+  /** Best-fit thumbnail URL (selectPrimaryImage), null when no usable VOW media. */
+  primaryImageUrl: string | null;
 }
 
 /** Build the Typesense filter_by string for the sold lens (mirrors buildActivityFilter). */
@@ -144,6 +146,7 @@ async function computeSold(
       sqft: posOrNull(d.BuildingAreaTotal),
       brokerage: (d.ListOfficeName as string) || null,
       city: (d.City as string) || null,
+      primaryImageUrl: (d.primaryImageUrl as string) || null,
     };
   });
 

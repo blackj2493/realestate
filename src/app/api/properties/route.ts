@@ -83,7 +83,10 @@ export async function GET(request: NextRequest) {
       bedrooms: p.BedroomsTotal || 0,
       bathrooms: p.BathroomsTotalInteger || 0,
       squareFeet: p.LotSizeDimensions || 0,
-      photoUrls: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800"],
+      // No media expansion in the OData query; consumer falls back to a text-only
+      // card via ListingThumbnail. Adding media would require $expand=Media which
+      // counts against TRREB rate limits — defer to the Typesense path instead.
+      photoUrls: [] as string[],
       brokerage: p.ListOfficeName || "Unknown Brokerage",
       daysOnMarket: Math.floor(
         (Date.now() -

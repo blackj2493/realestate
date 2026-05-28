@@ -15,9 +15,6 @@ interface MediaGalleryProps {
   media: MediaItem[];
 }
 
-// Fallback placeholder image
-const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200";
-
 export default function MediaGallery({ media }: MediaGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);

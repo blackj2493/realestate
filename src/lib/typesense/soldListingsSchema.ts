@@ -42,6 +42,9 @@ export const soldListingsSchema = {
     // Deterministic basement condition tier (1-9); <=5 == "has finished space".
     { name: 'BasementTier', type: 'int32' as const, facet: false, sort: true },
     { name: 'ListOfficeName', type: 'string' as const, index: false, facet: false, optional: true },
+    // Best-fit thumbnail URL — stored cargo for the dashboard "Sold" activity rows.
+    // Same selectPrimaryImage() rule as the active collection; null when no usable media.
+    { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },
     // "Sold firm" date as epoch ms — window filter + default desc sort.
     { name: 'PurchaseContractDate', type: 'int64' as const, facet: false, sort: true },
   ],
@@ -64,5 +67,7 @@ export interface SoldListingDocument {
   LotWidth: number;
   BasementTier: number;
   ListOfficeName?: string;
+  /** Best-fit thumbnail URL picked at index time from raw_payload media/images. */
+  primaryImageUrl?: string;
   PurchaseContractDate: number; // epoch ms
 }

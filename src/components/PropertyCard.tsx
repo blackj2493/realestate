@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -15,6 +14,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice, cn } from "@/lib/utils";
+import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 export interface PropertyCardData {
   id: string;
@@ -60,11 +60,6 @@ export function PropertyCard({
   variant = "default",
 }: PropertyCardProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
-  // Use placeholder image if no photo or if image failed to load
-  const placeholderImage = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800";
-  const imageUrl = imageError || !property.photoUrl ? placeholderImage : property.photoUrl;
 
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -107,15 +102,12 @@ export function PropertyCard({
       <Link href={`/properties/${property.id}`}>
         <Card className="group overflow-hidden hover:shadow-md transition-all cursor-pointer">
           <div className="flex">
-            <div className="relative w-32 h-24 shrink-0">
-              <Image
-                src={imageUrl}
-                alt={property.address}
-                fill
-                className="object-cover"
-                onError={() => setImageError(true)}
-              />
-            </div>
+            <ListingThumbnail
+              src={property.photoUrl}
+              alt={property.address}
+              className="w-32 h-24 shrink-0"
+              sizes="128px"
+            />
             <CardContent className="p-3 flex-1">
               <div className="text-lg font-bold text-primary">
                 {formatPrice(property.price)}
@@ -144,16 +136,15 @@ export function PropertyCard({
   return (
     <Link href={`/properties/${property.id}`}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer">
-        {/* Image Container */}
+        {/* Image Container (thumbnail + absolute-positioned overlays) */}
         <div className="relative aspect-[4/3]">
-          <Image
-            src={imageUrl}
+          <ListingThumbnail
+            src={property.photoUrl}
             alt={property.address}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={() => setImageError(true)}
+            className="absolute inset-0"
+            imgClassName="group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, 33vw"
           />
-          
           {/* Save Button */}
           {showSaveButton && (
             <button
@@ -267,8 +258,9 @@ export function PropertyCard({
             </span>
           </p>
 
-          {/* Features Row */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground pb-3 border-b">
+          {/* Features Row — no border-b: brokerage line below must not be visually
+              separated from the listing details per TRREB IDX §6.3(c). */}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             {property.bedrooms > 0 && (
               <div className="flex items-center gap-1.5">
                 <Bed className="h-4 w-4" />
@@ -292,8 +284,9 @@ export function PropertyCard({
             )}
           </div>
 
-          {/* Brokerage */}
-          <p className="text-xs text-muted-foreground mt-3">
+          {/* Brokerage — text-sm matches the Features Row above, satisfying TRREB
+              §6.3(c) ("same font and size as the other Listing details"). */}
+          <p className="mt-2 text-sm text-muted-foreground">
             Listed by {property.brokerage || "Unknown"}
           </p>
         </CardContent>

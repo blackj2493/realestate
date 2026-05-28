@@ -5,7 +5,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import { Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -13,6 +12,7 @@ import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
+import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -25,13 +25,6 @@ interface LedgerRowProps {
   isChecked?: boolean;
   /** Toggle this row's membership in the multi-select set. */
   onToggleSelect?: () => void;
-}
-
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
-
-function isUsableImage(url?: string) {
-  return !!url && !url.includes("example.com");
 }
 
 function carryFor(p: ListingDocument): number {
@@ -132,10 +125,7 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
 
 export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect }: LedgerRowProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const src = !imageError && isUsableImage(property.thumbnailUrl || property.primaryImageUrl)
-    ? (property.thumbnailUrl || property.primaryImageUrl)!
-    : PLACEHOLDER_IMAGE;
+  const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
 
   return (
@@ -169,15 +159,15 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
       </button>
 
-      {/* Thumbnail */}
-      <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-none bg-slate-800">
-        <Image
+      {/* Thumbnail + overlays (DealScore pill, save heart). The outer wrapper
+          is `relative` so the absolute children position against this box;
+          ListingThumbnail fills it via `absolute inset-0`. */}
+      <div className="relative h-16 w-24 shrink-0">
+        <ListingThumbnail
           src={src}
           alt={property.UnparsedAddress || "Property"}
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => setImageError(true)}
+          className="absolute inset-0"
+          sizes="96px"
         />
         {deal.score !== null && (
           <DealScoreGradePill

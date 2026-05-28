@@ -9,17 +9,12 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { MousePointerClick, Eye, ListFilter, GitCompareArrows, Share2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import ShareDialog from "./ShareDialog";
-
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
-
-const usable = (url?: string) => !!url && !url.includes("example.com");
+import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 export default function MapComparePanel() {
   const selectedIds = useCommandCenterStore((s) => s.selectedIds);
@@ -73,12 +68,15 @@ export default function MapComparePanel() {
         ) : (
           <>
             {docs.map((d) => {
-              const src = usable(d.thumbnailUrl || d.primaryImageUrl) ? (d.thumbnailUrl || d.primaryImageUrl)! : PLACEHOLDER_IMAGE;
+              const src = d.thumbnailUrl || d.primaryImageUrl;
               return (
                 <div key={d.id} className="flex items-center gap-2.5 border-b border-slate-800/50 p-2">
-                  <div className="relative h-12 w-16 shrink-0 overflow-hidden bg-slate-800">
-                    <Image src={src} alt={d.UnparsedAddress || "Property"} fill className="object-cover" unoptimized />
-                  </div>
+                  <ListingThumbnail
+                    src={src}
+                    alt={d.UnparsedAddress || "Property"}
+                    className="h-12 w-16 shrink-0"
+                    sizes="64px"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-slate-200">
                       {d.UnparsedAddress?.trim() || d.City || "Address unavailable"}

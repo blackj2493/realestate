@@ -27,6 +27,7 @@ import {
   SOLD_LISTINGS_COLLECTION,
   type SoldListingDocument,
 } from '../../src/lib/typesense/soldListingsSchema';
+import { selectPrimaryImage } from '../../src/lib/etl/selectPrimaryImage';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
 const IMPORT_CHUNK = 100;
@@ -87,14 +88,24 @@ export interface SoldIndexInput {
  */
 export function toSoldDocument(
   r: SoldIndexInput,
-  listOfficeName: string | null
+  listOfficeName: string | null,
+  /**
+   * Optional raw payload (media + images arrays) used to pick the thumbnail.
+   * The incremental path (ingester.ts Query B) has it in memory for free; the
+   * backfill path passes the JSONB-extracted slice from raw_vow_sold.
+   */
+  rawMedia?: { media?: unknown; images?: unknown }
 ): SoldListingDocument | null {
   if (!r.listing_key) return null;
   if (!r.purchase_contract_date) return null;
   const ms = new Date(r.purchase_contract_date).getTime();
   if (!Number.isFinite(ms)) return null;
 
-  return {
+  const primaryImageUrl = rawMedia
+    ? selectPrimaryImage(rawMedia as { media?: any[]; images?: any[] })
+    : null;
+
+  const doc: SoldListingDocument = {
     id: r.listing_key,
     ClosePrice: toInt(r.close_price),
     ListPrice: toInt(r.list_price),
@@ -111,6 +122,9 @@ export function toSoldDocument(
     ListOfficeName: listOfficeName ?? '',
     PurchaseContractDate: ms,
   };
+  if (primaryImageUrl) doc.primaryImageUrl = primaryImageUrl;
+
+  return doc;
 }
 
 /** Upsert a batch of sold docs into Typesense (chunked). Returns success/fail counts. */
@@ -181,7 +195,10 @@ async function backfill(): Promise<void> {
     'listing_key, unparsed_address, city_region, city, property_sub_type, ' +
     'building_area_total, lot_width, bedrooms_above_grade, bathrooms_total_integer, ' +
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
-    'brokerage:raw_payload->>ListOfficeName';
+    'brokerage:raw_payload->>ListOfficeName, ' +
+    // Pull the JSONB sub-trees PostgREST-side so selectPrimaryImage() can pick a thumbnail
+    // without us streaming the whole ~50 KB raw_payload per row.
+    'media:raw_payload->media, images:raw_payload->images';
 
   let lastKey = '';
   let totalSeen = 0;
@@ -209,7 +226,11 @@ async function backfill(): Promise<void> {
 
     const docs: SoldListingDocument[] = [];
     for (const row of rows) {
-      const doc = toSoldDocument(row as SoldIndexInput, row.brokerage ?? null);
+      const doc = toSoldDocument(
+        row as SoldIndexInput,
+        row.brokerage ?? null,
+        { media: row.media, images: row.images }
+      );
       if (doc) docs.push(doc);
       else totalSkipped++;
     }

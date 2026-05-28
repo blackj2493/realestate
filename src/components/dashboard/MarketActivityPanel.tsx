@@ -185,6 +185,7 @@ export default function MarketActivityPanel({
               price={l.closePrice}
               priceLabel="SOLD"
               caption={soldDateFmt(l.soldDate)}
+              image={l.primaryImageUrl}
               propertySubType={l.propertySubType}
               beds={l.beds}
               baths={l.baths}

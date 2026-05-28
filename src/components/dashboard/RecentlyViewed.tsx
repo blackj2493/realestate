@@ -1,25 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { getRecentlyViewed, type RecentListing } from "@/lib/dashboard/recentlyViewed";
-
-const PLACEHOLDER =
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
+import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 function Thumb({ item }: { item: RecentListing }) {
-  const [err, setErr] = useState(false);
-  const src = !err && item.thumb && !item.thumb.includes("example.com") ? item.thumb : PLACEHOLDER;
   return (
-    <Image
-      src={src}
+    <ListingThumbnail
+      src={item.thumb}
       alt={item.address}
-      fill
-      className="object-cover"
-      unoptimized
-      onError={() => setErr(true)}
+      className="absolute inset-0"
+      sizes="(max-width: 768px) 50vw, 200px"
     />
   );
 }

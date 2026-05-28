@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import WatchButton from "@/components/watchlist/WatchButton";
-
-const PLACEHOLDER =
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
-const usable = (u?: string | null) => !!u && !u.includes("example.com");
+import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 /**
  * Property-card row for the Market Activity lists (New or Sold): thumbnail + key
@@ -44,8 +39,6 @@ export default function ActivityRow({
   sqft?: number | null;
   watchable?: boolean;
 }) {
-  const [err, setErr] = useState(false);
-  const src = !err && usable(image) ? image! : PLACEHOLDER;
   const addr = address?.trim() || city || "Address unavailable";
 
   const specs: string[] = [];
@@ -59,17 +52,12 @@ export default function ActivityRow({
       href={`/properties/${id}`}
       className="group flex gap-3 border-b border-slate-800/50 p-2 transition-colors last:border-b-0 hover:bg-slate-800/50"
     >
-      <div className="relative h-14 w-20 shrink-0 overflow-hidden bg-slate-800">
-        <Image
-          src={src}
-          alt={addr}
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => setErr(true)}
-          sizes="80px"
-        />
-      </div>
+      <ListingThumbnail
+        src={image}
+        alt={addr}
+        className="h-14 w-20 shrink-0"
+        sizes="80px"
+      />
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
         <div className="min-w-0">
           <p className="truncate font-sans text-xs font-medium text-slate-200">{addr}</p>

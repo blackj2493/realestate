@@ -33,6 +33,7 @@ import {
 } from '@/lib/avm/conditionScoring';
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 import { fetchRoomsForKeys } from './roomsEnrichment';
+import { enrichListingsWithMedia } from './mediaEnrichment';
 import { nextSyncCursor } from './syncCursor';
 
 // ============================================================================
@@ -439,34 +440,38 @@ export async function fetchActiveListingsBatch(
   const modFilter = `ModificationTimestamp gt ${lastSyncTimestamp}`;
   const combinedFilter = `${statusFilter} and (${modFilter})`;
   
+  // The Property endpoint does NOT support $expand=Media on this feed (AMPRE
+  // returns HTTP 400/1109: "The property 'Media' ... is not defined in type
+  // 'Property'"). Media records live in the separate /Media resource and must
+  // be batch-fetched after the property batch — see fetchMediaForKeys below.
   const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$top=100&$skip=${skip}&$count=true`;
-  
+
   console.log(`   🔍 Query A (Active): ${url.substring(0, 80)}...`);
   console.log(`   → Delta query from: ${lastSyncTimestamp} (skip: ${skip})`);
-  
+
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
     }
   });
-  
+
   if (!result.success || !result.data) {
     throw new Error(`Query A fetch failed: ${result.error}`);
   }
-  
+
   const data = result.data;
-  
+
   // Extract listings and nextLink
   const listings: any[] = data.value || [];
   const nextLink: string | null = data['@odata.nextLink'] || null;
   const totalCount: number | undefined = data['@odata.count'];
-  
+
   console.log(`   ✅ Query A batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
   if (totalCount !== undefined) {
     console.log(`   📊 Total matching: ${totalCount}`);
   }
-  
+
   return { listings, nextLink, totalCount };
 }
 
@@ -528,12 +533,12 @@ export async function fetchSoldListingsBatch(
   }
   
   const data = result.data;
-  
+
   // Extract listings and nextLink
   const listings: any[] = data.value || [];
   const nextLink: string | null = data['@odata.nextLink'] || null;
   const totalCount: number | undefined = data['@odata.count'];
-  
+
   console.log(`   ✅ Query B batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
   if (totalCount !== undefined) {
     console.log(`   📊 Total matching: ${totalCount}`);
@@ -753,6 +758,14 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       const roomsAttached = await enrichActiveListingsWithRooms(batch.listings);
       console.log(`   📐 Rooms attached to ${roomsAttached}/${batch.listings.length} listings`);
 
+      // Enrich with photo media (separate /Media resource — AMPRE does not support
+      // $expand=Media on /Property). Attached as `media: StoredMedia[]` on each
+      // raw listing; the transformer's selectPrimaryImage/collectMediaUrls helpers
+      // read it from there and persist via full_payload + media_urls columns.
+      console.log('   🖼️  Enriching batch with media (photo URLs)...');
+      const mediaAttached = await enrichListingsWithMedia(batch.listings, IDX_TOKEN);
+      console.log(`   🖼️  Media attached to ${mediaAttached}/${batch.listings.length} listings`);
+
       // Process batch through ETL pipeline (sync.ts)
       console.log('   🔄 Processing batch through ETL pipeline...');
       const syncResult = await processBatch(batch.listings);
@@ -806,7 +819,13 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       // Log sample statuses
       const statuses = [...new Set(batch.listings.map(l => l.StandardStatus || l.MlsStatus || l.Status))];
       console.log(`   📋 Statuses in batch: ${statuses.join(', ')}`);
-      
+
+      // Enrich sold batch with media (uses VOW token since sold listings are only
+      // accessible via the VOW feed). Same best-effort pattern as the active path.
+      console.log('   🖼️  Enriching sold batch with media...');
+      const soldMediaAttached = await enrichListingsWithMedia(batch.listings, VOW_TOKEN);
+      console.log(`   🖼️  Media attached to ${soldMediaAttached}/${batch.listings.length} listings`);
+
       // Process batch through ETL pipeline (sync.ts) with is_sold flag
       console.log('   🔄 Processing sold batch through ETL pipeline...');
       const syncResult = await processBatch(batch.listings, { isSold: true });
@@ -825,7 +844,11 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
         const soldData = extractSoldListingData(rawListing);
         if (soldData) {
           soldRecords.push(soldData);
-          const doc = toSoldDocument(soldData, rawListing.ListOfficeName ?? null);
+          const doc = toSoldDocument(
+            soldData,
+            rawListing.ListOfficeName ?? null,
+            { media: (rawListing as any).media, images: (rawListing as any).images }
+          );
           if (doc) soldDocs.push(doc);
         }
       }

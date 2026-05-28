@@ -145,6 +145,10 @@ export const unindexedFields: UnindexedField[] = [
   { name: 'TaxAnnualAmount', type: 'float', index: false, facet: false },
   { name: 'AssociationFee', type: 'float', index: false, facet: false },
   { name: 'RawImages', type: 'string[]', index: false, facet: false },
+  // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
+  { name: 'primaryImageUrl', type: 'string', index: false, facet: false, optional: true },
+  // Listing brokerage — display cargo for the TRREB §6.3(c) text label on every card.
+  { name: 'ListOfficeName', type: 'string', index: false, facet: false, optional: true },
   { name: 'RawRooms', type: 'auto', index: false, facet: false },
   { name: 'PropertyHash', type: 'string', index: false, facet: false },
   // School cargo (display only): per-panel nearest-school name + distance in km.
@@ -247,6 +251,10 @@ export const typesenseSchema = {
     { name: 'TaxAnnualAmount', type: 'float' as const, index: false, facet: false },
     { name: 'AssociationFee', type: 'float' as const, index: false, facet: false },
     { name: 'RawImages', type: 'string[]' as const, index: false, facet: false },
+    // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
+    { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },
+    // Listing brokerage — display cargo for the TRREB §6.3(c) text label on every card.
+    { name: 'ListOfficeName', type: 'string' as const, index: false, facet: false, optional: true },
     { name: 'RawRooms', type: 'auto' as const, index: false, facet: false },
     // School cargo (display only): per-panel nearest-school name + distance.
     { name: 'ElemPublicSchool', type: 'string' as const, index: false, facet: false, optional: true },

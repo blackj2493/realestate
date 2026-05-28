@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { useWatchlistStore, type WatchItem } from "@/lib/watchlist/useWatchlist";
@@ -12,22 +10,15 @@ import {
 import WatchButton from "@/components/watchlist/WatchButton";
 import WatchlistSummary from "./WatchlistSummary";
 import WatchlistPulseStrip from "./WatchlistPulseStrip";
-
-const PLACEHOLDER =
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop";
+import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 function Thumb({ item }: { item: WatchItem }) {
-  const [err, setErr] = useState(false);
-  const ok = item.thumb && !item.thumb.includes("example.com");
-  const src = !err && ok ? item.thumb! : PLACEHOLDER;
   return (
-    <Image
-      src={src}
+    <ListingThumbnail
+      src={item.thumb}
       alt={item.address || "Saved property"}
-      fill
-      className="object-cover"
-      unoptimized
-      onError={() => setErr(true)}
+      className="absolute inset-0"
+      sizes="200px"
     />
   );
 }
