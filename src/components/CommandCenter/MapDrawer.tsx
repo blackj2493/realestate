@@ -11,7 +11,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Layers, Palette, PenTool, GitCompareArrows, Bookmark, type LucideIcon } from "lucide-react";
+import { X, Navigation, GraduationCap, Palette, Lasso, Scale, Bookmark, History, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
@@ -22,20 +22,22 @@ import MapComparePanel from "./MapComparePanel";
 import MapLensesPanel from "./MapLensesPanel";
 
 const TITLES: Record<RailModule, string> = {
-  layers: "Data Layers",
+  commute: "Commute",
+  school: "Schools",
   color: "Color By",
   draw: "Draw Area",
   compare: "Compare",
   time: "Timeline",
-  lenses: "Lenses",
+  lenses: "Saved Views",
 };
 
 const ICONS: Record<RailModule, LucideIcon> = {
-  layers: Layers,
+  commute: Navigation,
+  school: GraduationCap,
   color: Palette,
-  draw: PenTool,
-  compare: GitCompareArrows,
-  time: Layers,
+  draw: Lasso,
+  compare: Scale,
+  time: History,
   lenses: Bookmark,
 };
 
@@ -63,13 +65,15 @@ function DrawerHeader({ module, onClose }: { module: RailModule; onClose: () => 
 
 function renderContent(module: RailModule) {
   switch (module) {
-    case "layers":
+    case "commute":
       return (
-        <div className="flex flex-col gap-2 p-3">
-          <p className="px-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
-            Data Overlays
-          </p>
+        <div className="p-3">
           <CommuteFilter />
+        </div>
+      );
+    case "school":
+      return (
+        <div className="p-3">
           <SchoolFilter />
         </div>
       );

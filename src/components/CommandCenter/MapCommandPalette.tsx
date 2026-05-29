@@ -76,11 +76,12 @@ export default function MapCommandPalette() {
       list.push({ id: `mode-${m.id}`, group: "Map mode", label: m.label, run: () => { setMapMode(m.id); close(); } })
     );
     ([
-      ["layers", "Data Layers"],
+      ["commute", "Commute"],
+      ["school", "Schools"],
       ["color", "Color By"],
       ["draw", "Draw Area"],
       ["compare", "Compare"],
-      ["lenses", "Lenses"],
+      ["lenses", "Saved Views"],
     ] as const).forEach(([mod, label]) =>
       list.push({ id: `open-${mod}`, group: "Open", label: `Open ${label}`, run: () => { setActiveModule(mod); close(); } })
     );

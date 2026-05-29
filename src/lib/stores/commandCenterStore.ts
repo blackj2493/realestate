@@ -20,7 +20,7 @@ export type CommuteMode = "driving" | "walking" | "cycling";
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
  * drawer is open at a time so the map is never buried under stacked panels.
  */
-export type RailModule = "layers" | "color" | "draw" | "compare" | "time" | "lenses";
+export type RailModule = "commute" | "school" | "color" | "draw" | "compare" | "time" | "lenses";
 
 /** Current map viewport extent, used to scope the search to what's on screen. */
 export interface MapBounds {
