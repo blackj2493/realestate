@@ -22,7 +22,10 @@
  * - Patch in place via jsonb_set so the UPDATE never round-trips the whole
  *   payload.
  * - Idempotent: rows whose /Media returns empty still get `media: []` so the
- *   key exists and the WHERE NOT (?) skips them on re-run.
+ *   key exists and re-runs cost nothing extra at write time. Stale `media: []`
+ *   IS re-eligible for write so AMPRE photo availability changes between runs
+ *   propagate (the prior `NOT (? 'media')` guard alone stuck listings forever
+ *   when their photos appeared after the first pass; now we re-write on empty).
  * - Typesense partial update: after a successful Postgres write, push
  *   `primaryImageUrl` to the matching Typesense doc (`properties` for active,
  *   `sold_listings` for sold-and-in-window). Partial updates fail-soft when
@@ -159,13 +162,19 @@ async function updateActiveListing(
 ): Promise<{ written: boolean; skipped: boolean }> {
   // Patch BOTH full_payload.media (read by detail page) AND media_urls (read by
   // dashboard cards via the Typesense doc's RawImages fallback). The WHERE
-  // guard idempotent-skips already-populated rows.
+  // guard allows re-writes when the row has NO `media` key OR when the stored
+  // `media` is an empty array (stale-empty sentinel from a prior run when
+  // AMPRE returned no records). This catches listings whose photos became
+  // available between runs — without it, the prior `media: []` blocks the
+  // refresh forever. Rows with REAL media (non-empty array) are still
+  // protected from accidental clobbering.
   const sql = `
     UPDATE listings
        SET full_payload = jsonb_set(full_payload, '{media}', $1::jsonb, true),
            media_urls = $2::text[]
      WHERE listing_key = $3
-       AND NOT (full_payload ? 'media')`;
+       AND (NOT (full_payload ? 'media')
+            OR jsonb_array_length(full_payload->'media') = 0)`;
   const mediaJson = JSON.stringify(media);
   const mediaUrls = collectMediaUrls({ media });
 
@@ -306,12 +315,14 @@ async function updateSoldListing(
 ): Promise<{ written: boolean; skipped: boolean }> {
   // raw_vow_sold has no separate media_urls column — patch raw_payload.media
   // only. selectPrimaryImage / collectMediaUrls read from raw_payload.media
-  // for downstream consumers.
+  // for downstream consumers. Same stale-empty handling as the active path
+  // (see updateActiveListing): allow re-writes when stored media is `[]`.
   const sql = `
     UPDATE raw_vow_sold
        SET raw_payload = jsonb_set(raw_payload, '{media}', $1::jsonb, true)
      WHERE listing_key = $2
-       AND NOT (raw_payload ? 'media')`;
+       AND (NOT (raw_payload ? 'media')
+            OR jsonb_array_length(raw_payload->'media') = 0)`;
   const mediaJson = JSON.stringify(media);
 
   let attempt = 0;
