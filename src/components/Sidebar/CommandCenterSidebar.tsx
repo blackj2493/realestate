@@ -22,6 +22,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import Logo from "@/components/Logo";
 
 // Persona types
 export type PersonaType = "primary" | "yield" | "value-add";
@@ -312,10 +313,13 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
     <div className={cn("bg-slate-900 h-full flex flex-col", className)}>
       {/* Header */}
       <div className="p-4 border-b border-slate-800">
-        <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          PureProperty.ca Terminal
-        </h2>
+          <Logo size="sm" theme="dark" />
+          <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
+            Terminal
+          </span>
+        </div>
         <div className="flex items-center gap-2 mt-1">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <p className="text-[10px] text-emerald-500/70">Typesense: Connected</p>

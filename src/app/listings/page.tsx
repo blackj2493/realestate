@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Button } from "@/components/ui/button";
@@ -129,11 +130,8 @@ function ListingsPageContent() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">PP</span>
-              </div>
-              <span className="text-xl font-bold">PureProperty</span>
+            <Link href="/" className="flex items-center" aria-label="PureProperty.ca home">
+              <Logo size="md" theme="dark" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/properties" className="text-sm font-medium text-primary">

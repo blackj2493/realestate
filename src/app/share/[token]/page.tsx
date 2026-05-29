@@ -6,6 +6,7 @@
  */
 
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { notFound } from "next/navigation";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
@@ -77,11 +78,8 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">PP</span>
-            </div>
-            <span className="text-xl font-bold">PureProperty</span>
+          <Link href="/" className="flex items-center" aria-label="PureProperty.ca home">
+            <Logo size="md" theme="dark" />
           </Link>
           <Link href="/properties" className="text-sm font-medium hover:text-primary">
             Explore the terminal →

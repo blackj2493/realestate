@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import {
   LineChart,
   Line,
@@ -101,9 +102,8 @@ export default function AnalyticsPage() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Building2 className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">PureProperty</span>
+            <Link href="/" className="flex items-center" aria-label="PureProperty.ca home">
+              <Logo size="md" theme="dark" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/properties" className="text-sm font-medium hover:text-primary">

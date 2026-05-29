@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import MagicLinkForm from "@/components/auth/MagicLinkForm";
 
 export const metadata = {
@@ -9,11 +10,8 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
       <header className="px-4 py-3">
-        <Link
-          href="/"
-          className="terminal-font text-sm font-black uppercase tracking-widest text-cyan-400"
-        >
-          PP.CA
+        <Link href="/" className="inline-flex items-center" aria-label="PureProperty.ca home">
+          <Logo size="md" theme="dark" />
         </Link>
       </header>
 
