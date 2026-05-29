@@ -36,6 +36,8 @@ export type AnchorBasis =
   | 'blend'   // local comps + de-staled prior shrunk together
   | 'prior'   // no usable local comps; prior (g(t₀)+δ_c) carried the level
   | 'parent'  // community offset missing; parent city × sub-type level used
+  | 'peer'    // saturating outlier priced by the peer comp-grid (homes like it)
+  | 'floor'   // saturating outlier, too few peers — clamped number as a neighbourhood FLOOR
   | 'none';   // truly nothing — render "estimate unavailable"
 
 export interface AVMResult {
@@ -120,3 +122,22 @@ export const HUBER_K = 1.345;
 export const BAND_HIGH = 0.08;
 export const BAND_MED = 0.15;
 export const BAND_LOW = 0.25;
+
+/**
+ * Peer comp-grid tuning (atypical / high-end homes). Fires only when the standard
+ * coefficient adjustment saturates the ±ADJ_CLAMP clamp — see calculator.isSaturating.
+ * Stays independent of list price (CLAUDE.md §2).
+ *
+ *   MIN_PEER_NEFF       — effective peers a geography rung must clear to anchor on
+ *                         peers; below it, escalate, then fall back to a FLOOR.
+ *   MIN_PEERS_FOR_HIGH  — effective peers required before a peer estimate may be
+ *                         labelled HIGH confidence (a tight band on 3 comps isn't HIGH).
+ *   BW_*                — Gaussian similarity bandwidths (std-units) on the size
+ *                         proxies the comps actually carry: beds, baths, log-lot-area.
+ * Phase-1 defaults; tune against raw_vow_sold like the anchor-pipeline constants.
+ */
+export const MIN_PEER_NEFF = 6;
+export const MIN_PEERS_FOR_HIGH = 8;
+export const BW_BEDS = 1;
+export const BW_BATHS = 1;
+export const BW_LOT = 0.5;

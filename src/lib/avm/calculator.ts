@@ -38,6 +38,7 @@ import {
   BAND_HIGH,
   BAND_MED,
   BAND_LOW,
+  MIN_PEERS_FOR_HIGH,
 } from './types';
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -58,6 +59,64 @@ export interface AVMMarketData {
   basePrice: number | null;
   /** Per-feature standardized coefficients (beta/mean/std) for this market. */
   coefficients: CoefficientRow[];
+  /**
+   * Peer comp-grid anchor for SATURATING outliers (CLAUDE.md §10). Supplied by the
+   * async layer ONLY when isSaturating() is true:
+   *   • AnchorResult → price the subject off homes like it (basis 'peer');
+   *   • null         → saturating but too few peers → keep the clamped number as a
+   *                    neighbourhood FLOOR with capped confidence (basis 'floor');
+   *   • undefined    → not evaluated → the normal clamp path runs unchanged.
+   * Honored only when the clamp actually binds, so non-saturating homes are frozen.
+   */
+  peer?: AnchorResult | null;
+}
+
+/** One feature's standardized log-space contribution β·clamp(z). */
+function featureContributions(
+  input: AVMInput,
+  coeff: Map<string, CoefficientRow>
+): { key: keyof AVMAdjustmentBreakdown; contribution: number }[] {
+  const interiorScore = 6 - input.interiorTier;
+  const exteriorScore = 5 - input.exteriorTier;
+  const basementScore = 10 - input.basementTier;
+
+  const features: { name: string; value: number | null; key: keyof AVMAdjustmentBreakdown }[] = [
+    { name: 'building_area_total', value: input.buildingAreaTotal, key: 'buildingAreaAdjustment' },
+    { name: 'lot_width', value: input.lotWidth, key: 'lotWidthAdjustment' },
+    { name: 'bedrooms_above_grade', value: input.bedroomsAboveGrade, key: 'bedroomsAdjustment' },
+    { name: 'bathrooms_total_integer', value: input.bathroomsTotalInteger, key: 'bathroomsAdjustment' },
+    { name: 'parking_total', value: input.parkingTotal, key: 'parkingAdjustment' },
+    { name: 'basement_score', value: basementScore, key: 'basementAdjustment' },
+    { name: 'interior_score', value: interiorScore, key: 'interiorAdjustment' },
+    { name: 'exterior_score', value: exteriorScore, key: 'exteriorAdjustment' },
+  ];
+
+  const out: { key: keyof AVMAdjustmentBreakdown; contribution: number }[] = [];
+  for (const f of features) {
+    if (f.value === null) continue;
+    const c = coeff.get(f.name);
+    if (!c || c.beta === 0 || !(c.std > 0)) continue;
+    const z = clamp((f.value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
+    out.push({ key: f.key, contribution: c.beta * z });
+  }
+  return out;
+}
+
+/**
+ * True when the subject's coefficient adjustment would SATURATE the ±ADJ_CLAMP
+ * clamp under the coefficient engine — i.e. the clamp is about to distort the
+ * number. This is the sole trigger for the peer comp-grid; for every other home
+ * the clamp is a no-op and the estimate is unchanged from the pre-peer behaviour.
+ */
+export function isSaturating(
+  input: AVMInput,
+  coefficients: CoefficientRow[],
+  r2: number | null
+): boolean {
+  if (r2 === null || r2 < COEFFICIENT_ENGINE_THRESHOLD) return false;
+  const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
+  const total = featureContributions(input, coeff).reduce((a, c) => a + c.contribution, 0);
+  return Math.abs(total) > ADJ_CLAMP;
 }
 
 export async function calculateAVM(
@@ -96,7 +155,7 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
 
   // Gate: coefficient engine only when the market model is accurate enough.
   if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD) {
-    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients);
+    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients, market.peer);
   }
 
   // Anchor-only: estimate = anchor; band derived directly from predSD.
@@ -117,39 +176,60 @@ function calculateWithCoefficients(
   anchor: AnchorResult,
   r2Score: number,
   input: AVMInput,
-  coefficients: CoefficientRow[]
+  coefficients: CoefficientRow[],
+  peer?: AnchorResult | null
 ): AVMResult {
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
 
-  const interiorScore = 6 - input.interiorTier;
-  const exteriorScore = 5 - input.exteriorTier;
-  const basementScore = 10 - input.basementTier;
-
-  const features: { name: string; value: number | null; key: keyof AVMAdjustmentBreakdown }[] = [
-    { name: 'building_area_total', value: input.buildingAreaTotal, key: 'buildingAreaAdjustment' },
-    { name: 'lot_width', value: input.lotWidth, key: 'lotWidthAdjustment' },
-    { name: 'bedrooms_above_grade', value: input.bedroomsAboveGrade, key: 'bedroomsAdjustment' },
-    { name: 'bathrooms_total_integer', value: input.bathroomsTotalInteger, key: 'bathroomsAdjustment' },
-    { name: 'parking_total', value: input.parkingTotal, key: 'parkingAdjustment' },
-    { name: 'basement_score', value: basementScore, key: 'basementAdjustment' },
-    { name: 'interior_score', value: interiorScore, key: 'interiorAdjustment' },
-    { name: 'exterior_score', value: exteriorScore, key: 'exteriorAdjustment' },
-  ];
-
   const breakdown = blankBreakdown();
-  let total = 0;
-
-  for (const f of features) {
-    if (f.value === null) continue;
-    const c = coeff.get(f.name);
-    if (!c || c.beta === 0 || !(c.std > 0)) continue;
-    const z = clamp((f.value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
-    const contribution = c.beta * z;
-    total += contribution;
-    breakdown[f.key] = Math.round(baseAnchor * contribution);
+  let rawTotal = 0;
+  for (const c of featureContributions(input, coeff)) {
+    rawTotal += c.contribution;
+    breakdown[c.key] = Math.round(baseAnchor * c.contribution);
   }
 
-  total = clamp(total, -ADJ_CLAMP, ADJ_CLAMP);
+  // ── Peer comp-grid branch: ONLY when the clamp actually binds (saturating
+  //    outlier). Non-saturating homes can never enter here, so their number is
+  //    bit-for-bit unchanged regardless of what `peer` holds. ──────────────────
+  if (Math.abs(rawTotal) > ADJ_CLAMP && peer !== undefined) {
+    if (peer) {
+      // Peers priced the subject directly (grid already adjusted to it) — no
+      // clamped feature adjustment, band straight from the peer dispersion.
+      const peerPrice = Math.exp(peer.anchorLevel);
+      return finish(
+        {
+          estimatedValue: Math.round(peerPrice),
+          anchorPrice: Math.round(peerPrice),
+          totalAdjustmentPct: 0,
+          engineMode: ENGINE_MODE_COEFFICIENT_ADJUSTED,
+          r2Score,
+          breakdown: blankBreakdown(),
+          adjustmentLog: 0,
+          anchor: peer,
+        },
+        { minPeersForHigh: MIN_PEERS_FOR_HIGH, effectivePeers: peer.nEff }
+      );
+    }
+    // peer === null → too few peers anywhere: keep the clamped number but present
+    // it honestly as a neighbourhood FLOOR (capped confidence, relabelled basis).
+    const clampedTotal = clamp(rawTotal, -ADJ_CLAMP, ADJ_CLAMP);
+    return finish(
+      {
+        estimatedValue: Math.round(baseAnchor * Math.exp(clampedTotal)),
+        anchorPrice: Math.round(baseAnchor),
+        totalAdjustmentPct: Math.exp(clampedTotal) - 1,
+        engineMode: ENGINE_MODE_COEFFICIENT_ADJUSTED,
+        r2Score,
+        breakdown,
+        adjustmentLog: clampedTotal,
+        anchor,
+      },
+      { capConfidenceToMedium: true, forceBasis: 'floor' }
+    );
+  }
+
+  // ── Normal path (unchanged): clamp the cumulative adjustment. ────────────────
+  const total = clamp(rawTotal, -ADJ_CLAMP, ADJ_CLAMP);
   const estimatedValue = Math.round(baseAnchor * Math.exp(total));
 
   return finish({
@@ -169,16 +249,27 @@ function calculateWithCoefficients(
  * from its relative half-width. SUPPRESS the estimate entirely when the band is
  * wider than BAND_LOW — we don't publish a number we can't stand behind.
  */
-function finish(args: {
-  estimatedValue: number;
-  anchorPrice: number;
-  totalAdjustmentPct: number;
-  engineMode: AVMResult['engineMode'];
-  r2Score: number | null;
-  breakdown: AVMAdjustmentBreakdown;
-  adjustmentLog: number; // total adjustment in log-space (already clamped)
-  anchor: AnchorResult;
-}): AVMResult {
+function finish(
+  args: {
+    estimatedValue: number;
+    anchorPrice: number;
+    totalAdjustmentPct: number;
+    engineMode: AVMResult['engineMode'];
+    r2Score: number | null;
+    breakdown: AVMAdjustmentBreakdown;
+    adjustmentLog: number; // total adjustment in log-space (already clamped)
+    anchor: AnchorResult;
+  },
+  opts?: {
+    /** Peer mode: forbid HIGH unless effectivePeers ≥ minPeersForHigh. */
+    minPeersForHigh?: number;
+    effectivePeers?: number;
+    /** Floor mode: a HIGH band is downgraded to MEDIUM (we won't be HIGH on a clamp). */
+    capConfidenceToMedium?: boolean;
+    /** Override the surfaced basis (e.g. 'floor') when not suppressed. */
+    forceBasis?: AnchorBasis;
+  }
+): AVMResult {
   const { anchor, adjustmentLog } = args;
 
   // Band on price: exp(level ± SD) × exp(feature adjustment).
@@ -197,12 +288,27 @@ function finish(args: {
     confidence = CONFIDENCE_LOW;
     estimatedValue = 0;
     basis = 'none';
-  } else if (relHalfWidth < BAND_HIGH) {
-    confidence = CONFIDENCE_HIGH;
-  } else if (relHalfWidth < BAND_MED) {
-    confidence = CONFIDENCE_MEDIUM;
   } else {
-    confidence = CONFIDENCE_LOW;
+    if (relHalfWidth < BAND_HIGH) {
+      confidence = CONFIDENCE_HIGH;
+    } else if (relHalfWidth < BAND_MED) {
+      confidence = CONFIDENCE_MEDIUM;
+    } else {
+      confidence = CONFIDENCE_LOW;
+    }
+    // A tight band over too few peers is not HIGH — demote it.
+    if (
+      confidence === CONFIDENCE_HIGH &&
+      opts?.minPeersForHigh !== undefined &&
+      (opts.effectivePeers ?? 0) < opts.minPeersForHigh
+    ) {
+      confidence = CONFIDENCE_MEDIUM;
+    }
+    // Floor mode never claims HIGH — it's a clamped lower bound, not a valuation.
+    if (confidence === CONFIDENCE_HIGH && opts?.capConfidenceToMedium) {
+      confidence = CONFIDENCE_MEDIUM;
+    }
+    if (opts?.forceBasis) basis = opts.forceBasis;
   }
 
   return {
