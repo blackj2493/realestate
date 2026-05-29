@@ -244,6 +244,88 @@ export async function fetchMediaForKeys(
 }
 
 /**
+ * Restore previously-stored media onto listings whose new /Media fetch
+ * returned empty. Mutates `listings` in place; returns the number of
+ * listings whose media was restored from the DB.
+ *
+ * Why this exists — sync clobber protection:
+ *   enrichListingsWithMedia is best-effort. A transient AMPRE error (rate
+ *   limit, network hiccup, brief outage) leaves the affected listings with
+ *   `media = []`. sync.ts then writes the full raw object to
+ *   listings.full_payload via UPSERT, which REPLACES the entire JSONB
+ *   column — wiping any media a prior successful sync or the manual
+ *   backfill had populated. Run cumulatively, this slowly erodes coverage.
+ *
+ * Strategy: for listings whose current `media` is empty/missing, batch-
+ * fetch the EXISTING `media` JSONB sub-tree from Supabase and restore it
+ * onto the listing. The transformer downstream re-derives `media_urls`
+ * via collectMediaUrls(), so both columns stay consistent.
+ *
+ * Tradeoff: we'll preserve stale URLs for listings whose photos AMPRE
+ * legitimately removed (e.g. Closed listings). That's preferable to
+ * clobbering real photos when AMPRE hiccups, because:
+ *  - Closed listings aren't shown on the active dashboard
+ *  - Stale CDN URLs eventually 404 → ListingThumbnail falls back to text
+ *  - The alternative (write empty on any AMPRE failure) is unrecoverable
+ *
+ * Best-effort: a lookup failure is logged but never throws.
+ *
+ * Parameterized for active (`listings` / `full_payload`) and sold
+ * (`raw_vow_sold` / `raw_payload`) paths.
+ */
+export async function preserveExistingMedia(
+  listings: any[],
+  // Loosely typed to avoid importing the full Supabase client type into
+  // this self-contained worker module; only `.from().select().in()` used.
+  supabase: any,
+  table: 'listings' | 'raw_vow_sold' = 'listings',
+  payloadColumn: 'full_payload' | 'raw_payload' = 'full_payload'
+): Promise<number> {
+  const emptyKeys = listings
+    .filter((l) => !Array.isArray(l?.media) || l.media.length === 0)
+    .map((l) => l?.ListingKey)
+    .filter(Boolean);
+
+  if (emptyKeys.length === 0) return 0;
+
+  try {
+    // PostgREST JSONB sub-tree projection — same pattern soldIndexer.ts uses.
+    // No full-payload detoast: only the `media` key is read.
+    const select = `listing_key, media:${payloadColumn}->media`;
+    const { data, error } = await supabase
+      .from(table)
+      .select(select)
+      .in('listing_key', emptyKeys);
+
+    if (error || !data) {
+      console.warn(
+        `   ⚠️  Media preservation lookup failed (non-fatal): ${error?.message || 'no data'}`
+      );
+      return 0;
+    }
+
+    const existingByKey = new Map<string, StoredMedia[]>();
+    for (const row of data as Array<{ listing_key: string; media: unknown }>) {
+      const media = Array.isArray(row.media) ? (row.media as StoredMedia[]) : [];
+      if (media.length > 0) existingByKey.set(row.listing_key, media);
+    }
+
+    let preserved = 0;
+    for (const listing of listings) {
+      const existing = existingByKey.get(listing?.ListingKey);
+      if (existing && (!Array.isArray(listing.media) || listing.media.length === 0)) {
+        listing.media = existing;
+        preserved++;
+      }
+    }
+    return preserved;
+  } catch (err: any) {
+    console.warn(`   ⚠️  Media preservation failed (non-fatal): ${err.message}`);
+    return 0;
+  }
+}
+
+/**
  * Per-batch wrapper used by the ingester: mutates `listings` in place by
  * attaching `media: StoredMedia[]` onto each one. Returns the number of
  * listings that received at least one media record (for logging).
