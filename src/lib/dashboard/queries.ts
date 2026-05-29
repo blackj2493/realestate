@@ -79,6 +79,57 @@ export async function fetchRegionStats(area: Area): Promise<RegionStats> {
   };
 }
 
+/**
+ * Active-inventory SHARES that back the persona specialty headline tiles.
+ *
+ * Each field is a full-population COUNT (Typesense `found`) — counting matches is
+ * not "displaying listings", so the §6.3(b) 100-row DISPLAY cap does not apply
+ * (same reasoning as /api/market/region-stats). The comparison band turns each
+ * count into a share of active inventory, which (unlike a raw count) is
+ * comparable across markets of very different sizes. All deterministic (§4).
+ *
+ * Why shares and not e.g. a regional median carry: CapitalBurnRateMonthly is not
+ * faceted in the Typesense schema, so there's no cheap full-population aggregate
+ * for it — and sampling the top-N would bias the figure. Counts of a filterable
+ * flag are exact and cheap.
+ */
+export interface RegionSpecialtyStats {
+  /** Priced active listings — the denominator for every share below. */
+  activeCount: number;
+  /** is_density_ready listings (surplus parking + detached) — builder supply. */
+  densityReadyCount: number;
+  /** Listings carrying a price cut from their first-seen price — motivated sellers. */
+  priceCutCount: number;
+  /** Listings whose ExtrapolatedCapRate clears the cashflow floor. */
+  cashflowCount: number;
+}
+
+/** ExtrapolatedCapRate (%) at/above which a listing "pencils" for a cashflow buyer. */
+export const CASHFLOW_CAP_FLOOR = 4.5;
+
+/** Count-only Typesense query (perPage:0 → just the `found` total). */
+async function countMatching(filter: string): Promise<number> {
+  const res = await searchListings({ query: '*', rawFilterBy: filter, perPage: 0 });
+  return res.totalFound;
+}
+
+/** Specialty inventory shares for an area, used by the persona comparison tiles. */
+export async function fetchRegionSpecialty(area: Area): Promise<RegionSpecialtyStats> {
+  const base = areaFilter(area);
+  const [active, density, priceCut, cashflow] = await Promise.all([
+    countMatching(combine(base, 'ListPrice:>0')),
+    countMatching(combine(base, 'is_density_ready:=true')),
+    countMatching(combine(base, 'TotalPriceDrop:>0')),
+    countMatching(combine(base, `ExtrapolatedCapRate:>=${CASHFLOW_CAP_FLOOR}`)),
+  ]);
+  return {
+    activeCount: active,
+    densityReadyCount: density,
+    priceCutCount: priceCut,
+    cashflowCount: cashflow,
+  };
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVITY_PRICE_FLOOR = 50000; // mirror the sold feed: excludes leases/rentals
 

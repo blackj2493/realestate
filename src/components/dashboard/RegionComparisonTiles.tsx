@@ -5,18 +5,32 @@
  * active persona, surfaces 3 headline metrics per region, and EVERY tile carries a
  * comparison so the value reads good/bad at a glance:
  *   - medianPrice → 12-mo sparkline + YoY
- *   - peer metrics (cap rate, $/sqft, months supply, % stale) → delta vs the median
- *     of the user's OTHER regions (single-region fallback: market temperature)
+ *   - peer metrics (cap rate, $/sqft, months supply, % stale, specialty shares) →
+ *     delta vs the median of the user's OTHER regions (single-region fallback:
+ *     market temperature)
  *   - soldToList → colored vs the 100%-of-asking threshold
  *
- * Data comes from the SAME fetchRegionScore() the scorecard uses (server-side
- * full-population aggregates, §4-compliant) — no Typesense sampling, no new endpoint.
- * Uses MEDIAN cap rate, never the outlier "top".
+ * Two backing sources, both §4-compliant full-population aggregates (no Typesense
+ * 100-row sampling): fetchRegionScore() (server-side, sold+active stats) and
+ * fetchRegionSpecialty() (Typesense counts → share of active inventory). Specialty
+ * shares are only fetched when the active persona actually surfaces one, so the
+ * default "smart" persona fires no extra queries. Uses MEDIAN cap rate, never the
+ * outlier "top".
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchRegionScore, type RegionScore } from "@/lib/dashboard/marketAggregates";
-import { PERSONA_DASHBOARD, type HeadlineMetricId } from "@/lib/dashboard/personaDashboard";
+import {
+  fetchRegionSpecialty,
+  type RegionSpecialtyStats,
+  CASHFLOW_CAP_FLOOR,
+} from "@/lib/dashboard/queries";
+import { regionArea } from "@/lib/dashboard/area";
+import {
+  PERSONA_DASHBOARD,
+  SPECIALTY_METRIC_IDS,
+  type HeadlineMetricId,
+} from "@/lib/dashboard/personaDashboard";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 import {
   Sparkline,
@@ -30,27 +44,67 @@ import {
 type Dir = "higherGood" | "lowerGood" | "neutral";
 type Kind = "yoySpark" | "peer" | "threshold";
 
+/** Combined per-region payload — RegionScore is always present; specialty is fetched
+ *  only when the active persona surfaces a share metric (else null). */
+interface RegionData {
+  score: RegionScore;
+  specialty: RegionSpecialtyStats | null;
+}
+
 interface TileMetric {
   label: string;
-  get: (s: RegionScore) => number | null;
+  get: (d: RegionData) => number | null;
   format: (n: number) => string;
+  /** Optional secondary line under the comparison (e.g. the raw count behind a share). */
+  sub?: (d: RegionData) => string | null;
   dir: Dir;
   kind: Kind;
 }
+
+const SPECIALTY = new Set<HeadlineMetricId>(SPECIALTY_METRIC_IDS);
 
 const pct1 = (n: number) => `${n.toFixed(1)}%`;
 const ppsf = (n: number) => `$${Math.round(n)}`;
 const mo = (n: number) => `${n.toFixed(1)} mo`;
 
-// Only RegionScore-backed metrics here. Specialty tiles (carryBurn/priceDrop/
-// densityCount) await the Phase 5 fetchRegionStats extension.
+/** Share of active inventory matching a count (null when there's no active inventory). */
+const share = (count: number, active: number): number | null =>
+  active > 0 ? (count / active) * 100 : null;
+
 const METRICS: Partial<Record<HeadlineMetricId, TileMetric>> = {
-  medianPrice: { label: "Median Price", get: (s) => s.medianPrice, format: compactPrice, dir: "neutral", kind: "yoySpark" },
-  medianPpsf: { label: "$ / Sqft", get: (s) => s.medianPpsf, format: ppsf, dir: "lowerGood", kind: "peer" },
-  medianCapRate: { label: "Median Cap Rate", get: (s) => s.medianCapRate, format: pct1, dir: "higherGood", kind: "peer" },
-  monthsSupply: { label: "Months Supply", get: (s) => s.monthsOfSupply, format: mo, dir: "lowerGood", kind: "peer" },
-  soldToList: { label: "Sold / List", get: (s) => s.soldToListPct, format: pct1, dir: "neutral", kind: "threshold" },
-  pctStale: { label: "% Stale", get: (s) => s.stalePct, format: (n) => `${n.toFixed(0)}%`, dir: "lowerGood", kind: "peer" },
+  // ── RegionScore-backed ──
+  medianPrice: { label: "Median Price", get: (d) => d.score.medianPrice, format: compactPrice, dir: "neutral", kind: "yoySpark" },
+  medianPpsf: { label: "$ / Sqft", get: (d) => d.score.medianPpsf, format: ppsf, dir: "lowerGood", kind: "peer" },
+  medianCapRate: { label: "Median Cap Rate", get: (d) => d.score.medianCapRate, format: pct1, dir: "higherGood", kind: "peer" },
+  monthsSupply: { label: "Months Supply", get: (d) => d.score.monthsOfSupply, format: mo, dir: "lowerGood", kind: "peer" },
+  soldToList: { label: "Sold / List", get: (d) => d.score.soldToListPct, format: pct1, dir: "neutral", kind: "threshold" },
+  pctStale: { label: "% Stale", get: (d) => d.score.stalePct, format: (n) => `${n.toFixed(0)}%`, dir: "lowerGood", kind: "peer" },
+
+  // ── Specialty inventory shares (fetchRegionSpecialty) ──
+  cashflowShare: {
+    label: "Cashflow-Grade",
+    get: (d) => (d.specialty ? share(d.specialty.cashflowCount, d.specialty.activeCount) : null),
+    format: pct1,
+    sub: (d) => (d.specialty ? `${d.specialty.cashflowCount.toLocaleString()} ≥${CASHFLOW_CAP_FLOOR}% cap` : null),
+    dir: "higherGood",
+    kind: "peer",
+  },
+  priceCutShare: {
+    label: "Price-Cut Share",
+    get: (d) => (d.specialty ? share(d.specialty.priceCutCount, d.specialty.activeCount) : null),
+    format: pct1,
+    sub: (d) => (d.specialty ? `${d.specialty.priceCutCount.toLocaleString()} reduced` : null),
+    dir: "higherGood",
+    kind: "peer",
+  },
+  densityShare: {
+    label: "Density-Ready",
+    get: (d) => (d.specialty ? share(d.specialty.densityReadyCount, d.specialty.activeCount) : null),
+    format: pct1,
+    sub: (d) => (d.specialty ? `${d.specialty.densityReadyCount.toLocaleString()} lots` : null),
+    dir: "higherGood",
+    kind: "peer",
+  },
 };
 
 const median = (nums: number[]): number | null => {
@@ -69,18 +123,19 @@ function thresholdValueClass(v: number): string {
 
 function Tile({
   metric,
-  score,
+  data,
   peerMedian,
 }: {
   metric: TileMetric;
-  score: RegionScore;
+  data: RegionData;
   peerMedian: number | null;
 }) {
-  const value = metric.get(score);
+  const value = metric.get(data);
   const valueClass =
     metric.kind === "threshold" && value != null
       ? thresholdValueClass(value)
       : "text-cyan-400";
+  const sub = value != null ? metric.sub?.(data) ?? null : null;
 
   return (
     <div className="flex flex-col gap-1 border border-slate-800 bg-slate-900/40 px-3 py-2">
@@ -93,8 +148,8 @@ function Tile({
       <div className="flex min-h-[16px] items-center">
         {value == null ? null : metric.kind === "yoySpark" ? (
           <div className="flex items-center gap-2">
-            <Sparkline data={score.priceSeries} width={64} height={18} />
-            <YoY pct={score.yoyPct} />
+            <Sparkline data={data.score.priceSeries} width={64} height={18} />
+            <YoY pct={data.score.yoyPct} />
           </div>
         ) : metric.kind === "threshold" ? (
           <span className="terminal-font text-[10px] text-slate-500">
@@ -104,9 +159,14 @@ function Tile({
           <PeerDelta value={value} peerMedian={peerMedian} format={metric.format} dir={metric.dir} />
         ) : (
           // Single-region fallback — market temperature instead of a peer delta.
-          <TemperatureBadge temperature={score.temperature} />
+          <TemperatureBadge temperature={data.score.temperature} />
         )}
       </div>
+      {sub && (
+        <div className="terminal-font text-[9px] uppercase tracking-wider text-slate-600">
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -118,17 +178,35 @@ export default function RegionComparisonTiles({
   regions: string[];
   persona: PersonaType;
 }) {
-  const [scores, setScores] = useState<RegionScore[]>([]);
+  const [datas, setDatas] = useState<RegionData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const metricIds = PERSONA_DASHBOARD[persona].headlineMetrics.filter(
+    (id): id is HeadlineMetricId => METRICS[id] != null
+  );
 
   const regionsKey = regions.join("|");
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.allSettled(regions.map((r) => fetchRegionScore(r)))
+    // Only pay for the specialty count queries when a share metric is on screen.
+    const needSpecialty = PERSONA_DASHBOARD[persona].headlineMetrics.some((id) =>
+      SPECIALTY.has(id)
+    );
+    Promise.allSettled(
+      regions.map(async (r): Promise<RegionData> => {
+        const [score, specialty] = await Promise.all([
+          fetchRegionScore(r),
+          needSpecialty
+            ? fetchRegionSpecialty(regionArea(r)).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        return { score, specialty };
+      })
+    )
       .then((results) => {
         if (!alive) return;
-        setScores(
+        setDatas(
           results.flatMap((res) => (res.status === "fulfilled" ? [res.value] : []))
         );
       })
@@ -137,24 +215,20 @@ export default function RegionComparisonTiles({
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsKey]);
-
-  const metricIds = PERSONA_DASHBOARD[persona].headlineMetrics.filter(
-    (id): id is HeadlineMetricId => METRICS[id] != null
-  );
+  }, [regionsKey, persona]);
 
   // Peer median per metric, computed across all loaded regions (excluded per-tile).
   const peerValues = useMemo(() => {
     const map: Partial<Record<HeadlineMetricId, number[]>> = {};
     for (const id of metricIds) {
       const m = METRICS[id]!;
-      map[id] = scores
-        .map((s) => m.get(s))
+      map[id] = datas
+        .map((d) => m.get(d))
         .filter((v): v is number => v != null);
     }
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scores, regionsKey, persona]);
+  }, [datas, regionsKey, persona]);
 
   if (regions.length === 0) return null;
 
@@ -174,22 +248,22 @@ export default function RegionComparisonTiles({
 
   return (
     <div className="space-y-4">
-      {scores.map((score) => (
-        <div key={score.region} className="space-y-1.5">
+      {datas.map((d) => (
+        <div key={d.score.region} className="space-y-1.5">
           {regions.length > 1 && (
             <div className="terminal-font text-[11px] uppercase tracking-wider text-slate-400">
-              {score.region}
+              {d.score.region}
             </div>
           )}
           <div className="grid grid-cols-3 gap-3">
             {metricIds.map((id) => {
               const m = METRICS[id]!;
               const all = peerValues[id] ?? [];
-              const own = m.get(score);
+              const own = m.get(d);
               // Peer median EXCLUDING this region's own value.
               const peers = own == null ? all : removeOnce(all, own);
               return (
-                <Tile key={id} metric={m} score={score} peerMedian={median(peers)} />
+                <Tile key={id} metric={m} data={d} peerMedian={median(peers)} />
               );
             })}
           </div>

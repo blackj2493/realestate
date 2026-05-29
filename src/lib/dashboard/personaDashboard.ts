@@ -16,11 +16,13 @@ import type { PersonaType } from '@/lib/personas/personaConfig';
 import type { BoardId } from './boards';
 
 /**
- * Headline comparison metrics. The first group is backed by `RegionScore`
- * (fetchRegionScore) and shippable now. The starred group is Typesense-only and
- * deferred to Phase 5 (needs a fetchRegionStats extension).
+ * Headline comparison metrics. Two backing sources:
+ *  - the RegionScore group (fetchRegionScore — server-side full-population aggregates)
+ *  - the specialty SHARE group (fetchRegionSpecialty — full-population Typesense counts
+ *    expressed as a share of active inventory; see RegionSpecialtyStats in queries.ts)
  */
 export type HeadlineMetricId =
+  // ── RegionScore-backed ──
   | 'medianPrice'
   | 'medianPpsf'
   | 'medianCapRate'
@@ -28,10 +30,13 @@ export type HeadlineMetricId =
   | 'soldToList'
   | 'pctStale'
   | 'activeCount'
-  // ── Phase 5 specialty (not in RegionScore yet) ──
-  | 'carryBurn'
-  | 'priceDrop'
-  | 'densityCount';
+  // ── Specialty inventory shares (fetchRegionSpecialty) ──
+  | 'cashflowShare'
+  | 'priceCutShare'
+  | 'densityShare';
+
+/** The subset of HeadlineMetricId backed by fetchRegionSpecialty, not RegionScore. */
+export const SPECIALTY_METRIC_IDS = ['cashflowShare', 'priceCutShare', 'densityShare'] as const;
 
 export interface PersonaDashboardSpec {
   /** Ordered boards that lead for this persona (intersected with enabled boards). */
@@ -47,15 +52,15 @@ export const PERSONA_DASHBOARD: Record<PersonaType, PersonaDashboardSpec> = {
   },
   cashflow: {
     featuredBoards: ['cap_rate', 'carry', 'suite'],
-    headlineMetrics: ['medianCapRate', 'soldToList', 'monthsSupply'],
+    headlineMetrics: ['medianCapRate', 'cashflowShare', 'soldToList'],
   },
   flippers: {
     featuredBoards: ['price_drop', 'fresh', 'carry'],
-    headlineMetrics: ['pctStale', 'soldToList', 'medianPpsf'],
+    headlineMetrics: ['pctStale', 'priceCutShare', 'soldToList'],
   },
   builders: {
     featuredBoards: ['density', 'suite', 'cap_rate'],
-    headlineMetrics: ['medianPrice', 'medianPpsf', 'monthsSupply'],
+    headlineMetrics: ['medianPrice', 'densityShare', 'monthsSupply'],
   },
 };
 
