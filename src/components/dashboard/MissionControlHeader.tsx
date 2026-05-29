@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
+import Logo from "@/components/Logo";
 import AccountButton from "@/components/auth/AccountButton";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 import PersonaSwitcher from "@/components/dashboard/PersonaSwitcher";
@@ -34,9 +35,10 @@ export default function MissionControlHeader({
       <div className="flex items-center gap-3 px-4 py-3">
         <Link
           href="/properties"
-          className="terminal-font shrink-0 text-sm font-black uppercase tracking-widest text-cyan-400"
+          className="flex shrink-0 items-center"
+          aria-label="PureProperty.ca home"
         >
-          PP.CA
+          <Logo size="sm" theme="dark" />
         </Link>
 
         <form onSubmit={submit} className="relative max-w-2xl flex-1">

@@ -7,8 +7,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Logo from "@/components/Logo";
 import { useCommandCenterStore, type PersonaType } from "@/lib/stores/commandCenterStore";
 import { PERSONA_LIST } from "@/lib/personas/personaConfig";
 import PersonaFilterBar from "./PersonaFilterBar";
@@ -38,17 +38,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         <div className="flex shrink-0 items-center gap-3">
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-2 border border-slate-700 px-3 py-1.5 transition-colors hover:border-cyan-500/60"
+            className="flex shrink-0 items-center px-3 py-1.5"
+            aria-label="PureProperty.ca home"
           >
-            <ChevronsRight
-              className="h-5 w-5 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.75)]"
-              strokeWidth={3}
-            />
-            <span className="terminal-font text-[17px] font-bold tracking-wider">
-              <span className="text-white">PURE</span>
-              <span className="text-slate-400">PROPERTY</span>
-              <span className="text-cyan-400">.CA</span>
-            </span>
+            <Logo size="md" theme="dark" />
           </Link>
 
           <LocationSearch className="w-64 lg:w-96" />
