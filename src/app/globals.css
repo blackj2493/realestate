@@ -51,6 +51,24 @@
 }
 
 /* ============================================================================
+   Base body typography — Inter feature flags + smoothing (design-system spec).
+   Tabular figures for all data so numeric columns align in a financial UI.
+   ============================================================================ */
+body {
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.tabular,
+table,
+[data-tabular],
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
    Command Center Terminal Aesthetic
    ============================================================================ */
 
@@ -106,9 +124,12 @@
   @apply text-[10px] uppercase font-bold tracking-wider rounded-full px-2 py-0.5 border;
 }
 
-/* Font styling for terminal */
+/* Font styling for terminal — now backed by the bundled JetBrains Mono webfont
+   (loaded via next/font in layout.tsx → --font-mono). tabular-nums keeps numeric
+   columns aligned in the ledger/terminal UI. */
 .terminal-font {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', monospace;
+  font-family: var(--font-mono), 'JetBrains Mono', ui-monospace, 'SF Mono', 'Monaco', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Glow effect for primary elements */
