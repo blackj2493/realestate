@@ -43,6 +43,18 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Brand / Logo palette (PureProperty.ca logo spec). `pp.accent`
+        // (cyan) is reserved for live/active UI states, never the logo.
+        pp: {
+          bg: "#0A1828",
+          primary: "#FFFFFF",
+          secondary: "#8FA4B8",
+          tertiary: "#6B7E92",
+          accent: "#1DD3E0",
+          "primary-light": "#0A1828",
+          "secondary-light": "#4A6378",
+          "tertiary-light": "#6B7E92",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

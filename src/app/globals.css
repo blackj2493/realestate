@@ -30,6 +30,23 @@
     --input: 215 28% 17%; /* slate-800 */
     --ring: 189 94% 43%; /* cyan-500 */
     --radius: 0rem; /* sharp geometry — zero rounded corners */
+
+    /* ------------------------------------------------------------------
+       Brand / Logo tokens (PureProperty.ca logo spec).
+       Hex literals — referenced by the <Logo> component and the public
+       lockup SVGs. --pp-accent (cyan) is RESERVED for live/active UI
+       states and must NEVER be used by the logo.
+       ------------------------------------------------------------------ */
+    --pp-bg: #0a1828; /* Primary brand background (dark) */
+    --pp-text-primary: #ffffff; /* PURE on dark, also the chevron */
+    --pp-text-secondary: #8fa4b8; /* PROPERTY on dark */
+    --pp-text-tertiary: #6b7e92; /* .ca on dark */
+    --pp-accent: #1dd3e0; /* Cyan — NOT for the logo */
+
+    /* On-light variants (PDFs, email, invoices) */
+    --pp-text-primary-light: #0a1828;
+    --pp-text-secondary-light: #4a6378;
+    --pp-text-tertiary-light: #6b7e92;
   }
 }
 
