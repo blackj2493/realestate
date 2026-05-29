@@ -168,6 +168,8 @@ export default function DashboardPage() {
           <RegionScorecard
             regions={config.regions}
             propertyTypes={config.marketActivity.propertyTypes}
+            minBeds={config.marketActivity.minBeds}
+            minBaths={config.marketActivity.minBaths}
           />
         )}
 

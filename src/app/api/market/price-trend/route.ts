@@ -65,7 +65,12 @@ function monthKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-async function computeTrend(region: string, typeKeys: string[]): Promise<TrendResult> {
+async function computeTrend(
+  region: string,
+  typeKeys: string[],
+  minBeds: number,
+  minBaths: number
+): Promise<TrendResult> {
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MONTHS);
   const cutoff90 = new Date();
@@ -88,6 +93,12 @@ async function computeTrend(region: string, typeKeys: string[]): Promise<TrendRe
   // Empty ⇒ all types (unchanged behaviour).
   const variants = variantsForKeys(typeKeys);
   if (variants.length) query = query.in("property_sub_type", variants);
+
+  // Beds/baths floor — flat sold columns (the sold feed maps BedroomsTotal →
+  // bedrooms_above_grade; ingester.ts). `.gte` excludes NULL beds, matching the
+  // active RPC's full_payload cast and Typesense (missing ⇒ 0). 0 ⇒ no floor.
+  if (minBeds > 0) query = query.gte("bedrooms_above_grade", minBeds);
+  if (minBaths > 0) query = query.gte("bathrooms_total_integer", minBaths);
 
   const { data, error } = await query
     .order("purchase_contract_date", { ascending: false })
@@ -175,15 +186,19 @@ export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
   const typeKeys = parseTypeKeys(params);
+  const minBeds = Math.max(0, Math.floor(Number(params.get("minBeds")) || 0));
+  const minBaths = Math.max(0, Number(params.get("minBaths")) || 0);
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
 
-  const cacheKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
+  const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
+  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}`;
   try {
     const { points, summary } = await unstable_cache(
-      () => computeTrend(region, typeKeys),
-      // v5 = multi-type keys (types=a,b). v4 = lag-robust monthlyVelocity window.
-      // cacheKey is the sorted type-key set so each type combination caches independently.
-      ["market-price-trend", "v5", region.toLowerCase(), cacheKey],
+      () => computeTrend(region, typeKeys, minBeds, minBaths),
+      // v6 = beds/baths floor. v5 = multi-type keys (types=a,b). v4 = lag-robust
+      // monthlyVelocity window. cacheKey folds in type + beds + baths so each
+      // scope combination caches independently.
+      ["market-price-trend", "v6", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, points, summary });

@@ -39,14 +39,22 @@ const EMPTY: RegionStats = {
   staleCount: 0,
 };
 
-async function computeStats(region: string, typeKeys: string[]): Promise<RegionStats> {
+async function computeStats(
+  region: string,
+  typeKeys: string[],
+  minBeds: number,
+  minBaths: number
+): Promise<RegionStats> {
   const sb = getServiceRoleClient();
   // Resolve the UI keys to exact PropertySubType spellings (incl. the trailing-space
   // "Semi-Detached " quirk). Empty ⇒ all types ⇒ pass null so the RPC skips the filter.
   const variants = variantsForKeys(typeKeys);
+  // p_min_beds/p_min_baths are 0 ⇒ no floor (migration 026 short-circuits the cast).
   const { data, error } = await sb.rpc("region_active_aggregates", {
     p_region: region,
     p_subtypes: variants.length ? variants : null,
+    p_min_beds: minBeds,
+    p_min_baths: minBaths,
   });
   if (error) throw new Error(error.message);
 
@@ -73,13 +81,17 @@ export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
   const typeKeys = parseTypeKeys(params);
+  const minBeds = Math.max(0, Math.floor(Number(params.get("minBeds")) || 0));
+  const minBaths = Math.max(0, Number(params.get("minBaths")) || 0);
   if (!region) return NextResponse.json({ region: "", stats: EMPTY });
 
-  const cacheKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
+  const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
+  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}`;
   try {
     const stats = await unstable_cache(
-      () => computeStats(region, typeKeys),
-      ["market-region-stats", "v2", region.toLowerCase(), cacheKey],
+      () => computeStats(region, typeKeys, minBeds, minBaths),
+      // v3 = beds/baths floor (migration 026). cacheKey folds in type + beds + baths.
+      ["market-region-stats", "v3", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, stats });

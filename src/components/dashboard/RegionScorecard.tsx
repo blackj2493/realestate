@@ -57,10 +57,15 @@ function sortValue(s: RegionScore, key: SortKey): number | string | null {
 export default function RegionScorecard({
   regions,
   propertyTypes,
+  minBeds = 0,
+  minBaths = 0,
 }: {
   regions: string[];
   /** Global lens property-type keys ([] = all). Drives the sold/active aggregates. */
   propertyTypes: string[];
+  /** Global lens beds/baths floor (0 = no floor). Scopes sold + active medians (Phase C). */
+  minBeds?: number;
+  minBaths?: number;
 }) {
   const [scores, setScores] = useState<RegionScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,10 +75,11 @@ export default function RegionScorecard({
   // Stable dependencies so the effect doesn't re-fire on every parent render.
   const regionsKey = regions.join("|");
   const typesKey = [...propertyTypes].sort().join(",");
+  const bedsBathsKey = `${minBeds}|${minBaths}`;
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.allSettled(regions.map((r) => fetchRegionScore(r, propertyTypes)))
+    Promise.allSettled(regions.map((r) => fetchRegionScore(r, propertyTypes, { minBeds, minBaths })))
       .then((results) => {
         if (!alive) return;
         setScores(
@@ -87,7 +93,7 @@ export default function RegionScorecard({
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsKey, typesKey]);
+  }, [regionsKey, typesKey, bedsBathsKey]);
 
   const sorted = useMemo(() => {
     if (!sortKey) return scores;
@@ -209,9 +215,13 @@ export default function RegionScorecard({
       </div>
 
       <p className="text-[11px] leading-relaxed text-slate-600">
-        {propertyTypes.length > 0 && (
+        {(propertyTypes.length > 0 || minBeds > 0 || minBaths > 0) && (
           <span className="text-slate-400">
-            Filtered to your selected property type{propertyTypes.length > 1 ? "s" : ""}.{" "}
+            Filtered to{propertyTypes.length > 0 ? ` your selected property type${propertyTypes.length > 1 ? "s" : ""}` : ""}
+            {propertyTypes.length > 0 && (minBeds > 0 || minBaths > 0) ? "," : ""}
+            {minBeds > 0 ? ` ${minBeds}+ beds` : ""}
+            {minBeds > 0 && minBaths > 0 ? " &" : ""}
+            {minBaths > 0 ? ` ${minBaths}+ baths` : ""}.{" "}
           </span>
         )}
         Active metrics (cap rate, active count, % stale) are full-population over current active inventory.

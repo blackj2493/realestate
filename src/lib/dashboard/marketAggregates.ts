@@ -111,17 +111,31 @@ async function getJson<T>(url: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
+/** Optional scope dimensions of the global lens that the server medians honor. */
+export interface RegionScoreScope {
+  minBeds?: number;
+  minBaths?: number;
+}
+
 export async function fetchRegionScore(
   region: string,
-  typeKeys: string[] = []
+  typeKeys: string[] = [],
+  scope: RegionScoreScope = {}
 ): Promise<RegionScore> {
   const q = encodeURIComponent(region);
   // Multi-type: pass the lens's selected property-type keys (empty ⇒ all types).
   // The endpoints resolve keys → exact PropertySubType spellings (variantsForKeys).
   const t = typeKeys.length ? `&types=${encodeURIComponent(typeKeys.join(","))}` : "";
+  // Beds/baths floor (Phase C) — both endpoints scope sold + active medians by it.
+  // 0/absent ⇒ no floor. Sold side filters flat columns; active RPC reads full_payload.
+  const minBeds = scope.minBeds && scope.minBeds > 0 ? scope.minBeds : 0;
+  const minBaths = scope.minBaths && scope.minBaths > 0 ? scope.minBaths : 0;
+  const b = minBeds ? `&minBeds=${minBeds}` : "";
+  const w = minBaths ? `&minBaths=${minBaths}` : "";
+  const s = `${t}${b}${w}`;
   const [trendR, statsR] = await Promise.allSettled([
-    getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${t}`),
-    getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${t}`),
+    getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${s}`),
+    getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${s}`),
   ]);
 
   const trend = trendR.status === "fulfilled" ? trendR.value : null;
