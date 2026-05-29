@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Logo from "@/components/Logo";
 import {
   LineChart,
   Line,
@@ -98,39 +97,6 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center" aria-label="PureProperty.ca home">
-              <Logo size="md" theme="dark" />
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/properties" className="text-sm font-medium hover:text-primary">
-                Buy
-              </Link>
-              <Link href="/properties?type=rent" className="text-sm font-medium hover:text-primary">
-                Rent
-              </Link>
-              <Link href="/analytics" className="text-sm font-medium text-primary">
-                Market Analytics
-              </Link>
-              <Link href="/neighborhoods" className="text-sm font-medium hover:text-primary">
-                Neighborhoods
-              </Link>
-            </nav>
-            <div className="flex items-center gap-4">
-              <Link href="/login">
-                <Button variant="ghost">Sign In</Button>
-              </Link>
-              <Link href="/register">
-                <Button>Get Started</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
