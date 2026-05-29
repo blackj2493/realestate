@@ -115,6 +115,8 @@ async function getJson<T>(url: string): Promise<T | null> {
 export interface RegionScoreScope {
   minBeds?: number;
   minBaths?: number;
+  minParking?: number;
+  minFrontage?: number;
 }
 
 export async function fetchRegionScore(
@@ -126,13 +128,19 @@ export async function fetchRegionScore(
   // Multi-type: pass the lens's selected property-type keys (empty ⇒ all types).
   // The endpoints resolve keys → exact PropertySubType spellings (variantsForKeys).
   const t = typeKeys.length ? `&types=${encodeURIComponent(typeKeys.join(","))}` : "";
-  // Beds/baths floor (Phase C) — both endpoints scope sold + active medians by it.
+  // Beds/baths/parking/frontage floors — both endpoints scope sold + active medians.
   // 0/absent ⇒ no floor. Sold side filters flat columns; active RPC reads full_payload.
-  const minBeds = scope.minBeds && scope.minBeds > 0 ? scope.minBeds : 0;
-  const minBaths = scope.minBaths && scope.minBaths > 0 ? scope.minBaths : 0;
-  const b = minBeds ? `&minBeds=${minBeds}` : "";
-  const w = minBaths ? `&minBaths=${minBaths}` : "";
-  const s = `${t}${b}${w}`;
+  const pos = (v: number | undefined) => (v && v > 0 ? v : 0);
+  const minBeds = pos(scope.minBeds);
+  const minBaths = pos(scope.minBaths);
+  const minParking = pos(scope.minParking);
+  const minFrontage = pos(scope.minFrontage);
+  const s =
+    t +
+    (minBeds ? `&minBeds=${minBeds}` : "") +
+    (minBaths ? `&minBaths=${minBaths}` : "") +
+    (minParking ? `&minParking=${minParking}` : "") +
+    (minFrontage ? `&minFrontage=${minFrontage}` : "");
   const [trendR, statsR] = await Promise.allSettled([
     getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${s}`),
     getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${s}`),

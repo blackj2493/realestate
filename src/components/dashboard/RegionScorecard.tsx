@@ -59,13 +59,17 @@ export default function RegionScorecard({
   propertyTypes,
   minBeds = 0,
   minBaths = 0,
+  minGarage = 0,
+  minFrontage = 0,
 }: {
   regions: string[];
   /** Global lens property-type keys ([] = all). Drives the sold/active aggregates. */
   propertyTypes: string[];
-  /** Global lens beds/baths floor (0 = no floor). Scopes sold + active medians (Phase C). */
+  /** Global lens beds/baths/parking/frontage floors (0 = no floor). Scope sold + active medians (Phase C). */
   minBeds?: number;
   minBaths?: number;
+  minGarage?: number;
+  minFrontage?: number;
 }) {
   const [scores, setScores] = useState<RegionScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,11 +79,20 @@ export default function RegionScorecard({
   // Stable dependencies so the effect doesn't re-fire on every parent render.
   const regionsKey = regions.join("|");
   const typesKey = [...propertyTypes].sort().join(",");
-  const bedsBathsKey = `${minBeds}|${minBaths}`;
+  const scopeKey = `${minBeds}|${minBaths}|${minGarage}|${minFrontage}`;
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.allSettled(regions.map((r) => fetchRegionScore(r, propertyTypes, { minBeds, minBaths })))
+    Promise.allSettled(
+      regions.map((r) =>
+        fetchRegionScore(r, propertyTypes, {
+          minBeds,
+          minBaths,
+          minParking: minGarage,
+          minFrontage,
+        })
+      )
+    )
       .then((results) => {
         if (!alive) return;
         setScores(
@@ -93,7 +106,7 @@ export default function RegionScorecard({
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsKey, typesKey, bedsBathsKey]);
+  }, [regionsKey, typesKey, scopeKey]);
 
   const sorted = useMemo(() => {
     if (!sortKey) return scores;
@@ -120,6 +133,17 @@ export default function RegionScorecard({
   };
 
   if (regions.length === 0) return null;
+
+  // Human-readable list of the active lens filters, for the disclosure footnote.
+  const filterParts = [
+    propertyTypes.length > 0
+      ? `your selected property type${propertyTypes.length > 1 ? "s" : ""}`
+      : null,
+    minBeds > 0 ? `${minBeds}+ beds` : null,
+    minBaths > 0 ? `${minBaths}+ baths` : null,
+    minGarage > 0 ? `${minGarage}+ parking` : null,
+    minFrontage > 0 ? `${minFrontage}+ ft frontage` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <section className="space-y-2">
@@ -215,14 +239,8 @@ export default function RegionScorecard({
       </div>
 
       <p className="text-[11px] leading-relaxed text-slate-600">
-        {(propertyTypes.length > 0 || minBeds > 0 || minBaths > 0) && (
-          <span className="text-slate-400">
-            Filtered to{propertyTypes.length > 0 ? ` your selected property type${propertyTypes.length > 1 ? "s" : ""}` : ""}
-            {propertyTypes.length > 0 && (minBeds > 0 || minBaths > 0) ? "," : ""}
-            {minBeds > 0 ? ` ${minBeds}+ beds` : ""}
-            {minBeds > 0 && minBaths > 0 ? " &" : ""}
-            {minBaths > 0 ? ` ${minBaths}+ baths` : ""}.{" "}
-          </span>
+        {filterParts.length > 0 && (
+          <span className="text-slate-400">Filtered to {filterParts.join(", ")}. </span>
         )}
         Active metrics (cap rate, active count, % stale) are full-population over current active inventory.
         Median price, $/sqft, Sold/List & months of supply are from sold records (recent months lag).

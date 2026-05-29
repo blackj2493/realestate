@@ -69,7 +69,9 @@ async function computeTrend(
   region: string,
   typeKeys: string[],
   minBeds: number,
-  minBaths: number
+  minBaths: number,
+  minParking: number,
+  minFrontage: number
 ): Promise<TrendResult> {
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MONTHS);
@@ -99,6 +101,11 @@ async function computeTrend(
   // active RPC's full_payload cast and Typesense (missing ⇒ 0). 0 ⇒ no floor.
   if (minBeds > 0) query = query.gte("bedrooms_above_grade", minBeds);
   if (minBaths > 0) query = query.gte("bathrooms_total_integer", minBaths);
+
+  // Parking/frontage floor — flat sold columns (ingester.ts writes parking_total /
+  // lot_width). Same NULL-excluding `.gte` semantics as beds/baths. 0 ⇒ no floor.
+  if (minParking > 0) query = query.gte("parking_total", minParking);
+  if (minFrontage > 0) query = query.gte("lot_width", minFrontage);
 
   const { data, error } = await query
     .order("purchase_contract_date", { ascending: false })
@@ -188,17 +195,19 @@ export async function GET(req: NextRequest) {
   const typeKeys = parseTypeKeys(params);
   const minBeds = Math.max(0, Math.floor(Number(params.get("minBeds")) || 0));
   const minBaths = Math.max(0, Number(params.get("minBaths")) || 0);
+  const minParking = Math.max(0, Math.floor(Number(params.get("minParking")) || 0));
+  const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
 
   const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
-  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}`;
+  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}|p${minParking}|f${minFrontage}`;
   try {
     const { points, summary } = await unstable_cache(
-      () => computeTrend(region, typeKeys, minBeds, minBaths),
-      // v6 = beds/baths floor. v5 = multi-type keys (types=a,b). v4 = lag-robust
-      // monthlyVelocity window. cacheKey folds in type + beds + baths so each
-      // scope combination caches independently.
-      ["market-price-trend", "v6", region.toLowerCase(), cacheKey],
+      () => computeTrend(region, typeKeys, minBeds, minBaths, minParking, minFrontage),
+      // v7 = parking/frontage floor. v6 = beds/baths. v5 = multi-type keys (types=a,b).
+      // v4 = lag-robust monthlyVelocity window. cacheKey folds in type + beds + baths +
+      // parking + frontage so each scope combination caches independently.
+      ["market-price-trend", "v7", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, points, summary });

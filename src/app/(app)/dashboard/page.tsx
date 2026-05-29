@@ -170,6 +170,8 @@ export default function DashboardPage() {
             propertyTypes={config.marketActivity.propertyTypes}
             minBeds={config.marketActivity.minBeds}
             minBaths={config.marketActivity.minBaths}
+            minGarage={config.marketActivity.minGarage}
+            minFrontage={config.marketActivity.minFrontage}
           />
         )}
 

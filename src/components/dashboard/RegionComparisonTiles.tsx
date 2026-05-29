@@ -201,11 +201,14 @@ export default function RegionComparisonTiles({
     Promise.allSettled(
       regions.map(async (r): Promise<RegionData> => {
         const [score, specialty] = await Promise.all([
-          // Server medians honor the property-type slice (Phase B) AND the beds/baths
-          // floor (Phase C) of the lens — same slice as the boards & specialty counts.
+          // Server medians honor the full lens slice — property type (Phase B) and the
+          // beds/baths/parking/frontage floors (Phase C) — same slice as the boards &
+          // specialty counts.
           fetchRegionScore(r, lens.propertyTypes, {
             minBeds: lens.minBeds,
             minBaths: lens.minBaths,
+            minParking: lens.minGarage,
+            minFrontage: lens.minFrontage,
           }),
           // Specialty shares honor the full scope incl. sale/lease + beds/baths.
           needSpecialty
