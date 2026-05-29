@@ -33,7 +33,7 @@ import {
 } from '@/lib/avm/conditionScoring';
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 import { fetchRoomsForKeys } from './roomsEnrichment';
-import { enrichListingsWithMedia } from './mediaEnrichment';
+import { enrichListingsWithMedia, preserveExistingMedia } from './mediaEnrichment';
 import { nextSyncCursor } from './syncCursor';
 
 // ============================================================================
@@ -766,6 +766,17 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       const mediaAttached = await enrichListingsWithMedia(batch.listings, IDX_TOKEN);
       console.log(`   🖼️  Media attached to ${mediaAttached}/${batch.listings.length} listings`);
 
+      // Clobber protection: for listings whose AMPRE fetch returned empty,
+      // restore previously-stored media from Supabase so the impending UPSERT
+      // doesn't wipe a successful prior sync's / backfill's photos.
+      const preservedActive = await preserveExistingMedia(
+        batch.listings,
+        getServiceRoleClient()
+      );
+      if (preservedActive > 0) {
+        console.log(`   🛡️  Preserved existing media on ${preservedActive} listings (AMPRE empty)`);
+      }
+
       // Process batch through ETL pipeline (sync.ts)
       console.log('   🔄 Processing batch through ETL pipeline...');
       const syncResult = await processBatch(batch.listings);
@@ -825,6 +836,17 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       console.log('   🖼️  Enriching sold batch with media...');
       const soldMediaAttached = await enrichListingsWithMedia(batch.listings, VOW_TOKEN);
       console.log(`   🖼️  Media attached to ${soldMediaAttached}/${batch.listings.length} listings`);
+
+      // Same clobber protection as active path, against `raw_vow_sold.raw_payload`.
+      const preservedSold = await preserveExistingMedia(
+        batch.listings,
+        supabaseClient,
+        'raw_vow_sold',
+        'raw_payload'
+      );
+      if (preservedSold > 0) {
+        console.log(`   🛡️  Preserved existing sold media on ${preservedSold} listings`);
+      }
 
       // Process batch through ETL pipeline (sync.ts) with is_sold flag
       console.log('   🔄 Processing sold batch through ETL pipeline...');
