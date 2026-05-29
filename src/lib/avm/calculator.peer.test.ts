@@ -6,7 +6,7 @@
  * home is ignored; a non-supplied peer leaves saturating homes on the clamp path.
  */
 import { describe, it, expect } from 'vitest';
-import { estimateFromMarketData, isSaturating, type AVMMarketData } from './calculator';
+import { estimateFromMarketData, isFeatureOutlier, type AVMMarketData } from './calculator';
 import type { AVMInput } from './types';
 import { CONFIDENCE_HIGH, CONFIDENCE_MEDIUM, MIN_PEERS_FOR_HIGH } from './types';
 import type { AnchorResult } from './anchorService';
@@ -47,18 +47,20 @@ function anchor(level: number, predSD: number, basis: AnchorResult['basis'], nEf
   return { anchorLevel: level, predSD, nEff, comps: Math.round(nEff), basis };
 }
 
-describe('isSaturating — fires only when the clamp would bind under the coefficient engine', () => {
-  it('true for a luxury outlier with strong coefficients above the r2 gate', () => {
-    expect(isSaturating(outlierInput, strongCoeffs, 0.7)).toBe(true);
+describe('isFeatureOutlier — the cohort model implies a premium beyond the clamp', () => {
+  it('true for a luxury outlier with strong coefficients', () => {
+    expect(isFeatureOutlier(outlierInput, strongCoeffs)).toBe(true);
   });
-  it('false for a typical home (clamp does not bind)', () => {
-    expect(isSaturating(typicalInput, strongCoeffs, 0.7)).toBe(false);
+  it('false for a typical home (implied premium within the clamp)', () => {
+    expect(isFeatureOutlier(typicalInput, strongCoeffs)).toBe(false);
   });
-  it('false when r2 is below the coefficient-engine gate (anchor-only)', () => {
-    expect(isSaturating(outlierInput, strongCoeffs, 0.3)).toBe(false);
+  it('is engine-independent — still true for an outlier even when r2 would be below the gate', () => {
+    // The outlier signal must NOT depend on r2: anchor-only cohorts (low r2) are
+    // exactly where a big home silently sits at the neighbourhood level.
+    expect(isFeatureOutlier(outlierInput, strongCoeffs)).toBe(true);
   });
-  it('false with no coefficients', () => {
-    expect(isSaturating(outlierInput, [], 0.7)).toBe(false);
+  it('false with no coefficients (cannot assess)', () => {
+    expect(isFeatureOutlier(outlierInput, [])).toBe(false);
   });
 });
 
@@ -96,6 +98,33 @@ describe('estimateFromMarketData — peer branch (saturating home only)', () => 
     expect(floored.basis).toBe('floor');
     expect(floored.confidence).not.toBe(CONFIDENCE_HIGH); // capped down from HIGH
     expect([CONFIDENCE_MEDIUM, 'LOW']).toContain(floored.confidence);
+  });
+});
+
+describe('estimateFromMarketData — ANCHOR-ONLY outlier (r2 below gate, the E13206536 case)', () => {
+  // r2 below COEFFICIENT_ENGINE_THRESHOLD → today the estimate is just the anchor
+  // (~$800k) with no feature lift, yet the home is a clear outlier. Peer treatment
+  // must still engage off the engine-independent trigger.
+  const anchorOnly: Omit<AVMMarketData, 'peer'> = {
+    anchor: anchor(LN_800K, 0.055, 'local'),
+    r2: 0.3,
+    basePrice: 800_000,
+    coefficients: strongCoeffs,
+  };
+
+  it('uses the peer-grid level (not the bare anchor) when peers are found', () => {
+    const peer = anchor(Math.log(1_700_000), 0.06, 'peer', 12);
+    const r = estimateFromMarketData(outlierInput, { ...anchorOnly, peer });
+    expect(r.estimatedValue).toBeCloseTo(1_700_000, -3);
+    expect(r.basis).toBe('peer');
+  });
+
+  it('floor mode (peer === null): keeps the anchor number but caps confidence and relabels basis', () => {
+    const bare = estimateFromMarketData(outlierInput, anchorOnly); // ~anchor, no peer
+    const floored = estimateFromMarketData(outlierInput, { ...anchorOnly, peer: null });
+    expect(floored.estimatedValue).toBe(bare.estimatedValue);
+    expect(floored.basis).toBe('floor');
+    expect(floored.confidence).not.toBe(CONFIDENCE_HIGH);
   });
 });
 

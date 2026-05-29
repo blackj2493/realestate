@@ -29,9 +29,14 @@ import {
   SIGMA2,
   HUBER_K,
   Z_CLAMP,
+  MIN_PEER_NEFF,
+  BW_BEDS,
+  BW_BATHS,
+  BW_LOT,
 } from './types';
 import type { CoefficientRow } from './matrixService';
 import { rawVariantsOf, cityRegionLookupCandidates } from './normalizeType';
+import { subjectAdjustmentTotal } from './features';
 
 export interface AnchorResult {
   /** ln(price) at the community-average feature level. exp(anchorLevel) is the anchor. */
@@ -46,12 +51,13 @@ export interface AnchorResult {
   basis: AnchorBasis;
 }
 
-interface CompRow {
+export interface CompRow {
   close_price: number;
   purchase_contract_date: string | null;
   close_date: string | null;
   building_area_total: number | null;
   lot_width: number | null;
+  lot_depth: number | null;
   bedrooms_above_grade: number | null;
   bathrooms_total_integer: number | null;
   parking_total: number | null;
@@ -59,6 +65,12 @@ interface CompRow {
   exterior_tier: number | null;
   basement_tier: number | null;
 }
+
+/** Scalar columns pulled for both the standard anchor and the peer comp-grid. */
+const COMP_SELECT =
+  'close_price, purchase_contract_date, close_date, building_area_total, ' +
+  'lot_width, lot_depth, bedrooms_above_grade, bathrooms_total_integer, parking_total, ' +
+  'interior_tier, exterior_tier, basement_tier';
 
 interface TrendRow {
   period_end: string;
@@ -106,11 +118,7 @@ export async function fetchAnchor(
   const [compsRes, trendRes, offsetRes] = await Promise.all([
     supabase
       .from('raw_vow_sold')
-      .select(
-        'close_price, purchase_contract_date, close_date, building_area_total, ' +
-          'lot_width, bedrooms_above_grade, bathrooms_total_integer, parking_total, ' +
-          'interior_tier, exterior_tier, basement_tier'
-      )
+      .select(COMP_SELECT)
       .in('city_region', cityRegionCandidates)
       .in('property_sub_type', subVariants)
       .gt('close_price', 0)
@@ -371,4 +379,181 @@ function gAt(iso: string, trend: TrendRow[]): number {
     }
   }
   return nearest.level_log;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Peer comp-grid (atypical / high-end homes — basis 'peer')
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Lot magnitude for similarity: area when both sides have depth, else width. */
+function lotSimLog(subject: AVMInput, c: CompRow): number {
+  const sw = subject.lotWidth;
+  const sd = subject.lotDepth ?? null;
+  const cw = c.lot_width;
+  const cd = c.lot_depth;
+  let sVal: number | null = null;
+  let cVal: number | null = null;
+  if (sw && sw > 0 && sd && sd > 0 && cw && cw > 0 && cd && cd > 0) {
+    sVal = sw * sd;
+    cVal = cw * cd;
+  } else if (sw && sw > 0 && cw && cw > 0) {
+    sVal = sw;
+    cVal = cw;
+  }
+  if (sVal && cVal) return -0.5 * (Math.log(sVal / cVal) / BW_LOT) ** 2;
+  return 0;
+}
+
+/** Gaussian similarity on the size proxies the comps actually carry. Missing dims
+ *  contribute nothing (factor 1), so a sparse comp isn't penalised, only un-weighted. */
+function similarityWeight(subject: AVMInput, c: CompRow): number {
+  let logw = 0;
+  if (subject.bedroomsAboveGrade != null && c.bedrooms_above_grade != null) {
+    logw += -0.5 * ((subject.bedroomsAboveGrade - c.bedrooms_above_grade) / BW_BEDS) ** 2;
+  }
+  if (subject.bathroomsTotalInteger != null && c.bathrooms_total_integer != null) {
+    logw += -0.5 * ((subject.bathroomsTotalInteger - c.bathrooms_total_integer) / BW_BATHS) ** 2;
+  }
+  logw += lotSimLog(subject, c);
+  return Math.exp(logw);
+}
+
+/**
+ * Pure peer comp-grid: price the SUBJECT off homes like it. Each comp is adjusted
+ * to the subject's feature level
+ *   predicted_i = [ln(price_i) − Σβ·z_comp_i] + Σβ·z_subject + (g(now) − g(t_i))
+ * then combined by a recency×similarity-weighted Huber-robust mean. NO ADJ_CLAMP —
+ * the adjustment is the small delta between similar homes, not a capped extrapolation.
+ * predSD is the weighted dispersion of comparable sales (an honest band). Returns
+ * null when no usable comp survives. Deterministic, no AI (CLAUDE.md §4).
+ */
+export function peerLevelFromComps(
+  subject: AVMInput,
+  comps: CompRow[],
+  coefficients: CoefficientRow[],
+  trend: TrendRow[],
+  nowMs: number,
+  basis: AnchorBasis = 'peer'
+): AnchorResult | null {
+  const usable = comps.filter(
+    (c) => c.close_price > 0 && (c.purchase_contract_date || c.close_date)
+  );
+  if (usable.length === 0) return null;
+
+  const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
+  const subjPremium = subjectAdjustmentTotal(subject, coeff);
+  const gNow = trend[0]?.level_log ?? null;
+
+  const preds: number[] = [];
+  const weights: number[] = [];
+  for (const c of usable) {
+    const dateIso = c.purchase_contract_date || c.close_date!;
+    const neutralized = adjustedLogPrice(c, coeff); // ln(price) − Σβ·z_comp
+    const destale = gNow !== null ? gNow - gAt(dateIso, trend) : 0;
+    const predicted = neutralized + subjPremium + destale;
+    if (!Number.isFinite(predicted)) continue;
+    const ageDays = Math.max(0, (nowMs - new Date(dateIso).getTime()) / (1000 * 86400));
+    const w = Math.exp(-ageDays / H_DAYS) * similarityWeight(subject, c);
+    if (!(w > 0)) continue;
+    preds.push(predicted);
+    weights.push(w);
+  }
+  if (preds.length === 0) return null;
+
+  // Robust: Huber-downweight residuals around the weighted median.
+  const wmed = weightedMedian(preds, weights);
+  const resid = preds.map((p) => p - wmed);
+  const scale = (median(resid.map(Math.abs)) || 1e-6) * 1.4826;
+  const w2 = weights.map((w, i) => {
+    const z = Math.abs(resid[i]) / scale;
+    return w * (z <= HUBER_K ? 1 : HUBER_K / z);
+  });
+  const sumW = w2.reduce((a, b) => a + b, 0);
+  if (!(sumW > 0)) return null;
+
+  const center = preds.reduce((a, p, i) => a + p * w2[i], 0) / sumW;
+  const sumW2 = w2.reduce((a, x) => a + x * x, 0);
+  const nEff = (sumW * sumW) / sumW2;
+  const variance = preds.reduce((a, p, i) => a + w2[i] * (p - center) ** 2, 0) / sumW;
+  // Floor the band so a handful of near-identical comps can't claim absurd precision.
+  const predSD = Math.max(Math.sqrt(Math.max(variance, 0)), 0.02);
+
+  return { anchorLevel: center, predSD, nEff, comps: usable.length, basis };
+}
+
+/**
+ * Fetch a peer anchor for a saturating outlier, escalating geography until a rung
+ * carries enough effective peers (≥ MIN_PEER_NEFF): community → city-wide. Returns
+ * null if no rung clears the floor (caller then shows a clamped neighbourhood FLOOR).
+ * Independent of list price (CLAUDE.md §2). Reads raw_vow_sold READ-ONLY (§12).
+ */
+export async function fetchPeerAnchor(
+  supabase: SupabaseClient,
+  subject: AVMInput,
+  coefficients: CoefficientRow[]
+): Promise<AnchorResult | null> {
+  const subVariants = rawVariantsOf(subject.propertySubType, subject.rawPropertySubType);
+  if (subVariants.length === 0) return null;
+
+  const cityKey = (subject.city ?? subject.cityRegion).trim();
+  const subKey = subject.propertySubType.toLowerCase().trim();
+  const windowStart = new Date();
+  windowStart.setUTCMonth(windowStart.getUTCMonth() - COMP_WINDOW_MO);
+  const windowStartIso = windowStart.toISOString().slice(0, 10);
+  const nowMs = Date.now();
+
+  const trendRes = await supabase
+    .from('avm_trend_index')
+    .select('period_end, level_log')
+    .ilike('city', cityKey)
+    .ilike('property_sub_type', subKey)
+    .order('period_end', { ascending: false })
+    .limit(8);
+  const trend = (trendRes.data as unknown as TrendRow[] | null) ?? [];
+
+  // Rung 1 — community (city_region candidates).
+  const cands = cityRegionLookupCandidates(subject.cityRegion);
+  if (cands.length > 0) {
+    const res = await supabase
+      .from('raw_vow_sold')
+      .select(COMP_SELECT)
+      .in('city_region', cands)
+      .in('property_sub_type', subVariants)
+      .gt('close_price', 0)
+      .gte('purchase_contract_date', windowStartIso)
+      .order('purchase_contract_date', { ascending: false })
+      .limit(MAX_COMPS);
+    const peer = peerLevelFromComps(
+      subject,
+      ((res.data as unknown as CompRow[] | null) ?? []),
+      coefficients,
+      trend,
+      nowMs
+    );
+    if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+  }
+
+  // Rung 2 — city-wide (broader pool of homes like it).
+  if (cityKey) {
+    const res = await supabase
+      .from('raw_vow_sold')
+      .select(COMP_SELECT)
+      .ilike('city', cityKey)
+      .in('property_sub_type', subVariants)
+      .gt('close_price', 0)
+      .gte('purchase_contract_date', windowStartIso)
+      .order('purchase_contract_date', { ascending: false })
+      .limit(MAX_COMPS);
+    const peer = peerLevelFromComps(
+      subject,
+      ((res.data as unknown as CompRow[] | null) ?? []),
+      coefficients,
+      trend,
+      nowMs
+    );
+    if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+  }
+
+  // Too few peers anywhere → caller falls back to a clamped neighbourhood FLOOR.
+  return null;
 }

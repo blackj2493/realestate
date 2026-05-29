@@ -52,6 +52,8 @@ export function mapListingToAVMInput(
 
   const lotWidthRaw = numOrNull(payload.LotWidth);
   const lotWidth = lotWidthRaw !== null && lotWidthRaw > 0 ? lotWidthRaw : null;
+  const lotDepthRaw = numOrNull(payload.LotDepth);
+  const lotDepth = lotDepthRaw !== null && lotDepthRaw > 0 ? lotDepthRaw : null;
 
   return {
     cityRegion,
@@ -60,6 +62,7 @@ export function mapListingToAVMInput(
     rawPropertySubType,
     buildingAreaTotal: resolveLivingArea(payload, opts).sqft,
     lotWidth,
+    lotDepth,
     bedroomsAboveGrade: numOrNull(payload.BedroomsAboveGrade),
     bathroomsTotalInteger: numOrNull(payload.BathroomsTotalInteger),
     parkingTotal: numOrNull(payload.ParkingTotal),

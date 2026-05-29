@@ -22,6 +22,9 @@ export interface AVMInput {
   rawPropertySubType: string;
   buildingAreaTotal: number | null;
   lotWidth: number | null;
+  /** Lot depth (ft). Used ONLY for peer similarity in the comp-grid (not a trained
+   * coefficient), so adding it never changes the normal-path estimate. Optional. */
+  lotDepth?: number | null;
   bedroomsAboveGrade: number | null;
   bathroomsTotalInteger: number | null;
   parkingTotal: number | null;
