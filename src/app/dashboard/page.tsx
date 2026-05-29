@@ -170,6 +170,13 @@ export default function DashboardPage() {
           <RegionComparisonTiles regions={config.regions} persona={config.persona} />
         )}
 
+        {/* Custom areas the user drew/saved lead the drill-down band — they're a
+            deliberate, hand-picked focus, so they sit above the broader cities. */}
+        <BubbleSections
+          lens={config.marketActivity}
+          enabledBoards={enabledBoards}
+        />
+
         {hasRegions &&
           config.regions.map((loc) => {
             const area = regionArea(loc);
@@ -191,12 +198,6 @@ export default function DashboardPage() {
               </RegionDrilldown>
             );
           })}
-
-        {/* Saved Market Bubbles get the same per-region treatment. */}
-        <BubbleSections
-          lens={config.marketActivity}
-          enabledBoards={enabledBoards}
-        />
 
         {/* Primary-region intelligence: neighbourhood heat + price trend (V1). */}
         {hasRegions && <DashboardHeatTile region={config.regions[0]} />}
