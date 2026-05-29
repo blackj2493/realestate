@@ -47,6 +47,64 @@
     --pp-text-primary-light: #0a1828;
     --pp-text-secondary-light: #4a6378;
     --pp-text-tertiary-light: #6b7e92;
+
+    /* ------------------------------------------------------------------
+       Design-system tokens (additive — see PUREPROPERTY_DESIGN_SPEC).
+       These do NOT replace the shadcn --background/--radius vars or
+       Tailwind's default scales; they are opt-in via the `pp-*` Tailwind
+       utilities. Existing screens are unaffected.
+       ------------------------------------------------------------------ */
+    /* Surfaces */
+    --pp-bg-elevated: #0f1f30; /* cards, panels, modals */
+    --pp-bg-input: #0d1b2c; /* form fields, dropdowns */
+    --pp-bg-hover: #142940; /* hover on interactive surfaces */
+    --pp-bg-selected: #1a3350; /* selected row / active filter */
+
+    /* Text */
+    --pp-text-disabled: #4a6378;
+
+    /* Borders */
+    --pp-border-subtle: rgba(143, 164, 184, 0.1);
+    --pp-border-default: rgba(143, 164, 184, 0.2);
+    --pp-border-strong: rgba(143, 164, 184, 0.35);
+
+    /* Accent (reserved for live/active state — never the logo) */
+    --pp-accent-dim: #0891a6;
+    --pp-accent-bg: rgba(29, 211, 224, 0.1);
+
+    /* Semantic */
+    --pp-success: #4ade80;
+    --pp-success-bg: rgba(74, 222, 128, 0.1);
+    --pp-danger: #f87171;
+    --pp-danger-bg: rgba(248, 113, 113, 0.1);
+    --pp-warning: #fbbf24;
+    --pp-warning-bg: rgba(251, 191, 36, 0.1);
+    --pp-info: #60a5fa;
+    --pp-info-bg: rgba(96, 165, 250, 0.1);
+
+    /* Data-viz (charts, heatmaps, multi-series) */
+    --pp-data-1: #1dd3e0;
+    --pp-data-2: #60a5fa;
+    --pp-data-3: #a78bfa;
+    --pp-data-4: #f472b6;
+    --pp-data-5: #fbbf24;
+    --pp-data-6: #4ade80;
+    --pp-data-7: #fb923c;
+    --pp-data-8: #f87171;
+
+    /* Opt-in radius (does NOT touch the sharp --radius:0) */
+    --pp-radius: 6px;
+
+    /* Namespaced type scale (px) — exposed as text-pp-* utilities */
+    --pp-text-xs: 11px;
+    --pp-text-sm: 12px;
+    --pp-text-base: 14px;
+    --pp-text-md: 16px;
+    --pp-text-lg: 18px;
+    --pp-text-xl: 22px;
+    --pp-text-2xl: 28px;
+    --pp-text-3xl: 40px;
+    --pp-text-display: 56px;
   }
 }
 
