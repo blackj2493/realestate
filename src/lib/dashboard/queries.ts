@@ -135,7 +135,6 @@ export async function fetchRegionSpecialty(
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ACTIVITY_PRICE_FLOOR = 50000; // mirror the sold feed: excludes leases/rentals
 
 // BasementType values that indicate finished living space — mirrors the sold-feed
 // derivation (deriveHasFinishedBasement: any "apartment" or non-"unfinished"
@@ -153,16 +152,15 @@ function finishedBasementClause(): string {
 }
 
 /**
- * Sale-vs-lease scope as a ListPrice threshold. The live `properties` collection
- * has no filterable TransactionType field, but residential rents are always well
- * under $50k/listing and residential sales always well over it, so the floor is an
- * effectively exact separator for the dashboard's purpose. (`lease` = priced under
- * the floor; `sale` = at/above it, which is the historical default behaviour.)
+ * Sale-vs-lease scope via the indexed `TransactionType` facet (added to the live
+ * collection by scripts/admin/add-transaction-type.ts). Exact — replaces the old
+ * ListPrice ($50k) proxy. The handful of docs with a blank TransactionType match
+ * neither and are correctly excluded from both views.
  */
 function transactionClause(lens: MarketActivityLens): string {
   return lens.transactionType === 'lease'
-    ? `ListPrice:>0 && ListPrice:<${ACTIVITY_PRICE_FLOOR}`
-    : `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`;
+    ? 'TransactionType:=`For Lease`'
+    : 'TransactionType:=`For Sale`';
 }
 
 /**

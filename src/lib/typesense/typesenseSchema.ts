@@ -36,6 +36,9 @@ export const indexedFields: IndexedField[] = [
   // Property Classification — categorical, real facets
   { name: 'PropertyType', type: 'string', facet: true },
   { name: 'PropertySubType', type: 'string', facet: true },
+  // Sale vs lease — low-cardinality ("For Sale"/"For Lease"), so a real facet is
+  // cheap RAM (cf. RAM POLICY above). optional: backfilled in-place on existing docs.
+  { name: 'TransactionType', type: 'string', facet: true, optional: true },
 
   // Bedrooms / Bathrooms / Parking — range sliders, not facets
   { name: 'BedroomsTotal', type: 'int32', facet: false, sort: true },
@@ -174,6 +177,8 @@ export const typesenseSchema = {
     { name: 'ListPrice', type: 'int32' as const, facet: false, sort: true },
     { name: 'PropertyType', type: 'string' as const, facet: true },
     { name: 'PropertySubType', type: 'string' as const, facet: true },
+    // Sale vs lease — low-cardinality facet (see RAM POLICY); optional for back-compat.
+    { name: 'TransactionType', type: 'string' as const, facet: true, optional: true },
     { name: 'BedroomsTotal', type: 'int32' as const, facet: false, sort: true },
     { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: false, sort: true },
     { name: 'ParkingTotal', type: 'int32' as const, facet: false, sort: true },

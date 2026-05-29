@@ -324,9 +324,11 @@ export async function searchListings(
     filterParts.push(`AssociationFee:<=${filters.maxAssociationFee}`);
   }
   
-  // Transaction Type - exact match
+  // Transaction Type - exact match. Backtick-quote: the value ("For Sale"/"For
+  // Lease") contains a space, which Typesense mis-parses unquoted. Filterable since
+  // TransactionType was added to the collection (scripts/admin/add-transaction-type.ts).
   if (filters.transactionType) {
-    filterParts.push(`TransactionType:=${filters.transactionType}`);
+    filterParts.push(`TransactionType:=\`${filters.transactionType}\``);
   }
   
   // Derived metrics
