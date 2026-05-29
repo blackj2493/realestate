@@ -115,6 +115,10 @@ function basisCopy(
       return city
         ? `Based on adjacent ${city} sales (no local ${here} baseline yet)`
         : "Based on adjacent city-level sales";
+    case "peer":
+      return `Comped against ${comps} similar ${here}-area sales (size/beds/baths-matched), trend-adjusted to today`;
+    case "floor":
+      return `Larger or more upgraded than any recent ${here} comp — shown as a neighbourhood floor, not a full valuation`;
     case "none":
     default:
       return `Insufficient data to confidently estimate ${here}`;
