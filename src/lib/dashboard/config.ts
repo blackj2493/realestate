@@ -44,9 +44,10 @@ export interface ApplyProfile {
  * The global "lens" for the Market Activity panel — one window + filter set that
  * applies to every region's New (active/IDX) and Sold (VOW) counts and lists.
  */
-/** Sale vs lease scope. No filterable TransactionType field exists in the live
- *  Typesense collection, so this is applied as a ListPrice threshold proxy
- *  (residential rents are always well under, sales well over, $50k). */
+/** Sale vs lease scope. Applied via the indexed `TransactionType` facet on the
+ *  Typesense collection (`TransactionType:=`For Sale``) and the for-sale list_price
+ *  floor on the server-side sold/active aggregates. (Superseded the old ListPrice
+ *  threshold proxy once TransactionType was added to the live schema, 2026-05-28.) */
 export type TransactionScope = 'sale' | 'lease';
 
 export interface MarketActivityLens {
