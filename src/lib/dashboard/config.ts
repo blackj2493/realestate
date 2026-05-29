@@ -44,9 +44,16 @@ export interface ApplyProfile {
  * The global "lens" for the Market Activity panel — one window + filter set that
  * applies to every region's New (active/IDX) and Sold (VOW) counts and lists.
  */
+/** Sale vs lease scope. No filterable TransactionType field exists in the live
+ *  Typesense collection, so this is applied as a ListPrice threshold proxy
+ *  (residential rents are always well under, sales well over, $50k). */
+export type TransactionScope = 'sale' | 'lease';
+
 export interface MarketActivityLens {
   /** trailing-window in days for both New and Sold counts. */
   windowDays: number;
+  /** sale vs lease — scopes every active-inventory surface. */
+  transactionType: TransactionScope;
   /** selected property-type option keys (see propertyTypes.ts); [] = all types. */
   propertyTypes: string[];
   /** minimum bedrooms (0 = any). */
@@ -66,6 +73,7 @@ export const ACTIVITY_WINDOWS = [1, 3, 7, 30, 90, 180] as const;
 
 export const DEFAULT_ACTIVITY_LENS: MarketActivityLens = {
   windowDays: 1,
+  transactionType: 'sale',
   propertyTypes: [],
   minBeds: 0,
   minBaths: 0,
@@ -177,6 +185,7 @@ function mergeLens(raw: unknown): MarketActivityLens {
       typeof l.windowDays === 'number' && ACTIVITY_WINDOWS.includes(l.windowDays as 1)
         ? l.windowDays
         : DEFAULT_ACTIVITY_LENS.windowDays,
+    transactionType: l.transactionType === 'lease' ? 'lease' : 'sale',
     propertyTypes: Array.isArray(l.propertyTypes) ? l.propertyTypes : [],
     minBeds: typeof l.minBeds === 'number' ? l.minBeds : 0,
     minBaths: typeof l.minBaths === 'number' ? l.minBaths : 0,

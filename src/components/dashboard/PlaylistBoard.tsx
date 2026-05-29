@@ -4,26 +4,31 @@ import { useEffect, useState } from "react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { BoardDef } from "@/lib/dashboard/boards";
 import { fetchBoard } from "@/lib/dashboard/queries";
+import { scopeKey } from "@/lib/dashboard/lensKey";
 import { areaKey, type Area } from "@/lib/dashboard/area";
+import type { MarketActivityLens } from "@/lib/dashboard/config";
 
 import PlaylistRow from "./PlaylistRow";
 
 export default function PlaylistBoard({
   board,
   area,
+  lens,
 }: {
   board: BoardDef;
   area: Area;
+  lens: MarketActivityLens;
 }) {
   const [rows, setRows] = useState<ListingDocument[] | null>(null);
   const [error, setError] = useState(false);
   const key = areaKey(area);
+  const scope = scopeKey(lens);
 
   useEffect(() => {
     let alive = true;
     setRows(null);
     setError(false);
-    fetchBoard(board, area, 5)
+    fetchBoard(board, area, lens, 5)
       .then((r) => alive && setRows(r))
       .catch((e) => {
         console.error("[PlaylistBoard]", board.id, key, e);
@@ -32,9 +37,9 @@ export default function PlaylistBoard({
     return () => {
       alive = false;
     };
-    // `area` captured via `key`; `board` is a stable module-level definition.
+    // `area`/`lens` captured via `key`/`scope`; `board` is a stable module def.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board, key]);
+  }, [board, key, scope]);
 
   return (
     <div className="border border-slate-800 bg-slate-900/40">

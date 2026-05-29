@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
 
 export const dynamic = "force-dynamic"; // caching handled by unstable_cache per region
 
@@ -39,11 +39,11 @@ const EMPTY: RegionStats = {
   staleCount: 0,
 };
 
-async function computeStats(region: string, propertyType: string): Promise<RegionStats> {
+async function computeStats(region: string, typeKeys: string[]): Promise<RegionStats> {
   const sb = getServiceRoleClient();
-  // Resolve the UI key to exact PropertySubType spellings (incl. the trailing-space
+  // Resolve the UI keys to exact PropertySubType spellings (incl. the trailing-space
   // "Semi-Detached " quirk). Empty ⇒ all types ⇒ pass null so the RPC skips the filter.
-  const variants = variantsForKeys([propertyType]);
+  const variants = variantsForKeys(typeKeys);
   const { data, error } = await sb.rpc("region_active_aggregates", {
     p_region: region,
     p_subtypes: variants.length ? variants : null,
@@ -72,19 +72,20 @@ async function computeStats(region: string, propertyType: string): Promise<Regio
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
-  const propertyType = (params.get("propertyType") || "all").trim().toLowerCase();
+  const typeKeys = parseTypeKeys(params);
   if (!region) return NextResponse.json({ region: "", stats: EMPTY });
 
+  const cacheKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
   try {
     const stats = await unstable_cache(
-      () => computeStats(region, propertyType),
-      ["market-region-stats", region.toLowerCase(), propertyType],
+      () => computeStats(region, typeKeys),
+      ["market-region-stats", "v2", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, stats });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/region-stats]", region, propertyType, msg);
+    console.error("[market/region-stats]", region, cacheKey, msg);
     return NextResponse.json({ region, stats: EMPTY, error: msg }, { status: 500 });
   }
 }

@@ -164,10 +164,19 @@ export default function DashboardPage() {
           <MarketActivityControls lens={config.marketActivity} onChange={updateLens} />
         )}
 
-        {hasRegions && <RegionScorecard regions={config.regions} />}
+        {hasRegions && (
+          <RegionScorecard
+            regions={config.regions}
+            propertyTypes={config.marketActivity.propertyTypes}
+          />
+        )}
 
         {hasRegions && (
-          <RegionComparisonTiles regions={config.regions} persona={config.persona} />
+          <RegionComparisonTiles
+            regions={config.regions}
+            persona={config.persona}
+            lens={config.marketActivity}
+          />
         )}
 
         {/* Custom areas the user drew/saved lead the drill-down band — they're a
@@ -191,7 +200,12 @@ export default function DashboardPage() {
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {enabledBoards.map((b) => (
-                      <PlaylistBoard key={b.id} board={b} area={area} />
+                      <PlaylistBoard
+                        key={b.id}
+                        board={b}
+                        area={area}
+                        lens={config.marketActivity}
+                      />
                     ))}
                   </div>
                 )}

@@ -26,6 +26,8 @@ import {
   CASHFLOW_CAP_FLOOR,
 } from "@/lib/dashboard/queries";
 import { regionArea } from "@/lib/dashboard/area";
+import { scopeKey } from "@/lib/dashboard/lensKey";
+import type { MarketActivityLens } from "@/lib/dashboard/config";
 import {
   PERSONA_DASHBOARD,
   SPECIALTY_METRIC_IDS,
@@ -174,9 +176,11 @@ function Tile({
 export default function RegionComparisonTiles({
   regions,
   persona,
+  lens,
 }: {
   regions: string[];
   persona: PersonaType;
+  lens: MarketActivityLens;
 }) {
   const [datas, setDatas] = useState<RegionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,6 +190,7 @@ export default function RegionComparisonTiles({
   );
 
   const regionsKey = regions.join("|");
+  const scope = scopeKey(lens);
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -196,9 +201,11 @@ export default function RegionComparisonTiles({
     Promise.allSettled(
       regions.map(async (r): Promise<RegionData> => {
         const [score, specialty] = await Promise.all([
-          fetchRegionScore(r),
+          // Server medians honor the property-type slice of the lens (Phase B).
+          fetchRegionScore(r, lens.propertyTypes),
+          // Specialty shares honor the full scope incl. sale/lease + beds/baths.
           needSpecialty
-            ? fetchRegionSpecialty(regionArea(r)).catch(() => null)
+            ? fetchRegionSpecialty(regionArea(r), lens).catch(() => null)
             : Promise.resolve(null),
         ]);
         return { score, specialty };
@@ -215,7 +222,7 @@ export default function RegionComparisonTiles({
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsKey, persona]);
+  }, [regionsKey, persona, scope]);
 
   // Peer median per metric, computed across all loaded regions (excluded per-tile).
   const peerValues = useMemo(() => {

@@ -29,15 +29,16 @@ function combine(...clauses: (string | undefined)[]): string {
   return clauses.filter(Boolean).join(' && ');
 }
 
-/** Top-N listings for one board within one area. */
+/** Top-N listings for one board within one area, scoped by the global lens. */
 export async function fetchBoard(
   board: BoardDef,
   area: Area,
+  lens: MarketActivityLens,
   perPage = 5
 ): Promise<ListingDocument[]> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(areaFilter(area), board.rawFilterBy),
+    rawFilterBy: combine(buildScopeFilter(area, lens), board.rawFilterBy),
     sortBy: board.sortBy,
     sortOrder: board.sortOrder,
     perPage,
@@ -51,24 +52,24 @@ export interface RegionStats {
   suiteCandidates: number; // count of listings with SuiteScore >= 3
 }
 
-/** Exact, point-in-time stats for an area (no time-series — see plan §deferred). */
-export async function fetchRegionStats(area: Area): Promise<RegionStats> {
+/** Exact, point-in-time stats for an area, scoped by the global lens. */
+export async function fetchRegionStats(
+  area: Area,
+  lens: MarketActivityLens
+): Promise<RegionStats> {
+  const scope = buildScopeFilter(area, lens);
   const [active, cap, suite] = await Promise.all([
+    searchListings({ query: '*', rawFilterBy: scope, perPage: 0 }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(areaFilter(area), 'ListPrice:>0'),
-      perPage: 0,
-    }),
-    searchListings({
-      query: '*',
-      rawFilterBy: combine(areaFilter(area), 'ExtrapolatedCapRate:>0'),
+      rawFilterBy: combine(scope, 'ExtrapolatedCapRate:>0'),
       sortBy: 'ExtrapolatedCapRate',
       sortOrder: 'desc',
       perPage: 1,
     }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(areaFilter(area), 'SuiteScore:>=3'),
+      rawFilterBy: combine(scope, 'SuiteScore:>=3'),
       perPage: 0,
     }),
   ]);
@@ -113,14 +114,17 @@ async function countMatching(filter: string): Promise<number> {
   return res.totalFound;
 }
 
-/** Specialty inventory shares for an area, used by the persona comparison tiles. */
-export async function fetchRegionSpecialty(area: Area): Promise<RegionSpecialtyStats> {
-  const base = areaFilter(area);
+/** Specialty inventory shares for an area, scoped by the global lens. */
+export async function fetchRegionSpecialty(
+  area: Area,
+  lens: MarketActivityLens
+): Promise<RegionSpecialtyStats> {
+  const scope = buildScopeFilter(area, lens);
   const [active, density, priceCut, cashflow] = await Promise.all([
-    countMatching(combine(base, 'ListPrice:>0')),
-    countMatching(combine(base, 'is_density_ready:=true')),
-    countMatching(combine(base, 'TotalPriceDrop:>0')),
-    countMatching(combine(base, `ExtrapolatedCapRate:>=${CASHFLOW_CAP_FLOOR}`)),
+    countMatching(scope),
+    countMatching(combine(scope, 'is_density_ready:=true')),
+    countMatching(combine(scope, 'TotalPriceDrop:>0')),
+    countMatching(combine(scope, `ExtrapolatedCapRate:>=${CASHFLOW_CAP_FLOOR}`)),
   ]);
   return {
     activeCount: active,
@@ -149,28 +153,29 @@ function finishedBasementClause(): string {
 }
 
 /**
- * Typesense filter_by for "new active listings in the last N days" under a lens.
- *
- * NOTE: this collection has no usable `Status:=Active` flag (it stores TRREB
- * MlsStatus sub-states like "New"/"Price Change"); the whole index is the active
- * IDX feed, so we scope by the EntryTimestamp window only. `EntryTimestamp` is in
- * MILLISECONDS (transformer.ts), so the cutoff is `Date.now() - days*DAY_MS`.
- * `ListPrice:>=50000` drops lease rows (no filterable TransactionType field).
+ * Sale-vs-lease scope as a ListPrice threshold. The live `properties` collection
+ * has no filterable TransactionType field, but residential rents are always well
+ * under $50k/listing and residential sales always well over it, so the floor is an
+ * effectively exact separator for the dashboard's purpose. (`lease` = priced under
+ * the floor; `sale` = at/above it, which is the historical default behaviour.)
  */
+function transactionClause(lens: MarketActivityLens): string {
+  return lens.transactionType === 'lease'
+    ? `ListPrice:>0 && ListPrice:<${ACTIVITY_PRICE_FLOOR}`
+    : `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`;
+}
+
 /**
- * Lens filter for "new active listings since an ABSOLUTE cutoff (epoch ms)".
- * `buildActivityFilter` is the rolling-window special case; the action feed
- * passes the user's previous-visit timestamp instead.
+ * The global active-inventory SCOPE — every "what kind of property" dimension of
+ * the lens (sale/lease, type, beds, baths, parking, finished basement, frontage),
+ * but NOT the time window (that is activity-only). This is the single filter that
+ * every active-inventory surface AND-joins so a city or a custom bubble shows one
+ * coherent slice instead of a mix of rentals, condos and 4-beds.
  */
-export function buildSinceFilter(
-  area: Area,
-  lens: MarketActivityLens,
-  sinceMs: number
-): string {
+export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
   return combine(
     areaFilter(area),
-    `EntryTimestamp:>=${Math.floor(sinceMs)}`,
-    `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`,
+    transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
     lens.minBeds > 0 ? `BedroomsTotal:>=${lens.minBeds}` : undefined,
     lens.minBaths > 0 ? `BathroomsTotalInteger:>=${lens.minBaths}` : undefined,
@@ -180,6 +185,25 @@ export function buildSinceFilter(
   );
 }
 
+/**
+ * Scope filter PLUS an absolute "entered since" cutoff (epoch ms).
+ * `buildActivityFilter` is the rolling-window special case; the action feed passes
+ * the user's previous-visit timestamp instead.
+ */
+export function buildSinceFilter(
+  area: Area,
+  lens: MarketActivityLens,
+  sinceMs: number
+): string {
+  return combine(buildScopeFilter(area, lens), `EntryTimestamp:>=${Math.floor(sinceMs)}`);
+}
+
+/**
+ * Rolling-window "new active listings in the last N days". This collection has no
+ * usable `Status:=Active` flag (it stores TRREB MlsStatus sub-states), so the whole
+ * IDX index is treated as active and scoped by the EntryTimestamp window only —
+ * `EntryTimestamp` is in MILLISECONDS (transformer.ts).
+ */
 export function buildActivityFilter(area: Area, lens: MarketActivityLens): string {
   return buildSinceFilter(area, lens, Date.now() - lens.windowDays * DAY_MS);
 }

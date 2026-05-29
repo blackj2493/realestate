@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
 
 export const dynamic = "force-dynamic"; // caching is handled by unstable_cache per region
 
@@ -65,7 +65,7 @@ function monthKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-async function computeTrend(region: string, propertyType: string): Promise<TrendResult> {
+async function computeTrend(region: string, typeKeys: string[]): Promise<TrendResult> {
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MONTHS);
   const cutoff90 = new Date();
@@ -86,7 +86,7 @@ async function computeTrend(region: string, propertyType: string): Promise<Trend
 
   // Property-type filter: exact spelling match (incl. trailing-space "Semi-Detached ").
   // Empty ⇒ all types (unchanged behaviour).
-  const variants = variantsForKeys([propertyType]);
+  const variants = variantsForKeys(typeKeys);
   if (variants.length) query = query.in("property_sub_type", variants);
 
   const { data, error } = await query
@@ -174,22 +174,22 @@ async function computeTrend(region: string, propertyType: string): Promise<Trend
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
-  const propertyType = (params.get("propertyType") || "all").trim().toLowerCase();
+  const typeKeys = parseTypeKeys(params);
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
 
+  const cacheKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
   try {
     const { points, summary } = await unstable_cache(
-      () => computeTrend(region, propertyType),
-      // v4 = lag-robust monthlyVelocity window (skip the still-accruing latest month).
-      // v3 = added the property-type filter. propertyType is part of the key so each type
-      // variant caches independently; bumping the version abandons stale entries.
-      ["market-price-trend", "v4", region.toLowerCase(), propertyType],
+      () => computeTrend(region, typeKeys),
+      // v5 = multi-type keys (types=a,b). v4 = lag-robust monthlyVelocity window.
+      // cacheKey is the sorted type-key set so each type combination caches independently.
+      ["market-price-trend", "v5", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, points, summary });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/price-trend]", region, propertyType, msg);
+    console.error("[market/price-trend]", region, cacheKey, msg);
     return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, error: msg }, { status: 500 });
   }
 }

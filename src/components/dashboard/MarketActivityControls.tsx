@@ -91,6 +91,7 @@ export default function MarketActivityControls({
         : `${lens.propertyTypes.length} types`;
 
   const isDefault =
+    lens.transactionType === "sale" &&
     lens.propertyTypes.length === 0 &&
     lens.minBeds === 0 &&
     lens.minBaths === 0 &&
@@ -101,6 +102,36 @@ export default function MarketActivityControls({
   return (
     <div className="border border-slate-800 bg-slate-900/40 p-3">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {/* Sale vs Rent — scopes every surface (the rest of the bar refines within it) */}
+        <div className="flex items-center gap-2">
+          <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+            For
+          </span>
+          <div className="flex border border-slate-700">
+            {(
+              [
+                { v: "sale", t: "Sale" },
+                { v: "lease", t: "Rent" },
+              ] as const
+            ).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => set({ transactionType: o.v })}
+                aria-pressed={lens.transactionType === o.v}
+                className={cn(
+                  "terminal-font px-3 py-1 text-xs transition-colors",
+                  lens.transactionType === o.v
+                    ? "bg-cyan-500 text-slate-950"
+                    : "text-slate-400 hover:bg-slate-800"
+                )}
+              >
+                {o.t}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Window */}
         <div className="flex items-center gap-2">
           <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">

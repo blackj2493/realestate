@@ -224,7 +224,7 @@ export default function BubbleMarketSection({
     >
       <MarketActivityPanel area={area} lens={lens} />
 
-      <RegionStatTiles area={area} />
+      <RegionStatTiles area={area} lens={lens} />
 
       {enabledBoards.length === 0 ? (
         <p className="text-xs text-slate-500">
@@ -233,7 +233,7 @@ export default function BubbleMarketSection({
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {enabledBoards.map((b) => (
-            <PlaylistBoard key={b.id} board={b} area={area} />
+            <PlaylistBoard key={b.id} board={b} area={area} lens={lens} />
           ))}
         </div>
       )}

@@ -113,10 +113,12 @@ async function getJson<T>(url: string): Promise<T | null> {
 
 export async function fetchRegionScore(
   region: string,
-  propertyType: string = "all"
+  typeKeys: string[] = []
 ): Promise<RegionScore> {
   const q = encodeURIComponent(region);
-  const t = `&propertyType=${encodeURIComponent(propertyType)}`;
+  // Multi-type: pass the lens's selected property-type keys (empty ⇒ all types).
+  // The endpoints resolve keys → exact PropertySubType spellings (variantsForKeys).
+  const t = typeKeys.length ? `&types=${encodeURIComponent(typeKeys.join(","))}` : "";
   const [trendR, statsR] = await Promise.allSettled([
     getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${t}`),
     getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${t}`),

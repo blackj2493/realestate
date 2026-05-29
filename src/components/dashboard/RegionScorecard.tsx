@@ -48,35 +48,32 @@ const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "temperature", label: "Temp", align: "right" },
 ];
 
-// Global property-type filter. Keys MUST match src/lib/dashboard/propertyTypes.ts
-// (the API resolves them to exact PropertySubType spellings via variantsForKeys).
-const TYPE_FILTERS: { key: string; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "detached", label: "Detached" },
-  { key: "semi", label: "Semi" },
-  { key: "town", label: "Town" },
-  { key: "condo", label: "Condo" },
-];
-
 function sortValue(s: RegionScore, key: SortKey): number | string | null {
   if (key === "region") return s.region.toLowerCase();
   if (key === "temperature") return s.temperature ? TEMP[s.temperature].rank : null;
   return s[key] as number | null;
 }
 
-export default function RegionScorecard({ regions }: { regions: string[] }) {
+export default function RegionScorecard({
+  regions,
+  propertyTypes,
+}: {
+  regions: string[];
+  /** Global lens property-type keys ([] = all). Drives the sold/active aggregates. */
+  propertyTypes: string[];
+}) {
   const [scores, setScores] = useState<RegionScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [propertyType, setPropertyType] = useState("all");
 
-  // Stable dependency so the effect doesn't re-fire on every parent render.
+  // Stable dependencies so the effect doesn't re-fire on every parent render.
   const regionsKey = regions.join("|");
+  const typesKey = [...propertyTypes].sort().join(",");
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.allSettled(regions.map((r) => fetchRegionScore(r, propertyType)))
+    Promise.allSettled(regions.map((r) => fetchRegionScore(r, propertyTypes)))
       .then((results) => {
         if (!alive) return;
         setScores(
@@ -90,7 +87,7 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsKey, propertyType]);
+  }, [regionsKey, typesKey]);
 
   const sorted = useMemo(() => {
     if (!sortKey) return scores;
@@ -123,31 +120,6 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
       <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
         Region Scorecard <span className="text-slate-500">· {regions.length}</span>
       </h2>
-
-      {/* Global property-type filter — re-runs every region aggregate by type. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">Type</span>
-        <div className="flex border border-slate-700">
-          {TYPE_FILTERS.map((t) => {
-            const active = t.key === propertyType;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setPropertyType(t.key)}
-                aria-pressed={active}
-                className={`terminal-font border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
-                  active
-                    ? "bg-cyan-500/20 text-cyan-300"
-                    : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       <div className="overflow-x-auto border border-slate-800">
         <div className="min-w-[1000px]">
@@ -237,9 +209,9 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
       </div>
 
       <p className="text-[11px] leading-relaxed text-slate-600">
-        {propertyType !== "all" && (
+        {propertyTypes.length > 0 && (
           <span className="text-slate-400">
-            Showing: {TYPE_FILTERS.find((t) => t.key === propertyType)?.label}.{" "}
+            Filtered to your selected property type{propertyTypes.length > 1 ? "s" : ""}.{" "}
           </span>
         )}
         Active metrics (cap rate, active count, % stale) are full-population over current active inventory.
