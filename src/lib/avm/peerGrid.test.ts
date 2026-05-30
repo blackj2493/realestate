@@ -7,8 +7,9 @@
  * it is NOT subject to ADJ_CLAMP — the whole point for high-end outliers.
  */
 import { describe, it, expect } from 'vitest';
-import { peerLevelFromComps, type CompRow } from './anchorService';
+import { peerLevelFromComps, cohortOutlierScore, type CompRow } from './anchorService';
 import type { AVMInput } from './types';
+import { OUTLIER_Z, BAND_LOW } from './types';
 import type { CoefficientRow } from './matrixService';
 
 const NOW = Date.parse('2026-05-01T00:00:00Z');
@@ -92,5 +93,71 @@ describe('peerLevelFromComps', () => {
   it('returns null when every comp is unusable (no positive price)', () => {
     const comps = [comp({ close_price: 0 }), comp({ close_price: 0 })];
     expect(peerLevelFromComps(subject, comps, coeffs, [], NOW)).toBeNull();
+  });
+
+  it('band is the standard error of the estimate (shrinks with nEff), NOT the raw comp spread', () => {
+    // Many similar comps with WIDE price dispersion (~$900k–$2.2M, log-SD ≈ 0.27 >
+    // BAND_LOW). The point estimate is still well-determined by 10 comps, so the
+    // published band must reflect SE ≈ dispersion/√nEff and stay under BAND_LOW —
+    // otherwise finish() suppresses a perfectly good estimate (the live bug).
+    const prices = [900_000, 1_000_000, 1_100_000, 1_300_000, 1_500_000, 1_700_000, 1_900_000, 2_000_000, 2_100_000, 2_200_000];
+    const comps = prices.map((p) => comp({ close_price: p }));
+    const r = peerLevelFromComps(subject, comps, [], [], NOW);
+    expect(r).not.toBeNull();
+    expect(r!.predSD).toBeLessThan(BAND_LOW); // publishable, not suppressed
+  });
+
+  it('works with ZERO coefficients — similarity-weighted median of comp prices (CMA)', () => {
+    // Untrained cohort: no betas. With similar comps, the grid is just the median
+    // of comparable sale prices — exactly a CMA.
+    const comps = [
+      comp({ close_price: 1_480_000 }),
+      comp({ close_price: 1_500_000 }),
+      comp({ close_price: 1_520_000 }),
+      comp({ close_price: 1_500_000 }),
+      comp({ close_price: 1_510_000 }),
+    ];
+    const r = peerLevelFromComps(subject, comps, [], [], NOW);
+    expect(r).not.toBeNull();
+    expect(Math.exp(r!.anchorLevel)).toBeCloseTo(1_500_000, -4);
+  });
+});
+
+describe('cohortOutlierScore — coefficient-free, market-relative atypicality', () => {
+  const cohortComp = (over: Partial<CompRow>): CompRow =>
+    comp({ bedrooms_above_grade: 3, bathrooms_total_integer: 2, lot_width: 30, lot_depth: 100, ...over });
+
+  it('flags a subject far above the cohort (5 baths vs a 2-bath cohort)', () => {
+    const cohort = [
+      cohortComp({ bathrooms_total_integer: 2 }),
+      cohortComp({ bathrooms_total_integer: 3 }),
+      cohortComp({ bathrooms_total_integer: 2 }),
+      cohortComp({ bathrooms_total_integer: 2 }),
+      cohortComp({ bathrooms_total_integer: 3 }),
+    ];
+    const big: AVMInput = { ...subject, bedroomsAboveGrade: 4, bathroomsTotalInteger: 5, lotWidth: 50 };
+    expect(cohortOutlierScore(big, cohort)).toBeGreaterThan(OUTLIER_Z);
+  });
+
+  it('does NOT flag a subject that matches its cohort', () => {
+    const cohort = [
+      cohortComp({}),
+      cohortComp({ bathrooms_total_integer: 3 }),
+      cohortComp({ bedrooms_above_grade: 4 }),
+      cohortComp({}),
+      cohortComp({ lot_width: 32 }),
+    ];
+    const typical: AVMInput = {
+      ...subject,
+      bedroomsAboveGrade: 3,
+      bathroomsTotalInteger: 2,
+      lotWidth: 30,
+      lotDepth: 100,
+    };
+    expect(cohortOutlierScore(typical, cohort)).toBeLessThan(OUTLIER_Z);
+  });
+
+  it('returns 0 when the cohort is too small to judge', () => {
+    expect(cohortOutlierScore(subject, [comp({})])).toBe(0);
   });
 });

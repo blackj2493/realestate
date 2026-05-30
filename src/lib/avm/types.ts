@@ -144,3 +144,12 @@ export const MIN_PEERS_FOR_HIGH = 8;
 export const BW_BEDS = 1;
 export const BW_BATHS = 1;
 export const BW_LOT = 0.5;
+
+/**
+ * Coefficient-free outlier gate for UNTRAINED cohorts (no matrix row → anchor-only,
+ * e.g. Scarborough Village). With no betas we can't compute Σβz, so we flag a home
+ * as atypical when it sits more than this many std-devs from its local comp
+ * distribution on a size proxy (beds-above-grade, baths, log lot width). Market-
+ * relative, list-price-independent. Phase-1 default; tunable.
+ */
+export const OUTLIER_Z = 1.5;

@@ -33,6 +33,7 @@ import {
   BW_BEDS,
   BW_BATHS,
   BW_LOT,
+  OUTLIER_Z,
 } from './types';
 import type { CoefficientRow } from './matrixService';
 import { rawVariantsOf, cityRegionLookupCandidates } from './normalizeType';
@@ -475,25 +476,67 @@ export function peerLevelFromComps(
   const sumW2 = w2.reduce((a, x) => a + x * x, 0);
   const nEff = (sumW * sumW) / sumW2;
   const variance = preds.reduce((a, p, i) => a + w2[i] * (p - center) ** 2, 0) / sumW;
-  // Floor the band so a handful of near-identical comps can't claim absurd precision.
-  const predSD = Math.max(Math.sqrt(Math.max(variance, 0)), 0.02);
+  // Band = standard error of the weighted mean (uncertainty of the ESTIMATE, which
+  // shrinks with effective sample size) — consistent with the anchor pipeline's
+  // SIGMA2/nEff. Using the raw comp dispersion here over-states uncertainty and trips
+  // BAND_LOW suppression even when many comps pin the centre well. Floored so a few
+  // near-identical comps can't claim absurd precision.
+  const predSD = Math.max(Math.sqrt(Math.max(variance, 0) / Math.max(nEff, 1)), 0.02);
 
   return { anchorLevel: center, predSD, nEff, comps: usable.length, basis };
 }
 
 /**
- * Fetch a peer anchor for a saturating outlier, escalating geography until a rung
- * carries enough effective peers (≥ MIN_PEER_NEFF): community → city-wide. Returns
- * null if no rung clears the floor (caller then shows a clamped neighbourhood FLOOR).
+ * Coefficient-free, market-relative atypicality: how many std-devs the subject sits
+ * from its local comp distribution on the size proxies the comps carry (beds-above-
+ * grade, baths, log lot width). Returns the max |z| across available dimensions, or
+ * 0 when the cohort is too small (< 3 comps) or has no variance to judge against.
+ * Used to flag outliers in UNTRAINED cohorts where Σβz is unavailable. No list price.
+ */
+export function cohortOutlierScore(subject: AVMInput, comps: CompRow[]): number {
+  const zOf = (
+    subj: number | null | undefined,
+    getComp: (c: CompRow) => number | null,
+    tf: (x: number) => number = (x) => x
+  ): number | null => {
+    if (subj == null || !(subj > 0)) return null;
+    const xs = comps.map(getComp).filter((v): v is number => v != null && v > 0).map(tf);
+    if (xs.length < 3) return null;
+    const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+    const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length);
+    if (!(sd > 0)) return null;
+    return (tf(subj) - mean) / sd;
+  };
+  const zs = [
+    zOf(subject.bedroomsAboveGrade, (c) => c.bedrooms_above_grade),
+    zOf(subject.bathroomsTotalInteger, (c) => c.bathrooms_total_integer),
+    zOf(subject.lotWidth, (c) => c.lot_width, Math.log),
+  ].filter((z): z is number => z != null);
+  if (zs.length === 0) return 0;
+  return Math.max(...zs.map((z) => Math.abs(z)));
+}
+
+/**
+ * Fetch a peer anchor for an outlier, escalating geography until a rung carries
+ * enough effective peers (≥ MIN_PEER_NEFF): community → city-wide.
+ *   • AnchorResult → peers found (basis 'peer').
+ *   • null         → flagged outlier but too few peers → caller shows a FLOOR.
+ *   • undefined    → UNTRAINED cohort (no coefficients) where the home turns out
+ *                    TYPICAL for its community → caller leaves the normal estimate.
+ * For trained cohorts (coefficients present) the caller already decided via Σβz, so
+ * the atypicality gate is skipped and only AnchorResult|null are returned.
  * Independent of list price (CLAUDE.md §2). Reads raw_vow_sold READ-ONLY (§12).
  */
 export async function fetchPeerAnchor(
   supabase: SupabaseClient,
   subject: AVMInput,
   coefficients: CoefficientRow[]
-): Promise<AnchorResult | null> {
+): Promise<AnchorResult | null | undefined> {
   const subVariants = rawVariantsOf(subject.propertySubType, subject.rawPropertySubType);
-  if (subVariants.length === 0) return null;
+  if (subVariants.length === 0) return undefined;
+
+  // Untrained cohort (no betas) → decide outlier from the comp distribution, not Σβz.
+  const gateAtypicality = coefficients.length === 0;
 
   const cityKey = (subject.city ?? subject.cityRegion).trim();
   const subKey = subject.propertySubType.toLowerCase().trim();
@@ -513,6 +556,8 @@ export async function fetchPeerAnchor(
 
   // Rung 1 — community (city_region candidates).
   const cands = cityRegionLookupCandidates(subject.cityRegion);
+  // Coefficient-free path needs community comps to judge atypicality.
+  if (gateAtypicality && cands.length === 0) return undefined;
   if (cands.length > 0) {
     const res = await supabase
       .from('raw_vow_sold')
@@ -523,13 +568,15 @@ export async function fetchPeerAnchor(
       .gte('purchase_contract_date', windowStartIso)
       .order('purchase_contract_date', { ascending: false })
       .limit(MAX_COMPS);
-    const peer = peerLevelFromComps(
-      subject,
-      ((res.data as unknown as CompRow[] | null) ?? []),
-      coefficients,
-      trend,
-      nowMs
-    );
+    const communityComps = ((res.data as unknown as CompRow[] | null) ?? []);
+
+    // Untrained cohort: bail to the normal estimate unless the home is atypical
+    // for its community (market-relative, list-price-independent).
+    if (gateAtypicality && cohortOutlierScore(subject, communityComps) < OUTLIER_Z) {
+      return undefined;
+    }
+
+    const peer = peerLevelFromComps(subject, communityComps, coefficients, trend, nowMs);
     if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
   }
 

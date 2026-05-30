@@ -85,6 +85,34 @@ export function isFeatureOutlier(input: AVMInput, coefficients: CoefficientRow[]
   return Math.abs(subjectAdjustmentTotal(input, coeff)) > ADJ_CLAMP;
 }
 
+/**
+ * Cheap subject-only pre-screen for UNTRAINED cohorts (no coefficients): is the
+ * home large enough to be worth pulling comps to assess market-relative
+ * atypicality? Generous on purpose — the real decision is the comp-distribution
+ * gate inside fetchPeerAnchor; this only spares an extra query for obviously
+ * typical/small homes. NOT a valuation signal.
+ */
+function worthComparableCheck(input: AVMInput): boolean {
+  const beds = input.bedroomsAboveGrade ?? 0;
+  const baths = input.bathroomsTotalInteger ?? 0;
+  const sqft = input.buildingAreaTotal ?? 0;
+  const lotArea =
+    input.lotWidth && input.lotDepth ? input.lotWidth * input.lotDepth : 0;
+  return beds >= 5 || baths >= 4 || sqft >= 2500 || lotArea >= 6000;
+}
+
+/**
+ * Single source of truth for whether to pull peer comps: trained cohorts gate on
+ * the Σβz clamp-saturation signal; untrained cohorts (no coefficients) gate on the
+ * cheap large-home pre-screen, then fetchPeerAnchor self-gates on market-relative
+ * atypicality. Shared by the request path and the nightly batch so they can't drift.
+ */
+export function shouldEvaluatePeers(input: AVMInput, coefficients: CoefficientRow[]): boolean {
+  return coefficients.length > 0
+    ? isFeatureOutlier(input, coefficients)
+    : worthComparableCheck(input);
+}
+
 export async function calculateAVM(
   supabase: SupabaseClient,
   input: AVMInput
@@ -97,11 +125,12 @@ export async function calculateAVM(
   ]);
   const anchor = await fetchAnchor(supabase, input, coefficients, audit.basePrice);
 
-  // Peer comp-grid ONLY for feature outliers (the homes the standard estimate
-  // mis-prices). undefined → not evaluated → normal path unchanged; AnchorResult
-  // → peer-grid; null → too few peers → neighbourhood floor.
+  // Peer comp-grid for the homes the standard estimate mis-prices. undefined →
+  // not evaluated → normal path unchanged; AnchorResult → peer-grid; null → too
+  // few peers → neighbourhood floor. fetchPeerAnchor self-gates (atypicality) for
+  // untrained cohorts, so a flagged-but-typical home returns undefined.
   let peer: AnchorResult | null | undefined;
-  if (isFeatureOutlier(input, coefficients)) {
+  if (shouldEvaluatePeers(input, coefficients)) {
     peer = await fetchPeerAnchor(supabase, input, coefficients);
   }
 
@@ -128,10 +157,14 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
   }
 
   // Peer/floor branch — engine-independent, so it sits ABOVE the R² gate. Honored
-  // only when the async layer evaluated peers (market.peer !== undefined) AND the
-  // subject is a genuine feature outlier, so typical homes are never touched (the
-  // golden master proves the normal path is frozen).
-  if (market.peer !== undefined && isFeatureOutlier(input, market.coefficients)) {
+  // only when the async layer evaluated peers (market.peer !== undefined). For
+  // TRAINED cohorts we re-verify the home is a Σβz outlier (defense in depth, so a
+  // stray peer can't move a typical home); for UNTRAINED cohorts (no coefficients,
+  // no Σβz signal) we trust the async layer's market-relative decision. The golden
+  // master proves the normal path (peer undefined) is frozen either way.
+  const outlierGuard =
+    market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients) : true;
+  if (market.peer !== undefined && outlierGuard) {
     if (market.peer) return peerEstimate(market.peer, market.r2);
     // peer === null → too few peers anywhere: present the normal number honestly
     // as a neighbourhood FLOOR (relabelled basis, confidence never HIGH).

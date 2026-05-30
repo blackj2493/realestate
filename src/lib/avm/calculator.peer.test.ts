@@ -128,6 +128,37 @@ describe('estimateFromMarketData — ANCHOR-ONLY outlier (r2 below gate, the E13
   });
 });
 
+describe('estimateFromMarketData — UNTRAINED cohort (zero coefficients, the Scarborough Village case)', () => {
+  // coeffCount 0 → no Σβz signal; the async layer decides via market-relative
+  // atypicality and supplies a peer. estimateFromMarketData must honor it even
+  // though isFeatureOutlier (coefficient-based) can't fire.
+  const noCoeff: Omit<AVMMarketData, 'peer'> = {
+    anchor: anchor(LN_800K, 0.055, 'local'),
+    r2: null,
+    basePrice: 800_000,
+    coefficients: [],
+  };
+
+  it('uses the peer estimate even with zero coefficients', () => {
+    const peer = anchor(Math.log(1_700_000), 0.06, 'peer', 12);
+    const r = estimateFromMarketData(outlierInput, { ...noCoeff, peer });
+    expect(r.estimatedValue).toBeCloseTo(1_700_000, -3);
+    expect(r.basis).toBe('peer');
+  });
+
+  it('floor (peer === null): keeps the anchor number, caps confidence, relabels', () => {
+    const bare = estimateFromMarketData(outlierInput, noCoeff);
+    const floored = estimateFromMarketData(outlierInput, { ...noCoeff, peer: null });
+    expect(floored.estimatedValue).toBe(bare.estimatedValue);
+    expect(floored.basis).toBe('floor');
+    expect(floored.confidence).not.toBe(CONFIDENCE_HIGH);
+  });
+
+  it('peer undefined → untouched plain anchor-only', () => {
+    expect(estimateFromMarketData(outlierInput, noCoeff).basis).toBe('local');
+  });
+});
+
 describe('estimateFromMarketData — peer ignored unless the clamp binds (no-regression guard)', () => {
   it('a peer supplied for a NON-saturating home is ignored (number frozen)', () => {
     const base: Omit<AVMMarketData, 'peer'> = {
