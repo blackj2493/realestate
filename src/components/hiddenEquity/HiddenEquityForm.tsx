@@ -264,13 +264,15 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
         </Label>
         <Input
           type="number"
-          min={0}
+          min={1}
           value={value.buildingAreaTotal ?? ''}
           onChange={(e) => {
             const n = parseFloat(e.target.value);
+            // Empty / unparseable / non-positive → omit (null): the API's
+            // z.number().positive() would reject a literal 0 with a 400.
             onChange({
               ...value,
-              buildingAreaTotal: e.target.value === '' || !Number.isFinite(n) ? null : n,
+              buildingAreaTotal: e.target.value === '' || !Number.isFinite(n) || n <= 0 ? null : n,
             });
           }}
           placeholder="e.g. 1800"
