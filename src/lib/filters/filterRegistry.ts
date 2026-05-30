@@ -82,7 +82,7 @@ export const CORE_FILTERS: FilterDef[] = [
     facetField: "PropertySubType",
     options: [
       { value: "Detached", label: "Detached" },
-      { value: "Semi-Detached", label: "Semi-Detached" },
+      { value: "Semi-Detached ", label: "Semi-Detached" },
       { value: "Att/Row/Townhouse", label: "Townhouse" },
       { value: "Condo Apartment", label: "Condo Apt" },
       { value: "Condo Townhouse", label: "Condo Townhouse" },
