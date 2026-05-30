@@ -1,8 +1,7 @@
 /**
  * LocationSearch — the terminal search bar's typeahead.
  *
- * Restores the autocomplete the old (orphaned) SearchDropdown provided, but native
- * to the dark terminal. A debounced Typesense query surfaces, in priority order:
+ * A debounced Typesense query surfaces, in priority order:
  *   • an exact MLS# match → opens that listing,
  *   • street-address matches → opens that listing,
  *   • cities / neighbourhoods with live active-listing counts → runs a location search.
