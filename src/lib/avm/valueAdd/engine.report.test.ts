@@ -61,4 +61,27 @@ describe('buildValueAddReport', () => {
     expect(r.headlineUpside).toBeLessThanOrEqual(Math.round(PCT_CAP_STACK * r.subjectEstimate));
     // (precise selection internals are covered by the rawStackValue joint-math unit tests)
   });
+
+  it('exposes a gross joint value-add that is ≥ the net headline', () => {
+    const report = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
+    expect(report.headlineUpsideGross).toBeGreaterThanOrEqual(report.headlineUpside);
+    expect(report.headlineUpsideGross).toBeGreaterThan(0);
+  });
+
+  it('scales the whole report linearly when P0 is overridden', () => {
+    const baseRep = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
+    const override = baseRep.subjectEstimate * 2;
+    const scaled = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED, { subjectEstimate: override });
+    expect(scaled.subjectEstimate).toBe(override);
+    // Use finish_basement: high capHigh (150k) so doubling P0 isn't clipped by the absolute cap.
+    const baseMove = baseRep.moves.find((m) => m.key === 'finish_basement' && m.status === 'priced')!;
+    const scaledMove = scaled.moves.find((m) => m.key === 'finish_basement')!;
+    expect(scaledMove.valueAddTyp).toBeGreaterThan(baseMove.valueAddTyp * 1.9);
+  });
+
+  it('leaves output unchanged when no opts are passed', () => {
+    const a = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
+    const b = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED, {});
+    expect(b).toEqual(a);
+  });
 });

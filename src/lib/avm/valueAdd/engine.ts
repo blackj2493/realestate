@@ -143,6 +143,7 @@ function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddRep
     cityRegion: input.cityRegion,
     propertySubType: input.propertySubType,
     subjectEstimate: 0,
+    headlineUpsideGross: 0,
     headlineUpside: 0,
     valueAddScore: 0,
     moves: MOVE_CATALOG.map((m) => suppressed(m, 'no_estimate')),
@@ -162,9 +163,18 @@ function neighbourhoodInsight(input: AVMInput, _market: AVMMarketData, moves: Va
   return `In ${input.cityRegion}, the market pays most for: ${top.label.toLowerCase()}.${tail}`;
 }
 
-export function buildValueAddReport(input: AVMInput, market: AVMMarketData): ValueAddReport {
-  const base = estimateFromMarketData(input, market);
-  const P0 = base.estimatedValue;
+export interface BuildValueAddOpts {
+  /** Override P0 (the home's AVM estimate). The on-listing card passes the estimate
+   *  already displayed so the report can never contradict it. Every move value is
+   *  P0·(exp(Δ)−1), so this scales the whole report linearly. */
+  subjectEstimate?: number;
+}
+
+export function buildValueAddReport(input: AVMInput, market: AVMMarketData, opts?: BuildValueAddOpts): ValueAddReport {
+  const P0 =
+    opts?.subjectEstimate && opts.subjectEstimate > 0
+      ? opts.subjectEstimate
+      : estimateFromMarketData(input, market).estimatedValue;
   if (P0 <= 0) return unavailableReport(input, market);
 
   const byKey = new Map<MoveKey, (typeof MOVE_CATALOG)[number]>(MOVE_CATALOG.map((m) => [m.key, m]));
@@ -191,6 +201,7 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData): Val
   let jointValue = Math.max(0, rawStackValue(input, after, market, P0));
   jointValue = Math.min(jointValue, PCT_CAP_STACK * P0);
   const totalCost = selected.reduce((a, m) => a + m.costTyp, 0);
+  const headlineUpsideGross = Math.max(0, Math.round(jointValue));
   const headlineUpside = Math.max(0, Math.round(jointValue - totalCost));
   const valueAddScore = Math.min(100, Math.round((jointValue / P0) * SCORE_K));
 
@@ -198,6 +209,7 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData): Val
     cityRegion: input.cityRegion,
     propertySubType: input.propertySubType,
     subjectEstimate: P0,
+    headlineUpsideGross,
     headlineUpside,
     valueAddScore,
     moves,

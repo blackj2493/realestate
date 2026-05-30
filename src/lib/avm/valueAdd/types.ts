@@ -72,6 +72,9 @@ export interface ValueAddReport {
   propertySubType: string;
   /** P0 — the home's own AVM estimate (0 when unavailable). */
   subjectEstimate: number;
+  /** GROSS joint value-add in dollars (capped joint, BEFORE renovation costs).
+   *  Always ≥ headlineUpside. 0 in the unavailable report. */
+  headlineUpsideGross: number;
   /** NET of renovation costs: joint value-add of the best non-overlapping
    *  positive-payback moves − their costs. May be 0 while valueAddScore > 0. */
   headlineUpside: number;
