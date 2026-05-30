@@ -27,6 +27,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
+import { buildUniversalFilterString } from "@/lib/filters/filterRegistry";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
@@ -51,6 +52,7 @@ function CommandCenterContent() {
   const {
     activePersona,
     filters,
+    universalFilters,
     searchResult,
     setSearchResult,
     setIsLoading,
@@ -129,6 +131,10 @@ function CommandCenterContent() {
     try {
       const personaFilter = persona.buildFilterString(filters);
 
+      // Universal composable filters (price/beds/baths/type) compose alongside
+      // the persona's investor filters — same filter_by chain, no API change.
+      const universalFilter = buildUniversalFilterString(universalFilters);
+
       // School-quality lens: one indexed score field drives the min-score filter,
       // the target-school proximity filter, and the sort override (best schools first).
       const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
@@ -148,7 +154,7 @@ function CommandCenterContent() {
           ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
           : null;
 
-      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts, bandClause, drawClause]
+      const rawFilterBy = [SALES_FLOOR, personaFilter, universalFilter, ...schoolParts, bandClause, drawClause]
         .filter(Boolean)
         .join(" && ");
 
@@ -180,7 +186,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, universalFilters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
