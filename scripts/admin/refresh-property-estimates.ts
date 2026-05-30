@@ -32,7 +32,7 @@ import * as https from 'https';
 import crossFetch from 'cross-fetch';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
-import { estimateFromMarketData, isFeatureOutlier, type AVMMarketData } from '@/lib/avm/calculator';
+import { estimateFromMarketData, shouldEvaluatePeers, type AVMMarketData } from '@/lib/avm/calculator';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
 import { fetchAuditInfo } from '@/lib/avm/auditService';
 import { fetchCoefficients, type CoefficientRow } from '@/lib/avm/matrixService';
@@ -337,10 +337,11 @@ async function main() {
           staticData.coefficients,
           staticData.basePrice
         );
-        // Mirror the request path: saturating outliers get the peer comp-grid so
-        // precomputed Compare values match the listing-page estimate exactly.
+        // Mirror the request path EXACTLY (shouldEvaluatePeers covers both trained
+        // Σβz outliers and untrained-cohort atypical homes) so precomputed Compare
+        // values match the listing-page estimate.
         let peer: AnchorResult | null | undefined;
-        if (isFeatureOutlier(avmInput, staticData.coefficients)) {
+        if (shouldEvaluatePeers(avmInput, staticData.coefficients)) {
           peer = await fetchPeerAnchor(sb, avmInput, staticData.coefficients);
         }
         const market: AVMMarketData = {
