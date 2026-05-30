@@ -12,6 +12,7 @@ import Logo from "@/components/Logo";
 import { useCommandCenterStore, type PersonaType } from "@/lib/stores/commandCenterStore";
 import { PERSONA_LIST } from "@/lib/personas/personaConfig";
 import PersonaFilterBar from "./PersonaFilterBar";
+import FilterBar from "./FilterBar";
 import LocationSearch from "./LocationSearch";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 import PrimaryNav from "@/components/layout/PrimaryNav";
@@ -91,7 +92,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         </div>
       </div>
 
-      {/* Parameter ribbon */}
+      {/* Universal composable filter bar (price/beds/baths/type) */}
+      <FilterBar />
+
+      {/* Persona investor ribbon */}
       <PersonaFilterBar />
     </div>
   );
