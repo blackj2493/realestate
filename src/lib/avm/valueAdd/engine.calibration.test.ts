@@ -99,3 +99,83 @@ describe('evaluateMove — cohort gates', () => {
     expect(r.suppressReason).toBe('thin_cohort');
   });
 });
+
+describe('evaluateMove — gate coverage', () => {
+  const P0 = 861351;
+
+  // 1. at_ceiling: bathrooms well above mean + 2·effStd
+  it('at_ceiling: suppresses add_bathroom when bathrooms is above ceiling', () => {
+    const ceilHome = subject({
+      buildingAreaTotal: 1560, bathroomsTotalInteger: 6, bedroomsAboveGrade: 3,
+      parkingTotal: 2, basementTier: 5, interiorTier: 3, exteriorTier: 3, lotWidth: 40,
+    });
+    // bathrooms ceiling = 3.0256 + 2 * max(0.891187, 0.9) = 3.0256 + 1.8 = 4.8256
+    // 6 >= 4.8256 → at_ceiling
+    const r = evaluateMove(ceilHome, move('add_bathroom'), BRAMPTON_WEST_DETACHED, P0);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('at_ceiling');
+  });
+
+  // 2. null_baseline: missing bathrooms value
+  it('null_baseline: suppresses add_bathroom when bathroomsTotalInteger is null', () => {
+    const nullHome = subject({
+      buildingAreaTotal: 1560, bathroomsTotalInteger: null, bedroomsAboveGrade: 3,
+      parkingTotal: 2, basementTier: 5, interiorTier: 3, exteriorTier: 3, lotWidth: 40,
+    });
+    const r = evaluateMove(nullHome, move('add_bathroom'), BRAMPTON_WEST_DETACHED, P0);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('null_baseline');
+  });
+
+  // 3. already_present: basementTier already at 2 (finish_basement target)
+  it('already_present: suppresses finish_basement when basement already finished (tier=2)', () => {
+    const finishedHome = subject({
+      buildingAreaTotal: 1560, bathroomsTotalInteger: 3, bedroomsAboveGrade: 3,
+      parkingTotal: 2, basementTier: 2, interiorTier: 3, exteriorTier: 3, lotWidth: 40,
+    });
+    const r = evaluateMove(finishedHome, move('finish_basement'), BRAMPTON_WEST_DETACHED, P0);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('already_present');
+  });
+
+  // 4. legal_suite priced: both driving features healthy in Brampton
+  it('legal_suite priced: both basement_score and bathrooms_total_integer healthy → priced with positive value', () => {
+    // bramptonHome: basementTier=5 (score=5), bathrooms=3 — both below ceiling, healthy betas
+    const r = evaluateMove(bramptonHome, move('legal_suite'), BRAMPTON_WEST_DETACHED, P0);
+    expect(r.status).toBe('priced');
+    expect(r.valueAddTyp).toBeGreaterThan(0);
+  });
+
+  // 5. legal_suite suppressed: Erin Mills Condo basement_score is placeholder stub
+  it('legal_suite suppressed: Erin Mills Condo basement_score is placeholder → suppressed', () => {
+    const condoHome = subject({
+      propertySubType: 'Condo Apartment', rawPropertySubType: 'Condo Apartment',
+      buildingAreaTotal: 1169, bathroomsTotalInteger: 2, bedroomsAboveGrade: 2,
+      parkingTotal: 1, basementTier: 5, interiorTier: 3, exteriorTier: 3,
+    });
+    const r = evaluateMove(condoHome, move('legal_suite'), ERIN_MILLS_CONDO, P0);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('placeholder');
+  });
+
+  // 6. net-gain and payback math for a priced add_bathroom
+  it('net-gain / payback math: netGainTyp = valueAddTyp - costTyp and paybackRatio = valueAddTyp / costTyp', () => {
+    const r = evaluateMove(bramptonHome, move('add_bathroom'), BRAMPTON_WEST_DETACHED, P0);
+    expect(r.status).toBe('priced');
+    const m = move('add_bathroom');
+    expect(r.netGainTyp).toBe(r.valueAddTyp - m.costTyp);
+    expect(r.paybackRatio).toBeCloseTo(r.valueAddTyp / m.costTyp, 10);
+    expect(r.paybackRatio).toBeGreaterThan(0);
+  });
+
+  // 7. confidence LOW on a wide-band market (predSD >= BAND_MED = 0.15)
+  it('confidence LOW when predSD >= BAND_MED (0.15)', () => {
+    const wideBandMarket = {
+      ...BRAMPTON_WEST_DETACHED,
+      anchor: { ...BRAMPTON_WEST_DETACHED.anchor, predSD: 0.2 },
+    };
+    const r = evaluateMove(bramptonHome, move('add_bathroom'), wideBandMarket, P0);
+    expect(r.status).toBe('priced');
+    expect(r.confidence).toBe('LOW');
+  });
+});

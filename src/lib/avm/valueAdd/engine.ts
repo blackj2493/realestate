@@ -83,12 +83,14 @@ export function evaluateMove(
   // Per-driving-feature gates
   for (const fname of move.drivingFeatures) {
     const c = coeff.get(fname);
+    if (!c) return suppressed(move, 'placeholder');   // missing coeff row
     const gate = featureGate(c);
     if (gate) return suppressed(move, gate);
     const spec = FEATURE_SPECS.find((s) => s.name === fname)!;
     const v0 = spec.valueOf(input);
     if (v0 === null) return suppressed(move, 'null_baseline');
-    if (v0 >= c!.mean + CEILING_STD * c!.std) return suppressed(move, 'at_ceiling');
+    const effStd = effectiveStd(fname, c.std);
+    if (v0 >= c.mean + CEILING_STD * effStd) return suppressed(move, 'at_ceiling');
   }
 
   // Already-present: a move that changes none of its driving features (e.g. basement
