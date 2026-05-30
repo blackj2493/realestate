@@ -20,9 +20,14 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
+import { useRouter } from "next/navigation";
+import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
 
 interface LocationSearchProps {
   className?: string;
+  /** "inplace" (default): mutate commandCenterStore (terminal reacts live).
+   *  "navigate": router.push into /properties or the listing detail page. */
+  mode?: "inplace" | "navigate";
 }
 
 function SuggestionIcon({ kind }: { kind: SearchSuggestion["kind"] }) {
@@ -38,11 +43,12 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
   mls: "MLS",
 };
 
-export default function LocationSearch({ className }: LocationSearchProps) {
+export default function LocationSearch({ className, mode = "inplace" }: LocationSearchProps) {
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
   const totalCount = useCommandCenterStore((s) => s.totalCount);
   const setSelectedProperty = useCommandCenterStore((s) => s.setSelectedProperty);
+  const router = useRouter();
 
   const [value, setValue] = React.useState("");
   const [open, setOpen] = React.useState(false);
@@ -92,23 +98,22 @@ export default function LocationSearch({ className }: LocationSearchProps) {
     inputRef.current?.blur();
   };
 
-  // Commit a free-typed location string (no suggestion chosen).
-  const commitLocation = (label: string) => {
-    setLocation(label.trim());
+  // Apply a resolved target. navigate mode routes; inplace mode mutates the store
+  // exactly as before (city → setLocation, listing → setSelectedProperty).
+  const applyTarget = (t: SearchTarget) => {
+    if (mode === "navigate") {
+      router.push(targetToHref(t));
+    } else if (t.action === "open-listing") {
+      setSelectedProperty(t.listing); // opens the in-page listing terminal
+    } else {
+      setLocation(t.label); // drives the existing debounced search
+    }
     setValue("");
     closeAndBlur();
   };
 
-  // Act on a chosen suggestion: places run a location search; address/MLS open the listing.
-  const select = (s: SearchSuggestion) => {
-    if ((s.kind === "address" || s.kind === "mls") && s.listing) {
-      setSelectedProperty(s.listing); // opens the listing terminal
-      setValue("");
-      closeAndBlur();
-      return;
-    }
-    commitLocation(s.label);
-  };
+  // Act on a chosen suggestion.
+  const select = (s: SearchSuggestion) => applyTarget(resolveSuggestionTarget(s));
 
   const clear = () => {
     setLocation("");
@@ -136,7 +141,7 @@ export default function LocationSearch({ className }: LocationSearchProps) {
     if (open && highlight >= 0 && highlight < suggestions.length) {
       select(suggestions[highlight]);
     } else if (value.trim()) {
-      commitLocation(value);
+      applyTarget(resolveTextTarget(value));
     }
   };
 
