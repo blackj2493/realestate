@@ -7,12 +7,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { getCurrentUser } from '@/lib/supabase/server';
 import { calculateAVM } from '@/lib/avm/calculator';
 import { AVMInputSchema } from '@/lib/avm/validation';
 import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 import type { AVMInput } from '@/lib/avm/types';
 
 export async function POST(req: NextRequest) {
+  if (!(await getCurrentUser())) {
+    return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
 

@@ -5,9 +5,15 @@
  * Coefficient Engine when R² >= 0.50, or fallback anchor pricing otherwise.
  */
 
+import { redirect } from 'next/navigation';
+import { getCurrentUser } from '@/lib/supabase/server';
 import { AVMCalculator } from '@/components/avm';
 
-export default function AVMPage() {
+export default async function AVMPage() {
+  if (!(await getCurrentUser())) {
+    redirect('/hidden-equity');
+  }
+
   return (
     <div className="min-h-screen bg-black text-gray-100">
       <div className="max-w-6xl mx-auto px-6 py-8">
