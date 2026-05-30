@@ -21,6 +21,7 @@ import RoomMap from "@/components/Property/RoomMap";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
+import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
@@ -399,6 +400,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
               {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}
               <ForceAppreciationCard report={detail.valueAdd} />
+
+              {/* Compliance disclaimer for the AVM-derived figures above (estimate + value-add) */}
+              {(detail.estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
