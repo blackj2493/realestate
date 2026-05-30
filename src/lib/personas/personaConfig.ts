@@ -89,7 +89,6 @@ export type ControlDef =
       max: number;
       step: number;
       format: (v: number) => string;
-      accent: string;
     }
   | {
       kind: "range";
@@ -101,9 +100,8 @@ export type ControlDef =
       max: number;
       step: number;
       format: (v: number) => string;
-      accent: string;
     }
-  | { kind: "toggle"; key: BoolKey; label: string; short?: string; accent: string };
+  | { kind: "toggle"; key: BoolKey; label: string; short?: string };
 
 const fmtPct = (v: number) => `${v}%`;
 const fmtMoney = (v: number) =>
@@ -220,11 +218,11 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Smart Homebuyer",
     icon: Home,
     controls: [
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, accent: "text-emerald-400" },
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, accent: "text-amber-400" },
-      { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, accent: "text-cyan-400" },
-      { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready", accent: "text-cyan-400" },
-      { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex", accent: "text-emerald-400" },
+      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct },
+      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays },
+      { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney },
+      { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
+      { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex" },
     ],
     buildFilterString: (f) =>
       join([
@@ -252,10 +250,10 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Cashflow Investor",
     icon: DollarSign,
     controls: [
-      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, accent: "text-emerald-400" },
-      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, accent: "text-cyan-400" },
-      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, accent: "text-amber-400" },
-      { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex", accent: "text-emerald-400" },
+      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct },
+      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney },
+      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum },
+      { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex" },
     ],
     buildFilterString: (f) =>
       join([
@@ -282,10 +280,10 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Flippers & Deal Hunters",
     icon: TrendingUp,
     controls: [
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, accent: "text-amber-400" },
-      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney, accent: "text-rose-400" },
-      { kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, accent: "text-cyan-400" },
-      { kind: "toggle", key: "staleOnly", label: "Stale Only", short: "Stale Only", accent: "text-rose-400" },
+      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays },
+      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney },
+      { kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney },
+      { kind: "toggle", key: "staleOnly", label: "Stale Only", short: "Stale Only" },
     ],
     buildFilterString: (f) =>
       join([
@@ -313,10 +311,10 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Builders & Developers",
     icon: Hammer,
     controls: [
-      { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt, accent: "text-cyan-400" },
-      { kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥", min: 0, max: 20000, step: 500, format: fmtNum, accent: "text-emerald-400" },
-      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, accent: "text-amber-400" },
-      { kind: "toggle", key: "zoningPotential", label: "Density Ready", short: "Density Ready", accent: "text-cyan-400" },
+      { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt },
+      { kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥", min: 0, max: 20000, step: 500, format: fmtNum },
+      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum },
+      { kind: "toggle", key: "zoningPotential", label: "Density Ready", short: "Density Ready" },
     ],
     buildFilterString: (f) =>
       join([
