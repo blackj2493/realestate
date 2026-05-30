@@ -74,8 +74,11 @@ describe('buildValueAddReport', () => {
     const scaled = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED, { subjectEstimate: override });
     expect(scaled.subjectEstimate).toBe(override);
     // Use finish_basement: high capHigh (150k) so doubling P0 isn't clipped by the absolute cap.
-    const baseMove = baseRep.moves.find((m) => m.key === 'finish_basement' && m.status === 'priced')!;
+    const baseMove = baseRep.moves.find((m) => m.key === 'finish_basement')!;
     const scaledMove = scaled.moves.find((m) => m.key === 'finish_basement')!;
+    // Fail loudly (not via a silent `!`) if a fixture change ever suppresses this move.
+    expect(baseMove.status).toBe('priced');
+    // Tolerance for float/rounding drift; exact ratio ≈ 2.0 since value = P0·(exp(Δ)−1).
     expect(scaledMove.valueAddTyp).toBeGreaterThan(baseMove.valueAddTyp * 1.9);
   });
 
