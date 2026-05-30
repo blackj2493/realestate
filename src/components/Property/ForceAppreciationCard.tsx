@@ -4,7 +4,10 @@ import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
 import { shouldRender, buildView, type LedgerRow } from "./forceAppreciationView";
 
 function PaybackBar({ payback }: { payback: number }) {
-  const pct = (Math.min(payback, 3) / 3) * 100;
+  // Engine guarantees payback ∈ [0, ∞) finite; clamp anyway so this view stays
+  // self-contained (a non-finite/negative payback can never paint an invalid width).
+  const safe = Number.isFinite(payback) ? Math.max(0, payback) : 0;
+  const pct = (Math.min(safe, 3) / 3) * 100;
   return (
     <span className="inline-block h-1.5 w-10 rounded bg-slate-700 align-middle">
       <span className="block h-full rounded bg-emerald-500" style={{ width: `${pct}%` }} />
@@ -20,7 +23,9 @@ function Row({ row }: { row: LedgerRow }) {
         <span className="text-emerald-400">+{formatPrice(row.valueTyp)}</span>
         <span className="text-slate-500">−{formatPrice(row.costTyp)}</span>
         <PaybackBar payback={row.payback} />
-        <span className="w-9 text-right text-slate-400">{row.payback.toFixed(1)}×</span>
+        <span className="w-9 text-right text-slate-400">
+          {Number.isFinite(row.payback) ? row.payback.toFixed(1) : "—"}×
+        </span>
       </span>
     </div>
   );
