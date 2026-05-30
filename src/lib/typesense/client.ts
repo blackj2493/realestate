@@ -436,13 +436,24 @@ export async function searchListings(
       .documents()
       .search(searchParams);
      
+    // Typesense returns facets as `facet_counts: [{ field_name, counts: [{ value, count }] }]`
+    // (NOT `facet_distribution`). Reshape into { field: { value: count } } for the filter palette.
+    const facetCountsRaw: Array<{ field_name: string; counts: Array<{ value: string; count: number }> }> =
+      response.facet_counts || [];
+    const facetDistribution: Record<string, Record<string, number>> = {};
+    for (const f of facetCountsRaw) {
+      facetDistribution[f.field_name] = Object.fromEntries(
+        (f.counts || []).map((c) => [c.value, c.count])
+      );
+    }
+
     return {
       listings: (response.hits || []).map((hit: { document: ListingDocument }) => hit.document),
       totalFound: response.found || 0,
       page: response.page || page,
       perPage: perPage,
       processingTimeMs: response.search_time_ms || 0,
-      facetDistribution: response.facet_distribution
+      facetDistribution,
     };
   } catch (error) {
     // Log detailed error info
