@@ -326,10 +326,10 @@ export default function RoomMap({
                         onBlur={() => setActiveId((c) => (c === t.room.id ? null : c))}
                         style={{ cursor: "pointer", outline: "none" }}
                       >
+                        {/* Single string child — React requires <title> children to
+                            collapse to one text node, else SSR/CSR hydration mismatches. */}
                         <title>
-                          {t.room.name} · {t.floor} · {formatDimensions(t.room.length, t.room.width)} ·{" "}
-                          {formatArea(t.room.areaMeters, unit)}
-                          {t.room.isLikelyCombinedSpace ? " · likely combined space" : ""}
+                          {`${t.room.name} · ${t.floor} · ${formatDimensions(t.room.length, t.room.width)} · ${formatArea(t.room.areaMeters, unit)}${t.room.isLikelyCombinedSpace ? " · likely combined space" : ""}`}
                         </title>
                         <rect
                           x={t.x}
