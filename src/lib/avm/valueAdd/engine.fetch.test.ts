@@ -27,4 +27,25 @@ describe('fetchValueAddReport', () => {
     expect(report.moves.length).toBe(MOVE_CATALOG.length);
     expect(report.headlineUpside).toBeGreaterThan(0);
   });
+
+  it('skips the anchor/comps query when predSD is supplied, and still prices moves', async () => {
+    vi.spyOn(matrixService, 'fetchCoefficients').mockResolvedValue(BRAMPTON_WEST_DETACHED.coefficients);
+    vi.spyOn(auditService, 'fetchAuditInfo').mockResolvedValue({
+      r2: BRAMPTON_WEST_DETACHED.r2, basePrice: BRAMPTON_WEST_DETACHED.basePrice, n: BRAMPTON_WEST_DETACHED.n ?? 117,
+    });
+    const anchorSpy = vi.spyOn(anchorService, 'fetchAnchor');
+
+    const input = subject({
+      cityRegion: 'Brampton West',
+      buildingAreaTotal: 1560, bathroomsTotalInteger: 3, bedroomsAboveGrade: 3,
+      parkingTotal: 2, basementTier: 5, interiorTier: 3, exteriorTier: 3, lotWidth: 40,
+    });
+    const report = await fetchValueAddReport({} as any, input, {
+      subjectEstimate: 861351, predSD: 0.07,
+    });
+
+    expect(anchorSpy).not.toHaveBeenCalled();
+    expect(report.subjectEstimate).toBe(861351);
+    expect(report.moves.some((m) => m.status === 'priced')).toBe(true);
+  });
 });

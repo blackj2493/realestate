@@ -219,26 +219,40 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData, opts
   };
 }
 
+export interface FetchValueAddOpts {
+  subjectEstimate?: number;
+  /** Predictive SD already computed by calculateAVM (AVMResult.predictiveSD). When
+   *  provided, skip the expensive anchor/comps query — the engine needs the anchor
+   *  for predSD only. */
+  predSD?: number;
+}
+
 /**
  * Async entry point: load this market's coefficients/audit/anchor (reusing the
  * AVM's prefixed-city_region-safe lookups), then build the pure report. The
  * value-add report does not need the peer comp-grid — at-ceiling homes are
  * suppressed by evaluateMove rather than peer-priced in Phase 1.
+ *
+ * Pass `opts.predSD` (from AVMResult.predictiveSD) to skip the anchor/comps
+ * DB round-trip — the engine uses the anchor for predSD only, so the caller's
+ * already-computed value is sufficient.
  */
 export async function fetchValueAddReport(
   supabase: SupabaseClient,
-  input: AVMInput
+  input: AVMInput,
+  opts?: FetchValueAddOpts
 ): Promise<ValueAddReport> {
   const [coefficients, audit] = await Promise.all([
     fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
     fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
   ]);
-  const anchor = await fetchAnchor(supabase, input, coefficients, audit.basePrice);
-  return buildValueAddReport(input, {
-    anchor,
-    r2: audit.r2,
-    basePrice: audit.basePrice,
-    coefficients,
-    n: audit.n,
-  });
+  const anchor =
+    opts?.predSD !== undefined && Number.isFinite(opts.predSD)
+      ? { anchorLevel: 0, predSD: opts.predSD, nEff: 0, comps: 0, basis: 'none' as const }
+      : await fetchAnchor(supabase, input, coefficients, audit.basePrice);
+  return buildValueAddReport(
+    input,
+    { anchor, r2: audit.r2, basePrice: audit.basePrice, coefficients, n: audit.n },
+    { subjectEstimate: opts?.subjectEstimate }
+  );
 }
