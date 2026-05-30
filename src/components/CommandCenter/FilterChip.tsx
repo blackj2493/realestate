@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Popover } from "@/components/ui/popover";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
+import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -127,32 +128,40 @@ function EnumControl({
   value: string[];
   onChange: (v: FilterValue) => void;
 }) {
+  const facetDist = useCommandCenterStore((s) => s.searchResult?.facetDistribution);
+  const counts = def.facetField ? facetDist?.[def.facetField] : undefined;
   const toggle = (val: string) => {
     onChange(value.includes(val) ? value.filter((x) => x !== val) : [...value, val]);
   };
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
       <span className={cn(LABEL, "mb-1 text-slate-400")}>{def.label}</span>
       {(def.options ?? []).map((opt) => {
         const checked = value.includes(opt.value);
+        const n = counts?.[opt.value];
         return (
           <button
             key={opt.value}
             onClick={() => toggle(opt.value)}
             className={cn(
-              "flex items-center gap-2 px-1 py-1 text-left text-xs transition-colors",
+              "flex items-center justify-between gap-2 px-1 py-1 text-left text-xs transition-colors",
               checked ? "text-cyan-300" : "text-slate-400 hover:text-slate-200"
             )}
           >
-            <span
-              className={cn(
-                "flex h-3.5 w-3.5 items-center justify-center border",
-                checked ? "border-cyan-500 bg-cyan-500/20" : "border-slate-600"
-              )}
-            >
-              {checked && <span className="h-1.5 w-1.5 bg-cyan-400" />}
+            <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex h-3.5 w-3.5 items-center justify-center border",
+                  checked ? "border-cyan-500 bg-cyan-500/20" : "border-slate-600"
+                )}
+              >
+                {checked && <span className="h-1.5 w-1.5 bg-cyan-400" />}
+              </span>
+              {opt.label}
             </span>
-            {opt.label}
+            {n !== undefined && (
+              <span className="font-mono text-[10px] text-slate-500">{n.toLocaleString("en-US")}</span>
+            )}
           </button>
         );
       })}
