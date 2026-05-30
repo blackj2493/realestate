@@ -116,7 +116,7 @@ export default function LocationSearch({ className, mode = "inplace" }: Location
   const select = (s: SearchSuggestion) => applyTarget(resolveSuggestionTarget(s));
 
   const clear = () => {
-    setLocation("");
+    if (mode === "inplace") setLocation("");
     setValue("");
     setSuggestions([]);
     setOpen(false);

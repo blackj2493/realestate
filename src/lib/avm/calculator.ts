@@ -110,6 +110,7 @@ export async function calculateAVM(
     r2: audit.r2,
     basePrice: audit.basePrice,
     coefficients,
+    n: audit.n,
     peer,
   });
 }
