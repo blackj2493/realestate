@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isControlActive, investorChipLabel, anyControlActive } from "./investorChip";
+import { isControlActive, investorChipLabel, anyControlActive } from "./investorControls";
 import { defaultTerminalFilters, PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 
 const f = (patch: Partial<typeof defaultTerminalFilters> = {}) => ({ ...defaultTerminalFilters, ...patch });

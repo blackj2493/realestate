@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Popover } from "@/components/ui/popover";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { defaultTerminalFilters, type ControlDef } from "@/lib/personas/personaConfig";
-import { isControlActive, investorChipLabel } from "./investorChip";
+import { isControlActive, investorChipLabel } from "./investorControls";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
