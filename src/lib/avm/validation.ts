@@ -14,6 +14,8 @@ export const AVMInputSchema = z.object({
   interiorTier: z.number().int().min(1).max(5),
   exteriorTier: z.number().int().min(1).max(5),
   basementTier: z.number().int().min(1).max(9),
+  /** Optional measured square footage; improves the AVM estimate when provided. */
+  buildingAreaTotal: z.number().positive().nullable().optional(),
 });
 
 export type AVMInputZod = z.infer<typeof AVMInputSchema>;
