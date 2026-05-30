@@ -2,9 +2,11 @@
 import type { AVMInput } from '../types';
 import { Z_CLAMP, COEFFICIENT_ENGINE_THRESHOLD, HIGH_CONFIDENCE_THRESHOLD, BAND_MED } from '../types';
 import type { AVMMarketData } from '../calculator';
+import { estimateFromMarketData } from '../calculator';
 import { clamp, FEATURE_SPECS } from '../features';
-import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate } from './calibration';
-import type { FeatureDelta, MoveSpec, ValueAddMove, SuppressReason } from './types';
+import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate, PCT_CAP_STACK, SCORE_K } from './calibration';
+import { MOVE_CATALOG } from './moveCatalog';
+import type { FeatureDelta, MoveSpec, ValueAddMove, SuppressReason, ValueAddReport, MoveKey } from './types';
 
 /** Apply a move's field deltas to a copy of the input (set = absolute, add = increment). */
 export function applyMove(input: AVMInput, deltas: FeatureDelta[]): AVMInput {
@@ -125,5 +127,78 @@ export function evaluateMove(
     valueAddLow, valueAddTyp: typ, valueAddHigh,
     costLow: move.costLow, costTyp: move.costTyp, costHigh: move.costHigh,
     netGainTyp, paybackRatio, confidence,
+  };
+}
+
+const DISCLAIMER =
+  'Modeled estimate from recent local sales — not an appraisal or guarantee. ' +
+  'Actual returns vary by finish quality, permits, and market timing.';
+
+function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddReport {
+  return {
+    cityRegion: input.cityRegion,
+    propertySubType: input.propertySubType,
+    subjectEstimate: 0,
+    headlineUpside: 0,
+    valueAddScore: 0,
+    moves: MOVE_CATALOG.map((m) => suppressed(m, 'no_estimate')),
+    neighbourhoodInsight: 'Not enough recent sales here to model renovation value yet.',
+    basis: `${input.cityRegion} · ${input.propertySubType}`,
+    disclaimer: DISCLAIMER,
+  };
+}
+
+/** Deterministic, template-based insight from the cohort's value drivers (no AI). */
+function neighbourhoodInsight(input: AVMInput, _market: AVMMarketData, moves: ValueAddMove[]): string {
+  const priced = moves.filter((m) => m.status === 'priced');
+  if (priced.length === 0) return `Renovation premiums in ${input.cityRegion} are hard to model from current sales.`;
+  const top = priced.reduce((a, b) => (b.valueAddTyp > a.valueAddTyp ? b : a));
+  const suppressedNeg = moves.find((m) => m.suppressReason === 'negative_beta');
+  const tail = suppressedNeg ? ` ${suppressedNeg.label.toLowerCase()} adds little here.` : '';
+  return `In ${input.cityRegion}, the market pays most for: ${top.label.toLowerCase()}.${tail}`;
+}
+
+export function buildValueAddReport(input: AVMInput, market: AVMMarketData): ValueAddReport {
+  const base = estimateFromMarketData(input, market);
+  const P0 = base.estimatedValue;
+  if (P0 <= 0) return unavailableReport(input, market);
+
+  const moves = MOVE_CATALOG.map((m) => evaluateMove(input, m, market, P0)).sort(
+    (a, b) => b.netGainTyp - a.netGainTyp
+  );
+  const byKey = new Map<MoveKey, (typeof MOVE_CATALOG)[number]>(MOVE_CATALOG.map((m) => [m.key, m]));
+
+  // Greedy non-overlapping selection of positive-payback priced moves for the headline.
+  const claimed = new Set<string>();
+  const selectedDeltas: FeatureDelta[] = [];
+  const selected: ValueAddMove[] = [];
+  for (const mv of moves) {
+    if (mv.status !== 'priced' || mv.paybackRatio <= 1) continue;
+    const spec = byKey.get(mv.key)!;
+    const fields = spec.deltas.map((d) => d.field);
+    if (fields.some((f) => claimed.has(f))) continue;
+    fields.forEach((f) => claimed.add(f));
+    selectedDeltas.push(...spec.deltas);
+    selected.push(mv);
+  }
+
+  // Joint value-add via ONE re-eval over the union, capped by the stack %-cap.
+  const after = applyMove(input, selectedDeltas);
+  let jointValue = Math.max(0, rawStackValue(input, after, market, P0));
+  jointValue = Math.min(jointValue, PCT_CAP_STACK * P0);
+  const totalCost = selected.reduce((a, m) => a + m.costTyp, 0);
+  const headlineUpside = Math.max(0, Math.round(jointValue - totalCost));
+  const valueAddScore = Math.min(100, Math.round((jointValue / P0) * SCORE_K));
+
+  return {
+    cityRegion: input.cityRegion,
+    propertySubType: input.propertySubType,
+    subjectEstimate: P0,
+    headlineUpside,
+    valueAddScore,
+    moves,
+    neighbourhoodInsight: neighbourhoodInsight(input, market, moves),
+    basis: `Based on ${market.n ?? 'recent'} ${input.cityRegion} ${input.propertySubType} sales`,
+    disclaimer: DISCLAIMER,
   };
 }
