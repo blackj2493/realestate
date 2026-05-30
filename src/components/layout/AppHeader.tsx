@@ -17,8 +17,8 @@ import LocationSearch from "@/components/CommandCenter/LocationSearch";
  * AccountButton (Supabase browser client in an effect) mount safely on any
  * page with no provider. Off the terminal the shared LocationSearch runs in
  * "navigate" mode — selecting a result router.pushes to /properties?city= or
- * the listing detail page rather than writing to commandCenterStore (which it
- * never touches in navigate mode).
+ * the listing detail page rather than writing to commandCenterStore, which it
+ * never writes to in navigate mode.
  */
 interface AppHeaderProps {
   variant?: "app" | "marketing";
