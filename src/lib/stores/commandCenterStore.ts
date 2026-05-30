@@ -97,6 +97,7 @@ export interface CommandCenterState {
   addedFilterKeys: string[];
   addFilter: (key: string) => void;
   removeAddedFilter: (key: string) => void;
+  clearAddedFilters: () => void;
 
   // Selected property for the detail terminal
   selectedProperty: ListingDocument | null;
@@ -229,6 +230,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
     ),
   removeAddedFilter: (key) =>
     set((state) => ({ addedFilterKeys: state.addedFilterKeys.filter((k) => k !== key) })),
+  clearAddedFilters: () => set({ addedFilterKeys: [] }),
 
   selectedProperty: null,
   setSelectedProperty: (property) =>
