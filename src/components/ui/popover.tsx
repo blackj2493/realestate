@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface PopoverProps {
   trigger: React.ReactNode;
-  children: React.ReactNode;
+  children: React.ReactNode | ((close: () => void) => React.ReactNode);
   className?: string;
   align?: "left" | "right";
 }
@@ -83,7 +83,7 @@ export function Popover({ trigger, children, className, align = "left" }: Popove
               className
             )}
           >
-            {children}
+            {typeof children === "function" ? children(() => setOpen(false)) : children}
           </div>,
           document.body
         )}
