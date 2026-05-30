@@ -72,9 +72,11 @@ export interface ValueAddReport {
   propertySubType: string;
   /** P0 — the home's own AVM estimate (0 when unavailable). */
   subjectEstimate: number;
-  /** Joint value-add of the best non-overlapping positive-payback moves − their costs. */
+  /** NET of renovation costs: joint value-add of the best non-overlapping
+   *  positive-payback moves − their costs. May be 0 while valueAddScore > 0. */
   headlineUpside: number;
-  /** Quotable 0–100 index of unlockable equity. */
+  /** GROSS unlockable-equity index (0–100), BEFORE costs:
+   *  min(100, round((jointValue / P0) · SCORE_K)). Not net of renovation spend. */
   valueAddScore: number;
   moves: ValueAddMove[];
   neighbourhoodInsight: string;

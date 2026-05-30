@@ -2,6 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildValueAddReport } from './engine';
 import { BRAMPTON_WEST_DETACHED, ERIN_MILLS_CONDO, subject } from './__fixtures__/cohorts';
+import { MOVE_CATALOG } from './moveCatalog';
+import { PCT_CAP_STACK } from './calibration';
 
 describe('buildValueAddReport', () => {
   const bramptonHome = subject({
@@ -13,7 +15,7 @@ describe('buildValueAddReport', () => {
   it('produces a ranked report with a positive headline and bounded score', () => {
     const r = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
     expect(r.subjectEstimate).toBeGreaterThan(0);
-    expect(r.moves.length).toBe(9);
+    expect(r.moves.length).toBe(MOVE_CATALOG.length);
     // ranked by netGainTyp desc
     const gains = r.moves.map((m) => m.netGainTyp);
     expect([...gains].sort((a, b) => b - a)).toEqual(gains);
@@ -45,5 +47,18 @@ describe('buildValueAddReport', () => {
     expect(r.subjectEstimate).toBe(0);
     expect(r.headlineUpside).toBe(0);
     expect(r.valueAddScore).toBe(0);
+  });
+
+  it('exercises greedy non-overlapping selection without blowing up the headline', () => {
+    const r = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
+    const bath = r.moves.find((m) => m.key === 'add_bathroom')!;
+    const suite = r.moves.find((m) => m.key === 'legal_suite')!;
+    // both price individually and overlap on bathroomsTotalInteger
+    expect(bath.status).toBe('priced');
+    expect(suite.status).toBe('priced');
+    // headline is positive and bounded by the stack cap (overlap can't double-count)
+    expect(r.headlineUpside).toBeGreaterThan(0);
+    expect(r.headlineUpside).toBeLessThanOrEqual(Math.round(PCT_CAP_STACK * r.subjectEstimate));
+    // (precise selection internals are covered by the rawStackValue joint-math unit tests)
   });
 });

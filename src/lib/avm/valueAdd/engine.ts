@@ -163,10 +163,10 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData): Val
   const P0 = base.estimatedValue;
   if (P0 <= 0) return unavailableReport(input, market);
 
+  const byKey = new Map<MoveKey, (typeof MOVE_CATALOG)[number]>(MOVE_CATALOG.map((m) => [m.key, m]));
   const moves = MOVE_CATALOG.map((m) => evaluateMove(input, m, market, P0)).sort(
     (a, b) => b.netGainTyp - a.netGainTyp
   );
-  const byKey = new Map<MoveKey, (typeof MOVE_CATALOG)[number]>(MOVE_CATALOG.map((m) => [m.key, m]));
 
   // Greedy non-overlapping selection of positive-payback priced moves for the headline.
   const claimed = new Set<string>();
