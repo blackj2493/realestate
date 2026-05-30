@@ -45,3 +45,6 @@ coverage/
 
 # Reindexer resume checkpoint (runtime state)
 scripts/.reindex-cursor
+
+# Superpowers brainstorming companion artifacts
+.superpowers/
