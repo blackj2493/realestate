@@ -46,7 +46,7 @@ interface HiddenEquityFormProps {
   onChange: (next: HEFormState) => void;
 }
 
-export function HiddenEquityForm({ tree, value, onChange }: HiddenEquityFormProps) {
+export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquityFormProps) {
   const cities = Object.keys(tree); // already sorted by buildCohortTree
   const communities = value.city ? (tree[value.city] ?? []) : [];
   const selectedCommunity = communities.find((c) => c.cityRegion === value.cityRegion);
@@ -266,12 +266,13 @@ export function HiddenEquityForm({ tree, value, onChange }: HiddenEquityFormProp
           type="number"
           min={0}
           value={value.buildingAreaTotal ?? ''}
-          onChange={(e) =>
+          onChange={(e) => {
+            const n = parseFloat(e.target.value);
             onChange({
               ...value,
-              buildingAreaTotal: e.target.value === '' ? null : Number(e.target.value),
-            })
-          }
+              buildingAreaTotal: e.target.value === '' || !Number.isFinite(n) ? null : n,
+            });
+          }}
           placeholder="e.g. 1800"
           className="bg-black/20 border-gray-700 text-gray-100"
         />
