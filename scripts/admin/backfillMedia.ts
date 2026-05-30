@@ -215,7 +215,7 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
   console.log('══════════════════════════════════════════');
 
   let cursor = START_KEY;
-  let scanned = 0, withMedia = 0, emptyMarked = 0;
+  let scanned = 0, withMedia = 0, emptyMarked = 0, failedFetch = 0;
   let updated = 0, skipped = 0, failed = 0, tsUpdated = 0, tsMissed = 0;
 
   while (scanned < ROW_LIMIT) {
@@ -226,11 +226,14 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
       break;
     }
 
-    const mediaMap = await fetchMediaForKeys(keys, IDX_TOKEN);
+    const { media: mediaMap, failedKeys } = await fetchMediaForKeys(keys, IDX_TOKEN);
 
     for (const key of keys) {
       scanned++;
       cursor = key;
+      // Fetch failed (≠ confirmed 0 photos) — skip the write so the row stays
+      // eligible for the next run instead of being stamped a false empty.
+      if (failedKeys.has(key)) { failedFetch++; continue; }
       const media = mediaMap.get(key) ?? [];
       if (media.length > 0) withMedia++;
       else emptyMarked++;
@@ -253,7 +256,7 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
     }
 
     console.log(
-      `   …active page  scanned=${scanned}  withMedia=${withMedia}  emptyMarked=${emptyMarked}` +
+      `   …active page  scanned=${scanned}  withMedia=${withMedia}  emptyMarked=${emptyMarked}  fetchFailed=${failedFetch}` +
         (APPLY ? `  written=${updated}  skipped=${skipped}  failed=${failed}  tsUpdated=${tsUpdated}  tsMissed=${tsMissed}` : '') +
         `  lastKey=${cursor}`
     );
@@ -269,6 +272,7 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
   console.log(`  Scanned:       ${scanned}`);
   console.log(`  With media:    ${withMedia}`);
   console.log(`  Empty marked:  ${emptyMarked}`);
+  console.log(`  Fetch failed:  ${failedFetch}  (left eligible — re-run to retry)`);
   if (APPLY) {
     console.log(`  Updated:       ${updated}`);
     console.log(`  Skipped:       ${skipped}`);
@@ -362,7 +366,7 @@ async function backfillSold(pg: PgClient, ts: TsClient | null): Promise<void> {
 
   const windowCutoff = Date.now() - SOLD_WINDOW_MS;
   let cursor = START_KEY;
-  let scanned = 0, withMedia = 0, emptyMarked = 0;
+  let scanned = 0, withMedia = 0, emptyMarked = 0, failedFetch = 0;
   let updated = 0, skipped = 0, failed = 0, tsUpdated = 0, tsMissed = 0, tsOutsideWindow = 0;
 
   while (scanned < ROW_LIMIT) {
@@ -374,12 +378,14 @@ async function backfillSold(pg: PgClient, ts: TsClient | null): Promise<void> {
     }
 
     const keys = rows.map((r) => r.listing_key);
-    const mediaMap = await fetchMediaForKeys(keys, VOW_TOKEN);
+    const { media: mediaMap, failedKeys } = await fetchMediaForKeys(keys, VOW_TOKEN);
 
     for (const row of rows) {
       const key = row.listing_key;
       scanned++;
       cursor = key;
+      // Fetch failed (≠ confirmed 0 photos) — skip so the row stays eligible.
+      if (failedKeys.has(key)) { failedFetch++; continue; }
       const media = mediaMap.get(key) ?? [];
       if (media.length > 0) withMedia++;
       else emptyMarked++;
@@ -406,7 +412,7 @@ async function backfillSold(pg: PgClient, ts: TsClient | null): Promise<void> {
     }
 
     console.log(
-      `   …sold page  scanned=${scanned}  withMedia=${withMedia}  emptyMarked=${emptyMarked}` +
+      `   …sold page  scanned=${scanned}  withMedia=${withMedia}  emptyMarked=${emptyMarked}  fetchFailed=${failedFetch}` +
         (APPLY ? `  written=${updated}  skipped=${skipped}  failed=${failed}  tsUpdated=${tsUpdated}  tsOutside=${tsOutsideWindow}` : '') +
         `  lastKey=${cursor}`
     );
@@ -422,6 +428,7 @@ async function backfillSold(pg: PgClient, ts: TsClient | null): Promise<void> {
   console.log(`  Scanned:           ${scanned}`);
   console.log(`  With media:        ${withMedia}`);
   console.log(`  Empty marked:      ${emptyMarked}`);
+  console.log(`  Fetch failed:      ${failedFetch}  (left eligible — re-run to retry)`);
   if (APPLY) {
     console.log(`  Updated:           ${updated}`);
     console.log(`  Skipped:           ${skipped}`);

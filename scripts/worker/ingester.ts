@@ -25,6 +25,7 @@ import {
   pruneOldSold,
 } from './soldIndexer';
 import type { SoldListingDocument } from '@/lib/typesense/soldListingsSchema';
+import { SOLD_LISTINGS_COLLECTION } from '@/lib/typesense/soldListingsSchema';
 import {
   deriveInteriorTier,
   deriveExteriorTier,
@@ -330,6 +331,10 @@ const MEDIA_RECONCILE_WINDOW_DAYS = 21;
 const MEDIA_RECONCILE_PAGE = 100;           // keys (and full_payloads) hydrated per page
 const MEDIA_RECONCILE_MAX = 1000;           // total rows scanned per night (safety cap)
 const MEDIA_RECONCILE_PAGE_DELAY_MS = 300;  // polite pacing between pages
+// Query B2 (sold): cap on photo-less in-window sold listings re-checked per night.
+// Candidates come from the in-memory sold_listings Typesense export (no raw_vow_sold
+// scan); we pull raw_payload only for this many, by primary key.
+const SOLD_RECONCILE_MAX = 500;
 
 // ============================================================================
 // Sleep Utility
@@ -686,6 +691,9 @@ export interface DualSyncResult {
   // Query A2: # of recently-created active listings whose missing photos were
   // recovered from AMPRE this run (see reconcileMissingMedia).
   reconciledMedia?: number;
+  // Query B2: # of in-window sold listings whose missing photos were recovered
+  // from AMPRE this run (see reconcileMissingSoldMedia).
+  reconciledSoldMedia?: number;
 }
 
 /**
@@ -787,6 +795,133 @@ async function reconcileMissingMedia(
 }
 
 /**
+ * Query B2 — Sold media reconciliation (Typesense-driven; no raw_vow_sold scan).
+ *
+ * Counterpart to reconcileMissingMedia for SOLD inventory. raw_vow_sold has no
+ * media column and no purchase_contract_date index, and a JSONB scan across its
+ * ~217k rows blows the IO budget (CLAUDE.md §12). So instead of scanning the
+ * table, we read the candidate set from the in-memory `sold_listings` Typesense
+ * collection (already a bounded rolling 180-day window): any doc lacking
+ * `primaryImageUrl` has no photo. We then touch raw_vow_sold ONLY by primary key
+ * for that small set, re-fetch /Media via the VOW token (failure-aware, #2), and
+ * re-upsert the recovered ones through the SAME path as the daily Query B
+ * (upsertSoldListings + importSoldBatch). Best-effort: never throws.
+ *
+ * `primaryImageUrl` is index:false so it can't be filter_by'd — we export id +
+ * primaryImageUrl + PurchaseContractDate and filter client-side, freshest first
+ * (recent sales are the most likely to still have recoverable media; genuinely
+ * photo-less old ones age out of the 180-day window).
+ */
+async function reconcileMissingSoldMedia(
+  vowToken: string
+): Promise<{ scanned: number; recovered: number }> {
+  if (!vowToken) {
+    console.warn('   ⚠️  Sold media reconciliation skipped: PROPTX_VOW_TOKEN not set');
+    return { scanned: 0, recovered: 0 };
+  }
+  try {
+    const ts = getSoldAdminClient();
+
+    // 1. Export the in-window sold docs (in-memory — NOT a Supabase read) and
+    //    collect the ones with no photo.
+    let exported: string;
+    try {
+      exported = (await ts
+        .collections(SOLD_LISTINGS_COLLECTION)
+        .documents()
+        .export({ include_fields: 'id,primaryImageUrl,PurchaseContractDate' })) as unknown as string;
+    } catch (err: any) {
+      console.warn(`   ⚠️  Sold reconciliation export failed (non-fatal): ${err?.message || err}`);
+      return { scanned: 0, recovered: 0 };
+    }
+
+    const candidates: Array<{ id: string; pcd: number }> = [];
+    for (const line of String(exported).split('\n')) {
+      if (!line) continue;
+      let d: any;
+      try {
+        d = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (d?.id && !d.primaryImageUrl) candidates.push({ id: d.id, pcd: Number(d.PurchaseContractDate) || 0 });
+    }
+    if (candidates.length === 0) {
+      console.log('   ✅ No in-window sold listings are missing photos.');
+      return { scanned: 0, recovered: 0 };
+    }
+    candidates.sort((a, b) => b.pcd - a.pcd); // freshest sales first
+    const ids = candidates.slice(0, SOLD_RECONCILE_MAX).map((c) => c.id);
+    if (candidates.length > SOLD_RECONCILE_MAX) {
+      console.log(`   ℹ️  ${candidates.length} in-window sold lack photos; processing the ${SOLD_RECONCILE_MAX} freshest this run.`);
+    }
+
+    // 2. Pull raw_payload ONLY for the capped candidate set, by primary key
+    //    (no table scan — IO-safe). Chunk the .in() to keep URLs sane.
+    const supabase = getServiceRoleClient();
+    const rawListings: any[] = [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
+      const { data, error } = await supabase
+        .from('raw_vow_sold')
+        .select('listing_key, raw_payload')
+        .in('listing_key', chunk);
+      if (error) {
+        console.warn(`   ⚠️  Sold raw_payload fetch failed (non-fatal): ${error.message}`);
+        continue;
+      }
+      for (const row of data ?? []) {
+        const p = (row as any).raw_payload;
+        if (p && p.ListingKey) rawListings.push(p);
+      }
+    }
+    if (rawListings.length === 0) return { scanned: ids.length, recovered: 0 };
+
+    // 3. Many candidates already HAVE media in raw_payload but were indexed before
+    //    it was attached (so their sold-card doc lacks primaryImageUrl) — re-index
+    //    those LOCALLY, no AMPRE call. Only VOW-fetch the genuinely media-less ones.
+    const hasMedia = rawListings.filter((l) => Array.isArray(l?.media) && l.media.length > 0);
+    const needsFetch = rawListings.filter((l) => !Array.isArray(l?.media) || l.media.length === 0);
+    if (needsFetch.length > 0) await enrichListingsWithMedia(needsFetch, vowToken);
+    const fetched = needsFetch.filter((l) => Array.isArray(l?.media) && l.media.length > 0);
+    const fetchedKeys = new Set(fetched.map((l) => l.ListingKey));
+    const toIndex = [...hasMedia, ...fetched];
+    if (toIndex.length === 0) return { scanned: ids.length, recovered: 0 };
+
+    // 4. Re-index sold_listings for ALL now-photo'd docs; re-upsert raw_vow_sold
+    //    ONLY for the freshly-fetched ones (existing-media rows already carry it,
+    //    so we don't needlessly re-write the §12 table).
+    const soldRecords: SoldListingRecord[] = [];
+    const soldDocs: SoldListingDocument[] = [];
+    for (const raw of toIndex) {
+      const soldData = extractSoldListingData(raw);
+      if (!soldData) continue;
+      const doc = toSoldDocument(soldData, raw.ListOfficeName ?? null, {
+        media: raw.media,
+        images: raw.images,
+      });
+      if (doc) soldDocs.push(doc);
+      if (fetchedKeys.has(raw.ListingKey)) soldRecords.push(soldData);
+    }
+    if (soldRecords.length > 0) await upsertSoldListings(supabase, soldRecords);
+    if (soldDocs.length > 0) {
+      try {
+        await importSoldBatch(ts, soldDocs);
+      } catch (err: any) {
+        console.warn(`   ⚠️  Sold reconciliation index failed (non-fatal): ${err?.message || err}`);
+      }
+    }
+    console.log(
+      `   🩹 Re-indexed ${soldDocs.length}/${ids.length} sold (${fetched.length} via fresh /Media, ${hasMedia.length} already had media)`
+    );
+    return { scanned: ids.length, recovered: soldDocs.length };
+  } catch (err: any) {
+    console.warn(`   ⚠️  Sold media reconciliation failed (non-fatal): ${err?.message || err}`);
+    return { scanned: 0, recovered: 0 };
+  }
+}
+
+/**
  * Executes a Dual-Query delta sync.
  * 
  * Query A (Active Sync):
@@ -826,7 +961,8 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     soldPages: 0,
     errors: [],
     lastSyncTimestamp: '',
-    reconciledMedia: 0
+    reconciledMedia: 0,
+    reconciledSoldMedia: 0
   };
 
   // Captured outside the try so the catch block can still read it for the
@@ -1059,6 +1195,17 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       console.warn(`   ⚠️  sold_listings prune failed (non-fatal): ${err.message}`);
     }
 
+    // ─── Query B2: Sold Media Reconciliation (Typesense-driven, no DB scan) ──
+    // Recover photos for in-window sold listings whose media was missed (e.g. a
+    // transient Query B fetch failure). Runs AFTER prune so only live window docs
+    // are considered. Best-effort: never fails or advances the cursor.
+    console.log('\n════════════════════════════════════════════════');
+    console.log('  QUERY B2: Sold Media Reconciliation');
+    console.log('════════════════════════════════════════════════\n');
+    const soldRecon = await reconcileMissingSoldMedia(VOW_TOKEN);
+    result.reconciledSoldMedia = soldRecon.recovered;
+    console.log(`\n✅ Query B2 Complete: recovered media on ${soldRecon.recovered}/${soldRecon.scanned} in-window sold listings`);
+
     // ─── Finalize ───────────────────────────────────────────────────────────
     const now = new Date().toISOString();
     result.lastSyncTimestamp = now;
@@ -1068,7 +1215,7 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     console.log('========================================');
     console.log(`   Active records: ${result.activeRecords} (${result.activePages} pages)`);
     console.log(`   Sold records: ${result.soldRecords} (${result.soldPages} pages)`);
-    console.log(`   Media reconciled: ${result.reconciledMedia ?? 0} listings`);
+    console.log(`   Media reconciled: ${result.reconciledMedia ?? 0} active, ${result.reconciledSoldMedia ?? 0} sold`);
     console.log(`   New sync timestamp: ${now}`);
     
     if (result.errors.length > 0) {

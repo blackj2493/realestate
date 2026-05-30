@@ -33,7 +33,7 @@ async function rawCountBySize(token: string, size: string): Promise<number> {
       continue;
     }
     console.log(`\n[${label}] fetching /Media for ${ID} ...`);
-    const map = await fetchMediaForKeys([ID], token);
+    const { media: map } = await fetchMediaForKeys([ID], token);
     const arr = map.get(ID) || [];
     console.log(`  records: ${arr.length}`);
     const objectIds = new Set(arr.map((m) => m.MediaObjectID).filter(Boolean));
