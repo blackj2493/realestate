@@ -20,6 +20,7 @@ import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RoomMap from "@/components/Property/RoomMap";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
+import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
@@ -395,6 +396,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
               {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
               <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} city={p.City} />
+
+              {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}
+              <ForceAppreciationCard report={detail.valueAdd} />
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">

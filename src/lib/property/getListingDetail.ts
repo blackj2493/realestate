@@ -29,6 +29,8 @@ import { computeDealScore, type DealScoreResult } from "@/lib/dealScore/computeD
 import { generatePropertyHash } from "@/lib/typesense/TemporalDistressEngine";
 import { ProptXClient } from "@/lib/proptx/client";
 import type { RoomData } from "@/lib/room-utils";
+import { fetchValueAddReport } from "@/lib/avm/valueAdd/engine";
+import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
 
 /** One prior sold campaign for this physical property (from property_sale_history). */
 export interface SaleEvent {
@@ -91,6 +93,7 @@ export interface ListingDetail {
   property_sub_type: string | null;
   synced_at: string | null;
   estimate: AVMResult | null;
+  valueAdd: ValueAddReport | null;
   feeStability: FeeStabilityResult;
   dealScore: DealScoreResult;
   saleHistory: SaleHistory;
@@ -190,6 +193,7 @@ export const getListingDetail = cache(
 
     // Best-effort PureProperty Estimate (AVM). Never blocks the listing.
     let estimate: AVMResult | null = null;
+    let valueAdd: ValueAddReport | null = null;
     try {
       const payload = listing.full_payload as Record<string, unknown> | null;
 
@@ -227,6 +231,20 @@ export const getListingDetail = cache(
       const avmInput = mapListingToAVMInput(payload, { rooms, bucketCalibration });
       if (avmInput) {
         estimate = await withTimeout(calculateAVM(supabase, avmInput), 8000, "AVM");
+        if (estimate && estimate.estimatedValue > 0) {
+          try {
+            valueAdd = await withTimeout(
+              fetchValueAddReport(supabase, avmInput, {
+                subjectEstimate: estimate.estimatedValue,
+                predSD: estimate.predictiveSD,
+              }),
+              8000,
+              "Value-Add"
+            );
+          } catch (vaErr) {
+            console.error(`[getListingDetail] Value-Add failed for ${listingKey}:`, vaErr);
+          }
+        }
       }
     } catch (avmError) {
       console.error(`[getListingDetail] AVM failed for ${listingKey}:`, avmError);
@@ -386,6 +404,7 @@ export const getListingDetail = cache(
       property_sub_type: listing.property_sub_type ?? null,
       synced_at: listing.synced_at ?? null,
       estimate,
+      valueAdd,
       feeStability,
       dealScore,
       saleHistory,
