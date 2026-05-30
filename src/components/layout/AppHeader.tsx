@@ -7,6 +7,8 @@ import { Search } from "lucide-react";
 import Logo from "@/components/Logo";
 import AccountButton from "@/components/auth/AccountButton";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
+import PrimaryNav from "@/components/layout/PrimaryNav";
+import MobileNav from "@/components/layout/MobileNav";
 
 /**
  * Unified application header — logo + optional global search + alerts + account.
@@ -49,25 +51,30 @@ export default function AppHeader({
           <Logo size="md" theme="dark" />
         </Link>
 
+        {/* Primary section nav — inline on md+, drawer below (see MobileNav). */}
+        {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
+
+        {/* Spacer pushes the search + right cluster to the edge. */}
+        <div className="flex-1" />
+
+        {/* Global search collapses on smaller screens to leave room for the nav. */}
         {search && (
-          <form onSubmit={submit} className="relative max-w-xl flex-1">
+          <form onSubmit={submit} className="relative hidden shrink-0 lg:block lg:w-72">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="SEARCH PROPERTIES, ADDRESSES, MLS # OR INVESTOR QUERIES…"
+              placeholder="SEARCH PROPERTIES, ADDRESSES, MLS #…"
               className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2 pl-9 pr-3 text-xs uppercase tracking-wider text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
             />
           </form>
         )}
 
-        {/* push the right cluster to the edge when there's no flex-grow search */}
-        {!search && <div className="flex-1" />}
-
         <div className="flex shrink-0 items-center gap-3">
           {right}
           <WatchlistAlertsBell />
           <AccountButton />
+          {variant === "app" && <MobileNav className="md:hidden" />}
         </div>
       </div>
     </header>

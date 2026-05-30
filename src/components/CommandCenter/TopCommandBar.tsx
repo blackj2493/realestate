@@ -14,6 +14,7 @@ import { PERSONA_LIST } from "@/lib/personas/personaConfig";
 import PersonaFilterBar from "./PersonaFilterBar";
 import LocationSearch from "./LocationSearch";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
+import PrimaryNav from "@/components/layout/PrimaryNav";
 
 interface TopCommandBarProps {
   className?: string;
@@ -34,7 +35,7 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
     <div className={cn("border-b border-slate-800 bg-slate-950", className)}>
       {/* Context bar */}
       <div className="flex h-12 items-center gap-4 px-4">
-        {/* Left: wordmark + search */}
+        {/* Left: wordmark + section nav + search */}
         <div className="flex shrink-0 items-center gap-3">
           <Link
             href="/"
@@ -44,7 +45,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
             <Logo size="md" theme="dark" />
           </Link>
 
-          <LocationSearch className="w-64 lg:w-96" />
+          {/* Visible cross-section nav (same NAV_ITEMS as the AppHeader). */}
+          <PrimaryNav variant="compact" className="hidden sm:flex" />
+
+          <LocationSearch className="w-56 lg:w-64" />
         </div>
 
         {/* Flexible gap (smaller on the left nudges the persona cluster right) */}
@@ -80,15 +84,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         {/* Flexible gap (larger on the right) */}
         <div className="flex-1" />
 
-        {/* Right: alerts + profile */}
+        {/* Right: alerts. (Cross-section nav is the visible PrimaryNav on the
+            left; the Dashboard tab there replaces the old PROFILE link.) */}
         <div className="flex shrink-0 items-center justify-end gap-3">
           <WatchlistAlertsBell />
-          <Link
-            href="/dashboard"
-            className="terminal-font shrink-0 text-[15px] tracking-[0.2em] text-slate-400 transition-colors hover:text-cyan-400"
-          >
-            [ PROFILE ]
-          </Link>
         </div>
       </div>
 

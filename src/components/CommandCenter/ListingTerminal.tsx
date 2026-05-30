@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import Logo from '@/components/Logo';
+import PrimaryNav from '@/components/layout/PrimaryNav';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
 import UnderwritingSandbox from '@/components/Property/UnderwritingSandbox';
 import DOMTimelineChart, { type SaleMarker } from './DOMTimelineChart';
@@ -242,17 +244,27 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
       />
 
       {/* Terminal Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[1400px] bg-slate-950 border-l border-slate-800 shadow-2xl animate-in slide-in-from-right duration-300">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
-        >
-          <X className="h-5 w-5 text-slate-400" />
-        </button>
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[1400px] flex-col bg-slate-950 border-l border-slate-800 shadow-2xl animate-in slide-in-from-right duration-300">
+        {/* Header — brand + shared section nav (so you can leave the listing for
+            another section without closing first) + close. */}
+        <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-slate-800 px-4">
+          <div className="flex items-center gap-3">
+            <Link href="/" aria-label="PureProperty.ca home" className="flex shrink-0 items-center">
+              <Logo size="md" theme="dark" />
+            </Link>
+            <PrimaryNav variant="compact" className="hidden sm:flex" />
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close listing"
+            className="rounded-full border border-slate-700 bg-slate-800 p-2 transition-colors hover:bg-slate-700"
+          >
+            <X className="h-5 w-5 text-slate-400" />
+          </button>
+        </div>
 
         {/* 70/30 Split Layout */}
-        <div className="flex w-full h-full">
+        <div className="flex w-full min-h-0 flex-1">
           {/* LEFT PANEL - Asset Details (70%, Scrollable) */}
           <div className="w-[70%] h-full overflow-y-auto no-scrollbar p-6">
             {/* Header Section */}

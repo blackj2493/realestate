@@ -1,15 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { SlidersHorizontal } from "lucide-react";
 import PersonaSwitcher from "@/components/dashboard/PersonaSwitcher";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
 /**
- * Dashboard control toolbar. The logo / global search / alerts / account now
- * live in the shared AppHeader (rendered by the (app) route-group layout), so
- * this is a non-sticky secondary row holding only dashboard-specific controls:
- * workspace label, persona switcher, Map Terminal link, and Customize.
+ * Dashboard control toolbar. The logo / global search / alerts / account live
+ * in the shared AppHeader, and cross-section navigation (incl. the Map Terminal)
+ * now lives in the shared PrimaryNav, so this is a non-sticky secondary row
+ * holding only dashboard-specific controls: workspace label, persona switcher,
+ * and Customize.
  */
 export default function MissionControlHeader({
   name,
@@ -37,12 +37,6 @@ export default function MissionControlHeader({
 
         <div className="flex items-center gap-3">
           <PersonaSwitcher persona={persona} onChange={onPersonaChange} />
-          <Link
-            href="/properties"
-            className="terminal-font hidden border border-cyan-500/40 px-3 py-2 text-[11px] uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/10 md:inline-block"
-          >
-            [ Map Terminal ]
-          </Link>
           <button
             type="button"
             onClick={onToggleConfig}
