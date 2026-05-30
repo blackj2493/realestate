@@ -232,6 +232,7 @@ export interface SearchOptions {
   sortOrder?: 'asc' | 'desc';
   rawFilterBy?: string;  // Raw Typesense filter_by string (appended via &&) for persona builders
   geoPolygon?: [number, number][];  // Commute isochrone ring in [lat, lng] order
+  facetBy?: string;
 }
 
 export interface SearchResult {
@@ -264,7 +265,8 @@ export async function searchListings(
     sortBy,
     sortOrder = 'asc',
     rawFilterBy,
-    geoPolygon
+    geoPolygon,
+    facetBy
   } = options;
 
   // Build filter string
@@ -389,7 +391,12 @@ export async function searchListings(
     page,
     per_page: perPage,
   };
-  
+
+  if (facetBy) {
+    searchParams.facet_by = facetBy;
+    searchParams.max_facet_values = 50;
+  }
+
   // Apply filter string
   if (filterParts.length > 0) {
     const filterString = filterParts.join(' && ');

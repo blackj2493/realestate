@@ -27,7 +27,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
-import { buildUniversalFilterString } from "@/lib/filters/filterRegistry";
+import { buildUniversalFilterString, FACET_FIELDS } from "@/lib/filters/filterRegistry";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
@@ -172,6 +172,7 @@ function CommandCenterContent() {
         // inventory as the user zooms in (null until the user moves the map).
         filters: mapBounds ? { boundingBox: mapBounds } : undefined,
         perPage: MAX_LISTINGS,
+        facetBy: FACET_FIELDS.join(","),
         // When the school lens is on, rank by school score; else persona default.
         sortBy: schoolField ?? persona.sortBy,
         sortOrder: "desc",
