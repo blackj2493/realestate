@@ -11,6 +11,8 @@ import {
   type MapMode,
   defaultTerminalFilters,
 } from "@/lib/personas/personaConfig";
+import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
+import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -85,6 +87,11 @@ export interface CommandCenterState {
   ) => void;
   setFilters: (filters: TerminalFilterState) => void;
   resetFilters: () => void;
+
+  // Universal composable filters (price/beds/baths/type) — persona-independent.
+  universalFilters: UniversalFilterState;
+  setUniversalFilter: (key: string, value: FilterValue) => void;
+  resetUniversalFilters: () => void;
 
   // Selected property for the detail terminal
   selectedProperty: ListingDocument | null;
@@ -202,6 +209,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       commute: { ...defaultCommute },
       school: { ...defaultSchool },
     }),
+
+  universalFilters: makeDefaultUniversalFilters(),
+  setUniversalFilter: (key, value) =>
+    set((state) => ({ universalFilters: { ...state.universalFilters, [key]: value } })),
+  resetUniversalFilters: () => set({ universalFilters: makeDefaultUniversalFilters() }),
 
   selectedProperty: null,
   setSelectedProperty: (property) =>
