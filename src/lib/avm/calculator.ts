@@ -53,6 +53,9 @@ export interface AVMMarketData {
   r2: number | null;
   /** Audit Base_Price — surfaced for legacy display; anchor service uses it as a fallback prior. */
   basePrice: number | null;
+  /** Cohort sample size (avm_audit_report.total_sales_analyzed). Used by the
+   * valueAdd engine to suppress thin cohorts; the AVM estimate ignores it. */
+  n?: number | null;
   /** Per-feature standardized coefficients (beta/mean/std) for this market. */
   coefficients: CoefficientRow[];
   /**

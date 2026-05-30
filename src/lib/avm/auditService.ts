@@ -19,6 +19,8 @@ import { cityRegionLookupCandidates } from './normalizeType';
 export interface AuditInfo {
   r2: number | null;
   basePrice: number | null;
+  /** Cohort sample size (avm_audit_report.total_sales_analyzed); null if unknown. */
+  n: number | null;
 }
 
 export async function fetchAuditInfo(
@@ -27,19 +29,19 @@ export async function fetchAuditInfo(
   propertySubType: string
 ): Promise<AuditInfo> {
   const candidates = cityRegionLookupCandidates(cityRegion);
-  if (candidates.length === 0) return { r2: null, basePrice: null };
+  if (candidates.length === 0) return { r2: null, basePrice: null, n: null };
   const typeKey = propertySubType.toLowerCase().trim();
 
   const { data, error } = await supabase
     .from('avm_audit_report')
-    .select('city_region, model_accuracy_score, base_price')
+    .select('city_region, model_accuracy_score, base_price, total_sales_analyzed')
     .in('city_region', candidates)
     .ilike('property_sub_type', typeKey)
     .limit(candidates.length);
 
   if (error || !data || data.length === 0) {
     console.warn(`[AVM] Audit lookup failed for ${cityRegion}/${propertySubType}`);
-    return { r2: null, basePrice: null };
+    return { r2: null, basePrice: null, n: null };
   }
 
   // Pick the row matching the highest-priority candidate (verbatim wins over stripped).
@@ -50,5 +52,6 @@ export async function fetchAuditInfo(
 
   const basePrice =
     typeof best.base_price === 'number' && best.base_price > 0 ? best.base_price : null;
-  return { r2: best.model_accuracy_score ?? null, basePrice };
+  const n = typeof best.total_sales_analyzed === 'number' ? best.total_sales_analyzed : null;
+  return { r2: best.model_accuracy_score ?? null, basePrice, n };
 }
