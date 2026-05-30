@@ -17,33 +17,48 @@ export function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
+/**
+ * Single registry of the 8 standardized model features. `valueOf` returns the
+ * standardized model value from an AVMInput (the SCORE for tier features, via
+ * 6−interiorTier / 5−exteriorTier / 10−basementTier), or null when the field is
+ * absent. Consumed by featureContributions (AVM) and the valueAdd engine so the
+ * two can never disagree on standardization.
+ */
+export interface FeatureSpec {
+  /** AVMInput field a renovation move mutates. */
+  inputField: keyof AVMInput;
+  /** avm_multiplier_matrix.feature_name. */
+  name: string;
+  /** AVMAdjustmentBreakdown key. */
+  key: keyof AVMAdjustmentBreakdown;
+  /** Standardized model value (score for tiers); null = feature absent. */
+  valueOf: (input: AVMInput) => number | null;
+}
+
+export const FEATURE_SPECS: FeatureSpec[] = [
+  { inputField: 'buildingAreaTotal', name: 'building_area_total', key: 'buildingAreaAdjustment', valueOf: (i) => i.buildingAreaTotal },
+  { inputField: 'lotWidth', name: 'lot_width', key: 'lotWidthAdjustment', valueOf: (i) => i.lotWidth },
+  { inputField: 'bedroomsAboveGrade', name: 'bedrooms_above_grade', key: 'bedroomsAdjustment', valueOf: (i) => i.bedroomsAboveGrade },
+  { inputField: 'bathroomsTotalInteger', name: 'bathrooms_total_integer', key: 'bathroomsAdjustment', valueOf: (i) => i.bathroomsTotalInteger },
+  { inputField: 'parkingTotal', name: 'parking_total', key: 'parkingAdjustment', valueOf: (i) => i.parkingTotal },
+  { inputField: 'basementTier', name: 'basement_score', key: 'basementAdjustment', valueOf: (i) => 10 - i.basementTier },
+  { inputField: 'interiorTier', name: 'interior_score', key: 'interiorAdjustment', valueOf: (i) => 6 - i.interiorTier },
+  { inputField: 'exteriorTier', name: 'exterior_score', key: 'exteriorAdjustment', valueOf: (i) => 5 - i.exteriorTier },
+];
+
 /** Each present feature's standardized contribution β·clamp((x−mean)/std, ±Z_CLAMP). */
 export function featureContributions(
   input: AVMInput,
   coeff: Map<string, CoefficientRow>
 ): { key: keyof AVMAdjustmentBreakdown; contribution: number }[] {
-  const interiorScore = 6 - input.interiorTier;
-  const exteriorScore = 5 - input.exteriorTier;
-  const basementScore = 10 - input.basementTier;
-
-  const features: { name: string; value: number | null; key: keyof AVMAdjustmentBreakdown }[] = [
-    { name: 'building_area_total', value: input.buildingAreaTotal, key: 'buildingAreaAdjustment' },
-    { name: 'lot_width', value: input.lotWidth, key: 'lotWidthAdjustment' },
-    { name: 'bedrooms_above_grade', value: input.bedroomsAboveGrade, key: 'bedroomsAdjustment' },
-    { name: 'bathrooms_total_integer', value: input.bathroomsTotalInteger, key: 'bathroomsAdjustment' },
-    { name: 'parking_total', value: input.parkingTotal, key: 'parkingAdjustment' },
-    { name: 'basement_score', value: basementScore, key: 'basementAdjustment' },
-    { name: 'interior_score', value: interiorScore, key: 'interiorAdjustment' },
-    { name: 'exterior_score', value: exteriorScore, key: 'exteriorAdjustment' },
-  ];
-
   const out: { key: keyof AVMAdjustmentBreakdown; contribution: number }[] = [];
-  for (const f of features) {
-    if (f.value === null) continue;
-    const c = coeff.get(f.name);
+  for (const spec of FEATURE_SPECS) {
+    const value = spec.valueOf(input);
+    if (value === null) continue;
+    const c = coeff.get(spec.name);
     if (!c || c.beta === 0 || !(c.std > 0)) continue;
-    const z = clamp((f.value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
-    out.push({ key: f.key, contribution: c.beta * z });
+    const z = clamp((value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
+    out.push({ key: spec.key, contribution: c.beta * z });
   }
   return out;
 }
