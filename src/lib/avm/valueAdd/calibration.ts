@@ -6,7 +6,8 @@ import type { MoveSpec, SuppressReason } from './types';
 export const MIN_COHORT_N = 30;
 /** A single move never adds more than this fraction of the home's value. */
 export const PCT_CAP = 0.12;
-/** A non-overlapping stack of moves never adds more than this fraction. */
+/** A non-overlapping stack of moves never adds more than this fraction.
+ *  Consumed by buildValueAddReport (engine.ts) when capping the joint headline upside. */
 export const PCT_CAP_STACK = 0.3;
 /** Tiny-std floor for discrete counts: keep a +1 unit move near ~1 std, not 1.5–2. */
 export const MIN_STD_COUNT = 0.9;
@@ -14,7 +15,8 @@ export const MIN_STD_COUNT = 0.9;
 export const CEILING_STD = 2.0;
 /** Regional $/sqft prior cap for additions (overrides a runaway cohort sqft beta). */
 export const PPSF_CAP = 300;
-/** Value-Add Score scaling: score = min(100, round(jointFraction · SCORE_K)). */
+/** Value-Add Score scaling: score = min(100, round(jointFraction · SCORE_K)).
+ *  Consumed by buildValueAddReport (engine.ts) to compute the headline Value-Add Score. */
 export const SCORE_K = 350;
 
 const COUNT_FEATURES = new Set([
