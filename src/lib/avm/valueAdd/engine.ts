@@ -1,9 +1,13 @@
 // src/lib/avm/valueAdd/engine.ts
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AVMInput } from '../types';
 import { Z_CLAMP, COEFFICIENT_ENGINE_THRESHOLD, HIGH_CONFIDENCE_THRESHOLD, BAND_MED } from '../types';
 import type { AVMMarketData } from '../calculator';
 import { estimateFromMarketData } from '../calculator';
 import { clamp, FEATURE_SPECS } from '../features';
+import { fetchAnchor } from '../anchorService';
+import { fetchAuditInfo } from '../auditService';
+import { fetchCoefficients } from '../matrixService';
 import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate, PCT_CAP_STACK, SCORE_K } from './calibration';
 import { MOVE_CATALOG } from './moveCatalog';
 import type { FeatureDelta, MoveSpec, ValueAddMove, SuppressReason, ValueAddReport, MoveKey } from './types';
@@ -201,4 +205,28 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData): Val
     basis: `Based on ${market.n ?? 'recent'} ${input.cityRegion} ${input.propertySubType} sales`,
     disclaimer: DISCLAIMER,
   };
+}
+
+/**
+ * Async entry point: load this market's coefficients/audit/anchor (reusing the
+ * AVM's prefixed-city_region-safe lookups), then build the pure report. The
+ * value-add report does not need the peer comp-grid — at-ceiling homes are
+ * suppressed by evaluateMove rather than peer-priced in Phase 1.
+ */
+export async function fetchValueAddReport(
+  supabase: SupabaseClient,
+  input: AVMInput
+): Promise<ValueAddReport> {
+  const [coefficients, audit] = await Promise.all([
+    fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
+    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
+  ]);
+  const anchor = await fetchAnchor(supabase, input, coefficients, audit.basePrice);
+  return buildValueAddReport(input, {
+    anchor,
+    r2: audit.r2,
+    basePrice: audit.basePrice,
+    coefficients,
+    n: audit.n,
+  });
 }
