@@ -86,6 +86,7 @@ export const CORE_FILTERS: FilterDef[] = [
       { value: "Att/Row/Townhouse", label: "Townhouse" },
       { value: "Condo Apartment", label: "Condo Apt" },
       { value: "Condo Townhouse", label: "Condo Townhouse" },
+      { value: "Duplex", label: "Duplex" },
       { value: "Multiplex", label: "Multiplex" },
     ],
     isActive: (v) => (v as string[]).length > 0,
