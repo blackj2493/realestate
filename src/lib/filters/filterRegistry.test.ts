@@ -3,6 +3,8 @@ import {
   FILTERS_BY_KEY,
   buildUniversalFilterString,
   makeDefaultUniversalFilters,
+  ALL_FILTERS,
+  FACET_FIELDS,
 } from "./filterRegistry";
 
 describe("filterRegistry — clause builders", () => {
@@ -58,5 +60,34 @@ describe("buildUniversalFilterString", () => {
     expect(buildUniversalFilterString(f)).toBe(
       "ListPrice:>=500000 && ListPrice:<=800000 && BedroomsTotal:>=3 && (PropertySubType:=`Detached`)"
     );
+  });
+});
+
+describe("MORE_FILTERS (Phase 2)", () => {
+  it("registers 14 filters total (4 pinned + 10 added)", () => {
+    expect(ALL_FILTERS.length).toBe(14);
+    expect(ALL_FILTERS.filter((f) => f.defaultPinned).length).toBe(4);
+  });
+  it("basement backtick-quotes BasementType values in an OR group", () => {
+    expect(FILTERS_BY_KEY.basement.buildClause(["Finished", "Separate Entrance"])).toBe(
+      "(BasementType:=`Finished` || BasementType:=`Separate Entrance`)"
+    );
+  });
+  it("occupancy emits a single-value clause", () => {
+    expect(FILTERS_BY_KEY.occupancy.buildClause(["Vacant"])).toBe("(OccupantType:=`Vacant`)");
+  });
+  it("lotSize emits a range and null at defaults", () => {
+    expect(FILTERS_BY_KEY.lotSize.buildClause([2000, 20000])).toBe("LotSqftTotal:>=2000");
+    expect(FILTERS_BY_KEY.lotSize.buildClause([0, 20000])).toBeNull();
+  });
+  it("parking emits a >= stepper clause", () => {
+    expect(FILTERS_BY_KEY.parking.buildClause(2)).toBe("ParkingTotal:>=2");
+  });
+  it("maintFee emits an upper bound", () => {
+    expect(FILTERS_BY_KEY.maintFee.buildClause([0, 600])).toBe("AssociationFee:<=600");
+  });
+  it("FACET_FIELDS lists the faceted enum fields", () => {
+    expect(FACET_FIELDS).toContain("BasementType");
+    expect(FACET_FIELDS).toContain("PropertySubType");
   });
 });
