@@ -1,16 +1,19 @@
 // src/lib/avm/valueAdd/engine.fetch.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchValueAddReport } from './engine';
 import * as anchorService from '../anchorService';
 import * as auditService from '../auditService';
 import * as matrixService from '../matrixService';
+import { MOVE_CATALOG } from './moveCatalog';
 import { BRAMPTON_WEST_DETACHED, subject } from './__fixtures__/cohorts';
 
 describe('fetchValueAddReport', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('assembles market data via the AVM services and returns a report', async () => {
     vi.spyOn(matrixService, 'fetchCoefficients').mockResolvedValue(BRAMPTON_WEST_DETACHED.coefficients);
     vi.spyOn(auditService, 'fetchAuditInfo').mockResolvedValue({
-      r2: BRAMPTON_WEST_DETACHED.r2, basePrice: BRAMPTON_WEST_DETACHED.basePrice, n: BRAMPTON_WEST_DETACHED.n!,
+      r2: BRAMPTON_WEST_DETACHED.r2, basePrice: BRAMPTON_WEST_DETACHED.basePrice, n: BRAMPTON_WEST_DETACHED.n,
     });
     vi.spyOn(anchorService, 'fetchAnchor').mockResolvedValue(BRAMPTON_WEST_DETACHED.anchor);
 
@@ -21,7 +24,7 @@ describe('fetchValueAddReport', () => {
     });
     const report = await fetchValueAddReport({} as any, input);
     expect(report.subjectEstimate).toBeGreaterThan(0);
-    expect(report.moves.length).toBe(9);
+    expect(report.moves.length).toBe(MOVE_CATALOG.length);
     expect(report.headlineUpside).toBeGreaterThan(0);
   });
 });
