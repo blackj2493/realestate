@@ -93,6 +93,11 @@ export interface CommandCenterState {
   setUniversalFilter: (key: string, value: FilterValue) => void;
   resetUniversalFilters: () => void;
 
+  // Which non-pinned filters the user has added to the bar (chip shown even at default).
+  addedFilterKeys: string[];
+  addFilter: (key: string) => void;
+  removeAddedFilter: (key: string) => void;
+
   // Selected property for the detail terminal
   selectedProperty: ListingDocument | null;
   setSelectedProperty: (property: ListingDocument | null) => void;
@@ -214,6 +219,16 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setUniversalFilter: (key, value) =>
     set((state) => ({ universalFilters: { ...state.universalFilters, [key]: value } })),
   resetUniversalFilters: () => set({ universalFilters: makeDefaultUniversalFilters() }),
+
+  addedFilterKeys: [],
+  addFilter: (key) =>
+    set((state) =>
+      state.addedFilterKeys.includes(key)
+        ? {}
+        : { addedFilterKeys: [...state.addedFilterKeys, key] }
+    ),
+  removeAddedFilter: (key) =>
+    set((state) => ({ addedFilterKeys: state.addedFilterKeys.filter((k) => k !== key) })),
 
   selectedProperty: null,
   setSelectedProperty: (property) =>
