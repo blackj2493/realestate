@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
+import { getConsumer } from "@/lib/auth/requireConsumer";
 
 export const dynamic = "force-dynamic"; // caching handled by unstable_cache per region
 
@@ -90,6 +91,13 @@ export async function GET(req: NextRequest) {
   const minParking = Math.max(0, Math.floor(Number(params.get("minParking")) || 0));
   const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", stats: EMPTY });
+
+  // VOW gate: region cap-rate stats are a derived analytical metric (ExtrapolatedCapRate).
+  // Anonymous users get a locked shape (no data) before the cache/RPC scan.
+  const { isConsumer } = await getConsumer();
+  if (!isConsumer) {
+    return NextResponse.json({ region, stats: EMPTY, locked: true });
+  }
 
   const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
   const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}|p${minParking}|f${minFrontage}`;

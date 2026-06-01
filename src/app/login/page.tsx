@@ -6,7 +6,15 @@ export const metadata = {
   title: "Sign in · PureProperty.ca",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  // Open-redirect guard: only honor relative, single-slash paths (e.g. "/properties/X").
+  const safeNext =
+    next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
       <header className="px-4 py-3">
@@ -25,7 +33,7 @@ export default function LoginPage() {
           </p>
 
           <div className="mt-6">
-            <MagicLinkForm next="/dashboard" />
+            <MagicLinkForm next={safeNext} />
           </div>
 
           <p className="mt-6 text-center text-sm text-slate-500">

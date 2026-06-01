@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { smoothedYoY } from "@/lib/dashboard/marketAggregates";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 interface TrendPoint {
   month: string; // YYYY-MM
@@ -36,15 +37,21 @@ const fmtPpsf = (v: number) => `$${Math.round(v)}`;
 export default function MarketPulse({ location }: { location: string }) {
   const [points, setPoints] = useState<TrendPoint[] | null>(null);
   const [error, setError] = useState(false);
+  const [locked, setLocked] = useState(false);
   const [metric, setMetric] = useState<Metric>("price");
 
   useEffect(() => {
     let alive = true;
     setPoints(null);
     setError(false);
+    setLocked(false);
     fetch(`/api/market/price-trend?region=${encodeURIComponent(location)}`)
       .then((r) => r.json())
-      .then((d) => alive && setPoints(Array.isArray(d.points) ? d.points : []))
+      .then((d) => {
+        if (!alive) return;
+        setLocked(!!d.locked);
+        setPoints(Array.isArray(d.points) ? d.points : []);
+      })
       .catch(() => alive && setError(true));
     return () => {
       alive = false;
@@ -107,21 +114,30 @@ export default function MarketPulse({ location }: { location: string }) {
         </div>
       </div>
 
-      <div className="h-56 p-3">
-        {points === null && !error && (
+      <div className="relative h-56 p-3">
+        {locked && (
+          <div className="relative h-full w-full">
+            <div
+              className="h-full w-full rounded bg-gradient-to-t from-slate-800/50 to-slate-900/10 blur-sm"
+              aria-hidden="true"
+            />
+            <VowGateOverlay message="Sign in to view sold-price trends" />
+          </div>
+        )}
+        {!locked && points === null && !error && (
           <div className="h-full w-full animate-pulse bg-slate-800/40" />
         )}
-        {error && (
+        {!locked && error && (
           <p className="flex h-full items-center justify-center text-xs text-rose-400">
             Failed to load trend
           </p>
         )}
-        {points && points.length === 0 && !error && (
+        {!locked && points && points.length === 0 && !error && (
           <p className="flex h-full items-center justify-center text-xs text-slate-500">
             No recent sold data for this area
           </p>
         )}
-        {points && points.length > 0 && (
+        {!locked && points && points.length > 0 && (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
               <CartesianGrid stroke="#1e293b" vertical={false} />

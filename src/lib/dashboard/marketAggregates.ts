@@ -11,6 +11,8 @@
 
 export interface RegionScore {
   region: string;
+  /** VOW gate: anon received a `locked` shape from the endpoints — render a sign-in overlay. */
+  locked?: boolean;
   medianPrice: number | null;
   priceSeries: { month: string; v: number }[]; // months present in the trailing ~12 (sparkline)
   yoyPct: number | null;
@@ -43,6 +45,7 @@ interface PriceTrendResp {
     sales90: number;
     monthlyVelocity: number | null;
   };
+  locked?: boolean;
   error?: string;
 }
 
@@ -56,6 +59,7 @@ interface RegionStatsResp {
     topCapRate: number | null;
     staleCount: number;
   };
+  locked?: boolean;
   error?: string;
 }
 
@@ -169,6 +173,8 @@ export async function fetchRegionScore(
 
   return {
     region,
+    // Either endpoint returning `locked` (anonymous) locks the whole row.
+    locked: !!(trend?.locked || stats?.locked),
     medianPrice: latest?.medianPrice ?? null,
     priceSeries: points.slice(-12).map((p) => ({ month: p.month, v: p.medianPrice })),
     yoyPct: smoothedYoY(points, "medianPrice"),

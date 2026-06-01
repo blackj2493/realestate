@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
+import { getConsumer } from "@/lib/auth/requireConsumer";
 
 export const dynamic = "force-dynamic"; // caching is handled by unstable_cache per region
 
@@ -198,6 +199,14 @@ export async function GET(req: NextRequest) {
   const minParking = Math.max(0, Math.floor(Number(params.get("minParking")) || 0));
   const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
+
+  // VOW gate: sold-price trends are derived from raw_vow_sold. Anonymous users get a
+  // locked shape (no data) BEFORE the cache/scan — so we never touch raw_vow_sold for
+  // them (also protects the Supabase IO budget; memory supabase-io-budget).
+  const { isConsumer } = await getConsumer();
+  if (!isConsumer) {
+    return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, locked: true });
+  }
 
   const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
   const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}|p${minParking}|f${minFrontage}`;

@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Typesense, { Client } from "typesense";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
 import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
+import { getConsumer } from "@/lib/auth/requireConsumer";
 
 export const dynamic = "force-dynamic";
 
@@ -247,8 +248,22 @@ export async function GET(req: NextRequest) {
   // existing client response shape is preserved.
   const regionEcho = area.kind === "region" ? area.region : "";
 
+  // VOW gate (§6.2(f)/Purpose): sold rows are VOW Listing Information. Anonymous
+  // users get the COUNT (an aggregate teaser) but NO rows — close prices, sold
+  // dates, addresses and VOW media are never sent to an unauthenticated client.
+  // We also shrink the query to one hit for anon since the rows are discarded.
+  const { isConsumer } = await getConsumer();
+
   try {
-    const result = await computeSold(params);
+    const result = await computeSold(isConsumer ? params : { ...params, limit: 1 });
+    if (!isConsumer) {
+      return NextResponse.json({
+        region: regionEcho,
+        count: result.count,
+        listings: [],
+        locked: true,
+      });
+    }
     return NextResponse.json({ region: regionEcho, ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";

@@ -19,6 +19,8 @@ import {
   compactPrice,
   orDash,
 } from "@/components/dashboard/metricViz";
+import { cn } from "@/lib/utils";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 type SortKey =
   | "region"
@@ -145,14 +147,18 @@ export default function RegionScorecard({
     minFrontage > 0 ? `${minFrontage}+ ft frontage` : null,
   ].filter(Boolean) as string[];
 
+  // VOW gate: when every row came back locked (anonymous), blur the grid and
+  // surface a single sign-in overlay instead of a wall of "—".
+  const locked = !loading && scores.length > 0 && scores.every((s) => s.locked);
+
   return (
     <section className="space-y-2">
       <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
         Region Scorecard <span className="text-slate-500">· {regions.length}</span>
       </h2>
 
-      <div className="overflow-x-auto border border-slate-800">
-        <div className="min-w-[1000px]">
+      <div className="relative overflow-x-auto border border-slate-800">
+        <div className={cn("min-w-[1000px]", locked && "blur-sm select-none")}>
           {/* Header */}
           <div className={`grid ${GRID} border-b border-slate-800 bg-slate-900/60`}>
             {COLUMNS.map((c) => {
@@ -236,6 +242,7 @@ export default function RegionScorecard({
                 </div>
               ))}
         </div>
+        {locked && <VowGateOverlay message="Sign in to view region market stats" />}
       </div>
 
       <p className="text-[11px] leading-relaxed text-slate-600">
