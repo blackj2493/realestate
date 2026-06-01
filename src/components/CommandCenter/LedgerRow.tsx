@@ -80,11 +80,23 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
       const type = doc.PropertySubType || doc.PropertyType || "Residential";
       return (
         <div className={cn("min-w-0", col.width)}>
-          {/* Price + listed-ago */}
+          {/* Status chip + price (left) · listed-ago (right) */}
           <div className="flex items-baseline justify-between gap-2">
-            <span className="font-sans text-sm font-bold text-cyan-300">
-              {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
-            </span>
+            <div className="flex min-w-0 items-baseline gap-1.5">
+              {doc.TransactionType && (
+                <span
+                  className={cn(
+                    "shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide",
+                    /lease/i.test(doc.TransactionType) ? "bg-sky-500/15 text-sky-300" : "bg-emerald-500/15 text-emerald-300"
+                  )}
+                >
+                  {doc.TransactionType}
+                </span>
+              )}
+              <span className="truncate font-sans text-base font-bold text-cyan-300">
+                {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
+              </span>
+            </div>
             {age !== null && (
               <span className="shrink-0 text-[10px] text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>
             )}
@@ -93,15 +105,26 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
           {/* Address */}
           <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
 
-          {/* Bed / bath / parking / sqft strip — each chip shown only when present */}
-          {(beds || baths || parking || sqft) && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-xs text-slate-300">
-              {beds && <StatChip icon={BedDouble} label={beds} />}
-              {baths ? <StatChip icon={Bath} label={String(baths)} /> : null}
-              {parking ? <StatChip icon={Car} label={String(parking)} /> : null}
-              {sqft && <StatChip icon={Maximize} label={`${Math.round(sqft).toLocaleString()} ft²`} />}
-            </div>
-          )}
+          {/* Bed / bath / parking / sqft strip — present chips joined by · separators */}
+          {(() => {
+            const chips = [
+              beds ? <StatChip key="beds" icon={BedDouble} label={beds} /> : null,
+              baths ? <StatChip key="baths" icon={Bath} label={String(baths)} /> : null,
+              parking ? <StatChip key="parking" icon={Car} label={String(parking)} /> : null,
+              sqft ? <StatChip key="sqft" icon={Maximize} label={`${Math.round(sqft).toLocaleString()} ft²`} /> : null,
+            ].filter(Boolean);
+            if (!chips.length) return null;
+            return (
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-slate-300">
+                {chips.map((chip, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <span className="text-slate-600">·</span>}
+                    {chip}
+                  </React.Fragment>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* MLS# · type · brokerage (brokerage at sibling weight per TRREB §6.3(c)) */}
           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-slate-500">
@@ -217,12 +240,12 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
       {/* Thumbnail + overlays (DealScore pill, save heart). The outer wrapper
           is `relative` so the absolute children position against this box;
           ListingThumbnail fills it via `absolute inset-0`. */}
-      <div className="relative h-16 w-24 shrink-0">
+      <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-sm">
         <ListingThumbnail
           src={src}
           alt={property.UnparsedAddress || "Property"}
           className="absolute inset-0"
-          sizes="96px"
+          sizes="112px"
         />
         {deal.score !== null && (
           <DealScoreGradePill
@@ -240,16 +263,6 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         >
           <Heart className={cn("h-3.5 w-3.5", isSaved ? "fill-red-500 text-red-500" : "text-slate-400")} />
         </button>
-        {property.TransactionType && (
-          <span
-            className={cn(
-              "absolute bottom-1 left-1 z-10 rounded-none px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white",
-              /lease/i.test(property.TransactionType) ? "bg-sky-600/90" : "bg-emerald-600/90"
-            )}
-          >
-            {property.TransactionType}
-          </span>
-        )}
       </div>
 
       {columns.map((col) => (
