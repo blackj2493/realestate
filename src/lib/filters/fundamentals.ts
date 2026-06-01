@@ -15,6 +15,27 @@ import type { FilterOption } from "./types";
 export type TransactionMode = "sale" | "rent";
 export type PropertyClass = "residential" | "commercial";
 
+/** Slider bounds for a numeric range control. */
+export interface RangeConfig {
+  min: number;
+  max: number;
+  step: number;
+}
+
+/**
+ * Price slider is transaction-aware: ListPrice is a SALE price for sale (0–$3M,
+ * $25k steps) but a MONTHLY RENT for lease (~$2k) — a 0–3M/$25k slider can't
+ * express a rent, so rent gets 0–$12k / $100 steps.
+ */
+const PRICE_CONFIG: Record<TransactionMode, RangeConfig> = {
+  sale: { min: 0, max: 3_000_000, step: 25_000 },
+  rent: { min: 0, max: 12_000, step: 100 },
+};
+
+export function priceConfig(mode: TransactionMode): RangeConfig {
+  return PRICE_CONFIG[mode];
+}
+
 /** TransactionType values as stored on every doc. */
 const TRANSACTION_VALUE: Record<TransactionMode, string> = {
   sale: "For Sale",

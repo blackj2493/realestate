@@ -22,8 +22,11 @@ export interface FilterDef {
   step?: number;
   // enum controls
   options?: FilterOption[];
-  /** Typesense facet field for live counts (wired in the Phase 2 plan). */
+  /** Typesense facet field for live enum counts. */
   facetField?: string;
+  /** Typesense numeric field this range filters on — drives the distribution
+   *  histogram. Omitted ⇒ no histogram (e.g. unindexed AssociationFee). */
+  field?: string;
   isActive: (value: FilterValue) => boolean;
   /** Emits a Typesense filter_by fragment, or null when the value is at default. */
   buildClause: (value: FilterValue) => string | null;

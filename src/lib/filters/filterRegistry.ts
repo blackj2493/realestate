@@ -1,13 +1,51 @@
 import type { FilterDef, FilterValue, UniversalFilterState } from "./types";
-import { RESIDENTIAL_TYPE_OPTIONS } from "./fundamentals";
-
-const PRICE_MIN = 0;
-const PRICE_MAX = 3_000_000;
+import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig } from "./fundamentals";
 
 const fmtPrice = (v: number): string =>
   v >= 1_000_000
     ? `$${(v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 1)}M`
-    : `$${Math.round(v / 1000)}k`;
+    : v >= 10_000
+      ? `$${Math.round(v / 1000)}k`
+      : `$${v.toLocaleString("en-US")}`; // rents read as "$1,800", not "$2k"
+
+/**
+ * Price range filter, parameterised by transaction mode (sale vs rent bounds —
+ * see priceConfig). FilterBar renders the mode-scoped def; the query path builds
+ * the clause from the same config so bounds never drift between UI and filter.
+ */
+export function makePriceDef(cfg: RangeConfig): FilterDef {
+  const { min, max, step } = cfg;
+  return {
+    key: "price",
+    label: "Price",
+    category: "Basics",
+    control: "range",
+    defaultPinned: true,
+    defaultValue: [min, max],
+    min,
+    max,
+    step,
+    field: "ListPrice",
+    isActive: (v) => {
+      const [lo, hi] = v as [number, number];
+      return lo > min || hi < max;
+    },
+    buildClause: (v) => {
+      const [lo, hi] = v as [number, number];
+      const parts: string[] = [];
+      if (lo > min) parts.push(`ListPrice:>=${Math.floor(lo)}`);
+      if (hi < max) parts.push(`ListPrice:<=${Math.floor(hi)}`);
+      return parts.length ? parts.join(" && ") : null;
+    },
+    chipLabel: (v) => {
+      const [lo, hi] = v as [number, number];
+      if (lo > min && hi < max) return `${fmtPrice(lo)}–${fmtPrice(hi)}`;
+      if (lo > min) return `${fmtPrice(lo)}+`;
+      if (hi < max) return `≤${fmtPrice(hi)}`;
+      return "Price";
+    },
+  };
+}
 
 /**
  * CORE_FILTERS — the universal "what" filters, defined as data so the bar, the
@@ -16,35 +54,9 @@ const fmtPrice = (v: number): string =>
  * users actually mean by "type". Exact subtype spellings are confirmed in Task 9.
  */
 export const CORE_FILTERS: FilterDef[] = [
-  {
-    key: "price",
-    label: "Price",
-    category: "Basics",
-    control: "range",
-    defaultPinned: true,
-    defaultValue: [PRICE_MIN, PRICE_MAX],
-    min: PRICE_MIN,
-    max: PRICE_MAX,
-    step: 25_000,
-    isActive: (v) => {
-      const [lo, hi] = v as [number, number];
-      return lo > PRICE_MIN || hi < PRICE_MAX;
-    },
-    buildClause: (v) => {
-      const [lo, hi] = v as [number, number];
-      const parts: string[] = [];
-      if (lo > PRICE_MIN) parts.push(`ListPrice:>=${Math.floor(lo)}`);
-      if (hi < PRICE_MAX) parts.push(`ListPrice:<=${Math.floor(hi)}`);
-      return parts.length ? parts.join(" && ") : null;
-    },
-    chipLabel: (v) => {
-      const [lo, hi] = v as [number, number];
-      if (lo > PRICE_MIN && hi < PRICE_MAX) return `${fmtPrice(lo)}–${fmtPrice(hi)}`;
-      if (lo > PRICE_MIN) return `${fmtPrice(lo)}+`;
-      if (hi < PRICE_MAX) return `≤${fmtPrice(hi)}`;
-      return "Price";
-    },
-  },
+  // Default (sale) price def; FilterBar swaps to the rent-scoped def in rent mode,
+  // and the query path builds the price clause from the same makePriceDef config.
+  makePriceDef(priceConfig("sale")),
   {
     key: "beds",
     label: "Beds",
@@ -152,6 +164,7 @@ function rangeFilter(o: {
     min: o.min,
     max: o.max,
     step: o.step,
+    field: o.field,
     isActive: (v) => {
       const [lo, hi] = v as [number, number];
       return lo > o.min || hi < o.max;
@@ -287,10 +300,20 @@ export function makeDefaultUniversalFilters(): UniversalFilterState {
   return out;
 }
 
-/** Compose the active universal filters into one Typesense filter_by fragment ("" if none). */
-export function buildUniversalFilterString(values: UniversalFilterState): string {
+/**
+ * Compose the active universal filters into one Typesense filter_by fragment
+ * ("" if none). `exclude` drops specific keys — used by the distribution
+ * histogram (a field's own clause is excluded so its bars don't self-collapse)
+ * and by the query path (price is built transaction-aware, separately).
+ */
+export function buildUniversalFilterString(
+  values: UniversalFilterState,
+  opts?: { exclude?: string[] }
+): string {
+  const excluded = new Set(opts?.exclude ?? []);
   const clauses: string[] = [];
   for (const def of ALL_FILTERS) {
+    if (excluded.has(def.key)) continue;
     const value = values[def.key] ?? def.defaultValue;
     const clause = def.buildClause(value);
     if (clause) clauses.push(clause);

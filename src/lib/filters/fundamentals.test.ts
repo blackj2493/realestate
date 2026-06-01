@@ -4,10 +4,12 @@ import {
   buildClassClause,
   priceFloorClause,
   isInvestorLayerActive,
+  priceConfig,
   RESIDENTIAL_TYPE_OPTIONS,
   COMMERCIAL_TYPE_OPTIONS,
   typeOptionsForClass,
 } from "./fundamentals";
+import { makePriceDef } from "./filterRegistry";
 
 describe("fundamentals — transaction clause", () => {
   it("backtick-quotes the sale value (space inside)", () => {
@@ -45,6 +47,21 @@ describe("fundamentals — investor layer gate", () => {
     expect(isInvestorLayerActive("rent", "residential")).toBe(false);
     expect(isInvestorLayerActive("sale", "commercial")).toBe(false);
     expect(isInvestorLayerActive("rent", "commercial")).toBe(false);
+  });
+});
+
+describe("fundamentals — transaction-aware price", () => {
+  it("uses sale bounds 0–3M / $25k", () => {
+    expect(priceConfig("sale")).toEqual({ min: 0, max: 3_000_000, step: 25_000 });
+  });
+  it("uses rent bounds 0–$12k / $100 (ListPrice is monthly rent)", () => {
+    expect(priceConfig("rent")).toEqual({ min: 0, max: 12_000, step: 100 });
+  });
+  it("rent price def emits real rent bounds and is null at default", () => {
+    const rent = makePriceDef(priceConfig("rent"));
+    expect(rent.buildClause([1800, 3500])).toBe("ListPrice:>=1800 && ListPrice:<=3500");
+    expect(rent.buildClause([0, 12_000])).toBeNull();
+    expect(rent.chipLabel([1800, 3500])).toBe("$1,800–$3,500"); // not "$2k–$4k"
   });
 });
 

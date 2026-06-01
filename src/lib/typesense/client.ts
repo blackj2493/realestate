@@ -9,6 +9,7 @@
 
 import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
+import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 
 // Typesense configuration
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
@@ -36,6 +37,32 @@ export function getTypesenseClient(): Client {
     });
   }
   return client;
+}
+
+/**
+ * Full-population distribution counts for a numeric field, one per band, fetched
+ * as batched COUNT queries (per_page:0 → just `found`) in a single multi_search
+ * round-trip. `baseFilterBy` should already exclude this field's own clause so
+ * the bars reflect every OTHER active filter without self-collapsing. RAM-safe:
+ * no faceting of the numeric field (see histogram.ts / the 2026-05-19 RAM policy).
+ */
+export async function searchHistogram(params: {
+  field: string;
+  baseFilterBy: string;
+  bands: HistogramBand[];
+}): Promise<number[]> {
+  const { field, baseFilterBy, bands } = params;
+  if (!bands.length) return [];
+  const searches = bands.map((b) => ({
+    collection: 'properties',
+    q: '*',
+    query_by: 'City',
+    filter_by: [baseFilterBy, bandFilter(field, b)].filter(Boolean).join(' && '),
+    per_page: 0,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const res: any = await getTypesenseClient().multiSearch.perform({ searches } as any);
+  return (res.results ?? []).map((r: { found?: number }) => r.found ?? 0);
 }
 
 // ============================================================================
