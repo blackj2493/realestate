@@ -5,9 +5,11 @@ import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { CORE_FILTERS, FILTERS_BY_KEY } from "@/lib/filters/filterRegistry";
+import { isInvestorLayerActive, typeOptionsForClass } from "@/lib/filters/fundamentals";
 import { PERSONA_CONFIG, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
+import FundamentalToggle from "./FundamentalToggle";
 import InvestorChip from "./InvestorChip";
 import PresetChip from "./PresetChip";
 import AddFilterPalette from "./AddFilterPalette";
@@ -40,10 +42,33 @@ export default function FilterBar() {
     activePersona,
     filters,
     setFilters,
+    transactionMode,
+    setTransactionMode,
+    propertyClass,
+    setPropertyClass,
   } = useCommandCenterStore();
 
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
   const controls = PERSONA_CONFIG[activePersona].controls;
+
+  // The persona/investor layer (preset + investor chips) is residential-sale only.
+  const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+
+  // Property Type picker: same generic FilterChip, but the option set (and the
+  // single-select chip label) follow the chosen class. Value/clause stay on the
+  // `homeType` universal filter, so reset + live counts + query are unchanged.
+  const typeOptions = typeOptionsForClass(propertyClass);
+  const homeTypeDef = FILTERS_BY_KEY.homeType;
+  const scopedTypeDef: FilterDef = {
+    ...homeTypeDef,
+    options: typeOptions,
+    chipLabel: (v) => {
+      const vals = v as string[];
+      if (!vals.length) return homeTypeDef.label;
+      if (vals.length === 1) return typeOptions.find((o) => o.value === vals[0])?.label ?? vals[0];
+      return `${vals.length} types`;
+    },
+  };
 
   const addedDefs = addedFilterKeys
     .map((k) => FILTERS_BY_KEY[k])
@@ -64,23 +89,53 @@ export default function FilterBar() {
 
   return (
     <div className="no-scrollbar flex h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3">
-      <PresetChip />
+      {/* Fundamental axes — gate the whole query (sit before the persona preset). */}
+      <FundamentalToggle
+        ariaLabel="Transaction type"
+        value={transactionMode}
+        onChange={setTransactionMode}
+        options={[
+          { value: "sale", label: "For Sale" },
+          { value: "rent", label: "For Rent" },
+        ]}
+      />
+      <FundamentalToggle
+        ariaLabel="Property class"
+        value={propertyClass}
+        onChange={setPropertyClass}
+        options={[
+          { value: "residential", label: "Residential" },
+          { value: "commercial", label: "Commercial" },
+        ]}
+      />
       <div className="h-5 w-px shrink-0 bg-slate-800" />
+
+      {/* Persona preset — residential-sale only (rent/commercial = basic browse). */}
+      {investorLayer && (
+        <>
+          <PresetChip />
+          <div className="h-5 w-px shrink-0 bg-slate-800" />
+        </>
+      )}
 
       {CORE_FILTERS.map((def) => (
         <FilterChip
           key={def.key}
-          def={def}
+          def={def.key === "homeType" ? scopedTypeDef : def}
           value={universalFilters[def.key] ?? def.defaultValue}
           onChange={(v) => setUniversalFilter(def.key, v)}
           onClear={() => setUniversalFilter(def.key, freshDefault(def.defaultValue))}
         />
       ))}
 
-      <div className="h-5 w-px shrink-0 bg-slate-800" />
-      {controls.map((c, i) => (
-        <InvestorChip key={`${activePersona}-${i}`} control={c} />
-      ))}
+      {investorLayer && (
+        <>
+          <div className="h-5 w-px shrink-0 bg-slate-800" />
+          {controls.map((c, i) => (
+            <InvestorChip key={`${activePersona}-${i}`} control={c} />
+          ))}
+        </>
+      )}
 
       {addedDefs.map((def) => (
         <FilterChip

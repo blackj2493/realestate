@@ -13,6 +13,7 @@ import {
 } from "@/lib/personas/personaConfig";
 import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
 import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
+import type { TransactionMode, PropertyClass } from "@/lib/filters/fundamentals";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -92,6 +93,14 @@ export interface CommandCenterState {
   universalFilters: UniversalFilterState;
   setUniversalFilter: (key: string, value: FilterValue) => void;
   resetUniversalFilters: () => void;
+
+  // Fundamental axes — the two hard segmentations that sit BEFORE the persona /
+  // composable filters and gate the whole query (sale vs rent, residential vs
+  // commercial). The persona/investor analytics layer is residential-sale only.
+  transactionMode: TransactionMode;
+  setTransactionMode: (mode: TransactionMode) => void;
+  propertyClass: PropertyClass;
+  setPropertyClass: (cls: PropertyClass) => void;
 
   // Which non-pinned filters the user has added to the bar (chip shown even at default).
   addedFilterKeys: string[];
@@ -220,6 +229,17 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setUniversalFilter: (key, value) =>
     set((state) => ({ universalFilters: { ...state.universalFilters, [key]: value } })),
   resetUniversalFilters: () => set({ universalFilters: makeDefaultUniversalFilters() }),
+
+  transactionMode: "sale",
+  setTransactionMode: (mode) => set({ transactionMode: mode }),
+  propertyClass: "residential",
+  // Switching class clears the Property Type picker — residential & commercial use
+  // different PropertySubType spellings, so a stale selection would zero out results.
+  setPropertyClass: (cls) =>
+    set((state) => ({
+      propertyClass: cls,
+      universalFilters: { ...state.universalFilters, homeType: [] },
+    })),
 
   addedFilterKeys: [],
   addFilter: (key) =>

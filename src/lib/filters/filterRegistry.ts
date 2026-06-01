@@ -1,4 +1,5 @@
 import type { FilterDef, FilterValue, UniversalFilterState } from "./types";
+import { RESIDENTIAL_TYPE_OPTIONS } from "./fundamentals";
 
 const PRICE_MIN = 0;
 const PRICE_MAX = 3_000_000;
@@ -74,21 +75,15 @@ export const CORE_FILTERS: FilterDef[] = [
   },
   {
     key: "homeType",
-    label: "Home Type",
+    label: "Property Type",
     category: "Basics",
     control: "enum",
     defaultPinned: true,
     defaultValue: [],
     facetField: "PropertySubType",
-    options: [
-      { value: "Detached", label: "Detached" },
-      { value: "Semi-Detached ", label: "Semi-Detached" },
-      { value: "Att/Row/Townhouse", label: "Townhouse" },
-      { value: "Condo Apartment", label: "Condo Apt" },
-      { value: "Condo Townhouse", label: "Condo Townhouse" },
-      { value: "Duplex", label: "Duplex" },
-      { value: "Multiplex", label: "Multiplex" },
-    ],
+    // Default (residential) option set; FilterBar swaps to the commercial set when
+    // the property class is Commercial. Both live in ./fundamentals (one source).
+    options: RESIDENTIAL_TYPE_OPTIONS,
     isActive: (v) => (v as string[]).length > 0,
     buildClause: (v) => {
       const vals = v as string[];

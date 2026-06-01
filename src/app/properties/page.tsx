@@ -28,6 +28,12 @@ import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
 import { buildUniversalFilterString, FACET_FIELDS } from "@/lib/filters/filterRegistry";
+import {
+  buildTransactionClause,
+  buildClassClause,
+  priceFloorClause,
+  isInvestorLayerActive,
+} from "@/lib/filters/fundamentals";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
@@ -44,8 +50,9 @@ const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
 
 // Compliance: never retrieve/render more than 100 listings per UI query.
 const MAX_LISTINGS = 100;
-// Exclude rentals (no filterable TransactionType; rentals sit ~$2.2k).
-const SALES_FLOOR = "ListPrice:>=100000";
+// Neutral sort for the basic-browse modes (rent / commercial), where the persona
+// metric sorts (cap rate, yield) don't apply.
+const BASIC_SORT = "ListPrice";
 
 function CommandCenterContent() {
   const searchParams = useSearchParams();
@@ -75,6 +82,8 @@ function CommandCenterContent() {
     colorMetricId,
     colorBand,
     drawPolygon,
+    transactionMode,
+    propertyClass,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -129,7 +138,16 @@ function CommandCenterContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const personaFilter = persona.buildFilterString(filters);
+      // Fundamental axes gate the whole query: transaction (sale/lease), property
+      // class (residential = "not Commercial"), and a transaction-aware price floor.
+      const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+      const transactionClause = buildTransactionClause(transactionMode);
+      const classClause = buildClassClause(propertyClass);
+      const floorClause = priceFloorClause(transactionMode);
+
+      // Persona investor filters apply only in the residential-sale layer; rent /
+      // commercial are basic browse (their metrics are deferred), so skip them.
+      const personaFilter = investorLayer ? persona.buildFilterString(filters) : "";
 
       // Universal composable filters (price/beds/baths/type) compose alongside
       // the persona's investor filters — same filter_by chain, no API change.
@@ -154,7 +172,16 @@ function CommandCenterContent() {
           ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
           : null;
 
-      const rawFilterBy = [SALES_FLOOR, personaFilter, universalFilter, ...schoolParts, bandClause, drawClause]
+      const rawFilterBy = [
+        floorClause,
+        transactionClause,
+        classClause,
+        personaFilter,
+        universalFilter,
+        ...schoolParts,
+        bandClause,
+        drawClause,
+      ]
         .filter(Boolean)
         .join(" && ");
 
@@ -173,8 +200,9 @@ function CommandCenterContent() {
         filters: mapBounds ? { boundingBox: mapBounds } : undefined,
         perPage: MAX_LISTINGS,
         facetBy: FACET_FIELDS.join(","),
-        // When the school lens is on, rank by school score; else persona default.
-        sortBy: schoolField ?? persona.sortBy,
+        // School lens wins; else the persona metric sort (residential-sale only);
+        // else a neutral price sort for the rent / commercial basic-browse modes.
+        sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
         sortOrder: "desc",
       });
 
@@ -187,14 +215,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, universalFilters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
