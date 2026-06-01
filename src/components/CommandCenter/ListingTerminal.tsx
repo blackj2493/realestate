@@ -104,6 +104,8 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [saleHistory, setSaleHistory] = useState<SaleHistory | null>(null);
   const [priceTimeline, setPriceTimeline] = useState<PriceTimeline | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [hasEstimate, setHasEstimate] = useState(false);
+  const [hasDealScore, setHasDealScore] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   // Fetch full property details when terminal opens
@@ -151,6 +153,8 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     setSaleHistory(null);
     setPriceTimeline(null);
     setIsAuthed(false);
+    setHasEstimate(false);
+    setHasDealScore(false);
     setIsGalleryOpen(false);
     (async () => {
       try {
@@ -166,6 +170,8 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
         setSaleHistory(data?.saleHistory ?? null);
         setPriceTimeline(data?.priceTimeline ?? null);
         setIsAuthed(!!data?.isAuthed);
+        setHasEstimate(!!data?.hasEstimate);
+        setHasDealScore(!!data?.hasDealScore);
       } catch {
         /* keep index-only fallbacks */
       }
@@ -411,7 +417,7 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             <div className="space-y-4">
               {/* Deal Score — flagship signal, pinned to the top of the rail */}
               {dealScore ? (
-                <DealScoreCard dealScore={dealScore} />
+                <DealScoreCard dealScore={dealScore} locked={!isAuthed && hasDealScore} />
               ) : (
                 <div className="animate-pulse rounded-lg border border-slate-800 bg-slate-900/50 p-4">
                   <div className="mb-3 h-3 w-24 rounded bg-slate-800" />
@@ -430,6 +436,7 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 estimate={estimate}
                 listPrice={property.ListPrice}
                 cityRegion={property.City}
+                locked={!isAuthed && hasEstimate}
               />
 
               {/* Property Summary Card */}

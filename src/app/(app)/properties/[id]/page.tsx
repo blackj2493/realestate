@@ -13,7 +13,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Bed, Bath, Square, Car, Home, AlertTriangle, Building2 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
-import { getListingDetail, gateSaleHistory } from "@/lib/property/getListingDetail";
+import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
+import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
@@ -201,9 +202,17 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  // VOW gating: strip sold prices/dates for anonymous users (§4).
+  // VOW gating: strip sold prices/dates AND VOW-derived metrics (AVM, Value-Add,
+  // Deal Score, stitched True DOM) for anonymous users — the numbers never reach the
+  // client; the cards render blurred "Login Required" teasers (§4; §6.2(f)). The
+  // has* flags (computed from the ungated detail) drive the teaser only where real
+  // data exists, so we never tease an empty card.
   const isAuthed = !!(await getCurrentUser());
-  const saleHistory = gateSaleHistory(detail.saleHistory, isAuthed);
+  const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
+  const hasValueAdd = hasValueAddData(detail.valueAdd);
+  const hasDealScore = detail.dealScore.score !== null;
+  const view = gateVowDerived(detail, isAuthed);
+  const saleHistory = view.saleHistory;
   // Prior sold prices for the price-history chart — authed only (events are empty otherwise).
   const saleMarkers: SaleMarker[] = saleHistory.events
     .filter((e) => e.close_price && e.close_price > 0 && (e.contract_date || e.close_date))
@@ -214,7 +223,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const price = p.ListPrice || 0;
   const dom = p.DaysOnMarket ?? calculateDaysOnMarket(p.OriginalEntryTimestamp);
   // True DOM (stitched across relists) from the Temporal Distress Engine; falls back to raw DOM.
-  const trueDom = detail.priceTimeline.trueDom ?? dom;
+  // Gated (null) for anon → falls back to raw IDX DaysOnMarket.
+  const trueDom = view.priceTimeline.trueDom ?? dom;
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
   const jsonLd = buildJsonLd(id, detail);
@@ -310,7 +320,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <span className="text-sm font-semibold text-slate-400">
                   Listed {dom} {dom === 1 ? "day" : "days"} ago
                 </span>
-                <DealScoreBadge score={detail.dealScore.score} grade={detail.dealScore.grade} />
+                <DealScoreBadge score={view.dealScore.score} grade={view.dealScore.grade} />
               </div>
               {p.ListOfficeName && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
@@ -393,16 +403,22 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <div>
             <div className="sticky top-6 space-y-4">
               {/* Deal Score — flagship signal, pinned to the top of the rail */}
-              <DealScoreCard dealScore={detail.dealScore} />
+              <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
 
               {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
-              <ListingEstimateCard estimate={detail.estimate} listPrice={price} cityRegion={p.CityRegion} city={p.City} />
+              <ListingEstimateCard
+                estimate={view.estimate}
+                listPrice={price}
+                cityRegion={p.CityRegion}
+                city={p.City}
+                locked={!isAuthed && hasEstimate}
+              />
 
               {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}
-              <ForceAppreciationCard report={detail.valueAdd} />
+              <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
 
               {/* Compliance disclaimer for the AVM-derived figures above (estimate + value-add) */}
-              {(detail.estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
+              {(view.estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
