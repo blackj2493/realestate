@@ -52,6 +52,8 @@ export interface ListingDocument {
   
   // Property Specs
   BedroomsTotal?: number;
+  BedroomsAboveGrade?: number;
+  BedroomsBelowGrade?: number;
   BathroomsTotalInteger?: number;
   PropertySubType?: string;
   PropertyType?: string;

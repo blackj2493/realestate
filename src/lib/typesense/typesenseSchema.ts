@@ -42,6 +42,9 @@ export const indexedFields: IndexedField[] = [
 
   // Bedrooms / Bathrooms / Parking — range sliders, not facets
   { name: 'BedroomsTotal', type: 'int32', facet: false, sort: true },
+  // Above/below-grade split for the "4+1" card label. optional: backfilled in-place on existing docs.
+  { name: 'BedroomsAboveGrade', type: 'int32', facet: false, sort: false, optional: true },
+  { name: 'BedroomsBelowGrade', type: 'int32', facet: false, sort: false, optional: true },
   { name: 'BathroomsTotalInteger', type: 'int32', facet: false, sort: true },
   { name: 'ParkingTotal', type: 'int32', facet: false, sort: true },
 
@@ -180,6 +183,8 @@ export const typesenseSchema = {
     // Sale vs lease — low-cardinality facet (see RAM POLICY); optional for back-compat.
     { name: 'TransactionType', type: 'string' as const, facet: true, optional: true },
     { name: 'BedroomsTotal', type: 'int32' as const, facet: false, sort: true },
+    { name: 'BedroomsAboveGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
+    { name: 'BedroomsBelowGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
     { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: false, sort: true },
     { name: 'ParkingTotal', type: 'int32' as const, facet: false, sort: true },
     { name: 'City', type: 'string' as const, facet: true },
@@ -292,6 +297,8 @@ export interface TypesensePropertyDocument {
   
   // Bedrooms / Bathrooms / Parking
   BedroomsTotal: number;
+  BedroomsAboveGrade?: number;
+  BedroomsBelowGrade?: number;
   BathroomsTotalInteger: number;
   ParkingTotal: number;
   
