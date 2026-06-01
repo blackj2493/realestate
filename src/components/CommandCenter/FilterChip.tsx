@@ -7,6 +7,9 @@ import { Slider } from "@/components/ui/slider";
 import { Popover } from "@/components/ui/popover";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { useRangeHistogram } from "@/hooks/useRangeHistogram";
+import { supportsHistogram } from "@/lib/filters/histogram";
+import RangeHistogram from "./RangeHistogram";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -59,6 +62,45 @@ export default function FilterChip({ def, value, onChange, onClear }: FilterChip
   );
 }
 
+/**
+ * Editable numeric endpoint: types freely, commits a clamped number on blur/Enter.
+ * Uncontrolled + keyed by `value` so an external change (slider drag) remounts it
+ * with the fresh value — no prop→state sync effect.
+ */
+function NumberInput({
+  value,
+  min,
+  max,
+  onCommit,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (n: number) => void;
+}) {
+  const commit = (el: HTMLInputElement) => {
+    const n = Number(el.value.replace(/[^0-9.]/g, ""));
+    if (!Number.isFinite(n) || el.value.trim() === "") {
+      el.value = String(value); // restore on invalid input
+      return;
+    }
+    onCommit(Math.min(max, Math.max(min, n)));
+  };
+  return (
+    <input
+      key={value}
+      type="text"
+      inputMode="numeric"
+      defaultValue={value}
+      onBlur={(e) => commit(e.currentTarget)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      className="w-full border border-slate-700 bg-slate-950 px-2 py-1 text-center font-mono text-xs text-slate-200 focus:border-cyan-500/60 focus:outline-none"
+    />
+  );
+}
+
 function RangeControl({
   def,
   value,
@@ -68,19 +110,49 @@ function RangeControl({
   value: [number, number];
   onChange: (v: FilterValue) => void;
 }) {
+  const [lo, hi] = value;
+  const min = def.min ?? 0;
+  const max = def.max ?? 100;
+  const step = def.step ?? 1;
+  const { counts, maxCount, loading } = useRangeHistogram({
+    filterKey: def.key,
+    field: def.field,
+    min,
+    max,
+  });
+  const fmtValue = def.formatValue ?? ((v: number) => String(v));
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className={cn(LABEL, "text-slate-400")}>{def.label}</span>
         <span className="font-mono text-xs text-cyan-400">{def.chipLabel(value)}</span>
       </div>
+      {supportsHistogram(def.field) && (
+        <RangeHistogram
+          counts={counts}
+          maxCount={maxCount}
+          min={min}
+          max={max}
+          lo={lo}
+          hi={hi}
+          loading={loading}
+        />
+      )}
       <Slider
-        value={value}
-        min={def.min ?? 0}
-        max={def.max ?? 100}
-        step={def.step ?? 1}
+        value={[lo, hi]}
+        min={min}
+        max={max}
+        step={step}
+        ariaLabel={def.label}
+        getAriaValueText={fmtValue}
         onValueChange={(v) => onChange([v[0], v[1]] as [number, number])}
       />
+      <div className="flex items-center gap-1.5">
+        <NumberInput value={lo} min={min} max={hi} onCommit={(n) => onChange([n, hi])} />
+        <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">to</span>
+        <NumberInput value={hi} min={lo} max={max} onCommit={(n) => onChange([lo, n])} />
+      </div>
     </div>
   );
 }

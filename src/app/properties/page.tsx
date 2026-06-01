@@ -27,13 +27,9 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
-import { buildUniversalFilterString, FACET_FIELDS } from "@/lib/filters/filterRegistry";
-import {
-  buildTransactionClause,
-  buildClassClause,
-  priceFloorClause,
-  isInvestorLayerActive,
-} from "@/lib/filters/fundamentals";
+import { FACET_FIELDS } from "@/lib/filters/filterRegistry";
+import { isInvestorLayerActive } from "@/lib/filters/fundamentals";
+import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
@@ -138,20 +134,19 @@ function CommandCenterContent() {
     setIsLoading(true);
     setError(null);
     try {
-      // Fundamental axes gate the whole query: transaction (sale/lease), property
-      // class (residential = "not Commercial"), and a transaction-aware price floor.
       const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
-      const transactionClause = buildTransactionClause(transactionMode);
-      const classClause = buildClassClause(propertyClass);
-      const floorClause = priceFloorClause(transactionMode);
 
-      // Persona investor filters apply only in the residential-sale layer; rent /
-      // commercial are basic browse (their metrics are deferred), so skip them.
-      const personaFilter = investorLayer ? persona.buildFilterString(filters) : "";
-
-      // Universal composable filters (price/beds/baths/type) compose alongside
-      // the persona's investor filters — same filter_by chain, no API change.
-      const universalFilter = buildUniversalFilterString(universalFilters);
+      // Core clauses (transaction floor + type, property class, transaction-aware
+      // price, persona investor filter, universal composables) come from the
+      // shared builder — the SAME one the slider histograms use, so a histogram is
+      // always computed over the live population minus its own dimension.
+      const coreClauses = buildTerminalCoreClauses({
+        transactionMode,
+        propertyClass,
+        universalFilters,
+        filters,
+        persona,
+      });
 
       // School-quality lens: one indexed score field drives the min-score filter,
       // the target-school proximity filter, and the sort override (best schools first).
@@ -172,16 +167,7 @@ function CommandCenterContent() {
           ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
           : null;
 
-      const rawFilterBy = [
-        floorClause,
-        transactionClause,
-        classClause,
-        personaFilter,
-        universalFilter,
-        ...schoolParts,
-        bandClause,
-        drawClause,
-      ]
+      const rawFilterBy = [...coreClauses, ...schoolParts, bandClause, drawClause]
         .filter(Boolean)
         .join(" && ");
 

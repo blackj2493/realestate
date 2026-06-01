@@ -10,18 +10,23 @@ interface SliderProps
   rangeClassName?: string;
   /** Tailwind bg class for the thumb(s). Defaults to emerald. */
   thumbClassName?: string;
+  /** Accessible name for each thumb (e.g. "Price"). */
+  ariaLabel?: string;
+  /** Screen-reader text for a thumb's current value (e.g. 650000 → "$650k"). */
+  getAriaValueText?: (value: number, index: number) => string;
 }
 
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   SliderProps
->(({ className, rangeClassName, thumbClassName, ...props }, ref) => {
+>(({ className, rangeClassName, thumbClassName, ariaLabel, getAriaValueText, ...props }, ref) => {
   // One thumb per value so range sliders get two draggable handles.
-  const thumbCount = Array.isArray(props.value)
-    ? props.value.length
+  const values = Array.isArray(props.value)
+    ? (props.value as number[])
     : Array.isArray(props.defaultValue)
-      ? props.defaultValue.length
-      : 1;
+      ? (props.defaultValue as number[])
+      : [0];
+  const thumbCount = values.length;
 
   return (
     <SliderPrimitive.Root
@@ -40,6 +45,8 @@ const Slider = React.forwardRef<
       {Array.from({ length: thumbCount }).map((_, i) => (
         <SliderPrimitive.Thumb
           key={i}
+          aria-label={ariaLabel}
+          aria-valuetext={getAriaValueText ? getAriaValueText(values[i], i) : undefined}
           className={cn(
             "block h-3.5 w-3.5 border border-slate-950 ring-offset-slate-950 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
             thumbClassName ?? "bg-cyan-400"

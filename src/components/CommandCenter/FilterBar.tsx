@@ -4,8 +4,8 @@ import React from "react";
 import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { CORE_FILTERS, FILTERS_BY_KEY } from "@/lib/filters/filterRegistry";
-import { isInvestorLayerActive, typeOptionsForClass } from "@/lib/filters/fundamentals";
+import { CORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
+import { isInvestorLayerActive, typeOptionsForClass, priceConfig } from "@/lib/filters/fundamentals";
 import { PERSONA_CONFIG, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
@@ -53,6 +53,9 @@ export default function FilterBar() {
 
   // The persona/investor layer (preset + investor chips) is residential-sale only.
   const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+
+  // Price slider follows the transaction mode (sale 0–3M vs rent 0–$12k bounds).
+  const scopedPriceDef = makePriceDef(priceConfig(transactionMode));
 
   // Property Type picker: same generic FilterChip, but the option set (and the
   // single-select chip label) follow the chosen class. Value/clause stay on the
@@ -118,15 +121,19 @@ export default function FilterBar() {
         </>
       )}
 
-      {CORE_FILTERS.map((def) => (
-        <FilterChip
-          key={def.key}
-          def={def.key === "homeType" ? scopedTypeDef : def}
-          value={universalFilters[def.key] ?? def.defaultValue}
-          onChange={(v) => setUniversalFilter(def.key, v)}
-          onClear={() => setUniversalFilter(def.key, freshDefault(def.defaultValue))}
-        />
-      ))}
+      {CORE_FILTERS.map((def) => {
+        const useDef =
+          def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
+        return (
+          <FilterChip
+            key={def.key}
+            def={useDef}
+            value={universalFilters[def.key] ?? useDef.defaultValue}
+            onChange={(v) => setUniversalFilter(def.key, v)}
+            onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
+          />
+        );
+      })}
 
       {investorLayer && (
         <>

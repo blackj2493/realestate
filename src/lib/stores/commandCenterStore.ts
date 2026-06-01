@@ -13,7 +13,7 @@ import {
 } from "@/lib/personas/personaConfig";
 import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
 import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
-import type { TransactionMode, PropertyClass } from "@/lib/filters/fundamentals";
+import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -231,7 +231,13 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   resetUniversalFilters: () => set({ universalFilters: makeDefaultUniversalFilters() }),
 
   transactionMode: "sale",
-  setTransactionMode: (mode) => set({ transactionMode: mode }),
+  // Switching sale↔rent resets the price range — sale ($0–3M) and rent ($0–12k)
+  // use different bounds, so a carried-over value would sit off the new slider.
+  setTransactionMode: (mode) =>
+    set((state) => {
+      const { min, max } = priceConfig(mode);
+      return { transactionMode: mode, universalFilters: { ...state.universalFilters, price: [min, max] } };
+    }),
   propertyClass: "residential",
   // Switching class clears the Property Type picker — residential & commercial use
   // different PropertySubType spellings, so a stale selection would zero out results.

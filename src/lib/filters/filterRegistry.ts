@@ -26,6 +26,7 @@ export function makePriceDef(cfg: RangeConfig): FilterDef {
     max,
     step,
     field: "ListPrice",
+    formatValue: fmtPrice,
     isActive: (v) => {
       const [lo, hi] = v as [number, number];
       return lo > min || hi < max;
@@ -165,6 +166,7 @@ function rangeFilter(o: {
     max: o.max,
     step: o.step,
     field: o.field,
+    formatValue: o.fmt,
     isActive: (v) => {
       const [lo, hi] = v as [number, number];
       return lo > o.min || hi < o.max;

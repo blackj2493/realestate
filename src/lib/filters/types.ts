@@ -27,6 +27,8 @@ export interface FilterDef {
   /** Typesense numeric field this range filters on — drives the distribution
    *  histogram. Omitted ⇒ no histogram (e.g. unindexed AssociationFee). */
   field?: string;
+  /** Formats a single endpoint value (range controls) — used for aria-valuetext. */
+  formatValue?: (v: number) => string;
   isActive: (value: FilterValue) => boolean;
   /** Emits a Typesense filter_by fragment, or null when the value is at default. */
   buildClause: (value: FilterValue) => string | null;
