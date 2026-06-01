@@ -222,7 +222,10 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Smart Homebuyer",
     icon: Home,
     controls: [
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "gross_yield_est" },
+      // Histogram field = the field the filter actually uses (ExtrapolatedCapRate,
+      // fully populated); gross_yield_est is empty in the live index. (The "Yield"
+      // label is a pre-existing misnomer — this control thresholds cap rate.)
+      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "ExtrapolatedCapRate" },
       { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
       { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
       { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
