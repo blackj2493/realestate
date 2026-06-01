@@ -15,6 +15,8 @@ interface UseRangeHistogramArgs {
   min: number;
   max: number;
   bands?: number;
+  /** Investor-chip histograms drop the whole persona clause (see terminalQuery). */
+  excludePersona?: boolean;
 }
 
 /**
@@ -24,7 +26,14 @@ interface UseRangeHistogramArgs {
  * bars show where inventory sits across the dimension being dragged. Debounced so
  * adjusting other filters while open doesn't spam multi_search.
  */
-export function useRangeHistogram({ filterKey, field, min, max, bands = HISTOGRAM_BANDS }: UseRangeHistogramArgs) {
+export function useRangeHistogram({
+  filterKey,
+  field,
+  min,
+  max,
+  bands = HISTOGRAM_BANDS,
+  excludePersona,
+}: UseRangeHistogramArgs) {
   const transactionMode = useCommandCenterStore((s) => s.transactionMode);
   const propertyClass = useCommandCenterStore((s) => s.propertyClass);
   const universalFilters = useCommandCenterStore((s) => s.universalFilters);
@@ -40,8 +49,9 @@ export function useRangeHistogram({ filterKey, field, min, max, bands = HISTOGRA
         filters,
         persona: PERSONA_CONFIG[activePersona],
         excludeUniversalKey: filterKey,
+        excludePersona,
       }).join(" && "),
-    [transactionMode, propertyClass, universalFilters, filters, activePersona, filterKey]
+    [transactionMode, propertyClass, universalFilters, filters, activePersona, filterKey, excludePersona]
   );
 
   const [counts, setCounts] = useState<number[]>([]);

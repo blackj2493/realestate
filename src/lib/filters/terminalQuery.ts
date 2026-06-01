@@ -30,6 +30,10 @@ export interface TerminalCoreArgs {
   persona: PersonaLike;
   /** Drop one universal filter key — the histogram excludes its own field. */
   excludeUniversalKey?: string;
+  /** Drop the whole persona investor clause — investor-chip histograms show a
+   *  metric's full distribution over the basic-filtered set, not narrowed by the
+   *  other investor controls (and so never self-collapse on the dragged one). */
+  excludePersona?: boolean;
 }
 
 /**
@@ -41,8 +45,15 @@ export interface TerminalCoreArgs {
  * The page appends the school / colour-band / draw map lenses on top.
  */
 export function buildTerminalCoreClauses(args: TerminalCoreArgs): string[] {
-  const { transactionMode, propertyClass, universalFilters, filters, persona, excludeUniversalKey } =
-    args;
+  const {
+    transactionMode,
+    propertyClass,
+    universalFilters,
+    filters,
+    persona,
+    excludeUniversalKey,
+    excludePersona,
+  } = args;
   const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
 
   const priceDef = makePriceDef(priceConfig(transactionMode));
@@ -60,7 +71,7 @@ export function buildTerminalCoreClauses(args: TerminalCoreArgs): string[] {
     buildTransactionClause(transactionMode),
     buildClassClause(propertyClass),
     priceClause,
-    investorLayer ? persona.buildFilterString(filters) : "",
+    investorLayer && !excludePersona ? persona.buildFilterString(filters) : "",
     universalFilter,
   ].filter((c): c is string => Boolean(c));
 }

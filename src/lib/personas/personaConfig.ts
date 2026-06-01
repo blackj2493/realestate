@@ -89,6 +89,8 @@ export type ControlDef =
       max: number;
       step: number;
       format: (v: number) => string;
+      /** Typesense numeric field for the distribution histogram (optional). */
+      field?: string;
     }
   | {
       kind: "range";
@@ -100,6 +102,8 @@ export type ControlDef =
       max: number;
       step: number;
       format: (v: number) => string;
+      /** Typesense numeric field for the distribution histogram (optional). */
+      field?: string;
     }
   | { kind: "toggle"; key: BoolKey; label: string; short?: string };
 
@@ -218,9 +222,9 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Smart Homebuyer",
     icon: Home,
     controls: [
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct },
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays },
-      { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney },
+      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "gross_yield_est" },
+      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
+      { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
       { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
       { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex" },
     ],
@@ -250,9 +254,9 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Cashflow Investor",
     icon: DollarSign,
     controls: [
-      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct },
-      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney },
-      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum },
+      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "ExtrapolatedCapRate" },
+      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost" },
+      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
       { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex" },
     ],
     buildFilterString: (f) =>
@@ -280,9 +284,9 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Flippers & Deal Hunters",
     icon: TrendingUp,
     controls: [
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays },
-      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney },
-      { kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney },
+      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
+      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney, field: "TotalPriceDrop" },
+      { kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
       { kind: "toggle", key: "staleOnly", label: "Stale Only", short: "Stale Only" },
     ],
     buildFilterString: (f) =>
@@ -311,9 +315,9 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Builders & Developers",
     icon: Hammer,
     controls: [
-      { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt },
-      { kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥", min: 0, max: 20000, step: 500, format: fmtNum },
-      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum },
+      { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt, field: "LotWidth" },
+      { kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥", min: 0, max: 20000, step: 500, format: fmtNum, field: "LotSqftTotal" },
+      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
       { kind: "toggle", key: "zoningPotential", label: "Density Ready", short: "Density Ready" },
     ],
     buildFilterString: (f) =>

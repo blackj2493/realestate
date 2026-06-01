@@ -35,7 +35,9 @@ export default function RangeHistogram({
   if (loading && n === 0) {
     return <div className="h-10 w-full animate-pulse bg-slate-800/60" aria-hidden />;
   }
-  if (n === 0 || max <= min) return null;
+  // Nothing to show, or the field carries no data in this population (e.g. the
+  // empty gross_yield_est) — hide rather than render a misleading flat line.
+  if (n === 0 || max <= min || maxCount === 0) return null;
 
   const width = (max - min) / n;
 
