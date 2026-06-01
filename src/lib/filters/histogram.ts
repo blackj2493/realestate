@@ -42,6 +42,7 @@ export const HISTOGRAM_FIELDS: ReadonlySet<string> = new Set([
   "ListPrice",
   "LotSqftTotal",
   "LotWidth",
+  "AssociationFee",
   "BedroomsTotal",
   "BathroomsTotalInteger",
   "ParkingTotal",

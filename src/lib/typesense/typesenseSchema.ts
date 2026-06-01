@@ -66,6 +66,9 @@ export const indexedFields: IndexedField[] = [
   { name: 'LotDepth', type: 'float', facet: false, sort: true },
   { name: 'LotSqftTotal', type: 'float', facet: false, sort: true },
 
+  // Maintenance/condo fee — range slider (filter + histogram), not a facet.
+  { name: 'AssociationFee', type: 'float', facet: false, sort: true, optional: true },
+
   // ─── Extrapolated Cap Rate (Phase 3) — range sliders ──────────────────────
   { name: 'TotalCapitalBasis', type: 'float', facet: false, sort: true },
   { name: 'ExtrapolatedCapRate', type: 'float', facet: false, sort: true },
@@ -149,7 +152,7 @@ export interface UnindexedField {
 export const unindexedFields: UnindexedField[] = [
   { name: 'PublicRemarks', type: 'string', index: false, facet: false },
   { name: 'TaxAnnualAmount', type: 'float', index: false, facet: false },
-  { name: 'AssociationFee', type: 'float', index: false, facet: false },
+  // AssociationFee promoted to an indexed range field (see indexedFields).
   { name: 'RawImages', type: 'string[]', index: false, facet: false },
   // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
   { name: 'primaryImageUrl', type: 'string', index: false, facet: false, optional: true },
@@ -196,6 +199,10 @@ export const typesenseSchema = {
     { name: 'LotWidth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotDepth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotSqftTotal', type: 'float' as const, facet: false, sort: true },
+    // Maintenance/condo fee — indexed (filter + sort + slider histogram). NOT a
+    // facet: it's a numeric range, so per-value facet maps would waste RAM (RAM
+    // POLICY above). optional: the field predates indexing on existing docs.
+    { name: 'AssociationFee', type: 'float' as const, facet: false, sort: true, optional: true },
 
     // ─── Extrapolated Cap Rate (Phase 3) — range sliders ───────────────────
     { name: 'TotalCapitalBasis', type: 'float' as const, facet: false, sort: true },
@@ -259,7 +266,7 @@ export const typesenseSchema = {
     // ─── Unindexed Cargo ────────────────────────────────────────────────────
     { name: 'PublicRemarks', type: 'string' as const, index: false, facet: false },
     { name: 'TaxAnnualAmount', type: 'float' as const, index: false, facet: false },
-    { name: 'AssociationFee', type: 'float' as const, index: false, facet: false },
+    // AssociationFee is now an indexed range field (see above).
     { name: 'RawImages', type: 'string[]' as const, index: false, facet: false },
     // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
     { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },

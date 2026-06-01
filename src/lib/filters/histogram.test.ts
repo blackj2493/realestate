@@ -32,9 +32,11 @@ describe("histogram — supportsHistogram", () => {
   it("accepts indexed numeric fields", () => {
     expect(supportsHistogram("ListPrice")).toBe(true);
     expect(supportsHistogram("LotWidth")).toBe(true);
+    expect(supportsHistogram("AssociationFee")).toBe(true); // indexed 2026-06-01
   });
-  it("rejects unindexed / unknown fields (e.g. AssociationFee)", () => {
-    expect(supportsHistogram("AssociationFee")).toBe(false);
+  it("rejects unindexed / unknown fields", () => {
+    expect(supportsHistogram("TaxAnnualAmount")).toBe(false); // index:false cargo
+    expect(supportsHistogram("gross_yield_est")).toBe(false); // empty in live index
     expect(supportsHistogram(undefined)).toBe(false);
   });
 });
