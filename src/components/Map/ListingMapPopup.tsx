@@ -72,7 +72,7 @@ export default function ListingMapPopup({
 
   return (
     <div
-      className="pointer-events-auto absolute z-30 flex max-h-[330px] flex-col rounded-md border border-slate-700 bg-slate-900/97 shadow-2xl shadow-black/50 backdrop-blur-sm"
+      className="pointer-events-auto absolute z-30 flex max-h-[330px] flex-col overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
       style={{ left, top, width: POPUP_W }}
     >
       {/* Header */}
