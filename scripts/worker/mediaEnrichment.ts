@@ -23,6 +23,9 @@ const RETRY_DELAYS = [1000, 2000, 3000];
 
 export const MEDIA_CHUNK_SIZE = 25;        // listing keys per /Media request
 export const MEDIA_REQUEST_DELAY_MS = 300; // polite delay between requests
+// AMPRE's /Media caps every response at 100 records and does NOT emit an
+// @odata.nextLink, so we page explicitly with $skip (see fetchMediaForKeys).
+const MEDIA_PAGE_SIZE = 100;
 
 /**
  * Trimmed media record stored on raw_payload.media. Carries only fields
@@ -215,22 +218,32 @@ export async function fetchMediaForKeys(
     // (CLAUDE.md §3.C) ships, a future iteration can add a Largest fetch.
     const keyFilter = `(${chunk.map((k) => `ResourceRecordKey eq '${k}'`).join(' or ')})`;
     const orFilter = `${keyFilter} and ResourceName eq 'Property' and ImageSizeDescription eq 'Medium'`;
-    let url: string | null =
-      `${API_BASE_URL}/Media?$filter=${encodeURIComponent(orFilter)}&$orderby=ResourceRecordKey,Order&$top=100&$count=true`;
+    const encodedFilter = encodeURIComponent(orFilter);
 
-    // Follow @odata.nextLink — a 25-listing chunk × ~30 photos/listing easily
-    // blows past the server-side 100-record page cap.
-    while (url) {
+    // Page with $skip — NOT @odata.nextLink. AMPRE's /Media caps each response
+    // at MEDIA_PAGE_SIZE (100) records and does NOT return an @odata.nextLink,
+    // so the old `while (url = nextLink)` loop ran exactly ONCE and captured only
+    // the first 100 records. A 25-key OR chunk ordered by ResourceRecordKey
+    // routinely exceeds 100 Medium records (a handful of photo-heavy listings
+    // clears it), so every listing sorted after the 100th record came back with
+    // ZERO media and was persisted as a false `media: []` — the root cause of the
+    // mass "NO MEDIA" gap. Explicit $skip offset paging (AMPRE honours it with a
+    // stable $orderby — verified) walks every page until a short page ends it.
+    let chunkFailed = false;
+    for (let skip = 0; ; skip += MEDIA_PAGE_SIZE) {
+      const url =
+        `${API_BASE_URL}/Media?$filter=${encodedFilter}` +
+        `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}&$skip=${skip}&$count=true`;
       const result: FetchResult<any> = await fetchWithRetry<any>(url, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!result.success || !result.data) {
         console.warn(`   ⚠️  Media chunk fetch failed (non-fatal): ${result.error}`);
-        // Record every key in this chunk as a FETCH FAILURE (≠ "fetched, 0
-        // photos"). Keys that already paged in media on an earlier nextLink
-        // page are cleared from this set after the loop.
-        for (const k of chunk) failedKeys.add(k);
+        // Mark every key in this chunk a FETCH FAILURE (≠ "fetched, 0 photos").
+        // Keys that already paged in media on an earlier page are cleared from
+        // failedKeys after the loop (see the grouped-keys sweep below).
+        chunkFailed = true;
         break;
       }
       const records: any[] = result.data.value || [];
@@ -241,8 +254,11 @@ export async function fetchMediaForKeys(
         if (arr) arr.push(m);
         else rawByKey.set(lk, [m]);
       }
-      url = result.data['@odata.nextLink'] || null;
+      if (records.length < MEDIA_PAGE_SIZE) break; // short page → no more rows
       await sleep(MEDIA_REQUEST_DELAY_MS);
+    }
+    if (chunkFailed) {
+      for (const k of chunk) failedKeys.add(k);
     }
   }
 
