@@ -13,6 +13,7 @@
  */
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,10 @@ export default function VowGateOverlay({
   next?: string;
   className?: string;
 }) {
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  // Default to the current path so sign-in returns the user exactly where they were.
+  const pathname = usePathname();
+  const target = next ?? pathname ?? undefined;
+  const safeNext = target && target.startsWith("/") && !target.startsWith("//") ? target : null;
   const href = safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login";
 
   return (

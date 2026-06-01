@@ -85,6 +85,30 @@ export function gateSaleHistory(sh: SaleHistory, isAuthed: boolean): SaleHistory
   };
 }
 
+/**
+ * VOW gating for DERIVED metrics (CLAUDE.md §4; VOW agreement §6.2(f) — derivative
+ * analytics only "on their VOW(s)"). The AVM estimate, Value-Add report, Deal Score
+ * (it embeds the AVM) and the stitched True DOM are all built from VOW sold data, so
+ * for anonymous users we null them (the numbers never reach the client) and the UI
+ * renders a blurred "Login Required" teaser. Folds in gateSaleHistory and strips the
+ * VOW-stitched `true_dom` from the raw payload too (the property API ships full_payload),
+ * so ONE call fully de-VOWs a ListingDetail. IDX list-price movement stays intact.
+ */
+export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): ListingDetail {
+  if (isAuthed) return detail;
+  const gatedPayload = { ...(detail.full_payload as Record<string, unknown>) };
+  delete gatedPayload.true_dom; // VOW-stitched; raw DaysOnMarket (IDX) stays
+  return {
+    ...detail,
+    full_payload: gatedPayload,
+    estimate: null,
+    valueAdd: null,
+    dealScore: { score: null, grade: null, verdict: "", components: [] },
+    saleHistory: gateSaleHistory(detail.saleHistory, false),
+    priceTimeline: { ...detail.priceTimeline, trueDom: null },
+  };
+}
+
 export interface ListingDetail {
   listing_key: string;
   full_payload: Record<string, unknown>;

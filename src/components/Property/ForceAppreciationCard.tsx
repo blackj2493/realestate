@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
 import { shouldRender, buildView, type LedgerRow } from "./forceAppreciationView";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 function PaybackBar({ payback }: { payback: number }) {
   // Engine guarantees payback ∈ [0, ∞) finite; clamp anyway so this view stays
@@ -31,7 +32,37 @@ function Row({ row }: { row: LedgerRow }) {
   );
 }
 
-export default function ForceAppreciationCard({ report }: { report: ValueAddReport | null }) {
+export default function ForceAppreciationCard({
+  report,
+  locked,
+}: {
+  report: ValueAddReport | null;
+  /** VOW gate: Value-Add is AVM-derived — render a blurred "Login Required" teaser for anon. */
+  locked?: boolean;
+}) {
+  if (locked) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>Force-Appreciation</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <div className="space-y-2 blur-sm select-none" aria-hidden="true">
+              <p className="text-sm">
+                <span className="text-slate-400">up to </span>
+                <span className="font-semibold text-emerald-400">$000,000</span>
+                <span className="text-slate-400"> unlockable</span>
+              </p>
+              <div className="h-3 w-full rounded bg-slate-700/40" />
+              <div className="h-3 w-2/3 rounded bg-slate-700/40" />
+            </div>
+            <VowGateOverlay message="Sign in to view value-add ROI" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!shouldRender(report)) return null;
   const v = buildView(report);
 
