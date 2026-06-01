@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
 import {
-  grantAccess,
   saveProfile,
   saveConfig,
   seedConfigFromProfile,
@@ -243,11 +242,12 @@ export default function ApplyPage() {
       console.warn("[apply] persist failed (granting access anyway):", e);
     }
 
-    // Grant access + seed the personalized dashboard, then drop into Mission Control.
+    // Seed the personalized dashboard locally, then route to sign-in. The dashboard
+    // shows VOW/sold data, so it requires a real account (VOW compliance, §3A). The
+    // saved profile/config personalize it once they sign in on this device.
     saveProfile(profile);
     saveConfig(seedConfigFromProfile(profile));
-    grantAccess();
-    router.push("/dashboard");
+    router.push("/login?next=/dashboard");
   };
 
   const currentLabel = STEPS[step - 1].label;

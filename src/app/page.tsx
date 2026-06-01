@@ -5,20 +5,27 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
-import { hasAccess } from "@/lib/dashboard/config";
+import { createClient } from "@/lib/supabase/browser";
 
 export default function HomePage() {
   const router = useRouter();
-  // Returning users (access granted) are routed straight to Mission Control.
-  // Render nothing until the check resolves to avoid flashing the marketing hero.
+  // Returning SIGNED-IN users are routed straight to Mission Control. Render nothing
+  // until the auth check resolves to avoid flashing the marketing hero.
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (hasAccess()) {
-      router.replace("/dashboard");
-    } else {
-      setChecked(true);
-    }
+    let active = true;
+    (async () => {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+      if (!active) return;
+      if (user) router.replace("/dashboard");
+      else setChecked(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   if (!checked) return null;

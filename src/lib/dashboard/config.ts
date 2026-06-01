@@ -24,7 +24,6 @@ export const DEFAULT_PERSONA: PersonaType = 'smart';
 const isPersona = (v: unknown): v is PersonaType =>
   typeof v === 'string' && v in PERSONA_CONFIG;
 
-const ACCESS_KEY = 'pp_access';
 const PROFILE_KEY = 'pp_profile';
 const CONFIG_KEY = 'pp_dashboard_config';
 
@@ -116,17 +115,9 @@ export const REGION_TO_CITIES: Record<string, string[]> = {
 
 const hasWindow = () => typeof window !== 'undefined';
 
-// ── Access gate ──────────────────────────────────────────────────────────────
-export function hasAccess(): boolean {
-  if (!hasWindow()) return false;
-  return window.localStorage.getItem(ACCESS_KEY) === 'granted';
-}
-export function grantAccess(): void {
-  if (hasWindow()) window.localStorage.setItem(ACCESS_KEY, 'granted');
-}
-export function clearAccess(): void {
-  if (hasWindow()) window.localStorage.removeItem(ACCESS_KEY);
-}
+// NOTE: dashboard access is no longer a localStorage flag — it is enforced by a
+// real Supabase session in the server component at app/(app)/dashboard/page.tsx
+// (VOW compliance). The old hasAccess/grantAccess/clearAccess rope was removed.
 
 // ── Applicant profile ────────────────────────────────────────────────────────
 export function saveProfile(p: ApplyProfile): void {
