@@ -5,7 +5,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Heart, Check } from "lucide-react";
+import { Heart, Check, BedDouble, Bath, Car, Maximize, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
@@ -40,19 +40,74 @@ function alignClass(a: ColumnDef["align"]) {
   return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 }
 
+/** "Listed N days ago" — EntryTimestamp is epoch MILLISECONDS; falls back to DaysOnMarket. */
+function daysAgo(p: ListingDocument): number | null {
+  if (p.EntryTimestamp && p.EntryTimestamp > 0) {
+    return Math.max(0, Math.floor((Date.now() - p.EntryTimestamp) / 86_400_000));
+  }
+  return p.DaysOnMarket ?? null;
+}
+
+/** "4+1" bed label — above grade, plus below-grade when present. Falls back to total. */
+function bedsLabel(p: ListingDocument): string | null {
+  const above = p.BedroomsAboveGrade && p.BedroomsAboveGrade > 0 ? p.BedroomsAboveGrade : p.BedroomsTotal ?? 0;
+  const below = p.BedroomsBelowGrade ?? 0;
+  if (!above && !below) return null;
+  return below > 0 ? `${above}+${below}` : `${above}`;
+}
+
+/** Compact icon + value chip for the bed/bath/parking/sqft strip. */
+function StatChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Icon className="h-3.5 w-3.5 text-slate-500" />
+      {label}
+    </span>
+  );
+}
+
 function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
   const base = cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align));
 
   switch (col.type) {
     case "address": {
       const addr = doc.UnparsedAddress?.trim() || doc.City || "Address unavailable";
+      const age = daysAgo(doc);
+      const beds = bedsLabel(doc);
+      const baths = doc.BathroomsTotalInteger;
+      const parking = doc.ParkingTotal;
+      const sqft = doc.BuildingAreaTotal && doc.BuildingAreaTotal > 0 ? doc.BuildingAreaTotal : null;
+      const type = doc.PropertySubType || doc.PropertyType || "Residential";
       return (
         <div className={cn("min-w-0", col.width)}>
-          <p className="line-clamp-3 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
+          {/* Price + listed-ago */}
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-sans text-sm font-bold text-cyan-300">
+              {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
+            </span>
+            {age !== null && (
+              <span className="shrink-0 text-[10px] text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>
+            )}
+          </div>
+
+          {/* Address */}
+          <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
+
+          {/* Bed / bath / parking / sqft strip — each chip shown only when present */}
+          {(beds || baths || parking || sqft) && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-xs text-slate-300">
+              {beds && <StatChip icon={BedDouble} label={beds} />}
+              {baths ? <StatChip icon={Bath} label={String(baths)} /> : null}
+              {parking ? <StatChip icon={Car} label={String(parking)} /> : null}
+              {sqft && <StatChip icon={Maximize} label={`${Math.round(sqft).toLocaleString()} ft²`} />}
+            </div>
+          )}
+
+          {/* MLS# · type · brokerage (brokerage at sibling weight per TRREB §6.3(c)) */}
           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-slate-500">
-            <span>{doc.City || "—"}</span>
+            <span className="normal-case tracking-normal">{doc.id}</span>
             <span className="text-slate-600">·</span>
-            <span>{doc.PropertySubType || doc.PropertyType || "Residential"}</span>
+            <span>{type}</span>
             {doc.ListOfficeName && (
               <>
                 <span className="text-slate-600">·</span>
@@ -185,6 +240,16 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         >
           <Heart className={cn("h-3.5 w-3.5", isSaved ? "fill-red-500 text-red-500" : "text-slate-400")} />
         </button>
+        {property.TransactionType && (
+          <span
+            className={cn(
+              "absolute bottom-1 left-1 z-10 rounded-none px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white",
+              /lease/i.test(property.TransactionType) ? "bg-sky-600/90" : "bg-emerald-600/90"
+            )}
+          >
+            {property.TransactionType}
+          </span>
+        )}
       </div>
 
       {columns.map((col) => (
