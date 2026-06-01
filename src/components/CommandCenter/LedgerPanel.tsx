@@ -40,7 +40,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       {/* Column headers */}
       <div className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2">
         <div className="w-5 shrink-0" />
-        <div className="h-px w-28 shrink-0" />
+        <div className="h-px w-24 shrink-0" />
         {columns.map((col) => (
           <div
             key={col.type}

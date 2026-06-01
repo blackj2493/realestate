@@ -5,7 +5,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Heart, Check, BedDouble, Bath, Car, Maximize, type LucideIcon } from "lucide-react";
+import { Heart, Check, BedDouble, Bath, Car, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
@@ -76,13 +76,12 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
       const beds = bedsLabel(doc);
       const baths = doc.BathroomsTotalInteger;
       const parking = doc.ParkingTotal;
-      const sqft = doc.BuildingAreaTotal && doc.BuildingAreaTotal > 0 ? doc.BuildingAreaTotal : null;
       const type = doc.PropertySubType || doc.PropertyType || "Residential";
       return (
         <div className={cn("min-w-0", col.width)}>
-          {/* Status chip + price (left) · listed-ago (right) */}
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="flex min-w-0 items-baseline gap-1.5">
+          {/* Status chip + freshness (small line above the price) */}
+          {(doc.TransactionType || age !== null) && (
+            <div className="flex items-center gap-1.5 text-[10px]">
               {doc.TransactionType && (
                 <span
                   className={cn(
@@ -93,25 +92,24 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
                   {doc.TransactionType}
                 </span>
               )}
-              <span className="truncate font-sans text-base font-bold text-cyan-300">
-                {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
-              </span>
+              {age !== null && <span className="text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>}
             </div>
-            {age !== null && (
-              <span className="shrink-0 text-[10px] text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>
-            )}
-          </div>
+          )}
+
+          {/* Price — own line so it never gets squeezed by the chip/freshness */}
+          <p className="mt-0.5 truncate font-sans text-base font-bold text-cyan-300">
+            {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
+          </p>
 
           {/* Address */}
           <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
 
-          {/* Bed / bath / parking / sqft strip — present chips joined by · separators */}
+          {/* Bed / bath / parking strip — present chips joined by · separators */}
           {(() => {
             const chips = [
               beds ? <StatChip key="beds" icon={BedDouble} label={beds} /> : null,
               baths ? <StatChip key="baths" icon={Bath} label={String(baths)} /> : null,
               parking ? <StatChip key="parking" icon={Car} label={String(parking)} /> : null,
-              sqft ? <StatChip key="sqft" icon={Maximize} label={`${Math.round(sqft).toLocaleString()} ft²`} /> : null,
             ].filter(Boolean);
             if (!chips.length) return null;
             return (
@@ -240,12 +238,12 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
       {/* Thumbnail + overlays (DealScore pill, save heart). The outer wrapper
           is `relative` so the absolute children position against this box;
           ListingThumbnail fills it via `absolute inset-0`. */}
-      <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-sm">
+      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-sm">
         <ListingThumbnail
           src={src}
           alt={property.UnparsedAddress || "Property"}
           className="absolute inset-0"
-          sizes="112px"
+          sizes="96px"
         />
         {deal.score !== null && (
           <DealScoreGradePill
