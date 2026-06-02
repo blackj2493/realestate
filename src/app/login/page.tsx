@@ -53,6 +53,17 @@ export default async function LoginPage({
               Access is restricted to consumers with a bona fide interest in the purchase,
               sale, or lease of real estate, and may not be used for any commercial purpose.
             </p>
+            <p className="mt-2">
+              See our{" "}
+              <Link href="/terms" className="text-cyan-400 hover:underline">
+                Terms of Use
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-cyan-400 hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
           </div>
         </div>
       </div>

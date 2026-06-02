@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TopNav from "@/components/hero/TopNav";
@@ -490,6 +491,17 @@ export default function ApplyPage() {
                   >
                     {"I agree to the Terms of Service and Privacy Policy."}
                   </CheckRow>
+                  <p className="text-xs leading-snug text-slate-500">
+                    Read our{" "}
+                    <Link href="/terms" className="text-cyan-400 hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="text-cyan-400 hover:underline">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </p>
                   <p className="pt-1 text-xs leading-relaxed text-slate-600">
                     {
                       "This does not constitute a consumer service agreement. VOW compliance is verified before access is granted."

@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,18 @@ export default function AcceptTermsForm({ next }: { next: string }) {
         I agree to the VOW Terms of Use and will use this data for personal, non-commercial purposes
         only.
       </CheckRow>
+
+      <p className="text-[11px] leading-snug text-slate-500">
+        Read our full{" "}
+        <Link href="/terms" className="text-cyan-400 hover:underline">
+          Terms of Use
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-cyan-400 hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
 
       {error && <p className="text-xs text-rose-400">{error}</p>}
 
