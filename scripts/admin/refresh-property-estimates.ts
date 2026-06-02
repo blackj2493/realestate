@@ -32,8 +32,8 @@ import * as https from 'https';
 import crossFetch from 'cross-fetch';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
-import { estimateFromMarketData, type AVMMarketData } from '@/lib/avm/calculator';
-import { fetchAnchor } from '@/lib/avm/anchorService';
+import { estimateFromMarketData, shouldEvaluatePeers, type AVMMarketData } from '@/lib/avm/calculator';
+import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
 import { fetchAuditInfo } from '@/lib/avm/auditService';
 import { fetchCoefficients, type CoefficientRow } from '@/lib/avm/matrixService';
 import { normalizePropertySubType } from '@/lib/avm/normalizeType';
@@ -337,11 +337,19 @@ async function main() {
           staticData.coefficients,
           staticData.basePrice
         );
+        // Mirror the request path EXACTLY (shouldEvaluatePeers covers both trained
+        // Σβz outliers and untrained-cohort atypical homes) so precomputed Compare
+        // values match the listing-page estimate.
+        let peer: AnchorResult | null | undefined;
+        if (shouldEvaluatePeers(avmInput, staticData.coefficients)) {
+          peer = await fetchPeerAnchor(sb, avmInput, staticData.coefficients);
+        }
         const market: AVMMarketData = {
           anchor,
           r2: staticData.r2,
           basePrice: staticData.basePrice,
           coefficients: staticData.coefficients,
+          peer,
         };
         const est = estimateFromMarketData(avmInput, market);
         if (est.estimatedValue > 0) {

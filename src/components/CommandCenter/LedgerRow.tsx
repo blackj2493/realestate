@@ -4,7 +4,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -13,6 +13,8 @@ import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
+import ListingCardBody from "./ListingCardBody";
+import { carryFor } from "./columnSort";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -27,15 +29,6 @@ interface LedgerRowProps {
   onToggleSelect?: () => void;
 }
 
-function carryFor(p: ListingDocument): number {
-  if (p.MonthlyCarryCost) return Math.round(p.MonthlyCarryCost);
-  const principal = (p.ListPrice || 0) * 0.8;
-  const r = 0.07 / 12;
-  const n = 360;
-  const mortgage = principal ? (principal * (r * (1 + r) ** n)) / ((1 + r) ** n - 1) : 0;
-  return Math.round(mortgage + (p.TaxAnnualAmount || 0) / 12 + (p.AssociationFee || 0));
-}
-
 function alignClass(a: ColumnDef["align"]) {
   return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 }
@@ -44,25 +37,12 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
   const base = cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align));
 
   switch (col.type) {
-    case "address": {
-      const addr = doc.UnparsedAddress?.trim() || doc.City || "Address unavailable";
+    case "address":
       return (
         <div className={cn("min-w-0", col.width)}>
-          <p className="line-clamp-3 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-slate-500">
-            <span>{doc.City || "—"}</span>
-            <span className="text-slate-600">·</span>
-            <span>{doc.PropertySubType || doc.PropertyType || "Residential"}</span>
-            {doc.ListOfficeName && (
-              <>
-                <span className="text-slate-600">·</span>
-                <span className="truncate normal-case tracking-normal">{doc.ListOfficeName}</span>
-              </>
-            )}
-          </div>
+          <ListingCardBody doc={doc} />
         </div>
       );
-    }
     case "trueDom": {
       const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
       const color = dom > 90 ? "text-rose-400" : dom > 45 ? "text-cyan-400" : dom >= 14 ? "text-amber-400" : "text-slate-400";
@@ -162,7 +142,7 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
       {/* Thumbnail + overlays (DealScore pill, save heart). The outer wrapper
           is `relative` so the absolute children position against this box;
           ListingThumbnail fills it via `absolute inset-0`. */}
-      <div className="relative h-16 w-24 shrink-0">
+      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-sm">
         <ListingThumbnail
           src={src}
           alt={property.UnparsedAddress || "Property"}

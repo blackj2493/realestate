@@ -22,12 +22,17 @@ import {
   MapTimeline,
   MapCommandPalette,
 } from "@/components/CommandCenter";
+import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
+import { FACET_FIELDS } from "@/lib/filters/filterRegistry";
+import { isInvestorLayerActive } from "@/lib/filters/fundamentals";
+import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
+import { useBubbleHydration } from "@/hooks/useBubbleHydration";
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -41,14 +46,16 @@ const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
 
 // Compliance: never retrieve/render more than 100 listings per UI query.
 const MAX_LISTINGS = 100;
-// Exclude rentals (no filterable TransactionType; rentals sit ~$2.2k).
-const SALES_FLOOR = "ListPrice:>=100000";
+// Neutral sort for the basic-browse modes (rent / commercial), where the persona
+// metric sorts (cap rate, yield) don't apply.
+const BASIC_SORT = "ListPrice";
 
 function CommandCenterContent() {
   const searchParams = useSearchParams();
   const {
     activePersona,
     filters,
+    universalFilters,
     searchResult,
     setSearchResult,
     setIsLoading,
@@ -71,10 +78,15 @@ function CommandCenterContent() {
     colorMetricId,
     colorBand,
     drawPolygon,
+    transactionMode,
+    propertyClass,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
   useCommuteIsochrone();
+
+  // If the user landed via /properties?bubble=<id>, restore that saved state.
+  useBubbleHydration();
 
   // Drag-resizable ledger width (persisted). Map fills the remaining space.
   const LEDGER_MIN = 400;
@@ -122,7 +134,19 @@ function CommandCenterContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const personaFilter = persona.buildFilterString(filters);
+      const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+
+      // Core clauses (transaction floor + type, property class, transaction-aware
+      // price, persona investor filter, universal composables) come from the
+      // shared builder — the SAME one the slider histograms use, so a histogram is
+      // always computed over the live population minus its own dimension.
+      const coreClauses = buildTerminalCoreClauses({
+        transactionMode,
+        propertyClass,
+        universalFilters,
+        filters,
+        persona,
+      });
 
       // School-quality lens: one indexed score field drives the min-score filter,
       // the target-school proximity filter, and the sort override (best schools first).
@@ -143,7 +167,7 @@ function CommandCenterContent() {
           ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
           : null;
 
-      const rawFilterBy = [SALES_FLOOR, personaFilter, ...schoolParts, bandClause, drawClause]
+      const rawFilterBy = [...coreClauses, ...schoolParts, bandClause, drawClause]
         .filter(Boolean)
         .join(" && ");
 
@@ -161,8 +185,10 @@ function CommandCenterContent() {
         // inventory as the user zooms in (null until the user moves the map).
         filters: mapBounds ? { boundingBox: mapBounds } : undefined,
         perPage: MAX_LISTINGS,
-        // When the school lens is on, rank by school score; else persona default.
-        sortBy: schoolField ?? persona.sortBy,
+        facetBy: FACET_FIELDS.join(","),
+        // School lens wins; else the persona metric sort (residential-sale only);
+        // else a neutral price sort for the rent / commercial basic-browse modes.
+        sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
         sortOrder: "desc",
       });
 
@@ -175,14 +201,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, location, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -233,6 +259,11 @@ function CommandCenterContent() {
             metricDef={activeMetric}
             commuteActive={commute.enabled}
           />
+          {/* Save the current custom area as a Market Bubble. Self-hides when no
+              draw / commute / school filter is active. */}
+          <div className="pointer-events-auto absolute right-3 top-3 z-30">
+            <SaveBubbleButton />
+          </div>
         </div>
 
         {/* Drag handle — resize the ledger */}

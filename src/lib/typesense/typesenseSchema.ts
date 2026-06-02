@@ -36,9 +36,15 @@ export const indexedFields: IndexedField[] = [
   // Property Classification — categorical, real facets
   { name: 'PropertyType', type: 'string', facet: true },
   { name: 'PropertySubType', type: 'string', facet: true },
+  // Sale vs lease — low-cardinality ("For Sale"/"For Lease"), so a real facet is
+  // cheap RAM (cf. RAM POLICY above). optional: backfilled in-place on existing docs.
+  { name: 'TransactionType', type: 'string', facet: true, optional: true },
 
   // Bedrooms / Bathrooms / Parking — range sliders, not facets
   { name: 'BedroomsTotal', type: 'int32', facet: false, sort: true },
+  // Above/below-grade split for the "4+1" card label. optional: backfilled in-place on existing docs.
+  { name: 'BedroomsAboveGrade', type: 'int32', facet: false, sort: false, optional: true },
+  { name: 'BedroomsBelowGrade', type: 'int32', facet: false, sort: false, optional: true },
   { name: 'BathroomsTotalInteger', type: 'int32', facet: false, sort: true },
   { name: 'ParkingTotal', type: 'int32', facet: false, sort: true },
 
@@ -59,6 +65,9 @@ export const indexedFields: IndexedField[] = [
   { name: 'LotWidth', type: 'float', facet: false, sort: true },
   { name: 'LotDepth', type: 'float', facet: false, sort: true },
   { name: 'LotSqftTotal', type: 'float', facet: false, sort: true },
+
+  // Maintenance/condo fee — range slider (filter + histogram), not a facet.
+  { name: 'AssociationFee', type: 'float', facet: false, sort: true, optional: true },
 
   // ─── Extrapolated Cap Rate (Phase 3) — range sliders ──────────────────────
   { name: 'TotalCapitalBasis', type: 'float', facet: false, sort: true },
@@ -143,7 +152,7 @@ export interface UnindexedField {
 export const unindexedFields: UnindexedField[] = [
   { name: 'PublicRemarks', type: 'string', index: false, facet: false },
   { name: 'TaxAnnualAmount', type: 'float', index: false, facet: false },
-  { name: 'AssociationFee', type: 'float', index: false, facet: false },
+  // AssociationFee promoted to an indexed range field (see indexedFields).
   { name: 'RawImages', type: 'string[]', index: false, facet: false },
   // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
   { name: 'primaryImageUrl', type: 'string', index: false, facet: false, optional: true },
@@ -174,7 +183,11 @@ export const typesenseSchema = {
     { name: 'ListPrice', type: 'int32' as const, facet: false, sort: true },
     { name: 'PropertyType', type: 'string' as const, facet: true },
     { name: 'PropertySubType', type: 'string' as const, facet: true },
+    // Sale vs lease — low-cardinality facet (see RAM POLICY); optional for back-compat.
+    { name: 'TransactionType', type: 'string' as const, facet: true, optional: true },
     { name: 'BedroomsTotal', type: 'int32' as const, facet: false, sort: true },
+    { name: 'BedroomsAboveGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
+    { name: 'BedroomsBelowGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
     { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: false, sort: true },
     { name: 'ParkingTotal', type: 'int32' as const, facet: false, sort: true },
     { name: 'City', type: 'string' as const, facet: true },
@@ -186,6 +199,10 @@ export const typesenseSchema = {
     { name: 'LotWidth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotDepth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotSqftTotal', type: 'float' as const, facet: false, sort: true },
+    // Maintenance/condo fee — indexed (filter + sort + slider histogram). NOT a
+    // facet: it's a numeric range, so per-value facet maps would waste RAM (RAM
+    // POLICY above). optional: the field predates indexing on existing docs.
+    { name: 'AssociationFee', type: 'float' as const, facet: false, sort: true, optional: true },
 
     // ─── Extrapolated Cap Rate (Phase 3) — range sliders ───────────────────
     { name: 'TotalCapitalBasis', type: 'float' as const, facet: false, sort: true },
@@ -249,7 +266,7 @@ export const typesenseSchema = {
     // ─── Unindexed Cargo ────────────────────────────────────────────────────
     { name: 'PublicRemarks', type: 'string' as const, index: false, facet: false },
     { name: 'TaxAnnualAmount', type: 'float' as const, index: false, facet: false },
-    { name: 'AssociationFee', type: 'float' as const, index: false, facet: false },
+    // AssociationFee is now an indexed range field (see above).
     { name: 'RawImages', type: 'string[]' as const, index: false, facet: false },
     // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
     { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },
@@ -287,6 +304,8 @@ export interface TypesensePropertyDocument {
   
   // Bedrooms / Bathrooms / Parking
   BedroomsTotal: number;
+  BedroomsAboveGrade?: number;
+  BedroomsBelowGrade?: number;
   BathroomsTotalInteger: number;
   ParkingTotal: number;
   

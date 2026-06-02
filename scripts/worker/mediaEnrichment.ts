@@ -23,6 +23,9 @@ const RETRY_DELAYS = [1000, 2000, 3000];
 
 export const MEDIA_CHUNK_SIZE = 25;        // listing keys per /Media request
 export const MEDIA_REQUEST_DELAY_MS = 300; // polite delay between requests
+// AMPRE's /Media caps every response at 100 records and does NOT emit an
+// @odata.nextLink, so we page explicitly with $skip (see fetchMediaForKeys).
+const MEDIA_PAGE_SIZE = 100;
 
 /**
  * Trimmed media record stored on raw_payload.media. Carries only fields
@@ -166,9 +169,16 @@ function dedupeMediaByObject(records: any[]): any[] {
 
 /**
  * Fetches /Media for a set of ListingKeys, OR-batched into chunks with
- * @odata.nextLink pagination. Returns Map<ListingKey, StoredMedia[]> sorted by
- * Order. Best-effort: a failed chunk is skipped (those listings sync without
- * media — they'll render the text-only ListingThumbnail fallback per §6.3(c)).
+ * @odata.nextLink pagination. Returns BOTH the media map (sorted by Order) AND
+ * the set of keys whose fetch FAILED — distinct from keys that were fetched
+ * successfully but genuinely have zero photos.
+ *
+ * Why the distinction matters (the false-empty bug): callers used to treat
+ * "absent from the map" as "no photos" and persist `media: []`. But a transient
+ * AMPRE failure (rate-limit / network / brief outage) also leaves a key absent.
+ * One flaky run over ~86k keys therefore manufactured tens of thousands of
+ * permanent false-empties. Callers MUST skip writing an empty marker for any key
+ * in `failedKeys` so it stays eligible for the next run / nightly sweep.
  *
  * The ResourceName='Property' clause is REQUIRED by RESO spec — Media is a
  * polymorphic resource also used for Office/Member records, and omitting it
@@ -177,9 +187,10 @@ function dedupeMediaByObject(records: any[]): any[] {
 export async function fetchMediaForKeys(
   keys: string[],
   token: string
-): Promise<Map<string, StoredMedia[]>> {
+): Promise<{ media: Map<string, StoredMedia[]>; failedKeys: Set<string> }> {
   const grouped = new Map<string, StoredMedia[]>();
-  if (!token || keys.length === 0) return grouped;
+  const failedKeys = new Set<string>();
+  if (!token || keys.length === 0) return { media: grouped, failedKeys };
 
   // Accumulate raw media (with Order) so we sort per listing after grouping.
   const rawByKey = new Map<string, any[]>();
@@ -207,18 +218,32 @@ export async function fetchMediaForKeys(
     // (CLAUDE.md §3.C) ships, a future iteration can add a Largest fetch.
     const keyFilter = `(${chunk.map((k) => `ResourceRecordKey eq '${k}'`).join(' or ')})`;
     const orFilter = `${keyFilter} and ResourceName eq 'Property' and ImageSizeDescription eq 'Medium'`;
-    let url: string | null =
-      `${API_BASE_URL}/Media?$filter=${encodeURIComponent(orFilter)}&$orderby=ResourceRecordKey,Order&$top=100&$count=true`;
+    const encodedFilter = encodeURIComponent(orFilter);
 
-    // Follow @odata.nextLink — a 25-listing chunk × ~30 photos/listing easily
-    // blows past the server-side 100-record page cap.
-    while (url) {
+    // Page with $skip — NOT @odata.nextLink. AMPRE's /Media caps each response
+    // at MEDIA_PAGE_SIZE (100) records and does NOT return an @odata.nextLink,
+    // so the old `while (url = nextLink)` loop ran exactly ONCE and captured only
+    // the first 100 records. A 25-key OR chunk ordered by ResourceRecordKey
+    // routinely exceeds 100 Medium records (a handful of photo-heavy listings
+    // clears it), so every listing sorted after the 100th record came back with
+    // ZERO media and was persisted as a false `media: []` — the root cause of the
+    // mass "NO MEDIA" gap. Explicit $skip offset paging (AMPRE honours it with a
+    // stable $orderby — verified) walks every page until a short page ends it.
+    let chunkFailed = false;
+    for (let skip = 0; ; skip += MEDIA_PAGE_SIZE) {
+      const url =
+        `${API_BASE_URL}/Media?$filter=${encodedFilter}` +
+        `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}&$skip=${skip}&$count=true`;
       const result: FetchResult<any> = await fetchWithRetry<any>(url, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!result.success || !result.data) {
         console.warn(`   ⚠️  Media chunk fetch failed (non-fatal): ${result.error}`);
+        // Mark every key in this chunk a FETCH FAILURE (≠ "fetched, 0 photos").
+        // Keys that already paged in media on an earlier page are cleared from
+        // failedKeys after the loop (see the grouped-keys sweep below).
+        chunkFailed = true;
         break;
       }
       const records: any[] = result.data.value || [];
@@ -229,8 +254,11 @@ export async function fetchMediaForKeys(
         if (arr) arr.push(m);
         else rawByKey.set(lk, [m]);
       }
-      url = result.data['@odata.nextLink'] || null;
+      if (records.length < MEDIA_PAGE_SIZE) break; // short page → no more rows
       await sleep(MEDIA_REQUEST_DELAY_MS);
+    }
+    if (chunkFailed) {
+      for (const k of chunk) failedKeys.add(k);
     }
   }
 
@@ -240,7 +268,10 @@ export async function fetchMediaForKeys(
     collapsed.sort((a, b) => (a.Order ?? Number.POSITIVE_INFINITY) - (b.Order ?? Number.POSITIVE_INFINITY));
     grouped.set(lk, collapsed.map(toStoredMedia));
   }
-  return grouped;
+  // A key that returned media (despite a later-page failure in its chunk) is NOT
+  // a failure — only keys we ended up with nothing for stay flagged.
+  for (const lk of grouped.keys()) failedKeys.delete(lk);
+  return { media: grouped, failedKeys };
 }
 
 /**
@@ -340,9 +371,13 @@ export async function enrichListingsWithMedia(
   const keys = listings.map((l) => l.ListingKey).filter(Boolean);
   if (keys.length === 0) return 0;
   try {
-    const mediaMap = await fetchMediaForKeys(keys, token);
+    const { media: mediaMap, failedKeys } = await fetchMediaForKeys(keys, token);
     let withMedia = 0;
     for (const listing of listings) {
+      // Don't false-empty a failed fetch: leave `media` untouched so the
+      // downstream preserveExistingMedia / next sweep can recover it. Only a
+      // confirmed-zero fetch gets `media = []`.
+      if (failedKeys.has(listing.ListingKey)) continue;
       const media = mediaMap.get(listing.ListingKey) || [];
       listing.media = media;
       if (media.length > 0) withMedia++;

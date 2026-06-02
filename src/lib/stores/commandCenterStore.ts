@@ -11,6 +11,9 @@ import {
   type MapMode,
   defaultTerminalFilters,
 } from "@/lib/personas/personaConfig";
+import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
+import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
+import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -20,7 +23,7 @@ export type CommuteMode = "driving" | "walking" | "cycling";
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
  * drawer is open at a time so the map is never buried under stacked panels.
  */
-export type RailModule = "layers" | "color" | "draw" | "compare" | "time" | "lenses";
+export type RailModule = "commute" | "school" | "color" | "draw" | "compare" | "time" | "lenses";
 
 /** Current map viewport extent, used to scope the search to what's on screen. */
 export interface MapBounds {
@@ -85,6 +88,25 @@ export interface CommandCenterState {
   ) => void;
   setFilters: (filters: TerminalFilterState) => void;
   resetFilters: () => void;
+
+  // Universal composable filters (price/beds/baths/type) — persona-independent.
+  universalFilters: UniversalFilterState;
+  setUniversalFilter: (key: string, value: FilterValue) => void;
+  resetUniversalFilters: () => void;
+
+  // Fundamental axes — the two hard segmentations that sit BEFORE the persona /
+  // composable filters and gate the whole query (sale vs rent, residential vs
+  // commercial). The persona/investor analytics layer is residential-sale only.
+  transactionMode: TransactionMode;
+  setTransactionMode: (mode: TransactionMode) => void;
+  propertyClass: PropertyClass;
+  setPropertyClass: (cls: PropertyClass) => void;
+
+  // Which non-pinned filters the user has added to the bar (chip shown even at default).
+  addedFilterKeys: string[];
+  addFilter: (key: string) => void;
+  removeAddedFilter: (key: string) => void;
+  clearAddedFilters: () => void;
 
   // Selected property for the detail terminal
   selectedProperty: ListingDocument | null;
@@ -170,6 +192,8 @@ export interface CommandCenterState {
   undoDrawPoint: () => void;
   finishDrawing: () => void;
   clearDraw: () => void;
+  /** Direct setter used when rehydrating a saved market bubble (skips the click loop). */
+  setDrawPolygon: (polygon: [number, number][] | null) => void;
 
   // Temporal scrubber: a True-DOM time window swept over the loaded listings
   // (Temporal Distress Engine, made visual — client-side, no re-query).
@@ -200,6 +224,39 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       commute: { ...defaultCommute },
       school: { ...defaultSchool },
     }),
+
+  universalFilters: makeDefaultUniversalFilters(),
+  setUniversalFilter: (key, value) =>
+    set((state) => ({ universalFilters: { ...state.universalFilters, [key]: value } })),
+  resetUniversalFilters: () => set({ universalFilters: makeDefaultUniversalFilters() }),
+
+  transactionMode: "sale",
+  // Switching sale↔rent resets the price range — sale ($0–3M) and rent ($0–12k)
+  // use different bounds, so a carried-over value would sit off the new slider.
+  setTransactionMode: (mode) =>
+    set((state) => {
+      const { min, max } = priceConfig(mode);
+      return { transactionMode: mode, universalFilters: { ...state.universalFilters, price: [min, max] } };
+    }),
+  propertyClass: "residential",
+  // Switching class clears the Property Type picker — residential & commercial use
+  // different PropertySubType spellings, so a stale selection would zero out results.
+  setPropertyClass: (cls) =>
+    set((state) => ({
+      propertyClass: cls,
+      universalFilters: { ...state.universalFilters, homeType: [] },
+    })),
+
+  addedFilterKeys: [],
+  addFilter: (key) =>
+    set((state) =>
+      state.addedFilterKeys.includes(key)
+        ? {}
+        : { addedFilterKeys: [...state.addedFilterKeys, key] }
+    ),
+  removeAddedFilter: (key) =>
+    set((state) => ({ addedFilterKeys: state.addedFilterKeys.filter((k) => k !== key) })),
+  clearAddedFilters: () => set({ addedFilterKeys: [] }),
 
   selectedProperty: null,
   setSelectedProperty: (property) =>
@@ -287,6 +344,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       state.drawPoints.length >= 3 ? { isDrawing: false, drawPolygon: state.drawPoints } : {}
     ),
   clearDraw: () => set({ isDrawing: false, drawPoints: [], drawPolygon: null }),
+  setDrawPolygon: (polygon) => set({ isDrawing: false, drawPoints: [], drawPolygon: polygon }),
 
   timelineActive: false,
   setTimelineActive: (on) => set({ timelineActive: on, timelinePlaying: on ? false : false }),

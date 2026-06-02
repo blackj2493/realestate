@@ -9,9 +9,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LineChart, Line } from "recharts";
 import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
 import { fetchRegionScore, type RegionScore } from "@/lib/dashboard/marketAggregates";
+import {
+  TEMP,
+  YoY,
+  Sparkline,
+  TemperatureBadge,
+  compactPrice,
+  orDash,
+} from "@/components/dashboard/metricViz";
+import { cn } from "@/lib/utils";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 type SortKey =
   | "region"
@@ -28,12 +37,6 @@ type SortKey =
 const GRID =
   "grid-cols-[minmax(130px,1.5fr)_minmax(150px,1.4fr)_minmax(96px,1fr)_minmax(72px,0.8fr)_minmax(92px,0.9fr)_minmax(86px,0.9fr)_minmax(84px,0.9fr)_minmax(80px,0.9fr)_minmax(74px,0.8fr)_minmax(78px,0.8fr)]";
 
-const TEMP: Record<NonNullable<RegionScore["temperature"]>, { label: string; cls: string; rank: number }> = {
-  hot: { label: "Hot", cls: "text-rose-400 bg-rose-400/10 border-rose-400/30", rank: 3 },
-  balanced: { label: "Balanced", cls: "text-amber-400 bg-amber-400/10 border-amber-400/30", rank: 2 },
-  cold: { label: "Cold", cls: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30", rank: 1 },
-};
-
 const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "region", label: "Region", align: "left" },
   { key: "medianPrice", label: "Median Price", align: "right" },
@@ -47,64 +50,51 @@ const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "temperature", label: "Temp", align: "right" },
 ];
 
-// Global property-type filter. Keys MUST match src/lib/dashboard/propertyTypes.ts
-// (the API resolves them to exact PropertySubType spellings via variantsForKeys).
-const TYPE_FILTERS: { key: string; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "detached", label: "Detached" },
-  { key: "semi", label: "Semi" },
-  { key: "town", label: "Town" },
-  { key: "condo", label: "Condo" },
-];
-
-function compactPrice(n: number): string {
-  if (n >= 1_000_000) return `$${(Math.round((n / 1_000_000) * 100) / 100).toString()}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1000)}K`;
-  return `$${Math.round(n)}`;
-}
-
-const dash = "—";
-const orDash = (v: number | null | undefined, fn: (n: number) => string) =>
-  v == null ? dash : fn(v);
-
-function YoY({ pct }: { pct: number | null }) {
-  if (pct == null) return null;
-  const up = pct >= 0;
-  return (
-    <span className={`terminal-font text-[10px] ${up ? "text-emerald-400" : "text-rose-400"}`}>
-      {up ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
-    </span>
-  );
-}
-
-function Sparkline({ data }: { data: { month: string; v: number }[] }) {
-  if (data.length < 2) return null;
-  return (
-    <LineChart width={84} height={26} data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-      <Line type="monotone" dataKey="v" stroke="#22d3ee" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-    </LineChart>
-  );
-}
-
 function sortValue(s: RegionScore, key: SortKey): number | string | null {
   if (key === "region") return s.region.toLowerCase();
   if (key === "temperature") return s.temperature ? TEMP[s.temperature].rank : null;
   return s[key] as number | null;
 }
 
-export default function RegionScorecard({ regions }: { regions: string[] }) {
+export default function RegionScorecard({
+  regions,
+  propertyTypes,
+  minBeds = 0,
+  minBaths = 0,
+  minGarage = 0,
+  minFrontage = 0,
+}: {
+  regions: string[];
+  /** Global lens property-type keys ([] = all). Drives the sold/active aggregates. */
+  propertyTypes: string[];
+  /** Global lens beds/baths/parking/frontage floors (0 = no floor). Scope sold + active medians (Phase C). */
+  minBeds?: number;
+  minBaths?: number;
+  minGarage?: number;
+  minFrontage?: number;
+}) {
   const [scores, setScores] = useState<RegionScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [propertyType, setPropertyType] = useState("all");
 
-  // Stable dependency so the effect doesn't re-fire on every parent render.
+  // Stable dependencies so the effect doesn't re-fire on every parent render.
   const regionsKey = regions.join("|");
+  const typesKey = [...propertyTypes].sort().join(",");
+  const scopeKey = `${minBeds}|${minBaths}|${minGarage}|${minFrontage}`;
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.allSettled(regions.map((r) => fetchRegionScore(r, propertyType)))
+    Promise.allSettled(
+      regions.map((r) =>
+        fetchRegionScore(r, propertyTypes, {
+          minBeds,
+          minBaths,
+          minParking: minGarage,
+          minFrontage,
+        })
+      )
+    )
       .then((results) => {
         if (!alive) return;
         setScores(
@@ -118,7 +108,7 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regionsKey, propertyType]);
+  }, [regionsKey, typesKey, scopeKey]);
 
   const sorted = useMemo(() => {
     if (!sortKey) return scores;
@@ -146,39 +136,29 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
 
   if (regions.length === 0) return null;
 
+  // Human-readable list of the active lens filters, for the disclosure footnote.
+  const filterParts = [
+    propertyTypes.length > 0
+      ? `your selected property type${propertyTypes.length > 1 ? "s" : ""}`
+      : null,
+    minBeds > 0 ? `${minBeds}+ beds` : null,
+    minBaths > 0 ? `${minBaths}+ baths` : null,
+    minGarage > 0 ? `${minGarage}+ parking` : null,
+    minFrontage > 0 ? `${minFrontage}+ ft frontage` : null,
+  ].filter(Boolean) as string[];
+
+  // VOW gate: when every row came back locked (anonymous), blur the grid and
+  // surface a single sign-in overlay instead of a wall of "—".
+  const locked = !loading && scores.length > 0 && scores.every((s) => s.locked);
+
   return (
     <section className="space-y-2">
       <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
         Region Scorecard <span className="text-slate-500">· {regions.length}</span>
       </h2>
 
-      {/* Global property-type filter — re-runs every region aggregate by type. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">Type</span>
-        <div className="flex border border-slate-700">
-          {TYPE_FILTERS.map((t) => {
-            const active = t.key === propertyType;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setPropertyType(t.key)}
-                aria-pressed={active}
-                className={`terminal-font border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
-                  active
-                    ? "bg-cyan-500/20 text-cyan-300"
-                    : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="overflow-x-auto border border-slate-800">
-        <div className="min-w-[1000px]">
+      <div className="relative overflow-x-auto border border-slate-800">
+        <div className={cn("min-w-[1000px]", locked && "blur-sm select-none")}>
           {/* Header */}
           <div className={`grid ${GRID} border-b border-slate-800 bg-slate-900/60`}>
             {COLUMNS.map((c) => {
@@ -257,26 +237,17 @@ export default function RegionScorecard({ regions }: { regions: string[] }) {
 
                   {/* Temperature */}
                   <div className="flex justify-end px-2 py-3">
-                    {s.temperature ? (
-                      <span
-                        className={`terminal-font rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${TEMP[s.temperature].cls}`}
-                      >
-                        {TEMP[s.temperature].label}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-600">{dash}</span>
-                    )}
+                    <TemperatureBadge temperature={s.temperature} />
                   </div>
                 </div>
               ))}
         </div>
+        {locked && <VowGateOverlay message="Sign in to view region market stats" />}
       </div>
 
       <p className="text-[11px] leading-relaxed text-slate-600">
-        {propertyType !== "all" && (
-          <span className="text-slate-400">
-            Showing: {TYPE_FILTERS.find((t) => t.key === propertyType)?.label}.{" "}
-          </span>
+        {filterParts.length > 0 && (
+          <span className="text-slate-400">Filtered to {filterParts.join(", ")}. </span>
         )}
         Active metrics (cap rate, active count, % stale) are full-population over current active inventory.
         Median price, $/sqft, Sold/List & months of supply are from sold records (recent months lag).

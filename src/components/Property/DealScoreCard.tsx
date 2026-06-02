@@ -8,6 +8,7 @@ import type {
   DealScoreGrade,
   DealScoreComponent,
 } from "@/lib/dealScore/computeDealScore";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 /**
  * Deal Score UI — the flagship "is this a good deal?" signal.
@@ -117,8 +118,36 @@ export function DealScoreBadge({
   );
 }
 
-export default function DealScoreCard({ dealScore }: { dealScore: DealScoreResult }) {
+export default function DealScoreCard({
+  dealScore,
+  locked,
+}: {
+  dealScore: DealScoreResult;
+  /** VOW gate: the score embeds the AVM — render a blurred "Login Required" teaser for anon. */
+  locked?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+
+  if (locked) {
+    return (
+      <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+          <Gauge className="h-4 w-4 text-slate-500" />
+          Deal Score
+        </h3>
+        <div className="relative">
+          <div className="flex items-center gap-4 blur-sm select-none" aria-hidden="true">
+            <div className="h-[88px] w-[88px] shrink-0 rounded-full border-[7px] border-slate-700" />
+            <div className="space-y-2">
+              <div className="h-3 w-32 rounded bg-slate-700/50" />
+              <div className="h-3 w-20 rounded bg-slate-700/40" />
+            </div>
+          </div>
+          <VowGateOverlay message="Sign in to view the Deal Score" />
+        </div>
+      </div>
+    );
+  }
 
   // No component had data — render a quiet "not enough data" state instead of a 0.
   if (dealScore.score === null || dealScore.grade === null) {

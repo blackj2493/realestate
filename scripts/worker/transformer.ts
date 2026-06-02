@@ -674,6 +674,8 @@ export interface TransformResult {
     PostalCode?: string;
     KitchensTotal?: number;
     BedroomsTotal?: number;
+    BedroomsAboveGrade?: number;
+    BedroomsBelowGrade?: number;
     BathroomsTotalInteger?: number;
     PropertySubType?: string;
     PropertyType?: string;
@@ -962,6 +964,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.PostalCode = raw.PostalCode || '';
   typesensePayload.KitchensTotal = (raw.KitchensTotal !== undefined && raw.KitchensTotal !== null) ? parseInt(String(raw.KitchensTotal), 10) : 0;
   typesensePayload.BedroomsTotal = (raw.BedroomsTotal !== undefined && raw.BedroomsTotal !== null) ? parseInt(String(raw.BedroomsTotal), 10) : 0;
+  // Above/below-grade split powers the "4+1" card label (4 above, 1 below).
+  typesensePayload.BedroomsAboveGrade = (raw.BedroomsAboveGrade !== undefined && raw.BedroomsAboveGrade !== null) ? parseInt(String(raw.BedroomsAboveGrade), 10) : 0;
+  typesensePayload.BedroomsBelowGrade = (raw.BedroomsBelowGrade !== undefined && raw.BedroomsBelowGrade !== null) ? parseInt(String(raw.BedroomsBelowGrade), 10) : 0;
   typesensePayload.BathroomsTotalInteger = (raw.BathroomsTotalInteger !== undefined && raw.BathroomsTotalInteger !== null) ? parseFloat(String(raw.BathroomsTotalInteger)) : 0;
   typesensePayload.PropertySubType = raw.PropertySubType || '';
   typesensePayload.PropertyType = raw.PropertyType || '';

@@ -7,8 +7,12 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/avm/calculator', () => ({
   calculateAVM: vi.fn(),
 }));
+vi.mock('@/lib/supabase/server', () => ({
+  getCurrentUser: vi.fn().mockResolvedValue({ id: 'test-user' }),
+}));
 
 import { calculateAVM } from '@/lib/avm/calculator';
+import { getCurrentUser } from '@/lib/supabase/server';
 import { POST } from './route';
 
 const mockAvm = vi.mocked(calculateAVM);
@@ -87,6 +91,15 @@ describe('POST /api/avm — Zod validation', () => {
   it('accepts city as null/undefined (optional field)', async () => {
     const res = await post({ ...VALID_BODY, city: null });
     expect(res.status).toBe(200);
+  });
+});
+
+describe('POST /api/avm — auth gate', () => {
+  it('returns 401 (and never runs the AVM) when not signed in', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValueOnce(null);
+    const res = await post(VALID_BODY);
+    expect(res.status).toBe(401);
+    expect(mockAvm).not.toHaveBeenCalled();
   });
 });
 

@@ -13,7 +13,7 @@
 "use client";
 
 import React from "react";
-import { Layers, Palette, PenTool, GitCompareArrows, Bookmark, Clock, Command, type LucideIcon } from "lucide-react";
+import { Navigation, GraduationCap, Palette, Lasso, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
@@ -95,92 +95,110 @@ export default function MapControlRail() {
   const setTimelineActive = useCommandCenterStore((s) => s.setTimelineActive);
   const togglePalette = useCommandCenterStore((s) => s.togglePalette);
 
-  const tiles: RailTile[] = [
+  // Group 1 — map layers: tools that shape or visualize the search on the map.
+  const layerTiles: RailTile[] = [
     {
       kind: "drawer",
-      module: "layers",
-      label: "Overlays",
-      description: "Show schools, commute times & more on the map",
-      icon: Layers,
-      dataActive: commuteEnabled || schoolEnabled,
+      module: "commute",
+      label: "Commute",
+      description: "Shade a drive/walk/cycle time zone and filter to homes inside it",
+      icon: Navigation,
+      dataActive: commuteEnabled,
+    },
+    {
+      kind: "drawer",
+      module: "school",
+      label: "Schools",
+      description: "Shade school quality and filter to homes near a chosen school",
+      icon: GraduationCap,
+      dataActive: schoolEnabled,
     },
     {
       kind: "drawer",
       module: "color",
-      label: "Heatmap",
-      description: "Color the map by yield, days-on-market or price",
+      label: "Color By",
+      description: "Color the map by price, yield, days-on-market & more",
       icon: Palette,
       dataActive: colorMetricId !== null,
     },
     {
       kind: "drawer",
       module: "draw",
-      label: "Draw area",
-      description: "Draw your own area to search inside it",
-      icon: PenTool,
+      label: "Draw Area",
+      description: "Lasso your own area to search inside it",
+      icon: Lasso,
       dataActive: isDrawing || drawPolygon !== null,
     },
+  ];
+
+  // Group 2 — tools: selection, saved presets, time scrub, and the ⌘K launcher.
+  const toolTiles: RailTile[] = [
     {
       kind: "drawer",
       module: "compare",
       label: "Compare",
-      description: "Put the homes you pick side-by-side",
-      icon: GitCompareArrows,
+      description: "Collect homes to view side-by-side, isolate or share",
+      icon: Scale,
       dataActive: selectedCount > 0,
       badge: selectedCount,
     },
     {
       kind: "drawer",
       module: "lenses",
-      label: "Saved views",
-      description: "Save this setup & reopen it in one click",
+      label: "Saved Views",
+      description: "Save this persona, filters & colors and reopen in one click",
       icon: Bookmark,
     },
     {
       kind: "action",
       id: "time",
       label: "Timeline",
-      description: "Play listings forward & back through time",
-      icon: Clock,
+      description: "Scrub listings by days-on-market over time",
+      icon: History,
       active: timelineActive,
       onClick: () => setTimelineActive(!timelineActive),
     },
     {
       kind: "action",
       id: "palette",
-      label: "Search",
-      description: "Jump to a city, tool or view (⌘K)",
-      icon: Command,
+      label: "Quick Jump",
+      description: "Jump to a city, persona, map mode or tool (⌘K)",
+      icon: Zap,
       onClick: togglePalette,
     },
   ];
 
+  const renderTile = (t: RailTile) =>
+    t.kind === "drawer" ? (
+      <Tile
+        key={t.module}
+        icon={t.icon}
+        label={t.label}
+        description={t.description}
+        open={activeModule === t.module}
+        dataActive={t.dataActive}
+        badge={t.badge}
+        onClick={() => toggleModule(t.module)}
+      />
+    ) : (
+      <Tile
+        key={t.id}
+        icon={t.icon}
+        label={t.label}
+        description={t.description}
+        open={t.active}
+        badge={t.badge}
+        onClick={t.onClick}
+      />
+    );
+
   return (
     <div className="absolute left-0 top-0 z-20 flex h-full w-[68px] flex-col items-center gap-1 border-r border-slate-800 bg-slate-950/85 py-3 backdrop-blur-md">
-      {tiles.map((t) =>
-        t.kind === "drawer" ? (
-          <Tile
-            key={t.module}
-            icon={t.icon}
-            label={t.label}
-            description={t.description}
-            open={activeModule === t.module}
-            dataActive={t.dataActive}
-            badge={t.badge}
-            onClick={() => toggleModule(t.module)}
-          />
-        ) : (
-          <Tile
-            key={t.id}
-            icon={t.icon}
-            label={t.label}
-            description={t.description}
-            open={t.active}
-            badge={t.badge}
-            onClick={t.onClick}
-          />
-        )
-      )}
+      <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-600">Layers</span>
+      {layerTiles.map(renderTile)}
+      <div className="my-1.5 h-px w-7 bg-slate-800" />
+      <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-600">Tools</span>
+      {toolTiles.map(renderTile)}
     </div>
   );
 }

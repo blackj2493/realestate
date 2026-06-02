@@ -21,6 +21,7 @@ import {
   isValidLocation,
   toDeckPosition,
 } from "./mapLogic";
+import ListingMapPopup from "./ListingMapPopup";
 
 interface AlphaMapProps {
   properties: ListingDocument[];
@@ -68,7 +69,8 @@ export default function AlphaMap({
   // Once the map has framed real results, keep it mounted even if a later
   // viewport-scoped query returns 0 — blanking it mid-browse would trap the user.
   const [mapReady, setMapReady] = useState(false);
-  const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; object: ListingDocument | null } | null>(null);
+  // Pinned, interactive popup: the card(s) at a clicked pin/stacked cluster.
+  const [popup, setPopup] = useState<{ x: number; y: number; listings: ListingDocument[] } | null>(null);
 
   // Render mode is lifted to the store so the Mode dock / rail can drive it.
   const mapMode = useCommandCenterStore((s) => s.mapMode);
@@ -447,13 +449,7 @@ export default function AlphaMap({
         material: { ambient: 0.8, diffuse: 0.6, shininess: 32, specularColor: [60, 90, 110] },
         onHover: (info) => {
           const d = info.object as MapDataPoint | undefined;
-          if (d) {
-            setHoverInfo({ x: info.x, y: info.y, object: d });
-            setHoveredId(d.id);
-          } else {
-            setHoverInfo(null);
-            setHoveredId(null);
-          }
+          setHoveredId(d ? d.id : null);
         },
         onClick: (info) => {
           if (isDrawing) return;
@@ -491,7 +487,16 @@ export default function AlphaMap({
         if (!f) return;
         const cid = (f.properties as { cluster_id: number }).cluster_id;
         const [lng, lat] = f.geometry.coordinates as [number, number];
-        expandCluster(cid, lng, lat);
+        // Zoom to split the cluster; if it can't separate (coincident listings
+        // past maxZoom — e.g. condo units at one address), list them in a popup.
+        if (clusterIndex.getClusterExpansionZoom(cid) > MAP_MAX_ZOOM) {
+          const leaves = clusterIndex
+            .getLeaves(cid, Infinity)
+            .map((leaf) => (leaf.properties as PinProps).listing);
+          setPopup({ x: info.x, y: info.y, listings: leaves });
+        } else {
+          expandCluster(cid, lng, lat);
+        }
       },
     });
 
@@ -547,23 +552,18 @@ export default function AlphaMap({
       pickable: true,
       onHover: (info) => {
         const leaf = info.object as ClusterPoint | undefined;
-        if (leaf) {
-          const listing = (leaf.properties as PinProps).listing;
-          setHoverInfo({ x: info.x, y: info.y, object: listing });
-          setHoveredId(listing.id);
-        } else {
-          setHoverInfo(null);
-          setHoveredId(null);
-        }
+        // Hover only drives the pin↔list highlight now (no tooltip — the card
+        // lives in the click popup).
+        setHoveredId(leaf ? (leaf.properties as PinProps).listing.id : null);
       },
       onClick: (info) => {
         if (isDrawing) return;
         const leaf = info.object as ClusterPoint | undefined;
         if (!leaf) return;
         const listing = (leaf.properties as PinProps).listing;
-        // In select mode a tap toggles membership; otherwise it opens the terminal.
+        // In select mode a tap toggles membership; otherwise it opens the card popup.
         if (isSelectMode) toggleSelected(listing.id);
-        else onSelectProperty?.(listing);
+        else setPopup({ x: info.x, y: info.y, listings: [listing] });
       },
       updateTriggers: {
         getText: [selectedIds],
@@ -574,7 +574,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [renderData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
+  }, [renderData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
@@ -644,17 +644,24 @@ export default function AlphaMap({
         onResize={({ width, height }) => {
           dimsRef.current = { width, height };
         }}
+        onDragStart={() => setPopup(null)}
         onDragEnd={handleDragEnd}
         controller={true}
         layers={[...layers, ...drawLayers]}
         onClick={(info) => {
-          if (!isDrawing || !info.coordinate) return;
-          // Clicking the first vertex closes the polygon; any other click adds one.
-          if (info.layer?.id === "draw-vertices" && (info.object as { i: number })?.i === 0 && drawPoints.length >= 3) {
-            finishDrawing();
+          if (isDrawing) {
+            if (!info.coordinate) return;
+            // Clicking the first vertex closes the polygon; any other click adds one.
+            if (info.layer?.id === "draw-vertices" && (info.object as { i: number })?.i === 0 && drawPoints.length >= 3) {
+              finishDrawing();
+              return;
+            }
+            addDrawPoint([info.coordinate[0], info.coordinate[1]]);
             return;
           }
-          addDrawPoint([info.coordinate[0], info.coordinate[1]]);
+          // A click on empty map (no pin/cluster picked) dismisses the popup;
+          // pin/cluster layer handlers open it and set info.object.
+          if (!info.object) setPopup(null);
         }}
         getCursor={({ isHovering }) => (isDrawing ? "crosshair" : isHovering ? "pointer" : "grab")}
       >
@@ -681,18 +688,18 @@ export default function AlphaMap({
         </Map>
       </DeckGL>
 
-      {hoverInfo?.object && (
-        <div
-          className="pointer-events-none absolute z-20 rounded-none border border-slate-700 bg-slate-900/95 px-3 py-2 backdrop-blur-sm"
-          style={{ left: hoverInfo.x + 10, top: hoverInfo.y + 10 }}
-        >
-          <p className="text-xs font-medium text-slate-300">
-            {hoverInfo.object.UnparsedAddress || hoverInfo.object.City || "Unknown location"}
-          </p>
-          <p className="mt-1 font-mono text-sm text-cyan-400">
-            ${hoverInfo.object.ListPrice?.toLocaleString() || "N/A"}
-          </p>
-        </div>
+      {popup && (
+        <ListingMapPopup
+          listings={popup.listings}
+          x={popup.x}
+          y={popup.y}
+          dims={dimsRef.current}
+          onClose={() => setPopup(null)}
+          onSelect={(l) => {
+            setPopup(null);
+            onSelectProperty?.(l);
+          }}
+        />
       )}
 
       {/* Select-mode hint — centered toast so it clears the left rail/drawer. */}

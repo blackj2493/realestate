@@ -3,12 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { AVMResult, AnchorBasis } from "@/lib/avm/types";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 interface ListingEstimateCardProps {
   estimate: AVMResult | null;
   listPrice: number;
   cityRegion?: string;
   city?: string;
+  /** VOW gate: AVM is VOW-derived — render a blurred "Login Required" teaser for anon. */
+  locked?: boolean;
 }
 
 const CONFIDENCE_STYLES: Record<AVMResult["confidence"], string> = {
@@ -32,7 +35,28 @@ export default function ListingEstimateCard({
   listPrice,
   cityRegion,
   city,
+  locked,
 }: ListingEstimateCardProps) {
+  if (locked) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>PureProperty Estimate</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <div className="space-y-2 blur-sm select-none" aria-hidden="true">
+              <p className="text-3xl font-bold text-primary">$0,000,000</p>
+              <p className="text-xs font-mono text-muted-foreground">Range $000K – $000K</p>
+              <p className="text-sm font-medium text-muted-foreground">↓ $00,000 below ask</p>
+            </div>
+            <VowGateOverlay message="Sign in to view our estimate" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const unavailable =
     !estimate || estimate.estimatedValue <= 0 || estimate.anchorPrice <= 0;
 
@@ -115,6 +139,10 @@ function basisCopy(
       return city
         ? `Based on adjacent ${city} sales (no local ${here} baseline yet)`
         : "Based on adjacent city-level sales";
+    case "peer":
+      return `Comped against ${comps} similar ${here}-area sales (size/beds/baths-matched), trend-adjusted to today`;
+    case "floor":
+      return `Larger or more upgraded than any recent ${here} comp — shown as a neighbourhood floor, not a full valuation`;
     case "none":
     default:
       return `Insufficient data to confidently estimate ${here}`;

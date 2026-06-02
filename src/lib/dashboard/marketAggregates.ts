@@ -11,6 +11,8 @@
 
 export interface RegionScore {
   region: string;
+  /** VOW gate: anon received a `locked` shape from the endpoints — render a sign-in overlay. */
+  locked?: boolean;
   medianPrice: number | null;
   priceSeries: { month: string; v: number }[]; // months present in the trailing ~12 (sparkline)
   yoyPct: number | null;
@@ -43,6 +45,7 @@ interface PriceTrendResp {
     sales90: number;
     monthlyVelocity: number | null;
   };
+  locked?: boolean;
   error?: string;
 }
 
@@ -56,6 +59,7 @@ interface RegionStatsResp {
     topCapRate: number | null;
     staleCount: number;
   };
+  locked?: boolean;
   error?: string;
 }
 
@@ -111,15 +115,39 @@ async function getJson<T>(url: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
+/** Optional scope dimensions of the global lens that the server medians honor. */
+export interface RegionScoreScope {
+  minBeds?: number;
+  minBaths?: number;
+  minParking?: number;
+  minFrontage?: number;
+}
+
 export async function fetchRegionScore(
   region: string,
-  propertyType: string = "all"
+  typeKeys: string[] = [],
+  scope: RegionScoreScope = {}
 ): Promise<RegionScore> {
   const q = encodeURIComponent(region);
-  const t = `&propertyType=${encodeURIComponent(propertyType)}`;
+  // Multi-type: pass the lens's selected property-type keys (empty ⇒ all types).
+  // The endpoints resolve keys → exact PropertySubType spellings (variantsForKeys).
+  const t = typeKeys.length ? `&types=${encodeURIComponent(typeKeys.join(","))}` : "";
+  // Beds/baths/parking/frontage floors — both endpoints scope sold + active medians.
+  // 0/absent ⇒ no floor. Sold side filters flat columns; active RPC reads full_payload.
+  const pos = (v: number | undefined) => (v && v > 0 ? v : 0);
+  const minBeds = pos(scope.minBeds);
+  const minBaths = pos(scope.minBaths);
+  const minParking = pos(scope.minParking);
+  const minFrontage = pos(scope.minFrontage);
+  const s =
+    t +
+    (minBeds ? `&minBeds=${minBeds}` : "") +
+    (minBaths ? `&minBaths=${minBaths}` : "") +
+    (minParking ? `&minParking=${minParking}` : "") +
+    (minFrontage ? `&minFrontage=${minFrontage}` : "");
   const [trendR, statsR] = await Promise.allSettled([
-    getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${t}`),
-    getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${t}`),
+    getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${s}`),
+    getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${s}`),
   ]);
 
   const trend = trendR.status === "fulfilled" ? trendR.value : null;
@@ -145,6 +173,8 @@ export async function fetchRegionScore(
 
   return {
     region,
+    // Either endpoint returning `locked` (anonymous) locks the whole row.
+    locked: !!(trend?.locked || stats?.locked),
     medianPrice: latest?.medianPrice ?? null,
     priceSeries: points.slice(-12).map((p) => ({ month: p.month, v: p.medianPrice })),
     yoyPct: smoothedYoY(points, "medianPrice"),

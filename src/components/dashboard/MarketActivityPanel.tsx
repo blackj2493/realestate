@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
+import { areaKey, type Area } from "@/lib/dashboard/area";
 import type { SoldListing } from "@/app/api/market/activity/sold/route";
 import ActivityRow from "./ActivityRow";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 const LIST_LIMIT = 100; // New side (Typesense, free) — TRREB §6.3(b) per-query display cap
 const SOLD_LIST_LIMIT = 25; // Sold side: only ~5 visible (scroll); smaller payload, same cap rules
@@ -25,12 +27,26 @@ function soldDateFmt(s?: string | null): string {
     : d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
 }
 
-function soldQuery(location: string, lens: MarketActivityLens, limit: number): string {
+/**
+ * Build the GET query string for /api/market/activity/sold from any Area kind.
+ * Region areas pass `?region=`; polygon areas pass `?polygon=lat,lng,...`;
+ * school areas pass `?nearby_school=<key>`. Lens filters are shared.
+ *
+ * A 32-vertex circle polygon serializes to ~770 chars; a typical drawn ring
+ * ≤ 20 vertices is well under the 2 KB GET threshold.
+ */
+function soldQueryParams(area: Area, lens: MarketActivityLens, limit: number): string {
   const p = new URLSearchParams({
-    region: location,
     windowDays: String(lens.windowDays),
     limit: String(limit),
   });
+  if (area.kind === "region") {
+    p.set("region", area.name);
+  } else if (area.kind === "school") {
+    p.set("nearby_school", area.schoolKey);
+  } else {
+    p.set("polygon", area.polygon.map(([lat, lng]) => `${lat},${lng}`).join(","));
+  }
   if (lens.propertyTypes.length) p.set("types", lens.propertyTypes.join(","));
   if (lens.minBeds > 0) p.set("minBeds", String(lens.minBeds));
   if (lens.minBaths > 0) p.set("minBaths", String(lens.minBaths));
@@ -72,10 +88,10 @@ function CountHeader({
 }
 
 export default function MarketActivityPanel({
-  location,
+  area,
   lens,
 }: {
-  location: string;
+  area: Area;
   lens: MarketActivityLens;
 }) {
   const [newCount, setNewCount] = useState<number | null>(null);
@@ -85,8 +101,10 @@ export default function MarketActivityPanel({
   const [soldCount, setSoldCount] = useState<number | null>(null);
   const [soldRows, setSoldRows] = useState<SoldListing[] | null>(null);
   const [soldErr, setSoldErr] = useState(false);
+  const [soldLocked, setSoldLocked] = useState(false);
 
   const lensKey = JSON.stringify(lens);
+  const key = areaKey(area);
 
   useEffect(() => {
     let alive = true;
@@ -96,10 +114,11 @@ export default function MarketActivityPanel({
     setSoldCount(null);
     setSoldRows(null);
     setSoldErr(false);
+    setSoldLocked(false);
 
     Promise.all([
-      fetchNewCount(location, lens),
-      fetchNewListings(location, lens, LIST_LIMIT),
+      fetchNewCount(area, lens),
+      fetchNewListings(area, lens, LIST_LIMIT),
     ])
       .then(([c, rows]) => {
         if (!alive) return;
@@ -107,28 +126,32 @@ export default function MarketActivityPanel({
         setNewRows(rows);
       })
       .catch((e) => {
-        console.error("[MarketActivityPanel:new]", location, e);
+        console.error("[MarketActivityPanel:new]", key, e);
         if (alive) setNewErr(true);
       });
 
-    fetch(`/api/market/activity/sold?${soldQuery(location, lens, SOLD_LIST_LIMIT)}`)
+    // SOLD column now works for every area kind — the sold_listings collection
+    // gained `location` + `NearbySchools` in Phase 2B (see soldListingsSchema.ts).
+    fetch(`/api/market/activity/sold?${soldQueryParams(area, lens, SOLD_LIST_LIMIT)}`)
       .then((r) => r.json())
-      .then((d: { count: number; listings: SoldListing[]; error?: string }) => {
+      .then((d: { count: number; listings: SoldListing[]; locked?: boolean; error?: string }) => {
         if (!alive) return;
         if (d.error) throw new Error(d.error);
         setSoldCount(d.count);
         setSoldRows(d.listings);
+        setSoldLocked(!!d.locked);
       })
       .catch((e) => {
-        console.error("[MarketActivityPanel:sold]", location, e);
+        console.error("[MarketActivityPanel:sold]", key, e);
         if (alive) setSoldErr(true);
       });
 
     return () => {
       alive = false;
     };
+    // `area` captured via `key`; lens via `lensKey`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, lensKey]);
+  }, [key, lensKey]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -164,36 +187,67 @@ export default function MarketActivityPanel({
         </div>
       </div>
 
-      {/* Sold (VOW) */}
+      {/* Sold (VOW) — gated: anon sees the count + blurred "Login Required" rows */}
       <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="Sold" accent="text-emerald-400" count={soldCount} />
         <div className="max-h-[360px] overflow-y-auto">
-          {soldRows === null && !soldErr && <Skeleton />}
-          {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
-          {soldRows && soldRows.length === 0 && (
-            <p className="px-3 py-6 text-center text-xs text-slate-500">
-              No sales in this window
-            </p>
+          {soldLocked ? (
+            <div className="relative min-h-[208px]">
+              <div className="space-y-2 p-2 blur-sm select-none" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-slate-800/30 p-2">
+                    <div className="h-12 w-16 shrink-0 rounded bg-slate-700/50" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-2/3 rounded bg-slate-700/50" />
+                      <div className="h-3 w-1/3 rounded bg-slate-700/40" />
+                    </div>
+                    <div className="h-4 w-14 rounded bg-emerald-700/30" />
+                  </div>
+                ))}
+              </div>
+              <VowGateOverlay
+                message={
+                  soldCount && soldCount > 0
+                    ? `${soldCount.toLocaleString()} recent sale${soldCount === 1 ? "" : "s"} — sign in to view`
+                    : "Sign in to view recent sold comps"
+                }
+              />
+            </div>
+          ) : (
+            <>
+              {soldRows === null && !soldErr && <Skeleton />}
+              {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
+              {soldRows && soldRows.length === 0 && (
+                <p className="px-3 py-6 text-center text-xs text-slate-500">
+                  No sales in this window
+                </p>
+              )}
+              {soldRows?.map((l) => (
+                <ActivityRow
+                  key={l.id}
+                  id={l.id}
+                  address={l.address}
+                  city={l.city}
+                  brokerage={l.brokerage}
+                  price={l.closePrice}
+                  priceLabel="SOLD"
+                  caption={soldDateFmt(l.soldDate)}
+                  image={l.primaryImageUrl}
+                  propertySubType={l.propertySubType}
+                  beds={l.beds}
+                  baths={l.baths}
+                  sqft={l.sqft}
+                />
+              ))}
+            </>
           )}
-          {soldRows?.map((l) => (
-            <ActivityRow
-              key={l.id}
-              id={l.id}
-              address={l.address}
-              city={l.city}
-              brokerage={l.brokerage}
-              price={l.closePrice}
-              priceLabel="SOLD"
-              caption={soldDateFmt(l.soldDate)}
-              image={l.primaryImageUrl}
-              propertySubType={l.propertySubType}
-              beds={l.beds}
-              baths={l.baths}
-              sqft={l.sqft}
-            />
-          ))}
         </div>
       </div>
+      {/* TRREB §6.3(i)/(k): reliability + bona-fide-interest notice, local to the sold rows. */}
+      <p className="text-[10px] leading-snug text-slate-600 md:col-span-2">
+        Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for
+        consumers with a bona fide interest only, not for any commercial purpose.
+      </p>
     </div>
   );
 }

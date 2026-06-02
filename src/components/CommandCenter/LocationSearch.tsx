@@ -1,8 +1,7 @@
 /**
  * LocationSearch — the terminal search bar's typeahead.
  *
- * Restores the autocomplete the old (orphaned) SearchDropdown provided, but native
- * to the dark terminal. A debounced Typesense query surfaces, in priority order:
+ * A debounced Typesense query surfaces, in priority order:
  *   • an exact MLS# match → opens that listing,
  *   • street-address matches → opens that listing,
  *   • cities / neighbourhoods with live active-listing counts → runs a location search.
@@ -20,9 +19,14 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
+import { useRouter } from "next/navigation";
+import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
 
 interface LocationSearchProps {
   className?: string;
+  /** "inplace" (default): mutate commandCenterStore (terminal reacts live).
+   *  "navigate": router.push into /properties or the listing detail page. */
+  mode?: "inplace" | "navigate";
 }
 
 function SuggestionIcon({ kind }: { kind: SearchSuggestion["kind"] }) {
@@ -38,11 +42,12 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
   mls: "MLS",
 };
 
-export default function LocationSearch({ className }: LocationSearchProps) {
+export default function LocationSearch({ className, mode = "inplace" }: LocationSearchProps) {
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
   const totalCount = useCommandCenterStore((s) => s.totalCount);
   const setSelectedProperty = useCommandCenterStore((s) => s.setSelectedProperty);
+  const router = useRouter();
 
   const [value, setValue] = React.useState("");
   const [open, setOpen] = React.useState(false);
@@ -92,26 +97,25 @@ export default function LocationSearch({ className }: LocationSearchProps) {
     inputRef.current?.blur();
   };
 
-  // Commit a free-typed location string (no suggestion chosen).
-  const commitLocation = (label: string) => {
-    setLocation(label.trim());
+  // Apply a resolved target. navigate mode routes; inplace mode mutates the store
+  // exactly as before (city → setLocation, listing → setSelectedProperty).
+  const applyTarget = (t: SearchTarget) => {
+    if (mode === "navigate") {
+      router.push(targetToHref(t));
+    } else if (t.action === "open-listing") {
+      setSelectedProperty(t.listing); // opens the in-page listing terminal
+    } else {
+      setLocation(t.label); // drives the existing debounced search
+    }
     setValue("");
     closeAndBlur();
   };
 
-  // Act on a chosen suggestion: places run a location search; address/MLS open the listing.
-  const select = (s: SearchSuggestion) => {
-    if ((s.kind === "address" || s.kind === "mls") && s.listing) {
-      setSelectedProperty(s.listing); // opens the listing terminal
-      setValue("");
-      closeAndBlur();
-      return;
-    }
-    commitLocation(s.label);
-  };
+  // Act on a chosen suggestion.
+  const select = (s: SearchSuggestion) => applyTarget(resolveSuggestionTarget(s));
 
   const clear = () => {
-    setLocation("");
+    if (mode === "inplace") setLocation("");
     setValue("");
     setSuggestions([]);
     setOpen(false);
@@ -136,7 +140,7 @@ export default function LocationSearch({ className }: LocationSearchProps) {
     if (open && highlight >= 0 && highlight < suggestions.length) {
       select(suggestions[highlight]);
     } else if (value.trim()) {
-      commitLocation(value);
+      applyTarget(resolveTextTarget(value));
     }
   };
 
@@ -147,7 +151,9 @@ export default function LocationSearch({ className }: LocationSearchProps) {
       ? `Search ${fmt} Active Listings…`
       : "Search city, neighbourhood, address, or MLS#…";
 
-  const showClear = value.length > 0 || location.length > 0;
+  // In navigate mode the store `location` isn't ours to clear, so the X only
+  // reflects the typed value; inplace mode also surfaces a committed location.
+  const showClear = mode === "inplace" ? value.length > 0 || location.length > 0 : value.length > 0;
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
@@ -180,7 +186,7 @@ export default function LocationSearch({ className }: LocationSearchProps) {
       </form>
 
       {open && (suggestions.length > 0 || searching) && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto border border-slate-700 bg-slate-900">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto border border-slate-700 bg-slate-900">
           {searching && suggestions.length === 0 && (
             <div className="px-3 py-2 font-mono text-xs text-slate-500">Searching…</div>
           )}

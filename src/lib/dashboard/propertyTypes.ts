@@ -75,6 +75,24 @@ export function variantsForKeys(keys: string[]): string[] {
 }
 
 /**
+ * Parse property-type option keys from a market-endpoint request. Accepts the
+ * multi-select `types=detached,condo` form and falls back to the legacy single
+ * `propertyType=detached`. "all"/empty ⇒ [] (no type filter). Unknown keys are
+ * dropped (variantsForKeys ignores them anyway).
+ */
+export function parseTypeKeys(params: URLSearchParams): string[] {
+  const multi = (params.get('types') || '').trim();
+  if (multi) {
+    return multi
+      .split(',')
+      .map((k) => k.trim().toLowerCase())
+      .filter((k) => k && k !== 'all' && BY_KEY.has(k));
+  }
+  const single = (params.get('propertyType') || '').trim().toLowerCase();
+  return single && single !== 'all' && BY_KEY.has(single) ? [single] : [];
+}
+
+/**
  * Typesense filter_by clause for the selected property types, backtick-quoted.
  * Returns undefined when nothing is selected (= all types).
  */

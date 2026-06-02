@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getListingDetail, gateSaleHistory } from "@/lib/property/getListingDetail";
+import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,24 +24,31 @@ export async function GET(
       );
     }
 
-    // VOW gating: sold prices/dates are stripped for anonymous users (§4).
+    // VOW gating: strip sold prices/dates AND VOW-derived metrics (AVM, Deal Score,
+    // stitched True DOM) for anonymous users; the terminal renders blurred teasers.
+    // has* flags (from the ungated detail) tell the client where real data exists.
     const user = await getCurrentUser();
-    const saleHistory = gateSaleHistory(detail.saleHistory, !!user);
+    const isAuthed = !!user;
+    const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
+    const hasDealScore = detail.dealScore.score !== null;
+    const view = gateVowDerived(detail, isAuthed);
 
     return NextResponse.json({
-      listing_key: detail.listing_key,
-      full_payload: detail.full_payload,
-      media_urls: detail.media_urls,
-      city: detail.city,
-      property_sub_type: detail.property_sub_type,
-      synced_at: detail.synced_at,
-      estimate: detail.estimate,
-      feeStability: detail.feeStability,
-      dealScore: detail.dealScore,
-      saleHistory,
-      isAuthed: !!user,
-      priceTimeline: detail.priceTimeline,
-      rooms: detail.rooms,
+      listing_key: view.listing_key,
+      full_payload: view.full_payload,
+      media_urls: view.media_urls,
+      city: view.city,
+      property_sub_type: view.property_sub_type,
+      synced_at: view.synced_at,
+      estimate: view.estimate,
+      feeStability: view.feeStability,
+      dealScore: view.dealScore,
+      saleHistory: view.saleHistory,
+      isAuthed,
+      hasEstimate,
+      hasDealScore,
+      priceTimeline: view.priceTimeline,
+      rooms: view.rooms,
     });
   } catch (error) {
     console.error("[Property API] Unexpected error:", error);

@@ -1,34 +1,44 @@
 /**
  * Dashboard data helpers — thin wrappers over the client-side Typesense search.
  *
- * A "location" is a user-chosen market area. It can be a municipality (Typesense
- * `City`) or a neighbourhood (`CityRegion`), so every query matches BOTH. Values are
- * backtick-quoted because names contain spaces (e.g. "Richmond Hill", "Stoney Creek").
+ * An "area" is the market the user is asking about. It can be a TRREB region
+ * string (City / CityRegion), a saved bubble's polygon, or a saved school
+ * catchment. See src/lib/dashboard/area.ts — `areaFilter(area)` produces the
+ * Typesense filter fragment so the call sites here don't branch on kind.
+ *
+ * The original `locationFilter(loc: string)` is preserved as a re-export from
+ * area.ts (it now lives there as the `region` arm of `areaFilter`).
  */
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
 import type { BoardDef } from './boards';
 import type { MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
+import { areaFilter, type Area } from './area';
 
+/**
+ * Region-only filter — kept for any caller that still passes a raw string
+ * (e.g. /api/market/region-stats internally). Equivalent to
+ * `areaFilter({ kind: 'region', name: loc })`.
+ */
 export function locationFilter(loc: string): string {
-  const safe = loc.replace(/`/g, '');
-  return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
+  return areaFilter({ kind: 'region', name: loc });
 }
 
 function combine(...clauses: (string | undefined)[]): string {
   return clauses.filter(Boolean).join(' && ');
 }
 
-/** Top-N listings for one board within one location. */
+/** Top-N listings for one board within one area, scoped by the global lens. */
 export async function fetchBoard(
   board: BoardDef,
-  loc: string,
+  area: Area,
+  lens: MarketActivityLens,
   perPage = 5
 ): Promise<ListingDocument[]> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(locationFilter(loc), board.rawFilterBy),
+    rawFilterBy: combine(buildScopeFilter(area, lens), board.rawFilterBy),
     sortBy: board.sortBy,
     sortOrder: board.sortOrder,
     perPage,
@@ -42,24 +52,24 @@ export interface RegionStats {
   suiteCandidates: number; // count of listings with SuiteScore >= 3
 }
 
-/** Exact, point-in-time stats for a location (no time-series — see plan §deferred). */
-export async function fetchRegionStats(loc: string): Promise<RegionStats> {
+/** Exact, point-in-time stats for an area, scoped by the global lens. */
+export async function fetchRegionStats(
+  area: Area,
+  lens: MarketActivityLens
+): Promise<RegionStats> {
+  const scope = buildScopeFilter(area, lens);
   const [active, cap, suite] = await Promise.all([
+    searchListings({ query: '*', rawFilterBy: scope, perPage: 0 }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(locationFilter(loc), 'ListPrice:>0'),
-      perPage: 0,
-    }),
-    searchListings({
-      query: '*',
-      rawFilterBy: combine(locationFilter(loc), 'ExtrapolatedCapRate:>0'),
+      rawFilterBy: combine(scope, 'ExtrapolatedCapRate:>0'),
       sortBy: 'ExtrapolatedCapRate',
       sortOrder: 'desc',
       perPage: 1,
     }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(locationFilter(loc), 'SuiteScore:>=3'),
+      rawFilterBy: combine(scope, 'SuiteScore:>=3'),
       perPage: 0,
     }),
   ]);
@@ -70,8 +80,61 @@ export async function fetchRegionStats(loc: string): Promise<RegionStats> {
   };
 }
 
+/**
+ * Active-inventory SHARES that back the persona specialty headline tiles.
+ *
+ * Each field is a full-population COUNT (Typesense `found`) — counting matches is
+ * not "displaying listings", so the §6.3(b) 100-row DISPLAY cap does not apply
+ * (same reasoning as /api/market/region-stats). The comparison band turns each
+ * count into a share of active inventory, which (unlike a raw count) is
+ * comparable across markets of very different sizes. All deterministic (§4).
+ *
+ * Why shares and not e.g. a regional median carry: CapitalBurnRateMonthly is not
+ * faceted in the Typesense schema, so there's no cheap full-population aggregate
+ * for it — and sampling the top-N would bias the figure. Counts of a filterable
+ * flag are exact and cheap.
+ */
+export interface RegionSpecialtyStats {
+  /** Priced active listings — the denominator for every share below. */
+  activeCount: number;
+  /** is_density_ready listings (surplus parking + detached) — builder supply. */
+  densityReadyCount: number;
+  /** Listings carrying a price cut from their first-seen price — motivated sellers. */
+  priceCutCount: number;
+  /** Listings whose ExtrapolatedCapRate clears the cashflow floor. */
+  cashflowCount: number;
+}
+
+/** ExtrapolatedCapRate (%) at/above which a listing "pencils" for a cashflow buyer. */
+export const CASHFLOW_CAP_FLOOR = 4.5;
+
+/** Count-only Typesense query (perPage:0 → just the `found` total). */
+async function countMatching(filter: string): Promise<number> {
+  const res = await searchListings({ query: '*', rawFilterBy: filter, perPage: 0 });
+  return res.totalFound;
+}
+
+/** Specialty inventory shares for an area, scoped by the global lens. */
+export async function fetchRegionSpecialty(
+  area: Area,
+  lens: MarketActivityLens
+): Promise<RegionSpecialtyStats> {
+  const scope = buildScopeFilter(area, lens);
+  const [active, density, priceCut, cashflow] = await Promise.all([
+    countMatching(scope),
+    countMatching(combine(scope, 'is_density_ready:=true')),
+    countMatching(combine(scope, 'TotalPriceDrop:>0')),
+    countMatching(combine(scope, `ExtrapolatedCapRate:>=${CASHFLOW_CAP_FLOOR}`)),
+  ]);
+  return {
+    activeCount: active,
+    densityReadyCount: density,
+    priceCutCount: priceCut,
+    cashflowCount: cashflow,
+  };
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ACTIVITY_PRICE_FLOOR = 50000; // mirror the sold feed: excludes leases/rentals
 
 // BasementType values that indicate finished living space — mirrors the sold-feed
 // derivation (deriveHasFinishedBasement: any "apartment" or non-"unfinished"
@@ -89,20 +152,28 @@ function finishedBasementClause(): string {
 }
 
 /**
- * Typesense filter_by for "new active listings in the last N days" under a lens.
- *
- * NOTE: this collection has no usable `Status:=Active` flag (it stores TRREB
- * MlsStatus sub-states like "New"/"Price Change"); the whole index is the active
- * IDX feed, so we scope by the EntryTimestamp window only. `EntryTimestamp` is in
- * MILLISECONDS (transformer.ts), so the cutoff is `Date.now() - days*DAY_MS`.
- * `ListPrice:>=50000` drops lease rows (no filterable TransactionType field).
+ * Sale-vs-lease scope via the indexed `TransactionType` facet (added to the live
+ * collection by scripts/admin/add-transaction-type.ts). Exact — replaces the old
+ * ListPrice ($50k) proxy. The handful of docs with a blank TransactionType match
+ * neither and are correctly excluded from both views.
  */
-export function buildActivityFilter(loc: string, lens: MarketActivityLens): string {
-  const cutoff = Date.now() - lens.windowDays * DAY_MS;
+function transactionClause(lens: MarketActivityLens): string {
+  return lens.transactionType === 'lease'
+    ? 'TransactionType:=`For Lease`'
+    : 'TransactionType:=`For Sale`';
+}
+
+/**
+ * The global active-inventory SCOPE — every "what kind of property" dimension of
+ * the lens (sale/lease, type, beds, baths, parking, finished basement, frontage),
+ * but NOT the time window (that is activity-only). This is the single filter that
+ * every active-inventory surface AND-joins so a city or a custom bubble shows one
+ * coherent slice instead of a mix of rentals, condos and 4-beds.
+ */
+export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
   return combine(
-    locationFilter(loc),
-    `EntryTimestamp:>=${Math.floor(cutoff)}`,
-    `ListPrice:>=${ACTIVITY_PRICE_FLOOR}`,
+    areaFilter(area),
+    transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
     lens.minBeds > 0 ? `BedroomsTotal:>=${lens.minBeds}` : undefined,
     lens.minBaths > 0 ? `BathroomsTotalInteger:>=${lens.minBaths}` : undefined,
@@ -112,11 +183,34 @@ export function buildActivityFilter(loc: string, lens: MarketActivityLens): stri
   );
 }
 
-/** Count of newly-listed active properties for a location under the lens. */
-export async function fetchNewCount(loc: string, lens: MarketActivityLens): Promise<number> {
+/**
+ * Scope filter PLUS an absolute "entered since" cutoff (epoch ms).
+ * `buildActivityFilter` is the rolling-window special case; the action feed passes
+ * the user's previous-visit timestamp instead.
+ */
+export function buildSinceFilter(
+  area: Area,
+  lens: MarketActivityLens,
+  sinceMs: number
+): string {
+  return combine(buildScopeFilter(area, lens), `EntryTimestamp:>=${Math.floor(sinceMs)}`);
+}
+
+/**
+ * Rolling-window "new active listings in the last N days". This collection has no
+ * usable `Status:=Active` flag (it stores TRREB MlsStatus sub-states), so the whole
+ * IDX index is treated as active and scoped by the EntryTimestamp window only —
+ * `EntryTimestamp` is in MILLISECONDS (transformer.ts).
+ */
+export function buildActivityFilter(area: Area, lens: MarketActivityLens): string {
+  return buildSinceFilter(area, lens, Date.now() - lens.windowDays * DAY_MS);
+}
+
+/** Count of newly-listed active properties for an area under the lens. */
+export async function fetchNewCount(area: Area, lens: MarketActivityLens): Promise<number> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: buildActivityFilter(loc, lens),
+    rawFilterBy: buildActivityFilter(area, lens),
     perPage: 0,
   });
   return res.totalFound;
@@ -124,13 +218,36 @@ export async function fetchNewCount(loc: string, lens: MarketActivityLens): Prom
 
 /** Newest-first list of new active listings (capped at 100 — TRREB §6.3(b)). */
 export async function fetchNewListings(
-  loc: string,
+  area: Area,
   lens: MarketActivityLens,
   limit = 5
 ): Promise<ListingDocument[]> {
   const res = await searchListings({
     query: '*',
-    rawFilterBy: buildActivityFilter(loc, lens),
+    rawFilterBy: buildActivityFilter(area, lens),
+    sortBy: 'EntryTimestamp',
+    sortOrder: 'desc',
+    perPage: Math.min(limit, 100),
+  });
+  return res.listings;
+}
+
+/**
+ * Action-feed source: newest-first listings entered SINCE the user's last visit,
+ * optionally narrowed by `extraFilter` (the active persona's lead-board clause, so
+ * "new" means "new AND relevant to how this user invests"). Newest-first, capped
+ * at 100 (TRREB §6.3(b)).
+ */
+export async function fetchNewSinceVisit(
+  area: Area,
+  lens: MarketActivityLens,
+  sinceMs: number,
+  opts: { extraFilter?: string; limit?: number } = {}
+): Promise<ListingDocument[]> {
+  const { extraFilter, limit = 10 } = opts;
+  const res = await searchListings({
+    query: '*',
+    rawFilterBy: combine(buildSinceFilter(area, lens, sinceMs), extraFilter),
     sortBy: 'EntryTimestamp',
     sortOrder: 'desc',
     perPage: Math.min(limit, 100),

@@ -15,7 +15,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
+import { getConsumer } from "@/lib/auth/requireConsumer";
 
 export const dynamic = "force-dynamic"; // caching is handled by unstable_cache per region
 
@@ -65,7 +66,14 @@ function monthKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-async function computeTrend(region: string, propertyType: string): Promise<TrendResult> {
+async function computeTrend(
+  region: string,
+  typeKeys: string[],
+  minBeds: number,
+  minBaths: number,
+  minParking: number,
+  minFrontage: number
+): Promise<TrendResult> {
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MONTHS);
   const cutoff90 = new Date();
@@ -86,8 +94,19 @@ async function computeTrend(region: string, propertyType: string): Promise<Trend
 
   // Property-type filter: exact spelling match (incl. trailing-space "Semi-Detached ").
   // Empty ⇒ all types (unchanged behaviour).
-  const variants = variantsForKeys([propertyType]);
+  const variants = variantsForKeys(typeKeys);
   if (variants.length) query = query.in("property_sub_type", variants);
+
+  // Beds/baths floor — flat sold columns (the sold feed maps BedroomsTotal →
+  // bedrooms_above_grade; ingester.ts). `.gte` excludes NULL beds, matching the
+  // active RPC's full_payload cast and Typesense (missing ⇒ 0). 0 ⇒ no floor.
+  if (minBeds > 0) query = query.gte("bedrooms_above_grade", minBeds);
+  if (minBaths > 0) query = query.gte("bathrooms_total_integer", minBaths);
+
+  // Parking/frontage floor — flat sold columns (ingester.ts writes parking_total /
+  // lot_width). Same NULL-excluding `.gte` semantics as beds/baths. 0 ⇒ no floor.
+  if (minParking > 0) query = query.gte("parking_total", minParking);
+  if (minFrontage > 0) query = query.gte("lot_width", minFrontage);
 
   const { data, error } = await query
     .order("purchase_contract_date", { ascending: false })
@@ -174,22 +193,36 @@ async function computeTrend(region: string, propertyType: string): Promise<Trend
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
-  const propertyType = (params.get("propertyType") || "all").trim().toLowerCase();
+  const typeKeys = parseTypeKeys(params);
+  const minBeds = Math.max(0, Math.floor(Number(params.get("minBeds")) || 0));
+  const minBaths = Math.max(0, Number(params.get("minBaths")) || 0);
+  const minParking = Math.max(0, Math.floor(Number(params.get("minParking")) || 0));
+  const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
 
+  // VOW gate: sold-price trends are derived from raw_vow_sold. Anonymous users get a
+  // locked shape (no data) BEFORE the cache/scan — so we never touch raw_vow_sold for
+  // them (also protects the Supabase IO budget; memory supabase-io-budget).
+  const { isConsumer } = await getConsumer();
+  if (!isConsumer) {
+    return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, locked: true });
+  }
+
+  const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
+  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}|p${minParking}|f${minFrontage}`;
   try {
     const { points, summary } = await unstable_cache(
-      () => computeTrend(region, propertyType),
-      // v4 = lag-robust monthlyVelocity window (skip the still-accruing latest month).
-      // v3 = added the property-type filter. propertyType is part of the key so each type
-      // variant caches independently; bumping the version abandons stale entries.
-      ["market-price-trend", "v4", region.toLowerCase(), propertyType],
+      () => computeTrend(region, typeKeys, minBeds, minBaths, minParking, minFrontage),
+      // v7 = parking/frontage floor. v6 = beds/baths. v5 = multi-type keys (types=a,b).
+      // v4 = lag-robust monthlyVelocity window. cacheKey folds in type + beds + baths +
+      // parking + frontage so each scope combination caches independently.
+      ["market-price-trend", "v7", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, points, summary });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/price-trend]", region, propertyType, msg);
+    console.error("[market/price-trend]", region, cacheKey, msg);
     return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, error: msg }, { status: 500 });
   }
 }

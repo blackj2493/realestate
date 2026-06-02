@@ -23,9 +23,10 @@
 
 import type { AVMInput, AVMResult, AVMAdjustmentBreakdown, AnchorBasis } from './types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchAnchor, type AnchorResult } from './anchorService';
+import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from './anchorService';
 import { fetchAuditInfo } from './auditService';
 import { fetchCoefficients, type CoefficientRow } from './matrixService';
+import { clamp, featureContributions, subjectAdjustmentTotal } from './features';
 import {
   ENGINE_MODE_COEFFICIENT_ADJUSTED,
   ENGINE_MODE_ANCHOR_ONLY,
@@ -33,16 +34,12 @@ import {
   CONFIDENCE_MEDIUM,
   CONFIDENCE_LOW,
   COEFFICIENT_ENGINE_THRESHOLD,
-  Z_CLAMP,
   ADJ_CLAMP,
   BAND_HIGH,
   BAND_MED,
   BAND_LOW,
+  MIN_PEERS_FOR_HIGH,
 } from './types';
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
-}
 
 /**
  * Pre-loaded per-market constants the estimate needs. Lets the request-time
@@ -56,8 +53,64 @@ export interface AVMMarketData {
   r2: number | null;
   /** Audit Base_Price — surfaced for legacy display; anchor service uses it as a fallback prior. */
   basePrice: number | null;
+  /** Cohort sample size (avm_audit_report.total_sales_analyzed). Used by the
+   * valueAdd engine to suppress thin cohorts; the AVM estimate ignores it. */
+  n?: number | null;
   /** Per-feature standardized coefficients (beta/mean/std) for this market. */
   coefficients: CoefficientRow[];
+  /**
+   * Peer comp-grid anchor for SATURATING outliers (CLAUDE.md §10). Supplied by the
+   * async layer ONLY when isSaturating() is true:
+   *   • AnchorResult → price the subject off homes like it (basis 'peer');
+   *   • null         → saturating but too few peers → keep the clamped number as a
+   *                    neighbourhood FLOOR with capped confidence (basis 'floor');
+   *   • undefined    → not evaluated → the normal clamp path runs unchanged.
+   * Honored only when the clamp actually binds, so non-saturating homes are frozen.
+   */
+  peer?: AnchorResult | null;
+}
+
+/**
+ * True when the cohort model implies a feature premium beyond the ±ADJ_CLAMP
+ * clamp — the subject is a feature-space outlier the standard estimate cannot
+ * price (the clamp distorts it when the engine is on; anchor-only mode ignores it
+ * entirely). ENGINE-INDEPENDENT BY DESIGN: low-R² (anchor-only) cohorts are
+ * exactly where a large home silently sits at the neighbourhood level, so this
+ * must NOT gate on R². The sole trigger for the peer comp-grid; for every typical
+ * home the implied premium is within the clamp and the estimate is unchanged.
+ */
+export function isFeatureOutlier(input: AVMInput, coefficients: CoefficientRow[]): boolean {
+  if (coefficients.length === 0) return false; // can't assess without a model
+  const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
+  return Math.abs(subjectAdjustmentTotal(input, coeff)) > ADJ_CLAMP;
+}
+
+/**
+ * Cheap subject-only pre-screen for UNTRAINED cohorts (no coefficients): is the
+ * home large enough to be worth pulling comps to assess market-relative
+ * atypicality? Generous on purpose — the real decision is the comp-distribution
+ * gate inside fetchPeerAnchor; this only spares an extra query for obviously
+ * typical/small homes. NOT a valuation signal.
+ */
+function worthComparableCheck(input: AVMInput): boolean {
+  const beds = input.bedroomsAboveGrade ?? 0;
+  const baths = input.bathroomsTotalInteger ?? 0;
+  const sqft = input.buildingAreaTotal ?? 0;
+  const lotArea =
+    input.lotWidth && input.lotDepth ? input.lotWidth * input.lotDepth : 0;
+  return beds >= 5 || baths >= 4 || sqft >= 2500 || lotArea >= 6000;
+}
+
+/**
+ * Single source of truth for whether to pull peer comps: trained cohorts gate on
+ * the Σβz clamp-saturation signal; untrained cohorts (no coefficients) gate on the
+ * cheap large-home pre-screen, then fetchPeerAnchor self-gates on market-relative
+ * atypicality. Shared by the request path and the nightly batch so they can't drift.
+ */
+export function shouldEvaluatePeers(input: AVMInput, coefficients: CoefficientRow[]): boolean {
+  return coefficients.length > 0
+    ? isFeatureOutlier(input, coefficients)
+    : worthComparableCheck(input);
 }
 
 export async function calculateAVM(
@@ -72,11 +125,22 @@ export async function calculateAVM(
   ]);
   const anchor = await fetchAnchor(supabase, input, coefficients, audit.basePrice);
 
+  // Peer comp-grid for the homes the standard estimate mis-prices. undefined →
+  // not evaluated → normal path unchanged; AnchorResult → peer-grid; null → too
+  // few peers → neighbourhood floor. fetchPeerAnchor self-gates (atypicality) for
+  // untrained cohorts, so a flagged-but-typical home returns undefined.
+  let peer: AnchorResult | null | undefined;
+  if (shouldEvaluatePeers(input, coefficients)) {
+    peer = await fetchPeerAnchor(supabase, input, coefficients);
+  }
+
   return estimateFromMarketData(input, {
     anchor,
     r2: audit.r2,
     basePrice: audit.basePrice,
     coefficients,
+    n: audit.n,
+    peer,
   });
 }
 
@@ -92,9 +156,35 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
     return unavailable(market);
   }
 
+  // Peer/floor branch — engine-independent, so it sits ABOVE the R² gate. Honored
+  // only when the async layer evaluated peers (market.peer !== undefined). For
+  // TRAINED cohorts we re-verify the home is a Σβz outlier (defense in depth, so a
+  // stray peer can't move a typical home); for UNTRAINED cohorts (no coefficients,
+  // no Σβz signal) we trust the async layer's market-relative decision. The golden
+  // master proves the normal path (peer undefined) is frozen either way.
+  const outlierGuard =
+    market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients) : true;
+  if (market.peer !== undefined && outlierGuard) {
+    if (market.peer) return peerEstimate(market.peer, market.r2);
+    // peer === null → too few peers anywhere: present the normal number honestly
+    // as a neighbourhood FLOOR (relabelled basis, confidence never HIGH).
+    const base = normalEstimate(input, market);
+    if (base.estimatedValue <= 0) return base; // already suppressed → leave as-is
+    return {
+      ...base,
+      basis: 'floor',
+      confidence: base.confidence === CONFIDENCE_HIGH ? CONFIDENCE_MEDIUM : base.confidence,
+    };
+  }
+
+  return normalEstimate(input, market);
+}
+
+/** Today's behaviour: coefficient engine when R² clears the gate, else anchor-only. */
+function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
+  const { anchor } = market;
   const baseAnchor = Math.exp(anchor.anchorLevel);
 
-  // Gate: coefficient engine only when the market model is accurate enough.
   if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD) {
     return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients);
   }
@@ -112,6 +202,24 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
   });
 }
 
+/** Price the subject off the peer comp-grid (basis 'peer'); HIGH gated on peer count. */
+function peerEstimate(peer: AnchorResult, r2Score: number | null): AVMResult {
+  const peerPrice = Math.exp(peer.anchorLevel);
+  return finish(
+    {
+      estimatedValue: Math.round(peerPrice),
+      anchorPrice: Math.round(peerPrice),
+      totalAdjustmentPct: 0,
+      engineMode: ENGINE_MODE_COEFFICIENT_ADJUSTED,
+      r2Score,
+      breakdown: blankBreakdown(),
+      adjustmentLog: 0,
+      anchor: peer, // basis 'peer', band from peer dispersion
+    },
+    { minPeersForHigh: MIN_PEERS_FOR_HIGH, effectivePeers: peer.nEff }
+  );
+}
+
 function calculateWithCoefficients(
   baseAnchor: number,
   anchor: AnchorResult,
@@ -121,35 +229,14 @@ function calculateWithCoefficients(
 ): AVMResult {
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
 
-  const interiorScore = 6 - input.interiorTier;
-  const exteriorScore = 5 - input.exteriorTier;
-  const basementScore = 10 - input.basementTier;
-
-  const features: { name: string; value: number | null; key: keyof AVMAdjustmentBreakdown }[] = [
-    { name: 'building_area_total', value: input.buildingAreaTotal, key: 'buildingAreaAdjustment' },
-    { name: 'lot_width', value: input.lotWidth, key: 'lotWidthAdjustment' },
-    { name: 'bedrooms_above_grade', value: input.bedroomsAboveGrade, key: 'bedroomsAdjustment' },
-    { name: 'bathrooms_total_integer', value: input.bathroomsTotalInteger, key: 'bathroomsAdjustment' },
-    { name: 'parking_total', value: input.parkingTotal, key: 'parkingAdjustment' },
-    { name: 'basement_score', value: basementScore, key: 'basementAdjustment' },
-    { name: 'interior_score', value: interiorScore, key: 'interiorAdjustment' },
-    { name: 'exterior_score', value: exteriorScore, key: 'exteriorAdjustment' },
-  ];
-
   const breakdown = blankBreakdown();
-  let total = 0;
-
-  for (const f of features) {
-    if (f.value === null) continue;
-    const c = coeff.get(f.name);
-    if (!c || c.beta === 0 || !(c.std > 0)) continue;
-    const z = clamp((f.value - c.mean) / c.std, -Z_CLAMP, Z_CLAMP);
-    const contribution = c.beta * z;
-    total += contribution;
-    breakdown[f.key] = Math.round(baseAnchor * contribution);
+  let rawTotal = 0;
+  for (const c of featureContributions(input, coeff)) {
+    rawTotal += c.contribution;
+    breakdown[c.key] = Math.round(baseAnchor * c.contribution);
   }
 
-  total = clamp(total, -ADJ_CLAMP, ADJ_CLAMP);
+  const total = clamp(rawTotal, -ADJ_CLAMP, ADJ_CLAMP);
   const estimatedValue = Math.round(baseAnchor * Math.exp(total));
 
   return finish({
@@ -169,16 +256,23 @@ function calculateWithCoefficients(
  * from its relative half-width. SUPPRESS the estimate entirely when the band is
  * wider than BAND_LOW — we don't publish a number we can't stand behind.
  */
-function finish(args: {
-  estimatedValue: number;
-  anchorPrice: number;
-  totalAdjustmentPct: number;
-  engineMode: AVMResult['engineMode'];
-  r2Score: number | null;
-  breakdown: AVMAdjustmentBreakdown;
-  adjustmentLog: number; // total adjustment in log-space (already clamped)
-  anchor: AnchorResult;
-}): AVMResult {
+function finish(
+  args: {
+    estimatedValue: number;
+    anchorPrice: number;
+    totalAdjustmentPct: number;
+    engineMode: AVMResult['engineMode'];
+    r2Score: number | null;
+    breakdown: AVMAdjustmentBreakdown;
+    adjustmentLog: number; // total adjustment in log-space (already clamped)
+    anchor: AnchorResult;
+  },
+  opts?: {
+    /** Peer mode: forbid HIGH unless effectivePeers ≥ minPeersForHigh. */
+    minPeersForHigh?: number;
+    effectivePeers?: number;
+  }
+): AVMResult {
   const { anchor, adjustmentLog } = args;
 
   // Band on price: exp(level ± SD) × exp(feature adjustment).
@@ -197,12 +291,22 @@ function finish(args: {
     confidence = CONFIDENCE_LOW;
     estimatedValue = 0;
     basis = 'none';
-  } else if (relHalfWidth < BAND_HIGH) {
-    confidence = CONFIDENCE_HIGH;
-  } else if (relHalfWidth < BAND_MED) {
-    confidence = CONFIDENCE_MEDIUM;
   } else {
-    confidence = CONFIDENCE_LOW;
+    if (relHalfWidth < BAND_HIGH) {
+      confidence = CONFIDENCE_HIGH;
+    } else if (relHalfWidth < BAND_MED) {
+      confidence = CONFIDENCE_MEDIUM;
+    } else {
+      confidence = CONFIDENCE_LOW;
+    }
+    // A tight band over too few peers is not HIGH — demote it.
+    if (
+      confidence === CONFIDENCE_HIGH &&
+      opts?.minPeersForHigh !== undefined &&
+      (opts.effectivePeers ?? 0) < opts.minPeersForHigh
+    ) {
+      confidence = CONFIDENCE_MEDIUM;
+    }
   }
 
   return {

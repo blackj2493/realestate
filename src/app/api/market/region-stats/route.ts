@@ -17,7 +17,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
+import { getConsumer } from "@/lib/auth/requireConsumer";
 
 export const dynamic = "force-dynamic"; // caching handled by unstable_cache per region
 
@@ -39,14 +40,26 @@ const EMPTY: RegionStats = {
   staleCount: 0,
 };
 
-async function computeStats(region: string, propertyType: string): Promise<RegionStats> {
+async function computeStats(
+  region: string,
+  typeKeys: string[],
+  minBeds: number,
+  minBaths: number,
+  minParking: number,
+  minFrontage: number
+): Promise<RegionStats> {
   const sb = getServiceRoleClient();
-  // Resolve the UI key to exact PropertySubType spellings (incl. the trailing-space
+  // Resolve the UI keys to exact PropertySubType spellings (incl. the trailing-space
   // "Semi-Detached " quirk). Empty ⇒ all types ⇒ pass null so the RPC skips the filter.
-  const variants = variantsForKeys([propertyType]);
+  const variants = variantsForKeys(typeKeys);
+  // Any floor at 0 ⇒ no filter (migrations 026/027 short-circuit the JSONB cast).
   const { data, error } = await sb.rpc("region_active_aggregates", {
     p_region: region,
     p_subtypes: variants.length ? variants : null,
+    p_min_beds: minBeds,
+    p_min_baths: minBaths,
+    p_min_parking: minParking,
+    p_min_frontage: minFrontage,
   });
   if (error) throw new Error(error.message);
 
@@ -72,19 +85,34 @@ async function computeStats(region: string, propertyType: string): Promise<Regio
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
-  const propertyType = (params.get("propertyType") || "all").trim().toLowerCase();
+  const typeKeys = parseTypeKeys(params);
+  const minBeds = Math.max(0, Math.floor(Number(params.get("minBeds")) || 0));
+  const minBaths = Math.max(0, Number(params.get("minBaths")) || 0);
+  const minParking = Math.max(0, Math.floor(Number(params.get("minParking")) || 0));
+  const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", stats: EMPTY });
 
+  // VOW gate: region cap-rate stats are a derived analytical metric (ExtrapolatedCapRate).
+  // Anonymous users get a locked shape (no data) before the cache/RPC scan.
+  const { isConsumer } = await getConsumer();
+  if (!isConsumer) {
+    return NextResponse.json({ region, stats: EMPTY, locked: true });
+  }
+
+  const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
+  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}|p${minParking}|f${minFrontage}`;
   try {
     const stats = await unstable_cache(
-      () => computeStats(region, propertyType),
-      ["market-region-stats", region.toLowerCase(), propertyType],
+      () => computeStats(region, typeKeys, minBeds, minBaths, minParking, minFrontage),
+      // v4 = parking/frontage floor (migration 027). v3 = beds/baths (026). cacheKey
+      // folds in type + beds + baths + parking + frontage.
+      ["market-region-stats", "v4", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, stats });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/region-stats]", region, propertyType, msg);
+    console.error("[market/region-stats]", region, cacheKey, msg);
     return NextResponse.json({ region, stats: EMPTY, error: msg }, { status: 500 });
   }
 }

@@ -1,0 +1,190 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > anchor-only (r2 below gate) 1`] = `
+{
+  "anchorPrice": 800000,
+  "basis": "local",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 0,
+    "bedroomsAdjustment": 0,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 0,
+  },
+  "comps": 23,
+  "confidence": "HIGH",
+  "engineMode": "ANCHOR_ONLY",
+  "estimatedValue": 800000,
+  "highBand": 841017,
+  "lowBand": 760984,
+  "nEff": 5,
+  "predictiveSD": 0.05,
+  "r2Score": 0.3,
+  "totalAdjustmentPct": 0,
+}
+`;
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > anchor-only (r2 null), high-confidence band 1`] = `
+{
+  "anchorPrice": 800000,
+  "basis": "local",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 0,
+    "bedroomsAdjustment": 0,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 0,
+  },
+  "comps": 23,
+  "confidence": "HIGH",
+  "engineMode": "ANCHOR_ONLY",
+  "estimatedValue": 800000,
+  "highBand": 841017,
+  "lowBand": 760984,
+  "nEff": 5,
+  "predictiveSD": 0.05,
+  "r2Score": null,
+  "totalAdjustmentPct": 0,
+}
+`;
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > coefficient SATURATING outlier — clamp binds (number must not move w/o peer) 1`] = `
+{
+  "anchorPrice": 800000,
+  "basis": "local",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 240000,
+    "bedroomsAdjustment": 432000,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 120000,
+  },
+  "comps": 23,
+  "confidence": "HIGH",
+  "engineMode": "COEFFICIENT_ADJUSTED",
+  "estimatedValue": 1193460,
+  "highBand": 1260939,
+  "lowBand": 1129592,
+  "nEff": 5,
+  "predictiveSD": 0.055,
+  "r2Score": 0.7,
+  "totalAdjustmentPct": 0.49182469764127035,
+}
+`;
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > coefficient typical — clamp does NOT bind 1`] = `
+{
+  "anchorPrice": 800000,
+  "basis": "local",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 48000,
+    "bedroomsAdjustment": 144000,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 26667,
+  },
+  "comps": 23,
+  "confidence": "HIGH",
+  "engineMode": "COEFFICIENT_ADJUSTED",
+  "estimatedValue": 1051471,
+  "highBand": 1105381,
+  "lowBand": 1000190,
+  "nEff": 5,
+  "predictiveSD": 0.05,
+  "r2Score": 0.6,
+  "totalAdjustmentPct": 0.3143382845755833,
+}
+`;
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > medium-confidence band 1`] = `
+{
+  "anchorPrice": 800000,
+  "basis": "local",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 48000,
+    "bedroomsAdjustment": 144000,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 26667,
+  },
+  "comps": 23,
+  "confidence": "MEDIUM",
+  "engineMode": "COEFFICIENT_ADJUSTED",
+  "estimatedValue": 1051471,
+  "highBand": 1162055,
+  "lowBand": 951410,
+  "nEff": 5,
+  "predictiveSD": 0.1,
+  "r2Score": 0.6,
+  "totalAdjustmentPct": 0.3143382845755833,
+}
+`;
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > suppressed — band wider than BAND_LOW 1`] = `
+{
+  "anchorPrice": 800000,
+  "basis": "none",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 48000,
+    "bedroomsAdjustment": 144000,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 26667,
+  },
+  "comps": 23,
+  "confidence": "LOW",
+  "engineMode": "COEFFICIENT_ADJUSTED",
+  "estimatedValue": 0,
+  "highBand": 0,
+  "lowBand": 0,
+  "nEff": 5,
+  "predictiveSD": 0.3,
+  "r2Score": 0.6,
+  "totalAdjustmentPct": 0.3143382845755833,
+}
+`;
+
+exports[`GOLDEN MASTER — no-peer estimate is frozen > unavailable — basis none 1`] = `
+{
+  "anchorPrice": 0,
+  "basis": "none",
+  "breakdown": {
+    "basementAdjustment": 0,
+    "bathroomsAdjustment": 0,
+    "bedroomsAdjustment": 0,
+    "buildingAreaAdjustment": 0,
+    "exteriorAdjustment": 0,
+    "interiorAdjustment": 0,
+    "lotWidthAdjustment": 0,
+    "parkingAdjustment": 0,
+  },
+  "comps": 23,
+  "confidence": "LOW",
+  "engineMode": "ANCHOR_ONLY",
+  "estimatedValue": 0,
+  "highBand": 0,
+  "lowBand": 0,
+  "nEff": 0,
+  "predictiveSD": Infinity,
+  "r2Score": 0.6,
+  "totalAdjustmentPct": 0,
+}
+`;
