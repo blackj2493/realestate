@@ -8,10 +8,10 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-// TODO(legal): set these before publishing, and have the document reviewed by counsel
-// for accuracy against actual data practices and PIPEDA (see the final section).
-const EFFECTIVE_DATE = "[EFFECTIVE DATE]";
-const CONTACT_EMAIL = "[CONTACT EMAIL]";
+// TODO(legal): have this document reviewed by counsel for accuracy against actual
+// data practices and PIPEDA (see the final section) before relying on it.
+const EFFECTIVE_DATE = "June 1, 2026";
+const CONTACT_EMAIL = "support@pureproperty.ca";
 
 const TITLE = "PureProperty.ca Privacy Policy";
 
