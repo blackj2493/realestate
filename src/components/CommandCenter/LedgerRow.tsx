@@ -14,6 +14,7 @@ import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "./ListingCardBody";
+import { carryFor } from "./columnSort";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -26,15 +27,6 @@ interface LedgerRowProps {
   isChecked?: boolean;
   /** Toggle this row's membership in the multi-select set. */
   onToggleSelect?: () => void;
-}
-
-function carryFor(p: ListingDocument): number {
-  if (p.MonthlyCarryCost) return Math.round(p.MonthlyCarryCost);
-  const principal = (p.ListPrice || 0) * 0.8;
-  const r = 0.07 / 12;
-  const n = 360;
-  const mortgage = principal ? (principal * (r * (1 + r) ** n)) / ((1 + r) ** n - 1) : 0;
-  return Math.round(mortgage + (p.TaxAnnualAmount || 0) / 12 + (p.AssociationFee || 0));
 }
 
 function alignClass(a: ColumnDef["align"]) {

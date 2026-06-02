@@ -4,12 +4,13 @@
 
 "use client";
 
-import React from "react";
-import { Loader2, MapPin, AlertCircle, Zap } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LedgerRow from "./LedgerRow";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
+import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
+import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, type SortDir } from "./columnSort";
 
 interface LedgerPanelProps {
   className?: string;
@@ -21,8 +22,31 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
 
   const columns = PERSONA_CONFIG[activePersona].columns;
   const allProperties = searchResult?.listings || [];
-  const properties = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
+  const visible = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
   const ms = searchResult?.processingTimeMs ?? 0;
+
+  // Client-side column sort over the already-loaded set (instant, no refetch).
+  // null = persona/server default order. Cleared on persona change so a sort
+  // can't outlive its column — done via the "adjust state during render" pattern
+  // (https://react.dev/learn/you-might-not-need-an-effect) rather than an effect.
+  const [sort, setSort] = useState<{ type: ColumnType; dir: SortDir } | null>(null);
+  const [sortPersona, setSortPersona] = useState(activePersona);
+  if (activePersona !== sortPersona) {
+    setSortPersona(activePersona);
+    setSort(null);
+  }
+
+  const toggleSort = (type: ColumnType) =>
+    setSort((prev) =>
+      prev?.type === type
+        ? { type, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { type, dir: DEFAULT_SORT_DIR[type] ?? "desc" }
+    );
+
+  const properties = useMemo(
+    () => (sort ? [...visible].sort(compareByColumn(sort.type, sort.dir)) : visible),
+    [visible, sort]
+  );
 
   return (
     <div className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
@@ -41,18 +65,43 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2">
         <div className="w-5 shrink-0" />
         <div className="h-px w-24 shrink-0" />
-        {columns.map((col) => (
-          <div
-            key={col.type}
-            className={cn(
-              "text-[10px] font-semibold uppercase tracking-wider text-slate-500",
-              col.width,
-              col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
-            )}
-          >
-            {col.header}
-          </div>
-        ))}
+        {columns.map((col) => {
+          const headClass = cn(
+            "text-[10px] font-semibold uppercase tracking-wider text-slate-500",
+            col.width,
+            col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
+          );
+          if (!SORTABLE_COLUMN_TYPES.has(col.type)) {
+            return (
+              <div key={col.type} className={headClass}>
+                {col.header}
+              </div>
+            );
+          }
+          const active = sort?.type === col.type;
+          return (
+            <button
+              key={col.type}
+              type="button"
+              onClick={() => toggleSort(col.type)}
+              aria-label={`Sort by ${col.header}`}
+              className={cn(
+                headClass,
+                "flex items-center gap-0.5 transition-colors hover:text-slate-300",
+                active && "text-cyan-400",
+                col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
+              )}
+            >
+              <span className="truncate">{col.header}</span>
+              {active &&
+                (sort!.dir === "asc" ? (
+                  <ChevronUp className="h-3 w-3 shrink-0" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 shrink-0" />
+                ))}
+            </button>
+          );
+        })}
       </div>
 
       {/* Rows */}
