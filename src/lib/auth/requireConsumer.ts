@@ -21,6 +21,7 @@
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { hasAcceptedTerms } from "@/lib/auth/terms";
 
 export interface ConsumerStatus {
   user: User | null;
@@ -28,17 +29,21 @@ export interface ConsumerStatus {
   isConsumer: boolean;
 }
 
-/** SOFT gate — who is asking. `isConsumer === false` ⇒ return a `locked` teaser shape. */
+/** SOFT gate — who is asking. `isConsumer === false` ⇒ return a `locked` teaser shape.
+ *  A signed-in user who hasn't accepted Terms (when enforcement is on) is NOT a
+ *  consumer yet, so they see the same teaser as anonymous until they accept. */
 export async function getConsumer(): Promise<ConsumerStatus> {
   const user = await getCurrentUser();
-  return { user, isConsumer: !!user };
+  const isConsumer = !!user && (await hasAcceptedTerms(user.id));
+  return { user, isConsumer };
 }
 
 export type ConsumerGate =
   | { ok: true; user: User }
   | { ok: false; response: NextResponse };
 
-/** HARD gate — 401 for anonymous. Use where anonymous users should get nothing. */
+/** HARD gate — 401 for anonymous, 403 when signed in but Terms not accepted. Use where
+ *  anonymous (and un-accepted) users should get nothing at all. */
 export async function requireConsumer(): Promise<ConsumerGate> {
   const user = await getCurrentUser();
   if (!user) {
@@ -47,6 +52,15 @@ export async function requireConsumer(): Promise<ConsumerGate> {
       response: NextResponse.json(
         { error: "Sign in required to view VOW data", code: "VOW_AUTH_REQUIRED" },
         { status: 401 }
+      ),
+    };
+  }
+  if (!(await hasAcceptedTerms(user.id))) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "VOW terms acceptance required", code: "VOW_TERMS_REQUIRED" },
+        { status: 403 }
       ),
     };
   }
