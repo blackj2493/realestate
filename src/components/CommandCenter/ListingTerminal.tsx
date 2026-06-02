@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import PrimaryNav from '@/components/layout/PrimaryNav';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
+import { bedsLabel } from './ListingCardBody';
 import UnderwritingSandbox from '@/components/Property/UnderwritingSandbox';
 import DOMTimelineChart, { type SaleMarker } from './DOMTimelineChart';
 import SaleHistorySection from '@/components/Property/SaleHistorySection';
@@ -321,7 +322,7 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             <div className="grid grid-cols-4 gap-3 mb-6">
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-3 text-center">
                 <Bed className="h-5 w-5 text-emerald-400 mx-auto mb-1" />
-                <span className="text-lg font-bold font-mono text-slate-200">{property.BedroomsTotal || 0}</span>
+                <span className="text-lg font-bold font-mono text-slate-200">{bedsLabel(property) ?? (property.BedroomsTotal || 0)}</span>
                 <span className="text-[10px] text-slate-500 block uppercase">Beds</span>
               </div>
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-3 text-center">
