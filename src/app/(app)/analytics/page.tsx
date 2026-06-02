@@ -37,7 +37,10 @@ import {
 } from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
 
-// Sample market data
+// Sample market data — PLACEHOLDER ONLY (hardcoded, not live VOW data).
+// TODO(vow-gate): if these charts are ever wired to real raw_vow_sold / sold aggregates,
+// this page must gate access (requireConsumer / gateVowDerived) and keep the §6.3(i)/(k)
+// notice below, since it would then display VOW-derived data to anonymous users.
 const priceTrendsData = [
   { month: "Jan", avgPrice: 1050000, listings: 245 },
   { month: "Feb", avgPrice: 1080000, listings: 268 },

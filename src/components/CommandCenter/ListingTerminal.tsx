@@ -34,6 +34,7 @@ import ImageBentoGrid from '@/components/Property/ImageBentoGrid';
 import MediaGalleryOverlay from '@/components/Property/MediaGalleryOverlay';
 import DealScoreCard, { DealScoreBadge } from '@/components/Property/DealScoreCard';
 import ListingEstimateCard from '@/components/Property/ListingEstimateCard';
+import Disclaimers from '@/components/hiddenEquity/Disclaimers';
 import SocialProofBar from '@/components/Property/SocialProofBar';
 import RoomMap from '@/components/Property/RoomMap';
 import type { RoomData } from '@/lib/room-utils';
@@ -438,6 +439,9 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 cityRegion={property.City}
                 locked={!isAuthed && hasEstimate}
               />
+
+              {/* §6.3(i)/(k) disclaimer for the AVM-derived estimate above (parity with the full report). */}
+              {(estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
 
               {/* Property Summary Card */}
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4">

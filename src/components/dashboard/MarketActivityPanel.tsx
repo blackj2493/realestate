@@ -243,6 +243,11 @@ export default function MarketActivityPanel({
           )}
         </div>
       </div>
+      {/* TRREB §6.3(i)/(k): reliability + bona-fide-interest notice, local to the sold rows. */}
+      <p className="text-[10px] leading-snug text-slate-600 md:col-span-2">
+        Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for
+        consumers with a bona fide interest only, not for any commercial purpose.
+      </p>
     </div>
   );
 }
