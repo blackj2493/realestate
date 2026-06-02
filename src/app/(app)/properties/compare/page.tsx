@@ -9,6 +9,8 @@
 import type { Metadata } from "next";
 import CompareClient from "./CompareClient";
 import { getCompareData } from "@/lib/property/getCompareData";
+import { getCurrentUser } from "@/lib/supabase/server";
+import type { ListingDocument } from "@/lib/typesense/client";
 
 export const metadata: Metadata = {
   title: "Compare Properties | PureProperty",
@@ -33,9 +35,18 @@ export default async function ComparePage({
   // and corrected $/sqft render instantly (no live AVM round-trip).
   const { listings, estimates } = await getCompareData(idList);
 
+  // VOW gate: AVM estimates + stitched True DOM are VOW-derived. For anonymous users
+  // never send them to the client — drop the estimates and strip TrueDom (True DOM
+  // falls back to raw IDX DOM); CompareClient renders locked cells + a sign-in banner.
+  const isAuthed = !!(await getCurrentUser());
+  const gatedEstimates = isAuthed ? estimates : {};
+  const gatedListings: ListingDocument[] = isAuthed
+    ? listings
+    : listings.map((l) => ({ ...l, TrueDom: undefined }));
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
-      <CompareClient listings={listings} estimates={estimates} />
+      <CompareClient listings={gatedListings} estimates={gatedEstimates} isAuthed={isAuthed} />
     </main>
   );
 }

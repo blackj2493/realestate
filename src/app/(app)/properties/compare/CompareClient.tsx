@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, GitCompareArrows } from "lucide-react";
+import { ArrowLeft, GitCompareArrows, Lock } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { CompareData, CompareEstimate } from "@/lib/property/getCompareData";
@@ -105,7 +105,11 @@ function bestValue(values: (number | null)[], better: Better): number | null {
   return better === "high" ? Math.max(...valid) : Math.min(...valid);
 }
 
-export default function CompareClient({ listings, estimates }: CompareData) {
+export default function CompareClient({
+  listings,
+  estimates,
+  isAuthed,
+}: CompareData & { isAuthed: boolean }) {
   const estOf = (l: ListingDocument): CompareEstimate | undefined => estimates[l.id];
 
   const winners = useMemo(() => {
@@ -159,6 +163,22 @@ export default function CompareClient({ listings, estimates }: CompareData) {
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-6">
       <Header />
+      {!isAuthed && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-4 py-2.5">
+          <p className="text-xs text-slate-300">
+            <Lock className="mr-1.5 inline h-3.5 w-3.5 text-cyan-400" />
+            Estimates, deal scores &amp; sold-derived metrics are members-only.
+          </p>
+          <Link
+            href={`/login?next=${encodeURIComponent(
+              `/properties/compare?ids=${listings.map((l) => l.id).join(",")}`
+            )}`}
+            className="shrink-0 rounded-md border border-cyan-400/50 bg-cyan-500/20 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/30"
+          >
+            Sign in to unlock
+          </Link>
+        </div>
+      )}
       <div className="overflow-x-auto rounded-lg border border-slate-800">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -198,6 +218,13 @@ export default function CompareClient({ listings, estimates }: CompareData) {
             <tr className="bg-slate-900/30">
               <td className="sticky left-0 z-10 bg-slate-950 p-3 text-slate-500">Deal Score</td>
               {listings.map((l, i) => {
+                if (!isAuthed) {
+                  return (
+                    <td key={l.id} className="p-3">
+                      <LockedCell />
+                    </td>
+                  );
+                }
                 const d = dealScores[i];
                 const isBest = dealBest.has(i);
                 return (
@@ -219,6 +246,13 @@ export default function CompareClient({ listings, estimates }: CompareData) {
             <tr className="hover:bg-slate-900/30">
               <td className="sticky left-0 z-10 bg-slate-950 p-3 text-slate-500">Est. Value</td>
               {listings.map((l) => {
+                if (!isAuthed) {
+                  return (
+                    <td key={l.id} className="p-3">
+                      <LockedCell />
+                    </td>
+                  );
+                }
                 const e = estOf(l);
                 return (
                   <td key={l.id} className="p-3 font-mono text-slate-200">
@@ -241,6 +275,13 @@ export default function CompareClient({ listings, estimates }: CompareData) {
             <tr className="hover:bg-slate-900/30">
               <td className="sticky left-0 z-10 bg-slate-950 p-3 text-slate-500">vs Estimate</td>
               {listings.map((l, i) => {
+                if (!isAuthed) {
+                  return (
+                    <td key={l.id} className="p-3">
+                      <LockedCell />
+                    </td>
+                  );
+                }
                 const d = discountValues[i];
                 if (d == null) {
                   return (
@@ -311,6 +352,15 @@ export default function CompareClient({ listings, estimates }: CompareData) {
         figure. &ldquo;vs Estimate&rdquo; compares the asking price to that estimate.
       </p>
     </div>
+  );
+}
+
+function LockedCell() {
+  return (
+    <span className="inline-flex items-center gap-1 text-slate-500" title="Sign in to view">
+      <Lock className="h-3.5 w-3.5 text-cyan-400/70" />
+      <span aria-hidden="true" className="select-none blur-[2px]">•••</span>
+    </span>
   );
 }
 
