@@ -6,6 +6,11 @@ import * as auditService from '../auditService';
 import * as matrixService from '../matrixService';
 import { MOVE_CATALOG } from './moveCatalog';
 import { BRAMPTON_WEST_DETACHED, subject } from './__fixtures__/cohorts';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// The Supabase client is never touched here (all AVM services are mocked), so a
+// bare stub cast to the param type keeps the test honest without an `any`.
+const stubClient = {} as unknown as SupabaseClient;
 
 describe('fetchValueAddReport', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -22,7 +27,7 @@ describe('fetchValueAddReport', () => {
       buildingAreaTotal: 1560, bathroomsTotalInteger: 3, bedroomsAboveGrade: 3,
       parkingTotal: 2, basementTier: 5, interiorTier: 3, exteriorTier: 3, lotWidth: 40,
     });
-    const report = await fetchValueAddReport({} as any, input);
+    const report = await fetchValueAddReport(stubClient, input);
     expect(report.subjectEstimate).toBeGreaterThan(0);
     expect(report.moves.length).toBe(MOVE_CATALOG.length);
     expect(report.headlineUpside).toBeGreaterThan(0);
@@ -40,7 +45,7 @@ describe('fetchValueAddReport', () => {
       buildingAreaTotal: 1560, bathroomsTotalInteger: 3, bedroomsAboveGrade: 3,
       parkingTotal: 2, basementTier: 5, interiorTier: 3, exteriorTier: 3, lotWidth: 40,
     });
-    const report = await fetchValueAddReport({} as any, input, {
+    const report = await fetchValueAddReport(stubClient, input, {
       subjectEstimate: 861351, predSD: 0.07,
     });
 
