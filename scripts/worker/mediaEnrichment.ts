@@ -168,10 +168,13 @@ function dedupeMediaByObject(records: any[]): any[] {
 }
 
 /**
- * Fetches /Media for a set of ListingKeys, OR-batched into chunks with
- * @odata.nextLink pagination. Returns BOTH the media map (sorted by Order) AND
- * the set of keys whose fetch FAILED — distinct from keys that were fetched
- * successfully but genuinely have zero photos.
+ * Fetches /Media for a set of ListingKeys, OR-batched into chunks and paged
+ * with explicit $skip — AMPRE's /Media caps each response at 100 records and
+ * does NOT emit an @odata.nextLink, so a nextLink loop would silently capture
+ * only the first 100 records and drop every listing sorted past the cut.
+ * Returns BOTH the media map (sorted by Order) AND the set of keys whose fetch
+ * FAILED — distinct from keys that were fetched successfully but genuinely have
+ * zero photos.
  *
  * Why the distinction matters (the false-empty bug): callers used to treat
  * "absent from the map" as "no photos" and persist `media: []`. But a transient
