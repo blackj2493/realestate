@@ -123,6 +123,10 @@ export interface ListingDocument {
   // Extended fields for Command Center
   TrueDom?: number;
   primaryImageUrl?: string;
+
+  // Full deduped photo URL array (unindexed Typesense cargo `RawImages`) — used by
+  // the Compare media cell to scroll all photos with no extra fetch. May be empty.
+  RawImages?: string[];
   OriginalListPrice?: number;
   KitchensBelowGrade?: number;
   SchoolZone?: boolean;
