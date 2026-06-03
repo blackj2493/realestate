@@ -17,7 +17,7 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, listingMode, soldWindowDays } =
     useCommandCenterStore();
 
   const columns = PERSONA_CONFIG[activePersona].columns;
@@ -54,10 +54,20 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
         <Zap className="h-3.5 w-3.5 text-cyan-400" />
         <p className="font-mono text-xs text-slate-400">
-          Typesense Search:{" "}
-          <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
-          <span className="mx-1.5 text-slate-600">|</span>
-          Instant Query <span className="text-cyan-400">&lt;{ms}ms</span>
+          {listingMode === "sold" ? (
+            <>
+              <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Sold Comps
+              <span className="mx-1.5 text-slate-600">|</span>
+              VOW · last <span className="text-cyan-400">{soldWindowDays}d</span>
+            </>
+          ) : (
+            <>
+              Typesense Search:{" "}
+              <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
+              <span className="mx-1.5 text-slate-600">|</span>
+              Instant Query <span className="text-cyan-400">&lt;{ms}ms</span>
+            </>
+          )}
         </p>
       </div>
 
