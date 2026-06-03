@@ -33,6 +33,7 @@ import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
+import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -80,6 +81,9 @@ function CommandCenterContent() {
     drawPolygon,
     transactionMode,
     propertyClass,
+    listingMode,
+    soldWindowDays,
+    setSoldLocked,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -133,6 +137,29 @@ function CommandCenterContent() {
   const performSearch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
+      // ─── Sold mode: gated server route (sold_listings), NOT client Typesense ───
+      if (listingMode === "sold") {
+        try {
+          const { docs, count, locked } = await fetchSoldComps({
+            mapBounds,
+            location,
+            windowDays: soldWindowDays,
+            limit: MAX_LISTINGS,
+          });
+          setSoldLocked(locked);
+          setSearchResult({ listings: docs, totalFound: count, page: 1, perPage: MAX_LISTINGS, processingTimeMs: 0 });
+          setTotalCount(count);
+        } catch (err) {
+          console.error("[CommandCenter] Sold search error:", err);
+          setError(err instanceof Error ? err.message : "Sold comps temporarily unavailable.");
+          setSearchResult(null);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
     try {
       const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
 
@@ -201,14 +228,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, listingMode, soldWindowDays, setSoldLocked, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, listingMode, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
