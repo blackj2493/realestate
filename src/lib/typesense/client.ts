@@ -179,6 +179,12 @@ export interface ListingDocument {
   Status?: string;
   DaysOnMarket?: number;
 
+  // ─── Sold-comp overlay (set only by the sold adapter; see src/lib/sold/adapter.ts) ─
+  /** True when this doc is an adapted VOW sold comp, not an active IDX listing. */
+  IsSoldComp?: boolean;
+  /** Sold ("purchase contract") date as ISO string — sold comps only. */
+  SoldDate?: string;
+
   // Entry timestamp (epoch) — sortable; powers "freshest" + since-last-visit.
   EntryTimestamp?: number;
 
