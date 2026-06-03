@@ -22,6 +22,7 @@ import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RoomMap from "@/components/Property/RoomMap";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
+import ExpectedSaleCard from "@/components/Property/ExpectedSaleCard";
 import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
@@ -212,6 +213,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
   const hasValueAdd = hasValueAddData(detail.valueAdd);
   const hasDealScore = detail.dealScore.score !== null;
+  const hasExpectedSale = (detail.expectedSale?.expectedPrice ?? 0) > 0;
   const view = gateVowDerived(detail, isAuthed);
   const saleHistory = view.saleHistory;
   // Prior sold prices for the price-history chart — authed only (events are empty otherwise).
@@ -406,13 +408,24 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {/* Deal Score — flagship signal, pinned to the top of the rail */}
               <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
 
-              {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
+              {/* PureProperty Estimate — our list-blind AVM ("comparable value") */}
               <ListingEstimateCard
                 estimate={view.estimate}
                 listPrice={price}
                 cityRegion={p.CityRegion}
                 city={p.City}
                 locked={!isAuthed && hasEstimate}
+              />
+
+              {/* Expected Sale Price — list-AWARE "what this closes at"; lineup axis ties
+                  it to the comparable-value (AVM) range above */}
+              <ExpectedSaleCard
+                expectedSale={view.expectedSale}
+                estimate={view.estimate}
+                listPrice={price}
+                city={p.City}
+                propertySubType={p.PropertySubType}
+                locked={!isAuthed && hasExpectedSale}
               />
 
               {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}

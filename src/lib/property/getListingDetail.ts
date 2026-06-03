@@ -32,6 +32,8 @@ import { ProptXClient } from "@/lib/proptx/client";
 import type { RoomData } from "@/lib/room-utils";
 import { fetchValueAddReport } from "@/lib/avm/valueAdd/engine";
 import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
+import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
+import { computeExpectedSale, type ExpectedSale } from "@/lib/avm/expectedSale";
 
 /** One prior sold campaign for this physical property (from property_sale_history). */
 export interface SaleEvent {
@@ -105,6 +107,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     estimate: null,
     valueAdd: null,
     dealScore: { score: null, grade: null, verdict: "", components: [] },
+    expectedSale: null,
     saleHistory: gateSaleHistory(detail.saleHistory, false),
     priceTimeline: { ...detail.priceTimeline, trueDom: null },
   };
@@ -121,6 +124,8 @@ export interface ListingDetail {
   valueAdd: ValueAddReport | null;
   feeStability: FeeStabilityResult;
   dealScore: DealScoreResult;
+  /** List-aware "what this listing will close at" (VOW-derived, gated for anon). */
+  expectedSale: ExpectedSale | null;
   saleHistory: SaleHistory;
   priceTimeline: PriceTimeline;
   /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
@@ -369,6 +374,24 @@ export const getListingDetail = cache(
       capRatePct: realCapRate,
     });
 
+    // Expected Sale Price — list-aware (list × cohort close/list ratio). VOW-derived
+    // (raw_vow_sold); getCloseListRatio is unstable_cache'd 24h per cohort so this
+    // never scans the table per page load (Disk IO budget). Best-effort, never blocks.
+    let expectedSale: ExpectedSale | null = null;
+    try {
+      if (listPrice && listPrice > 0) {
+        const ratioCity =
+          listing.city ?? (typeof payload["City"] === "string" ? (payload["City"] as string) : null);
+        const ratioSub =
+          listing.property_sub_type ??
+          (typeof payload["PropertySubType"] === "string" ? (payload["PropertySubType"] as string) : null);
+        const ratio = await getCloseListRatio(ratioCity, ratioSub);
+        expectedSale = computeExpectedSale(listPrice, ratio);
+      }
+    } catch (esErr) {
+      console.error(`[getListingDetail] Expected Sale failed for ${listingKey}:`, esErr);
+    }
+
     // Best-effort prior-sale ledger — ONE indexed PK point-lookup on the precomputed
     // property_sale_history table (never scans raw_vow_sold at request time, §12/Disk IO).
     let saleHistory: SaleHistory = {
@@ -442,6 +465,7 @@ export const getListingDetail = cache(
       valueAdd,
       feeStability,
       dealScore,
+      expectedSale,
       saleHistory,
       priceTimeline,
       rooms,

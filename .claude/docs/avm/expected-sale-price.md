@@ -69,6 +69,14 @@ The backtest fits `R` on, and predicts, the **last list of *sold* homes**. A sol
 
 ## 4. How it surfaces (product)
 
+**Built (listing detail right rail):** `src/components/Property/ExpectedSaleCard.tsx`, fed by
+`getCloseListRatio` (server, cached 24h) → `computeExpectedSale` (pure, `src/lib/avm/expectedSale.ts`),
+wired into `getListingDetail` as `expectedSale` and gated for anon by `gateVowDerived`. It renders
+the Expected Sale Price + honest range, the delta-vs-ask, the market-temperature line, and a "how it
+lines up" axis placing **asking ▲**, **expected sale ◆**, and the **comparable-value range** (the AVM
+band) on one track — which is what resolves the two-number relationship visually. Sits in the rail
+directly below the list-blind PureProperty Estimate (`ListingEstimateCard`).
+
 On the individual listing page (the 70/30 view), two clearly-distinct numbers:
 
 - **"Comparable value" (AVM)** — *"Similar homes in {community} go for ~$X"* — intrinsic, list-blind, shown as a **range** (honest ±18–20% band).
