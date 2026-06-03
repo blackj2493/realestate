@@ -13,6 +13,7 @@
 import React from "react";
 import { BedDouble, Bath, Car, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
 import type { ListingDocument } from "@/lib/typesense/client";
 
 /** "Listed N days ago" — EntryTimestamp is epoch MILLISECONDS; falls back to DaysOnMarket. */
@@ -30,6 +31,12 @@ export function bedsLabel(p: ListingDocument): string | null {
   if (!above && !below) return null;
   return below > 0 ? `${above}+${below}` : `${above}`;
 }
+
+const BADGE_TONE: Record<BadgeTone, string> = {
+  warn: "bg-amber-500/15 text-amber-300",
+  info: "bg-sky-500/15 text-sky-300",
+  neutral: "bg-slate-500/15 text-slate-300",
+};
 
 /** Compact icon + value chip for the bed/bath/parking strip. */
 function StatChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
@@ -55,10 +62,12 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
     parking ? <StatChip key="parking" icon={Car} label={String(parking)} /> : null,
   ].filter(Boolean);
 
+  const badge = statusBadge(doc.Status);
+
   return (
     <>
       {/* Status chip + freshness (small line above the price) */}
-      {(doc.TransactionType || age !== null) && (
+      {(doc.TransactionType || badge || age !== null) && (
         <div className="flex items-center gap-1.5 text-[10px]">
           {doc.TransactionType && (
             <span
@@ -68,6 +77,16 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
               )}
             >
               {doc.TransactionType}
+            </span>
+          )}
+          {badge && (
+            <span
+              className={cn(
+                "shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide",
+                BADGE_TONE[badge.tone]
+              )}
+            >
+              {badge.label}
             </span>
           )}
           {age !== null && <span className="text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>}
