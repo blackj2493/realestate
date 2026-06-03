@@ -23,6 +23,7 @@ import {
   MapCommandPalette,
 } from "@/components/CommandCenter";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
@@ -84,6 +85,7 @@ function CommandCenterContent() {
     listingMode,
     soldWindowDays,
     setSoldLocked,
+    soldLocked,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -259,6 +261,9 @@ function CommandCenterContent() {
     activeMetric ?? (school.enabled ? schoolMapColor(school.level, school.system) : persona.mapColor);
   const heatAggregation = activeMetric?.heatAggregation ?? "mean";
 
+  const showSoldLock = listingMode === "sold" && soldLocked;
+  const soldLockMsg = `${totalCount.toLocaleString()} recent sale${totalCount === 1 ? "" : "s"} — sign in to view`;
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950">
       <TopCommandBar className="shrink-0" />
@@ -291,6 +296,7 @@ function CommandCenterContent() {
           <div className="pointer-events-auto absolute right-3 top-3 z-30">
             <SaveBubbleButton />
           </div>
+          {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
 
         {/* Drag handle — resize the ledger */}
@@ -306,8 +312,9 @@ function CommandCenterContent() {
         </div>
 
         {/* Ledger — user-resizable width */}
-        <div className="flex shrink-0 flex-col bg-slate-950" style={{ width: ledgerWidth }}>
+        <div className="relative flex shrink-0 flex-col bg-slate-950" style={{ width: ledgerWidth }}>
           <LedgerPanel className="flex-1 min-h-0" />
+          {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
       </div>
 
