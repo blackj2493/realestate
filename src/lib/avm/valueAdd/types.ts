@@ -65,6 +65,9 @@ export interface ValueAddMove {
   netGainTyp: number;
   paybackRatio: number;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  /** True for the greedy, non-overlapping, positive-payback set the card recommends
+   *  and the headline sums. Set in buildValueAddReport; false on every other move. */
+  recommended: boolean;
 }
 
 export interface ValueAddReport {

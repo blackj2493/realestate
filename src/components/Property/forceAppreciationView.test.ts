@@ -6,12 +6,12 @@ const priced = (key: string, netGainTyp: number, over: Partial<ValueAddMove> = {
   key: key as ValueAddMove['key'], label: key, status: 'priced',
   valueAddLow: 0, valueAddTyp: 50000, valueAddHigh: 0,
   costLow: 0, costTyp: 20000, costHigh: 0,
-  netGainTyp, paybackRatio: 2.5, confidence: 'HIGH', ...over,
+  netGainTyp, paybackRatio: 2.5, confidence: 'HIGH', recommended: false, ...over,
 });
 const suppressedMove = (key: string, reason: SuppressReason): ValueAddMove => ({
   key: key as ValueAddMove['key'], label: key, status: 'suppressed', suppressReason: reason,
   valueAddLow: 0, valueAddTyp: 0, valueAddHigh: 0, costLow: 0, costTyp: 0, costHigh: 0,
-  netGainTyp: 0, paybackRatio: 0, confidence: 'LOW',
+  netGainTyp: 0, paybackRatio: 0, confidence: 'LOW', recommended: false,
 });
 const report = (over: Partial<ValueAddReport> = {}): ValueAddReport => ({
   cityRegion: 'Brampton West', propertySubType: 'Detached',

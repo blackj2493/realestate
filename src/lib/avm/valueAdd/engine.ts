@@ -61,7 +61,7 @@ function suppressed(move: MoveSpec, reason: SuppressReason): ValueAddMove {
     key: move.key, label: move.label, status: 'suppressed', suppressReason: reason,
     valueAddLow: 0, valueAddTyp: 0, valueAddHigh: 0,
     costLow: move.costLow, costTyp: move.costTyp, costHigh: move.costHigh,
-    netGainTyp: 0, paybackRatio: 0, confidence: 'LOW',
+    netGainTyp: 0, paybackRatio: 0, confidence: 'LOW', recommended: false,
   };
 }
 
@@ -130,7 +130,7 @@ export function evaluateMove(
     key: move.key, label: move.label, status: 'priced',
     valueAddLow, valueAddTyp: typ, valueAddHigh,
     costLow: move.costLow, costTyp: move.costTyp, costHigh: move.costHigh,
-    netGainTyp, paybackRatio, confidence,
+    netGainTyp, paybackRatio, confidence, recommended: false,
   };
 }
 
