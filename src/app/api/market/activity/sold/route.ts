@@ -29,10 +29,15 @@ import Typesense, { Client } from "typesense";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
 import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
 import { getConsumer } from "@/lib/auth/requireConsumer";
+import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
+import { mapSoldDoc, type SoldListing } from "./soldMapper";
+
+// Re-export so existing importers (MarketActivityPanel.tsx) keep resolving it here.
+export type { SoldListing } from "./soldMapper";
 
 export const dynamic = "force-dynamic";
 
-const MAX_WINDOW_DAYS = 180;
+const MAX_WINDOW_DAYS = SOLD_DISPLAY_MAX_DAYS;
 const MAX_LIST = 100; // TRREB per-query display cap
 const PRICE_FLOOR = 50000; // excludes lease/rental rows leaking into the sold feed
 const DAY_MS = 86_400_000;
@@ -80,22 +85,6 @@ interface SoldParams {
   basementFinished: boolean;
   minFrontage: number;
   limit: number;
-}
-
-export interface SoldListing {
-  id: string;
-  address: string;
-  closePrice: number;
-  listPrice: number | null;
-  soldDate: string | null;
-  propertySubType: string | null;
-  beds: number | null;
-  baths: number | null;
-  sqft: number | null;
-  brokerage: string | null;
-  city: string | null;
-  /** Best-fit thumbnail URL (selectPrimaryImage), null when no usable VOW media. */
-  primaryImageUrl: string | null;
 }
 
 /** Build the Typesense area clause (one per kind) — see SoldArea docstring. */
@@ -154,11 +143,6 @@ function parsePolygonParam(raw: string): [number, number][] | null {
   return out;
 }
 
-const posOrNull = (v: unknown): number | null => {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : null;
-};
-
 async function computeSold(
   p: SoldParams
 ): Promise<{ count: number; listings: SoldListing[] }> {
@@ -176,24 +160,7 @@ async function computeSold(
       page: 1,
     });
 
-  const listings: SoldListing[] = (res.hits ?? []).map((h) => {
-    const d = h.document as Record<string, unknown>;
-    const ms = Number(d.PurchaseContractDate);
-    return {
-      id: String(d.id ?? ""),
-      address: (d.UnparsedAddress as string) || "",
-      closePrice: Number(d.ClosePrice) || 0,
-      listPrice: posOrNull(d.ListPrice),
-      soldDate: Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null,
-      propertySubType: (d.PropertySubType as string) || null,
-      beds: posOrNull(d.BedroomsTotal),
-      baths: posOrNull(d.BathroomsTotalInteger),
-      sqft: posOrNull(d.BuildingAreaTotal),
-      brokerage: (d.ListOfficeName as string) || null,
-      city: (d.City as string) || null,
-      primaryImageUrl: (d.primaryImageUrl as string) || null,
-    };
-  });
+  const listings: SoldListing[] = (res.hits ?? []).map((h) => mapSoldDoc(h.document as Record<string, unknown>));
 
   return { count: res.found ?? 0, listings };
 }
