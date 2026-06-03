@@ -100,7 +100,7 @@ export default function CompareClient({
           </thead>
           {order.map((groupId) => (
             <MetricGroup
-              key={groupId}
+              key={`${lens}-${groupId}`}
               groupId={groupId}
               metrics={COMPARE_METRICS.filter((m) => m.group === groupId)}
               contexts={contexts}
