@@ -114,10 +114,10 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
             <p className="text-xs text-slate-500">{v.insight}</p>
           )}
 
-          {/* Top ledger rows */}
-          {v.topRows.length > 0 && (
+          {/* Recommended ledger rows */}
+          {v.recommendedRows.length > 0 && (
             <div className="space-y-1.5">
-              {v.topRows.map((r) => (
+              {v.recommendedRows.map((r) => (
                 <Row key={r.key} row={r} />
               ))}
             </div>
