@@ -6,9 +6,6 @@ import type { MoveSpec, SuppressReason } from './types';
 export const MIN_COHORT_N = 30;
 /** A single move never adds more than this fraction of the home's value. */
 export const PCT_CAP = 0.12;
-/** A non-overlapping stack of moves never adds more than this fraction.
- *  Consumed by buildValueAddReport (engine.ts) when capping the joint headline upside. */
-export const PCT_CAP_STACK = 0.3;
 /** Tiny-std floor for discrete counts: keep a +1 unit move near ~1 std, not 1.5–2. */
 export const MIN_STD_COUNT = 0.9;
 /** A feature whose current value sits ≥ mean + CEILING_STD·std is "at ceiling". */

@@ -65,6 +65,9 @@ export interface ValueAddMove {
   netGainTyp: number;
   paybackRatio: number;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  /** True for the greedy, non-overlapping, positive-payback set the card recommends
+   *  and the headline sums. Set in buildValueAddReport; false on every other move. */
+  recommended: boolean;
 }
 
 export interface ValueAddReport {
@@ -72,14 +75,14 @@ export interface ValueAddReport {
   propertySubType: string;
   /** P0 — the home's own AVM estimate (0 when unavailable). */
   subjectEstimate: number;
-  /** GROSS joint value-add in dollars (capped joint, BEFORE renovation costs).
-   *  Always ≥ headlineUpside. 0 in the unavailable report. */
+  /** GROSS additive sum of the recommended moves' value-adds (each per-move capped),
+   *  BEFORE renovation costs. Always ≥ headlineUpside. 0 in the unavailable report. */
   headlineUpsideGross: number;
-  /** NET of renovation costs: joint value-add of the best non-overlapping
-   *  positive-payback moves − their costs. May be 0 while valueAddScore > 0. */
+  /** NET of renovation costs: the recommended moves' summed value-add − their costs.
+   *  May be 0 while valueAddScore > 0. */
   headlineUpside: number;
   /** GROSS unlockable-equity index (0–100), BEFORE costs:
-   *  min(100, round((jointValue / P0) · SCORE_K)). Not net of renovation spend. */
+   *  min(100, round((grossSum / P0) · SCORE_K)), grossSum = Σ valueAddTyp of recommended moves. */
   valueAddScore: number;
   moves: ValueAddMove[];
   neighbourhoodInsight: string;
