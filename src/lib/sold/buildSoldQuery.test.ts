@@ -1,0 +1,35 @@
+import { describe, it, expect } from "vitest";
+import { buildSoldQuery } from "./fetchSoldComps";
+
+describe("buildSoldQuery", () => {
+  it("uses the viewport as a 4-corner polygon (lat,lng pairs) when bounds exist", () => {
+    const qs = buildSoldQuery({
+      mapBounds: { north: 44, south: 43, east: -79, west: -80 },
+      location: "Toronto",
+      windowDays: 90,
+      limit: 100,
+    });
+    const p = new URLSearchParams(qs);
+    // S,W, S,E, N,E, N,W
+    expect(p.get("polygon")).toBe("43,-80,43,-79,44,-79,44,-80");
+    expect(p.get("windowDays")).toBe("90");
+    expect(p.get("limit")).toBe("100");
+    expect(p.get("region")).toBeNull();
+  });
+
+  it("falls back to region=location when no bounds", () => {
+    const qs = buildSoldQuery({ mapBounds: null, location: "Brampton", windowDays: 180, limit: 100 });
+    const p = new URLSearchParams(qs);
+    expect(p.get("region")).toBe("Brampton");
+    expect(p.get("polygon")).toBeNull();
+  });
+
+  it("clamps the window to the cap", () => {
+    const qs = buildSoldQuery({ mapBounds: null, location: "Ajax", windowDays: 9999, limit: 100 });
+    expect(new URLSearchParams(qs).get("windowDays")).toBe("180");
+  });
+
+  it("returns an empty string when there is neither bounds nor location", () => {
+    expect(buildSoldQuery({ mapBounds: null, location: "", windowDays: 90, limit: 100 })).toBe("");
+  });
+});
