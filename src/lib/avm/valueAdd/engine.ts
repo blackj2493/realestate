@@ -9,6 +9,7 @@ import { fetchAnchor } from '../anchorService';
 import { fetchAuditInfo } from '../auditService';
 import { fetchCoefficients } from '../matrixService';
 import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate, SCORE_K } from './calibration';
+import { formatPrice } from '@/lib/utils';
 import { MOVE_CATALOG } from './moveCatalog';
 import type { FeatureDelta, MoveSpec, ValueAddMove, SuppressReason, ValueAddReport, MoveKey } from './types';
 
@@ -153,14 +154,19 @@ function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddRep
   };
 }
 
-/** Deterministic, template-based insight from the cohort's value drivers (no AI). */
+/** Deterministic, template-based insight keyed on ROI/net (no AI — CLAUDE.md §4).
+ *  Names the recommended move that nets the most after cost, so the headline can
+ *  never contradict the ledger. */
 function neighbourhoodInsight(input: AVMInput, _market: AVMMarketData, moves: ValueAddMove[]): string {
-  const priced = moves.filter((m) => m.status === 'priced');
-  if (priced.length === 0) return `Renovation premiums in ${input.cityRegion} are hard to model from current sales.`;
-  const top = priced.reduce((a, b) => (b.valueAddTyp > a.valueAddTyp ? b : a));
-  const suppressedNeg = moves.find((m) => m.suppressReason === 'negative_beta');
-  const tail = suppressedNeg ? ` ${suppressedNeg.label.toLowerCase()} adds little here.` : '';
-  return `In ${input.cityRegion}, the market pays most for: ${top.label.toLowerCase()}.${tail}`;
+  const recommended = moves.filter((m) => m.status === 'priced' && m.recommended);
+  if (recommended.length === 0) {
+    const anyPriced = moves.some((m) => m.status === 'priced');
+    return anyPriced
+      ? `No renovation in ${input.cityRegion} is projected to pay for itself right now.`
+      : `Renovation premiums in ${input.cityRegion} are hard to model from current sales.`;
+  }
+  const best = recommended.reduce((a, b) => (b.netGainTyp > a.netGainTyp ? b : a));
+  return `Best payback in ${input.cityRegion}: ${best.label} — +${formatPrice(best.netGainTyp)} after cost (${best.paybackRatio.toFixed(1)}×).`;
 }
 
 export interface BuildValueAddOpts {

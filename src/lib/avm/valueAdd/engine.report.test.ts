@@ -92,4 +92,28 @@ describe('buildValueAddReport', () => {
     const b = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED, {});
     expect(b).toEqual(a);
   });
+
+  it('insight names the best net-dollar recommended move, never a rejected one', () => {
+    const r = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
+    const rec = r.moves.filter((m) => m.recommended);
+    const bestNet = rec.reduce((a, b) => (b.netGainTyp > a.netGainTyp ? b : a));
+    expect(r.neighbourhoodInsight).toContain('Best payback in Brampton West');
+    expect(r.neighbourhoodInsight).toContain(bestNet.label);
+    expect(r.neighbourhoodInsight).not.toContain('pays most for');
+  });
+
+  it('falls back to a no-payback insight when nothing recommended prices', () => {
+    // Synthetic market: one feature, beta so small every move prices but never pays back.
+    const tinyMarket = buildMarket({
+      basePrice: 800000, r2: 0.9, n: 100,
+      coefficients: [{ featureName: 'building_area_total', beta: 0.001, mean: 1500, std: 500 }],
+    });
+    const home = subject({ cityRegion: 'Nowhere', buildingAreaTotal: 1500 });
+    const r = buildValueAddReport(home, tinyMarket);
+    expect(r.moves.some((m) => m.status === 'priced')).toBe(true);   // build_addition prices
+    expect(r.moves.some((m) => m.recommended)).toBe(false);          // …but pays back < 1×
+    expect(r.headlineUpside).toBe(0);
+    expect(r.valueAddScore).toBe(0);
+    expect(r.neighbourhoodInsight).toContain('is projected to pay for itself');
+  });
 });
