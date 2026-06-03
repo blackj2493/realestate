@@ -5,7 +5,7 @@ import { shouldRender, buildView, type LedgerRow } from "./forceAppreciationView
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 const SCORE_LEGEND =
-  "Upside = the share of this home's value you could add by renovating, before cost (0–100).";
+  "Upside = how much equity you could unlock by renovating, as an index relative to this home's value (before cost).";
 const COLS = "grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3";
 
 function ColumnHeader() {
@@ -97,11 +97,15 @@ export default function ForceAppreciationCard({
             {v.recommendedRows.map((r) => (
               <LedgerRowView key={r.key} row={r} />
             ))}
-            <div className={`${COLS} border-t border-slate-700 pt-1 text-xs font-semibold`}>
+            {/* Total summary line (not the column grid): the net is labelled so it
+                is never read as a Return × value. */}
+            <div className="flex items-center justify-between gap-2 border-t border-slate-700 pt-1 text-xs font-semibold">
               <span className="text-slate-400">Total</span>
-              <span className="text-right font-mono text-emerald-400">+{formatPrice(v.headlineGross)}</span>
-              <span className="text-right font-mono text-slate-500">−{formatPrice(v.totalCosts)}</span>
-              <span className="w-10 text-right font-mono text-emerald-400">{formatPrice(v.headlineNet)}</span>
+              <span className="font-mono">
+                <span className="text-emerald-400">+{formatPrice(v.headlineGross)}</span>{" "}
+                <span className="text-slate-500">−{formatPrice(v.totalCosts)}</span>{" "}
+                <span className="text-emerald-400">= {formatPrice(v.headlineNet)} net</span>
+              </span>
             </div>
           </div>
         )}
