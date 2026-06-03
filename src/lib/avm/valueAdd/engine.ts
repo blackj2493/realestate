@@ -8,7 +8,8 @@ import { clamp, FEATURE_SPECS } from '../features';
 import { fetchAnchor } from '../anchorService';
 import { fetchAuditInfo } from '../auditService';
 import { fetchCoefficients } from '../matrixService';
-import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate, PCT_CAP_STACK, SCORE_K } from './calibration';
+import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate, SCORE_K } from './calibration';
+import { formatPrice } from '@/lib/utils';
 import { MOVE_CATALOG } from './moveCatalog';
 import type { FeatureDelta, MoveSpec, ValueAddMove, SuppressReason, ValueAddReport, MoveKey } from './types';
 
@@ -61,7 +62,7 @@ function suppressed(move: MoveSpec, reason: SuppressReason): ValueAddMove {
     key: move.key, label: move.label, status: 'suppressed', suppressReason: reason,
     valueAddLow: 0, valueAddTyp: 0, valueAddHigh: 0,
     costLow: move.costLow, costTyp: move.costTyp, costHigh: move.costHigh,
-    netGainTyp: 0, paybackRatio: 0, confidence: 'LOW',
+    netGainTyp: 0, paybackRatio: 0, confidence: 'LOW', recommended: false,
   };
 }
 
@@ -130,7 +131,7 @@ export function evaluateMove(
     key: move.key, label: move.label, status: 'priced',
     valueAddLow, valueAddTyp: typ, valueAddHigh,
     costLow: move.costLow, costTyp: move.costTyp, costHigh: move.costHigh,
-    netGainTyp, paybackRatio, confidence,
+    netGainTyp, paybackRatio, confidence, recommended: false,
   };
 }
 
@@ -153,14 +154,19 @@ function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddRep
   };
 }
 
-/** Deterministic, template-based insight from the cohort's value drivers (no AI). */
+/** Deterministic, template-based insight keyed on ROI/net (no AI — CLAUDE.md §4).
+ *  Names the recommended move that nets the most after cost, so the headline can
+ *  never contradict the ledger. */
 function neighbourhoodInsight(input: AVMInput, _market: AVMMarketData, moves: ValueAddMove[]): string {
-  const priced = moves.filter((m) => m.status === 'priced');
-  if (priced.length === 0) return `Renovation premiums in ${input.cityRegion} are hard to model from current sales.`;
-  const top = priced.reduce((a, b) => (b.valueAddTyp > a.valueAddTyp ? b : a));
-  const suppressedNeg = moves.find((m) => m.suppressReason === 'negative_beta');
-  const tail = suppressedNeg ? ` ${suppressedNeg.label.toLowerCase()} adds little here.` : '';
-  return `In ${input.cityRegion}, the market pays most for: ${top.label.toLowerCase()}.${tail}`;
+  const recommended = moves.filter((m) => m.status === 'priced' && m.recommended);
+  if (recommended.length === 0) {
+    const anyPriced = moves.some((m) => m.status === 'priced');
+    return anyPriced
+      ? `No renovation in ${input.cityRegion} is projected to pay for itself right now.`
+      : `Renovation premiums in ${input.cityRegion} are hard to model from current sales.`;
+  }
+  const best = recommended.reduce((a, b) => (b.netGainTyp > a.netGainTyp ? b : a));
+  return `Best payback in ${input.cityRegion}: ${best.label} — +${formatPrice(best.netGainTyp)} after cost (${best.paybackRatio.toFixed(1)}×).`;
 }
 
 export interface BuildValueAddOpts {
@@ -178,32 +184,31 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData, opts
   if (P0 <= 0) return unavailableReport(input, market);
 
   const byKey = new Map<MoveKey, (typeof MOVE_CATALOG)[number]>(MOVE_CATALOG.map((m) => [m.key, m]));
-  const moves = MOVE_CATALOG.map((m) => evaluateMove(input, m, market, P0)).sort(
+  const evaluated = MOVE_CATALOG.map((m) => evaluateMove(input, m, market, P0)).sort(
     (a, b) => b.netGainTyp - a.netGainTyp
   );
 
-  // Greedy non-overlapping selection of positive-payback priced moves for the headline.
+  // Greedy non-overlapping selection of positive-payback priced moves → recommended set.
   const claimed = new Set<string>();
-  const selectedDeltas: FeatureDelta[] = [];
-  const selected: ValueAddMove[] = [];
-  for (const mv of moves) {
+  const recommendedKeys = new Set<MoveKey>();
+  for (const mv of evaluated) {
     if (mv.status !== 'priced' || mv.paybackRatio <= 1) continue;
-    const spec = byKey.get(mv.key)!;
-    const fields = spec.deltas.map((d) => d.field);
-    if (fields.some((f) => claimed.has(f))) continue;
+    const fields = byKey.get(mv.key)!.deltas.map((d) => d.field);
+    if (fields.some((f) => claimed.has(f))) continue; // non-overlapping fields
     fields.forEach((f) => claimed.add(f));
-    selectedDeltas.push(...spec.deltas);
-    selected.push(mv);
+    recommendedKeys.add(mv.key);
   }
+  const moves = evaluated.map((m) => ({ ...m, recommended: recommendedKeys.has(m.key) }));
 
-  // Joint value-add via ONE re-eval over the union, capped by the stack %-cap.
-  const after = applyMove(input, selectedDeltas);
-  let jointValue = Math.max(0, rawStackValue(input, after, market, P0));
-  jointValue = Math.min(jointValue, PCT_CAP_STACK * P0);
-  const totalCost = selected.reduce((a, m) => a + m.costTyp, 0);
-  const headlineUpsideGross = Math.max(0, Math.round(jointValue));
-  const headlineUpside = Math.max(0, Math.round(jointValue - totalCost));
-  const valueAddScore = Math.min(100, Math.round((jointValue / P0) * SCORE_K));
+  // Headline = additive sum of the recommended rows, so the card's Total ties out to the
+  // column the user can see. Each valueAddTyp is already per-move capped (capValueAdd); no
+  // stack re-cap here — re-clamping would break the tie-out. The 0–100 score stays bounded.
+  const recommended = moves.filter((m) => m.recommended);
+  const grossSum = recommended.reduce((a, m) => a + m.valueAddTyp, 0);
+  const costSum = recommended.reduce((a, m) => a + m.costTyp, 0);
+  const headlineUpsideGross = Math.max(0, Math.round(grossSum));
+  const headlineUpside = Math.max(0, Math.round(grossSum - costSum));
+  const valueAddScore = Math.min(100, Math.round((grossSum / P0) * SCORE_K));
 
   return {
     cityRegion: input.cityRegion,
