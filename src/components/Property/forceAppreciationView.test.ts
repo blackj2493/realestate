@@ -6,12 +6,12 @@ const priced = (key: string, netGainTyp: number, over: Partial<ValueAddMove> = {
   key: key as ValueAddMove['key'], label: key, status: 'priced',
   valueAddLow: 0, valueAddTyp: 50000, valueAddHigh: 0,
   costLow: 0, costTyp: 20000, costHigh: 0,
-  netGainTyp, paybackRatio: 2.5, confidence: 'HIGH', ...over,
+  netGainTyp, paybackRatio: 2.5, confidence: 'HIGH', recommended: false, ...over,
 });
 const suppressedMove = (key: string, reason: SuppressReason): ValueAddMove => ({
   key: key as ValueAddMove['key'], label: key, status: 'suppressed', suppressReason: reason,
   valueAddLow: 0, valueAddTyp: 0, valueAddHigh: 0, costLow: 0, costTyp: 0, costHigh: 0,
-  netGainTyp: 0, paybackRatio: 0, confidence: 'LOW',
+  netGainTyp: 0, paybackRatio: 0, confidence: 'LOW', recommended: false,
 });
 const report = (over: Partial<ValueAddReport> = {}): ValueAddReport => ({
   cityRegion: 'Brampton West', propertySubType: 'Detached',
@@ -33,16 +33,24 @@ describe('shouldRender', () => {
 
 describe('buildView', () => {
   const v = buildView(report({
-    moves: [priced('m1', 90), priced('m2', 80), priced('m3', 70), priced('m4', 60),
-            suppressedMove('s1', 'negative_beta')],
+    moves: [
+      priced('m1', 90, { recommended: true }),
+      priced('m2', 80, { recommended: false }),
+      priced('m3', 70, { recommended: true, costTyp: 10000 }),
+      priced('m4', 60, { recommended: false }),
+      suppressedMove('s1', 'negative_beta'),
+    ],
   }));
-  it('takes the top 3 priced moves as headline rows, rest into moreRows', () => {
-    expect(v.topRows.map((r) => r.key)).toEqual(['m1', 'm2', 'm3']);
-    expect(v.moreRows.map((r) => r.key)).toEqual(['m4']);
+  it('partitions priced moves by the engine flag, not a slice', () => {
+    expect(v.recommendedRows.map((r) => r.key)).toEqual(['m1', 'm3']);
+    expect(v.moreRows.map((r) => r.key)).toEqual(['m2', 'm4']);
   });
-  it('maps suppressed moves to human copy', () => {
+  it('sums the recommended costs for the Total row', () => {
+    expect(v.totalCosts).toBe(30000); // 20000 (m1 default) + 10000 (m3 override)
+  });
+  it('maps suppressed moves to the softened copy', () => {
     expect(v.suppressed).toEqual([
-      { key: 's1', label: 's1', reason: "the local market doesn't pay extra for this" },
+      { key: 's1', label: 's1', reason: "local sales don't show a reliable premium" },
     ]);
   });
   it('wires headline, score, insight and basis', () => {

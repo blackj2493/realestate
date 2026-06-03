@@ -1,9 +1,8 @@
 // src/lib/avm/valueAdd/engine.report.test.ts
 import { describe, it, expect } from 'vitest';
 import { buildValueAddReport } from './engine';
-import { BRAMPTON_WEST_DETACHED, ERIN_MILLS_CONDO, subject } from './__fixtures__/cohorts';
+import { BRAMPTON_WEST_DETACHED, ERIN_MILLS_CONDO, buildMarket, subject } from './__fixtures__/cohorts';
 import { MOVE_CATALOG } from './moveCatalog';
-import { PCT_CAP_STACK } from './calibration';
 
 describe('buildValueAddReport', () => {
   const bramptonHome = subject({
@@ -37,7 +36,7 @@ describe('buildValueAddReport', () => {
     const bedroom = r.moves.find((m) => m.key === 'add_bedroom')!;
     expect(basement.status).toBe('suppressed');
     expect(bedroom.status).toBe('suppressed');
-    // headline is bounded by the stack %-cap and never negative
+    // headline sums only recommended (priced) moves and is never negative
     expect(r.headlineUpside).toBeGreaterThanOrEqual(0);
   });
 
@@ -49,17 +48,23 @@ describe('buildValueAddReport', () => {
     expect(r.valueAddScore).toBe(0);
   });
 
-  it('exercises greedy non-overlapping selection without blowing up the headline', () => {
+  it('flags a non-overlapping recommended set and sums it into the headline', () => {
     const r = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
     const bath = r.moves.find((m) => m.key === 'add_bathroom')!;
     const suite = r.moves.find((m) => m.key === 'legal_suite')!;
-    // both price individually and overlap on bathroomsTotalInteger
     expect(bath.status).toBe('priced');
     expect(suite.status).toBe('priced');
-    // headline is positive and bounded by the stack cap (overlap can't double-count)
-    expect(r.headlineUpside).toBeGreaterThan(0);
-    expect(r.headlineUpside).toBeLessThanOrEqual(Math.round(PCT_CAP_STACK * r.subjectEstimate));
-    // (precise selection internals are covered by the rawStackValue joint-math unit tests)
+    // both touch bathroomsTotalInteger → at most one can be recommended
+    expect(bath.recommended && suite.recommended).toBe(false);
+
+    const rec = r.moves.filter((m) => m.recommended);
+    const grossSum = rec.reduce((a, m) => a + m.valueAddTyp, 0);
+    const costSum = rec.reduce((a, m) => a + m.costTyp, 0);
+    // headline ties out exactly to the recommended rows the card shows
+    expect(r.headlineUpsideGross).toBe(grossSum);
+    expect(r.headlineUpside).toBe(Math.max(0, grossSum - costSum));
+    // every recommended move is priced and pays back
+    expect(rec.every((m) => m.status === 'priced' && m.paybackRatio > 1)).toBe(true);
   });
 
   it('exposes a gross joint value-add that is ≥ the net headline', () => {
@@ -86,5 +91,29 @@ describe('buildValueAddReport', () => {
     const a = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
     const b = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED, {});
     expect(b).toEqual(a);
+  });
+
+  it('insight names the best net-dollar recommended move, never a rejected one', () => {
+    const r = buildValueAddReport(bramptonHome, BRAMPTON_WEST_DETACHED);
+    const rec = r.moves.filter((m) => m.recommended);
+    const bestNet = rec.reduce((a, b) => (b.netGainTyp > a.netGainTyp ? b : a));
+    expect(r.neighbourhoodInsight).toContain('Best payback in Brampton West');
+    expect(r.neighbourhoodInsight).toContain(bestNet.label);
+    expect(r.neighbourhoodInsight).not.toContain('pays most for');
+  });
+
+  it('falls back to a no-payback insight when nothing recommended prices', () => {
+    // Synthetic market: one feature, beta so small every move prices but never pays back.
+    const tinyMarket = buildMarket({
+      basePrice: 800000, r2: 0.9, n: 100,
+      coefficients: [{ featureName: 'building_area_total', beta: 0.001, mean: 1500, std: 500 }],
+    });
+    const home = subject({ cityRegion: 'Nowhere', buildingAreaTotal: 1500 });
+    const r = buildValueAddReport(home, tinyMarket);
+    expect(r.moves.some((m) => m.status === 'priced')).toBe(true);   // build_addition prices
+    expect(r.moves.some((m) => m.recommended)).toBe(false);          // …but pays back < 1×
+    expect(r.headlineUpside).toBe(0);
+    expect(r.valueAddScore).toBe(0);
+    expect(r.neighbourhoodInsight).toContain('is projected to pay for itself');
   });
 });

@@ -20,13 +20,17 @@ export interface ForceAppreciationView {
   headlineNet: number;
   insight: string;
   basis: string;
-  topRows: LedgerRow[];
+  /** The greedy positive-payback set the headline sums (engine `recommended` flag). */
+  recommendedRows: LedgerRow[];
+  /** Σ costTyp of recommendedRows — the Total row's Costs cell. */
+  totalCosts: number;
+  /** Priced-but-not-recommended moves (the "Why not the others?" disclosure). */
   moreRows: LedgerRow[];
   suppressed: SuppressedRow[];
 }
 
 const REASON_COPY: Record<SuppressReason, string> = {
-  negative_beta: "the local market doesn't pay extra for this",
+  negative_beta: "local sales don't show a reliable premium",
   placeholder: 'not enough local signal to price this',
   low_r2: 'too few comparable sales to model this area',
   thin_cohort: 'too few comparable sales to model this area',
@@ -60,7 +64,9 @@ function toRow(m: ValueAddMove): LedgerRow {
 }
 
 export function buildView(report: ValueAddReport): ForceAppreciationView {
-  const priced = report.moves.filter((m) => m.status === 'priced'); // already sorted by net gain
+  const priced = report.moves.filter((m) => m.status === 'priced'); // sorted by net gain
+  const recommended = priced.filter((m) => m.recommended);
+  const more = priced.filter((m) => !m.recommended);
   const suppressed: SuppressedRow[] = report.moves
     .filter((m) => m.status === 'suppressed')
     .map((m) => ({ key: m.key, label: m.label, reason: suppressReasonCopy(m.suppressReason ?? 'no_estimate') }));
@@ -70,8 +76,9 @@ export function buildView(report: ValueAddReport): ForceAppreciationView {
     headlineNet: report.headlineUpside,
     insight: report.neighbourhoodInsight,
     basis: `${report.basis} · modeled, not appraised`,
-    topRows: priced.slice(0, 3).map(toRow),
-    moreRows: priced.slice(3).map(toRow),
+    recommendedRows: recommended.map(toRow),
+    totalCosts: recommended.reduce((a, m) => a + m.costTyp, 0),
+    moreRows: more.map(toRow),
     suppressed,
   };
 }
