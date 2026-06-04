@@ -49,6 +49,18 @@ export function makePriceDef(cfg: RangeConfig): FilterDef {
 }
 
 /**
+ * Beds filter on ABOVE-GRADE bedrooms (what users mean by "a 4-bed house"), not
+ * the inflated total — a "2+2" (2 above, 2 below) is a 2-bed for filtering, so it
+ * must NOT surface under "4 beds". Falls back to BedroomsTotal only when the
+ * above-grade value is missing (stored as 0), mirroring the card's `bedsLabel`
+ * fallback so the filter and the displayed split stay consistent. ~85% of the
+ * index has BedroomsAboveGrade > 0; the `=0` branch rescues the ~0.5% that carry
+ * only a total. (Typesense supports the parenthesised || / && grouping.)
+ */
+export const aboveGradeBedsClause = (n: number): string =>
+  `(BedroomsAboveGrade:>=${n} || (BedroomsAboveGrade:=0 && BedroomsTotal:>=${n}))`;
+
+/**
  * CORE_FILTERS — the universal "what" filters, defined as data so the bar, the
  * query builder, and (later) the add-filter palette all read one source.
  * Home Type filters PropertySubType (Detached/Semi/Townhouse/Condo) — the value
@@ -69,7 +81,7 @@ export const CORE_FILTERS: FilterDef[] = [
     max: 7,
     step: 1,
     isActive: (v) => (v as number) > 0,
-    buildClause: (v) => ((v as number) > 0 ? `BedroomsTotal:>=${v as number}` : null),
+    buildClause: (v) => ((v as number) > 0 ? aboveGradeBedsClause(v as number) : null),
     chipLabel: (v) => ((v as number) > 0 ? `${v as number}+ Bd` : "Beds"),
   },
   {

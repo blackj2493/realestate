@@ -49,7 +49,9 @@ describe("buildTerminalCoreClauses", () => {
       persona: noopPersona,
     });
     expect(withPrice).toContain("ListPrice:>=600000 && ListPrice:<=1200000");
-    expect(withPrice).toContain("BedroomsTotal:>=3");
+    expect(withPrice).toContain(
+      "(BedroomsAboveGrade:>=3 || (BedroomsAboveGrade:=0 && BedroomsTotal:>=3))"
+    );
 
     const minusPrice = buildTerminalCoreClauses({
       transactionMode: "sale",
@@ -60,6 +62,8 @@ describe("buildTerminalCoreClauses", () => {
       excludeUniversalKey: "price",
     });
     expect(minusPrice.some((c) => c.includes("ListPrice:>=600000"))).toBe(false);
-    expect(minusPrice).toContain("BedroomsTotal:>=3"); // other filters survive
+    expect(minusPrice).toContain(
+      "(BedroomsAboveGrade:>=3 || (BedroomsAboveGrade:=0 && BedroomsTotal:>=3))"
+    ); // other filters survive
   });
 });

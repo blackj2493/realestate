@@ -19,8 +19,10 @@ describe("filterRegistry — clause builders", () => {
   it("price returns null at defaults", () => {
     expect(FILTERS_BY_KEY.price.buildClause([0, 3_000_000])).toBeNull();
   });
-  it("beds emits a >= clause, null at 0", () => {
-    expect(FILTERS_BY_KEY.beds.buildClause(3)).toBe("BedroomsTotal:>=3");
+  it("beds emits an above-grade >= clause (with total fallback), null at 0", () => {
+    expect(FILTERS_BY_KEY.beds.buildClause(3)).toBe(
+      "(BedroomsAboveGrade:>=3 || (BedroomsAboveGrade:=0 && BedroomsTotal:>=3))"
+    );
     expect(FILTERS_BY_KEY.beds.buildClause(0)).toBeNull();
   });
   it("baths emits a >= clause", () => {
@@ -58,7 +60,7 @@ describe("buildUniversalFilterString", () => {
     f.beds = 3;
     f.homeType = ["Detached"];
     expect(buildUniversalFilterString(f)).toBe(
-      "ListPrice:>=500000 && ListPrice:<=800000 && BedroomsTotal:>=3 && (PropertySubType:=`Detached`)"
+      "ListPrice:>=500000 && ListPrice:<=800000 && (BedroomsAboveGrade:>=3 || (BedroomsAboveGrade:=0 && BedroomsTotal:>=3)) && (PropertySubType:=`Detached`)"
     );
   });
 });
