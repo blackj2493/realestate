@@ -15,7 +15,7 @@ import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
 import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
 import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
-import { type LayerKey, transactionModeForLayers } from "@/lib/sold/layers";
+import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -253,9 +253,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   activeLayers: new Set<LayerKey>(["forSale"]),
   toggleLayer: (key) =>
     set((state) => {
-      const next = new Set(state.activeLayers);
-      if (next.has(key)) { if (next.size > 1) next.delete(key); }
-      else next.add(key);
+      const next = applyLayerToggle(state.activeLayers, key);
       const tx = transactionModeForLayers(next);
       const { min, max } = priceConfig(tx);
       return {

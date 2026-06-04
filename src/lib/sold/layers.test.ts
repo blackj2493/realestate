@@ -20,4 +20,8 @@ describe("layers", () => {
   it("comp-only plan disables the active source", () => {
     expect(queryPlan(new Set(["sold"])).active).toBeNull();
   });
+  it("forSale and forRent are mutually exclusive (different price contexts)", () => {
+    expect([...toggleLayer(new Set(["forSale"]), "forRent")]).toEqual(["forRent"]);
+    expect([...toggleLayer(new Set(["forRent", "sold"]), "forSale")].sort()).toEqual(["forSale", "sold"]);
+  });
 });
