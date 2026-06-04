@@ -22,7 +22,7 @@ function ColumnHeader() {
 function LedgerRowView({ row }: { row: LedgerRow }) {
   return (
     <div className={`${COLS} text-xs`}>
-      <span className="truncate text-slate-300">{row.label}</span>
+      <span className="text-slate-300 leading-tight">{row.label}</span>
       <span className="text-right font-mono text-emerald-400">+{formatPrice(row.valueTyp)}</span>
       <span className="text-right font-mono text-slate-500">−{formatPrice(row.costTyp)}</span>
       <span className="w-10 text-right font-mono text-slate-400">
@@ -44,7 +44,7 @@ export default function ForceAppreciationCard({
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Force-Appreciation</CardTitle>
+          <CardTitle>Renovation Upside</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -70,7 +70,7 @@ export default function ForceAppreciationCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Force-Appreciation</CardTitle>
+        <CardTitle>Renovation Upside</CardTitle>
         <span
           title={SCORE_LEGEND}
           className="cursor-help rounded border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 font-mono text-xs text-emerald-300"
@@ -121,9 +121,9 @@ export default function ForceAppreciationCard({
                 <LedgerRowView key={r.key} row={r} />
               ))}
               {v.suppressed.map((s) => (
-                <div key={s.key} className="flex justify-between gap-2 text-xs">
-                  <span className="truncate text-slate-400">{s.label}</span>
-                  <span className="shrink-0 text-right text-slate-500">{s.reason}</span>
+                <div key={s.key} className="text-xs leading-tight">
+                  <span className="text-slate-400">{s.label}</span>
+                  <span className="block text-slate-500">{s.reason}</span>
                 </div>
               ))}
             </div>
