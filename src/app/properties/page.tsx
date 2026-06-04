@@ -28,6 +28,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
+import type { ListingDocument, SearchResult } from "@/lib/typesense/client";
 import { FACET_FIELDS } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive } from "@/lib/filters/fundamentals";
 import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
@@ -35,6 +36,8 @@ import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
 import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
+import { queryPlan } from "@/lib/sold/layers";
+import { mergeLayers } from "@/lib/sold/mergeLayers";
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -82,7 +85,7 @@ function CommandCenterContent() {
     drawPolygon,
     transactionMode,
     propertyClass,
-    listingMode,
+    activeLayers,
     soldWindowDays,
     setSoldLocked,
     soldLocked,
@@ -136,93 +139,63 @@ function CommandCenterContent() {
     setMapMode(PERSONA_CONFIG[activePersona].defaultMapMode);
   }, [activePersona, setMapMode]);
 
+  // Runs the public-Typesense active-listings query (For Sale / For Rent) and
+  // RETURNS the result — all the commute/school/draw/band/sort logic lives here,
+  // but it never touches state, so the fan-out below can run it in parallel.
+  const runActiveSearch = useCallback(async (): Promise<SearchResult> => {
+    const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+    const coreClauses = buildTerminalCoreClauses({ transactionMode, propertyClass, universalFilters, filters, persona });
+    const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
+    const schoolParts: string[] = [];
+    if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
+    if (school.enabled && school.targetSchool) schoolParts.push(`NearbySchools:=\`${school.targetSchool.id}\``);
+    const bandDef = colorBand ? getMapMetric(colorBand.metricId) : null;
+    const bandClause = bandDef ? bandFilterClause(bandDef, colorBand!.index) : null;
+    const drawClause =
+      drawPolygon && drawPolygon.length >= 3
+        ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
+        : null;
+    const rawFilterBy = [...coreClauses, ...schoolParts, bandClause, drawClause].filter(Boolean).join(" && ");
+    const geoPolygon =
+      commute.enabled && commute.polygon && commute.polygon.length >= 3
+        ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
+        : undefined;
+    return await searchListings({
+      query: location || "*",
+      rawFilterBy,
+      geoPolygon,
+      filters: mapBounds ? { boundingBox: mapBounds } : undefined,
+      perPage: MAX_LISTINGS,
+      facetBy: FACET_FIELDS.join(","),
+      sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
+      sortOrder: "desc",
+    });
+  }, [transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
+
   const performSearch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
-      // ─── Sold mode: gated server route (sold_listings), NOT client Typesense ───
-      if (listingMode === "sold") {
-        try {
-          const { docs, count, locked } = await fetchSoldComps({
-            mapBounds,
-            location,
-            windowDays: soldWindowDays,
-            limit: MAX_LISTINGS,
-          });
-          setSoldLocked(locked);
-          setSearchResult({ listings: docs, totalFound: count, page: 1, perPage: MAX_LISTINGS, processingTimeMs: 0 });
-          setTotalCount(count);
-        } catch (err) {
-          console.error("[CommandCenter] Sold search error:", err);
-          setError(err instanceof Error ? err.message : "Sold comps temporarily unavailable.");
-          setSearchResult(null);
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
+    const plan = queryPlan(activeLayers);
     try {
-      const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+      // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
+      // whichever layers are lit, in parallel; then merge into one recency-sorted list.
+      const [compRes, activeRes] = await Promise.all([
+        plan.comps.length
+          ? fetchSoldComps({ mapBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps })
+          : Promise.resolve({ docs: [] as ListingDocument[], count: 0, locked: false }),
+        plan.active ? runActiveSearch() : Promise.resolve(null),
+      ]);
 
-      // Core clauses (transaction floor + type, property class, transaction-aware
-      // price, persona investor filter, universal composables) come from the
-      // shared builder — the SAME one the slider histograms use, so a histogram is
-      // always computed over the live population minus its own dimension.
-      const coreClauses = buildTerminalCoreClauses({
-        transactionMode,
-        propertyClass,
-        universalFilters,
-        filters,
-        persona,
-      });
+      setSoldLocked(plan.comps.length > 0 && compRes.locked);
 
-      // School-quality lens: one indexed score field drives the min-score filter,
-      // the target-school proximity filter, and the sort override (best schools first).
-      const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
-      const schoolParts: string[] = [];
-      if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
-      if (school.enabled && school.targetSchool) schoolParts.push(`NearbySchools:=\`${school.targetSchool.id}\``);
+      const sources: ListingDocument[][] = [];
+      if (compRes.docs.length) sources.push(compRes.docs);
+      if (activeRes) sources.push(activeRes.listings);
+      const merged = mergeLayers(sources).slice(0, MAX_LISTINGS);
 
-      // Interactive legend: a clicked band narrows the map to one value bucket
-      // of the active color metric (only when that metric is field-backed).
-      const bandDef = colorBand ? getMapMetric(colorBand.metricId) : null;
-      const bandClause = bandDef ? bandFilterClause(bandDef, colorBand!.index) : null;
-
-      // Draw-to-search: the lasso polygon ([lng,lat]) becomes a second location()
-      // geo filter, intersecting with commute/viewport. Typesense wants "lat, lng".
-      const drawClause =
-        drawPolygon && drawPolygon.length >= 3
-          ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
-          : null;
-
-      const rawFilterBy = [...coreClauses, ...schoolParts, bandClause, drawClause]
-        .filter(Boolean)
-        .join(" && ");
-
-      // Commute zone: polygon is stored [lng, lat]; Typesense wants [lat, lng].
-      const geoPolygon =
-        commute.enabled && commute.polygon && commute.polygon.length >= 3
-          ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
-          : undefined;
-
-      const result = await searchListings({
-        query: location || "*",
-        rawFilterBy,
-        geoPolygon,
-        // Scope the query to the current map view so the 100-cap reveals deeper
-        // inventory as the user zooms in (null until the user moves the map).
-        filters: mapBounds ? { boundingBox: mapBounds } : undefined,
-        perPage: MAX_LISTINGS,
-        facetBy: FACET_FIELDS.join(","),
-        // School lens wins; else the persona metric sort (residential-sale only);
-        // else a neutral price sort for the rent / commercial basic-browse modes.
-        sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
-        sortOrder: "desc",
-      });
-
-      setSearchResult(result);
-      setTotalCount(result.totalFound);
+      const total = (activeRes?.totalFound ?? 0) + compRes.count;
+      setSearchResult({ listings: merged, totalFound: total, page: 1, perPage: MAX_LISTINGS, processingTimeMs: activeRes?.processingTimeMs ?? 0 });
+      setTotalCount(total);
     } catch (err) {
       console.error("[CommandCenter] Search error:", err);
       setError(err instanceof Error ? err.message : "Search service temporarily unavailable.");
@@ -230,14 +203,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, listingMode, soldWindowDays, setSoldLocked, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, setSoldLocked, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, transactionMode, propertyClass, listingMode, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, activeLayers, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -261,7 +234,7 @@ function CommandCenterContent() {
     activeMetric ?? (school.enabled ? schoolMapColor(school.level, school.system) : persona.mapColor);
   const heatAggregation = activeMetric?.heatAggregation ?? "mean";
 
-  const showSoldLock = listingMode === "sold" && soldLocked;
+  const showSoldLock = soldLocked;
   const soldLockMsg = `${totalCount.toLocaleString()} recent sale${totalCount === 1 ? "" : "s"} — sign in to view`;
 
   return (
