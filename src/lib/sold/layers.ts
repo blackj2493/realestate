@@ -34,10 +34,3 @@ export function queryPlan(layers: Set<LayerKey>): LayerQueryPlan {
   if (layers.has("leased")) comps.push("leased");
   return { active: sale || rent ? { enabled: true, sale, rent } : null, comps };
 }
-
-/** Lossy back-compat value for the legacy `listingMode` field during migration only. */
-export function deriveLegacyListingMode(layers: Set<LayerKey>): "sale" | "sold" | "rent" {
-  if (layers.has("forSale")) return "sale";
-  if (layers.has("forRent")) return "rent";
-  return "sold"; // comp-only (sold/leased) maps to the legacy "sold" view
-}

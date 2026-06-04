@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { LAYER_KEYS, toggleLayer, transactionModeForLayers, queryPlan, deriveLegacyListingMode } from "./layers";
+import { LAYER_KEYS, toggleLayer, transactionModeForLayers, queryPlan } from "./layers";
 
 describe("layers", () => {
   it("toggle adds/removes but never empties (last layer sticks)", () => {
@@ -19,10 +19,5 @@ describe("layers", () => {
   });
   it("comp-only plan disables the active source", () => {
     expect(queryPlan(new Set(["sold"])).active).toBeNull();
-  });
-  it("legacy listingMode: sale/rent win, comp-only → sold", () => {
-    expect(deriveLegacyListingMode(new Set(["forSale", "sold"]))).toBe("sale");
-    expect(deriveLegacyListingMode(new Set(["forRent"]))).toBe("rent");
-    expect(deriveLegacyListingMode(new Set(["leased"]))).toBe("sold");
   });
 });

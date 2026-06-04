@@ -15,14 +15,11 @@ import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
 import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
 import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
-import { type LayerKey, transactionModeForLayers, deriveLegacyListingMode } from "@/lib/sold/layers";
+import { type LayerKey, transactionModeForLayers } from "@/lib/sold/layers";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
 export type CommuteMode = "driving" | "walking" | "cycling";
-
-/** Transaction strip: active sale / sold comps / active lease. `sold` switches data source. */
-export type ListingMode = "sale" | "sold" | "rent";
 
 /**
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
@@ -104,13 +101,8 @@ export interface CommandCenterState {
   // commercial). The persona/investor analytics layer is residential-sale only.
   transactionMode: TransactionMode;
   setTransactionMode: (mode: TransactionMode) => void;
-  // Listing mode — the three-state strip (For Sale / Sold / For Rent). `sale`/`rent`
-  // mirror transactionMode (active path); `sold` switches to the gated sold route.
-  listingMode: ListingMode;
-  setListingMode: (mode: ListingMode) => void;
   // Active layers — multi-select For Sale·Sold·Leased·For Rent (any combination,
   // never empty). transactionMode/price bounds follow transactionModeForLayers().
-  // `listingMode` is kept synced for back-compat until its readers migrate.
   activeLayers: Set<LayerKey>;
   toggleLayer: (key: LayerKey) => void;
 
@@ -258,19 +250,6 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       const { min, max } = priceConfig(mode);
       return { transactionMode: mode, universalFilters: { ...state.universalFilters, price: [min, max] } };
     }),
-  listingMode: "sale",
-  // sale/rent mirror transactionMode (+ reset price bounds, like setTransactionMode);
-  // sold pins transactionMode to "sale" so the sale price config + class axis stay valid.
-  setListingMode: (mode) =>
-    set((state) => {
-      const tx = mode === "rent" ? "rent" : "sale";
-      const { min, max } = priceConfig(tx);
-      return {
-        listingMode: mode,
-        transactionMode: tx,
-        universalFilters: { ...state.universalFilters, price: [min, max] },
-      };
-    }),
   activeLayers: new Set<LayerKey>(["forSale"]),
   toggleLayer: (key) =>
     set((state) => {
@@ -282,7 +261,6 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       return {
         activeLayers: next,
         transactionMode: tx,
-        listingMode: deriveLegacyListingMode(next),
         universalFilters: { ...state.universalFilters, price: [min, max] },
       };
     }),
