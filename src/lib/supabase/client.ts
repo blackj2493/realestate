@@ -9,12 +9,21 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import fetch from 'cross-fetch';
+import crossFetch from 'cross-fetch';
+import { makeTimeoutFetch } from './timeoutFetch';
 
 // Environment variables (sanitized to strip invisible characters)
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://pyzgnivilxhnwzfrdkiq.supabase.co').trim();
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+
+// Bounded request timeout so a dead/unreachable origin (e.g. Cloudflare 522 when the
+// Supabase compute is Unhealthy) fails fast and retryable instead of hanging forever —
+// cross-fetch ships with NO timeout. Override via SUPABASE_FETCH_TIMEOUT_MS if needed.
+const _supabaseFetchTimeout = Number(process.env.SUPABASE_FETCH_TIMEOUT_MS);
+const SUPABASE_FETCH_TIMEOUT_MS =
+  Number.isFinite(_supabaseFetchTimeout) && _supabaseFetchTimeout > 0 ? _supabaseFetchTimeout : 30000;
+const timeoutFetch = makeTimeoutFetch(crossFetch as typeof fetch, SUPABASE_FETCH_TIMEOUT_MS);
 
 // Singleton instances
 let serverClient: SupabaseClient | null = null;
@@ -35,7 +44,7 @@ export function getServerClient(): SupabaseClient {
         autoRefreshToken: false
       },
       global: {
-        fetch: fetch // <-- INJECT CUSTOM FETCH HERE
+        fetch: timeoutFetch // <-- bounded-timeout fetch (cross-fetch had none)
       }
     });
   }
@@ -60,7 +69,7 @@ export function getServiceRoleClient(): SupabaseClient {
         autoRefreshToken: false
       },
       global: {
-        fetch: fetch // <-- INJECT CUSTOM FETCH HERE
+        fetch: timeoutFetch // <-- bounded-timeout fetch (cross-fetch had none)
       }
     });
   }
