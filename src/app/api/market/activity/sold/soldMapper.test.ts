@@ -32,4 +32,9 @@ describe("mapSoldDoc", () => {
     expect(out.lng).toBeNull();
     expect(out.soldDate).toBeNull();
   });
+
+  it("carries DealType through (defaults to sold)", () => {
+    expect(mapSoldDoc({ id: "X1", DealType: "leased", PurchaseContractDate: 1 }).dealType).toBe("leased");
+    expect(mapSoldDoc({ id: "X2", PurchaseContractDate: 1 }).dealType).toBe("sold");
+  });
 });

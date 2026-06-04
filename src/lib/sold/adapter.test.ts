@@ -17,6 +17,7 @@ const base: SoldListing = {
   primaryImageUrl: "https://img/x.jpg",
   lat: 43.65,
   lng: -79.38,
+  dealType: "sold",
 };
 
 describe("soldToListingDocument", () => {

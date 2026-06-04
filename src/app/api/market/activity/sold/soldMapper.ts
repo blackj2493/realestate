@@ -17,6 +17,8 @@ export interface SoldListing {
   /** Latitude/longitude for map pins; null when the postal code didn't resolve. */
   lat: number | null;
   lng: number | null;
+  /** 'sold' | 'leased' — real-values deal type from the index. */
+  dealType: "sold" | "leased";
 }
 
 export const posOrNull = (v: unknown): number | null => {
@@ -43,5 +45,6 @@ export function mapSoldDoc(d: Record<string, unknown>): SoldListing {
     primaryImageUrl: (d.primaryImageUrl as string) || null,
     lat: loc && Number.isFinite(loc[0]) ? loc[0] : null,
     lng: loc && Number.isFinite(loc[1]) ? loc[1] : null,
+    dealType: (d.DealType as string) === "leased" ? "leased" : "sold",
   };
 }
