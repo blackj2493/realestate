@@ -30,6 +30,7 @@ import {
 import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { selectPrimaryImage } from '../../src/lib/etl/selectPrimaryImage';
+import { deriveDealType } from '../../src/lib/sold/dealType';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
 const IMPORT_CHUNK = 100;
@@ -83,6 +84,9 @@ export interface SoldIndexInput {
   close_price: number;
   purchase_contract_date: string | null;
   basement_tier: number;
+  /** Raw board status signals for deriving DealType (real values, not price). */
+  mls_status: string | null;
+  transaction_type: string | null;
 }
 
 /**
@@ -133,6 +137,7 @@ export function toSoldDocument(
     PurchaseContractDate: ms,
   };
   if (primaryImageUrl) doc.primaryImageUrl = primaryImageUrl;
+  doc.DealType = deriveDealType(r.mls_status, r.transaction_type);
 
   const geo = resolveLocation(r.postal_code, null, null, r.city);
   if (!geo.needsGeocoding) {
@@ -215,6 +220,7 @@ async function backfill(): Promise<void> {
     'building_area_total, lot_width, bedrooms_above_grade, bathrooms_total_integer, ' +
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
     'brokerage:raw_payload->>ListOfficeName, ' +
+    'mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, ' +
     // Pull the JSONB sub-trees PostgREST-side so selectPrimaryImage() can pick a thumbnail
     // without us streaming the whole ~50 KB raw_payload per row.
     'media:raw_payload->media, images:raw_payload->images';
@@ -246,7 +252,7 @@ async function backfill(): Promise<void> {
     const docs: SoldListingDocument[] = [];
     for (const row of rows) {
       const doc = toSoldDocument(
-        row as SoldIndexInput,
+        { ...(row as any), mls_status: row.mls_status ?? null, transaction_type: row.txn_type ?? null } as SoldIndexInput,
         row.brokerage ?? null,
         { media: row.media, images: row.images }
       );
