@@ -15,6 +15,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
+  clusterRadiusForZoom,
   colorIndexFor,
   formatPriceShort,
   isClusterFeature,
@@ -262,7 +263,7 @@ export default function AlphaMap({
   // ≤100 listings (compliance cap) so clustering the whole world bbox at the
   // current zoom is cheap and avoids needing the precise viewport extent.
   const clusterIndex = useMemo(() => {
-    const index = new Supercluster<PinProps>({ ...CLUSTER_OPTIONS });
+    const index = new Supercluster<PinProps>({ ...CLUSTER_OPTIONS, radius: clusterRadiusForZoom(Math.round(viewState.zoom)) });
     index.load(
       renderData.map((p) => ({
         type: "Feature" as const,
@@ -271,7 +272,7 @@ export default function AlphaMap({
       }))
     );
     return index;
-  }, [renderData]);
+  }, [renderData, viewState.zoom]);
 
   const clusters = useMemo(
     () => clusterIndex.getClusters([-180, -85, 180, 85], Math.round(viewState.zoom)),
@@ -535,6 +536,8 @@ export default function AlphaMap({
         const listing = (f.properties as PinProps).listing;
         // Selected pins read as a solid emerald chip regardless of the metric color.
         if (selectedIds.has(listing.id)) return [34, 211, 238, 255];
+        if (listing.compKind === "sold") return [244, 63, 94, 230];     // rose
+        if (listing.compKind === "leased") return [167, 139, 250, 230]; // violet
         const c = getScatterColor(listing);
         return [c[0], c[1], c[2], 235];
       },

@@ -81,3 +81,9 @@ export function formatPriceShort(price?: number | null): string {
 export function isClusterFeature(f: { properties: Record<string, unknown> }): boolean {
   return f.properties.cluster === true;
 }
+
+/** Cluster radius (px) by zoom — smaller when zoomed out so dense comps don't blob
+ *  into one bubble; truly coincident points (one building) still cluster at any radius. */
+export function clusterRadiusForZoom(zoom: number): number {
+  return zoom <= 12 ? 28 : zoom <= 14 ? 40 : 56;
+}
