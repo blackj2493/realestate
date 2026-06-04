@@ -36,6 +36,7 @@ import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 import { fetchRoomsForKeys } from './roomsEnrichment';
 import { enrichListingsWithMedia, preserveExistingMedia } from './mediaEnrichment';
 import { nextSyncCursor } from './syncCursor';
+import { describeError } from '@/lib/etl/describeError';
 
 // ============================================================================
 // Sold Listing Types
@@ -1230,14 +1231,23 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     return result;
 
   } catch (err: any) {
-    console.error('\n❌ Dual-Query sync failed:', err.message);
+    // describeError unwraps non-Error throws (a Cloudflare 522 body has no
+    // `.message`, which is why this used to log `Dual-Query sync failed: undefined`).
+    const message = describeError(err);
+    console.error('\n❌ Dual-Query sync failed:', message);
     result.success = false;
-    result.errors.push(err.message);
+    result.errors.push(message);
 
     // Preserve the previous cursor on failure so the next attempt re-runs the
     // same window. Advancing on failure leaves an unrecoverable gap (§12).
-    const failureCursor = nextSyncCursor('failed', previousCursor, new Date().toISOString());
-    await updateSyncState(failureCursor, result.activeRecords + result.soldRecords, 'failed');
+    // Best-effort: if the DB itself is down, this write will 522 too — don't let
+    // that throw mask the original failure.
+    try {
+      const failureCursor = nextSyncCursor('failed', previousCursor, new Date().toISOString());
+      await updateSyncState(failureCursor, result.activeRecords + result.soldRecords, 'failed');
+    } catch (stateErr: any) {
+      console.error('   ⚠️  Could not record failed sync_state:', describeError(stateErr));
+    }
 
     return result;
   }
