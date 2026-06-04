@@ -38,6 +38,17 @@ import { useBubbleHydration } from "@/hooks/useBubbleHydration";
 import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
 import { queryPlan } from "@/lib/sold/layers";
 import { mergeLayers } from "@/lib/sold/mergeLayers";
+import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
+
+/**
+ * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
+ * Built from PROPERTY_TYPE_OPTIONS.variants so it stays in sync with one source.
+ * Used to convert universalFilters.homeType (raw spellings from RESIDENTIAL_TYPE_OPTIONS)
+ * into the dashboard keys that variantsForKeys() in the sold route understands.
+ */
+const SUBTYPE_TO_DASHBOARD_KEY: ReadonlyMap<string, string> = new Map(
+  PROPERTY_TYPE_OPTIONS.flatMap((opt) => opt.variants.map((v) => [v, opt.key] as [string, string]))
+);
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -177,11 +188,28 @@ function CommandCenterContent() {
     setError(null);
     const plan = queryPlan(activeLayers);
     try {
+      // Derive basic filters for comp layers from universalFilters — mirrors how
+      // buildTerminalCoreClauses extracts beds/baths/homeType for the active query.
+      // Persona/investor analytics filters are intentionally excluded (comps have no
+      // forward metrics like cap rate or yield).
+      const minBeds = (universalFilters.beds as number | undefined) ?? 0;
+      const minBaths = (universalFilters.baths as number | undefined) ?? 0;
+      const homeTypeRaw = (universalFilters.homeType as string[] | undefined) ?? [];
+      // Map raw PropertySubType spellings → dashboard keys the sold route accepts.
+      // variantsForKeys() in the route uses these keys to expand back to all spellings.
+      const mappedKeys = homeTypeRaw
+        .map((spelling) => SUBTYPE_TO_DASHBOARD_KEY.get(spelling))
+        .filter((k): k is string => k !== undefined);
+      const compFilters: { minBeds?: number; minBaths?: number; types?: string[] } = {};
+      if (minBeds > 0) compFilters.minBeds = minBeds;
+      if (minBaths > 0) compFilters.minBaths = minBaths;
+      if (mappedKeys.length > 0) compFilters.types = [...new Set(mappedKeys)];
+
       // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
       // whichever layers are lit, in parallel; then merge into one recency-sorted list.
       const [compRes, activeRes] = await Promise.all([
         plan.comps.length
-          ? fetchSoldComps({ mapBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps })
+          ? fetchSoldComps({ mapBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps, filters: compFilters })
           : Promise.resolve({ docs: [] as ListingDocument[], count: 0, locked: false }),
         plan.active ? runActiveSearch() : Promise.resolve(null),
       ]);
@@ -203,7 +231,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, setSoldLocked, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, setSoldLocked, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
