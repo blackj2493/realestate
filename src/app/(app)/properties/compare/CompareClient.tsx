@@ -5,8 +5,9 @@ import Link from "next/link";
 import { ArrowLeft, GitCompareArrows, Lock } from "lucide-react";
 import type { CompareData } from "@/lib/property/getCompareData";
 import {
-  COMPARE_METRICS,
-  GROUP_ORDER,
+  CORE_METRICS,
+  extendedGroupMetrics,
+  visibleRows,
   LENS_PRIORITY_GROUP,
   lensGroupOrder,
   type MetricContext,
@@ -14,6 +15,7 @@ import {
 import { useCompareAssumptions } from "@/lib/compare/useCompareAssumptions";
 import AssumptionsBar from "@/components/compare/AssumptionsBar";
 import MetricGroup from "@/components/compare/MetricGroup";
+import MetricRow from "@/components/compare/MetricRow";
 import CompareMediaCell from "@/components/compare/CompareMediaCell";
 import RentInput from "@/components/compare/RentInput";
 import CompareMobile from "@/components/compare/CompareMobile";
@@ -98,17 +100,27 @@ export default function CompareClient({
               ))}
             </tr>
           </thead>
-          {order.map((groupId) => (
-            <MetricGroup
-              key={`${lens}-${groupId}`}
-              groupId={groupId}
-              metrics={COMPARE_METRICS.filter((m) => m.group === groupId)}
-              contexts={contexts}
-              colSpan={colSpan}
-              defaultOpen={groupId === LENS_PRIORITY_GROUP[lens] || groupId === GROUP_ORDER[0]}
-              diffOnly={diffOnly}
-            />
-          ))}
+          {/* Core comparison — the original always-visible rows, shown flat */}
+          <tbody className="divide-y divide-slate-800/70 border-b-4 border-slate-950">
+            {visibleRows(CORE_METRICS, contexts, diffOnly).map(({ metric, resolved }) => (
+              <MetricRow key={metric.key} metric={metric} contexts={contexts} resolved={resolved} />
+            ))}
+          </tbody>
+
+          {/* Additional metrics — collapsible, lens-ordered groups */}
+          {order
+            .filter((groupId) => extendedGroupMetrics(groupId).length > 0)
+            .map((groupId) => (
+              <MetricGroup
+                key={`${lens}-${groupId}`}
+                groupId={groupId}
+                metrics={extendedGroupMetrics(groupId)}
+                contexts={contexts}
+                colSpan={colSpan}
+                defaultOpen={groupId === LENS_PRIORITY_GROUP[lens]}
+                diffOnly={diffOnly}
+              />
+            ))}
         </table>
       </div>
 

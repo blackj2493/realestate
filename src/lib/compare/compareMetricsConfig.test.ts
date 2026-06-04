@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { COMPARE_METRICS, resolveRow, lensGroupOrder, type MetricContext } from "./compareMetricsConfig";
+import {
+  COMPARE_METRICS,
+  CORE_METRICS,
+  extendedGroupMetrics,
+  visibleRows,
+  resolveRow,
+  lensGroupOrder,
+  type MetricContext,
+} from "./compareMetricsConfig";
 import type { ListingDocument } from "@/lib/typesense/client";
 
 const L = (over: Partial<ListingDocument>): ListingDocument =>
@@ -42,6 +50,47 @@ describe("resolveRow", () => {
     const r = resolveRow(metric("priceDrop"), [ctx(flat), ctx(flat)]);
     expect(r.winners.size).toBe(0);
     expect(r.displayed).toEqual([null, null]);
+  });
+});
+
+describe("core vs extended split", () => {
+  it("CORE_METRICS holds the 17 classic rows in order", () => {
+    expect(CORE_METRICS.map((m) => m.key)).toEqual([
+      "dealScore", "estValue", "vsEstimate", "listPrice", "ppsf",
+      "beds", "baths", "parking", "trueDom", "priceDrop",
+      "capRateUw", "carry", "taxes", "fees", "type", "suite", "brokerage",
+    ]);
+  });
+
+  it("extendedGroupMetrics returns only the non-core rows per group", () => {
+    expect(extendedGroupMetrics("cashflowCarry").map((m) => m.key)).toEqual(["capRateVA", "cashflow"]);
+    expect(extendedGroupMetrics("distressTiming").map((m) => m.key)).toEqual(["stale"]);
+    expect(extendedGroupMetrics("suiteDensity").map((m) => m.key)).toEqual([
+      "suiteScore", "multiUnit", "surplusParking", "densityReady",
+    ]);
+    expect(extendedGroupMetrics("valuationDeal")).toEqual([]);
+    expect(extendedGroupMetrics("structural")).toEqual([]);
+  });
+
+  it("core + extended partition every metric exactly once", () => {
+    const groups = ["valuationDeal", "cashflowCarry", "distressTiming", "suiteDensity", "structural"] as const;
+    const all = [...CORE_METRICS, ...groups.flatMap((g) => extendedGroupMetrics(g))].map((m) => m.key);
+    expect(all.slice().sort()).toEqual(COMPARE_METRICS.map((m) => m.key).sort());
+    expect(new Set(all).size).toBe(COMPARE_METRICS.length);
+  });
+});
+
+describe("visibleRows", () => {
+  it("drops identical rows in diff mode but keeps alwaysShow (brokerage)", () => {
+    const same = [ctx(L({ ListOfficeName: "ACME", BedroomsTotal: 3 })), ctx(L({ ListOfficeName: "ACME", BedroomsTotal: 3 }))];
+    const keys = visibleRows(CORE_METRICS, same, true).map((r) => r.metric.key);
+    expect(keys).toContain("brokerage"); // alwaysShow survives even when identical
+    expect(keys).not.toContain("beds"); // identical → hidden in diff mode
+  });
+
+  it("keeps all rows when diff mode is off", () => {
+    const same = [ctx(L({ BedroomsTotal: 3 })), ctx(L({ BedroomsTotal: 3 }))];
+    expect(visibleRows(CORE_METRICS, same, false).length).toBe(CORE_METRICS.length);
   });
 });
 

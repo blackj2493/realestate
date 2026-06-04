@@ -12,6 +12,7 @@ import type { PersonaType } from "@/lib/personas/personaConfig";
 import { formatPrice } from "@/lib/utils";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { winnerIndices, bestValue, type WinnerDirection } from "./winner";
+import { rowIsIdentical } from "./diff";
 
 export type CompareGroupId =
   | "valuationDeal"
@@ -137,16 +138,17 @@ export const COMPARE_METRICS: CompareMetric[] = [
       ? { estimatedValue: c.estimate.estimatedValue, confidence: c.estimate.confidence } : null).score,
     winner: "high", gated: true },
   { key: "estValue", label: "Est. Value", group: "valuationDeal", cellKind: "estValue",
-    get: (c) => c.estimate?.estimatedValue ?? null, winner: null, gated: true },
+    get: (c) => c.estimate?.estimatedValue ?? null, format: formatPrice, winner: null, gated: true },
   { key: "vsEstimate", label: "vs Estimate", group: "valuationDeal", cellKind: "discount",
-    get: discountPctOf, winner: "high", gated: true },
+    get: discountPctOf, format: (v) => `${Math.abs(v).toFixed(1)}% ${v >= 0 ? "under" : "over"}`,
+    winner: "high", gated: true },
   { key: "listPrice", label: "List Price", group: "valuationDeal", cellKind: "numeric",
     get: (c) => c.listing.ListPrice ?? null, format: formatPrice, winner: "low", magnitude: true },
   { key: "ppsf", label: "Price / Sqft", group: "valuationDeal", cellKind: "numeric",
     get: ppsfOf, format: fmtMoney, winner: "low", magnitude: true },
 
   // Cashflow & Carry (recomputed live — NOT gated)
-  { key: "capRateUw", label: "Cap Rate (your assumptions)", group: "cashflowCarry", cellKind: "numeric",
+  { key: "capRateUw", label: "Cap Rate", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.capRatePct ?? null, format: fmtPct1, winner: "high",
     tag: () => "est" },
   { key: "capRateVA", label: "Value-Add Cap Rate", group: "cashflowCarry", cellKind: "numeric",
@@ -229,4 +231,46 @@ export function resolveRow(metric: CompareMetric, contexts: MetricContext[]): Re
   const bestVal = metric.magnitude ? bestValue(values, metric.winner ?? null) : null;
   const tags = contexts.map((c, i) => (locked[i] || values[i] == null ? null : metric.tag?.(c) ?? null));
   return { values, displayed, locked, winners, bestVal, tags };
+}
+
+// ── Core vs extended split ──────────────────────────────────────────────────────
+// CORE rows are the original always-visible comparison set, shown flat at the top
+// of the page in this classic order. Everything else is an additional metric
+// surfaced in the collapsible, lens-ordered groups below.
+export const CORE_ORDER: string[] = [
+  "dealScore", "estValue", "vsEstimate", "listPrice", "ppsf",
+  "beds", "baths", "parking", "trueDom", "priceDrop",
+  "capRateUw", "carry", "taxes", "fees", "type", "suite", "brokerage",
+];
+const CORE_KEYS = new Set(CORE_ORDER);
+
+/** The original always-visible comparison rows, in their classic order. */
+export const CORE_METRICS: CompareMetric[] = CORE_ORDER
+  .map((k) => COMPARE_METRICS.find((m) => m.key === k))
+  .filter((m): m is CompareMetric => Boolean(m));
+
+/** The extra (collapsible) metrics for a group — everything not in the core block. */
+export function extendedGroupMetrics(groupId: CompareGroupId): CompareMetric[] {
+  return COMPARE_METRICS.filter((m) => m.group === groupId && !CORE_KEYS.has(m.key));
+}
+
+export interface VisibleRow {
+  metric: CompareMetric;
+  resolved: ResolvedRow;
+}
+
+/**
+ * Resolve a set of metrics against the columns and apply the diff filter: when
+ * `diffOnly`, rows where every column renders identically are dropped (except
+ * `alwaysShow` rows, e.g. the mandatory Brokerage line). Shared by desktop + mobile.
+ */
+export function visibleRows(
+  metrics: CompareMetric[],
+  contexts: MetricContext[],
+  diffOnly: boolean
+): VisibleRow[] {
+  const rows = metrics.map((metric) => ({ metric, resolved: resolveRow(metric, contexts) }));
+  return diffOnly
+    ? rows.filter(({ metric, resolved }) => metric.alwaysShow || !rowIsIdentical(resolved.displayed))
+    : rows;
 }
