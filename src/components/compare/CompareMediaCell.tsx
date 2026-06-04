@@ -28,7 +28,7 @@ export default function CompareMediaCell({ listing }: { listing: ListingDocument
   const step = (d: number) => setIdx((i) => (count ? (i + d + count) % count : 0));
 
   return (
-    <div className="relative mb-2 h-28 w-full overflow-hidden rounded-md bg-slate-800">
+    <div className="relative mb-2 h-40 w-full overflow-hidden rounded-md bg-slate-800 md:h-64">
       <button
         type="button"
         onClick={() => count > 0 && setOpen(true)}
