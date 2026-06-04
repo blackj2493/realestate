@@ -13,6 +13,8 @@
 import React from "react";
 import { BedDouble, Bath, Car, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
+import { soldVsAsk } from "@/lib/sold/delta";
 import type { ListingDocument } from "@/lib/typesense/client";
 
 /** "Listed N days ago" — EntryTimestamp is epoch MILLISECONDS; falls back to DaysOnMarket. */
@@ -30,6 +32,12 @@ export function bedsLabel(p: ListingDocument): string | null {
   if (!above && !below) return null;
   return below > 0 ? `${above}+${below}` : `${above}`;
 }
+
+const BADGE_TONE: Record<BadgeTone, string> = {
+  warn: "bg-amber-500/15 text-amber-300",
+  info: "bg-sky-500/15 text-sky-300",
+  neutral: "bg-slate-500/15 text-slate-300",
+};
 
 /** Compact icon + value chip for the bed/bath/parking strip. */
 function StatChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
@@ -55,10 +63,63 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
     parking ? <StatChip key="parking" icon={Car} label={String(parking)} /> : null,
   ].filter(Boolean);
 
+  const badge = statusBadge(doc.Status);
+
+  if (doc.IsSoldComp) {
+    const delta = soldVsAsk(doc.ListPrice, doc.OriginalListPrice ?? null);
+    const soldOn = doc.SoldDate ? new Date(doc.SoldDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : null;
+    const deltaTone =
+      delta?.direction === "over" ? "text-rose-300" : delta?.direction === "under" ? "text-emerald-300" : "text-slate-300";
+    return (
+      <>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <span className="shrink-0 rounded-sm bg-rose-500/15 px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide text-rose-300">
+            Sold
+          </span>
+          {soldOn && <span className="text-slate-500">{soldOn}</span>}
+        </div>
+        <p className="mt-0.5 truncate font-sans text-base font-bold text-cyan-300">
+          {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
+        </p>
+        {delta && (
+          <p className={cn("mt-0.5 font-mono text-xs font-semibold", deltaTone)}>
+            {delta.direction === "at" ? "At ask" : `${delta.deltaPct > 0 ? "+" : ""}${delta.deltaPct}% ${delta.direction} ask`}
+            <span className="ml-1 text-slate-500">(asked ${(doc.OriginalListPrice ?? 0).toLocaleString()})</span>
+          </p>
+        )}
+        <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
+        {chips.length > 0 && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-slate-300">
+            {chips.map((chip, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span className="text-slate-600">·</span>}
+                {chip}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-slate-500">
+          <span className="normal-case tracking-normal">{doc.id}</span>
+          <span className="text-slate-600">·</span>
+          <span>{type}</span>
+          {doc.ListOfficeName && (
+            <>
+              <span className="text-slate-600">·</span>
+              <span className="truncate normal-case tracking-normal">{doc.ListOfficeName}</span>
+            </>
+          )}
+        </div>
+        <p className="mt-1 text-[9px] leading-tight text-slate-600">
+          Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
+        </p>
+      </>
+    );
+  }
+
   return (
     <>
       {/* Status chip + freshness (small line above the price) */}
-      {(doc.TransactionType || age !== null) && (
+      {(doc.TransactionType || badge || age !== null) && (
         <div className="flex items-center gap-1.5 text-[10px]">
           {doc.TransactionType && (
             <span
@@ -68,6 +129,16 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
               )}
             >
               {doc.TransactionType}
+            </span>
+          )}
+          {badge && (
+            <span
+              className={cn(
+                "shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide",
+                BADGE_TONE[badge.tone]
+              )}
+            >
+              {badge.label}
             </span>
           )}
           {age !== null && <span className="text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>}

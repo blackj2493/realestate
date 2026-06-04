@@ -23,6 +23,7 @@ import {
   MapCommandPalette,
 } from "@/components/CommandCenter";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
@@ -33,6 +34,7 @@ import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
+import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -80,6 +82,10 @@ function CommandCenterContent() {
     drawPolygon,
     transactionMode,
     propertyClass,
+    listingMode,
+    soldWindowDays,
+    setSoldLocked,
+    soldLocked,
   } = useCommandCenterStore();
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
@@ -133,6 +139,29 @@ function CommandCenterContent() {
   const performSearch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
+      // ─── Sold mode: gated server route (sold_listings), NOT client Typesense ───
+      if (listingMode === "sold") {
+        try {
+          const { docs, count, locked } = await fetchSoldComps({
+            mapBounds,
+            location,
+            windowDays: soldWindowDays,
+            limit: MAX_LISTINGS,
+          });
+          setSoldLocked(locked);
+          setSearchResult({ listings: docs, totalFound: count, page: 1, perPage: MAX_LISTINGS, processingTimeMs: 0 });
+          setTotalCount(count);
+        } catch (err) {
+          console.error("[CommandCenter] Sold search error:", err);
+          setError(err instanceof Error ? err.message : "Sold comps temporarily unavailable.");
+          setSearchResult(null);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
     try {
       const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
 
@@ -201,14 +230,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [persona, filters, universalFilters, location, transactionMode, propertyClass, listingMode, soldWindowDays, setSoldLocked, commute.enabled, commute.polygon, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, mapBounds, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, transactionMode, propertyClass, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, listingMode, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -231,6 +260,9 @@ function CommandCenterContent() {
   const mapColorConfig =
     activeMetric ?? (school.enabled ? schoolMapColor(school.level, school.system) : persona.mapColor);
   const heatAggregation = activeMetric?.heatAggregation ?? "mean";
+
+  const showSoldLock = listingMode === "sold" && soldLocked;
+  const soldLockMsg = `${totalCount.toLocaleString()} recent sale${totalCount === 1 ? "" : "s"} — sign in to view`;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950">
@@ -264,6 +296,7 @@ function CommandCenterContent() {
           <div className="pointer-events-auto absolute right-3 top-3 z-30">
             <SaveBubbleButton />
           </div>
+          {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
 
         {/* Drag handle — resize the ledger */}
@@ -279,8 +312,9 @@ function CommandCenterContent() {
         </div>
 
         {/* Ledger — user-resizable width */}
-        <div className="flex shrink-0 flex-col bg-slate-950" style={{ width: ledgerWidth }}>
+        <div className="relative flex shrink-0 flex-col bg-slate-950" style={{ width: ledgerWidth }}>
           <LedgerPanel className="flex-1 min-h-0" />
+          {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
       </div>
 

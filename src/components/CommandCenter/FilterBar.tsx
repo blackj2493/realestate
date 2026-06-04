@@ -11,6 +11,7 @@ import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
 import InvestorChip from "./InvestorChip";
+import SoldWindowDropdown from "./SoldWindowDropdown";
 import PresetChip from "./PresetChip";
 import AddFilterPalette from "./AddFilterPalette";
 import { Popover } from "@/components/ui/popover";
@@ -43,7 +44,8 @@ export default function FilterBar() {
     filters,
     setFilters,
     transactionMode,
-    setTransactionMode,
+    listingMode,
+    setListingMode,
     propertyClass,
     setPropertyClass,
   } = useCommandCenterStore();
@@ -52,7 +54,7 @@ export default function FilterBar() {
   const controls = PERSONA_CONFIG[activePersona].controls;
 
   // The persona/investor layer (preset + investor chips) is residential-sale only.
-  const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
+  const investorLayer = listingMode !== "sold" && isInvestorLayerActive(transactionMode, propertyClass);
 
   // Price slider follows the transaction mode (sale 0–3M vs rent 0–$12k bounds).
   const scopedPriceDef = makePriceDef(priceConfig(transactionMode));
@@ -92,90 +94,98 @@ export default function FilterBar() {
 
   return (
     <div className="no-scrollbar flex h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3">
-      {/* Fundamental axes — gate the whole query (sit before the persona preset). */}
+      {/* Listing-status strip — For Sale / Sold / For Rent (Sold switches data source). */}
       <FundamentalToggle
-        ariaLabel="Transaction type"
-        value={transactionMode}
-        onChange={setTransactionMode}
+        ariaLabel="Listing status"
+        value={listingMode}
+        onChange={setListingMode}
         options={[
           { value: "sale", label: "For Sale" },
+          { value: "sold", label: "Sold" },
           { value: "rent", label: "For Rent" },
         ]}
       />
-      <FundamentalToggle
-        ariaLabel="Property class"
-        value={propertyClass}
-        onChange={setPropertyClass}
-        options={[
-          { value: "residential", label: "Residential" },
-          { value: "commercial", label: "Commercial" },
-        ]}
-      />
-      <div className="h-5 w-px shrink-0 bg-slate-800" />
+      {listingMode === "sold" && <SoldWindowDropdown />}
 
-      {/* Persona preset — residential-sale only (rent/commercial = basic browse). */}
-      {investorLayer && (
+      {/* Everything else is the active-browse bar — hidden in Sold mode (v1). */}
+      {listingMode !== "sold" && (
         <>
-          <PresetChip />
-          <div className="h-5 w-px shrink-0 bg-slate-800" />
-        </>
-      )}
-
-      {CORE_FILTERS.map((def) => {
-        const useDef =
-          def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
-        return (
-          <FilterChip
-            key={def.key}
-            def={useDef}
-            value={universalFilters[def.key] ?? useDef.defaultValue}
-            onChange={(v) => setUniversalFilter(def.key, v)}
-            onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
+          <FundamentalToggle
+            ariaLabel="Property class"
+            value={propertyClass}
+            onChange={setPropertyClass}
+            options={[
+              { value: "residential", label: "Residential" },
+              { value: "commercial", label: "Commercial" },
+            ]}
           />
-        );
-      })}
-
-      {investorLayer && (
-        <>
           <div className="h-5 w-px shrink-0 bg-slate-800" />
-          {controls.map((c, i) => (
-            <InvestorChip key={`${activePersona}-${i}`} control={c} />
+
+          {/* Persona preset — residential-sale only (rent/commercial = basic browse). */}
+          {investorLayer && (
+            <>
+              <PresetChip />
+              <div className="h-5 w-px shrink-0 bg-slate-800" />
+            </>
+          )}
+
+          {CORE_FILTERS.map((def) => {
+            const useDef =
+              def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
+            return (
+              <FilterChip
+                key={def.key}
+                def={useDef}
+                value={universalFilters[def.key] ?? useDef.defaultValue}
+                onChange={(v) => setUniversalFilter(def.key, v)}
+                onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
+              />
+            );
+          })}
+
+          {investorLayer && (
+            <>
+              <div className="h-5 w-px shrink-0 bg-slate-800" />
+              {controls.map((c, i) => (
+                <InvestorChip key={`${activePersona}-${i}`} control={c} />
+              ))}
+            </>
+          )}
+
+          {addedDefs.map((def) => (
+            <FilterChip
+              key={def.key}
+              def={def}
+              value={universalFilters[def.key] ?? def.defaultValue}
+              onChange={(v) => setUniversalFilter(def.key, v)}
+              onClear={() => {
+                setUniversalFilter(def.key, freshDefault(def.defaultValue));
+                removeAddedFilter(def.key);
+              }}
+            />
           ))}
+
+          <Popover
+            trigger={
+              <span
+                className={cn(
+                  LABEL,
+                  "flex shrink-0 cursor-pointer items-center gap-1 border border-dashed border-slate-700 px-2.5 py-1.5 text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                )}
+              >
+                <Plus className="h-3 w-3" />
+                Add filter
+              </span>
+            }
+            className="p-2"
+          >
+            <AddFilterPalette />
+          </Popover>
         </>
       )}
-
-      {addedDefs.map((def) => (
-        <FilterChip
-          key={def.key}
-          def={def}
-          value={universalFilters[def.key] ?? def.defaultValue}
-          onChange={(v) => setUniversalFilter(def.key, v)}
-          onClear={() => {
-            setUniversalFilter(def.key, freshDefault(def.defaultValue));
-            removeAddedFilter(def.key);
-          }}
-        />
-      ))}
-
-      <Popover
-        trigger={
-          <span
-            className={cn(
-              LABEL,
-              "flex shrink-0 cursor-pointer items-center gap-1 border border-dashed border-slate-700 px-2.5 py-1.5 text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
-            )}
-          >
-            <Plus className="h-3 w-3" />
-            Add filter
-          </span>
-        }
-        className="p-2"
-      >
-        <AddFilterPalette />
-      </Popover>
 
       <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
-        {anyActive && (
+        {anyActive && listingMode !== "sold" && (
           <button
             onClick={clearAll}
             className={cn(
