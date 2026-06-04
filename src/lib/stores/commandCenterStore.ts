@@ -15,6 +15,7 @@ import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
 import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
 import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
+import { type LayerKey, transactionModeForLayers, deriveLegacyListingMode } from "@/lib/sold/layers";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -107,6 +108,12 @@ export interface CommandCenterState {
   // mirror transactionMode (active path); `sold` switches to the gated sold route.
   listingMode: ListingMode;
   setListingMode: (mode: ListingMode) => void;
+  // Active layers — multi-select For Sale·Sold·Leased·For Rent (any combination,
+  // never empty). transactionMode/price bounds follow transactionModeForLayers().
+  // `listingMode` is kept synced for back-compat until its readers migrate.
+  activeLayers: Set<LayerKey>;
+  toggleLayer: (key: LayerKey) => void;
+
   // Sold-comp window (days) + the anonymous gate flag for the teaser overlay.
   soldWindowDays: number;
   setSoldWindowDays: (days: number) => void;
@@ -264,6 +271,22 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
         universalFilters: { ...state.universalFilters, price: [min, max] },
       };
     }),
+  activeLayers: new Set<LayerKey>(["forSale"]),
+  toggleLayer: (key) =>
+    set((state) => {
+      const next = new Set(state.activeLayers);
+      if (next.has(key)) { if (next.size > 1) next.delete(key); }
+      else next.add(key);
+      const tx = transactionModeForLayers(next);
+      const { min, max } = priceConfig(tx);
+      return {
+        activeLayers: next,
+        transactionMode: tx,
+        listingMode: deriveLegacyListingMode(next),
+        universalFilters: { ...state.universalFilters, price: [min, max] },
+      };
+    }),
+
   soldWindowDays: SOLD_DISPLAY_MAX_DAYS,
   setSoldWindowDays: (days) => set({ soldWindowDays: days }),
   soldLocked: false,
