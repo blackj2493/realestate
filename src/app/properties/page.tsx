@@ -234,7 +234,10 @@ function CommandCenterContent() {
     activeMetric ?? (school.enabled ? schoolMapColor(school.level, school.system) : persona.mapColor);
   const heatAggregation = activeMetric?.heatAggregation ?? "mean";
 
-  const showSoldLock = soldLocked;
+  // Only blanket the panes with the VOW gate when the view is comp-only — if an active
+  // (For Sale / For Rent) layer is also lit, its listings aren't gated and must stay visible.
+  const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
+  const showSoldLock = soldLocked && compOnly;
   const soldLockMsg = `${totalCount.toLocaleString()} recent sale${totalCount === 1 ? "" : "s"} — sign in to view`;
 
   return (
