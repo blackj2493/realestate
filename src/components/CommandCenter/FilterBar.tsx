@@ -12,7 +12,6 @@ import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
 import InvestorChip from "./InvestorChip";
 import SoldWindowDropdown from "./SoldWindowDropdown";
-import PresetChip from "./PresetChip";
 import AddFilterPalette from "./AddFilterPalette";
 import { Popover } from "@/components/ui/popover";
 import { formatResultNudge } from "./filterNudge";
@@ -24,7 +23,7 @@ const freshDefault = (v: FilterValue): FilterValue =>
   Array.isArray(v) ? ([...v] as FilterValue) : v;
 
 /**
- * Unified instrument bar: a gold persona-preset chip, the universal "what"
+ * Unified instrument bar: the universal "what"
  * basics (price/beds/baths/type), the active persona's investor chips, any
  * user-added deeper filters, the "+ Add filter" palette and the narrow nudge.
  * Investor chips bind to the persona `filters` slice (unchanged query pipeline);
@@ -121,14 +120,8 @@ export default function FilterBar() {
           />
           <div className="h-5 w-px shrink-0 bg-slate-800" />
 
-          {/* Persona preset — residential-sale only (rent/commercial = basic browse). */}
-          {investorLayer && (
-            <>
-              <PresetChip />
-              <div className="h-5 w-px shrink-0 bg-slate-800" />
-            </>
-          )}
-
+          {/* Persona preset now lives centered in the TopCommandBar (lifted out
+              of this row). Investor chips below still gate on `investorLayer`. */}
           {CORE_FILTERS.map((def) => {
             const useDef =
               def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;

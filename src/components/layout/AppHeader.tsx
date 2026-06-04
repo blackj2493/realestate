@@ -43,14 +43,15 @@ export default function AppHeader({
           <Logo size="md" theme="dark" />
         </Link>
 
-        {/* Primary section nav — inline on md+, drawer below (see MobileNav). */}
-        {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
+        {/* Global search sits next to the logo on the left (collapses below lg). */}
+        {search && <LocationSearch mode="navigate" className="hidden shrink-0 lg:block lg:w-72" />}
 
-        {/* Spacer pushes the search + right cluster to the edge. */}
+        {/* Spacer pushes the nav + right cluster to the edge. */}
         <div className="flex-1" />
 
-        {/* Global search collapses on smaller screens to leave room for the nav. */}
-        {search && <LocationSearch mode="navigate" className="hidden shrink-0 lg:block lg:w-72" />}
+        {/* Primary section nav — pushed to the right, before the alerts/account
+            cluster. Inline on md+, drawer below (see MobileNav). */}
+        {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
 
         <div className="flex shrink-0 items-center gap-3">
           {right}
