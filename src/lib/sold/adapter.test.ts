@@ -48,4 +48,28 @@ describe("soldToListingDocument", () => {
     expect(d.primaryImageUrl).toBe("https://img/x.jpg");
     expect(d.thumbnailUrl).toBe("https://img/x.jpg");
   });
+
+  it("sets compKind + LeasedDate for leased comps", () => {
+    const leased: SoldListing = {
+      id: "L1",
+      dealType: "leased",
+      soldDate: "2026-05-01T00:00:00Z",
+      closePrice: 3200,
+      listPrice: 3300,
+      address: "1 King St",
+      lat: 43.6,
+      lng: -79.4,
+      propertySubType: null,
+      beds: null,
+      baths: null,
+      sqft: null,
+      brokerage: null,
+      city: null,
+      primaryImageUrl: null,
+    };
+    const doc = soldToListingDocument(leased);
+    expect(doc.compKind).toBe("leased");
+    expect(doc.LeasedDate).toBe("2026-05-01T00:00:00Z");
+    expect(doc.ListPrice).toBe(3200);
+  });
 });
