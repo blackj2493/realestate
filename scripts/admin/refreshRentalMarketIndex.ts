@@ -24,27 +24,27 @@ async function main() {
   await client.query("SET statement_timeout TO '0'");
 
   const acc = createRentAccumulator();
-  let lastId = '00000000-0000-0000-0000-000000000000';
+  let lastKey = ''; // raw_vow_sold PK is listing_key (varchar); '' sorts before all keys
   let scanned = 0;
 
   for (;;) {
     const { rows } = await client.query(
-      `SELECT id,
+      `SELECT listing_key,
               city_region,
+              property_sub_type,
               close_price,
               list_price,
-              full_payload->>'Status'           AS status,
-              full_payload->>'MlsStatus'         AS mls_status,
-              full_payload->>'StandardStatus'    AS standard_status,
-              full_payload->>'TransactionType'   AS transaction_type,
-              full_payload->>'PropertySubType'   AS property_sub_type,
-              full_payload->>'BedroomsTotal'     AS bedrooms_total,
-              full_payload->>'WashroomsType1Pcs' AS washrooms_full
+              raw_payload->>'Status'            AS status,
+              raw_payload->>'MlsStatus'          AS mls_status,
+              raw_payload->>'StandardStatus'     AS standard_status,
+              raw_payload->>'TransactionType'    AS transaction_type,
+              raw_payload->>'BedroomsTotal'      AS bedrooms_total,
+              raw_payload->>'WashroomsType1Pcs'  AS washrooms_full
          FROM raw_vow_sold
-        WHERE id > $1
-        ORDER BY id
+        WHERE listing_key > $1
+        ORDER BY listing_key
         LIMIT $2`,
-      [lastId, READ_CHUNK],
+      [lastKey, READ_CHUNK],
     );
     if (rows.length === 0) break;
     for (const r of rows) {
@@ -56,11 +56,12 @@ async function main() {
         cityRegion: r.city_region,
         propertySubType: r.property_sub_type,
         bedroomsTotal: r.bedrooms_total != null ? parseInt(r.bedrooms_total, 10) : null,
-        washroomsFull: r.washrooms_full != null ? parseInt(r.washrooms_full, 10) : 0,
+        // rentAVM.ts looks up washrooms_full from raw.WashroomsType1Pcs with a `|| 1` default — match it.
+        washroomsFull: r.washrooms_full != null ? parseInt(r.washrooms_full, 10) : 1,
       });
     }
     scanned += rows.length;
-    lastId = rows[rows.length - 1].id;
+    lastKey = rows[rows.length - 1].listing_key;
     if (scanned % 50000 === 0) console.log(`   …scanned ${scanned} rows`);
   }
 
