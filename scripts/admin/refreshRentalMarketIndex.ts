@@ -1,7 +1,9 @@
 /**
- * Populate rental_market_index from leased rows in raw_vow_sold.
- * Mirrors scripts/admin/backfill020.ts: direct pg Session-pooler client,
- * statement_timeout=0, keyset pagination by id, batched upserts.
+ * Populate rental_market_index from the ACTIVE for-lease inventory (current asking rents).
+ * Source: listings WHERE TransactionType ~ lease — list_price is the monthly rent there
+ * (there is no close_price; the listing isn't closed). The active for-lease set (~38k) is
+ * the real rent-comp source; raw_vow_sold (the SOLD feed) carries only ~985 stray leases.
+ * The pure helpers in worker/services/rentModel.ts do classification / percentile / cohorts.
  *
  * Usage:
  *   npx tsx scripts/admin/refreshRentalMarketIndex.ts --dry-run   (no writes; prints cohort stats)
@@ -11,7 +13,6 @@ import 'dotenv/config';
 import { Client } from 'pg';
 import { createRentAccumulator, type RentalIndexRow } from '../worker/services/rentModel';
 
-const READ_CHUNK = 2000;
 const WRITE_CHUNK = 500;
 const APPLY = process.argv.includes('--apply');
 const DRY = process.argv.includes('--dry-run') || !APPLY;
@@ -24,49 +25,34 @@ async function main() {
   await client.query("SET statement_timeout TO '0'");
 
   const acc = createRentAccumulator();
-  let lastKey = ''; // raw_vow_sold PK is listing_key (varchar); '' sorts before all keys
-  let scanned = 0;
 
-  for (;;) {
-    const { rows } = await client.query(
-      `SELECT listing_key,
-              city_region,
-              property_sub_type,
-              close_price,
-              list_price,
-              raw_payload->>'Status'            AS status,
-              raw_payload->>'MlsStatus'          AS mls_status,
-              raw_payload->>'StandardStatus'     AS standard_status,
-              raw_payload->>'TransactionType'    AS transaction_type,
-              raw_payload->>'BedroomsTotal'      AS bedrooms_total,
-              raw_payload->>'WashroomsType1Pcs'  AS washrooms_full
-         FROM raw_vow_sold
-        WHERE listing_key > $1
-        ORDER BY listing_key
-        LIMIT $2`,
-      [lastKey, READ_CHUNK],
-    );
-    if (rows.length === 0) break;
-    for (const r of rows) {
-      acc.add({
-        status: r.status || r.mls_status || r.standard_status,
-        transactionType: r.transaction_type,
-        closePrice: r.close_price != null ? Number(r.close_price) : null,
-        listPrice: r.list_price != null ? Number(r.list_price) : null,
-        cityRegion: r.city_region,
-        propertySubType: r.property_sub_type,
-        bedroomsTotal: r.bedrooms_total != null ? parseInt(r.bedrooms_total, 10) : null,
-        // rentAVM.ts looks up washrooms_full from raw.WashroomsType1Pcs with a `|| 1` default — match it.
-        washroomsFull: r.washrooms_full != null ? parseInt(r.washrooms_full, 10) : 1,
-      });
-    }
-    scanned += rows.length;
-    lastKey = rows[rows.length - 1].listing_key;
-    if (scanned % 50000 === 0) console.log(`   …scanned ${scanned} rows`);
+  // One filtered pass over the active for-lease inventory (asking rents).
+  // listings PK is payload_hash; TransactionType/beds/washrooms live in full_payload.
+  const { rows } = await client.query(
+    `SELECT list_price,
+            city_region,
+            property_sub_type,
+            full_payload->>'TransactionType'    AS transaction_type,
+            full_payload->>'BedroomsTotal'      AS bedrooms_total,
+            full_payload->>'WashroomsType1Pcs'  AS washrooms_full
+       FROM listings
+      WHERE lower(coalesce(full_payload->>'TransactionType', '')) ~ '(leas|rent)'`,
+  );
+  for (const r of rows) {
+    acc.add({
+      transactionType: r.transaction_type,
+      closePrice: null,
+      listPrice: r.list_price != null ? Number(r.list_price) : null,
+      cityRegion: r.city_region,
+      propertySubType: r.property_sub_type,
+      bedroomsTotal: r.bedrooms_total != null ? parseInt(r.bedrooms_total, 10) : null,
+      // rentAVM.ts looks up washrooms_full from raw.WashroomsType1Pcs with a `|| 1` default — match it.
+      washroomsFull: r.washrooms_full != null ? parseInt(r.washrooms_full, 10) : 1,
+    });
   }
 
   const indexRows: RentalIndexRow[] = acc.finalize();
-  console.log(`Scanned ${scanned} raw rows -> ${indexRows.length} qualifying cohorts (min-N met).`);
+  console.log(`Read ${rows.length} active for-lease listings -> ${indexRows.length} cohorts (min-N met).`);
   console.log('Sample:', indexRows.slice(0, 5));
 
   if (DRY) {
