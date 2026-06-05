@@ -1,0 +1,65 @@
+import type { Metadata } from 'next';
+import RenovationFunnel from '@/components/reno/RenovationFunnel';
+import { loadCohortTree } from '@/lib/avm/loadCohortTree';
+import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
+
+export const dynamic = 'force-dynamic';
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://pureproperty.ca').replace(/\/$/, '');
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ community?: string }>;
+}): Promise<Metadata> {
+  const { community: slug } = await searchParams;
+  const where = slug ? deslugifyCommunity(slug) : null;
+  const title = where
+    ? `Which renovation pays you back most in ${where}?`
+    : "What's my home hiding? Renovation upside, free";
+  const description = where
+    ? `Find the renovation that pays back most for your ${where} home. Free, 60-second analysis.`
+    : 'Describe your home and find the renovations that pay back most in your neighbourhood. Free.';
+  const ogImage = `/api/og/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
+  };
+}
+
+export default async function WhatsMyHomeHidingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ community?: string }>;
+}) {
+  const { community: slug } = await searchParams;
+  const tree = await loadCohortTree();
+  const resolved = slug ? resolveCommunitySlug(tree, slug) : null;
+  const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
+
+  return (
+    <main className="mx-auto max-w-[1200px] px-4 py-10 text-slate-200">
+      <h1 className="mb-1 text-3xl font-bold">What&apos;s my home hiding?</h1>
+      <p className="mb-8 max-w-2xl text-sm text-slate-400">
+        Describe your home and see the renovations that pay back the most where you are —
+        ranked by what actually sells nearby. Free.
+      </p>
+      <RenovationFunnel
+        tree={tree}
+        initialCity={resolved?.city ?? ''}
+        initialCityRegion={resolved?.cityRegion ?? ''}
+        communitySlug={slug ?? null}
+        communityLabel={communityLabel}
+      />
+    </main>
+  );
+}
