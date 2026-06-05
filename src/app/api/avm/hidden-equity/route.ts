@@ -18,35 +18,40 @@ import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 import type { AVMInput } from '@/lib/avm/types';
 
 export async function POST(req: NextRequest) {
+  let body: unknown;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 
-    const parsed = AVMInputSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
-    const v = parsed.data;
+  const parsed = AVMInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid input', details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+  const v = parsed.data;
 
-    // SOFT GATE: non-consumers get the non-VOW teaser. No AVM/VOW touched.
-    const { isConsumer } = await getConsumer();
-    if (!isConsumer) {
-      return NextResponse.json(
-        buildAnonCatalog({
-          basementTier: v.basementTier,
-          interiorTier: v.interiorTier,
-          exteriorTier: v.exteriorTier,
-          bathroomsTotalInteger: v.bathroomsTotalInteger,
-          bedroomsAboveGrade: v.bedroomsAboveGrade,
-          parkingTotal: v.parkingTotal,
-          buildingAreaTotal: v.buildingAreaTotal ?? null,
-        }),
-      );
-    }
+  // SOFT GATE: non-consumers get the non-VOW teaser. No AVM/VOW touched.
+  const { isConsumer } = await getConsumer();
+  if (!isConsumer) {
+    return NextResponse.json(
+      buildAnonCatalog({
+        basementTier: v.basementTier,
+        interiorTier: v.interiorTier,
+        exteriorTier: v.exteriorTier,
+        bathroomsTotalInteger: v.bathroomsTotalInteger,
+        bedroomsAboveGrade: v.bedroomsAboveGrade,
+        parkingTotal: v.parkingTotal,
+        buildingAreaTotal: v.buildingAreaTotal ?? null,
+      }),
+    );
+  }
 
-    // CONSUMER: full VOW-derived report (unchanged behaviour).
+  // CONSUMER: full VOW-derived report.
+  try {
     const input: AVMInput = {
       cityRegion: v.cityRegion,
       city: v.city ?? null,
