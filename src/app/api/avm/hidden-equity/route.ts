@@ -1,26 +1,23 @@
 /**
- * Hidden Equity API Route — GATED
+ * Hidden Equity API Route — SOFT-GATED (VOW posture B)
  *
  * POST /api/avm/hidden-equity
- * Requires authentication. Accepts AVMInput (+ optional buildingAreaTotal) and
- * returns both the AVM estimate and the Phase-1 value-add report.
+ *  - Anonymous / non-consumer → { locked: true, catalog }  (non-VOW move list +
+ *    cost ranges; NO AVM run, NO VOW reads). Powers the public funnel teaser.
+ *  - Consumer (signed in, + Terms when enforced) → { locked: false, estimate,
+ *    valueAdd }  (unchanged — the existing /hidden-equity tool reads these).
  */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { getConsumer } from '@/lib/auth/requireConsumer';
 import { calculateAVM } from '@/lib/avm/calculator';
 import { fetchValueAddReport } from '@/lib/avm/valueAdd/engine';
+import { buildAnonCatalog } from '@/lib/avm/valueAdd/anonCatalog';
 import { AVMInputSchema } from '@/lib/avm/validation';
 import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 import type { AVMInput } from '@/lib/avm/types';
 
 export async function POST(req: NextRequest) {
-  // Auth gate — must be first
-  if (!(await getCurrentUser())) {
-    return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
-  }
-
   try {
     const body = await req.json();
 
@@ -28,22 +25,34 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Invalid input', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+    const v = parsed.data;
+
+    // SOFT GATE: non-consumers get the non-VOW teaser. No AVM/VOW touched.
+    const { isConsumer } = await getConsumer();
+    if (!isConsumer) {
+      return NextResponse.json(
+        buildAnonCatalog({
+          basementTier: v.basementTier,
+          interiorTier: v.interiorTier,
+          exteriorTier: v.exteriorTier,
+          bathroomsTotalInteger: v.bathroomsTotalInteger,
+          bedroomsAboveGrade: v.bedroomsAboveGrade,
+          parkingTotal: v.parkingTotal,
+          buildingAreaTotal: v.buildingAreaTotal ?? null,
+        }),
       );
     }
 
-    const v = parsed.data;
-
-    // buildingAreaTotal flows through the schema (positive number | null | undefined).
-    // Coerce undefined → null so AVMInput gets the right type.
-    const buildingAreaTotal: number | null = v.buildingAreaTotal ?? null;
-
+    // CONSUMER: full VOW-derived report (unchanged behaviour).
     const input: AVMInput = {
       cityRegion: v.cityRegion,
       city: v.city ?? null,
       propertySubType: normalizePropertySubType(v.propertySubType),
       rawPropertySubType: v.propertySubType,
-      buildingAreaTotal,
+      buildingAreaTotal: v.buildingAreaTotal ?? null,
       lotWidth: null,
       bedroomsAboveGrade: v.bedroomsAboveGrade,
       bathroomsTotalInteger: v.bathroomsTotalInteger,
@@ -64,7 +73,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ estimate, valueAdd });
+    return NextResponse.json({ locked: false, estimate, valueAdd });
   } catch (err) {
     console.error('[avm/hidden-equity]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
