@@ -54,3 +54,52 @@ export function percentile(sortedAsc: number[], p: number): number {
   if (lo === hi) return sortedAsc[lo];
   return sortedAsc[lo] + (sortedAsc[hi] - sortedAsc[lo]) * (idx - lo);
 }
+
+export interface RentalIndexRow {
+  city_region: string;
+  property_sub_type: string;
+  bedrooms_total: number;
+  washrooms_full: number;
+  avg_rent: number;   // median monthly rent
+  p10_rent: number;   // 10th-percentile monthly rent
+  sample_count: number;
+}
+
+export function createRentAccumulator() {
+  const groups = new Map<string, { meta: RawLeaseInput; rents: number[] }>();
+  return {
+    add(r: RawLeaseInput): void {
+      if (!isLeaseRecord(r)) return;
+      const rent = extractMonthlyRent(r);
+      if (rent == null) return;
+      const key = cohortKeyOf(r);
+      if (!key) return;
+      let g = groups.get(key);
+      if (!g) { g = { meta: r, rents: [] }; groups.set(key, g); }
+      g.rents.push(rent);
+    },
+    finalize(): RentalIndexRow[] {
+      const rows: RentalIndexRow[] = [];
+      for (const g of groups.values()) {
+        if (g.rents.length < MIN_COHORT_SAMPLES) continue;
+        const sorted = [...g.rents].sort((a, b) => a - b);
+        rows.push({
+          city_region: (g.meta.cityRegion ?? '').trim(),
+          property_sub_type: (g.meta.propertySubType ?? '').trim(),
+          bedrooms_total: g.meta.bedroomsTotal as number,
+          washrooms_full: g.meta.washroomsFull ?? 0,
+          avg_rent: Math.round(percentile(sorted, 0.5)),
+          p10_rent: Math.round(percentile(sorted, 0.10)),
+          sample_count: sorted.length,
+        });
+      }
+      return rows;
+    },
+  };
+}
+
+export function buildRentalIndexRows(records: RawLeaseInput[]): RentalIndexRow[] {
+  const acc = createRentAccumulator();
+  for (const r of records) acc.add(r);
+  return acc.finalize();
+}
