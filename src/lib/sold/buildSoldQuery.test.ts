@@ -8,6 +8,7 @@ describe("buildSoldQuery", () => {
       location: "Toronto",
       windowDays: 90,
       limit: 100,
+      dealType: "sold",
     });
     const p = new URLSearchParams(qs);
     // S,W, S,E, N,E, N,W
@@ -18,18 +19,22 @@ describe("buildSoldQuery", () => {
   });
 
   it("falls back to region=location when no bounds", () => {
-    const qs = buildSoldQuery({ mapBounds: null, location: "Brampton", windowDays: 180, limit: 100 });
+    const qs = buildSoldQuery({ mapBounds: null, location: "Brampton", windowDays: 180, limit: 100, dealType: "sold" });
     const p = new URLSearchParams(qs);
     expect(p.get("region")).toBe("Brampton");
     expect(p.get("polygon")).toBeNull();
   });
 
   it("clamps the window to the cap", () => {
-    const qs = buildSoldQuery({ mapBounds: null, location: "Ajax", windowDays: 9999, limit: 100 });
+    const qs = buildSoldQuery({ mapBounds: null, location: "Ajax", windowDays: 9999, limit: 100, dealType: "sold" });
     expect(new URLSearchParams(qs).get("windowDays")).toBe("180");
   });
 
   it("returns an empty string when there is neither bounds nor location", () => {
-    expect(buildSoldQuery({ mapBounds: null, location: "", windowDays: 90, limit: 100 })).toBe("");
+    expect(buildSoldQuery({ mapBounds: null, location: "", windowDays: 90, limit: 100, dealType: "sold" })).toBe("");
+  });
+
+  it("includes dealType in the query string", () => {
+    expect(buildSoldQuery({ mapBounds: null, location: "Toronto", windowDays: 90, limit: 100, dealType: "sold" })).toContain("dealType=sold");
   });
 });

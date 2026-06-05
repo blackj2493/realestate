@@ -897,10 +897,11 @@ async function reconcileMissingSoldMedia(
     for (const raw of toIndex) {
       const soldData = extractSoldListingData(raw);
       if (!soldData) continue;
-      const doc = toSoldDocument(soldData, raw.ListOfficeName ?? null, {
-        media: raw.media,
-        images: raw.images,
-      });
+      const doc = toSoldDocument(
+        { ...soldData, mls_status: raw.MlsStatus ?? null, transaction_type: raw.TransactionType ?? null },
+        raw.ListOfficeName ?? null,
+        { media: raw.media, images: raw.images }
+      );
       if (doc) soldDocs.push(doc);
       if (fetchedKeys.has(raw.ListingKey)) soldRecords.push(soldData);
     }
@@ -1123,7 +1124,7 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
         if (soldData) {
           soldRecords.push(soldData);
           const doc = toSoldDocument(
-            soldData,
+            { ...soldData, mls_status: rawListing.MlsStatus ?? null, transaction_type: rawListing.TransactionType ?? null },
             rawListing.ListOfficeName ?? null,
             { media: (rawListing as any).media, images: (rawListing as any).images }
           );

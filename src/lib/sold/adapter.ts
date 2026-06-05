@@ -26,7 +26,9 @@ export function soldToListingDocument(s: SoldListing): ListingDocument {
     // [lat, lng] per ListingDocument.location; [0,0] for ungeocoded rows (map filters them).
     location: hasCoords ? [s.lat as number, s.lng as number] : [0, 0],
     IsSoldComp: true,
-    SoldDate: s.soldDate ?? undefined,
+    compKind: s.dealType,
+    SoldDate: s.dealType === "sold" ? (s.soldDate ?? undefined) : undefined,
+    LeasedDate: s.dealType === "leased" ? (s.soldDate ?? undefined) : undefined,
     // Discriminators consumed by render paths; sold comps carry no active-only metrics.
     isDistressed: false,
     hasSecondarySuitePotential: false,

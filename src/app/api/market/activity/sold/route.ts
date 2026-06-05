@@ -39,7 +39,6 @@ export const dynamic = "force-dynamic";
 
 const MAX_WINDOW_DAYS = SOLD_DISPLAY_MAX_DAYS;
 const MAX_LIST = 100; // TRREB per-query display cap
-const PRICE_FLOOR = 50000; // excludes lease/rental rows leaking into the sold feed
 const DAY_MS = 86_400_000;
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
@@ -85,6 +84,7 @@ interface SoldParams {
   basementFinished: boolean;
   minFrontage: number;
   limit: number;
+  dealType: "sold" | "leased";
 }
 
 /** Build the Typesense area clause (one per kind) — see SoldArea docstring. */
@@ -108,7 +108,8 @@ function buildSoldFilter(p: SoldParams): string {
     buildAreaClause(p.area),
     `PurchaseContractDate:>=${cutoffMs}`,
     `PurchaseContractDate:<=${Date.now()}`, // defensive: no future contract dates
-    `ClosePrice:>=${PRICE_FLOOR}`,
+    `DealType:=${p.dealType}`,
+    `ClosePrice:>=1`,
   ];
 
   const variants = variantsForKeys(p.typeKeys);
@@ -199,6 +200,8 @@ export async function GET(req: NextRequest) {
     return Number.isFinite(n) && n > 0 ? n : d;
   };
 
+  const dealType = sp.get("dealType") === "leased" ? "leased" : "sold";
+
   const params: SoldParams = {
     area,
     windowDays: Math.min(num("windowDays", 1), MAX_WINDOW_DAYS),
@@ -209,6 +212,7 @@ export async function GET(req: NextRequest) {
     basementFinished: sp.get("basement") === "1",
     minFrontage: num("minFrontage"),
     limit: Math.min(num("limit", 5), MAX_LIST),
+    dealType,
   };
 
   // Echo the original `region` value (or "" for non-region areas) so the

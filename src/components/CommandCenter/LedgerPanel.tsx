@@ -17,7 +17,7 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, listingMode, soldWindowDays } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
     useCommandCenterStore();
 
   const columns = PERSONA_CONFIG[activePersona].columns;
@@ -54,9 +54,9 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
         <Zap className="h-3.5 w-3.5 text-cyan-400" />
         <p className="font-mono text-xs text-slate-400">
-          {listingMode === "sold" ? (
+          {(activeLayers.has("sold") || activeLayers.has("leased")) ? (
             <>
-              <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Sold Comps
+              <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Comps
               <span className="mx-1.5 text-slate-600">|</span>
               VOW · last <span className="text-cyan-400">{soldWindowDays}d</span>
             </>
@@ -151,6 +151,12 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
           ))
         )}
       </div>
+
+      {(activeLayers.has("sold") || activeLayers.has("leased")) && (
+        <p className="border-t border-slate-800 bg-slate-900 px-3 py-1.5 text-[9px] leading-tight text-slate-600">
+          Sold/leased data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
+        </p>
+      )}
 
       {/* Footer */}
       <div className="shrink-0 border-t border-slate-800 bg-slate-900 px-3 py-2">

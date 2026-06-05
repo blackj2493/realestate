@@ -25,11 +25,11 @@ interface TopCommandBarProps {
 }
 
 export default function TopCommandBar({ className }: TopCommandBarProps) {
-  const { transactionMode, propertyClass, listingMode } = useCommandCenterStore();
-  // The persona preset is residential-sale only — rent/commercial and Sold mode
-  // are basic browse, the same gating it had in the filter row.
-  const investorLayer =
-    listingMode !== "sold" && isInvestorLayerActive(transactionMode, propertyClass);
+  const { transactionMode, propertyClass, activeLayers } = useCommandCenterStore();
+  // The persona preset is residential-sale only — rent/commercial and comp-only
+  // (Sold/Leased) views are basic browse, the same gating the filter row uses.
+  const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
+  const investorLayer = !compOnly && isInvestorLayerActive(transactionMode, propertyClass);
 
   return (
     <div className={cn("border-b border-slate-800 bg-slate-950", className)}>

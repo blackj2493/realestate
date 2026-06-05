@@ -54,6 +54,9 @@ export const soldListingsSchema = {
     // entries on the active `properties` collection (typesenseSchema.ts).
     { name: 'location', type: 'geopoint' as const, facet: false, optional: true },
     { name: 'NearbySchools', type: 'string[]' as const, facet: false, optional: true },
+    // Real-values deal type ('sold' | 'leased') — replaces the $50k price proxy for
+    // separating closed sales from closed leases. Faceted so the route can filter exactly.
+    { name: 'DealType', type: 'string' as const, facet: true, optional: true },
   ],
   default_sorting_field: 'PurchaseContractDate',
 };
@@ -81,4 +84,6 @@ export interface SoldListingDocument {
   location?: [number, number];
   /** School ids within NEARBY_RADIUS_KM (2.5) — populated alongside `location`. */
   NearbySchools?: string[];
+  /** 'sold' | 'leased' — derived from MlsStatus/TransactionType at index time. */
+  DealType?: 'sold' | 'leased';
 }

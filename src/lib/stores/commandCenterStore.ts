@@ -15,13 +15,11 @@ import type { FilterValue, UniversalFilterState } from "@/lib/filters/types";
 import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
 import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
+import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
 export type CommuteMode = "driving" | "walking" | "cycling";
-
-/** Transaction strip: active sale / sold comps / active lease. `sold` switches data source. */
-export type ListingMode = "sale" | "sold" | "rent";
 
 /**
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
@@ -103,10 +101,11 @@ export interface CommandCenterState {
   // commercial). The persona/investor analytics layer is residential-sale only.
   transactionMode: TransactionMode;
   setTransactionMode: (mode: TransactionMode) => void;
-  // Listing mode — the three-state strip (For Sale / Sold / For Rent). `sale`/`rent`
-  // mirror transactionMode (active path); `sold` switches to the gated sold route.
-  listingMode: ListingMode;
-  setListingMode: (mode: ListingMode) => void;
+  // Active layers — multi-select For Sale·Sold·Leased·For Rent (any combination,
+  // never empty). transactionMode/price bounds follow transactionModeForLayers().
+  activeLayers: Set<LayerKey>;
+  toggleLayer: (key: LayerKey) => void;
+
   // Sold-comp window (days) + the anonymous gate flag for the teaser overlay.
   soldWindowDays: number;
   setSoldWindowDays: (days: number) => void;
@@ -251,19 +250,19 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       const { min, max } = priceConfig(mode);
       return { transactionMode: mode, universalFilters: { ...state.universalFilters, price: [min, max] } };
     }),
-  listingMode: "sale",
-  // sale/rent mirror transactionMode (+ reset price bounds, like setTransactionMode);
-  // sold pins transactionMode to "sale" so the sale price config + class axis stay valid.
-  setListingMode: (mode) =>
+  activeLayers: new Set<LayerKey>(["forSale"]),
+  toggleLayer: (key) =>
     set((state) => {
-      const tx = mode === "rent" ? "rent" : "sale";
+      const next = applyLayerToggle(state.activeLayers, key);
+      const tx = transactionModeForLayers(next);
       const { min, max } = priceConfig(tx);
       return {
-        listingMode: mode,
+        activeLayers: next,
         transactionMode: tx,
         universalFilters: { ...state.universalFilters, price: [min, max] },
       };
     }),
+
   soldWindowDays: SOLD_DISPLAY_MAX_DAYS,
   setSoldWindowDays: (days) => set({ soldWindowDays: days }),
   soldLocked: false,

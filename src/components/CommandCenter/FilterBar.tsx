@@ -12,6 +12,7 @@ import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
 import InvestorChip from "./InvestorChip";
 import SoldWindowDropdown from "./SoldWindowDropdown";
+import LayerChips from "./LayerChips";
 import AddFilterPalette from "./AddFilterPalette";
 import { Popover } from "@/components/ui/popover";
 import { formatResultNudge } from "./filterNudge";
@@ -43,8 +44,7 @@ export default function FilterBar() {
     filters,
     setFilters,
     transactionMode,
-    listingMode,
-    setListingMode,
+    activeLayers,
     propertyClass,
     setPropertyClass,
   } = useCommandCenterStore();
@@ -52,8 +52,11 @@ export default function FilterBar() {
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
   const controls = PERSONA_CONFIG[activePersona].controls;
 
+  // Comp-only = no active (sale/rent) layer lit → hide the active-browse controls.
+  const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
+
   // The persona/investor layer (preset + investor chips) is residential-sale only.
-  const investorLayer = listingMode !== "sold" && isInvestorLayerActive(transactionMode, propertyClass);
+  const investorLayer = !compOnly && isInvestorLayerActive(transactionMode, propertyClass);
 
   // Price slider follows the transaction mode (sale 0–3M vs rent 0–$12k bounds).
   const scopedPriceDef = makePriceDef(priceConfig(transactionMode));
@@ -93,21 +96,12 @@ export default function FilterBar() {
 
   return (
     <div className="no-scrollbar flex h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3">
-      {/* Listing-status strip — For Sale / Sold / For Rent (Sold switches data source). */}
-      <FundamentalToggle
-        ariaLabel="Listing status"
-        value={listingMode}
-        onChange={setListingMode}
-        options={[
-          { value: "sale", label: "For Sale" },
-          { value: "sold", label: "Sold" },
-          { value: "rent", label: "For Rent" },
-        ]}
-      />
-      {listingMode === "sold" && <SoldWindowDropdown />}
+      {/* Listing-status layers — multi-select For Sale·Sold·Leased·For Rent. */}
+      <LayerChips />
+      {(activeLayers.has("sold") || activeLayers.has("leased")) && <SoldWindowDropdown />}
 
-      {/* Everything else is the active-browse bar — hidden in Sold mode (v1). */}
-      {listingMode !== "sold" && (
+      {/* Everything else is the active-browse bar — hidden in comp-only mode. */}
+      {!compOnly && (
         <>
           <FundamentalToggle
             ariaLabel="Property class"
@@ -178,7 +172,7 @@ export default function FilterBar() {
       )}
 
       <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
-        {anyActive && listingMode !== "sold" && (
+        {anyActive && !compOnly && (
           <button
             onClick={clearAll}
             className={cn(

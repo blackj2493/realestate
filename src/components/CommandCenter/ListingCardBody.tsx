@@ -14,6 +14,7 @@ import React from "react";
 import { BedDouble, Bath, Car, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
+import { layerStatus, LAYER_TONE_CLASS } from "@/lib/listings/layerStatus";
 import { soldVsAsk } from "@/lib/sold/delta";
 import type { ListingDocument } from "@/lib/typesense/client";
 
@@ -65,21 +66,24 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
 
   const badge = statusBadge(doc.Status);
 
-  if (doc.IsSoldComp) {
+  if (doc.compKind || doc.IsSoldComp) {
+    const status = layerStatus(doc);
+    const isLeased = doc.compKind === "leased";
     const delta = soldVsAsk(doc.ListPrice, doc.OriginalListPrice ?? null);
-    const soldOn = doc.SoldDate ? new Date(doc.SoldDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : null;
+    const onIso = isLeased ? doc.LeasedDate : doc.SoldDate;
+    const on = onIso ? new Date(onIso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : null;
     const deltaTone =
       delta?.direction === "over" ? "text-rose-300" : delta?.direction === "under" ? "text-emerald-300" : "text-slate-300";
     return (
       <>
         <div className="flex items-center gap-1.5 text-[10px]">
-          <span className="shrink-0 rounded-sm bg-rose-500/15 px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide text-rose-300">
-            Sold
+          <span className={cn("shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide", LAYER_TONE_CLASS[status.tone])}>
+            {status.label}
           </span>
-          {soldOn && <span className="text-slate-500">{soldOn}</span>}
+          {on && <span className="text-slate-500">{on}</span>}
         </div>
         <p className="mt-0.5 truncate font-sans text-base font-bold text-cyan-300">
-          {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
+          {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}${isLeased ? "/mo" : ""}` : "—"}
         </p>
         {delta && (
           <p className={cn("mt-0.5 font-mono text-xs font-semibold", deltaTone)}>
@@ -109,9 +113,6 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
             </>
           )}
         </div>
-        <p className="mt-1 text-[9px] leading-tight text-slate-600">
-          Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
-        </p>
       </>
     );
   }

@@ -15,10 +15,20 @@ export interface SoldQueryArgs {
   location: string;
   windowDays: number;
   limit: number;
+  dealType: "sold" | "leased";
+  /** Basic property filters to constrain comp results. Only beds/baths/types — no
+   *  persona/investor metrics (comps have no forward metrics). */
+  filters?: {
+    minBeds?: number;
+    minBaths?: number;
+    /** Dashboard type keys (e.g. "detached", "semi") for variantsForKeys expansion
+     *  in the sold route. Raw PropertySubType spellings are NOT accepted here. */
+    types?: string[];
+  };
 }
 
 /** Build the route query string. Empty string = no area resolvable (caller shows empty state). */
-export function buildSoldQuery({ mapBounds, location, windowDays, limit }: SoldQueryArgs): string {
+export function buildSoldQuery({ mapBounds, location, windowDays, limit, dealType, filters }: SoldQueryArgs): string {
   const p = new URLSearchParams();
   if (mapBounds) {
     const { north: N, south: S, east: E, west: W } = mapBounds;
@@ -30,6 +40,10 @@ export function buildSoldQuery({ mapBounds, location, windowDays, limit }: SoldQ
   }
   p.set("windowDays", String(clampWindowDays(windowDays)));
   p.set("limit", String(limit));
+  p.set("dealType", dealType);
+  if (filters?.minBeds) p.set("minBeds", String(filters.minBeds));
+  if (filters?.minBaths) p.set("minBaths", String(filters.minBaths));
+  if (filters?.types?.length) p.set("types", filters.types.join(","));
   return p.toString();
 }
 
@@ -39,15 +53,23 @@ export interface SoldCompsResult {
   locked: boolean;
 }
 
-export async function fetchSoldComps(args: SoldQueryArgs): Promise<SoldCompsResult> {
-  const qs = buildSoldQuery(args);
-  if (!qs) return { docs: [], count: 0, locked: false };
-  const res = await fetch(`/api/market/activity/sold?${qs}`);
-  if (!res.ok) throw new Error(`sold fetch failed: ${res.status}`);
-  const data = (await res.json()) as { count?: number; listings?: SoldListing[]; locked?: boolean };
+export async function fetchSoldComps(
+  args: Omit<SoldQueryArgs, "dealType"> & { kinds?: Array<"sold" | "leased"> }
+): Promise<SoldCompsResult> {
+  const kinds = args.kinds ?? ["sold"]; // default keeps existing callers working
+  const results = await Promise.all(
+    kinds.map(async (dealType) => {
+      const qs = buildSoldQuery({ ...args, dealType, filters: args.filters });
+      if (!qs) return { docs: [] as ListingDocument[], count: 0, locked: false };
+      const res = await fetch(`/api/market/activity/sold?${qs}`);
+      if (!res.ok) throw new Error(`sold fetch failed: ${res.status}`);
+      const data = (await res.json()) as { count?: number; listings?: SoldListing[]; locked?: boolean };
+      return { docs: (data.listings ?? []).map(soldToListingDocument), count: data.count ?? 0, locked: !!data.locked };
+    })
+  );
   return {
-    docs: (data.listings ?? []).map(soldToListingDocument),
-    count: data.count ?? 0,
-    locked: !!data.locked,
+    docs: results.flatMap((r) => r.docs),
+    count: results.reduce((n, r) => n + r.count, 0),
+    locked: results.some((r) => r.locked),
   };
 }
