@@ -28,6 +28,7 @@ import {
   type SoldListingDocument,
 } from '../../src/lib/typesense/soldListingsSchema';
 import { resolveLocation } from './resolveLocation';
+import { parsePostalFromAddress } from './parsePostal';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { selectPrimaryImage } from '../../src/lib/etl/selectPrimaryImage';
 import { deriveDealType } from '../../src/lib/sold/dealType';
@@ -139,7 +140,10 @@ export function toSoldDocument(
   if (primaryImageUrl) doc.primaryImageUrl = primaryImageUrl;
   doc.DealType = deriveDealType(r.mls_status, r.transaction_type);
 
-  const geo = resolveLocation(r.postal_code, null, null, r.city);
+  // VOW `postal_code` is frequently the FSA only (→ FSA-centroid blob); the full
+  // postal is in the address. Prefer it; fall back to the column.
+  const geoPostal = parsePostalFromAddress(r.unparsed_address) ?? r.postal_code;
+  const geo = resolveLocation(geoPostal, null, null, r.city);
   if (!geo.needsGeocoding) {
     doc.location = geo.location;
     const schools = assignSchools(geo.location);
