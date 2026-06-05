@@ -101,6 +101,11 @@ export default function RenovationFunnel({
     }
     if (stashed) {
       sessionStorage.removeItem(STASH_KEY);
+      // Rehydrate the form from the pre-sign-in stash. setState-in-effect is
+      // intentional and SSR-safe: sessionStorage is unavailable during SSR so
+      // useState can't be lazy-initialised from it, and the one-shot autoTried
+      // ref prevents cascading re-runs.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(stashed);
       void submit(stashed);
     }
