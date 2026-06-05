@@ -861,6 +861,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     is_price_discovery: trueValue.is_price_discovery,
     propertySubType: raw.PropertySubType || '',
     listPrice: raw.ListPrice || 0,
+    // For-lease listings carry monthly rent in ListPrice — the engine zeroes
+    // cap rate/yield/cashflow for them rather than emitting absurd 1000%+ figures.
+    transactionType: raw.TransactionType,
     taxAnnualAmount: raw.TaxAnnualAmount ?? null,
     associationFee: raw.AssociationFee ?? null,
     maintenanceExpense: raw.MaintenanceExpense ?? null,

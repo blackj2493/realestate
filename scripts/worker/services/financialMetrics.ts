@@ -22,6 +22,11 @@ export interface FinancialMetricsInput {
   // Property Details
   propertySubType: string;
   listPrice: number;
+  // TRREB TransactionType ("For Sale" / "For Lease" / "For Sub-Lease"). For a lease
+  // listing, listPrice is the MONTHLY RENT, not a purchase price — so cap rate / yield
+  // / cashflow are undefined and must be zeroed (see the guard below). Optional:
+  // a missing value is treated as a sale (no regression for sale listings).
+  transactionType?: string;
   taxAnnualAmount: number | null;
   associationFee: number | null;
   maintenanceExpense: number | null;
@@ -59,10 +64,34 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   const {
     annual_rent, annual_rent_p10, has_rent_data,
     calculation_price, is_price_discovery,
-    propertySubType, listPrice, taxAnnualAmount,
+    propertySubType, listPrice, transactionType, taxAnnualAmount,
     associationFee, maintenanceExpense, insuranceExpense,
     baseMillRate, multiUnitStatus, isCondo,
   } = input;
+
+  // === FOR-LEASE GUARD ===
+  // A lease listing's listPrice IS the monthly rent, not a sale price. Cap rate,
+  // yield, cashflow and tax-burden are all price-relative and become absurd (1000%+)
+  // when divided by a rent. Emit zeros instead. Matches rentModel.isLeaseRecord:
+  // any TransactionType containing "lease"/"rent" is a lease. A missing value falls
+  // through to the normal (sale) path, so sale listings are never regressed.
+  const txn = (transactionType ?? '').trim().toLowerCase();
+  if (txn.includes('lease') || txn.includes('rent')) {
+    return {
+      cap_rate_est: 0,
+      cap_rate_floor: 0,
+      gross_yield_est: 0,
+      price_discovery_flag: is_price_discovery,
+      net_monthly_cashflow: 0,
+      cashflow_floor: 0,
+      tax_burden_ratio: 0,
+      assessment_status: 'UNASSESSED',
+      annual_opex: 0,
+      annual_revenue: 0,
+      vacancy_loss: 0,
+      mortgage_monthly: 0,
+    };
+  }
 
   const price = calculation_price || 1;
   const isSuiteCandidate = multiUnitStatus === 'EXISTING_MULTI_UNIT' || multiUnitStatus === 'PRIME_CANDIDATE';

@@ -115,3 +115,53 @@ describe('calculateFinancialMetrics', () => {
     expect(Number.isFinite(r.tax_burden_ratio)).toBe(true);
   });
 });
+
+describe('transaction-type guard (a for-lease listing has no purchase price)', () => {
+  // On a for-lease listing, ListPrice is the MONTHLY RENT, not a sale price. Dividing
+  // an annual-rent estimate by it yields absurd 1000%+ cap rates (the real defect that
+  // contaminated 249/575 positive-cap docs in prod). Lease listings must yield zeros.
+  const leaseLike: FinancialMetricsInput = {
+    ...baseInput,
+    transactionType: 'For Lease',
+    listPrice: 1_750,           // the monthly rent, masquerading as a price
+    calculation_price: 1_750,
+    annual_rent: 26_400,        // cohort rent estimate (~$2,200/mo) from rentAVM
+    annual_rent_p10: 24_000,
+    has_rent_data: true,
+  };
+
+  it('zeroes price-relative metrics for a for-lease listing (no 1000%+ cap rate)', () => {
+    const r = calculateFinancialMetrics(leaseLike);
+    expect(r.cap_rate_est).toBe(0);
+    expect(r.cap_rate_floor).toBe(0);
+    expect(r.gross_yield_est).toBe(0);
+    expect(r.net_monthly_cashflow).toBe(0);
+    expect(r.cashflow_floor).toBe(0);
+    expect(r.tax_burden_ratio).toBe(0);
+  });
+
+  it('treats "For Sub-Lease" as a lease too', () => {
+    const r = calculateFinancialMetrics({ ...leaseLike, transactionType: 'For Sub-Lease' });
+    expect(r.cap_rate_est).toBe(0);
+  });
+
+  it('still computes real metrics for an explicit "For Sale" listing', () => {
+    const r = calculateFinancialMetrics({
+      ...baseInput,
+      transactionType: 'For Sale',
+      annual_rent: 36_000,
+      has_rent_data: true,
+    });
+    expect(r.cap_rate_est).not.toBe(0);
+    expect(r.gross_yield_est).toBeGreaterThan(0);
+  });
+
+  it('treats a missing transactionType as a sale (no regression for sale listings)', () => {
+    const r = calculateFinancialMetrics({
+      ...baseInput,
+      annual_rent: 36_000,
+      has_rent_data: true,
+    });
+    expect(r.gross_yield_est).toBeGreaterThan(0);
+  });
+});
