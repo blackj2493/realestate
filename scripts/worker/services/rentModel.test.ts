@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLeaseRecord, extractMonthlyRent, MIN_MONTHLY_RENT, MAX_MONTHLY_RENT } from './rentModel';
+import { isLeaseRecord, extractMonthlyRent, cohortKeyOf, percentile, MIN_MONTHLY_RENT, MAX_MONTHLY_RENT } from './rentModel';
 
 describe('isLeaseRecord', () => {
   it('flags status="Leased" (any case/space) as a lease', () => {
@@ -32,5 +32,32 @@ describe('extractMonthlyRent', () => {
     expect(extractMonthlyRent({ closePrice: MIN_MONTHLY_RENT })).toBe(MIN_MONTHLY_RENT);
     expect(extractMonthlyRent({ closePrice: MAX_MONTHLY_RENT })).toBe(MAX_MONTHLY_RENT);
     expect(extractMonthlyRent({ closePrice: MAX_MONTHLY_RENT + 1 })).toBeNull();
+  });
+});
+
+describe('cohortKeyOf', () => {
+  it('builds a normalized key from region/subtype/beds/washrooms', () => {
+    expect(cohortKeyOf({ cityRegion: 'Brampton East', propertySubType: 'Detached', bedroomsTotal: 3, washroomsFull: 2 }))
+      .toBe('brampton east|detached|3|2');
+  });
+  it('defaults washrooms to 0', () => {
+    expect(cohortKeyOf({ cityRegion: 'Ajax', propertySubType: 'Condo Apt', bedroomsTotal: 1 }))
+      .toBe('ajax|condo apt|1|0');
+  });
+  it('returns null when region/subtype/beds missing', () => {
+    expect(cohortKeyOf({ propertySubType: 'Detached', bedroomsTotal: 3 })).toBeNull();
+    expect(cohortKeyOf({ cityRegion: 'Ajax', bedroomsTotal: 3 })).toBeNull();
+    expect(cohortKeyOf({ cityRegion: 'Ajax', propertySubType: 'Detached' })).toBeNull();
+  });
+});
+
+describe('percentile', () => {
+  it('interpolates on a sorted ascending array', () => {
+    expect(percentile([10, 20, 30, 40, 50], 0.5)).toBe(30);
+    expect(percentile([10, 20, 30, 40, 50], 0.10)).toBeCloseTo(14, 5);
+  });
+  it('handles single/empty', () => {
+    expect(percentile([42], 0.5)).toBe(42);
+    expect(percentile([], 0.5)).toBe(0);
   });
 });

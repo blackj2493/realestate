@@ -34,3 +34,23 @@ export function extractMonthlyRent(r: RawLeaseInput): number | null {
   if (!raw || raw < MIN_MONTHLY_RENT || raw > MAX_MONTHLY_RENT) return null;
   return Math.round(raw);
 }
+
+export function cohortKeyOf(r: RawLeaseInput): string | null {
+  const cr = (r.cityRegion ?? '').trim();
+  const st = (r.propertySubType ?? '').trim();
+  const bd = r.bedroomsTotal;
+  if (!cr || !st || bd == null) return null;
+  const wr = r.washroomsFull ?? 0;
+  return [cr.toLowerCase(), st.toLowerCase(), bd, wr].join('|');
+}
+
+/** Linear-interpolated percentile over an ASCENDING-sorted array. p in [0,1]. */
+export function percentile(sortedAsc: number[], p: number): number {
+  if (sortedAsc.length === 0) return 0;
+  if (sortedAsc.length === 1) return sortedAsc[0];
+  const idx = (sortedAsc.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sortedAsc[lo];
+  return sortedAsc[lo] + (sortedAsc[hi] - sortedAsc[lo]) * (idx - lo);
+}
