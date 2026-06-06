@@ -15,6 +15,7 @@ import { BedDouble, Bath, Car, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
 import { layerStatus, LAYER_TONE_CLASS } from "@/lib/listings/layerStatus";
+import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { soldVsAsk } from "@/lib/sold/delta";
 import type { ListingDocument } from "@/lib/typesense/client";
 
@@ -24,14 +25,6 @@ export function daysAgo(p: ListingDocument): number | null {
     return Math.max(0, Math.floor((Date.now() - p.EntryTimestamp) / 86_400_000));
   }
   return p.DaysOnMarket ?? null;
-}
-
-/** "4+1" bed label — above grade, plus below-grade when present. Falls back to total. */
-export function bedsLabel(p: ListingDocument): string | null {
-  const above = p.BedroomsAboveGrade && p.BedroomsAboveGrade > 0 ? p.BedroomsAboveGrade : p.BedroomsTotal ?? 0;
-  const below = p.BedroomsBelowGrade ?? 0;
-  if (!above && !below) return null;
-  return below > 0 ? `${above}+${below}` : `${above}`;
 }
 
 const BADGE_TONE: Record<BadgeTone, string> = {
