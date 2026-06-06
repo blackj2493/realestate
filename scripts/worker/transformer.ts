@@ -17,7 +17,7 @@ import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/Extrapolated
 import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
-import { fetchRentAVM } from './services/rentAVM';
+import { fetchRentAVM, type RentAVMResult } from './services/rentAVM';
 import { fetchTrueValue, fetchMillRate } from './services/trueValueCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
@@ -822,13 +822,15 @@ export async function transformListing(raw: any): Promise<TransformResult> {
 
   // === Phase 3: Rent AVM (async Supabase lookup) ===
   const isSuiteCandidate = ['EXISTING_MULTI_UNIT', 'PRIME_CANDIDATE', 'MARGINAL_CANDIDATE'].includes(multiUnitResult.multi_unit_status);
-  let rentAVM = { annual_rent: 0, annual_rent_p10: 0, has_data: false };
+  let rentAVM: RentAVMResult = { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null };
   try {
     rentAVM = await fetchRentAVM({
+      city: raw.City || '',
       cityRegion: raw.CityRegion || raw.City || '',
       propertySubType: raw.PropertySubType || '',
       bedroomsTotal: raw.BedroomsTotal || 0,
-      washroomsFull: raw.WashroomsType1Pcs || 1,
+      // Real bath count drives the tiered rent lookup (replaces WashroomsType1Pcs).
+      bathroomsTotal: raw.BathroomsTotalInteger || 0,
       isSuiteCandidate,
     });
   } catch (err) {
