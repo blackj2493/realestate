@@ -5,29 +5,62 @@
 // trained cohorts — it carries NO sold prices, counts, or VOW Listing Information
 // (buildCohortTree drops model_accuracy_score / total_sales_analyzed), so it is
 // safe to expose publicly. Module-level 1h TTL cache (tree is global).
+//
+// Both source reads exceed (or approach) PostgREST's hard 1000-row response cap —
+// the distinct (city, city_region) pairs are ~1960, the audit table ~969 — so a
+// single unpaginated read silently truncates the tree (dropping whole cities like
+// Vaughan whose communities land past row #1000). Both reads are therefore paged
+// with a stable ORDER BY so range pagination is deterministic.
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildCohortTree, type CohortRow, type CityRegionPair, type CohortTree } from '@/lib/avm/cohorts';
 
 let treeCache: { data: CohortTree; at: number } | null = null;
 const TREE_TTL_MS = 60 * 60 * 1000; // 1h
+const PAGE = 1000; // PostgREST caps a single response at 1000 rows.
+
+/** Audit cohorts, paged. Stable order (city_region, property_sub_type) for correct range pagination. */
+async function fetchAllAudit(supabase: SupabaseClient): Promise<CohortRow[]> {
+  const out: CohortRow[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('avm_audit_report')
+      .select('city_region, property_sub_type, model_accuracy_score, total_sales_analyzed')
+      .order('city_region')
+      .order('property_sub_type')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as CohortRow[];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
+/** Distinct (city, city_region) pairs from the get_distinct_cohort_cities RPC, paged. */
+async function fetchAllPairs(supabase: SupabaseClient): Promise<CityRegionPair[]> {
+  const out: CityRegionPair[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .rpc('get_distinct_cohort_cities')
+      .order('city')
+      .order('city_region')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as CityRegionPair[];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
 
 export async function loadCohortTree(): Promise<CohortTree> {
   if (treeCache && Date.now() - treeCache.at < TREE_TTL_MS) return treeCache.data;
 
   const supabase = getServiceRoleClient();
+  const [cohorts, pairs] = await Promise.all([fetchAllAudit(supabase), fetchAllPairs(supabase)]);
 
-  const { data: cohorts, error: cohortsErr } = await supabase
-    .from('avm_audit_report')
-    .select('city_region, property_sub_type, model_accuracy_score, total_sales_analyzed');
-  if (cohortsErr) throw cohortsErr;
-
-  const { data: pairData, error: pairErr } = await supabase.rpc('get_distinct_cohort_cities');
-  if (pairErr) throw pairErr;
-
-  const tree = buildCohortTree(
-    (cohorts ?? []) as CohortRow[],
-    (pairData ?? []) as CityRegionPair[],
-  );
+  const tree = buildCohortTree(cohorts, pairs);
   treeCache = { data: tree, at: Date.now() };
   return tree;
 }
