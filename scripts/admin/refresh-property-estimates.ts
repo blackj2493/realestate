@@ -32,10 +32,9 @@ import * as https from 'https';
 import crossFetch from 'cross-fetch';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
-import { estimateFromMarketData, shouldEvaluatePeers, type AVMMarketData } from '@/lib/avm/calculator';
+import { estimateFromMarketData, shouldEvaluatePeers, resolveModel, type AVMMarketData } from '@/lib/avm/calculator';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
-import { fetchAuditInfo } from '@/lib/avm/auditService';
-import { fetchCoefficients, type CoefficientRow } from '@/lib/avm/matrixService';
+import { type CoefficientRow } from '@/lib/avm/matrixService';
 import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 import type { RoomData } from '@/lib/room-utils';
 
@@ -187,29 +186,48 @@ function lookupCalibration(payload: Record<string, unknown>, rooms: RoomData[]):
 }
 
 // ── Per-listing AVM caching ──────────────────────────────────────────────────
-// The new anchor pipeline is per-listing in the sense that it depends on the
-// listing's (cityRegion, sub_type, City), but the (audit, coefficients) lookup
-// is still per-market and stable across listings in the same cohort — memoize
-// those, and call fetchAnchor per listing using the cached pair.
+// The anchor pipeline depends on (cityRegion, sub_type, City, rawSubType) but the
+// borrow resolution (native vs sibling coefficients) is stable per cohort — memoize
+// the resolved model so each distinct cohort pays the DB cost once.
+// INVARIANT: uses resolveModel (same as calculateAVM) so the batch is byte-identical
+// to the request path for every listing: native coefficients gate routing, effective
+// (possibly borrowed) coefficients drive adjustment, peer.basis='borrowed' when borrowed.
 interface MarketStaticData {
+  nativeCoefficients: CoefficientRow[];
+  effectiveCoefficients: CoefficientRow[];
   r2: number | null;
   basePrice: number | null;
-  coefficients: CoefficientRow[];
+  n: number | null | undefined;
+  borrowed: boolean;
 }
 const marketStaticCache = new Map<string, MarketStaticData>();
 
 async function getMarketStatic(
   cityRegion: string,
-  normalizedType: string
+  normalizedType: string,
+  city: string | null,
+  rawPropertySubType: string
 ): Promise<MarketStaticData> {
-  const key = `${cityRegion.toLowerCase()}|${normalizedType.toLowerCase()}`;
+  // Cache key: cohort identity (city + subType determine the sibling search scope,
+  // so include city to avoid serving Aurora's sibling model to a different city's
+  // untrained cohort with the same cityRegion name).
+  const key = `${cityRegion.toLowerCase()}|${normalizedType.toLowerCase()}|${(city ?? '').toLowerCase()}`;
   const cached = marketStaticCache.get(key);
   if (cached) return cached;
-  const [audit, coefficients] = await Promise.all([
-    fetchAuditInfo(sb, cityRegion, normalizedType),
-    fetchCoefficients(sb, cityRegion, normalizedType),
-  ]);
-  const market: MarketStaticData = { r2: audit.r2, basePrice: audit.basePrice, coefficients };
+  const resolved = await resolveModel(sb, {
+    cityRegion,
+    propertySubType: normalizedType,
+    city,
+    rawPropertySubType,
+  });
+  const market: MarketStaticData = {
+    nativeCoefficients: resolved.nativeCoefficients,
+    effectiveCoefficients: resolved.effectiveCoefficients,
+    r2: resolved.r2,
+    basePrice: resolved.basePrice,
+    n: resolved.n,
+    borrowed: resolved.borrowed,
+  };
   marketStaticCache.set(key, market);
   return market;
 }
@@ -330,25 +348,37 @@ async function main() {
 
       const avmInput = avmEligible ? mapListingToAVMInput(payload, { rooms, bucketCalibration }) : null;
       if (avmInput) {
-        const staticData = await getMarketStatic(avmInput.cityRegion, avmInput.propertySubType);
+        // getMarketStatic mirrors calculateAVM's resolveModel: native coefficients gate
+        // routing; effective (possibly borrowed) coefficients drive comp adjustment.
+        const staticData = await getMarketStatic(
+          avmInput.cityRegion,
+          avmInput.propertySubType,
+          avmInput.city,
+          avmInput.rawPropertySubType
+        );
+        // EFFECTIVE coefficients (borrowed when untrained+sibling) drive anchor adjustment.
         const anchor = await fetchAnchor(
           sb,
           avmInput,
-          staticData.coefficients,
+          staticData.effectiveCoefficients,
           staticData.basePrice
         );
         // Mirror the request path EXACTLY (shouldEvaluatePeers covers both trained
         // Σβz outliers and untrained-cohort atypical homes) so precomputed Compare
         // values match the listing-page estimate.
+        // ROUTING gates on NATIVE coefficients (empty ⟺ untrained → always evaluates peers).
         let peer: AnchorResult | null | undefined;
-        if (shouldEvaluatePeers(avmInput, staticData.coefficients)) {
-          peer = await fetchPeerAnchor(sb, avmInput, staticData.coefficients);
+        if (shouldEvaluatePeers(avmInput, staticData.nativeCoefficients)) {
+          peer = await fetchPeerAnchor(sb, avmInput, staticData.effectiveCoefficients);
+          // Mark borrowed-basis so peerEstimate caps HIGH the same way as the request path.
+          if (peer && staticData.borrowed) peer.basis = 'borrowed';
         }
         const market: AVMMarketData = {
           anchor,
           r2: staticData.r2,
           basePrice: staticData.basePrice,
-          coefficients: staticData.coefficients,
+          // NATIVE coefficients: keep outlierGuard on the untrained→peer path (same as calculateAVM).
+          coefficients: staticData.nativeCoefficients,
           peer,
         };
         const est = estimateFromMarketData(avmInput, market);
