@@ -18,68 +18,60 @@ export interface RentAVMResult {
   annual_rent: number;
   annual_rent_p10: number;
   has_data: boolean;
+  match_tier: 'nbhd' | 'city_bath' | 'city' | null; // confidence signal (Plan 2 surfaces it)
 }
 
 export async function fetchRentAVM(params: {
+  city: string;
   cityRegion: string;
   propertySubType: string;
   bedroomsTotal: number;
-  washroomsFull?: number;
+  bathroomsTotal?: number;
   isSuiteCandidate: boolean;
 }): Promise<RentAVMResult> {
-  const { cityRegion, propertySubType, bedroomsTotal, washroomsFull = 1, isSuiteCandidate } = params;
+  const { city, cityRegion, propertySubType, bedroomsTotal, bathroomsTotal = 0, isSuiteCandidate } = params;
+  const sel = () => supabase.from('rental_market_index').select('avg_rent, p10_rent');
 
-  // Try exact city_region match first
-  let { data, error } = await supabase
-    .from('rental_market_index')
-    .select('avg_rent, p10_rent')
-    .eq('city_region', cityRegion)
-    .eq('property_sub_type', propertySubType)
-    .eq('bedrooms_total', bedroomsTotal)
-    .eq('washrooms_full', washroomsFull)
-    .single();
+  let row: { avg_rent: number; p10_rent: number } | null = null;
+  let tier: RentAVMResult['match_tier'] = null;
 
-  // Fallback: broaden to city-level
-  if (!data || error) {
-    const city = cityRegion.split(' ')[0]; // e.g., "Brampton East" → "Brampton"
-    const { data: fallbackData } = await supabase
-      .from('rental_market_index')
-      .select('avg_rent, p10_rent')
-      .eq('property_sub_type', propertySubType)
-      .eq('bedrooms_total', bedroomsTotal)
-      .like('city_region', `${city}%`)
-      .order('sample_count', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (fallbackData) {
-      // Apply 5% haircut for hyper-local variance
-      data = {
-        avg_rent: fallbackData.avg_rent * 0.95,
-        p10_rent: fallbackData.p10_rent * 0.95,
-      };
-    }
+  // Tier 1 — neighbourhood + baths (most precise)
+  {
+    const { data } = await sel()
+      .eq('match_tier', 'nbhd').eq('city_region', cityRegion)
+      .eq('property_sub_type', propertySubType).eq('bedrooms_total', bedroomsTotal)
+      .eq('bathrooms', bathroomsTotal).maybeSingle();
+    if (data) { row = data; tier = 'nbhd'; }
+  }
+  // Tier 2 — city + baths
+  if (!row && city) {
+    const { data } = await sel()
+      .eq('match_tier', 'city_bath').eq('city', city)
+      .eq('property_sub_type', propertySubType).eq('bedrooms_total', bedroomsTotal)
+      .eq('bathrooms', bathroomsTotal).maybeSingle();
+    if (data) { row = data; tier = 'city_bath'; }
+  }
+  // Tier 3 — city, baths relaxed (last resort)
+  if (!row && city) {
+    const { data } = await sel()
+      .eq('match_tier', 'city').eq('city', city)
+      .eq('property_sub_type', propertySubType).eq('bedrooms_total', bedroomsTotal)
+      .maybeSingle();
+    if (data) { row = data; tier = 'city'; }
   }
 
-  if (!data) {
-    return { annual_rent: 0, annual_rent_p10: 0, has_data: false };
-  }
+  if (!row) return { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null };
 
-  let annualRent = (data.avg_rent || 0) * 12;
-  let annualRentP10 = (data.p10_rent || 0) * 12;
+  let annualRent = (row.avg_rent || 0) * 12;
+  let annualRentP10 = (row.p10_rent || 0) * 12;
 
-  // Suite Multiplier: if property is EXISTING_SUITE or POTENTIAL_CANDIDATE
+  // Suite Multiplier: secondary-suite uplift (unchanged)
   if (isSuiteCandidate) {
-    // Add 60% for secondary unit rent
     annualRent *= 1.6;
     annualRentP10 *= 1.6;
   }
 
-  return {
-    annual_rent: annualRent,
-    annual_rent_p10: annualRentP10,
-    has_data: true,
-  };
+  return { annual_rent: annualRent, annual_rent_p10: annualRentP10, has_data: true, match_tier: tier };
 }
 
 export default fetchRentAVM;
