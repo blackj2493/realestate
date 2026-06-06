@@ -26,6 +26,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from './anchorService';
 import { fetchAuditInfo } from './auditService';
 import { fetchCoefficients, type CoefficientRow } from './matrixService';
+import { fetchSiblingModel } from './siblingModel';
 import { clamp, featureContributions, subjectAdjustmentTotal } from './features';
 import {
   ENGINE_MODE_COEFFICIENT_ADJUSTED,
@@ -103,26 +104,42 @@ export async function calculateAVM(
 ): Promise<AVMResult> {
   // Coefficients + audit are needed by the anchor (for per-comp adjustment and
   // basePrice fallback), so fetch them first, then call fetchAnchor.
-  const [coefficients, audit] = await Promise.all([
-    fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
-    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
-  ]);
-  const anchor = await fetchAnchor(supabase, input, coefficients, audit.basePrice);
+  const nativeCoefficients = await fetchCoefficients(supabase, input.cityRegion, input.propertySubType);
+  let audit = await fetchAuditInfo(supabase, input.cityRegion, input.propertySubType);
+
+  // When the native community has no trained model, borrow the best sibling cohort's
+  // coefficients (same city + property type) to feature-adjust matched comps.
+  // ROUTING gates on NATIVE coefficients so a borrowed model does NOT make an
+  // untrained cohort look trained (which would skip matched comps).
+  let effectiveCoefficients = nativeCoefficients;
+  let borrowed = false;
+  if (nativeCoefficients.length === 0) {
+    const sibling = await fetchSiblingModel(supabase, input.city, input.propertySubType, input.rawPropertySubType);
+    if (sibling) {
+      effectiveCoefficients = sibling.coefficients;
+      audit = { r2: sibling.r2, basePrice: audit.basePrice, n: sibling.n };
+      borrowed = true;
+    }
+  }
+
+  // EFFECTIVE (possibly borrowed) coefficients drive comp ADJUSTMENT.
+  const anchor = await fetchAnchor(supabase, input, effectiveCoefficients, audit.basePrice);
 
   // Peer comp-grid for the homes the standard estimate mis-prices. undefined →
   // not evaluated → normal path unchanged; AnchorResult → peer-grid; null → too
-  // few peers → neighbourhood floor. fetchPeerAnchor self-gates (atypicality) for
-  // untrained cohorts, so a flagged-but-typical home returns undefined.
+  // few peers → neighbourhood floor. ROUTING gates on NATIVE coefficients so an
+  // untrained cohort always evaluates peers regardless of whether we borrowed.
   let peer: AnchorResult | null | undefined;
-  if (shouldEvaluatePeers(input, coefficients)) {
-    peer = await fetchPeerAnchor(supabase, input, coefficients);
+  if (shouldEvaluatePeers(input, nativeCoefficients)) {
+    peer = await fetchPeerAnchor(supabase, input, effectiveCoefficients);
+    if (peer && borrowed) peer.basis = 'borrowed';
   }
 
   return estimateFromMarketData(input, {
     anchor,
     r2: audit.r2,
     basePrice: audit.basePrice,
-    coefficients,
+    coefficients: nativeCoefficients, // NATIVE: keeps outlierGuard on the untrained→peer path
     n: audit.n,
     peer,
   });
