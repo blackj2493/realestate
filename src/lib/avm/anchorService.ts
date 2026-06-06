@@ -33,6 +33,7 @@ import {
   BW_BEDS,
   BW_BATHS,
   BW_LOT,
+  BW_SQFT,
   OUTLIER_Z,
   MIN_SALE_PRICE,
 } from './types';
@@ -407,14 +408,18 @@ function lotSimLog(subject: AVMInput, c: CompRow): number {
 }
 
 /** Gaussian similarity on the size proxies the comps actually carry. Missing dims
- *  contribute nothing (factor 1), so a sparse comp isn't penalised, only un-weighted. */
-function similarityWeight(subject: AVMInput, c: CompRow): number {
+ *  contribute nothing (factor 1), so a sparse comp isn't penalised, only un-weighted.
+ *  Exported for unit testing. */
+export function similarityWeight(subject: AVMInput, c: CompRow): number {
   let logw = 0;
   if (subject.bedroomsAboveGrade != null && c.bedrooms_above_grade != null) {
     logw += -0.5 * ((subject.bedroomsAboveGrade - c.bedrooms_above_grade) / BW_BEDS) ** 2;
   }
   if (subject.bathroomsTotalInteger != null && c.bathrooms_total_integer != null) {
     logw += -0.5 * ((subject.bathroomsTotalInteger - c.bathrooms_total_integer) / BW_BATHS) ** 2;
+  }
+  if (subject.buildingAreaTotal && subject.buildingAreaTotal > 0 && c.building_area_total && c.building_area_total > 0) {
+    logw += -0.5 * (Math.log(subject.buildingAreaTotal / c.building_area_total) / BW_SQFT) ** 2;
   }
   logw += lotSimLog(subject, c);
   return Math.exp(logw);

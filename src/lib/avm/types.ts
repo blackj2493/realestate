@@ -145,6 +145,10 @@ export const MIN_PEERS_FOR_HIGH = 8;
 export const BW_BEDS = 1;
 export const BW_BATHS = 1;
 export const BW_LOT = 0.5;
+/** Gaussian bandwidth (log-space) for sqft similarity. Subject sqft is the resolved
+ * room-sum; comp sqft is the 500-sqft bucket midpoint, so resolution is coarse —
+ * this mainly separates size CLASSES (e.g. ~2,250 vs ~4,250). Tunable. */
+export const BW_SQFT = 0.25;
 
 /**
  * Coefficient-free outlier gate for UNTRAINED cohorts (no matrix row → anchor-only,
