@@ -39,6 +39,7 @@ export type AnchorBasis =
   | 'blend'   // local comps + de-staled prior shrunk together
   | 'prior'   // no usable local comps; prior (g(t₀)+δ_c) carried the level
   | 'parent'  // community offset missing; parent city × sub-type level used
+  | 'borrowed'// untrained cohort priced via matched comps + a trained SIBLING cohort's coefficients
   | 'peer'    // saturating outlier priced by the peer comp-grid (homes like it)
   | 'floor'   // saturating outlier, too few peers — clamped number as a neighbourhood FLOOR
   | 'none';   // truly nothing — render "estimate unavailable"

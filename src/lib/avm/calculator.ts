@@ -202,7 +202,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
   });
 }
 
-/** Price the subject off the peer comp-grid (basis 'peer'); HIGH gated on peer count. */
+/** Price the subject off the peer comp-grid (basis 'peer' or 'borrowed'); HIGH gated on peer count and basis. */
 function peerEstimate(peer: AnchorResult, r2Score: number | null): AVMResult {
   const peerPrice = Math.exp(peer.anchorLevel);
   return finish(
@@ -214,9 +214,13 @@ function peerEstimate(peer: AnchorResult, r2Score: number | null): AVMResult {
       r2Score,
       breakdown: blankBreakdown(),
       adjustmentLog: 0,
-      anchor: peer, // basis 'peer', band from peer dispersion
+      anchor: peer, // basis 'peer'/'borrowed', band from peer dispersion
     },
-    { minPeersForHigh: MIN_PEERS_FOR_HIGH, effectivePeers: peer.nEff }
+    {
+      minPeersForHigh: MIN_PEERS_FOR_HIGH,
+      effectivePeers: peer.nEff,
+      capHigh: peer.basis === 'borrowed',
+    }
   );
 }
 
@@ -271,6 +275,8 @@ function finish(
     /** Peer mode: forbid HIGH unless effectivePeers ≥ minPeersForHigh. */
     minPeersForHigh?: number;
     effectivePeers?: number;
+    /** Untrained/borrowed: never publish HIGH (a community-borrowed number isn't HIGH). */
+    capHigh?: boolean;
   }
 ): AVMResult {
   const { anchor, adjustmentLog } = args;
@@ -305,6 +311,10 @@ function finish(
       opts?.minPeersForHigh !== undefined &&
       (opts.effectivePeers ?? 0) < opts.minPeersForHigh
     ) {
+      confidence = CONFIDENCE_MEDIUM;
+    }
+    // A borrowed-basis estimate (untrained cohort, sibling coefficients) is never HIGH.
+    if (confidence === CONFIDENCE_HIGH && opts?.capHigh) {
       confidence = CONFIDENCE_MEDIUM;
     }
   }
