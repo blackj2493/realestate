@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { it, expect } from "vitest";
 import { estimateFromMarketData } from "./calculator";
 import type { AVMInput } from "./types";
 
