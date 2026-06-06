@@ -146,12 +146,15 @@ describe('estimateFromMarketData — UNTRAINED cohort (zero coefficients, the Sc
     expect(r.basis).toBe('peer');
   });
 
-  it('floor (peer === null): keeps the anchor number, caps confidence, relabels', () => {
+  it('thin-comp fallback (peer === null): keeps the anchor number, caps confidence, uses anchor basis (not floor)', () => {
     const bare = estimateFromMarketData(outlierInput, noCoeff);
-    const floored = estimateFromMarketData(outlierInput, { ...noCoeff, peer: null });
-    expect(floored.estimatedValue).toBe(bare.estimatedValue);
-    expect(floored.basis).toBe('floor');
-    expect(floored.confidence).not.toBe(CONFIDENCE_HIGH);
+    const thinComp = estimateFromMarketData(outlierInput, { ...noCoeff, peer: null });
+    expect(thinComp.estimatedValue).toBe(bare.estimatedValue);
+    // Untrained: basis stays as the anchor's own honest basis (e.g. 'local'), NOT 'floor'
+    // ('floor' implies a trained saturating outlier — that copy is wrong for typical untrained homes).
+    expect(thinComp.basis).toBe(bare.basis);
+    expect(thinComp.basis).not.toBe('floor');
+    expect(thinComp.confidence).not.toBe(CONFIDENCE_HIGH);
   });
 
   it('peer undefined → untouched plain anchor-only', () => {

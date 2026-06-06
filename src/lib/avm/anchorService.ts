@@ -34,7 +34,6 @@ import {
   BW_BATHS,
   BW_LOT,
   BW_SQFT,
-  OUTLIER_Z,
   MIN_SALE_PRICE,
 } from './types';
 import type { CoefficientRow } from './matrixService';
@@ -541,9 +540,6 @@ export async function fetchPeerAnchor(
   const subVariants = rawVariantsOf(subject.propertySubType, subject.rawPropertySubType);
   if (subVariants.length === 0) return undefined;
 
-  // Untrained cohort (no betas) → decide outlier from the comp distribution, not Σβz.
-  const gateAtypicality = coefficients.length === 0;
-
   const cityKey = (subject.city ?? subject.cityRegion).trim();
   const subKey = subject.propertySubType.toLowerCase().trim();
   const windowStart = new Date();
@@ -562,8 +558,8 @@ export async function fetchPeerAnchor(
 
   // Rung 1 — community (city_region candidates).
   const cands = cityRegionLookupCandidates(subject.cityRegion);
-  // Coefficient-free path needs community comps to judge atypicality.
-  if (gateAtypicality && cands.length === 0) return undefined;
+  // If no community candidates and no city, there is nothing to search.
+  if (cands.length === 0 && !cityKey) return undefined;
   if (cands.length > 0) {
     const res = await supabase
       .from('raw_vow_sold')
@@ -576,12 +572,9 @@ export async function fetchPeerAnchor(
       .limit(MAX_COMPS);
     const communityComps = ((res.data as unknown as CompRow[] | null) ?? []);
 
-    // Untrained cohort: bail to the normal estimate unless the home is atypical
-    // for its community (market-relative, list-price-independent).
-    if (gateAtypicality && cohortOutlierScore(subject, communityComps) < OUTLIER_Z) {
-      return undefined;
-    }
-
+    // Untrained cohorts always proceed to peerLevelFromComps (no blind average).
+    // The previous atypicality early-return is removed; thin-comp cases fall through
+    // to rung 2 / null, which the caller relabels honestly (not 'floor').
     const peer = peerLevelFromComps(subject, communityComps, coefficients, trend, nowMs);
     if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
   }

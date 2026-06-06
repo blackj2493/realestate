@@ -86,31 +86,15 @@ export function isFeatureOutlier(input: AVMInput, coefficients: CoefficientRow[]
 }
 
 /**
- * Cheap subject-only pre-screen for UNTRAINED cohorts (no coefficients): is the
- * home large enough to be worth pulling comps to assess market-relative
- * atypicality? Generous on purpose — the real decision is the comp-distribution
- * gate inside fetchPeerAnchor; this only spares an extra query for obviously
- * typical/small homes. NOT a valuation signal.
- */
-function worthComparableCheck(input: AVMInput): boolean {
-  const beds = input.bedroomsAboveGrade ?? 0;
-  const baths = input.bathroomsTotalInteger ?? 0;
-  const sqft = input.buildingAreaTotal ?? 0;
-  const lotArea =
-    input.lotWidth && input.lotDepth ? input.lotWidth * input.lotDepth : 0;
-  return beds >= 5 || baths >= 4 || sqft >= 2500 || lotArea >= 6000;
-}
-
-/**
  * Single source of truth for whether to pull peer comps: trained cohorts gate on
- * the Σβz clamp-saturation signal; untrained cohorts (no coefficients) gate on the
- * cheap large-home pre-screen, then fetchPeerAnchor self-gates on market-relative
- * atypicality. Shared by the request path and the nightly batch so they can't drift.
+ * the Σβz clamp-saturation signal; untrained cohorts (no coefficients) always
+ * evaluate peers so every home gets feature/size-matched comps rather than a blind
+ * cohort average. Shared by the request path and the nightly batch so they can't drift.
  */
 export function shouldEvaluatePeers(input: AVMInput, coefficients: CoefficientRow[]): boolean {
   return coefficients.length > 0
-    ? isFeatureOutlier(input, coefficients)
-    : worthComparableCheck(input);
+    ? isFeatureOutlier(input, coefficients) // trained: only clamp-saturating outliers
+    : true;                                 // untrained: ALWAYS match comps (no blind average)
 }
 
 export async function calculateAVM(
@@ -166,13 +150,16 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
     market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients) : true;
   if (market.peer !== undefined && outlierGuard) {
     if (market.peer) return peerEstimate(market.peer, market.r2);
-    // peer === null → too few peers anywhere: present the normal number honestly
-    // as a neighbourhood FLOOR (relabelled basis, confidence never HIGH).
+    // peer === null → too few peers anywhere. For TRAINED cohorts the home is a
+    // Σβz saturating outlier → 'floor' honestly labels "clamped number, too few peers".
+    // For UNTRAINED cohorts the home isn't necessarily large/upgraded — there just
+    // aren't enough comps — so keep the anchor's own honest basis and cap confidence.
     const base = normalEstimate(input, market);
     if (base.estimatedValue <= 0) return base; // already suppressed → leave as-is
+    const untrained = market.coefficients.length === 0;
     return {
       ...base,
-      basis: 'floor',
+      basis: untrained ? base.basis : 'floor',
       confidence: base.confidence === CONFIDENCE_HIGH ? CONFIDENCE_MEDIUM : base.confidence,
     };
   }
