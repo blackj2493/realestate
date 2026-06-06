@@ -98,32 +98,70 @@ export function shouldEvaluatePeers(input: AVMInput, coefficients: CoefficientRo
     : true;                                 // untrained: ALWAYS match comps (no blind average)
 }
 
+/**
+ * Resolved model for a single listing: fetches native coefficients + audit, then
+ * borrows the best trained sibling when the native cohort is untrained.
+ *
+ * This is the SINGLE SOURCE OF TRUTH for the borrow+decouple logic. Both the
+ * request-time path (calculateAVM) and the nightly batch precompute
+ * (refresh-property-estimates) call it so they can never diverge.
+ *
+ *   nativeCoefficients  — drive ROUTING (empty ⟺ untrained, always evaluates peers)
+ *   effectiveCoefficients — drive ADJUSTMENT (= sibling's when borrowed, else native)
+ *   r2 / basePrice / n  — from the native audit, overridden by sibling when borrowed
+ *   borrowed            — true when a sibling's model was substituted
+ */
+export interface ResolvedModel {
+  nativeCoefficients: CoefficientRow[];
+  effectiveCoefficients: CoefficientRow[];
+  r2: number | null;
+  basePrice: number | null;
+  n: number | null | undefined;
+  borrowed: boolean;
+}
+
+export async function resolveModel(
+  supabase: SupabaseClient,
+  input: Pick<AVMInput, 'cityRegion' | 'propertySubType' | 'city' | 'rawPropertySubType'>
+): Promise<ResolvedModel> {
+  const [nativeCoefficients, audit] = await Promise.all([
+    fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
+    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
+  ]);
+
+  if (nativeCoefficients.length === 0) {
+    const sibling = await fetchSiblingModel(supabase, input.city, input.propertySubType, input.rawPropertySubType);
+    if (sibling) {
+      return {
+        nativeCoefficients,
+        effectiveCoefficients: sibling.coefficients,
+        r2: sibling.r2,
+        basePrice: audit.basePrice,
+        n: sibling.n,
+        borrowed: true,
+      };
+    }
+  }
+
+  return {
+    nativeCoefficients,
+    effectiveCoefficients: nativeCoefficients,
+    r2: audit.r2,
+    basePrice: audit.basePrice,
+    n: audit.n,
+    borrowed: false,
+  };
+}
+
 export async function calculateAVM(
   supabase: SupabaseClient,
   input: AVMInput
 ): Promise<AVMResult> {
-  // Coefficients + audit are needed by the anchor (for per-comp adjustment and
-  // basePrice fallback), so fetch them first, then call fetchAnchor.
-  const nativeCoefficients = await fetchCoefficients(supabase, input.cityRegion, input.propertySubType);
-  let audit = await fetchAuditInfo(supabase, input.cityRegion, input.propertySubType);
-
-  // When the native community has no trained model, borrow the best sibling cohort's
-  // coefficients (same city + property type) to feature-adjust matched comps.
-  // ROUTING gates on NATIVE coefficients so a borrowed model does NOT make an
-  // untrained cohort look trained (which would skip matched comps).
-  let effectiveCoefficients = nativeCoefficients;
-  let borrowed = false;
-  if (nativeCoefficients.length === 0) {
-    const sibling = await fetchSiblingModel(supabase, input.city, input.propertySubType, input.rawPropertySubType);
-    if (sibling) {
-      effectiveCoefficients = sibling.coefficients;
-      audit = { r2: sibling.r2, basePrice: audit.basePrice, n: sibling.n };
-      borrowed = true;
-    }
-  }
+  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
+    await resolveModel(supabase, input);
 
   // EFFECTIVE (possibly borrowed) coefficients drive comp ADJUSTMENT.
-  const anchor = await fetchAnchor(supabase, input, effectiveCoefficients, audit.basePrice);
+  const anchor = await fetchAnchor(supabase, input, effectiveCoefficients, basePrice);
 
   // Peer comp-grid for the homes the standard estimate mis-prices. undefined →
   // not evaluated → normal path unchanged; AnchorResult → peer-grid; null → too
@@ -137,10 +175,10 @@ export async function calculateAVM(
 
   return estimateFromMarketData(input, {
     anchor,
-    r2: audit.r2,
-    basePrice: audit.basePrice,
+    r2,
+    basePrice,
     coefficients: nativeCoefficients, // NATIVE: keeps outlierGuard on the untrained→peer path
-    n: audit.n,
+    n,
     peer,
   });
 }
@@ -166,7 +204,7 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
   const outlierGuard =
     market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients) : true;
   if (market.peer !== undefined && outlierGuard) {
-    if (market.peer) return peerEstimate(market.peer, market.r2);
+    if (market.peer) return peerEstimate(market.peer, market.r2, market.coefficients.length === 0);
     // peer === null → too few peers anywhere. For TRAINED cohorts the home is a
     // Σβz saturating outlier → 'floor' honestly labels "clamped number, too few peers".
     // For UNTRAINED cohorts the home isn't necessarily large/upgraded — there just
@@ -184,12 +222,16 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
   return normalEstimate(input, market);
 }
 
-/** Today's behaviour: coefficient engine when R² clears the gate, else anchor-only. */
+/** Today's behaviour: coefficient engine when R² clears the gate AND native coefficients are present, else anchor-only. */
 function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
   const { anchor } = market;
   const baseAnchor = Math.exp(anchor.anchorLevel);
 
-  if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD) {
+  // Gate on BOTH r2 AND non-empty native coefficients: when the cohort is untrained
+  // (empty coefficients) the r2 may come from a borrowed sibling, but without a
+  // native model we cannot compute Σβz for this subject — fall through to anchor-only
+  // so engineMode stays ANCHOR_ONLY and the UI does not append "· adjusted for…".
+  if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD && market.coefficients.length > 0) {
     return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients);
   }
 
@@ -206,8 +248,14 @@ function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
   });
 }
 
-/** Price the subject off the peer comp-grid (basis 'peer' or 'borrowed'); HIGH gated on peer count and basis. */
-function peerEstimate(peer: AnchorResult, r2Score: number | null): AVMResult {
+/**
+ * Price the subject off the peer comp-grid (basis 'peer' or 'borrowed'); HIGH gated on peer count and basis.
+ * @param capHigh - when true, demote HIGH→MEDIUM regardless of band/peer count.
+ *   Callers pass `true` for ANY untrained cohort (empty native coefficients), not just
+ *   borrowed-basis: an untrained estimate — whether it borrowed a sibling model or
+ *   found peers with no model at all — must never be labelled HIGH.
+ */
+function peerEstimate(peer: AnchorResult, r2Score: number | null, capHigh = false): AVMResult {
   const peerPrice = Math.exp(peer.anchorLevel);
   return finish(
     {
@@ -223,7 +271,10 @@ function peerEstimate(peer: AnchorResult, r2Score: number | null): AVMResult {
     {
       minPeersForHigh: MIN_PEERS_FOR_HIGH,
       effectivePeers: peer.nEff,
-      capHigh: peer.basis === 'borrowed',
+      // Belt-and-suspenders: cap for borrowed basis AND for any untrained cohort (no
+      // native coefficients), so no path through peerEstimate can label an untrained
+      // result HIGH regardless of how the peer was sourced.
+      capHigh: peer.basis === 'borrowed' || capHigh,
     }
   );
 }
