@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { CohortTree } from '@/lib/avm/cohorts';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,17 +13,19 @@ import {
 import { Label } from '@/components/ui/label';
 
 // Mirror AVMPropertyForm label arrays exactly
-const INTERIOR_LABELS = ['', 'Executive', 'Premium', 'Standard', 'Economy', 'Minimal'];
-const EXTERIOR_LABELS = ['', 'Executive', 'Premium', 'Standard', 'Economy', 'Minimal'];
+// Human-readable condition labels (no cryptic tier numbers shown to the user).
+const INTERIOR_LABELS = ['', 'Executive (luxury)', 'Premium (updated)', 'Standard (average)', 'Economy (dated)', 'Minimal (original)'];
+const EXTERIOR_LABELS = ['', 'Executive (luxury)', 'Premium (updated)', 'Standard (average)', 'Economy (dated)', 'Minimal (original)'];
+// Basement uses only the labelled tiers 1/3/5/7/9 (best → none).
 const BASEMENT_LABELS = [
   '',
-  'Custom/Finished',
+  'Finished — high-end',
   '',
-  'Full Finished',
+  'Finished — standard',
   '',
-  'Full Unfinished',
+  'Unfinished',
   '',
-  'Partial',
+  'Partial / crawl space',
   '',
   'None',
 ];
@@ -52,30 +55,46 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
   const selectedCommunity = communities.find((c) => c.cityRegion === value.cityRegion);
   const types = selectedCommunity?.types ?? [];
 
+  // City is a type-ahead (150+ cities). Hold the raw input text locally; commit to
+  // value.city only on an exact match (datalist pick / full type), clear on empty,
+  // and leave a partial-but-unmatched query untouched so typing isn't wiped.
+  const [cityQuery, setCityQuery] = useState(value.city);
+  const [prevCity, setPrevCity] = useState(value.city);
+  // Sync the input when value.city changes externally (prefill / rehydrate / reset):
+  // adjust-state-during-render — React's recommended alternative to setState-in-effect.
+  if (value.city !== prevCity) {
+    setPrevCity(value.city);
+    setCityQuery(value.city);
+  }
+  const onCityInput = (v: string) => {
+    setCityQuery(v);
+    if (v === '') {
+      if (value.city !== '') onChange({ ...value, city: '', cityRegion: '', propertySubType: '' });
+    } else if (cities.includes(v) && v !== value.city) {
+      onChange({ ...value, city: v, cityRegion: '', propertySubType: '' });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* ── Location cascades ── */}
       <div className="grid grid-cols-1 gap-4">
-        {/* City */}
+        {/* City — type-ahead over 150+ cities (datalist; zero deps) */}
         <div className="space-y-2">
           <Label className="text-xs text-gray-400">CITY</Label>
-          <Select
-            value={value.city}
-            onValueChange={(city) =>
-              onChange({ ...value, city, cityRegion: '', propertySubType: '' })
-            }
-          >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
-              <SelectValue placeholder="Select city" />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
-              {cities.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            list="he-city-options"
+            value={cityQuery}
+            onChange={(e) => onCityInput(e.target.value)}
+            placeholder="Type your city (e.g. Vaughan)"
+            autoComplete="off"
+            className="bg-black/20 border-gray-700 text-gray-100"
+          />
+          <datalist id="he-city-options">
+            {cities.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         {/* Community */}
@@ -204,7 +223,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
               <SelectContent className="bg-gray-900 border-gray-700">
                 {[1, 2, 3, 4, 5].map((t) => (
                   <SelectItem key={t} value={String(t)}>
-                    {t} — {INTERIOR_LABELS[t]}
+                    {INTERIOR_LABELS[t]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -226,7 +245,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
               <SelectContent className="bg-gray-900 border-gray-700">
                 {[1, 2, 3, 4, 5].map((t) => (
                   <SelectItem key={t} value={String(t)}>
-                    {t} — {EXTERIOR_LABELS[t]}
+                    {EXTERIOR_LABELS[t]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -246,9 +265,9 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((t) => (
+                {[1, 3, 5, 7, 9].map((t) => (
                   <SelectItem key={t} value={String(t)}>
-                    {t} — {BASEMENT_LABELS[t]}
+                    {BASEMENT_LABELS[t]}
                   </SelectItem>
                 ))}
               </SelectContent>

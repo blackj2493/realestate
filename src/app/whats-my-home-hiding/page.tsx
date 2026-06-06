@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import RenovationFunnel from '@/components/reno/RenovationFunnel';
 import { loadCohortTree } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
+import AppHeader from '@/components/layout/AppHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,19 +48,22 @@ export default async function WhatsMyHomeHidingPage({
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
   return (
-    <main className="mx-auto max-w-[1200px] px-4 py-10 text-slate-200">
-      <h1 className="mb-1 text-3xl font-bold">What&apos;s my home hiding?</h1>
-      <p className="mb-8 max-w-2xl text-sm text-slate-400">
-        Describe your home and see the renovations that pay back the most where you are —
-        ranked by what actually sells nearby. Free.
-      </p>
-      <RenovationFunnel
-        tree={tree}
-        initialCity={resolved?.city ?? ''}
-        initialCityRegion={resolved?.cityRegion ?? ''}
-        communitySlug={slug ?? null}
-        communityLabel={communityLabel}
-      />
-    </main>
+    <div className="min-h-screen bg-slate-950 text-slate-200">
+      <AppHeader variant="marketing" />
+      <main className="mx-auto max-w-[1200px] px-4 py-10">
+        <h1 className="mb-1 text-3xl font-bold text-white">What&apos;s my home hiding?</h1>
+        <p className="mb-8 max-w-2xl text-sm text-slate-400">
+          Describe your home and see the renovations that pay back the most where you are —
+          ranked by what actually sells nearby. Free.
+        </p>
+        <RenovationFunnel
+          tree={tree}
+          initialCity={resolved?.city ?? ''}
+          initialCityRegion={resolved?.cityRegion ?? ''}
+          communitySlug={slug ?? null}
+          communityLabel={communityLabel}
+        />
+      </main>
+    </div>
   );
 }
