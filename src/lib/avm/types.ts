@@ -153,3 +153,11 @@ export const BW_LOT = 0.5;
  * relative, list-price-independent. Phase-1 default; tunable.
  */
 export const OUTLIER_Z = 1.5;
+
+/**
+ * Minimum close_price for a row to count as a SALE comp. raw_vow_sold mixes sold
+ * records with LEASED ones (close_price = monthly rent, e.g. $3,250); there is no
+ * scalar transaction_type to filter on. Residential rents never approach this, so
+ * the floor cleanly excludes leases without dropping legitimate low-end sales. Tunable.
+ */
+export const MIN_SALE_PRICE = 50_000;

@@ -34,6 +34,7 @@ import {
   BW_BATHS,
   BW_LOT,
   OUTLIER_Z,
+  MIN_SALE_PRICE,
 } from './types';
 import type { CoefficientRow } from './matrixService';
 import { rawVariantsOf, cityRegionLookupCandidates } from './normalizeType';
@@ -122,7 +123,7 @@ export async function fetchAnchor(
       .select(COMP_SELECT)
       .in('city_region', cityRegionCandidates)
       .in('property_sub_type', subVariants)
-      .gt('close_price', 0)
+      .gte('close_price', MIN_SALE_PRICE)
       .gte('purchase_contract_date', windowStartIso)
       .order('purchase_contract_date', { ascending: false })
       .limit(MAX_COMPS),
@@ -564,7 +565,7 @@ export async function fetchPeerAnchor(
       .select(COMP_SELECT)
       .in('city_region', cands)
       .in('property_sub_type', subVariants)
-      .gt('close_price', 0)
+      .gte('close_price', MIN_SALE_PRICE)
       .gte('purchase_contract_date', windowStartIso)
       .order('purchase_contract_date', { ascending: false })
       .limit(MAX_COMPS);
@@ -587,7 +588,7 @@ export async function fetchPeerAnchor(
       .select(COMP_SELECT)
       .ilike('city', cityKey)
       .in('property_sub_type', subVariants)
-      .gt('close_price', 0)
+      .gte('close_price', MIN_SALE_PRICE)
       .gte('purchase_contract_date', windowStartIso)
       .order('purchase_contract_date', { ascending: false })
       .limit(MAX_COMPS);
