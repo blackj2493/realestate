@@ -68,7 +68,7 @@ function suppressed(move: MoveSpec, reason: SuppressReason): ValueAddMove {
 
 /**
  * Evaluate one move into a ValueAddMove. Runs the trust gauntlet:
- *  cohort gates (R², n) → per-driving-feature gates (beta sign, stub, null baseline,
+ *  cohort gate (n; R² drives confidence, not suppression) → per-driving-feature gates (beta sign, stub, null baseline,
  *  at-ceiling, already-present) → raw exp value → magnitude caps → range + confidence.
  */
 export function evaluateMove(
@@ -77,11 +77,9 @@ export function evaluateMove(
   market: AVMMarketData,
   subjectEstimate: number
 ): ValueAddMove {
-  // Cohort gates
-  if (market.r2 === null || market.r2 === undefined || market.r2 < COEFFICIENT_ENGINE_THRESHOLD) {
-    return suppressed(move, 'low_r2');
-  }
-  if (market.n !== null && market.n !== undefined && market.n < MIN_COHORT_N) {
+  // Cohort gate: enough recent local sales to fit a model. R² is NOT a hard gate —
+  // weaker cohorts price with LOW confidence (set below) rather than being hidden.
+  if (market.n === null || market.n === undefined || market.n < MIN_COHORT_N) {
     return suppressed(move, 'thin_cohort');
   }
 
@@ -120,8 +118,9 @@ export function evaluateMove(
   const sd = Number.isFinite(market.anchor.predSD) ? market.anchor.predSD : 0.1;
   const valueAddLow = Math.round(typ * Math.exp(-sd));
   const valueAddHigh = Math.round(typ * Math.exp(sd));
+  const r2 = market.r2 ?? 0;
   let confidence: ValueAddMove['confidence'] =
-    market.r2 >= HIGH_CONFIDENCE_THRESHOLD ? 'HIGH' : 'MEDIUM';
+    r2 >= HIGH_CONFIDENCE_THRESHOLD ? 'HIGH' : r2 >= COEFFICIENT_ENGINE_THRESHOLD ? 'MEDIUM' : 'LOW';
   if (sd >= BAND_MED) confidence = 'LOW';
 
   const netGainTyp = typ - move.costTyp;
@@ -139,6 +138,12 @@ const DISCLAIMER =
   'Modeled estimate from recent local sales — not an appraisal or guarantee. ' +
   'Actual returns vary by finish quality, permits, and market timing.';
 
+/** Overall renovation-model confidence from the cohort R² (mirrors the per-move bands). */
+function reportConfidence(r2: number | null | undefined): 'HIGH' | 'MEDIUM' | 'LOW' {
+  const v = r2 ?? 0;
+  return v >= HIGH_CONFIDENCE_THRESHOLD ? 'HIGH' : v >= COEFFICIENT_ENGINE_THRESHOLD ? 'MEDIUM' : 'LOW';
+}
+
 function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddReport {
   return {
     cityRegion: input.cityRegion,
@@ -151,6 +156,7 @@ function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddRep
     neighbourhoodInsight: 'Not enough recent sales here to model renovation value yet.',
     basis: `${input.cityRegion} · ${input.propertySubType}`,
     disclaimer: DISCLAIMER,
+    confidence: 'LOW',
   };
 }
 
@@ -221,6 +227,7 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData, opts
     neighbourhoodInsight: neighbourhoodInsight(input, market, moves),
     basis: `Based on ${market.n ?? 'recent'} ${input.cityRegion} ${input.propertySubType} sales`,
     disclaimer: DISCLAIMER,
+    confidence: reportConfidence(market.r2),
   };
 }
 

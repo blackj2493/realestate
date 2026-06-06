@@ -22,10 +22,10 @@ describe('normalizeCityRegion', () => {
 
 describe('buildCohortTree', () => {
   const tree = buildCohortTree(rows, pairs);
-  it('drops low-R² and thin cohorts', () => {
+  it('drops thin cohorts (N<30) but KEEPS low-R² ones (N-gate only; R² shown via confidence)', () => {
     const s = JSON.stringify(tree);
-    expect(s).not.toContain('Thin');
-    expect(s).not.toContain('LowR2');
+    expect(s).not.toContain('Thin');   // N=10 → dropped
+    expect(s).toContain('LowR2');      // R²=0.3 but N=100 → now kept
   });
   it('groups communities under parent city with display label + RAW key + sorted types', () => {
     expect(tree['Brampton']).toEqual([

@@ -86,11 +86,11 @@ describe('evaluateMove — Churchill Meadows Townhouse', () => {
 
 describe('evaluateMove — cohort gates', () => {
   const P0 = 800000;
-  it('suppresses everything in a low-R² cohort', () => {
+  it('prices a low-R² cohort with LOW confidence (R² no longer hard-gates)', () => {
     const lowR2 = { ...BRAMPTON_WEST_DETACHED, r2: 0.4 };
     const r = evaluateMove(bramptonHome, move('finish_basement'), lowR2, P0);
-    expect(r.status).toBe('suppressed');
-    expect(r.suppressReason).toBe('low_r2');
+    expect(r.status).toBe('priced');
+    expect(r.confidence).toBe('LOW');
   });
   it('suppresses everything in a thin cohort', () => {
     const thin = { ...BRAMPTON_WEST_DETACHED, n: 12 };

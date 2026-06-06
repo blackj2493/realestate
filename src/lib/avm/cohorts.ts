@@ -18,8 +18,9 @@ export interface CohortCommunity {
 }
 export type CohortTree = Record<string, CohortCommunity[]>;
 
-/** Trained-cohort gate: where the value-add report actually prices moves. */
-const TRAINED_R2 = 0.5;
+/** Coverage gate: a cohort needs enough recent local sales to fit a model. R² is
+ *  NOT gated here — weaker cohorts are surfaced and flagged via the value-add
+ *  confidence badge rather than hidden (so e.g. a 0.31-R² townhouse still appears). */
 const TRAINED_N = 30;
 /** Legacy prefixes on some matrix city_regions: "1001 - BR Bronte", "7709 - Barrhaven". */
 const PREFIX_RE = /^\d+\s*-\s*(?:[A-Z]{1,3}\s+)?/;
@@ -39,7 +40,7 @@ export function buildCohortTree(rows: CohortRow[], pairs: CityRegionPair[]): Coh
 
   const tree = new Map<string, Map<string, { community: string; cityRegion: string; types: Set<string> }>>();
   for (const r of rows) {
-    if (!(r.model_accuracy_score >= TRAINED_R2 && r.total_sales_analyzed >= TRAINED_N)) continue;
+    if (!(r.total_sales_analyzed >= TRAINED_N)) continue;
     const cities = cityByRegion.get(r.city_region);
     const cityList = cities && cities.size ? [...cities] : ['Other'];
     const community = normalizeCityRegion(r.city_region);

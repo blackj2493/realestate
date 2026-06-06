@@ -16,7 +16,7 @@ const suppressedMove = (key: string, reason: SuppressReason): ValueAddMove => ({
 const report = (over: Partial<ValueAddReport> = {}): ValueAddReport => ({
   cityRegion: 'Brampton West', propertySubType: 'Detached',
   subjectEstimate: 800000, headlineUpsideGross: 140000, headlineUpside: 58000,
-  valueAddScore: 72, moves: [], neighbourhoodInsight: 'pays most for: finish the basement.',
+  valueAddScore: 72, confidence: 'HIGH', moves: [], neighbourhoodInsight: 'pays most for: finish the basement.',
   basis: 'Based on 117 Brampton West Detached sales', disclaimer: 'x', ...over,
 });
 

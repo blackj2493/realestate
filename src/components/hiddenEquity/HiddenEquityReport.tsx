@@ -66,6 +66,7 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
   // 3. Value-add section
   const hasValueAdd = shouldRender(report);
   const v = hasValueAdd ? buildView(report) : null;
+  const vaConfidence = report?.confidence ?? null;
 
   return (
     <div className="space-y-6 rounded-xl border border-slate-800 bg-slate-900 p-6">
@@ -95,9 +96,19 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
           {/* Section header */}
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-100">Hidden Equity</h3>
-            <span className="rounded border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 font-mono text-xs text-emerald-300">
-              Score {v.score}/100
-            </span>
+            <div className="flex items-center gap-2">
+              {vaConfidence && (
+                <span
+                  className={`inline-block rounded border px-2 py-0.5 font-mono text-xs ${CONFIDENCE_CHIP[vaConfidence]}`}
+                  title="How reliable this neighbourhood's renovation model is, based on recent local sales."
+                >
+                  {vaConfidence} CONFIDENCE
+                </span>
+              )}
+              <span className="rounded border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 font-mono text-xs text-emerald-300">
+                Score {v.score}/100
+              </span>
+            </div>
           </div>
 
           {/* Consumer-friendly headline */}

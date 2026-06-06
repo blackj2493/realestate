@@ -84,6 +84,8 @@ export interface ValueAddReport {
   /** GROSS unlockable-equity index (0–100), BEFORE costs:
    *  min(100, round((grossSum / P0) · SCORE_K)), grossSum = Σ valueAddTyp of recommended moves. */
   valueAddScore: number;
+  /** Overall renovation-model confidence (from cohort R²): HIGH ≥0.70, MEDIUM ≥0.50, LOW below. */
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   moves: ValueAddMove[];
   neighbourhoodInsight: string;
   basis: string;
