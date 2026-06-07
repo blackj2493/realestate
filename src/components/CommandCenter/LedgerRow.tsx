@@ -28,13 +28,15 @@ interface LedgerRowProps {
   isChecked?: boolean;
   /** Toggle this row's membership in the multi-select set. */
   onToggleSelect?: () => void;
+  /** Signed-in? Gates VOW-derived row metrics (True DOM, distress flags, deal score) for anon (§6.2(f)). */
+  isAuthed?: boolean;
 }
 
 function alignClass(a: ColumnDef["align"]) {
   return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 }
 
-function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
+function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
   const base = cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align));
 
   switch (col.type) {
@@ -45,6 +47,13 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
         </div>
       );
     case "trueDom": {
+      // True DOM is relist-corrected (VOW-derived) — gated for anon (§6.2(f)).
+      if (!isAuthed)
+        return (
+          <div className={cn(base, "text-slate-600")} title="Sign in to view True DOM">
+            🔒
+          </div>
+        );
       const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
       const color = dom > 90 ? "text-rose-400" : dom > 45 ? "text-cyan-400" : dom >= 14 ? "text-amber-400" : "text-slate-400";
       return <div className={cn(base, color, "font-semibold")}>{dom}d</div>;
@@ -87,7 +96,7 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
     case "density":
       return <div className={cn(base, doc.is_density_ready ? "text-cyan-400" : "text-slate-500")}>{doc.is_density_ready ? "YES" : "—"}</div>;
     case "alphaFlag": {
-      const flag = getAlphaFlag(doc);
+      const flag = getAlphaFlag(doc, isAuthed);
       return (
         <div className={cn("shrink-0", col.width, alignClass(col.align))}>
           {flag.variant === "none" ? (
@@ -105,7 +114,7 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
   }
 }
 
-export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false }: LedgerRowProps) {
   const [isSaved, setIsSaved] = useState(false);
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
@@ -151,7 +160,7 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
           className="absolute inset-0"
           sizes="96px"
         />
-        {deal.score !== null && (
+        {deal.score !== null && isAuthed && (
           <DealScoreGradePill
             score={deal.score}
             grade={deal.grade}
@@ -170,7 +179,7 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
       </div>
 
       {columns.map((col) => (
-        <Cell key={col.type} doc={property} col={col} />
+        <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} />
       ))}
     </div>
   );

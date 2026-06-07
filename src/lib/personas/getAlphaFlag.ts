@@ -21,8 +21,12 @@ export interface AlphaFlag {
   variant: AlphaFlagVariant;
 }
 
-export function getAlphaFlag(d: ListingDocument): AlphaFlag {
-  if (d.isDistressed) return { label: "DISTRESSED", variant: "distressed" };
+export function getAlphaFlag(d: ListingDocument, isAuthed: boolean = true): AlphaFlag {
+  // VOW-derived signals (distress, and relist-corrected stale/new via True DOM)
+  // are gated for anonymous users (CLAUDE.md §4 / VOW §6.2(f)) while
+  // VOW_ENFORCE_TERMS is off. The IDX-public flags (zoning / suite / density)
+  // stay visible to everyone, so an anon row falls through to those.
+  if (isAuthed && d.isDistressed) return { label: "DISTRESSED", variant: "distressed" };
   if (d.zoning_designation) return { label: `ZONING: ${d.zoning_designation}`, variant: "zoning" };
   if (d.SuiteStatus === "EXISTING_SUITE" || d.multi_unit_status === "EXISTING_MULTI_UNIT")
     return { label: "INCOME SUITE", variant: "income" };
@@ -33,8 +37,8 @@ export function getAlphaFlag(d: ListingDocument): AlphaFlag {
   )
     return { label: "SUITE POTENTIAL", variant: "suite" };
   if (d.is_density_ready) return { label: "DENSITY READY", variant: "density" };
-  if (d.IsStale) return { label: "STALE", variant: "stale" };
-  if ((d.TrueDom ?? d.calculatedDOM ?? 999) <= 7) return { label: "NEW", variant: "new" };
+  if (isAuthed && d.IsStale) return { label: "STALE", variant: "stale" };
+  if (isAuthed && (d.TrueDom ?? d.calculatedDOM ?? 999) <= 7) return { label: "NEW", variant: "new" };
   return { label: "—", variant: "none" };
 }
 

@@ -11,6 +11,7 @@ import LedgerRow from "./LedgerRow";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
 import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, type SortDir } from "./columnSort";
+import { useIsAuthed } from "@/hooks/useIsAuthed";
 
 interface LedgerPanelProps {
   className?: string;
@@ -19,6 +20,7 @@ interface LedgerPanelProps {
 export default function LedgerPanel({ className }: LedgerPanelProps) {
   const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
     useCommandCenterStore();
+  const isAuthed = useIsAuthed();
 
   const columns = PERSONA_CONFIG[activePersona].columns;
   const allProperties = searchResult?.listings || [];
@@ -81,7 +83,10 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
             col.width,
             col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
           );
-          if (!SORTABLE_COLUMN_TYPES.has(col.type)) {
+          // True DOM is VOW-gated for anon (§6.2(f)) — disable its sort header too,
+          // so its hidden value can't be inferred from row ordering.
+          const sortable = SORTABLE_COLUMN_TYPES.has(col.type) && (isAuthed || col.type !== "trueDom");
+          if (!sortable) {
             return (
               <div key={col.type} className={headClass}>
                 {col.header}
@@ -141,6 +146,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               key={property.id}
               property={property}
               columns={columns}
+              isAuthed={isAuthed}
               onClick={() => setSelectedProperty(property)}
               isSelected={selectedProperty?.id === property.id}
               isHovered={hoveredId === property.id}
