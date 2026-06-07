@@ -21,6 +21,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
+import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { useWatchlistStore, type WatchItem } from "./useWatchlist";
 
 // TRREB listing keys: a board letter + 5–10 digits (e.g. W12632618). Anything else
@@ -47,6 +48,7 @@ export interface WatchlistRollup {
   minPrice: number | null; // price band you're watching
   maxPrice: number | null;
   avgCapRate: number | null; // yield quality of what you tend to save
+  avgCapRateSample: number; // n listings with a real cap estimate (§7 honesty)
   bestDeal: { score: number; grade: string; address?: string } | null; // strongest buy right now
   priceDrops: number; // items cheaper than when you saved them
   offMarket: number;
@@ -154,8 +156,8 @@ export function useWatchlistSnapshot(): WatchlistSnapshot {
         maxPrice = maxPrice == null ? price : Math.max(maxPrice, price);
       }
 
-      const cap = c.current?.ExtrapolatedCapRate;
-      if (cap != null && cap > 0) {
+      const cap = capRateOrNull(c.current?.cap_rate_est);
+      if (cap != null) {
         capSum += cap;
         capN += 1;
       }
@@ -181,6 +183,7 @@ export function useWatchlistSnapshot(): WatchlistSnapshot {
       minPrice,
       maxPrice,
       avgCapRate: capN ? capSum / capN : null,
+      avgCapRateSample: capN,
       bestDeal,
       priceDrops,
       offMarket,
