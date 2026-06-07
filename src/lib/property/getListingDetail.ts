@@ -11,6 +11,8 @@
 
 import { cache } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { searchListings } from "@/lib/typesense/client";
+import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { calculateAVM } from "@/lib/avm/calculator";
 import { mapListingToAVMInput } from "@/lib/avm/mapListingToAVMInput";
 import { resolveLivingArea, type BucketCalibration } from "@/lib/avm/livingArea";
@@ -24,7 +26,6 @@ import {
   type CorpStats,
   type TrendBucket,
 } from "@/lib/condo/feeStability";
-import { calculateProForma } from "@/lib/typesense/ExtrapolatedCapRateEngine";
 import { computeDealScore, type DealScoreResult } from "@/lib/dealScore/computeDealScore";
 import { generatePropertyHash } from "@/lib/typesense/TemporalDistressEngine";
 import { ProptXClient } from "@/lib/proptx/client";
@@ -210,6 +211,20 @@ export const getListingDetail = cache(
     const roomsPromise: Promise<RoomData[]> =
       storedRooms.length > 0 ? Promise.resolve(storedRooms) : fetchListingRooms(listingKey);
 
+    // Real cap rate (Typesense doc; full_payload lacks the derived metric). Fire it
+    // off here so it overlaps the AVM / fee / room fetches instead of serializing
+    // onto TTFB. Best-effort: resolves null on miss/timeout, never rejects.
+    const capRatePromise: Promise<number | null> = withTimeout(
+      searchListings({ query: "*", rawFilterBy: `id:=\`${listingKey}\``, perPage: 1 }),
+      4000,
+      "CapRate"
+    )
+      .then((r) => capRateOrNull(r.listings[0]?.cap_rate_est))
+      .catch((capErr) => {
+        console.error(`[getListingDetail] cap_rate lookup failed for ${listingKey}:`, capErr);
+        return null;
+      });
+
     // Resolve rooms before the AVM: room dimensions are the AVM's best square-
     // footage signal (BuildingAreaTotal is ~never filled for houses). Best-effort,
     // so failure → [] and the AVM falls back to the calibrated bucket / midpoint.
@@ -342,11 +357,7 @@ export const getListingDetail = cache(
       typeof payload["OriginalListPrice"] === "number"
         ? (payload["OriginalListPrice"] as number)
         : null;
-    const taxAnnualAmount =
-      typeof payload["TaxAnnualAmount"] === "number" ? (payload["TaxAnnualAmount"] as number) : null;
-    const associationFee =
-      typeof payload["AssociationFee"] === "number" ? (payload["AssociationFee"] as number) : null;
-    const proForma = calculateProForma(listPrice, { listPrice: listPrice ?? 0, taxAnnualAmount, associationFee });
+    const realCapRate = await capRatePromise;
 
     const dealScore = computeDealScore({
       listPrice,
@@ -355,7 +366,7 @@ export const getListingDetail = cache(
         ? { estimatedValue: estimate.estimatedValue, confidence: estimate.confidence }
         : null,
       domDays: deriveDomDays(payload),
-      capRatePct: proForma.extrapolated_cap_rate > 0 ? proForma.extrapolated_cap_rate : null,
+      capRatePct: realCapRate,
     });
 
     // Best-effort prior-sale ledger — ONE indexed PK point-lookup on the precomputed
