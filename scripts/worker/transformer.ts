@@ -648,6 +648,7 @@ export interface TransformResult {
     property_sub_type: string | null;
     list_price: number;
     extrapolated_cap_rate: number;
+    cap_rate_est: number | null;
     property_hash: string;
     // Flat carry cost columns (migration 005)
     monthly_carry_cost: number;
@@ -905,6 +906,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     property_sub_type: raw.PropertySubType || null,
     list_price: raw.ListPrice || 0,
     extrapolated_cap_rate: proForma.extrapolated_cap_rate,
+    // Real IDX-derived cap rate (de-fake §6.2) — NULL when no rent estimate so the region
+    // RPC excludes it rather than averaging a 0. extrapolated_cap_rate stays until the
+    // engine is retired (§9); region_active_aggregates reads only cap_rate_est.
+    cap_rate_est: metrics3?.cap_rate_est || null,
     property_hash: trueDOM.propertyHash,
     // Flat carry cost columns (migration 005)
     monthly_carry_cost: carryCost.trueCarryCost,
