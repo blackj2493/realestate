@@ -101,20 +101,19 @@ bounds are folded into the Typesense `filter_by` **only when the user actively
 filters or sorts by that metric** — so a cap-rate sort can't rank a 400% value at
 the top, but the default unfiltered view still returns all rows.
 
-### 4.2 Cashflow gate — `net_monthly_cashflow` is a confident fake on no-rent rows
+### 4.2 Cashflow gate — forward-looking rule (no live surface today)
 
-`net_monthly_cashflow` is non-zero on 100% of for-sale, but on the ~53% with no
-rent estimate it is `mortgage + tax + opex − $0 rent` = a confident red
-"−$3,200/mo". That is **worse than blank** because it reads as computed. Rule,
-parallel to the band and obeying the same §4.1 discipline:
-
-- Gate every `net_monthly_cashflow` (and `cashflow_floor`) display/sort/filter on
-  **`hasRentEstimate(doc)`**. When false → render `—`.
-- The cashflow **sort/filter** ranks/keeps **only** estimate-bearing rows (the
-  band-in-query-only-when-active rule of §4.1); it never surfaces a no-rent row
-  with a fabricated negative number at the top of a "best cashflow" sort.
-- **Leave `UnderwritingSandbox`** — its cashflow is a *live user recompute* via
-  `computeUnderwriting`, not the index field. Out of scope.
+`net_monthly_cashflow` *would* be a confident fake on the ~53% no-rent rows
+(`mortgage + tax + opex − $0 rent` = a confident red "−$3,200/mo"). **But verified
+on origin/main it has NO live display/sort/filter surface** — `CashflowColumns`,
+`FinancialProForma`, and the `queryBuilder` cashflow clause are all orphan. So the
+rule is **forward-looking**: any future surface that shows/sorts/filters
+`net_monthly_cashflow` (or `cashflow_floor`) MUST gate on **`hasRentEstimate(doc)`**
+(→ `—` when false) and obey §4.1 (band-in-query only when active). The one live
+cashflow-adjacent query is the dashboard `cashflowCount` (#12), de-faked via
+`cap_rate_est`. `UnderwritingSandbox` stays out (live user recompute).
+`hasRentEstimate` still ships in the §4 module so the rule is enforceable the
+moment a cashflow surface is wired.
 
 ## 5. Composite-score correctness (the single biggest risk)
 
@@ -143,18 +142,18 @@ Real-first, fake removed from the chain. Grouped by surface:
 | --- | --- | --- |
 | Ledger sort | `components/CommandCenter/columnSort.ts:57,59` | `cap_rate_est` / `gross_yield_est` first; band-aware null |
 | Ledger cell | `components/CommandCenter/LedgerRow.tsx` | render real field via band guard → `—` when null |
-| Cashflow cell | `components/CommandCenter/CashflowColumns.tsx:51,55` | gate on `hasRentEstimate` → `—` (§4.2) |
 | Deal score input (list) | `lib/dealScore/fromListingDocument.ts:26` | band-validated cap (§5) |
-| Persona filter/sort/color/histogram | `lib/personas/personaConfig.ts` (cashflow + smart) | repoint `buildFilterString`, `sortBy`, `mapColor.metric`, control `field`; fix stale comments (13-19, 225-227) |
-| Map metric | `lib/personas/mapMetrics.ts` | real field via band guard |
-| Histograms | `lib/filters/histogram.ts` | distribution off real field |
-| Filters / sliders / query | `lib/typesense/queryBuilder.ts:11`, `components/CommandCenter/TerminalFilters.tsx:144`, `store/useFilterStore.ts` | repoint cap/yield + cashflow; implement §4.1 "band-in-query-only-when-active" + §4.2 cashflow gate |
-| Compare grid | `lib/compare/compareMetricsConfig.ts` | repoint + band |
-| Dashboard | `lib/dashboard/queries.ts`, `boards.ts`, `components/dashboard/DashboardHeatTile.tsx` | repoint; **+ `(n with estimates)` qualifier** (see §7) |
-| Aggregates | `app/api/market/region-stats/route.ts`, `lib/bubbles/stats.ts` | repoint; aggregates shift (real subset) |
-| Watchlist / underwriting | `lib/watchlist/useWatchlistSnapshot.ts`, `lib/underwriting/computeUnderwriting.ts` | repoint + band |
+| Persona filter/sort/color/histogram | `lib/personas/personaConfig.ts` (cashflow + smart) | repoint `buildFilterString` (`cap_rate_est`), `sortBy`, `mapColor.metric`, control `field`; **smart `mapColor` domain `[0,0.08]`→`[2,8]`** (was the fraction scale for `targetGrossYield`); fix stale comments (13-19, 225-227) |
+| Map metric | `lib/personas/mapMetrics.ts:53-56` | `field`+`metric` → `cap_rate_est` via band guard |
+| Histograms | `lib/filters/histogram.ts:50-56` | add `cap_rate_est` (+ `gross_yield_est`); delete stale "EMPTY" comment |
+| Compare grid | `lib/compare/compareMetricsConfig.ts:154-156` | `capRateVA` get → `capRateOrNull(c.listing.cap_rate_est)` (the live `capRateUw` underwrite row is untouched) |
+| Dashboard | `lib/dashboard/queries.ts:63-68,127`, `boards.ts:51-61`, `components/dashboard/DashboardHeatTile.tsx:34` | repoint to `cap_rate_est` (+ `&& cap_rate_est:<=15`); **+ `(n with estimates)` qualifier** (§7) |
+| Aggregates | `lib/bubbles/stats.ts:168,190,213-215` | `medianCapRate` → `cap_rate_est` + band; shift to real subset (§7). **NOT `region-stats/route.ts`** — Postgres column, deferred §14. |
+| Watchlist | `lib/watchlist/useWatchlistSnapshot.ts:157` | `avgCapRate` → `capRateOrNull(cap_rate_est)`; dealScore flows via §5. (`computeUnderwriting.ts` is NOT a repoint — imports only `calculateMonthlyMortgage`; §9 engine-removal dep.) |
 | **Listing detail page** | `lib/property/getListingDetail.ts:27,349,358` | see §6.1 |
 | Tests | `lib/filters/terminalQuery.test.ts`, others | update expectations |
+
+**Verified ORPHAN — explicitly NOT in scope** (no live importer; no `dynamic()`/`lazy()`): the entire `components/terminal/*` stack (`FinancialProForma`, `CashflowColumns`, `TerminalFilters`, `Builder/FlipperFilters`) + `lib/typesense/queryBuilder.ts` + `store/useFilterStore.ts`. Left as dead code (candidate for a separate deletion PR). **Consequence:** the §4.2 cashflow gate has no live target today (see §4.2); `net_monthly_cashflow` has no live display/sort/filter surface.
 
 (`lib/typesense/client.ts:141`'s `ExtrapolatedCapRate?` is a type decl only —
 leave for the §9 removal.)
@@ -278,7 +277,7 @@ then branch — never `git stash -u`, which would sweep the spec + script.)
 
 1. `feat(metrics): sanity band + hasRentEstimate module + tests` (`lib/metrics/sanityBand.ts`).
 2. `fix(dealscore): band-validated cap input, drop missing/out-of-band component`.
-3. `feat(terminal): repoint ledger/map/histogram/persona/filters to real cap+yield + cashflow gate` (no flip).
+3. `feat(terminal): repoint ledger/map/histogram/persona to real cap+yield` (no flip; drop the yield-cell `*100` unit bug).
 4. `feat: repoint downstream surfaces (compare, dashboard +n-qualifier, aggregates, watchlist, underwriting)`.
 5. `feat(listing): de-fake detail-page deal score — real cap via Typesense lookup, drop fake engine` (§6.1).
 6. `feat(terminal): default persona smart→flippers` — **isolated**, gated on §8 audit.
@@ -288,6 +287,10 @@ then branch — never `git stash -u`, which would sweep the spec + script.)
 
 - Reindex of any kind. Removal of the fake field/engine (deferred, §9).
 - N ≥ 8 / confidence / tier split (deferred, §3).
+- **`api/market/region-stats/route.ts`** — reads a persisted Postgres
+  `ExtrapolatedCapRate` column (`getServiceRoleClient`, not Typesense); de-faking
+  needs a `cap_rate_est` Postgres column = reindex/migration-shaped. Deferred
+  (revisit with the §9 reindex).
 - **Wiring the orphan `FinancialProForma` component** — it already expects real
   fields but is referenced nowhere in `src/`; integrating it is a separate
   feature, not a de-fake. (If ever wired, it must obey the §4.2 cashflow gate.)
