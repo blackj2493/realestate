@@ -448,6 +448,7 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       property_sub_type: p.property_sub_type,
       list_price: p.list_price,
       extrapolated_cap_rate: p.extrapolated_cap_rate,
+      cap_rate_est: p.cap_rate_est,
       property_hash: metrics?.property_hash || '',
       // Flat carry cost columns (migration 005)
       monthly_carry_cost: p.monthly_carry_cost,

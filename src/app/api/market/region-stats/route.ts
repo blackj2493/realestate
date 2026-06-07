@@ -7,8 +7,9 @@
  *
  * These are derived STATISTICS (not listing rows), so the 100-listing display cap
  * (§6.3b) does not apply — the RPC scans the whole active set server-side and returns
- * only scalars. Cap rate is the Node-ETL ExtrapolatedCapRate, persisted to a column;
- * SQL only aggregates it (§4 keeps the derived-metric computation in Node).
+ * only scalars. Cap rate is the real IDX-derived cap_rate_est (financialMetrics),
+ * persisted to a column and aggregated within the [1,15]% sanity band; SQL only
+ * aggregates it (§4 keeps the derived-metric computation in Node). De-fake spec §6.2.
  *
  * Wrapped in unstable_cache (24h, aligned with the daily sync) and uses the
  * service-role client because `listings` aggregation must bypass anon RLS.
@@ -92,7 +93,8 @@ export async function GET(req: NextRequest) {
   const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", stats: EMPTY });
 
-  // VOW gate: region cap-rate stats are a derived analytical metric (ExtrapolatedCapRate).
+  // Gate: cap_rate_est is IDX-only (not VOW), so un-gating these IDX-derived region
+  // aggregates is a separate compliance call (de-fake §6.2) — kept conservative for now.
   // Anonymous users get a locked shape (no data) before the cache/RPC scan.
   const { isConsumer } = await getConsumer();
   if (!isConsumer) {
