@@ -74,14 +74,30 @@ const COMP_SELECT =
   'lot_width, lot_depth, bedrooms_above_grade, bathrooms_total_integer, parking_total, ' +
   'interior_tier, exterior_tier, basement_tier';
 
-interface TrendRow {
+export interface TrendRow {
   period_end: string;
   level_log: number;
 }
 
-interface OffsetRow {
+export interface OffsetRow {
   city_region: string;
   delta_log: number;
+}
+
+/**
+ * Market data the pure anchor math consumes, injected by the caller. fetchAnchor
+ * fills it from live DB queries with nowMs = Date.now(); the out-of-time backtest
+ * harness fills it with as-of data — comps dated < t_S, an as-of trend/offset
+ * snapshot — and nowMs = t_S, so the SAME math replays with zero look-ahead leakage.
+ */
+export interface AnchorInputData {
+  comps: CompRow[];
+  /** {period_end, level_log}, most-recent period first (as the live query orders). */
+  trend: TrendRow[];
+  /** {city_region, delta_log} for the subject's city_region candidates. */
+  offsets: OffsetRow[];
+  /** "now" in epoch ms — Date.now() in the live path, the sale's reference date (t_S) in the backtest. */
+  nowMs: number;
 }
 
 const UNAVAILABLE: AnchorResult = {
@@ -144,11 +160,34 @@ export async function fetchAnchor(
       .limit(cityRegionCandidates.length),
   ]);
 
-  const comps = ((compsRes.data as unknown as CompRow[] | null) ?? []).filter(
+  return computeAnchorFromData(input, coefficients, basePriceFallback, {
+    comps: (compsRes.data as unknown as CompRow[] | null) ?? [],
+    trend: (trendRes.data as unknown as TrendRow[] | null) ?? [],
+    offsets: (offsetRes.data as unknown as OffsetRow[] | null) ?? [],
+    nowMs: Date.now(),
+  });
+}
+
+/**
+ * Pure anchor math over INJECTED market data — the deterministic core of the
+ * anchor pipeline (steps 2–6). fetchAnchor wraps this with live DB queries and
+ * nowMs = Date.now(); the out-of-time backtest harness calls it directly with
+ * as-of data (comps dated < t_S, an as-of trend/offset snapshot, nowMs = t_S) so
+ * it replays the EXACT request-time model with zero look-ahead leakage.
+ * Behaviour is byte-identical to the pre-extraction fetchAnchor tail.
+ * Deterministic, no AI (CLAUDE.md §4).
+ */
+export function computeAnchorFromData(
+  input: AVMInput,
+  coefficients: CoefficientRow[],
+  basePriceFallback: number | null,
+  data: AnchorInputData
+): AnchorResult {
+  const cityRegionCandidates = cityRegionLookupCandidates(input.cityRegion);
+  const comps = data.comps.filter(
     (c) => c.close_price > 0 && (c.purchase_contract_date || c.close_date)
   );
-  const trend = (trendRes.data as unknown as TrendRow[] | null) ?? [];
-  const offsets = (offsetRes.data as unknown as OffsetRow[] | null) ?? [];
+  const { trend, offsets, nowMs } = data;
 
   // ── Prior level: ℓ_prior = g(t₀) + δ_c (best available) ──────────────────
   const gNow = trend[0]?.level_log ?? null;
@@ -185,7 +224,6 @@ export async function fetchAnchor(
 
   // ── Per-comp ℓ_i, de-staled to now ───────────────────────────────────────
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
-  const nowMs = Date.now();
 
   type Adjusted = { l: number; ageDays: number };
   const adjusted: Adjusted[] = [];
