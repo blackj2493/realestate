@@ -246,9 +246,6 @@ export interface SearchFilters {
   // Derived Metrics
   isDistressed?: boolean;
   hasSecondarySuitePotential?: boolean;
-  minTargetGrossYield?: number;
-  maxTargetGrossYield?: number;
-  
   // Lot Dimensions (for Value-Add / Developer)
   minLotWidth?: number;
   maxLotWidth?: number;
@@ -382,14 +379,6 @@ export async function searchListings(
   }
   if (filters.hasSecondarySuitePotential !== undefined) {
     filterParts.push(`hasSecondarySuitePotential:=${filters.hasSecondarySuitePotential}`);
-  }
-  
-  // Target Gross Yield filter
-  if (filters.minTargetGrossYield !== undefined) {
-    filterParts.push(`targetGrossYield:>=${filters.minTargetGrossYield}`);
-  }
-  if (filters.maxTargetGrossYield !== undefined) {
-    filterParts.push(`targetGrossYield:<=${filters.maxTargetGrossYield}`);
   }
   
   // Lot dimensions (for Value-Add/Developer)
