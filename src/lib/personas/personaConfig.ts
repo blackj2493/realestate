@@ -10,17 +10,19 @@
  *   (HTTP 400): targetGrossYield, isDistressed, hasSecondarySuitePotential,
  *   zoning_designation, multiplex_by_right, TransactionType. They are fine for
  *   display/color only.
- * - gross_yield_est / cap_rate_floor / net_monthly_cashflow are filterable but
- *   all 0 in the data — do NOT filter on them.
- * - Filterable + populated: ExtrapolatedCapRate, CapitalBurnRateMonthly,
+ * - cap_rate_est / gross_yield_est ARE populated (~47% of for-sale) + indexed +
+ *   filterable + sortable — they back the cashflow/smart cap & yield controls.
+ *   Sparse by design (rent index suppresses cohorts < N=5); guard every read with
+ *   the sanity band (src/lib/metrics/sanityBand.ts). cap_rate_est / gross_yield_est
+ *   are PERCENT. The old fake ExtrapolatedCapRate is retired from the UI (spec §9).
+ * - Filterable + populated: cap_rate_est, gross_yield_est, CapitalBurnRateMonthly,
  *   MonthlyCarryCost, TrueDom, SuiteStatus, multi_unit_status, is_density_ready,
  *   surplus_parking_count, LotWidth, LotSqftTotal, IsStale, TotalPriceDrop.
- * - targetGrossYield is a FRACTION (0.034 = 3.4%); ExtrapolatedCapRate is a
- *   PERCENT (4.64 = 4.64%).
  */
 
 import { DollarSign, TrendingUp, Home, Hammer, type LucideIcon } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 
 export type PersonaType = "smart" | "cashflow" | "flippers" | "builders";
 
@@ -29,7 +31,7 @@ export type PersonaType = "smart" | "cashflow" | "flippers" | "builders";
 // ============================================================================
 
 export interface TerminalFilterState {
-  minYield: number; // % — substituted onto ExtrapolatedCapRate (gross yield unfilterable)
+  minYield: number; // % — thresholds cap_rate_est (label "Yield" is a legacy misnomer)
   minCapRate: number; // %
   maxCarryCost: number; // $/mo
   maxCapitalBurn: number; // $/mo
@@ -222,10 +224,9 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Smart Homebuyer",
     icon: Home,
     controls: [
-      // Histogram field = the field the filter actually uses (ExtrapolatedCapRate,
-      // fully populated); gross_yield_est is empty in the live index. (The "Yield"
-      // label is a pre-existing misnomer — this control thresholds cap rate.)
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "ExtrapolatedCapRate" },
+      // This control thresholds cap_rate_est (real, indexed). The "Yield" label is
+      // a legacy misnomer — kept to avoid churning the chip UI; it filters cap rate.
+      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
       { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
       { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
       { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
@@ -233,7 +234,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     ],
     buildFilterString: (f) =>
       join([
-        f.minYield > 0 ? `ExtrapolatedCapRate:>=${f.minYield}` : "",
+        f.minYield > 0 ? `cap_rate_est:>=${Math.max(f.minYield, 1)} && cap_rate_est:<=15` : "",
         f.trueDomMin > 0 ? `TrueDom:>=${f.trueDomMin}` : "",
         f.trueDomMax < 365 ? `TrueDom:<=${f.trueDomMax}` : "",
         f.maxCapitalBurn < 20000 ? `CapitalBurnRateMonthly:<=${f.maxCapitalBurn}` : "",
@@ -247,7 +248,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.targetGrossYield ?? 0, domain: [0, 0.08], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield" },
+    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield" },
     defaultMapMode: "listings",
   },
 
@@ -257,19 +258,19 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Cashflow Investor",
     icon: DollarSign,
     controls: [
-      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "ExtrapolatedCapRate" },
+      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
       { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost" },
       { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
       { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex" },
     ],
     buildFilterString: (f) =>
       join([
-        f.minCapRate > 0 ? `ExtrapolatedCapRate:>=${f.minCapRate}` : "",
+        f.minCapRate > 0 ? `cap_rate_est:>=${Math.max(f.minCapRate, 1)} && cap_rate_est:<=15` : "",
         f.maxCarryCost < 15000 ? `MonthlyCarryCost:<=${f.maxCarryCost}` : "",
         f.minSurplusParking > 0 ? `surplus_parking_count:>=${f.minSurplusParking}` : "",
         f.duplexCandidate ? `(SuiteStatus:=POTENTIAL_CANDIDATE || SuiteStatus:=EXISTING_SUITE || multi_unit_status:=PRIME_CANDIDATE)` : "",
       ]),
-    sortBy: "ExtrapolatedCapRate",
+    sortBy: "cap_rate_est",
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
       { type: "capRate", header: "Cap Rate", width: "w-16", align: "right" },
@@ -277,7 +278,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.ExtrapolatedCapRate ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap" },
+    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap" },
     defaultMapMode: "heatmap",
   },
 
