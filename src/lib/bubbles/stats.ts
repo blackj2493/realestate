@@ -26,6 +26,7 @@
 
 import Typesense, { Client } from "typesense";
 import type { Bubble } from "./serialize";
+import { CAP_RATE_BAND } from "@/lib/metrics/sanityBand";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -212,7 +213,7 @@ export async function computeBubbleStats(bubble: Bubble): Promise<BubbleStats> {
   // sample is large enough to be representative for typical bubble sizes.
   const capRates = ascDocs
     .map((d) => Number(d.cap_rate_est))
-    .filter((n) => Number.isFinite(n) && n >= 1 && n <= 15);
+    .filter((n) => Number.isFinite(n) && n >= CAP_RATE_BAND.min && n <= CAP_RATE_BAND.max);
 
   return {
     activeCount,
