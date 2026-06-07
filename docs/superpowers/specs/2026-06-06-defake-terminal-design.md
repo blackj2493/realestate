@@ -287,13 +287,75 @@ then branch — never `git stash -u`, which would sweep the spec + script.)
 
 - Reindex of any kind. Removal of the fake field/engine (deferred, §9).
 - N ≥ 8 / confidence / tier split (deferred, §3).
-- **`api/market/region-stats/route.ts`** — reads a persisted Postgres
-  `ExtrapolatedCapRate` column (`getServiceRoleClient`, not Typesense); de-faking
-  needs a `cap_rate_est` Postgres column = reindex/migration-shaped. Deferred
-  (revisit with the §9 reindex).
-- **Wiring the orphan `FinancialProForma` component** — it already expects real
-  fields but is referenced nowhere in `src/`; integrating it is a separate
-  feature, not a de-fake. (If ever wired, it must obey the §4.2 cashflow gate.)
+- **The entire orphan `src/components/terminal/*` stack** + `store/useFilterStore.ts`
+  + `lib/typesense/queryBuilder.ts` (`FinancialProForma`, `CashflowCell`,
+  `TerminalFilters`, `FlipperFilters`, `BuilderFilters`) — defined but referenced
+  nowhere in `src/` (zero JSX usage / non-self imports). Dead code; optionally a
+  separate deletion-cleanup. (region-stats was previously listed here as deferred;
+  it is now **IN SCOPE** per the user — see §6.2 / §15.)
 - `UnderwritingSandbox` cashflow (live user recompute, §4.2).
 - Plan 4 (VOW_ENFORCE_TERMS, migration 029) — only becomes a dependency if §8
   audit fails.
+
+## 15. Verified scope corrections (2026-06-07)
+
+A full `origin/main` import/JSX-usage audit corrected several §4.2/§6 assumptions
+(the original §6 trusted a review that cited a different branch's paths):
+
+- **Two terminal UIs exist; one is orphan.** LIVE = `CommandCenter`
+  (`app/properties/page.tsx`) + listing detail `app/(app)/properties/[id]/page.tsx`
+  (renders `DealScoreCard` + `UnderwritingSandbox`). **ORPHAN** (defined, zero JSX
+  usage / non-self imports): the `src/components/terminal/*` stack
+  (`FinancialProForma`, `CashflowCell` at `terminal/Table/Columns/CashflowColumns.tsx`,
+  `TerminalFilters`, `FlipperFilters`, `BuilderFilters`) + `store/useFilterStore.ts`
+  + `lib/typesense/queryBuilder.ts` → OUT OF SCOPE (§14).
+- **§4.2 (cashflow) is mostly moot live** — `net_monthly_cashflow` has no live
+  display/sort/filter surface. The gate becomes (a) a forward-looking rule + (b)
+  the dashboard "cashflow" board (`queries.ts:104-127`, fake-cap proxy), de-faked
+  in the dashboard repoint. `UnderwritingSandbox` stays out (live recompute).
+- **`computeUnderwriting.ts:18` is NOT a repoint** — imports only
+  `calculateMonthlyMortgage` (mortgage util). §9-removal dependency, not a cap read.
+- **`LedgerRow.tsx:57` unit bug** — `(v*100)` is correct for the `targetGrossYield`
+  *fraction* but wrong for `gross_yield_est` (*percent*); repoint MUST drop `*100`.
+- **region-stats — INCLUDED (user decision), as the heavy phase §6.2.**
+
+### 6.2 region-stats de-fake (heavy phase — Postgres + backfill)
+
+`/api/market/region-stats` → RPC `region_active_aggregates()` (migration 020/026/027)
+aggregates the persisted **`listings.extrapolated_cap_rate`** column (fake; ETL +
+`backfill020.ts`). Typesense's `cap_rate_est` is NOT in Postgres. De-fake:
+1. **Migration** (slim, instant DDL — 020 pattern): `ALTER TABLE listings ADD COLUMN
+   IF NOT EXISTS cap_rate_est NUMERIC;`
+2. **Backfill** (`scripts/admin/backfillNNN.ts`, **Session-pooler** per §12, batched
+   by id cursor, `SET statement_timeout TO '0'`): copy `cap_rate_est` from the
+   Typesense `properties` docs (already computed; no rent-index recompute). ~47%
+   get a value, rest NULL.
+3. **ETL:** transformer writes `cap_rate_est` to the Supabase listings payload so
+   daily sync keeps it fresh.
+4. **RPC rewrite:** `region_active_aggregates()` aggregates `cap_rate_est`
+   (NULL/0 excluded → N≥5 implied) **with the §4 band** (`cap BETWEEN 1 AND 15`);
+   update `RegionStats`/route comments. **Keep the existing anon lock** (route
+   line 98-100) — un-gating IDX-only region aggregates is a separate compliance
+   call (note, don't bundle).
+5. The `extrapolated_cap_rate` column drops with the engine (§9).
+
+### Verified live repoint inventory (authoritative for execution)
+
+| Site | File:line | Kind |
+| --- | --- | --- |
+| Ledger cap cell | `LedgerRow.tsx:52` | display |
+| Ledger yield cell (+`*100` bug) | `LedgerRow.tsx:55-57` | display |
+| Ledger sort | `columnSort.ts:57,59` | sort |
+| Persona filter/sort/color/hist | `personaConfig.ts:228,236,260,267,272,280` (+comments) | filter/sort/color |
+| Map cap metric | `mapMetrics.ts:55-56` (+comment) | color |
+| Histogram fields | `histogram.ts:50,55-56` | histogram |
+| Deal score (list/compare) | `fromListingDocument.ts:26` | score |
+| Deal score (listing page) | `getListingDetail.ts:27,349,358` | score (§6.1) |
+| Compare grid | `compareMetricsConfig.ts:155` | display |
+| Dashboard heat tile | `DashboardHeatTile.tsx:34` | display |
+| Dashboard boards | `boards.ts:54,57,59` | filter/sort |
+| Dashboard queries (+cashflow board) | `queries.ts:65,66,78,104-127` | filter/sort |
+| Bubble headline stats | `bubbles/stats.ts:168,190,211,214` | aggregate |
+| Watchlist cap | `useWatchlistSnapshot.ts:157` | display |
+| Region stats (heavy) | `region-stats` RPC + column | §6.2 |
+| Test fixture | `terminalQuery.test.ts:30` | test |
