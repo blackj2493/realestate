@@ -39,6 +39,7 @@ export type AnchorBasis =
   | 'blend'   // local comps + de-staled prior shrunk together
   | 'prior'   // no usable local comps; prior (g(t₀)+δ_c) carried the level
   | 'parent'  // community offset missing; parent city × sub-type level used
+  | 'borrowed'// untrained cohort priced via matched comps + a trained SIBLING cohort's coefficients
   | 'peer'    // saturating outlier priced by the peer comp-grid (homes like it)
   | 'floor'   // saturating outlier, too few peers — clamped number as a neighbourhood FLOOR
   | 'none';   // truly nothing — render "estimate unavailable"
@@ -144,6 +145,10 @@ export const MIN_PEERS_FOR_HIGH = 8;
 export const BW_BEDS = 1;
 export const BW_BATHS = 1;
 export const BW_LOT = 0.5;
+/** Gaussian bandwidth (log-space) for sqft similarity. Subject sqft is the resolved
+ * room-sum; comp sqft is the 500-sqft bucket midpoint, so resolution is coarse —
+ * this mainly separates size CLASSES (e.g. ~2,250 vs ~4,250). Tunable. */
+export const BW_SQFT = 0.25;
 
 /**
  * Coefficient-free outlier gate for UNTRAINED cohorts (no matrix row → anchor-only,
@@ -153,3 +158,11 @@ export const BW_LOT = 0.5;
  * relative, list-price-independent. Phase-1 default; tunable.
  */
 export const OUTLIER_Z = 1.5;
+
+/**
+ * Minimum close_price for a row to count as a SALE comp. raw_vow_sold mixes sold
+ * records with LEASED ones (close_price = monthly rent, e.g. $3,250); there is no
+ * scalar transaction_type to filter on. Residential rents never approach this, so
+ * the floor cleanly excludes leases without dropping legitimate low-end sales. Tunable.
+ */
+export const MIN_SALE_PRICE = 50_000;

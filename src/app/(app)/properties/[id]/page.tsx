@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Bed, Bath, Square, Car, Home, AlertTriangle, Building2 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
+import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
@@ -340,7 +341,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
             {/* Specs */}
             <div className="mb-6 grid grid-cols-4 gap-3">
-              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={p.BedroomsTotal ?? 0} label="Beds" />
+              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
               <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
               <SpecCell
                 icon={<Square className="h-5 w-5 text-purple-400" />}

@@ -139,6 +139,8 @@ function basisCopy(
       return city
         ? `Based on adjacent ${city} sales (no local ${here} baseline yet)`
         : "Based on adjacent city-level sales";
+    case "borrowed":
+      return `Comped against ${comps} size-matched ${here} sales, adjusted with the ${city ?? "nearby"} model (no local model for ${here} yet)`;
     case "peer":
       return `Comped against ${comps} similar ${here}-area sales (size/beds/baths-matched), trend-adjusted to today`;
     case "floor":

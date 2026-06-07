@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import PrimaryNav from '@/components/layout/PrimaryNav';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
-import { bedsLabel } from './ListingCardBody';
+import { bedsLabel } from '@/lib/listings/bedsLabel';
 import UnderwritingSandbox from '@/components/Property/UnderwritingSandbox';
 import DOMTimelineChart, { type SaleMarker } from './DOMTimelineChart';
 import SaleHistorySection from '@/components/Property/SaleHistorySection';
