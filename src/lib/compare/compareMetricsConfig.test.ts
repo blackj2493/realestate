@@ -106,3 +106,14 @@ describe("lensGroupOrder", () => {
     expect(order[0]).toBe("distressTiming");
   });
 });
+
+describe("compare Value-Add Cap Rate", () => {
+  const m = COMPARE_METRICS.find((x) => x.key === "capRateVA")!;
+  it("reads the real cap_rate_est, band-guarded", () => {
+    expect(m.get!(ctx(L({ cap_rate_est: 7 })) as never)).toBe(7);
+    expect(m.get!(ctx(L({ cap_rate_est: 99 })) as never)).toBeNull();
+  });
+  it("ignores the fake ExtrapolatedCapRate", () => {
+    expect(m.get!(ctx(L({ ExtrapolatedCapRate: 8 } as Partial<ListingDocument>)) as never)).toBeNull();
+  });
+});

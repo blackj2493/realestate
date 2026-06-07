@@ -223,7 +223,7 @@ export interface CommandCenterState {
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
-  activePersona: "smart",
+  activePersona: "flippers",
   setActivePersona: (persona) => set({ activePersona: persona }),
 
   filters: { ...defaultTerminalFilters },

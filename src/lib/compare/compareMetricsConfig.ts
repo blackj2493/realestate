@@ -13,6 +13,7 @@ import { formatPrice } from "@/lib/utils";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { winnerIndices, bestValue, type WinnerDirection } from "./winner";
 import { rowIsIdentical } from "./diff";
+import { capRateOrNull } from "@/lib/metrics/sanityBand";
 
 export type CompareGroupId =
   | "valuationDeal"
@@ -151,9 +152,9 @@ export const COMPARE_METRICS: CompareMetric[] = [
   { key: "capRateUw", label: "Cap Rate", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.capRatePct ?? null, format: fmtPct1, winner: "high",
     tag: () => "est" },
-  { key: "capRateVA", label: "Value-Add Cap Rate", group: "cashflowCarry", cellKind: "numeric",
-    get: (c) => c.listing.ExtrapolatedCapRate ?? null, format: fmtPct1, winner: "high",
-    tag: () => "BRRRR" },
+  { key: "capRateVA", label: "Est. Cap Rate", group: "cashflowCarry", cellKind: "numeric",
+    get: (c) => capRateOrNull(c.listing.cap_rate_est), format: fmtPct1, winner: "high",
+    tag: () => "est" },
   { key: "cashflow", label: "Monthly Cashflow", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.monthlyCashflow ?? null, format: fmtSignedPerMo, winner: "high",
     tag: () => "est" },

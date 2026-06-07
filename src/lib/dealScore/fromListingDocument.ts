@@ -12,6 +12,7 @@
 
 import { computeDealScore, type DealScoreResult } from "./computeDealScore";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { capRateOrNull } from "@/lib/metrics/sanityBand";
 
 export interface DocumentDealScoreEstimate {
   estimatedValue: number;
@@ -23,7 +24,7 @@ export function dealScoreFromDocument(
   estimate?: DocumentDealScoreEstimate | null
 ): DealScoreResult {
   const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket;
-  const capRate = doc.ExtrapolatedCapRate ?? doc.cap_rate_est;
+  const capRate = capRateOrNull(doc.cap_rate_est);
 
   return computeDealScore({
     listPrice: doc.ListPrice ?? null,
@@ -33,6 +34,6 @@ export function dealScoreFromDocument(
         ? { estimatedValue: estimate.estimatedValue, confidence: estimate.confidence }
         : null,
     domDays: typeof dom === "number" ? dom : null,
-    capRatePct: typeof capRate === "number" ? capRate : null,
+    capRatePct: capRate,
   });
 }

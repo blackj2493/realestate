@@ -28,11 +28,19 @@ import crossFetch from 'cross-fetch';
 // Patch global fetch with TLS disabled agent for Supabase client
 const agent = new https.Agent({ rejectUnauthorized: false });
 const patchedFetch: typeof fetch = (url, init) => {
+  // Hard 45s per-request cap. On the intermittently-throttled Supabase instance a
+  // hung connection otherwise blocks the entire run forever (observed twice). An
+  // abort surfaces as a fetch error → fetchChunk retries it (isThrottleError matches
+  // 'abort'); per-record AVM aborts are caught and counted as failed, not hung.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 45000);
+  if (init?.signal) init.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
   return crossFetch(url, {
     ...init,
     // @ts-ignore - agent is not a standard option
-    agent
-  });
+    agent,
+    signal: ctrl.signal,
+  }).finally(() => clearTimeout(timer));
 };
 (global as unknown as { fetch: typeof fetch }).fetch = patchedFetch;
 
@@ -88,7 +96,7 @@ if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
 // ============================================================================
 
 interface ListingRecord {
-  id: number;
+  id: string; // UUID — the listings PK (NOT an integer)
   listing_key: string;
   full_payload: Record<string, unknown>;
   property_hash: string | null;
@@ -177,7 +185,8 @@ function isThrottleError(msg: string): boolean {
     m.includes('statement timeout') ||
     m.includes('canceling statement') ||
     m.includes('timeout') ||
-    m.includes('fetch failed')
+    m.includes('fetch failed') ||
+    m.includes('abort')
   );
 }
 
@@ -308,11 +317,11 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
 
 interface FetchResult {
   records: ListingRecord[];
-  lastId: number | null;
+  lastId: string | null;
   hasMore: boolean;
 }
 
-async function fetchChunk(lastId: number | null): Promise<FetchResult> {
+async function fetchChunk(lastId: string | null): Promise<FetchResult> {
   // Retry the fetch with exponential backoff. A throttled instance recovers IO
   // budget over time, so backing off (rather than hammering) is what lets the
   // run make progress. Each attempt rebuilds the query — supabase-js builders
@@ -407,11 +416,13 @@ async function reindexFromVault(): Promise<void> {
   // Resume from a prior interrupted run if a checkpoint exists. The reindex is
   // idempotent (Typesense upsert), but resuming avoids re-reading already-done
   // rows — i.e. avoids re-spending the scarce Disk IO budget on work we did.
-  let lastId: number | null = null;
+  let lastId: string | null = null;
   try {
     if (fs.existsSync(CHECKPOINT_FILE)) {
-      const saved = parseInt(fs.readFileSync(CHECKPOINT_FILE, 'utf8').trim(), 10);
-      if (Number.isFinite(saved) && saved > 0) {
+      // listings.id is a UUID, not an integer — read it verbatim. (parseInt(uuid,10)
+      // returns NaN, which silently disabled resume and restarted from id=0 every run.)
+      const saved = fs.readFileSync(CHECKPOINT_FILE, 'utf8').trim();
+      if (saved) {
         lastId = saved;
         console.log(`↩️  Resuming from checkpoint: id > ${lastId} (delete ${CHECKPOINT_FILE} to start over)\n`);
       }

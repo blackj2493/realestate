@@ -35,7 +35,7 @@ export interface BoardDef {
   objectives: string[];
 }
 
-// ExtrapolatedCapRate is stored as a percentage (7.1 → "7.1%").
+// cap_rate_est is stored as a percentage (7.1 → "7.1%").
 const pct = (v: number | undefined | null) =>
   v == null || !Number.isFinite(v) ? '—' : `${v.toFixed(1)}%`;
 const money = (v: number | undefined | null) =>
@@ -51,12 +51,12 @@ export const BOARDS: Record<BoardId, BoardDef> = {
   cap_rate: {
     id: 'cap_rate',
     title: 'Highest Cap Rate',
-    metricField: 'ExtrapolatedCapRate',
+    metricField: 'cap_rate_est',
     metricLabel: 'CAP',
     formatMetric: pct,
-    sortBy: 'ExtrapolatedCapRate',
+    sortBy: 'cap_rate_est',
     sortOrder: 'desc',
-    rawFilterBy: 'ExtrapolatedCapRate:>0',
+    rawFilterBy: 'cap_rate_est:>=1 && cap_rate_est:<=15',
     objectives: ['Analyze rental yield / cap rates'],
   },
   suite: {

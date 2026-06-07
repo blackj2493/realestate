@@ -26,6 +26,7 @@
 
 import Typesense, { Client } from "typesense";
 import type { Bubble } from "./serialize";
+import { CAP_RATE_BAND } from "@/lib/metrics/sanityBand";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -165,7 +166,7 @@ export async function computeBubbleStats(bubble: Bubble): Promise<BubbleStats> {
       filter_by: baseFilter,
       sort_by: "ListPrice:asc",
       per_page: MEDIAN_SAMPLE_CAP,
-      include_fields: "ListPrice,ExtrapolatedCapRate",
+      include_fields: "ListPrice,cap_rate_est",
     }),
     client.collections(PROPERTIES_COLLECTION).documents().search({
       q: "*",
@@ -187,7 +188,7 @@ export async function computeBubbleStats(bubble: Bubble): Promise<BubbleStats> {
   if (activeCount === 0) return EMPTY;
 
   const ascDocs = (ascRes.hits ?? []).map(
-    (h) => h.document as { ListPrice?: number; ExtrapolatedCapRate?: number }
+    (h) => h.document as { ListPrice?: number; cap_rate_est?: number }
   );
 
   const ascPrices = ascDocs
@@ -208,11 +209,11 @@ export async function computeBubbleStats(bubble: Bubble): Promise<BubbleStats> {
   );
 
   // Cap rate: the sample (≤250) is the best we can do without indexing
-  // ExtrapolatedCapRate as sortable too. Good enough for a headline — the
+  // cap_rate_est as sortable too. Good enough for a headline — the
   // sample is large enough to be representative for typical bubble sizes.
   const capRates = ascDocs
-    .map((d) => Number(d.ExtrapolatedCapRate))
-    .filter((n) => Number.isFinite(n) && n > 0);
+    .map((d) => Number(d.cap_rate_est))
+    .filter((n) => Number.isFinite(n) && n >= CAP_RATE_BAND.min && n <= CAP_RATE_BAND.max);
 
   return {
     activeCount,

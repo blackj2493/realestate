@@ -15,6 +15,7 @@ import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "./ListingCardBody";
 import { carryFor } from "./columnSort";
+import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -49,12 +50,13 @@ function Cell({ doc, col }: { doc: ListingDocument; col: ColumnDef }) {
       return <div className={cn(base, color, "font-semibold")}>{dom}d</div>;
     }
     case "capRate": {
-      const v = doc.ExtrapolatedCapRate ?? doc.cap_rate_est;
-      return <div className={cn(base, "text-cyan-400")}>{v ? `${v.toFixed(1)}%` : "—"}</div>;
+      const v = capRateOrNull(doc.cap_rate_est);
+      return <div className={cn(base, "text-cyan-400")}>{v != null ? `${v.toFixed(1)}%` : "—"}</div>;
     }
     case "yield": {
-      const v = doc.targetGrossYield ?? doc.gross_yield_est;
-      return <div className={cn(base, "text-cyan-400")}>{v ? `${(v * 100).toFixed(1)}%` : "—"}</div>;
+      // gross_yield_est is already a PERCENT — no ×100 (that was for the old fraction targetGrossYield).
+      const v = grossYieldOrNull(doc.gross_yield_est);
+      return <div className={cn(base, "text-cyan-400")}>{v != null ? `${v.toFixed(1)}%` : "—"}</div>;
     }
     case "carryCost":
       return (

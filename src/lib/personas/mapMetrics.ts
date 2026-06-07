@@ -5,7 +5,7 @@
  * click-to-filter.
  *
  * Only fields that are actually POPULATED in the live index are offered (see the
- * field-availability notes in personaConfig.ts): ListPrice, ExtrapolatedCapRate,
+ * field-availability notes in personaConfig.ts): ListPrice, cap_rate_est,
  * TrueDom, TotalPriceDrop, CapitalBurnRateMonthly. Density is a count metric
  * (heatmap aggregation), so it has no field and no band-filter.
  */
@@ -17,6 +17,7 @@ import {
   DENSITY_RANGE,
   type MapColorConfig,
 } from "./personaConfig";
+import { capRateOrNull } from "@/lib/metrics/sanityBand";
 
 export interface MapMetricDef extends MapColorConfig {
   id: string;
@@ -52,14 +53,16 @@ export const MAP_METRICS: MapMetricDef[] = [
   {
     id: "capRate",
     label: "Cap Rate",
-    field: "ExtrapolatedCapRate",
-    metric: (d: ListingDocument) => d.ExtrapolatedCapRate ?? 0,
+    field: "cap_rate_est",
+    // Band-guarded; out-of-band → 0 so the heat/pin consumers' `v > 0` filter drops it.
+    metric: (d: ListingDocument) => capRateOrNull(d.cap_rate_est) ?? 0,
     domain: [0, 10],
     range: GREEN_RANGE,
     legendLow: "Low",
     legendHigh: "High",
     format: pct,
     bands: 6,
+    sparse: true,
   },
   {
     id: "trueDom",

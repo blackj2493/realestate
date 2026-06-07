@@ -22,6 +22,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { locationFilter } from "@/lib/dashboard/queries";
 import { ALPHA_GLOW_RANGE } from "@/lib/personas/personaConfig";
+import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { isValidLocation, toDeckPosition } from "@/components/Map/mapLogic";
 
 type MetricId = "cap" | "dom" | "drop";
@@ -31,7 +32,7 @@ const METRICS: {
   label: string;
   get: (d: ListingDocument) => number | undefined;
 }[] = [
-  { id: "cap", label: "Cap Rate", get: (d) => d.ExtrapolatedCapRate },
+  { id: "cap", label: "Cap Rate", get: (d) => capRateOrNull(d.cap_rate_est) ?? undefined },
   { id: "dom", label: "True DOM", get: (d) => d.TrueDom },
   { id: "drop", label: "Price Drop", get: (d) => d.TotalPriceDrop },
 ];

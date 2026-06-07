@@ -36,7 +36,13 @@ describe("histogram — supportsHistogram", () => {
   });
   it("rejects unindexed / unknown fields", () => {
     expect(supportsHistogram("TaxAnnualAmount")).toBe(false); // index:false cargo
-    expect(supportsHistogram("gross_yield_est")).toBe(false); // empty in live index
     expect(supportsHistogram(undefined)).toBe(false);
+  });
+});
+
+describe("histogram supports the real cap/yield fields", () => {
+  it("includes cap_rate_est and gross_yield_est", () => {
+    expect(supportsHistogram("cap_rate_est")).toBe(true);
+    expect(supportsHistogram("gross_yield_est")).toBe(true);
   });
 });

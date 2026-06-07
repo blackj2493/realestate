@@ -16,10 +16,11 @@ import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
   clusterRadiusForZoom,
-  colorIndexFor,
   formatPriceShort,
+  hasMetricValue,
   isClusterFeature,
   isValidLocation,
+  scatterColorFor,
   toDeckPosition,
 } from "./mapLogic";
 import ListingMapPopup from "./ListingMapPopup";
@@ -251,10 +252,17 @@ export default function AlphaMap({
     }));
   }, [commuteRing, markProgrammatic]);
 
+  // For sparse metrics (cap rate / gross yield), exclude listings without an estimate
+  // from the HexagonLayer so "no data" doesn't drag the MEAN toward zero.
+  // Non-sparse metrics keep all points (0 is a legitimate value for price, DOM, etc.).
+  const heatData = useMemo<MapDataPoint[]>(() => {
+    if (!colorConfig.sparse || heatAggregation === "count") return renderData;
+    return renderData.filter((d) => hasMetricValue(colorConfig.metric(d), colorConfig.sparse));
+  }, [renderData, colorConfig, heatAggregation]);
+
   const getScatterColor = useCallback(
     (d: ListingDocument): [number, number, number] => {
-      const idx = colorIndexFor(colorConfig.metric(d), colorConfig.domain, colorConfig.range.length);
-      return colorConfig.range[idx];
+      return scatterColorFor(colorConfig.metric(d), colorConfig.domain, colorConfig.range, colorConfig.sparse);
     },
     [colorConfig]
   );
@@ -396,7 +404,7 @@ export default function AlphaMap({
         ...commuteLayers,
         new HexagonLayer<MapDataPoint>({
           id: "hexagon-layer",
-          data: renderData,
+          data: heatData,
           getPosition: (d) => d.coordinates,
           // Density colors/elevates by listing COUNT (weight 1, SUM); every other
           // metric uses the MEAN of the metric value across the hex.
@@ -577,7 +585,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [renderData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
+  }, [renderData, heatData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
