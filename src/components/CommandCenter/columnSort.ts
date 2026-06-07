@@ -10,6 +10,7 @@
 
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnType } from "@/lib/personas/personaConfig";
+import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 
 export type SortDir = "asc" | "desc";
 
@@ -54,9 +55,9 @@ export function columnSortValue(doc: ListingDocument, type: ColumnType): number 
     case "trueDom":
       return doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? null;
     case "capRate":
-      return doc.ExtrapolatedCapRate ?? doc.cap_rate_est ?? null;
+      return capRateOrNull(doc.cap_rate_est);
     case "yield":
-      return doc.targetGrossYield ?? doc.gross_yield_est ?? null;
+      return grossYieldOrNull(doc.gross_yield_est);
     case "carryCost":
       return carryFor(doc);
     case "priceDrop":
