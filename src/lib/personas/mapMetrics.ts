@@ -62,6 +62,7 @@ export const MAP_METRICS: MapMetricDef[] = [
     legendHigh: "High",
     format: pct,
     bands: 6,
+    sparse: true,
   },
   {
     id: "trueDom",

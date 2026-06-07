@@ -87,3 +87,31 @@ export function isClusterFeature(f: { properties: Record<string, unknown> }): bo
 export function clusterRadiusForZoom(zoom: number): number {
   return zoom <= 12 ? 28 : zoom <= 14 ? 40 : 56;
 }
+
+/** Neutral "no estimate" pin color (slate-500) — for sparse metrics whose value
+ *  is absent. Distinct from the low end of any ramp so "no data" never reads as "low". */
+export const NO_DATA_COLOR: [number, number, number] = [100, 116, 139];
+
+/**
+ * Does this metric value count as present? Non-sparse metrics (price, DOM, drop…)
+ * treat 0 as a legitimate value. Sparse metrics (cap rate / gross yield, ~47%
+ * populated) treat non-positive / NaN as "no estimate".
+ */
+export function hasMetricValue(value: number, sparse?: boolean): boolean {
+  if (!sparse) return true;
+  return Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Pin/scatter color for a metric value. Sparse + no-estimate → neutral NO_DATA_COLOR;
+ * otherwise the domain-mapped ramp color (existing behavior).
+ */
+export function scatterColorFor(
+  value: number,
+  domain: [number, number],
+  range: [number, number, number][],
+  sparse?: boolean
+): [number, number, number] {
+  if (!hasMetricValue(value, sparse)) return NO_DATA_COLOR;
+  return range[colorIndexFor(value, domain, range.length)];
+}

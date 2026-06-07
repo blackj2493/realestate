@@ -150,6 +150,8 @@ export interface MapColorConfig {
   range: [number, number, number][];
   legendLow: string;
   legendHigh: string;
+  /** true → values are ~47% populated; the map must treat 0 as "no estimate", not "low". */
+  sparse?: boolean;
 }
 
 // Low (muted) -> High (bright) green ramp — yield / cap rate
@@ -248,7 +250,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield" },
+    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield", sparse: true },
     defaultMapMode: "listings",
   },
 
@@ -278,7 +280,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap" },
+    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap", sparse: true },
     defaultMapMode: "heatmap",
   },
 
