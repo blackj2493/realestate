@@ -1,0 +1,832 @@
+/**
+ * Branch-faithful, leakage-safe AVM out-of-time backtest (branch feat/avm-untrained-cohort).
+ *
+ * Replays THIS BRANCH's request-time AVM against held-out raw_vow_sold sales and
+ * compares the estimate to the actual ClosePrice. Unlike the original harness (which
+ * predates the untrained-cohort fix), this one reproduces the FULL routing this branch
+ * ships: borrowed-sibling models for untrained cohorts (resolveModel/fetchSiblingModel),
+ * the peer comp-grid (peerLevelFromComps), and the size/bed/bath escalation — by calling
+ * the SAME pure functions the live path calls (computeAnchorFromData + peerLevelFromComps
+ * + estimateFromMarketData). It measures the model AS DEPLOYED, not a reimplementation.
+ *
+ * LEAKAGE IS THE CORE DISCIPLINE (only data dated < t_S may inform an estimate):
+ *   - Reference date = purchase_contract_date (deal signing), never close_date.
+ *   - Comps: purchase_contract_date < t_S, within COMP_WINDOW_MO, EXCLUDING S, floored
+ *     at MIN_SALE_PRICE (lease exclusion — see types.MIN_SALE_PRICE).
+ *   - Trend/offset: an AS-OF snapshot aggregated (via the shared trendOffset core) from
+ *     sales whose half-year period ended strictly before t_S's period — what production
+ *     would have computed at the start of t_S's period. NEVER the live future-laden
+ *     avm_trend_index / avm_community_offset tables.
+ *   - resolveModel (coefficients / audit R² / sibling) IS live: these are STATIC offline
+ *     artifacts (the matrix/audit are retrained out-of-band), so reading them is
+ *     leakage-safe in the same sense the original harness used the static matrix.
+ *   - --leaky feeds a snapshot built from ALL sales (incl. AFTER t_S). It MUST score
+ *     materially better; if it doesn't, leakage isn't actually prevented.
+ *
+ * KEY DELIVERABLE — the untrained-cohort subset (this branch's whole point):
+ *   For sales whose NATIVE cohort is untrained (no avm_multiplier_matrix row), the harness
+ *   scores BOTH on the SAME leakage-safe comps:
+ *     OLD = computeAnchorFromData(comps, trend, offset, [] (empty coeffs), basePrice) ->
+ *           anchor-only, no peer routing  (the pre-fix behaviour: blind cohort average)
+ *     NEW = full this-branch routing (borrowed model + peer comp-grid)
+ *   and reports median/mean |%err| OLD vs NEW, bias, % improved, and the NEW confidence
+ *   distribution (must contain 0 HIGH). This is the clean leakage-safe analog of the
+ *   earlier live result (11.9% → 10.3%).
+ *
+ * FIDELITY CHECK (--fidelity): with a NOW-dated window (no leakage filter), the harness's
+ * estimate must match LIVE calculateAVM for a basket of listing keys (Aurora N13229524 +
+ * others). If they diverge, the routing replication is wrong — fix before trusting numbers.
+ *
+ * 100% deterministic, no AI (CLAUDE.md §4). raw_vow_sold is READ-ONLY (§12). This script
+ * writes NOTHING to the database — results go to a local JSON file (--out). IO-frugal:
+ * scalar columns only, keyset pagination, bounded window, retry/backoff.
+ *
+ * Usage (run where .env with Supabase creds lives):
+ *   npx.cmd tsx --env-file=.env scripts/admin/avm-backtest.ts --limit 10000 --eval-months 6
+ *   npx.cmd tsx --env-file=.env scripts/admin/avm-backtest.ts --leaky --limit 10000   # self-test
+ *   npx.cmd tsx --env-file=.env scripts/admin/avm-backtest.ts --fidelity              # live-match check
+ */
+
+// MUST set TLS env var BEFORE importing the supabase client.
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import * as https from 'https';
+import * as fs from 'fs';
+import crossFetch from 'cross-fetch';
+import {
+  normalizePropertySubType,
+  cityRegionLookupCandidates,
+  rawVariantsOf,
+} from '@/lib/avm/normalizeType';
+import {
+  aggregateTrendAndOffset,
+  periodEndForDate,
+  selectTrendSeries,
+  selectOffsets,
+  type LRecord,
+  type Matrix,
+  type TrendRow as AggTrendRow,
+  type OffsetRow as AggOffsetRow,
+  adjustedLogPrice as adjustedLogPriceForAgg,
+} from '@/lib/avm/trendOffset';
+import {
+  computeAnchorFromData,
+  peerLevelFromComps,
+  type CompRow,
+  type AnchorResult,
+  type TrendRow,
+  type OffsetRow,
+} from '@/lib/avm/anchorService';
+import {
+  estimateFromMarketData,
+  shouldEvaluatePeers,
+  resolveModel,
+  calculateAVM,
+} from '@/lib/avm/calculator';
+import type { CoefficientRow } from '@/lib/avm/matrixService';
+import type { AVMInput, AVMResult } from '@/lib/avm/types';
+import { COMP_WINDOW_MO, MIN_SALE_PRICE as DEFAULT_SALE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
+import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
+import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
+import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
+import type { RoomData } from '@/lib/room-utils';
+
+const agent = new https.Agent({ rejectUnauthorized: false });
+(global as unknown as { fetch: typeof fetch }).fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
+  // @ts-expect-error agent is a node-fetch option, not standard
+  crossFetch(url, { ...init, agent })) as typeof fetch;
+
+// ── CLI flags ────────────────────────────────────────────────────────────────
+const LEAKY = process.argv.includes('--leaky');
+const FIDELITY = process.argv.includes('--fidelity');
+function numFlag(name: string, def: number): number {
+  const a = process.argv.find((x) => x.startsWith(name));
+  if (!a) return def;
+  const raw = a.includes('=') ? a.split('=')[1] : process.argv[process.argv.indexOf(a) + 1];
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : def;
+}
+function strFlag(name: string, def: string): string {
+  const a = process.argv.find((x) => x.startsWith(name));
+  if (!a) return def;
+  return a.includes('=') ? a.split('=')[1] : process.argv[process.argv.indexOf(a) + 1] ?? def;
+}
+const EVAL_MONTHS = numFlag('--eval-months', 6);
+const EVAL_LIMIT = numFlag('--limit', Infinity);
+const TREND_WINDOW_MONTHS = numFlag('--trend-window-mo', 24);
+const RUN_ID = strFlag('--run-id', `branch-eval${EVAL_MONTHS}m${LEAKY ? '-leaky' : ''}`);
+const OUT_PATH = strFlag('--out', `avm-backtest-${RUN_ID}.json`);
+const MIN_SALE_PRICE = numFlag('--min-sale-price', DEFAULT_SALE_PRICE_FLOOR);
+
+// ── statistical thresholds (match the live anchor / refresh job) ──────────────
+const MAX_COMPS = 500;
+const MIN_TREND_SAMPLES = 8;
+const MIN_OFFSET_SAMPLES = 5;
+
+// ── IO pacing ─────────────────────────────────────────────────────────────────
+const READ_PAGE = 1000;
+const INTER_CHUNK_DELAY_MS = 250;
+const MAX_READ_RETRIES = 5;
+
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
+const sb: SupabaseClient = createClient(SUPABASE_URL, SERVICE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Domain types
+// ─────────────────────────────────────────────────────────────────────────────
+interface PoolRow {
+  listing_key: string;
+  close_price: number | null;
+  purchase_contract_date: string | null;
+  close_date: string | null;
+  city: string | null;
+  city_region: string | null;
+  property_sub_type: string | null;
+  building_area_total: number | null;
+  lot_width: number | null;
+  lot_depth: number | null;
+  bedrooms_above_grade: number | null;
+  bathrooms_total_integer: number | null;
+  parking_total: number | null;
+  interior_tier: number | null;
+  exterior_tier: number | null;
+  basement_tier: number | null;
+}
+
+interface Sale extends PoolRow {
+  refDate: string; // YYYY-MM-DD (purchase_contract_date)
+  normSub: string; // normalizePropertySubType(property_sub_type)
+  period: string; // periodEndForDate(refDate)
+}
+
+interface ResultRow {
+  listing_key: string;
+  city: string | null;
+  city_region: string | null;
+  reference_date: string;
+  close_price: number;
+  estimated_value: number | null;
+  log_error: number | null;
+  abs_pct_error: number | null;
+  basis: string;
+  confidence: string;
+  n_eff: number | null;
+  comps: number | null;
+  in_band: boolean | null;
+  price_tier: string;
+  untrained: boolean;
+  borrowed: boolean;
+  // Untrained OLD-vs-NEW (only populated for untrained cohorts):
+  old_estimated_value: number | null;
+  old_abs_pct_error: number | null;
+  old_log_error: number | null;
+}
+
+const SELECT_COLS =
+  'listing_key, close_price, purchase_contract_date, close_date, city, city_region, ' +
+  'property_sub_type, building_area_total, lot_width, lot_depth, bedrooms_above_grade, ' +
+  'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Date helpers — ISO 'YYYY-MM-DD' compares lexicographically = chronologically.
+// ─────────────────────────────────────────────────────────────────────────────
+function monthsAgoIso(months: number): string {
+  const d = new Date();
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+function isoMinusMonths(iso: string, months: number): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+function periodStart(periodEnd: string): string {
+  const y = periodEnd.slice(0, 4);
+  return periodEnd.endsWith('-06-30') ? `${y}-01-01` : `${y}-07-01`;
+}
+function priceTier(p: number): string {
+  if (p < 500_000) return '<500k';
+  if (p < 1_000_000) return '500k-1M';
+  if (p < 1_500_000) return '1M-1.5M';
+  if (p < 2_000_000) return '1.5M-2M';
+  return '2M+';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Matrix preload — ONLY to build the as-of trend/offset snapshot (feature-adjust
+// each sold ℓ_i). Subject routing uses live resolveModel, not this. Mirrors the
+// refresh job's candidate-expanded keying so a sold row's CityRegion hits its cohort.
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadMatricesForSnapshot(): Promise<Map<string, Matrix>> {
+  const expanded = new Map<string, Matrix>();
+  const byVerbatim = new Map<string, Matrix>();
+  let cursor = 0;
+  for (;;) {
+    const { data, error } = await sb
+      .from('avm_multiplier_matrix')
+      .select('id, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
+      .gt('id', cursor)
+      .order('id', { ascending: true })
+      .limit(READ_PAGE);
+    if (error) throw new Error(`matrix load failed: ${error.message}`);
+    if (!data || data.length === 0) break;
+    for (const r of data as Array<{
+      id: number;
+      city_region: string;
+      property_sub_type: string;
+      feature_name: string;
+      beta: number;
+      feat_mean: number;
+      feat_std: number;
+    }>) {
+      const sub = normalizePropertySubType(r.property_sub_type);
+      const verbatimKey = `${r.city_region}||${sub}`;
+      let m = byVerbatim.get(verbatimKey);
+      if (!m) {
+        m = new Map();
+        byVerbatim.set(verbatimKey, m);
+        for (const cand of cityRegionLookupCandidates(r.city_region)) {
+          const candKey = `${cand}||${sub}`;
+          if (!expanded.has(candKey)) expanded.set(candKey, m);
+        }
+      }
+      m.set(r.feature_name, { beta: r.beta, mean: r.feat_mean, std: r.feat_std });
+      cursor = r.id;
+    }
+    if (data.length < READ_PAGE) break;
+  }
+  return expanded;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// raw_vow_sold streaming read (keyset on listing_key, retry/backoff)
+// ─────────────────────────────────────────────────────────────────────────────
+async function readPoolPage(cursor: string, windowStartIso: string): Promise<PoolRow[] | null> {
+  let attempt = 0;
+  for (;;) {
+    const { data, error } = await sb
+      .from('raw_vow_sold')
+      .select(SELECT_COLS)
+      .gt('listing_key', cursor)
+      .gte('purchase_contract_date', windowStartIso)
+      .gte('close_price', MIN_SALE_PRICE)
+      .order('listing_key', { ascending: true })
+      .limit(READ_PAGE);
+    if (!error) return data as unknown as PoolRow[] | null;
+    attempt++;
+    if (attempt > MAX_READ_RETRIES) {
+      throw new Error(`read failed at cursor "${cursor}" after ${MAX_READ_RETRIES} retries: ${error.message}`);
+    }
+    const backoff = Math.min(30000, 3000 * 2 ** (attempt - 1));
+    console.warn(`   read error at "${cursor}" (${attempt}/${MAX_READ_RETRIES}): ${error.message} — backoff ${backoff}ms`);
+    await sleep(backoff);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// As-of trend/offset snapshot (shared aggregation core; window-agnostic = leak-safe)
+// ─────────────────────────────────────────────────────────────────────────────
+interface Snapshot {
+  trendRows: AggTrendRow[];
+  offsetRows: AggOffsetRow[];
+}
+function buildSnapshot(
+  pool: Sale[],
+  expanded: Map<string, Matrix>,
+  windowStartIso: string,
+  cutoffExclusiveIso: string | null
+): Snapshot {
+  const records: LRecord[] = [];
+  for (const s of pool) {
+    if (s.refDate < windowStartIso) continue;
+    if (cutoffExclusiveIso !== null && s.refDate >= cutoffExclusiveIso) continue;
+    const city = (s.city || '').trim();
+    const cityRegion = (s.city_region || '').trim();
+    if (!city || !cityRegion || !s.normSub) continue;
+    const m = expanded.get(`${cityRegion}||${s.normSub}`);
+    if (!m) continue;
+    const l = adjustedLogPriceForAgg(s, m);
+    if (l === null) continue;
+    records.push({ city, cityRegion, subType: s.normSub, periodEnd: s.period, l });
+  }
+  const { trendRows, offsetRows } = aggregateTrendAndOffset(records, {
+    minTrendSamples: MIN_TREND_SAMPLES,
+    minOffsetSamples: MIN_OFFSET_SAMPLES,
+  });
+  return { trendRows, offsetRows };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Metrics
+// ─────────────────────────────────────────────────────────────────────────────
+function median(xs: number[]): number {
+  if (xs.length === 0) return NaN;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function mean(xs: number[]): number {
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN;
+}
+function pct(x: number | null): string {
+  return x === null || Number.isNaN(x) ? 'n/a' : (x * 100).toFixed(2) + '%';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Comp/peer assembly for one held-out sale (leakage-safe: every comp dated < t_S)
+// ─────────────────────────────────────────────────────────────────────────────
+function toCompRow(c: Sale): CompRow {
+  return {
+    close_price: c.close_price as number,
+    purchase_contract_date: c.purchase_contract_date,
+    close_date: c.close_date,
+    building_area_total: c.building_area_total,
+    lot_width: c.lot_width,
+    lot_depth: c.lot_depth,
+    bedrooms_above_grade: c.bedrooms_above_grade,
+    bathrooms_total_integer: c.bathrooms_total_integer,
+    parking_total: c.parking_total,
+    interior_tier: c.interior_tier,
+    exterior_tier: c.exterior_tier,
+    basement_tier: c.basement_tier,
+  };
+}
+
+function inputFromSale(s: Sale): AVMInput {
+  return {
+    cityRegion: (s.city_region || '').trim(),
+    city: (s.city || '').trim() || null,
+    propertySubType: s.normSub,
+    rawPropertySubType: (s.property_sub_type || '').trim(),
+    buildingAreaTotal: s.building_area_total !== null && s.building_area_total > 0 ? s.building_area_total : null,
+    lotWidth: s.lot_width !== null && s.lot_width > 0 ? s.lot_width : null,
+    lotDepth: s.lot_depth !== null && s.lot_depth > 0 ? s.lot_depth : null,
+    bedroomsAboveGrade: s.bedrooms_above_grade,
+    bathroomsTotalInteger: s.bathrooms_total_integer,
+    parkingTotal: s.parking_total,
+    interiorTier: s.interior_tier ?? NEUTRAL_TIER,
+    exteriorTier: s.exterior_tier ?? NEUTRAL_TIER,
+    basementTier: s.basement_tier ?? BASEMENT_NONE_TIER,
+  };
+}
+
+/** Community-rung comps (city_region candidates), dated < cutoff, excluding S. */
+function communityComps(input: AVMInput, s: Sale, pool: Sale[], cutoffIso: string, windowStartIso: string): CompRow[] {
+  const candSet = new Set(cityRegionLookupCandidates(input.cityRegion));
+  const subVariants = new Set(rawVariantsOf(input.propertySubType, input.rawPropertySubType));
+  return pool
+    .filter(
+      (c) =>
+        c.listing_key !== s.listing_key &&
+        c.refDate < cutoffIso &&
+        c.refDate >= windowStartIso &&
+        c.city_region !== null &&
+        candSet.has(c.city_region.trim()) &&
+        c.property_sub_type !== null &&
+        subVariants.has(c.property_sub_type) &&
+        c.close_price !== null &&
+        c.close_price > 0
+    )
+    .sort((a, b) => (a.refDate < b.refDate ? 1 : a.refDate > b.refDate ? -1 : 0))
+    .slice(0, MAX_COMPS)
+    .map(toCompRow);
+}
+
+/** City-wide-rung comps (same municipality), dated < cutoff, excluding S. */
+function cityComps(input: AVMInput, s: Sale, pool: Sale[], cutoffIso: string, windowStartIso: string): CompRow[] {
+  const subjCity = (input.city ?? '').trim().toLowerCase();
+  if (!subjCity) return [];
+  const subVariants = new Set(rawVariantsOf(input.propertySubType, input.rawPropertySubType));
+  return pool
+    .filter(
+      (c) =>
+        c.listing_key !== s.listing_key &&
+        c.refDate < cutoffIso &&
+        c.refDate >= windowStartIso &&
+        (c.city || '').trim().toLowerCase() === subjCity &&
+        c.property_sub_type !== null &&
+        subVariants.has(c.property_sub_type) &&
+        c.close_price !== null &&
+        c.close_price > 0
+    )
+    .sort((a, b) => (a.refDate < b.refDate ? 1 : a.refDate > b.refDate ? -1 : 0))
+    .slice(0, MAX_COMPS)
+    .map(toCompRow);
+}
+
+/**
+ * As-of, leakage-safe replay of THIS BRANCH's fetchPeerAnchor: community rung
+ * (city_region candidates) then city-wide rung, each gated at MIN_PEER_NEFF.
+ *
+ * FIDELITY NOTE: this branch's fetchPeerAnchor REMOVED the rung-1 cohortOutlierScore
+ * ≥ OUTLIER_Z early-return for untrained cohorts (see anchorService.ts: "the previous
+ * atypicality early-return is removed; thin-comp cases fall through to rung 2 / null").
+ * So untrained cohorts ALWAYS proceed to peerLevelFromComps here too — no atypicality
+ * gate. undefined is returned only when there is no community candidate AND no city
+ * (mirrors fetchPeerAnchor's `if (cands.length === 0 && !cityKey) return undefined`).
+ */
+function replayPeer(
+  input: AVMInput,
+  coefficients: CoefficientRow[],
+  community: CompRow[],
+  cityWide: CompRow[],
+  cityRegionCandCount: number,
+  trend: TrendRow[],
+  nowMs: number
+): AnchorResult | null | undefined {
+  const cityKey = (input.city ?? input.cityRegion).trim();
+  if (cityRegionCandCount === 0 && !cityKey) return undefined;
+  if (cityRegionCandCount > 0) {
+    const peer = peerLevelFromComps(input, community, coefficients, trend, nowMs);
+    if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+  }
+  if (cityKey) {
+    const peer = peerLevelFromComps(input, cityWide, coefficients, trend, nowMs);
+    if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+  }
+  return null;
+}
+
+/**
+ * Replay THIS BRANCH's calculateAVM for one held-out sale on leakage-safe data.
+ * Returns the ResultRow (with the untrained OLD-vs-NEW fields filled when applicable).
+ */
+async function replaySale(
+  s: Sale,
+  pool: Sale[],
+  snapshot: Snapshot
+): Promise<ResultRow | null> {
+  const cityRegion = (s.city_region || '').trim();
+  if (!cityRegion || !s.normSub || !s.close_price) return null;
+
+  const input = inputFromSale(s);
+
+  // Live, leakage-safe model resolution (static matrix/audit/sibling).
+  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
+    await resolveModel(sb, input);
+  const untrained = nativeCoefficients.length === 0;
+
+  // As-of trend/offset for this subject (shaped like the live queries).
+  const cityKey = input.city ?? input.cityRegion;
+  const trend = selectTrendSeries(snapshot.trendRows, cityKey, input.propertySubType) as TrendRow[];
+  const offsets = selectOffsets(
+    snapshot.offsetRows,
+    cityRegionLookupCandidates(cityRegion),
+    input.propertySubType
+  ) as OffsetRow[];
+
+  // Leakage-safe comps (date < t_S, EXCLUDING S).
+  const compWindowStart = isoMinusMonths(s.refDate, COMP_WINDOW_MO);
+  const community = communityComps(input, s, pool, s.refDate, compWindowStart);
+  const nowMs = Date.parse(s.refDate + 'T00:00:00Z');
+
+  // anchor uses EFFECTIVE (possibly borrowed) coefficients — mirrors calculateAVM.
+  const anchor = computeAnchorFromData(input, effectiveCoefficients, basePrice, {
+    comps: community,
+    trend,
+    offsets,
+    nowMs,
+  });
+
+  // Peer comp-grid — ROUTING gates on NATIVE coefficients (untrained ⟺ always evaluate).
+  let peer: AnchorResult | null | undefined;
+  if (shouldEvaluatePeers(input, nativeCoefficients)) {
+    const cityWide = cityComps(input, s, pool, s.refDate, compWindowStart);
+    peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(cityRegion)).size, trend, nowMs);
+    if (peer && borrowed) peer.basis = 'borrowed';
+  }
+
+  // estimate uses NATIVE coefficients (keeps the outlierGuard on the untrained→peer path).
+  const result: AVMResult = estimateFromMarketData(input, {
+    anchor,
+    r2,
+    basePrice,
+    coefficients: nativeCoefficients,
+    n,
+    peer,
+  });
+
+  const close = s.close_price;
+  const est = result.estimatedValue > 0 ? result.estimatedValue : null;
+  const logErr = est !== null ? Math.log(est) - Math.log(close) : null;
+  const absPct = est !== null ? Math.abs(est - close) / close : null;
+  const inBand =
+    est !== null && result.lowBand > 0 && result.highBand > 0
+      ? close >= result.lowBand && close <= result.highBand
+      : null;
+
+  // ── Untrained OLD baseline: anchor-only with EMPTY coefficients, no peer routing.
+  //    This is the pre-fix behaviour (blind cohort average) on the SAME comps. ─────
+  let oldEst: number | null = null;
+  let oldAbsPct: number | null = null;
+  let oldLogErr: number | null = null;
+  if (untrained) {
+    const oldAnchor = computeAnchorFromData(input, [], basePrice, {
+      comps: community,
+      trend,
+      offsets,
+      nowMs,
+    });
+    // No peer (peer === undefined) → normalEstimate → anchor-only number, exactly the
+    // pre-fix path for an untrained cohort.
+    const oldResult = estimateFromMarketData(input, {
+      anchor: oldAnchor,
+      r2,
+      basePrice,
+      coefficients: [],
+      n,
+    });
+    oldEst = oldResult.estimatedValue > 0 ? oldResult.estimatedValue : null;
+    if (oldEst !== null) {
+      oldAbsPct = Math.abs(oldEst - close) / close;
+      oldLogErr = Math.log(oldEst) - Math.log(close);
+    }
+  }
+
+  return {
+    listing_key: s.listing_key,
+    city: input.city,
+    city_region: cityRegion,
+    reference_date: s.refDate,
+    close_price: close,
+    estimated_value: est,
+    log_error: logErr,
+    abs_pct_error: absPct,
+    basis: result.basis,
+    confidence: result.confidence,
+    n_eff: result.nEff,
+    comps: result.comps,
+    in_band: inBand,
+    price_tier: priceTier(close),
+    untrained,
+    borrowed,
+    old_estimated_value: oldEst,
+    old_abs_pct_error: oldAbsPct,
+    old_log_error: oldLogErr,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reporting
+// ─────────────────────────────────────────────────────────────────────────────
+function reportOverall(rows: ResultRow[]) {
+  const est = rows.filter((r) => r.abs_pct_error !== null);
+  const abs = est.map((r) => r.abs_pct_error as number);
+  const logs = est.map((r) => r.log_error as number);
+  console.log('\n──────── OVERALL ────────');
+  console.log(`Sales evaluated:   ${rows.length}  (estimate published: ${est.length}, suppressed: ${rows.length - est.length})`);
+  console.log(`Median |%err|:     ${pct(median(abs))}`);
+  console.log(`Mean   |%err|:     ${pct(mean(abs))}`);
+  console.log(`Bias (mean ln-err):${' ' + mean(logs).toFixed(4)}`);
+  console.log(`Hit ±10% / ±20%:   ${pct(est.filter((r) => (r.abs_pct_error as number) <= 0.1).length / est.length)} / ${pct(est.filter((r) => (r.abs_pct_error as number) <= 0.2).length / est.length)}`);
+  console.log(`Band coverage:     ${pct(est.filter((r) => r.in_band === true).length / est.length)}`);
+
+  const tiers = ['<500k', '500k-1M', '1M-1.5M', '1.5M-2M', '2M+'];
+  console.log('\nBy price tier (median |%err|, mean |%err|, n):');
+  for (const t of tiers) {
+    const sub = est.filter((r) => r.price_tier === t);
+    if (sub.length === 0) { console.log(`   ${t.padEnd(10)} n=0`); continue; }
+    const a = sub.map((r) => r.abs_pct_error as number);
+    console.log(`   ${t.padEnd(10)} ${pct(median(a))}   mean ${pct(mean(a))}   n=${sub.length}`);
+  }
+}
+
+function reportUntrained(rows: ResultRow[]) {
+  const u = rows.filter((r) => r.untrained);
+  // NEW (full routing) vs OLD (anchor-only, empty coeffs) on the SAME leakage-safe comps.
+  // Compare only rows where BOTH produced a number (apples-to-apples).
+  const both = u.filter((r) => r.abs_pct_error !== null && r.old_abs_pct_error !== null);
+  const newAbs = both.map((r) => r.abs_pct_error as number);
+  const oldAbs = both.map((r) => r.old_abs_pct_error as number);
+  const newLog = both.map((r) => r.log_error as number);
+  const oldLog = both.map((r) => r.old_log_error as number);
+  const improved = both.filter((r) => (r.abs_pct_error as number) < (r.old_abs_pct_error as number)).length;
+
+  console.log('\n──────── UNTRAINED-COHORT SUBSET (leakage-safe OLD vs NEW) ────────');
+  console.log(`Untrained sales:        ${u.length}  (NEW published: ${u.filter((r) => r.abs_pct_error !== null).length}, OLD published: ${u.filter((r) => r.old_abs_pct_error !== null).length})`);
+  console.log(`Paired (both published): ${both.length}`);
+  if (both.length > 0) {
+    console.log(`  OLD  median |%err|:  ${pct(median(oldAbs))}   mean ${pct(mean(oldAbs))}   bias ${mean(oldLog).toFixed(4)}`);
+    console.log(`  NEW  median |%err|:  ${pct(median(newAbs))}   mean ${pct(mean(newAbs))}   bias ${mean(newLog).toFixed(4)}`);
+    console.log(`  % improved (NEW<OLD): ${pct(improved / both.length)}`);
+  }
+  // Confidence distribution among ALL untrained NEW estimates (must have 0 HIGH).
+  const pub = u.filter((r) => r.abs_pct_error !== null);
+  const conf = { HIGH: 0, MEDIUM: 0, LOW: 0 } as Record<string, number>;
+  for (const r of pub) conf[r.confidence] = (conf[r.confidence] ?? 0) + 1;
+  console.log(`  NEW confidence dist:  HIGH=${conf.HIGH ?? 0}  MEDIUM=${conf.MEDIUM ?? 0}  LOW=${conf.LOW ?? 0}  ${(conf.HIGH ?? 0) === 0 ? '(0 HIGH ✓)' : '(⚠ HIGH PRESENT)'}`);
+  // Basis distribution (diagnostic).
+  const basis: Record<string, number> = {};
+  for (const r of pub) basis[r.basis] = (basis[r.basis] ?? 0) + 1;
+  console.log(`  NEW basis dist:       ${Object.entries(basis).map(([k, v]) => `${k}=${v}`).join('  ')}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fidelity check: NOW-dated window (no leakage filter) must match live calculateAVM.
+// ─────────────────────────────────────────────────────────────────────────────
+const FIDELITY_KEYS = ['N13229524', 'W13168260', 'N13135326'];
+
+async function liveAVMForKey(key: string): Promise<{ input: AVMInput; r: AVMResult } | null> {
+  const { data: row } = await sb
+    .from('listings')
+    .select('listing_key, full_payload')
+    .eq('listing_key', key)
+    .maybeSingle();
+  if (!row) return null;
+  const payload = row.full_payload as Record<string, unknown>;
+  const rooms: RoomData[] = Array.isArray(payload?.rooms) ? (payload.rooms as RoomData[]) : [];
+  let bucketCalibration: BucketCalibration | null = null;
+  const cityRegion = String(payload?.CityRegion ?? '').trim();
+  const subType = String(payload?.PropertySubType ?? '').trim();
+  const bucket = String(payload?.LivingAreaRange ?? '').trim();
+  if (cityRegion && subType && bucket && resolveLivingArea(payload, { rooms }).source === 'range_midpoint') {
+    const { data: cal } = await sb
+      .from('avm_sqft_calibration')
+      .select('median_gla, sample_count')
+      .eq('city_region', cityRegion)
+      .ilike('property_sub_type', subType)
+      .eq('living_area_range', bucket)
+      .maybeSingle();
+    if (cal && Number(cal.median_gla) > 0) {
+      bucketCalibration = { medianGla: Number(cal.median_gla), sampleCount: Number(cal.sample_count) };
+    }
+  }
+  const input = mapListingToAVMInput(payload, { rooms, bucketCalibration });
+  if (!input) return null;
+  const r = await calculateAVM(sb, input);
+  return { input, r };
+}
+
+/**
+ * Reproduce the harness's estimate for a given AVMInput with a NOW-dated, NON-leakage
+ * window (comps within the live COMP_WINDOW_MO ending today, NO date<t_S filter, full
+ * pool). This should equal LIVE calculateAVM up to the comp-window edge / snapshot
+ * staleness differences; the routing (basis/confidence) and the estimate must match.
+ */
+async function harnessNowEstimate(input: AVMInput, pool: Sale[], expanded: Map<string, Matrix>): Promise<AVMResult> {
+  const nowMs = Date.now();
+  const windowStartIso = monthsAgoIso(COMP_WINDOW_MO);
+  // NOW snapshot = trailing TREND_WINDOW months up to today (no cutoff).
+  const snap = buildSnapshot(pool, expanded, monthsAgoIso(TREND_WINDOW_MONTHS), null);
+
+  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
+    await resolveModel(sb, input);
+  const cityKey = input.city ?? input.cityRegion;
+  const trend = selectTrendSeries(snap.trendRows, cityKey, input.propertySubType) as TrendRow[];
+  const offsets = selectOffsets(snap.offsetRows, cityRegionLookupCandidates(input.cityRegion), input.propertySubType) as OffsetRow[];
+
+  // Synthetic Sale for comp filtering (no exclusion key; future = now).
+  const synthetic: Sale = {
+    listing_key: '__SUBJECT__', close_price: null, purchase_contract_date: null, close_date: null,
+    city: input.city, city_region: input.cityRegion, property_sub_type: input.rawPropertySubType,
+    building_area_total: input.buildingAreaTotal, lot_width: input.lotWidth, lot_depth: input.lotDepth ?? null,
+    bedrooms_above_grade: input.bedroomsAboveGrade, bathrooms_total_integer: input.bathroomsTotalInteger,
+    parking_total: input.parkingTotal, interior_tier: null, exterior_tier: null, basement_tier: null,
+    refDate: '9999-12-31', normSub: input.propertySubType, period: '9999-12-31',
+  };
+  const community = communityComps(input, synthetic, pool, '9999-12-31', windowStartIso);
+
+  const anchor = computeAnchorFromData(input, effectiveCoefficients, basePrice, { comps: community, trend, offsets, nowMs });
+  let peer: AnchorResult | null | undefined;
+  if (shouldEvaluatePeers(input, nativeCoefficients)) {
+    const cityWide = cityComps(input, synthetic, pool, '9999-12-31', windowStartIso);
+    peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(input.cityRegion)).size, trend, nowMs);
+    if (peer && borrowed) peer.basis = 'borrowed';
+  }
+  return estimateFromMarketData(input, { anchor, r2, basePrice, coefficients: nativeCoefficients, n, peer });
+}
+
+async function runFidelity(pool: Sale[], expanded: Map<string, Matrix>) {
+  console.log('\n──────── FIDELITY CHECK (harness NOW-window vs LIVE calculateAVM) ────────');
+  let allMatch = true;
+  for (const key of FIDELITY_KEYS) {
+    const live = await liveAVMForKey(key);
+    if (!live) { console.log(`  ${key}: NOT FOUND (skipped)`); continue; }
+    const h = await harnessNowEstimate(live.input, pool, expanded);
+    const L = live.r, H = h;
+    const relDiff = L.estimatedValue > 0 && H.estimatedValue > 0
+      ? Math.abs(H.estimatedValue - L.estimatedValue) / L.estimatedValue : null;
+    const basisMatch = L.basis === H.basis;
+    const confMatch = L.confidence === H.confidence;
+    // Estimate "matches" if basis+confidence agree and the value is within 3% (comp-window
+    // edge + as-of snapshot staleness vs the live future-laden trend table cause tiny drift).
+    const valMatch = relDiff !== null && relDiff <= 0.03;
+    const ok = basisMatch && confMatch && (valMatch || (L.estimatedValue === 0 && H.estimatedValue === 0));
+    if (!ok) allMatch = false;
+    const fmt = (n: number) => n > 0 ? '$' + Math.round(n).toLocaleString() : 'UNAVAIL';
+    console.log(`  ${key}  ${ok ? 'MATCH ✓' : 'MISMATCH ✗'}`);
+    console.log(`     LIVE     est=${fmt(L.estimatedValue)}  basis=${L.basis}  conf=${L.confidence}  comps=${L.comps}`);
+    console.log(`     HARNESS  est=${fmt(H.estimatedValue)}  basis=${H.basis}  conf=${H.confidence}  comps=${H.comps}  relDiff=${relDiff !== null ? (relDiff * 100).toFixed(2) + '%' : 'n/a'}`);
+  }
+  console.log(`\n  FIDELITY: ${allMatch ? 'PASS ✓ (routing replication faithful)' : 'FAIL ✗ (routing replication WRONG — do not trust numbers)'}`);
+  return allMatch;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main
+// ─────────────────────────────────────────────────────────────────────────────
+async function main() {
+  console.log('========================================');
+  console.log('  AVM branch-faithful out-of-time backtest  (feat/avm-untrained-cohort)');
+  console.log(`  run_id=${RUN_ID}  ${LEAKY ? 'LEAKY (self-test)' : 'clean'}${FIDELITY ? '  +FIDELITY' : ''}`);
+  console.log(`  eval: last ${EVAL_MONTHS} mo · trend: ${TREND_WINDOW_MONTHS} mo · comp: ${COMP_WINDOW_MO} mo · lease floor: $${MIN_SALE_PRICE.toLocaleString()}`);
+  if (Number.isFinite(EVAL_LIMIT)) console.log(`  eval limit: ${EVAL_LIMIT}`);
+  console.log('========================================');
+
+  const evalWindowStart = monthsAgoIso(EVAL_MONTHS);
+  const poolWindowStart = monthsAgoIso(EVAL_MONTHS + TREND_WINDOW_MONTHS + 1);
+
+  console.log(`Loading matrix (snapshot feature-adjust only)…`);
+  const expanded = await loadMatricesForSnapshot();
+  console.log(`   ${expanded.size} candidate-expanded matrix keys.`);
+
+  console.log(`Streaming raw_vow_sold (purchase_contract_date >= ${poolWindowStart})…`);
+  const pool: Sale[] = [];
+  let cursor = '';
+  for (;;) {
+    let page: PoolRow[] | null;
+    try {
+      page = await readPoolPage(cursor, poolWindowStart);
+    } catch (e) {
+      console.error(`${e instanceof Error ? e.message : String(e)}`);
+      process.exitCode = 1;
+      return;
+    }
+    if (!page || page.length === 0) break;
+    for (const r of page) {
+      cursor = r.listing_key;
+      const refDate = (r.purchase_contract_date || r.close_date || '').slice(0, 10);
+      if (!refDate) continue;
+      pool.push({ ...r, refDate, normSub: normalizePropertySubType(r.property_sub_type), period: periodEndForDate(refDate) });
+    }
+    if (page.length < READ_PAGE) break;
+    await sleep(INTER_CHUNK_DELAY_MS);
+  }
+  console.log(`   pool size: ${pool.length}`);
+
+  if (FIDELITY) {
+    const ok = await runFidelity(pool, expanded);
+    if (!ok) process.exitCode = 1;
+    // Fidelity is a standalone gate; still continue to the backtest if --limit given.
+    if (!Number.isFinite(EVAL_LIMIT)) return;
+  }
+
+  // Eval set: sales in the last EVAL_MONTHS, most-recent first, capped by --limit.
+  let evalSales = pool
+    .filter((s) => s.refDate >= evalWindowStart && s.normSub && (s.city_region || '').trim())
+    .sort((a, b) => (a.refDate < b.refDate ? 1 : a.refDate > b.refDate ? -1 : 0));
+  if (Number.isFinite(EVAL_LIMIT)) evalSales = evalSales.slice(0, EVAL_LIMIT);
+  console.log(`\nEvaluating ${evalSales.length} held-out sales…`);
+
+  // Snapshots: clean = per-evaluation-period (data before the period start); leaky =
+  // one snapshot over the WHOLE pool (sees the future — must score better).
+  const snapshotCache = new Map<string, Snapshot>();
+  const leakySnapshot = LEAKY ? buildSnapshot(pool, expanded, poolWindowStart, null) : null;
+  const snapshotFor = (period: string): Snapshot => {
+    if (LEAKY) return leakySnapshot!;
+    let snap = snapshotCache.get(period);
+    if (!snap) {
+      const pStart = periodStart(period);
+      snap = buildSnapshot(pool, expanded, isoMinusMonths(pStart, TREND_WINDOW_MONTHS), pStart);
+      snapshotCache.set(period, snap);
+    }
+    return snap;
+  };
+
+  const results: ResultRow[] = [];
+  let done = 0;
+  for (const s of evalSales) {
+    const row = await replaySale(s, pool, snapshotFor(s.period));
+    if (row) results.push(row);
+    if (++done % 2000 === 0) console.log(`   …replayed ${done}/${evalSales.length}`);
+  }
+
+  reportOverall(results);
+  reportUntrained(results);
+
+  // Local results file (READ-ONLY on DB — nothing is written to Supabase).
+  const summary = {
+    run_id: RUN_ID,
+    leaky: LEAKY,
+    generated_at: new Date().toISOString(),
+    params: { evalMonths: EVAL_MONTHS, trendWindowMo: TREND_WINDOW_MONTHS, compWindowMo: COMP_WINDOW_MO, minSalePrice: MIN_SALE_PRICE, limit: Number.isFinite(EVAL_LIMIT) ? EVAL_LIMIT : null },
+    n: results.length,
+    results,
+  };
+  fs.writeFileSync(OUT_PATH, JSON.stringify(summary, null, 2));
+  console.log(`\nWrote ${results.length} result rows to ${OUT_PATH} (local file; DB untouched).`);
+}
+
+main().catch((e) => {
+  console.error('CRASH:', e?.message || e);
+  process.exit(1);
+});
