@@ -47,13 +47,13 @@ export const HISTOGRAM_FIELDS: ReadonlySet<string> = new Set([
   "BathroomsTotalInteger",
   "ParkingTotal",
   "surplus_parking_count",
-  "ExtrapolatedCapRate",
+  "ExtrapolatedCapRate", // legacy — retired from UI controls (spec §9); kept indexed until reindex
+  "cap_rate_est",
+  "gross_yield_est",
   "CapitalBurnRateMonthly",
   "MonthlyCarryCost",
   "TrueDom",
   "TotalPriceDrop",
-  // NB: gross_yield_est / cap_rate_est are EMPTY in the live index — intentionally
-  // excluded so no slider fires 20 all-zero count queries. Use ExtrapolatedCapRate.
 ]);
 
 export function supportsHistogram(field: string | undefined): field is string {
