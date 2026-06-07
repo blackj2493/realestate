@@ -62,8 +62,8 @@ export async function fetchRegionStats(
     searchListings({ query: '*', rawFilterBy: scope, perPage: 0 }),
     searchListings({
       query: '*',
-      rawFilterBy: combine(scope, 'ExtrapolatedCapRate:>0'),
-      sortBy: 'ExtrapolatedCapRate',
+      rawFilterBy: combine(scope, 'cap_rate_est:>=1 && cap_rate_est:<=15'),
+      sortBy: 'cap_rate_est',
       sortOrder: 'desc',
       perPage: 1,
     }),
@@ -75,7 +75,7 @@ export async function fetchRegionStats(
   ]);
   return {
     activeCount: active.totalFound,
-    topCapRate: cap.listings[0]?.ExtrapolatedCapRate ?? null,
+    topCapRate: cap.listings[0]?.cap_rate_est ?? null,
     suiteCandidates: suite.totalFound,
   };
 }
@@ -101,11 +101,11 @@ export interface RegionSpecialtyStats {
   densityReadyCount: number;
   /** Listings carrying a price cut from their first-seen price — motivated sellers. */
   priceCutCount: number;
-  /** Listings whose ExtrapolatedCapRate clears the cashflow floor. */
+  /** Listings whose cap_rate_est clears the cashflow floor. */
   cashflowCount: number;
 }
 
-/** ExtrapolatedCapRate (%) at/above which a listing "pencils" for a cashflow buyer. */
+/** cap_rate_est (%) at/above which a listing "pencils" for a cashflow buyer. */
 export const CASHFLOW_CAP_FLOOR = 4.5;
 
 /** Count-only Typesense query (perPage:0 → just the `found` total). */
@@ -124,7 +124,7 @@ export async function fetchRegionSpecialty(
     countMatching(scope),
     countMatching(combine(scope, 'is_density_ready:=true')),
     countMatching(combine(scope, 'TotalPriceDrop:>0')),
-    countMatching(combine(scope, `ExtrapolatedCapRate:>=${CASHFLOW_CAP_FLOOR}`)),
+    countMatching(combine(scope, `cap_rate_est:>=${CASHFLOW_CAP_FLOOR} && cap_rate_est:<=15`)),
   ]);
   return {
     activeCount: active,
