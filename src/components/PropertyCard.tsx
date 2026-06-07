@@ -1,20 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import {
   MapPin,
   Bed,
   Bath,
   Square,
-  Heart,
   Calendar,
   Home,
   TrendingDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice, cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
+import WatchHeart from "@/components/watchlist/WatchHeart";
 
 export interface PropertyCardData {
   id: string;
@@ -59,14 +58,6 @@ export function PropertyCard({
   showSaveButton = true,
   variant = "default",
 }: PropertyCardProps) {
-  const [isSaved, setIsSaved] = useState(false);
-
-  const handleSave = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsSaved(!isSaved);
-  };
-
   // Determine if price was reduced
   const priceReduced = property.previousPrice && property.previousPrice > property.price;
   const priceDiff = priceReduced ? (property.previousPrice ?? 0) - property.price : 0;
@@ -147,19 +138,11 @@ export function PropertyCard({
           />
           {/* Save Button */}
           {showSaveButton && (
-            <button
-              onClick={handleSave}
+            <WatchHeart
+              item={{ listing_key: property.id, address: property.address, city: property.city, thumb: property.photoUrl ?? undefined, list_price: property.price }}
               className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm z-10"
-              aria-label={isSaved ? "Remove from saved" : "Save property"}
-            >
-              <Heart
-                className={`h-5 w-5 ${
-                  isSaved
-                    ? "fill-red-500 text-red-500"
-                    : "text-gray-600 hover:text-red-500"
-                }`}
-              />
-            </button>
+              iconClassName="h-5 w-5 text-gray-600 hover:text-red-500"
+            />
           )}
 
           {/* Badges */}
