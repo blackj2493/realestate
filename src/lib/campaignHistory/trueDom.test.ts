@@ -92,3 +92,48 @@ describe('computeTrueDomFromCampaigns — edges', () => {
     expect(r.campaign_count).toBe(1);
   });
 });
+
+describe('computeTrueDomFromCampaigns — regression: multi-hop, boundary, off-market', () => {
+  it('stitches a 3-campaign chain and walks the drop back to the earliest', () => {
+    const r = computeTrueDomFromCampaigns(
+      [
+        ev({ listing_key: 'C3', status: 'Active', entry_date: '2026-06-06T00:00:00Z', list_price: 700000, original_list_price: 700000 }),
+        ev({ listing_key: 'C2', status: 'Terminated', entry_date: '2026-05-20T00:00:00Z', end_date: '2026-06-01', list_price: 750000, original_list_price: 750000 }),
+        ev({ listing_key: 'C1', status: 'Terminated', entry_date: '2026-05-01T00:00:00Z', end_date: '2026-05-15', list_price: 800000, original_list_price: 800000 }),
+      ],
+      { nowMs: NOW }
+    );
+    expect(r.true_dom).toBe(38);             // earliest start 2026-05-01 -> NOW
+    expect(r.total_price_drop).toBe(100000); // earliest original 800k -> current 700k
+    expect(r.campaign_count).toBe(3);
+  });
+
+  it('stitches at an exactly-35-day gap but breaks at 36', () => {
+    const stitched = computeTrueDomFromCampaigns(
+      [
+        ev({ listing_key: 'N', status: 'Active', entry_date: '2026-06-06T00:00:00Z', list_price: 800000 }),
+        ev({ listing_key: 'P', status: 'Terminated', entry_date: '2026-04-25T00:00:00Z', end_date: '2026-05-02', list_price: 820000, original_list_price: 820000 }),
+      ],
+      { nowMs: NOW }
+    );
+    expect(stitched.true_dom).toBe(44); // gap 35d (<=35) -> stitched, earliest 2026-04-25
+
+    const broken = computeTrueDomFromCampaigns(
+      [
+        ev({ listing_key: 'N', status: 'Active', entry_date: '2026-06-06T00:00:00Z', list_price: 800000 }),
+        ev({ listing_key: 'P', status: 'Terminated', entry_date: '2026-04-25T00:00:00Z', end_date: '2026-05-01', list_price: 820000, original_list_price: 820000 }),
+      ],
+      { nowMs: NOW }
+    );
+    expect(broken.true_dom).toBe(2); // gap 36d (>35) -> not stitched, newest age only
+  });
+
+  it('measures to the terminal date when the newest campaign is already off-market', () => {
+    const r = computeTrueDomFromCampaigns(
+      [ev({ listing_key: 'S', status: 'Sold', entry_date: '2026-04-01T00:00:00Z', end_date: '2026-05-01', list_price: 900000, original_list_price: 900000, close_price: 890000 })],
+      { nowMs: NOW }
+    );
+    expect(r.true_dom).toBe(30);     // 2026-04-01 -> 2026-05-01 (NOT to now)
+    expect(r.campaign_count).toBe(1);
+  });
+});

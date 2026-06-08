@@ -31,12 +31,13 @@ export function computeTrueDomFromCampaigns(
   const windowDays = opts.windowDays ?? DEFAULT_WINDOW_DAYS;
   const staleDays = opts.staleThresholdDays ?? DEFAULT_STALE_DAYS;
 
+  // counts ALL campaigns (sale + lease) for the "listed N times" signal — deliberately not just the sale campaigns that feed true_dom
   const campaign_count = new Set(events.map((e) => e.listing_key)).size;
 
   const sales: SaleNode[] = events
     .filter((e) => e.transaction_type === 'Sale')
     .map((e) => ({ e, startMs: parseTimestamp(e.entry_date), endMs: 0 }))
-    .filter((n): n is { e: CampaignEvent; startMs: number; endMs: number } => n.startMs !== null)
+    .filter((n): n is SaleNode => n.startMs !== null)
     .map((n) => ({ ...n, endMs: resolveEndMs(n.e, nowMs) }))
     .sort((a, b) => b.startMs - a.startMs); // newest first
 
