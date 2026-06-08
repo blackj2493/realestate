@@ -39,9 +39,12 @@ export function shouldFetchMore(
 
 /** Reject a promise after `ms` so a slow feed call never hangs the caller. */
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let handle: ReturnType<typeof setTimeout>;
   return Promise.race([
-    p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('campaign fetch timeout')), ms)),
+    p.finally(() => clearTimeout(handle)),
+    new Promise<T>((_, reject) => {
+      handle = setTimeout(() => reject(new Error('campaign fetch timeout')), ms);
+    }),
   ]);
 }
 
@@ -111,8 +114,9 @@ export async function fetchCampaignsByAddress(
         timeoutMs
       );
       page = ((res?.value ?? []) as unknown[]) as RawVowCampaign[];
-    } catch {
-      break; // best-effort: keep the pages we already have
+    } catch (err) {
+      console.warn(`[campaignHistory] fetch page ${pages + 1} failed (best-effort):`, (err as Error)?.message ?? err);
+      break; // keep the pages we already have
     }
     rows.push(...page);
     lastLen = page.length;
