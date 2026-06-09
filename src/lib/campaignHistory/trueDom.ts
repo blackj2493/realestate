@@ -32,7 +32,7 @@ export function currentStitchedSaleSpan(
   const sales = events
     .filter((e) => e.transaction_type === 'Sale')
     .map((e) => ({ e, startMs: parseTimestamp(e.entry_date), endMs: 0 }))
-    .filter((n): n is { e: CampaignEvent; startMs: number; endMs: number } => n.startMs !== null)
+    .filter((n): n is SaleNode => n.startMs !== null)
     .map((n) => ({ ...n, endMs: resolveEndMs(n.e, opts.nowMs) }))
     .sort((a, b) => b.startMs - a.startMs);
   if (sales.length === 0) return null;
