@@ -99,13 +99,14 @@ export async function readCampaignHistory(
   supabase: SupabaseClient,
   propertyHash: string
 ): Promise<CampaignHistoryRow | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('property_campaign_history')
     .select(
       'property_hash, events, true_dom, total_price_drop, campaign_count, first_seen_date, is_stale, fetched_at'
     )
     .eq('property_hash', propertyHash)
     .maybeSingle();
+  if (error) console.warn(`[campaignHistory] ledger read failed for ${propertyHash}:`, error.message);
   return (data as CampaignHistoryRow | null) ?? null;
 }
 
@@ -166,8 +167,8 @@ export async function refreshCampaignHistoryForListing(
   if (chosen === fresh) {
     try {
       await upsertCampaignHistory(supabase, fresh);
-    } catch {
-      /* best-effort: still return the fresh metrics for this render */
+    } catch (err) {
+      console.warn(`[campaignHistory] ledger upsert failed for ${propertyHash} (best-effort):`, (err as Error)?.message ?? err);
     }
   }
   return chosen;
