@@ -41,7 +41,9 @@ function Row({ r }: { r: TimelineRow }) {
         ) : ("—")}
       </td>
       <td className="py-2 text-right text-slate-500">{r.listingKey}</td>
-      <td className="py-2 text-right text-slate-600 truncate max-w-[120px]">{r.brokerage ?? "—"}</td>
+      <td className="py-2 text-right text-slate-600">
+        <span className="ml-auto block max-w-[140px] truncate" title={r.brokerage ?? undefined}>{r.brokerage ?? "—"}</span>
+      </td>
     </tr>
   );
 }
@@ -112,7 +114,7 @@ export default function CampaignHistorySection({
               <th className="py-2 text-left font-medium">Date</th>
               <th className="py-2 text-left font-medium">Event</th>
               <th className="py-2 text-right font-medium">Price</th>
-              <th className="py-2 text-right font-medium">Δ</th>
+              <th className="py-2 text-right font-medium">Δ%</th>
               <th className="py-2 text-right font-medium">MLS#</th>
               <th className="py-2 text-right font-medium">Brokerage</th>
             </tr>
