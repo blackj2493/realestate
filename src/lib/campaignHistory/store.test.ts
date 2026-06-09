@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSubjectEvent, buildCampaignHistoryRow } from './store';
+import { mergeSubjectEvent, buildCampaignHistoryRow, isLedgerStale, preferFreshOrPrior, type CampaignHistoryRow } from './store';
 import type { CampaignEvent } from './types';
 
 const NOW = Date.parse('2026-06-08T18:00:00Z');
@@ -52,5 +52,40 @@ describe('buildCampaignHistoryRow', () => {
   });
   it('stamps fetched_at from the injected now', () => {
     expect(row.fetched_at).toBe('2026-06-08T18:00:00.000Z');
+  });
+});
+
+describe('isLedgerStale', () => {
+  const NOW2 = Date.parse('2026-06-08T18:00:00Z');
+  it('is stale when never fetched', () => {
+    expect(isLedgerStale(null, NOW2)).toBe(true);
+  });
+  it('is fresh within the TTL', () => {
+    expect(isLedgerStale('2026-06-08T06:00:00Z', NOW2)).toBe(false); // 12h < 24h
+  });
+  it('is stale past the TTL', () => {
+    expect(isLedgerStale('2026-06-07T00:00:00Z', NOW2)).toBe(true); // 42h > 24h
+  });
+  it('is stale on an unparseable timestamp', () => {
+    expect(isLedgerStale('not-a-date', NOW2)).toBe(true);
+  });
+});
+
+describe('preferFreshOrPrior', () => {
+  const row = (campaign_count: number): CampaignHistoryRow => ({
+    property_hash: 'h', events: [], true_dom: 0, total_price_drop: 0,
+    campaign_count, first_seen_date: null, is_stale: false, fetched_at: '2026-06-08T18:00:00.000Z',
+  });
+  it('keeps a richer prior when the fetch returned nothing (no regression)', () => {
+    const prior = row(7);
+    expect(preferFreshOrPrior(row(1), prior, 0)).toBe(prior);
+  });
+  it('uses fresh when the fetch returned events', () => {
+    const fresh = row(3);
+    expect(preferFreshOrPrior(fresh, row(7), 5)).toBe(fresh);
+  });
+  it('uses fresh when there is no prior', () => {
+    const fresh = row(1);
+    expect(preferFreshOrPrior(fresh, null, 0)).toBe(fresh);
   });
 });

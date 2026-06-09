@@ -69,6 +69,30 @@ export function buildCampaignHistoryRow(
   };
 }
 
+const TTL_HOURS = 24;
+
+/** True when the ledger row is missing/expired and should be refreshed from the feed. */
+export function isLedgerStale(fetchedAt: string | null, nowMs: number, ttlHours: number = TTL_HOURS): boolean {
+  if (!fetchedAt) return true;
+  const t = Date.parse(fetchedAt);
+  if (Number.isNaN(t)) return true;
+  return nowMs - t > ttlHours * 3_600_000;
+}
+
+/**
+ * Never-regress guard: when a refresh fetch returned NO campaigns (transient feed
+ * failure → only the subject is in `fresh`), keep a richer prior row rather than
+ * collapsing the history. Otherwise the freshly-built row wins.
+ */
+export function preferFreshOrPrior(
+  fresh: CampaignHistoryRow,
+  prior: CampaignHistoryRow | null,
+  fetchedCount: number
+): CampaignHistoryRow {
+  if (fetchedCount === 0 && prior && prior.campaign_count > fresh.campaign_count) return prior;
+  return fresh;
+}
+
 /** Read the ledger row for a property_hash (PK point-lookup). null when absent. */
 export async function readCampaignHistory(
   supabase: SupabaseClient,
