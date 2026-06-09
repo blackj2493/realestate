@@ -3,12 +3,12 @@
  * 
  * Dual-write database orchestrator that routes transformed listings
  * to both Supabase (storage) and Typesense (search).
- * 
- * Phase 4 Integration: Temporal Distress Engine for True DOM calculation
- * - Batch generates property_hash for all listings
- * - Single Supabase query for historical matches (1 query, group locally)
- * - Computes true_dom and total_price_drop for investor filtering
- * 
+ *
+ * True DOM: per active listing, refreshes the campaign-history ledger
+ * (best-effort, 24h-TTL cached, subject-merged, never-regress) via the VOW feed
+ * and writes the corrected true_dom/total_price_drop to full_payload + Typesense.
+ * Sold batches skip the ledger refresh (no VOW fetch — they aren't indexed).
+ *
  * Run: npx tsx scripts/worker/sync.ts
  */
 
@@ -90,19 +90,21 @@ export interface SyncResult {
 
 /**
  * Process a batch of raw listings through the ETL pipeline.
- * 
+ *
  * Steps:
  * 1. Transform each raw listing using transformListing()
- * 2. Generate property_hash for all listings (Phase 4)
- * 3. Fetch historical listings in single batch query (Phase 4)
- * 4. Calculate True DOM and price drop for each listing (Phase 4)
- * 5. Separate results into supabaseBatch and typesenseBatch
- * 6. Write to Supabase (storage)
- * 7. Write to Typesense (search index)
- * 
+ * 2. Generate property_hash for every listing
+ * 3. Per ACTIVE listing, refresh the campaign-history ledger (VOW feed,
+ *    best-effort/24h-TTL/never-regress) for the corrected true_dom/total_price_drop;
+ *    SOLD batches skip the refresh (no VOW fetch — they aren't indexed)
+ * 4. Separate results into supabaseBatch and typesenseBatch
+ * 5. Write to Supabase (storage)
+ * 6. Write to Typesense (search index)
+ *
  * @param rawListings - Array of raw listing objects from MLS API
  * @param options - Optional processing flags
  * @param options.isSold - If true, marks listings as sold (is_sold: true in Typesense)
+ *   and SKIPS the per-listing ledger refresh (sold True DOM is never surfaced)
  */
 export async function processBatch(rawListings: any[], options?: { isSold?: boolean }): Promise<SyncResult> {
   console.log(`\n📦 Processing batch of ${rawListings.length} listings...`);
@@ -116,11 +118,12 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
   // Step 1: Transform all listings (async due to Supabase AVM lookups)
   const transformed = await Promise.all(rawListings.map(raw => transformListing(raw)));
   
-  // ─── Phase 4: Campaign-History Ledger (replaces broken stitch) ──────────
-  // Per active listing: refresh the campaign-history ledger (best-effort, 24h-TTL
+  // ─── Campaign-History Ledger (replaces broken stitch) ───────────────────
+  // Per ACTIVE listing: refresh the campaign-history ledger (best-effort, 24h-TTL
   // cached, subject-always-merged, never-regress) and write the corrected
-  // true_dom/total_price_drop to full_payload + Typesense TrueDom.
-  // Replaces the old fetchHistoricalListings/fetchSoldCampaigns/calculateTrueDOM stitch.
+  // true_dom/total_price_drop to full_payload + Typesense TrueDom. Sold batches
+  // skip the VOW fetch (see the in-loop guard). Replaces the old
+  // fetchHistoricalListings/fetchSoldCampaigns/calculateTrueDOM stitch.
   const supabaseClient = getServiceRoleClient();
   const vowToken = process.env.PROPTX_VOW_TOKEN;
   const nowMs = Date.now();
@@ -133,27 +136,33 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     let true_dom = 0;
     let total_price_drop = 0;
     let is_stale = false;
-    try {
-      const row = await refreshCampaignHistoryForListing(supabaseClient, {
-        propertyHash,
-        addr: {
-          StreetNumber: raw['StreetNumber'],
-          StreetName: raw['StreetName'],
-          City: raw['City'],
-          UnitNumber: raw['UnitNumber'],
-          PropertySubType: raw['PropertySubType'],
-        },
-        subjectEvent: normalizeCampaign(raw as RawVowCampaign),
-        vowToken,
-        nowMs,
-      });
-      if (row) {
-        true_dom = row.true_dom;
-        total_price_drop = row.total_price_drop;
-        is_stale = row.is_stale;
+    // Sold/Closed batches (Query B → isSold) are never indexed in Typesense and their
+    // True DOM is not surfaced, so skip the per-listing VOW address-query entirely —
+    // firing one fetch per sold record (then discarding it) would be a needless feed
+    // hit and a TRREB API-revocation risk (CLAUDE.md §4). Active listings still refresh.
+    if (!options?.isSold) {
+      try {
+        const row = await refreshCampaignHistoryForListing(supabaseClient, {
+          propertyHash,
+          addr: {
+            StreetNumber: raw['StreetNumber'],
+            StreetName: raw['StreetName'],
+            City: raw['City'],
+            UnitNumber: raw['UnitNumber'],
+            PropertySubType: raw['PropertySubType'],
+          },
+          subjectEvent: normalizeCampaign(raw as RawVowCampaign),
+          vowToken,
+          nowMs,
+        });
+        if (row) {
+          true_dom = row.true_dom;
+          total_price_drop = row.total_price_drop;
+          is_stale = row.is_stale;
+        }
+      } catch (e) {
+        console.warn(`[sync] campaign-history refresh failed for ${listingKey}:`, (e as Error)?.message ?? e);
       }
-    } catch (e) {
-      console.warn(`[sync] campaign-history refresh failed for ${listingKey}:`, (e as Error)?.message ?? e);
     }
     raw['property_hash'] = propertyHash;
     raw['true_dom'] = true_dom;
