@@ -40,8 +40,11 @@ const agent = new https.Agent({ rejectUnauthorized: false });
   // @ts-expect-error agent is a node-fetch option, not standard
   crossFetch(url, { ...init, agent })) as typeof fetch;
 
-// Import AFTER the TLS + fetch patches.
-import { getServiceRoleClient } from '@/lib/supabase/client';
+// Import AFTER the TLS + fetch patches. NOTE: @/lib/supabase/client captures
+// SUPABASE_SERVICE_ROLE_KEY at MODULE LOAD, and static ESM imports hoist ABOVE the
+// top-level dotenv.config() — so it is imported DYNAMICALLY in main() (after dotenv
+// has populated process.env) to avoid capturing an empty key. The modules below read
+// no env at load (verified), so static import is safe.
 import { refreshCampaignHistoryForListing } from '@/lib/campaignHistory/store';
 import { normalizeCampaign, type RawVowCampaign } from '@/lib/campaignHistory/normalize';
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
@@ -173,6 +176,9 @@ async function main() {
     full_payload: Record<string, unknown>;
   }>(FULL_SQL, [maxRows]);
 
+  // Dynamic import so client.ts reads SUPABASE_SERVICE_ROLE_KEY AFTER dotenv.config()
+  // populated it (static ESM imports hoist above the top-level dotenv call → empty key).
+  const { getServiceRoleClient } = await import('@/lib/supabase/client');
   const supabase = getServiceRoleClient();
   const vowToken = (process.env.PROPTX_VOW_TOKEN || '').trim() || undefined;
   const nowMs = Date.now();
