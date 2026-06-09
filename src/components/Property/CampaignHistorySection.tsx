@@ -1,0 +1,128 @@
+/**
+ * CampaignHistorySection — full per-property campaign timeline table (HouseSigma-parity).
+ * Renders every campaign event (Listed / Price Changed / Terminated / Expired / Sold)
+ * from the gated CampaignHistoryView. VOW data (CLAUDE.md §4): anon sees a blurred
+ * teaser + the surviving campaignCount, never the rows (events arrive as [] for anon).
+ */
+"use client";
+
+import Link from "next/link";
+import { History, Lock } from "lucide-react";
+import { cn, formatPrice } from "@/lib/utils";
+import type { CampaignHistoryView } from "@/lib/campaignHistory/view";
+import { buildEventRows, type TimelineRow, type TimelineEventKind } from "@/lib/campaignHistory/timeline";
+
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
+const KIND_COLOR: Record<TimelineEventKind, string> = {
+  "Listed for Sale": "text-emerald-400",
+  "Listed for Lease": "text-sky-400",
+  "Price Changed": "text-amber-400",
+  Terminated: "text-rose-400",
+  Expired: "text-slate-400",
+  Suspended: "text-slate-400",
+  Sold: "text-amber-300",
+};
+
+function Row({ r }: { r: TimelineRow }) {
+  return (
+    <tr className="border-b border-slate-800/50 font-mono text-xs">
+      <td className="py-2 text-left text-slate-400">{fmtDate(r.date)}</td>
+      <td className={cn("py-2 text-left font-medium", KIND_COLOR[r.kind])}>{r.kind}</td>
+      <td className="py-2 text-right text-slate-300">{r.price ? formatPrice(r.price) : "—"}</td>
+      <td className="py-2 text-right">
+        {r.deltaPct != null ? (
+          <span className={r.deltaPct < 0 ? "text-emerald-400" : "text-rose-400"}>
+            {r.deltaPct > 0 ? "+" : ""}{Math.round(r.deltaPct * 100)}%
+          </span>
+        ) : ("—")}
+      </td>
+      <td className="py-2 text-right text-slate-500">{r.listingKey}</td>
+      <td className="py-2 text-right text-slate-600 truncate max-w-[120px]">{r.brokerage ?? "—"}</td>
+    </tr>
+  );
+}
+
+export default function CampaignHistorySection({
+  campaignHistory, isAuthed, className,
+}: { campaignHistory: CampaignHistoryView; isAuthed: boolean; className?: string }) {
+  const { campaignCount, firstSeenDate, events } = campaignHistory;
+  const Title = (
+    <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+      <History className="h-4 w-4 text-amber-400" />
+      Listing History
+      {campaignCount > 0 && (
+        <span className="ml-1 rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
+          {campaignCount}×
+        </span>
+      )}
+    </h3>
+  );
+
+  if (campaignCount === 0) {
+    return (
+      <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+        {Title}
+        <p className="text-xs text-slate-500">No prior listing campaigns on record for this address.</p>
+      </div>
+    );
+  }
+
+  if (!isAuthed) {
+    const n = Math.min(campaignCount, 6);
+    return (
+      <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+        {Title}
+        <div className="relative">
+          <div className="select-none space-y-2 blur-sm" aria-hidden="true">
+            {Array.from({ length: n }).map((_, i) => (
+              <div key={i} className="flex justify-between font-mono text-xs text-slate-400">
+                <span>2025 ··· ··</span><span>Listed ····</span><span>$•,•••,•••</span>
+              </div>
+            ))}
+          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-slate-950/50 backdrop-blur-[1px]">
+            <Lock className="h-5 w-5 text-cyan-400" />
+            <p className="text-xs text-slate-300">
+              Listed {campaignCount}× {firstSeenDate ? `since ${new Date(firstSeenDate).getFullYear()}` : ""}
+            </p>
+            <Link href="/login" className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20">
+              Sign in to view the full history
+            </Link>
+          </div>
+        </div>
+        <p className="mt-3 text-[10px] leading-snug text-slate-600">
+          Listing history via TRREB VOW — viewable to signed-in users for personal, non-commercial use.
+        </p>
+      </div>
+    );
+  }
+
+  const rows = buildEventRows(events);
+  return (
+    <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+      {Title}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+              <th className="py-2 text-left font-medium">Date</th>
+              <th className="py-2 text-left font-medium">Event</th>
+              <th className="py-2 text-right font-medium">Price</th>
+              <th className="py-2 text-right font-medium">Δ</th>
+              <th className="py-2 text-right font-medium">MLS#</th>
+              <th className="py-2 text-right font-medium">Brokerage</th>
+            </tr>
+          </thead>
+          <tbody>{rows.map((r, i) => <Row key={`${r.listingKey}-${r.kind}-${i}`} r={r} />)}</tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-[10px] leading-snug text-slate-600">
+        Listing history via TRREB VOW — for your personal, non-commercial use.
+      </p>
+    </div>
+  );
+}
