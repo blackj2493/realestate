@@ -113,7 +113,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     valueAdd: null,
     dealScore: { score: null, grade: null, verdict: "", components: [] },
     saleHistory: gateSaleHistory(detail.saleHistory, false),
-    priceTimeline: { ...detail.priceTimeline, trueDom: null },
+    priceTimeline: { ...detail.priceTimeline, trueDom: null, totalPriceDrop: 0, originalPrice: null },
     campaignHistory: gateCampaignHistory(detail.campaignHistory, false),
   };
 }

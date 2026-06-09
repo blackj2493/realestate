@@ -454,8 +454,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
               <DOMTimelineChart
                 currentPrice={price}
-                originalPrice={detail.priceTimeline.originalPrice ?? undefined}
-                priceDrop={detail.priceTimeline.totalPriceDrop}
+                originalPrice={view.priceTimeline.originalPrice ?? undefined}
+                priceDrop={view.priceTimeline.totalPriceDrop}
                 dom={trueDom}
                 saleMarkers={saleMarkers}
               />
