@@ -26,7 +26,7 @@ import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
-import CampaignTimelineChart from "@/components/CommandCenter/CampaignTimelineChart";
+import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
 import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
@@ -228,6 +228,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   // True DOM (stitched across relists) from the Temporal Distress Engine; falls back to raw DOM.
   // Gated (null) for anon → falls back to raw IDX DaysOnMarket.
   const trueDom = view.priceTimeline.trueDom ?? dom;
+  // eslint-disable-next-line react-hooks/purity -- server component (force-dynamic); a per-request "now" is intentional for the live True DOM span / active-campaign end
+  const nowMs = Date.now();
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
   const jsonLd = buildJsonLd(id, detail);
@@ -454,26 +456,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 hasSuitePotential={hasSuitePotential}
               />
 
-              {isAuthed && view.campaignHistory.events.length > 0 ? (
-                <CampaignTimelineChart
-                  events={view.campaignHistory.events}
-                  trueDom={view.campaignHistory.trueDom}
-                  campaignCount={view.campaignHistory.campaignCount}
-                />
-              ) : (
-                <DOMTimelineChart
-                  currentPrice={price}
-                  originalPrice={view.priceTimeline.originalPrice ?? undefined}
-                  priceDrop={view.priceTimeline.totalPriceDrop}
-                  dom={trueDom}
-                  saleMarkers={saleMarkers}
-                />
-              )}
-
+              {/* Property History (timeline + campaign/sale tables) moved to the full-width band below the grid. */}
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
-
-              <SaleHistorySection saleHistory={saleHistory} isAuthed={isAuthed} />
-              <CampaignHistorySection campaignHistory={view.campaignHistory} isAuthed={isAuthed} />
 
               <ListingActions
                 id={id}
@@ -485,6 +469,34 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
         </div>
+
+        {/* ── FULL-WIDTH: Property History — timeline + campaign/sale tables, given room out of the 30% rail ── */}
+        <section className="mt-6">
+          {isAuthed && view.campaignHistory.events.length > 0 ? (
+            <CampaignHistoryChart
+              events={view.campaignHistory.events}
+              trueDom={view.campaignHistory.trueDom}
+              campaignCount={view.campaignHistory.campaignCount}
+              nowMs={nowMs}
+            />
+          ) : (
+            <DOMTimelineChart
+              currentPrice={price}
+              originalPrice={view.priceTimeline.originalPrice ?? undefined}
+              priceDrop={view.priceTimeline.totalPriceDrop}
+              dom={trueDom}
+              saleMarkers={saleMarkers}
+            />
+          )}
+          {saleHistory.saleCount > 0 ? (
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <CampaignHistorySection campaignHistory={view.campaignHistory} isAuthed={isAuthed} />
+              <SaleHistorySection saleHistory={saleHistory} isAuthed={isAuthed} />
+            </div>
+          ) : (
+            <CampaignHistorySection className="mt-4" campaignHistory={view.campaignHistory} isAuthed={isAuthed} />
+          )}
+        </section>
       </div>
     </main>
   );
