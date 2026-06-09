@@ -928,8 +928,11 @@ export function runTemporalTests(): void {
   console.log('✅ All temporal distress tests completed\n');
 }
 
-// Run if executed directly
-if (require.main === module) {
+// Run if executed directly (Node CLI only). Guarded with typeof checks so the
+// browser/ESM client bundle — which imports parseTimestamp from this module via the
+// campaignHistory timeline components — never evaluates `require`/`module` and crash
+// with "module is not defined".
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
   runTemporalTests();
 }
 

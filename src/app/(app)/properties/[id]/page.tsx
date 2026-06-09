@@ -26,6 +26,8 @@ import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
+import CampaignTimelineChart from "@/components/CommandCenter/CampaignTimelineChart";
+import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import PropertyGallery from "./PropertyGallery";
@@ -452,17 +454,26 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 hasSuitePotential={hasSuitePotential}
               />
 
-              <DOMTimelineChart
-                currentPrice={price}
-                originalPrice={detail.priceTimeline.originalPrice ?? undefined}
-                priceDrop={detail.priceTimeline.totalPriceDrop}
-                dom={trueDom}
-                saleMarkers={saleMarkers}
-              />
+              {isAuthed && view.campaignHistory.events.length > 0 ? (
+                <CampaignTimelineChart
+                  events={view.campaignHistory.events}
+                  trueDom={view.campaignHistory.trueDom}
+                  campaignCount={view.campaignHistory.campaignCount}
+                />
+              ) : (
+                <DOMTimelineChart
+                  currentPrice={price}
+                  originalPrice={view.priceTimeline.originalPrice ?? undefined}
+                  priceDrop={view.priceTimeline.totalPriceDrop}
+                  dom={trueDom}
+                  saleMarkers={saleMarkers}
+                />
+              )}
 
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
 
               <SaleHistorySection saleHistory={saleHistory} isAuthed={isAuthed} />
+              <CampaignHistorySection campaignHistory={view.campaignHistory} isAuthed={isAuthed} />
 
               <ListingActions
                 id={id}
