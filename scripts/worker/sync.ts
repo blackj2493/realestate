@@ -20,14 +20,9 @@ import { transformListing, TransformResult } from './transformer';
 import Typesense, { Client } from 'typesense';
 import {
   generatePropertyHash,
-  calculateTrueDOM,
-  processTemporalBatch,
-  groupHistoricalByHash,
-  STITCH_WINDOW_DAYS,
-  TemporalMetrics,
-  HistoricalListing,
-  CurrentListingInput
 } from '@/lib/typesense/TemporalDistressEngine';
+import { refreshCampaignHistoryForListing } from '@/lib/campaignHistory/store';
+import { normalizeCampaign, type RawVowCampaign } from '@/lib/campaignHistory/normalize';
 
 // ============================================================================
 // Configuration
@@ -68,249 +63,11 @@ function getAdminClient(): Client {
   return adminClient;
 }
 
-// ============================================================================
-// Historical Listing Fetching (Phase 4 - Entity Resolution)
-// ============================================================================
-
-/**
- * Helper: Split array into chunks of specified size.
- */
-function chunkArray<T>(array: T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += chunkSize) {
-    chunks.push(array.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
 /**
  * Helper: Sleep utility for rate limiting.
  */
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ============================================================================
-
-/**
- * Re-wraps a flat aliased `listings` row (from the projected JSONB select) back
- * into the HistoricalListing shape the Temporal Distress Engine expects.
- */
-function rowToHistoricalListing(row: any): HistoricalListing {
-  return {
-    listing_key: row.listing_key,
-    property_hash: row.property_hash,
-    created_at: row.created_at ?? '',
-    full_payload: {
-      OriginalEntryTimestamp: row.OriginalEntryTimestamp ?? undefined,
-      ListPrice: row.ListPrice ?? undefined,
-      CancellationDate: row.CancellationDate ?? undefined,
-      ModificationTimestamp: row.ModificationTimestamp ?? undefined,
-      SystemModificationTimestamp: row.SystemModificationTimestamp ?? undefined,
-    },
-  };
-}
-
-/**
- * Fetches prior SOLD campaigns for a batch of property hashes from the precomputed
- * property_sale_history table and maps each sale event into a HistoricalListing so the
- * engine can stitch ACROSS feeds. A property that previously sold and is now relisted
- * folds its prior campaign into the chain — true_dom and the chain's original list
- * price reflect the full history. The 35-day stitch window keeps genuine resales
- * (months/years apart) from being merged.
- *
- * We read the precompute (small, PK-indexed, refreshed nightly) rather than scanning
- * raw_vow_sold directly because raw_vow_sold.property_hash is an un-hashed address
- * string for ~all of the historical archive and never matches a listing's SHA-256.
- * property_sale_history is re-keyed with the SAME generatePropertyHash() listings use
- * (see scripts/admin/refresh-property-sale-history.ts), so these lookups join correctly.
- *
- * Returns Map<property_hash, HistoricalListing[]>.
- */
-async function fetchSoldCampaigns(
-  supabaseClient: any,
-  propertyHashes: string[]
-): Promise<Map<string, HistoricalListing[]>> {
-  if (propertyHashes.length === 0) return new Map();
-
-  const CHUNK_SIZE = 50;
-  const chunks = chunkArray(propertyHashes, CHUNK_SIZE);
-  const grouped = new Map<string, HistoricalListing[]>();
-  const MAX_RETRIES = 3;
-
-  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-    const chunk = chunks[chunkIdx];
-    let success = false;
-    let attempt = 0;
-
-    while (!success && attempt < MAX_RETRIES) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('property_sale_history')
-          .select('property_hash, sale_events')
-          .in('property_hash', chunk);
-
-        if (error) throw error;
-
-        for (const row of (data as any[]) || []) {
-          const hash = row.property_hash;
-          if (!hash) continue;
-          const events = Array.isArray(row.sale_events) ? row.sale_events : [];
-          for (const e of events) {
-            // Start = contract date (the "sold date") so the campaign has a start
-            // anchor. End = close_date || contract_date, mapped to CancellationDate so
-            // getListingEndDate() resolves it. ListPrice = list_price so a prior
-            // campaign can become the chain's original price.
-            const start = e.contract_date || e.close_date || null;
-            const end = e.close_date || e.contract_date || null;
-            const mapped: HistoricalListing = {
-              listing_key: e.listing_key || `${hash}-sold`,
-              property_hash: hash,
-              created_at: end ?? '',
-              full_payload: {
-                OriginalEntryTimestamp: start ?? undefined,
-                ListPrice: e.list_price ?? undefined,
-                CancellationDate: end ?? undefined,
-              },
-            };
-            const existing = grouped.get(hash);
-            if (existing) existing.push(mapped);
-            else grouped.set(hash, [mapped]);
-          }
-        }
-
-        success = true;
-      } catch (err: any) {
-        attempt++;
-        if (attempt < MAX_RETRIES) {
-          const delay = Math.pow(2, attempt) * 500;
-          console.warn(`   ⏳ Retry ${attempt}/${MAX_RETRIES} for sold-campaign chunk ${chunkIdx + 1} in ${delay}ms...`);
-          await sleep(delay);
-        } else {
-          console.error(`   ❌ Sold-campaign chunk ${chunkIdx + 1} failed after ${MAX_RETRIES} attempts: ${err.message}`);
-        }
-      }
-    }
-
-    if (chunkIdx < chunks.length - 1) {
-      await sleep(50);
-    }
-  }
-
-  const total = [...grouped.values()].reduce((n, arr) => n + arr.length, 0);
-  if (total > 0) {
-    console.log(`   🏷️  Found ${total} prior sold campaign(s) across ${grouped.size} properties`);
-  }
-  return grouped;
-}
-
-/**
- * Fetches historical listings for a batch of property hashes.
- * Implements the efficient batch pattern: 1 query, group locally.
- * 
- * OPTIMIZATION: Chunks 100 hashes into 4x25 batches, processed sequentially.
- * Uses explicit column selects to minimize payload size.
- * Implements retry with exponential backoff.
- * 
- * @param supabaseClient - Service role client for Supabase
- * @param propertyHashes - Array of property hashes to fetch
- * @param excludeListingKeys - Listing keys to exclude (current listings)
- * @returns Historical listings grouped by property_hash
- */
-async function fetchHistoricalListings(
-  supabaseClient: any,
-  propertyHashes: string[],
-  excludeListingKeys: string[]
-): Promise<Map<string, HistoricalListing[]>> {
-  if (propertyHashes.length === 0) {
-    return new Map();
-  }
-
-  console.log(`   📚 Fetching historical listings for ${propertyHashes.length} properties...`);
-
-  // Chunk into 25-hash sub-batches for sequential processing
-  const CHUNK_SIZE = 25;
-  const chunks = chunkArray(propertyHashes, CHUNK_SIZE);
-  console.log(`   📦 Split into ${chunks.length} chunks of ${CHUNK_SIZE} hashes each`);
-
-  // Build exclusion clause once (same for all chunks)
-  const excludeClause = `(${excludeListingKeys.map(k => `'${k}'`).join(',')})`;
-
-  // Process chunks sequentially with retry
-  const MAX_RETRIES = 3;
-  const allHistoricalData: any[] = [];
-
-  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-    const chunk = chunks[chunkIdx];
-    let success = false;
-    let attempt = 0;
-
-    while (!success && attempt < MAX_RETRIES) {
-      try {
-        // Project ONLY the JSONB keys calculateTrueDOM reads, then re-wrap into a
-        // synthetic full_payload below. Selecting just `id, property_hash` (the old
-        // behavior) starved the engine — every historical record was skipped and
-        // true_dom collapsed to the current campaign with total_price_drop = 0.
-        // `listing_key` is required so the current-listing self-exclusion works.
-        // Light projection avoids detoasting the whole JSONB blob (Disk IO budget).
-        const { data, error } = await supabaseClient
-          .from('listings')
-          .select(
-            'listing_key, property_hash, created_at, ' +
-              'OriginalEntryTimestamp:full_payload->OriginalEntryTimestamp, ' +
-              'ListPrice:full_payload->ListPrice, ' +
-              'CancellationDate:full_payload->CancellationDate, ' +
-              'ModificationTimestamp:full_payload->ModificationTimestamp, ' +
-              'SystemModificationTimestamp:full_payload->SystemModificationTimestamp'
-          )
-          .in('property_hash', chunk)
-          .not('listing_key', 'in', excludeClause);
-
-        if (error) {
-          console.warn(`   ⚠️  Chunk ${chunkIdx + 1} attempt ${attempt + 1} warning: ${error.message}`);
-          throw error;
-        }
-
-        if (data && data.length > 0) {
-          // Re-wrap the flat aliased rows back into HistoricalListing shape so the
-          // engine sees full_payload.{OriginalEntryTimestamp,ListPrice,...}.
-          for (const row of data as any[]) {
-            allHistoricalData.push(rowToHistoricalListing(row));
-          }
-        }
-
-        success = true;
-        console.log(`   ✅ Chunk ${chunkIdx + 1}/${chunks.length}: ${data?.length || 0} historical records`);
-
-      } catch (err: any) {
-        attempt++;
-        if (attempt < MAX_RETRIES) {
-          const delay = Math.pow(2, attempt) * 500; // Exponential backoff: 500, 1000, 2000ms
-          console.warn(`   ⏳ Retry ${attempt}/${MAX_RETRIES} for chunk ${chunkIdx + 1} in ${delay}ms...`);
-          await sleep(delay);
-        } else {
-          console.error(`   ❌ Chunk ${chunkIdx + 1} failed after ${MAX_RETRIES} attempts: ${err.message}`);
-        }
-      }
-    }
-
-    // 50ms inter-chunk delay to regulate Supabase connection pool
-    if (chunkIdx < chunks.length - 1) {
-      await sleep(50);
-    }
-  }
-
-  if (allHistoricalData.length === 0) {
-    console.log(`   ℹ️  No historical listings found`);
-    return new Map();
-  }
-
-  console.log(`   📊 Found ${allHistoricalData.length} historical listing records total`);
-  
-  // Group locally in memory
-  const grouped = groupHistoricalByHash(allHistoricalData);
-  
-  return grouped;
 }
 
 // ============================================================================
@@ -359,67 +116,53 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
   // Step 1: Transform all listings (async due to Supabase AVM lookups)
   const transformed = await Promise.all(rawListings.map(raw => transformListing(raw)));
   
-  // ─── Phase 4: Temporal Distress Engine ───────────────────────────────────
-  // Generate property hashes and fetch historical data in batch
-  const propertyHashes: string[] = [];
-  const listingKeyToTransform = new Map<string, TransformResult>();
-  
-  for (const t of transformed) {
-    const raw = t.supabasePayload.full_payload as any;
-    const hash = generatePropertyHash(raw);
-    propertyHashes.push(hash);
-    listingKeyToTransform.set(t.supabasePayload.listing_key, t);
-  }
-  
-  // Fetch historical listings (single query for all hashes) + prior sold campaigns
-  // from the VOW archive, so True DOM stitches across BOTH feeds.
+  // ─── Phase 4: Campaign-History Ledger (replaces broken stitch) ──────────
+  // Per active listing: refresh the campaign-history ledger (best-effort, 24h-TTL
+  // cached, subject-always-merged, never-regress) and write the corrected
+  // true_dom/total_price_drop to full_payload + Typesense TrueDom.
+  // Replaces the old fetchHistoricalListings/fetchSoldCampaigns/calculateTrueDOM stitch.
   const supabaseClient = getServiceRoleClient();
-  const listingKeys = transformed.map(t => t.supabasePayload.listing_key);
-  const uniqueHashes = [...new Set(propertyHashes)];
-  const historicalMap = await fetchHistoricalListings(
-    supabaseClient,
-    uniqueHashes,
-    listingKeys
-  );
-  const soldCampaignMap = await fetchSoldCampaigns(supabaseClient, uniqueHashes);
-  
-  // Calculate temporal metrics for each listing
-  const temporalMetrics = new Map<string, TemporalMetrics>();
-  
+  const vowToken = process.env.PROPTX_VOW_TOKEN;
+  const nowMs = Date.now();
+  const temporalMetrics = new Map<string, { true_dom: number; total_price_drop: number; property_hash: string; is_stale: boolean }>();
+
   for (const t of transformed) {
     const listingKey = t.supabasePayload.listing_key;
-    const raw = t.supabasePayload.full_payload as any;
-    const hash = generatePropertyHash(raw);
-    
-    // Get historical for this property — prior Active campaigns (listings table)
-    // PLUS prior sold campaigns (raw_vow_sold), merged into one chain.
-    const history = [
-      ...(historicalMap.get(hash) || []),
-      ...(soldCampaignMap.get(hash) || []),
-    ];
-
-    // Prepare current listing input
-    const currentInput: CurrentListingInput = {
-      listingKey: listingKey,
-      propertyHash: hash,
-      listPrice: raw.ListPrice || 0,
-      originalEntryTimestamp: raw.OriginalEntryTimestamp || null
-    };
-
-    // Calculate True DOM (35-day stitch window defeats cancel-and-relist resets)
-    const metrics = calculateTrueDOM(currentInput, history, {
-      coolingOffDays: STITCH_WINDOW_DAYS,
-    });
-    temporalMetrics.set(listingKey, metrics);
-    
-    // Add temporal data to full payload for Supabase storage
-    (t.supabasePayload.full_payload as any).property_hash = metrics.property_hash;
-    (t.supabasePayload.full_payload as any).true_dom = metrics.true_dom;
-    (t.supabasePayload.full_payload as any).total_price_drop = metrics.total_price_drop;
+    const raw = t.supabasePayload.full_payload as Record<string, unknown>;
+    const propertyHash = generatePropertyHash(raw);
+    let true_dom = 0;
+    let total_price_drop = 0;
+    let is_stale = false;
+    try {
+      const row = await refreshCampaignHistoryForListing(supabaseClient, {
+        propertyHash,
+        addr: {
+          StreetNumber: raw['StreetNumber'],
+          StreetName: raw['StreetName'],
+          City: raw['City'],
+          UnitNumber: raw['UnitNumber'],
+          PropertySubType: raw['PropertySubType'],
+        },
+        subjectEvent: normalizeCampaign(raw as RawVowCampaign),
+        vowToken,
+        nowMs,
+      });
+      if (row) {
+        true_dom = row.true_dom;
+        total_price_drop = row.total_price_drop;
+        is_stale = row.is_stale;
+      }
+    } catch (e) {
+      console.warn(`[sync] campaign-history refresh failed for ${listingKey}:`, (e as Error)?.message ?? e);
+    }
+    raw['property_hash'] = propertyHash;
+    raw['true_dom'] = true_dom;
+    raw['total_price_drop'] = total_price_drop;
+    temporalMetrics.set(listingKey, { true_dom, total_price_drop, property_hash: propertyHash, is_stale });
   }
-  
+
   console.log(`   ⏱️  Temporal metrics calculated for ${temporalMetrics.size} listings`);
-  
+
   // Log stale inventory detection
   const staleCount = [...temporalMetrics.values()].filter(m => m.is_stale).length;
   if (staleCount > 0) {
