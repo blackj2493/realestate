@@ -6,6 +6,7 @@
  */
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { History, Lock } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
@@ -52,6 +53,7 @@ export default function CampaignHistorySection({
   campaignHistory, isAuthed, className,
 }: { campaignHistory: CampaignHistoryView; isAuthed: boolean; className?: string }) {
   const { campaignCount, firstSeenDate, events } = campaignHistory;
+  const [expanded, setExpanded] = useState(false);
   const Title = (
     <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
       <History className="h-4 w-4 text-amber-400" />
@@ -104,6 +106,9 @@ export default function CampaignHistorySection({
   }
 
   const rows = buildEventRows(events);
+  const COLLAPSED = 4;
+  const hasMore = rows.length > COLLAPSED;
+  const shown = expanded ? rows : rows.slice(0, COLLAPSED);
   return (
     <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
       {Title}
@@ -119,9 +124,18 @@ export default function CampaignHistorySection({
               <th className="py-2 text-right font-medium">Brokerage</th>
             </tr>
           </thead>
-          <tbody>{rows.map((r, i) => <Row key={`${r.listingKey}-${r.kind}-${i}`} r={r} />)}</tbody>
+          <tbody>{shown.map((r, i) => <Row key={`${r.listingKey}-${r.kind}-${i}`} r={r} />)}</tbody>
         </table>
       </div>
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 text-xs font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+        >
+          {expanded ? "Show less ▴" : `Show all ${rows.length} events ▾`}
+        </button>
+      )}
       <p className="mt-3 text-[10px] leading-snug text-slate-600">
         Listing history via TRREB VOW — for your personal, non-commercial use.
       </p>
