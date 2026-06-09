@@ -69,6 +69,14 @@ const SAMPLE = sampleIdx !== -1 ? parseInt(process.argv[sampleIdx + 1] ?? '0', 1
 const limitIdx = process.argv.indexOf('--limit');
 const LIMIT = limitIdx !== -1 ? parseInt(process.argv[limitIdx + 1] ?? '0', 10) : 0; // 0 = no limit
 
+// Mutual exclusion: --sample is a NO-WRITE validation mode. With --apply present, the
+// downstream `if (!APPLY)` no-write guard is skipped, so --apply --sample would WRITE
+// while looking like a dry validation. Reject the combo up front.
+if (APPLY && SAMPLE > 0) {
+  console.error('❌ --apply and --sample are mutually exclusive. Use --apply --limit N for a bounded apply.');
+  process.exit(1);
+}
+
 // ── Pacing constants (TRREB feed + Disk IO budget) ────────────────────────────
 const DELAY_MS = 250;       // inter-listing pause (feed-friendly, CLAUDE.md §4)
 const REINDEX_CHUNK = 100;  // Typesense partial-update batch size
@@ -101,28 +109,30 @@ async function main() {
   await pg.query("SET statement_timeout TO '0'");
   console.log('   pg connected (enumeration)\n');
 
-  // ── Count query (DRY-RUN + sizing for all modes) ────────────────────────────
-  // Uses the same NOT-IN predicate as the existing idx_listings_active_city_lower
-  // partial index so Postgres can use an index scan rather than a full JSONB detoast.
-  // StandardStatus='Active' rows pass because they are NOT in the terminal-status list.
-  const NON_ACTIVE_SQL =
-    `lower(coalesce(full_payload->>'Status', full_payload->>'MlsStatus', full_payload->>'StandardStatus', ''))` +
-    ` NOT IN ('sold','closed','closed sale','leased','terminated','expired','suspended')`;
-
-  const COUNT_SQL = `
-    WITH active AS (
-      SELECT listing_key, property_hash
-      FROM listings
+  // ── Enumeration (relist-hashes FIRST, JSONB active-filter LAST) ─────────────
+  // Compute the likely-relist HASH set using ONLY the indexed property_hash column
+  // (no JSONB) — addresses with >1 campaign in `listings` UNION any present in
+  // property_sale_history. Then narrow `listings` by `property_hash IN (...)`
+  // (idx_listings_property_hash) to a few thousand rows BEFORE the expensive
+  // full_payload->>'StandardStatus' detoast runs on that small subset. Reversing the
+  // order avoids a full-table JSONB scan of ~112k rows (which stalled the dry-run).
+  const RELIST_HASHES_CTE = `
+    relist_hashes AS (
+      SELECT property_hash FROM listings
       WHERE property_hash IS NOT NULL AND property_hash <> ''
-        AND ${NON_ACTIVE_SQL}
-    ),
-    multi AS (
-      SELECT property_hash FROM active GROUP BY property_hash HAVING count(*) > 1
-    )
-    SELECT COUNT(*) AS cnt
-    FROM active a
-    WHERE a.property_hash IN (SELECT property_hash FROM multi)
-       OR a.property_hash IN (SELECT property_hash FROM property_sale_history);
+      GROUP BY property_hash HAVING count(*) > 1
+      UNION
+      SELECT property_hash FROM property_sale_history
+    )`;
+  const ACTIVE_PREDICATE = `lower(coalesce(full_payload->>'StandardStatus','')) = 'active'`;
+
+  // DRY-RUN count: same narrowed-first + active-filtered set, COUNT only (no full_payload).
+  const COUNT_SQL = `
+    WITH ${RELIST_HASHES_CTE}
+    SELECT count(*) AS cnt
+    FROM listings
+    WHERE property_hash IN (SELECT property_hash FROM relist_hashes)
+      AND ${ACTIVE_PREDICATE};
   `;
 
   const { rows: countRows } = await pg.query<{ cnt: string }>(COUNT_SQL);
@@ -137,33 +147,27 @@ async function main() {
     process.exit(0);
   }
 
-  // ── Full enumeration for processing phases ─────────────────────────────────
-  // Load full_payload only when we need to actually process records (--sample / --apply).
+  // ── Full enumeration for processing phases (--sample / --apply) ─────────────
+  // Loads true_dom (the Postgres column — NOT in full_payload) so before/after is real,
+  // plus full_payload for the hash + address. Same relist-first narrowing as the count.
   // ORDER BY listing_key makes this resumable (keyset cursor for future incremental runs).
   const maxRows = SAMPLE > 0 ? SAMPLE : LIMIT > 0 ? LIMIT : totalTargets;
   const FULL_SQL = `
-    WITH active AS (
-      SELECT listing_key, property_hash, full_payload
-      FROM listings
-      WHERE property_hash IS NOT NULL AND property_hash <> ''
-        AND ${NON_ACTIVE_SQL}
-    ),
-    multi AS (
-      SELECT property_hash FROM active GROUP BY property_hash HAVING count(*) > 1
-    )
-    SELECT a.listing_key, a.full_payload
-    FROM active a
-    WHERE a.property_hash IN (SELECT property_hash FROM multi)
-       OR a.property_hash IN (SELECT property_hash FROM property_sale_history)
-    ORDER BY a.listing_key
+    WITH ${RELIST_HASHES_CTE}
+    SELECT listing_key, true_dom, full_payload
+    FROM listings
+    WHERE property_hash IN (SELECT property_hash FROM relist_hashes)
+      AND ${ACTIVE_PREDICATE}
+    ORDER BY listing_key
     LIMIT $1;
   `;
 
   console.log(`Loading up to ${maxRows} target rows (full_payload)…`);
-  const { rows: workSlice } = await pg.query<{ listing_key: string; full_payload: Record<string, unknown> }>(
-    FULL_SQL,
-    [maxRows]
-  );
+  const { rows: workSlice } = await pg.query<{
+    listing_key: string;
+    true_dom: number | null;
+    full_payload: Record<string, unknown>;
+  }>(FULL_SQL, [maxRows]);
 
   const supabase = getServiceRoleClient();
   const vowToken = (process.env.PROPTX_VOW_TOKEN || '').trim() || undefined;
@@ -172,6 +176,10 @@ async function main() {
   if (!vowToken) {
     console.warn('⚠️  PROPTX_VOW_TOKEN not set — campaign refresh will serve cached ledger rows only (no feed fetch).');
   }
+
+  // Build the Typesense admin client BEFORE the feed loop under --apply, so a missing
+  // TYPESENSE_ADMIN_API_KEY fails fast instead of burning the whole VOW feed run first.
+  const tsAdmin = APPLY ? buildTypesenseAdminClient() : null;
 
   const updates: { id: string; TrueDom: number }[] = [];
   let processed = 0;
@@ -197,7 +205,8 @@ async function main() {
         nowMs,
       });
 
-      const prevDom = typeof raw['true_dom'] === 'number' ? (raw['true_dom'] as number) : null;
+      // prevDom is the existing true_dom Postgres COLUMN (never lives in full_payload).
+      const prevDom = typeof r.true_dom === 'number' ? r.true_dom : null;
 
       if (row) {
         if (SAMPLE > 0) {
@@ -241,14 +250,15 @@ async function main() {
   }
 
   console.log(`\n🔍 Reindexing Typesense TrueDom for ${updates.length} documents (partial update)…`);
-  const tsAdmin = buildTypesenseAdminClient();
+  // tsAdmin was built before the loop (fail-fast on a missing key); non-null under APPLY.
+  const admin = tsAdmin ?? buildTypesenseAdminClient();
   let tsOk = 0;
   let tsFailed = 0;
 
   for (let i = 0; i < updates.length; i += REINDEX_CHUNK) {
     const chunk = updates.slice(i, i + REINDEX_CHUNK);
     try {
-      const res = await tsAdmin.collections('properties').documents().import(chunk, { action: 'update' });
+      const res = await admin.collections('properties').documents().import(chunk, { action: 'update' });
       // import() returns an array of per-doc result objects.
       const results: Array<{ success: boolean; error?: string }> = Array.isArray(res)
         ? res
