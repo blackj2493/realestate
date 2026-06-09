@@ -32,6 +32,13 @@ import { ProptXClient } from "@/lib/proptx/client";
 import type { RoomData } from "@/lib/room-utils";
 import { fetchValueAddReport } from "@/lib/avm/valueAdd/engine";
 import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
+import { refreshCampaignHistoryForListing } from "@/lib/campaignHistory/store";
+import {
+  toCampaignHistoryView,
+  gateCampaignHistory,
+  type CampaignHistoryView,
+} from "@/lib/campaignHistory/view";
+import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/normalize";
 
 /** One prior sold campaign for this physical property (from property_sale_history). */
 export interface SaleEvent {
@@ -107,6 +114,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     dealScore: { score: null, grade: null, verdict: "", components: [] },
     saleHistory: gateSaleHistory(detail.saleHistory, false),
     priceTimeline: { ...detail.priceTimeline, trueDom: null },
+    campaignHistory: gateCampaignHistory(detail.campaignHistory, false),
   };
 }
 
@@ -123,6 +131,8 @@ export interface ListingDetail {
   dealScore: DealScoreResult;
   saleHistory: SaleHistory;
   priceTimeline: PriceTimeline;
+  /** Full per-property campaign history (gated for anon). Powers True DOM + the timeline. */
+  campaignHistory: CampaignHistoryView;
   /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
   rooms: RoomData[];
 }
@@ -408,16 +418,51 @@ export const getListingDetail = cache(
       console.error(`[getListingDetail] Sale history failed for ${listingKey}:`, saleErr);
     }
 
+    // Campaign history (corrected True DOM + event timeline). Read the ledger; if
+    // missing/stale, refresh on-demand from the VOW feed (best-effort, timeout-bounded
+    // — never blocks the page). Subject is merged in so a feed lag can't zero True DOM.
+    let campaignHistory: CampaignHistoryView = toCampaignHistoryView(null);
+    try {
+      const propertyHash =
+        (typeof listing.property_hash === "string" && listing.property_hash) ||
+        generatePropertyHash(payload);
+      if (propertyHash) {
+        const row = await withTimeout(
+          refreshCampaignHistoryForListing(supabase, {
+            propertyHash,
+            addr: {
+              StreetNumber: payload["StreetNumber"],
+              StreetName: payload["StreetName"],
+              City: payload["City"],
+              UnitNumber: payload["UnitNumber"],
+              PropertySubType: payload["PropertySubType"],
+            },
+            subjectEvent: normalizeCampaign(payload as RawVowCampaign),
+            vowToken: process.env.PROPTX_VOW_TOKEN,
+            nowMs: Date.now(),
+          }),
+          8000,
+          "Campaign history"
+        );
+        campaignHistory = toCampaignHistoryView(row);
+      }
+    } catch (chErr) {
+      console.error(`[getListingDetail] Campaign history failed for ${listingKey}:`, chErr);
+    }
+
     // Price timeline — list-price movement only (IDX-class). total_price_drop / true_dom
     // are the deterministic fields the Temporal Distress Engine persisted to full_payload.
-    const totalPriceDrop =
+    const ledgerDrop = campaignHistory.totalPriceDrop;
+    const payloadDrop =
       typeof payload["total_price_drop"] === "number" && payload["total_price_drop"] > 0
         ? (payload["total_price_drop"] as number)
         : 0;
+    const totalPriceDrop = ledgerDrop > 0 ? ledgerDrop : payloadDrop;
     const trueDom =
-      typeof payload["true_dom"] === "number"
+      campaignHistory.trueDom ??
+      (typeof payload["true_dom"] === "number"
         ? (payload["true_dom"] as number)
-        : deriveDomDays(payload);
+        : deriveDomDays(payload));
     const originalPrice =
       originalListPrice && listPrice && originalListPrice > listPrice
         ? originalListPrice
@@ -444,6 +489,7 @@ export const getListingDetail = cache(
       dealScore,
       saleHistory,
       priceTimeline,
+      campaignHistory,
       rooms,
     };
   }
