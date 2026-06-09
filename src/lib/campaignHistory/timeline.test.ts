@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildEventRows, buildSaleChartSeries } from './timeline';
+import { buildEventRows, buildSaleChartSeries, buildCampaignBars, buildSalePricePath, summarizeSaleHistory } from './timeline';
 import type { CampaignEvent } from './types';
 
 const NOW = Date.parse('2026-06-08T18:00:00Z');
@@ -53,5 +53,66 @@ describe('buildSaleChartSeries', () => {
   });
   it('emits event markers for listed/terminated', () => {
     expect(s.markers.length).toBeGreaterThan(0);
+  });
+});
+
+describe('buildCampaignBars', () => {
+  const bars = buildCampaignBars(chain363, { nowMs: NOW });
+  it('emits one bar per campaign, oldest → newest', () => {
+    expect(bars.map((b) => b.listingKey)).toEqual(['N12409326', 'N12656610', 'N13135326', 'N13410488']);
+  });
+  it('flags the stitched recent sale campaigns as current, and the lone 2025 effort as not', () => {
+    const current = new Set(bars.filter((b) => b.isCurrent).map((b) => b.listingKey));
+    expect(current).toEqual(new Set(['N13135326', 'N13410488']));
+    expect(bars.find((b) => b.listingKey === 'N12409326')!.isCurrent).toBe(false);
+  });
+  it('keeps the lease campaign as its own kind (not current)', () => {
+    const lease = bars.find((b) => b.listingKey === 'N12656610')!;
+    expect(lease.kind).toBe('Lease');
+    expect(lease.isCurrent).toBe(false);
+  });
+  it('captures a price change as start→end on the bar', () => {
+    const b = bars.find((b) => b.listingKey === 'N13135326')!;
+    expect(b.priceChanged).toBe(true);
+    expect(b.startPrice).toBe(1699900);
+    expect(b.endPrice).toBe(1850000);
+  });
+  it('extends an Active campaign to nowMs', () => {
+    expect(bars.find((b) => b.listingKey === 'N13410488')!.endMs).toBe(NOW);
+  });
+});
+
+describe('buildSalePricePath', () => {
+  const path = buildSalePricePath(chain363, { nowMs: NOW });
+  it('excludes lease prices entirely', () => {
+    expect(path.every((p) => p.price >= 1000000)).toBe(true);
+  });
+  it('orders sale price events: $1.99M → $1.6999M → $1.85M → $1.729M', () => {
+    expect(path.map((p) => p.price)).toEqual([1990000, 1699900, 1850000, 1729000]);
+  });
+  it('dashes across the long off-market gap, but keeps the stitched relist continuous', () => {
+    const byKey = (k: string) => path.filter((p) => p.listingKey === k);
+    // first point of the May campaign follows the ~7-month lease gap → dashed
+    expect(byKey('N13135326')[0].offMarketBefore).toBe(true);
+    // the Jun relist is stitched to it (2-day gap, same True DOM span) → solid
+    expect(byKey('N13410488')[0].offMarketBefore).toBe(false);
+  });
+  it("decorates each campaign's last point with its end status", () => {
+    expect(path[0].endStatus).toBe('Terminated');        // 2025 effort
+    expect(path[2].endStatus).toBe('Terminated');        // May campaign (after the +9% change)
+    expect(path[3].endStatus).toBe('Active');            // current
+    expect(path[1].endStatus).toBeNull();                // mid-campaign listed point
+  });
+});
+
+describe('summarizeSaleHistory', () => {
+  it('reports original (first sale list) → current (latest sale list) and the % cut', () => {
+    const s = summarizeSaleHistory(chain363);
+    expect(s.originalSalePrice).toBe(1990000);
+    expect(s.currentSalePrice).toBe(1729000);
+    expect(s.dropPct).toBeCloseTo((1729000 - 1990000) / 1990000, 5);
+  });
+  it('returns nulls when there are no sale campaigns', () => {
+    expect(summarizeSaleHistory([])).toEqual({ originalSalePrice: null, currentSalePrice: null, dropPct: null });
   });
 });
