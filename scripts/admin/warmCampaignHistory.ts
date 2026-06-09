@@ -281,8 +281,25 @@ async function main() {
         }
       }
     } catch (e) {
-      tsFailed += chunk.length;
-      console.warn(`   ⚠️  reindex chunk @${i} failed: ${(e as Error)?.message ?? e}`);
+      // Typesense .import() THROWS an ImportError on ANY per-doc failure — but most docs
+      // in the chunk usually succeeded. Recover the per-doc results from error.importResults
+      // so we count REAL failures (and surface their reasons), not the whole chunk. (A
+      // partial UPDATE failure here is typically "document not found" — a listing present
+      // in `listings` but absent from the Typesense index, which has nothing to update.)
+      const importResults = (e as { importResults?: Array<{ success: boolean; error?: string }> })
+        ?.importResults;
+      if (Array.isArray(importResults)) {
+        for (const x of importResults) {
+          if (x.success) tsOk++;
+          else {
+            tsFailed++;
+            if (x.error) console.warn(`   Typesense doc error: ${x.error}`);
+          }
+        }
+      } else {
+        tsFailed += chunk.length;
+        console.warn(`   ⚠️  reindex chunk @${i} failed: ${(e as Error)?.message ?? e}`);
+      }
     }
     await sleep(REINDEX_DELAY_MS);
   }
