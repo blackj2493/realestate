@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeTrueDomFromCampaigns } from './trueDom';
 import type { CampaignEvent } from './types';
+import { fetchCampaignsByAddress, type SubjectAddress } from './fetch';
 
 /** One row of property_campaign_history (matches migration 032). */
 export interface CampaignHistoryRow {
@@ -117,4 +118,57 @@ export async function upsertCampaignHistory(
     .from('property_campaign_history')
     .upsert(row, { onConflict: 'property_hash' });
   if (error) throw error;
+}
+
+/**
+ * Read the ledger for a property; if missing or older than the TTL, refresh it from
+ * the VOW feed (best-effort, subject-always-merged) and upsert. Never throws and
+ * never regresses a richer prior on a transient fetch failure. Returns the row to
+ * use (or null when there's nothing — no prior, no subject, no fetch).
+ */
+export async function refreshCampaignHistoryForListing(
+  supabase: SupabaseClient,
+  params: {
+    propertyHash: string;
+    addr: SubjectAddress;
+    subjectEvent: CampaignEvent | null;
+    vowToken: string | undefined;
+    nowMs: number;
+    ttlHours?: number;
+  }
+): Promise<CampaignHistoryRow | null> {
+  const { propertyHash, addr, subjectEvent, vowToken, nowMs, ttlHours } = params;
+
+  let prior: CampaignHistoryRow | null = null;
+  try {
+    prior = await readCampaignHistory(supabase, propertyHash);
+  } catch {
+    prior = null;
+  }
+
+  // Fresh cache hit → serve as-is.
+  if (prior && !isLedgerStale(prior.fetched_at, nowMs, ttlHours)) return prior;
+  // No token → can't refresh; serve whatever we had (possibly null).
+  if (!vowToken) return prior;
+
+  let fetched: CampaignEvent[] = [];
+  try {
+    fetched = await fetchCampaignsByAddress(addr, vowToken);
+  } catch {
+    fetched = [];
+  }
+
+  const merged = mergeSubjectEvent(fetched, subjectEvent);
+  if (merged.length === 0) return prior; // nothing to build
+
+  const fresh = buildCampaignHistoryRow(propertyHash, merged, { nowMs });
+  const chosen = preferFreshOrPrior(fresh, prior, fetched.length);
+  if (chosen === fresh) {
+    try {
+      await upsertCampaignHistory(supabase, fresh);
+    } catch {
+      /* best-effort: still return the fresh metrics for this render */
+    }
+  }
+  return chosen;
 }
