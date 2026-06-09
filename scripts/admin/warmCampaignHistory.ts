@@ -109,13 +109,17 @@ async function main() {
   await pg.query("SET statement_timeout TO '0'");
   console.log('   pg connected (enumeration)\n');
 
-  // ── Enumeration (relist-hashes FIRST, JSONB active-filter LAST) ─────────────
-  // Compute the likely-relist HASH set using ONLY the indexed property_hash column
-  // (no JSONB) — addresses with >1 campaign in `listings` UNION any present in
-  // property_sale_history. Then narrow `listings` by `property_hash IN (...)`
-  // (idx_listings_property_hash) to a few thousand rows BEFORE the expensive
-  // full_payload->>'StandardStatus' detoast runs on that small subset. Reversing the
-  // order avoids a full-table JSONB scan of ~112k rows (which stalled the dry-run).
+  // ── Enumeration (likely-relist actives) ─────────────────────────────────────
+  // relist_hashes = addresses with >1 campaign in `listings` (Index-Only Scan on
+  // idx_listings_property_hash) UNION any present in property_sale_history (PK
+  // Index-Only Scan). The property_hash side is cheap. The cost is the active-status
+  // filter: there is NO index covering `full_payload->>'StandardStatus'` on its own
+  // (only idx_listings_active_city_lower, a partial btree keyed on lower(city)), so
+  // Postgres seq-scans + detoasts full_payload across all ~136k listings rows to apply
+  // it — this is the dominant cost and is IO-bound-slow on this instance (~5 min;
+  // CLAUDE.md §12 / supabase-io-budget). Reordering can't avoid it without a new
+  // partial index on the active-status expression (a migration, out of scope here).
+  // statement_timeout is disabled above so the scan can run to completion.
   const RELIST_HASHES_CTE = `
     relist_hashes AS (
       SELECT property_hash FROM listings
