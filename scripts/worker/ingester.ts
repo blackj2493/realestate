@@ -37,6 +37,7 @@ import { fetchRoomsForKeys } from './roomsEnrichment';
 import { enrichListingsWithMedia, preserveExistingMedia } from './mediaEnrichment';
 import { nextSyncCursor } from './syncCursor';
 import { describeError } from '@/lib/etl/describeError';
+import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
 
 // ============================================================================
 // Sold Listing Types
@@ -1207,6 +1208,23 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     const soldRecon = await reconcileMissingSoldMedia(VOW_TOKEN);
     result.reconciledSoldMedia = soldRecon.recovered;
     console.log(`\n✅ Query B2 Complete: recovered media on ${soldRecon.recovered}/${soldRecon.scanned} in-window sold listings`);
+
+    // ─── Query C: De-listed Sync (Terminated/Expired/Suspended) ─────────────
+    // Own cursor (sync_state id='delisted') and own try/catch: a Query C
+    // failure must never fail the A/B sync or move the master cursor.
+    console.log('\n════════════════════════════════════════════════');
+    console.log('  QUERY C: De-listed Listings Sync');
+    console.log('════════════════════════════════════════════════\n');
+    try {
+      const delisted = await runDelistedSync();
+      await pruneOldDelisted();
+      console.log(
+        `\n✅ Query C Complete: ${delisted.records} de-listed records, ${delisted.indexed} indexed, caughtUp=${delisted.caughtUp}`
+      );
+    } catch (err: any) {
+      console.warn(`\n⚠️  Query C failed (non-fatal for the A/B sync): ${err?.message || err}`);
+      result.errors.push(`delisted sync: ${err?.message || err}`);
+    }
 
     // ─── Finalize ───────────────────────────────────────────────────────────
     const now = new Date().toISOString();
