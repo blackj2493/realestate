@@ -6,10 +6,11 @@ import { LAYER_KEYS, type LayerKey } from "@/lib/sold/layers";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 const META: Record<LayerKey, { label: string; on: string }> = {
-  forSale: { label: "For Sale", on: "bg-emerald-500/15 text-emerald-300" },
-  sold:    { label: "Sold",     on: "bg-rose-500/15 text-rose-300" },
-  leased:  { label: "Leased",   on: "bg-violet-500/15 text-violet-300" },
-  forRent: { label: "For Rent", on: "bg-teal-500/15 text-teal-300" },
+  forSale:  { label: "For Sale",   on: "bg-emerald-500/15 text-emerald-300" },
+  sold:     { label: "Sold",       on: "bg-rose-500/15 text-rose-300" },
+  leased:   { label: "Leased",     on: "bg-violet-500/15 text-violet-300" },
+  delisted: { label: "De-listed",  on: "bg-amber-500/15 text-amber-300" },
+  forRent:  { label: "For Rent",   on: "bg-teal-500/15 text-teal-300" },
 };
 
 /** Independent multi-select status layers (any combination; never empty). */

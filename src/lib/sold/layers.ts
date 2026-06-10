@@ -1,7 +1,7 @@
 import type { TransactionMode } from "@/lib/filters/fundamentals";
 
-export type LayerKey = "forSale" | "sold" | "leased" | "forRent";
-export const LAYER_KEYS: LayerKey[] = ["forSale", "sold", "leased", "forRent"];
+export type LayerKey = "forSale" | "sold" | "leased" | "delisted" | "forRent";
+export const LAYER_KEYS: LayerKey[] = ["forSale", "sold", "leased", "delisted", "forRent"];
 
 /** Toggle a layer; never returns an empty set (the last lit layer stays on).
  *  forSale/forRent are mutually exclusive (different price contexts); lighting one
@@ -26,17 +26,20 @@ export function transactionModeForLayers(layers: Set<LayerKey>): TransactionMode
   return "sale";
 }
 
+export type CompKind = "sold" | "leased" | "delisted";
+
 export interface LayerQueryPlan {
   active: { enabled: true; sale: boolean; rent: boolean } | null;
-  comps: Array<"sold" | "leased">;
+  comps: CompKind[];
 }
 
 /** Which sources to fetch: one active Typesense query (sale/rent) + comp routes. */
 export function queryPlan(layers: Set<LayerKey>): LayerQueryPlan {
   const sale = layers.has("forSale");
   const rent = layers.has("forRent");
-  const comps: Array<"sold" | "leased"> = [];
+  const comps: CompKind[] = [];
   if (layers.has("sold")) comps.push("sold");
   if (layers.has("leased")) comps.push("leased");
+  if (layers.has("delisted")) comps.push("delisted");
   return { active: sale || rent ? { enabled: true, sale, rent } : null, comps };
 }
