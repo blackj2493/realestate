@@ -160,9 +160,9 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         )}
       </div>
 
-      {(activeLayers.has("sold") || activeLayers.has("leased")) && (
+      {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && (
         <p className="border-t border-slate-800 bg-slate-900 px-3 py-1.5 text-[9px] leading-tight text-slate-600">
-          Sold/leased data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
+          Sold/leased/de-listed data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
         </p>
       )}
 

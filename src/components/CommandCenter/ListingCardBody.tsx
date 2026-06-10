@@ -17,6 +17,7 @@ import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
 import { layerStatus, LAYER_TONE_CLASS } from "@/lib/listings/layerStatus";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { soldVsAsk } from "@/lib/sold/delta";
+import { isDelistedDealType } from "@/lib/sold/dealType";
 import type { ListingDocument } from "@/lib/typesense/client";
 
 /** "Listed N days ago" — EntryTimestamp is epoch MILLISECONDS; falls back to DaysOnMarket. */
@@ -62,8 +63,7 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
   if (doc.compKind || doc.IsSoldComp) {
     const status = layerStatus(doc);
     const isLeased = doc.compKind === "leased";
-    const isDelisted =
-      doc.compKind === "terminated" || doc.compKind === "expired" || doc.compKind === "suspended";
+    const isDelisted = isDelistedDealType(doc.compKind);
     const delta = isDelisted ? null : soldVsAsk(doc.ListPrice, doc.OriginalListPrice ?? null);
     // De-listed: ListPrice = final ask, OriginalListPrice = original ask → the
     // cut the seller made during the failed campaign.
@@ -99,7 +99,9 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
           <p className="mt-0.5 font-mono text-xs font-semibold text-amber-300">
             {askCut !== null
               ? `Cut ${askCut}% during campaign (from $${(doc.OriginalListPrice ?? 0).toLocaleString()})`
-              : "Last ask — did not sell"}
+              : doc.OriginalListPrice && doc.OriginalListPrice === doc.ListPrice
+                ? "No cuts during campaign — did not sell"
+                : "Last ask — did not sell"}
           </p>
         )}
         <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
