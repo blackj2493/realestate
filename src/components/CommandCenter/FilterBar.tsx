@@ -98,7 +98,7 @@ export default function FilterBar() {
     <div className="no-scrollbar flex h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3">
       {/* Listing-status layers — multi-select For Sale·Sold·Leased·For Rent. */}
       <LayerChips />
-      {(activeLayers.has("sold") || activeLayers.has("leased")) && <SoldWindowDropdown />}
+      {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && <SoldWindowDropdown />}
 
       {/* Everything else is the active-browse bar — hidden in comp-only mode. */}
       {!compOnly && (

@@ -266,7 +266,7 @@ function CommandCenterContent() {
   // (For Sale / For Rent) layer is also lit, its listings aren't gated and must stay visible.
   const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
   const showSoldLock = soldLocked && compOnly;
-  const soldLockMsg = `${totalCount.toLocaleString()} recent sale${totalCount === 1 ? "" : "s"} — sign in to view`;
+  const soldLockMsg = `${totalCount.toLocaleString()} gated market record${totalCount === 1 ? "" : "s"} — sign in to view`;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950">

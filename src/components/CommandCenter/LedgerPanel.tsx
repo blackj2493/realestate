@@ -56,11 +56,13 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
         <Zap className="h-3.5 w-3.5 text-cyan-400" />
         <p className="font-mono text-xs text-slate-400">
-          {(activeLayers.has("sold") || activeLayers.has("leased")) ? (
+          {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) ? (
             <>
               <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Comps
               <span className="mx-1.5 text-slate-600">|</span>
-              VOW · last <span className="text-cyan-400">{soldWindowDays}d</span>
+              {/* When only delisted is lit, clamp the displayed window to 90d to match the
+                  actual fetch cap (sold/leased are uncapped at 180d). */}
+              VOW · last <span className="text-cyan-400">{(!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")) ? Math.min(soldWindowDays, 90) : soldWindowDays}d</span>
             </>
           ) : (
             <>

@@ -16,6 +16,10 @@ describe("delisted layer", () => {
     expect(plan.comps).toEqual(["delisted"]);
     expect(plan.active).toBeNull();
   });
+
+  it("toggleLayer on an already-active delisted layer refuses to empty the set", () => {
+    expect(toggleLayer(new Set<LayerKey>(["delisted"]), "delisted").has("delisted")).toBe(true); // refuses to empty
+  });
 });
 
 describe("per-kind window clamp", () => {
@@ -56,6 +60,7 @@ describe("adapter — delisted comp", () => {
     expect(doc.DelistedDate).toBe("2026-05-22T00:00:00.000Z");
     expect(doc.DaysOnMarket).toBe(47);
     expect(doc.SoldDate).toBeUndefined();
+    expect(doc.LeasedDate).toBeUndefined();
     expect(doc.IsSoldComp).toBe(true);
   });
 });

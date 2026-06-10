@@ -546,6 +546,12 @@ export default function AlphaMap({
         if (selectedIds.has(listing.id)) return [34, 211, 238, 255];
         if (listing.compKind === "sold") return [244, 63, 94, 230];     // rose
         if (listing.compKind === "leased") return [167, 139, 250, 230]; // violet
+        if (
+          listing.compKind === "terminated" ||
+          listing.compKind === "expired" ||
+          listing.compKind === "suspended"
+        )
+          return [245, 158, 11, 230]; // amber — de-listed
         const c = getScatterColor(listing);
         return [c[0], c[1], c[2], 235];
       },
