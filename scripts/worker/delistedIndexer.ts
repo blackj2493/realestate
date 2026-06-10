@@ -63,7 +63,10 @@ export async function readDelistedCursor(defaultIso: string): Promise<string> {
   return data.last_sync_timestamp;
 }
 
-export async function updateDelistedCursor(timestamp: string, status: 'completed' | 'failed'): Promise<void> {
+export async function updateDelistedCursor(
+  timestamp: string,
+  status: 'running' | 'completed' | 'failed'
+): Promise<void> {
   const supabase = getServiceRoleClient();
   const { error } = await supabase
     .from('sync_state')
@@ -72,14 +75,20 @@ export async function updateDelistedCursor(timestamp: string, status: 'completed
   if (error) throw new Error(`update delisted cursor: ${error.message}`);
 }
 
-// ── feed fetch (cursor paging, no $skip) ─────────────────────────────────────
-async function fetchDelistedPage(cursorIso: string): Promise<any[]> {
+// ── feed fetch (keyset paging on (ModificationTimestamp, ListingKey)) ────────
+// TRREB ModificationTimestamps are second-precision: a bulk status change can
+// put >100 records in the same second, so `gt cursor` alone would silently
+// skip the same-timestamp tail. The (timestamp, key) keyset walks through it.
+async function fetchDelistedPage(cursorIso: string, afterKey: string | null): Promise<any[]> {
   const token = process.env.PROPTX_VOW_TOKEN;
   if (!token) throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
-  const filter = `${STATUS_FILTER} and ModificationTimestamp gt ${cursorIso}`;
+  const filter =
+    afterKey === null
+      ? `${STATUS_FILTER} and ModificationTimestamp gt ${cursorIso}`
+      : `${STATUS_FILTER} and (ModificationTimestamp gt ${cursorIso} or (ModificationTimestamp eq ${cursorIso} and ListingKey gt '${afterKey}'))`;
   const url =
     `${API_BASE_URL}/Property?$filter=${encodeURIComponent(filter)}` +
-    `&$orderby=${encodeURIComponent('ModificationTimestamp asc')}&$top=100`;
+    `&$orderby=${encodeURIComponent('ModificationTimestamp asc, ListingKey asc')}&$top=100`;
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
@@ -180,13 +189,20 @@ export interface DelistedSyncResult {
 export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<DelistedSyncResult> {
   const defaultIso = new Date(Date.now() - 48 * 3600_000).toISOString();
   let cursor = await readDelistedCursor(defaultIso);
+  // Same-second tail position within `cursor` — in-memory only. Persistence is
+  // timestamp-only: a restart re-fetches and re-upserts the same-second tail,
+  // which is idempotent and acceptable.
+  let afterKey: string | null = null;
   console.log(`   📖 De-listed cursor: ${cursor}`);
+  // A row stuck at 'running' = a run crashed mid-flight (success/failure
+  // overwrite it with 'completed'/'failed' below).
+  await updateDelistedCursor(cursor, 'running');
   const windowCutoff = Date.now() - DELISTED_WINDOW_DAYS * 86_400_000;
   const result: DelistedSyncResult = { records: 0, pages: 0, indexed: 0, caughtUp: false };
 
   try {
     while (result.pages < maxPages) {
-      const listings = await fetchDelistedPage(cursor);
+      const listings = await fetchDelistedPage(cursor, afterKey);
       if (listings.length === 0) {
         result.caughtUp = true;
         break;
@@ -220,18 +236,25 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
         }
       }
 
-      // Advance the cursor to the last record's ModificationTimestamp.
-      const lastMod = listings[listings.length - 1]?.ModificationTimestamp;
-      if (!lastMod || lastMod === cursor) {
-        // Defensive: a page that can't advance the cursor would loop forever.
+      // Advance the (ModificationTimestamp, ListingKey) keyset to the last record.
+      const last = listings[listings.length - 1];
+      if (!last?.ModificationTimestamp) {
+        // Defensive: a page that can't advance the keyset would loop forever.
+        console.warn('   ⚠️  Page has no ModificationTimestamp on its last record — stopping.');
         result.caughtUp = listings.length < 100;
         break;
       }
-      cursor = lastMod;
+      if (last.ModificationTimestamp === cursor) {
+        // Same-second run: progress through it via the key, timestamp unchanged.
+        afterKey = last.ListingKey;
+      } else {
+        cursor = last.ModificationTimestamp;
+        afterKey = last.ListingKey ?? null;
+      }
       result.records += listings.length;
       result.pages++;
       console.log(
-        `   📄 De-listed page ${result.pages}: +${listings.length} (cursor → ${cursor})`
+        `   📄 De-listed page ${result.pages}: +${listings.length} (cursor → ${cursor}${afterKey ? ` after ${afterKey}` : ''})`
       );
       if (listings.length < 100) {
         result.caughtUp = true;
@@ -259,19 +282,34 @@ if (invokedDirectly) {
   (async () => {
     const mode = process.argv[2] || 'delta';
     if (mode === 'backfill') {
-      // Seed the cursor 12 months back ONLY when it's still at its default
-      // (never clobber an in-progress catch-up — backfill is resumable).
       const archiveStart = new Date(
         Date.now() - DELISTED_ARCHIVE_MONTHS * 30.44 * 86_400_000
       ).toISOString();
-      const current = await readDelistedCursor(archiveStart);
+      let current = await readDelistedCursor(archiveStart);
+      // The nightly delta may have created the row at its 48h default, which
+      // would limit a "backfill" to 48 hours. Rewind any cursor newer than the
+      // archive start (upserts make the overlap safe). A cursor at/before the
+      // archive start is an in-progress backfill — keep it (resumable).
+      if (current > archiveStart) {
+        await updateDelistedCursor(archiveStart, 'completed');
+        current = archiveStart;
+        console.log(`🌱 Cursor rewound to ${archiveStart} for 12-month backfill`);
+      }
       console.log(`🌱 De-listed backfill from cursor ${current}`);
       let total = 0;
-      for (;;) {
+      let caughtUp = false;
+      // Hard ceiling: 100 × 200 pages × 100 records = 2M, far beyond any real backfill.
+      for (let i = 0; i < 100; i++) {
         const r = await runDelistedSync(200);
         total += r.records;
         console.log(`   …${total} records so far (caughtUp=${r.caughtUp})`);
-        if (r.caughtUp) break;
+        if (r.caughtUp) {
+          caughtUp = true;
+          break;
+        }
+      }
+      if (!caughtUp) {
+        console.warn('   ⚠️  Backfill hit the 100-iteration ceiling without catching up — re-run to resume.');
       }
       await pruneOldDelisted();
       console.log(`✅ Backfill complete: ${total} records archived.`);
