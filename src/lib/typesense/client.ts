@@ -188,10 +188,12 @@ export interface ListingDocument {
   IsSoldComp?: boolean;
   /** Sold ("purchase contract") date as ISO string — sold comps only. */
   SoldDate?: string;
-  /** Comp layer for an adapted VOW comp ('sold' | 'leased'); absent for active docs. */
-  compKind?: "sold" | "leased";
+  /** Comp layer for an adapted VOW comp; absent for active docs. */
+  compKind?: "sold" | "leased" | "terminated" | "expired" | "suspended";
   /** Leased ("contract") date as ISO string — leased comps only. */
   LeasedDate?: string;
+  /** De-list date as ISO string — terminated/expired/suspended comps only. */
+  DelistedDate?: string;
 
   // Entry timestamp (epoch) — sortable; powers "freshest" + since-last-visit.
   EntryTimestamp?: number;

@@ -31,6 +31,12 @@ import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { mapSoldDoc, type SoldListing } from "./soldMapper";
+import {
+  buildSoldFilter,
+  parsePolygonParam,
+  type SoldArea,
+  type SoldParams,
+} from "./soldFilter";
 
 // Re-export so existing importers (MarketActivityPanel.tsx) keep resolving it here.
 export type { SoldListing } from "./soldMapper";
@@ -39,7 +45,6 @@ export const dynamic = "force-dynamic";
 
 const MAX_WINDOW_DAYS = SOLD_DISPLAY_MAX_DAYS;
 const MAX_LIST = 100; // TRREB per-query display cap
-const DAY_MS = 86_400_000;
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -60,90 +65,6 @@ function getSoldClient(): Client {
   return soldClient;
 }
 
-/**
- * Area scoping for a sold query. Exactly one variant must be set; precedence at
- * the call site (GET handler) is polygon > nearby_school > region so a caller
- * accidentally passing multiple gets the most-specific filter.
- *
- *   - region:        traditional city/neighbourhood scoping (existing behaviour)
- *   - polygon:       [lat, lng, lat, lng, ...] from a draw / commute bubble
- *   - nearbySchool:  exact NearbySchools id (school catchment bubble)
- */
-type SoldArea =
-  | { kind: "region"; region: string }
-  | { kind: "polygon"; polygon: [number, number][] }
-  | { kind: "school"; schoolKey: string };
-
-interface SoldParams {
-  area: SoldArea;
-  windowDays: number;
-  typeKeys: string[];
-  minBeds: number;
-  minBaths: number;
-  minGarage: number;
-  basementFinished: boolean;
-  minFrontage: number;
-  limit: number;
-  dealType: "sold" | "leased";
-}
-
-/** Build the Typesense area clause (one per kind) — see SoldArea docstring. */
-function buildAreaClause(area: SoldArea): string {
-  if (area.kind === "polygon") {
-    const coords = area.polygon.map(([lat, lng]) => `${lat}, ${lng}`).join(", ");
-    return `location:(${coords})`;
-  }
-  if (area.kind === "school") {
-    const safe = area.schoolKey.replace(/`/g, "");
-    return `NearbySchools:=\`${safe}\``;
-  }
-  const safe = area.region.replace(/`/g, "");
-  return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
-}
-
-/** Build the Typesense filter_by string for the sold lens (mirrors buildActivityFilter). */
-function buildSoldFilter(p: SoldParams): string {
-  const cutoffMs = Math.floor(Date.now() - p.windowDays * DAY_MS);
-  const clauses: string[] = [
-    buildAreaClause(p.area),
-    `PurchaseContractDate:>=${cutoffMs}`,
-    `PurchaseContractDate:<=${Date.now()}`, // defensive: no future contract dates
-    `DealType:=${p.dealType}`,
-    `ClosePrice:>=1`,
-  ];
-
-  const variants = variantsForKeys(p.typeKeys);
-  if (variants.length > 0) {
-    const ors = variants.map((v) => `PropertySubType:=\`${v.replace(/`/g, "")}\``);
-    clauses.push(`(${ors.join(" || ")})`);
-  }
-  if (p.minBeds > 0) clauses.push(`BedroomsTotal:>=${p.minBeds}`);
-  if (p.minBaths > 0) clauses.push(`BathroomsTotalInteger:>=${p.minBaths}`);
-  if (p.minGarage > 0) clauses.push(`ParkingTotal:>=${p.minGarage}`);
-  // BasementTier 1-5 = finished/partially-finished space (deterministic tier).
-  if (p.basementFinished) clauses.push(`BasementTier:<=5`);
-  if (p.minFrontage > 0) clauses.push(`LotWidth:>=${p.minFrontage}`);
-
-  return clauses.join(" && ");
-}
-
-/**
- * Parse a flat `lat,lng,lat,lng,...` polygon param. Returns null on any shape
- * issue (odd count, < 3 vertices, non-finite values) so the caller can fail
- * the request cleanly rather than ship a degenerate filter to Typesense.
- */
-function parsePolygonParam(raw: string): [number, number][] | null {
-  const nums = raw
-    .split(",")
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n));
-  if (nums.length % 2 !== 0) return null;
-  if (nums.length < 6) return null; // ≥ 3 vertices required by Typesense
-  const out: [number, number][] = [];
-  for (let i = 0; i < nums.length; i += 2) out.push([nums[i], nums[i + 1]]);
-  return out;
-}
-
 async function computeSold(
   p: SoldParams
 ): Promise<{ count: number; listings: SoldListing[] }> {
@@ -155,7 +76,7 @@ async function computeSold(
     .search({
       q: "*",
       query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
-      filter_by: buildSoldFilter(p),
+      filter_by: buildSoldFilter(p, (keys) => variantsForKeys(keys)),
       sort_by: "PurchaseContractDate:desc",
       per_page: p.limit,
       page: 1,
@@ -200,11 +121,15 @@ export async function GET(req: NextRequest) {
     return Number.isFinite(n) && n > 0 ? n : d;
   };
 
-  const dealType = sp.get("dealType") === "leased" ? "leased" : "sold";
+  const dealTypeRaw = sp.get("dealType");
+  const dealType: SoldParams["dealType"] =
+    dealTypeRaw === "leased" ? "leased" : dealTypeRaw === "delisted" ? "delisted" : "sold";
+  // De-listed window is capped at its Typesense retention (90d).
+  const maxWindow = dealType === "delisted" ? 90 : MAX_WINDOW_DAYS;
 
   const params: SoldParams = {
     area,
-    windowDays: Math.min(num("windowDays", 1), MAX_WINDOW_DAYS),
+    windowDays: Math.min(num("windowDays", 1), maxWindow),
     typeKeys: (sp.get("types") || "").split(",").map((s) => s.trim()).filter(Boolean),
     minBeds: num("minBeds"),
     minBaths: num("minBaths"),
