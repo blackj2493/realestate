@@ -38,6 +38,7 @@ import { enrichListingsWithMedia, preserveExistingMedia } from './mediaEnrichmen
 import { nextSyncCursor } from './syncCursor';
 import { describeError } from '@/lib/etl/describeError';
 import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
+import { isDelistedDealType } from '@/lib/sold/dealType';
 
 // ============================================================================
 // Sold Listing Types
@@ -831,7 +832,7 @@ async function reconcileMissingSoldMedia(
       exported = (await ts
         .collections(SOLD_LISTINGS_COLLECTION)
         .documents()
-        .export({ include_fields: 'id,primaryImageUrl,PurchaseContractDate' })) as unknown as string;
+        .export({ include_fields: 'id,primaryImageUrl,PurchaseContractDate,DealType' })) as unknown as string;
     } catch (err: any) {
       console.warn(`   ⚠️  Sold reconciliation export failed (non-fatal): ${err?.message || err}`);
       return { scanned: 0, recovered: 0 };
@@ -846,6 +847,8 @@ async function reconcileMissingSoldMedia(
       } catch {
         continue;
       }
+      // De-listed docs are photo-less by design — never reconciliation candidates (they'd starve the 500-slot budget).
+      if (isDelistedDealType(d?.DealType)) continue;
       if (d?.id && !d.primaryImageUrl) candidates.push({ id: d.id, pcd: Number(d.PurchaseContractDate) || 0 });
     }
     if (candidates.length === 0) {

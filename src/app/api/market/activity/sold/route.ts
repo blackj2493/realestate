@@ -29,7 +29,7 @@ import Typesense, { Client } from "typesense";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
 import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
 import { getConsumer } from "@/lib/auth/requireConsumer";
-import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
+import { SOLD_DISPLAY_MAX_DAYS, DELISTED_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { mapSoldDoc, type SoldListing } from "./soldMapper";
 import {
   buildSoldFilter,
@@ -124,8 +124,8 @@ export async function GET(req: NextRequest) {
   const dealTypeRaw = sp.get("dealType");
   const dealType: SoldParams["dealType"] =
     dealTypeRaw === "leased" ? "leased" : dealTypeRaw === "delisted" ? "delisted" : "sold";
-  // De-listed window is capped at its Typesense retention (90d).
-  const maxWindow = dealType === "delisted" ? 90 : MAX_WINDOW_DAYS;
+  // De-listed window is capped at its Typesense retention (DELISTED_DISPLAY_MAX_DAYS).
+  const maxWindow = dealType === "delisted" ? DELISTED_DISPLAY_MAX_DAYS : MAX_WINDOW_DAYS;
 
   const params: SoldParams = {
     area,

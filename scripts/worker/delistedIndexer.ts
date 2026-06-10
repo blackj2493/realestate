@@ -223,6 +223,10 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
       }
 
       // These listings left Active — their For Sale docs are frozen stale.
+      // Inverse edge: a Suspended/Terminated listing that re-activates under the SAME
+      // ListingKey re-enters `properties` via Query A on its next modification, but its
+      // amber comp doc remains in sold_listings for up to 90d (dual markers) — accepted,
+      // same class as the sold deal-fell-through edge.
       const keys = records.map((r) => r.listing_key);
       if (keys.length > 0) {
         try {
