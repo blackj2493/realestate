@@ -79,13 +79,12 @@ export async function updateDelistedCursor(
 // TRREB ModificationTimestamps are second-precision: a bulk status change can
 // put >100 records in the same second, so `gt cursor` alone would silently
 // skip the same-timestamp tail. The (timestamp, key) keyset walks through it.
-async function fetchDelistedPage(cursorIso: string, afterKey: string | null): Promise<any[]> {
+async function fetchDelistedPage(cursorIso: string, afterKey: string): Promise<any[]> {
   const token = process.env.PROPTX_VOW_TOKEN;
   if (!token) throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
-  const filter =
-    afterKey === null
-      ? `${STATUS_FILTER} and ModificationTimestamp gt ${cursorIso}`
-      : `${STATUS_FILTER} and (ModificationTimestamp gt ${cursorIso} or (ModificationTimestamp eq ${cursorIso} and ListingKey gt '${afterKey}'))`;
+  // Always the keyset form: with afterKey = '' it behaves as `>= cursorIso`
+  // (every ListingKey is > ''), so the cursor-second is always covered.
+  const filter = `${STATUS_FILTER} and (ModificationTimestamp gt ${cursorIso} or (ModificationTimestamp eq ${cursorIso} and ListingKey gt '${afterKey}'))`;
   const url =
     `${API_BASE_URL}/Property?$filter=${encodeURIComponent(filter)}` +
     `&$orderby=${encodeURIComponent('ModificationTimestamp asc, ListingKey asc')}&$top=100`;
@@ -189,10 +188,10 @@ export interface DelistedSyncResult {
 export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<DelistedSyncResult> {
   const defaultIso = new Date(Date.now() - 48 * 3600_000).toISOString();
   let cursor = await readDelistedCursor(defaultIso);
-  // Same-second tail position within `cursor` — in-memory only. Persistence is
-  // timestamp-only: a restart re-fetches and re-upserts the same-second tail,
-  // which is idempotent and acceptable.
-  let afterKey: string | null = null;
+  // afterKey is in-memory only; on restart the keyset filter starts at
+  // (cursor, '') which re-fetches the whole cursor-second — idempotent, and
+  // guarantees a mid-tail interruption never skips records.
+  let afterKey = '';
   console.log(`   📖 De-listed cursor: ${cursor}`);
   // A row stuck at 'running' = a run crashed mid-flight (success/failure
   // overwrite it with 'completed'/'failed' below).
@@ -246,10 +245,10 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
       }
       if (last.ModificationTimestamp === cursor) {
         // Same-second run: progress through it via the key, timestamp unchanged.
-        afterKey = last.ListingKey;
+        afterKey = last.ListingKey ?? afterKey;
       } else {
         cursor = last.ModificationTimestamp;
-        afterKey = last.ListingKey ?? null;
+        afterKey = last.ListingKey ?? '';
       }
       result.records += listings.length;
       result.pages++;
