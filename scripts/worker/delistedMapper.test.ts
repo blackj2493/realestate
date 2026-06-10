@@ -91,6 +91,78 @@ describe('extractDelistedRecord', () => {
     expect(r.postal_code).toBe('N5A 8B6');
   });
 
+  it('maps an expired raw listing — deal_type expired, delisted_date = ExpirationDate', () => {
+    const r = extractDelistedRecord(
+      {
+        ...RAW_TERMINATED,
+        MlsStatus: 'Expired',
+        TerminatedDate: undefined,
+        ExpirationDate: '2026-04-30',
+        ModificationTimestamp: '2026-05-01T05:15:22Z',
+      },
+      NOW
+    )!;
+    expect(r).not.toBeNull();
+    expect(r.deal_type).toBe('expired');
+    expect(r.delisted_date).toBe('2026-04-30');
+  });
+
+  it('expired with a FUTURE ExpirationDate falls back to the ModificationTimestamp date', () => {
+    const r = extractDelistedRecord(
+      {
+        ...RAW_TERMINATED,
+        MlsStatus: 'Expired',
+        TerminatedDate: undefined,
+        ExpirationDate: '2026-12-31',
+        ModificationTimestamp: '2026-05-18T09:30:00Z',
+      },
+      NOW
+    )!;
+    expect(r).not.toBeNull();
+    expect(r.deal_type).toBe('expired');
+    expect(r.delisted_date).toBe('2026-05-18');
+  });
+
+  it('maps a suspended raw listing — deal_type suspended, delisted_date = SuspendedDate', () => {
+    const r = extractDelistedRecord(
+      {
+        ...RAW_TERMINATED,
+        MlsStatus: 'Suspended',
+        TerminatedDate: undefined,
+        SuspendedDate: '2026-04-07',
+        ModificationTimestamp: '2026-04-07T22:52:33Z',
+      },
+      NOW
+    )!;
+    expect(r).not.toBeNull();
+    expect(r.deal_type).toBe('suspended');
+    expect(r.delisted_date).toBe('2026-04-07');
+  });
+
+  it('falls back to ListingId when ListingKey is missing', () => {
+    const r = extractDelistedRecord(
+      { ...RAW_TERMINATED, ListingKey: undefined, ListingId: 'W99887766' },
+      NOW
+    )!;
+    expect(r).not.toBeNull();
+    expect(r.listing_key).toBe('W99887766');
+  });
+
+  it('joins the address from street components when UnparsedAddress is null', () => {
+    const r = extractDelistedRecord(
+      {
+        ...RAW_TERMINATED,
+        UnparsedAddress: null,
+        StreetNumber: '19',
+        StreetName: 'Hossie Terrace',
+        UnitNumber: undefined,
+      },
+      NOW
+    )!;
+    expect(r).not.toBeNull();
+    expect(r.unparsed_address).toBe('19 Hossie Terrace');
+  });
+
   it('returns null for non-delisted statuses and for missing event dates', () => {
     expect(extractDelistedRecord({ ...RAW_TERMINATED, MlsStatus: 'Sold' }, NOW)).toBeNull();
     expect(
@@ -114,6 +186,8 @@ describe('toDelistedDocument', () => {
     expect(doc.OriginalListPrice).toBe(949000);
     expect(doc.DaysOnMarket).toBe(47);
     expect(doc.TransactionType).toBe('For Sale');
+    // Brokerage display is a TRREB §4 compliance field — pin it.
+    expect(doc.ListOfficeName).toBe('Acme Realty');
     expect(doc.PurchaseContractDate).toBe(new Date('2026-05-22').getTime());
     // Strict-schema required fields all present with fallbacks:
     expect(doc.BuildingAreaTotal).toBe(0);

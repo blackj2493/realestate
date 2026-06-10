@@ -28,7 +28,9 @@ function numOrNull(v: unknown): number | null {
 /** YYYY-MM-DD from a date-ish string; null when unparseable. */
 function isoDateOrNull(v: unknown): string | null {
   if (!v || typeof v !== 'string') return null;
-  const ms = new Date(v).getTime();
+  // Normalize bare YYYY-MM-DD to UTC midnight to avoid local-time mis-slice on UTC+ servers
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T00:00:00Z` : v;
+  const ms = new Date(normalized).getTime();
   if (!Number.isFinite(ms)) return null;
   return new Date(ms).toISOString().slice(0, 10);
 }
