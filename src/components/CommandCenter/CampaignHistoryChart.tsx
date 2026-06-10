@@ -72,7 +72,7 @@ function monthTicks(tMin: number, tMax: number): number[] {
 
 /* ── price-path lane (event-spaced) ──────────────────────────────────────── */
 function PricePathLane({ path }: { path: PricePathPoint[] }) {
-  const X0 = 60, X1 = 988, YT = 22, YB = 96;
+  const X0 = 70, X1 = 900, YT = 22, YB = 96;
   const prices = path.map((p) => p.price);
   let pMin = Math.min(...prices), pMax = Math.max(...prices);
   if (pMin === pMax) { pMin -= 1; pMax += 1; }
@@ -124,65 +124,77 @@ function PricePathLane({ path }: { path: PricePathPoint[] }) {
   );
 }
 
-/* ── ribbon lane (time-scaled) ───────────────────────────────────────────── */
+/* ── ribbon lane (time-scaled, SEPARATE Sale / Lease rows) ───────────────────
+ * Sale and Lease get their own row so concurrent campaigns (a home listed for
+ * sale AND lease at once) never overlap. Bars are colored periods; prices live
+ * in the price-path lane above and the table below, so bars stay label-light
+ * (only wide bars show a price) — no cramped status text to collide. */
 function RibbonLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: number | null }) {
-  const X0 = 44, X1 = 988, BY = 58, BH = 44;
+  const X0 = 60, X1 = 924, ROW_H = 30, GAP = 16, TOP = 48;
   const tMin = Math.min(...bars.map((b) => b.startMs));
   const tMax = Math.max(...bars.map((b) => b.endMs));
   const sx = (t: number) => (tMax === tMin ? X0 : X0 + ((t - tMin) / (tMax - tMin)) * (X1 - X0));
+
+  const saleRows = bars.filter((b) => b.kind === "Sale");
+  const leaseRows = bars.filter((b) => b.kind === "Lease");
+  const lanes = [{ label: "Sale", rows: saleRows }, ...(leaseRows.length ? [{ label: "Lease", rows: leaseRows }] : [])];
+
+  const rowY = (i: number) => TOP + i * (ROW_H + GAP);
+  const monthY = TOP + lanes.length * (ROW_H + GAP) + 2;
+  const H = monthY + 16;
   const ticks = monthTicks(tMin, tMax);
 
   const current = bars.filter((b) => b.isCurrent);
   const span = current.length
-    ? { x1: Math.min(...current.map((b) => sx(b.startMs))), x2: Math.max(...current.map((b) => sx(b.endMs))) }
+    ? {
+        x1: Math.max(X0, Math.min(...current.map((b) => sx(b.startMs))) - 3),
+        x2: Math.min(X1, Math.max(...current.map((b) => sx(b.endMs))) + 3),
+      }
     : null;
+  const bracketCx = span ? Math.min(Math.max((span.x1 + span.x2) / 2, X0 + 36), X1 - 36) : 0;
 
   return (
-    <svg viewBox="0 0 1000 165" className="block h-auto w-full" role="img" aria-label="campaign timeline by date">
+    <svg viewBox={`0 0 1000 ${H}`} className="block h-auto w-full" role="img" aria-label="campaign timeline by date">
       <g stroke="#1e293b" strokeWidth={1}>
-        {ticks.map((t) => <line key={t} x1={sx(t)} y1={BY - 14} x2={sx(t)} y2={BY + BH + 8} />)}
+        {ticks.map((t) => <line key={t} x1={sx(t)} y1={TOP - 8} x2={sx(t)} y2={monthY - 6} />)}
       </g>
-      <g fill="#64748b" fontSize={11.5} fontFamily={MONO}>
-        {ticks.map((t) => <text key={t} x={sx(t)} y={BY + BH + 26}>{monthLabel(t)}</text>)}
+      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="middle">
+        {ticks.map((t) => <text key={t} x={sx(t)} y={monthY + 8}>{monthLabel(t)}</text>)}
       </g>
 
-      {/* current stitched span → True DOM */}
       {span && (
         <>
-          <rect x={span.x1 - 4} y={BY - 4} width={span.x2 - span.x1 + 8} height={BH + 8} rx={7} fill={CYAN} opacity={0.08} />
-          <line x1={span.x1 - 4} y1={BY - 16} x2={span.x2 + 4} y2={BY - 16} stroke={CYAN} strokeWidth={1.2} />
+          <line x1={span.x1} y1={TOP - 14} x2={span.x2} y2={TOP - 14} stroke={CYAN} strokeWidth={1.2} />
           {trueDom != null && (
-            <text x={(span.x1 + span.x2) / 2} y={BY - 21} fill={CYAN} fontSize={11.5} fontFamily={MONO} textAnchor="middle">
-              True DOM {trueDom}d
-            </text>
+            <text x={bracketCx} y={TOP - 19} fill={CYAN} fontSize={11} fontFamily={MONO} textAnchor="middle">True DOM {trueDom}d</text>
           )}
         </>
       )}
 
-      {bars.map((b) => {
-        const x1 = sx(b.startMs);
-        const w = Math.max(sx(b.endMs) - x1, 30);
-        const cx = x1 + w / 2;
-        const sale = b.kind === "Sale";
-        const label = b.priceChanged && b.startPrice != null && b.endPrice != null
-          ? `${compactPrice(b.startPrice)}→${compactPrice(b.endPrice)}`
-          : b.startPrice != null ? compactPrice(b.startPrice) : "—";
-        return (
-          <g key={b.listingKey}>
-            <rect
-              x={x1} y={BY} width={w} height={BH} rx={6}
-              fill={sale ? SALE : LEASE}
-              stroke={b.isCurrent ? CYAN : "none"} strokeWidth={b.isCurrent ? 2 : 0}
-            />
-            <text x={cx} y={BY + 26} fill={sale ? "#062e22" : "#042c43"} fontSize={w < 70 ? 10 : 12} fontWeight={700} textAnchor="middle" fontFamily={MONO}>
-              {label}
-            </text>
-            <text x={cx} y={BY + BH + 16} fill={statusColor(b.endStatus)} fontSize={10.5} textAnchor="middle" fontFamily={MONO}>
-              {sale ? STATUS_LABEL[b.endStatus] : `Lease · ${STATUS_LABEL[b.endStatus]}`}
-            </text>
-          </g>
-        );
-      })}
+      <g fill="#64748b" fontSize={10} fontFamily={MONO}>
+        {lanes.map((ln, i) => <text key={ln.label} x={6} y={rowY(i) + ROW_H / 2 + 3.5}>{ln.label}</text>)}
+      </g>
+
+      {lanes.map((ln, i) =>
+        ln.rows.map((b) => {
+          const x1 = sx(b.startMs);
+          const w = Math.max(Math.min(sx(b.endMs), X1) - x1, 20);
+          const isSale = b.kind === "Sale";
+          const label = b.priceChanged && b.startPrice != null && b.endPrice != null
+            ? `${compactPrice(b.startPrice)}→${compactPrice(b.endPrice)}`
+            : b.startPrice != null ? compactPrice(b.startPrice) : "";
+          return (
+            <g key={b.listingKey}>
+              <rect x={x1} y={rowY(i)} width={w} height={ROW_H} rx={5}
+                fill={isSale ? SALE : LEASE}
+                stroke={b.isCurrent ? CYAN : "none"} strokeWidth={b.isCurrent ? 2 : 0} />
+              {w >= 64 && label && (
+                <text x={x1 + w / 2} y={rowY(i) + ROW_H / 2 + 4} fill={isSale ? "#062e22" : "#042c43"} fontSize={11} fontWeight={700} textAnchor="middle" fontFamily={MONO}>{label}</text>
+              )}
+            </g>
+          );
+        })
+      )}
     </svg>
   );
 }
