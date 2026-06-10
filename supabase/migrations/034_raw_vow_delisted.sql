@@ -43,3 +43,9 @@ CREATE INDEX IF NOT EXISTS idx_raw_vow_delisted_city_date
   ON raw_vow_delisted (city, delisted_date DESC);
 
 ALTER TABLE raw_vow_delisted ENABLE ROW LEVEL SECURITY;
+
+-- Keep updated_at fresh on row updates (shared function from migration 001).
+DROP TRIGGER IF EXISTS update_raw_vow_delisted_updated_at ON raw_vow_delisted;
+CREATE TRIGGER update_raw_vow_delisted_updated_at
+  BEFORE UPDATE ON raw_vow_delisted
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

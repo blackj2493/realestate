@@ -11,6 +11,11 @@ import 'dotenv/config';
 import Typesense from 'typesense';
 import { SOLD_LISTINGS_COLLECTION } from '../../src/lib/typesense/soldListingsSchema';
 
+if (!process.env.TYPESENSE_ADMIN_API_KEY) {
+  console.error('❌ TYPESENSE_ADMIN_API_KEY not set');
+  process.exit(1);
+}
+
 const NEW_FIELDS = [
   { name: 'DaysOnMarket', type: 'int32' as const, facet: false, optional: true, sort: true },
   { name: 'TransactionType', type: 'string' as const, facet: true, optional: true },
