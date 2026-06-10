@@ -117,10 +117,12 @@ the feed forever):
 
 - `DealType` gains values `terminated` | `expired` | `suspended`
   (existing facet — no schema change needed for values).
-- **Two added fields:** `DaysOnMarket` (int32, optional, default 0) and
+- **Three added fields:** `DaysOnMarket` (int32, optional, default 0);
   `TransactionType` (string facet, optional, default '' — needed to filter
   terminated lease listings out of the sale-lead view; legacy sold docs
-  simply carry the default).
+  simply carry the default); `OriginalListPrice` (int32, optional — the
+  original ask of the failed campaign, powering the §5.6 ask-cut delta;
+  `ListPrice` carries the FINAL ask for de-listed rows).
 - `PurchaseContractDate` (the window/sort field) holds the **de-list event
   date** for these DealTypes — rename its doc comment to "event date the row
   is windowed on". `ClosePrice: 0` for de-listed docs.
