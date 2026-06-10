@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import RenovationFunnel from '@/components/reno/RenovationFunnel';
-import { loadCohortTree } from '@/lib/avm/loadCohortTree';
+import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
 import AppHeader from '@/components/layout/AppHeader';
 
@@ -43,7 +43,7 @@ export default async function WhatsMyHomeHidingPage({
   searchParams: Promise<{ community?: string }>;
 }) {
   const { community: slug } = await searchParams;
-  const tree = await loadCohortTree();
+  const tree = await loadCohortTreeSafe();
   const resolved = slug ? resolveCommunitySlug(tree, slug) : null;
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
