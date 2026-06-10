@@ -23,6 +23,11 @@ import {
 } from '@/lib/typesense/TemporalDistressEngine';
 import { refreshCampaignHistoryForListing } from '@/lib/campaignHistory/store';
 import { normalizeCampaign, type RawVowCampaign } from '@/lib/campaignHistory/normalize';
+import {
+  NON_ACTIVE_STATUSES,
+  collectStaleSearchDocIds,
+  buildIdDeleteFilters,
+} from './staleSearchDocs';
 
 // ============================================================================
 // Configuration
@@ -289,9 +294,6 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
   // are never indexed: nothing in the frontend searches them and they only consume
   // Typesense RAM (caused bulk-sync OOM). Sold/lease comps are served from Supabase;
   // the Supabase `listings` table still keeps every status for True DOM history.
-  const NON_ACTIVE_STATUSES = new Set([
-    'sold', 'closed', 'closed sale', 'leased', 'terminated', 'expired', 'suspended',
-  ]);
   const searchableDocs = options?.isSold
     ? [] // entire sold batch (Query B) — never indexed
     : typesenseDocuments.filter(
@@ -373,6 +375,32 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     }
   }
   } // end else — non-active listings excluded from the Typesense index
+
+  // Step 8: Delete stale docs from the search index. A doc upserted while the
+  // listing was Active otherwise freezes in `properties` forever ("New" at the
+  // old list price) because Query A only fetches StandardStatus eq 'Active' and
+  // sold batches skip the Typesense write. Entire sold (Query B) batch + any
+  // terminal-status docs filtered out of an active batch are deleted here.
+  const staleIds = collectStaleSearchDocIds(typesenseDocuments, options);
+  if (staleIds.length > 0) {
+    try {
+      const client = getAdminClient();
+      let deleted = 0;
+      for (const filter of buildIdDeleteFilters(staleIds)) {
+        const res: any = await client
+          .collections('properties')
+          .documents()
+          .delete({ filter_by: filter } as any);
+        deleted += res?.num_deleted ?? 0;
+      }
+      console.log(`   🧹 Typesense: ${deleted} stale doc(s) deleted (${staleIds.length} keys checked)`);
+    } catch (err: any) {
+      // Non-fatal: a missed delete only leaves a stale doc for the next sold
+      // batch or backfill purge to retry — never fail the sync over cleanup.
+      result.typesense.errors.push(`stale-doc delete failed: ${err.message}`);
+      console.warn(`   ⚠️  Stale-doc delete failed (non-fatal): ${err?.message || err}`);
+    }
+  }
 
   console.log('\n📊 Sync Result:', {
     total: rawListings.length,
