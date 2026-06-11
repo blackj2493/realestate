@@ -26,9 +26,11 @@ export async function GET(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
+  // select * keeps this route working before and after migration 034 adds the
+  // alert columns (an explicit unknown column would 500 the read).
   const { data, error } = await supabase
     .from("market_bubbles")
-    .select("id, name, area_type, polygon, source, filters, created_at, updated_at")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
 
@@ -42,6 +44,8 @@ interface PatchBody {
   filters?: unknown;
   polygon?: [number, number][];
   source?: unknown;
+  /** Nightly new-listing digest toggle (migration 034). */
+  alerts_enabled?: boolean;
 }
 
 export async function PATCH(
@@ -83,6 +87,11 @@ export async function PATCH(
     patch.polygon = body.polygon;
   }
   if (body.source !== undefined) patch.source = body.source;
+  if (body.alerts_enabled !== undefined) {
+    if (typeof body.alerts_enabled !== "boolean")
+      return NextResponse.json({ error: "alerts_enabled must be boolean" }, { status: 400 });
+    patch.alerts_enabled = body.alerts_enabled;
+  }
 
   if (Object.keys(patch).length === 0)
     return NextResponse.json({ error: "no updatable fields supplied" }, { status: 400 });
@@ -91,7 +100,7 @@ export async function PATCH(
     .from("market_bubbles")
     .update(patch)
     .eq("id", id)
-    .select("id, name, area_type, polygon, source, filters, created_at, updated_at")
+    .select("*")
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

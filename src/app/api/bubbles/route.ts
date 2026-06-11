@@ -82,6 +82,10 @@ function rowToBubble(r: Record<string, unknown>): Bubble {
     filters: r.filters as BubblePayload["filters"],
     created_at: r.created_at as string,
     updated_at: r.updated_at as string,
+    // Alert fields (migration 034). Mapped optionally so a pre-034 database
+    // (column absent from `select *`) still serializes — defaults to ON client-side.
+    alerts_enabled: typeof r.alerts_enabled === "boolean" ? r.alerts_enabled : undefined,
+    notify_since: (r.notify_since as string | null | undefined) ?? null,
   };
 }
 
@@ -92,9 +96,11 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ items: [] }, { status: 401 });
 
+  // select * so the route works both before and after migration 034 adds the
+  // alert columns (an explicit unknown column would 500 the whole list).
   const { data, error } = await supabase
     .from("market_bubbles")
-    .select("id, name, area_type, polygon, source, filters, created_at, updated_at")
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ items: [], error: error.message }, { status: 500 });
@@ -122,7 +128,7 @@ export async function POST(req: Request) {
       source: v.payload.source,
       filters: v.payload.filters,
     })
-    .select("id, name, area_type, polygon, source, filters, created_at, updated_at")
+    .select("*")
     .single();
 
   if (error) {
