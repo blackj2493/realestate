@@ -38,7 +38,7 @@ export function buildEventRows(events: CampaignEvent[]): TimelineRow[] {
         price: e.original_list_price ?? e.list_price, deltaPct: null,
       });
     }
-    if (e.price_change_date && e.original_list_price != null && e.list_price != null && e.original_list_price !== e.list_price) {
+    if (e.price_change_date && e.original_list_price != null && e.original_list_price > 0 && e.list_price != null && e.original_list_price !== e.list_price) {
       rows.push({
         ...base, date: e.price_change_date, kind: 'Price Changed',
         price: e.list_price,

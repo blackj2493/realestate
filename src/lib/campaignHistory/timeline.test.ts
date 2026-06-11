@@ -105,6 +105,25 @@ describe('buildSalePricePath', () => {
   });
 });
 
+describe('buildEventRows — zero original_list_price guard (audit HIGH-4)', () => {
+  it('omits the Price Changed row entirely when original_list_price is 0 (no Infinity)', () => {
+    // original_list_price = 0 is a real TRREB data-quality case — division by it
+    // produced Infinity and the UI rendered "Infinity%" (audit HIGH-4).
+    const rows = buildEventRows([
+      ev({
+        entry_date: '2026-01-01',
+        price_change_date: '2026-01-10',
+        original_list_price: 0,
+        list_price: 500_000,
+      }),
+    ]);
+    expect(rows.filter((r) => r.kind === 'Price Changed')).toHaveLength(0);
+    for (const r of rows) {
+      if (r.deltaPct != null) expect(Number.isFinite(r.deltaPct)).toBe(true);
+    }
+  });
+});
+
 describe('summarizeSaleHistory', () => {
   it('reports original (first sale list) → current (latest sale list) and the % cut', () => {
     const s = summarizeSaleHistory(chain363);
