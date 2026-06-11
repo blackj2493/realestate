@@ -99,12 +99,9 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
           <span className="normal-case tracking-normal">{doc.id}</span>
           <span className="text-slate-600">·</span>
           <span>{type}</span>
-          {doc.ListOfficeName && (
-            <>
-              <span className="text-slate-600">·</span>
-              <span className="truncate normal-case tracking-normal">{doc.ListOfficeName}</span>
-            </>
-          )}
+          {/* TRREB §6.3(c): brokerage must always be displayed — fallback, never omit */}
+          <span className="text-slate-600">·</span>
+          <span className="truncate normal-case tracking-normal">{doc.ListOfficeName || "Brokerage unavailable"}</span>
         </div>
       </>
     );
@@ -164,12 +161,9 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
         <span className="normal-case tracking-normal">{doc.id}</span>
         <span className="text-slate-600">·</span>
         <span>{type}</span>
-        {doc.ListOfficeName && (
-          <>
-            <span className="text-slate-600">·</span>
-            <span className="truncate normal-case tracking-normal">{doc.ListOfficeName}</span>
-          </>
-        )}
+        {/* TRREB §6.3(c): brokerage must always be displayed — fallback, never omit */}
+        <span className="text-slate-600">·</span>
+        <span className="truncate normal-case tracking-normal">{doc.ListOfficeName || "Brokerage unavailable"}</span>
       </div>
     </>
   );
