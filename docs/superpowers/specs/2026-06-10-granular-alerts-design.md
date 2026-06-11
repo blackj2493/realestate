@@ -32,9 +32,10 @@ per user, then advances the baseline. No ingester changes, no event ledger.
 
 - **Phase A: no migration.** `watchlist.last_known_status` (015) is the baseline; the worker
   already refreshes it nightly — it just never compared it.
-- **Phase B: migration 034** (next free slot; 030–033 are taken):
+- **Phase B: migration 034** (next free slot; 030–033 are taken). The table is `market_bubbles`
+  (migration 025):
   ```sql
-  ALTER TABLE public.bubbles
+  ALTER TABLE public.market_bubbles
     ADD COLUMN IF NOT EXISTS alerts_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS notify_since   TIMESTAMPTZ;  -- NULL = not yet baselined
   ```
@@ -56,6 +57,8 @@ as `raw.Status || raw.MlsStatus || raw.StandardStatus`; terminal spellings per
    already terminal → resolve why, in order:
    a. `sold_listings` collection lookup by id (= listing_key), `DealType='sold'` → **SOLD** (tease).
    b. Supabase `listings` row status is terminal → **Off market (terminated/expired/suspended)**.
+      The listings table keeps no flat status column — read it from the JSONB payload:
+      `.select("status:full_payload->>MlsStatus")` (single-row lookup by indexed listing_key).
    c. Otherwise → **No longer active** (generic).
    The resolved status is written to `last_known_status` so it never re-fires; a later reappearance
    in the active index fires **Back On Market** via rule 1.
@@ -66,10 +69,15 @@ Price-drop behavior is unchanged.
 
 One Typesense `properties` search per bubble:
 - Area: `location:(lat1, lng1, lat2, lng2, …)` for draw/commute polygons; school bubbles use
-  `NearbySchools:=\`key\`` (same clauses as `src/lib/bubbles/stats.ts` `buildAreaClause` — reuse it).
+  `NearbySchools:=\`key\`` (same clauses as `src/lib/bubbles/stats.ts` `buildAreaClause` — export
+  and reuse it).
 - Freshness: `EntryTimestamp:>{notify_since ms}` (int64 unix ms, from OriginalEntryTimestamp).
-- Bubble filters: map the stored `filters` JSONB (commandCenterStore slice: minPrice/maxPrice/
-  minBedrooms/…) to Typesense clauses — reuse/extend the mapping already used by bubble stats.
+- **Scope correction (verified in code):** bubbles do NOT persist the universal price/beds
+  filters — `BubbleFiltersSnapshot.filters` is `TerminalFilterState`, persona investor thresholds
+  only (minCapRate, minPriceDrop, staleOnly…), several of which are meaningless or zero-matching
+  for brand-new listings (e.g. minPriceDrop). Matching is therefore **area + sales floor only**
+  (`ListPrice:>=100000`, same as bubble stats, which deliberately skips saved filters too).
+  Applying saved filters becomes future work if/when universal filters are persisted on bubbles.
 - `per_page` ≤ 100 (§6.3b), sorted `EntryTimestamp:desc`.
 
 Watermark semantics: read rows where `alerts_enabled`; if `notify_since IS NULL`, set it to run
