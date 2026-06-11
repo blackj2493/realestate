@@ -77,6 +77,10 @@ export interface Bubble extends BubblePayload {
   id: string;
   created_at: string;
   updated_at: string;
+  /** Nightly new-listing digest toggle (default ON; migration 034). Optional so
+   *  pre-034 API payloads stay assignable. */
+  alerts_enabled?: boolean;
+  notify_since?: string | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────

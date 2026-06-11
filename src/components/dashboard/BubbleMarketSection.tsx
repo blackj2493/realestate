@@ -23,6 +23,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Bell,
+  BellOff,
   Compass,
   ExternalLink,
   GraduationCap,
@@ -182,6 +184,36 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
   );
 }
 
+/**
+ * Per-bubble nightly new-listing alert toggle (default ON — migration 034).
+ * Optimistic flip via the bubbles store; pre-034 rows lack the field and are
+ * treated as ON, matching the column default.
+ */
+function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
+  const setAlertsEnabled = useBubblesStore((s) => s.setAlertsEnabled);
+  const enabled = bubble.alerts_enabled !== false;
+  return (
+    <button
+      type="button"
+      onClick={() => setAlertsEnabled(bubble.id, !enabled)}
+      aria-pressed={enabled}
+      title={
+        enabled
+          ? "New-listing alerts ON — click to mute this area"
+          : "New-listing alerts muted — click to enable"
+      }
+      className={cn(
+        "flex h-7 w-7 items-center justify-center border transition-colors",
+        enabled
+          ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+          : "border-slate-700 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+      )}
+    >
+      {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
+
 export default function BubbleMarketSection({
   bubble,
   lens,
@@ -218,6 +250,7 @@ export default function BubbleMarketSection({
           >
             <ExternalLink className="h-3 w-3" /> Open in Terminal
           </button>
+          <BubbleAlertToggle bubble={bubble} />
           <BubbleSectionMenu bubble={bubble} />
         </>
       }
