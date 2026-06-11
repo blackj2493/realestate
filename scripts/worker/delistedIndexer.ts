@@ -75,19 +75,20 @@ export async function updateDelistedCursor(
   if (error) throw new Error(`update delisted cursor: ${error.message}`);
 }
 
-// ── feed fetch (keyset paging on (ModificationTimestamp, ListingKey)) ────────
+// ── feed fetch (single-orderby paging; AMPRE rejects compound $orderby) ──────
 // TRREB ModificationTimestamps are second-precision: a bulk status change can
 // put >100 records in the same second, so `gt cursor` alone would silently
-// skip the same-timestamp tail. The (timestamp, key) keyset walks through it.
-async function fetchDelistedPage(cursorIso: string, afterKey: string): Promise<any[]> {
+// skip the same-timestamp tail. AMPRE rejects both compound $orderby and
+// keyset or-filters with error 1109 "The URI is malformed" (probe-verified
+// 2026-06-10), so the tail is handled by DRAINING the boundary second with an
+// `eq` filter + $skip — the same $skip pattern Query A/B already rely on.
+async function fetchDelistedPage(filter: string, skip = 0): Promise<any[]> {
   const token = process.env.PROPTX_VOW_TOKEN;
   if (!token) throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
-  // Always the keyset form: with afterKey = '' it behaves as `>= cursorIso`
-  // (every ListingKey is > ''), so the cursor-second is always covered.
-  const filter = `${STATUS_FILTER} and (ModificationTimestamp gt ${cursorIso} or (ModificationTimestamp eq ${cursorIso} and ListingKey gt '${afterKey}'))`;
   const url =
     `${API_BASE_URL}/Property?$filter=${encodeURIComponent(filter)}` +
-    `&$orderby=${encodeURIComponent('ModificationTimestamp asc, ListingKey asc')}&$top=100`;
+    `&$orderby=${encodeURIComponent('ModificationTimestamp asc')}&$top=100` +
+    (skip > 0 ? `&$skip=${skip}` : '');
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
@@ -188,10 +189,6 @@ export interface DelistedSyncResult {
 export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<DelistedSyncResult> {
   const defaultIso = new Date(Date.now() - 48 * 3600_000).toISOString();
   let cursor = await readDelistedCursor(defaultIso);
-  // afterKey is in-memory only; on restart the keyset filter starts at
-  // (cursor, '') which re-fetches the whole cursor-second — idempotent, and
-  // guarantees a mid-tail interruption never skips records.
-  let afterKey = '';
   console.log(`   📖 De-listed cursor: ${cursor}`);
   // A row stuck at 'running' = a run crashed mid-flight (success/failure
   // overwrite it with 'completed'/'failed' below).
@@ -199,70 +196,97 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
   const windowCutoff = Date.now() - DELISTED_WINDOW_DAYS * 86_400_000;
   const result: DelistedSyncResult = { records: 0, pages: 0, indexed: 0, caughtUp: false };
 
+  /** Persist one page: archive upsert + windowed index + stale-active delete. */
+  const persistPage = async (listings: any[]): Promise<void> => {
+    const nowMs = Date.now();
+    const records = listings
+      .map((l) => extractDelistedRecord(l, nowMs))
+      .filter((r): r is DelistedRecord => r !== null);
+
+    await upsertDelistedRecords(records);
+
+    const docs = records
+      .map((r) => toWindowedDoc(r, windowCutoff))
+      .filter((d): d is SoldListingDocument => d !== null);
+    if (docs.length > 0) {
+      const { success, failed } = await importSoldBatch(getSoldAdminClient(), docs);
+      result.indexed += success;
+      if (failed > 0) console.warn(`   ⚠️  ${failed} de-listed docs failed to index`);
+    }
+
+    // These listings left Active — their For Sale docs are frozen stale.
+    // Inverse edge: a Suspended/Terminated listing that re-activates under the SAME
+    // ListingKey re-enters `properties` via Query A on its next modification, but its
+    // amber comp doc remains in sold_listings for up to 90d (dual markers) — accepted,
+    // same class as the sold deal-fell-through edge.
+    const keys = records.map((r) => r.listing_key);
+    if (keys.length > 0) {
+      try {
+        const ts = getSoldAdminClient();
+        for (const filter of buildIdDeleteFilters(keys)) {
+          await ts.collections('properties').documents().delete({ filter_by: filter } as any);
+        }
+      } catch (err: any) {
+        console.warn(`   ⚠️  Stale-active delete failed (non-fatal): ${err.message}`);
+      }
+    }
+  };
+
   try {
     while (result.pages < maxPages) {
-      const listings = await fetchDelistedPage(cursor, afterKey);
+      const listings = await fetchDelistedPage(
+        `${STATUS_FILTER} and ModificationTimestamp gt ${cursor}`
+      );
       if (listings.length === 0) {
         result.caughtUp = true;
         break;
       }
-      const nowMs = Date.now();
-      const records = listings
-        .map((l) => extractDelistedRecord(l, nowMs))
-        .filter((r): r is DelistedRecord => r !== null);
+      await persistPage(listings);
+      result.records += listings.length;
+      result.pages++;
 
-      await upsertDelistedRecords(records);
-
-      const docs = records
-        .map((r) => toWindowedDoc(r, windowCutoff))
-        .filter((d): d is SoldListingDocument => d !== null);
-      if (docs.length > 0) {
-        const { success, failed } = await importSoldBatch(getSoldAdminClient(), docs);
-        result.indexed += success;
-        if (failed > 0) console.warn(`   ⚠️  ${failed} de-listed docs failed to index`);
-      }
-
-      // These listings left Active — their For Sale docs are frozen stale.
-      // Inverse edge: a Suspended/Terminated listing that re-activates under the SAME
-      // ListingKey re-enters `properties` via Query A on its next modification, but its
-      // amber comp doc remains in sold_listings for up to 90d (dual markers) — accepted,
-      // same class as the sold deal-fell-through edge.
-      const keys = records.map((r) => r.listing_key);
-      if (keys.length > 0) {
-        try {
-          const ts = getSoldAdminClient();
-          for (const filter of buildIdDeleteFilters(keys)) {
-            await ts.collections('properties').documents().delete({ filter_by: filter } as any);
-          }
-        } catch (err: any) {
-          console.warn(`   ⚠️  Stale-active delete failed (non-fatal): ${err.message}`);
-        }
-      }
-
-      // Advance the (ModificationTimestamp, ListingKey) keyset to the last record.
-      const last = listings[listings.length - 1];
-      if (!last?.ModificationTimestamp) {
-        // Defensive: a page that can't advance the keyset would loop forever.
+      const lastTs = listings[listings.length - 1]?.ModificationTimestamp;
+      if (!lastTs) {
+        // Defensive: a page that can't advance the cursor would loop forever.
         console.warn('   ⚠️  Page has no ModificationTimestamp on its last record — stopping.');
         result.caughtUp = listings.length < 100;
         break;
       }
-      if (last.ModificationTimestamp === cursor) {
-        // Same-second run: progress through it via the key, timestamp unchanged.
-        afterKey = last.ListingKey ?? afterKey;
-      } else {
-        cursor = last.ModificationTimestamp;
-        afterKey = last.ListingKey ?? '';
-      }
-      result.records += listings.length;
-      result.pages++;
-      console.log(
-        `   📄 De-listed page ${result.pages}: +${listings.length} (cursor → ${cursor}${afterKey ? ` after ${afterKey}` : ''})`
-      );
+      console.log(`   📄 De-listed page ${result.pages}: +${listings.length} (cursor → ${lastTs})`);
+
       if (listings.length < 100) {
+        // Short page = feed exhausted; the boundary second arrived complete.
+        cursor = lastTs;
         result.caughtUp = true;
         break;
       }
+
+      // Full page: the boundary may have split lastTs's second (second-precision
+      // feed; bulk status changes can exceed 100 records/second). Drain that
+      // second fully via `eq` + $skip before advancing the cursor past it. The
+      // overlap with rows already persisted above is idempotent (upserts).
+      let drainComplete = false;
+      const eqFilter = `${STATUS_FILTER} and ModificationTimestamp eq ${lastTs}`;
+      for (let skip = 0; result.pages < maxPages; skip += 100) {
+        await sleep(PAGE_DELAY_MS);
+        const drain = await fetchDelistedPage(eqFilter, skip);
+        if (drain.length > 0) {
+          await persistPage(drain);
+          result.records += drain.length;
+          result.pages++;
+          console.log(`   📄 De-listed drain: +${drain.length} @ ${lastTs} (skip ${skip})`);
+        }
+        if (drain.length < 100) {
+          drainComplete = true;
+          break;
+        }
+      }
+      if (!drainComplete) {
+        // Page cap hit mid-drain — leave the cursor BEFORE lastTs so the next
+        // run re-fetches and re-drains that second (idempotent), never skips it.
+        break;
+      }
+      cursor = lastTs;
       await sleep(PAGE_DELAY_MS);
     }
     await updateDelistedCursor(cursor, 'completed');
