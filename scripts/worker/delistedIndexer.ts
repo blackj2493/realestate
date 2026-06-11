@@ -104,6 +104,10 @@ async function fetchDelistedPage(filter: string, skip = 0): Promise<any[]> {
 export async function upsertDelistedRecords(records: DelistedRecord[]): Promise<void> {
   if (records.length === 0) return;
   const supabase = getServiceRoleClient();
+  // Board data sends fractional values where you'd expect integers (e.g.
+  // ParkingTotal "3.5", DaysOnMarket "3.5") — round for the INTEGER columns
+  // or Postgres rejects the whole batch ("invalid input syntax for type integer").
+  const intOrNull = (v: number | null): number | null => (v == null ? null : Math.round(v));
   const rows = records.map((r) => ({
     listing_key: r.listing_key,
     mls_status: r.mls_status,
@@ -114,15 +118,15 @@ export async function upsertDelistedRecords(records: DelistedRecord[]): Promise<
     listing_contract_date: r.listing_contract_date,
     list_price: r.list_price,
     original_list_price: r.original_list_price,
-    days_on_market: r.days_on_market,
+    days_on_market: intOrNull(r.days_on_market),
     unparsed_address: r.unparsed_address,
     city: r.city,
     city_region: r.city_region,
     postal_code: r.postal_code,
     property_sub_type: r.property_sub_type,
-    bedrooms_above_grade: r.bedrooms_above_grade,
+    bedrooms_above_grade: intOrNull(r.bedrooms_above_grade),
     bathrooms_total_integer: r.bathrooms_total_integer,
-    parking_total: r.parking_total,
+    parking_total: intOrNull(r.parking_total),
     list_office_name: r.list_office_name,
     lat: null as number | null,
     lng: null as number | null,
