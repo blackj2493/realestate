@@ -4,8 +4,8 @@
 
 "use client";
 
-import { useState } from "react";
-import { Heart, Check } from "lucide-react";
+import { Check } from "lucide-react";
+import WatchHeart from "@/components/watchlist/WatchHeart";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
@@ -115,7 +115,6 @@ function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; is
 }
 
 export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false }: LedgerRowProps) {
-  const [isSaved, setIsSaved] = useState(false);
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
 
@@ -167,15 +166,11 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
             className="absolute left-1 top-1 z-10 backdrop-blur-sm"
           />
         )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsSaved(!isSaved);
-          }}
+        <WatchHeart
+          item={{ listing_key: property.id, address: property.UnparsedAddress, city: property.City, thumb: src, list_price: property.ListPrice, status: property.Status }}
           className="absolute right-1 top-1 z-10 rounded-none bg-slate-900/70 p-1 transition-colors hover:bg-slate-900"
-        >
-          <Heart className={cn("h-3.5 w-3.5", isSaved ? "fill-red-500 text-red-500" : "text-slate-400")} />
-        </button>
+          iconClassName="h-3.5 w-3.5 text-slate-400"
+        />
       </div>
 
       {columns.map((col) => (

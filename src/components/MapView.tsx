@@ -3,8 +3,9 @@
 import { useState, useCallback, useMemo, useEffect, memo, useRef } from "react";
 import Map, { Marker, NavigationControl, GeolocateControl, Popup, MapRef } from "react-map-gl/mapbox";
 import Supercluster from "supercluster";
-import { MapPin, X, Bed, Bath, Heart, ExternalLink, Building2 } from "lucide-react";
+import { MapPin, X, Bed, Bath, ExternalLink, Building2 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import WatchHeart from "@/components/watchlist/WatchHeart";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 // Property type matching your API response
@@ -365,9 +366,11 @@ export default function MapView({
                 )}
                 
                 {/* Favorite Button */}
-                <button className="absolute top-3 right-3 p-2 bg-white/95 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors">
-                  <Heart className="h-4 w-4 text-slate-600" />
-                </button>
+                <WatchHeart
+                  item={{ listing_key: selectedProperty.ListingKey, address: selectedProperty.UnparsedAddress, city: selectedProperty.City, thumb: selectedProperty.photoUrl ?? undefined, list_price: selectedProperty.ListPrice }}
+                  className="absolute top-3 right-3 p-2 bg-white/95 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
+                  iconClassName="h-4 w-4 text-slate-600"
+                />
               </div>
               
               {/* Content Section */}
