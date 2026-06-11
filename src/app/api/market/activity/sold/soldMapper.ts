@@ -17,8 +17,12 @@ export interface SoldListing {
   /** Latitude/longitude for map pins; null when the postal code didn't resolve. */
   lat: number | null;
   lng: number | null;
-  /** 'sold' | 'leased' — real-values deal type from the index. */
-  dealType: "sold" | "leased";
+  /** 'sold' | 'leased' | de-list reason — real-values deal type from the index. */
+  dealType: "sold" | "leased" | "terminated" | "expired" | "suspended";
+  /** Days the campaign survived (de-listed rows). */
+  daysOnMarket: number | null;
+  /** Original ask of a failed campaign (de-listed rows). */
+  originalListPrice: number | null;
 }
 
 export const posOrNull = (v: unknown): number | null => {
@@ -45,6 +49,10 @@ export function mapSoldDoc(d: Record<string, unknown>): SoldListing {
     primaryImageUrl: (d.primaryImageUrl as string) || null,
     lat: loc && Number.isFinite(loc[0]) ? loc[0] : null,
     lng: loc && Number.isFinite(loc[1]) ? loc[1] : null,
-    dealType: (d.DealType as string) === "leased" ? "leased" : "sold",
+    dealType: (["leased", "terminated", "expired", "suspended"] as const).find(
+      (v) => d.DealType === v
+    ) ?? "sold",
+    daysOnMarket: posOrNull(d.DaysOnMarket),
+    originalListPrice: posOrNull(d.OriginalListPrice),
   };
 }

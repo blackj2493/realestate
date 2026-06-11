@@ -18,6 +18,8 @@ const base: SoldListing = {
   lat: 43.65,
   lng: -79.38,
   dealType: "sold",
+  daysOnMarket: null,
+  originalListPrice: null,
 };
 
 describe("soldToListingDocument", () => {
@@ -66,6 +68,8 @@ describe("soldToListingDocument", () => {
       brokerage: null,
       city: null,
       primaryImageUrl: null,
+      daysOnMarket: null,
+      originalListPrice: null,
     };
     const doc = soldToListingDocument(leased);
     expect(doc.compKind).toBe("leased");

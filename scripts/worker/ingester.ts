@@ -37,6 +37,8 @@ import { fetchRoomsForKeys } from './roomsEnrichment';
 import { enrichListingsWithMedia, preserveExistingMedia } from './mediaEnrichment';
 import { nextSyncCursor } from './syncCursor';
 import { describeError } from '@/lib/etl/describeError';
+import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
+import { isDelistedDealType } from '@/lib/sold/dealType';
 
 // ============================================================================
 // Sold Listing Types
@@ -830,7 +832,7 @@ async function reconcileMissingSoldMedia(
       exported = (await ts
         .collections(SOLD_LISTINGS_COLLECTION)
         .documents()
-        .export({ include_fields: 'id,primaryImageUrl,PurchaseContractDate' })) as unknown as string;
+        .export({ include_fields: 'id,primaryImageUrl,PurchaseContractDate,DealType' })) as unknown as string;
     } catch (err: any) {
       console.warn(`   ⚠️  Sold reconciliation export failed (non-fatal): ${err?.message || err}`);
       return { scanned: 0, recovered: 0 };
@@ -845,6 +847,8 @@ async function reconcileMissingSoldMedia(
       } catch {
         continue;
       }
+      // De-listed docs are photo-less by design — never reconciliation candidates (they'd starve the 500-slot budget).
+      if (isDelistedDealType(d?.DealType)) continue;
       if (d?.id && !d.primaryImageUrl) candidates.push({ id: d.id, pcd: Number(d.PurchaseContractDate) || 0 });
     }
     if (candidates.length === 0) {
@@ -1207,6 +1211,23 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     const soldRecon = await reconcileMissingSoldMedia(VOW_TOKEN);
     result.reconciledSoldMedia = soldRecon.recovered;
     console.log(`\n✅ Query B2 Complete: recovered media on ${soldRecon.recovered}/${soldRecon.scanned} in-window sold listings`);
+
+    // ─── Query C: De-listed Sync (Terminated/Expired/Suspended) ─────────────
+    // Own cursor (sync_state id='delisted') and own try/catch: a Query C
+    // failure must never fail the A/B sync or move the master cursor.
+    console.log('\n════════════════════════════════════════════════');
+    console.log('  QUERY C: De-listed Listings Sync');
+    console.log('════════════════════════════════════════════════\n');
+    try {
+      const delisted = await runDelistedSync();
+      await pruneOldDelisted();
+      console.log(
+        `\n✅ Query C Complete: ${delisted.records} de-listed records, ${delisted.indexed} indexed, caughtUp=${delisted.caughtUp}`
+      );
+    } catch (err: any) {
+      console.warn(`\n⚠️  Query C failed (non-fatal for the A/B sync): ${err?.message || err}`);
+      result.errors.push(`delisted sync: ${err?.message || err}`);
+    }
 
     // ─── Finalize ───────────────────────────────────────────────────────────
     const now = new Date().toISOString();

@@ -17,8 +17,13 @@ export const SOLD_WINDOW_OPTIONS: number[] = [1, 3, 7, 30, 90, 180].filter(
   (d) => d <= SOLD_DISPLAY_MAX_DAYS
 );
 
-/** Clamp a requested window to [1, cap]; non-finite falls back to the cap. */
-export function clampWindowDays(days: number): number {
-  if (!Number.isFinite(days)) return SOLD_DISPLAY_MAX_DAYS;
-  return Math.min(SOLD_DISPLAY_MAX_DAYS, Math.max(1, Math.floor(days)));
+/** De-listed comps live in a 90-day Typesense window (design spec 2026-06-09). */
+export const DELISTED_DISPLAY_MAX_DAYS = 90;
+
+/** Clamp a requested window to [1, cap]; the cap depends on the comp kind.
+ *  Existing 1-arg callers receive the sold/leased cap (unchanged behaviour). */
+export function clampWindowDays(days: number, kind: "sold" | "leased" | "delisted" = "sold"): number {
+  const cap = kind === "delisted" ? DELISTED_DISPLAY_MAX_DAYS : SOLD_DISPLAY_MAX_DAYS;
+  if (!Number.isFinite(days)) return cap;
+  return Math.min(cap, Math.max(1, Math.floor(days)));
 }

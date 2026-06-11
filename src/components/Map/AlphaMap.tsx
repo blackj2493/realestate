@@ -10,6 +10,7 @@ import { Layers, MapPin } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { isDelistedDealType } from "@/lib/sold/dealType";
 import { ALPHA_GLOW_RANGE, type MapColorConfig } from "@/lib/personas/personaConfig";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import {
@@ -546,6 +547,7 @@ export default function AlphaMap({
         if (selectedIds.has(listing.id)) return [34, 211, 238, 255];
         if (listing.compKind === "sold") return [244, 63, 94, 230];     // rose
         if (listing.compKind === "leased") return [167, 139, 250, 230]; // violet
+        if (isDelistedDealType(listing.compKind)) return [245, 158, 11, 230]; // amber — de-listed
         const c = getScatterColor(listing);
         return [c[0], c[1], c[2], 235];
       },

@@ -57,6 +57,18 @@ export const soldListingsSchema = {
     // Real-values deal type ('sold' | 'leased') — replaces the $50k price proxy for
     // separating closed sales from closed leases. Faceted so the route can filter exactly.
     { name: 'DealType', type: 'string' as const, facet: true, optional: true },
+    // ─── De-listed comps (design spec 2026-06-09) ─────────────────────────────
+    // DealType additionally carries 'terminated' | 'expired' | 'suspended' for
+    // de-listed rows; PurchaseContractDate then holds the DE-LIST event date
+    // (the field is "the event date the row is windowed/sorted on").
+    // How long the failed campaign survived — the card's "survived N days".
+    { name: 'DaysOnMarket', type: 'int32' as const, facet: false, optional: true, sort: true },
+    // 'For Sale' | 'For Lease' — keeps terminated lease listings out of the
+    // sale-lead view. Optional: legacy sold docs simply omit it.
+    { name: 'TransactionType', type: 'string' as const, facet: true, optional: true },
+    // Original ask of the failed campaign — powers the "cut N% during campaign"
+    // delta (ListPrice carries the FINAL ask for de-listed rows).
+    { name: 'OriginalListPrice', type: 'int32' as const, facet: false, optional: true, sort: true },
   ],
   default_sorting_field: 'PurchaseContractDate',
 };
@@ -79,11 +91,18 @@ export interface SoldListingDocument {
   ListOfficeName?: string;
   /** Best-fit thumbnail URL picked at index time from raw_payload media/images. */
   primaryImageUrl?: string;
-  PurchaseContractDate: number; // epoch ms
+  /** Event date (sold-firm date, or de-list date for de-listed rows) as epoch ms. */
+  PurchaseContractDate: number;
   /** [lat, lng] — present only when postal-code resolution was a Tier-1 hit. */
   location?: [number, number];
   /** School ids within NEARBY_RADIUS_KM (2.5) — populated alongside `location`. */
   NearbySchools?: string[];
-  /** 'sold' | 'leased' — derived from MlsStatus/TransactionType at index time. */
-  DealType?: 'sold' | 'leased';
+  /** 'sold' | 'leased' | de-list reason — derived at index time. */
+  DealType?: 'sold' | 'leased' | 'terminated' | 'expired' | 'suspended';
+  /** Days the campaign survived before the de-list event (de-listed rows). */
+  DaysOnMarket?: number;
+  /** 'For Sale' | 'For Lease' — present on de-listed rows. */
+  TransactionType?: string;
+  /** Original ask of a failed campaign (de-listed rows). */
+  OriginalListPrice?: number;
 }

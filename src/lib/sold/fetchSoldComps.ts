@@ -15,7 +15,7 @@ export interface SoldQueryArgs {
   location: string;
   windowDays: number;
   limit: number;
-  dealType: "sold" | "leased";
+  dealType: "sold" | "leased" | "delisted";
   /** Basic property filters to constrain comp results. Only beds/baths/types — no
    *  persona/investor metrics (comps have no forward metrics). */
   filters?: {
@@ -38,7 +38,7 @@ export function buildSoldQuery({ mapBounds, location, windowDays, limit, dealTyp
   } else {
     return "";
   }
-  p.set("windowDays", String(clampWindowDays(windowDays)));
+  p.set("windowDays", String(clampWindowDays(windowDays, dealType)));
   p.set("limit", String(limit));
   p.set("dealType", dealType);
   if (filters?.minBeds) p.set("minBeds", String(filters.minBeds));
@@ -54,7 +54,7 @@ export interface SoldCompsResult {
 }
 
 export async function fetchSoldComps(
-  args: Omit<SoldQueryArgs, "dealType"> & { kinds?: Array<"sold" | "leased"> }
+  args: Omit<SoldQueryArgs, "dealType"> & { kinds?: Array<"sold" | "leased" | "delisted"> }
 ): Promise<SoldCompsResult> {
   const kinds = args.kinds ?? ["sold"]; // default keeps existing callers working
   const results = await Promise.all(

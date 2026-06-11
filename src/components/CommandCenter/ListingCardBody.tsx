@@ -17,6 +17,7 @@ import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
 import { layerStatus, LAYER_TONE_CLASS } from "@/lib/listings/layerStatus";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { soldVsAsk } from "@/lib/sold/delta";
+import { isDelistedDealType } from "@/lib/sold/dealType";
 import type { ListingDocument } from "@/lib/typesense/client";
 
 /** "Listed N days ago" — EntryTimestamp is epoch MILLISECONDS; falls back to DaysOnMarket. */
@@ -62,8 +63,15 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
   if (doc.compKind || doc.IsSoldComp) {
     const status = layerStatus(doc);
     const isLeased = doc.compKind === "leased";
-    const delta = soldVsAsk(doc.ListPrice, doc.OriginalListPrice ?? null);
-    const onIso = isLeased ? doc.LeasedDate : doc.SoldDate;
+    const isDelisted = isDelistedDealType(doc.compKind);
+    const delta = isDelisted ? null : soldVsAsk(doc.ListPrice, doc.OriginalListPrice ?? null);
+    // De-listed: ListPrice = final ask, OriginalListPrice = original ask → the
+    // cut the seller made during the failed campaign.
+    const askCut =
+      isDelisted && doc.OriginalListPrice && doc.ListPrice && doc.OriginalListPrice > doc.ListPrice
+        ? Math.round(((doc.OriginalListPrice - doc.ListPrice) / doc.OriginalListPrice) * 100)
+        : null;
+    const onIso = isLeased ? doc.LeasedDate : isDelisted ? doc.DelistedDate : doc.SoldDate;
     const on = onIso ? new Date(onIso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : null;
     const deltaTone =
       delta?.direction === "over" ? "text-rose-300" : delta?.direction === "under" ? "text-emerald-300" : "text-slate-300";
@@ -74,6 +82,9 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
             {status.label}
           </span>
           {on && <span className="text-slate-500">{on}</span>}
+          {isDelisted && (doc.DaysOnMarket ?? 0) > 0 && (
+            <span className="text-slate-500">· survived {doc.DaysOnMarket}d</span>
+          )}
         </div>
         <p className="mt-0.5 truncate font-sans text-base font-bold text-cyan-300">
           {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}${isLeased ? "/mo" : ""}` : "—"}
@@ -82,6 +93,15 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
           <p className={cn("mt-0.5 font-mono text-xs font-semibold", deltaTone)}>
             {delta.direction === "at" ? "At ask" : `${delta.deltaPct > 0 ? "+" : ""}${delta.deltaPct}% ${delta.direction} ask`}
             <span className="ml-1 text-slate-500">(asked ${(doc.OriginalListPrice ?? 0).toLocaleString()})</span>
+          </p>
+        )}
+        {isDelisted && (
+          <p className="mt-0.5 font-mono text-xs font-semibold text-amber-300">
+            {askCut !== null
+              ? `Cut ${askCut}% during campaign (from $${(doc.OriginalListPrice ?? 0).toLocaleString()})`
+              : doc.OriginalListPrice && doc.OriginalListPrice === doc.ListPrice
+                ? "No cuts during campaign — did not sell"
+                : "Last ask — did not sell"}
           </p>
         )}
         <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
