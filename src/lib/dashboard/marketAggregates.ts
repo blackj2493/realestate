@@ -28,14 +28,14 @@ export interface RegionScore {
   temperature: "hot" | "balanced" | "cold" | null;
 }
 
-interface TrendPoint {
+export interface TrendPoint {
   month: string;
   medianPrice: number;
   medianPpsf: number | null;
   sales: number;
 }
 
-interface PriceTrendResp {
+export interface PriceTrendResp {
   region: string;
   points: TrendPoint[];
   summary: {
@@ -49,7 +49,7 @@ interface PriceTrendResp {
   error?: string;
 }
 
-interface RegionStatsResp {
+export interface RegionStatsResp {
   region: string;
   stats: {
     activeCount: number;
@@ -99,7 +99,7 @@ export function smoothedYoY(points: TrendPoint[], key: "medianPrice" | "medianPp
   return Math.round(((mean(recentVals) / prior - 1) * 100) * 10) / 10;
 }
 
-function temperatureOf(
+export function temperatureOf(
   monthsOfSupply: number | null,
   soldToListPct: number | null
 ): RegionScore["temperature"] {
@@ -153,6 +153,20 @@ export async function fetchRegionScore(
   const trend = trendR.status === "fulfilled" ? trendR.value : null;
   const stats = statsR.status === "fulfilled" ? statsR.value : null;
 
+  return assembleRegionScore(region, trend, stats);
+}
+
+/**
+ * Pure assembly of a RegionScore from the two endpoint payloads. Split out of
+ * fetchRegionScore so other surfaces (Market Trends page) that already hold the
+ * raw responses can derive the identical score without a second fetch — and so
+ * the derivation is unit-testable.
+ */
+export function assembleRegionScore(
+  region: string,
+  trend: PriceTrendResp | null,
+  stats: RegionStatsResp | null
+): RegionScore {
   const points = trend?.points ?? [];
   const latest = points.length ? points[points.length - 1] : null;
   const latestPpsf = [...points].reverse().find((p) => p.medianPpsf != null)?.medianPpsf ?? null;

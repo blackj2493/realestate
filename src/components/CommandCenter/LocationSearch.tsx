@@ -27,6 +27,12 @@ interface LocationSearchProps {
   /** "inplace" (default): mutate commandCenterStore (terminal reacts live).
    *  "navigate": router.push into /properties or the listing detail page. */
   mode?: "inplace" | "navigate";
+  /** When provided, city/neighbourhood selections are handed to this callback
+   *  instead of the mode's default handling (address/MLS picks still follow the
+   *  mode). Lets pages like Market Trends capture a region without touching the
+   *  terminal store or navigating away. */
+  onPlace?: (label: string) => void;
+  placeholder?: string;
 }
 
 function SuggestionIcon({ kind }: { kind: SearchSuggestion["kind"] }) {
@@ -42,7 +48,12 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
   mls: "MLS",
 };
 
-export default function LocationSearch({ className, mode = "inplace" }: LocationSearchProps) {
+export default function LocationSearch({
+  className,
+  mode = "inplace",
+  onPlace,
+  placeholder: placeholderProp,
+}: LocationSearchProps) {
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
   const totalCount = useCommandCenterStore((s) => s.totalCount);
@@ -100,7 +111,9 @@ export default function LocationSearch({ className, mode = "inplace" }: Location
   // Apply a resolved target. navigate mode routes; inplace mode mutates the store
   // exactly as before (city → setLocation, listing → setSelectedProperty).
   const applyTarget = (t: SearchTarget) => {
-    if (mode === "navigate") {
+    if (t.action !== "open-listing" && onPlace) {
+      onPlace(t.label); // caller-managed region (e.g. Market Trends page)
+    } else if (mode === "navigate") {
       router.push(targetToHref(t));
     } else if (t.action === "open-listing") {
       setSelectedProperty(t.listing); // opens the in-page listing terminal
@@ -145,11 +158,11 @@ export default function LocationSearch({ className, mode = "inplace" }: Location
   };
 
   const fmt = totalCount.toLocaleString();
-  const placeholder = location
+  const placeholder = placeholderProp ?? (location
     ? `${location}, ON  |  Search ${fmt} Active Listings…`
     : totalCount > 0
       ? `Search ${fmt} Active Listings…`
-      : "Search city, neighbourhood, address, or MLS#…";
+      : "Search city, neighbourhood, address, or MLS#…");
 
   // In navigate mode the store `location` isn't ours to clear, so the X only
   // reflects the typed value; inplace mode also surfaces a committed location.

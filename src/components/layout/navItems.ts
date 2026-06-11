@@ -1,4 +1,4 @@
-import { LayoutDashboard, Map, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Map, TrendingUp, type LucideIcon } from "lucide-react";
 
 /**
  * Single source of truth for the app's primary navigation.
@@ -24,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   // /properties/compare share this prefix but are contextual sub-pages — they
   // should NOT light up "Map Terminal".
   { label: "Map Terminal", href: "/properties", icon: Map },
+  { label: "Market Trends", href: "/analytics", icon: TrendingUp },
 ];
 
 /**
