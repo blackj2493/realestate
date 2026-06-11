@@ -93,6 +93,37 @@ describe('computeTrueDomFromCampaigns — edges', () => {
   });
 });
 
+describe('null end_date on non-Active campaigns (audit HIGH-9)', () => {
+  it('does NOT stitch a Terminated campaign with no end_date — true_dom counts only the fresh campaign', () => {
+    const now = Date.parse('2026-06-09T00:00:00Z');
+    const events = [
+      ev({ listing_key: 'OLD1', status: 'Terminated', entry_date: '2024-06-01', end_date: null, transaction_type: 'Sale' }),
+      ev({ listing_key: 'NEW1', status: 'Active', entry_date: '2026-05-02', end_date: null, transaction_type: 'Sale' }),
+    ];
+    const r = computeTrueDomFromCampaigns(events, { nowMs: now });
+    expect(r.true_dom).toBe(38); // 2026-05-02 → 2026-06-09, NOT ~737 days back to 2024
+  });
+
+  it('still stitches a prior with a KNOWN end_date within the window (regression guard)', () => {
+    const now = Date.parse('2026-06-09T00:00:00Z');
+    const events = [
+      ev({ listing_key: 'OLD2', status: 'Terminated', entry_date: '2026-03-01', end_date: '2026-04-20', transaction_type: 'Sale' }),
+      ev({ listing_key: 'NEW2', status: 'Active', entry_date: '2026-05-02', end_date: null, transaction_type: 'Sale' }),
+    ];
+    const r = computeTrueDomFromCampaigns(events, { nowMs: now });
+    expect(r.true_dom).toBe(100); // gap 12d ≤ 35 → stitched back to 2026-03-01
+  });
+
+  it('a NEWEST non-Active campaign with no end_date contributes 0 days (conservative, not inflated)', () => {
+    const now = Date.parse('2026-06-09T00:00:00Z');
+    const events = [
+      ev({ listing_key: 'ONLY', status: 'Terminated', entry_date: '2025-01-01', end_date: null, transaction_type: 'Sale' }),
+    ];
+    const r = computeTrueDomFromCampaigns(events, { nowMs: now });
+    expect(r.true_dom).toBe(0); // unknown terminal — refuse to fabricate ~524 days
+  });
+});
+
 describe('computeTrueDomFromCampaigns — regression: multi-hop, boundary, off-market', () => {
   it('stitches a 3-campaign chain and walks the drop back to the earliest', () => {
     const r = computeTrueDomFromCampaigns(

@@ -8,12 +8,16 @@ const DEFAULT_STALE_DAYS = 60;
 interface SaleNode {
   e: CampaignEvent;
   startMs: number;
-  endMs: number; // real terminal date, or nowMs for Active / unknown end
+  endMs: number | null; // real terminal date; nowMs while Active; null = unknown terminal (never stitched across)
 }
 
-function resolveEndMs(e: CampaignEvent, nowMs: number): number {
+function resolveEndMs(e: CampaignEvent, nowMs: number): number | null {
   const end = parseTimestamp(e.end_date);
-  return end !== null ? end : nowMs;
+  if (end !== null) return end;
+  // Non-Active with no terminal date = ended at an UNKNOWN time. Treating it as
+  // "ended now" made every historical gap negative, so such campaigns stitched
+  // unconditionally and inflated true_dom by months/years (audit HIGH-9).
+  return e.status === 'Active' ? nowMs : null;
 }
 
 export interface StitchedSpan {
@@ -29,21 +33,24 @@ export function currentStitchedSaleSpan(
   opts: { nowMs: number; windowDays?: number }
 ): StitchedSpan | null {
   const windowDays = opts.windowDays ?? DEFAULT_WINDOW_DAYS;
-  const sales = events
+  const sales: SaleNode[] = events
     .filter((e) => e.transaction_type === 'Sale')
-    .map((e) => ({ e, startMs: parseTimestamp(e.entry_date), endMs: 0 }))
-    .filter((n): n is SaleNode => n.startMs !== null)
+    .map((e) => ({ e, startMs: parseTimestamp(e.entry_date), endMs: 0 as number | null }))
+    .filter((n): n is { e: CampaignEvent; startMs: number; endMs: number | null } => n.startMs !== null)
     .map((n) => ({ ...n, endMs: resolveEndMs(n.e, opts.nowMs) }))
     .sort((a, b) => b.startMs - a.startMs);
   if (sales.length === 0) return null;
 
   const newest = sales[0];
-  const endMs = newest.e.status === 'Active' ? opts.nowMs : newest.endMs;
+  // Active → measure to now. Known terminal → measure to it. UNKNOWN terminal →
+  // contribute zero days rather than fabricating a span (conservative for a distress signal).
+  const endMs = newest.e.status === 'Active' ? opts.nowMs : (newest.endMs ?? newest.startMs);
   let startMs = newest.startMs;
   let originalListPrice = newest.e.original_list_price ?? newest.e.list_price ?? null;
   let nextStartMs = newest.startMs;
   for (let i = 1; i < sales.length; i++) {
     const prior = sales[i];
+    if (prior.endMs === null) break; // unknown terminal date — never stitch across it
     if (Math.floor((nextStartMs - prior.endMs) / DAY_MS) > windowDays) break;
     startMs = prior.startMs;
     const priorOrig = prior.e.original_list_price ?? prior.e.list_price;
