@@ -1,7 +1,7 @@
--- supabase/migrations/034_raw_vow_delisted.sql
+﻿-- supabase/migrations/035_raw_vow_delisted.sql
 --
 -- Slim 12-month archive of de-listed (Terminated/Expired/Suspended) VOW
--- listings. Deliberately NO raw_payload JSONB — the full payload remains
+-- listings. Deliberately NO raw_payload JSONB â€” the full payload remains
 -- fetchable from the feed forever; this table stores only what the De-listed
 -- surface and future failure-rate analytics need (design spec 2026-06-09).
 -- RLS is enabled with NO policies: service-role-only (VOW data must never be
