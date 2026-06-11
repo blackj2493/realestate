@@ -60,9 +60,19 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
             <>
               <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Comps
               <span className="mx-1.5 text-slate-600">|</span>
-              {/* When only delisted is lit, clamp the displayed window to 90d to match the
-                  actual fetch cap (sold/leased are uncapped at 180d). */}
-              VOW · last <span className="text-cyan-400">{(!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")) ? Math.min(soldWindowDays, 90) : soldWindowDays}d</span>
+              {/* The de-listed fetch is capped at 90d while sold/leased go to 180d:
+                  delisted-only shows the clamped figure; a mixed view annotates both
+                  so the label never overstates the de-listed coverage. */}
+              VOW · last{" "}
+              <span className="text-cyan-400">
+                {!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")
+                  ? Math.min(soldWindowDays, 90)
+                  : soldWindowDays}
+                d
+              </span>
+              {activeLayers.has("delisted") &&
+                (activeLayers.has("sold") || activeLayers.has("leased")) &&
+                soldWindowDays > 90 && <span className="text-slate-500"> · de-listed 90d</span>}
             </>
           ) : (
             <>
