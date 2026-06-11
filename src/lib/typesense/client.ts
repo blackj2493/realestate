@@ -14,7 +14,7 @@ import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 // Typesense configuration
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
-const SEARCH_API_KEY = process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY || 'BzXkIss7SXH0U1Hb0a1COwdvEACxbhkj';
+const SEARCH_API_KEY = process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY ?? '';
 
 // Singleton client
 let client: Client | null = null;
@@ -24,6 +24,11 @@ let client: Client | null = null;
  */
 export function getTypesenseClient(): Client {
   if (!client) {
+    if (!SEARCH_API_KEY) {
+      throw new Error(
+        'Typesense search key is missing — NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY must be set at next build time.'
+      );
+    }
     client = new Typesense.Client({
       nodes: [
         {

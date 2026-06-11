@@ -35,8 +35,8 @@ import {
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
-// Validated lazily in getAdminClient() — importing this module (via ingester.ts, or
-// via /api/sync during `next build`) must not throw or require the key at load time.
+// Validated lazily in getAdminClient() — importing this module (via ingester.ts)
+// must not throw or require the key at load time.
 const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY;
 
 // Batch size for database operations
@@ -643,7 +643,7 @@ Examples:
 }
 
 // Only run the CLI when executed directly (e.g. `tsx scripts/worker/sync.ts delta`).
-// ingester.ts and the /api/sync route import this module for processBatch/getAdminClient
+// ingester.ts imports this module for processBatch/getAdminClient
 // — importing it must NOT trigger CLI execution (and `next build` must not run it).
 const isMainModule =
   typeof process !== 'undefined' && process.argv[1]?.includes('sync.ts');

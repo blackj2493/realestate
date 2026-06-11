@@ -54,6 +54,10 @@ async function fetchAllPairs(supabase: SupabaseClient): Promise<CityRegionPair[]
   return out;
 }
 
+/**
+ * Throws on any Supabase/Postgres error (e.g. 57014 statement timeout) —
+ * callers must catch, or use loadCohortTreeSafe() for public surfaces.
+ */
 export async function loadCohortTree(): Promise<CohortTree> {
   if (treeCache && Date.now() - treeCache.at < TREE_TTL_MS) return treeCache.data;
 
@@ -63,4 +67,21 @@ export async function loadCohortTree(): Promise<CohortTree> {
   const tree = buildCohortTree(cohorts, pairs);
   treeCache = { data: tree, at: Date.now() };
   return tree;
+}
+
+/**
+ * Non-throwing variant for the PUBLIC /whats-my-home-hiding page. A Supabase
+ * failure (typically Postgres 57014 statement timeout under IO load) must
+ * degrade to a stale or empty picker tree, never a route 500 — the page is a
+ * public marketing/SEO surface. The gated /api/avm/cohorts route keeps using
+ * loadCohortTree() so API consumers still see real errors.
+ */
+export async function loadCohortTreeSafe(): Promise<CohortTree> {
+  try {
+    return await loadCohortTree();
+  } catch (err) {
+    console.error('[loadCohortTree] failed — serving stale/empty tree fallback:', err);
+    if (treeCache) return treeCache.data; // stale beats empty
+    return buildCohortTree([], []);
+  }
 }
