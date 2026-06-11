@@ -6,11 +6,11 @@
  * against `profiles` (columns added in migration 029), and feed the consumer gate
  * (requireConsumer/getConsumer) and the dashboard server gate.
  *
- * ROLLOUT SAFETY: enforcement is OFF by default (VOW_ENFORCE_TERMS !== "true"). When
- * off, hasAcceptedTerms() short-circuits to true with NO DB round-trip, so this adds
- * zero cost and zero behavior change until deliberately enabled. Enable it only AFTER
- * migration 029 is applied — otherwise every signed-in user would be sent to accept
- * terms against columns that don't exist yet.
+ * ROLLOUT SAFETY: enforcement is ON by default (fail-closed). A missing or unset
+ * VOW_ENFORCE_TERMS must never silently open the VOW gate — set VOW_ENFORCE_TERMS=false
+ * only to explicitly disable during maintenance or a rollback. Migration 029 must be
+ * applied before this gate can perform DB reads; if the migration is absent, query
+ * errors fail OPEN with a loud log (see hasAcceptedTerms), so there is no lockout risk.
  */
 
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -18,8 +18,11 @@ import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/serve
 /** Bump when the Terms text materially changes — forces everyone to re-accept. */
 export const CURRENT_TERMS_VERSION = "2026-06-01";
 
-/** Server-side enforcement switch. Flip VOW_ENFORCE_TERMS=true once migration 029 is live. */
-export const TERMS_ENFORCED = process.env.VOW_ENFORCE_TERMS === "true";
+/** Server-side enforcement switch. ENFORCED unless explicitly disabled with
+ *  VOW_ENFORCE_TERMS=false — a missing env var must never silently open the
+ *  VOW gate (audit HIGH-3). Query errors still fail open with a loud log, so
+ *  a missing migration 029 degrades to logging, not lockout. */
+export const TERMS_ENFORCED = process.env.VOW_ENFORCE_TERMS !== "false";
 
 /**
  * Has THIS user accepted the CURRENT Terms version? Always true when enforcement is
