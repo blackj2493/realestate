@@ -105,3 +105,41 @@ describe("renderAlertsDigest", () => {
     expect(html).toContain("PROPTX MLS®");
   });
 });
+
+// Edge cases ported from the retired scripts/worker/alerts.test.ts (renderDigest era).
+describe("renderAlertsDigest — drop-row edge cases", () => {
+  it("includes address, city, and both prices for a drop", () => {
+    const { html } = renderAlertsDigest(payload({ drops: [baseDrop] }));
+    expect(html).toContain("100 Drop Ave");
+    expect(html).toContain("Brampton");
+    expect(html).toContain("$900,000");
+    expect(html).toContain("$850,000");
+    expect(html).toContain("−$50,000"); // U+2212 minus, en-CA formatting
+  });
+
+  it("URL-encodes the listing_key (defense against weird MLS keys)", () => {
+    const { html } = renderAlertsDigest(
+      payload({ drops: [{ ...baseDrop, listing_key: "odd key/with?chars" }] })
+    );
+    expect(html).toContain("odd%20key%2Fwith%3Fchars");
+    expect(html).not.toContain("odd key/with?chars");
+  });
+
+  it("falls back to 'Saved property' when the address is empty", () => {
+    const { html } = renderAlertsDigest(payload({ drops: [{ ...baseDrop, address: "" }] }));
+    expect(html).toContain("Saved property");
+  });
+
+  it("rounds non-integer prices for display (no fractional dollars)", () => {
+    const { html } = renderAlertsDigest(
+      payload({ drops: [{ ...baseDrop, oldPrice: 800_123.4, newPrice: 750_000 }] })
+    );
+    expect(html).toContain("$800,123");
+    expect(html).not.toContain("800,123.4");
+  });
+
+  it("text fallback ends with the dashboard link", () => {
+    const { text } = renderAlertsDigest(payload({ drops: [baseDrop] }));
+    expect(text).toContain("Open your dashboard: https://pureproperty.ca/dashboard");
+  });
+});

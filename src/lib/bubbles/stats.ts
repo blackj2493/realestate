@@ -84,8 +84,12 @@ const EMPTY: BubbleStats = {
  * Build the area-scoping clause for the Typesense `properties` collection.
  * Returns the string fragment that scopes documents to the bubble's area;
  * the caller AND-joins it with SALES_FLOOR and any persona/saved-filter clauses.
+ * Exported for the nightly alerts worker (scripts/worker/alerts.ts), which
+ * scopes its new-listing search with the exact same clause.
  */
-function buildAreaClause(bubble: Bubble): string | null {
+export function buildAreaClause(
+  bubble: Pick<Bubble, "area_type" | "polygon" | "source">
+): string | null {
   if (bubble.area_type === "school" && bubble.source.kind === "school") {
     // Backticks because school ids contain hyphens/colons.
     return `NearbySchools:=\`${bubble.source.schoolKey}\``;
