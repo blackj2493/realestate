@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { ProptXClient } from "@/lib/proptx/client";
+import { processBatch } from "../../../../scripts/worker/sync";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // single-listing quick-sync only; the full ETL runs via GitHub Actions cron
@@ -63,8 +64,10 @@ export async function POST(request: NextRequest) {
 
       // Fetch media for this listing
       let mediaUrls: string[] = [];
+      let mediaItems: unknown[] = [];
       try {
         const mediaResponse = await client.getMediaBatch(`ResourceRecordKey eq '${listingKey}'`);
+        mediaItems = mediaResponse.value;
 
         // Prefer Largest or Large images
         const sizePriority: Record<string, number> = {
@@ -85,7 +88,39 @@ export async function POST(request: NextRequest) {
         console.warn(`[Quick-Sync] Failed to fetch media for ${listingKey}:`, mediaError);
       }
 
-      // Upsert to Supabase
+      // Attach media so transformListing derives media_urls / primaryImageUrl
+      // exactly like the nightly ETL (it reads raw.media — audit HIGH-6).
+      (prop as Record<string, unknown>).media = mediaItems;
+
+      try {
+        const result = await processBatch([prop]);
+        if (result.supabase.failed > 0) {
+          throw new Error(String(result.supabase.errors?.[0] ?? "supabase upsert failed"));
+        }
+        // processBatch swallows Typesense failures into result.typesense.failed
+        // (no throw) — report honestly instead of claiming a full index write.
+        // Don't fall back: Supabase already has the full record; the fallback
+        // would write less. The nightly sync repairs the index.
+        const typesenseOk = result.typesense.failed === 0;
+        if (!typesenseOk) {
+          console.warn(`[Quick-Sync] Supabase ok but Typesense write failed for ${listingKey} — nightly sync will repair the index.`);
+        }
+        console.log(`[Quick-Sync] Full pipeline synced listing: ${listingKey}`);
+        return NextResponse.json({
+          success: true,
+          message: "Listing synced successfully",
+          listingKey,
+          mediaCount: mediaUrls.length,
+          pipeline: typesenseOk ? "full" : "full-no-typesense",
+        });
+      } catch (pipelineErr) {
+        // The full pipeline needs ETL env (e.g. TYPESENSE_ADMIN_API_KEY at the
+        // Typesense step). Never let that break on-demand sync for a visitor —
+        // degrade to the legacy minimal upsert; the nightly ETL repairs the rest.
+        console.error(`[Quick-Sync] full pipeline failed for ${listingKey} — falling back to minimal upsert:`, pipelineErr);
+      }
+
+      // Fallback: legacy minimal upsert (pre-HIGH-6 behavior, kept as a floor)
       const supabase = getServiceRoleClient();
       const { error: upsertError } = await supabase
         .from('listings')
@@ -112,12 +147,13 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
-      console.log(`[Quick-Sync] Successfully synced listing: ${listingKey}`);
+      console.log(`[Quick-Sync] Successfully synced listing (minimal): ${listingKey}`);
       return NextResponse.json({
         success: true,
         message: "Listing synced successfully",
         listingKey,
         mediaCount: mediaUrls.length,
+        pipeline: "fallback-minimal",
       });
     }
 
