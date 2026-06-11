@@ -34,6 +34,8 @@ interface BubbleState {
   create: (payload: BubblePayload) => Promise<Bubble | { error: string }>;
   rename: (id: string, name: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Toggle the nightly new-listing digest for one bubble (optimistic). */
+  setAlertsEnabled: (id: string, enabled: boolean) => Promise<void>;
 }
 
 export const useBubblesStore = create<BubbleState>((set, get) => ({
@@ -106,6 +108,22 @@ export const useBubblesStore = create<BubbleState>((set, get) => ({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
+      });
+      if (!res.ok) set((s) => ({ items: { ...s.items, [id]: prev } }));
+    } catch {
+      set((s) => ({ items: { ...s.items, [id]: prev } }));
+    }
+  },
+
+  setAlertsEnabled: async (id, enabled) => {
+    const prev = get().items[id];
+    if (!prev) return;
+    set((s) => ({ items: { ...s.items, [id]: { ...prev, alerts_enabled: enabled } } }));
+    try {
+      const res = await fetch(`/api/bubbles/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alerts_enabled: enabled }),
       });
       if (!res.ok) set((s) => ({ items: { ...s.items, [id]: prev } }));
     } catch {
