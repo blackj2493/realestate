@@ -153,8 +153,9 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
 
   // Monthly cashflow
   const monthlyGrossRent = annualRevenue / 12;
-  const netMonthlyCashflow = (monthlyGrossRent * 0.96) - (mortgageMonthly + (annualOpex / 12) + (insurance / 12));
-  const netMonthlyCashflowFloor = ((annualRevenueP10 / 12) * 0.92) - (mortgageMonthly + (annualOpexFloor / 12) + (insurance * 1.2 / 12));
+  // Insurance is already inside annualOpex / annualOpexFloor — deduct it exactly once (audit HIGH-8).
+  const netMonthlyCashflow = (monthlyGrossRent * 0.96) - (mortgageMonthly + (annualOpex / 12));
+  const netMonthlyCashflowFloor = ((annualRevenueP10 / 12) * 0.92) - (mortgageMonthly + (annualOpexFloor / 12));
 
   // === TAX BURDEN RATIO ===
   const taxBurdenRatio = price > 0 ? (taxes / price) * 100 : 0;
