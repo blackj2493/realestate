@@ -161,7 +161,33 @@ function toWindowedDoc(r: DelistedRecord, windowCutoffMs: number): SoldListingDo
   return doc;
 }
 
-/** Prune de-listed docs beyond their 90-day window (sold/leased keep 180d via pruneOldSold). */
+/**
+ * Keep the slim Supabase archive at its 12-month design size — without this it
+ * grows ~330k rows/year unbounded. Cheap: delisted_date is indexed and the
+ * nightly delete removes roughly one day's worth (~900 rows). Non-fatal.
+ */
+export async function pruneOldDelistedArchive(months = DELISTED_ARCHIVE_MONTHS): Promise<void> {
+  const cutoff = new Date(Date.now() - months * 30.44 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  try {
+    const supabase = getServiceRoleClient();
+    const { count, error } = await supabase
+      .from('raw_vow_delisted')
+      .delete({ count: 'exact' })
+      .lt('delisted_date', cutoff);
+    if (error) throw new Error(error.message);
+    console.log(`   🧹 Archive: pruned ${count ?? 0} de-listed rows older than ${cutoff}`);
+  } catch (err: any) {
+    console.warn(`   ⚠️  Archive prune failed (non-fatal): ${err?.message || err}`);
+  }
+}
+
+/**
+ * Prune BOTH de-listed stores: docs beyond the 90-day Typesense window
+ * (sold/leased keep 180d via pruneOldSold) and archive rows beyond 12 months.
+ * Every caller (nightly Query C + all CLI modes) wants the pair together.
+ */
 export async function pruneOldDelisted(days = DELISTED_WINDOW_DAYS): Promise<void> {
   const cutoff = Date.now() - days * 86_400_000;
   try {
@@ -175,6 +201,7 @@ export async function pruneOldDelisted(days = DELISTED_WINDOW_DAYS): Promise<voi
   } catch (err: any) {
     console.warn(`   ⚠️  De-listed prune failed (non-fatal): ${err.message}`);
   }
+  await pruneOldDelistedArchive();
 }
 
 export interface DelistedSyncResult {
