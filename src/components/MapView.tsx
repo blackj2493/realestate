@@ -193,7 +193,9 @@ export default function MapView({
     }
   }, [properties]);
 
-  // Load points into supercluster when properties change
+  // Load points into supercluster when properties change.
+  // supercluster.load() mutates the external library instance (side-effect), so
+  // this effect cannot be lifted into render or useMemo — it must run after commit.
   useEffect(() => {
     if (points.length > 0) {
       supercluster.load(points);

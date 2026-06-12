@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Check, GitCompareArrows, CalendarDays, Bookmark, BookmarkCheck, ArrowRight } from "lucide-react";
+import { Check, GitCompareArrows, Bookmark, BookmarkCheck, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useWatchlistStore } from "@/lib/watchlist/useWatchlist";
+import ScheduleViewingForm from "@/components/Property/ScheduleViewingForm";
 
 /**
  * Right-rail actions for the full listing page. "Add to Comparison" feeds the same
@@ -41,13 +42,7 @@ export default function ListingActions({
   return (
     <div className="space-y-2 pt-2">
       {statusKind === "active" && (
-        <button
-          type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-        >
-          <CalendarDays className="h-4 w-4" />
-          Schedule Viewing
-        </button>
+        <ScheduleViewingForm listingKey={id} address={address} />
       )}
 
       <button

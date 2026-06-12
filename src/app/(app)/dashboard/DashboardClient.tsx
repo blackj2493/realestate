@@ -79,7 +79,7 @@ export default function DashboardClient() {
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
 
-  if (!ready) return null;
+  if (!ready) return <div className="min-h-screen bg-slate-950" aria-busy="true" />;
 
   // Persona reorders which boards lead (non-destructive — config.boards stays the
   // user's enable/disable set).

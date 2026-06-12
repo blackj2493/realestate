@@ -650,7 +650,12 @@ export default function AlphaMap({
   }
 
   return (
-    <div className={`relative overflow-hidden ${className}`} style={{ minHeight: "400px", height: "100%" }}>
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={{ minHeight: "400px", height: "100%" }}
+      role="application"
+      aria-label="Interactive listings map — pan, zoom, and click pins to explore properties"
+    >
       <DeckGL
         viewState={viewState}
         onViewStateChange={handleViewStateChange}

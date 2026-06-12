@@ -176,7 +176,8 @@ export default function ApplyPage() {
     if (s === 1) {
       if (!applicantType) return "Select your applicant type.";
       if (!fullName.trim()) return "Enter your full name.";
-      if (!/\S+@\S+\.\S+/.test(email)) return "Enter a valid email address.";
+      // Strict shape: one @, a dot in domain, ≥2-char TLD (mirrors /api/viewing-requests EMAIL_RE).
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return "Enter a valid email address.";
     }
     if (s === 2) {
       if (regions.length === 0) return "Select at least one target region.";
