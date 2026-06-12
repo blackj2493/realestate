@@ -12,6 +12,11 @@ describe('mapStatus', () => {
   it('treats Sold/Closed with highest precedence', () => {
     expect(mapStatus('Closed', 'Terminated')).toBe('Sold');
   });
+  it('maps MlsStatus=leased to Leased (audit MEDIUM-11)', () => {
+    expect(mapStatus(undefined, 'leased')).toBe('Leased');
+    expect(mapStatus('Closed', 'Leased')).toBe('Leased');
+    expect(mapStatus('Closed', 'Leased Conditional')).toBe('Leased');
+  });
 });
 
 describe('normalizeCampaign', () => {

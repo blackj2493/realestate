@@ -93,7 +93,28 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
     };
   }
 
-  const price = calculation_price || 1;
+  // === ZERO-PRICE GUARD (audit LOW-10) ===
+  // If either price is zero (e.g. a record that slipped through before the lease guard,
+  // or a data-entry error), every ratio metric is undefined. Return all-zeros rather than
+  // dividing by `price||1` which yields astronomical cap rates / yields.
+  if (!(calculation_price > 0) || !(listPrice > 0)) {
+    return {
+      cap_rate_est: 0,
+      cap_rate_floor: 0,
+      gross_yield_est: 0,
+      price_discovery_flag: is_price_discovery,
+      net_monthly_cashflow: 0,
+      cashflow_floor: 0,
+      tax_burden_ratio: 0,
+      assessment_status: 'UNASSESSED',
+      annual_opex: 0,
+      annual_revenue: 0,
+      vacancy_loss: 0,
+      mortgage_monthly: 0,
+    };
+  }
+
+  const price = calculation_price;
   const isSuiteCandidate = multiUnitStatus === 'EXISTING_MULTI_UNIT' || multiUnitStatus === 'PRIME_CANDIDATE';
 
   // === ANNUAL REVENUE ===

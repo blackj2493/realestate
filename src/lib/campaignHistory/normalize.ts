@@ -39,7 +39,11 @@ function strOrNull(v: unknown): string | null {
 export function mapStatus(standard?: string, mls?: string): CampaignStatus {
   const s = (standard ?? '').toLowerCase().trim();
   const m = (mls ?? '').toLowerCase().trim();
-  if (s === 'closed' || m === 'sold' || m === 'leased') return 'Sold';
+  if (m.startsWith('leased')) return 'Leased'; // 'Leased' and 'Leased Conditional'
+  // Note: StandardStatus='Closed' covers both sold AND leased deals in TRREB data.
+  // A Closed lease whose MlsStatus is missing or not 'Leased*' will still fall
+  // through to 'Sold' here — acceptable residual; MlsStatus is the discriminant.
+  if (s === 'closed' || m === 'sold') return 'Sold';
   if (s === 'active' || m === 'new' || m === 'price change' || m === 'extension' || m === 'active') return 'Active';
   if (s === 'cancelled' || s === 'canceled' || m === 'terminated') return 'Terminated';
   if (s === 'expired' || m === 'expired') return 'Expired';
@@ -50,6 +54,7 @@ export function mapStatus(standard?: string, mls?: string): CampaignStatus {
 function resolveEndDate(raw: RawVowCampaign, status: CampaignStatus): string | null {
   switch (status) {
     case 'Sold': return strOrNull(raw.CloseDate) ?? strOrNull(raw.PurchaseContractDate);
+    case 'Leased': return strOrNull(raw.CloseDate) ?? strOrNull(raw.PurchaseContractDate);
     case 'Terminated': return strOrNull(raw.TerminatedDate) ?? strOrNull(raw.UnavailableDate);
     case 'Expired': return strOrNull(raw.ExpirationDate) ?? strOrNull(raw.UnavailableDate);
     case 'Suspended': return strOrNull(raw.SuspendedDate) ?? strOrNull(raw.UnavailableDate);

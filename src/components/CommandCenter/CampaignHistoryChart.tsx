@@ -48,10 +48,13 @@ function shortDate(t: number): string {
 }
 const STATUS_LABEL: Record<CampaignStatus, string> = {
   Active: "● Active", Terminated: "✕ Term", Expired: "Exp", Suspended: "Susp", Sold: "✓ Sold",
+  // Leased uses the sky/lease tone — same family as the lease bar color
+  Leased: "✓ Leased",
 };
 function statusColor(s: CampaignStatus): string {
   if (s === "Active") return CYAN;
   if (s === "Sold") return AMBER;
+  if (s === "Leased") return LEASE;  // sky blue, matching the lease bar lane
   if (s === "Terminated") return ROSE;
   return SLATE;
 }

@@ -3,7 +3,7 @@ import type { CampaignEvent, CampaignStatus, TransactionKind } from './types';
 
 export type TimelineEventKind =
   | 'Listed for Sale' | 'Listed for Lease' | 'Price Changed'
-  | 'Terminated' | 'Expired' | 'Suspended' | 'Sold';
+  | 'Terminated' | 'Expired' | 'Suspended' | 'Sold' | 'Leased';
 
 export interface TimelineRow {
   date: string;
@@ -48,7 +48,7 @@ export function buildEventRows(events: CampaignEvent[]): TimelineRow[] {
     if (e.end_date && e.status !== 'Active') {
       rows.push({
         ...base, date: e.end_date, kind: e.status as TimelineEventKind,
-        price: e.status === 'Sold' ? e.close_price : null, deltaPct: null,
+        price: e.status === 'Sold' || e.status === 'Leased' ? e.close_price : null, deltaPct: null,
       });
     }
   }
@@ -100,7 +100,7 @@ export function buildSaleChartSeries(
       points.push({ t: opts.nowMs, price: lastPrice });
     } else if (s.e.status !== 'Active' && lastPrice != null) {
       points.push({ t: s.endT, price: lastPrice });
-      markers.push({ t: s.endT, price: s.e.status === 'Sold' ? (s.e.close_price ?? lastPrice) : lastPrice, kind: s.e.status as TimelineEventKind });
+      markers.push({ t: s.endT, price: (s.e.status === 'Sold' || s.e.status === 'Leased') ? (s.e.close_price ?? lastPrice) : lastPrice, kind: s.e.status as TimelineEventKind });
     }
     prevEndT = s.endT;
   });

@@ -1,6 +1,6 @@
 /**
  * CampaignHistorySection — full per-property campaign timeline table (HouseSigma-parity).
- * Renders every campaign event (Listed / Price Changed / Terminated / Expired / Sold)
+ * Renders every campaign event (Listed / Price Changed / Terminated / Expired / Sold / Leased)
  * from the gated CampaignHistoryView. VOW data (CLAUDE.md §4): anon sees a blurred
  * teaser + the surviving campaignCount, never the rows (events arrive as [] for anon).
  */
@@ -15,7 +15,9 @@ import { buildEventRows, type TimelineRow, type TimelineEventKind } from "@/lib/
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  // Date-ONLY strings parse as UTC midnight; without timeZone:'UTC' every UTC− viewer
+  // (all of Ontario) sees the previous day (audit MEDIUM-18).
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 const KIND_COLOR: Record<TimelineEventKind, string> = {
@@ -26,6 +28,8 @@ const KIND_COLOR: Record<TimelineEventKind, string> = {
   Expired: "text-slate-400",
   Suspended: "text-slate-400",
   Sold: "text-amber-300",
+  // Leased uses the sky/lease tone — same family as "Listed for Lease"
+  Leased: "text-sky-300",
 };
 
 function Row({ r }: { r: TimelineRow }) {

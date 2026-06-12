@@ -81,38 +81,55 @@ async function computeTrend(
 
   const sb = getServiceRoleClient();
   // Match either municipality (city) or community (city_region). ilike = case-insensitive.
-  const safe = region.replace(/[,()]/g, " ").trim();
-  // PurchaseContractDate = the "Sold Date" (deal signed). close_date is the later
-  // completion date and is frequently null/future, so it makes a poor trend axis.
-  let query = sb
-    .from("raw_vow_sold")
-    .select("close_price, list_price, purchase_contract_date, building_area_total")
-    .or(`city.ilike.${safe},city_region.ilike.${safe}`)
-    // $50k floor excludes lease/rental rows that leak into the sold feed (e.g. $2,200).
-    .gte("close_price", 50000)
-    .gte("purchase_contract_date", cutoff.toISOString());
+  // Input is already validated by REGION_RE in GET (no metacharacters).
+  // PostgREST .or() requires double-quoted values when they contain spaces —
+  // unquoted, "Vales of Castlemore North" is a parse error and silently matches
+  // nothing (audit MEDIUM-8). Input is already validated against REGION_RE, which
+  // excludes the quote character itself.
+  const safe = region.trim();
 
   // Property-type filter: exact spelling match (incl. trailing-space "Semi-Detached ").
   // Empty ⇒ all types (unchanged behaviour).
   const variants = variantsForKeys(typeKeys);
-  if (variants.length) query = query.in("property_sub_type", variants);
 
-  // Beds/baths floor — flat sold columns (the sold feed maps BedroomsTotal →
-  // bedrooms_above_grade; ingester.ts). `.gte` excludes NULL beds, matching the
-  // active RPC's full_payload cast and Typesense (missing ⇒ 0). 0 ⇒ no floor.
-  if (minBeds > 0) query = query.gte("bedrooms_above_grade", minBeds);
-  if (minBaths > 0) query = query.gte("bathrooms_total_integer", minBaths);
+  // Paginate past the PostgREST 1,000-row hard cap (audit MEDIUM-10).
+  // PostgREST builders are single-use, so filters are applied via a closure
+  // that constructs a fresh query per page.
+  const PAGE = 1000; // PostgREST hard cap per response
+  const buildQuery = () => {
+    // PurchaseContractDate = the "Sold Date" (deal signed). close_date is the later
+    // completion date and is frequently null/future, so it makes a poor trend axis.
+    let q = sb
+      .from("raw_vow_sold")
+      .select("close_price, list_price, purchase_contract_date, building_area_total")
+      .or(`city.ilike."${safe}",city_region.ilike."${safe}"`)
+      // $50k floor excludes lease/rental rows that leak into the sold feed (e.g. $2,200).
+      .gte("close_price", 50000)
+      .gte("purchase_contract_date", cutoff.toISOString());
+    if (variants.length) q = q.in("property_sub_type", variants);
+    // Beds/baths floor — flat sold columns (the sold feed maps BedroomsTotal →
+    // bedrooms_above_grade; ingester.ts). `.gte` excludes NULL beds, matching the
+    // active RPC's full_payload cast and Typesense (missing ⇒ 0). 0 ⇒ no floor.
+    if (minBeds > 0) q = q.gte("bedrooms_above_grade", minBeds);
+    if (minBaths > 0) q = q.gte("bathrooms_total_integer", minBaths);
+    // Parking/frontage floor — flat sold columns (ingester.ts writes parking_total /
+    // lot_width). Same NULL-excluding `.gte` semantics as beds/baths. 0 ⇒ no floor.
+    if (minParking > 0) q = q.gte("parking_total", minParking);
+    if (minFrontage > 0) q = q.gte("lot_width", minFrontage);
+    return q;
+  };
 
-  // Parking/frontage floor — flat sold columns (ingester.ts writes parking_total /
-  // lot_width). Same NULL-excluding `.gte` semantics as beds/baths. 0 ⇒ no floor.
-  if (minParking > 0) query = query.gte("parking_total", minParking);
-  if (minFrontage > 0) query = query.gte("lot_width", minFrontage);
-
-  const { data, error } = await query
-    .order("purchase_contract_date", { ascending: false })
-    .limit(MAX_ROWS);
-
-  if (error) throw new Error(error.message);
+  type Row = { close_price: unknown; list_price: unknown; purchase_contract_date: unknown; building_area_total: unknown };
+  const rows: Row[] = [];
+  for (let from = 0; rows.length < MAX_ROWS; from += PAGE) {
+    const { data, error } = await buildQuery()
+      .order("purchase_contract_date", { ascending: false })
+      .order("listing_key") // deterministic tie-break across pages
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
 
   const buckets = new Map<string, { prices: number[]; ppsf: number[] }>();
   // Trailing-90-day sold-to-list accumulators (current market heat).
@@ -121,7 +138,7 @@ async function computeTrend(
   let ratioSum = 0;
   let overAsk = 0;
 
-  for (const row of data ?? []) {
+  for (const row of rows) {
     const d = row.purchase_contract_date ? new Date(row.purchase_contract_date as string) : null;
     if (!d || Number.isNaN(d.getTime())) continue;
     const price = Number(row.close_price);
@@ -200,6 +217,14 @@ export async function GET(req: NextRequest) {
   const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
 
+  // Letters/digits/spaces/hyphen/apostrophe/period only — matches every real GTA
+  // municipality & community name and excludes PostgREST/ilike metacharacters
+  // (% _ , ( ) ") outright. Resolves audit MEDIUM-23.
+  const REGION_RE = /^[\p{L}\p{N}\s\-'.]{1,60}$/u;
+  if (!REGION_RE.test(region)) {
+    return NextResponse.json({ error: "Invalid region" }, { status: 400 });
+  }
+
   // VOW gate: sold-price trends are derived from raw_vow_sold. Anonymous users get a
   // locked shape (no data) BEFORE the cache/scan — so we never touch raw_vow_sold for
   // them (also protects the Supabase IO budget; memory supabase-io-budget).
@@ -213,10 +238,11 @@ export async function GET(req: NextRequest) {
   try {
     const { points, summary } = await unstable_cache(
       () => computeTrend(region, typeKeys, minBeds, minBaths, minParking, minFrontage),
+      // v8 = paginated (MEDIUM-10) + quoted .or() values (MEDIUM-8) + REGION_RE (MEDIUM-23).
       // v7 = parking/frontage floor. v6 = beds/baths. v5 = multi-type keys (types=a,b).
       // v4 = lag-robust monthlyVelocity window. cacheKey folds in type + beds + baths +
       // parking + frontage so each scope combination caches independently.
-      ["market-price-trend", "v7", region.toLowerCase(), cacheKey],
+      ["market-price-trend", "v8", region.toLowerCase(), cacheKey],
       { revalidate: 86400 }
     )();
     return NextResponse.json({ region, points, summary });

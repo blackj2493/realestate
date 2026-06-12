@@ -124,6 +124,26 @@ describe('buildEventRows — zero original_list_price guard (audit HIGH-4)', () 
   });
 });
 
+describe('buildEventRows — Leased status (audit MEDIUM-11)', () => {
+  it('emits a terminal row with kind Leased (not Sold) and price=close_price for a Lease campaign', () => {
+    const leasedCampaign = ev({
+      listing_key: 'L99',
+      transaction_type: 'Lease',
+      status: 'Leased',
+      entry_date: '2026-01-01T00:00:00Z',
+      end_date: '2026-03-01',
+      close_price: 2400,
+      list_price: 2500,
+      original_list_price: 2500,
+    });
+    const rows = buildEventRows([leasedCampaign]);
+    const leasedRow = rows.find((r) => r.kind === 'Leased');
+    expect(leasedRow).toBeTruthy();
+    expect(leasedRow!.price).toBe(2400);
+    expect(rows.some((r) => r.kind === 'Sold')).toBe(false);
+  });
+});
+
 describe('summarizeSaleHistory', () => {
   it('reports original (first sale list) → current (latest sale list) and the % cut', () => {
     const s = summarizeSaleHistory(chain363);

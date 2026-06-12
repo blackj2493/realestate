@@ -172,7 +172,7 @@ export default function UnderwritingSandbox({
         />
         <Metric label="Monthly Carry" value={`${formatPrice(result.monthlyCarry)}/mo`} />
         <Metric label="Monthly NOI" value={`${formatPrice(result.monthlyNOI)}/mo`} />
-        <Metric label="Gross Yield" value={pct(result.grossYieldPct)} />
+        <Metric label="Gross Yield (rent)" value={pct(result.grossYieldPct)} />
         <Metric label="DSCR" value={result.dscr === null ? "—" : result.dscr.toFixed(2)} />
       </div>
 
