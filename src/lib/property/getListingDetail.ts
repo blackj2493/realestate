@@ -41,6 +41,15 @@ import {
 import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/normalize";
 import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
 import { computeExpectedSale, type ExpectedSale } from "@/lib/avm/expectedSale";
+import {
+  resolveListingStatus,
+  fillClosePriceFromSaleHistory,
+  pickSoldAccuracy,
+  gateListingStatus,
+  type DelistedRowLite,
+  type ListingStatus,
+  type SoldAccuracy,
+} from "@/lib/property/listingStatus";
 
 /** One prior sold campaign for this physical property (from property_sale_history). */
 export interface SaleEvent {
@@ -108,6 +117,17 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
   if (isAuthed) return detail;
   const gatedPayload = { ...(detail.full_payload as Record<string, unknown>) };
   delete gatedPayload.true_dom; // VOW-stitched; raw DaysOnMarket (IDX) stays
+  // Sold listings live in `listings` with their raw Closed payload (Query B), and the
+  // property API ships full_payload — scrub the sold price/date fields so an anonymous
+  // /api/property/[id] response can never carry them (status.closePrice is gated above,
+  // but the raw payload would leak the same numbers).
+  delete gatedPayload.ClosePrice;
+  delete gatedPayload.CloseDate;
+  delete gatedPayload.ClosePriceHold;
+  delete gatedPayload.CloseDateHold;
+  delete gatedPayload.PurchaseContractDate;
+  delete gatedPayload.SoldEntryTimestamp;
+  delete gatedPayload.SoldConditionalEntryTimestamp;
   return {
     ...detail,
     full_payload: gatedPayload,
@@ -118,6 +138,8 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     saleHistory: gateSaleHistory(detail.saleHistory, false),
     priceTimeline: { ...detail.priceTimeline, trueDom: null, totalPriceDrop: 0, originalPrice: null },
     campaignHistory: gateCampaignHistory(detail.campaignHistory, false),
+    status: gateListingStatus(detail.status, false),
+    soldAccuracy: null,
   };
 }
 
@@ -138,6 +160,10 @@ export interface ListingDetail {
   priceTimeline: PriceTimeline;
   /** Full per-property campaign history (gated for anon). Powers True DOM + the timeline. */
   campaignHistory: CampaignHistoryView;
+  /** Active / Sold / De-listed state. Kind is public; VOW numbers gated for anon. */
+  status: ListingStatus;
+  /** How close our closest model came to the actual sale (sold only; VOW-gated). */
+  soldAccuracy: SoldAccuracy | null;
   /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
   rooms: RoomData[];
 }
@@ -384,6 +410,28 @@ export const getListingDetail = cache(
       capRatePct: realCapRate,
     });
 
+    // Status resolution — sold comes straight from the payload (Query B upserts the
+    // Closed payload into `listings`); Terminated/Expired/Suspended live ONLY in
+    // raw_vow_delisted (the listings row stays frozen-Active), so non-sold rows get
+    // one indexed PK lookup there. Best-effort: a miss/timeout degrades to "active".
+    let status: ListingStatus = resolveListingStatus(payload, null);
+    if (status.kind === "active") {
+      try {
+        const { data: dRow } = await withTimeout(
+          supabase
+            .from("raw_vow_delisted")
+            .select("mls_status, delisted_date, days_on_market, list_price")
+            .eq("listing_key", listingKey)
+            .maybeSingle(),
+          4000,
+          "Delisted lookup"
+        );
+        if (dRow) status = resolveListingStatus(payload, dRow as DelistedRowLite);
+      } catch (dlErr) {
+        console.error(`[getListingDetail] delisted lookup failed for ${listingKey}:`, dlErr);
+      }
+    }
+
     // Expected Sale Price — list-aware (list × cohort close/list ratio). VOW-derived
     // (raw_vow_sold); getCloseListRatio is unstable_cache'd 24h per cohort so this
     // never scans the table per page load (Disk IO budget). Best-effort, never blocks.
@@ -440,6 +488,14 @@ export const getListingDetail = cache(
     } catch (saleErr) {
       console.error(`[getListingDetail] Sale history failed for ${listingKey}:`, saleErr);
     }
+
+    // Non-disclosure fallback (own sale event only) + the accuracy receipt.
+    status = fillClosePriceFromSaleHistory(status, listing.listing_key, saleHistory.events);
+    const soldAccuracy = pickSoldAccuracy({
+      closePrice: status.kind === "sold" ? status.closePrice : null,
+      avmValue: estimate?.estimatedValue ?? null,
+      expectedSalePrice: expectedSale?.expectedPrice ?? null,
+    });
 
     // Campaign history (corrected True DOM + event timeline). Read the ledger; if
     // missing/stale, refresh on-demand from the VOW feed (best-effort, timeout-bounded
@@ -514,6 +570,8 @@ export const getListingDetail = cache(
       saleHistory,
       priceTimeline,
       campaignHistory,
+      status,
+      soldAccuracy,
       rooms,
     };
   }

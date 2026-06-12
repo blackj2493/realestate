@@ -18,12 +18,15 @@ export default function ListingActions({
   city,
   price,
   thumb,
+  statusKind = "active",
 }: {
   id: string;
   address?: string;
   city?: string;
   price?: number;
   thumb?: string;
+  /** Drives the CTA set: sold/delisted drop Schedule Viewing; delisted promotes Watchlist. */
+  statusKind?: "active" | "sold" | "delisted";
 }) {
   const selectedIds = useCommandCenterStore((s) => s.selectedIds);
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
@@ -37,13 +40,15 @@ export default function ListingActions({
 
   return (
     <div className="space-y-2 pt-2">
-      <button
-        type="button"
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-      >
-        <CalendarDays className="h-4 w-4" />
-        Schedule Viewing
-      </button>
+      {statusKind === "active" && (
+        <button
+          type="button"
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+        >
+          <CalendarDays className="h-4 w-4" />
+          Schedule Viewing
+        </button>
+      )}
 
       <button
         type="button"
@@ -59,13 +64,21 @@ export default function ListingActions({
         aria-pressed={watched}
         className={cn(
           "flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors",
-          watched
-            ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
-            : "border-slate-700 text-slate-300 hover:bg-slate-800"
+          statusKind === "delisted" && !watched
+            ? "border-transparent bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+            : watched
+              ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
+              : "border-slate-700 text-slate-300 hover:bg-slate-800"
         )}
       >
         {watched ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-        {watched ? "On your Watchlist" : "Add to Watchlist"}
+        {statusKind === "delisted"
+          ? watched
+            ? "Watching for a relist"
+            : "Watch for a Relist"
+          : watched
+            ? "On your Watchlist"
+            : "Add to Watchlist"}
       </button>
 
       <button

@@ -12,6 +12,8 @@ interface ListingEstimateCardProps {
   city?: string;
   /** VOW gate: AVM is VOW-derived — render a blurred "Login Required" teaser for anon. */
   locked?: boolean;
+  /** Sold/de-listed views: the ask is moot — suppress the "below/above ask" delta line. */
+  hideAskDelta?: boolean;
 }
 
 const CONFIDENCE_STYLES: Record<AVMResult["confidence"], string> = {
@@ -36,12 +38,16 @@ export default function ListingEstimateCard({
   cityRegion,
   city,
   locked,
+  hideAskDelta,
 }: ListingEstimateCardProps) {
   if (locked) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>PureProperty Estimate</CardTitle>
+          <CardTitle>True Value</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            What the asset itself is worth — independent of asking price.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -50,7 +56,7 @@ export default function ListingEstimateCard({
               <p className="text-xs font-mono text-muted-foreground">Range $000K – $000K</p>
               <p className="text-sm font-medium text-muted-foreground">↓ $00,000 below ask</p>
             </div>
-            <VowGateOverlay message="Sign in to view our estimate" />
+            <VowGateOverlay message="Sign in to view the True Value" />
           </div>
         </CardContent>
       </Card>
@@ -63,7 +69,10 @@ export default function ListingEstimateCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>PureProperty Estimate</CardTitle>
+        <CardTitle>True Value</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          What the asset itself is worth — independent of asking price.
+        </p>
       </CardHeader>
       <CardContent>
         {unavailable ? (
@@ -89,10 +98,12 @@ export default function ListingEstimateCard({
                   Range {formatPrice(estimate.lowBand)} – {formatPrice(estimate.highBand)}
                 </p>
               )}
-              <DeltaVsAsking
-                estimatedValue={estimate.estimatedValue}
-                listPrice={listPrice}
-              />
+              {!hideAskDelta && (
+                <DeltaVsAsking
+                  estimatedValue={estimate.estimatedValue}
+                  listPrice={listPrice}
+                />
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t">

@@ -136,7 +136,7 @@ export default function CompareClient({
       />
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-600">
-        Est. Value is the PureProperty Estimate — our own deterministic model, not an MLS/TRREB figure.
+        Est. Value is our True Value estimate — our own deterministic model, not an MLS/TRREB figure.
         Carry, cap rate &amp; cashflow are computed from your assumptions and a rent estimate, not advice.
       </p>
     </div>
