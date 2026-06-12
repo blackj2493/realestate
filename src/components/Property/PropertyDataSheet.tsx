@@ -25,6 +25,9 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(max-width: 1023px)").matches) {
+      // SSR renders all groups open (SEO); the mobile collapse is a deliberate
+      // post-mount progressive enhancement, not derivable state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional post-mount collapse
       setOpen((prev) => {
         const next = { ...prev };
         groups.forEach((g, i) => {
