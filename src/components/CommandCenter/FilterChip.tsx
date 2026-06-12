@@ -39,6 +39,8 @@ export default function FilterChip({ def, value, onChange, onClear }: FilterChip
       {active && (
         <X
           className="h-3 w-3 opacity-70 hover:opacity-100"
+          role="button"
+          aria-label={`Clear ${def.label} filter`}
           onClick={(e) => {
             e.stopPropagation();
             onClear();

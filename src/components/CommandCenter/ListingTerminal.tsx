@@ -59,35 +59,8 @@ interface NearbySchool {
   distanceKm: number;
 }
 
-// Highlight NLP flags in text (motivated, as-is, TLC, handyman special, etc.)
-function highlightNLPFlags(text: string): React.ReactNode {
-  if (!text) return null;
-  
-  const flags = [
-    { pattern: /\b(motivated|need to sell|moving|relocating)\b/gi, className: 'text-rose-400 bg-rose-400/10' },
-    { pattern: /\b(TLC|as-is|handyman special)\b/gi, className: 'text-amber-400 bg-amber-400/10' },
-    { pattern: /\b(income suite|basement|nicolite potential)\b/gi, className: 'text-emerald-400 bg-emerald-400/10' },
-  ];
-  
-  // Split text by flag patterns
-  const parts: { text: string; isFlag: boolean; flagClass?: string }[] = [];
-  let remaining = text;
-  
-  flags.forEach(flag => {
-    const regex = new RegExp(flag.pattern);
-    remaining = remaining.replace(regex, (match) => {
-      parts.push({ text: match, isFlag: true, flagClass: flag.className });
-      return '';
-    });
-  });
-  
-  // For simplicity, just return the text with basic highlighting
-  // In production, you'd want more sophisticated text processing
-  return text;
-}
 
 export default function ListingTerminal({ property, isOpen, onClose }: ListingTerminalProps) {
-  const [propertyDetails, setPropertyDetails] = useState<ListingDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // School lens target (the school the user searched for, if any) — used to pin and
@@ -109,13 +82,6 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [hasEstimate, setHasEstimate] = useState(false);
   const [hasDealScore, setHasDealScore] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-
-  // Fetch full property details when terminal opens
-  useEffect(() => {
-    if (isOpen && property) {
-      setPropertyDetails(property);
-    }
-  }, [isOpen, property]);
 
   // Fetch all schools near this home (same 2.5 km radius as the NearbySchools filter,
   // so the searched school always appears here on a matched listing).

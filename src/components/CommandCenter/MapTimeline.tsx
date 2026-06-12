@@ -14,6 +14,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 
 const HALF = 22; // must match AlphaMap's DOM_WINDOW_HALF
 const MAX_DOM = 365;
+const MIN_DOM = 10; // smallest window-center that keeps the low-DOM band visible
 
 export default function MapTimeline() {
   const timelineActive = useCommandCenterStore((s) => s.timelineActive);
@@ -28,7 +29,7 @@ export default function MapTimeline() {
     if (!playing) return;
     const id = setInterval(() => {
       const cur = useCommandCenterStore.getState().domCenter;
-      setDomCenter(cur + 10 > MAX_DOM ? 0 : cur + 10);
+      setDomCenter(cur + 10 > MAX_DOM ? MIN_DOM : cur + 10);
     }, 450);
     return () => clearInterval(id);
   }, [playing, setDomCenter]);

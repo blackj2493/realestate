@@ -118,7 +118,7 @@ export const useWatchlistStore = create<WatchState>((set, get) => ({
         await migrateLocalToServer();
         await loadServer();
       } else if (event === "SIGNED_OUT") {
-        set({ items: toMap(readLocal()), signedIn: false });
+        set({ items: toMap(readLocal()), signedIn: false, loaded: true });
       }
     });
   },

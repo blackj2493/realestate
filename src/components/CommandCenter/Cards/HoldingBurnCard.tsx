@@ -44,7 +44,7 @@ export function HoldingBurnCard({
     const maintenance = (listPrice * 0.005) / 12;
     
     return Math.round(interest + taxes + vacancyInsurance + utilities + maintenance);
-  }, [listPrice, interestRate]);
+  }, [listPrice, interestRate, maxHoldingCost]);
 
   // Total project capital at risk
   const totalProjectCapitalRisk = useMemo(() => {
