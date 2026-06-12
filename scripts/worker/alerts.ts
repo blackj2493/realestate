@@ -132,11 +132,24 @@ async function main() {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   // ── Watchlist phase ────────────────────────────────────────────────────────
-  const { data: rows, error } = await supabase
-    .from('watchlist')
-    .select('id, user_id, listing_key, address, city, thumb, list_price, last_known_status, last_alerted_price');
-  if (error) throw new Error(`watchlist read failed: ${error.message}`);
-  const watch = (rows ?? []) as WatchRow[];
+  // PostgREST caps a single select at 1,000 rows; page through all rows so
+  // users past the first thousand are never silently skipped (audit LOW-25).
+  const PAGE = 1000;
+  const allRows: WatchRow[] = [];
+  let offset = 0;
+  while (true) {
+    const { data: page, error } = await supabase
+      .from('watchlist')
+      .select('id, user_id, listing_key, address, city, thumb, list_price, last_known_status, last_alerted_price')
+      .order('id')
+      .range(offset, offset + PAGE - 1);
+    if (error) throw new Error(`watchlist read failed: ${error.message}`);
+    const chunk = (page ?? []) as WatchRow[];
+    allRows.push(...chunk);
+    if (chunk.length < PAGE) break;
+    offset += PAGE;
+  }
+  const watch = allRows;
 
   // One active-index lookup per distinct listing.
   const currents = new Map<string, Current | null>();
