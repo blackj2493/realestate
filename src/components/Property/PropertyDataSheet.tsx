@@ -23,7 +23,6 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (window.matchMedia("(max-width: 1023px)").matches) {
       // SSR renders all groups open (SEO); the mobile collapse is a deliberate
       // post-mount progressive enhancement, not derivable state.
@@ -45,8 +44,11 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
   const jumpTo = (id: string) => {
     setOpen((prev) => ({ ...prev, [id]: true }));
     // open first so the scroll target has its final height
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
     requestAnimationFrame(() => {
-      sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+      sectionRefs.current[id]?.scrollIntoView({ behavior, block: "start" });
     });
   };
 
@@ -73,7 +75,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                   : "border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200",
               )}
             >
-              {isRisk ? "⚠ " : ""}
+              {isRisk && <span aria-hidden="true">⚠ </span>}
               {group.title} · {rows.length}
             </button>
           );
@@ -99,8 +101,9 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
             >
               <button
                 type="button"
-                onClick={() => setOpen((prev) => ({ ...prev, [group.id]: !isOpen }))}
+                onClick={() => setOpen((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                 aria-expanded={isOpen}
+                aria-controls={`datasheet-${group.id}-panel`}
                 className="flex w-full items-center justify-between px-4 py-3 text-left"
               >
                 <span
@@ -120,8 +123,11 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                   )}
                 />
               </button>
-              {/* hidden (not unmounted): content stays in the DOM for SEO/find-in-page */}
-              <div className={cn("px-4 pb-4", !isOpen && "hidden")}>
+              {/* hidden (not unmounted): SSR HTML keeps all field values in the DOM for crawlers */}
+              <div
+                id={`datasheet-${group.id}-panel`}
+                className={cn("px-4 pb-4", !isOpen && "hidden")}
+              >
                 <div className="grid grid-cols-1 gap-y-2">
                   {rows.map((row) => (
                     <div key={row.key} className="flex items-baseline justify-between gap-4">
