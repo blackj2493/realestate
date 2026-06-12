@@ -117,6 +117,17 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
   if (isAuthed) return detail;
   const gatedPayload = { ...(detail.full_payload as Record<string, unknown>) };
   delete gatedPayload.true_dom; // VOW-stitched; raw DaysOnMarket (IDX) stays
+  // Sold listings live in `listings` with their raw Closed payload (Query B), and the
+  // property API ships full_payload — scrub the sold price/date fields so an anonymous
+  // /api/property/[id] response can never carry them (status.closePrice is gated above,
+  // but the raw payload would leak the same numbers).
+  delete gatedPayload.ClosePrice;
+  delete gatedPayload.CloseDate;
+  delete gatedPayload.ClosePriceHold;
+  delete gatedPayload.CloseDateHold;
+  delete gatedPayload.PurchaseContractDate;
+  delete gatedPayload.SoldEntryTimestamp;
+  delete gatedPayload.SoldConditionalEntryTimestamp;
   return {
     ...detail,
     full_payload: gatedPayload,
