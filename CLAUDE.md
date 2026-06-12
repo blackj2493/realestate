@@ -103,14 +103,14 @@ Every feature must be measurably better than housesigma or realtor.ca on at leas
 This project integrates two TRREB data feeds. Before writing any code that reads, displays, or transforms listing data, consult the relevant docs below.
 
 ### API Payloads & Response Structure
-- @.claude/docs/api/trreb-idx-payload.md — IDX feed field schema and payload spec
-- @.claude/docs/api/trreb-vow-payload.md — VOW feed field schema and payload spec
-- @.claude/docs/api/idx-response-example.json — Real example IDX API response
-- @.claude/docs/api/vow-response-example.json — Real example VOW API response
+Read these on demand (do NOT assume field names from memory — the feeds are case-sensitive and quirky):
+- `.claude/docs/api/trreb-idx-payload.md` — IDX feed field schema and payload spec
+- `.claude/docs/api/trreb-vow-payload.md` — VOW feed field schema and payload spec
+- `.claude/docs/api/vow-response-example.json` — Real example VOW API response
 
 ### Legal Agreements & Rules
-- @.claude/docs/legal/idx-agreement.pdf — IDX display rules, dos and don'ts
-- @.claude/docs/legal/vow-agreement.pdf — VOW display rules, dos and don'ts
+- `.claude/docs/legal/idx-agreement.pdf` — IDX display rules, dos and don'ts
+- `.claude/docs/legal/vow-agreement.pdf` — VOW display rules, dos and don'ts
 
 **Always check the agreement files before implementing any listing display feature to ensure compliance with TRREB data licensing rules.**
 
