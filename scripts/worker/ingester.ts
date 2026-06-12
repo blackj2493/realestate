@@ -1319,7 +1319,8 @@ Usage:
   npx tsx scripts/worker/ingester.ts test   - Test API connection
 
 Environment Variables:
-  RESO_BEARER_TOKEN  - Bearer token for Ampre RESO Web API
+  PROPTX_IDX_TOKEN   - TRREB IDX bearer token (Active listings, Query A)
+  PROPTX_VOW_TOKEN   - TRREB VOW bearer token (Sold listings, Query B)
   AMPRE_API_URL      - Base URL (default: https://query.ampre.ca/odata)
 
 Notes:
