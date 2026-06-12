@@ -51,15 +51,31 @@ export async function fetchSiblingModel(
   if (subVariants.length === 0) return null;
 
   // 1. Which community cohorts live in this municipality? (raw_vow_sold carries both.)
-  const regionsRes = await supabase
-    .from('raw_vow_sold')
-    .select('city_region')
-    .ilike('city', city.trim())
-    .in('property_sub_type', subVariants)
-    .limit(5000);
-  const cityRegions = Array.from(
-    new Set((regionsRes.data ?? []).map((r: { city_region: string }) => r.city_region).filter(Boolean))
-  );
+  //    Paged loop: PostgREST hard-caps at 1,000 rows per response; .limit(5000) was
+  //    silently truncated to 1,000, dropping donor communities past row 1,000 in big
+  //    cities and degrading untrained-cohort AVM. (audit MEDIUM-9)
+  const PAGE = 1000;
+  const communitySet = new Set<string>();
+  for (let from = 0; from < PAGE * 20; from += PAGE) {
+    const { data, error } = await supabase
+      .from('raw_vow_sold')
+      .select('city_region')
+      .ilike('city', city.trim())
+      .in('property_sub_type', subVariants)
+      .order('city_region')
+      .range(from, from + PAGE - 1);
+    if (error || !data) break;
+    for (const r of data as { city_region: string }[]) {
+      if (r.city_region) communitySet.add(r.city_region);
+    }
+    if (data.length < PAGE) break;
+    if (from + PAGE >= PAGE * 20) {
+      console.warn(
+        `[siblingModel] IO-budget guard: stopped after 20 pages fetching city_regions for city="${city}". Some communities may be missing.`
+      );
+    }
+  }
+  const cityRegions = Array.from(communitySet);
   if (cityRegions.length === 0) return null;
 
   // 2. Which of those are trained? Pick the best.
