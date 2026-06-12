@@ -162,39 +162,58 @@ const FIELDS: DatasheetField[] = [
     key: "KitchensTotal",
     label: "Kitchens",
     group: "vitals",
+    // Known segments only — never fabricate a 0 the feed did not assert.
     format: (p) => {
       const total = num(p, "KitchensTotal");
       const above = num(p, "KitchensAboveGrade");
       const below = num(p, "KitchensBelowGrade");
-      if (total === null && above === null && below === null) return null;
-      return `${total ?? 0} (${above ?? 0} above · ${below ?? 0} below)`;
+      const known = [total, above, below].filter((v): v is number => v !== null);
+      if (known.length === 0) return null;
+      if (known.every((v) => v === 0)) return null; // all-zero row is noise
+      const segs: string[] = [];
+      if (above !== null) segs.push(`${above} above`);
+      if (below !== null) segs.push(`${below} below`);
+      if (total === null) return segs.join(" · ");
+      return segs.length > 0 ? `${total} (${segs.join(" · ")})` : String(total);
     },
   },
   {
     key: "RoomsAboveGrade",
     label: "Rooms",
     group: "vitals",
+    // Known segments only — never fabricate a 0 the feed did not assert.
     format: (p) => {
       const above = num(p, "RoomsAboveGrade");
       const below = num(p, "RoomsBelowGrade");
-      if (above === null && below === null) return null;
-      return `${above ?? 0} above · ${below ?? 0} below`;
+      const segs: string[] = [];
+      if (above !== null) segs.push(`${above} above`);
+      if (below !== null) segs.push(`${below} below`);
+      return segs.length > 0 ? segs.join(" · ") : null;
     },
   },
   {
     key: "BedroomsAboveGrade",
     label: "Bedrooms",
     group: "vitals",
+    // Known segments only. BedroomsTotal includes below-grade, so the plain-total
+    // fallback gets NO "above" suffix and no below segment appended to it.
     format: (p) => {
-      const above = num(p, "BedroomsAboveGrade") ?? num(p, "BedroomsTotal");
+      const above = num(p, "BedroomsAboveGrade");
       const below = num(p, "BedroomsBelowGrade");
-      if (above === null && below === null) return null;
-      return `${above ?? 0} above · ${below ?? 0} below`;
+      if (above !== null) {
+        const segs = [`${above} above`];
+        if (below !== null) segs.push(`${below} below`);
+        return segs.join(" · ");
+      }
+      const total = num(p, "BedroomsTotal");
+      if (total !== null) return String(total);
+      return below !== null ? `${below} below` : null;
     },
   },
 ];
 
 // Mark helpers as used — they are available for Task 2+ fields.
+// TODO(Task 2): remove — these helpers get wired when the remaining groups land.
 void (yes satisfies typeof yes);
 void (money satisfies typeof money);
 
@@ -205,9 +224,17 @@ const DEFAULT_ORDER: DatasheetGroupId[] = GROUPS.map((g) => g.id);
  * groups with zero rows are dropped. `order` is the future persona-lens /
  * per-user reorder seam — it may reorder groups but can never add or remove
  * fields (per-user hiding is compliance-gated; see spec).
+ *
+ * `order` is normalized: duplicates are deduped, unknown ids are ignored, and
+ * any DEFAULT_ORDER groups missing from it are appended afterwards in default
+ * order — a partial `order` reorders its listed groups to the front but never
+ * removes the rest.
  */
 export function buildDatasheet(p: RawPayload, order?: DatasheetGroupId[]): ResolvedGroup[] {
-  const groupOrder = order && order.length > 0 ? order : DEFAULT_ORDER;
+  const requested = (order ?? []).filter(
+    (id, i, arr) => DEFAULT_ORDER.includes(id) && arr.indexOf(id) === i,
+  );
+  const groupOrder = [...requested, ...DEFAULT_ORDER.filter((id) => !requested.includes(id))];
   const out: ResolvedGroup[] = [];
   for (const id of groupOrder) {
     const meta = GROUPS.find((g) => g.id === id);

@@ -75,3 +75,42 @@ describe("buildDatasheet — vitals", () => {
     expect(rowValue(p, "vitals", "Direction Faces")).toBe("wEsT");
   });
 });
+
+describe("buildDatasheet — composite rows render known segments only", () => {
+  it("Rooms: only the segments the feed asserted, no fabricated zeros", () => {
+    expect(rowValue({ RoomsAboveGrade: 10 }, "vitals", "Rooms")).toBe("10 above");
+    expect(rowValue({ RoomsBelowGrade: 4 }, "vitals", "Rooms")).toBe("4 below");
+  });
+
+  it("Bedrooms: plain BedroomsTotal fallback gets no above/below labels", () => {
+    expect(rowValue({ BedroomsTotal: 5, BedroomsBelowGrade: 1 }, "vitals", "Bedrooms")).toBe("5");
+    expect(rowValue({ BedroomsAboveGrade: 3 }, "vitals", "Bedrooms")).toBe("3 above");
+  });
+
+  it("Kitchens: parenthetical lists only known segments; all-zero row is dropped", () => {
+    expect(rowValue({ KitchensTotal: 2, KitchensAboveGrade: 2 }, "vitals", "Kitchens")).toBe(
+      "2 (2 above)",
+    );
+    expect(
+      rowValue(
+        { KitchensTotal: 0, KitchensAboveGrade: 0, KitchensBelowGrade: 0 },
+        "vitals",
+        "Kitchens",
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("buildDatasheet — order normalization (append-remainder)", () => {
+  it("a partial order never removes unlisted groups", () => {
+    // "taxes" has no registry fields yet (Task 2), so it resolves empty and is
+    // dropped — but vitals must still render via the appended remainder.
+    const ids = buildDatasheet(DETACHED, ["taxes"]).map((g) => g.group.id);
+    expect(ids).toEqual(["vitals"]);
+  });
+
+  it("duplicate ids in order render the group only once", () => {
+    const ids = buildDatasheet(DETACHED, ["vitals", "vitals"]).map((g) => g.group.id);
+    expect(ids).toEqual(["vitals"]);
+  });
+});
