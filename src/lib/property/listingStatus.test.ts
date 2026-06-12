@@ -3,6 +3,7 @@ import {
   resolveListingStatus,
   fillClosePriceFromSaleHistory,
   pickSoldAccuracy,
+  gateListingStatus,
   type DelistedRowLite,
 } from "./listingStatus";
 
@@ -150,5 +151,44 @@ describe("pickSoldAccuracy", () => {
   it("ties go to Expected Sale Price", () => {
     const a = pickSoldAccuracy({ closePrice: 800_000, avmValue: 810_000, expectedSalePrice: 790_000 })!;
     expect(a.modelLabel).toBe("Expected Sale Price");
+  });
+});
+
+describe("gateListingStatus", () => {
+  it("authed users see everything unchanged", () => {
+    const sold = { kind: "sold", label: "SOLD", closePrice: 875_000, closeDate: "2026-06-09" } as const;
+    expect(gateListingStatus(sold, true)).toBe(sold);
+  });
+
+  it("anon keeps the sold KIND + label but loses price/date (HouseSigma model)", () => {
+    const gated = gateListingStatus(
+      { kind: "sold", label: "LEASED", closePrice: 2_600, closeDate: "2026-06-09" },
+      false
+    );
+    expect(gated).toEqual({ kind: "sold", label: "LEASED", closePrice: null, closeDate: null });
+  });
+
+  it("anon keeps the delisted KIND but loses all VOW specifics", () => {
+    const gated = gateListingStatus(
+      {
+        kind: "delisted",
+        mlsStatus: "Terminated",
+        delistedDate: "2026-03-14",
+        daysOnMarket: 71,
+        lastListPrice: 949_900,
+      },
+      false
+    );
+    expect(gated).toEqual({
+      kind: "delisted",
+      mlsStatus: null,
+      delistedDate: null,
+      daysOnMarket: null,
+      lastListPrice: null,
+    });
+  });
+
+  it("active passes through for anon", () => {
+    expect(gateListingStatus({ kind: "active" }, false)).toEqual({ kind: "active" });
   });
 });

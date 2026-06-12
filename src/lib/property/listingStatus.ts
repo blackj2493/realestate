@@ -142,3 +142,24 @@ export function pickSoldAccuracy(args: {
     diffPct: (best.value - closePrice) / closePrice,
   };
 }
+
+/**
+ * VOW gating (CLAUDE.md §4): the status KIND is public (anon sees the SOLD /
+ * OFF MARKET badge — HouseSigma model; the badge itself is the conversion hook),
+ * but every VOW-sourced number/date is stripped. Called from gateVowDerived so
+ * one call fully de-VOWs a ListingDetail.
+ */
+export function gateListingStatus(status: ListingStatus, isAuthed: boolean): ListingStatus {
+  if (isAuthed) return status;
+  if (status.kind === "sold")
+    return { kind: "sold", label: status.label, closePrice: null, closeDate: null };
+  if (status.kind === "delisted")
+    return {
+      kind: "delisted",
+      mlsStatus: null,
+      delistedDate: null,
+      daysOnMarket: null,
+      lastListPrice: null,
+    };
+  return status;
+}
