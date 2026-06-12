@@ -58,6 +58,9 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
         <Table2 className="h-4 w-4 text-emerald-400" />
         Property Data Sheet
       </h3>
+      <p className="mb-3 text-[10px] text-slate-600">
+        Information deemed reliable but is not guaranteed accurate by PROPTX.
+      </p>
 
       {/* Chip nav — tab-like wayfinding without hiding content */}
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1 lg:flex-wrap">
