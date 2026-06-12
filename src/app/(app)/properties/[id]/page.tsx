@@ -92,6 +92,14 @@ function calculateDaysOnMarket(ts?: string): number {
   return Math.max(0, Math.ceil(diff / 86_400_000) - 1);
 }
 
+/** Format a feed date; malformed strings pass through raw instead of "Invalid Date". */
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+}
+
 function asArray(v: string[] | string | undefined): string[] {
   if (Array.isArray(v)) return v.filter(Boolean);
   return v ? [v] : [];
@@ -346,7 +354,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   <>
                     <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-rose-400">
                       {status.label}
-                      {soldDate ? ` ${new Date(soldDate).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })}` : ""}
+                      {soldDate ? ` ${fmtDate(soldDate)}` : ""}
                     </span>
                     {soldPrice ? (
                       <>
@@ -415,13 +423,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {status.kind === "delisted" && (
                 <p className="mt-1 text-sm text-amber-300/80">
                   {status.mlsStatus
-                    ? `${status.mlsStatus} ${
-                        status.delistedDate
-                          ? new Date(status.delistedDate).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })
-                          : ""
-                      }${status.daysOnMarket != null ? ` · ${status.daysOnMarket} days on market` : ""}${
-                        status.lastListPrice ? ` · last asking ${formatPrice(status.lastListPrice)}` : ""
-                      }`
+                    ? [
+                        `${status.mlsStatus}${status.delistedDate ? ` ${fmtDate(status.delistedDate)}` : ""}`,
+                        status.daysOnMarket != null ? `${status.daysOnMarket} days on market` : null,
+                        status.lastListPrice ? `last asking ${formatPrice(status.lastListPrice)}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
                     : "This listing is no longer on the market."}
                 </p>
               )}
