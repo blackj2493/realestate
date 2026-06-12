@@ -27,6 +27,12 @@ export type DatasheetGroupId =
   | "risk";
 
 export interface ResolvedRow {
+  /**
+   * Registry identity — unique per field, safe as a React key. NOT necessarily
+   * the payload key that produced the value: composite formatters read multiple
+   * payload fields (e.g. key "FireplaceYN" may render FireplaceFeatures;
+   * "WaterSource" may render Water). Do not use it for payload back-references.
+   */
   key: string;
   label: string;
   value: string;
@@ -104,7 +110,7 @@ function money(p: RawPayload, key: string): string | null {
 /** Only http(s) URLs are linkable; anything else is dropped (defence vs feed garbage). */
 function safeUrl(p: RawPayload, key: string): string | null {
   const v = str(p, key);
-  return v && /^https?:\/\//i.test(v) ? v : null;
+  return v && /^https?:\/\/\S+/i.test(v) ? v : null;
 }
 
 /** True when a risk value is "concerning": present and not a benign None/No/Unknown. */
@@ -246,6 +252,7 @@ const FIELDS: DatasheetField[] = [
       const count = num(p, "FireplacesTotal");
       if (features) return count && count > 1 ? `${count} · ${features}` : features;
       if (p["FireplaceYN"] === true) return count && count > 1 ? `${count}` : "Yes";
+      if (count && count > 0) return String(count);
       return null;
     },
   },
@@ -426,7 +433,7 @@ const FIELDS: DatasheetField[] = [
     label: "UFFI",
     group: "risk",
     format: (p) => str(p, "UFFI"),
-    flag: (p) => concerning([str(p, "UFFI") ?? ""].filter(Boolean)),
+    flag: (p) => concerning(list(p, "UFFI")),
   },
   {
     key: "Disclosures",

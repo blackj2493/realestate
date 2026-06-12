@@ -174,6 +174,18 @@ describe("buildDatasheet — group coverage", () => {
     expect(rowValue(p, "interior", "Furnished")).toBe("Unfurnished");
     // FireplaceYN true with no features still shows "Yes"
     expect(rowValue({ FireplaceYN: true }, "interior", "Fireplace")).toBe("Yes");
+    // count > 1 prefixes the features
+    expect(
+      rowValue({ FireplacesTotal: 2, FireplaceFeatures: ["Natural Gas"] }, "interior", "Fireplace"),
+    ).toBe("2 · Natural Gas");
+    // FireplaceYN true + count > 1 → count alone
+    expect(rowValue({ FireplaceYN: true, FireplacesTotal: 2 }, "interior", "Fireplace")).toBe("2");
+    // count alone (no features, no YN) still renders the row
+    expect(rowValue({ FireplacesTotal: 2 }, "interior", "Fireplace")).toBe("2");
+    // features win even when FireplaceYN is explicitly false
+    expect(
+      rowValue({ FireplaceFeatures: ["Wood"], FireplaceYN: false }, "interior", "Fireplace"),
+    ).toBe("Wood");
   });
 
   it("exterior, lot & land", () => {
@@ -281,6 +293,13 @@ describe("buildDatasheet — group coverage", () => {
     expect(tour?.value).toBe("View tour");
     // Non-http(s) URL → link suppressed entirely
     expect(rows({ VirtualTourURLUnbranded: "javascript:alert(1)" }, "transaction")).toEqual([]);
+    // Bare scheme with no host → dead link suppressed entirely
+    expect(rows({ VirtualTourURLUnbranded: "https://" }, "transaction")).toEqual([]);
+    // Branded tour renders its own labelled link row
+    const branded = rows({ VirtualTourURLBranded: "https://tour.example.com/b" }, "transaction");
+    const brandedRow = branded.find((r) => r.label === "Virtual Tour (branded)");
+    expect(brandedRow?.value).toBe("View tour");
+    expect(brandedRow?.href).toBe("https://tour.example.com/b");
   });
 
   it("risk & disclosures with flag semantics", () => {
@@ -309,6 +328,12 @@ describe("buildDatasheet — group coverage", () => {
     expect(b.find((x) => x.label === "UFFI")).toMatchObject({ value: "No", flagged: false });
     expect(b.find((x) => x.label === "Easements / Restrictions")).toMatchObject({ flagged: false });
     expect(b.find((x) => x.label === "Special Designation")).toMatchObject({ flagged: false });
+    // Mixed array: ANY concerning member flags the row (.some semantics)
+    const mixed = rows({ Disclosures: ["None", "Easement"] }, "risk");
+    expect(mixed.find((x) => x.label === "Easements / Restrictions")).toMatchObject({
+      value: "None · Easement",
+      flagged: true,
+    });
   });
 });
 
@@ -333,6 +358,9 @@ describe("buildDatasheet — policy & ordering", () => {
     expect(allText).not.toContain("Lockbox");
     expect(allText).not.toContain("seller motivated");
     expect(allText).not.toContain("Call LBO");
+    // Sold/expiry dates are as compliance-sensitive as sold prices
+    expect(allText).not.toContain("2026-01-01");
+    expect(allText).not.toContain("2026-09-01");
   });
 
   it("order param puts requested groups first (append-remainder)", () => {
