@@ -5,8 +5,9 @@
  * full Supabase payload (real rooms, all photos, AVM estimate, condo-fee stability)
  * and emitting per-listing <title>/meta/OpenGraph + JSON-LD for crawlers.
  *
- * Compliance: serves the `listings` table (active IDX) only; brokerage is displayed;
- * all derived metrics are deterministic (no LLM transformation).
+ * Compliance: serves the `listings` table; sold/de-listed states render status-aware
+ * views with VOW numbers gated (kind public, prices/dates authed-only); brokerage is
+ * displayed; all derived metrics are deterministic (no LLM transformation).
  */
 
 import type { Metadata } from "next";
@@ -30,6 +31,7 @@ import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
 import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
+import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
@@ -121,13 +123,22 @@ export async function generateMetadata({
   const address = p.UnparsedAddress || detail.city || "Listing";
   const price = p.ListPrice || 0;
   const canonical = `${SITE_URL}/properties/${id}`;
-  const title = `${address} — ${formatPrice(price)} | PureProperty`;
+  const statusSuffix =
+    detail.status.kind === "sold"
+      ? ` — ${detail.status.label}`
+      : detail.status.kind === "delisted"
+        ? " — Off Market"
+        : "";
+  const title = `${address} — ${formatPrice(price)}${statusSuffix} | PureProperty`;
   const description =
     cleanDescription(p.PublicRemarks) ||
     `${address}. ${p.BedroomsTotal ?? 0} bed, ${p.BathroomsTotalInteger ?? 0} bath ${
       p.PropertySubType || "home"
     } listed at ${formatPrice(price)}.`;
-  const isActive = (p.StandardStatus ?? "Active") === "Active";
+  // Frozen-Active payloads (Terminated/Expired/Suspended) must noindex too — trust
+  // the resolved status, not the stale payload field.
+  const isActive =
+    detail.status.kind === "active" && (p.StandardStatus ?? "Active") === "Active";
   const ogImage = detail.media_urls[0];
 
   return {
@@ -185,7 +196,12 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
       "@type": "Offer",
       price: p.ListPrice || 0,
       priceCurrency: "CAD",
-      availability: "https://schema.org/InStock",
+      availability:
+        detail.status.kind === "sold"
+          ? "https://schema.org/SoldOut"
+          : detail.status.kind === "delisted"
+            ? "https://schema.org/OutOfStock"
+            : "https://schema.org/InStock",
       url: `${SITE_URL}/properties/${id}`,
       ...(p.ListOfficeName
         ? { seller: { "@type": "RealEstateAgent", name: p.ListOfficeName } }
@@ -216,7 +232,16 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const hasValueAdd = hasValueAddData(detail.valueAdd);
   const hasDealScore = detail.dealScore.score !== null;
   const hasExpectedSale = (detail.expectedSale?.expectedPrice ?? 0) > 0;
+  const hasSoldAccuracy = detail.soldAccuracy !== null;
+  const hasSoldPrice = detail.status.kind === "sold" && detail.status.closePrice !== null;
   const view = gateVowDerived(detail, isAuthed);
+  // ALWAYS read status/accuracy from the gated view below — detail.status carries
+  // ungated VOW sold numbers (anon must never receive them).
+  const status = view.status;
+  const soldAccuracy = view.soldAccuracy;
+  const isActiveListing = status.kind === "active";
+  const soldPrice = status.kind === "sold" ? status.closePrice : null;
+  const soldDate = status.kind === "sold" ? status.closeDate : null;
   const saleHistory = view.saleHistory;
   // Prior sold prices for the price-history chart — authed only (events are empty otherwise).
   const saleMarkers: SaleMarker[] = saleHistory.events
@@ -317,18 +342,89 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               )}
               <h1 className="mb-2 text-2xl font-bold text-slate-100">{address}</h1>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="font-mono text-3xl font-bold text-emerald-400">
-                  {formatPrice(price)}
-                </span>
+                {status.kind === "sold" ? (
+                  <>
+                    <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-rose-400">
+                      {status.label}
+                      {soldDate ? ` ${new Date(soldDate).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })}` : ""}
+                    </span>
+                    {soldPrice ? (
+                      <>
+                        <span className="font-mono text-3xl font-bold text-emerald-400">
+                          {formatPrice(soldPrice)}
+                        </span>
+                        {price > 0 && (
+                          <>
+                            <span className="font-mono text-lg text-slate-500 line-through">
+                              {formatPrice(price)}
+                            </span>
+                            <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-300">
+                              {((soldPrice / price) * 100).toFixed(1)}% of ask
+                            </span>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-mono text-3xl font-bold text-slate-400">
+                          {formatPrice(price)}
+                        </span>
+                        {hasSoldPrice && (
+                          <Link
+                            href="/login"
+                            className="rounded border border-slate-700 px-2 py-0.5 text-xs text-cyan-300 hover:bg-slate-800"
+                          >
+                            Sign in for the sold price
+                          </Link>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : status.kind === "delisted" ? (
+                  <>
+                    <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-400">
+                      OFF MARKET
+                    </span>
+                    <span className="font-mono text-3xl font-bold text-slate-400">
+                      {formatPrice(price)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-mono text-3xl font-bold text-emerald-400">
+                    {formatPrice(price)}
+                  </span>
+                )}
                 <span className="text-sm text-slate-500">
                   {p.City}
                   {p.PropertySubType ? `, ${p.PropertySubType}` : ""}
                 </span>
-                <span className="text-sm font-semibold text-slate-400">
-                  Listed {dom} {dom === 1 ? "day" : "days"} ago
-                </span>
-                <DealScoreBadge score={view.dealScore.score} grade={view.dealScore.grade} />
+                {isActiveListing && (
+                  <span className="text-sm font-semibold text-slate-400">
+                    Listed {dom} {dom === 1 ? "day" : "days"} ago
+                  </span>
+                )}
+                {status.kind === "sold" && (
+                  <span className="text-sm font-semibold text-slate-400">
+                    Sold after {dom} {dom === 1 ? "day" : "days"} on market
+                  </span>
+                )}
+                {isActiveListing && (
+                  <DealScoreBadge score={view.dealScore.score} grade={view.dealScore.grade} />
+                )}
               </div>
+              {status.kind === "delisted" && (
+                <p className="mt-1 text-sm text-amber-300/80">
+                  {status.mlsStatus
+                    ? `${status.mlsStatus} ${
+                        status.delistedDate
+                          ? new Date(status.delistedDate).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })
+                          : ""
+                      }${status.daysOnMarket != null ? ` · ${status.daysOnMarket} days on market` : ""}${
+                        status.lastListPrice ? ` · last asking ${formatPrice(status.lastListPrice)}` : ""
+                      }`
+                    : "This listing is no longer on the market."}
+                </p>
+              )}
               {p.ListOfficeName && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
                   <Building2 className="h-4 w-4 text-slate-500" />
@@ -409,28 +505,41 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           {/* ── RIGHT (30%, sticky) ── */}
           <div>
             <div className="sticky top-6 space-y-4">
-              {/* Deal Score — flagship signal, pinned to the top of the rail */}
-              <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
+              {/* Sold: lead with the accuracy receipt — Deal Score / Expected Sale are
+                  for live asks; their job here is done. */}
+              {status.kind === "sold" && (
+                <SoldOutcomeCard
+                  accuracy={soldAccuracy}
+                  closeDate={soldDate}
+                  locked={!isAuthed && hasSoldAccuracy}
+                />
+              )}
 
-              {/* PureProperty Estimate — our list-blind AVM ("comparable value") */}
+              {isActiveListing && (
+                <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
+              )}
+
+              {/* True Value — our list-blind AVM ("what the asset is worth") */}
               <ListingEstimateCard
                 estimate={view.estimate}
                 listPrice={price}
                 cityRegion={p.CityRegion}
                 city={p.City}
                 locked={!isAuthed && hasEstimate}
+                hideAskDelta={status.kind === "sold"}
               />
 
-              {/* Expected Sale Price — list-AWARE "what this closes at"; lineup axis ties
-                  it to the comparable-value (AVM) range above */}
-              <ExpectedSaleCard
-                expectedSale={view.expectedSale}
-                estimate={view.estimate}
-                listPrice={price}
-                city={p.City}
-                propertySubType={p.PropertySubType}
-                locked={!isAuthed && hasExpectedSale}
-              />
+              {/* Expected Sale Price — only meaningful against a live ask */}
+              {isActiveListing && (
+                <ExpectedSaleCard
+                  expectedSale={view.expectedSale}
+                  estimate={view.estimate}
+                  listPrice={price}
+                  city={p.City}
+                  propertySubType={p.PropertySubType}
+                  locked={!isAuthed && hasExpectedSale}
+                />
+              )}
 
               {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}
               <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
@@ -444,7 +553,18 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   Asset Summary
                 </h3>
                 <div className="space-y-2 text-xs">
-                  <SummaryRow label="List Price" value={formatPrice(price)} valueClass="text-emerald-400" />
+                  {soldPrice !== null && (
+                    <SummaryRow
+                      label={status.kind === "sold" && status.label === "LEASED" ? "Leased Price" : "Sold Price"}
+                      value={formatPrice(soldPrice)}
+                      valueClass="text-rose-400"
+                    />
+                  )}
+                  <SummaryRow
+                    label="List Price"
+                    value={formatPrice(price)}
+                    valueClass={isActiveListing ? "text-emerald-400" : "text-slate-400"}
+                  />
                   <SummaryRow
                     label="Annual Taxes"
                     value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
@@ -463,7 +583,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
               <UnderwritingSandbox
                 listingId={id}
-                listPrice={price}
+                listPrice={soldPrice ?? price}
                 annualTaxes={p.TaxAnnualAmount || 0}
                 monthlyFees={p.AssociationFee || 0}
                 hasSuitePotential={hasSuitePotential}
@@ -478,6 +598,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 city={detail.city ?? undefined}
                 price={price}
                 thumb={detail.media_urls[0]}
+                statusKind={status.kind}
               />
             </div>
           </div>
