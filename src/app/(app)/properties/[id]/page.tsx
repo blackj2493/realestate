@@ -22,7 +22,7 @@ import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/Alp
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RoomMap from "@/components/Property/RoomMap";
 import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
-import { buildDatasheet, type RawPayload } from "@/lib/property/datasheet";
+import { buildDatasheet } from "@/lib/property/datasheet";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import ExpectedSaleCard from "@/components/Property/ExpectedSaleCard";
@@ -101,7 +101,6 @@ function fmtDate(iso: string): string {
     ? iso
     : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 }
-
 
 function cleanDescription(remarks: string | undefined, max = 155): string {
   if (!remarks) return "";
@@ -278,7 +277,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   // Gated payload (defense-in-depth): anon view has sold price/date keys scrubbed,
   // so a future registry field can never surface them here. Identical for authed users.
-  const datasheet = buildDatasheet(view.full_payload as RawPayload);
+  const datasheet = buildDatasheet(view.full_payload);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
