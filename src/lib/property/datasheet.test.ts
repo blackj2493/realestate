@@ -327,7 +327,8 @@ describe("buildDatasheet — group coverage", () => {
     const b = rows(benign, "risk");
     expect(b.find((x) => x.label === "UFFI")).toMatchObject({ value: "No", flagged: false });
     expect(b.find((x) => x.label === "Easements / Restrictions")).toMatchObject({ flagged: false });
-    expect(b.find((x) => x.label === "Special Designation")).toMatchObject({ flagged: false });
+    // "Unknown" asserts nothing — suppressed entirely (tranche 2), unlike "None"
+    expect(b.find((x) => x.label === "Special Designation")).toBeUndefined();
     // Mixed array: ANY concerning member flags the row (.some semantics)
     const mixed = rows({ Disclosures: ["None", "Easement"] }, "risk");
     expect(mixed.find((x) => x.label === "Easements / Restrictions")).toMatchObject({
@@ -369,5 +370,158 @@ describe("buildDatasheet — policy & ordering", () => {
     expect(reordered.map((g) => g.group.id)).toEqual(["taxes", "vitals"]);
     const defaultIds = buildDatasheet(p).map((g) => g.group.id);
     expect(defaultIds).toEqual(["vitals", "taxes"]);
+  });
+});
+
+describe("buildDatasheet — tranche 2", () => {
+  it("washroom breakdown from WashroomsTypeN composites", () => {
+    const p: RawPayload = {
+      WashroomsType1: 2,
+      WashroomsType1Pcs: 4,
+      WashroomsType1Level: "Second",
+      WashroomsType2: 1,
+      WashroomsType2Pcs: 2,
+      WashroomsType2Level: "Main",
+      WashroomsType3: 0, // zero-count slot omitted
+      WashroomsType3Pcs: 3,
+    };
+    expect(rowValue(p, "vitals", "Washrooms")).toBe("2 × 4-pc (Second) · 1 × 2-pc (Main)");
+    // count without pieces still renders; level optional
+    expect(rowValue({ WashroomsType1: 1 }, "vitals", "Washrooms")).toBe("1");
+    expect(rowValue({}, "vitals", "Washrooms")).toBeUndefined();
+  });
+
+  it("cross street and area influences (deduped union)", () => {
+    const p: RawPayload = {
+      CrossStreet: "Mavis Rd & Eglinton Ave",
+      CommunityFeatures: ["Park", "Public Transit"],
+      PropertyFeatures: ["Park", "School", "Ravine"],
+    };
+    expect(rowValue(p, "vitals", "Cross Street")).toBe("Mavis Rd & Eglinton Ave");
+    expect(rowValue(p, "exterior", "Area Influences")).toBe("Park · Public Transit · School · Ravine");
+    // either source alone works
+    expect(rowValue({ PropertyFeatures: ["Fenced Yard"] }, "exterior", "Area Influences")).toBe("Fenced Yard");
+  });
+
+  it("builder fields: zoning fallback, PIN, development charges, survey composite", () => {
+    const p: RawPayload = {
+      ZoningDesignation: "R4-21",
+      ParcelNumber: "134250123",
+      DevelopmentChargesPaid: ["Yes"],
+      SurveyAvailableYN: true,
+      SurveyType: "Boundary Only",
+    };
+    expect(rowValue(p, "exterior", "Zoning")).toBe("R4-21");
+    expect(rowValue({ Zoning: "C2" }, "exterior", "Zoning")).toBe("C2");
+    expect(rowValue(p, "taxes", "PIN #")).toBe("134250123");
+    expect(rowValue(p, "taxes", "Development Charges Paid")).toBe("Yes");
+    expect(rowValue(p, "transaction", "Survey")).toBe("Yes · Boundary Only");
+    expect(rowValue({ SurveyType: "Up-to-Date" }, "transaction", "Survey")).toBe("Up-to-Date");
+    expect(rowValue({ SurveyAvailableYN: true }, "transaction", "Survey")).toBe("Yes");
+  });
+
+  it("carrying-cost gotchas land flagged in the risk group", () => {
+    const p: RawPayload = {
+      UnderContract: ["Hot Water Tank"],
+      LeaseToOwnEquipment: ["Furnace"],
+      RentalItems: "HWT rental $35/mo",
+    };
+    const r = rows(p, "risk");
+    expect(r.find((x) => x.label === "Items Under Contract")).toMatchObject({
+      value: "Hot Water Tank",
+      flagged: true,
+    });
+    expect(r.find((x) => x.label === "Lease-To-Own Equipment")).toMatchObject({
+      value: "Furnace",
+      flagged: true,
+    });
+    expect(r.find((x) => x.label === "Rental Items")).toMatchObject({
+      value: "HWT rental $35/mo",
+      flagged: true,
+    });
+    // "None" renders unflagged (affirmative absence)
+    const none = rows({ UnderContract: ["None"] }, "risk");
+    expect(none.find((x) => x.label === "Items Under Contract")).toMatchObject({
+      value: "None",
+      flagged: false,
+    });
+  });
+
+  it("suppresses Unknown-only disclosure values (noise, not information)", () => {
+    expect(rows({ SpecialDesignation: ["Unknown"] }, "risk")).toEqual([]);
+    expect(rows({ Disclosures: ["Unknown"] }, "risk")).toEqual([]);
+    // Unknown alongside a real value: real value survives, row flagged
+    const mixed = rows({ SpecialDesignation: ["Unknown", "Heritage"] }, "risk");
+    expect(mixed.find((x) => x.label === "Special Designation")).toMatchObject({
+      value: "Heritage",
+      flagged: true,
+    });
+    // "None" is still informative and still renders
+    expect(rows({ Disclosures: ["None"] }, "risk").length).toBe(1);
+  });
+
+  it("lease group renders for lease transactions only", () => {
+    const lease: RawPayload = {
+      TransactionType: "For Lease",
+      RentIncludes: ["Heat", "Water"],
+      LeaseTerm: "12 Months",
+      MinimumRentalTermMonths: 12,
+      MaximumRentalMonthsTerm: 24,
+      DepositRequired: true,
+      RentalApplicationYN: true,
+      CreditCheckYN: true,
+      ReferencesRequiredYN: true,
+      EmploymentLetterYN: true,
+      PortionPropertyLease: ["Basement"],
+      PortionLeaseComments: "Lower level only",
+      PrivateEntranceYN: true,
+    };
+    expect(rowValue(lease, "lease", "Included in Rent")).toBe("Heat · Water");
+    expect(rowValue(lease, "lease", "Lease Term")).toBe("12 Months");
+    expect(rowValue(lease, "lease", "Min. Term (months)")).toBe("12");
+    expect(rowValue(lease, "lease", "Max. Term (months)")).toBe("24");
+    expect(rowValue(lease, "lease", "Deposit Required")).toBe("Yes");
+    expect(rowValue(lease, "lease", "Application Required")).toBe("Yes");
+    expect(rowValue(lease, "lease", "Credit Check")).toBe("Yes");
+    expect(rowValue(lease, "lease", "References Required")).toBe("Yes");
+    expect(rowValue(lease, "lease", "Employment Letter")).toBe("Yes");
+    expect(rowValue(lease, "lease", "Portion for Lease")).toBe("Basement");
+    expect(rowValue(lease, "lease", "Portion Notes")).toBe("Lower level only");
+    expect(rowValue(lease, "lease", "Private Entrance")).toBe("Yes");
+    // For Sale payload with lease fields present → group suppressed
+    const sale: RawPayload = { ...lease, TransactionType: "For Sale" };
+    expect(rows(sale, "lease")).toEqual([]);
+  });
+
+  it("waterfront extras", () => {
+    const p: RawPayload = {
+      WaterFrontageFt: "30.5",
+      Shoreline: ["Sandy", "Shallow"],
+      ShorelineAllowance: "Owned",
+      AccessToProperty: ["Year Round Municipal Road"],
+      Winterized: "Fully",
+      IslandYN: true,
+    };
+    expect(rowValue(p, "exterior", "Water Frontage (m)")).toBe("30.5");
+    expect(rowValue(p, "exterior", "Shoreline")).toBe("Sandy · Shallow");
+    expect(rowValue(p, "exterior", "Shoreline Allowance")).toBe("Owned");
+    expect(rowValue(p, "exterior", "Access")).toBe("Year Round Municipal Road");
+    expect(rowValue(p, "exterior", "Winterized")).toBe("Fully");
+    expect(rowValue(p, "exterior", "Island")).toBe("Yes");
+  });
+
+  it("VOW-payload extras (sold pages): inclusions/exclusions, assignment, SPIS", () => {
+    const p: RawPayload = {
+      Inclusions: "Fridge, stove, washer",
+      Exclusions: "Dining chandelier",
+      AssignmentYN: true,
+      FractionalOwnershipYN: true,
+      VendorPropertyInfoStatement: true,
+    };
+    expect(rowValue(p, "transaction", "Inclusions")).toBe("Fridge, stove, washer");
+    expect(rowValue(p, "transaction", "Exclusions")).toBe("Dining chandelier");
+    expect(rowValue(p, "transaction", "Assignment")).toBe("Yes");
+    expect(rowValue(p, "transaction", "Fractional Ownership")).toBe("Yes");
+    expect(rowValue(p, "transaction", "Seller Property Info Statement")).toBe("Yes");
   });
 });
