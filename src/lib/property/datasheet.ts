@@ -374,6 +374,8 @@ const FIELDS: DatasheetField[] = [
     group: "exterior",
     format: (p) => str(p, "ZoningDesignation") ?? str(p, "Zoning"),
   },
+  // TRREB names the key "...Ft" but its official display name is "Water Frontage (metres)".
+  // Value rendered verbatim — do NOT add a unit conversion here without PROPTX clarification.
   { key: "WaterFrontageFt", label: "Water Frontage (m)", group: "exterior", format: (p) => str(p, "WaterFrontageFt") },
   { key: "Shoreline", label: "Shoreline", group: "exterior", format: (p) => joined(p, "Shoreline") },
   { key: "ShorelineAllowance", label: "Shoreline Allowance", group: "exterior", format: (p) => str(p, "ShorelineAllowance") },
