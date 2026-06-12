@@ -5,6 +5,13 @@ vi.mock('@/lib/supabase/client', () => ({
   getServiceRoleClient: vi.fn(),
 }));
 
+// Always allow in tests — rate-limiter behaviour is unit-tested in rateLimit.test.ts;
+// here we care about route logic, not per-IP windowing.
+vi.mock('@/lib/rateLimit', () => ({
+  makeRateLimiter: () => ({ check: () => ({ allowed: true, retryAfterSec: 0 }) }),
+  clientIpFrom: () => 'test-ip',
+}));
+
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { POST } from './route';
 

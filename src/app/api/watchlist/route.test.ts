@@ -54,7 +54,7 @@ describe('GET /api/watchlist', () => {
     mockCreate.mockResolvedValueOnce(client as never);
     const res = await GET();
     expect(res.status).toBe(401);
-    expect(await res.json()).toEqual({ items: [] });
+    expect(await res.json()).toEqual({ items: [], error: "unauthenticated" });
   });
 
   it('returns the user\'s rows mapped to the public WatchItem shape', async () => {

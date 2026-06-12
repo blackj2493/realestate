@@ -7,8 +7,9 @@ import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 /**
  * Property-card row for the Market Activity lists (New or Sold): thumbnail + key
- * specs + price. Brokerage is shown at the same size as the other listing details
- * and not visually separated, per TRREB §6.3(c). Deep-links to the detail page.
+ * specs + price. Brokerage is rendered at text-xs text-slate-400 — same size as
+ * other listing details and not visually separated, per TRREB §6.3(c). Deep-links
+ * to the detail page.
  */
 export default function ActivityRow({
   id,
@@ -67,7 +68,9 @@ export default function ActivityRow({
             </p>
           )}
         </div>
-        <p className="truncate text-[10px] text-slate-500">
+        {/* Brokerage rendered at text-xs text-slate-400 — same size as sibling listing
+            details, per TRREB §6.3(c) (no visual de-emphasis vs other listing info). */}
+        <p className="truncate text-xs text-slate-400">
           {city || "—"}
           {brokerage ? <span> · {brokerage}</span> : null}
         </p>

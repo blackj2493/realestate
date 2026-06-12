@@ -12,6 +12,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
+
+// 10 share-link mints/min/IP — rate-caps abuse without requiring auth (audit LOW-31).
+// Auth is intentionally NOT required: anonymous share links are product-intended
+// (anonymous-first model). Do not add an auth gate here without a product decision.
+const limiter = makeRateLimiter({ windowMs: 60_000, max: 10 });
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +49,18 @@ export async function POST(request: NextRequest) {
 
   // De-dupe while preserving order.
   const listingKeys = Array.from(new Set(parsed.listingKeys));
-  const token = randomBytes(8).toString("base64url");
 
   try {
+    const rl = limiter.check(clientIpFrom(request));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      );
+    }
+
+    // Mint the token only after the rate gate — no wasted work on 429s.
+    const token = randomBytes(8).toString("base64url");
     const supabase = getServiceRoleClient();
     const { error } = await supabase
       .from("shared_collections")

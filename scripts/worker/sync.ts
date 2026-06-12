@@ -463,86 +463,17 @@ export async function processInBatches(
 }
 
 // ============================================================================
-// Delta Sync Function
-// ============================================================================
-
-/**
- * Performs a delta sync - fetches only listings modified in the last N hours.
- * This is the primary sync mechanism for the ETL worker.
- */
-export async function deltaSync(hoursAgo: number = 24): Promise<SyncResult> {
-  console.log(`\n🔄 Starting Legacy Delta Sync (last ${hoursAgo} hours)...`);
-  console.log(`   ⚠️  Consider using: npx tsx scripts/worker/ingester.ts sync`);
-  console.log(`   The legacy method lacks rate-limiting and state management.\n`);
-  
-  try {
-    const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
-    const cutoffIso = cutoffTime.toISOString();
-    
-    console.log(`   Cutoff: ${cutoffIso}`);
-    
-    const BEARER_TOKEN = process.env.RESO_BEARER_TOKEN;
-    if (!BEARER_TOKEN) {
-      throw new Error('RESO_BEARER_TOKEN not configured');
-    }
-    
-    const response = await fetch(
-      `https://query.ampre.ca/odata/Property?$filter=ModificationTimestamp ge ${cutoffIso}&$top=100&$count=true`,
-      {
-        headers: {
-          'Authorization': `Bearer ${BEARER_TOKEN}`,
-          'Accept': 'application/json'
-        }
-      }
-    );
-    
-    if (!response.ok) {
-      throw new Error(`RESO Web API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const listings = data.value || [];
-    
-    console.log(`   Found ${listings.length} listings modified since ${cutoffIso}`);
-    
-    if (listings.length === 0) {
-      return {
-        success: true,
-        supabase: { inserted: 0, failed: 0, errors: [] },
-        typesense: { indexed: 0, failed: 0, errors: [] }
-      };
-    }
-    
-    // Process listings (single batch - legacy mode)
-    const result = await processInBatches(listings);
-    
-    console.log(`\n✅ Legacy delta sync complete!`);
-    console.log(`   Supabase: ${result.supabase.inserted} inserted, ${result.supabase.failed} failed`);
-    console.log(`   Typesense: ${result.typesense.indexed} indexed, ${result.typesense.failed} failed`);
-    
-    return result;
-    
-  } catch (err: any) {
-    console.error('❌ Legacy delta sync failed:', err.message);
-    return {
-      success: false,
-      supabase: { inserted: 0, failed: 0, errors: [err.message] },
-      typesense: { indexed: 0, failed: 0, errors: [err.message] }
-    };
-  }
-}
-
-// ============================================================================
 // CLI Entry Point
 // ============================================================================
+// NOTE: The legacy `deltaSync` function (hard-required RESO_BEARER_TOKEN, a
+// single-token path that caused a 6-day sync outage on 2026-05-14) was deleted
+// 2026-06-12. The daily sync uses `scripts/worker/ingester.ts sync` exclusively.
+// MEDIUM-4/LOW-4 remediation.
 
 async function main() {
   const args = process.argv.slice(2);
-  
-  if (args[0] === 'delta') {
-    const hours = parseInt(args[1] || '24', 10);
-    await deltaSync(hours);
-  } else if (args[0] === 'test') {
+
+  if (args[0] === 'test') {
     // Test with mock data
     console.log('\n🧪 Running sync test with mock data...');
     const mockListings = [
@@ -624,20 +555,11 @@ Shadow MLS Sync Worker
 ======================
 
 Usage:
-  npx tsx scripts/worker/sync.ts delta [hours]   - Delta sync (default: 24 hours)
-  npx tsx scripts/worker/sync.ts test             - Test with mock data
+  npx tsx scripts/worker/sync.ts test   - Process mock listings through the
+                                          processBatch pipeline (dev smoke-test)
 
-Phase 4 Features:
-  - True DOM calculation (Shadow DOM) via entity resolution
-  - Batch property_hash generation for all listings
-  - Historical lookup with 45-day cooling-off threshold
-  - Stale inventory detection (>60 days True DOM)
-  - Total price drop calculation from first listing in chain
-
-Examples:
-  npx tsx scripts/worker/sync.ts delta            # Sync last 24 hours
-  npx tsx scripts/worker/sync.ts delta 48         # Sync last 48 hours
-  npx tsx scripts/worker/sync.ts test              # Test sync with mock data
+For the daily delta sync use:
+  npx tsx scripts/worker/ingester.ts sync
     `);
   }
 }

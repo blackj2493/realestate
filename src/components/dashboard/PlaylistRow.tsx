@@ -31,8 +31,9 @@ export default function PlaylistRow({
       />
       <div className="min-w-0 flex-1">
         <p className="truncate font-sans text-xs font-medium text-slate-200">{addr}</p>
-        {/* Brokerage shown at the same size as other listing details (TRREB §4). */}
-        <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">
+        {/* Brokerage rendered at text-xs text-slate-400 — same size as sibling listing
+            details, per TRREB §6.3(c) (no visual de-emphasis vs other listing info). */}
+        <p className="truncate text-xs uppercase tracking-wide text-slate-400">
           {listing.City || "—"}
           {listing.ListOfficeName ? (
             <span className="normal-case tracking-normal"> · {listing.ListOfficeName}</span>

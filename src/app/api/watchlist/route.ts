@@ -27,7 +27,7 @@ export async function GET() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ items: [] }, { status: 401 });
+  if (!user) return NextResponse.json({ items: [], error: "unauthenticated" }, { status: 401 });
 
   const { data, error } = await supabase
     .from("watchlist")

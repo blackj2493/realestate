@@ -11,8 +11,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { makeRateLimiter, clientIpFrom } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
+
+// 5 submissions/min/IP — generous for a human filling a form, hostile to table-flooding (audit LOW-30).
+const limiter = makeRateLimiter({ windowMs: 60_000, max: 5 });
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -26,6 +30,14 @@ export async function POST(req: NextRequest) {
   const asString = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
   try {
+    const rl = limiter.check(clientIpFrom(req));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { ok: false, error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      );
+    }
+
     const sb = getServiceRoleClient();
     const { error } = await sb.from('terminal_applications').insert({
       applicant_type: asString(body.applicantType),
