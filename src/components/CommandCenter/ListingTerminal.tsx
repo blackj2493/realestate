@@ -470,9 +470,9 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                     <span className="text-slate-500">True DOM</span>
                     <span className={cn(
                       "font-mono",
-                      dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-400"
+                      trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-slate-400"
                     )}>
-                      {dom} days
+                      {trueDom} days
                     </span>
                   </div>
                 </div>
