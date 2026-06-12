@@ -40,11 +40,14 @@ function makeSupabaseStub(dataset: { city_region: string }[]) {
   vowChain.then = (resolve: (v: unknown) => unknown) =>
     Promise.resolve(resolve({ data: dataset.slice(rangeFrom, rangeTo + 1), error: null }));
 
-  // Generic chain for other tables (avm_audit_report, etc.)
+  // Generic chain for other tables (avm_audit_report, etc.). Its .in() is a
+  // dedicated spy so tests can assert WHICH communities reached the donor query.
+  const auditInCall = vi.fn(() => emptyChain);
   const emptyChain: Record<string, unknown> = {};
-  for (const m of ["select", "ilike", "in", "order", "range"]) {
+  for (const m of ["select", "ilike", "order", "range"]) {
     emptyChain[m] = vi.fn(() => emptyChain);
   }
+  emptyChain.in = auditInCall;
   emptyChain.then = (resolve: (v: unknown) => unknown) =>
     Promise.resolve(resolve({ data: [], error: null }));
 
@@ -55,7 +58,7 @@ function makeSupabaseStub(dataset: { city_region: string }[]) {
     }),
   };
 
-  return { stub, rangeCall };
+  return { stub, rangeCall, auditInCall };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -67,10 +70,10 @@ describe("fetchSiblingModel — PostgREST 1k paging (audit MEDIUM-9)", () => {
     const page2 = Array.from({ length: 500 }, (_, i) => ({ city_region: `RegionB${i}` }));
     const dataset = [...page1, ...page2];
 
-    const { stub, rangeCall } = makeSupabaseStub(dataset);
+    const { stub, rangeCall, auditInCall } = makeSupabaseStub(dataset);
 
     // fetchSiblingModel will then query avm_audit_report → returns [] → best=null → returns null
-    // That's fine — we only care that both pages were fetched (range called ≥ 2 times)
+    // That's fine — we only care that both pages were fetched AND used downstream.
     const result = await fetchSiblingModel(
       stub as unknown as Parameters<typeof fetchSiblingModel>[0],
       "Aurora",
@@ -88,6 +91,20 @@ describe("fetchSiblingModel — PostgREST 1k paging (audit MEDIUM-9)", () => {
     expect(rangeCall.mock.calls[0]).toEqual([0, 999]);
     // Second call must be range(1000, 1999)
     expect(rangeCall.mock.calls[1]).toEqual([1000, 1999]);
+
+    // Fetching page 2 is not enough — its communities must be USED downstream.
+    // The avm_audit_report donor query filters .in('city_region', cityRegions);
+    // assert that list includes communities from BOTH pages (a Set reset per
+    // iteration, or a discarded page-2 read, would fail here).
+    const auditCityRegionCall = auditInCall.mock.calls.find(
+      (c: unknown[]) => c[0] === "city_region"
+    ) as [string, string[]] | undefined;
+    expect(auditCityRegionCall).toBeDefined();
+    const offered = auditCityRegionCall![1];
+    expect(offered).toContain("RegionA0"); // page 1
+    expect(offered).toContain("RegionB0"); // page 2
+    expect(offered).toContain("RegionB499"); // last row of page 2
+    expect(offered).toHaveLength(1500); // every distinct community across both pages
   });
 });
 
