@@ -307,13 +307,16 @@ export async function searchListings(
     query,
     filters = {},
     page = 1,
-    perPage = 20,
+    perPage: rawPerPage = 20,
     sortBy,
     sortOrder = 'asc',
     rawFilterBy,
     geoPolygon,
     facetBy
   } = options;
+
+  // TRREB §4: never let any caller exceed the 100-listing display cap (audit LOW-1).
+  const perPage = Math.min(100, Math.max(1, rawPerPage));
 
   // Build filter string
   const filterParts: string[] = [];

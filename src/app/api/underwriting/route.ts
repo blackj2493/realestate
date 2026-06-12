@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ scenarios: [] }, { status: 401 });
+  if (!user) return NextResponse.json({ scenarios: [], error: "unauthenticated" }, { status: 401 });
 
   const listingKey = (new URL(req.url).searchParams.get("listing_key") ?? "").trim();
 

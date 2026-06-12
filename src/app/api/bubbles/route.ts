@@ -94,7 +94,7 @@ export async function GET() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ items: [] }, { status: 401 });
+  if (!user) return NextResponse.json({ items: [], error: "unauthenticated" }, { status: 401 });
 
   // select * so the route works both before and after migration 034 adds the
   // alert columns (an explicit unknown column would 500 the whole list).
