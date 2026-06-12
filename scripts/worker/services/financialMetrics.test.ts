@@ -114,6 +114,25 @@ describe('calculateFinancialMetrics', () => {
     expect(Number.isFinite(r.cap_rate_est)).toBe(true);
     expect(Number.isFinite(r.tax_burden_ratio)).toBe(true);
   });
+
+  // audit LOW-10: when both prices are zero every ratio metric must be 0, not
+  // astronomical (the old `price||1` fallback produced absurd cap rates on
+  // zero-price records that slip through before the lease guard).
+  it('LOW-10: zero-price record returns all ratio metrics as 0 (not astronomical)', () => {
+    const r = calculateFinancialMetrics({
+      ...baseInput,
+      calculation_price: 0,
+      listPrice: 0,
+      annual_rent: 36_000,
+      annual_rent_p10: 30_000,
+      has_rent_data: true,
+    });
+    expect(r.cap_rate_est).toBe(0);
+    expect(r.cap_rate_floor).toBe(0);
+    expect(r.gross_yield_est).toBe(0);
+    expect(r.tax_burden_ratio).toBe(0);
+    expect(r.net_monthly_cashflow).toBe(0);
+  });
 });
 
 describe('transaction-type guard (a for-lease listing has no purchase price)', () => {

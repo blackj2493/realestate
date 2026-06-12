@@ -181,10 +181,10 @@ export function calculateBurnRate(input: BurnRateInput): number {
  * @example
  * ```typescript
  * const metrics = calculateProForma(850000);
- * // metrics.total_capital_basis = 1034700
- * // metrics.pro_forma_noi = 54450
- * // metrics.extrapolated_cap_rate = 5.26
- * // metrics.capital_burn_rate_monthly = 4721.67
+ * // metrics.total_capital_basis = 1012500   // 850000 + 17000 (2% closing) + 120000 (capex) + 25500 (holding)
+ * // metrics.pro_forma_noi = 47025           // 66000 gross rent × 0.95 vacancy × 0.75 opex retention
+ * // metrics.extrapolated_cap_rate = 4.64    // 47025 / 1012500 × 100, rounded
+ * // metrics.capital_burn_rate_monthly = … (varies with mortgage helper)
  * ```
  */
 export function calculateProForma(

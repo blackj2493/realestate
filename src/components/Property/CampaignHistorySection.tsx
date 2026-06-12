@@ -15,7 +15,9 @@ import { buildEventRows, type TimelineRow, type TimelineEventKind } from "@/lib/
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  // Date-ONLY strings parse as UTC midnight; without timeZone:'UTC' every UTC− viewer
+  // (all of Ontario) sees the previous day (audit MEDIUM-18).
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 const KIND_COLOR: Record<TimelineEventKind, string> = {

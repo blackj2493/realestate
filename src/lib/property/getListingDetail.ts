@@ -149,7 +149,8 @@ function deriveDomDays(payload: Record<string, unknown>): number | null {
   const ts = payload["OriginalEntryTimestamp"];
   if (typeof ts === "string" && ts) {
     const diff = Date.now() - new Date(ts).getTime();
-    if (Number.isFinite(diff)) return Math.max(0, Math.ceil(diff / 86_400_000) - 1);
+    // floor matches trueDom's day math; ceil−1 under-reported exact-boundary days (audit LOW-11).
+    if (Number.isFinite(diff)) return Math.max(0, Math.floor(diff / 86_400_000));
   }
   return null;
 }
