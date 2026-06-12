@@ -1044,8 +1044,10 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       result.activePages++;
       activeSkip += batch.listings.length;
       
-      // If we got a full batch of 100, there is likely another page
-      activeHasMore = batch.listings.length === 100;
+      // nextLink is the authoritative "more pages" signal; the ===100 heuristic stays
+      // as a fallback for endpoints that omit nextLink (the /Media endpoint does — see
+      // memory media-reconciliation-gap). Resolves audit MEDIUM-7.
+      activeHasMore = batch.nextLink != null || batch.listings.length === 100;
       
       console.log(`   📊 Running totals: ${result.activeRecords} active records, ${result.activePages} pages`);
       
@@ -1180,9 +1182,11 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       result.soldPages++;
       soldSkip += batch.listings.length;
       
-      // If we got a full batch of 100, there is likely another page
-      // BUT also check if we hit the old cutoff date
-      soldHasMore = !hitOldCutoff && batch.listings.length === 100;
+      // nextLink is the authoritative "more pages" signal; the ===100 heuristic stays
+      // as a fallback for endpoints that omit nextLink (the /Media endpoint does — see
+      // memory media-reconciliation-gap). Resolves audit MEDIUM-7.
+      // BUT also check if we hit the old cutoff date.
+      soldHasMore = !hitOldCutoff && (batch.nextLink != null || batch.listings.length === 100);
       
       console.log(`   📊 Running totals: ${result.soldRecords} sold records, ${result.soldPages} pages`);
       
