@@ -21,6 +21,7 @@ export type DatasheetGroupId =
   | "interior"
   | "exterior"
   | "condo"
+  | "lease"
   | "utilities"
   | "taxes"
   | "transaction"
@@ -119,6 +120,20 @@ function concerning(values: string[]): boolean {
   return values.some((v) => !benign.test(v));
 }
 
+/**
+ * Drop "Unknown" members: unlike "None" (affirmative absence — informative),
+ * "Unknown" asserts nothing and only lights up the risk group as noise.
+ */
+function withoutUnknown(values: string[]): string[] {
+  return values.filter((v) => !/^unknown$/i.test(v));
+}
+
+/** Positive finite number rendered as a string, else null. */
+function posNum(p: RawPayload, key: string): string | null {
+  const v = num(p, key);
+  return v !== null && v > 0 ? String(v) : null;
+}
+
 // ── group metadata (registry order = default display order) ──
 
 const GROUPS: DatasheetGroupMeta[] = [
@@ -127,6 +142,7 @@ const GROUPS: DatasheetGroupMeta[] = [
   { id: "interior", title: "Interior" },
   { id: "exterior", title: "Exterior, Lot & Land" },
   { id: "condo", title: "Condo & Building" },
+  { id: "lease", title: "Lease Terms" },
   { id: "utilities", title: "Utilities & Systems" },
   { id: "taxes", title: "Taxes & Assessment" },
   { id: "transaction", title: "Transaction & Possession" },
@@ -139,8 +155,14 @@ function isCondoClass(p: RawPayload): boolean {
   return sub.includes("condo") || sub.includes("co-op") || sub.includes("co-ownership");
 }
 
+/** Lease group applies only to lease transactions (objective criteria, §6.3(f)). */
+function isLeaseTransaction(p: RawPayload): boolean {
+  return (str(p, "TransactionType") ?? "").toLowerCase().includes("lease");
+}
+
 const GROUP_APPLIES: Partial<Record<DatasheetGroupId, (p: RawPayload) => boolean>> = {
   condo: isCondoClass,
+  lease: isLeaseTransaction,
 };
 
 // ── field registry ──
@@ -228,6 +250,26 @@ const FIELDS: DatasheetField[] = [
       return below !== null ? `${below} below` : null;
     },
   },
+  {
+    key: "WashroomsType1",
+    label: "Washrooms",
+    group: "vitals",
+    // Per-level breakdown from the WashroomsType1-5 slots: "2 × 4-pc (Second) · 1 × 2-pc (Main)".
+    format: (p) => {
+      const parts: string[] = [];
+      for (let i = 1; i <= 5; i++) {
+        const count = num(p, `WashroomsType${i}`);
+        if (count === null || count <= 0) continue;
+        const pcs = num(p, `WashroomsType${i}Pcs`);
+        const level = str(p, `WashroomsType${i}Level`);
+        let part = pcs !== null && pcs > 0 ? `${count} × ${pcs}-pc` : String(count);
+        if (level) part += ` (${level})`;
+        parts.push(part);
+      }
+      return parts.length > 0 ? parts.join(" · ") : null;
+    },
+  },
+  { key: "CrossStreet", label: "Cross Street", group: "vitals", format: (p) => str(p, "CrossStreet") },
 
   // ── Building & Construction ──
   { key: "ConstructionMaterials", label: "Construction", group: "building", format: (p) => joined(p, "ConstructionMaterials") },
@@ -309,6 +351,35 @@ const FIELDS: DatasheetField[] = [
     },
   },
   { key: "ParkingFeatures", label: "Parking Features", group: "exterior", format: (p) => joined(p, "ParkingFeatures") },
+  {
+    key: "CommunityFeatures",
+    label: "Area Influences",
+    group: "exterior",
+    // Deduped union of the two feed fields carrying the same concept (case-insensitive).
+    format: (p) => {
+      const items = [...list(p, "CommunityFeatures"), ...list(p, "PropertyFeatures")];
+      const seen = new Set<string>();
+      const uniq = items.filter((v) => {
+        const k = v.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      return uniq.length > 0 ? uniq.join(" · ") : null;
+    },
+  },
+  {
+    key: "ZoningDesignation",
+    label: "Zoning",
+    group: "exterior",
+    format: (p) => str(p, "ZoningDesignation") ?? str(p, "Zoning"),
+  },
+  { key: "WaterFrontageFt", label: "Water Frontage (m)", group: "exterior", format: (p) => str(p, "WaterFrontageFt") },
+  { key: "Shoreline", label: "Shoreline", group: "exterior", format: (p) => joined(p, "Shoreline") },
+  { key: "ShorelineAllowance", label: "Shoreline Allowance", group: "exterior", format: (p) => str(p, "ShorelineAllowance") },
+  { key: "AccessToProperty", label: "Access", group: "exterior", format: (p) => joined(p, "AccessToProperty") },
+  { key: "Winterized", label: "Winterized", group: "exterior", format: (p) => str(p, "Winterized") },
+  { key: "IslandYN", label: "Island", group: "exterior", format: (p) => yes(p, "IslandYN") },
 
   // ── Condo & Building (group gated by isCondoClass) ──
   { key: "AssociationAmenities", label: "Building Amenities", group: "condo", format: (p) => joined(p, "AssociationAmenities") },
@@ -334,6 +405,20 @@ const FIELDS: DatasheetField[] = [
   { key: "AssociationName", label: "Registry Office", group: "condo", format: (p) => str(p, "AssociationName") },
   { key: "PropertyManagementCompany", label: "Property Management", group: "condo", format: (p) => str(p, "PropertyManagementCompany") },
   { key: "LegalStories", label: "Level", group: "condo", format: (p) => str(p, "LegalStories") },
+
+  // ── Lease Terms (group gated by isLeaseTransaction) ──
+  { key: "RentIncludes", label: "Included in Rent", group: "lease", format: (p) => joined(p, "RentIncludes") },
+  { key: "LeaseTerm", label: "Lease Term", group: "lease", format: (p) => str(p, "LeaseTerm") },
+  { key: "MinimumRentalTermMonths", label: "Min. Term (months)", group: "lease", format: (p) => posNum(p, "MinimumRentalTermMonths") },
+  { key: "MaximumRentalMonthsTerm", label: "Max. Term (months)", group: "lease", format: (p) => posNum(p, "MaximumRentalMonthsTerm") },
+  { key: "DepositRequired", label: "Deposit Required", group: "lease", format: (p) => yes(p, "DepositRequired") },
+  { key: "RentalApplicationYN", label: "Application Required", group: "lease", format: (p) => yes(p, "RentalApplicationYN") },
+  { key: "CreditCheckYN", label: "Credit Check", group: "lease", format: (p) => yes(p, "CreditCheckYN") },
+  { key: "ReferencesRequiredYN", label: "References Required", group: "lease", format: (p) => yes(p, "ReferencesRequiredYN") },
+  { key: "EmploymentLetterYN", label: "Employment Letter", group: "lease", format: (p) => yes(p, "EmploymentLetterYN") },
+  { key: "PortionPropertyLease", label: "Portion for Lease", group: "lease", format: (p) => joined(p, "PortionPropertyLease") },
+  { key: "PortionLeaseComments", label: "Portion Notes", group: "lease", format: (p) => str(p, "PortionLeaseComments") },
+  { key: "PrivateEntranceYN", label: "Private Entrance", group: "lease", format: (p) => yes(p, "PrivateEntranceYN") },
 
   // ── Utilities & Systems ──
   {
@@ -392,6 +477,8 @@ const FIELDS: DatasheetField[] = [
     },
   },
   { key: "TaxType", label: "Tax Type", group: "taxes", format: (p) => str(p, "TaxType") },
+  { key: "ParcelNumber", label: "PIN #", group: "taxes", format: (p) => str(p, "ParcelNumber") },
+  { key: "DevelopmentChargesPaid", label: "Development Charges Paid", group: "taxes", format: (p) => joined(p, "DevelopmentChargesPaid") },
   { key: "RollNumber", label: "Assessment Roll #", group: "taxes", format: (p) => str(p, "RollNumber") },
   { key: "TaxLegalDescription", label: "Legal Description", group: "taxes", format: (p) => str(p, "TaxLegalDescription") },
   {
@@ -426,6 +513,23 @@ const FIELDS: DatasheetField[] = [
     format: (p) => (safeUrl(p, "VirtualTourURLBranded") ? "View tour" : null),
     href: (p) => safeUrl(p, "VirtualTourURLBranded"),
   },
+  {
+    key: "SurveyAvailableYN",
+    label: "Survey",
+    group: "transaction",
+    format: (p) => {
+      const type = str(p, "SurveyType");
+      if (p["SurveyAvailableYN"] === true) return type ? `Yes · ${type}` : "Yes";
+      return type;
+    },
+  },
+  { key: "VendorPropertyInfoStatement", label: "Seller Property Info Statement", group: "transaction", format: (p) => yes(p, "VendorPropertyInfoStatement") },
+  // VOW-payload extras — absent from active IDX listings, they self-omit there
+  // and surface on sold pages where the payload carries them.
+  { key: "Inclusions", label: "Inclusions", group: "transaction", format: (p) => str(p, "Inclusions") },
+  { key: "Exclusions", label: "Exclusions", group: "transaction", format: (p) => str(p, "Exclusions") },
+  { key: "AssignmentYN", label: "Assignment", group: "transaction", format: (p) => yes(p, "AssignmentYN") },
+  { key: "FractionalOwnershipYN", label: "Fractional Ownership", group: "transaction", format: (p) => yes(p, "FractionalOwnershipYN") },
 
   // ── Risk & Disclosures ──
   {
@@ -439,8 +543,11 @@ const FIELDS: DatasheetField[] = [
     key: "Disclosures",
     label: "Easements / Restrictions",
     group: "risk",
-    format: (p) => joined(p, "Disclosures"),
-    flag: (p) => concerning(list(p, "Disclosures")),
+    format: (p) => {
+      const items = withoutUnknown(list(p, "Disclosures"));
+      return items.length > 0 ? items.join(" · ") : null;
+    },
+    flag: (p) => concerning(withoutUnknown(list(p, "Disclosures"))),
   },
   {
     key: "LocalImprovements",
@@ -459,10 +566,35 @@ const FIELDS: DatasheetField[] = [
     key: "SpecialDesignation",
     label: "Special Designation",
     group: "risk",
-    format: (p) => joined(p, "SpecialDesignation"),
-    flag: (p) => concerning(list(p, "SpecialDesignation")),
+    format: (p) => {
+      const items = withoutUnknown(list(p, "SpecialDesignation"));
+      return items.length > 0 ? items.join(" · ") : null;
+    },
+    flag: (p) => concerning(withoutUnknown(list(p, "SpecialDesignation"))),
   },
   { key: "SeasonalDwelling", label: "Seasonal Dwelling", group: "risk", format: (p) => yes(p, "SeasonalDwelling") },
+  // Carrying-cost gotchas: contracts/rentals that transfer with the property.
+  {
+    key: "UnderContract",
+    label: "Items Under Contract",
+    group: "risk",
+    format: (p) => joined(p, "UnderContract"),
+    flag: (p) => concerning(list(p, "UnderContract")),
+  },
+  {
+    key: "LeaseToOwnEquipment",
+    label: "Lease-To-Own Equipment",
+    group: "risk",
+    format: (p) => joined(p, "LeaseToOwnEquipment"),
+    flag: (p) => concerning(list(p, "LeaseToOwnEquipment")),
+  },
+  {
+    key: "RentalItems",
+    label: "Rental Items",
+    group: "risk",
+    format: (p) => str(p, "RentalItems"),
+    flag: (p) => concerning(list(p, "RentalItems")),
+  },
 ];
 
 const DEFAULT_ORDER: DatasheetGroupId[] = GROUPS.map((g) => g.id);
