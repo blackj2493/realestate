@@ -1,7 +1,7 @@
 /** Campaign-history domain types. One CampaignEvent == one listing (campaign). */
 
 export type TransactionKind = 'Sale' | 'Lease';
-export type CampaignStatus = 'Active' | 'Terminated' | 'Expired' | 'Suspended' | 'Sold';
+export type CampaignStatus = 'Active' | 'Terminated' | 'Expired' | 'Suspended' | 'Sold' | 'Leased';
 
 /** One campaign (listing) at a physical address, normalized from the VOW feed. */
 export interface CampaignEvent {
