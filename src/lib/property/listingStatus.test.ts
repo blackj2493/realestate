@@ -105,6 +105,14 @@ describe("fillClosePriceFromSaleHistory", () => {
     expect(filled.kind === "sold" && filled.closePrice).toBeNull();
   });
 
+  it("does NOT overwrite an existing closeDate", () => {
+    const withDate = { ...soldNoPrice, closeDate: "2026-05-01" };
+    const filled = fillClosePriceFromSaleHistory(withDate, "X13146238", [
+      { listing_key: "X13146238", close_price: 875_000, close_date: "2026-06-09" },
+    ]);
+    expect(filled).toMatchObject({ closePrice: 875_000, closeDate: "2026-05-01" });
+  });
+
   it("is a no-op for already-priced sold and for non-sold statuses", () => {
     const priced = { ...soldNoPrice, closePrice: 875_000 };
     expect(fillClosePriceFromSaleHistory(priced, "X13146238", [])).toBe(priced);

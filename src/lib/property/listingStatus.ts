@@ -91,7 +91,7 @@ export function fillClosePriceFromSaleHistory(
   listingKey: string,
   saleEvents: SaleEventLite[]
 ): ListingStatus {
-  if (status.kind !== "sold" || status.closePrice) return status;
+  if (status.kind !== "sold" || status.closePrice !== null) return status;
   const own = saleEvents.find(
     (e) => e.listing_key === listingKey && (e.close_price ?? 0) > 0
   );
