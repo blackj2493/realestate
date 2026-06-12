@@ -28,9 +28,12 @@ export async function GET(req: Request) {
 
   const listingKey = (new URL(req.url).searchParams.get("listing_key") ?? "").trim();
 
+  // Defense-in-depth: filter by user_id explicitly so GET is symmetric with DELETE.
+  // RLS already enforces this today; the explicit filter is an audit LOW-29 hardening.
   let query = supabase
     .from("underwriting_scenarios")
     .select("id, listing_key, name, assumptions, created_at, updated_at")
+    .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
   if (listingKey) query = query.eq("listing_key", listingKey);
 
