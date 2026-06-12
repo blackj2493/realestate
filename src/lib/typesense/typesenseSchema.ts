@@ -263,6 +263,14 @@ export const typesenseSchema = {
     { name: 'BestSchoolScoreNearby', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearbySchools', type: 'string[]' as const, facet: false, optional: true },
 
+    // Investor-filter fields — written by transformer.ts since Phase 2 but undeclared
+    // until 2026-06-10 (audit HIGH-5): every filter_by/sort_by on them was HTTP 400.
+    // Live collection altered via scripts/admin/add-investor-filter-fields.ts.
+    { name: 'isDistressed', type: 'bool' as const, facet: true },
+    { name: 'hasSecondarySuitePotential', type: 'bool' as const, facet: true },
+    { name: 'calculatedDOM', type: 'int32' as const, facet: false, sort: true, optional: true },
+    // BuildingAreaTotal and price_discovery_flag are deliberately stored-only (display cargo).
+
     // ─── Unindexed Cargo ────────────────────────────────────────────────────
     { name: 'PublicRemarks', type: 'string' as const, index: false, facet: false },
     { name: 'TaxAnnualAmount', type: 'float' as const, index: false, facet: false },

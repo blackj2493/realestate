@@ -165,3 +165,72 @@ describe('transaction-type guard (a for-lease listing has no purchase price)', (
     expect(r.gross_yield_est).toBeGreaterThan(0);
   });
 });
+
+const BASE: FinancialMetricsInput = {
+  annual_rent: 30_000,
+  annual_rent_p10: 24_000,
+  has_rent_data: true,
+  calculation_price: 500_000,
+  is_price_discovery: false,
+  propertySubType: 'Detached',
+  listPrice: 500_000,
+  transactionType: 'For Sale',
+  taxAnnualAmount: 4_000,
+  associationFee: 0,
+  maintenanceExpense: null,
+  insuranceExpense: null,
+  baseMillRate: 0.008,
+  multiUnitStatus: 'NONE',
+  isCondo: false,
+};
+
+describe('calculateFinancialMetrics — insurance single-count (audit HIGH-8)', () => {
+  it('net_monthly_cashflow reconciles with its own returned components (no second insurance deduction)', () => {
+    const m = calculateFinancialMetrics(BASE);
+    // Spec: cashflow = grossRent*0.96 − mortgage − opex/12. Insurance is INSIDE
+    // annual_opex; deducting it again (the bug) makes this off by $125/mo (freehold).
+    const expected = (m.annual_revenue / 12) * 0.96 - (m.mortgage_monthly + m.annual_opex / 12);
+    // Components are individually rounded to the dollar — allow ±$5; the bug is off by $125.
+    expect(Math.abs(m.net_monthly_cashflow - expected)).toBeLessThanOrEqual(5);
+  });
+
+  it('condo variant reconciles too (bug delta would be $40/mo)', () => {
+    const m = calculateFinancialMetrics({ ...BASE, isCondo: true, propertySubType: 'Condo Apartment', associationFee: 600 });
+    const expected = (m.annual_revenue / 12) * 0.96 - (m.mortgage_monthly + m.annual_opex / 12);
+    expect(Math.abs(m.net_monthly_cashflow - expected)).toBeLessThanOrEqual(5);
+  });
+
+  it('cashflow_floor matches the hand-derived spec value for BASE', () => {
+    const m = calculateFinancialMetrics(BASE);
+    /*
+     * Hand-derived for BASE (isCondo=false, no association fee):
+     *   annualRevenueP10 = 24_000 (has_rent_data=true, uses annual_rent_p10)
+     *   vacancyLossFloor = 24_000 * 0.08 = 1_920
+     *   grossRentNetVacancyFloor = 24_000 - 1_920 = 22_080
+     *
+     *   taxes = 4_000 (taxAnnualAmount supplied, >500, <5% of listPrice 500k)
+     *   insurance = 1_500 (isCondo=false)
+     *   maintenance = 500_000 * 0.01 = 5_000 (freehold rate)
+     *   hoa = 0 * 12 = 0 (associationFee=0)
+     *   managementFeeFloor = 24_000 * 0.10 = 2_400
+     *   utilities = 0 (not Duplex)
+     *   annualOpexFloor = 4_000 + (1_500*1.2) + (5_000*1.5) + 0 + 2_400 + 0
+     *                   = 4_000 + 1_800 + 7_500 + 2_400 = 15_700
+     *
+     *   loanAmount = 500_000 * 0.80 = 400_000
+     *   r = (1 + 0.0404/2)^(1/6) - 1 ≈ 0.0033387
+     *   factor = (1+r)^360 ≈ 3.31986
+     *   mortgageMonthly = 400_000 * (r * factor)/(factor - 1) ≈ 1911.14
+     *
+     * AFTER the fix (insurance deducted exactly once, already inside annualOpexFloor):
+     *   cashflowFloorRaw = ((24_000/12) * 0.92) - (1911.14 + (15_700/12))
+     *                    = (2_000 * 0.92) - (1911.14 + 1308.33)
+     *                    = 1_840 - 3_219.47
+     *                    = -1_379.47 → Math.round = -1_379
+     *
+     * Before the fix (double-counting insurance*1.2/12 = $150/mo):
+     *   would be -1_379 - 150 = -1_529
+     */
+    expect(m.cashflow_floor).toBe(-1379);
+  });
+});
