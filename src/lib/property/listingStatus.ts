@@ -72,3 +72,73 @@ export function resolveListingStatus(
 
   return { kind: "active" };
 }
+
+/** Minimal sale-event shape (structural subset of getListingDetail's SaleEvent — no import cycle). */
+export interface SaleEventLite {
+  listing_key: string;
+  close_price: number | null;
+  close_date: string | null;
+}
+
+/**
+ * Non-disclosure fallback: a Closed payload may carry ClosePrice=0
+ * (DoNotDiscloseUntilClosingYN). property_sale_history sometimes has the figure once
+ * the deal closes — but ONLY this listing's own event is trustworthy; a prior
+ * campaign's sale price would corrupt the accuracy math.
+ */
+export function fillClosePriceFromSaleHistory(
+  status: ListingStatus,
+  listingKey: string,
+  saleEvents: SaleEventLite[]
+): ListingStatus {
+  if (status.kind !== "sold" || status.closePrice) return status;
+  const own = saleEvents.find(
+    (e) => e.listing_key === listingKey && (e.close_price ?? 0) > 0
+  );
+  if (!own) return status;
+  return {
+    ...status,
+    closePrice: own.close_price,
+    closeDate: status.closeDate ?? own.close_date,
+  };
+}
+
+/** The accuracy receipt: how close our closest model came to the actual sale. */
+export interface SoldAccuracy {
+  modelLabel: "Expected Sale Price" | "True Value";
+  estimateValue: number;
+  closePrice: number;
+  /** Signed: (estimate − close) / close. Positive ⇒ we over-called. */
+  diffPct: number;
+}
+
+/**
+ * Compare the close against both models and keep ONLY the closest (user decision:
+ * showing the list-blind AVM's ~11% delta alongside would hurt credibility).
+ * Ties go to Expected Sale Price (listed first).
+ */
+export function pickSoldAccuracy(args: {
+  closePrice: number | null;
+  avmValue: number | null;
+  expectedSalePrice: number | null;
+}): SoldAccuracy | null {
+  const { closePrice, avmValue, expectedSalePrice } = args;
+  if (!closePrice || closePrice <= 0) return null;
+
+  const candidates: Array<{ modelLabel: SoldAccuracy["modelLabel"]; value: number }> = [];
+  if (expectedSalePrice && expectedSalePrice > 0)
+    candidates.push({ modelLabel: "Expected Sale Price", value: expectedSalePrice });
+  if (avmValue && avmValue > 0)
+    candidates.push({ modelLabel: "True Value", value: avmValue });
+  if (candidates.length === 0) return null;
+
+  const best = candidates.reduce((a, b) =>
+    Math.abs(b.value - closePrice) < Math.abs(a.value - closePrice) ? b : a
+  );
+  return {
+    modelLabel: best.modelLabel,
+    estimateValue: best.value,
+    closePrice,
+    diffPct: (best.value - closePrice) / closePrice,
+  };
+}

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveListingStatus,
+  fillClosePriceFromSaleHistory,
+  pickSoldAccuracy,
   type DelistedRowLite,
 } from "./listingStatus";
 
@@ -67,5 +69,78 @@ describe("resolveListingStatus", () => {
       delistedRow()
     );
     expect(s.kind).toBe("sold");
+  });
+
+  it("leased from MlsStatus=Leased alone (stale-Active StandardStatus)", () => {
+    const s = resolveListingStatus({ StandardStatus: "Active", MlsStatus: "Leased" }, null);
+    expect(s).toMatchObject({ kind: "sold", label: "LEASED" });
+  });
+});
+
+describe("fillClosePriceFromSaleHistory", () => {
+  const soldNoPrice = {
+    kind: "sold",
+    label: "SOLD",
+    closePrice: null,
+    closeDate: null,
+  } as const;
+
+  it("fills closePrice/closeDate from this listing's OWN sale event only", () => {
+    const filled = fillClosePriceFromSaleHistory(soldNoPrice, "X13146238", [
+      { listing_key: "OLD2019", close_price: 600_000, close_date: "2019-05-01" },
+      { listing_key: "X13146238", close_price: 875_000, close_date: "2026-06-09" },
+    ]);
+    expect(filled).toEqual({
+      kind: "sold",
+      label: "SOLD",
+      closePrice: 875_000,
+      closeDate: "2026-06-09",
+    });
+  });
+
+  it("does NOT borrow a prior campaign's sale price (stays null)", () => {
+    const filled = fillClosePriceFromSaleHistory(soldNoPrice, "X13146238", [
+      { listing_key: "OLD2019", close_price: 600_000, close_date: "2019-05-01" },
+    ]);
+    expect(filled.kind === "sold" && filled.closePrice).toBeNull();
+  });
+
+  it("is a no-op for already-priced sold and for non-sold statuses", () => {
+    const priced = { ...soldNoPrice, closePrice: 875_000 };
+    expect(fillClosePriceFromSaleHistory(priced, "X13146238", [])).toBe(priced);
+    const active = { kind: "active" } as const;
+    expect(fillClosePriceFromSaleHistory(active, "X13146238", [])).toBe(active);
+  });
+});
+
+describe("pickSoldAccuracy", () => {
+  it("null when there is no close price or no models", () => {
+    expect(pickSoldAccuracy({ closePrice: null, avmValue: 700_000, expectedSalePrice: 870_000 })).toBeNull();
+    expect(pickSoldAccuracy({ closePrice: 875_000, avmValue: null, expectedSalePrice: null })).toBeNull();
+  });
+
+  it("picks the closest model — usually Expected Sale Price", () => {
+    const a = pickSoldAccuracy({ closePrice: 875_000, avmValue: 709_484, expectedSalePrice: 872_000 })!;
+    expect(a.modelLabel).toBe("Expected Sale Price");
+    expect(a.estimateValue).toBe(872_000);
+    expect(a.closePrice).toBe(875_000);
+    expect(a.diffPct).toBeCloseTo((872_000 - 875_000) / 875_000, 6);
+  });
+
+  it("picks True Value when the AVM was nearer", () => {
+    const a = pickSoldAccuracy({ closePrice: 700_000, avmValue: 705_000, expectedSalePrice: 850_000 })!;
+    expect(a.modelLabel).toBe("True Value");
+    expect(a.estimateValue).toBe(705_000);
+  });
+
+  it("works with a single available model", () => {
+    const a = pickSoldAccuracy({ closePrice: 875_000, avmValue: null, expectedSalePrice: 880_000 })!;
+    expect(a.modelLabel).toBe("Expected Sale Price");
+    expect(a.diffPct).toBeGreaterThan(0); // signed: estimate above close
+  });
+
+  it("ties go to Expected Sale Price", () => {
+    const a = pickSoldAccuracy({ closePrice: 800_000, avmValue: 810_000, expectedSalePrice: 790_000 })!;
+    expect(a.modelLabel).toBe("Expected Sale Price");
   });
 });
