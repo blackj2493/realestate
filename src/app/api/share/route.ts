@@ -49,7 +49,6 @@ export async function POST(request: NextRequest) {
 
   // De-dupe while preserving order.
   const listingKeys = Array.from(new Set(parsed.listingKeys));
-  const token = randomBytes(8).toString("base64url");
 
   try {
     const rl = limiter.check(clientIpFrom(request));
@@ -60,6 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Mint the token only after the rate gate — no wasted work on 429s.
+    const token = randomBytes(8).toString("base64url");
     const supabase = getServiceRoleClient();
     const { error } = await supabase
       .from("shared_collections")
