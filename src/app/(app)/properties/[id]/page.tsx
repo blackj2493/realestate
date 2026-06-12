@@ -276,7 +276,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
     DaysOnMarket: dom,
   });
 
-  const datasheet = buildDatasheet(detail.full_payload as RawPayload);
+  // Gated payload (defense-in-depth): anon view has sold price/date keys scrubbed,
+  // so a future registry field can never surface them here. Identical for authed users.
+  const datasheet = buildDatasheet(view.full_payload as RawPayload);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
