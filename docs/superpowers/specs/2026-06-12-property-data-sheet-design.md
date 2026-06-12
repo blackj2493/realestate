@@ -120,20 +120,38 @@ carries them — no branching needed.
 
 ### 3. Rendering — `src/components/property/PropertyDataSheet.tsx` (new)
 
-- **Server component, zero client JS.** Collapsibles are native
-  `<details open>` / `<summary>`.
-- One `<Section title="Property Data Sheet">` (existing `Section` wrapper, existing
-  icon language) containing the group list.
-- Group header row: title + populated-row count (e.g. "Interior · 7"), chevron via
-  CSS `details[open]` marker styling.
-- Rows: 2-col definition grid `grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2`;
-  label `text-xs text-slate-500`, value `font-mono text-sm text-slate-200` —
-  identical palette to the sections it replaces.
-- Risk group: `border-amber-500/30`, `text-amber-400` accents, AlertTriangle icon.
-- Link rows (virtual tour): pill-style anchor, ExternalLink icon.
-- Default open state (server-rendered, so identical across viewports): Vitals,
-  Building & Construction, and Risk & Disclosures (when present) render with
-  `open`; remaining groups closed. Users expand freely; no state persistence.
+Layout decision (user-approved 2026-06-12): **chip-nav + 2-column accordion grid**,
+not tabs. Tabs were considered and rejected: they hide 8 of 9 groups at a time,
+which breaks the cross-group anomaly scan our personas do, and force click-per-
+category. Space is controlled by the grid + collapse instead.
+
+- **Server/client split:** `page.tsx` (server) calls `buildDatasheet(payload)` and
+  passes the resolved plain-JSON groups to `PropertyDataSheet`, a **small client
+  component** that owns only collapse state and chip navigation. All field logic
+  stays server-side in the registry. All group content is always rendered into the
+  DOM (closed `<details>` content included), so SEO/indexing sees every field
+  value regardless of collapse state.
+- One `<Section title="Property Data Sheet">` (existing wrapper/icon language).
+- **Chip nav row** at the top of the sheet: one chip per populated group —
+  `"Interior · 7"`, `"⚠ Risk · 2"` (amber chip) — click scrolls to the group and
+  ensures it is open. Tab-like wayfinding without hiding content. Horizontally
+  scrollable row on mobile.
+- **Desktop (`lg:`):** groups laid out as cards in a 2-column grid
+  (`lg:grid-cols-2`, items-start) — roughly halves vertical footprint. All groups
+  default open.
+- **Mobile:** single column; all groups collapsed except Vitals. Server renders
+  everything open (no-JS users and crawlers see all data); the client island
+  collapses per-viewport on mount (progressive enhancement).
+- Group card: `<details>`/`<summary>` header with title + populated-row count and
+  chevron; body is a definition grid `grid grid-cols-1 gap-x-6 gap-y-2` (rows are
+  label/value pairs; single column within a card since cards are already half-
+  width on desktop). Label `text-xs text-slate-500`, value `font-mono text-sm
+  text-slate-200` — identical palette to the sections it replaces.
+- Risk group card: `border-amber-500/30`, `text-amber-400` accents, AlertTriangle
+  icon.
+- Link rows (virtual tour): pill-style anchor, ExternalLink icon,
+  `rel="noopener noreferrer"`.
+- No collapse-state persistence.
 - Placement in `page.tsx`: where Structural Vitals currently sits (directly below
   spec cells), replacing Structural Vitals + Property Summary.
 
