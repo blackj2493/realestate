@@ -250,42 +250,6 @@ export function createDlaClient(accessToken: string): ProptXClient {
 }
 
 /**
- * Create a ProptX client with VOW token
- */
-export function createVowClient(accessToken: string): ProptXClient {
-  return new ProptXClient(accessToken, 'VOW');
-}
-
-/**
- * Get a client using environment variables
- * NOTE: IDX token is currently the only working token for media access
- * VOW and DLA tokens return 401 Unauthorized
- */
-export function createClientFromEnv(tokenType: TokenType = 'VOW'): ProptXClient {
-  let token: string | undefined;
-  
-  switch (tokenType) {
-    case 'IDX':
-      token = process.env.PROPTX_IDX_TOKEN;
-      break;
-    case 'DLA':
-      // DLA fallback to IDX
-      token = process.env.PROPTX_DLA_TOKEN || process.env.PROPTX_IDX_TOKEN;
-      break;
-    case 'VOW':
-      // VOW fallback to IDX (VOW token currently returns 401)
-      token = process.env.PROPTX_VOW_TOKEN || process.env.PROPTX_IDX_TOKEN;
-      break;
-  }
-  
-  if (!token) {
-    throw new Error(`${tokenType} token not found in environment variables`);
-  }
-  
-  return new ProptXClient(token, tokenType);
-}
-
-/**
  * Get IDX client - recommended for media access
  */
 export function createIdxClientFromEnv(): ProptXClient {

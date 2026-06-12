@@ -7,9 +7,13 @@
  * IMPORTANT (verified against live Typesense):
  * - `location` is stored as [lat, lng] (Typesense geopoint convention).
  * - These fields are stored-but-UNINDEXED and CANNOT appear in filter_by
- *   (HTTP 400): targetGrossYield, isDistressed, hasSecondarySuitePotential,
- *   zoning_designation, multiplex_by_right, TransactionType. They are fine for
- *   display/color only.
+ *   (HTTP 400): zoning_designation, multiplex_by_right, TransactionType.
+ *   They are fine for display/color only.
+ * - isDistressed, hasSecondarySuitePotential, and calculatedDOM ARE indexed
+ *   facets (declared in typesenseSchema.ts, live collection altered 2026-06-10
+ *   via add-investor-filter-fields.ts — audit HIGH-5). Use filter_by freely.
+ * - targetGrossYield is no longer emitted by the transformer (removed 2026-06-10;
+ *   its filter clauses went in PR #13). Do not use it.
  * - cap_rate_est / gross_yield_est ARE populated (~47% of for-sale) + indexed +
  *   filterable + sortable — they back the cashflow/smart cap & yield controls.
  *   Sparse by design (rent index suppresses cohorts < N=5); guard every read with

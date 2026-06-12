@@ -115,7 +115,6 @@ export interface ListingDocument {
   
   // Derived Metrics
   isDistressed: boolean;
-  targetGrossYield?: number;
   hasSecondarySuitePotential: boolean;
   calculatedDOM?: number;
   
@@ -672,51 +671,6 @@ export async function searchListingsInBounds(
 }
 
 /**
- * Get nearby listings using geopoint
- * 
- * Typesense expects radius in KM, not meters
- * Format: location:(lat, lng, radius_in_km km)
- */
-export async function getNearbyListings(
-  lat: number,
-  lng: number,
-  radiusKm: number = 5,
-  options: Partial<SearchOptions> = {}
-): Promise<SearchResult> {
-  const client = getTypesenseClient();
-
-  // Typesense geo radius filter: location:(lat, lng, radius km)
-  // Note: Typesense expects radius in km, NOT meters!
-  const searchParams: Record<string, unknown> = {
-    q: options.query || '*',
-    query_by: 'City,CityRegion,PropertySubType',
-    page: options.page || 1,
-    per_page: options.perPage || 20,
-    filter_by: `location:(${lat}, ${lng}, ${radiusKm} km)`,
-    sort_by: 'calculatedDOM:asc'
-  };
-  
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response: any = await client
-      .collections('properties')
-      .documents()
-      .search(searchParams);
-    
-    return {
-      listings: (response.hits || []).map((hit: { document: ListingDocument }) => hit.document),
-      totalFound: response.found || 0,
-      page: response.page || 1,
-      perPage: options.perPage || 20,
-      processingTimeMs: response.search_time_ms || 0
-    };
-  } catch (error) {
-    console.error('[Typesense] Geo search error:', error);
-    throw error;
-  }
-}
-
-/**
  * Index a single listing (for ETL worker)
  */
 export async function indexListing(listing: ListingDocument): Promise<void> {
@@ -746,7 +700,6 @@ export async function indexListing(listing: ListingDocument): Promise<void> {
   if (listing.ApproximateAge) document.ApproximateAge = listing.ApproximateAge;
   if (listing.ParkingTotal !== undefined) document.ParkingTotal = listing.ParkingTotal;
   if (listing.BuildingAreaTotal !== undefined) document.BuildingAreaTotal = listing.BuildingAreaTotal;
-  if (listing.targetGrossYield !== undefined) document.targetGrossYield = listing.targetGrossYield;
   if (listing.calculatedDOM !== undefined) document.calculatedDOM = listing.calculatedDOM;
   if (listing.thumbnailUrl) document.thumbnailUrl = listing.thumbnailUrl;
   if (listing.ListOfficeName) document.ListOfficeName = listing.ListOfficeName;
