@@ -990,7 +990,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.Status = raw.Status || raw.MlsStatus || raw.StandardStatus || '';
   typesensePayload.ParkingTotal = (raw.ParkingTotal !== undefined && raw.ParkingTotal !== null) ? raw.ParkingTotal : 0;
   typesensePayload.BuildingAreaTotal = (raw.BuildingAreaTotal !== undefined && raw.BuildingAreaTotal !== null) ? parseFloat(String(raw.BuildingAreaTotal)) : 0;
-  if (metrics.targetGrossYield !== null) typesensePayload.targetGrossYield = metrics.targetGrossYield;
+  // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;
   typesensePayload.primaryImageUrl = primaryThumbnailUrl || '';
   typesensePayload.ListOfficeName = raw.ListOfficeName || '';
