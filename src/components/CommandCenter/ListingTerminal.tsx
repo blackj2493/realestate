@@ -19,10 +19,12 @@ import {
   GraduationCap,
   ExternalLink,
   GitCompareArrows,
-  Check
+  Check,
+  Bookmark,
+  BookmarkCheck,
+  CalendarCheck
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import PrimaryNav from '@/components/layout/PrimaryNav';
 import { AlphaBadge, detectPropertyBadges } from './AlphaBadge';
@@ -43,6 +45,7 @@ import type { DealScoreResult } from '@/lib/dealScore/computeDealScore';
 import type { AVMResult } from '@/lib/avm/types';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
+import { useWatchlistStore } from '@/lib/watchlist/useWatchlist';
 
 interface ListingTerminalProps {
   property: ListingDocument;
@@ -61,8 +64,6 @@ interface NearbySchool {
 
 
 export default function ListingTerminal({ property, isOpen, onClose }: ListingTerminalProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
   // School lens target (the school the user searched for, if any) — used to pin and
   // highlight that school in the "Schools near this home" list.
   const targetSchool = useCommandCenterStore((s) => s.school.targetSchool);
@@ -72,6 +73,10 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   // Multi-select (comparison) + real media/rooms hydrated from the Vault on open.
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const isSelected = useCommandCenterStore((s) => s.selectedIds.has(property.id));
+
+  // Cross-device watchlist (same store + payload shape as ListingActions on the full page).
+  const watched = useWatchlistStore((s) => !!s.items[property.id]);
+  const toggleWatch = useWatchlistStore((s) => s.toggle);
   const [media, setMedia] = useState<string[]>([]);
   const [detailRooms, setDetailRooms] = useState<RoomData[]>([]);
   const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
@@ -490,12 +495,36 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                   {isSelected ? <Check className="h-4 w-4" /> : <GitCompareArrows className="h-4 w-4" />}
                   {isSelected ? 'Added to Comparison' : 'Add to Comparison'}
                 </button>
-                <Button className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100">
+                {/* The viewing-request lead form lives on the full listing page (ScheduleViewingForm). */}
+                <Link
+                  href={`/properties/${property.id}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  <CalendarCheck className="h-4 w-4" />
                   Schedule Viewing
-                </Button>
-                <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800">
-                  Add to Watchlist
-                </Button>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void toggleWatch({
+                      listing_key: property.id,
+                      address: property.UnparsedAddress,
+                      city: property.City,
+                      list_price: property.ListPrice,
+                      thumb: property.primaryImageUrl,
+                    })
+                  }
+                  aria-pressed={watched}
+                  className={cn(
+                    'flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors',
+                    watched
+                      ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25'
+                      : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                  )}
+                >
+                  {watched ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                  {watched ? 'On your Watchlist' : 'Add to Watchlist'}
+                </button>
               </div>
             </div>
           </div>
