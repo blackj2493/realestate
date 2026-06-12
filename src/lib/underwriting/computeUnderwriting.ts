@@ -126,7 +126,9 @@ export function computeUnderwriting(input: UnderwritingAssumptions): Underwritin
 
   const capRatePct = price > 0 ? (annualNOI / price) * 100 : 0;
   const cashOnCashPct = totalCashInvested > 0 ? (annualCashflow / totalCashInvested) * 100 : 0;
-  const grossYieldPct = price > 0 ? (grossMonthlyIncome * 12 / price) * 100 : 0;
+  // Industry definition: annual gross RENT / price. otherIncome (e.g. hypothetical suite)
+  // stays in NOI/cashflow but must not inflate the headline yield (audit MEDIUM-12).
+  const grossYieldPct = price > 0 ? (monthlyRent * 12 / price) * 100 : 0;
   const dscr = annualDebtService > 0 ? annualNOI / annualDebtService : null;
 
   const monthlyCarry = monthlyMortgage + monthlyTax + monthlyFees + insuranceMonthly;
