@@ -11,6 +11,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
+
+// 20 calls/min/IP — isochrone computations are heavier than geocodes.
+const limiter = makeRateLimiter({ windowMs: 60_000, max: 20 });
 
 type Mode = "driving" | "walking" | "cycling";
 const MODES: Mode[] = ["driving", "walking", "cycling"];
@@ -57,6 +61,14 @@ function extractOuterRing(geometry: {
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = limiter.check(clientIpFrom(req));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      );
+    }
+
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token || token === "your-mapbox-token") {
       return NextResponse.json(

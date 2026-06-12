@@ -35,7 +35,7 @@ function Row({ r }: { r: TimelineRow }) {
       <td className={cn("py-2 text-left font-medium", KIND_COLOR[r.kind])}>{r.kind}</td>
       <td className="py-2 text-right text-slate-300">{r.price ? formatPrice(r.price) : "—"}</td>
       <td className="py-2 text-right">
-        {r.deltaPct != null ? (
+        {r.deltaPct != null && Number.isFinite(r.deltaPct) ? (
           <span className={r.deltaPct < 0 ? "text-emerald-400" : "text-rose-400"}>
             {r.deltaPct > 0 ? "+" : ""}{Math.round(r.deltaPct * 100)}%
           </span>

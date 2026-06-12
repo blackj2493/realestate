@@ -8,6 +8,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
+
+// 30 lookups/min/IP — generous for autocomplete typing, hostile to quota-burn loops.
+const limiter = makeRateLimiter({ windowMs: 60_000, max: 30 });
 
 export interface GeocodeResult {
   label: string;
@@ -17,6 +21,14 @@ export interface GeocodeResult {
 
 export async function GET(req: NextRequest) {
   try {
+    const rl = limiter.check(clientIpFrom(req));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      );
+    }
+
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token || token === "your-mapbox-token") {
       return NextResponse.json(
