@@ -12,7 +12,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Square, Car, Home, AlertTriangle, Building2 } from "lucide-react";
+import { Bed, Bath, Square, Car, AlertTriangle, Building2 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
@@ -21,6 +21,8 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RoomMap from "@/components/Property/RoomMap";
+import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
+import { buildDatasheet, type RawPayload } from "@/lib/property/datasheet";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import ExpectedSaleCard from "@/components/Property/ExpectedSaleCard";
@@ -100,10 +102,6 @@ function fmtDate(iso: string): string {
     : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function asArray(v: string[] | string | undefined): string[] {
-  if (Array.isArray(v)) return v.filter(Boolean);
-  return v ? [v] : [];
-}
 
 function cleanDescription(remarks: string | undefined, max = 155): string {
   if (!remarks) return "";
@@ -278,39 +276,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
     DaysOnMarket: dom,
   });
 
-  const style = asArray(p.ArchitecturalStyle).join(", ");
-  const basement = asArray(p.Basement).join(", ");
-  const cooling = asArray(p.Cooling).join(", ");
-
-  const vitals: Array<{ label: string; value: string }> = [
-    {
-      label: "Lot Dimensions",
-      value: p.LotWidth ? `${p.LotWidth} x ${p.LotDepth ?? "N/A"} ${p.LotSizeUnits ?? ""}`.trim() : "N/A",
-    },
-    { label: "Property Age", value: p.ApproximateAge || "N/A" },
-    { label: "Heating", value: [p.HeatType, p.HeatSource].filter(Boolean).join(" · ") || "N/A" },
-    { label: "Cooling", value: cooling || "N/A" },
-    { label: "Direction Faces", value: p.DirectionFaces || "N/A" },
-    { label: "Basement", value: basement || "N/A" },
-  ];
-
-  const summary: Array<{ label: string; value: string }> = [
-    { label: "Property Type", value: p.PropertySubType || p.PropertyType || "N/A" },
-    { label: "Style", value: style || "N/A" },
-    { label: "Annual Taxes", value: p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A" },
-    {
-      label: "Kitchens",
-      value: `${p.KitchensTotal ?? 0} (${p.KitchensAboveGrade ?? 0} above · ${p.KitchensBelowGrade ?? 0} below)`,
-    },
-    {
-      label: "Rooms",
-      value: `${p.RoomsAboveGrade ?? 0} above · ${p.RoomsBelowGrade ?? 0} below`,
-    },
-    {
-      label: "Bedrooms",
-      value: `${p.BedroomsAboveGrade ?? p.BedroomsTotal ?? 0} above · ${p.BedroomsBelowGrade ?? 0} below`,
-    },
-  ];
+  const datasheet = buildDatasheet(detail.full_payload as RawPayload);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
@@ -461,31 +427,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
             </div>
 
-            {/* Structural Vitals */}
-            <Section title="Structural Vitals" icon={<Home className="h-4 w-4 text-emerald-400" />}>
-              <table className="w-full border-collapse text-sm">
-                <tbody className="divide-y divide-slate-800">
-                  {vitals.map((row) => (
-                    <tr key={row.label}>
-                      <td className="w-1/3 py-2 text-slate-500">{row.label}</td>
-                      <td className="py-2 font-mono text-slate-200">{row.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Section>
-
-            {/* Property Summary (richer than the modal) */}
-            <Section title="Property Summary" icon={<Building2 className="h-4 w-4 text-emerald-400" />}>
-              <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-                {summary.map((row) => (
-                  <div key={row.label}>
-                    <p className="text-xs text-slate-500">{row.label}</p>
-                    <p className="font-medium text-slate-200">{row.value}</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
+            {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12) */}
+            <PropertyDataSheet groups={datasheet} />
 
             {/* Schools */}
             <NearbySchools listingId={id} />
