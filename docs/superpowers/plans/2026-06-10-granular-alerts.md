@@ -894,7 +894,7 @@ import {
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
-const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <alerts@pureproperty.ca>';
+const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
 /** Same rental-noise floor as bubble stats (src/lib/bubbles/stats.ts). */
 const SALES_FLOOR = 'ListPrice:>=100000';
 /** §6.3b display cap — also bounds the per-bubble fetch. */

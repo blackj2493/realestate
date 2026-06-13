@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
     try {
       if (process.env.RESEND_API_KEY) {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const to = process.env.VIEWING_REQUESTS_EMAIL || process.env.ALERTS_FROM_EMAIL || "alerts@pureproperty.ca";
-        const from = process.env.ALERTS_FROM_EMAIL || "alerts@pureproperty.ca";
+        const to = process.env.VIEWING_REQUESTS_EMAIL || process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca";
+        const from = process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca";
         await resend.emails.send({
           from,
           to,

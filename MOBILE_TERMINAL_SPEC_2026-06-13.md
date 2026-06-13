@@ -13,7 +13,7 @@
 - ✅ **Map toggle** — mobile-only list/map segmented control (`page.tsx`); map is list-first-hidden `<md`, one tap to reveal it (resize-nudged on show). Desktop unchanged (both panes).
 - ✅ **Mobile filter access** — `FilterBar` is a horizontally-scrollable chip strip (`overflow-x-auto no-scrollbar`), a standard, functional mobile pattern. A dedicated bottom sheet is deferred as polish, not a fix.
 - ✅ **Lead path** — **reused the existing `viewing_requests` system** (migration `036`, `/api/viewing-requests`) — no new table/route. `ScheduleViewingForm` now renders **inline inside `ListingTerminal`** (was a link to the full page), so the funnel closes in the terminal on mobile; route sets `replyTo` so the agent can reply straight to the lead; leads email to `VIEWING_REQUESTS_EMAIL` = `blackj8591@gmail.com`.
-  - **Prod ops required:** set `VIEWING_REQUESTS_EMAIL=blackj8591@gmail.com` in the runtime env (Railway/Vercel); confirm migration `036_viewing_requests.sql` is applied; confirm `alerts@pureproperty.ca` is a Resend-verified sender.
+  - **Prod ops required:** set `VIEWING_REQUESTS_EMAIL=blackj8591@gmail.com` in the runtime env (Railway/Vercel); confirm migration `036_viewing_requests.sql` is applied; confirm `support@pureproperty.ca` is a Resend-verified sender.
 
 ---
 
