@@ -17,6 +17,8 @@ import { formatPrice } from "@/lib/utils";
 import type { AVMResult } from "@/lib/avm/types";
 import { axisPosition, lineupDomain, type ExpectedSale } from "@/lib/avm/expectedSale";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { TermTip } from "@/components/ui/TermTip";
+import { term } from "@/lib/glossary/terms";
 
 interface ExpectedSaleCardProps {
   expectedSale: ExpectedSale | null;
@@ -41,7 +43,10 @@ export default function ExpectedSaleCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Expected Sale Price</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{term("expectedSalePrice").name}</CardTitle>
+            <TermTip id="expectedSalePrice" iconOnly />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -88,7 +93,10 @@ export default function ExpectedSaleCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Expected Sale Price</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{term("expectedSalePrice").name}</CardTitle>
+          <TermTip id="expectedSalePrice" iconOnly />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { SoldAccuracy } from "@/lib/property/listingStatus";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { TermTip } from "@/components/ui/TermTip";
+import { term } from "@/lib/glossary/terms";
 
 /** ≤3% |diff| → bragging tone; above → neutral. */
 const BRAG_THRESHOLD_PCT = 3;
@@ -40,7 +42,10 @@ export default function SoldOutcomeCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Our Call vs. The Sale</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{term("ourCall").name}</CardTitle>
+            <TermTip id="ourCall" iconOnly />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -66,7 +71,10 @@ export default function SoldOutcomeCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Our Call vs. The Sale</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{term("ourCall").name}</CardTitle>
+          <TermTip id="ourCall" iconOnly />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">

@@ -16,6 +16,8 @@ import type {
   TrendBand,
   Confidence,
 } from "@/lib/condo/feeStability";
+import { TermTip } from "@/components/ui/TermTip";
+import { term } from "@/lib/glossary/terms";
 
 interface CondoFeeStabilityCardProps {
   feeStability: FeeStabilityResult | null | undefined;
@@ -48,7 +50,10 @@ export default function CondoFeeStabilityCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Condo Fee Stability</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{term("condoFeeStability").name}</CardTitle>
+          <TermTip id="condoFeeStability" iconOnly />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

@@ -9,6 +9,8 @@ import type {
   DealScoreComponent,
 } from "@/lib/dealScore/computeDealScore";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { TermTip } from "@/components/ui/TermTip";
+import { term } from "@/lib/glossary/terms";
 
 /**
  * Deal Score UI — the flagship "is this a good deal?" signal.
@@ -133,7 +135,8 @@ export default function DealScoreCard({
       <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
           <Gauge className="h-4 w-4 text-slate-500" />
-          Deal Score
+          {term("dealScore").name}
+          <TermTip id="dealScore" iconOnly />
         </h3>
         <div className="relative">
           <div className="flex items-center gap-4 blur-sm select-none" aria-hidden="true">
@@ -155,7 +158,8 @@ export default function DealScoreCard({
       <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
         <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
           <Gauge className="h-4 w-4 text-slate-500" />
-          Deal Score
+          {term("dealScore").name}
+          <TermTip id="dealScore" iconOnly />
         </h3>
         <p className="text-xs text-slate-500">{dealScore.verdict}</p>
       </div>
@@ -171,7 +175,8 @@ export default function DealScoreCard({
     <div className={cn("rounded-lg border bg-slate-900/50 p-4", s.border)}>
       <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
         <Gauge className={cn("h-4 w-4", s.text)} />
-        Deal Score
+        {term("dealScore").name}
+        <TermTip id="dealScore" iconOnly />
       </h3>
 
       <div className="flex items-center gap-4">

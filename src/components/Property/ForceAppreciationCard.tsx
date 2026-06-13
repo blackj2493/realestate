@@ -3,6 +3,8 @@ import { formatPrice } from "@/lib/utils";
 import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
 import { shouldRender, buildView, type LedgerRow } from "./forceAppreciationView";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { TermTip } from "@/components/ui/TermTip";
+import { term } from "@/lib/glossary/terms";
 
 const SCORE_LEGEND =
   "Upside = how much equity you could unlock by renovating, as an index relative to this home's value (before cost).";
@@ -44,7 +46,10 @@ export default function ForceAppreciationCard({
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Renovation Upside</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{term("renovationUpside").name}</CardTitle>
+            <TermTip id="renovationUpside" iconOnly />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -70,7 +75,10 @@ export default function ForceAppreciationCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Renovation Upside</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{term("renovationUpside").name}</CardTitle>
+          <TermTip id="renovationUpside" iconOnly />
+        </div>
         <span
           title={SCORE_LEGEND}
           className="cursor-help rounded border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 font-mono text-xs text-emerald-300"

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { AVMResult, AnchorBasis } from "@/lib/avm/types";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { TermTip } from "@/components/ui/TermTip";
+import { term } from "@/lib/glossary/terms";
 
 interface ListingEstimateCardProps {
   estimate: AVMResult | null;
@@ -44,7 +46,10 @@ export default function ListingEstimateCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>True Value</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{term("trueValue").name}</CardTitle>
+            <TermTip id="trueValue" iconOnly />
+          </div>
           <p className="text-xs text-muted-foreground">
             What the asset itself is worth — independent of asking price.
           </p>
@@ -69,7 +74,10 @@ export default function ListingEstimateCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>True Value</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{term("trueValue").name}</CardTitle>
+          <TermTip id="trueValue" iconOnly />
+        </div>
         <p className="text-xs text-muted-foreground">
           What the asset itself is worth — independent of asking price.
         </p>
