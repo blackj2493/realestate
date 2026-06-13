@@ -273,8 +273,11 @@ function CommandCenterContent() {
       <TopCommandBar className="shrink-0" />
 
       <div className="flex min-h-0 flex-1">
-        {/* Map — fills remaining width */}
-        <div className="relative min-w-0 flex-1">
+        {/* Map — fills remaining width. Hidden on mobile (<md): the terminal's
+            desktop split crushed the ledger into ~390px (audit C4), so mobile
+            shows the full-width card ledger instead. A map/list toggle is a
+            follow-up. */}
+        <div className="relative hidden min-w-0 flex-1 md:block">
           <AlphaMap
             properties={displayed}
             colorConfig={mapColorConfig}
@@ -303,20 +306,23 @@ function CommandCenterContent() {
           {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
 
-        {/* Drag handle — resize the ledger */}
+        {/* Drag handle — resize the ledger (desktop only) */}
         <div
           onMouseDown={startResize}
           role="separator"
           aria-orientation="vertical"
           title="Drag to resize"
-          className="group relative w-1.5 shrink-0 cursor-col-resize bg-slate-800 transition-colors hover:bg-cyan-500/60"
+          className="group relative hidden w-1.5 shrink-0 cursor-col-resize bg-slate-800 transition-colors hover:bg-cyan-500/60 md:block"
         >
           {/* Wider invisible hit area for easier grabbing */}
           <div className="absolute inset-y-0 -left-2 -right-2" />
         </div>
 
-        {/* Ledger — user-resizable width */}
-        <div className="relative flex shrink-0 flex-col bg-slate-950" style={{ width: ledgerWidth }}>
+        {/* Ledger — full-width on mobile, user-resizable width on desktop. */}
+        <div
+          className="relative flex w-full shrink-0 flex-col bg-slate-950 md:w-[var(--ledger-w)]"
+          style={{ "--ledger-w": `${ledgerWidth}px` } as React.CSSProperties}
+        >
           <LedgerPanel className="flex-1 min-h-0" />
           {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>

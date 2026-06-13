@@ -4,7 +4,7 @@
 
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LedgerRow from "./LedgerRow";
@@ -21,6 +21,26 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
     useCommandCenterStore();
   const isAuthed = useIsAuthed();
+
+  // Width-aware layout (audit C4): the fixed numeric columns starve the
+  // flex-1 address column at narrow widths — at the default 620px panel the
+  // price clipped to "$8…". Below COMPACT_BELOW we drop to a clean card list
+  // (photo + price/address) and reveal the analytical columns only when the
+  // panel is genuinely wide enough to show them without crushing the price.
+  // Container width drives this, so it works for the resizable desktop panel
+  // AND the full-width mobile ledger (viewport breakpoints can't see panel width).
+  const COMPACT_BELOW = 760;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => {
+      setCompact(entry.contentRect.width < COMPACT_BELOW);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const columns = PERSONA_CONFIG[activePersona].columns;
   const allProperties = searchResult?.listings || [];
@@ -51,7 +71,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   );
 
   return (
-    <div className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
+    <div ref={rootRef} className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
       {/* Typesense stat header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
         <Zap className="h-3.5 w-3.5 text-cyan-400" />
@@ -85,8 +105,8 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         </p>
       </div>
 
-      {/* Column headers */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2">
+      {/* Column headers — hidden in compact card mode (no columns to sort). */}
+      <div className={cn("shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2", compact ? "hidden" : "flex")}>
         <div className="w-5 shrink-0" />
         <div className="h-px w-24 shrink-0" />
         {columns.map((col) => {
@@ -158,6 +178,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               key={property.id}
               property={property}
               columns={columns}
+              compact={compact}
               isAuthed={isAuthed}
               onClick={() => setSelectedProperty(property)}
               isSelected={selectedProperty?.id === property.id}

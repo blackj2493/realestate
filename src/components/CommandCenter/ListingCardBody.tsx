@@ -86,7 +86,7 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
             <span className="text-slate-500">· survived {doc.DaysOnMarket}d</span>
           )}
         </div>
-        <p className="mt-0.5 truncate font-sans text-base font-bold text-cyan-300">
+        <p className="mt-0.5 font-sans text-base font-bold text-cyan-300">
           {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}${isLeased ? "/mo" : ""}` : "—"}
         </p>
         {delta && (
@@ -156,8 +156,9 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
         </div>
       )}
 
-      {/* Price — own line so it never gets squeezed by the chip/freshness */}
-      <p className="mt-0.5 truncate font-sans text-base font-bold text-cyan-300">
+      {/* Price — own line so it never gets squeezed by the chip/freshness.
+          No `truncate`: a price must never be ellipsis-clipped to "$8…" (audit C4). */}
+      <p className="mt-0.5 font-sans text-base font-bold text-cyan-300">
         {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
       </p>
 

@@ -30,6 +30,9 @@ interface LedgerRowProps {
   onToggleSelect?: () => void;
   /** Signed-in? Gates VOW-derived row metrics (True DOM, distress flags, deal score) for anon (§6.2(f)). */
   isAuthed?: boolean;
+  /** Card mode for narrow panels (audit C4): render only the photo + address
+   *  card, dropping the fixed numeric columns that would starve the price. */
+  compact?: boolean;
 }
 
 function alignClass(a: ColumnDef["align"]) {
@@ -114,9 +117,12 @@ function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; is
   }
 }
 
-export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
+  // In compact card mode only the address card renders; the fixed numeric
+  // columns are dropped so the price never gets crushed (audit C4).
+  const visibleColumns = compact ? columns.filter((c) => c.type === "address") : columns;
 
   return (
     <div
@@ -173,7 +179,7 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         />
       </div>
 
-      {columns.map((col) => (
+      {visibleColumns.map((col) => (
         <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} />
       ))}
     </div>

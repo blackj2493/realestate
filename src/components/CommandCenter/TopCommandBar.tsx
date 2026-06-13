@@ -37,7 +37,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           the left (logo + search) and right (nav + alerts) widths. minmax(0,1fr)
           lets the side columns shrink so the search can flex and the center stays
           truly centered. */}
-      <div className="grid h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4">
+      {/* Mobile: a simple 3-zone flex (logo · persona · bell) so the shrink-0
+          logo never overflows its track into the centered persona (audit C4).
+          sm+: the centered 3-column grid (persona stays truly centered). */}
+      <div className="flex h-12 items-center justify-between gap-2 px-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4 sm:px-4">
         {/* Left: wordmark + location search (search expands to fill the column) */}
         <div className="flex min-w-0 items-center gap-3">
           <Link
@@ -48,7 +51,8 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
             <Logo size="md" theme="dark" />
           </Link>
 
-          <LocationSearch className="min-w-0 flex-1" />
+          {/* Location search is hidden on mobile to make room for the persona. */}
+          <LocationSearch className="hidden min-w-0 flex-1 sm:block" />
         </div>
 
         {/* Center: persona preset — the gold selector (lifted up from the filter
