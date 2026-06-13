@@ -35,6 +35,7 @@ import CampaignHistorySection from "@/components/Property/CampaignHistorySection
 import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
+import SimilarProperties from "@/components/Property/SimilarProperties";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -583,6 +584,18 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             <CampaignHistorySection className="mt-4" campaignHistory={view.campaignHistory} isAuthed={isAuthed} />
           )}
         </section>
+
+        {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island ── */}
+        <SimilarProperties
+          subjectId={id}
+          cityRegion={p.CityRegion ?? null}
+          city={p.City ?? null}
+          subType={p.PropertySubType ?? null}
+          beds={p.BedroomsTotal ?? 0}
+          baths={p.BathroomsTotalInteger ?? 0}
+          listPrice={price}
+          area={p.BuildingAreaTotal ?? 0}
+        />
       </div>
     </main>
   );
