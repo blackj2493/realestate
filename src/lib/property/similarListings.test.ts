@@ -96,3 +96,84 @@ describe("recencyScore", () => {
     expect(recencyScore(60)).toBeGreaterThan(recencyScore(150));
   });
 });
+
+import {
+  scoreForSale,
+  scoreSold,
+  rankSimilar,
+  classifyMatchQuality,
+  buildWhyLabel,
+  type SubjectAttrs,
+  type CandidateAttrs,
+} from "./similarListings";
+
+const SUBJECT: SubjectAttrs = {
+  id: "SUBJ",
+  cityRegion: "Bram East",
+  city: "Brampton",
+  subType: "Detached",
+  beds: 3,
+  listPrice: 1_000_000,
+  area: 1800,
+};
+
+const cand = (over: Partial<CandidateAttrs>): CandidateAttrs => ({
+  cityRegion: "Bram East",
+  subType: "Detached",
+  beds: 3,
+  price: 1_000_000,
+  area: 1800,
+  ...over,
+});
+
+describe("scoreForSale", () => {
+  it("ranks a same-neighbourhood match above a same-city-only one", () => {
+    expect(scoreForSale(SUBJECT, cand({}))).toBeGreaterThan(
+      scoreForSale(SUBJECT, cand({ cityRegion: "Bram West" }))
+    );
+  });
+});
+
+describe("scoreSold ignores price (it is the answer, not a filter)", () => {
+  it("gives identical scores regardless of the comp's close price", () => {
+    const a = scoreSold(SUBJECT, cand({ price: 500_000, daysAgo: 10 }));
+    const b = scoreSold(SUBJECT, cand({ price: 2_000_000, daysAgo: 10 }));
+    expect(a).toBe(b);
+  });
+});
+
+describe("rankSimilar", () => {
+  it("sorts by score desc, caps at the limit, and tags exact flags + why", () => {
+    const items = [
+      cand({ cityRegion: "Bram West", beds: 1 }), // weak
+      cand({}), // perfect
+      cand({ cityRegion: "Bram East", beds: 4 }), // strong
+    ];
+    const ranked = rankSimilar(SUBJECT, items, (c) => c, "sale", 2);
+    expect(ranked).toHaveLength(2);
+    expect(ranked[0].score).toBeGreaterThanOrEqual(ranked[1].score);
+    expect(ranked[0].regionExact).toBe(true);
+    expect(ranked[0].subtypeExact).toBe(true);
+    expect(ranked[0].why).toContain("Same neighbourhood");
+  });
+});
+
+describe("classifyMatchQuality", () => {
+  it("returns none/sparse/partial/close by count and strength", () => {
+    expect(classifyMatchQuality([])).toBe("none");
+    expect(
+      classifyMatchQuality([{ regionExact: true, subtypeExact: true }])
+    ).toBe("sparse");
+    const strong = Array.from({ length: 4 }, () => ({ regionExact: true, subtypeExact: true }));
+    expect(classifyMatchQuality(strong)).toBe("close");
+    const weak = Array.from({ length: 4 }, () => ({ regionExact: false, subtypeExact: false }));
+    expect(classifyMatchQuality(weak)).toBe("partial");
+  });
+});
+
+describe("buildWhyLabel", () => {
+  it("labels a sold comp with neighbourhood, form, and recency", () => {
+    const label = buildWhyLabel(SUBJECT, cand({ cityRegion: "Bram West", beds: 4, daysAgo: 22 }), "sold");
+    expect(label).toBe("Nearby in Brampton · 4bd Detached · sold 22d ago");
+  });
+});
