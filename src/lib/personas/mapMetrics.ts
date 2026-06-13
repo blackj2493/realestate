@@ -18,6 +18,7 @@ import {
   type MapColorConfig,
 } from "./personaConfig";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
+import { term } from "@/lib/glossary/terms";
 
 export interface MapMetricDef extends MapColorConfig {
   id: string;
@@ -102,7 +103,7 @@ export const MAP_METRICS: MapMetricDef[] = [
   },
   {
     id: "density",
-    label: "Density",
+    label: term("listingDensity").name,
     metric: () => 1,
     domain: [0, 1],
     range: DENSITY_RANGE,

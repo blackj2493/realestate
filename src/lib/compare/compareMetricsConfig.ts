@@ -14,6 +14,7 @@ import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { winnerIndices, bestValue, type WinnerDirection } from "./winner";
 import { rowIsIdentical } from "./diff";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
+import { term } from "@/lib/glossary/terms";
 
 export type CompareGroupId =
   | "valuationDeal"
@@ -158,7 +159,7 @@ export const COMPARE_METRICS: CompareMetric[] = [
   { key: "cashflow", label: "Monthly Cashflow", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.monthlyCashflow ?? null, format: fmtSignedPerMo, winner: "high",
     tag: () => "est" },
-  { key: "carry", label: "Monthly Carry", group: "cashflowCarry", cellKind: "numeric",
+  { key: "carry", label: term("carryCost").name, group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.monthlyCarry ?? null, format: fmtPerMo, winner: "low" },
   { key: "taxes", label: "Annual Taxes", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.listing.TaxAnnualAmount ?? null, format: formatPrice, winner: "low" },

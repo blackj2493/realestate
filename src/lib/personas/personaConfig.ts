@@ -25,6 +25,7 @@
  */
 
 import { DollarSign, TrendingUp, Home, Hammer, type LucideIcon } from "lucide-react";
+import { term } from "@/lib/glossary/terms";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 
@@ -232,11 +233,11 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     controls: [
       // This control thresholds cap_rate_est (real, indexed). The "Yield" label is
       // a legacy misnomer — kept to avoid churning the chip UI; it filters cap rate.
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
+      { kind: "slider", key: "minYield", label: `Min ${term("capRate").name}`, short: term("capRate").name, op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
       { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
       { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
-      { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
-      { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex" },
+      { kind: "toggle", key: "zoningPotential", label: term("densityReady").name, short: term("densityReady").name },
+      { kind: "toggle", key: "duplexCandidate", label: term("suitePotential").name, short: term("suitePotential").name },
     ],
     buildFilterString: (f) =>
       join([
@@ -267,7 +268,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
       { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost" },
       { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
-      { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex" },
+      { kind: "toggle", key: "duplexCandidate", label: term("suitePotential").name, short: term("suitePotential").name },
     ],
     buildFilterString: (f) =>
       join([
