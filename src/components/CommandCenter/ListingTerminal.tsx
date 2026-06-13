@@ -21,8 +21,7 @@ import {
   GitCompareArrows,
   Check,
   Bookmark,
-  BookmarkCheck,
-  CalendarCheck
+  BookmarkCheck
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import Logo from '@/components/Logo';
@@ -46,6 +45,7 @@ import type { AVMResult } from '@/lib/avm/types';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
 import { useWatchlistStore } from '@/lib/watchlist/useWatchlist';
+import ScheduleViewingForm from '@/components/Property/ScheduleViewingForm';
 
 interface ListingTerminalProps {
   property: ListingDocument;
@@ -497,14 +497,10 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                   {isSelected ? <Check className="h-4 w-4" /> : <GitCompareArrows className="h-4 w-4" />}
                   {isSelected ? 'Added to Comparison' : 'Add to Comparison'}
                 </button>
-                {/* The viewing-request lead form lives on the full listing page (ScheduleViewingForm). */}
-                <Link
-                  href={`/properties/${property.id}`}
-                  className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-                >
-                  <CalendarCheck className="h-4 w-4" />
-                  Schedule Viewing
-                </Link>
+                {/* Inline viewing-request lead form — closes the funnel inside the
+                    terminal (esp. mobile) instead of bouncing to the full page.
+                    Posts to /api/viewing-requests → viewing_requests + agent email. */}
+                <ScheduleViewingForm listingKey={property.id} address={property.UnparsedAddress} />
                 <button
                   type="button"
                   onClick={() =>

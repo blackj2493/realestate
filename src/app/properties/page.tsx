@@ -9,7 +9,7 @@
 import React, { useEffect, useCallback, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Loader2 } from "lucide-react";
+import { Loader2, List, Map as MapIcon } from "lucide-react";
 
 import {
   TopCommandBar,
@@ -24,6 +24,7 @@ import {
 } from "@/components/CommandCenter";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
@@ -268,6 +269,16 @@ function CommandCenterContent() {
   const showSoldLock = soldLocked && compOnly;
   const soldLockMsg = `${totalCount.toLocaleString()} gated market record${totalCount === 1 ? "" : "s"} — sign in to view`;
 
+  // Mobile-only list/map switch. The map is list-first-hidden on mobile; this is
+  // the "one tap away" to it. Desktop shows both panes, so the control is md:hidden.
+  // The map mounts in a hidden container on mobile, so nudge it to resize on reveal.
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  useEffect(() => {
+    if (mobileView !== "map") return;
+    const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+    return () => clearTimeout(t);
+  }, [mobileView]);
+
   return (
     <div className="flex h-app flex-col overflow-hidden bg-slate-950">
       <TopCommandBar className="shrink-0" />
@@ -277,7 +288,7 @@ function CommandCenterContent() {
             desktop split crushed the ledger into ~390px (audit C4), so mobile
             shows the full-width card ledger instead. A map/list toggle is a
             follow-up. */}
-        <div className="relative hidden min-w-0 flex-1 md:block">
+        <div className={cn("relative min-w-0 flex-1 md:block", mobileView === "map" ? "block" : "hidden")}>
           <AlphaMap
             properties={displayed}
             colorConfig={mapColorConfig}
@@ -318,14 +329,44 @@ function CommandCenterContent() {
           <div className="absolute inset-y-0 -left-2 -right-2" />
         </div>
 
-        {/* Ledger — full-width on mobile, user-resizable width on desktop. */}
+        {/* Ledger — full-width on mobile (hidden when the map view is active),
+            user-resizable width on desktop where both panes always show. */}
         <div
-          className="relative flex w-full shrink-0 flex-col bg-slate-950 md:w-[var(--ledger-w)]"
+          className={cn(
+            "relative w-full shrink-0 flex-col bg-slate-950 md:flex md:w-[var(--ledger-w)]",
+            mobileView === "map" ? "hidden" : "flex"
+          )}
           style={{ "--ledger-w": `${ledgerWidth}px` } as React.CSSProperties}
         >
           <LedgerPanel className="flex-1 min-h-0" />
           {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
+      </div>
+
+      {/* Mobile-only list/map toggle — the one-tap path to the map (which is
+          list-first-hidden <md). Desktop shows both panes, so it's md:hidden. */}
+      <div
+        className="fixed left-1/2 z-40 flex -translate-x-1/2 overflow-hidden rounded-full border border-slate-700 bg-slate-900/95 shadow-lg backdrop-blur md:hidden"
+        style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
+        {(["list", "map"] as const).map((v) => {
+          const Icon = v === "list" ? List : MapIcon;
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setMobileView(v)}
+              aria-pressed={mobileView === v}
+              className={cn(
+                "flex items-center gap-1.5 px-5 py-2 text-sm font-semibold capitalize transition-colors",
+                mobileView === v ? "bg-cyan-500 text-slate-950" : "text-slate-300"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {v}
+            </button>
+          );
+        })}
       </div>
 
       {selectedProperty && (

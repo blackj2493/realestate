@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from,
           to,
+          replyTo: email,
           subject: `Viewing request — ${address || listingKey}`,
           text: [
             `Listing: ${listingKey}${address ? ` — ${address}` : ""}`,
