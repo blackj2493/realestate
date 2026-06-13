@@ -203,3 +203,42 @@ export function classifyMatchQuality(
   const strong = ranked.slice(0, 4).filter((r) => r.regionExact && r.subtypeExact).length;
   return strong >= 2 ? "close" : "partial";
 }
+
+const DAY_MS = 86_400_000;
+
+/** Backtick-quote a Typesense filter value (strip embedded backticks). */
+function bq(v: string): string {
+  return `\`${v.replace(/`/g, "")}\``;
+}
+
+/** OR-clause over the subject family's exact sub-type spellings, or "" if none. */
+function familyClause(subType: string | null): string {
+  const variants = familySubtypeVariants(subType);
+  if (variants.length === 0) return "";
+  return `(${variants.map((v) => `PropertySubType:=${bq(v)}`).join(" || ")})`;
+}
+
+/** Wide-net For-Sale filter: active + city floor + family wall. (Subject excluded in JS.) */
+export function buildForSaleSimilarFilter(s: SubjectAttrs): string {
+  const clauses: string[] = ["TransactionType:=`For Sale`"];
+  if (s.city) clauses.push(`City:=${bq(s.city)}`);
+  const fam = familyClause(s.subType);
+  if (fam) clauses.push(fam);
+  return clauses.join(" && ");
+}
+
+/** Wide-net Sold filter: sold + price floor + window + city floor + family wall.
+ *  `nowMs` is injected (not Date.now()) so the output is deterministic for tests. */
+export function buildSoldSimilarFilter(s: SubjectAttrs, windowDays: number, nowMs: number): string {
+  const cutoff = Math.floor(nowMs - windowDays * DAY_MS);
+  const clauses: string[] = [
+    "DealType:=sold",
+    "ClosePrice:>=1",
+    `PurchaseContractDate:>=${cutoff}`,
+    `PurchaseContractDate:<=${nowMs}`,
+  ];
+  if (s.city) clauses.push(`(City:=${bq(s.city)} || CityRegion:=${bq(s.city)})`);
+  const fam = familyClause(s.subType);
+  if (fam) clauses.push(fam);
+  return clauses.join(" && ");
+}

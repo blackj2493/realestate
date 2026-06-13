@@ -177,3 +177,29 @@ describe("buildWhyLabel", () => {
     expect(label).toBe("Nearby in Brampton · 4bd Detached · sold 22d ago");
   });
 });
+
+import { buildForSaleSimilarFilter, buildSoldSimilarFilter } from "./similarListings";
+
+describe("buildForSaleSimilarFilter", () => {
+  it("scopes to For Sale + city + the subject's family only (no cross-family)", () => {
+    const f = buildForSaleSimilarFilter(SUBJECT);
+    expect(f).toContain("TransactionType:=`For Sale`");
+    expect(f).toContain("City:=`Brampton`");
+    expect(f).toContain("PropertySubType:=`Detached`");
+    expect(f).toContain("PropertySubType:=`Condo Townhouse`");
+    expect(f).not.toContain("Condo Apartment"); // family wall
+  });
+});
+
+describe("buildSoldSimilarFilter", () => {
+  it("scopes to sold + price floor + window + city + family", () => {
+    const NOW = 1_700_000_000_000;
+    const f = buildSoldSimilarFilter(SUBJECT, 180, NOW);
+    expect(f).toContain("DealType:=sold");
+    expect(f).toContain("ClosePrice:>=1");
+    expect(f).toContain(`PurchaseContractDate:<=${NOW}`);
+    expect(f).toContain(`PurchaseContractDate:>=${NOW - 180 * 86_400_000}`);
+    expect(f).toContain("PropertySubType:=`Detached`");
+    expect(f).not.toContain("Condo Apartment");
+  });
+});
