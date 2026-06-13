@@ -39,90 +39,128 @@ function alignClass(a: ColumnDef["align"]) {
   return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 }
 
-function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
-  const base = cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align));
-
+/**
+ * ColumnValue — the bare, colored value for a numeric/text column. Shared by the
+ * desktop Cell (fixed-width column) and the mobile MetricChip (labeled card chip)
+ * so the formatting + color rules live in ONE place and can't drift.
+ * (address + alphaFlag are structural and handled by their own renderers.)
+ */
+function ColumnValue({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
   switch (col.type) {
-    case "address":
-      return (
-        <div className={cn("min-w-0", col.width)}>
-          <ListingCardBody doc={doc} />
-        </div>
-      );
     case "trueDom": {
       // True DOM is relist-corrected (VOW-derived) — gated for anon (§6.2(f)).
       if (!isAuthed)
         return (
-          <div className={cn(base, "text-slate-600")} title="Sign in to view True DOM">
+          <span className="text-slate-600" title="Sign in to view True DOM">
             🔒
-          </div>
+          </span>
         );
       const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
       const color = dom > 90 ? "text-rose-400" : dom > 45 ? "text-cyan-400" : dom >= 14 ? "text-amber-400" : "text-slate-400";
-      return <div className={cn(base, color, "font-semibold")}>{dom}d</div>;
+      return <span className={cn(color, "font-semibold")}>{dom}d</span>;
     }
     case "capRate": {
       const v = capRateOrNull(doc.cap_rate_est);
-      return <div className={cn(base, "text-cyan-400")}>{v != null ? `${v.toFixed(1)}%` : "—"}</div>;
+      return <span className="text-cyan-400">{v != null ? `${v.toFixed(1)}%` : "—"}</span>;
     }
     case "yield": {
       // gross_yield_est is already a PERCENT — no ×100 (that was for the old fraction targetGrossYield).
       const v = grossYieldOrNull(doc.gross_yield_est);
-      return <div className={cn(base, "text-cyan-400")}>{v != null ? `${v.toFixed(1)}%` : "—"}</div>;
+      return <span className="text-cyan-400">{v != null ? `${v.toFixed(1)}%` : "—"}</span>;
     }
     case "carryCost":
       return (
-        <div className={cn(base, "text-cyan-400")}>
+        <span className="text-cyan-400">
           ${carryFor(doc).toLocaleString()}
           <span className="text-[9px] text-slate-500">/mo</span>
-        </div>
+        </span>
       );
     case "priceDrop":
       return (
-        <div className={cn(base, doc.TotalPriceDrop ? "text-rose-400" : "text-slate-500")}>
+        <span className={doc.TotalPriceDrop ? "text-rose-400" : "text-slate-500"}>
           {doc.TotalPriceDrop ? `-$${doc.TotalPriceDrop.toLocaleString()}` : "—"}
-        </div>
+        </span>
       );
     case "suite":
       return (
-        <div className={cn(base, "text-blue-300")}>
+        <span className="text-blue-300">
           {doc.SuiteStatus === "EXISTING_SUITE" ? "EXISTING" : doc.SuiteStatus === "POTENTIAL_CANDIDATE" ? "CANDIDATE" : "—"}
-        </div>
+        </span>
       );
     case "lotDims": {
       const w = doc.LotWidth ?? doc.lot_width_ft;
       const d = doc.LotDepth ?? doc.lot_depth_ft;
-      return <div className={cn(base, "text-slate-300")}>{w ? `${w}′×${d ?? "?"}′` : "—"}</div>;
+      return <span className="text-slate-300">{w ? `${w}′×${d ?? "?"}′` : "—"}</span>;
     }
     case "zoning":
-      return <div className={cn(base, doc.multiplex_by_right ? "text-cyan-400" : "text-slate-300")}>{doc.zoning_designation || "—"}</div>;
+      return <span className={doc.multiplex_by_right ? "text-cyan-400" : "text-slate-300"}>{doc.zoning_designation || "—"}</span>;
     case "density":
-      return <div className={cn(base, doc.is_density_ready ? "text-cyan-400" : "text-slate-500")}>{doc.is_density_ready ? "YES" : "—"}</div>;
-    case "alphaFlag": {
-      const flag = getAlphaFlag(doc, isAuthed);
-      return (
-        <div className={cn("shrink-0", col.width, alignClass(col.align))}>
-          {flag.variant === "none" ? (
-            <span className="text-xs text-slate-600">—</span>
-          ) : (
-            <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
-              {flag.label}
-            </span>
-          )}
-        </div>
-      );
-    }
+      return <span className={doc.is_density_ready ? "text-cyan-400" : "text-slate-500"}>{doc.is_density_ready ? "YES" : "—"}</span>;
     default:
       return null;
   }
 }
 
+/** Desktop column cell — value at the persona's fixed width + alignment. */
+function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
+  if (col.type === "address")
+    return (
+      <div className={cn("min-w-0", col.width)}>
+        <ListingCardBody doc={doc} />
+      </div>
+    );
+  if (col.type === "alphaFlag") {
+    const flag = getAlphaFlag(doc, isAuthed);
+    return (
+      <div className={cn("shrink-0", col.width, alignClass(col.align))}>
+        {flag.variant === "none" ? (
+          <span className="text-xs text-slate-600">—</span>
+        ) : (
+          <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
+            {flag.label}
+          </span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className={cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align))}>
+      <ColumnValue doc={doc} col={col} isAuthed={isAuthed} />
+    </div>
+  );
+}
+
+/**
+ * MetricChip — mobile/compact card chip carrying a persona shadow-data metric
+ * (e.g. "CAP 6.2%", "DOM 142d", "DROP -$40k"). Self-labels because the column
+ * headers are hidden in card mode. This is what keeps the moat visible on mobile.
+ */
+function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
+  if (col.type === "alphaFlag") {
+    const flag = getAlphaFlag(doc, isAuthed);
+    if (flag.variant === "none") return null;
+    return (
+      <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
+        {flag.label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-baseline gap-1 rounded-sm bg-slate-800/50 px-1.5 py-0.5 font-mono text-xs">
+      <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{col.header}</span>
+      <ColumnValue doc={doc} col={col} isAuthed={isAuthed} />
+    </span>
+  );
+}
+
 export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
-  // In compact card mode only the address card renders; the fixed numeric
-  // columns are dropped so the price never gets crushed (audit C4).
-  const visibleColumns = compact ? columns.filter((c) => c.type === "address") : columns;
+  // Compact (mobile / narrow panel): render the address card PLUS a wrapping strip
+  // of persona shadow-data chips. Dropping the columns entirely (audit C4) also hid
+  // the moat on mobile — chips put the differentiating numbers back without crushing
+  // the price, since they flow vertically instead of as fixed-width columns.
+  const analyticalColumns = columns.filter((c) => c.type !== "address");
 
   return (
     <div
@@ -179,9 +217,20 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         />
       </div>
 
-      {visibleColumns.map((col) => (
-        <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} />
-      ))}
+      {compact ? (
+        <div className="min-w-0 flex-1">
+          <ListingCardBody doc={property} />
+          {analyticalColumns.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1">
+              {analyticalColumns.map((col) => (
+                <MetricChip key={col.type} doc={property} col={col} isAuthed={isAuthed} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        columns.map((col) => <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} />)
+      )}
     </div>
   );
 }

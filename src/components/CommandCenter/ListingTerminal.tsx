@@ -242,10 +242,11 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
           </button>
         </div>
 
-        {/* 70/30 Split Layout */}
-        <div className="flex w-full min-h-0 flex-1">
-          {/* LEFT PANEL - Asset Details (70%, Scrollable) */}
-          <div className="w-[70%] h-full overflow-y-auto no-scrollbar p-6">
+        {/* 70/30 split on desktop; stacks to a single scroll column on mobile so the
+            calculator rail never gets crushed to ~112px (was a hard w-[30%]). */}
+        <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar lg:flex-row lg:overflow-hidden">
+          {/* LEFT PANEL - Asset Details (70% on desktop; full-width, in the page scroll on mobile) */}
+          <div className="w-full p-4 sm:p-6 lg:w-[70%] lg:h-full lg:overflow-y-auto no-scrollbar">
             {/* Header Section */}
             <div className="mb-6">
               {/* Badges */}
@@ -290,7 +291,7 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             </div>
 
             {/* Property Specs Grid */}
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-3 text-center">
                 <Bed className="h-5 w-5 text-emerald-400 mx-auto mb-1" />
                 <span className="text-lg font-bold font-mono text-slate-200">{bedsLabel(property) ?? (property.BedroomsTotal || 0)}</span>
@@ -354,7 +355,7 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                   <GraduationCap className="h-4 w-4 text-emerald-400" />
                   Schools near this home
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {targetRow && renderSchoolRow(targetRow, true)}
                   {otherRows.map((s) => renderSchoolRow(s, false))}
                 </div>
@@ -385,8 +386,9 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             </div>
           </div>
 
-          {/* RIGHT PANEL - Calculator & Ledger (30%, Sticky) */}
-          <div className="w-[30%] h-full overflow-y-auto no-scrollbar bg-slate-900/30 border-l border-slate-800 p-4">
+          {/* RIGHT PANEL - Calculator & Ledger (30% sticky rail on desktop; stacks below
+              the asset details, full-width, on mobile) */}
+          <div className="w-full border-t border-slate-800 bg-slate-900/30 p-4 lg:w-[30%] lg:h-full lg:overflow-y-auto lg:border-l lg:border-t-0 no-scrollbar">
             <div className="space-y-4">
               {/* Deal Score — flagship signal, pinned to the top of the rail */}
               {dealScore ? (

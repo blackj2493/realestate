@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   description: "Find your dream home with advanced market analytics and real-time MLS listings.",
 };
 
+// Mobile viewport: device-width + viewport-fit=cover so safe-area-inset env()
+// vars resolve on notched phones; dark theme-color so the browser chrome matches
+// the app instead of flashing white. Pinch-zoom left enabled on purpose (a11y).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0A1828",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
+      <body className={`${inter.className} min-h-app bg-background text-foreground`}>
         <WatchlistInit />
         {children}
         <Toaster />

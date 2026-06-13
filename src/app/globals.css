@@ -298,3 +298,35 @@ table,
   background-color: rgba(34, 211, 238, 0.3);
   color: #ecfeff;
 }
+
+/* ============================================================================
+   Mobile viewport helpers
+   - h-app / min-h-app: dynamic viewport height (100dvh) with a 100vh fallback,
+     so the 100vh Terminal stops being clipped behind the mobile browser chrome.
+   - *-safe: safe-area insets for notched phones. Requires viewport-fit=cover
+     (set in layout.tsx `viewport`). Apply to mobile headers / bottom bars.
+   ============================================================================ */
+.h-app {
+  height: 100vh; /* fallback for browsers without dvh */
+  height: 100dvh;
+}
+.min-h-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right);
+}
+.px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}

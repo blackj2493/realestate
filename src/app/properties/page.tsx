@@ -269,7 +269,7 @@ function CommandCenterContent() {
   const soldLockMsg = `${totalCount.toLocaleString()} gated market record${totalCount === 1 ? "" : "s"} — sign in to view`;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-950">
+    <div className="flex h-app flex-col overflow-hidden bg-slate-950">
       <TopCommandBar className="shrink-0" />
 
       <div className="flex min-h-0 flex-1">
