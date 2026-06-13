@@ -48,3 +48,50 @@ export function familySubtypeVariants(subType: string | null): string[] {
   }
   return out;
 }
+
+/** Asymmetric bed closeness: exact best, then +1 over -1, decaying to a floor. */
+export function bedScore(subjectBeds: number, candBeds: number): number {
+  const d = candBeds - subjectBeds;
+  if (d === 0) return 1;
+  if (d === 1) return 0.85;
+  if (d === 2) return 0.6;
+  if (d === -1) return 0.6;
+  if (d === -2) return 0.3;
+  return 0.1;
+}
+
+/** Linear price closeness, 1 at equal, 0 at >=50% delta. Neutral if either is <=0. */
+export function priceScore(subjectPrice: number, candPrice: number): number {
+  if (subjectPrice <= 0 || candPrice <= 0) return 0.5;
+  const rel = Math.abs(candPrice - subjectPrice) / subjectPrice;
+  return Math.max(0, 1 - rel / 0.5);
+}
+
+/** Size closeness; neutral 0.5 when either area is missing (feed has ~0% exact sqft). */
+export function sizeScore(subjectArea: number, candArea: number): number {
+  if (subjectArea <= 0 || candArea <= 0) return 0.5;
+  const rel = Math.abs(candArea - subjectArea) / subjectArea;
+  return Math.max(0, 1 - rel / 0.5);
+}
+
+/** 1 for same CityRegion, 0.4 for same-city-only (neighbourhood-first ranking). */
+export function regionScore(subjectRegion: string | null, candRegion: string | null): number {
+  if (subjectRegion && candRegion && subjectRegion === candRegion) return 1;
+  return 0.4;
+}
+
+/** 1 when sub-types share an option key (Detached==Detached), else 0.5 (same family). */
+export function subtypeScore(subjectSubType: string | null, candSubType: string | null): number {
+  const a = optionKeyForSubType(subjectSubType);
+  const b = optionKeyForSubType(candSubType);
+  if (a && b && a === b) return 1;
+  return 0.5;
+}
+
+/** Recency of a sold comp by days since contract date. */
+export function recencyScore(daysAgo: number): number {
+  if (daysAgo <= 30) return 1;
+  if (daysAgo <= 90) return 0.8;
+  if (daysAgo <= 180) return 0.5;
+  return 0.3;
+}

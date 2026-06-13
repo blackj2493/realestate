@@ -43,3 +43,56 @@ describe("familySubtypeVariants", () => {
     expect(familySubtypeVariants("Houseboat")).toEqual(["Houseboat"]);
   });
 });
+
+import {
+  bedScore,
+  priceScore,
+  sizeScore,
+  regionScore,
+  subtypeScore,
+  recencyScore,
+} from "./similarListings";
+
+describe("bedScore (asymmetric — bigger preferred over smaller)", () => {
+  it("peaks at an exact match", () => {
+    expect(bedScore(3, 3)).toBe(1);
+  });
+  it("prefers +1 bed over -1 bed", () => {
+    expect(bedScore(3, 4)).toBeGreaterThan(bedScore(3, 2));
+  });
+  it("decays toward a floor for big gaps", () => {
+    expect(bedScore(3, 6)).toBeLessThanOrEqual(0.1);
+  });
+});
+
+describe("priceScore / sizeScore", () => {
+  it("priceScore peaks when equal, 0 at >=50% off", () => {
+    expect(priceScore(1_000_000, 1_000_000)).toBe(1);
+    expect(priceScore(1_000_000, 1_500_000)).toBe(0);
+  });
+  it("sizeScore is neutral (0.5) when either area is missing", () => {
+    expect(sizeScore(0, 1500)).toBe(0.5);
+    expect(sizeScore(1500, 0)).toBe(0.5);
+  });
+  it("sizeScore peaks when equal", () => {
+    expect(sizeScore(1500, 1500)).toBe(1);
+  });
+});
+
+describe("regionScore / subtypeScore", () => {
+  it("rewards same CityRegion over same-city-only", () => {
+    expect(regionScore("Bram East", "Bram East")).toBe(1);
+    expect(regionScore("Bram East", "Bram West")).toBe(0.4);
+  });
+  it("treats same option key as an exact sub-type match (trailing space)", () => {
+    expect(subtypeScore("Semi-Detached", "Semi-Detached ")).toBe(1);
+    expect(subtypeScore("Detached", "Condo Townhouse")).toBe(0.5);
+  });
+});
+
+describe("recencyScore", () => {
+  it("ranks fresher sales higher", () => {
+    expect(recencyScore(10)).toBeGreaterThan(recencyScore(60));
+    expect(recencyScore(60)).toBeGreaterThan(recencyScore(150));
+  });
+});
