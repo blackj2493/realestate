@@ -20,6 +20,7 @@ import { shouldRender as hasValueAddData } from "@/components/Property/forceAppr
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
+import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
 import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
 import { buildDatasheet } from "@/lib/property/datasheet";
@@ -265,6 +266,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const nowMs = Date.now();
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
+  // C2 (UX audit 2026-06-13): vacant land has no rental income, so the income
+  // side of the underwrite (rent → cap rate, gross yield, cashflow) is a
+  // fabrication on these parcels. Gate it so the sandbox shows carrying cost
+  // only rather than inventing a rent.
+  const incomeApplicable = isIncomeProperty(p.PropertySubType);
   const jsonLd = buildJsonLd(id, detail);
 
   const badges = detectPropertyBadges({
@@ -540,6 +546,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 annualTaxes={p.TaxAnnualAmount || 0}
                 monthlyFees={p.AssociationFee || 0}
                 hasSuitePotential={hasSuitePotential}
+                incomeApplicable={incomeApplicable}
               />
 
               {/* Property History (timeline + campaign/sale tables) moved to the full-width band below the grid. */}

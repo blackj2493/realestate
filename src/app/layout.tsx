@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className={inter.className}>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
         <WatchlistInit />
         {children}
         <Toaster />

@@ -268,7 +268,7 @@ export default function ApplyPage() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               {
-                "Verification required. Access is reviewed by hand and granted to principals and analysts — not to agents prospecting for clients."
+                "Built for principals and analysts — not agents prospecting for clients. Tell us how you invest and the terminal opens to the right tools."
               }
             </p>
           </div>
@@ -562,13 +562,13 @@ export default function ApplyPage() {
                 </p>
                 <p className="mt-3 text-xs leading-relaxed text-slate-400">
                   {
-                    "Access is reviewed by hand. Most applications are declined. This terminal is not built for agents."
+                    "Built for principals and analysts, not agents prospecting for clients. We ask how you invest so the terminal opens to the tools that fit you."
                   }
                 </p>
                 <div className="my-4 h-px bg-slate-800" />
                 <p className="text-xs leading-relaxed text-slate-500">
                   {
-                    "Verification is mandatory and may take a few days. Applying does not guarantee access."
+                    "You're in as soon as you confirm your email — no waiting, no gatekeeping."
                   }
                 </p>
               </div>

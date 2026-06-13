@@ -63,7 +63,7 @@ export default function HomePage() {
           </Link>
 
           <p className="terminal-font mt-6 text-[11px] uppercase tracking-[0.25em] text-slate-400 md:text-xs [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
-            VOW compliance required · All accounts are manually verified
+            VOW compliance required · Built for serious investors, not browsers
           </p>
         </main>
       </div>

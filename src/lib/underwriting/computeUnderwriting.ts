@@ -188,3 +188,17 @@ export function seedAssumptions(listing: SeedInput): UnderwritingAssumptions {
     closingCostPct: UW_DEFAULTS.closingCostPct,
   };
 }
+
+/**
+ * Whether the rental-income side of the underwrite (rent → cap rate, gross
+ * yield, cashflow) is meaningful for a property. False for non-dwelling parcels
+ * — vacant land, raw land, parking spaces, lockers — where seeding a monthly
+ * rent and reporting a cap rate is a fabrication, not an estimate.
+ *
+ * Audit finding C2 (2026-06-13): the sandbox showed "-$311/mo cashflow" on a
+ * vacant-land parcel. Callers gate the income display on this.
+ */
+export function isIncomeProperty(propertySubType?: string | null): boolean {
+  const t = (propertySubType || "").toLowerCase();
+  return !/vacant|\bland\b|parking|locker/.test(t);
+}

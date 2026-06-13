@@ -43,6 +43,12 @@ interface UnderwritingSandboxProps {
   annualTaxes: number;
   monthlyFees: number;
   hasSuitePotential?: boolean;
+  /**
+   * Whether rental-income metrics apply to this property. False for non-income
+   * parcels (e.g. vacant land), where rent → cap rate / yield / cashflow would
+   * be a fabrication; the sandbox then shows carrying cost only. (Audit C2.)
+   */
+  incomeApplicable?: boolean;
   className?: string;
 }
 
@@ -82,6 +88,7 @@ export default function UnderwritingSandbox({
   annualTaxes,
   monthlyFees,
   hasSuitePotential = false,
+  incomeApplicable = true,
   className,
 }: UnderwritingSandboxProps) {
   const [a, setA] = useState<UnderwritingAssumptions>(() =>
@@ -129,52 +136,87 @@ export default function UnderwritingSandbox({
         </span>
       </div>
 
-      {/* Hero: monthly cashflow */}
-      <div
-        className={cn(
-          "rounded-lg p-3 mb-4 border",
-          cashflowTone === "good"
-            ? "bg-emerald-900/20 border-emerald-800/50"
-            : "bg-rose-900/20 border-rose-800/50"
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <span
+      {incomeApplicable ? (
+        <>
+          {/* Hero: monthly cashflow */}
+          <div
             className={cn(
-              "text-xs uppercase tracking-wider",
-              cashflowTone === "good" ? "text-emerald-400" : "text-rose-400"
+              "rounded-lg p-3 mb-4 border",
+              cashflowTone === "good"
+                ? "bg-emerald-900/20 border-emerald-800/50"
+                : "bg-rose-900/20 border-rose-800/50"
             )}
           >
-            Monthly Cashflow
-          </span>
-          <span
-            className={cn(
-              "text-2xl font-bold font-mono",
-              cashflowTone === "good" ? "text-emerald-400" : "text-rose-400"
-            )}
-          >
-            {result.monthlyCashflow >= 0 ? "+" : "−"}
-            {formatPrice(Math.abs(result.monthlyCashflow))}
-          </span>
-        </div>
-        <span className="text-[10px] text-slate-500">
-          /mo after mortgage, taxes, fees, insurance & opex
-        </span>
-      </div>
+            <div className="flex items-center justify-between">
+              <span
+                className={cn(
+                  "text-xs uppercase tracking-wider",
+                  cashflowTone === "good" ? "text-emerald-400" : "text-rose-400"
+                )}
+              >
+                Monthly Cashflow
+              </span>
+              <span
+                className={cn(
+                  "text-2xl font-bold font-mono",
+                  cashflowTone === "good" ? "text-emerald-400" : "text-rose-400"
+                )}
+              >
+                {result.monthlyCashflow >= 0 ? "+" : "−"}
+                {formatPrice(Math.abs(result.monthlyCashflow))}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500">
+              /mo after mortgage, taxes, fees, insurance & opex
+            </span>
+          </div>
 
-      {/* Key metrics */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Metric label="Cap Rate" value={pct(result.capRatePct)} />
-        <Metric
-          label="Cash-on-Cash"
-          value={pct(result.cashOnCashPct)}
-          tone={result.cashOnCashPct >= 0 ? "good" : "bad"}
-        />
-        <Metric label="Monthly Carry" value={`${formatPrice(result.monthlyCarry)}/mo`} />
-        <Metric label="Monthly NOI" value={`${formatPrice(result.monthlyNOI)}/mo`} />
-        <Metric label="Gross Yield (rent)" value={pct(result.grossYieldPct)} />
-        <Metric label="DSCR" value={result.dscr === null ? "—" : result.dscr.toFixed(2)} />
-      </div>
+          {/* Key metrics */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <Metric label="Cap Rate" value={pct(result.capRatePct)} />
+            <Metric
+              label="Cash-on-Cash"
+              value={pct(result.cashOnCashPct)}
+              tone={result.cashOnCashPct >= 0 ? "good" : "bad"}
+            />
+            <Metric label="Monthly Carry" value={`${formatPrice(result.monthlyCarry)}/mo`} />
+            <Metric label="Monthly NOI" value={`${formatPrice(result.monthlyNOI)}/mo`} />
+            <Metric label="Gross Yield (rent)" value={pct(result.grossYieldPct)} />
+            <Metric label="DSCR" value={result.dscr === null ? "—" : result.dscr.toFixed(2)} />
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Hero: monthly carrying cost (no rental income on this property type) */}
+          <div className="rounded-lg p-3 mb-4 border bg-slate-800/40 border-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-wider text-slate-300">
+                Monthly Carry
+              </span>
+              <span className="text-2xl font-bold font-mono text-slate-100">
+                {formatPrice(result.monthlyCarry)}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500">
+              /mo out of pocket — mortgage, taxes, fees & insurance
+            </span>
+          </div>
+
+          <p className="mb-4 text-[11px] leading-relaxed text-amber-400/80">
+            No rental income applies to this property type (e.g. vacant land), so
+            cap rate, yield and cashflow are not shown — they&apos;d be fabricated.
+            Carrying cost only.
+          </p>
+
+          {/* Cost-side metrics */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <Metric label="Down Payment" value={formatPrice(result.downPayment)} />
+            <Metric label="Loan Amount" value={formatPrice(result.loanAmount)} />
+            <Metric label="Monthly Mortgage" value={`${formatPrice(result.monthlyMortgage)}/mo`} />
+            <Metric label="Annual Carry" value={`${formatPrice(result.monthlyCarry * 12)}/yr`} />
+          </div>
+        </>
+      )}
 
       {/* Down payment */}
       <div className="mb-4">
@@ -227,51 +269,55 @@ export default function UnderwritingSandbox({
         </select>
       </div>
 
-      {/* Monthly rent */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <Label className="text-xs text-slate-400">Monthly Rent</Label>
-          <span className="text-[10px] text-amber-400/80">estimate — adjust</span>
-        </div>
-        <Input
-          type="number"
-          inputMode="numeric"
-          value={a.monthlyRent}
-          onChange={(e) => set("monthlyRent", Math.max(0, Number(e.target.value)))}
-          className="h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
-        />
-      </div>
+      {incomeApplicable && (
+        <>
+          {/* Monthly rent */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs text-slate-400">Monthly Rent</Label>
+              <span className="text-[10px] text-amber-400/80">estimate — adjust</span>
+            </div>
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={a.monthlyRent}
+              onChange={(e) => set("monthlyRent", Math.max(0, Number(e.target.value)))}
+              className="h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+            />
+          </div>
 
-      {/* Vacancy */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <Label className="text-xs text-slate-400">Vacancy</Label>
-          <span className="text-xs font-mono text-slate-300">{a.vacancyPct.toFixed(1)}%</span>
-        </div>
-        <Slider
-          value={[a.vacancyPct]}
-          onValueChange={([v]) => set("vacancyPct", v)}
-          min={0}
-          max={15}
-          step={0.5}
-        />
-      </div>
+          {/* Vacancy */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs text-slate-400">Vacancy</Label>
+              <span className="text-xs font-mono text-slate-300">{a.vacancyPct.toFixed(1)}%</span>
+            </div>
+            <Slider
+              value={[a.vacancyPct]}
+              onValueChange={([v]) => set("vacancyPct", v)}
+              min={0}
+              max={15}
+              step={0.5}
+            />
+          </div>
 
-      {/* Opex */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <Label className="text-xs text-slate-400">Operating Expenses</Label>
-          <span className="text-xs font-mono text-slate-300">{a.opexPct.toFixed(0)}%</span>
-        </div>
-        <Slider
-          value={[a.opexPct]}
-          onValueChange={([v]) => set("opexPct", v)}
-          min={0}
-          max={30}
-          step={1}
-        />
-        <span className="text-[10px] text-slate-600">mgmt + maintenance + reserves, on gross income</span>
-      </div>
+          {/* Opex */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs text-slate-400">Operating Expenses</Label>
+              <span className="text-xs font-mono text-slate-300">{a.opexPct.toFixed(0)}%</span>
+            </div>
+            <Slider
+              value={[a.opexPct]}
+              onValueChange={([v]) => set("opexPct", v)}
+              min={0}
+              max={30}
+              step={1}
+            />
+            <span className="text-[10px] text-slate-600">mgmt + maintenance + reserves, on gross income</span>
+          </div>
+        </>
+      )}
 
       {/* Advanced */}
       <button
