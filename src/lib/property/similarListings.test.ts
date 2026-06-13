@@ -203,3 +203,48 @@ describe("buildSoldSimilarFilter", () => {
     expect(f).not.toContain("Condo Apartment");
   });
 });
+
+import { buildAttrDeltas, formatPriceDelta, type DeltaInput } from "./similarListings";
+
+const subjDelta: DeltaInput = { beds: 3, baths: 2, price: 1_000_000, area: 1500 };
+
+describe("formatPriceDelta", () => {
+  it("renders compact signed money", () => {
+    expect(formatPriceDelta(50_000)).toBe("+$50K");
+    expect(formatPriceDelta(-240_000)).toBe("-$240K");
+    expect(formatPriceDelta(1_200_000)).toBe("+$1.2M");
+    expect(formatPriceDelta(2_000_000)).toBe("+$2M");
+    expect(formatPriceDelta(900)).toBe("+$900");
+  });
+});
+
+describe("buildAttrDeltas", () => {
+  it("emits a signed, pluralised bed delta and tags direction", () => {
+    const up = buildAttrDeltas(subjDelta, { beds: 4, baths: 2, price: 1_000_000, area: 1500 });
+    expect(up).toContainEqual({ kind: "beds", delta: 1, label: "+1 bed", direction: "up" });
+    const down = buildAttrDeltas(subjDelta, { beds: 1, baths: 2, price: 1_000_000, area: 1500 });
+    expect(down).toContainEqual({ kind: "beds", delta: -2, label: "-2 beds", direction: "down" });
+  });
+  it("handles fractional baths", () => {
+    const d = buildAttrDeltas(subjDelta, { beds: 3, baths: 2.5, price: 1_000_000, area: 1500 });
+    expect(d.find((x) => x.kind === "baths")?.label).toBe("+0.5 baths");
+  });
+  it("omits chips for equal or unknown attributes", () => {
+    const same = buildAttrDeltas(subjDelta, { beds: 3, baths: 2, price: 1_000_000, area: 1500 });
+    expect(same.find((x) => x.kind === "beds")).toBeUndefined();
+    const unknownBeds = buildAttrDeltas(subjDelta, { beds: 0, baths: 2, price: 1_000_000, area: 1500 });
+    expect(unknownBeds.find((x) => x.kind === "beds")).toBeUndefined();
+  });
+  it("only shows a price chip when includePrice is set (off for sold)", () => {
+    const cand: DeltaInput = { beds: 3, baths: 2, price: 1_250_000, area: 1500 };
+    expect(buildAttrDeltas(subjDelta, cand).find((x) => x.kind === "price")).toBeUndefined();
+    const withPrice = buildAttrDeltas(subjDelta, cand, { includePrice: true });
+    expect(withPrice.find((x) => x.kind === "price")?.label).toBe("+$250K");
+  });
+  it("emits a size delta only when both areas are known", () => {
+    const known = buildAttrDeltas(subjDelta, { beds: 3, baths: 2, price: 1_000_000, area: 1900 });
+    expect(known.find((x) => x.kind === "size")?.label).toBe("+400 sqft");
+    const missing = buildAttrDeltas(subjDelta, { beds: 3, baths: 2, price: 1_000_000, area: 0 });
+    expect(missing.find((x) => x.kind === "size")).toBeUndefined();
+  });
+});

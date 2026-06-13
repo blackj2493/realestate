@@ -242,3 +242,71 @@ export function buildSoldSimilarFilter(s: SubjectAttrs, windowDays: number, nowM
   if (fam) clauses.push(fam);
   return clauses.join(" && ");
 }
+
+// ── Per-card attribute deltas (HouseSigma-style "+1 bed / -$240K vs this home") ──
+
+/** A single attribute's difference between a comp and the subject. Only emitted for
+ *  known (both > 0) and non-zero deltas — "same" is the implied baseline, not a chip. */
+export interface AttrDelta {
+  kind: "beds" | "baths" | "size" | "price";
+  delta: number; // signed: candidate − subject
+  label: string; // e.g. "+1 bed", "-$240K", "+200 sqft"
+  direction: "up" | "down";
+}
+
+/** Minimal shape needed to diff display attributes (independent of the scoring attrs). */
+export interface DeltaInput {
+  beds: number;
+  baths: number;
+  price: number; // subject: list price; candidate: list price (sale) or close price (sold)
+  area: number; // 0 when unknown
+}
+
+const signOf = (n: number): string => (n > 0 ? "+" : "-");
+
+/** Compact signed money for a delta chip: +$50K, -$1.2M, +$900. */
+export function formatPriceDelta(delta: number): string {
+  const abs = Math.abs(delta);
+  let body: string;
+  if (abs >= 1_000_000) {
+    const m = abs / 1_000_000;
+    body = `$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
+  } else if (abs >= 1_000) {
+    body = `$${Math.round(abs / 1_000)}K`;
+  } else {
+    body = `$${abs}`;
+  }
+  return `${signOf(delta)}${body}`;
+}
+
+/** Differences of a comp vs the subject, for the per-card comparison chips.
+ *  `includePrice` is OFF for sold (close-vs-list is conveyed by "% of ask" instead). */
+export function buildAttrDeltas(
+  subject: DeltaInput,
+  cand: DeltaInput,
+  opts: { includePrice?: boolean } = {}
+): AttrDelta[] {
+  const out: AttrDelta[] = [];
+  const push = (kind: AttrDelta["kind"], delta: number, label: string) =>
+    out.push({ kind, delta, label, direction: delta > 0 ? "up" : "down" });
+
+  if (subject.beds > 0 && cand.beds > 0 && cand.beds !== subject.beds) {
+    const d = cand.beds - subject.beds;
+    push("beds", d, `${signOf(d)}${Math.abs(d)} bed${Math.abs(d) === 1 ? "" : "s"}`);
+  }
+  if (subject.baths > 0 && cand.baths > 0 && cand.baths !== subject.baths) {
+    const d = cand.baths - subject.baths;
+    const abs = Math.abs(d);
+    const absLabel = Number.isInteger(abs) ? String(abs) : abs.toFixed(1);
+    push("baths", d, `${signOf(d)}${absLabel} bath${abs === 1 ? "" : "s"}`);
+  }
+  if (subject.area > 0 && cand.area > 0 && cand.area !== subject.area) {
+    const d = cand.area - subject.area;
+    push("size", d, `${signOf(d)}${Math.abs(d).toLocaleString("en-CA")} sqft`);
+  }
+  if (opts.includePrice && subject.price > 0 && cand.price > 0 && cand.price !== subject.price) {
+    const d = cand.price - subject.price;
+    push("price", d, formatPriceDelta(d));
+  }
+  return out;
+}

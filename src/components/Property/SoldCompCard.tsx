@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bed, Bath, Lock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
+import { DeltaChips } from "@/components/Property/DeltaChips";
 import type { SimilarSoldCard } from "@/app/api/properties/[id]/similar/route";
 
 function fmtSoldDate(iso: string | null): string {
@@ -80,6 +81,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
             </span>
           )}
         </div>
+        <DeltaChips deltas={card.deltas} className="mt-2" />
         {/* Brokerage — same text size as the details above (TRREB §6.3(c)). */}
         <p className="mt-2 text-xs text-slate-500">Listed by {card.brokerage || "Unknown"}</p>
         <p className="mt-1 text-[11px] text-cyan-300/80">{card.why}</p>

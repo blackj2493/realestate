@@ -22,10 +22,13 @@ import {
   buildSoldSimilarFilter,
   rankSimilar,
   classifyMatchQuality,
+  buildAttrDeltas,
   type SubjectAttrs,
   type CandidateAttrs,
   type MatchTier,
   type RankedSimilar,
+  type AttrDelta,
+  type DeltaInput,
 } from "@/lib/property/similarListings";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +69,7 @@ export interface SimilarForSaleCard {
   thumb: string | null;
   daysOnMarket: number | null;
   why: string;
+  deltas: AttrDelta[];
 }
 
 export interface SimilarSoldCard {
@@ -82,6 +86,7 @@ export interface SimilarSoldCard {
   thumb: string | null;
   pctOfAsk: number | null;
   why: string;
+  deltas: AttrDelta[];
 }
 
 type Doc = Record<string, unknown>;
@@ -110,25 +115,30 @@ function soldAttrs(d: Doc, nowMs: number): CandidateAttrs {
   };
 }
 
-function toForSaleCard(r: RankedSimilar<Doc>): SimilarForSaleCard {
+function toForSaleCard(r: RankedSimilar<Doc>, subject: DeltaInput): SimilarForSaleCard {
   const d = r.item;
   const imgs = Array.isArray(d.RawImages) ? (d.RawImages as string[]) : [];
+  const beds = numField(d.BedroomsTotal);
+  const baths = numField(d.BathroomsTotalInteger);
+  const price = numField(d.ListPrice);
   return {
     id: String(d.id),
     address: (d.UnparsedAddress as string) || "",
     city: (d.City as string) || null,
-    price: numField(d.ListPrice),
-    beds: numField(d.BedroomsTotal),
-    baths: numField(d.BathroomsTotalInteger),
+    price,
+    beds,
+    baths,
     propertySubType: (d.PropertySubType as string) || null,
     brokerage: (d.ListOfficeName as string) || null,
     thumb: (d.primaryImageUrl as string) || imgs[0] || null,
     daysOnMarket: Number.isFinite(Number(d.calculatedDOM)) ? Number(d.calculatedDOM) : null,
     why: r.why,
+    // For-Sale comps list-vs-list, so price delta is a clean comparison → include it.
+    deltas: buildAttrDeltas(subject, { beds, baths, price, area: 0 }, { includePrice: true }),
   };
 }
 
-function toSoldCard(r: RankedSimilar<Doc>): SimilarSoldCard {
+function toSoldCard(r: RankedSimilar<Doc>, subject: DeltaInput): SimilarSoldCard {
   const m = mapSoldDoc(r.item);
   const pctOfAsk = m.listPrice && m.listPrice > 0 ? (m.closePrice / m.listPrice) * 100 : null;
   return {
@@ -145,6 +155,12 @@ function toSoldCard(r: RankedSimilar<Doc>): SimilarSoldCard {
     thumb: m.primaryImageUrl,
     pctOfAsk,
     why: r.why,
+    // Sold: skip the price chip (close-vs-list is muddy; "% of ask" conveys it instead).
+    deltas: buildAttrDeltas(
+      subject,
+      { beds: m.beds ?? 0, baths: m.baths ?? 0, price: m.closePrice, area: m.sqft ?? 0 },
+      { includePrice: false }
+    ),
   };
 }
 
@@ -164,6 +180,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     beds: numParam(sp.get("beds")),
     listPrice: numParam(sp.get("listPrice")),
     area: numParam(sp.get("area")),
+  };
+  // Subject shape for the per-card "vs this home" delta chips (baths isn't a scoring signal).
+  const subjectDelta: DeltaInput = {
+    beds: subject.beds,
+    baths: numParam(sp.get("baths")),
+    price: subject.listPrice,
+    area: subject.area,
   };
 
   // ── For Sale (IDX, ungated) ──
@@ -185,7 +208,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .map((h) => h.document as Doc)
       .filter((d) => String(d.id) !== id);
     const ranked = rankSimilar<Doc>(subject, docs, forSaleAttrs, "sale", RESULT_LIMIT);
-    forSale = ranked.map(toForSaleCard);
+    forSale = ranked.map((r) => toForSaleCard(r, subjectDelta));
     forSaleTier = classifyMatchQuality(ranked);
   } catch (e) {
     console.error("[properties/similar] forSale", e instanceof Error ? e.message : e);
@@ -215,7 +238,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         .map((h) => h.document as Doc)
         .filter((d) => String(d.id) !== id);
       const ranked = rankSimilar<Doc>(subject, docs, (d) => soldAttrs(d, nowMs), "sold", RESULT_LIMIT);
-      sold = ranked.map(toSoldCard);
+      sold = ranked.map((r) => toSoldCard(r, subjectDelta));
       soldTier = classifyMatchQuality(ranked);
     }
   } catch (e) {

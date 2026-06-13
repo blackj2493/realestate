@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import { SoldCompCard } from "@/components/Property/SoldCompCard";
+import { DeltaChips } from "@/components/Property/DeltaChips";
 import type {
   SimilarForSaleCard,
   SimilarSoldCard,
@@ -152,6 +153,7 @@ export default function SimilarProperties(props: Props) {
           {data.forSale.map((c) => (
             <div key={c.id} className="w-[260px] shrink-0">
               <PropertyCard property={toCardData(c)} showSaveButton={false} />
+              <DeltaChips deltas={c.deltas} className="mt-1 px-1" />
               <p className="mt-1 px-1 text-[11px] text-cyan-300/80">{c.why}</p>
             </div>
           ))}
