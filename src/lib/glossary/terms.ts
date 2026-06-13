@@ -254,6 +254,7 @@ export const TERMS: Record<TermId, TermDef> = {
 
 export function term(id: TermId): TermDef {
   const t = TERMS[id];
+  // Runtime guard for JS callers / type-bypass (the Record type alone won't catch them).
   if (!t) throw new Error(`Unknown term id: ${id}`);
   return t;
 }

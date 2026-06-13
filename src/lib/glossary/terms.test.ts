@@ -50,8 +50,13 @@ describe("term registry integrity", () => {
     expect(() => term("nope")).toThrow();
   });
 
-  it("termsByGroup partitions all terms with no loss", () => {
+  it("termsByGroup partitions all terms with no loss or cross-group contamination", () => {
     const grouped = termsByGroup();
+    for (const g of GLOSSARY_GROUPS) {
+      for (const t of grouped[g.id]) {
+        expect(t.group, `term ${t.id} bucketed under ${g.id}`).toBe(g.id);
+      }
+    }
     const flat = GLOSSARY_GROUPS.flatMap((g) => grouped[g.id]);
     expect(flat.length).toBe(ALL_IDS.length);
   });
