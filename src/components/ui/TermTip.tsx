@@ -13,6 +13,7 @@ interface TermTipProps {
   children?: React.ReactNode;
   /** Render only the ⓘ trigger — place it beside an existing title. */
   iconOnly?: boolean;
+  align?: "left" | "right";
   className?: string;
 }
 
@@ -21,12 +22,15 @@ interface TermTipProps {
  * (the Popover primitive is click-to-open, which is the reliable touch gesture).
  * Use `iconOnly` to drop just the ⓘ beside a heading you don't want to wrap.
  */
-export function TermTip({ id, children, iconOnly, className }: TermTipProps) {
+export function TermTip({ id, children, iconOnly, align, className }: TermTipProps) {
   const tip = buildTipContent(id);
-  const trigger = (
+  const trigger = (open: boolean) => (
     <button
       type="button"
-      aria-label={`What is ${tip.name}?`}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-label={iconOnly ? `What is ${tip.name}?` : undefined}
+      title={!iconOnly ? `What is ${tip.name}?` : undefined}
       className={cn(
         "inline-flex items-center gap-1 text-left align-middle",
         "text-slate-400 hover:text-slate-200 transition-colors",
@@ -39,7 +43,7 @@ export function TermTip({ id, children, iconOnly, className }: TermTipProps) {
   );
 
   return (
-    <Popover trigger={trigger} className="max-w-xs">
+    <Popover trigger={trigger} align={align ?? "left"} className="max-w-xs">
       <p className="text-sm font-semibold text-slate-100">{tip.subtitle}</p>
       <p className="mt-1 text-sm text-slate-300">{tip.definition}</p>
       {tip.notMlsLine && (

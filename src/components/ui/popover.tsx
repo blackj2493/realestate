@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 interface PopoverProps {
-  trigger: React.ReactNode;
+  trigger: React.ReactNode | ((open: boolean) => React.ReactNode);
   children: React.ReactNode | ((close: () => void) => React.ReactNode);
   className?: string;
   align?: "left" | "right";
@@ -66,7 +66,7 @@ export function Popover({ trigger, children, className, align = "left" }: Popove
 
   return (
     <div ref={triggerRef} className="relative shrink-0">
-      <div onClick={onTriggerClick}>{trigger}</div>
+      <div onClick={onTriggerClick}>{typeof trigger === "function" ? trigger(open) : trigger}</div>
       {open &&
         anchor &&
         typeof document !== "undefined" &&
