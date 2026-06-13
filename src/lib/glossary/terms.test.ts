@@ -81,3 +81,15 @@ describe("buildTipContent", () => {
     expect(term("listingDensity").name).toBe("Listing Density");
   });
 });
+
+describe("glossary rendering contract", () => {
+  it("every grouped row carries an anchor id that resolves back to its term", () => {
+    const grouped = termsByGroup();
+    for (const g of GLOSSARY_GROUPS) {
+      for (const t of grouped[g.id]) {
+        expect(t.id, `anchor for ${t.name} in ${g.id}`).toBeTruthy();
+        expect(TERMS[t.id].id).toBe(t.id);
+      }
+    }
+  });
+});
