@@ -27,7 +27,10 @@ export default function PresetChip() {
       )}
     >
       <ActiveIcon className="h-3.5 w-3.5" />
-      {active.label}
+      {/* Mobile: icon + chevron only so the chip can't overflow onto the search
+          icon in the crowded top row (the dropdown still lists all four full
+          persona names). sm+: show the full label. */}
+      <span className="hidden sm:inline">{active.label}</span>
       <ChevronDown className="h-3 w-3 opacity-70" />
     </span>
   );
