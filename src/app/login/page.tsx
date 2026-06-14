@@ -22,7 +22,7 @@ export default async function LoginPage({
       : "";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
       {/* CSS-only background (no Mapbox/deck.gl on the auth page): grid + emerald wash + scrim */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-slate-950">
         <div className="grid-pattern absolute inset-0 opacity-20" />
@@ -42,7 +42,7 @@ export default async function LoginPage({
         />
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-app flex-col">
         {/* Header — logo size/padding match the apply page's TopNav */}
         <header className="relative z-10 flex items-center px-6 py-5 md:px-12 md:py-7">
           <Link

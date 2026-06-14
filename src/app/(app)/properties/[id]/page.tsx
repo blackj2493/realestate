@@ -37,6 +37,8 @@ import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCa
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
+import TheReadCard from "@/components/Property/TheReadCard";
+import { buildTheRead } from "@/lib/property/theRead";
 import WatchButton from "@/components/watchlist/WatchButton";
 import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
@@ -225,7 +227,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   if (!detail) {
     return (
-      <main className="min-h-screen bg-slate-950">
+      <main className="min-h-app bg-slate-950">
         <PropertyNotFound id={id} />
       </main>
     );
@@ -289,7 +291,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const datasheet = buildDatasheet(view.full_payload);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-slate-950 text-slate-200">
       {jsonLd && (
         <script
           type="application/ld+json"
@@ -432,6 +434,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 </p>
               )}
             </div>
+
+            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
+            {isActiveListing && <TheReadCard read={buildTheRead(view)} />}
 
             {/* Social proof — honest, deterministic activity counters */}
             <SocialProofBar listingId={id} className="mb-6" />

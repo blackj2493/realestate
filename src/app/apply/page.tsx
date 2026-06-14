@@ -257,9 +257,9 @@ export default function ApplyPage() {
   const currentLabel = STEPS[step - 1].label;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
       <HeroBackground variant="form" />
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
 
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">

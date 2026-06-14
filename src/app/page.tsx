@@ -26,10 +26,10 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
       <HeroBackground variant="hero" />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
 
         {/* Hero */}

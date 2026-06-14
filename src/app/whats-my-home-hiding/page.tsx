@@ -49,7 +49,7 @@ export default async function WhatsMyHomeHidingPage({
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
+    <div className="min-h-app bg-slate-950 text-slate-200">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
         <h1 className="mb-1 text-3xl font-bold text-white">What&apos;s my home hiding?</h1>

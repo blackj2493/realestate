@@ -26,7 +26,7 @@ export default async function WelcomePage({
   if (await hasAcceptedTerms(user.id)) redirect(safeNext);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
+    <div className="flex min-h-app flex-col bg-slate-950 text-slate-100">
       <header className="px-4 py-3">
         <Link href="/" className="inline-flex items-center" aria-label="PureProperty.ca home">
           <Logo size="md" theme="dark" />
