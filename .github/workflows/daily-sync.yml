@@ -104,6 +104,20 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-property-estimates.ts --apply
 
+      # Precompute geo "Things to Know" flags (flood now; rail/traffic later) for
+      # listings synced in the last day, into listing_geo_flags. PUBLIC-records
+      # PostGIS spatial joins — reads listings, writes the separate listing_geo_flags
+      # table. Unlike the refresh steps above it uses raw pg, so it needs the
+      # Session-pooler DATABASE_URL secret (CLAUDE.md §12), NOT the Supabase REST
+      # creds. Delta window (~25h) covers the daily cadence with margin. Additive —
+      # must never break the core sync, so continue-on-error; the step errors out
+      # cleanly (and is skipped) if the DATABASE_URL secret is unset.
+      - name: Enrich Geo Things-to-Know Flags
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/enrichGeoFlags.ts --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+
       # Email each user a digest of price drops on their watched properties, using
       # the freshly-synced Typesense index. Additive + must never break the core
       # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
