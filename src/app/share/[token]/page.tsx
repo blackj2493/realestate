@@ -139,13 +139,18 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   const { note, cards } = data;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+    <div className="min-h-app bg-background">
+      {/* pt-safe: safe-area inset for notched phones on sticky header */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 pt-safe backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center" aria-label="PureProperty.ca home">
             <Logo size="md" theme="dark" />
           </Link>
-          <Link href="/properties" className="text-sm font-medium hover:text-primary">
+          {/* ≥44px tap target + active state */}
+          <Link
+            href="/properties"
+            className="inline-flex min-h-[44px] items-center px-3 text-sm font-medium transition-colors hover:text-primary active:bg-muted"
+          >
             Explore the terminal →
           </Link>
         </div>
@@ -156,7 +161,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
           <h1 className="text-2xl font-bold">Shared property selection</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {cards.length} {cards.length === 1 ? "property" : "properties"} shared with you
-            {note ? ` — “${note}”` : ""}
+            {note ? ` — "${note}"` : ""}
           </p>
         </div>
 
@@ -171,15 +176,28 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {cards.map((property) => (
-              <PropertyCard key={property.id} property={property} showSaveButton={false} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cards.map((property) => (
+                <PropertyCard key={property.id} property={property} showSaveButton={false} />
+              ))}
+            </div>
+
+            {/* Full-width end-of-list CTA */}
+            <div className="mt-8">
+              <Link
+                href="/properties"
+                className="flex w-full items-center justify-center rounded-lg border border-primary/40 bg-primary/10 px-4 py-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 active:bg-primary/30"
+              >
+                See all properties on PureProperty →
+              </Link>
+            </div>
+          </>
         )}
       </div>
 
-      <footer className="mt-8 border-t py-8">
+      {/* pb-safe: safe-area inset so MLS attribution clears home-indicator */}
+      <footer className="mt-8 border-t pb-safe pt-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>© {new Date().getFullYear()} PureProperty. All rights reserved.</p>
           <p className="mt-2 text-xs">

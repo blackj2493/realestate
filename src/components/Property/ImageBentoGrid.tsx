@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CameraOff } from "lucide-react";
+import { CameraOff, Images } from "lucide-react";
 
 interface ImageBentoGridProps {
   images: string[];
@@ -23,33 +23,68 @@ export default function ImageBentoGrid({ images, onClick, className = "" }: Imag
   // No images - show placeholder
   if (!images || images.length === 0) {
     return (
-      <div className={`relative grid grid-cols-2 grid-rows-2 gap-2 rounded-md overflow-hidden ${className}`}>
+      <div className={`relative rounded-md overflow-hidden ${className}`}>
         <EmptyState />
       </div>
     );
   }
 
-  // 2-row bento: hero fills the entire left column (row-span-2); right column holds
-  // two pairs of stacked thumbnails (rows 1 and 2), 4 thumbs total + "+N more" on the 4th.
   return (
-    <div
-      className={`relative grid grid-cols-2 grid-rows-2 gap-2 rounded-md overflow-hidden cursor-pointer group ${className}`}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick?.();
-        }
-      }}
-    >
+    <>
+      {/* Mobile (<md): single full-bleed hero with a tappable "VIEW ALL PHOTOS" pill.
+          The fixed 2-col bento is gesture-dead and too tall on a phone, so on mobile we
+          show one hero image plus an explicit affordance that opens the gallery overlay. */}
+      <div
+        className={`relative md:hidden rounded-md overflow-hidden cursor-pointer group ${className}`}
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+      >
+        <Image
+          src={images[0]}
+          alt="Property main view"
+          fill
+          className="object-cover rounded-md"
+          sizes="100vw"
+          priority
+        />
+
+        {/* "VIEW ALL PHOTOS (N)" pill — ≥44px tap target */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-2 min-h-[44px] px-4 py-2 bg-black/70 backdrop-blur-sm rounded-md">
+          <Images className="w-4 h-4 text-white" />
+          <span className="font-mono text-white text-xs tracking-wide">
+            VIEW ALL PHOTOS ({images.length})
+          </span>
+        </div>
+      </div>
+
+      {/* Desktop (≥md): 2-row bento. Hero fills the entire left column (row-span-2);
+          right column holds two pairs of stacked thumbnails (rows 1 and 2), 4 thumbs
+          total + "+N more" on the 4th. Visually unchanged from before. */}
+      <div
+        className={`relative hidden md:grid md:grid-cols-2 md:grid-rows-2 gap-2 rounded-md overflow-hidden cursor-pointer group ${className}`}
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+      >
       {/* Hero — left column, full height.
           sizes: full-width on mobile (single-column stack); ~35% of viewport on
           desktop where the listing page uses a 70/30 split and the bento occupies
           the 70% left pane (~50% of that pane width = ~35vw). */}
       <div
-        className="relative col-span-1 row-span-2 min-h-[300px]"
+        className="relative col-span-1 row-span-2 min-h-[180px] sm:min-h-[300px]"
         onClick={(e) => {
           e.stopPropagation();
           onClick?.();
@@ -150,8 +185,9 @@ export default function ImageBentoGrid({ images, onClick, className = "" }: Imag
         )}
       </div>
 
-      {/* Hover overlay hint */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-md" />
-    </div>
+        {/* Hover overlay hint */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-md" />
+      </div>
+    </>
   );
 }

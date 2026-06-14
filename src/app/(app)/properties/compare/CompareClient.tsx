@@ -152,9 +152,9 @@ function AnonBanner({ ids }: { ids: string[] }) {
       </p>
       <Link
         href={`/login?next=${encodeURIComponent(`/properties/compare?ids=${ids.join(",")}`)}`}
-        className="shrink-0 rounded-md border border-cyan-400/50 bg-cyan-500/20 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/30"
+        className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/30 active:scale-95"
       >
-        Sign in to unlock
+        Unlock deal scores + AVM estimates — free
       </Link>
     </div>
   );

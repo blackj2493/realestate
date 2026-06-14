@@ -15,7 +15,11 @@ const CONTACT_EMAIL = "support@pureproperty.ca";
 
 const TITLE = "PureProperty.ca — VOW Terms of Use";
 
-const INTRO = `These VOW Terms of Use ("Terms") govern your access to and use of the registered, signed-in areas of PureProperty.ca (the "Service"), operated as a Virtual Office Website ("VOW") and IDX display under licence from PROPTX and the Toronto Regional Real Estate Board ("TRREB"). PureProperty.ca displays active listings, sold and closed listings, and deterministically computed analytics derived from real estate listing data. By creating an account or signing in, you agree to be bound by these Terms. If you do not agree, do not register for or use the registered areas of the Service. Effective Date: ${EFFECTIVE_DATE}.`;
+const INTRO: string[] = [
+  `These VOW Terms of Use ("Terms") govern your access to and use of the registered, signed-in areas of PureProperty.ca (the "Service"), operated as a Virtual Office Website ("VOW") and IDX display under licence from PROPTX and the Toronto Regional Real Estate Board ("TRREB").`,
+  `PureProperty.ca displays active listings, sold and closed listings, and deterministically computed analytics derived from real estate listing data. By creating an account or signing in, you agree to be bound by these Terms. If you do not agree, do not register for or use the registered areas of the Service.`,
+  `Effective Date: ${EFFECTIVE_DATE}.`,
+];
 
 const SECTIONS: LegalSection[] = [
   {

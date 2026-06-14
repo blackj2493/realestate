@@ -209,6 +209,8 @@ export type MapMode = "listings" | "heatmap" | "3d";
 export interface PersonaDef {
   id: PersonaType;
   label: string;
+  /** Concise label for narrow viewports (mobile lens pills). Optional/additive. */
+  short?: string;
   icon: LucideIcon;
   controls: ControlDef[];
   buildFilterString: (f: TerminalFilterState) => string;
@@ -228,6 +230,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
   smart: {
     id: "smart",
     label: "Smart Homebuyer",
+    short: "Homebuyer",
     icon: Home,
     controls: [
       // This control thresholds cap_rate_est (real, indexed). The "Yield" label is
@@ -262,6 +265,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
   cashflow: {
     id: "cashflow",
     label: "Cashflow Investor",
+    short: "Cashflow",
     icon: DollarSign,
     controls: [
       { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
@@ -292,6 +296,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
   flippers: {
     id: "flippers",
     label: "Flippers & Deal Hunters",
+    short: "Flipper",
     icon: TrendingUp,
     controls: [
       { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
@@ -323,6 +328,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
   builders: {
     id: "builders",
     label: "Builders & Developers",
+    short: "Builder",
     icon: Hammer,
     controls: [
       { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt, field: "LotWidth" },

@@ -57,6 +57,16 @@ export default function HomePage() {
             Apply for Terminal Access
           </Link>
 
+          {/* Secondary ghost CTA: lets cold/anonymous visitors reach the terminal
+              without the high-friction application form. Muted outline so it never
+              competes with the primary emerald CTA above. */}
+          <Link
+            href="/properties"
+            className="terminal-font mt-4 inline-flex h-11 items-center justify-center rounded-md border border-slate-600/70 px-6 text-sm tracking-[0.2em] text-slate-300 transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+          >
+            Explore the Terminal &rarr;
+          </Link>
+
           <p className="terminal-font mt-6 text-[11px] uppercase tracking-[0.25em] text-slate-400 md:text-xs [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers
           </p>

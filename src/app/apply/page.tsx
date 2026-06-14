@@ -78,7 +78,7 @@ function Pill({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-md border px-4 py-2 text-sm transition-colors",
+        "min-h-[44px] rounded-md border px-4 py-2 text-sm transition-colors [touch-action:manipulation] active:bg-slate-800",
         active
           ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
           : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600"
@@ -103,7 +103,7 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-colors",
+        "inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-colors [touch-action:manipulation] active:bg-slate-800",
         active
           ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
           : "border-slate-700 bg-slate-900/60 text-slate-400 hover:border-slate-600"
@@ -249,7 +249,9 @@ export default function ApplyPage() {
     // saved profile/config personalize it once they sign in on this device.
     saveProfile(profile);
     saveConfig(seedConfigFromProfile(profile));
-    router.push("/login?next=/dashboard");
+    // Carry the captured email across the wall so /login can pre-fill it —
+    // no re-typing at the funnel's most fragile point.
+    router.push(`/login?next=/dashboard&email=${encodeURIComponent(email.trim())}`);
   };
 
   const currentLabel = STEPS[step - 1].label;
@@ -369,6 +371,10 @@ export default function ApplyPage() {
                       <input
                         className={inputClass}
                         type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        enterKeyHint="next"
                         placeholder="you@firm.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -518,10 +524,10 @@ export default function ApplyPage() {
                   onClick={handleBack}
                   disabled={step === 1}
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm transition-colors",
+                    "inline-flex min-h-[44px] items-center gap-2 rounded-md px-4 py-2.5 text-sm transition-colors [touch-action:manipulation]",
                     step === 1
                       ? "cursor-not-allowed text-slate-700"
-                      : "text-slate-400 hover:text-slate-100"
+                      : "text-slate-400 hover:text-slate-100 active:text-slate-300"
                   )}
                 >
                   <ArrowLeft className="h-4 w-4" /> Back

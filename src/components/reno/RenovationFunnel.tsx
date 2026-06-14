@@ -144,7 +144,7 @@ export default function RenovationFunnel({
           <Button
             onClick={() => void submit(form)}
             disabled={!canSubmit || submitting}
-            className="w-full bg-emerald-700 font-mono text-white hover:bg-emerald-600 disabled:opacity-40"
+            className="h-11 w-full bg-emerald-700 font-mono text-white hover:bg-emerald-600 active:bg-emerald-800 disabled:opacity-40 [touch-action:manipulation]"
           >
             {submitting ? 'Analyzing…' : "See what my home's hiding"}
           </Button>

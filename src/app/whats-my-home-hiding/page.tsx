@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import RenovationFunnel from '@/components/reno/RenovationFunnel';
 import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
@@ -52,9 +53,18 @@ export default async function WhatsMyHomeHidingPage({
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
         <h1 className="mb-1 text-3xl font-bold text-white">What&apos;s my home hiding?</h1>
-        <p className="mb-8 max-w-2xl text-sm text-slate-400">
+        <p className="mb-3 max-w-2xl text-sm text-slate-400">
           Describe your home and see the renovations that pay back the most where you are —
           ranked by what actually sells nearby. Free.
+        </p>
+        <p className="mb-8 text-xs text-slate-500">
+          Want your home&apos;s full estimated value too?{" "}
+          <Link
+            href="/hidden-equity"
+            className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+          >
+            Sign in for your Hidden Equity report →
+          </Link>
         </p>
         <RenovationFunnel
           tree={tree}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { TouchEvent as ReactTouchEvent } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -19,6 +20,7 @@ export default function MediaGalleryOverlay({
 }: MediaGalleryOverlayProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const filmstripRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
 
   // Reset index when overlay opens
   useEffect(() => {
@@ -34,6 +36,26 @@ export default function MediaGalleryOverlay({
   const goToPrevious = useCallback(() => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   }, [images.length]);
+
+  // Touch swipe navigation (mobile): record start X, compare against end X on release.
+  const handleTouchStart = useCallback((e: ReactTouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: ReactTouchEvent) => {
+      if (touchStartX.current === null) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const SWIPE_THRESHOLD = 40; // px
+      if (deltaX <= -SWIPE_THRESHOLD) {
+        goToNext(); // swipe left → next
+      } else if (deltaX >= SWIPE_THRESHOLD) {
+        goToPrevious(); // swipe right → previous
+      }
+      touchStartX.current = null;
+    },
+    [goToNext, goToPrevious]
+  );
 
   // Keyboard navigation
   useEffect(() => {
@@ -97,7 +119,7 @@ export default function MediaGalleryOverlay({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="p-2 hover:bg-slate-800 rounded-md transition-colors"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] hover:bg-slate-800 rounded-md transition-colors"
           aria-label="Close gallery"
         >
           <X className="w-6 h-6 text-slate-400" />
@@ -105,7 +127,11 @@ export default function MediaGalleryOverlay({
       </div>
 
       {/* Main Stage */}
-      <div className="flex-1 relative flex items-center justify-center p-8">
+      <div
+        className="flex-1 relative flex items-center justify-center p-8"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Previous Button */}
         {images.length > 1 && (
           <button

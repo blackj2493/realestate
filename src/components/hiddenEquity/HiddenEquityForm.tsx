@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { CohortTree } from '@/lib/avm/cohorts';
 import { Input } from '@/components/ui/input';
 import {
@@ -55,23 +55,55 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
   const selectedCommunity = communities.find((c) => c.cityRegion === value.cityRegion);
   const types = selectedCommunity?.types ?? [];
 
-  // City is a type-ahead (150+ cities). Hold the raw input text locally; commit to
-  // value.city only on an exact match (datalist pick / full type), clear on empty,
-  // and leave a partial-but-unmatched query untouched so typing isn't wiped.
+  // City is a type-ahead (150+ cities) implemented as a self-owned combobox.
+  // We deliberately avoid <datalist>: on iOS Safari the datalist suggestion
+  // cascade is unreliable and intermittently swallows the OS keyboard's own
+  // suggestion bar. Instead we hold the raw input text locally, render our own
+  // filtered list, and commit to value.city on an exact (trimmed, case-insensitive)
+  // match or on a tap. Clearing the field clears the cascade; a partial-but-
+  // unmatched query is left untouched so typing isn't wiped.
   const [cityQuery, setCityQuery] = useState(value.city);
   const [prevCity, setPrevCity] = useState(value.city);
+  const [cityOpen, setCityOpen] = useState(false);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Sync the input when value.city changes externally (prefill / rehydrate / reset):
   // adjust-state-during-render — React's recommended alternative to setState-in-effect.
   if (value.city !== prevCity) {
     setPrevCity(value.city);
     setCityQuery(value.city);
   }
+
+  // Canonical, case-insensitive, trimmed match → the exact key in `cities`.
+  const matchCity = (raw: string): string | undefined => {
+    const q = raw.trim().toLowerCase();
+    return cities.find((c) => c.toLowerCase() === q);
+  };
+
+  const q = cityQuery.trim().toLowerCase();
+  // Suggestions: substring match, capped so the list stays phone-friendly.
+  const citySuggestions =
+    q === ''
+      ? cities.slice(0, 8)
+      : cities.filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
+
+  const commitCity = (city: string) => {
+    setCityQuery(city);
+    setCityOpen(false);
+    if (city !== value.city) {
+      onChange({ ...value, city, cityRegion: '', propertySubType: '' });
+    }
+  };
+
   const onCityInput = (v: string) => {
     setCityQuery(v);
-    if (v === '') {
+    setCityOpen(true);
+    if (v.trim() === '') {
       if (value.city !== '') onChange({ ...value, city: '', cityRegion: '', propertySubType: '' });
-    } else if (cities.includes(v) && v !== value.city) {
-      onChange({ ...value, city: v, cityRegion: '', propertySubType: '' });
+      return;
+    }
+    const exact = matchCity(v);
+    if (exact && exact !== value.city) {
+      onChange({ ...value, city: exact, cityRegion: '', propertySubType: '' });
     }
   };
 
@@ -79,22 +111,63 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
     <div className="space-y-4">
       {/* ── Location cascades ── */}
       <div className="grid grid-cols-1 gap-4">
-        {/* City — type-ahead over 150+ cities (datalist; zero deps) */}
-        <div className="space-y-2">
-          <Label className="text-xs text-gray-400">CITY</Label>
+        {/* City — self-owned filtered combobox (no <datalist>: unreliable on iOS) */}
+        <div className="relative space-y-2">
+          <Label className="text-xs text-gray-400" htmlFor="he-city-input">
+            CITY
+          </Label>
           <Input
-            list="he-city-options"
+            id="he-city-input"
+            role="combobox"
+            aria-expanded={cityOpen && citySuggestions.length > 0}
+            aria-autocomplete="list"
+            aria-controls="he-city-listbox"
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
+            autoCapitalize="words"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
             value={cityQuery}
             onChange={(e) => onCityInput(e.target.value)}
+            onFocus={() => setCityOpen(true)}
+            onBlur={() => {
+              // Delay so an option mousedown/tap can commit before we close;
+              // on plain blur, snap a trimmed exact match to canonical casing.
+              blurTimer.current = setTimeout(() => {
+                setCityOpen(false);
+                const exact = matchCity(cityQuery);
+                if (exact) setCityQuery(exact);
+              }, 120);
+            }}
             placeholder="Type your city (e.g. Vaughan)"
-            autoComplete="off"
-            className="bg-black/20 border-gray-700 text-gray-100"
+            className="h-11 border-gray-700 bg-black/20 text-base text-gray-100"
           />
-          <datalist id="he-city-options">
-            {cities.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
+          {cityOpen && citySuggestions.length > 0 && (
+            <ul
+              id="he-city-listbox"
+              role="listbox"
+              className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900 py-1 shadow-lg"
+            >
+              {citySuggestions.map((c) => (
+                <li key={c} role="option" aria-selected={c === value.city}>
+                  <button
+                    type="button"
+                    // onMouseDown fires before input blur, so the commit isn't lost.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (blurTimer.current) clearTimeout(blurTimer.current);
+                      commitCity(c);
+                    }}
+                    className="flex min-h-[44px] w-full items-center px-3 text-left text-sm text-gray-200 hover:bg-gray-800 active:bg-gray-800"
+                  >
+                    {c}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Community */}
@@ -107,7 +180,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             }
             disabled={!value.city}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100 disabled:opacity-40">
+            <SelectTrigger className="h-11 border-gray-700 bg-black/20 text-gray-100 disabled:opacity-40 sm:h-10">
               <SelectValue placeholder="Select community" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
@@ -128,7 +201,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             onValueChange={(propertySubType) => onChange({ ...value, propertySubType })}
             disabled={!value.cityRegion}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100 disabled:opacity-40">
+            <SelectTrigger className="h-11 border-gray-700 bg-black/20 text-gray-100 disabled:opacity-40 sm:h-10">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
@@ -143,7 +216,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
       </div>
 
       {/* ── Home details ── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2">
         {/* Bedrooms */}
         <div className="space-y-2">
           <Label className="text-xs text-gray-400">BEDROOMS</Label>
@@ -151,7 +224,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             value={String(value.bedroomsAboveGrade)}
             onValueChange={(v) => onChange({ ...value, bedroomsAboveGrade: Number(v) })}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="h-11 bg-black/20 border-gray-700 text-gray-100">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
@@ -171,7 +244,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             value={String(value.bathroomsTotalInteger)}
             onValueChange={(v) => onChange({ ...value, bathroomsTotalInteger: Number(v) })}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="h-11 bg-black/20 border-gray-700 text-gray-100">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
@@ -191,7 +264,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             value={String(value.parkingTotal)}
             onValueChange={(v) => onChange({ ...value, parkingTotal: Number(v) })}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="h-11 bg-black/20 border-gray-700 text-gray-100">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
@@ -211,13 +284,13 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Interior */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <Label className="text-sm text-gray-300">Interior</Label>
             <Select
               value={String(value.interiorTier)}
               onValueChange={(v) => onChange({ ...value, interiorTier: Number(v) })}
             >
-              <SelectTrigger className="w-40 bg-black/20 border-gray-700 text-gray-100">
+              <SelectTrigger className="h-11 w-full border-gray-700 bg-black/20 text-gray-100 sm:h-10 sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700">
@@ -233,13 +306,13 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Exterior */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <Label className="text-sm text-gray-300">Exterior</Label>
             <Select
               value={String(value.exteriorTier)}
               onValueChange={(v) => onChange({ ...value, exteriorTier: Number(v) })}
             >
-              <SelectTrigger className="w-40 bg-black/20 border-gray-700 text-gray-100">
+              <SelectTrigger className="h-11 w-full border-gray-700 bg-black/20 text-gray-100 sm:h-10 sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700">
@@ -255,13 +328,13 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Basement */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <Label className="text-sm text-gray-300">Basement</Label>
             <Select
               value={String(value.basementTier)}
               onValueChange={(v) => onChange({ ...value, basementTier: Number(v) })}
             >
-              <SelectTrigger className="w-40 bg-black/20 border-gray-700 text-gray-100">
+              <SelectTrigger className="h-11 w-full border-gray-700 bg-black/20 text-gray-100 sm:h-10 sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-700">
@@ -282,20 +355,24 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
           SQUARE FOOTAGE (OPTIONAL — IMPROVES ACCURACY)
         </Label>
         <Input
-          type="number"
-          min={1}
+          type="text"
+          inputMode="numeric"
+          enterKeyHint="done"
           value={value.buildingAreaTotal ?? ''}
           onChange={(e) => {
-            const n = parseFloat(e.target.value);
+            // type=text + inputMode=numeric gives the numeric keypad without iOS
+            // spinner/zoom quirks; strip non-numeric chars before parsing.
+            const cleaned = e.target.value.replace(/[^\d.]/g, '');
+            const n = parseFloat(cleaned);
             // Empty / unparseable / non-positive → omit (null): the API's
             // z.number().positive() would reject a literal 0 with a 400.
             onChange({
               ...value,
-              buildingAreaTotal: e.target.value === '' || !Number.isFinite(n) || n <= 0 ? null : n,
+              buildingAreaTotal: cleaned === '' || !Number.isFinite(n) || n <= 0 ? null : n,
             });
           }}
           placeholder="e.g. 1800"
-          className="bg-black/20 border-gray-700 text-gray-100"
+          className="h-11 border-gray-700 bg-black/20 text-base text-gray-100 sm:h-10"
         />
       </div>
     </div>

@@ -16,9 +16,16 @@ import { createClient } from "@/lib/supabase/browser";
  * devices, which sidesteps the magic-link prefetch/PKCE failures. Code is the
  * primary identity and stays passkey-ready (Face ID / fingerprint) for later.
  */
-export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }) {
+export default function MagicLinkForm({
+  next = "/dashboard",
+  initialEmail = "",
+}: {
+  next?: string;
+  initialEmail?: string;
+}) {
   const [step, setStep] = useState<"email" | "code">("email");
-  const [email, setEmail] = useState("");
+  // Seed from the apply funnel so the email isn't re-typed; user can still edit/send.
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "verifying">("idle");
   const [error, setError] = useState("");
@@ -98,7 +105,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
         <button
           type="submit"
           disabled={status === "verifying" || code.length < 6}
-          className="terminal-font flex w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-2.5 text-xs uppercase tracking-wider text-cyan-200 transition-colors hover:bg-cyan-500/20 disabled:opacity-50"
+          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
         >
           {status === "verifying" ? (
             <>
@@ -117,7 +124,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
               setCode("");
               setError("");
             }}
-            className="terminal-font uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-slate-500 underline-offset-2 transition-colors [touch-action:manipulation] hover:text-slate-300 hover:underline active:text-slate-200"
           >
             ← Change email
           </button>
@@ -125,7 +132,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
             type="button"
             disabled={status === "sending"}
             onClick={() => void doSend()}
-            className="terminal-font uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-cyan-300 hover:underline disabled:opacity-50"
+            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-slate-500 underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cyan-300 hover:underline active:text-cyan-200 disabled:opacity-50"
           >
             Resend code
           </button>
@@ -146,9 +153,13 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
         <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         <input
           id="magic-email"
+          name="email"
           type="email"
           required
+          inputMode="email"
           autoComplete="email"
+          autoCapitalize="none"
+          enterKeyHint="go"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
@@ -161,7 +172,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
       <button
         type="submit"
         disabled={status === "sending"}
-        className="terminal-font flex w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-2.5 text-xs uppercase tracking-wider text-cyan-200 transition-colors hover:bg-cyan-500/20 disabled:opacity-50"
+        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
       >
         {status === "sending" ? (
           <>

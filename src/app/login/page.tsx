@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import MagicLinkForm from "@/components/auth/MagicLinkForm";
-import HeroBackground from "@/components/hero/HeroBackground";
 
 export const metadata = {
   title: "Sign in · PureProperty.ca",
@@ -10,17 +9,38 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; email?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, email } = await searchParams;
   // Open-redirect guard: only honor relative, single-slash paths (e.g. "/properties/X").
   const safeNext =
     next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  // Pre-fill from the apply funnel: only honor a plausibly-shaped address and cap length.
+  const initialEmail =
+    email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 254
+      ? email
+      : "";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-      {/* Background matches the apply page (live map + legibility scrim) */}
-      <HeroBackground variant="form" />
+      {/* CSS-only background (no Mapbox/deck.gl on the auth page): grid + emerald wash + scrim */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-slate-950">
+        <div className="grid-pattern absolute inset-0 opacity-20" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(80% 50% at 50% 0%, rgba(16,185,129,0.10) 0%, transparent 60%)",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(115% 95% at 50% 35%, rgba(2,6,23,0.32) 0%, rgba(2,6,23,0.6) 100%)",
+          }}
+        />
+      </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Header — logo size/padding match the apply page's TopNav */}
@@ -47,14 +67,14 @@ export default async function LoginPage({
 
           {/* Card — translucent + blur to match the apply page form card */}
           <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-md md:p-8">
-            <MagicLinkForm next={safeNext} />
+            <MagicLinkForm next={safeNext} initialEmail={initialEmail} />
 
             <p className="mt-6 text-center text-sm text-slate-500">
-              New here?{" "}
-              <Link href="/apply" className="text-cyan-400 hover:underline">
-                Apply for access
-              </Link>{" "}
-              — or just enter your email above; first sign-in creates your account.
+              New here? Enter your email above — first sign-in creates your account.{" "}
+              <Link href="/apply" className="text-cyan-400 underline">
+                Learn about Terminal Access
+              </Link>
+              .
             </p>
 
             {/* VOW compliance notice */}

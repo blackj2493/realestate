@@ -141,7 +141,7 @@ export default function HiddenEquityTool() {
             <Button
               onClick={handleSubmit}
               disabled={!canSubmit || submitting}
-              className="w-full bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white font-mono"
+              className="h-11 w-full bg-emerald-700 font-mono text-white hover:bg-emerald-600 active:bg-emerald-800 disabled:opacity-40 [touch-action:manipulation]"
             >
               {submitting ? 'Calculating…' : 'Reveal my hidden equity'}
             </Button>

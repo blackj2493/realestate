@@ -15,7 +15,11 @@ const CONTACT_EMAIL = "support@pureproperty.ca";
 
 const TITLE = "PureProperty.ca Privacy Policy";
 
-const INTRO = `This Privacy Policy explains how PureProperty.ca ("PureProperty," "we," "us," or "our") collects, uses, discloses, and safeguards your personal information when you use our website and services (the "Service"). PureProperty.ca is a real estate data platform operating in Ontario, Canada that displays active listings through the TRREB/PROPTX IDX feed and provides sold/closed listings together with deterministic, automated analytics — including an automated valuation estimate, Deal Score, cap rate, and True days-on-market — to registered, signed-in users through the TRREB/PROPTX VOW (Virtual Office Website) feed. We are committed to handling your personal information in accordance with Canada's Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable Ontario law. Listing data displayed on the Service is licensed from PROPTX/TRREB and remains their intellectual property; this Policy concerns the personal information of users of the Service, not the licensed listing content itself. Effective Date: ${EFFECTIVE_DATE}.`;
+const INTRO: string[] = [
+  `This Privacy Policy explains how PureProperty.ca ("PureProperty," "we," "us," or "our") collects, uses, discloses, and safeguards your personal information when you use our website and services (the "Service").`,
+  `PureProperty.ca is a real estate data platform operating in Ontario, Canada that displays active listings through the TRREB/PROPTX IDX feed and provides sold/closed listings together with deterministic, automated analytics — including an automated valuation estimate, Deal Score, cap rate, and True days-on-market — to registered, signed-in users through the TRREB/PROPTX VOW (Virtual Office Website) feed.`,
+  `We are committed to handling your personal information in accordance with Canada's Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable Ontario law. Listing data displayed on the Service is licensed from PROPTX/TRREB and remains their intellectual property; this Policy concerns the personal information of users of the Service, not the licensed listing content itself. Effective Date: ${EFFECTIVE_DATE}.`,
+];
 
 const SECTIONS: LegalSection[] = [
   {

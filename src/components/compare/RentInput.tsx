@@ -16,10 +16,10 @@ export default function RentInput({
       <span className="uppercase tracking-wide">Rent</span>
       <Input
         type="number"
-        inputMode="numeric"
+        inputMode="decimal"
         value={value ?? seeded}
         onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
-        className="h-6 w-20 border-slate-700 bg-slate-800 px-1.5 font-mono text-xs text-slate-200"
+        className="h-10 w-full border-slate-700 bg-slate-800 px-2 font-mono text-xs text-slate-200 md:h-6 md:w-20 md:px-1.5"
         aria-label="Monthly rent assumption"
       />
       <span className="text-amber-400/80">/mo est</span>

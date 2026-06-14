@@ -106,7 +106,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
       <button
         type="button"
         onClick={open}
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+        className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-700 active:scale-95 [touch-action:manipulation]"
       >
         <CalendarDays className="h-4 w-4" />
         Schedule Viewing
@@ -157,6 +157,9 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
+          autoComplete="name"
+          autoCapitalize="words"
+          enterKeyHint="next"
           className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
@@ -174,6 +177,10 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
+          inputMode="email"
+          autoComplete="email"
+          autoCorrect="off"
+          enterKeyHint="next"
           className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
@@ -190,6 +197,9 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="416-555-0100"
+          inputMode="tel"
+          autoComplete="tel"
+          enterKeyHint="next"
           className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
@@ -199,15 +209,20 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
         <label htmlFor="sv-time" className="block text-xs font-medium text-slate-400 mb-1">
           Preferred time
         </label>
-        <input
+        <select
           id="sv-time"
-          type="text"
           disabled={isSubmitting}
           value={preferredTime}
           onChange={(e) => setPreferredTime(e.target.value)}
-          placeholder="e.g. Weekday evenings"
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
-        />
+          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+        >
+          <option value="">Select a time…</option>
+          <option value="Weekday mornings">Weekday mornings</option>
+          <option value="Weekday evenings">Weekday evenings</option>
+          <option value="Weekend mornings">Weekend mornings</option>
+          <option value="Weekend afternoons">Weekend afternoons</option>
+          <option value="ASAP / flexible">ASAP / flexible</option>
+        </select>
       </div>
 
       {/* Message */}
@@ -234,11 +249,19 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-700 active:scale-95 [touch-action:manipulation] disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <CalendarDays className="h-4 w-4" />
         {isSubmitting ? "Sending…" : "Request Viewing"}
       </button>
+
+      <p className="text-center text-xs text-slate-500">
+        We&apos;ll only use this to arrange your viewing. No spam.{" "}
+        <a href="/privacy" className="underline hover:text-slate-400">
+          Privacy policy
+        </a>
+        .
+      </p>
     </form>
   );
 }

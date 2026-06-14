@@ -11,7 +11,7 @@ import { AVMCalculator } from '@/components/avm';
 
 export default async function AVMPage() {
   if (!(await getCurrentUser())) {
-    redirect('/hidden-equity');
+    redirect('/hidden-equity?next=/avm');
   }
 
   return (

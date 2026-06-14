@@ -302,6 +302,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         price={price}
         thumb={detail.media_urls[0]}
         city={detail.city ?? undefined}
+        brokerage={p.ListOfficeName}
       />
 
       <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
