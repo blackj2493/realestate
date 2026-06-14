@@ -24,6 +24,9 @@ import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
 import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
 import { buildDatasheet } from "@/lib/property/datasheet";
+import ThingsToKnowCard from "@/components/Property/ThingsToKnowCard";
+import { buildDiligenceFlags } from "@/lib/property/diligence";
+import YourTakeCard from "@/components/Property/YourTakeCard";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import ExpectedSaleCard from "@/components/Property/ExpectedSaleCard";
@@ -289,6 +292,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   // Gated payload (defense-in-depth): anon view has sold price/date keys scrubbed,
   // so a future registry field can never surface them here. Identical for authed users.
   const datasheet = buildDatasheet(view.full_payload);
+  // Things to Know — payload-derived diligence flags (Phase 1) merged with
+  // geo-joined public-records flags (Phase 2: flood/rail/traffic). Public data is
+  // not VOW-gated, so view.geoFlags is populated for anon users too. Feeds The Read.
+  const diligenceFlags = buildDiligenceFlags(view.full_payload, view.geoFlags);
 
   return (
     <main className="min-h-app bg-slate-950 text-slate-200">
@@ -436,7 +443,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
 
             {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
-            {isActiveListing && <TheReadCard read={buildTheRead(view)} />}
+            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} />}
 
             {/* Social proof — honest, deterministic activity counters */}
             <SocialProofBar listingId={id} className="mb-6" />
@@ -461,6 +468,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12) */}
             <PropertyDataSheet groups={datasheet} />
 
+            {/* Things to Know — interpretive diligence flags (sourced; §4-safe) */}
+            <ThingsToKnowCard flags={diligenceFlags} />
+
             {/* Schools */}
             <NearbySchools listingId={id} />
 
@@ -482,6 +492,17 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 {p.ListOfficeName || "Brokerage information not available"}
               </p>
             </Section>
+
+            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage) */}
+            <YourTakeCard
+              listingKey={id}
+              metrics={{
+                listPrice: price || null,
+                capRatePct: view.capRatePct,
+                beds: p.BedroomsTotal ?? null,
+                trueDom,
+              }}
+            />
           </div>
 
           {/* ── RIGHT (30%, sticky) ── */}
