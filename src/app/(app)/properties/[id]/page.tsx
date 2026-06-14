@@ -37,6 +37,7 @@ import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCa
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
+import WatchButton from "@/components/watchlist/WatchButton";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -322,7 +323,22 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   ))}
                 </div>
               )}
-              <h1 className="mb-2 text-2xl font-bold text-slate-100">{address}</h1>
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <h1 className="text-2xl font-bold text-slate-100">{address}</h1>
+                {/* Prominent save — top of the detail so it's reachable without
+                    scrolling past the entire financial workup (mirrors the dashboard). */}
+                <WatchButton
+                  item={{
+                    listing_key: id,
+                    address,
+                    city: detail.city ?? undefined,
+                    list_price: price,
+                    thumb: detail.media_urls[0],
+                  }}
+                  label="Save"
+                  className="shrink-0"
+                />
+              </div>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {status.kind === "sold" ? (
                   <>

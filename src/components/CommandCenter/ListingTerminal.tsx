@@ -45,6 +45,7 @@ import type { AVMResult } from '@/lib/avm/types';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
 import { useWatchlistStore } from '@/lib/watchlist/useWatchlist';
+import WatchButton from '@/components/watchlist/WatchButton';
 import ScheduleViewingForm from '@/components/Property/ScheduleViewingForm';
 
 interface ListingTerminalProps {
@@ -233,13 +234,28 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             </Link>
             <PrimaryNav variant="compact" className="hidden sm:flex" />
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close listing"
-            className="rounded-full border border-slate-700 bg-slate-800 p-2 transition-colors hover:bg-slate-700"
-          >
-            <X className="h-5 w-5 text-slate-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Prominent save — top of the detail so it never gets buried below the
+                calculator rail (esp. on mobile, where the rail stacks far below). */}
+            <WatchButton
+              item={{
+                listing_key: property.id,
+                address: property.UnparsedAddress,
+                city: property.City,
+                list_price: property.ListPrice,
+                thumb: property.primaryImageUrl,
+                status: property.Status,
+              }}
+              label="Save"
+            />
+            <button
+              onClick={onClose}
+              aria-label="Close listing"
+              className="rounded-full border border-slate-700 bg-slate-800 p-2 transition-colors hover:bg-slate-700"
+            >
+              <X className="h-5 w-5 text-slate-400" />
+            </button>
+          </div>
         </div>
 
         {/* 70/30 split on desktop; stacks to a single scroll column on mobile so the
