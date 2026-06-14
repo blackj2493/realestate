@@ -38,6 +38,7 @@ import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import WatchButton from "@/components/watchlist/WatchButton";
+import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -303,7 +304,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         city={detail.city ?? undefined}
       />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
+      <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
         <Link
           href="/properties"
           className="mb-4 inline-block text-sm text-cyan-400 transition-colors hover:text-cyan-300"
@@ -620,6 +621,20 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           area={p.BuildingAreaTotal ?? 0}
         />
       </div>
+
+      {/* Mobile sticky Save + Contact — the right rail (with these actions) stacks
+          far below the fold on phones; this keeps the funnel reachable. */}
+      <MobileActionBar
+        item={{
+          listing_key: id,
+          address,
+          city: detail.city ?? undefined,
+          list_price: price,
+          thumb: detail.media_urls[0],
+        }}
+        listingKey={id}
+        canContact={isActiveListing}
+      />
     </main>
   );
 }

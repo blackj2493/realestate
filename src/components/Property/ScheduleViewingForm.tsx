@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CalendarDays, X } from "lucide-react";
 
 // Same strict email shape used by the API route (audit LOW-18).
@@ -23,6 +23,30 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
   const [phone, setPhone] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [message, setMessage] = useState("");
+
+  // A sticky "Contact" CTA elsewhere on the surface (the mobile action bar) opens
+  // and reveals this form via a window event, keyed by listing so multiple mounted
+  // forms never cross-fire. Decoupled so the form stays the sole owner of its state.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [openSignal, setOpenSignal] = useState(0);
+
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const key = (e as CustomEvent<{ listingKey?: string }>).detail?.listingKey;
+      if (key && key !== listingKey) return;
+      setStatus((s) => (s === "success" ? s : "open"));
+      setOpenSignal((n) => n + 1);
+    }
+    window.addEventListener("pp:open-viewing", onOpen);
+    return () => window.removeEventListener("pp:open-viewing", onOpen);
+  }, [listingKey]);
+
+  // After the form renders (open/submitting/error states), bring it into view.
+  useEffect(() => {
+    if (openSignal > 0) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [openSignal]);
 
   function open() {
     setStatus("open");
@@ -104,6 +128,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
 
   return (
     <form
+      ref={formRef}
       onSubmit={(e) => void handleSubmit(e)}
       className="rounded-md border border-slate-700 bg-slate-900 p-4 space-y-3"
     >

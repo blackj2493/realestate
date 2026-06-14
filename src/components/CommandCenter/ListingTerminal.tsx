@@ -21,7 +21,8 @@ import {
   GitCompareArrows,
   Check,
   Bookmark,
-  BookmarkCheck
+  BookmarkCheck,
+  CalendarDays
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import Logo from '@/components/Logo';
@@ -542,6 +543,38 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Mobile sticky action bar — Save + Contact pinned to the bottom of the
+            panel so the funnel's two key actions never scroll away (the calculator
+            rail, with the inline Schedule-Viewing form, stacks far below on mobile). */}
+        <div
+          className="flex shrink-0 items-center gap-2 border-t border-slate-800 bg-slate-950/95 px-3 pt-2.5 backdrop-blur lg:hidden"
+          style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
+        >
+          <WatchButton
+            item={{
+              listing_key: property.id,
+              address: property.UnparsedAddress,
+              city: property.City,
+              list_price: property.ListPrice,
+              thumb: property.primaryImageUrl,
+              status: property.Status,
+            }}
+            label="Save"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent('pp:open-viewing', { detail: { listingKey: property.id } })
+              )
+            }
+            className="flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            <CalendarDays className="h-4 w-4" />
+            Contact
+          </button>
         </div>
       </div>
 
