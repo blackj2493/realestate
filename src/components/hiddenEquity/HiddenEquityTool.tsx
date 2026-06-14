@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import HiddenEquityForm, { type HEFormState } from './HiddenEquityForm';
 import HiddenEquityReport from './HiddenEquityReport';
 import type { CohortTree } from '@/lib/avm/cohorts';
@@ -67,6 +67,16 @@ export default function HiddenEquityTool() {
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // ── Result scroll ref ────────────────────────────────────────────────────
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the result card into view on mobile once it populates.
+  useEffect(() => {
+    if (result) {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [result]);
 
   const canSubmit = !!(form.city && form.cityRegion && form.propertySubType);
 
@@ -145,7 +155,7 @@ export default function HiddenEquityTool() {
 
       {/* RIGHT — report or placeholder */}
       <Card className="p-6 bg-gray-900/50 border-gray-800">
-        <div className="space-y-6">
+        <div ref={resultRef} className="space-y-6">
           <div>
             <h2 className="text-lg font-mono text-gray-100 mb-1">EQUITY REPORT</h2>
             <p className="text-xs text-gray-500">Estimated value + renovation uplift potential</p>

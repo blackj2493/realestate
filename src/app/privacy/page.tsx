@@ -122,13 +122,6 @@ const SECTIONS: LegalSection[] = [
       `If you are not satisfied with our response to a privacy concern, you have the right to contact the Office of the Privacy Commissioner of Canada, which oversees compliance with PIPEDA.`,
     ],
   },
-  {
-    heading: "15. Template Notice and Legal Review",
-    paragraphs: [
-      `This document is a template provided for drafting purposes only and does not constitute legal advice. Before it is published or relied upon, it should be reviewed and adapted by qualified legal counsel to ensure it accurately reflects PureProperty.ca's actual data practices and complies with PIPEDA and all other applicable laws.`,
-      `In addition, any companion Terms of Service or terms governing access to listing data should be reviewed by counsel and confirmed against the current PROPTX VOW Policy and Rules (and applicable IDX rules) before being relied upon.`,
-    ],
-  },
 ];
 
 export default function PrivacyPage() {

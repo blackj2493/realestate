@@ -139,12 +139,6 @@ const SECTIONS: LegalSection[] = [
       `If you have questions about these Terms, your account, or the Service, please contact us at ${CONTACT_EMAIL}.`,
     ],
   },
-  {
-    heading: "18. Template Notice",
-    paragraphs: [
-      `This document is a template provided for convenience only and does not constitute legal advice. It should be reviewed and adapted by qualified legal counsel, and the VOW-specific provisions should be confirmed against the current PROPTX VOW Policy and Rules and applicable TRREB requirements, before it is published or relied upon.`,
-    ],
-  },
 ];
 
 export default function TermsPage() {

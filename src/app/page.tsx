@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TopNav from "@/components/hero/TopNav";
@@ -9,10 +9,8 @@ import { createClient } from "@/lib/supabase/browser";
 
 export default function HomePage() {
   const router = useRouter();
-  // Returning SIGNED-IN users are routed straight to Mission Control. Render nothing
-  // until the auth check resolves to avoid flashing the marketing hero.
-  const [checked, setChecked] = useState(false);
-
+  // Returning SIGNED-IN users are routed straight to Mission Control. Anonymous
+  // visitors (95%+) see the hero immediately — no blank screen while auth resolves.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -21,14 +19,11 @@ export default function HomePage() {
       } = await createClient().auth.getUser();
       if (!active) return;
       if (user) router.replace("/dashboard");
-      else setChecked(true);
     })();
     return () => {
       active = false;
     };
   }, [router]);
-
-  if (!checked) return null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">

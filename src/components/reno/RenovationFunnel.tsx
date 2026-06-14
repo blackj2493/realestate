@@ -47,6 +47,7 @@ export default function RenovationFunnel({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const autoTried = useRef(false);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const canSubmit = !!(form.city && form.cityRegion && form.propertySubType);
 
@@ -123,6 +124,13 @@ export default function RenovationFunnel({
     `/whats-my-home-hiding${communitySlug ? `?community=${communitySlug}` : ''}`,
   )}`;
 
+  // Scroll the result card into view on mobile once it populates.
+  useEffect(() => {
+    if (result) {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [result]);
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* LEFT — form */}
@@ -146,7 +154,7 @@ export default function RenovationFunnel({
 
       {/* RIGHT — reveal */}
       <Card className="border-gray-800 bg-gray-900/50 p-6">
-        <div className="space-y-6">
+        <div ref={resultRef} className="space-y-6">
           <div>
             <h2 className="mb-1 font-mono text-lg text-gray-100">RENOVATION UPSIDE</h2>
             <p className="text-xs text-gray-500">What pays back most — for your home.</p>

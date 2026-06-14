@@ -99,6 +99,7 @@ export default function WatchlistSection() {
         {changes.map((change) => {
           const item = change.item;
           const price = change.current?.ListPrice ?? item.list_price;
+          const brokerage = change.current?.ListOfficeName;
           return (
             <div
               key={item.listing_key}
@@ -124,6 +125,14 @@ export default function WatchlistSection() {
                     <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">
                       {item.city}
                     </p>
+                  )}
+                  {/* Listing brokerage (ListOfficeName) — TRREB §6.3(c) mandates the
+                      brokerage on EVERY listing shown, including saved/watchlist cards,
+                      at the same size/weight as other detail lines (no visual de-emphasis).
+                      Re-hydrated live from Typesense via change.current; rendered
+                      conditionally so off-market cards (no live doc) never break. */}
+                  {brokerage && (
+                    <p className="truncate text-[11px] text-slate-300">{brokerage}</p>
                   )}
                 </div>
               </Link>

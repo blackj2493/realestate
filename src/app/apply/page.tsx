@@ -54,7 +54,7 @@ const ASSETS = [
 const CADENCE = ["0–1", "2–4", "5–9", "10+"];
 
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-900/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40";
+  "w-full rounded-md border border-slate-700 bg-slate-900/60 px-3.5 py-2.5 text-base text-slate-100 placeholder:text-slate-600 outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (

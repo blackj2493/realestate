@@ -6,6 +6,7 @@
 
 'use client';
 
+import { useRef } from 'react';
 import { useAVMStore } from '@/store/useAVMStore';
 import { AVMPropertyForm } from './AVMPropertyForm';
 import { AVMResultDisplay } from './AVMResultDisplay';
@@ -13,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export function AVMCalculator() {
-  const { cityRegion, propertySubType, setResult, setLoading, setError, reset } =
-    useAVMStore();
+  const { isLoading, setResult, setLoading, setError, reset } = useAVMStore();
+  const resultRef = useRef<HTMLDivElement>(null);
 
   async function handleCalculate() {
     const {
@@ -35,6 +36,7 @@ export function AVMCalculator() {
 
     setLoading(true);
     setError(null);
+    resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     try {
       const res = await fetch('/api/avm', {
@@ -77,9 +79,10 @@ export function AVMCalculator() {
           <div className="flex gap-3">
             <Button
               onClick={handleCalculate}
+              disabled={isLoading}
               className="flex-1 bg-blue-700 hover:bg-blue-600 text-white font-mono"
             >
-              CALCULATE ESTIMATE
+              {isLoading ? 'CALCULATING…' : 'CALCULATE ESTIMATE'}
             </Button>
             <Button
               onClick={reset}
@@ -93,7 +96,7 @@ export function AVMCalculator() {
       </Card>
 
       {/* Right: Result Display */}
-      <Card className="p-6 bg-gray-900/50 border-gray-800">
+      <Card ref={resultRef} className="p-6 bg-gray-900/50 border-gray-800">
         <div className="space-y-6">
           <div>
             <h2 className="text-lg font-mono text-gray-100 mb-1">ESTIMATED VALUE</h2>

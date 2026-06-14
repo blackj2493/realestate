@@ -40,7 +40,7 @@ export default function MapTimeline() {
   const hi = Math.min(MAX_DOM, domCenter + HALF);
 
   return (
-    <div className="absolute bottom-16 left-1/2 z-10 w-[28rem] max-w-[80vw] -translate-x-1/2 border border-slate-700 bg-slate-900/90 px-3 py-2.5 backdrop-blur-md">
+    <div className="absolute bottom-16 left-1/2 z-10 hidden w-[28rem] max-w-[80vw] -translate-x-1/2 border border-slate-700 bg-slate-900/90 px-3 py-2.5 backdrop-blur-md md:block">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
           Days on market

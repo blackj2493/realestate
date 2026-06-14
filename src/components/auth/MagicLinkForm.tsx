@@ -152,7 +152,7 @@ export default function MagicLinkForm({ next = "/dashboard" }: { next?: string }
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
+          className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-base text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
         />
       </div>
 
