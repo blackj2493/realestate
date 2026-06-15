@@ -15,6 +15,8 @@
  *                  chains — Loblaws/Metro/Fortinos/No Frills/Longo's split across both)
  *   - recreation = community_center (sports_and_recreation_venue is ~78% noise — karting,
  *                  trampoline parks, pickleball clubs — so it is intentionally excluded)
+ * Grocery candidates Overture also tags as restaurants (or whose name is an unambiguous
+ * eatery) are then dropped as eatery-noise — see isGroceryNoise.
  * Anything else is dropped. Output mirrors data/ontario-schools.json shape so the ETL
  * (assignAmenities) and the /api/amenities/nearby route can load it the same way.
  *
@@ -61,6 +63,27 @@ function classify(category: string): AmenityType | null {
   return null;
 }
 
+// Overture mis-tags many prepared-food eateries as grocery_store (mall sushi counters,
+// pizza/coffee kiosks, even corporate HQs). A grocery candidate is dropped when Overture
+// ALSO classifies it a restaurant (alt_categories) or its name is an unambiguous eatery —
+// UNLESS the name carries a clear grocer signal (chain or ethnic/independent grocery),
+// which always wins. Tuned to kill the Kikka-Sushi noise while keeping every real chain
+// and named ethnic grocer; a few specialty shops are accepted collateral.
+const GROCERY_WORD =
+  /grocer|grocery|supermarket|food|market|mart|fruit|produce|halal|butcher|meat|fish|seafood|bazaar|spice|dairy|farm|convenience|deli|loblaw|sobey|metro|fortino|longo|freshco|zehr|costco|walmart|food basics|superstore|no frills|t&t|nations|valu|independent|asian|indian|persian|korean|chinese|polish/i;
+const RESTAURANT_NAME =
+  /\bsushi\b|\bpizza\b|\bramen\b|noodle|smoothie|bubble tea|cold brew|coffee co|\bcaf[eé]\b|\bbistro\b|\bdiner\b|shawarma|\bkebab\b|pupusa|\bdhaba\b|\bsandwich\b/i;
+
+function hasRestaurantAlt(alt: string[] | null): boolean {
+  return Array.isArray(alt) && alt.some((c) => /restaurant|fast_food|food_court/.test(c));
+}
+
+/** True when a grocery-categorized POI is really an eatery, not a grocery store. */
+function isGroceryNoise(name: string, alt: string[] | null): boolean {
+  if (GROCERY_WORD.test(name)) return false;
+  return hasRestaurantAlt(alt) || RESTAURANT_NAME.test(name);
+}
+
 function main() {
   if (!fs.existsSync(RAW_FILE)) {
     throw new Error(
@@ -76,6 +99,7 @@ function main() {
   let droppedCat = 0;
   let droppedGeo = 0;
   let droppedDup = 0;
+  let droppedNoise = 0;
 
   for (const r of raw) {
     const category = String(r.category ?? '').trim();
@@ -96,6 +120,12 @@ function main() {
     const name = String(r.name ?? '').trim();
     if (!name) {
       droppedCat++; // unnamed POIs aren't useful to display
+      continue;
+    }
+
+    // Drop grocery candidates that are really eateries (mall sushi counters, etc.).
+    if (type === 'grocery' && isGroceryNoise(name, r.alt_categories)) {
+      droppedNoise++;
       continue;
     }
 
@@ -137,7 +167,7 @@ function main() {
   const recreation = out.length - grocery;
   console.log(`\nWrote ${out.length} amenities → data/gta-amenities.json`);
   console.log(`  grocery: ${grocery} | recreation: ${recreation}`);
-  console.log(`  dropped — category: ${droppedCat}, geo/bbox: ${droppedGeo}, duplicate: ${droppedDup}`);
+  console.log(`  dropped — category: ${droppedCat}, geo/bbox: ${droppedGeo}, duplicate: ${droppedDup}, eatery-noise: ${droppedNoise}`);
 }
 
 try {
