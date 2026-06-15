@@ -11,6 +11,7 @@ import LedgerRow from "./LedgerRow";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
 import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, type SortDir } from "./columnSort";
+import { makeCohortRanker } from "./cohortPercentiles";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 
 interface LedgerPanelProps {
@@ -69,6 +70,12 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     () => (sort ? [...visible].sort(compareByColumn(sort.type, sort.dir)) : visible),
     [visible, sort]
   );
+
+  // Percentile context (#1): rank each numeric cell against the FULL result set
+  // (not the selection-isolated view) so "P88" is stable as the user selects rows.
+  // Depend on the result object (stable until a new query), not the `|| []`
+  // fallback above, which is a fresh array every render.
+  const ranker = useMemo(() => makeCohortRanker(searchResult?.listings ?? []), [searchResult]);
 
   return (
     <div ref={rootRef} className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
@@ -186,6 +193,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               onHoverChange={(hovered) => setHoveredId(hovered ? property.id : null)}
               isChecked={selectedIds.has(property.id)}
               onToggleSelect={() => toggleSelected(property.id)}
+              ranker={ranker}
             />
           ))
         )}
