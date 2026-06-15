@@ -197,6 +197,7 @@ async function main() {
   await client.query("SET statement_timeout TO '0'");
 
   let total = 0;
+  const failures: { source: string; error: string }[] = [];
   try {
     for (const ds of targets) {
       console.log(`\n📦 ${ds.kind} (${ds.family})`);
@@ -209,18 +210,29 @@ async function main() {
         total += await loadSource(client, ds, source, features, srid, retrievedOn);
         continue;
       }
-      // ArcGIS endpoints from the registry.
+      // ArcGIS endpoints from the registry. Resilient per source: one flaky external
+      // portal must not block the rest of the load (failures are reported at the end).
       for (const source of ds.sources) {
         if (!source.endpoint) {
           console.log(`     ⏭️  ${source.sourceKey}: file-based source — load with --dataset ${ds.kind} --file <geojson>`);
           continue;
         }
         console.log(`   → ${source.sourceKey}`);
-        const features = await fetchArcgis(source);
-        total += await loadSource(client, ds, source, features, 4326, retrievedOn);
+        try {
+          const features = await fetchArcgis(source);
+          total += await loadSource(client, ds, source, features, 4326, retrievedOn);
+        } catch (srcErr) {
+          const msg = (srcErr as { message?: string }).message ?? String(srcErr);
+          console.error(`     ⚠️  ${source.sourceKey} failed (continuing): ${msg}`);
+          failures.push({ source: source.sourceKey, error: msg });
+        }
       }
     }
     console.log(`\n   ✅ geo_features total inserted this run: ${total}`);
+    if (failures.length) {
+      console.log(`\n   ⚠️  ${failures.length} source(s) failed — re-run them individually once their portal is back:`);
+      for (const f of failures) console.log(`        - ${f.source}: ${f.error}`);
+    }
     console.log("\n==================================================================\n");
   } catch (err) {
     const e = err as { message?: string };
@@ -230,6 +242,9 @@ async function main() {
     await client.end();
     console.log("🔌 Connection closed.\n");
   }
+  // Non-zero exit if any source failed, so CI/operators notice — but only AFTER
+  // every other source has loaded.
+  if (failures.length) process.exit(1);
 }
 
 main()
