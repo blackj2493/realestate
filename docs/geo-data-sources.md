@@ -16,8 +16,9 @@ entry. All endpoints below were liveness-verified (feature counts shown).
 
 > **Coordinate precision.** The IDX feed has **no lat/lng**. Listings are geocoded
 > from their postal code (full `PostalCode`, else parsed from the address; FSA-centroid
-> fallbacks rejected). This is **postal/block-level**, not rooftop — adequate for the
-> sizable regulated areas below; rooftop geocoding is a future enhancement.
+> fallbacks rejected, and full-postal coords sitting >20 km from their own FSA centroid
+> rejected as corrupt source rows). This is **postal/block-level**, not rooftop —
+> adequate for the sizable regulated areas below; rooftop geocoding is a future enhancement.
 
 ## Datasets
 
@@ -28,7 +29,7 @@ entry. All endpoints below were liveness-verified (feature counts shown).
 | `flood` | TRCA `Floodline_TRCA_Polygon/FeatureServer/1` | 1,306 | polygon / inside | TRCA Open Data Licence v1.0 |
 | `conservation_regulated` | CVC `Generic_Regulations_Limit_2025/0`, CLOCA `…/MapServer/15`, LSRCA `OpenData/MapServer/36` | 1 + 1 + 20 | polygon / inside | Conservation Authority Open Data Licence v1.0 |
 | `wetland` (PSW) | LIO `LIO_Open01/MapServer/15` where `WETLAND_SIGNIFICANCE='Evaluated-Provincial'` | 80,039 | polygon / inside | OGL–Ontario |
-| `greenbelt` | LIO `LIO_Open06/MapServer/17` | 1 | polygon / inside | OGL–Ontario |
+| `greenbelt` | LIO `LIO_Open06/MapServer/15` where `DESIGNATION='Protected Countryside'` | 32 | polygon / inside | OGL–Ontario |
 | `orm` | LIO `LIO_Open06/MapServer/29` | 1 | polygon / inside | OGL–Ontario |
 | `niagara` | LIO `LIO_Open06/MapServer/25` | 12 | polygon / inside | OGL–Ontario |
 | `hydro` | LIO `LIO_Open05/MapServer/11` where `CLASS_SUBTYPE_NUM IN (1114,1340)` | 3,451 | line / within 150 m | OGL–Ontario |

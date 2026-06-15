@@ -53,16 +53,35 @@ function bestPostal(postalCode: string | null, address: string | null): string |
   return parsePostalFromAddress(address);
 }
 
+/** A full-postal coord farther than this from its own FSA centroid is a corrupt
+ *  source row (the postal data has bad rows, e.g. M5B 0C1 → 28 km north of M5B). */
+const MAX_FSA_DEVIATION_KM = 20;
+
+function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 /**
- * Resolve a block-level coordinate, or null if only a coarse (FSA-centroid)
- * approximation is available — too imprecise for a containment/proximity flag.
+ * Resolve a block-level coordinate, or null if it's untrustworthy:
+ *   - a coarse FSA-centroid fallback (too imprecise for a containment flag), or
+ *   - a full-postal coord implausibly far from its own FSA centroid (a corrupt
+ *     source row — reject rather than emit a flag at the wrong location).
  */
 function preciseCoord(postal: string | null): { lat: number; lng: number } | null {
   if (!postal) return null;
   const c = getCoordinates(postal);
   if (!c) return null;
   const fsa = getFsaCentroid(postal.slice(0, 3));
-  if (fsa && c.lat === fsa.lat && c.lng === fsa.lng) return null; // FSA-centroid fallback → reject
+  if (fsa) {
+    if (c.lat === fsa.lat && c.lng === fsa.lng) return null; // FSA-centroid fallback → too coarse
+    if (haversineKm(c.lat, c.lng, fsa.lat, fsa.lng) > MAX_FSA_DEVIATION_KM) return null; // corrupt row
+  }
   return c;
 }
 

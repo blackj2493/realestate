@@ -173,10 +173,16 @@ export const GEO_DATASETS: GeoDataset[] = [
     license: OGL_ON,
     sources: [
       {
+        // Designation layer (15) filtered to Protected Countryside — the core
+        // development-restricted Greenbelt. The Outer Boundary (layer 17) also
+        // included the Urban River Valley tentacles down the Don/Humber, which
+        // falsely flagged downtown condos; ORM/Niagara designations are flagged
+        // separately, so excluding them here avoids double-flagging.
         sourceKey: "lio_greenbelt",
-        name: "Ontario LIO — Greenbelt Outer Boundary",
+        name: "Ontario LIO — Greenbelt Designation (Protected Countryside)",
         endpoint:
-          "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open06/MapServer/17",
+          "https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open06/MapServer/15",
+        where: "DESIGNATION='Protected Countryside'",
         simplifyDeg: 0.0002,
       },
     ],
