@@ -17,6 +17,7 @@ import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "./ListingCardBody";
 import { carryFor } from "./columnSort";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import type { CohortRanker } from "./cohortPercentiles";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -34,10 +35,26 @@ interface LedgerRowProps {
   /** Card mode for narrow panels (audit C4): render only the photo + address
    *  card, dropping the fixed numeric columns that would starve the price. */
   compact?: boolean;
+  /** Ranks a numeric cell within the current result set → "P88" tag (#1). */
+  ranker?: CohortRanker;
 }
 
 function alignClass(a: ColumnDef["align"]) {
   return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
+}
+
+/** Days the stitched True DOM must exceed the board's shown DOM before we treat
+ *  the listing as relisted and strike the (reset) shown figure (#4). */
+const RELIST_GAP_DAYS = 14;
+
+/** Subtle "position in the current results" tag appended to a numeric cell (#1). */
+function PctTag({ p }: { p: number | null | undefined }) {
+  if (p == null) return null;
+  return (
+    <span className="ml-1 text-[9px] font-normal text-slate-500" title={`${p}th percentile of current results`}>
+      P{p}
+    </span>
+  );
 }
 
 /**
@@ -46,7 +63,7 @@ function alignClass(a: ColumnDef["align"]) {
  * so the formatting + color rules live in ONE place and can't drift.
  * (address + alphaFlag are structural and handled by their own renderers.)
  */
-function ColumnValue({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
+function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
   switch (col.type) {
     case "trueDom": {
       // True DOM is relist-corrected (VOW-derived) — gated for anon (§6.2(f)).
@@ -56,30 +73,56 @@ function ColumnValue({ doc, col, isAuthed }: { doc: ListingDocument; col: Column
             🔒
           </span>
         );
+      const shown = doc.DaysOnMarket ?? doc.calculatedDOM ?? null;
       const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
       const color = dom > 90 ? "text-rose-400" : dom > 45 ? "text-cyan-400" : dom >= 14 ? "text-amber-400" : "text-slate-400";
-      return <span className={cn(color, "font-semibold")}>{dom}d</span>;
+      // Relisted: the board reset the clock. Strike the shown figure, keep True DOM (#4).
+      const relisted = doc.TrueDom != null && shown != null && doc.TrueDom - shown >= RELIST_GAP_DAYS;
+      return (
+        <span
+          className={cn(color, "font-semibold")}
+          title={relisted ? `Board shows ${shown}d — relisted; True DOM is ${dom}d` : undefined}
+        >
+          {relisted && <span className="mr-1 font-normal text-slate-600 line-through">{shown}d</span>}
+          {dom}d
+          <PctTag p={ranker?.("trueDom", dom)} />
+        </span>
+      );
     }
     case "capRate": {
       const v = capRateOrNull(doc.cap_rate_est);
-      return <span className="text-cyan-400">{v != null ? `${v.toFixed(1)}%` : "—"}</span>;
+      return (
+        <span className="text-cyan-400">
+          {v != null ? `${v.toFixed(1)}%` : "—"}
+          {v != null && <PctTag p={ranker?.("capRate", v)} />}
+        </span>
+      );
     }
     case "yield": {
       // gross_yield_est is already a PERCENT — no ×100 (that was for the old fraction targetGrossYield).
       const v = grossYieldOrNull(doc.gross_yield_est);
-      return <span className="text-cyan-400">{v != null ? `${v.toFixed(1)}%` : "—"}</span>;
-    }
-    case "carryCost":
       return (
         <span className="text-cyan-400">
-          ${carryFor(doc).toLocaleString()}
-          <span className="text-[9px] text-slate-500">/mo</span>
+          {v != null ? `${v.toFixed(1)}%` : "—"}
+          {v != null && <PctTag p={ranker?.("yield", v)} />}
         </span>
       );
+    }
+    case "carryCost": {
+      const v = carryFor(doc);
+      return (
+        <span className="text-cyan-400">
+          ${v.toLocaleString()}
+          <span className="text-[9px] text-slate-500">/mo</span>
+          <PctTag p={ranker?.("carryCost", v)} />
+        </span>
+      );
+    }
     case "priceDrop":
       return (
         <span className={doc.TotalPriceDrop ? "text-rose-400" : "text-slate-500"}>
           {doc.TotalPriceDrop ? `-$${doc.TotalPriceDrop.toLocaleString()}` : "—"}
+          {doc.TotalPriceDrop ? <PctTag p={ranker?.("priceDrop", doc.TotalPriceDrop)} /> : null}
         </span>
       );
     case "suite":
@@ -103,7 +146,7 @@ function ColumnValue({ doc, col, isAuthed }: { doc: ListingDocument; col: Column
 }
 
 /** Desktop column cell — value at the persona's fixed width + alignment. */
-function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
+function Cell({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
   if (col.type === "address")
     return (
       <div className={cn("min-w-0", col.width)}>
@@ -126,7 +169,7 @@ function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; is
   }
   return (
     <div className={cn("shrink-0 text-xs font-mono", col.width, alignClass(col.align))}>
-      <ColumnValue doc={doc} col={col} isAuthed={isAuthed} />
+      <ColumnValue doc={doc} col={col} isAuthed={isAuthed} ranker={ranker} />
     </div>
   );
 }
@@ -136,7 +179,7 @@ function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; is
  * (e.g. "CAP 6.2%", "DOM 142d", "DROP -$40k"). Self-labels because the column
  * headers are hidden in card mode. This is what keeps the moat visible on mobile.
  */
-function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
+function MetricChip({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
   if (col.type === "alphaFlag") {
     const flag = getAlphaFlag(doc, isAuthed);
     if (flag.variant === "none") return null;
@@ -149,12 +192,12 @@ function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnD
   return (
     <span className="inline-flex items-baseline gap-1 rounded-sm bg-slate-800/50 px-1.5 py-0.5 font-mono text-xs">
       <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{col.header}</span>
-      <ColumnValue doc={doc} col={col} isAuthed={isAuthed} />
+      <ColumnValue doc={doc} col={col} isAuthed={isAuthed} ranker={ranker} />
     </span>
   );
 }
 
-export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false, ranker }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
   // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
@@ -239,13 +282,13 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
           {analyticalColumns.length > 0 && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {analyticalColumns.map((col) => (
-                <MetricChip key={col.type} doc={property} col={col} isAuthed={isAuthed} />
+                <MetricChip key={col.type} doc={property} col={col} isAuthed={isAuthed} ranker={ranker} />
               ))}
             </div>
           )}
         </div>
       ) : (
-        columns.map((col) => <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} />)
+        columns.map((col) => <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} ranker={ranker} />)
       )}
     </div>
   );

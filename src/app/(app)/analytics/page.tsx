@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
 import AnalyticsClient from "./AnalyticsClient";
+import SubmarketLeaderboard from "@/components/dashboard/SubmarketLeaderboard";
 
 export const dynamic = "force-dynamic";
 
@@ -24,5 +25,11 @@ export default async function AnalyticsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/analytics");
   if (!(await hasAcceptedTerms(user.id))) redirect("/welcome?next=/analytics");
-  return <AnalyticsClient />;
+  return (
+    <>
+      {/* Zoom out: rank every GTA market, then drill into one below. */}
+      <SubmarketLeaderboard />
+      <AnalyticsClient />
+    </>
+  );
 }
