@@ -268,11 +268,13 @@ export const GEO_DATASETS: GeoDataset[] = [
     kind: "rsc",
     family: "point",
     predicate: { type: "distance", meters: 75 },
-    enabled: true,
+    // DISABLED pending written MECP license confirmation (verified 2026-06-14: no
+    // open licence is asserted on the Access Environment service, and RSC is not
+    // published on data.ontario.ca). Data still loads via --dataset rsc, but the
+    // flag is not emitted. Re-enable once MECP confirms OGL terms, then re-run the
+    // backfill. See docs/geo-data-sources.md.
+    enabled: false,
     autoLoad: true,
-    // NOTE: served from a government MapServer but the license isn't explicitly
-    // OGL-tagged on that service — confirm terms with MECP before relying on it
-    // commercially (docs/geo-data-sources.md). Disable here if that blocks you.
     license: "Ontario Environmental Site Registry (confirm terms with MECP)",
     sources: [
       {

@@ -71,11 +71,17 @@ describe("geoFlagsFor — registry integrity", () => {
     expect(GEO_DATASETS.find((d) => d.kind === "traffic")?.enabled).toBe(false);
   });
 
-  it("combined signals produce one flag per matching dataset", () => {
+  it("combined signals produce one flag per matching ACTIVE dataset (rsc disabled)", () => {
     const flags = geoFlagsFor({
       inside: { flood: true, greenbelt: true },
       distanceM: { hydro: 40, rsc: 20, transit: 600 },
     });
-    expect(flags.map((f) => f.id).sort()).toEqual(["flood", "greenbelt", "hydro", "rsc", "transit"]);
+    // rsc is signalled but disabled (license pending) → excluded from output.
+    expect(flags.map((f) => f.id).sort()).toEqual(["flood", "greenbelt", "hydro", "transit"]);
+  });
+
+  it("rsc is registered but disabled (license pending MECP)", () => {
+    expect(GEO_DATASETS.find((d) => d.kind === "rsc")?.enabled).toBe(false);
+    expect(geoFlagsFor({ distanceM: { rsc: 10 } })).toEqual([]);
   });
 });
