@@ -23,6 +23,7 @@ import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
 import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '@/lib/schools/nearestSchools';
+import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 
 // ============================================================================
@@ -768,6 +769,11 @@ export interface TransformResult {
     BestSecondaryScore?: number;
     BestSchoolScoreNearby?: number;
     NearbySchools?: string[];
+    // Amenity proximity (nearest grocery + recreation centre); NO_AMENITY_KM sentinel.
+    NearestGroceryKm?: number;
+    NearestGroceryName?: string;
+    NearestRecCentreKm?: number;
+    NearestRecCentreName?: string;
   };
 }
 
@@ -1059,6 +1065,15 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.BestSecondaryScore = schools.BestSecondaryScore;
   typesensePayload.BestSchoolScoreNearby = schools.BestSchoolScoreNearby;
   typesensePayload.NearbySchools = schools.NearbySchools;
+
+  // Amenity proximity: nearest grocery + recreation centre (deterministic, §4/§6).
+  // Distances use the NO_AMENITY_KM sentinel (not 0) so the walkability filter
+  // (NearestGroceryKm:<=X) can't false-match listings with nothing nearby.
+  const amenities = assignAmenities(geo.location);
+  typesensePayload.NearestGroceryKm = amenities.NearestGroceryKm;
+  typesensePayload.NearestGroceryName = amenities.NearestGroceryName;
+  typesensePayload.NearestRecCentreKm = amenities.NearestRecCentreKm;
+  typesensePayload.NearestRecCentreName = amenities.NearestRecCentreName;
 
   return { supabasePayload, typesensePayload };
 }

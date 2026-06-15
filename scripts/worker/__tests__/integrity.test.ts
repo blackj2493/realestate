@@ -42,6 +42,14 @@ vi.mock('@/services/BuilderAnalyticsEngine', () => ({
     zoningDesignation: '',
   })),
 }));
+vi.mock('@/lib/amenities/nearestAmenities', () => ({
+  assignAmenities: vi.fn(() => ({
+    NearestGroceryKm: 99,
+    NearestGroceryName: '',
+    NearestRecCentreKm: 99,
+    NearestRecCentreName: '',
+  })),
+}));
 vi.mock('@/lib/schools/nearestSchools', () => ({
   // Realistic shape: cargo strings + numeric scores + ids array. Optional
   // fields per schema, but the transformer copies every key through.

@@ -135,6 +135,13 @@ export const indexedFields: IndexedField[] = [
   { name: 'BestSchoolScoreNearby', type: 'float', facet: false, sort: true, optional: true },
   // Target-school filter: ids of nearby schools, filterable via NearbySchools:=<id>.
   { name: 'NearbySchools', type: 'string[]', facet: false, optional: true },
+
+  // ─── Amenity proximity (nearest grocery + recreation centre) — walkability ──
+  // Straight-line km, sortable + filterable (NearestGroceryKm:<=X). NO_AMENITY_KM (99)
+  // sentinel when none in range, so `<=X` never false-matches. Names ride as stored
+  // cargo (see ListingDocument), not indexed. Source: Overture Maps (CDLA-Permissive).
+  { name: 'NearestGroceryKm', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'NearestRecCentreKm', type: 'float', facet: false, sort: true, optional: true },
 ];
 
 /**
@@ -262,6 +269,10 @@ export const typesenseSchema = {
     { name: 'BestSecondaryScore', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'BestSchoolScoreNearby', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearbySchools', type: 'string[]' as const, facet: false, optional: true },
+
+    // ─── Amenity proximity — walkability distance sliders (NO_AMENITY_KM sentinel) ──
+    { name: 'NearestGroceryKm', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'NearestRecCentreKm', type: 'float' as const, facet: false, sort: true, optional: true },
 
     // Investor-filter fields — written by transformer.ts since Phase 2 but undeclared
     // until 2026-06-10 (audit HIGH-5): every filter_by/sort_by on them was HTTP 400.
@@ -457,6 +468,14 @@ export interface TypesensePropertyDocument {
   SecPublicDistanceKm?: number;
   SecCatholicSchool?: string;
   SecCatholicDistanceKm?: number;
+
+  // ─── Amenity proximity (Overture Maps) ────────────────────────────────────
+  /** Straight-line km to the nearest grocery / recreation centre; NO_AMENITY_KM (99)
+   *  when none within range. Km is indexed (walkability filter); names are display cargo. */
+  NearestGroceryKm?: number;
+  NearestGroceryName?: string;
+  NearestRecCentreKm?: number;
+  NearestRecCentreName?: string;
 }
 
 /**

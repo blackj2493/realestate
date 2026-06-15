@@ -11,11 +11,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Navigation, GraduationCap, Palette, Lasso, Scale, Bookmark, History, type LucideIcon } from "lucide-react";
+import { X, Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Scale, Bookmark, History, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
 import SchoolFilter from "./SchoolFilter";
+import AmenityFilter from "./AmenityFilter";
 import MapColorPanel from "./MapColorPanel";
 import MapDrawPanel from "./MapDrawPanel";
 import MapComparePanel from "./MapComparePanel";
@@ -24,6 +25,7 @@ import MapLensesPanel from "./MapLensesPanel";
 const TITLES: Record<RailModule, string> = {
   commute: "Commute",
   school: "Schools",
+  amenity: "Walkable To",
   color: "Color By",
   draw: "Draw Area",
   compare: "Compare",
@@ -34,6 +36,7 @@ const TITLES: Record<RailModule, string> = {
 const ICONS: Record<RailModule, LucideIcon> = {
   commute: Navigation,
   school: GraduationCap,
+  amenity: ShoppingCart,
   color: Palette,
   draw: Lasso,
   compare: Scale,
@@ -75,6 +78,12 @@ function renderContent(module: RailModule) {
       return (
         <div className="p-3">
           <SchoolFilter />
+        </div>
+      );
+    case "amenity":
+      return (
+        <div className="p-3">
+          <AmenityFilter />
         </div>
       );
     case "color":
