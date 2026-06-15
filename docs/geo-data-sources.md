@@ -1,56 +1,112 @@
 # Geo "Things to Know" — data sources & runbook (Phase 2)
 
-Precomputed, geo-joined **public-records** diligence flags (flood now; rail/traffic
-later) merged into the listing page's "Things to Know" card and The Read. These are
-**not** TRREB IDX/VOW data, so they are **not** VOW-gated and are computed by
-deterministic PostGIS spatial SQL (no LLM, CLAUDE.md §4).
+Precomputed, geo-joined **public-records** diligence flags merged into the listing
+page's "Things to Know" card and The Read. These are **not** TRREB IDX/VOW data, so
+they are **not** VOW-gated and are computed by deterministic PostGIS spatial SQL (no
+LLM, CLAUDE.md §4).
 
-Pipeline: `migration 037` → `loadGeoData.ts` (reference polygons) →
-`enrichGeoFlags.ts` (per-listing precompute) → `getListingDetail.geoFlags` (one
-indexed PK lookup) → `buildDiligenceFlags(payload, geoFlags)`.
+Pipeline: `migration 037` (unified `geo_features` table) → `loadGeoData.ts`
+(reference geometry) → `enrichGeoFlags.ts` (per-listing precompute into
+`listing_geo_flags`) → `getListingDetail.geoFlags` (one indexed PK lookup) →
+`buildDiligenceFlags(payload, geoFlags)`.
+
+**Everything is registry-driven from `src/lib/property/geoDatasets.ts`** — endpoints,
+filters, predicates, severities and flag wording all live there. Add a flag = add an
+entry. All endpoints below were liveness-verified (feature counts shown).
+
+> **Coordinate precision.** The IDX feed has **no lat/lng**. Listings are geocoded
+> from their postal code (full `PostalCode`, else parsed from the address; FSA-centroid
+> fallbacks rejected). This is **postal/block-level**, not rooftop — adequate for the
+> sizable regulated areas below; rooftop geocoding is a future enhancement.
 
 ## Datasets
 
-| Flag | Dataset | Source / endpoint | Native CRS | License |
+### Active — auto-loadable (ArcGIS REST, `--all`)
+
+| Flag | Source(s) | Features | Geometry / predicate | License (commercial OK) |
 |---|---|---|---|---|
-| `flood` | Regulated floodplain (Floodline) | TRCA ArcGIS Hub — `Floodline_TRCA_Polygon/FeatureServer/1` (`services1.arcgis.com/d0ZCwU7eGKVeNiEE`), portal `https://trca-camaps.opendata.arcgis.com/` | EPSG:26917 (fetched as 4326) | TRCA Open Data Licence v1.0 — commercial use **with attribution** (`https://trca.ca/about/open-data-licence/`) |
-| `rail` _(follow-up)_ | Rail corridors | Metrolinx Open Data / OpenStreetMap `railway=rail` | — | OGL-ON / ODbL |
-| `traffic` _(follow-up)_ | Traffic volumes (AADT) | City of Toronto Open Data "Traffic Volumes" | — | OGL-Toronto |
+| `flood` | TRCA `Floodline_TRCA_Polygon/FeatureServer/1` | 1,306 | polygon / inside | TRCA Open Data Licence v1.0 |
+| `conservation_regulated` | CVC `Generic_Regulations_Limit_2025/0`, CLOCA `…/MapServer/15`, LSRCA `OpenData/MapServer/36` | 1 + 1 + 20 | polygon / inside | Conservation Authority Open Data Licence v1.0 |
+| `wetland` (PSW) | LIO `LIO_Open01/MapServer/15` where `WETLAND_SIGNIFICANCE='Evaluated-Provincial'` | 80,039 | polygon / inside | OGL–Ontario |
+| `greenbelt` | LIO `LIO_Open06/MapServer/17` | 1 | polygon / inside | OGL–Ontario |
+| `orm` | LIO `LIO_Open06/MapServer/29` | 1 | polygon / inside | OGL–Ontario |
+| `niagara` | LIO `LIO_Open06/MapServer/25` | 12 | polygon / inside | OGL–Ontario |
+| `hydro` | LIO `LIO_Open05/MapServer/11` where `CLASS_SUBTYPE_NUM IN (1114,1340)` | 3,451 | line / within 150 m | OGL–Ontario |
+| `rsc` | Ontario ESR `Access_Environment/…/MapServer/6` | 11,814 | point / within 75 m | ⚠️ see note |
 
-Attribution is carried per-flag in `DiligenceFlag.source` and per-dataset in the
-`geo_sources` table (`key, name, url, license, retrieved_on`). **Raw datasets are
-not committed** — they are reloaded from source via the loader.
+⚠️ **RSC license caveat.** The Record-of-Site-Condition data is served from a government
+MapServer but is **not explicitly OGL-tagged** on that service. Confirm terms with MECP
+before relying on it commercially. To ship without it, set `enabled: false` on the `rsc`
+entry in `geoDatasets.ts`.
 
-> Precision note: the IDX feed has **no lat/lng**. Listings are geocoded from their
-> postal code (full `PostalCode`, else parsed from the address; FSA-centroid
-> fallbacks are rejected). This is **postal/block-level**, not rooftop — adequate
-> for sizable regulated floodplains; rooftop geocoding is a future enhancement.
+ℹ️ **`conservation_regulated` semantics.** TRCA publishes a true floodplain line (→ `flood`).
+The 905 conservation authorities publish only their broader **regulation limit** (floodplain
++ valley/wetland/erosion hazards), so we label those honestly as a *conservation-regulated
+area* (development-permit fact), not a floodplain.
+
+### Active — file-based (load via `--file` after converting to GeoJSON)
+
+| Flag | Source | Convert | License |
+|---|---|---|---|
+| `rail` | Ontario Railway Network (ORWN) Track — `https://ws.gisetl.lrc.gov.on.ca/fmedatadownload/Packages/ORWNTRK.zip` (EPSG:4269) | `ogr2ogr -f GeoJSON -t_srs EPSG:4326 data/orwn_track.geojson ORWN_TRACK.shp` | OGL–Ontario |
+| `transit` | GO rail stations `https://files.ontario.ca/opendata/go_train_stations_xslttransf.zip` + TTC subway (GTFS `stops.txt`, `location_type=1`) | merge to one GeoJSON point file | OGL–Ontario / OGL–Toronto |
+
+### Deferred (no reliable region-wide open data — kept in the registry, `enabled: false`)
+
+- **`traffic` (AADT).** City of Toronto is single-day TMC (not AADT); **York & Halton are
+  paywalled**; only Durham/Peel regional roads + 400-series have true open AADT. Not
+  shippable region-wide. Revisit with a commercial feed (Replica/HERE) if needed.
+- **Airport noise (Pearson / Billy Bishop).** PDF contour maps only — no GIS, no open
+  license. Not buildable from open data.
+
+### Coverage gaps (honest)
+
+- **Conservation Halton** (Oakville, Burlington, Milton) publishes **no open** floodplain/
+  regulation data — requires a paid licence agreement. Those municipalities have no flood/
+  conservation flag until licensed.
+- Fringe authorities **NVCA** (Collingwood/Shelburne) and **GRCA** (Port Hope/east Clarington)
+  have data but unconfirmed open licenses — excluded.
+- **Zoning** and **heritage** flags were evaluated and deferred: solid only in Toronto +
+  a few municipalities (Hamilton/Oakville), patchy across the 905 — better as Toronto-first
+  features than region-wide flags.
 
 ## Runbook
 
-All DB steps need `DATABASE_URL` = Supabase **Session pooler** string (port 5432,
-IPv4) in `.env.local` — see CLAUDE.md §12. The direct host is IPv6-only and won't
-resolve here.
+All DB steps need `DATABASE_URL` = Supabase **Session pooler** string (port 5432, IPv4)
+in `.env.local` — CLAUDE.md §12. The direct host is IPv6-only and won't resolve here.
 
 ```bash
-# 1. Apply the schema (PostGIS + reference + listing_geo_flags). Light DDL —
-#    or paste supabase/migrations/037_geo_things_to_know.sql into the SQL editor.
+# 1. Apply the schema (PostGIS + geo_features + geo_sources + listing_geo_flags).
 npx tsx scripts/admin/applyMigration037.ts
 
-# 2. Load the TRCA floodplain polygons (idempotent; re-run after TRCA's annual update).
-npx tsx scripts/worker/loadGeoData.ts
-#    …or from a local download:  --file data/floodplain.geojson --srid 4326
+# 2. Load every auto-loadable dataset (flood, conservation, wetland, greenbelt, orm,
+#    niagara, hydro, rsc). Idempotent per source; re-run after a dataset refresh.
+npx tsx scripts/worker/loadGeoData.ts --all
+#    …or one at a time:        npx tsx scripts/worker/loadGeoData.ts --dataset wetland
 
-# 3. Backfill flags for all existing listings (idempotent upserts).
-npx tsx scripts/worker/enrichGeoFlags.ts            # add --dry-run to preview
+# 2b. File-based datasets (after converting the shapefiles to GeoJSON — see table above):
+npx tsx scripts/worker/loadGeoData.ts --dataset rail    --file data/orwn_track.geojson --srid 4269
+npx tsx scripts/worker/loadGeoData.ts --dataset transit --file data/transit_stations.geojson
 
-# 4. Verify (spot-check a known floodplain address):
+# 3. Backfill flags for all coord-bearing listings (idempotent upserts; --dry-run to preview).
+npx tsx scripts/worker/enrichGeoFlags.ts
+
+# 4. Verify a known address:
 #    SELECT flags FROM listing_geo_flags WHERE listing_key = '<key>';
+#    SELECT key, kind, feature_count, license FROM geo_sources ORDER BY kind;
 ```
 
 ## Nightly
 
-`.github/workflows/daily-sync.yml` runs `enrichGeoFlags.ts --since <~25h ago>`
-after the core sync, `continue-on-error`. **Requires a new GitHub secret
-`DATABASE_URL`** (Session pooler) — without it the step errors out and is skipped
-(the core sync is never affected). The loader runs ad-hoc (datasets refresh rarely).
+`.github/workflows/daily-sync.yml` runs `enrichGeoFlags.ts --since <~25h ago>` after
+the core sync, `continue-on-error` (never breaks the sync). **Requires the GitHub secret
+`DATABASE_URL`** (Session pooler) — without it the step errors out and is skipped. The
+loader runs ad-hoc (reference datasets refresh rarely).
+
+## Attribution (required on a public data-sources/credits page)
+
+- "Contains information made available under the Toronto and Region Conservation Authority
+  (TRCA)'s Open Data Licence v1.0" (+ equivalent for CVC / CLOCA / LSRCA).
+- "Contains information licensed under the Open Government Licence – Ontario"
+  (wetlands, Greenbelt, ORM, Niagara Escarpment, hydro, ORWN rail).
+- "Contains information licensed under the Open Government Licence – Toronto" (TTC transit).
