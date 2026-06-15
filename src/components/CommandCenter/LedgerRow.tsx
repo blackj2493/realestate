@@ -7,6 +7,7 @@
 import { Check } from "lucide-react";
 import WatchHeart from "@/components/watchlist/WatchHeart";
 import { cn } from "@/lib/utils";
+import { useCommandCenterStore, MAX_SELECTED } from "@/lib/stores/commandCenterStore";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
@@ -156,6 +157,10 @@ function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnD
 export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
+  // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
+  // already-checked row always stays enabled so the user can swap one out.
+  const selectionFull = useCommandCenterStore((s) => s.selectedIds.size >= MAX_SELECTED);
+  const selectDisabled = selectionFull && !isChecked;
   // Compact (mobile / narrow panel): render the address card PLUS a wrapping strip
   // of persona shadow-data chips. Dropping the columns entirely (audit C4) also hid
   // the moat on mobile — chips put the differentiating numbers back without crushing
@@ -179,14 +184,25 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          if (selectDisabled) return;
           onToggleSelect?.();
         }}
-        aria-label={isChecked ? "Remove from selection" : "Add to selection"}
+        disabled={selectDisabled}
+        aria-label={
+          selectDisabled
+            ? `Compare limit of ${MAX_SELECTED} reached`
+            : isChecked
+            ? "Remove from selection"
+            : "Add to selection"
+        }
         aria-pressed={isChecked}
+        title={selectDisabled ? `Compare holds up to ${MAX_SELECTED} — remove one to add another` : undefined}
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-none border transition-colors",
           isChecked
             ? "border-cyan-500 bg-cyan-500 text-slate-950"
+            : selectDisabled
+            ? "cursor-not-allowed border-slate-800 text-transparent opacity-40"
             : "border-slate-600 text-transparent hover:border-cyan-400"
         )}
       >

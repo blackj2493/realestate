@@ -3,7 +3,9 @@
  *
  * The decision step of the funnel: the selection set built in the Command Center
  * (or from a listing page) is lined up column-by-column so the winner is obvious.
- * URL-driven so it's shareable and works on a cold load. Capped at 4 columns.
+ * URL-driven so it's shareable and works on a cold load. Capped at 8 columns
+ * (mirrors MAX_SELECTED in commandCenterStore) — the table scrolls horizontally
+ * past ~5, which is where the Value plot becomes the better "see it all" view.
  */
 
 import type { Metadata } from "next";
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-const MAX_COLUMNS = 4;
+const MAX_COLUMNS = 8;
 
 export default async function ComparePage({
   searchParams,

@@ -19,7 +19,8 @@ import MetricRow from "@/components/compare/MetricRow";
 import CompareMediaCell from "@/components/compare/CompareMediaCell";
 import RentInput from "@/components/compare/RentInput";
 import CompareMobile from "@/components/compare/CompareMobile";
-import { formatPrice } from "@/lib/utils";
+import CompareValuePlot from "@/components/compare/CompareValuePlot";
+import { formatPrice, cn } from "@/lib/utils";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
 export default function CompareClient({
@@ -29,6 +30,12 @@ export default function CompareClient({
 }: CompareData & { isAuthed: boolean }) {
   const [lens, setLens] = useState<PersonaType>("smart");
   const [diffOnly, setDiffOnly] = useState(false);
+  // Table is the familiar default; the value plot earns its place once there are
+  // enough homes to show a cluster (and only when signed in, since its value axis
+  // is the members-only Estimate).
+  const [view, setView] = useState<"table" | "plot">(
+    () => (isAuthed && listings.length >= 6 ? "plot" : "table")
+  );
   const uw = useCompareAssumptions(listings);
 
   const contexts: MetricContext[] = useMemo(
@@ -74,6 +81,34 @@ export default function CompareClient({
         onDiffToggle={setDiffOnly}
       />
 
+      {/* View switch — side-by-side table vs value plot */}
+      <div className="mb-3 mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          {listings.length} {listings.length === 1 ? "home" : "homes"} ·{" "}
+          {view === "plot" ? "value plot" : "side-by-side"}
+        </p>
+        <div className="inline-flex overflow-hidden rounded-md border border-slate-700">
+          {(["table", "plot"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              aria-pressed={view === v}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold transition-colors",
+                view === v ? "bg-slate-800 text-slate-100" : "bg-slate-950 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              {v === "table" ? "▦ Table" : "⊹ Value plot"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === "plot" ? (
+        <CompareValuePlot contexts={contexts} />
+      ) : (
+        <>
       {/* Desktop table */}
       <div className="hidden overflow-x-auto rounded-lg border border-slate-800 md:block">
         <table className="w-full border-collapse text-sm">
@@ -134,6 +169,8 @@ export default function CompareClient({
         seededRentById={uw.seededRentById}
         onRent={uw.setRent}
       />
+        </>
+      )}
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-600">
         Est. Value is our True Value estimate — our own deterministic model, not an MLS/TRREB figure.
