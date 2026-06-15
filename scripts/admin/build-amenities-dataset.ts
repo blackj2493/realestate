@@ -11,8 +11,10 @@
  *
  * This script does the deterministic classification + normalization (hardcoded rules,
  * no AI — CLAUDE.md §4):
- *   - grocery    = category contains "grocery" OR supermarket OR wholesale_grocer
- *   - recreation = community_center OR sports_and_recreation_venue
+ *   - grocery    = supermarket OR grocery_store (the two categories that hold the real
+ *                  chains — Loblaws/Metro/Fortinos/No Frills/Longo's split across both)
+ *   - recreation = community_center (sports_and_recreation_venue is ~78% noise — karting,
+ *                  trampoline parks, pickleball clubs — so it is intentionally excluded)
  * Anything else is dropped. Output mirrors data/ontario-schools.json shape so the ETL
  * (assignAmenities) and the /api/amenities/nearby route can load it the same way.
  *
@@ -54,8 +56,8 @@ interface Amenity {
 /** Deterministic category → amenity-type mapping (see header). null = drop. */
 function classify(category: string): AmenityType | null {
   const c = category.toLowerCase();
-  if (c.includes('grocery') || c === 'supermarket' || c === 'wholesale_grocer') return 'grocery';
-  if (c === 'community_center' || c === 'sports_and_recreation_venue') return 'recreation';
+  if (c === 'supermarket' || c === 'grocery_store') return 'grocery';
+  if (c === 'community_center') return 'recreation';
   return null;
 }
 
