@@ -45,21 +45,21 @@ def connect():
 
 
 # Precise category selection for the extract, derived from --discover output.
-# Grocery = any *_grocery_store + supermarket + wholesale_grocer (excludes farmers/
-# flea/night markets and ambiguous health_market). Recreation = community_center +
-# sports_and_recreation_venue (excludes standalone gyms, sports clubs/leagues, rinks/
-# arenas, and the catch-all community_services_non_profits). Final grocery|recreation
-# labelling happens in build-amenities-dataset.ts; this just scopes the S3 scan.
-REC_CATEGORIES = ("community_center", "sports_and_recreation_venue")
+# Grocery = supermarket + grocery_store (the two categories holding the real chains;
+# specialty/organic/ethnic/wholesale long-tail and farmers/flea markets excluded).
+# Recreation = community_center only (sports_and_recreation_venue is ~78% noise —
+# karting/trampoline/pickleball/etc. — and the catch-all community_services_non_profits
+# is excluded). Final labelling happens in build-amenities-dataset.ts; this scopes the scan.
+GROCERY_CATEGORIES = ("supermarket", "grocery_store")
+REC_CATEGORIES = ("community_center",)
 
 
 def where_clause() -> str:
-    rec_in = ", ".join([f"'{c}'" for c in REC_CATEGORIES])
+    cats = ", ".join([f"'{c}'" for c in (*GROCERY_CATEGORIES, *REC_CATEGORIES)])
     return (
         f"bbox.xmin BETWEEN {XMIN} AND {XMAX} "
         f"AND bbox.ymin BETWEEN {YMIN} AND {YMAX} "
-        f"AND (categories.primary ILIKE '%grocery%' "
-        f"OR categories.primary IN ('supermarket', 'wholesale_grocer', {rec_in}))"
+        f"AND categories.primary IN ({cats})"
     )
 
 
