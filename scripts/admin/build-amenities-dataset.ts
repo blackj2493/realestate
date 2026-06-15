@@ -15,8 +15,9 @@
  *                  chains — Loblaws/Metro/Fortinos/No Frills/Longo's split across both)
  *   - recreation = community_center (sports_and_recreation_venue is ~78% noise — karting,
  *                  trampoline parks, pickleball clubs — so it is intentionally excluded)
- * Grocery candidates Overture also tags as restaurants (or whose name is an unambiguous
- * eatery) are then dropped as eatery-noise — see isGroceryNoise.
+ * Mis-tagged noise is then dropped: grocery candidates Overture also tags as restaurants
+ * (isGroceryNoise), and community_center candidates that aren't real centres — pet stores,
+ * charities, churches, offices (isRecreationNoise).
  * Anything else is dropped. Output mirrors data/ontario-schools.json shape so the ETL
  * (assignAmenities) and the /api/amenities/nearby route can load it the same way.
  *
@@ -84,6 +85,28 @@ function isGroceryNoise(name: string, alt: string[] | null): boolean {
   return hasRestaurantAlt(alt) || RESTAURANT_NAME.test(name);
 }
 
+// community_center also sweeps in pet stores, charities, churches, schools, BIA offices
+// and corporate orgs. Its alt_categories overlap real centres (community centres carry
+// social_service/senior alts), so the reliable signal is the INVERSE: keep only when the
+// name reads like a real centre (Centre/Recreation/YMCA/arena/pool/club/legion/hall/civic/
+// cultural/…) OR the alt is clearly recreational (gym/pool/sports/park). Else drop.
+const REC_WORD =
+  /\bcent(re|er|ennial)?\b|recreation|\brec\b|ymca|ywca|\barena|aquatic|\bpool\b|leisure|sportsplex|memorial|gymnas|\bgym\b|fitness|athletic|curling|skat(e|ing)|\bclub|legion|\bhall\b|sports|parks? and rec|neighbou?rhood|civic|cultural|seniors?\b|\byouth\b|pavilion|fairground|arts? cent/i;
+
+function hasRecreationAlt(alt: string[] | null): boolean {
+  return (
+    Array.isArray(alt) &&
+    alt.some((c) =>
+      /sports_and_recreation_venue|^gym$|active_life|swimming_pool|stadium_arena|^park$|recreation|sports_and_fitness|water_park|fitness|skating_rink|hockey_arena|athletic|cultural_center/.test(c)
+    )
+  );
+}
+
+/** True when a community_center POI isn't actually a recreation/community centre. */
+function isRecreationNoise(name: string, alt: string[] | null): boolean {
+  return !REC_WORD.test(name) && !hasRecreationAlt(alt);
+}
+
 function main() {
   if (!fs.existsSync(RAW_FILE)) {
     throw new Error(
@@ -123,8 +146,14 @@ function main() {
       continue;
     }
 
-    // Drop grocery candidates that are really eateries (mall sushi counters, etc.).
+    // Drop mis-tagged noise: grocery candidates that are really eateries (mall sushi
+    // counters, etc.) and community_center candidates that aren't real rec centres
+    // (pet stores, charities, churches, offices).
     if (type === 'grocery' && isGroceryNoise(name, r.alt_categories)) {
+      droppedNoise++;
+      continue;
+    }
+    if (type === 'recreation' && isRecreationNoise(name, r.alt_categories)) {
       droppedNoise++;
       continue;
     }
