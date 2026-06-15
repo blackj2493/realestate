@@ -2,61 +2,52 @@
 --
 -- Phase 2 "Things to Know" — geo-joined public-records diligence flags.
 --
--- Adds PostGIS reference tables for NON-MLS open data (flood/rail/traffic) and a
--- single precomputed per-listing output table (listing_geo_flags) that the read
--- path point-looks-up by listing_key. No per-request spatial queries ever
--- (CLAUDE.md §5, Disk-IO budget) — enrichGeoFlags.ts computes flags into
--- listing_geo_flags; getListingDetail reads one indexed row.
+-- A single, generalized PostGIS reference table (geo_features) holds every public
+-- dataset — flood, conservation-regulated areas, Provincially Significant Wetlands,
+-- Greenbelt / Oak Ridges Moraine / Niagara Escarpment, hydro corridors, rail,
+-- transit, Record of Site Condition — distinguished by `kind`. enrichGeoFlags.ts
+-- runs the spatial predicates OFFLINE and writes per-listing flags into
+-- listing_geo_flags; the read path point-looks-up one indexed row by listing_key.
+-- No spatial query at request time (CLAUDE.md §5, Disk-IO budget).
 --
--- These are PUBLIC records (the city's own flood maps), NOT TRREB IDX/VOW data,
--- so the output is NOT VOW-gated and is computed by deterministic spatial SQL
--- (ST_Intersects / ST_DWithin) — satisfies the no-LLM rule (§4) by construction.
+-- All sources are PUBLIC records (city/provincial open data), NOT TRREB IDX/VOW, so
+-- the output is NOT VOW-gated, and every flag is computed by deterministic spatial
+-- SQL (ST_Intersects / ST_DWithin) — satisfies the no-LLM rule (§4) by construction.
 --
--- Light DDL: safe to paste into the Supabase SQL editor, or apply via the pooler
--- script `npx tsx scripts/admin/applyMigration037.ts` (CLAUDE.md §12).
+-- Light DDL: paste into the Supabase SQL editor, or apply via the pooler script
+-- `npx tsx scripts/admin/applyMigration037.ts` (CLAUDE.md §12).
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
--- ── reference geodata (static; reloaded only when a dataset is refreshed) ──────
--- geom stored in EPSG:4326 (WGS84 lat/lng). Distance predicates cast ::geography
--- at query time so they measure in METRES, not planar degrees (enrichGeoFlags.ts).
-
--- Regulated floodplain / flood-hazard limit polygons (TRCA, Ontario GeoHub).
-CREATE TABLE IF NOT EXISTS geo_floodplain (
+-- ── unified reference geodata (static; reloaded only when a dataset refreshes) ──
+-- One row per source feature. `geom` is a generic geometry (polygon / line / point)
+-- in EPSG:4326; distance predicates cast ::geography at query time so they measure
+-- in METRES, not planar degrees (enrichGeoFlags.ts). `kind` partitions datasets;
+-- `source_key` references geo_sources.key; `attrs` keeps source properties for
+-- future flag refinement (e.g. wetland type, conservation designation).
+CREATE TABLE IF NOT EXISTS geo_features (
   id          bigserial PRIMARY KEY,
-  source_key  text NOT NULL,                          -- references geo_sources.key (FK-ish, not enforced)
-  geom        geometry(MultiPolygon, 4326) NOT NULL
+  kind        text NOT NULL,                    -- flood | wetland | greenbelt | orm | niagara | hydro | rail | transit | rsc | conservation_regulated
+  source_key  text NOT NULL,                    -- references geo_sources.key (FK-ish, not enforced)
+  attrs       jsonb NOT NULL DEFAULT '{}'::jsonb,
+  geom        geometry(Geometry, 4326) NOT NULL
 );
-CREATE INDEX IF NOT EXISTS geo_floodplain_gix ON geo_floodplain USING GIST (geom);
-
--- Rail corridors (GO + freight). Phase 2 follow-up; table created now so the
--- loader/enrichment can add the `rail` predicate without a second migration.
-CREATE TABLE IF NOT EXISTS geo_rail_lines (
-  id          bigserial PRIMARY KEY,
-  source_key  text NOT NULL,
-  geom        geometry(MultiLineString, 4326) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS geo_rail_lines_gix ON geo_rail_lines USING GIST (geom);
-
--- Traffic volumes (AADT) at intersections/segments. Phase 2 follow-up.
-CREATE TABLE IF NOT EXISTS geo_traffic_counts (
-  id          bigserial PRIMARY KEY,
-  source_key  text NOT NULL,
-  aadt        integer,
-  geom        geometry(Point, 4326) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS geo_traffic_counts_gix ON geo_traffic_counts USING GIST (geom);
+CREATE INDEX IF NOT EXISTS geo_features_gix ON geo_features USING GIST (geom);
+CREATE INDEX IF NOT EXISTS geo_features_kind_idx ON geo_features (kind);
+CREATE INDEX IF NOT EXISTS geo_features_source_idx ON geo_features (source_key);
 
 -- ── provenance / licensing / attribution ─────────────────────────────────────
--- One row per loaded dataset. `key` is referenced by *.source_key above; the
--- loader upserts this row (name/url/license/retrieved_on) on every ingest so the
--- attribution carried in DiligenceFlag.source stays checkable.
+-- One row per loaded source. `key` is referenced by geo_features.source_key; the
+-- loader upserts this row on every ingest so the attribution carried in
+-- DiligenceFlag.source stays checkable.
 CREATE TABLE IF NOT EXISTS geo_sources (
-  key           text PRIMARY KEY,
-  name          text,
-  url           text,
-  license       text,
-  retrieved_on  date
+  key            text PRIMARY KEY,
+  kind           text,
+  name           text,
+  url            text,
+  license        text,
+  feature_count  integer,
+  retrieved_on   date
 );
 
 -- ── precomputed per-listing output (the ONLY table the read path touches) ─────

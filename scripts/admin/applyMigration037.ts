@@ -21,13 +21,7 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const EXPECTED_TABLES = [
-  'geo_floodplain',
-  'geo_rail_lines',
-  'geo_traffic_counts',
-  'geo_sources',
-  'listing_geo_flags',
-];
+const EXPECTED_TABLES = ['geo_features', 'geo_sources', 'listing_geo_flags'];
 
 async function applyMigration() {
   console.log('\n🔧 Migration 037: geo "Things to Know" (PostGIS + listing_geo_flags)');
@@ -58,7 +52,7 @@ async function applyMigration() {
     const missing = EXPECTED_TABLES.filter((t) => !found.has(t));
     if (missing.length) throw new Error(`tables missing post-apply: ${missing.join(', ')}`);
 
-    console.log(`✅ Migration 037 complete (postgis enabled, ${EXPECTED_TABLES.length} tables + GIST indexes).`);
+    console.log(`✅ Migration 037 complete (postgis enabled, geo_features + ${EXPECTED_TABLES.length - 1} tables + GIST/kind indexes).`);
   } finally {
     await client.end();
   }

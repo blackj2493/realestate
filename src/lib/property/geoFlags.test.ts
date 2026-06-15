@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { geoFlagsFor, RAIL_PROXIMITY_M, BUSY_ROAD_AADT } from "./geoFlags";
+import { geoFlagsFor } from "./geoFlags";
+import { ACTIVE_DATASETS, GEO_DATASETS } from "./geoDatasets";
 
-describe("geoFlagsFor — flood", () => {
+describe("geoFlagsFor — intersect (polygon) flags", () => {
   it("flags a listing inside a regulated floodplain", () => {
-    const flags = geoFlagsFor({ in_flood: true });
+    const flags = geoFlagsFor({ inside: { flood: true } });
     expect(flags).toHaveLength(1);
     expect(flags[0]).toMatchObject({
       id: "flood",
@@ -15,49 +16,66 @@ describe("geoFlagsFor — flood", () => {
     expect(flags[0].ask).toBeTruthy();
   });
 
-  it("emits nothing when not in a floodplain", () => {
-    expect(geoFlagsFor({ in_flood: false })).toEqual([]);
+  it("flags a Provincially Significant Wetland and conservation-regulated area", () => {
+    const flags = geoFlagsFor({ inside: { wetland: true, conservation_regulated: true } });
+    expect(flags.map((f) => f.id).sort()).toEqual(["conservation_regulated", "wetland"]);
+  });
+
+  it("emits nothing when not inside, or for non-true values", () => {
+    expect(geoFlagsFor({ inside: { flood: false } })).toEqual([]);
+    expect(geoFlagsFor({ inside: { flood: null } })).toEqual([]);
     expect(geoFlagsFor({})).toEqual([]);
-    expect(geoFlagsFor({ in_flood: null })).toEqual([]);
-    // defensively: only a strict boolean true fires the flag
-    expect(geoFlagsFor({ in_flood: undefined })).toEqual([]);
+    expect(geoFlagsFor({ inside: {} })).toEqual([]);
   });
 });
 
-describe("geoFlagsFor — rail proximity", () => {
-  it("flags when nearer than the threshold and rounds the distance", () => {
-    const flags = geoFlagsFor({ rail_m: 88.6 });
+describe("geoFlagsFor — distance (line/point) flags", () => {
+  it("flags hydro proximity and rounds the distance", () => {
+    const flags = geoFlagsFor({ distanceM: { hydro: 88.6 } });
     expect(flags).toHaveLength(1);
-    expect(flags[0]).toMatchObject({ id: "rail", kind: "warn", severity: 40 });
-    expect(flags[0].title).toBe("89 m from a rail corridor");
+    expect(flags[0]).toMatchObject({ id: "hydro", kind: "warn", severity: 34 });
+    expect(flags[0].title).toBe("89 m from a hydro transmission corridor");
   });
 
-  it("does not flag at or beyond the threshold, or when absent", () => {
-    expect(geoFlagsFor({ rail_m: RAIL_PROXIMITY_M })).toEqual([]); // strict <
-    expect(geoFlagsFor({ rail_m: 300 })).toEqual([]);
-    expect(geoFlagsFor({ rail_m: null })).toEqual([]);
-    expect(geoFlagsFor({ rail_m: Number.NaN })).toEqual([]);
-  });
-});
-
-describe("geoFlagsFor — busy road (AADT)", () => {
-  it("flags at or above the AADT threshold with a grouped number", () => {
-    const flags = geoFlagsFor({ near_aadt: 12500 });
+  it("treats transit as an info (upside) flag", () => {
+    const flags = geoFlagsFor({ distanceM: { transit: 350 } });
     expect(flags).toHaveLength(1);
-    expect(flags[0]).toMatchObject({ id: "traffic", kind: "warn", severity: 38 });
-    expect(flags[0].title).toBe("Fronts a busy road (~12,500 vehicles/day)");
+    expect(flags[0]).toMatchObject({ id: "transit", kind: "info" });
+    expect(flags[0].title).toBe("350 m to a GO/subway station");
+    expect(flags[0].ask).toBeUndefined();
   });
 
-  it("does not flag below threshold or when absent", () => {
-    expect(geoFlagsFor({ near_aadt: BUSY_ROAD_AADT - 1 })).toEqual([]);
-    expect(geoFlagsFor({ near_aadt: null })).toEqual([]);
-    expect(geoFlagsFor({ near_aadt: Number.NaN })).toEqual([]);
+  it("does not flag beyond the threshold, or for null/NaN", () => {
+    expect(geoFlagsFor({ distanceM: { hydro: 9999 } })).toEqual([]); // > 150 m
+    expect(geoFlagsFor({ distanceM: { rail: null } })).toEqual([]);
+    expect(geoFlagsFor({ distanceM: { rail: Number.NaN } })).toEqual([]);
   });
 });
 
-describe("geoFlagsFor — combined", () => {
-  it("returns every applicable flag (order/sort is buildDiligenceFlags' job)", () => {
-    const flags = geoFlagsFor({ in_flood: true, rail_m: 50, near_aadt: 20000 });
-    expect(flags.map((f) => f.id).sort()).toEqual(["flood", "rail", "traffic"]);
+describe("geoFlagsFor — registry integrity", () => {
+  it("never emits a flag for a disabled dataset (e.g. traffic)", () => {
+    const flags = geoFlagsFor({ inside: { traffic: true }, distanceM: { traffic: 10 } });
+    expect(flags).toEqual([]);
+  });
+
+  it("every active dataset has a unique flag id and a non-empty source", () => {
+    const ids = ACTIVE_DATASETS.map((d) => d.flag.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const d of ACTIVE_DATASETS) {
+      expect(d.flag.source.trim().length).toBeGreaterThan(0);
+      expect(d.sources.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("traffic is registered but disabled", () => {
+    expect(GEO_DATASETS.find((d) => d.kind === "traffic")?.enabled).toBe(false);
+  });
+
+  it("combined signals produce one flag per matching dataset", () => {
+    const flags = geoFlagsFor({
+      inside: { flood: true, greenbelt: true },
+      distanceM: { hydro: 40, rsc: 20, transit: 600 },
+    });
+    expect(flags.map((f) => f.id).sort()).toEqual(["flood", "greenbelt", "hydro", "rsc", "transit"]);
   });
 });

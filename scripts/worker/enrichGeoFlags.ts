@@ -1,19 +1,21 @@
 /**
  * enrichGeoFlags — precompute per-listing geo "Things to Know" flags into
- * listing_geo_flags (Phase 2, migration 037).
+ * listing_geo_flags (Phase 2, migration 037). Registry-driven: the spatial
+ * predicates are generated from src/lib/property/geoDatasets.ts, so adding a
+ * dataset there automatically adds its predicate here.
  *
- * For each coord-bearing listing we resolve a BLOCK-LEVEL point and run the PostGIS
- * predicates (flood now; rail/traffic as follow-ups), map the result to
- * DiligenceFlag[] via the pure geoFlagsFor(), and upsert one JSONB row. The read
- * path (getListingDetail) then does a single indexed PK lookup — no spatial query
- * at request time (§5 Disk-IO budget).
+ * For each coord-bearing listing we resolve a BLOCK-LEVEL point and run every
+ * active dataset's predicate (polygon intersect / nearest-within-N-metres) in one
+ * set-based query against geo_features, map the result to DiligenceFlag[] via the
+ * pure geoFlagsFor(), and upsert one JSONB row. The read path then does a single
+ * indexed PK lookup — no spatial query at request time (§5 Disk-IO budget).
  *
  * COORDINATES (no lat/lng in the IDX feed): mirror the ETL (transformer.ts →
  * resolveLocation) — resolve from the postal code. The feed's PostalCode is often
  * FSA-only, so we prefer a full 6-char PostalCode, else parse the full code from
- * UnparsedAddress (parsePostal.ts). We then REJECT FSA-centroid fallbacks: a flood
- * flag (severity 70) must never fire off a town-centroid blob. Postal-centroid
- * precision is the known limitation (rooftop geocoding is a future enhancement).
+ * UnparsedAddress (parsePostal.ts), and REJECT FSA-centroid fallbacks so a flag
+ * never fires off a town-centroid blob. Postal/block-level precision is the known
+ * limitation (rooftop geocoding is a future enhancement).
  *
  * COMPLIANCE: deterministic spatial SQL over PUBLIC data; no LLM (§4). Output is
  * NOT VOW-gated. Idempotent upserts — safe to re-run.
@@ -25,16 +27,17 @@
  *   dry run:            npx tsx scripts/worker/enrichGeoFlags.ts --dry-run
  */
 
-import { Client } from 'pg';
-import dotenv from 'dotenv';
-import { getCoordinates, getFsaCentroid, loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
-import { parsePostalFromAddress } from './parsePostal';
-import { geoFlagsFor } from '@/lib/property/geoFlags';
-dotenv.config({ path: ['.env.local', '.env'] });
+import { Client } from "pg";
+import dotenv from "dotenv";
+import { getCoordinates, getFsaCentroid, loadPostalCodes, isDataLoaded } from "@/lib/postalCodes";
+import { parsePostalFromAddress } from "./parsePostal";
+import { geoFlagsFor, type GeoSignals } from "@/lib/property/geoFlags";
+import { ACTIVE_DATASETS } from "@/lib/property/geoDatasets";
+dotenv.config({ path: [".env.local", ".env"] });
 
-const DRY_RUN = process.argv.includes('--dry-run');
-const SINCE = argValue('since');
-const BATCH = Number(argValue('batch') ?? 1000);
+const DRY_RUN = process.argv.includes("--dry-run");
+const SINCE = argValue("since");
+const BATCH = Number(argValue("batch") ?? 1000);
 
 function argValue(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -45,16 +48,14 @@ const FULL_POSTAL = /^[A-Z]\d[A-Z]\d[A-Z]\d$/;
 
 /** Best full 6-char postal: a complete PostalCode field, else parsed from the address. */
 function bestPostal(postalCode: string | null, address: string | null): string | null {
-  const pc = (postalCode ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const pc = (postalCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (FULL_POSTAL.test(pc)) return `${pc.slice(0, 3)} ${pc.slice(3)}`;
   return parsePostalFromAddress(address);
 }
 
 /**
  * Resolve a block-level coordinate, or null if only a coarse (FSA-centroid)
- * approximation is available. getCoordinates falls back to the FSA centroid when
- * the full postal isn't in the LDU/Canada libraries; we detect that by comparing
- * against the FSA centroid and reject it — too coarse for floodplain containment.
+ * approximation is available — too imprecise for a containment/proximity flag.
  */
 function preciseCoord(postal: string | null): { lat: number; lng: number } | null {
   if (!postal) return null;
@@ -63,6 +64,36 @@ function preciseCoord(postal: string | null): { lat: number; lng: number } | nul
   const fsa = getFsaCentroid(postal.slice(0, 3));
   if (fsa && c.lat === fsa.lat && c.lng === fsa.lng) return null; // FSA-centroid fallback → reject
   return c;
+}
+
+/** Build the per-point spatial SELECT columns from the active dataset registry. */
+function spatialColumns(): string {
+  return ACTIVE_DATASETS.map((ds) => {
+    if (ds.predicate.type === "intersect") {
+      return `EXISTS (SELECT 1 FROM geo_features f WHERE f.kind='${ds.kind}'
+                AND ST_Intersects(f.geom, p.geom)) AS in_${ds.kind}`;
+    }
+    const m = ds.predicate.meters;
+    return `(SELECT MIN(ST_Distance(f.geom::geography, p.geom::geography))
+               FROM geo_features f
+              WHERE f.kind='${ds.kind}'
+                AND ST_DWithin(f.geom::geography, p.geom::geography, ${m})) AS m_${ds.kind}`;
+  }).join(",\n         ");
+}
+
+/** Map a spatial result row → GeoSignals for geoFlagsFor. */
+function rowToSignals(row: Record<string, unknown>): GeoSignals {
+  const inside: Record<string, boolean> = {};
+  const distanceM: Record<string, number | null> = {};
+  for (const ds of ACTIVE_DATASETS) {
+    if (ds.predicate.type === "intersect") {
+      inside[ds.kind] = row[`in_${ds.kind}`] === true;
+    } else {
+      const v = row[`m_${ds.kind}`];
+      distanceM[ds.kind] = v == null ? null : Number(v);
+    }
+  }
+  return { inside, distanceM };
 }
 
 interface ListingRow {
@@ -74,13 +105,16 @@ interface ListingRow {
 async function main() {
   const DATABASE_URL = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
   if (!DATABASE_URL) {
-    console.error('❌ Set DATABASE_URL (Session pooler, §12)');
+    console.error("❌ Set DATABASE_URL (Session pooler, §12)");
     process.exit(1);
   }
   if (!isDataLoaded()) loadPostalCodes();
 
-  console.log(`\n🌊 enrichGeoFlags → listing_geo_flags  (${DRY_RUN ? 'DRY RUN' : 'APPLY'}${SINCE ? `, since ${SINCE}` : ', full backfill'})`);
-  console.log('==================================================================\n');
+  console.log(
+    `\n🌍 enrichGeoFlags → listing_geo_flags  (${DRY_RUN ? "DRY RUN" : "APPLY"}${SINCE ? `, since ${SINCE}` : ", full backfill"})`,
+  );
+  console.log(`   datasets: ${ACTIVE_DATASETS.map((d) => d.kind).join(", ")}`);
+  console.log("==================================================================\n");
 
   const client = new Client({
     connectionString: DATABASE_URL,
@@ -89,19 +123,17 @@ async function main() {
   });
   await client.connect();
   await client.query("SET statement_timeout TO '0'");
-  console.log('   ✅ Connected (statement_timeout disabled)\n');
 
+  const cols = spatialColumns();
+  const flagCounts: Record<string, number> = {};
   let scanned = 0;
   let geocoded = 0;
-  let flooded = 0;
   let written = 0;
-  let cursor = ''; // listing_key cursor (text, ascending)
+  let cursor = "";
 
   try {
     for (;;) {
-      // Page listings by listing_key. Pull only the two payload fields we need
-      // (detoasts JSONB per row, but batched + statement_timeout=0 → fine, §12).
-      const where = ['listing_key > $1'];
+      const where = ["listing_key > $1"];
       const params: (string | number)[] = [cursor];
       if (SINCE) {
         where.push(`synced_at > $${params.length + 1}`);
@@ -110,19 +142,18 @@ async function main() {
       params.push(BATCH);
       const { rows } = await client.query<ListingRow>(
         `SELECT listing_key,
-                full_payload->>'PostalCode'     AS postal_code,
+                full_payload->>'PostalCode'      AS postal_code,
                 full_payload->>'UnparsedAddress' AS address
          FROM listings
-         WHERE ${where.join(' AND ')}
+         WHERE ${where.join(" AND ")}
          ORDER BY listing_key
          LIMIT $${params.length}`,
-        params
+        params,
       );
       if (rows.length === 0) break;
       cursor = rows[rows.length - 1].listing_key;
       scanned += rows.length;
 
-      // Resolve block-level points in TS (mirrors the ETL geocoder).
       const keys: string[] = [];
       const lngs: number[] = [];
       const lats: number[] = [];
@@ -139,24 +170,24 @@ async function main() {
         continue;
       }
 
-      // One set-based spatial query: each point gets a GIST-indexed flood probe.
-      const spatial = await client.query<{ listing_key: string; in_flood: boolean }>(
-        `SELECT t.k AS listing_key,
-                EXISTS (
-                  SELECT 1 FROM geo_floodplain f
-                  WHERE ST_Intersects(f.geom, ST_SetSRID(ST_MakePoint(t.lng, t.lat), 4326))
-                ) AS in_flood
-         FROM unnest($1::text[], $2::float8[], $3::float8[]) AS t(k, lng, lat)`,
-        [keys, lngs, lats]
+      // One set-based query: every active predicate per point, GIST-indexed.
+      const spatial = await client.query<Record<string, unknown>>(
+        `WITH pts AS (
+           SELECT k, ST_SetSRID(ST_MakePoint(lng, lat), 4326) AS geom
+           FROM unnest($1::text[], $2::float8[], $3::float8[]) AS u(k, lng, lat)
+         )
+         SELECT p.k AS listing_key,
+         ${cols}
+         FROM pts p`,
+        [keys, lngs, lats],
       );
 
-      // Map → DiligenceFlag[] (pure) and build upsert arrays.
       const upKeys: string[] = [];
       const upFlags: string[] = [];
       for (const row of spatial.rows) {
-        const flags = geoFlagsFor({ in_flood: row.in_flood });
-        if (row.in_flood) flooded += 1;
-        upKeys.push(row.listing_key);
+        const flags = geoFlagsFor(rowToSignals(row));
+        for (const f of flags) flagCounts[f.id] = (flagCounts[f.id] ?? 0) + 1;
+        upKeys.push(row.listing_key as string);
         upFlags.push(JSON.stringify(flags));
       }
 
@@ -167,28 +198,32 @@ async function main() {
            FROM unnest($1::text[], $2::text[]) AS t(k, f)
            ON CONFLICT (listing_key) DO UPDATE
              SET flags = EXCLUDED.flags, computed_at = EXCLUDED.computed_at`,
-          [upKeys, upFlags]
+          [upKeys, upFlags],
         );
         written += up.rowCount ?? 0;
       }
 
       if (scanned % (BATCH * 10) === 0 || rows.length < BATCH) {
-        console.log(`   … scanned ${scanned} · geocoded ${geocoded} · flood ${flooded}`);
+        console.log(`   … scanned ${scanned} · geocoded ${geocoded}`);
       }
       if (rows.length < BATCH) break;
     }
 
-    console.log(`\n   📊 scanned=${scanned} · block-level geocoded=${geocoded} · in floodplain=${flooded}`);
-    console.log(`   ${DRY_RUN ? '🔎 (dry run — nothing written)' : `✅ upserted ${written} listing_geo_flags rows`}`);
-    console.log('\n==================================================================\n');
+    const summary = Object.entries(flagCounts)
+      .map(([id, n]) => `${id}=${n}`)
+      .join(" · ");
+    console.log(`\n   📊 scanned=${scanned} · block-level geocoded=${geocoded}`);
+    console.log(`   📊 flags: ${summary || "(none)"}`);
+    console.log(`   ${DRY_RUN ? "🔎 (dry run — nothing written)" : `✅ upserted ${written} listing_geo_flags rows`}`);
+    console.log("\n==================================================================\n");
   } catch (err) {
     const e = err as { message?: string };
-    console.error('\n❌ enrichGeoFlags failed:', e.message);
-    console.error('   (Safe to re-run — upserts by listing_key are idempotent.)');
+    console.error("\n❌ enrichGeoFlags failed:", e.message);
+    console.error("   (Safe to re-run — upserts by listing_key are idempotent.)");
     throw err;
   } finally {
     await client.end();
-    console.log('🔌 Connection closed.\n');
+    console.log("🔌 Connection closed.\n");
   }
 }
 
