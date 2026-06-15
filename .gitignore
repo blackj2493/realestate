@@ -8,6 +8,12 @@ out/
 # Downloaded source data caches (e.g. Ontario SIF XLSX for build-schools-dataset)
 .cache/
 
+# Phase 2 geo "Things to Know" — downloaded/converted rail+transit source data.
+# Reproduce via docs/geo-data-sources.md; never commit the raw/large data.
+data/_geo_src/
+data/orwn_track.geojson
+data/transit_stations.geojson
+
 # Production build
 build/
 

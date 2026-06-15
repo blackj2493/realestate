@@ -45,12 +45,36 @@ The 905 conservation authorities publish only their broader **regulation limit**
 + valley/wetland/erosion hazards), so we label those honestly as a *conservation-regulated
 area* (development-permit fact), not a floodplain.
 
-### Active — file-based (load via `--file` after converting to GeoJSON)
+### Active — file-based (ship as shapefile/GTFS, not ArcGIS-queryable)
 
-| Flag | Source | Convert | License |
+| Flag | Source | Loaded | License |
 |---|---|---|---|
-| `rail` | Ontario Railway Network (ORWN) Track — `https://ws.gisetl.lrc.gov.on.ca/fmedatadownload/Packages/ORWNTRK.zip` (EPSG:4269) | `ogr2ogr -f GeoJSON -t_srs EPSG:4326 data/orwn_track.geojson ORWN_TRACK.shp` | OGL–Ontario |
-| `transit` | GO rail stations `https://files.ontario.ca/opendata/go_train_stations_xslttransf.zip` + TTC subway (GTFS `stops.txt`, `location_type=1`) | merge to one GeoJSON point file | OGL–Ontario / OGL–Toronto |
+| `rail` | Ontario Railway Network (ORWN) Track (EPSG:4269) | 19,055 LineStrings / within 150 m | OGL–Ontario |
+| `transit` | GO rail stations (63) + TTC subway stations (148, via GTFS `route_type=1` join) | 211 points / within 1500 m (upside flag) | OGL–Ontario / OGL–Toronto |
+
+**Prep recipe** (no `ogr2ogr` needed — uses `npx -y mapshaper`; data is `.gitignore`d):
+
+```bash
+mkdir -p data/_geo_src && cd data/_geo_src
+
+# rail — ORWN track shapefile → WGS84 GeoJSON
+curl -o ORWNTRK.zip https://ws.gisetl.lrc.gov.on.ca/fmedatadownload/Packages/ORWNTRK.zip
+unzip -o ORWNTRK.zip
+npx -y mapshaper */ORWN_TRACK.shp -proj wgs84 -o format=geojson ../orwn_track.geojson
+
+# transit — GO stations shapefile + TTC subway (GTFS route_type=1 → trips → stop_times → stops)
+curl -o go.zip https://files.ontario.ca/opendata/go_train_stations_xslttransf.zip && unzip -o go.zip -d go_stations
+npx -y mapshaper go_stations/GO_Train_Stations.shp -proj wgs84 -o format=geojson go_stations.geojson
+curl -o ttc.zip "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/7795b45e-e65a-4465-81fc-c36b9dfff169/resource/cfb6b2b8-6191-41e3-bda1-b175c51148cb/download/opendata_ttc_schedules.zip"
+unzip -o ttc.zip routes.txt trips.txt stop_times.txt stops.txt -d ttc_gtfs
+node ../../scripts/admin/buildTransitGeoJSON.cjs          # → ../transit_stations.geojson
+cd ../..
+
+# load (srid 4326 — mapshaper already reprojected) then re-run the backfill
+npx tsx scripts/worker/loadGeoData.ts --dataset rail    --file data/orwn_track.geojson      --srid 4326
+npx tsx scripts/worker/loadGeoData.ts --dataset transit --file data/transit_stations.geojson --srid 4326
+npx tsx scripts/worker/enrichGeoFlags.ts
+```
 
 ### Deferred (no reliable region-wide open data — kept in the registry, `enabled: false`)
 
