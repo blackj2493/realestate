@@ -48,6 +48,7 @@ import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
 import NearbySchools from "./NearbySchools";
+import NearbyAmenities from "./NearbyAmenities";
 import PropertyNotFound from "./PropertyNotFound";
 
 export const dynamic = "force-dynamic";
@@ -473,6 +474,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
             {/* Schools */}
             <NearbySchools listingId={id} />
+
+            {/* Grocery + recreation proximity */}
+            <NearbyAmenities listingId={id} />
 
             {/* Room Dimensions — proportional, drawn-to-scale room map */}
             {rooms.length > 0 && <RoomMap rooms={rooms} className="mb-6" />}
