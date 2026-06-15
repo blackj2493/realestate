@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS geo_features (
   geom        geometry(Geometry, 4326) NOT NULL
 );
 CREATE INDEX IF NOT EXISTS geo_features_gix ON geo_features USING GIST (geom);
+-- Functional GIST on the geography cast so metric ST_DWithin(::geography, ., N) is
+-- index-backed (the plain geom GIST does NOT serve geography distance queries).
+CREATE INDEX IF NOT EXISTS geo_features_geog_gix ON geo_features USING GIST ((geom::geography));
 CREATE INDEX IF NOT EXISTS geo_features_kind_idx ON geo_features (kind);
 CREATE INDEX IF NOT EXISTS geo_features_source_idx ON geo_features (source_key);
 

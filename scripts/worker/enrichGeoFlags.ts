@@ -124,6 +124,16 @@ async function main() {
   await client.connect();
   await client.query("SET statement_timeout TO '0'");
 
+  // A freshly-loaded geo_features has NO planner statistics and no metric-distance
+  // index, so the spatial joins pick terrible plans and crawl. Build a geography
+  // GIST (so ST_DWithin(::geography) is indexed) and ANALYZE so ST_Intersects /
+  // ST_DWithin use the GIST indexes. Both idempotent — cheap on re-runs.
+  console.log("   ⚙️  ensuring geography index + fresh statistics on geo_features…");
+  await client.query(
+    "CREATE INDEX IF NOT EXISTS geo_features_geog_gix ON geo_features USING GIST ((geom::geography))",
+  );
+  await client.query("ANALYZE geo_features");
+
   const cols = spatialColumns();
   const flagCounts: Record<string, number> = {};
   let scanned = 0;
@@ -166,7 +176,7 @@ async function main() {
       }
       geocoded += keys.length;
       if (keys.length === 0) {
-        if (scanned % (BATCH * 10) === 0) console.log(`   … scanned ${scanned}`);
+        console.log(`   … scanned ${scanned} (no block-level coords in this batch)`);
         continue;
       }
 
@@ -203,9 +213,7 @@ async function main() {
         written += up.rowCount ?? 0;
       }
 
-      if (scanned % (BATCH * 10) === 0 || rows.length < BATCH) {
-        console.log(`   … scanned ${scanned} · geocoded ${geocoded}`);
-      }
+      console.log(`   … scanned ${scanned} · geocoded ${geocoded} · written ${written}`);
       if (rows.length < BATCH) break;
     }
 
