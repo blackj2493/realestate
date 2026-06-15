@@ -186,38 +186,42 @@ async function main() {
       const keys: string[] = [];
       const lngs: number[] = [];
       const lats: number[] = [];
+      const upKeys: string[] = [];
+      const upFlags: string[] = [];
       for (const r of rows) {
         const coord = preciseCoord(bestPostal(r.postal_code, r.address));
-        if (!coord) continue;
+        if (!coord) {
+          // No trustworthy coord (missing / FSA-only / corrupt row). Write an empty
+          // row so any PRIOR flags are CLEARED — otherwise a listing whose coord
+          // becomes rejected on a later run keeps stale flags at the wrong location.
+          upKeys.push(r.listing_key);
+          upFlags.push("[]");
+          continue;
+        }
         keys.push(r.listing_key);
         lngs.push(coord.lng);
         lats.push(coord.lat);
       }
       geocoded += keys.length;
-      if (keys.length === 0) {
-        console.log(`   … scanned ${scanned} (no block-level coords in this batch)`);
-        continue;
-      }
 
       // One set-based query: every active predicate per point, GIST-indexed.
-      const spatial = await client.query<Record<string, unknown>>(
-        `WITH pts AS (
-           SELECT k, ST_SetSRID(ST_MakePoint(lng, lat), 4326) AS geom
-           FROM unnest($1::text[], $2::float8[], $3::float8[]) AS u(k, lng, lat)
-         )
-         SELECT p.k AS listing_key,
-         ${cols}
-         FROM pts p`,
-        [keys, lngs, lats],
-      );
-
-      const upKeys: string[] = [];
-      const upFlags: string[] = [];
-      for (const row of spatial.rows) {
-        const flags = geoFlagsFor(rowToSignals(row));
-        for (const f of flags) flagCounts[f.id] = (flagCounts[f.id] ?? 0) + 1;
-        upKeys.push(row.listing_key as string);
-        upFlags.push(JSON.stringify(flags));
+      if (keys.length > 0) {
+        const spatial = await client.query<Record<string, unknown>>(
+          `WITH pts AS (
+             SELECT k, ST_SetSRID(ST_MakePoint(lng, lat), 4326) AS geom
+             FROM unnest($1::text[], $2::float8[], $3::float8[]) AS u(k, lng, lat)
+           )
+           SELECT p.k AS listing_key,
+           ${cols}
+           FROM pts p`,
+          [keys, lngs, lats],
+        );
+        for (const row of spatial.rows) {
+          const flags = geoFlagsFor(rowToSignals(row));
+          for (const f of flags) flagCounts[f.id] = (flagCounts[f.id] ?? 0) + 1;
+          upKeys.push(row.listing_key as string);
+          upFlags.push(JSON.stringify(flags));
+        }
       }
 
       if (!DRY_RUN && upKeys.length) {
