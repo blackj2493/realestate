@@ -12,7 +12,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { MousePointerClick, Eye, ListFilter, GitCompareArrows, Share2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { useCommandCenterStore, MAX_SELECTED } from "@/lib/stores/commandCenterStore";
 import ShareDialog from "./ShareDialog";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
@@ -24,12 +24,14 @@ export default function MapComparePanel() {
   const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
   const showSelectedOnly = useCommandCenterStore((s) => s.showSelectedOnly);
   const setShowSelectedOnly = useCommandCenterStore((s) => s.setShowSelectedOnly);
+  const selectionLimitHit = useCommandCenterStore((s) => s.selectionLimitHit);
   const searchResult = useCommandCenterStore((s) => s.searchResult);
 
   const [shareOpen, setShareOpen] = useState(false);
 
   const listingKeys = useMemo(() => Array.from(selectedIds), [selectedIds]);
   const count = listingKeys.length;
+  const atCap = count >= MAX_SELECTED;
   // Resolve the docs we can (those in the current result set) for thumbnails.
   const docs = useMemo(
     () => (searchResult?.listings ?? []).filter((l) => selectedIds.has(l.id)),
@@ -40,15 +42,24 @@ export default function MapComparePanel() {
 
   return (
     <div className="flex max-h-[70vh] flex-col">
-      {/* Tap-to-add toggle */}
+      {/* Tap-to-add toggle + basket count */}
       <div className="border-b border-slate-800 p-3">
+        <div className="mb-2 flex items-center justify-between text-[11px]">
+          <span className="font-medium text-slate-400">Compare basket</span>
+          <span className={cn("font-mono", atCap ? "text-amber-300" : "text-slate-500")}>
+            {count}/{MAX_SELECTED}
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => setSelectMode(!isSelectMode)}
           aria-pressed={isSelectMode}
+          disabled={atCap && !isSelectMode}
           className={cn(
             "flex w-full items-center justify-center gap-2 border py-2 text-xs font-medium transition-all",
-            isSelectMode
+            atCap && !isSelectMode
+              ? "cursor-not-allowed border-slate-800 bg-slate-900/50 text-slate-600"
+              : isSelectMode
               ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-200"
               : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-600"
           )}
@@ -56,6 +67,16 @@ export default function MapComparePanel() {
           <MousePointerClick className="h-3.5 w-3.5" />
           {isSelectMode ? "Tap map to add — on" : "Tap map to add"}
         </button>
+        {atCap && (
+          <p
+            className={cn(
+              "mt-2 text-[10px] leading-relaxed",
+              selectionLimitHit ? "text-amber-300" : "text-slate-500"
+            )}
+          >
+            Limit of {MAX_SELECTED} reached — remove one to add another.
+          </p>
+        )}
       </div>
 
       {/* Basket list */}

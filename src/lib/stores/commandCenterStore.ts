@@ -19,6 +19,14 @@ import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggl
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
+/**
+ * Max homes in the multi-select / Compare basket. Compare renders one column
+ * (table) or one labelled dot (value plot) per home; 8 keeps the table legible
+ * and the plot readable, and matches the ~7±2 a person can weigh at once.
+ * Mirrored by MAX_COLUMNS in app/(app)/properties/compare/page.tsx — keep in sync.
+ */
+export const MAX_SELECTED = 8;
+
 export type CommuteMode = "driving" | "walking" | "cycling";
 
 /**
@@ -140,6 +148,9 @@ export interface CommandCenterState {
   // Collapse both panes to just the current selection
   showSelectedOnly: boolean;
   setShowSelectedOnly: (on: boolean) => void;
+  // True when the last add was blocked by MAX_SELECTED, so the basket can
+  // explain the cap. Cleared on any successful add / remove / clear.
+  selectionLimitHit: boolean;
 
   // Search results
   searchResult: SearchResult | null;
@@ -304,19 +315,30 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   toggleSelected: (id) =>
     set((state) => {
       const next = new Set(state.selectedIds);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      // Leaving zero selected exits the isolated view so the user isn't stranded.
-      return {
-        selectedIds: next,
-        showSelectedOnly: next.size === 0 ? false : state.showSelectedOnly,
-      };
+      if (next.has(id)) {
+        next.delete(id);
+        // Leaving zero selected exits the isolated view so the user isn't stranded.
+        return {
+          selectedIds: next,
+          selectionLimitHit: false,
+          showSelectedOnly: next.size === 0 ? false : state.showSelectedOnly,
+        };
+      }
+      // Cap the basket at MAX_SELECTED: block the add and flag it so the UI can
+      // tell the user to remove one before adding another.
+      if (next.size >= MAX_SELECTED) {
+        return { selectionLimitHit: true };
+      }
+      next.add(id);
+      return { selectedIds: next, selectionLimitHit: false };
     }),
-  clearSelected: () => set({ selectedIds: new Set<string>(), showSelectedOnly: false }),
+  clearSelected: () =>
+    set({ selectedIds: new Set<string>(), showSelectedOnly: false, selectionLimitHit: false }),
   isSelectMode: false,
   setSelectMode: (on) => set({ isSelectMode: on }),
   showSelectedOnly: false,
   setShowSelectedOnly: (on) => set({ showSelectedOnly: on }),
+  selectionLimitHit: false,
 
   searchResult: null,
   setSearchResult: (result) => set({ searchResult: result }),
