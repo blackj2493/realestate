@@ -33,7 +33,7 @@ export type CommuteMode = "driving" | "walking" | "cycling";
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
  * drawer is open at a time so the map is never buried under stacked panels.
  */
-export type RailModule = "commute" | "school" | "color" | "draw" | "compare" | "time" | "lenses";
+export type RailModule = "commute" | "school" | "amenity" | "color" | "draw" | "compare" | "time" | "lenses";
 
 /** Current map viewport extent, used to scope the search to what's on screen. */
 export interface MapBounds {
@@ -83,6 +83,25 @@ const defaultSchool: SchoolState = {
   system: "public",
   minScore: 0,
   targetSchool: null,
+};
+
+export type AmenityKind = "grocery" | "recreation" | "either";
+
+/**
+ * Walkability filter (global, applies across personas). Narrows the list + map to
+ * homes within `maxKm` straight-line of a grocery store and/or a recreation centre,
+ * via the precomputed NearestGroceryKm / NearestRecCentreKm Typesense fields.
+ */
+export interface AmenityState {
+  enabled: boolean;
+  kind: AmenityKind;
+  maxKm: number; // straight-line distance ceiling
+}
+
+const defaultAmenity: AmenityState = {
+  enabled: false,
+  kind: "grocery",
+  maxKm: 1,
 };
 
 export interface CommandCenterState {
@@ -177,6 +196,11 @@ export interface CommandCenterState {
   setSchool: (patch: Partial<SchoolState>) => void;
   resetSchool: () => void;
 
+  // Walkability filter — nearest grocery / recreation centre (global)
+  amenity: AmenityState;
+  setAmenity: (patch: Partial<AmenityState>) => void;
+  resetAmenity: () => void;
+
   // Total found (full count, independent of the ≤100 render cap)
   totalCount: number;
   setTotalCount: (count: number) => void;
@@ -246,6 +270,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       filters: { ...defaultTerminalFilters },
       commute: { ...defaultCommute },
       school: { ...defaultSchool },
+      amenity: { ...defaultAmenity },
     }),
 
   universalFilters: makeDefaultUniversalFilters(),
@@ -362,6 +387,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setSchool: (patch) =>
     set((state) => ({ school: { ...state.school, ...patch } })),
   resetSchool: () => set({ school: { ...defaultSchool } }),
+
+  amenity: { ...defaultAmenity },
+  setAmenity: (patch) =>
+    set((state) => ({ amenity: { ...state.amenity, ...patch } })),
+  resetAmenity: () => set({ amenity: { ...defaultAmenity } }),
 
   totalCount: 0,
   setTotalCount: (count) => set({ totalCount: count }),
