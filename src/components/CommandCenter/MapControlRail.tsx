@@ -13,7 +13,7 @@
 "use client";
 
 import React from "react";
-import { Navigation, GraduationCap, Palette, Lasso, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
+import { Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
@@ -87,6 +87,7 @@ export default function MapControlRail() {
   const toggleModule = useCommandCenterStore((s) => s.toggleModule);
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const schoolEnabled = useCommandCenterStore((s) => s.school.enabled);
+  const amenityEnabled = useCommandCenterStore((s) => s.amenity.enabled);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const isDrawing = useCommandCenterStore((s) => s.isDrawing);
@@ -112,6 +113,14 @@ export default function MapControlRail() {
       description: "Shade school quality and filter to homes near a chosen school",
       icon: GraduationCap,
       dataActive: schoolEnabled,
+    },
+    {
+      kind: "drawer",
+      module: "amenity",
+      label: "Walkable",
+      description: "Filter to homes within walking distance of a grocery store or recreation centre",
+      icon: ShoppingCart,
+      dataActive: amenityEnabled,
     },
     {
       kind: "drawer",

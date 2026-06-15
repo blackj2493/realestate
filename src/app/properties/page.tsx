@@ -86,6 +86,7 @@ function CommandCenterContent() {
     setIsTerminalOpen,
     commute,
     school,
+    amenity,
     mapBounds,
     setMapBounds,
     selectedIds,
@@ -161,13 +162,22 @@ function CommandCenterContent() {
     const schoolParts: string[] = [];
     if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
     if (school.enabled && school.targetSchool) schoolParts.push(`NearbySchools:=\`${school.targetSchool.id}\``);
+    // Walkability: nearest grocery / recreation within maxKm. "either" = OR across both.
+    const amenityParts: string[] = [];
+    if (amenity.enabled) {
+      const g = `NearestGroceryKm:<=${amenity.maxKm}`;
+      const r = `NearestRecCentreKm:<=${amenity.maxKm}`;
+      if (amenity.kind === "grocery") amenityParts.push(g);
+      else if (amenity.kind === "recreation") amenityParts.push(r);
+      else amenityParts.push(`(${g} || ${r})`);
+    }
     const bandDef = colorBand ? getMapMetric(colorBand.metricId) : null;
     const bandClause = bandDef ? bandFilterClause(bandDef, colorBand!.index) : null;
     const drawClause =
       drawPolygon && drawPolygon.length >= 3
         ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
         : null;
-    const rawFilterBy = [...coreClauses, ...schoolParts, bandClause, drawClause].filter(Boolean).join(" && ");
+    const rawFilterBy = [...coreClauses, ...schoolParts, ...amenityParts, bandClause, drawClause].filter(Boolean).join(" && ");
     const geoPolygon =
       commute.enabled && commute.polygon && commute.polygon.length >= 3
         ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
@@ -182,7 +192,7 @@ function CommandCenterContent() {
       sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
       sortOrder: "desc",
     });
-  }, [transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
+  }, [transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
 
   const performSearch = useCallback(async () => {
     setIsLoading(true);
@@ -239,7 +249,7 @@ function CommandCenterContent() {
   // on purpose: tweaking a filter re-queries in place at the current zoom.
   useEffect(() => {
     setMapBounds(null);
-  }, [location, activePersona, transactionMode, propertyClass, activeLayers, commute.enabled, commute.polygon, school.enabled, school.targetSchool, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, activeLayers, commute.enabled, commute.polygon, school.enabled, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

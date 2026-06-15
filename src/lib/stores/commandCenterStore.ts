@@ -19,13 +19,21 @@ import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggl
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
+/**
+ * Max homes in the multi-select / Compare basket. Compare renders one column
+ * (table) or one labelled dot (value plot) per home; 8 keeps the table legible
+ * and the plot readable, and matches the ~7±2 a person can weigh at once.
+ * Mirrored by MAX_COLUMNS in app/(app)/properties/compare/page.tsx — keep in sync.
+ */
+export const MAX_SELECTED = 8;
+
 export type CommuteMode = "driving" | "walking" | "cycling";
 
 /**
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
  * drawer is open at a time so the map is never buried under stacked panels.
  */
-export type RailModule = "commute" | "school" | "color" | "draw" | "compare" | "time" | "lenses";
+export type RailModule = "commute" | "school" | "amenity" | "color" | "draw" | "compare" | "time" | "lenses";
 
 /** Current map viewport extent, used to scope the search to what's on screen. */
 export interface MapBounds {
@@ -75,6 +83,25 @@ const defaultSchool: SchoolState = {
   system: "public",
   minScore: 0,
   targetSchool: null,
+};
+
+export type AmenityKind = "grocery" | "recreation" | "either";
+
+/**
+ * Walkability filter (global, applies across personas). Narrows the list + map to
+ * homes within `maxKm` straight-line of a grocery store and/or a recreation centre,
+ * via the precomputed NearestGroceryKm / NearestRecCentreKm Typesense fields.
+ */
+export interface AmenityState {
+  enabled: boolean;
+  kind: AmenityKind;
+  maxKm: number; // straight-line distance ceiling
+}
+
+const defaultAmenity: AmenityState = {
+  enabled: false,
+  kind: "grocery",
+  maxKm: 1,
 };
 
 export interface CommandCenterState {
@@ -140,6 +167,9 @@ export interface CommandCenterState {
   // Collapse both panes to just the current selection
   showSelectedOnly: boolean;
   setShowSelectedOnly: (on: boolean) => void;
+  // True when the last add was blocked by MAX_SELECTED, so the basket can
+  // explain the cap. Cleared on any successful add / remove / clear.
+  selectionLimitHit: boolean;
 
   // Search results
   searchResult: SearchResult | null;
@@ -165,6 +195,11 @@ export interface CommandCenterState {
   school: SchoolState;
   setSchool: (patch: Partial<SchoolState>) => void;
   resetSchool: () => void;
+
+  // Walkability filter — nearest grocery / recreation centre (global)
+  amenity: AmenityState;
+  setAmenity: (patch: Partial<AmenityState>) => void;
+  resetAmenity: () => void;
 
   // Total found (full count, independent of the ≤100 render cap)
   totalCount: number;
@@ -235,6 +270,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       filters: { ...defaultTerminalFilters },
       commute: { ...defaultCommute },
       school: { ...defaultSchool },
+      amenity: { ...defaultAmenity },
     }),
 
   universalFilters: makeDefaultUniversalFilters(),
@@ -304,19 +340,30 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   toggleSelected: (id) =>
     set((state) => {
       const next = new Set(state.selectedIds);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      // Leaving zero selected exits the isolated view so the user isn't stranded.
-      return {
-        selectedIds: next,
-        showSelectedOnly: next.size === 0 ? false : state.showSelectedOnly,
-      };
+      if (next.has(id)) {
+        next.delete(id);
+        // Leaving zero selected exits the isolated view so the user isn't stranded.
+        return {
+          selectedIds: next,
+          selectionLimitHit: false,
+          showSelectedOnly: next.size === 0 ? false : state.showSelectedOnly,
+        };
+      }
+      // Cap the basket at MAX_SELECTED: block the add and flag it so the UI can
+      // tell the user to remove one before adding another.
+      if (next.size >= MAX_SELECTED) {
+        return { selectionLimitHit: true };
+      }
+      next.add(id);
+      return { selectedIds: next, selectionLimitHit: false };
     }),
-  clearSelected: () => set({ selectedIds: new Set<string>(), showSelectedOnly: false }),
+  clearSelected: () =>
+    set({ selectedIds: new Set<string>(), showSelectedOnly: false, selectionLimitHit: false }),
   isSelectMode: false,
   setSelectMode: (on) => set({ isSelectMode: on }),
   showSelectedOnly: false,
   setShowSelectedOnly: (on) => set({ showSelectedOnly: on }),
+  selectionLimitHit: false,
 
   searchResult: null,
   setSearchResult: (result) => set({ searchResult: result }),
@@ -340,6 +387,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setSchool: (patch) =>
     set((state) => ({ school: { ...state.school, ...patch } })),
   resetSchool: () => set({ school: { ...defaultSchool } }),
+
+  amenity: { ...defaultAmenity },
+  setAmenity: (patch) =>
+    set((state) => ({ amenity: { ...state.amenity, ...patch } })),
+  resetAmenity: () => set({ amenity: { ...defaultAmenity } }),
 
   totalCount: 0,
   setTotalCount: (count) => set({ totalCount: count }),
