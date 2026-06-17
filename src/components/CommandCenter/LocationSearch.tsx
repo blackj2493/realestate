@@ -198,10 +198,15 @@ export default function LocationSearch({
         </div>
       </form>
 
-      {open && (suggestions.length > 0 || searching) && (
+      {open && (suggestions.length > 0 || searching || value.trim().length >= 2) && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto border border-slate-700 bg-slate-900">
           {searching && suggestions.length === 0 && (
             <div className="px-3 py-2 font-mono text-xs text-slate-500">Searching…</div>
+          )}
+          {!searching && suggestions.length === 0 && value.trim().length >= 2 && (
+            <div className="px-3 py-2 font-mono text-xs text-slate-500">
+              No matches for “{value.trim()}”. Try a city, neighbourhood, address, or MLS#.
+            </div>
           )}
           {suggestions.map((s, i) => (
             <button
