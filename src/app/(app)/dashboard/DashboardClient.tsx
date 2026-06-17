@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Plus } from "lucide-react";
 import {
   getConfig,
   saveConfig,
@@ -28,6 +27,7 @@ import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
+import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -110,22 +110,9 @@ export default function DashboardClient() {
         <WatchlistSection />
 
         {!hasRegions && (
-          <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-16 text-center">
-            <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-200">
-              No market areas yet
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-              Add the cities or neighbourhoods you invest in to populate your
-              investment playlists and market intelligence.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowConfig(true)}
-              className="terminal-font mt-6 inline-flex items-center gap-2 border border-cyan-500/50 bg-cyan-500/10 px-4 py-2 text-xs uppercase tracking-wider text-cyan-200 hover:bg-cyan-500/20"
-            >
-              <Plus className="h-4 w-4" /> Add a market area
-            </button>
-          </div>
+          <FirstRunRegionPicker
+            onConfirm={(regions) => update({ ...config, regions })}
+          />
         )}
 
         {hasRegions && (

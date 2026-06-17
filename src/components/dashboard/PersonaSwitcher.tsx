@@ -32,7 +32,7 @@ export default function PersonaSwitcher({
             aria-checked={active}
             title={p.label}
             onClick={() => onChange(p.id as PersonaType)}
-            className={`terminal-font inline-flex items-center gap-1.5 px-2.5 py-2 text-[11px] uppercase tracking-wider transition-colors ${
+            className={`terminal-font inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 px-2.5 py-2 text-[11px] uppercase tracking-wider transition-colors ${
               active
                 ? "bg-cyan-500 text-slate-950"
                 : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"

@@ -38,9 +38,16 @@ export default function AppHeader({
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
-      <div className="flex h-14 items-center gap-3 px-4">
+      <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
-          <Logo size="md" theme="dark" />
+          {/* Smaller wordmark on phones so the logo + right cluster fit a 390px
+              viewport without forcing the layout wider (which clips the nav button). */}
+          <span className="md:hidden">
+            <Logo size="sm" theme="dark" />
+          </span>
+          <span className="hidden md:inline-flex">
+            <Logo size="md" theme="dark" />
+          </span>
         </Link>
 
         {/* Global search sits next to the logo on the left (collapses below lg). */}

@@ -71,7 +71,11 @@ describe('loadCohortTreeSafe — public-page resilience (audit CRITICAL-5)', () 
           typeof supa.getServiceRoleClient
         >
       );
-      const second = await mod.loadCohortTreeSafe();
+      // The refresh now retries once on a transient 57014 before giving up;
+      // flush the backoff timer so the retry resolves under fake timers.
+      const secondPromise = mod.loadCohortTreeSafe();
+      await vi.runAllTimersAsync();
+      const second = await secondPromise;
       expect(second).toEqual(first);
     } finally {
       vi.useRealTimers();

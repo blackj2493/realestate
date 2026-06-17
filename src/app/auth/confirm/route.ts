@@ -19,7 +19,9 @@ export async function GET(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
-      return NextResponse.redirect(`${origin}${next.startsWith('/') ? next : '/dashboard'}`);
+      // Open-redirect guard: only relative, single-slash paths (reject protocol-relative `//host`).
+      const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+      return NextResponse.redirect(`${origin}${safeNext}`);
     }
   }
 

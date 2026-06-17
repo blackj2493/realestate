@@ -387,7 +387,7 @@ export default function UnderwritingSandbox({
             type="button"
             onClick={handleSave}
             className={cn(
-              "flex items-center gap-1 h-8 px-3 rounded text-xs font-semibold whitespace-nowrap transition-colors",
+              "flex items-center gap-1 h-8 min-h-[44px] px-3 rounded text-xs font-semibold whitespace-nowrap transition-colors md:min-h-0",
               savedFlash
                 ? "bg-emerald-600 text-white"
                 : "bg-emerald-900/40 border border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/60"

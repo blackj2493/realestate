@@ -54,7 +54,12 @@ export default function AcceptTermsForm({ next }: { next: string }) {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/vow/accept-terms", { method: "POST" });
+      const res = await fetch("/api/vow/accept-terms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Server re-verifies these — the disabled button is UX, not the security boundary.
+        body: JSON.stringify({ notAgent, bonaFide, agree }),
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Could not record your acceptance. Please try again.");
