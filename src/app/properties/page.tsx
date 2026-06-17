@@ -30,8 +30,8 @@ import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
 import type { ListingDocument, SearchResult } from "@/lib/typesense/client";
-import { FACET_FIELDS } from "@/lib/filters/filterRegistry";
-import { isInvestorLayerActive } from "@/lib/filters/fundamentals";
+import { FACET_FIELDS, readStepper } from "@/lib/filters/filterRegistry";
+import { isInvestorLayerActive, priceConfig } from "@/lib/filters/fundamentals";
 import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
@@ -203,17 +203,40 @@ function CommandCenterContent() {
       // buildTerminalCoreClauses extracts beds/baths/homeType for the active query.
       // Persona/investor analytics filters are intentionally excluded (comps have no
       // forward metrics like cap rate or yield).
-      const minBeds = (universalFilters.beds as number | undefined) ?? 0;
-      const minBaths = (universalFilters.baths as number | undefined) ?? 0;
+      // Beds/Baths are stepper values ({ n, exact } once the popover is touched,
+      // a bare number otherwise) — readStepper normalizes both, exactly like
+      // buildTerminalCoreClauses does for the active query. Reading them as raw
+      // numbers silently dropped the filter on comps (the object failed `> 0`).
+      const beds = readStepper(universalFilters.beds ?? 0);
+      const baths = readStepper(universalFilters.baths ?? 0);
       const homeTypeRaw = (universalFilters.homeType as string[] | undefined) ?? [];
       // Map raw PropertySubType spellings → dashboard keys the sold route accepts.
       // variantsForKeys() in the route uses these keys to expand back to all spellings.
       const mappedKeys = homeTypeRaw
         .map((spelling) => SUBTYPE_TO_DASHBOARD_KEY.get(spelling))
         .filter((k): k is string => k !== undefined);
-      const compFilters: { minBeds?: number; minBaths?: number; types?: string[] } = {};
-      if (minBeds > 0) compFilters.minBeds = minBeds;
-      if (minBaths > 0) compFilters.minBaths = minBaths;
+      const compFilters: {
+        minPrice?: number; maxPrice?: number;
+        minBeds?: number; bedsExact?: boolean;
+        minBaths?: number; bathsExact?: boolean;
+        types?: string[];
+      } = {};
+      // Price band: only send a bound when it deviates from the slider's full range
+      // (transaction-scoped, same config the active query uses) so default = no clause.
+      const priceVal = universalFilters.price as [number, number] | undefined;
+      if (priceVal) {
+        const { min: pMin, max: pMax } = priceConfig(transactionMode);
+        if (priceVal[0] > pMin) compFilters.minPrice = priceVal[0];
+        if (priceVal[1] < pMax) compFilters.maxPrice = priceVal[1];
+      }
+      if (beds.n > 0) {
+        compFilters.minBeds = beds.n;
+        if (beds.exact) compFilters.bedsExact = true;
+      }
+      if (baths.n > 0) {
+        compFilters.minBaths = baths.n;
+        if (baths.exact) compFilters.bathsExact = true;
+      }
       if (mappedKeys.length > 0) compFilters.types = [...new Set(mappedKeys)];
 
       // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
@@ -242,7 +265,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, setSoldLocked, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, setSoldLocked, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded

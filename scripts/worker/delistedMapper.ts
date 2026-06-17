@@ -149,11 +149,17 @@ export function extractDelistedRecord(
  * ClosePrice is 0 (no transaction — the route's price floor is sold/leased-only).
  * Geocoding (location/NearbySchools) is attached by the indexer, not here,
  * to keep this module IO-free.
+ *
+ * Beds: the VOW de-list feed carries only above-grade (no below-grade split), so
+ * BedroomsTotal == BedroomsAboveGrade and BedroomsBelowGrade is 0. We still emit
+ * the explicit grade fields so the grade-aware beds filter (buildSoldFilter) and
+ * the "4+2" card label (bedsLabel) treat de-listed rows the same as sold/leased.
  */
 export function toDelistedDocument(r: DelistedRecord): SoldListingDocument | null {
   if (!r.listing_key) return null;
   const ms = new Date(r.delisted_date).getTime();
   if (!Number.isFinite(ms)) return null;
+  const bedsAbove = toInt(r.bedrooms_above_grade);
   return {
     id: r.listing_key,
     ClosePrice: 0,
@@ -162,7 +168,9 @@ export function toDelistedDocument(r: DelistedRecord): SoldListingDocument | nul
     CityRegion: r.city_region ?? '',
     UnparsedAddress: r.unparsed_address ?? '',
     PropertySubType: r.property_sub_type ?? '',
-    BedroomsTotal: toInt(r.bedrooms_above_grade),
+    BedroomsTotal: bedsAbove,
+    BedroomsAboveGrade: bedsAbove,
+    BedroomsBelowGrade: 0,
     BathroomsTotalInteger: toFloat(r.bathrooms_total_integer),
     BuildingAreaTotal: 0,
     ParkingTotal: toInt(r.parking_total),

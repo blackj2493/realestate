@@ -10,6 +10,8 @@ const base: SoldListing = {
   soldDate: "2026-05-20T00:00:00.000Z",
   propertySubType: "Detached",
   beds: 3,
+  bedsAbove: 3,
+  bedsBelow: 0,
   baths: 2,
   sqft: 1500,
   brokerage: "ACME REALTY",
@@ -33,6 +35,22 @@ describe("soldToListingDocument", () => {
     const d = soldToListingDocument(base);
     expect(d.IsSoldComp).toBe(true);
     expect(d.SoldDate).toBe("2026-05-20T00:00:00.000Z");
+  });
+
+  it("carries the above/below-grade bed split so the card renders '4+2', not the total", () => {
+    // 48 Sawston Circle (W13055448): 4 above + 2 below = 6 total. Without the split
+    // the card fell back to BedroomsTotal and showed a misleading "6".
+    const d = soldToListingDocument({ ...base, beds: 6, bedsAbove: 4, bedsBelow: 2 });
+    expect(d.BedroomsAboveGrade).toBe(4);
+    expect(d.BedroomsBelowGrade).toBe(2);
+    expect(d.BedroomsTotal).toBe(6);
+  });
+
+  it("leaves the split undefined when the source omits it (bedsLabel falls back to total)", () => {
+    const d = soldToListingDocument({ ...base, beds: 5, bedsAbove: null, bedsBelow: null });
+    expect(d.BedroomsAboveGrade).toBeUndefined();
+    expect(d.BedroomsBelowGrade).toBeUndefined();
+    expect(d.BedroomsTotal).toBe(5);
   });
 
   it("uses [lat, lng] for location when coords exist", () => {
@@ -63,6 +81,8 @@ describe("soldToListingDocument", () => {
       lng: -79.4,
       propertySubType: null,
       beds: null,
+      bedsAbove: null,
+      bedsBelow: null,
       baths: null,
       sqft: null,
       brokerage: null,

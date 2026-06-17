@@ -37,4 +37,25 @@ describe("buildSoldQuery", () => {
   it("includes dealType in the query string", () => {
     expect(buildSoldQuery({ mapBounds: null, location: "Toronto", windowDays: 90, limit: 100, dealType: "sold" })).toContain("dealType=sold");
   });
+
+  it("passes the price band through when set", () => {
+    const qs = buildSoldQuery({
+      mapBounds: null,
+      location: "Toronto",
+      windowDays: 90,
+      limit: 100,
+      dealType: "sold",
+      filters: { minPrice: 500_000, maxPrice: 800_000 },
+    });
+    const p = new URLSearchParams(qs);
+    expect(p.get("minPrice")).toBe("500000");
+    expect(p.get("maxPrice")).toBe("800000");
+  });
+
+  it("omits price params when the band is unset", () => {
+    const qs = buildSoldQuery({ mapBounds: null, location: "Toronto", windowDays: 90, limit: 100, dealType: "sold" });
+    const p = new URLSearchParams(qs);
+    expect(p.get("minPrice")).toBeNull();
+    expect(p.get("maxPrice")).toBeNull();
+  });
 });

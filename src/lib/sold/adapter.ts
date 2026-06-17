@@ -26,6 +26,12 @@ export function soldToListingDocument(s: SoldListing): ListingDocument {
     City: s.city ?? undefined,
     PropertySubType: s.propertySubType ?? undefined,
     BedroomsTotal: s.beds ?? undefined,
+    // Carry the above/below-grade split so the card renders "4+2" like the active
+    // listings, ForSaleComp/SoldComp cards and the detail page — not the inflated
+    // total. bedsLabel() falls back to BedroomsTotal when the split is absent
+    // (~63% of legacy sold docs omit it).
+    BedroomsAboveGrade: s.bedsAbove ?? undefined,
+    BedroomsBelowGrade: s.bedsBelow ?? undefined,
     BathroomsTotalInteger: s.baths ?? undefined,
     BuildingAreaTotal: s.sqft ?? undefined,
     ListOfficeName: s.brokerage ?? undefined,
