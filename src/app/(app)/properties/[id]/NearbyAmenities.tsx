@@ -57,23 +57,11 @@ export default function NearbyAmenities({ listingId }: { listingId: string }) {
 
   if (!data || (data.grocery.length === 0 && data.recreation.length === 0 && !data.costco)) return null;
 
-  const costcoCity = data.costco?.name.includes("—") ? data.costco.name.split("—")[1].trim() : null;
-
   return (
     <div className="mb-6">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-200">
         What&apos;s nearby
       </h3>
-      {data.costco && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-          <Store className="h-4 w-4 shrink-0 text-amber-400" />
-          <span className="text-sm font-medium text-slate-200">Nearest Costco</span>
-          {costcoCity && <span className="truncate text-xs text-slate-400">{costcoCity}</span>}
-          <span className="ml-auto shrink-0 font-mono text-sm font-semibold text-amber-400">
-            {data.costco.distanceKm.toFixed(1)} km
-          </span>
-        </div>
-      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <AmenityColumn
           icon={<ShoppingCart className="h-4 w-4 text-emerald-400" />}
@@ -81,6 +69,7 @@ export default function NearbyAmenities({ listingId }: { listingId: string }) {
           items={data.grocery}
           total={data.groceryTotal}
           accent="text-emerald-400"
+          costco={data.costco}
         />
         <AmenityColumn
           icon={<Dumbbell className="h-4 w-4 text-sky-400" />}
@@ -104,16 +93,20 @@ function AmenityColumn({
   items,
   total,
   accent,
+  costco,
 }: {
   icon: React.ReactNode;
   label: string;
   items: NearbyAmenity[];
   total: number;
   accent: string;
+  /** When provided (Grocery column), pinned as a highlighted Costco row at the top. */
+  costco?: { name: string; distanceKm: number } | null;
 }) {
-  if (items.length === 0) return null;
+  if (items.length === 0 && !costco) return null;
   const shown = items.slice(0, 4);
   const moreCount = Math.max(0, total - shown.length);
+  const costcoCity = costco?.name.includes("—") ? costco.name.split("—")[1].trim() : null;
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
@@ -122,6 +115,17 @@ function AmenityColumn({
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">{label}</span>
       </div>
       <ul className="space-y-1.5">
+        {costco && (
+          <li className="flex items-start justify-between gap-2 rounded-md bg-amber-500/10 px-1.5 py-1">
+            <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight text-amber-300">
+              <Store className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Costco{costcoCity ? ` · ${costcoCity}` : ""}</span>
+            </span>
+            <span className="shrink-0 font-mono text-[11px] font-semibold text-amber-400">
+              {costco.distanceKm.toFixed(1)} km
+            </span>
+          </li>
+        )}
         {shown.map((a) => (
           <li key={a.id} className="flex items-start justify-between gap-2">
             <span className="truncate text-sm leading-tight text-slate-200">{a.name}</span>
