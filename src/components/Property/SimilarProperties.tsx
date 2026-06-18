@@ -3,9 +3,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
+import { ForSaleCompCard } from "@/components/Property/ForSaleCompCard";
 import { SoldCompCard } from "@/components/Property/SoldCompCard";
-import { DeltaChips } from "@/components/Property/DeltaChips";
 import type {
   SimilarForSaleCard,
   SimilarSoldCard,
@@ -27,6 +26,9 @@ interface Props {
   city: string | null;
   subType: string | null;
   beds: number;
+  bedsAbove: number;
+  bedsBelow: number;
+  garage: number | null;
   baths: number;
   listPrice: number;
   area: number;
@@ -49,22 +51,6 @@ function Badge({ tier }: { tier: MatchTier }) {
   );
 }
 
-function toCardData(c: SimilarForSaleCard): PropertyCardData {
-  return {
-    id: c.id,
-    listingId: c.id,
-    address: c.address,
-    city: c.city ?? "",
-    price: c.price,
-    propertyType: c.propertySubType ?? "",
-    bedrooms: c.beds,
-    bathrooms: c.baths,
-    brokerage: c.brokerage ?? undefined,
-    photoUrl: c.thumb,
-    daysOnMarket: c.daysOnMarket ?? undefined,
-  };
-}
-
 function Row({ title, children, badge, action }: {
   title: string;
   badge: MatchTier;
@@ -84,7 +70,7 @@ function Row({ title, children, badge, action }: {
 }
 
 export default function SimilarProperties(props: Props) {
-  const { subjectId, cityRegion, city, subType, beds, baths, listPrice, area } = props;
+  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area } = props;
   const [data, setData] = useState<SimilarResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -95,6 +81,10 @@ export default function SimilarProperties(props: Props) {
       city: city ?? "",
       subType: subType ?? "",
       beds: String(beds),
+      bedsAbove: String(bedsAbove),
+      bedsBelow: String(bedsBelow),
+      // Omit when unknown so the route treats it as neutral (not "0 garage").
+      ...(garage != null ? { garage: String(garage) } : {}),
       baths: String(baths),
       listPrice: String(listPrice),
       area: String(area),
@@ -114,7 +104,7 @@ export default function SimilarProperties(props: Props) {
     return () => {
       alive = false;
     };
-  }, [subjectId, cityRegion, city, subType, beds, baths, listPrice, area]);
+  }, [subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area]);
 
   if (loading) {
     return (
@@ -151,11 +141,7 @@ export default function SimilarProperties(props: Props) {
       {hasForSale ? (
         <Row title={`For Sale in ${areaName}`} badge={data.matchQuality.forSale} action={seeAll}>
           {data.forSale.map((c) => (
-            <div key={c.id} className="w-[260px] shrink-0">
-              <PropertyCard property={toCardData(c)} showSaveButton={false} />
-              <DeltaChips deltas={c.deltas} className="mt-1 px-1" />
-              <p className="mt-1 px-1 text-[11px] text-cyan-300/80">{c.why}</p>
-            </div>
+            <ForSaleCompCard key={c.id} card={c} />
           ))}
         </Row>
       ) : (

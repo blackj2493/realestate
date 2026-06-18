@@ -1,0 +1,290 @@
+{
+  "_meta": {
+    "purpose": "Registry of school attendance-boundary (catchment) data sources per Ontario board. Drives scripts/admin/harvest-school-catchments.ts (Tier A). Each verified source was confirmed 2026-06-15 with a live ArcGIS REST returnCountOnly query over a token-free endpoint.",
+    "generatedOn": "2026-06-15",
+    "statusLegend": {
+      "verified_open": "Queryable ArcGIS FeatureServer/MapServer polygon layer, no token, live count confirmed. Loadable via /query?where=1=1&outFields=*&outSR=4326&f=geojson.",
+      "found_locked": "Polygon service exists but requires a token / is hidden from the anonymous directory.",
+      "fallback": "No openly queryable polygons (address-lookup tool, PDF maps, proprietary API, or non-commercial static file). Use the 2.5 km proximity-circle fallback.",
+      "harvestable_keyed": "Boundaries exist behind a non-ArcGIS proprietary API that can be harvested per-school but has no open license."
+    },
+    "harvestNotes": "Field schemas are heterogeneous per board — schoolNameField and the panel discriminator differ. panelMode='field' => one layer split by panelField values; panelMode='layer' => separate layer per panel. School names must be fuzzy-joined to data/ontario-schools.json to attach EQAO scores (no shared id).",
+    "licenseWarning": "MOST sources carry NO explicit open-data license — they are merely shared 'public' in a board ArcGIS Online org. For a commercial product this is legally ambiguous; confirm reuse terms / attribution per board. Exceptions noted: Region of Waterloo = OGL-style; Windsor (GECDSB/WECDSB) Borealis files = CC BY-NC-SA 4.0 (NON-COMMERCIAL — do not use commercially).",
+    "liveValidation": {
+      "testedOn": "2026-06-15",
+      "method": "Full `query?where=1=1&outFields=<fields>&returnGeometry=true&outSR=4326&geometryPrecision=5&f=geojson` pull, JSON.parsed and feature-counted (the harvester's core step).",
+      "boardsTested": {
+        "OCSB": "96/96 parsed, 0 null geom, 95 Polygon + 1 MultiPolygon, CATEGORY split Elementary 77 / Secondary 19. OK.",
+        "YRDSB": "689 parsed BUT 226 have geometry:null (holding zones, ED_LEVEL=null). Real = 368 elem + 95 sec = 463 polygons.",
+        "WRDSB(MapServer/12)": "198/198, 177 Polygon + 21 MultiPolygon. f=geojson works on self-hosted MapServer too. `Type` = Junior/Senior/Development/Composite (grade config, NOT panel)."
+      },
+      "harvesterMustHandle": [
+        "Drop rows where geometry is null AND/OR the panel discriminator is null (YRDSB holding zones).",
+        "Accept both Polygon and MultiPolygon geometries.",
+        "Use the per-board panelMode/panelField/layer mapping — do NOT infer panel from a generic 'Type' field.",
+        "Paginate with resultOffset if a board's count ever exceeds its maxRecordCount (seen as low as 1000); todays counts are all under it.",
+        "Request outSR=4326 explicitly — native SRs vary (UTM 26918, WebMercator 3857) and reproject correctly when asked."
+      ]
+    }
+  },
+
+  "verified": [
+    {
+      "boardCode": "YRDSB", "board": "York Region DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "current",
+      "service": "https://services.arcgis.com/RFHWU0rfXmpzrbn0/arcgis/rest/services/FullLayers_ForOnline/FeatureServer/29",
+      "panelMode": "field", "panelField": "ED_LEVEL", "panelValues": {"elementary": "Elementary", "secondary": "Secondary"},
+      "schoolNameField": "SCHOOLNAME", "programField": "FRIMM",
+      "featureCount": {"total": 689, "elementary": 368, "secondary": 95},
+      "license": "unspecified (YRDSB Planning AGOL org, public share)",
+      "sourcePage": "https://experience.arcgis.com/experience/9edb0ffdaf5b46f2aa3af56d2dae0f17",
+      "notes": "689 incl holding/null zones — filter ED_LEVEL. Region of York open-data portal has school POINTS only."
+    },
+    {
+      "boardCode": "HDSB", "board": "Halton DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "current",
+      "service": "https://services5.arcgis.com/e0gAxpJEEEPzcOG4/arcgis/rest/services/Current_Boundaries/FeatureServer/0",
+      "panelMode": "none", "panelField": null,
+      "schoolNameField": "Sch_Name", "programField": "Option_Prog",
+      "featureCount": {"total": 78},
+      "license": "unspecified (HDSB AGOL org, public share)",
+      "sourcePage": "https://www.arcgis.com/apps/dashboards/5334dcd4a3ab4de2b9771adad5a9ec0b",
+      "notes": "Not split by panel; some Sch_Name embed grade ranges. Option_Prog distinguishes English vs French Immersion. StudyAreasFullLayers (1037) is the locator backing layer w/ scenarios — do not use."
+    },
+    {
+      "boardCode": "HCDSB", "board": "Halton Catholic DSB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "current",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Elementary_School_Boundaries/FeatureServer/0", "featureCount": 45, "schoolNameField": "SCH_NAM"},
+        "secondary": {"url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Secondary_School_Boundaries/FeatureServer/0", "featureCount": 9, "schoolNameField": "SchoolName"}
+      },
+      "license": "unspecified (HCDSB AGOL org, public share)",
+      "sourcePage": "https://schoolplanning.hcdsb.org/find-your-school/",
+      "notes": "Supports GeoJSON/Shapefile/KML export."
+    },
+    {
+      "boardCode": "TCDSB", "board": "Toronto Catholic DSB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "elementary_only", "year": "2023",
+      "service": "https://services3.arcgis.com/i9SIJZvRhal6cvaG/arcgis/rest/services/FAB2023/FeatureServer/0",
+      "panelMode": "fixed", "panelFixed": "elementary",
+      "schoolNameField": "School",
+      "featureCount": {"elementary": 165},
+      "license": "unspecified (public item, owner Ruiyi.Zhang)",
+      "sourcePage": "https://www.tcdsb.org/page/school-locator",
+      "notes": "FAB = Fixed Attendance Boundaries (elementary). SECONDARY is PDF-only => fallback for secondary panel. FDELK/FI fields mark Full-Day-K / French Immersion."
+    },
+    {
+      "boardCode": "DPCDSB", "board": "Dufferin-Peel Catholic DSB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2023-2024",
+      "service": "https://services5.arcgis.com/OTdNpvC9YulsqUyQ/arcgis/rest/services/School_Locator_Boundaries_2023_2024_NEW/FeatureServer/0",
+      "panelMode": "field", "panelField": "Panel", "panelValues": {"elementary": "Elementary", "secondary": "Secondary"},
+      "schoolNameField": "School_Nam",
+      "featureCount": {"total": 148, "elementary": 123, "secondary": 24},
+      "frenchService": "https://services5.arcgis.com/OTdNpvC9YulsqUyQ/arcgis/rest/services/French_Boundary_2023_2024_final/FeatureServer/0",
+      "frenchFeatureCount": 17,
+      "license": "unspecified (public items, owner lakhi.odedra_DPCDSB)",
+      "sourcePage": "https://dpcdsb.maps.arcgis.com/apps/instant/lookup/index.html?appid=a9a3fbd4e6504f6b9a13bb7b26276d84"
+    },
+    {
+      "boardCode": "OCSB", "board": "Ottawa Catholic SB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2024",
+      "service": "https://services3.arcgis.com/lSzSjpgX3twwfvFB/arcgis/rest/services/OCSB_Boundaries/FeatureServer/0",
+      "panelMode": "field", "panelField": "CATEGORY", "panelValues": {"elementary": "Elementary", "secondary": "Secondary"},
+      "schoolNameField": "NAME",
+      "featureCount": {"total": 96},
+      "license": "unspecified (public item, owner OCSBPF1)",
+      "sourcePage": "https://www.ocsb.ca/our-schools/boundaries/"
+    },
+    {
+      "boardCode": "CEPEO", "board": "Conseil des écoles publiques de l'Est de l'Ontario", "system": "public", "language": "french",
+      "status": "verified_open", "coverage": "full", "year": "current",
+      "service": "https://services8.arcgis.com/Vff0sq4QMCvTK4mY/arcgis/rest/services/SchoolDistricts_public/FeatureServer/2",
+      "panelMode": "field", "panelField": "disttype", "panelValues": {"elementary": "Secteur de fréquentation élémentaire", "secondary": "Secteur de fréquentation secondaire"},
+      "schoolNameField": "name",
+      "featureCount": {"total": 45},
+      "license": "unspecified (public app)",
+      "sourcePage": "https://cepeo.on.ca/zones-de-frequentation/",
+      "notes": "Layer 2 only (0=facility points, 1=site polygons)."
+    },
+    {
+      "boardCode": "WRDSB", "board": "Waterloo Region DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2014-2015",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://gis.regionofwaterloo.ca/wamap/rest/services/HousingCatalogue/MapServer/12", "featureCount": 198, "schoolNameField": "SchoolBoundary"},
+        "secondary": {"url": "https://gis.regionofwaterloo.ca/wamap/rest/services/HousingCatalogue/MapServer/13", "featureCount": 16, "schoolNameField": "SchoolBoundary"}
+      },
+      "license": "Region of Waterloo Open Data Licence (OGL-Ontario style, attribution required)",
+      "sourcePage": "https://www.wrdsb.ca/planning/school-boundary-and-location-maps/",
+      "notes": "Dated (2014-15) but authoritative. Host gis.regionofwaterloo.ca/wamap (NOT gis.region.waterloo.on.ca, which refuses)."
+    },
+    {
+      "boardCode": "WCDSB", "board": "Waterloo Catholic DSB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2014-2015",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://gis.regionofwaterloo.ca/wamap/rest/services/HousingCatalogue/MapServer/15", "featureCount": 52, "schoolNameField": "SchoolBoundary"},
+        "secondary": {"url": "https://gis.regionofwaterloo.ca/wamap/rest/services/HousingCatalogue/MapServer/16", "featureCount": 5, "schoolNameField": "SchoolBoundary"}
+      },
+      "license": "Region of Waterloo Open Data Licence (OGL-Ontario style, attribution required)",
+      "sourcePage": "https://www.wcdsb.ca/our-schools/school-finder-transportation-eligibility/"
+    },
+    {
+      "boardCode": "HWDSB", "board": "Hamilton-Wentworth DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2024-2025",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2024_Elementary_Boundaries/FeatureServer/0", "featureCount": 74, "schoolNameField": "SchoolName"},
+        "secondary": {"url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2025_HWDSB_Secondary_Boundaries/FeatureServer/0", "featureCount": 12, "schoolNameField": "SchoolName"}
+      },
+      "license": "unspecified (public items, owner khebner_HWDSB)",
+      "sourcePage": "https://www.hwdsb.on.ca/school-boundary-maps",
+      "notes": "Same org also hosts 2025 French Immersion + Middle School boundary services."
+    },
+    {
+      "boardCode": "UGDSB", "board": "Upper Grand DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2025-2026",
+      "service": "https://services3.arcgis.com/ihgd0mpMDUZffRye/arcgis/rest/services/School_Locator_24_25/FeatureServer/0",
+      "panelMode": "field", "panelField": "Type", "panelValues": {"elementary": "Elementary", "secondary": "Secondary"},
+      "schoolNameField": "NAME", "programField": "Track",
+      "featureCount": {"total": 213},
+      "license": "unspecified (public item, owner NoelDyerUGDSB6)",
+      "sourcePage": "https://www.ugdsb.ca/page/school-locator",
+      "notes": "Layer name Attendance_Bounds_25_26. FI variants exist in same org."
+    },
+    {
+      "boardCode": "TVDSB", "board": "Thames Valley DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "current",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/TVDSB_Interactive_Map_WFL1/FeatureServer/9", "featureCount": 115, "schoolNameField": "SchoolName"},
+        "secondary": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/TVDSB_Interactive_Map_WFL1/FeatureServer/12", "featureCount": 27, "schoolNameField": "SchoolName"}
+      },
+      "license": "unspecified (public item; hosted by Watson & Associates consultant)",
+      "sourcePage": "https://www.tvdsb.ca/en/schools/find-my-local-school.aspx",
+      "notes": "Layer 9/12 = Regular Track catchments. 10/13 = French Immersion. London city locator is points-only; this Watson service is the polygon source."
+    },
+    {
+      "boardCode": "SCDSB", "board": "Simcoe County DSB", "system": "public", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "2025-2026",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://services.arcgis.com/gV678DkT4msvdr0P/arcgis/rest/services/2025_2026_Elementary_Attendance_Areas/FeatureServer/0", "featureCount": 146, "schoolNameField": "SCHOOL_NAM"},
+        "secondary": {"url": "https://services.arcgis.com/gV678DkT4msvdr0P/arcgis/rest/services/2025_2026_Secondary_Attendance_Areas/FeatureServer/0", "featureCount": 22, "schoolNameField": "SCHOOL_NAM"}
+      },
+      "license": "SCDSB ArcGIS Hub open data (public; GeoJSON/Shapefile/KML/CSV export)",
+      "sourcePage": "https://simcoe-county-district-school-board-hub-scdsbplan.hub.arcgis.com"
+    },
+    {
+      "boardCode": "DCDSB", "board": "Durham Catholic DSB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "partial_oshawa_only", "year": "2025",
+      "panelMode": "layer",
+      "layers": {
+        "regular": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/Oshawa_Attendance_Area_Map_WFL3/FeatureServer/5", "featureCount": 11, "schoolNameField": "SchoolName"},
+        "french_immersion": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/Oshawa_Attendance_Area_Map_WFL3/FeatureServer/3", "featureCount": 3, "schoolNameField": "SchoolName"}
+      },
+      "license": "unspecified (consultant-hosted, Watson & Associates)",
+      "sourcePage": "https://www.dcdsb.ca/our-schools/boundary-reviews/oshawa-program-and-boundary-study/oshawa-boundary-maps/",
+      "notes": "OSHAWA ONLY. Rest of board (Ajax/Pickering/Whitby) is fallback. Not split elementary/secondary."
+    },
+    {
+      "boardCode": "LDCSB", "board": "London District Catholic SB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "partial_middlesex_aar_elementary", "year": "2026",
+      "service": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/LCDSB_Middlesex_AAR_Interactive_Map_WFL1/FeatureServer/3",
+      "panelMode": "fixed", "panelFixed": "elementary",
+      "schoolNameField": "SCHNAME",
+      "featureCount": {"elementary": 16},
+      "license": "unspecified (public item; Watson & Associates)",
+      "sourcePage": "https://www.ldcsb.ca",
+      "notes": "PARTIAL: a Middlesex Attendance Area Review study (elementary only, ~16 of ~37 schools). Layer 4 'Recommended Option' is a PROPOSAL, not current. Treat rest of board as fallback."
+    },
+    {
+      "boardCode": "SMCDSB", "board": "Simcoe Muskoka Catholic DSB", "system": "catholic", "language": "english",
+      "status": "verified_open", "coverage": "full", "year": "current", "_note": "bonus find, not in original list",
+      "panelMode": "layer",
+      "layers": {
+        "elementary": {"url": "https://maps.simcoe.ca/arcgis/rest/services/Public/Operational_Layers_Dynamic/MapServer/54", "featureCount": 45, "schoolNameField": "CES_Name"},
+        "secondary": {"url": "https://maps.simcoe.ca/arcgis/rest/services/Public/Operational_Layers_Dynamic/MapServer/55", "featureCount": null, "schoolNameField": "CES_Name"}
+      },
+      "license": "County of Simcoe (public MapServer)",
+      "sourcePage": "https://maps.simcoe.ca"
+    }
+  ],
+
+  "found_locked": [
+    {
+      "boardCode": "YCDSB", "board": "York Catholic DSB", "system": "catholic", "language": "english",
+      "status": "found_locked",
+      "service": "https://locator.ycdsb.ca/arcgis/rest/services/WebAppBuilder/YCDSB_Elementary/MapServer/2",
+      "secondaryService": "https://locator.ycdsb.ca/arcgis/rest/services/WebAppBuilder/YCDSB_Secondary/MapServer/2",
+      "license": null,
+      "sourcePage": "https://locator.ycdsb.ca/schoollocator/",
+      "notes": "Elementary + Secondary services exist but return HTTP 499 Token Required and are hidden from the anonymous directory. Needs credentials or a board request. Fallback (proximity) until then."
+    }
+  ],
+
+  "fallback": [
+    {
+      "boardCode": "TDSB", "board": "Toronto DSB", "system": "public", "language": "english",
+      "status": "fallback", "marketImportance": "HIGHEST",
+      "notes": "NO open catchment polygons. 'Find Your School / By Map' is JS-rendered (labels attendance areas 'approximate'); the 'School Boundary Search' AGOL app is private (HTTP 400). Only open TDSB polygons are 22 trustee-ward areas (NOT catchments). Secondary boundaries are static PDFs. Options: reverse-engineer via the address tool (Tier B), request the locked app be shared, or license a vendor. This is the single biggest coverage gap.",
+      "addressLookup": "https://www.tdsb.on.ca/Find-your/School/By-Map",
+      "license": null
+    },
+    {
+      "boardCode": "PDSB", "board": "Peel DSB", "system": "public", "language": "english",
+      "status": "harvestable_keyed", "marketImportance": "HIGH",
+      "api": "https://api.spsplus.ca/api/v3/Search/GetSchoolProgramGradeBoundary?schoolId=<GUID>&programTypeCode=RT&gradeCode=<g>&schoolYear=2025",
+      "apiHeaders": {"x-api-key": "00f4b315-24e5-4a05-8894-91148c612e0e", "x-api-version": "3.0"},
+      "harvestFlow": "GetSchoolList?schoolYear=2025 (253 schools: 136 elem, 35 sec) -> per school GetSchoolProgramGrades -> GetSchoolProgramGradeBoundary (returns escaped GeoJSON Polygon/MultiPolygon). ~hundreds of keyed calls.",
+      "license": null,
+      "sourcePage": "https://www.peelschools.org/school-finder",
+      "notes": "Proprietary 'SPS Plus' product (key published in page HTML). Boundaries ARE harvestable per-school but no open license and no bulk query. Needs a custom (non-ArcGIS) adapter."
+    },
+    {
+      "boardCode": "DDSB", "board": "Durham DSB", "system": "public", "language": "english",
+      "status": "fallback",
+      "notes": "AGOL org catalog private; regional portal has school POINTS only; official maps are PDF. Address-lookup tool exists. A polygon layer may sit behind the locator but appears token-locked.",
+      "license": null
+    },
+    {
+      "boardCode": "OCDSB", "board": "Ottawa-Carleton DSB", "system": "public", "language": "english",
+      "status": "fallback",
+      "notes": "Per-school PDF maps + .NET address-lookup tool. No queryable polygon service. (City of Ottawa open data does NOT host school catchments — verified across all 77 services.)",
+      "license": null
+    },
+    {
+      "boardCode": "HWCDSB", "board": "Hamilton-Wentworth Catholic DSB", "system": "catholic", "language": "english",
+      "status": "fallback",
+      "notes": "Address-lookup tool + PDF maps (47 elem, 7 sec, FI) only. No feature service.",
+      "license": null
+    },
+    {
+      "boardCode": "CECCE", "board": "Conseil des écoles catholiques du Centre-Est", "system": "catholic", "language": "french",
+      "status": "fallback",
+      "notes": "Proprietary CartoVista viewer; no ArcGIS REST/GeoJSON exposed. Could revisit with browser network inspection if prioritized.",
+      "license": null
+    },
+    {
+      "boardCode": "UCDSB", "board": "Upper Canada DSB", "system": "public", "language": "english",
+      "status": "fallback",
+      "notes": "STEO/BusPlanner address-lookup (findmyschool.ca) + PDFs only. No polygon service.",
+      "license": null
+    },
+    {
+      "boardCode": "GECDSB", "board": "Greater Essex County DSB", "system": "public", "language": "english",
+      "status": "fallback",
+      "staticFile": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/GQBGLK (GEC_ELEM_BOUND.7z, GEC_SEC_BOUND.7z shapefiles)",
+      "license": "CC BY-NC-SA 4.0 (NON-COMMERCIAL — not usable in a commercial product without permission)",
+      "notes": "Polygons exist only as static shapefiles; no live REST. NonCommercial license is a blocker for commercial use."
+    },
+    {
+      "boardCode": "WECDSB", "board": "Windsor-Essex Catholic DSB", "system": "catholic", "language": "english",
+      "status": "fallback",
+      "staticFile": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/GQBGLK (WEC_ELEM_BOUND.7z, WEC_SEC_BOUND.7z)",
+      "license": "CC BY-NC-SA 4.0 (NON-COMMERCIAL)",
+      "notes": "Same Borealis dataset as GECDSB."
+    }
+  ]
+}

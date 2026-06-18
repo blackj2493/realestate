@@ -19,6 +19,24 @@ let treeCache: { data: CohortTree; at: number } | null = null;
 const TREE_TTL_MS = 60 * 60 * 1000; // 1h
 const PAGE = 1000; // PostgREST caps a single response at 1000 rows.
 
+// The cold rebuild issues ~2,900 rows over several round-trips, which under IO load
+// can trip Postgres' statement_timeout (57014) or a transient network error. Those
+// are almost always one-off, so retry the whole (idempotent) read once before giving
+// up — far cheaper than serving a stale/empty tree.
+const TRANSIENT = /statement timeout|57014|timeout|ECONNRESET|fetch failed|socket hang up/i;
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const code = (err as { code?: string } | null)?.code;
+    if (code !== '57014' && !TRANSIENT.test(msg)) throw err;
+    console.warn(`[loadCohortTree] ${label} transient failure — retrying once:`, msg);
+    await new Promise((r) => setTimeout(r, 400));
+    return await fn();
+  }
+}
+
 /** Audit cohorts, paged. Stable order (city_region, property_sub_type) for correct range pagination. */
 async function fetchAllAudit(supabase: SupabaseClient): Promise<CohortRow[]> {
   const out: CohortRow[] = [];
@@ -62,7 +80,10 @@ export async function loadCohortTree(): Promise<CohortTree> {
   if (treeCache && Date.now() - treeCache.at < TREE_TTL_MS) return treeCache.data;
 
   const supabase = getServiceRoleClient();
-  const [cohorts, pairs] = await Promise.all([fetchAllAudit(supabase), fetchAllPairs(supabase)]);
+  const [cohorts, pairs] = await Promise.all([
+    withRetry(() => fetchAllAudit(supabase), 'audit'),
+    withRetry(() => fetchAllPairs(supabase), 'pairs'),
+  ]);
 
   const tree = buildCohortTree(cohorts, pairs);
   treeCache = { data: tree, at: Date.now() };

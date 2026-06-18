@@ -31,7 +31,7 @@ export default function MobileActionBar({
       <WatchButton
         item={item}
         label="Save"
-        className={canContact ? undefined : "flex-1 justify-center"}
+        className={canContact ? "min-h-[44px]" : "min-h-[44px] flex-1 justify-center"}
       />
       {canContact && (
         <button
@@ -41,10 +41,10 @@ export default function MobileActionBar({
               new CustomEvent("pp:open-viewing", { detail: { listingKey } })
             )
           }
-          className="flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
         >
           <CalendarDays className="h-4 w-4" />
-          Contact
+          Book a viewing
         </button>
       )}
     </div>

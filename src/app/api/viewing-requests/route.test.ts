@@ -57,6 +57,30 @@ describe('POST /api/viewing-requests', () => {
     });
   });
 
+  it('non-viewing intent tags the stored message (no schema change)', async () => {
+    const res = await POST(makeReq({
+      listingKey: 'W12632618',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      intent: 'price_opinion',
+      message: 'is 899k fair?',
+    }) as never);
+
+    expect(res.status).toBe(200);
+    const row = insertSpy.mock.calls[0][0];
+    expect(row.message).toBe('[Price second-opinion] is 899k fair?');
+  });
+
+  it('viewing intent (default) leaves the message untagged', async () => {
+    await POST(makeReq({
+      listingKey: 'W12632618',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      message: 'morning please',
+    }) as never);
+    expect(insertSpy.mock.calls[0][0].message).toBe('morning please');
+  });
+
   it('invalid listingKey (wrong pattern) → 400, no insert', async () => {
     const res = await POST(makeReq({
       listingKey: 'invalid-key-123',

@@ -27,8 +27,11 @@ export default function MapModeDock() {
   const mapMode = useCommandCenterStore((s) => s.mapMode);
   const setMapMode = useCommandCenterStore((s) => s.setMapMode);
 
+  // z-20 keeps the (interactive) mode control clickable above the bottom-left
+  // MapStatusHUD (z-10), whose wide count line can otherwise overlap and intercept
+  // clicks on the Listings segment when the map is narrowed by the ledger.
   return (
-    <div className="absolute bottom-16 left-2 z-10 translate-x-0 md:bottom-4 md:left-1/2 md:-translate-x-1/2">
+    <div className="absolute bottom-16 left-2 z-20 translate-x-0 md:bottom-4 md:left-1/2 md:-translate-x-1/2">
       <div className="flex overflow-hidden border border-slate-700 bg-slate-900/90 backdrop-blur-md">
         {SEGMENTS.filter((s) => ENABLED.includes(s.id)).map((s) => {
           const active = mapMode === s.id;

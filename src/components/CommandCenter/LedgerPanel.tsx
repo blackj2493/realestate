@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils";
 import LedgerRow from "./LedgerRow";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
-import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, type SortDir } from "./columnSort";
+import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, type SortDir } from "./columnSort";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface LedgerPanelProps {
   className?: string;
@@ -22,27 +23,33 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     useCommandCenterStore();
   const isAuthed = useIsAuthed();
 
-  // Width-aware layout (audit C4): the fixed numeric columns starve the
-  // flex-1 address column at narrow widths — at the default 620px panel the
-  // price clipped to "$8…". Below COMPACT_BELOW we drop to a clean card list
-  // (photo + price/address) and reveal the analytical columns only when the
-  // panel is genuinely wide enough to show them without crushing the price.
-  // Container width drives this, so it works for the resizable desktop panel
-  // AND the full-width mobile ledger (viewport breakpoints can't see panel width).
-  const COMPACT_BELOW = 760;
+  // Card vs. column layout is DEVICE-driven, not panel-width-driven: desktop
+  // always gets the sortable column grid (the whole point of the terminal),
+  // mobile keeps the merged card. `md` (≤767px) mirrors the page layout, which
+  // also switches the ledger to full-width / map-hidden at the same breakpoint.
+  const cardMode = useIsMobile(767);
+
+  // Within the desktop column grid, the panel is drag-resizable (620px default,
+  // 400–1000px). The fixed numeric columns starve the flex-1 address card at
+  // narrow widths — audit C4: at 620px every column showing clipped the price to
+  // "$8…". So we width-fit: keep the address card + as many analytical columns
+  // as fit, dropping the non-sortable alphaFlag first (see fitLedgerColumns).
+  // ResizeObserver reads the panel's own width, which the resizable desktop panel
+  // needs (viewport breakpoints can't see panel width).
   const rootRef = useRef<HTMLDivElement>(null);
-  const [compact, setCompact] = useState(false);
+  const [width, setWidth] = useState(620);
   useEffect(() => {
     const el = rootRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(([entry]) => {
-      setCompact(entry.contentRect.width < COMPACT_BELOW);
+      setWidth(entry.contentRect.width);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
   const columns = PERSONA_CONFIG[activePersona].columns;
+  const visibleColumns = useMemo(() => fitLedgerColumns(columns, width), [columns, width]);
   const allProperties = searchResult?.listings || [];
   const visible = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
   const ms = searchResult?.processingTimeMs ?? 0;
@@ -105,11 +112,12 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         </p>
       </div>
 
-      {/* Column headers — hidden in compact card mode (no columns to sort). */}
-      <div className={cn("shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2", compact ? "hidden" : "flex")}>
+      {/* Column headers — desktop only (mobile card mode has no columns to sort).
+          Mirrors the width-fitted `visibleColumns` so each header aligns with its cell. */}
+      <div className={cn("shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2", cardMode ? "hidden" : "flex")}>
         <div className="w-5 shrink-0" />
         <div className="h-px w-24 shrink-0" />
-        {columns.map((col) => {
+        {visibleColumns.map((col) => {
           const headClass = cn(
             "text-[10px] font-semibold uppercase tracking-wider text-slate-500",
             col.width,
@@ -178,7 +186,8 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               key={property.id}
               property={property}
               columns={columns}
-              compact={compact}
+              visibleColumns={visibleColumns}
+              compact={cardMode}
               isAuthed={isAuthed}
               onClick={() => setSelectedProperty(property)}
               isSelected={selectedProperty?.id === property.id}

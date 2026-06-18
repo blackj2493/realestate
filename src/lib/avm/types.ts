@@ -31,6 +31,10 @@ export interface AVMInput {
   interiorTier: number; // 1-5
   exteriorTier: number; // 1-5
   basementTier: number; // 1-9
+  /** Full 6-char postal code (payload.PostalCode). Used ONLY for hierarchical
+   * geographic comp weighting (same building/block > FSA > community); never a
+   * trained coefficient. Optional — when absent, geo weights are all 1.0 (no-op). */
+  postalCode?: string | null;
 }
 
 /** Where the anchor's level estimate came from — surfaced in the UI basis line. */
@@ -166,3 +170,128 @@ export const OUTLIER_Z = 1.5;
  * the floor cleanly excludes leases without dropping legitimate low-end sales. Tunable.
  */
 export const MIN_SALE_PRICE = 50_000;
+
+/**
+ * Tunable knobs for the estimate math, injectable so the backtest harness can A/B
+ * variants without touching production. `DEFAULT_TUNING` reproduces the historical
+ * constants EXACTLY, so any call site that omits `tuning` is byte-identical to before.
+ *
+ *   predMode 'legacy'      — predSD = estimation SD only (a CONFIDENCE interval for the
+ *                            mean level; collapses to ~4% → bands cover only ~18%).
+ *   predMode 'predictive'  — predSD = sqrt(estimationVar + compDispersion²); a true
+ *                            PREDICTION interval for THIS home that includes the
+ *                            irreducible spread of comparable sales (covers ~68%) and
+ *                            auto-widens for dispersed/atypical cohorts. The comp
+ *                            dispersion is the robust SD already computed from comps —
+ *                            100% as-of, no future data, leakage-safe.
+ *   adjClamp               — ± log-space cap on the subject feature adjustment.
+ *   peerTrigger            — |Σβz| above which a home routes to the peer comp-grid.
+ *                            Decoupled from adjClamp so we can route MORE homes to the
+ *                            (well-calibrated) peer grid without loosening the clamp.
+ *   band{High,Med,Low}     — predSD thresholds for HIGH/MEDIUM/LOW; above bandLow the
+ *                            estimate is suppressed. Recalibrated for predictive predSD.
+ *   priorSd                — predSD when there are no local comps (prior-only / no-comp).
+ */
+export interface AvmTuning {
+  predMode: 'legacy' | 'predictive';
+  adjClamp: number;
+  peerTrigger: number;
+  bandHigh: number;
+  bandMed: number;
+  bandLow: number;
+  priorSd: number;
+  /** Between-community prior variance — the shrinkage strength (wPrior = 1/tau2).
+   *  Higher tau2 = weaker prior = more weight on local comps. */
+  tau2: number;
+  /** Optional nEff-adaptive prior variance: as local comps accumulate, trust them
+   *  more (weaken the prior). null → flat `tau2`. Defends sparse cohorts (small nEff
+   *  keeps the strong prior) while letting comp-rich expensive cohorts escape the
+   *  pull to the community median (the -36% @ 2M+ bias). */
+  tau2Schedule: { ltN: number; lt: number; geN: number; ge: number } | null;
+  /** Suppress (publish no number) for the 'floor' basis — a saturating outlier with
+   *  too few peers, whose clamped neighbourhood number is a known severe under-estimate
+   *  (−42% to −77% bias). An honest "estimate unavailable" beats a confidently-low number. */
+  suppressFloor: boolean;
+  /** Suppress for non-canonical (exotic) property types — Vacant Land/Farm/Mobile/
+   *  Triplex/etc. — which the 4-type dwelling model prices very poorly (41–67% error). */
+  suppressExotic: boolean;
+  /** Hierarchical geographic comp weights (multiplicative upweight of nearby comps;
+   *  1.0 = off). A comp sharing the subject's full 6-char postal (same building/block)
+   *  gets ×geoFull; same FSA+LDU1 (block cluster) ×geoBlock; same FSA (neighbourhood)
+   *  ×geoFsa; elsewhere in the community ×1.0. Requires AVMInput.postalCode + comp
+   *  postal. Soft kernel (no hard cutoff) so thin pockets still fall back to community. */
+  geoFull: number;
+  geoBlock: number;
+  geoFsa: number;
+}
+
+/**
+ * The pre-2026-06 behaviour: confidence-interval predSD (collapses to ~4% → bands
+ * cover ~18%), ±0.4 clamp == peer trigger, no suppression. Kept for backtest A/B and
+ * to document exactly what `DEFAULT_TUNING` changed.
+ */
+export const LEGACY_TUNING: AvmTuning = {
+  predMode: 'legacy',
+  adjClamp: ADJ_CLAMP,
+  peerTrigger: ADJ_CLAMP,
+  bandHigh: BAND_HIGH,
+  bandMed: BAND_MED,
+  bandLow: BAND_LOW,
+  priorSd: Math.sqrt(TAU2),
+  tau2: TAU2,
+  tau2Schedule: null,
+  suppressFloor: false,
+  suppressExotic: false,
+  geoFull: 1,
+  geoBlock: 1,
+  geoFsa: 1,
+};
+
+/**
+ * PRODUCTION tuning (shipped 2026-06). Validated out-of-time on ~10k held-out 2026
+ * sales AND a disjoint [6,12)-month holdout (see scripts/admin/avm-experiment.ts):
+ *   median |%err| 11.5%→10.7%, mean 18.0%→15.6%, ±10% 45%→47%, BAND COVERAGE 18%→61%,
+ *   2M+ bias −36%→−26%, and confidence labels made HONEST & MONOTONE (HIGH ≈ 8% err).
+ * Changes vs LEGACY:
+ *   • predMode 'predictive' — predSD = √(estimationVar + comp-dispersion²): a true
+ *     prediction interval for THIS home; fixes the catastrophic overconfidence and the
+ *     INVERTED confidence labels (HIGH was the most overconfident). Auto-widens for
+ *     dispersed/atypical/expensive cohorts. Leakage-safe (as-of comp residuals only).
+ *   • band thresholds recalibrated to the predictive SD scale; bandLow raised to 0.45
+ *     so honest-but-wide cohorts still publish.
+ *   • priorSd 0.22 — no-local-comp homes are genuinely uncertain.
+ *   • adjClamp 0.9 + peerTrigger 0.25 (decoupled) — let premium homes escape the
+ *     neighbourhood ceiling and route more of them to the well-calibrated peer grid,
+ *     cutting the expensive-home under-valuation.
+ *   • suppressFloor + suppressExotic — never publish the known-catastrophic 'floor'
+ *     basis (−42…−77% bias) or unpriceable types (Vacant Land/Farm/…, 40–67% error).
+ */
+export const DEFAULT_TUNING: AvmTuning = {
+  predMode: 'predictive',
+  adjClamp: 0.9,
+  peerTrigger: 0.25,
+  bandHigh: 0.12,
+  bandMed: 0.2,
+  bandLow: 0.45,
+  priorSd: 0.22,
+  tau2: TAU2,
+  tau2Schedule: null,
+  suppressFloor: true,
+  suppressExotic: true,
+  // Geo weights OFF by default until measured; set by the 'geo' harness variant, then
+  // promoted here if the backtest delta justifies it (needs the postal_code backfill).
+  geoFull: 1,
+  geoBlock: 1,
+  geoFsa: 1,
+};
+
+/** Resolve the effective prior variance for a given effective sample size. */
+export function resolveTau2(tuning: AvmTuning, nEff: number): number {
+  const s = tuning.tau2Schedule;
+  if (!s) return tuning.tau2;
+  // Linear ramp in nEff from (ltN→lt) up to (geN→ge), clamped at the ends.
+  if (nEff <= s.ltN) return s.lt;
+  if (nEff >= s.geN) return s.ge;
+  const t = (nEff - s.ltN) / (s.geN - s.ltN);
+  return s.lt + t * (s.ge - s.lt);
+}

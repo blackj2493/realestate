@@ -18,6 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { estimateFromMarketData, type AVMMarketData } from './calculator';
 import type { AVMInput } from './types';
+import { LEGACY_TUNING } from './types';
 import type { AnchorResult } from './anchorService';
 import type { CoefficientRow } from './matrixService';
 
@@ -100,7 +101,9 @@ const SCENARIOS: { name: string; input: AVMInput; market: AVMMarketData }[] = [
 describe('GOLDEN MASTER — no-peer estimate is frozen', () => {
   for (const s of SCENARIOS) {
     it(s.name, () => {
-      const r = estimateFromMarketData(s.input, s.market);
+      // Frozen LEGACY behaviour (the firewall's purpose). Production calibration
+      // (DEFAULT_TUNING) is validated out-of-time in scripts/admin/avm-experiment.ts.
+      const r = estimateFromMarketData(s.input, s.market, LEGACY_TUNING);
       expect(r).toMatchSnapshot();
     });
   }

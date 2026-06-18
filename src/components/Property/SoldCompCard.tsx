@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { Bed, Bath, Lock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { DeltaChips } from "@/components/Property/DeltaChips";
 import type { SimilarSoldCard } from "@/app/api/properties/[id]/similar/route";
@@ -22,7 +23,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
     return (
       <Link
         href="/login"
-        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-slate-800 bg-slate-900/50"
+        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-slate-800 border-l-rose-500/40 bg-slate-900/50"
       >
         <div className="relative aspect-[4/3] bg-slate-800/60">
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400">
@@ -38,10 +39,17 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
     );
   }
 
+  // "4+2" when there are below-grade beds, else "4" — matches the subject detail page.
+  const beds = bedsLabel({
+    BedroomsAboveGrade: card.bedsAbove,
+    BedroomsBelowGrade: card.bedsBelow,
+    BedroomsTotal: card.beds,
+  });
+
   return (
     <Link
       href={`/properties/${card.id}`}
-      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-slate-800 bg-slate-900/50 transition-colors hover:border-slate-700"
+      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-slate-800 border-l-rose-500/40 bg-slate-900/50 transition-colors hover:border-slate-700 hover:border-l-rose-400"
     >
       <div className="relative aspect-[4/3]">
         <ListingThumbnail
@@ -68,10 +76,10 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
         </div>
         <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-200">{card.address}</p>
         <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
-          {card.beds != null && card.beds > 0 && (
+          {beds && (
             <span className="flex items-center gap-1">
               <Bed className="h-3 w-3" />
-              {card.beds}
+              {beds}
             </span>
           )}
           {card.baths != null && card.baths > 0 && (

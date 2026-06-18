@@ -21,13 +21,14 @@
  * otherwise the result is anchor + band only.
  */
 
-import type { AVMInput, AVMResult, AVMAdjustmentBreakdown, AnchorBasis } from './types';
+import type { AVMInput, AVMResult, AVMAdjustmentBreakdown, AnchorBasis, AvmTuning } from './types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from './anchorService';
 import { fetchAuditInfo } from './auditService';
 import { fetchCoefficients, type CoefficientRow } from './matrixService';
 import { fetchSiblingModel } from './siblingModel';
 import { clamp, featureContributions, subjectAdjustmentTotal } from './features';
+import { isUnpriceableType } from './normalizeType';
 import {
   ENGINE_MODE_COEFFICIENT_ADJUSTED,
   ENGINE_MODE_ANCHOR_ONLY,
@@ -35,11 +36,8 @@ import {
   CONFIDENCE_MEDIUM,
   CONFIDENCE_LOW,
   COEFFICIENT_ENGINE_THRESHOLD,
-  ADJ_CLAMP,
-  BAND_HIGH,
-  BAND_MED,
-  BAND_LOW,
   MIN_PEERS_FOR_HIGH,
+  DEFAULT_TUNING,
 } from './types';
 
 /**
@@ -80,10 +78,14 @@ export interface AVMMarketData {
  * must NOT gate on R². The sole trigger for the peer comp-grid; for every typical
  * home the implied premium is within the clamp and the estimate is unchanged.
  */
-export function isFeatureOutlier(input: AVMInput, coefficients: CoefficientRow[]): boolean {
+export function isFeatureOutlier(
+  input: AVMInput,
+  coefficients: CoefficientRow[],
+  tuning: AvmTuning = DEFAULT_TUNING
+): boolean {
   if (coefficients.length === 0) return false; // can't assess without a model
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
-  return Math.abs(subjectAdjustmentTotal(input, coeff)) > ADJ_CLAMP;
+  return Math.abs(subjectAdjustmentTotal(input, coeff)) > tuning.peerTrigger;
 }
 
 /**
@@ -92,10 +94,14 @@ export function isFeatureOutlier(input: AVMInput, coefficients: CoefficientRow[]
  * evaluate peers so every home gets feature/size-matched comps rather than a blind
  * cohort average. Shared by the request path and the nightly batch so they can't drift.
  */
-export function shouldEvaluatePeers(input: AVMInput, coefficients: CoefficientRow[]): boolean {
+export function shouldEvaluatePeers(
+  input: AVMInput,
+  coefficients: CoefficientRow[],
+  tuning: AvmTuning = DEFAULT_TUNING
+): boolean {
   return coefficients.length > 0
-    ? isFeatureOutlier(input, coefficients) // trained: only clamp-saturating outliers
-    : true;                                 // untrained: ALWAYS match comps (no blind average)
+    ? isFeatureOutlier(input, coefficients, tuning) // trained: only trigger-saturating outliers
+    : true;                                         // untrained: ALWAYS match comps (no blind average)
 }
 
 /**
@@ -187,11 +193,22 @@ export async function calculateAVM(
  * Pure, deterministic estimate from a listing's features + pre-loaded market
  * data. Identical inputs always yield an identical result; no I/O, no AI.
  */
-export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): AVMResult {
+export function estimateFromMarketData(
+  input: AVMInput,
+  market: AVMMarketData,
+  tuning: AvmTuning = DEFAULT_TUNING
+): AVMResult {
   const { anchor } = market;
 
   // Anchor unavailable: render "estimate unavailable" downstream.
   if (anchor.basis === 'none' || !Number.isFinite(anchor.anchorLevel)) {
+    return unavailable(market);
+  }
+
+  // Unpriceable types (Vacant Land/Farm/Mobile/Triplex/…) are out-of-distribution for
+  // the dwelling comp model — an honest "unavailable" beats a 40–70%-off number. (Link,
+  // Duplex, Modular stay published — they price fine.)
+  if (tuning.suppressExotic && isUnpriceableType(input.rawPropertySubType || input.propertySubType)) {
     return unavailable(market);
   }
 
@@ -202,16 +219,19 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
   // no Σβz signal) we trust the async layer's market-relative decision. The golden
   // master proves the normal path (peer undefined) is frozen either way.
   const outlierGuard =
-    market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients) : true;
+    market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients, tuning) : true;
   if (market.peer !== undefined && outlierGuard) {
-    if (market.peer) return peerEstimate(market.peer, market.r2, market.coefficients.length === 0);
+    if (market.peer) return peerEstimate(market.peer, market.r2, market.coefficients.length === 0, tuning);
     // peer === null → too few peers anywhere. For TRAINED cohorts the home is a
     // Σβz saturating outlier → 'floor' honestly labels "clamped number, too few peers".
     // For UNTRAINED cohorts the home isn't necessarily large/upgraded — there just
     // aren't enough comps — so keep the anchor's own honest basis and cap confidence.
-    const base = normalEstimate(input, market);
+    const base = normalEstimate(input, market, tuning);
     if (base.estimatedValue <= 0) return base; // already suppressed → leave as-is
     const untrained = market.coefficients.length === 0;
+    // TRAINED 'floor' is a saturating outlier shown at a clamped neighbourhood number —
+    // a known severe under-estimate. Suppressing is more honest than publishing it low.
+    if (tuning.suppressFloor && !untrained) return unavailable(market);
     return {
       ...base,
       basis: untrained ? base.basis : 'floor',
@@ -219,11 +239,11 @@ export function estimateFromMarketData(input: AVMInput, market: AVMMarketData): 
     };
   }
 
-  return normalEstimate(input, market);
+  return normalEstimate(input, market, tuning);
 }
 
 /** Today's behaviour: coefficient engine when R² clears the gate AND native coefficients are present, else anchor-only. */
-function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
+function normalEstimate(input: AVMInput, market: AVMMarketData, tuning: AvmTuning = DEFAULT_TUNING): AVMResult {
   const { anchor } = market;
   const baseAnchor = Math.exp(anchor.anchorLevel);
 
@@ -232,7 +252,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
   // native model we cannot compute Σβz for this subject — fall through to anchor-only
   // so engineMode stays ANCHOR_ONLY and the UI does not append "· adjusted for…".
   if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD && market.coefficients.length > 0) {
-    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients);
+    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients, tuning);
   }
 
   // Anchor-only: estimate = anchor; band derived directly from predSD.
@@ -245,7 +265,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
     breakdown: blankBreakdown(),
     adjustmentLog: 0,
     anchor,
-  });
+  }, undefined, tuning);
 }
 
 /**
@@ -255,7 +275,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData): AVMResult {
  *   borrowed-basis: an untrained estimate — whether it borrowed a sibling model or
  *   found peers with no model at all — must never be labelled HIGH.
  */
-function peerEstimate(peer: AnchorResult, r2Score: number | null, capHigh = false): AVMResult {
+function peerEstimate(peer: AnchorResult, r2Score: number | null, capHigh = false, tuning: AvmTuning = DEFAULT_TUNING): AVMResult {
   const peerPrice = Math.exp(peer.anchorLevel);
   return finish(
     {
@@ -275,7 +295,8 @@ function peerEstimate(peer: AnchorResult, r2Score: number | null, capHigh = fals
       // native coefficients), so no path through peerEstimate can label an untrained
       // result HIGH regardless of how the peer was sourced.
       capHigh: peer.basis === 'borrowed' || capHigh,
-    }
+    },
+    tuning
   );
 }
 
@@ -284,7 +305,8 @@ function calculateWithCoefficients(
   anchor: AnchorResult,
   r2Score: number,
   input: AVMInput,
-  coefficients: CoefficientRow[]
+  coefficients: CoefficientRow[],
+  tuning: AvmTuning = DEFAULT_TUNING
 ): AVMResult {
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
 
@@ -295,7 +317,7 @@ function calculateWithCoefficients(
     breakdown[c.key] = Math.round(baseAnchor * c.contribution);
   }
 
-  const total = clamp(rawTotal, -ADJ_CLAMP, ADJ_CLAMP);
+  const total = clamp(rawTotal, -tuning.adjClamp, tuning.adjClamp);
   const estimatedValue = Math.round(baseAnchor * Math.exp(total));
 
   return finish({
@@ -307,7 +329,7 @@ function calculateWithCoefficients(
     breakdown,
     adjustmentLog: total,
     anchor,
-  });
+  }, undefined, tuning);
 }
 
 /**
@@ -332,7 +354,8 @@ function finish(
     effectivePeers?: number;
     /** Untrained/borrowed: never publish HIGH (a community-borrowed number isn't HIGH). */
     capHigh?: boolean;
-  }
+  },
+  tuning: AvmTuning = DEFAULT_TUNING
 ): AVMResult {
   const { anchor, adjustmentLog } = args;
 
@@ -346,16 +369,16 @@ function finish(
   let estimatedValue = args.estimatedValue;
   let basis: AnchorBasis = anchor.basis;
 
-  if (!Number.isFinite(relHalfWidth) || relHalfWidth > BAND_LOW) {
+  if (!Number.isFinite(relHalfWidth) || relHalfWidth > tuning.bandLow) {
     // Range too wide to publish — degrade to "unavailable" without erasing the
     // anchor/band (caller can still surface diagnostics).
     confidence = CONFIDENCE_LOW;
     estimatedValue = 0;
     basis = 'none';
   } else {
-    if (relHalfWidth < BAND_HIGH) {
+    if (relHalfWidth < tuning.bandHigh) {
       confidence = CONFIDENCE_HIGH;
-    } else if (relHalfWidth < BAND_MED) {
+    } else if (relHalfWidth < tuning.bandMed) {
       confidence = CONFIDENCE_MEDIUM;
     } else {
       confidence = CONFIDENCE_LOW;

@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/browser";
 
 /**
  * Passwordless sign-in via a one-time email code (Supabase OTP; length is set by
- * the project's "Email OTP Length", commonly 6–8 digits).
+ * the project's "Email OTP Length" — set to 6 digits, the standard length that
+ * iOS/Android auto-suggest from the email via autocomplete="one-time-code").
  *
  * Step 1: signInWithOtp(email) → Supabase emails a code (template must include
  *         {{ .Token }}).
@@ -90,11 +91,11 @@ export default function MagicLinkForm({
             inputMode="numeric"
             autoComplete="one-time-code"
             pattern="[0-9]*"
-            maxLength={10}
+            maxLength={6}
             required
             autoFocus
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="Enter code"
             className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-lg tracking-[0.4em] text-slate-200 outline-none placeholder:text-slate-600 placeholder:tracking-normal focus:border-cyan-500/60"
           />

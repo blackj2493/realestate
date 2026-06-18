@@ -49,7 +49,8 @@ export function familySubtypeVariants(subType: string | null): string[] {
   return out;
 }
 
-/** Asymmetric bed closeness: exact best, then +1 over -1, decaying to a floor. */
+/** Asymmetric bed closeness: exact best, then +1 over -1, decaying to a floor.
+ *  Used per-grade (above OR below) by combinedBedScore — not on the raw total. */
 export function bedScore(subjectBeds: number, candBeds: number): number {
   const d = candBeds - subjectBeds;
   if (d === 0) return 1;
@@ -58,6 +59,53 @@ export function bedScore(subjectBeds: number, candBeds: number): number {
   if (d === -1) return 0.6;
   if (d === -2) return 0.3;
   return 0.1;
+}
+
+/**
+ * Weighted above/below-grade bed closeness. Above-grade dominates (0.75); below-grade
+ * refines (0.25). This is the fix for matching on the raw total: a 4+2 (total 6) home
+ * now scores far higher against another 4+X than against a 6+0 (also total 6) — the
+ * latter is a genuinely bigger/different home, not an exact comp.
+ */
+export function combinedBedScore(
+  subjectAbove: number,
+  subjectBelow: number,
+  candAbove: number,
+  candBelow: number
+): number {
+  return 0.75 * bedScore(subjectAbove, candAbove) + 0.25 * bedScore(subjectBelow, candBelow);
+}
+
+/**
+ * Garage (covered-space) closeness — symmetric. A proxy for the size/frontage/price-tier
+ * signal we otherwise don't compare (a 2-car-garage home is a different class than a 1-car).
+ * Neutral 0.5 when either side is unknown (null) so missing data never sinks a good comp;
+ * 0 is a REAL value (no garage) distinguished from null at the index layer.
+ */
+export function garageScore(subjectGarage: number | null, candGarage: number | null): number {
+  if (subjectGarage == null || candGarage == null) return 0.5;
+  const d = Math.abs(candGarage - subjectGarage);
+  if (d === 0) return 1;
+  if (d === 1) return 0.5;
+  if (d === 2) return 0.2;
+  return 0.1;
+}
+
+/**
+ * Normalize a bed record into above/below-grade counts. Handles the TRREB quirk where
+ * BedroomsAboveGrade is left empty (0) while BedroomsTotal carries the sum: in that case
+ * above is derived as total − below. Reused for subject + candidate so both sides agree.
+ */
+export function splitBeds(p: {
+  total?: number | null;
+  above?: number | null;
+  below?: number | null;
+}): { above: number; below: number } {
+  const total = Math.max(0, Math.round(Number(p.total) || 0));
+  const below = Math.max(0, Math.round(Number(p.below) || 0));
+  const aboveRaw = Math.round(Number(p.above) || 0);
+  const above = aboveRaw > 0 ? aboveRaw : Math.max(0, total - below);
+  return { above, below };
 }
 
 /** Linear price closeness, 1 at equal, 0 at >=50% delta. Neutral if either is <=0. */
@@ -105,7 +153,10 @@ export interface SubjectAttrs {
   cityRegion: string | null;
   city: string | null;
   subType: string | null;
-  beds: number;
+  beds: number; // BedroomsTotal — kept for the why-label/display
+  bedsAbove: number; // BedroomsAboveGrade (derived when absent — see splitBeds)
+  bedsBelow: number; // BedroomsBelowGrade
+  garage: number | null; // CoveredSpaces (garage spaces); null when unknown
   listPrice: number;
   area: number; // BuildingAreaTotal, 0 when unknown
 }
@@ -115,6 +166,9 @@ export interface CandidateAttrs {
   cityRegion: string | null;
   subType: string | null;
   beds: number;
+  bedsAbove: number;
+  bedsBelow: number;
+  garage: number | null; // CoveredSpaces; null when unknown
   price: number; // ListPrice (sale) or ClosePrice (sold)
   area: number; // 0 when unknown
   daysAgo?: number; // sold only
@@ -129,13 +183,16 @@ export interface RankedSimilar<T> {
 }
 
 // Weights — buyer browse keeps location/price; appraiser comps drop price, weight recency+size.
+// Beds score on the above/below-grade split (not the raw total); garage (covered spaces)
+// is a strong size/frontage proxy at weight 20 on both lists.
 export function scoreForSale(s: SubjectAttrs, c: CandidateAttrs): number {
   return (
     30 * regionScore(s.cityRegion, c.cityRegion) +
     20 * subtypeScore(s.subType, c.subType) +
-    20 * bedScore(s.beds, c.beds) +
+    20 * combinedBedScore(s.bedsAbove, s.bedsBelow, c.bedsAbove, c.bedsBelow) +
     20 * priceScore(s.listPrice, c.price) +
-    10 * sizeScore(s.area, c.area)
+    10 * sizeScore(s.area, c.area) +
+    20 * garageScore(s.garage, c.garage)
   );
 }
 
@@ -143,9 +200,10 @@ export function scoreSold(s: SubjectAttrs, c: CandidateAttrs): number {
   return (
     20 * regionScore(s.cityRegion, c.cityRegion) +
     20 * subtypeScore(s.subType, c.subType) +
-    15 * bedScore(s.beds, c.beds) +
+    15 * combinedBedScore(s.bedsAbove, s.bedsBelow, c.bedsAbove, c.bedsBelow) +
     20 * sizeScore(s.area, c.area) +
-    25 * recencyScore(c.daysAgo ?? 999)
+    25 * recencyScore(c.daysAgo ?? 999) +
+    20 * garageScore(s.garage, c.garage)
   );
 }
 

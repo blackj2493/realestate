@@ -348,7 +348,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                     thumb: detail.media_urls[0],
                   }}
                   label="Save"
-                  className="shrink-0"
+                  className="min-h-[44px] shrink-0 md:min-h-0"
                 />
               </div>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -647,6 +647,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           city={p.City ?? null}
           subType={p.PropertySubType ?? null}
           beds={p.BedroomsTotal ?? 0}
+          bedsAbove={p.BedroomsAboveGrade ?? 0}
+          bedsBelow={p.BedroomsBelowGrade ?? 0}
+          garage={p.CoveredSpaces ?? null}
           baths={p.BathroomsTotalInteger ?? 0}
           listPrice={price}
           area={p.BuildingAreaTotal ?? 0}

@@ -9,7 +9,6 @@
 import Link from 'next/link';
 import { useAVMStore } from '@/store/useAVMStore';
 import type { AVMResult } from '@/lib/avm/types';
-import { Card } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 function formatCurrency(value: number): string {
@@ -97,6 +96,36 @@ export function AVMResultDisplay() {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
         Enter property details and calculate
+      </div>
+    );
+  }
+
+  // Coverage guard: an untrained/unknown region (or a saturating outlier with too
+  // few peers) yields no usable level — basis 'none' and/or a $0 anchor. Rendering
+  // that verbatim shows "$0 · Anchor Price $0", which reads as broken. Show an
+  // explicit out-of-coverage state instead (see AnchorBasis 'none' in lib/avm/types).
+  if (result.basis === 'none' || result.estimatedValue <= 0 || result.anchorPrice <= 0) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-md border border-gray-700 bg-gray-900/40 p-6 text-center">
+          <div className="text-lg font-semibold text-gray-200">Estimate unavailable</div>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
+            We don&apos;t have enough recent comparable sales in this area to produce a
+            reliable valuation. Try a covered city/region — coverage is strongest across
+            the Greater Toronto Area.
+          </p>
+        </div>
+        <div className="space-y-2 pt-4 border-t border-gray-700">
+          <Link
+            href="/properties"
+            className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+          >
+            See live investor deals near you →
+          </Link>
+          <p className="text-xs text-gray-500 text-center">
+            Estimate only — not a formal appraisal or financial advice.
+          </p>
+        </div>
       </div>
     );
   }

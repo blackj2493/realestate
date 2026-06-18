@@ -11,6 +11,8 @@ describe("mapSoldDoc", () => {
       PurchaseContractDate: 1_716_000_000_000,
       PropertySubType: "Detached",
       BedroomsTotal: 3,
+      BedroomsAboveGrade: 2,
+      BedroomsBelowGrade: 1,
       BathroomsTotalInteger: 2,
       BuildingAreaTotal: 1500,
       ListOfficeName: "ACME REALTY",
@@ -21,6 +23,9 @@ describe("mapSoldDoc", () => {
     expect(out.id).toBe("W123");
     expect(out.closePrice).toBe(950000);
     expect(out.listPrice).toBe(999000);
+    expect(out.beds).toBe(3);
+    expect(out.bedsAbove).toBe(2);
+    expect(out.bedsBelow).toBe(1);
     expect(out.lat).toBe(43.65);
     expect(out.lng).toBe(-79.38);
     expect(out.soldDate).toBe(new Date(1_716_000_000_000).toISOString());

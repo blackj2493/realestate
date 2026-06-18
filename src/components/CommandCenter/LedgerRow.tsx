@@ -7,6 +7,7 @@
 import { Check } from "lucide-react";
 import WatchHeart from "@/components/watchlist/WatchHeart";
 import { cn } from "@/lib/utils";
+import { useCommandCenterStore, MAX_SELECTED } from "@/lib/stores/commandCenterStore";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
@@ -20,6 +21,10 @@ import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 interface LedgerRowProps {
   property: ListingDocument;
   columns: ColumnDef[];
+  /** Desktop column grid: the width-fitted subset actually rendered as cells.
+   *  Falls back to `columns` when omitted. Mobile (compact) ignores this and
+   *  renders every analytical column as a chip. */
+  visibleColumns?: ColumnDef[];
   onClick: () => void;
   isSelected?: boolean;
   isHovered?: boolean;
@@ -37,6 +42,22 @@ interface LedgerRowProps {
 
 function alignClass(a: ColumnDef["align"]) {
   return a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
+}
+
+/**
+ * AlphaFlagBadge — the persona "alpha" badge (NEW / SUITE POTENTIAL / DENSITY
+ * READY …) or `null` when the listing has none. Single source for the badge so
+ * the desktop alphaFlag column, the mobile chip, and the address fold-in (shown
+ * when the alphaFlag column is squeezed out at narrow widths) can't drift.
+ */
+function AlphaFlagBadge({ doc, isAuthed }: { doc: ListingDocument; isAuthed: boolean }) {
+  const flag = getAlphaFlag(doc, isAuthed);
+  if (flag.variant === "none") return null;
+  return (
+    <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
+      {flag.label}
+    </span>
+  );
 }
 
 /**
@@ -102,10 +123,17 @@ function ColumnValue({ doc, col, isAuthed }: { doc: ListingDocument; col: Column
 }
 
 /** Desktop column cell — value at the persona's fixed width + alignment. */
-function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
+function Cell({ doc, col, isAuthed, alphaInline }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; alphaInline?: boolean }) {
   if (col.type === "address")
     return (
       <div className={cn("min-w-0", col.width)}>
+        {/* When the alphaFlag column is squeezed out at narrow widths, fold its
+            badge in here so the moat signal is never lost (CLAUDE.md §10). */}
+        {alphaInline && (
+          <div className="mb-1 empty:hidden">
+            <AlphaFlagBadge doc={doc} isAuthed={isAuthed} />
+          </div>
+        )}
         <ListingCardBody doc={doc} />
       </div>
     );
@@ -136,15 +164,7 @@ function Cell({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; is
  * headers are hidden in card mode. This is what keeps the moat visible on mobile.
  */
 function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean }) {
-  if (col.type === "alphaFlag") {
-    const flag = getAlphaFlag(doc, isAuthed);
-    if (flag.variant === "none") return null;
-    return (
-      <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
-        {flag.label}
-      </span>
-    );
-  }
+  if (col.type === "alphaFlag") return <AlphaFlagBadge doc={doc} isAuthed={isAuthed} />;
   return (
     <span className="inline-flex items-baseline gap-1 rounded-sm bg-slate-800/50 px-1.5 py-0.5 font-mono text-xs">
       <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{col.header}</span>
@@ -153,14 +173,23 @@ function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnD
   );
 }
 
-export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, visibleColumns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
-  // Compact (mobile / narrow panel): render the address card PLUS a wrapping strip
-  // of persona shadow-data chips. Dropping the columns entirely (audit C4) also hid
-  // the moat on mobile — chips put the differentiating numbers back without crushing
-  // the price, since they flow vertically instead of as fixed-width columns.
+  // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
+  // already-checked row always stays enabled so the user can swap one out.
+  const selectionFull = useCommandCenterStore((s) => s.selectedIds.size >= MAX_SELECTED);
+  const selectDisabled = selectionFull && !isChecked;
+  // Compact (mobile): render the address card PLUS a wrapping strip of persona
+  // shadow-data chips. Dropping the columns entirely (audit C4) also hid the moat
+  // on mobile — chips put the differentiating numbers back without crushing the
+  // price, since they flow vertically instead of as fixed-width columns.
   const analyticalColumns = columns.filter((c) => c.type !== "address");
+  // Desktop: render the width-fitted subset as columns. If the alphaFlag column
+  // got squeezed out, fold its badge into the address card so it stays visible.
+  const desktopColumns = visibleColumns ?? columns;
+  const foldAlpha =
+    columns.some((c) => c.type === "alphaFlag") && !desktopColumns.some((c) => c.type === "alphaFlag");
 
   return (
     <div
@@ -179,14 +208,25 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          if (selectDisabled) return;
           onToggleSelect?.();
         }}
-        aria-label={isChecked ? "Remove from selection" : "Add to selection"}
+        disabled={selectDisabled}
+        aria-label={
+          selectDisabled
+            ? `Compare limit of ${MAX_SELECTED} reached`
+            : isChecked
+            ? "Remove from selection"
+            : "Add to selection"
+        }
         aria-pressed={isChecked}
+        title={selectDisabled ? `Compare holds up to ${MAX_SELECTED} — remove one to add another` : undefined}
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-none border transition-colors",
           isChecked
             ? "border-cyan-500 bg-cyan-500 text-slate-950"
+            : selectDisabled
+            ? "cursor-not-allowed border-slate-800 text-transparent opacity-40"
             : "border-slate-600 text-transparent hover:border-cyan-400"
         )}
       >
@@ -229,7 +269,9 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
           )}
         </div>
       ) : (
-        columns.map((col) => <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} />)
+        desktopColumns.map((col) => (
+          <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} alphaInline={col.type === "address" && foldAlpha} />
+        ))
       )}
     </div>
   );

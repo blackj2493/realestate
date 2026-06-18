@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CalendarDays, X } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
+import { LEAD_INTENTS, isLeadIntent, seedMessageFor, type LeadIntent } from "./leadIntents";
 
 // Same strict email shape used by the API route (audit LOW-18).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -9,12 +11,18 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 interface Props {
   listingKey: string;
   address?: string;
+  /** Listing price — seeds the price-opinion message. */
+  price?: number;
+  /** When false, the form renders nothing while idle (a CtaLadder owns the triggers)
+   *  and only appears when opened via the `pp:open-viewing` event. */
+  renderTrigger?: boolean;
 }
 
 type Status = "idle" | "open" | "submitting" | "success" | "error";
 
-export default function ScheduleViewingForm({ listingKey, address }: Props) {
+export default function ScheduleViewingForm({ listingKey, address, price, renderTrigger = true }: Props) {
   const [status, setStatus] = useState<Status>("idle");
+  const [intent, setIntent] = useState<LeadIntent>("viewing");
   const [errorMsg, setErrorMsg] = useState("");
 
   // Form fields
@@ -32,14 +40,21 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
 
   useEffect(() => {
     function onOpen(e: Event) {
-      const key = (e as CustomEvent<{ listingKey?: string }>).detail?.listingKey;
-      if (key && key !== listingKey) return;
+      const detail = (e as CustomEvent<{ listingKey?: string; intent?: string }>).detail;
+      if (detail?.listingKey && detail.listingKey !== listingKey) return;
+      const nextIntent: LeadIntent = isLeadIntent(detail?.intent) ? detail.intent : "viewing";
+      setIntent(nextIntent);
+      const seed = seedMessageFor(nextIntent, {
+        priceText: price ? formatPrice(price) : undefined,
+        address,
+      });
+      if (seed) setMessage((m) => m || seed);
       setStatus((s) => (s === "success" ? s : "open"));
       setOpenSignal((n) => n + 1);
     }
     window.addEventListener("pp:open-viewing", onOpen);
     return () => window.removeEventListener("pp:open-viewing", onOpen);
-  }, [listingKey]);
+  }, [listingKey, price, address]);
 
   // After the form renders (open/submitting/error states), bring it into view.
   useEffect(() => {
@@ -49,6 +64,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
   }, [openSignal]);
 
   function open() {
+    setIntent("viewing");
     setStatus("open");
   }
 
@@ -79,6 +95,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           listingKey,
+          intent,
           address: address ?? "",
           name: name.trim(),
           email: email.trim(),
@@ -100,8 +117,9 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
     }
   }
 
-  // ── Collapsed: the same emerald CTA button ──────────────────────────────────
+  // ── Collapsed: the same emerald CTA button (suppressed when a CtaLadder owns triggers) ──
   if (status === "idle") {
+    if (!renderTrigger) return null;
     return (
       <button
         type="button"
@@ -125,6 +143,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
 
   // ── Expanded inline form (open | submitting | error) ─────────────────────────
   const isSubmitting = status === "submitting";
+  const def = LEAD_INTENTS[intent];
 
   return (
     <form
@@ -133,7 +152,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
       className="rounded-md border border-slate-700 bg-slate-900 p-4 space-y-3"
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-200">Schedule a Viewing</span>
+        <span className="text-sm font-semibold text-slate-200">{def.heading}</span>
         <button
           type="button"
           onClick={close}
@@ -204,38 +223,40 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
         />
       </div>
 
-      {/* Preferred time */}
-      <div>
-        <label htmlFor="sv-time" className="block text-xs font-medium text-slate-400 mb-1">
-          Preferred time
-        </label>
-        <select
-          id="sv-time"
-          disabled={isSubmitting}
-          value={preferredTime}
-          onChange={(e) => setPreferredTime(e.target.value)}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
-        >
-          <option value="">Select a time…</option>
-          <option value="Weekday mornings">Weekday mornings</option>
-          <option value="Weekday evenings">Weekday evenings</option>
-          <option value="Weekend mornings">Weekend mornings</option>
-          <option value="Weekend afternoons">Weekend afternoons</option>
-          <option value="ASAP / flexible">ASAP / flexible</option>
-        </select>
-      </div>
+      {/* Preferred time — viewing intent only */}
+      {def.showTime && (
+        <div>
+          <label htmlFor="sv-time" className="block text-xs font-medium text-slate-400 mb-1">
+            Preferred time
+          </label>
+          <select
+            id="sv-time"
+            disabled={isSubmitting}
+            value={preferredTime}
+            onChange={(e) => setPreferredTime(e.target.value)}
+            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          >
+            <option value="">Select a time…</option>
+            <option value="Weekday mornings">Weekday mornings</option>
+            <option value="Weekday evenings">Weekday evenings</option>
+            <option value="Weekend mornings">Weekend mornings</option>
+            <option value="Weekend afternoons">Weekend afternoons</option>
+            <option value="ASAP / flexible">ASAP / flexible</option>
+          </select>
+        </div>
+      )}
 
       {/* Message */}
       <div>
         <label htmlFor="sv-message" className="block text-xs font-medium text-slate-400 mb-1">
-          Message
+          {def.messageLabel}
         </label>
         <textarea
           id="sv-message"
           disabled={isSubmitting}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Anything specific you'd like to see?"
+          placeholder={def.placeholder}
           rows={3}
           className="w-full resize-none rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
@@ -252,7 +273,7 @@ export default function ScheduleViewingForm({ listingKey, address }: Props) {
         className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-700 active:scale-95 [touch-action:manipulation] disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <CalendarDays className="h-4 w-4" />
-        {isSubmitting ? "Sending…" : "Request Viewing"}
+        {isSubmitting ? "Sending…" : def.submitLabel}
       </button>
 
       <p className="text-center text-xs text-slate-500">

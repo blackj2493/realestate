@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
+import ListingCompare from "@/components/hero/ListingCompare";
 import { createClient } from "@/lib/supabase/browser";
 
 export default function HomePage() {
@@ -32,42 +33,42 @@ export default function HomePage() {
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
 
-        {/* Hero */}
-        <main className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-          <p className="terminal-font mb-6 text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400 md:text-base [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
-            Built for principals, not practicing agents
+        {/* Hero — compact so the comparison cards AND the CTA stay above the fold */}
+        <main className="flex flex-1 flex-col items-center justify-center px-6 py-5 text-center">
+          <p className="terminal-font mb-5 text-[14.4px] font-semibold uppercase tracking-[0.3em] text-emerald-400 md:text-[16.8px] [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
+            For serious buyers &amp; investors — not browsers
           </p>
 
-          <h1 className="max-w-[95rem] text-balance font-black uppercase leading-[0.85] tracking-tight text-white text-[clamp(2.75rem,9vw,9rem)] [text-shadow:0_4px_30px_rgba(0,0,0,0.65)]">
-            Real estate is a mathematical instrument.
+          <h1 className="max-w-[66rem] text-balance font-black uppercase leading-[0.92] tracking-tight text-white text-[clamp(2.4rem,5.76vw,4.62rem)] [text-shadow:0_4px_30px_rgba(0,0,0,0.65)]">
+            See every listing like the smart money does.
             <br />
-            <span className="text-slate-300">Stop trading blindly.</span>
+            <span className="text-slate-300">Before you bid, not after you close.</span>
           </h1>
 
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-xl [text-shadow:0_2px_14px_rgba(0,0,0,0.8)]">
-            Active and sold listings, scored on the metrics that move price.
-            <br className="hidden sm:block" />
-            For Ontario&apos;s top 1% of investors and developers.
+          <p className="mt-5 max-w-[44rem] text-[16.8px] leading-relaxed text-slate-200 md:text-[18px] [text-shadow:0_2px_14px_rgba(0,0,0,0.8)]">
+            The same listing — on every other platform, and on PureProperty:
           </p>
+
+          {/* The comparison: sparse consumer card vs. our decoded intelligence card */}
+          <ListingCompare />
 
           <Link
             href="/apply"
-            className="glow-emerald mt-11 inline-flex h-16 items-center justify-center rounded-md bg-emerald-500 px-12 text-base font-bold uppercase tracking-[0.15em] text-slate-950 transition-colors hover:bg-emerald-400 md:h-[4.25rem] md:px-16 md:text-lg"
+            className="glow-emerald mt-7 inline-flex h-[3.25rem] items-center justify-center rounded-md bg-emerald-500 px-12 text-base font-bold uppercase tracking-[0.15em] text-slate-950 transition-colors hover:bg-emerald-400"
           >
             Apply for Terminal Access
           </Link>
 
           {/* Secondary ghost CTA: lets cold/anonymous visitors reach the terminal
-              without the high-friction application form. Muted outline so it never
-              competes with the primary emerald CTA above. */}
+              without the high-friction application form. */}
           <Link
             href="/properties"
-            className="terminal-font mt-4 inline-flex h-11 items-center justify-center rounded-md border border-slate-600/70 px-6 text-sm tracking-[0.2em] text-slate-300 transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+            className="terminal-font mt-3.5 inline-flex h-10 items-center justify-center rounded-md border border-slate-600/70 px-6 text-[13px] tracking-[0.2em] text-slate-300 transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
           >
             Explore the Terminal &rarr;
           </Link>
 
-          <p className="terminal-font mt-6 text-[11px] uppercase tracking-[0.25em] text-slate-400 md:text-xs [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
+          <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-slate-400 [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers
           </p>
         </main>

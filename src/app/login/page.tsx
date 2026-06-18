@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import MagicLinkForm from "@/components/auth/MagicLinkForm";
+import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
 
 export const metadata = {
   title: "Sign in · PureProperty.ca",
@@ -67,6 +68,9 @@ export default async function LoginPage({
 
           {/* Card — translucent + blur to match the apply page form card */}
           <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-md md:p-8">
+            <div className="mb-5">
+              <SocialAuthButtons next={safeNext} />
+            </div>
             <MagicLinkForm next={safeNext} initialEmail={initialEmail} />
 
             <p className="mt-6 text-center text-sm text-slate-500">

@@ -49,7 +49,7 @@ export default function AssumptionsBar({
         <Slider value={[interestRatePct]} onValueChange={([v]) => onInterestRate(v)} min={3} max={12} step={0.125} />
       </div>
 
-      <div className="flex w-full items-center gap-3 md:w-auto">
+      <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:flex-nowrap">
         <LensSelector lens={lens} onChange={onLens} />
         <button
           type="button"

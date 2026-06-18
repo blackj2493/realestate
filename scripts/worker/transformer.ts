@@ -690,6 +690,7 @@ export interface TransformResult {
     LotSqftTotal?: number;
     ApproximateAge?: string;
     ParkingTotal?: number;
+    CoveredSpaces?: number;
     BuildingAreaTotal?: number;
     isDistressed: boolean;
     targetGrossYield?: number;
@@ -995,6 +996,11 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.ApproximateAge = raw.ApproximateAge || '';
   typesensePayload.Status = raw.Status || raw.MlsStatus || raw.StandardStatus || '';
   typesensePayload.ParkingTotal = (raw.ParkingTotal !== undefined && raw.ParkingTotal !== null) ? raw.ParkingTotal : 0;
+  // Garage (covered) spaces — size/frontage proxy for the comparables matcher. Emitted
+  // ONLY when present so "unknown" stays absent (neutral score) vs. 0 = "no garage".
+  if (raw.CoveredSpaces !== undefined && raw.CoveredSpaces !== null) {
+    typesensePayload.CoveredSpaces = parseInt(String(raw.CoveredSpaces), 10);
+  }
   typesensePayload.BuildingAreaTotal = (raw.BuildingAreaTotal !== undefined && raw.BuildingAreaTotal !== null) ? parseFloat(String(raw.BuildingAreaTotal)) : 0;
   // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;

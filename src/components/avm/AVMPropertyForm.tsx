@@ -57,7 +57,7 @@ export function AVMPropertyForm() {
             value={cityRegion}
             onChange={(e) => setField('cityRegion', e.target.value)}
             placeholder="e.g., Maple"
-            className="bg-black/20 border-gray-700 text-gray-100"
+            className="bg-black/20 border-gray-700 text-gray-100 text-base md:text-sm"
           />
         </div>
         <div className="space-y-2">

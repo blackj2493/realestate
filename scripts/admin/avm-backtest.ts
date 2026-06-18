@@ -47,13 +47,9 @@
  *   npx.cmd tsx --env-file=.env scripts/admin/avm-backtest.ts --fidelity              # live-match check
  */
 
-// MUST set TLS env var BEFORE importing the supabase client.
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
+// Proper TLS verification — Supabase serves valid certs; no weakening needed.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import * as https from 'https';
 import * as fs from 'fs';
-import crossFetch from 'cross-fetch';
 import {
   normalizePropertySubType,
   cityRegionLookupCandidates,
@@ -91,11 +87,6 @@ import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
 import type { RoomData } from '@/lib/room-utils';
-
-const agent = new https.Agent({ rejectUnauthorized: false });
-(global as unknown as { fetch: typeof fetch }).fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
-  // @ts-expect-error agent is a node-fetch option, not standard
-  crossFetch(url, { ...init, agent })) as typeof fetch;
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
 const LEAKY = process.argv.includes('--leaky');
@@ -183,6 +174,10 @@ interface ResultRow {
   comps: number | null;
   in_band: boolean | null;
   price_tier: string;
+  property_sub_type: string | null;
+  norm_sub: string;
+  sqft_present: boolean;
+  lot_present: boolean;
   untrained: boolean;
   borrowed: boolean;
   // Untrained OLD-vs-NEW (only populated for untrained cohorts):
@@ -567,6 +562,10 @@ async function replaySale(
     comps: result.comps,
     in_band: inBand,
     price_tier: priceTier(close),
+    property_sub_type: s.property_sub_type,
+    norm_sub: s.normSub,
+    sqft_present: s.building_area_total !== null && s.building_area_total > 0,
+    lot_present: s.lot_width !== null && s.lot_width > 0,
     untrained,
     borrowed,
     old_estimated_value: oldEst,
