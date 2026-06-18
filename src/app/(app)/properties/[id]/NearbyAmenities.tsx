@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingCart, Dumbbell } from "lucide-react";
+import { ShoppingCart, Dumbbell, Store } from "lucide-react";
 import { searchListings } from "@/lib/typesense/client";
 
 interface NearbyAmenity {
@@ -16,6 +16,8 @@ interface AmenitiesResponse {
   recreation: NearbyAmenity[];
   groceryTotal: number;
   recreationTotal: number;
+  /** Nearest Costco warehouse (drive-to; searched beyond the walkable radius). */
+  costco: { name: string; distanceKm: number } | null;
 }
 
 /**
@@ -53,13 +55,25 @@ export default function NearbyAmenities({ listingId }: { listingId: string }) {
     };
   }, [listingId]);
 
-  if (!data || (data.grocery.length === 0 && data.recreation.length === 0)) return null;
+  if (!data || (data.grocery.length === 0 && data.recreation.length === 0 && !data.costco)) return null;
+
+  const costcoCity = data.costco?.name.includes("—") ? data.costco.name.split("—")[1].trim() : null;
 
   return (
     <div className="mb-6">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-200">
         What&apos;s nearby
       </h3>
+      {data.costco && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+          <Store className="h-4 w-4 shrink-0 text-amber-400" />
+          <span className="text-sm font-medium text-slate-200">Nearest Costco</span>
+          {costcoCity && <span className="truncate text-xs text-slate-400">{costcoCity}</span>}
+          <span className="ml-auto shrink-0 font-mono text-sm font-semibold text-amber-400">
+            {data.costco.distanceKm.toFixed(1)} km
+          </span>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <AmenityColumn
           icon={<ShoppingCart className="h-4 w-4 text-emerald-400" />}
