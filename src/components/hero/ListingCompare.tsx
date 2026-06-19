@@ -141,7 +141,7 @@ export default function ListingCompare() {
             </div>
             <div>
               <div className="terminal-font text-[14px] font-bold text-red-400">
-                ⚠ $85K over True Value
+                ⚠ $85K over comp value
               </div>
               <div className="mt-[3px] text-[11.5px] text-[#8fa4b8]">
                 Asking $899K · worth $814K · grade C

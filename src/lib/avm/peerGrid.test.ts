@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { peerLevelFromComps, cohortOutlierScore, type CompRow } from './anchorService';
 import type { AVMInput } from './types';
-import { OUTLIER_Z, BAND_LOW } from './types';
+import { OUTLIER_Z, BAND_LOW, LEGACY_TUNING } from './types';
 import type { CoefficientRow } from './matrixService';
 
 const NOW = Date.parse('2026-05-01T00:00:00Z');
@@ -102,7 +102,10 @@ describe('peerLevelFromComps', () => {
     // otherwise finish() suppresses a perfectly good estimate (the live bug).
     const prices = [900_000, 1_000_000, 1_100_000, 1_300_000, 1_500_000, 1_700_000, 1_900_000, 2_000_000, 2_100_000, 2_200_000];
     const comps = prices.map((p) => comp({ close_price: p }));
-    const r = peerLevelFromComps(subject, comps, [], [], NOW);
+    // LEGACY_TUNING: legacy peer band = SE of the mean (shrinks with nEff). Production
+    // (predictive) intentionally widens this to the comp dispersion so a $900k–$2.2M
+    // spread reads as the genuinely-uncertain estimate it is (the calibration fix).
+    const r = peerLevelFromComps(subject, comps, [], [], NOW, 'peer', LEGACY_TUNING);
     expect(r).not.toBeNull();
     expect(r!.predSD).toBeLessThan(BAND_LOW); // publishable, not suppressed
   });

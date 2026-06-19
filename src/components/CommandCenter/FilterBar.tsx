@@ -100,36 +100,40 @@ export default function FilterBar() {
       <LayerChips />
       {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && <SoldWindowDropdown />}
 
-      {/* Everything else is the active-browse bar — hidden in comp-only mode. */}
+      {/* Basics (class · price · beds · baths · type) constrain the active AND the
+          comp queries alike, so they stay visible in comp-only Sold/De-listed mode. */}
+      <FundamentalToggle
+        ariaLabel="Property class"
+        value={propertyClass}
+        onChange={setPropertyClass}
+        options={[
+          { value: "residential", label: "Residential" },
+          { value: "commercial", label: "Commercial" },
+        ]}
+      />
+      <div className="h-5 w-px shrink-0 bg-slate-800" />
+
+      {/* Persona preset now lives centered in the TopCommandBar (lifted out
+          of this row). Investor chips below still gate on `investorLayer`. */}
+      {CORE_FILTERS.map((def) => {
+        const useDef =
+          def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
+        return (
+          <FilterChip
+            key={def.key}
+            def={useDef}
+            value={universalFilters[def.key] ?? useDef.defaultValue}
+            onChange={(v) => setUniversalFilter(def.key, v)}
+            onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
+          />
+        );
+      })}
+
+      {/* Investor chips, deeper added filters and the +Add palette are active-browse
+          only: comps carry no forward metrics and the comp route ignores the deeper
+          fields, so showing them under Sold/De-listed would be misleading no-ops. */}
       {!compOnly && (
         <>
-          <FundamentalToggle
-            ariaLabel="Property class"
-            value={propertyClass}
-            onChange={setPropertyClass}
-            options={[
-              { value: "residential", label: "Residential" },
-              { value: "commercial", label: "Commercial" },
-            ]}
-          />
-          <div className="h-5 w-px shrink-0 bg-slate-800" />
-
-          {/* Persona preset now lives centered in the TopCommandBar (lifted out
-              of this row). Investor chips below still gate on `investorLayer`. */}
-          {CORE_FILTERS.map((def) => {
-            const useDef =
-              def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
-            return (
-              <FilterChip
-                key={def.key}
-                def={useDef}
-                value={universalFilters[def.key] ?? useDef.defaultValue}
-                onChange={(v) => setUniversalFilter(def.key, v)}
-                onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
-              />
-            );
-          })}
-
           {investorLayer && (
             <>
               <div className="h-5 w-px shrink-0 bg-slate-800" />
@@ -172,7 +176,7 @@ export default function FilterBar() {
       )}
 
       <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
-        {anyActive && !compOnly && (
+        {anyActive && (
           <button
             onClick={clearAll}
             className={cn(

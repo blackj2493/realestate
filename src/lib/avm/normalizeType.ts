@@ -28,6 +28,43 @@ const CANONICAL: readonly string[] = [
 ];
 
 /**
+ * True when a normalized type is one of the four canonical dwelling types the AVM
+ * is actually built for.
+ */
+export function isCanonicalSubType(normalized: string): boolean {
+  return CANONICAL.includes(normalized);
+}
+
+/**
+ * Types the comp-based dwelling AVM prices VERY poorly (backtest: 30–67% median
+ * error) because they are land, non-dwelling, or income properties valued on a
+ * different basis (cap rate, buildable area) than residential comps:
+ *   Vacant Land, Farm, Rural Residential, Mobile/Trailer, Parking Space,
+ *   Sale Of Business, Triplex/Fourplex/Multiplex.
+ * NOTE: deliberately EXCLUDES Link (backtest 6% median — excellent), Duplex
+ * (≈unbiased), Co-op/Co-Ownership (normalize to Condo Apartment), and Modular —
+ * those are priceable and must keep publishing. Matched on the verbatim spelling.
+ */
+const UNPRICEABLE_PATTERNS: readonly string[] = [
+  'vacant',
+  'farm',
+  'rural resid',
+  'mobile',
+  'trailer',
+  'parking',
+  'sale of business',
+  'triplex',
+  'fourplex',
+  'multiplex',
+];
+
+export function isUnpriceableType(rawSubType: string | null | undefined): boolean {
+  const s = (rawSubType ?? '').trim().toLowerCase();
+  if (!s) return false;
+  return UNPRICEABLE_PATTERNS.some((p) => s.includes(p));
+}
+
+/**
  * Collapse a raw/live PropertySubType to the canonical lookup key. Unknown types
  * fall through to the trimmed verbatim string (→ matrix/audit miss → anchor-only).
  * Order matters: "semi" before "detached"; "town" before "condo" (Condo Townhouse

@@ -15,7 +15,9 @@ export interface FinancialMetricsInput {
   annual_rent_p10: number;
   has_rent_data: boolean;
 
-  // True Value
+  // Purchase-price basis for the ratio metrics below (cap rate / yield / tax burden):
+  // the list price, or a city-region average for sub-$200K "$1 bidding-war" listings.
+  // NOT the AVM / "True Value" — see services/ratioPriceCalculator.ts.
   calculation_price: number;
   is_price_discovery: boolean;
 

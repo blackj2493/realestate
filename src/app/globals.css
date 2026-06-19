@@ -30,6 +30,7 @@
     --input: 215 28% 17%; /* slate-800 */
     --ring: 189 94% 43%; /* cyan-500 */
     --radius: 0rem; /* sharp geometry — zero rounded corners */
+    color-scheme: dark; /* iOS/macOS: render native scrollbars, form controls & status-bar text dark to match the UI (avoids light-mode chrome leaking onto the dark theme) */
 
     /* ------------------------------------------------------------------
        Brand / Logo tokens (PureProperty.ca logo spec).

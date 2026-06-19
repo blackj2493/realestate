@@ -144,7 +144,7 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label={`Watchlist alerts${unseenCount ? ` (${unseenCount} new)` : ""}`}
         aria-expanded={open}
-        className="relative inline-flex h-9 w-9 items-center justify-center border border-slate-700 text-slate-300 transition-colors hover:border-cyan-500/60 hover:text-cyan-300"
+        className="relative inline-flex h-11 w-11 items-center justify-center border border-slate-700 text-slate-300 transition-colors hover:border-cyan-500/60 hover:text-cyan-300"
       >
         <Bell className="h-4 w-4" />
         {unseenCount > 0 && (
@@ -159,7 +159,7 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
           {/* Backdrop closes the panel */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
 
-          <div className="absolute right-0 top-11 z-50 w-80 border border-slate-700 bg-slate-950 shadow-2xl">
+          <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] border border-slate-700 bg-slate-950 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-200">
                 Price-Drop Alerts
@@ -167,14 +167,14 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-slate-500 transition-colors hover:text-slate-300"
+                className="-my-2 -mr-1 inline-flex h-11 w-11 items-center justify-center text-slate-500 transition-colors hover:text-slate-300"
                 aria-label="Close alerts"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[70dvh] overflow-y-auto pb-safe">
               {drops.length === 0 ? (
                 <div className="px-3 py-6 text-center text-xs text-slate-500">
                   {watchedIds.length === 0

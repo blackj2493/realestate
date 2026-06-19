@@ -1,4 +1,4 @@
-import type { FilterDef, FilterValue, UniversalFilterState } from "./types";
+import type { FilterDef, FilterValue, StepperValue, UniversalFilterState } from "./types";
 import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig } from "./fundamentals";
 
 const fmtPrice = (v: number): string =>
@@ -60,6 +60,19 @@ export function makePriceDef(cfg: RangeConfig): FilterDef {
 export const aboveGradeBedsClause = (n: number): string =>
   `(BedroomsAboveGrade:>=${n} || (BedroomsAboveGrade:=0 && BedroomsTotal:>=${n}))`;
 
+/** Exact-count variant of {@link aboveGradeBedsClause} (beds filter in "exact"
+ *  mode), mirroring the same above-grade/total fallback with `:=` in place of `:>=`. */
+export const exactAboveGradeBedsClause = (n: number): string =>
+  `(BedroomsAboveGrade:=${n} || (BedroomsAboveGrade:=0 && BedroomsTotal:=${n}))`;
+
+/**
+ * Normalises a stepper value. A bare number means "minimum" (the default/legacy
+ * shape), so existing state and the `0` defaults keep working; the object form
+ * `{ n, exact }` carries the Min/Exact mode the popover now offers.
+ */
+export const readStepper = (v: FilterValue): StepperValue =>
+  typeof v === "number" ? { n: v, exact: false } : (v as StepperValue);
+
 /**
  * CORE_FILTERS — the universal "what" filters, defined as data so the bar, the
  * query builder, and (later) the add-filter palette all read one source.
@@ -80,9 +93,16 @@ export const CORE_FILTERS: FilterDef[] = [
     min: 0,
     max: 7,
     step: 1,
-    isActive: (v) => (v as number) > 0,
-    buildClause: (v) => ((v as number) > 0 ? aboveGradeBedsClause(v as number) : null),
-    chipLabel: (v) => ((v as number) > 0 ? `${v as number}+ Bd` : "Beds"),
+    isActive: (v) => readStepper(v).n > 0,
+    buildClause: (v) => {
+      const { n, exact } = readStepper(v);
+      if (n <= 0) return null;
+      return exact ? exactAboveGradeBedsClause(n) : aboveGradeBedsClause(n);
+    },
+    chipLabel: (v) => {
+      const { n, exact } = readStepper(v);
+      return n > 0 ? `${n}${exact ? "" : "+"} Bd` : "Beds";
+    },
   },
   {
     key: "baths",
@@ -94,9 +114,16 @@ export const CORE_FILTERS: FilterDef[] = [
     min: 0,
     max: 7,
     step: 1,
-    isActive: (v) => (v as number) > 0,
-    buildClause: (v) => ((v as number) > 0 ? `BathroomsTotalInteger:>=${v as number}` : null),
-    chipLabel: (v) => ((v as number) > 0 ? `${v as number}+ Ba` : "Baths"),
+    isActive: (v) => readStepper(v).n > 0,
+    buildClause: (v) => {
+      const { n, exact } = readStepper(v);
+      if (n <= 0) return null;
+      return `BathroomsTotalInteger:${exact ? "=" : ">="}${n}`;
+    },
+    chipLabel: (v) => {
+      const { n, exact } = readStepper(v);
+      return n > 0 ? `${n}${exact ? "" : "+"} Ba` : "Baths";
+    },
   },
   {
     key: "homeType",
@@ -217,9 +244,16 @@ function stepperFilter(o: {
     min: 0,
     max: o.max,
     step: 1,
-    isActive: (v) => (v as number) > 0,
-    buildClause: (v) => ((v as number) > 0 ? `${o.field}:>=${v as number}` : null),
-    chipLabel: (v) => ((v as number) > 0 ? `${v as number}+ ${o.unit}` : o.label),
+    isActive: (v) => readStepper(v).n > 0,
+    buildClause: (v) => {
+      const { n, exact } = readStepper(v);
+      if (n <= 0) return null;
+      return `${o.field}:${exact ? "=" : ">="}${n}`;
+    },
+    chipLabel: (v) => {
+      const { n, exact } = readStepper(v);
+      return n > 0 ? `${n}${exact ? "" : "+"} ${o.unit}` : o.label;
+    },
   };
 }
 

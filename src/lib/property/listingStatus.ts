@@ -105,7 +105,7 @@ export function fillClosePriceFromSaleHistory(
 
 /** The accuracy receipt: how close our closest model came to the actual sale. */
 export interface SoldAccuracy {
-  modelLabel: "Expected Sale Price" | "True Value";
+  modelLabel: "Expected Sale Price" | "Comparable Sales";
   estimateValue: number;
   closePrice: number;
   /** Signed: (estimate − close) / close. Positive ⇒ we over-called. */
@@ -129,7 +129,7 @@ export function pickSoldAccuracy(args: {
   if (expectedSalePrice && expectedSalePrice > 0)
     candidates.push({ modelLabel: "Expected Sale Price", value: expectedSalePrice });
   if (avmValue && avmValue > 0)
-    candidates.push({ modelLabel: "True Value", value: avmValue });
+    candidates.push({ modelLabel: "Comparable Sales", value: avmValue });
   if (candidates.length === 0) return null;
 
   const best = candidates.reduce((a, b) =>

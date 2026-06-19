@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { resolveSalePrice } from "@/lib/avm/salePrice";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +31,20 @@ export async function GET(
     const user = await getCurrentUser();
     const isAuthed = !!user;
     const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
+    const hasExpectedSale = (detail.expectedSale?.expectedPrice ?? 0) > 0;
     const hasDealScore = detail.dealScore.score !== null;
     const view = gateVowDerived(detail, isAuthed);
+
+    // THE single price number (list-anchored where we can, AVM fallback). Resolved on the
+    // GATED view → null for anon (inputs nulled); the client renders a locked teaser.
+    const listPriceRaw = (view.full_payload as Record<string, unknown> | null)?.ListPrice;
+    const listPrice = typeof listPriceRaw === "number" && listPriceRaw > 0 ? listPriceRaw : null;
+    const salePrice = resolveSalePrice({
+      listPrice,
+      isActive: view.status.kind === "active",
+      expectedSale: view.expectedSale,
+      estimate: view.estimate,
+    });
 
     return NextResponse.json({
       listing_key: view.listing_key,
@@ -44,8 +57,10 @@ export async function GET(
       feeStability: view.feeStability,
       dealScore: view.dealScore,
       saleHistory: view.saleHistory,
+      salePrice,
       isAuthed,
       hasEstimate,
+      hasExpectedSale,
       hasDealScore,
       priceTimeline: view.priceTimeline,
       rooms: view.rooms,

@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PUREPROPERTY // TERMINAL — Opportunity Lens (prototype)</title>
+<style>
+  :root{
+    --bg:#07090d; --panel:#0b1017; --panel2:#0e141d; --bd:#1a212c; --bd2:#222b38;
+    --dim:#5b6573; --dim2:#3a424e; --txt:#c5ccd6; --bright:#eef2f7;
+    --g:#23e3a0; --g2:#19c98a; --r:#ff5d6c; --r2:#e0394a; --am:#ffb454; --cy:#4cc2ff;
+    --grid:#121821; --alpha:rgba(35,227,160,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--txt);
+    font:12px/1.4 ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  .app{display:flex;flex-direction:column;height:100vh}
+
+  /* ---- top header ---- */
+  header{display:flex;align-items:center;gap:16px;padding:8px 14px;border-bottom:1px solid var(--bd);background:var(--panel)}
+  .brand{font-weight:700;letter-spacing:.12em;color:var(--bright);font-size:13px}
+  .brand b{color:var(--g)}
+  .brand .sub{color:var(--dim);font-weight:400;letter-spacing:.2em;font-size:10px;margin-left:8px}
+  header .spacer{flex:1}
+  .clock{color:var(--dim);font-size:11px}
+  .clock b{color:var(--txt)}
+  select.persona{background:var(--panel2);color:var(--bright);border:1px solid var(--bd2);border-radius:4px;padding:5px 8px;font:inherit;font-size:11px}
+
+  /* ---- assumptions bar ---- */
+  .assume{display:flex;align-items:center;gap:22px;padding:9px 14px;border-bottom:1px solid var(--bd);background:linear-gradient(#0a0f16,#080c12)}
+  .assume .lbl{color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .ctrl{display:flex;align-items:center;gap:9px}
+  .ctrl input[type=range]{ -webkit-appearance:none;appearance:none;height:3px;width:120px;background:var(--bd2);border-radius:3px;outline:none}
+  .ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:13px;width:13px;border-radius:50%;background:var(--cy);border:2px solid #07121b;cursor:pointer;box-shadow:0 0 0 1px var(--cy)}
+  .ctrl .val{color:var(--bright);min-width:46px;font-variant-numeric:tabular-nums}
+  .toggle{display:flex;border:1px solid var(--bd2);border-radius:4px;overflow:hidden}
+  .toggle button{background:transparent;color:var(--dim);border:0;padding:5px 9px;font:inherit;font-size:10.5px;cursor:pointer}
+  .toggle button.on{background:var(--bd2);color:var(--bright)}
+  .headline{margin-left:auto;display:flex;align-items:center;gap:10px;background:#06130d;border:1px solid #14402e;border-radius:5px;padding:6px 12px}
+  .headline .big{color:var(--g);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+  .headline small{color:var(--dim);font-size:10px}
+
+  /* ---- main 3-col ---- */
+  .main{flex:1;display:grid;grid-template-columns:minmax(440px,1fr) minmax(520px,1.05fr) 248px;min-height:0}
+  .col{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--bd)}
+  .col:last-child{border-right:0}
+  .colhd{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--bd);background:var(--panel);min-height:34px}
+  .colhd .t{color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+
+  /* lens tabs */
+  .lens{display:flex;gap:2px}
+  .lens button{background:transparent;border:1px solid transparent;color:var(--dim);padding:4px 10px;border-radius:4px;font:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .lens button.on{color:var(--bright);background:var(--panel2);border-color:var(--bd2)}
+  .lens .dot{width:6px;height:6px;border-radius:50%;background:var(--dim2)}
+  .lens button.on .dot{background:var(--cy)}
+
+  /* scatter */
+  .scatterwrap{flex:1;position:relative;min-height:0;padding:6px 8px 4px}
+  svg.scatter{width:100%;height:100%;display:block}
+  .axlabel{fill:var(--dim);font-size:10px;font-family:inherit;letter-spacing:.06em}
+  .axtick{fill:var(--dim2);font-size:9px;font-family:inherit}
+  .gridln{stroke:var(--grid);stroke-width:1}
+  .quadtag{fill:var(--g);font-size:10px;font-weight:700;letter-spacing:.12em;opacity:.8}
+  .dot-c{cursor:pointer;transition:opacity .12s}
+  .legend{position:absolute;left:14px;bottom:10px;display:flex;gap:14px;color:var(--dim);font-size:10px;align-items:center;pointer-events:none}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .maphint,.listhint{flex:1;display:none;align-items:center;justify-content:center;color:var(--dim2);text-align:center;flex-direction:column;gap:10px}
+  .maphint .big{font-size:13px;color:var(--dim);letter-spacing:.1em}
+
+  /* tooltip */
+  .tip{position:absolute;pointer-events:none;background:#070b11;border:1px solid var(--bd2);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--txt);display:none;z-index:30;min-width:170px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .tip .ta{color:var(--bright);font-weight:600;margin-bottom:4px}
+  .tip .tr{display:flex;justify-content:space-between;gap:14px}
+  .tip .tr span:last-child{font-variant-numeric:tabular-nums;color:var(--bright)}
+
+  /* ledger */
+  .ledger{flex:1;overflow:auto;min-height:0}
+  table{width:100%;border-collapse:collapse}
+  thead th{position:sticky;top:0;background:var(--panel);color:var(--dim);font-weight:500;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;text-align:right;padding:7px 10px;border-bottom:1px solid var(--bd);z-index:2}
+  thead th.l{text-align:left}
+  tbody td{padding:7px 10px;border-bottom:1px solid #0e131b;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody td.l{text-align:left}
+  tbody tr{cursor:pointer}
+  tbody tr:hover,tbody tr.hl{background:#0f1620}
+  tbody tr.hl{box-shadow:inset 2px 0 0 var(--cy)}
+  .addr{color:var(--bright)}
+  .sub{color:var(--dim);font-size:10px}
+  .brk{color:var(--dim2);font-size:9.5px;letter-spacing:.02em}
+  .pos{color:var(--g)} .neg{color:var(--r)} .warnum{color:var(--am)}
+  .mut{color:var(--dim)}
+  .strike{color:var(--dim2);text-decoration:line-through;margin-right:5px}
+
+  /* percentile bar */
+  .pcell{display:flex;align-items:center;gap:7px;justify-content:flex-end}
+  .pbar{position:relative;width:54px;height:6px;background:var(--bd);border-radius:3px;overflow:visible}
+  .pbar .seg{position:absolute;top:0;bottom:0;left:0;border-radius:3px;opacity:.4}
+  .pbar .notch{position:absolute;top:-2px;width:2px;height:10px;border-radius:1px;transform:translateX(-1px)}
+  .plabel{color:var(--dim);font-size:10px;min-width:24px;text-align:left}
+
+  /* chips */
+  .chips{display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap}
+  .chip{font-size:9px;padding:2px 5px;border-radius:3px;border:1px solid;letter-spacing:.02em;white-space:nowrap}
+  .chip.d{color:var(--am);border-color:#5a4218;background:#1c1408}
+  .chip.s{color:var(--g);border-color:#15402f;background:#08160f}
+  .chip.f{color:var(--cy);border-color:#173a4d;background:#08161d}
+  .chip.drop{color:var(--r);border-color:#4d1c22;background:#1a0b0d}
+
+  /* signal tape */
+  .tape{flex:1;overflow:auto;min-height:0}
+  .ev{display:flex;gap:8px;padding:8px 11px;border-bottom:1px solid #0e131b}
+  .ev .bar{width:2px;border-radius:2px;flex:none}
+  .ev .body{flex:1;min-width:0}
+  .ev .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .ev .tag{font-size:9px;font-weight:700;letter-spacing:.08em}
+  .ev .ago{color:var(--dim2);font-size:9px}
+  .ev .meat{color:var(--txt);font-size:11px;margin-top:2px}
+  .ev .meat b{color:var(--bright)}
+  .ev .ctx{color:var(--dim);font-size:9.5px;margin-top:2px}
+  .ev.cut .bar{background:var(--r)} .ev.cut .tag{color:var(--r)}
+  .ev.sold .bar{background:var(--cy)} .ev.sold .tag{color:var(--cy)}
+  .ev.dom .bar{background:var(--am)} .ev.dom .tag{color:var(--am)}
+  .ev.new .bar{background:var(--g)} .ev.new .tag{color:var(--g)}
+
+  footer{display:flex;gap:18px;align-items:center;padding:5px 14px;border-top:1px solid var(--bd);background:var(--panel);color:var(--dim2);font-size:9.5px;letter-spacing:.04em}
+  footer .ok{color:var(--g2)}
+  .scrolly::-webkit-scrollbar{width:9px;height:9px}
+  .scrolly::-webkit-scrollbar-thumb{background:#1c2530;border-radius:5px}
+  .scrolly::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">PURE<b>PROPERTY</b><span class="sub">// TERMINAL</span></div>
+    <div class="clock" id="clock"></div>
+    <div class="spacer"></div>
+    <span class="lbl" style="color:var(--dim);font-size:10px;letter-spacing:.08em">PERSONA</span>
+    <select class="persona" id="persona">
+      <option value="flipper">Flipper / Deal Hunter</option>
+      <option value="cashflow">Cashflow Investor</option>
+      <option value="builder">Builder / Developer</option>
+      <option value="buyer">Smart Homebuyer</option>
+    </select>
+  </header>
+
+  <!-- assumptions -->
+  <div class="assume">
+    <div class="ctrl">
+      <span class="lbl">Down</span>
+      <input type="range" id="down" min="5" max="35" step="1" value="20">
+      <span class="val" id="downV">20%</span>
+    </div>
+    <div class="ctrl">
+      <span class="lbl">Rate</span>
+      <input type="range" id="rate" min="2" max="7" step="0.05" value="4.04">
+      <span class="val" id="rateV">4.04%</span>
+    </div>
+    <div class="ctrl">
+      <span class="lbl">Amort</span>
+      <div class="toggle" id="amort">
+        <button data-v="300">25y</button>
+        <button data-v="360" class="on">30y</button>
+      </div>
+    </div>
+    <div class="ctrl">
+      <span class="lbl">Y-Axis</span>
+      <div class="toggle" id="yaxis">
+        <button data-v="cap" class="on">Cap rate</button>
+        <button data-v="cash">Cashflow</button>
+      </div>
+    </div>
+    <div class="headline">
+      <div class="big" id="hlBig">–</div>
+      <small id="hlSub">cashflow-positive<br>at current assumptions</small>
+    </div>
+  </div>
+
+  <!-- main -->
+  <div class="main">
+    <!-- LEFT: lenses -->
+    <div class="col">
+      <div class="colhd">
+        <div class="lens" id="lens">
+          <button data-v="opp" class="on"><span class="dot"></span>Opportunity</button>
+          <button data-v="map"><span class="dot"></span>Map</button>
+          <button data-v="list"><span class="dot"></span>List</button>
+        </div>
+      </div>
+      <div class="scatterwrap">
+        <svg class="scatter" id="scatter" viewBox="0 0 600 470" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="maphint" id="maphint">
+          <div class="big">◢◤ WebGL 3D HEX HEATMAP</div>
+          <div>Map lens — same filtered set, rendered as Deck.gl hexbins colored by the active metric.</div>
+        </div>
+        <div class="listhint" id="listhint">
+          <div class="big">▤ LIST LENS</div>
+          <div>Detail rows expand full-width — the ledger to the right is the compact version.</div>
+        </div>
+        <div class="legend" id="legend">
+          <span><i style="background:var(--g)"></i>cashflow +</span>
+          <span><i style="background:var(--r)"></i>cashflow −</span>
+          <span><i style="background:var(--dim);width:6px;height:6px"></i>size = price</span>
+        </div>
+        <div class="tip" id="tip"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: ledger -->
+    <div class="col">
+      <div class="colhd"><span class="t">Ledger — live pro-forma · <span id="ledgerCount" style="color:var(--txt)"></span> shown</span></div>
+      <div class="ledger scrolly" id="ledger">
+        <table>
+          <thead>
+            <tr>
+              <th class="l">Asset</th>
+              <th>$ / sqft · vs submkt</th>
+              <th>Cap</th>
+              <th>Cash / mo</th>
+              <th>True DOM</th>
+              <th>Signals</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT: tape -->
+    <div class="col">
+      <div class="colhd"><span class="t">◉ Signal Tape — live</span></div>
+      <div class="tape scrolly" id="tape"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span class="ok">● COMPLIANT</span>
+    <span>≤100 listings displayed · brokerage shown per row · distributions from precomputed region aggregates · all metrics deterministic (no LLM)</span>
+    <span style="margin-left:auto">Typesense ⟶ &lt;50ms · prototype with mock GTA data</span>
+  </footer>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Seeded data — mirrors real Typesense fields (ListPrice, cap_rate_est,
+// gross_yield_est, price_per_sqft, TrueDom, TotalPriceDrop, suite_status …)
+// ─────────────────────────────────────────────────────────────────────────────
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry32(20260614);
+const R=(a,b)=>a+(b-a)*rnd();
+const pick=a=>a[Math.floor(rnd()*a.length)];
+
+const SUBS=[
+  {city:'Brampton',   region:'Brampton',          psf:520, yld:.050, mill:.0100},
+  {city:'Mississauga',region:'Mississauga',       psf:735, yld:.043, mill:.0090},
+  {city:'Toronto',    region:'Scarborough',       psf:690, yld:.044, mill:.0070},
+  {city:'Hamilton',   region:'Hamilton Centre',   psf:545, yld:.058, mill:.0090},
+  {city:'Oshawa',     region:'Oshawa O’Neill',psf:475, yld:.062, mill:.0100},
+  {city:'Vaughan',    region:'Vaughan Maple',     psf:795, yld:.040, mill:.0080},
+];
+const STREETS=['Elm','Oak','Birch','Maple','Cedar','Ash','Willow','Hawthorn','Linden','Spruce','Aspen','Rowan','Juniper','Sycamore','Chestnut','Beech','Poplar','Magnolia'];
+const SUF=['St','Ave','Rd','Dr','Cres','Blvd','Way','Gate'];
+const BRK=['ROYAL LEPAGE','RE/MAX HALLMARK','EXP REALTY','CENTURY 21','HOMELIFE','IPRO REALTY','KELLER WILLIAMS','RIGHT AT HOME'];
+const SUBTYPES=['Detached','Semi-Detached','Detached','Townhouse','Condo','Detached','Semi-Detached','Multiplex'];
+
+const N=46;
+let LISTINGS=[];
+for(let i=0;i<N;i++){
+  const s=pick(SUBS);
+  const subtype=pick(SUBTYPES);
+  const isCondo=subtype==='Condo';
+  const sqft=Math.round(isCondo?R(560,1050):R(950,2750));
+  const psf=Math.round(s.psf*R(0.74,1.28));
+  const price=Math.round(psf*sqft/1000)*1000;
+  // suite (freehold only) — drives the Rent AVM uplift below
+  let suite='NONE';
+  if(!isCondo){const sc=rnd();suite=sc<0.18?'EXISTING_SUITE':sc<0.46?'POTENTIAL_CANDIDATE':'NONE';}
+  // Rent AVM: market rent + second-unit income where a suite exists / is viable
+  const suiteFactor=suite==='EXISTING_SUITE'?1.46:suite==='POTENTIAL_CANDIDATE'?1.24:1;
+  const grossYld=s.yld*R(0.82,1.22);
+  const annualRent=Math.round(price*grossYld*suiteFactor/100)*100;
+  const tax=Math.round(price*s.mill);
+  const hoa=isCondo?Math.round(R(380,720)):0;
+  const beds=isCondo?(sqft>820?2:1):(sqft>2100?5:sqft>1500?4:3);
+  // distress / temporal
+  const trueDom=Math.round(Math.max(4, (Math.pow(rnd(),1.7))*170));
+  const relisted=rnd()<0.32 && trueDom>60;
+  const displayedDom=relisted?Math.round(R(3,22)):trueDom;
+  const dropPct=rnd()<0.38?Math.round(R(2,11)):0;
+  const distressed=dropPct>=6||trueDom>110;
+  const geo = rnd()<0.14 ? pick(['flood','conservation','rail']) : null;
+  LISTINGS.push({
+    id:'X'+(100000+i),
+    addr:`${Math.floor(R(8,320))} ${pick(STREETS)} ${pick(SUF)}`,
+    city:s.city, region:s.region, sub:s,
+    subtype, isCondo, sqft, psf, price, beds,
+    annualRent, tax, hoa,
+    TrueDom:trueDom, displayedDom, relisted,
+    TotalPriceDropPct:dropPct, distressed, suite, geo,
+    brokerage:pick(BRK),
+  });
+}
+
+// percentiles of $/sqft within submarket cohort
+const byRegion={};
+LISTINGS.forEach(l=>{(byRegion[l.region]=byRegion[l.region]||[]).push(l.psf)});
+Object.values(byRegion).forEach(a=>a.sort((x,y)=>x-y));
+function pctOf(arr,v){let c=0;for(const x of arr)if(x<v)c++;return c/arr.length;}
+LISTINGS.forEach(l=>{
+  const arr=byRegion[l.region];
+  l.psfPct=pctOf(arr,l.psf);                 // 0=cheapest in submkt
+  const med=arr[Math.floor(arr.length/2)];
+  l.discount=(med-l.psf)/med;                // + = below comps
+});
+// DOM percentile across whole set
+const domArr=LISTINGS.map(l=>l.TrueDom).sort((a,b)=>a-b);
+LISTINGS.forEach(l=>l.domPct=pctOf(domArr,l.TrueDom));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State + finance
+// ─────────────────────────────────────────────────────────────────────────────
+const state={down:.20,rate:.0404,amort:360,yaxis:'cap',lens:'opp',persona:'flipper',hl:null};
+
+function effMonthly(annual){return Math.pow(1+annual/2,1/6)-1;}
+function mortgage(loan,annual,n){const r=effMonthly(annual);return loan*r/(1-Math.pow(1+r,-n));}
+
+function compute(l){
+  const loan=l.price*(1-state.down);
+  const mtg=mortgage(loan,state.rate,state.amort);
+  const capexAnnual=l.price*(l.isCondo?0.005:0.01);
+  const insur=l.isCondo?40:(l.subtype==='Multiplex'?200:135);
+  const vacancy=l.annualRent*0.03;
+  // NOI excludes financing + capex reserve (standard cap-rate convention)
+  const opexForCap=l.tax+l.hoa*12+insur*12+vacancy;
+  const noi=l.annualRent-opexForCap;
+  const cap=noi/l.price;
+  // cashflow includes mortgage + capex reserve
+  const cashMo=l.annualRent/12-(opexForCap/12)-(capexAnnual/12)-mtg;
+  const grossYld=l.annualRent/l.price;
+  return {cap,cashMo,grossYld,mtg};
+}
+
+const fmtPrice=p=>p>=1e6?'$'+(p/1e6).toFixed(2)+'M':'$'+Math.round(p/1e3)+'K';
+const fmtCash=c=>(c>=0?'+$':'−$')+Math.abs(Math.round(c)).toLocaleString();
+const pctStr=p=>'P'+Math.round(p*100);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scatter
+// ─────────────────────────────────────────────────────────────────────────────
+const NS='http://www.w3.org/2000/svg';
+function el(n,a){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;}
+const PAD={l:52,r:18,t:24,b:42}, W=600,H=470;
+const X0=PAD.l,X1=W-PAD.r,Y0=H-PAD.b,Y1=PAD.t;
+// X = discount to comps (-0.28 .. +0.28), right = underpriced
+const xDom=[-0.28,0.28];
+const xScale=v=>X0+( (clamp(v,xDom[0],xDom[1])-xDom[0])/(xDom[1]-xDom[0]) )*(X1-X0);
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function drawScatter(rows){
+  const svg=document.getElementById('scatter');
+  svg.innerHTML='';
+  // y domain depends on metric
+  let yVal,yDom,yFmt,yTitle;
+  if(state.yaxis==='cap'){yVal=r=>r.m.cap;yDom=[0.018,0.072];yFmt=v=>(v*100).toFixed(1)+'%';yTitle='YIELD  ·  cap rate  (NOI / price)';}
+  else{const cs=rows.map(r=>r.m.cashMo);const lo=Math.min(-1200,...cs),hi=Math.max(1200,...cs);yDom=[lo,hi];yVal=r=>r.m.cashMo;yFmt=v=>(v>=0?'+$':'−$')+Math.abs(Math.round(v));yTitle='MONTHLY CASHFLOW  ·  at your assumptions';}
+  const yScale=v=>Y0+((clamp(v,yDom[0],yDom[1])-yDom[0])/(yDom[1]-yDom[0]))*(Y1-Y0);
+
+  // alpha quadrant (underpriced + high yield) top-right
+  const ax=xScale(0.06), ay=state.yaxis==='cap'?yScale(0.045):yScale(0);
+  svg.appendChild(el('rect',{x:ax,y:Y1,width:X1-ax,height:ay-Y1,fill:'var(--alpha)'}));
+  const qt=el('text',{x:X1-6,y:Y1+14,'text-anchor':'end','class':'quadtag'});qt.textContent='◹ ALPHA';svg.appendChild(qt);
+
+  // gridlines + ticks
+  for(let i=0;i<=4;i++){
+    const yv=yDom[0]+(yDom[1]-yDom[0])*i/4, y=yScale(yv);
+    svg.appendChild(el('line',{x1:X0,y1:y,x2:X1,y2:y,'class':'gridln'}));
+    const t=el('text',{x:X0-8,y:y+3,'text-anchor':'end','class':'axtick'});t.textContent=yFmt(yv);svg.appendChild(t);
+  }
+  [-0.2,-0.1,0,0.1,0.2].forEach(xv=>{
+    const x=xScale(xv);
+    svg.appendChild(el('line',{x1:x,y1:Y1,x2:x,y2:Y0,'class':'gridln',stroke:xv===0?'#1f2a36':'var(--grid)'}));
+    const t=el('text',{x:x,y:Y0+15,'text-anchor':'middle','class':'axtick'});t.textContent=(xv>0?'+':'')+Math.round(xv*100)+'%';svg.appendChild(t);
+  });
+  // axis labels
+  const xl=el('text',{x:(X0+X1)/2,y:H-6,'text-anchor':'middle','class':'axlabel'});
+  xl.textContent='◄ over comps        DISCOUNT TO SUBMARKET $/SQFT        under comps ►';svg.appendChild(xl);
+  const yl=el('text',{x:14,y:(Y0+Y1)/2,'text-anchor':'middle','class':'axlabel',transform:`rotate(-90 14 ${(Y0+Y1)/2})`});
+  yl.textContent=yTitle;svg.appendChild(yl);
+
+  // dots
+  const pr=rows.map(r=>r.price), pmin=Math.min(...pr),pmax=Math.max(...pr);
+  rows.forEach(r=>{
+    const cx=xScale(r.discount), cy=yScale(yVal(r));
+    const rad=4+ (1-(r.price-pmin)/(pmax-pmin||1))*7; // cheaper = bigger
+    const pos=r.m.cashMo>=0;
+    const fill=pos?'var(--g)':'var(--r)';
+    const c=el('circle',{cx,cy,r:rad,fill,'fill-opacity':r.distressed?0.95:0.62,stroke:r.id===state.hl?'#fff':(r.distressed?'var(--am)':'none'),'stroke-width':r.id===state.hl?2:(r.distressed?1.4:0),'class':'dot-c','data-id':r.id});
+    svg.appendChild(c);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Percentile bar (good = low percentile for $/sqft)
+// ─────────────────────────────────────────────────────────────────────────────
+function pbar(pct){
+  const pos=Math.round(pct*100);
+  const col=pct<.33?'var(--g)':pct<.66?'var(--am)':'var(--r)';
+  return `<div class="pcell"><span class="plabel">${pctStr(pct)}</span>`+
+    `<div class="pbar"><div class="seg" style="width:${pos}%;background:${col}"></div>`+
+    `<div class="notch" style="left:${pos}%;background:${col};box-shadow:0 0 4px ${col}"></div></div></div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render ledger
+// ─────────────────────────────────────────────────────────────────────────────
+function chipsFor(l){
+  let h='<div class="chips">';
+  if(l.TotalPriceDropPct>0) h+=`<span class="chip drop">▼${l.TotalPriceDropPct}%</span>`;
+  if(l.distressed) h+='<span class="chip d">DISTRESS</span>';
+  if(l.suite==='EXISTING_SUITE') h+='<span class="chip s">SUITE</span>';
+  else if(l.suite==='POTENTIAL_CANDIDATE') h+='<span class="chip s">+1 POT</span>';
+  if(l.geo) h+=`<span class="chip f">${l.geo.toUpperCase()}</span>`;
+  return h+'</div>';
+}
+function domCell(l){
+  const warn=l.TrueDom>90;
+  const strike=l.relisted?`<span class="strike">${l.displayedDom}d</span>`:'';
+  return `${strike}<span class="${warn?'warnum':'mut'}">${l.TrueDom}d</span>`;
+}
+function renderLedger(rows){
+  const tb=document.getElementById('rows');
+  tb.innerHTML=rows.map(r=>{
+    const capCol=r.m.cap>=0.05?'pos':r.m.cap>=0.038?'warnum':'mut';
+    return `<tr data-id="${r.id}" class="${r.id===state.hl?'hl':''}">
+      <td class="l"><div class="addr">${r.addr}</div><div class="sub">${r.beds}bd · ${r.subtype} · ${r.sqft.toLocaleString()}sqft · ${r.region}</div><div class="brk">${r.brokerage}</div></td>
+      <td><div style="color:var(--bright)">$${r.psf}</div>${pbar(r.psfPct)}</td>
+      <td class="${capCol}">${(r.m.cap*100).toFixed(1)}%</td>
+      <td class="${r.m.cashMo>=0?'pos':'neg'}">${fmtCash(r.m.cashMo)}</td>
+      <td>${domCell(r)}</td>
+      <td>${chipsFor(r)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ledgerCount').textContent=rows.length;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Signal tape (derived from the same data)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildTape(rows){
+  const ev=[];
+  rows.forEach(r=>{
+    if(r.TotalPriceDropPct>=4) ev.push({k:'cut',w:r.TotalPriceDropPct,tag:'PRICE CUT',ago:Math.round(R(1,9))+'h',
+      meat:`<b>−${r.TotalPriceDropPct}%</b> · ${r.addr}`,ctx:`now ${pctStr(r.psfPct)} in ${r.region} · ${fmtPrice(r.price)}`,id:r.id});
+    if(r.relisted) ev.push({k:'dom',w:r.TrueDom,tag:'CROSSED 90d',ago:Math.round(R(2,20))+'h',
+      meat:`<b>${r.TrueDom}d</b> True DOM · ${r.addr}`,ctx:`board shows ${r.displayedDom}d — relisted to reset the clock`,id:r.id});
+    if(r.suite==='POTENTIAL_CANDIDATE'&&r.discount>0.05) ev.push({k:'new',w:50,tag:'NEW · MATCH',ago:Math.round(R(1,6))+'h',
+      meat:`${r.addr} · <b>${fmtPrice(r.price)}</b>`,ctx:`${pctStr(r.psfPct)} $/sqft + suite potential · fits Flipper screen`,id:r.id});
+  });
+  // synthetic sold comps
+  for(let i=0;i<5;i++){const r=pick(rows);const d=Math.round(R(-7,2));
+    ev.push({k:'sold',w:30,tag:'SOLD COMP',ago:Math.round(R(1,30))+'h',
+      meat:`<b>${fmtPrice(Math.round(r.price*(1+d/100)))}</b> · ${pick(STREETS)} ${pick(SUF)}`,
+      ctx:`${d<=0?d:'+'+d}% vs ask · ${r.region} · resets your comps`,id:r.id});}
+  ev.sort((a,b)=>parseFloat(a.ago)-parseFloat(b.ago));
+  return ev.slice(0,22);
+}
+function renderTape(rows){
+  const t=document.getElementById('tape');
+  t.innerHTML=buildTape(rows).map(e=>`<div class="ev ${e.k}" data-id="${e.id}">
+    <div class="bar"></div><div class="body">
+    <div class="top"><span class="tag">${e.tag}</span><span class="ago">${e.ago} ago</span></div>
+    <div class="meat">${e.meat}</div><div class="ctx">${e.ctx}</div></div></div>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sort by persona + render all
+// ─────────────────────────────────────────────────────────────────────────────
+function activeRows(){
+  const rows=LISTINGS.map(l=>({...l,m:compute(l)}));
+  const sorters={
+    flipper:(a,b)=>(b.discount-a.discount)||(b.TrueDom-a.TrueDom),
+    cashflow:(a,b)=>b.m.cashMo-a.m.cashMo,
+    builder:(a,b)=>(b.suite==='EXISTING_SUITE')-(a.suite==='EXISTING_SUITE')||a.psf-b.psf,
+    buyer:(a,b)=>a.psfPct-b.psfPct,
+  };
+  return rows.sort(sorters[state.persona]||sorters.flipper);
+}
+function render(){
+  const rows=activeRows();
+  // headline: cashflow-positive count
+  const pos=rows.filter(r=>r.m.cashMo>=0).length;
+  document.getElementById('hlBig').textContent=`${pos}/${rows.length}`;
+  // lens visibility
+  const show=state.lens;
+  document.getElementById('scatter').style.display=show==='opp'?'block':'none';
+  document.getElementById('legend').style.display=show==='opp'?'flex':'none';
+  document.getElementById('maphint').style.display=show==='map'?'flex':'none';
+  document.getElementById('listhint').style.display=show==='list'?'flex':'none';
+  if(show==='opp') drawScatter(rows);
+  renderLedger(rows);
+  renderTape(rows);
+  bindHover();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Interactivity
+// ─────────────────────────────────────────────────────────────────────────────
+function setHL(id){state.hl=id;
+  document.querySelectorAll('#rows tr').forEach(tr=>tr.classList.toggle('hl',tr.dataset.id===id));
+  document.querySelectorAll('#scatter circle').forEach(c=>{
+    const on=c.dataset.id===id;c.setAttribute('stroke',on?'#fff':(c.getAttribute('data-distress')==='1'?'var(--am)':'none'));
+    c.setAttribute('stroke-width',on?2:0);c.setAttribute('r',c.getAttribute('data-r')||c.getAttribute('r'));
+  });
+}
+function bindHover(){
+  document.querySelectorAll('#rows tr').forEach(tr=>{
+    tr.onmouseenter=()=>setHL(tr.dataset.id);
+    tr.onmouseleave=()=>setHL(null);
+  });
+  const tip=document.getElementById('tip');
+  document.querySelectorAll('#scatter circle').forEach(c=>{
+    c.onmouseenter=e=>{const id=c.dataset.id;setHL(id);const l=LISTINGS.find(x=>x.id===id);const m=compute(l);
+      tip.style.display='block';
+      tip.innerHTML=`<div class="ta">${l.addr}</div>
+        <div class="tr"><span>${l.region}</span><span>${fmtPrice(l.price)}</span></div>
+        <div class="tr"><span>$/sqft</span><span>$${l.psf} · ${pctStr(l.psfPct)}</span></div>
+        <div class="tr"><span>cap rate</span><span>${(m.cap*100).toFixed(1)}%</span></div>
+        <div class="tr"><span>cash/mo</span><span style="color:${m.cashMo>=0?'var(--g)':'var(--r)'}">${fmtCash(m.cashMo)}</span></div>
+        <div class="tr"><span>True DOM</span><span>${l.TrueDom}d${l.relisted?' ('+l.displayedDom+' shown)':''}</span></div>`;
+    };
+    c.onmousemove=e=>{const wrap=document.querySelector('.scatterwrap').getBoundingClientRect();
+      let x=e.clientX-wrap.left+12,y=e.clientY-wrap.top+12;
+      if(x>wrap.width-185)x-=200;tip.style.left=x+'px';tip.style.top=y+'px';};
+    c.onmouseleave=()=>{tip.style.display='none';setHL(null);};
+  });
+  document.querySelectorAll('#tape .ev').forEach(ev=>{
+    ev.onmouseenter=()=>setHL(ev.dataset.id);ev.onmouseleave=()=>setHL(null);
+  });
+}
+
+// controls
+const downEl=document.getElementById('down'),rateEl=document.getElementById('rate');
+downEl.oninput=()=>{state.down=+downEl.value/100;document.getElementById('downV').textContent=downEl.value+'%';render();};
+rateEl.oninput=()=>{state.rate=+rateEl.value/100;document.getElementById('rateV').textContent=(+rateEl.value).toFixed(2)+'%';render();};
+document.querySelectorAll('#amort button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#amort button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.amort=+b.dataset.v;render();});
+document.querySelectorAll('#yaxis button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#yaxis button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.yaxis=b.dataset.v;render();});
+document.querySelectorAll('#lens button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#lens button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.lens=b.dataset.v;render();});
+document.getElementById('persona').onchange=e=>{state.persona=e.target.value;render();};
+
+// clock
+function tick(){const d=new Date();document.getElementById('clock').innerHTML=
+  `MKT <b>OPEN</b> · ${d.toLocaleTimeString('en-CA',{hour12:false})} ET · GTA feed <b style="color:var(--g)">●</b> synced`;}
+tick();setInterval(tick,1000);
+
+render();
+</script>
+</body>
+</html>

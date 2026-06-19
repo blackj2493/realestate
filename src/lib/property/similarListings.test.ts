@@ -46,6 +46,9 @@ describe("familySubtypeVariants", () => {
 
 import {
   bedScore,
+  combinedBedScore,
+  garageScore,
+  splitBeds,
   priceScore,
   sizeScore,
   regionScore,
@@ -62,6 +65,52 @@ describe("bedScore (asymmetric — bigger preferred over smaller)", () => {
   });
   it("decays toward a floor for big gaps", () => {
     expect(bedScore(3, 6)).toBeLessThanOrEqual(0.1);
+  });
+});
+
+describe("combinedBedScore (above-grade dominates, below-grade refines)", () => {
+  // Subject is 4+2 (4 above, 2 below).
+  const s = (a: number, b: number) => (cA: number, cB: number) => combinedBedScore(a, b, cA, cB);
+  const sub = s(4, 2);
+  it("peaks for an identical above/below split", () => {
+    expect(sub(4, 2)).toBe(1);
+  });
+  it("ranks a true above-grade match (4+X) far above a same-total 6+0", () => {
+    // The bug being fixed: 4+2 (total 6) vs 6+0 (also total 6) used to be a perfect match.
+    expect(sub(4, 1)).toBeGreaterThan(sub(6, 0));
+    expect(sub(4, 0)).toBeGreaterThan(sub(6, 0));
+  });
+  it("within above-grade matches, prefers a closer below-grade count", () => {
+    expect(sub(4, 1)).toBeGreaterThan(sub(4, 0)); // 4+1 closer to 4+2 than 4+0
+    expect(sub(4, 2)).toBeGreaterThan(sub(4, 1));
+  });
+});
+
+describe("garageScore (symmetric closeness; neutral when unknown)", () => {
+  it("peaks at an exact match", () => {
+    expect(garageScore(2, 2)).toBe(1);
+  });
+  it("penalizes a 1-car vs 2-car difference and more for a no-garage gap", () => {
+    expect(garageScore(2, 1)).toBeGreaterThan(garageScore(2, 0));
+    expect(garageScore(2, 1)).toBeLessThan(garageScore(2, 2));
+  });
+  it("is neutral (0.5) when either side is unknown (null), not penalized", () => {
+    expect(garageScore(null, 2)).toBe(0.5);
+    expect(garageScore(2, null)).toBe(0.5);
+    // 0 is a REAL value (no garage), distinct from unknown.
+    expect(garageScore(2, 0)).toBeLessThan(0.5);
+  });
+});
+
+describe("splitBeds (above/below normalization with the TRREB fallback)", () => {
+  it("passes through a fully-populated split", () => {
+    expect(splitBeds({ total: 6, above: 4, below: 2 })).toEqual({ above: 4, below: 2 });
+  });
+  it("derives above = total − below when above is missing/0 (TRREB quirk)", () => {
+    expect(splitBeds({ total: 6, above: 0, below: 2 })).toEqual({ above: 4, below: 2 });
+  });
+  it("falls back to total when only the total is known", () => {
+    expect(splitBeds({ total: 5 })).toEqual({ above: 5, below: 0 });
   });
 });
 
@@ -113,6 +162,9 @@ const SUBJECT: SubjectAttrs = {
   city: "Brampton",
   subType: "Detached",
   beds: 3,
+  bedsAbove: 3,
+  bedsBelow: 0,
+  garage: 2,
   listPrice: 1_000_000,
   area: 1800,
 };
@@ -121,6 +173,9 @@ const cand = (over: Partial<CandidateAttrs>): CandidateAttrs => ({
   cityRegion: "Bram East",
   subType: "Detached",
   beds: 3,
+  bedsAbove: 3,
+  bedsBelow: 0,
+  garage: 2,
   price: 1_000_000,
   area: 1800,
   ...over,
@@ -131,6 +186,25 @@ describe("scoreForSale", () => {
     expect(scoreForSale(SUBJECT, cand({}))).toBeGreaterThan(
       scoreForSale(SUBJECT, cand({ cityRegion: "Bram West" }))
     );
+  });
+});
+
+describe("comparables regression — a 4+2 subject", () => {
+  // Subject: 4 above + 2 below (total 6), 2-car garage.
+  const subject: SubjectAttrs = { ...SUBJECT, beds: 6, bedsAbove: 4, bedsBelow: 2, garage: 2 };
+  const fourPlusTwo = cand({ beds: 6, bedsAbove: 4, bedsBelow: 2, garage: 2 });
+  const sixPlusZero = cand({ beds: 6, bedsAbove: 6, bedsBelow: 0, garage: 2 });
+
+  it("ranks a true 4+2 comp above a same-total 6+0 comp (the original bug)", () => {
+    expect(scoreForSale(subject, fourPlusTwo)).toBeGreaterThan(scoreForSale(subject, sixPlusZero));
+    expect(scoreSold(subject, { ...sixPlusZero, daysAgo: 10 })).toBeLessThan(
+      scoreSold(subject, { ...fourPlusTwo, daysAgo: 10 })
+    );
+  });
+
+  it("ranks a matching-garage comp above a garage-mismatched one, all else equal", () => {
+    const oneCar = cand({ beds: 6, bedsAbove: 4, bedsBelow: 2, garage: 0 });
+    expect(scoreForSale(subject, fourPlusTwo)).toBeGreaterThan(scoreForSale(subject, oneCar));
   });
 });
 
@@ -145,9 +219,9 @@ describe("scoreSold ignores price (it is the answer, not a filter)", () => {
 describe("rankSimilar", () => {
   it("sorts by score desc, caps at the limit, and tags exact flags + why", () => {
     const items = [
-      cand({ cityRegion: "Bram West", beds: 1 }), // weak
+      cand({ cityRegion: "Bram West", beds: 1, bedsAbove: 1 }), // weak
       cand({}), // perfect
-      cand({ cityRegion: "Bram East", beds: 4 }), // strong
+      cand({ cityRegion: "Bram East", beds: 4, bedsAbove: 4 }), // strong
     ];
     const ranked = rankSimilar(SUBJECT, items, (c) => c, "sale", 2);
     expect(ranked).toHaveLength(2);

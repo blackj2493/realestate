@@ -69,5 +69,8 @@ export function mapListingToAVMInput(
     interiorTier: deriveInteriorTier(payload),
     exteriorTier: deriveExteriorTier(payload),
     basementTier: deriveBasementTier(payload),
+    // Full postal for hierarchical geo comp weighting (the active listing payload
+    // carries the full 6-char code). Absent → geo weighting is a no-op for this subject.
+    postalCode: typeof payload.PostalCode === 'string' ? payload.PostalCode.trim() : null,
   };
 }

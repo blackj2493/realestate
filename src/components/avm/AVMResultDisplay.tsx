@@ -115,15 +115,17 @@ export function AVMResultDisplay() {
             the Greater Toronto Area.
           </p>
         </div>
-        <Link
-          href="/properties"
-          className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
-        >
-          See live investor deals near you →
-        </Link>
-        <p className="text-xs text-gray-500 text-center">
-          Estimate only — not a formal appraisal or financial advice.
-        </p>
+        <div className="space-y-2 pt-4 border-t border-gray-700">
+          <Link
+            href="/properties"
+            className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+          >
+            See live investor deals near you →
+          </Link>
+          <p className="text-xs text-gray-500 text-center">
+            Estimate only — not a formal appraisal or financial advice.
+          </p>
+        </div>
       </div>
     );
   }
@@ -182,6 +184,19 @@ export function AVMResultDisplay() {
           <BreakdownRow label="Basement" value={result.breakdown.basementAdjustment} />
         </div>
       )}
+
+      {/* Lead CTA — route high-intent viewer into the funnel */}
+      <div className="space-y-2 pt-4 border-t border-gray-700">
+        <Link
+          href="/properties"
+          className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+        >
+          See live investor deals near you →
+        </Link>
+        <p className="text-xs text-gray-500 text-center">
+          Estimate only — not a formal appraisal or financial advice.
+        </p>
+      </div>
     </div>
   );
 }

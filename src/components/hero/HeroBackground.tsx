@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const HeroMapCanvas = dynamic(() => import("./HeroMapCanvas"), { ssr: false });
 
@@ -9,6 +10,11 @@ export default function HeroBackground({
 }: {
   variant?: "hero" | "form";
 }) {
+  // Phones get the lightweight grid + emerald wash only. The Mapbox/deck.gl
+  // canvas (~300-400KB JS + map tiles) is desktop-only so cellular first paint
+  // stays cheap. SSR snapshot is `false` (desktop-first), matching prior markup.
+  const isMobile = useIsMobile();
+
   // Keep the map clearly visible; only enough scrim for text legibility.
   const scrim =
     variant === "form"
@@ -20,8 +26,8 @@ export default function HeroBackground({
       {/* Faint texture shown only until the map tiles load */}
       <div className="grid-pattern absolute inset-0 opacity-20" />
 
-      {/* Live deck.gl + Mapbox dark map */}
-      <HeroMapCanvas />
+      {/* Live deck.gl + Mapbox dark map — desktop only (skipped on phones) */}
+      {!isMobile && <HeroMapCanvas />}
 
       {/* Subtle emerald top wash */}
       <div

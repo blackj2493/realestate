@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, TrendingUp, TrendingDown, Minus, Gauge } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import type {
   DealScoreResult,
   DealScoreGrade,
@@ -233,7 +233,12 @@ export default function DealScoreCard({
                   style={{ width: `${Math.round(c.points)}%` }}
                 />
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-slate-500">{c.detail}</p>
+              <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                {c.detail}
+                {c.compValue ? (
+                  <span className="text-slate-600"> · comp value {formatPrice(c.compValue)}</span>
+                ) : null}
+              </p>
             </div>
           ))}
         </div>

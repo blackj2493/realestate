@@ -195,6 +195,14 @@ describe('toDelistedDocument', () => {
     expect(doc.BasementTier).toBe(0);
   });
 
+  it('emits the grade fields (above = total, below = 0) so the grade-aware beds filter keeps de-listed rows', () => {
+    // The VOW de-list feed has no below-grade split, so total == above-grade.
+    const doc = toDelistedDocument(record)!;
+    expect(doc.BedroomsAboveGrade).toBe(3);
+    expect(doc.BedroomsBelowGrade).toBe(0);
+    expect(doc.BedroomsTotal).toBe(3);
+  });
+
   it('returns null without a listing key', () => {
     expect(toDelistedDocument({ ...record, listing_key: '' })).toBeNull();
   });

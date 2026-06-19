@@ -6,8 +6,16 @@ export interface FilterOption {
   label: string;
 }
 
-/** A range carries [min, max]; a stepper carries a single number; an enum carries selected values. */
-export type FilterValue = [number, number] | number | string[];
+/** A stepper carries a count plus whether it's an *exact* match (vs. a minimum).
+ *  A bare number is read as { n, exact:false } — back-compat for defaults and any
+ *  previously-stored state (see `readStepper` in filterRegistry). */
+export interface StepperValue {
+  n: number;
+  exact: boolean;
+}
+
+/** A range carries [min, max]; a stepper carries a count (+exact flag); an enum carries selected values. */
+export type FilterValue = [number, number] | number | string[] | StepperValue;
 
 export interface FilterDef {
   key: string;

@@ -1,4 +1,5 @@
 // src/components/hiddenEquity/HiddenEquityReport.tsx
+import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import type { AVMResult } from "@/lib/avm/types";
 import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
@@ -163,6 +164,19 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
           Renovation modeling isn&apos;t available for this neighbourhood yet.
         </p>
       ) : null}
+
+      {/* ── Lead CTA — route to the live properties surface (no /contact route) ── */}
+      <div className="space-y-2 border-t border-slate-800 pt-4">
+        <Link
+          href="/properties"
+          className="flex min-h-[44px] w-full items-center justify-center gap-1 rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 active:bg-emerald-700 [touch-action:manipulation]"
+        >
+          Book a free call →
+        </Link>
+        <p className="text-center text-[11px] text-slate-500">
+          See active listings and talk to an investor agent — free, no obligation.
+        </p>
+      </div>
 
       {/* ── Always render compliance disclaimers ── */}
       <Disclaimers />

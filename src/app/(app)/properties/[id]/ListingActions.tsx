@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useWatchlistStore } from "@/lib/watchlist/useWatchlist";
 import ScheduleViewingForm from "@/components/Property/ScheduleViewingForm";
+import CtaLadder from "@/components/Property/CtaLadder";
 
 /**
  * Right-rail actions for the full listing page. "Add to Comparison" feeds the same
@@ -42,7 +43,11 @@ export default function ListingActions({
   return (
     <div className="space-y-2 pt-2">
       {statusKind === "active" && (
-        <ScheduleViewingForm listingKey={id} address={address} />
+        <>
+          <CtaLadder listingKey={id} />
+          {/* Shared form: rendered (event-only) so every ladder rung opens it inline. */}
+          <ScheduleViewingForm listingKey={id} address={address} price={price} renderTrigger={false} />
+        </>
       )}
 
       <button

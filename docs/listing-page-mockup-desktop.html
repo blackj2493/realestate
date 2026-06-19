@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PureProperty — Listing Page Mockup · Desktop (concept)</title>
+<style>
+  :root{
+    --bg:#020617; --shell:#06080f; --card:#0f172a; --card2:#0b1220; --line:#1e293b; --line2:#273449;
+    --txt:#e2e8f0; --mut:#94a3b8; --faint:#64748b; --faintest:#475569;
+    --em:#34d399; --cy:#22d3ee; --am:#fbbf24; --ro:#fb7185; --pu:#c084fc;
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--shell);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .mono{font-family:var(--mono)}
+  a{color:inherit;text-decoration:none}
+  .caption{max-width:1400px;margin:18px auto 6px;padding:0 22px;color:var(--mut);font-size:13px;line-height:1.5}
+  .caption b{color:var(--txt)} .caption code{font-family:var(--mono);color:var(--cy);font-size:12px}
+
+  /* top nav */
+  .nav{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:11px 22px;
+    background:rgba(2,6,23,.93);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .logo{font-family:var(--mono);font-weight:800;letter-spacing:.02em;color:#f1f5f9;font-size:15px}
+  .logo span{color:var(--em)}
+  .search{flex:1;max-width:420px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--faint);font-size:13px}
+  .personas{display:flex;gap:6px;margin-left:auto}
+  .pchip{white-space:nowrap;font-size:12px;padding:7px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--mut);background:transparent;cursor:pointer;font-weight:600}
+  .pchip.on{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.5);color:var(--em)}
+  .acct{height:34px;width:34px;border-radius:9px;background:linear-gradient(135deg,#0e7490,#155e75);display:flex;align-items:center;justify-content:center;color:#cffafe;font-weight:800;font-size:13px}
+
+  .wrap{max-width:1400px;margin:0 auto;padding:18px 22px 80px}
+  .back{display:inline-block;color:var(--cy);font-size:13px;margin-bottom:16px}
+
+  .grid{display:grid;grid-template-columns:7fr 3fr;gap:22px;align-items:start}
+
+  /* header */
+  .badges{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px}
+  .badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;padding:4px 8px;border-radius:6px;text-transform:uppercase}
+  .b-em{background:rgba(52,211,153,.13);color:var(--em);border:1px solid rgba(52,211,153,.3)}
+  .b-am{background:rgba(251,191,36,.13);color:var(--am);border:1px solid rgba(251,191,36,.3)}
+  .b-pu{background:rgba(192,132,252,.13);color:var(--pu);border:1px solid rgba(192,132,252,.3)}
+  .htop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+  h1.addr{font-size:28px;font-weight:800;margin:0;color:#f1f5f9;line-height:1.15}
+  .save{height:38px;padding:0 14px;display:flex;align-items:center;gap:6px;border:1px solid rgba(251,113,133,.4);border-radius:9px;background:rgba(251,113,133,.08);color:var(--ro);font-size:13px;font-weight:700;flex-shrink:0;cursor:pointer}
+  .priceline{display:flex;flex-wrap:wrap;align-items:baseline;gap:13px;margin-top:10px}
+  .price{font-family:var(--mono);font-size:32px;font-weight:800;color:var(--em)}
+  .overchip{font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 9px;border-radius:6px;background:rgba(251,113,133,.13);color:var(--ro);border:1px solid rgba(251,113,133,.3)}
+  .ds-badge{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:13px;font-weight:700;padding:5px 10px;border-radius:8px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.35);color:var(--cy)}
+  .ds-badge .g{background:var(--cy);color:#04293a;border-radius:4px;padding:0 6px;font-weight:800}
+  .sub{margin-top:10px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+  .sub .bk{color:var(--mut)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px}
+  .card.new{border-color:rgba(52,211,153,.32);box-shadow:0 0 0 1px rgba(52,211,153,.06)}
+  .ctitle{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#cbd5e1;margin:0 0 13px}
+  .newtag{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--em);background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.35);border-radius:5px;padding:2px 6px;margin-left:auto}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .disc{font-size:10px;color:var(--faintest);font-family:var(--mono);margin-top:8px}
+  .muted{color:var(--mut)} .small{font-size:12px}
+
+  /* VERDICT — 3 columns on desktop */
+  .vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .vcol{border-left:2px solid var(--line2);padding-left:13px}
+  .vcol.good{border-color:rgba(52,211,153,.55)} .vcol.risk{border-color:rgba(251,191,36,.55)} .vcol.price{border-color:rgba(34,211,238,.55)}
+  .vlab{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .vlab.good{color:var(--em)} .vlab.risk{color:var(--am)} .vlab.price{color:var(--cy)}
+  .vtext{font-size:13.5px;line-height:1.55;color:#cbd5e1} .vtext b{color:#f1f5f9}
+
+  /* bento gallery */
+  .bento{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:140px 140px;gap:8px;margin-bottom:18px}
+  .tile{border-radius:11px;background:repeating-linear-gradient(115deg,#243245 0 22px,#1c2940 22px 44px);position:relative;overflow:hidden}
+  .tile.hero{grid-row:span 2;background:linear-gradient(135deg,#1e293b,#0f172a 60%,#172033)}
+  .tile .more{position:absolute;right:9px;bottom:9px;font-family:var(--mono);font-size:11px;font-weight:700;background:rgba(2,6,23,.78);border:1px solid var(--line2);border-radius:8px;padding:6px 9px}
+
+  /* specs */
+  .specs{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
+  .spec{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px;text-align:center}
+  .spec .v{font-family:var(--mono);font-size:21px;font-weight:800}
+  .spec .l{font-size:10px;text-transform:uppercase;color:var(--faint);letter-spacing:.04em;margin-top:3px}
+
+  /* things to know */
+  .flag{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .flag:first-of-type{border-top:none}
+  .fic{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .fic.warn{background:rgba(251,191,36,.13);color:var(--am)}
+  .fic.info{background:rgba(34,211,238,.12);color:var(--cy)}
+  .ftitle{font-size:13.5px;font-weight:700;color:#e2e8f0}
+  .fsrc{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:3px}
+  .fask{font-size:12.5px;color:var(--am);margin-top:5px}
+  .freply{font-size:12.5px;color:var(--em);margin-top:6px;padding:7px 10px;background:rgba(52,211,153,.07);border-left:2px solid rgba(52,211,153,.5);border-radius:0 7px 7px 0}
+  .freply b{color:var(--em)}
+  .flags2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+
+  /* data sheet */
+  .dsheet{display:grid;grid-template-columns:1fr 1fr;gap:8px 28px}
+  .drow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .drow .k{color:var(--faint)} .drow .v{font-family:var(--mono);color:#e2e8f0}
+  .drow.flagged .v{color:var(--am)}
+
+  /* agent Q&A */
+  .agenthead{display:flex;align-items:center;gap:11px;margin-bottom:5px}
+  .ava{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#0e7490,#155e75);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#cffafe}
+  .aname{font-size:13.5px;font-weight:700;color:#e2e8f0}
+  .ameta{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .respbar{display:flex;gap:4px;margin:11px 0 5px}
+  .seg{height:6px;flex:1;border-radius:3px;background:#1e293b}
+  .seg.on{background:var(--em)}
+  .qagrid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+  .qa{padding:13px 0;border-top:1px solid var(--line)}
+  .q{font-size:13px;font-weight:700;color:#e2e8f0;display:flex;gap:8px;align-items:flex-start}
+  .q .qm{color:var(--cy);font-family:var(--mono);font-weight:800}
+  .a{font-size:13px;line-height:1.55;color:#cbd5e1;margin:6px 0 0 21px}
+  .ameta2{font-family:var(--mono);font-size:10.5px;color:var(--faintest);margin:6px 0 0 21px;display:flex;gap:12px}
+  .unanswered{margin:6px 0 0 21px}
+  .uflag{font-family:var(--mono);font-size:12px;color:var(--am)}
+  .askbtn{margin-top:8px;font-size:12px;font-weight:700;color:var(--cy);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);border-radius:8px;padding:7px 11px;display:inline-block;cursor:pointer}
+
+  /* RIGHT RAIL */
+  .rail{position:sticky;top:74px;display:flex;flex-direction:column;gap:14px}
+  .rcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
+  .rtitle{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 11px;display:flex;align-items:center;gap:7px}
+
+  /* deal score ring */
+  .ring-wrap{display:flex;align-items:center;gap:15px}
+  .ring{position:relative;width:78px;height:78px;flex-shrink:0}
+  .ring .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .num .s{font-family:var(--mono);font-size:22px;font-weight:800;color:#e2e8f0;line-height:1}
+  .ring .num .g{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--cy)}
+  .verdicttxt{font-size:12.5px;line-height:1.5;color:var(--mut)}
+  .verdicttxt b{color:#e2e8f0}
+
+  .avmval{font-family:var(--mono);font-size:26px;font-weight:800;color:var(--cy)}
+  .band{position:relative;height:7px;border-radius:4px;background:linear-gradient(90deg,#172033,#1f3550,#172033);margin:22px 0 6px}
+  .tick{position:absolute;top:-16px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;font-weight:700}
+  .marker{position:absolute;top:-3px;width:2px;height:13px;border-radius:2px}
+  .scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faintest)}
+
+  /* underwriting */
+  .uw-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .um{text-align:center;padding:9px 3px;border:1px solid var(--line);border-radius:9px}
+  .um.lead{outline:1px solid rgba(52,211,153,.5);background:rgba(52,211,153,.05)}
+  .um .v{font-family:var(--mono);font-size:18px;font-weight:800}
+  .um .l{font-size:9px;text-transform:uppercase;color:var(--faint);margin-top:2px;letter-spacing:.03em}
+  .slider{margin:11px 0}
+  .slider .row{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px}
+  .slider .row .k{color:var(--mut)} .slider .row .val{font-family:var(--mono);color:var(--cy);font-weight:700}
+  input[type=range]{-webkit-appearance:none;width:100%;height:5px;border-radius:4px;background:#1e293b;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--em);border:2px solid #052e22;cursor:pointer}
+
+  .rrow{display:flex;justify-content:space-between;font-size:12px;padding:5px 0}
+  .rrow .k{color:var(--faint)} .rrow .v{font-family:var(--mono)}
+
+  /* force appreciation mini */
+  .fa-row{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .fa-row .pay{font-family:var(--mono);color:var(--em);font-weight:700}
+
+  /* CTA ladder */
+  .ladder{display:flex;flex-direction:column;gap:8px}
+  .ladder button{border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);text-align:left;display:flex;justify-content:space-between;align-items:center}
+  .ladder .prim{background:var(--em);color:#022c22}
+  .ladder .ghost{background:var(--card2);border:1px solid var(--line2);color:var(--mut)}
+  .ladder .ghost .hint{font-size:10px;color:var(--faintest);font-family:var(--mono)}
+
+  /* full width below */
+  .fullsec{margin-top:10px}
+  .tl{position:relative;height:60px;margin:8px 0}
+  .tlbase{position:absolute;top:28px;left:0;right:0;height:2px;background:var(--line2)}
+  .ev{position:absolute;top:19px;transform:translateX(-50%);text-align:center}
+  .ev .pt{width:11px;height:11px;border-radius:50%;margin:0 auto}
+  .ev .lb{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:5px;white-space:nowrap}
+  .comprow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .comp{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px}
+  .comp .cp{font-family:var(--mono);font-size:17px;font-weight:800;color:#e2e8f0}
+  .comp .cs{font-family:var(--mono);font-size:11px;margin-top:3px}
+  .comp .cm{font-size:11.5px;color:var(--faint);margin-top:8px}
+  .comp .cb{font-size:10px;color:var(--faintest);margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="caption">
+  <b>PureProperty — individual listing, desktop terminal (concept).</b> The <code>70/30</code> asymmetric layout from <code>CLAUDE.md §3C</code>:
+  left rail = structural + intelligence, right rail = sticky financial workup. Sections marked
+  <span class="newtag" style="margin:0">NEW</span> are the three additions. <b>Drag the underwriting sliders</b> and <b>tap a persona</b> up top.
+</div>
+
+<!-- TOP NAV -->
+<div class="nav">
+  <div class="logo">PURE<span>PROPERTY</span></div>
+  <div class="search">⌕ Search address, MLS#, or neighbourhood…</div>
+  <div class="personas" id="personas">
+    <button class="pchip on" data-p="cashflow">Cashflow</button>
+    <button class="pchip" data-p="flipper">Flipper</button>
+    <button class="pchip" data-p="homebuyer">Homebuyer</button>
+    <button class="pchip" data-p="builder">Builder</button>
+  </div>
+  <div class="acct">JB</div>
+</div>
+
+<div class="wrap">
+  <a class="back" href="#">← Back to Command Center</a>
+
+  <div class="grid">
+    <!-- ============ LEFT 70% ============ -->
+    <div>
+      <!-- header -->
+      <div class="badges">
+        <span class="badge b-em">Suite Potential</span>
+        <span class="badge b-am">Price Cut −$30K</span>
+        <span class="badge b-pu">Relisted ×1</span>
+      </div>
+      <div class="htop">
+        <h1 class="addr">42 Bertrand Ave, Scarborough</h1>
+        <div class="save">♥ Save</div>
+      </div>
+      <div class="priceline">
+        <span class="price">$899,000</span>
+        <span class="overchip">+4.3% vs AVM</span>
+        <span class="ds-badge"><span class="g">B</span> Deal Score 71</span>
+      </div>
+      <div class="sub">
+        <span>Toronto E04 · Semi-Detached · MLS# E9284417</span>
+        <span>True DOM <b class="mono" style="color:var(--am)">38d</b> across 2 listings</span>
+      </div>
+      <div class="sub"><span class="bk">⌂ Listed by Royal LePage Signature Realty, Brokerage</span></div>
+
+      <!-- VERDICT (NEW) -->
+      <div class="card new" style="margin-top:16px">
+        <div class="ctitle"><span class="dot" style="background:var(--em)"></span>The Read <span class="newtag">NEW</span></div>
+        <div class="vgrid">
+          <div class="vcol good">
+            <div class="vlab good">Thesis</div>
+            <div class="vtext" id="thesis"><b>Cashflow play with a basement suite.</b> A legal second unit moves the cap rate <b>3.9% → 5.4%</b> — top-quartile for E04.</div>
+          </div>
+          <div class="vcol risk">
+            <div class="vlab risk">The catch</div>
+            <div class="vtext">Furnace <b>~18 yrs</b>, sits in a <b>flood screening zone</b>, and was <b>relisted to reset DOM</b> — true time on market is 38d, not 11d.</div>
+          </div>
+          <div class="vcol price">
+            <div class="vlab price">Price read</div>
+            <div class="vtext">Ask <b>$899K</b> vs AVM <b>$862K</b>. The <b>$30K cut + 38d True DOM</b> say there's room — model expects <b>~$868K</b>.</div>
+          </div>
+        </div>
+        <div class="disc">Generated deterministically from Deal Score · AVM · True DOM · Value-Add · Fee Stability. No AI on feed data (§4).</div>
+      </div>
+
+      <!-- BENTO GALLERY -->
+      <div class="bento">
+        <div class="tile hero"><span class="more">◳ VIEW ALL 32 PHOTOS</span></div>
+        <div class="tile"></div>
+        <div class="tile"><span class="more">▢ Floor plan</span></div>
+        <div class="tile"></div>
+        <div class="tile"><span class="more">⊕ Map · Street</span></div>
+      </div>
+
+      <!-- SPECS -->
+      <div class="specs">
+        <div class="spec"><div class="v" style="color:var(--em)">3+2</div><div class="l">Beds</div></div>
+        <div class="spec"><div class="v" style="color:var(--cy)">2</div><div class="l">Baths</div></div>
+        <div class="spec"><div class="v" style="color:var(--pu)">1,420</div><div class="l">Sqft</div></div>
+        <div class="spec"><div class="v" style="color:var(--am)">33×120</div><div class="l">Lot (ft)</div></div>
+      </div>
+
+      <!-- THINGS TO KNOW (NEW) -->
+      <div class="card new">
+        <div class="ctitle"><span class="dot" style="background:var(--am)"></span>Things to Know <span class="newtag">NEW · public records</span></div>
+        <div class="flags2">
+          <div>
+            <div class="flag">
+              <div class="fic warn">≈</div>
+              <div class="fbody">
+                <div class="ftitle">In a flood screening zone</div>
+                <div class="fsrc">TRCA floodplain mapping</div>
+                <div class="freply"><b>Agent:</b> Sump pump + backwater valve 2023; dry since.</div>
+              </div>
+            </div>
+            <div class="flag">
+              <div class="fic warn">⌖</div>
+              <div class="fbody">
+                <div class="ftitle">90m from Stouffville GO rail corridor</div>
+                <div class="fsrc">Metrolinx GIS · City open data</div>
+                <div class="fask">Worth asking: train noise at peak?</div>
+              </div>
+            </div>
+            <div class="flag">
+              <div class="fic info">◴</div>
+              <div class="fbody">
+                <div class="ftitle">North-facing front · limited AM light</div>
+                <div class="fsrc">Computed from parcel orientation</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="flag">
+              <div class="fic warn">⚙</div>
+              <div class="fbody">
+                <div class="ftitle">Furnace likely ~18 yrs (permit 2007)</div>
+                <div class="fsrc">City of Toronto building permits</div>
+                <div class="fask">Worth asking: HVAC replaced since? (capex)</div>
+              </div>
+            </div>
+            <div class="flag">
+              <div class="fic info">▦</div>
+              <div class="fbody">
+                <div class="ftitle">Zoning RD permits a 2nd suite + garden suite</div>
+                <div class="fsrc">City zoning (PostGIS overlay)</div>
+              </div>
+            </div>
+            <div class="flag">
+              <div class="fic info">◈</div>
+              <div class="fbody">
+                <div class="ftitle">Transit score 78 · strong rental demand</div>
+                <div class="fsrc">GTFS + CMHC vacancy (1.4% in E04)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROPERTY DATA SHEET (existing) -->
+      <div class="card">
+        <div class="ctitle"><span class="dot" style="background:var(--mut)"></span>Property Data Sheet · full TRREB payload</div>
+        <div class="dsheet">
+          <div class="drow"><span class="k">Property Type</span><span class="v">Semi-Detached</span></div>
+          <div class="drow"><span class="k">Style</span><span class="v">2-Storey</span></div>
+          <div class="drow"><span class="k">Basement</span><span class="v">Finished · Sep. Entrance</span></div>
+          <div class="drow"><span class="k">Kitchens</span><span class="v">1 + 1 below</span></div>
+          <div class="drow flagged"><span class="k">Heat Source</span><span class="v">Gas · Forced Air (aged)</span></div>
+          <div class="drow"><span class="k">Annual Taxes</span><span class="v">$4,210</span></div>
+          <div class="drow"><span class="k">Parking</span><span class="v">3 · Private Drive</span></div>
+          <div class="drow flagged"><span class="k">Possession</span><span class="v">Flexible / TBD</span></div>
+        </div>
+      </div>
+
+      <!-- ASK THE LISTING AGENT (NEW) -->
+      <div class="card new">
+        <div class="ctitle"><span class="dot" style="background:var(--cy)"></span>Ask the Listing Agent <span class="newtag">NEW</span></div>
+        <div class="agenthead">
+          <div class="ava">SL</div>
+          <div>
+            <div class="aname">Sarah Lin · Royal LePage Signature</div>
+            <div class="ameta">answered 5 of 8 buyer questions</div>
+          </div>
+        </div>
+        <div class="respbar">
+          <div class="seg on"></div><div class="seg on"></div><div class="seg on"></div>
+          <div class="seg on"></div><div class="seg on"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+        </div>
+        <div class="qagrid">
+          <div>
+            <div class="qa">
+              <div class="q"><span class="qm">Q</span> Is it tenanted, and is the tenancy assumable?</div>
+              <div class="a">"Vacant on closing — seller delivers empty. Set market rent or move in."</div>
+              <div class="ameta2"><span>answered 2d ago</span><span>▲ 14 helpful</span></div>
+            </div>
+            <div class="qa">
+              <div class="q"><span class="qm">Q</span> Any pending special assessment / known defects?</div>
+              <div class="a">"None pending. Roof 2019, sump 2023. Furnace original — priced in."</div>
+              <div class="ameta2"><span>answered 2d ago</span><span>▲ 9 helpful</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="qa">
+              <div class="q"><span class="qm">Q</span> Real monthly hydro + gas?</div>
+              <div class="unanswered">
+                <div class="uflag">⚠ We estimated $340/mo — agent hasn't confirmed.</div>
+                <div class="askbtn">Ask Sarah to confirm →</div>
+              </div>
+            </div>
+            <div class="qa">
+              <div class="q"><span class="qm">Q</span> Why is the seller moving?</div>
+              <div class="unanswered">
+                <div class="uflag">— Not answered yet</div>
+                <div class="askbtn">Ask this question →</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REMARKS -->
+      <div class="card">
+        <div class="ctitle"><span class="dot" style="background:var(--am)"></span>Unvarnished Remarks</div>
+        <div class="small" style="color:#cbd5e1;line-height:1.6">Bright, well-kept semi on a quiet street in Clairlea. Separate-entrance finished basement ideal for in-law or income. Steps to GO, TTC, Warden Ave shops. Newer roof (2019). Being sold as-is; furnace original. Flexible closing — seller motivated.</div>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT 30% sticky ============ -->
+    <div>
+      <div class="rail">
+
+        <!-- DEAL SCORE -->
+        <div class="rcard">
+          <div class="rtitle"><span class="dot" style="background:var(--cy)"></span>Deal Score</div>
+          <div class="ring-wrap">
+            <div class="ring">
+              <svg width="78" height="78" viewBox="0 0 78 78">
+                <circle cx="39" cy="39" r="33" fill="none" stroke="#1e293b" stroke-width="8"/>
+                <circle cx="39" cy="39" r="33" fill="none" stroke="#22d3ee" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="60"
+                  transform="rotate(-90 39 39)"/>
+              </svg>
+              <div class="num"><span class="s">71</span><span class="g">GRADE B</span></div>
+            </div>
+            <div class="verdicttxt"><b>Better than 71% of active E04 listings.</b> Lifted by suite upside + below-AVM trajectory; dragged by aged mechanicals.</div>
+          </div>
+        </div>
+
+        <!-- AVM -->
+        <div class="rcard">
+          <div class="rtitle"><span class="dot" style="background:var(--cy)"></span>True Value · list-blind AVM</div>
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <span class="avmval">$862,000</span>
+            <span class="mono small" style="color:var(--ro)">−4.3%</span>
+            <span class="mono small" style="color:var(--faint);margin-left:auto">conf High</span>
+          </div>
+          <div class="band">
+            <span class="tick" style="left:16%;color:var(--faint)">$840K</span>
+            <span class="marker" style="left:16%;background:var(--faint)"></span>
+            <span class="tick" style="left:50%;color:var(--cy)">AVM</span>
+            <span class="marker" style="left:50%;background:var(--cy);height:17px;top:-5px"></span>
+            <span class="tick" style="left:84%;color:var(--faint)">$884K</span>
+            <span class="marker" style="left:84%;background:var(--faint)"></span>
+            <span class="marker" style="left:97%;background:var(--ro);height:17px;top:-5px"></span>
+            <span class="tick" style="left:97%;color:var(--ro)">Ask</span>
+          </div>
+          <div class="scale"><span>low</span><span>high</span></div>
+          <div class="rrow" style="margin-top:10px;border-top:1px solid var(--line);padding-top:9px"><span class="k">Expected sale</span><span class="v" style="color:var(--am)">$868,000 · 96.5% of ask</span></div>
+        </div>
+
+        <!-- UNDERWRITING SANDBOX -->
+        <div class="rcard">
+          <div class="rtitle"><span class="dot" style="background:var(--em)"></span>Underwriting Sandbox</div>
+          <div class="uw-metrics">
+            <div class="um lead" id="m-cap"><div class="v" style="color:var(--em)" id="cap">5.4%</div><div class="l">Cap (suite)</div></div>
+            <div class="um" id="m-cf"><div class="v" style="color:var(--em)" id="cf">+$310</div><div class="l">Cashflow</div></div>
+            <div class="um" id="m-dscr"><div class="v" style="color:var(--am)" id="dscr">1.18</div><div class="l">DSCR</div></div>
+          </div>
+          <div class="slider">
+            <div class="row"><span class="k">Down payment</span><span class="val"><span id="dpval">20</span>%</span></div>
+            <input type="range" id="dp" min="5" max="50" value="20">
+          </div>
+          <div class="slider">
+            <div class="row"><span class="k">Mortgage rate</span><span class="val"><span id="rtval">5.24</span>%</span></div>
+            <input type="range" id="rt" min="300" max="800" value="524">
+          </div>
+          <div class="slider">
+            <div class="row"><span class="k">Monthly rent (both units)</span><span class="val">$<span id="rnval">3,650</span></span></div>
+            <input type="range" id="rn" min="2800" max="4600" value="3650" step="50">
+          </div>
+          <div class="rrow" style="border-top:1px solid var(--line);padding-top:9px;margin-top:4px"><span class="k">Carry if vacant</span><span class="v" style="color:var(--ro)" id="carry">$4,180/mo</span></div>
+        </div>
+
+        <!-- FORCE APPRECIATION -->
+        <div class="rcard">
+          <div class="rtitle"><span class="dot" style="background:var(--pu)"></span>Force-Appreciation · reno upside</div>
+          <div class="fa-row"><span>Legalize basement suite</span><span class="pay">+$78K · 1.4×</span></div>
+          <div class="fa-row"><span>Kitchen + bath refresh</span><span class="pay">+$34K · 1.9×</span></div>
+          <div class="fa-row" style="border:none"><span>Garden suite (by-right)</span><span class="pay">+$120K · 1.3×</span></div>
+          <div class="rrow" style="margin-top:8px"><span class="k">Unlockable equity</span><span class="v" style="color:var(--em);font-weight:800">~$232,000</span></div>
+        </div>
+
+        <!-- CTA LADDER -->
+        <div class="rcard">
+          <div class="ladder">
+            <button class="prim">Book a viewing <span>→</span></button>
+            <button class="ghost">Ask the listing agent <span class="hint">no signup</span></button>
+            <button class="ghost">Get a 2nd opinion on price <span class="hint">free</span></button>
+            <button class="ghost">Full diligence pack (PDF) <span class="hint">pro</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FULL WIDTH below the grid ============ -->
+  <div class="card fullsec" style="margin-top:24px">
+    <div class="ctitle"><span class="dot" style="background:var(--pu)"></span>Campaign History · stitched True DOM</div>
+    <div class="tl">
+      <div class="tlbase"></div>
+      <div class="ev" style="left:6%"><div class="pt" style="background:var(--em)"></div><div class="lb">Apr 2 · Listed $929K</div></div>
+      <div class="ev" style="left:34%"><div class="pt" style="background:var(--am)"></div><div class="lb">Apr 29 · Terminated</div></div>
+      <div class="ev" style="left:48%"><div class="pt" style="background:var(--cy)"></div><div class="lb">May 6 · Relisted $899K</div></div>
+      <div class="ev" style="left:70%"><div class="pt" style="background:var(--am)"></div><div class="lb">May 21 · −$30K cut</div></div>
+      <div class="ev" style="left:94%"><div class="pt" style="background:var(--ro)"></div><div class="lb">Today · True DOM 38</div></div>
+    </div>
+    <div class="small muted" style="margin-top:8px">MLS shows <b>11 days</b>. <b style="color:var(--am)">True DOM is 38</b> — the Temporal Distress Engine stitched the terminated campaign back in. Two price events, one relist: a motivated seller.</div>
+  </div>
+
+  <div class="fullsec">
+    <div class="ctitle" style="margin-bottom:13px"><span class="dot" style="background:var(--em)"></span>Comparable Properties</div>
+    <div class="comprow">
+      <div class="comp"><div class="cp">$868,000</div><div class="cs" style="color:var(--am)">98% of ask · sold 26d</div><div class="cm">29 Bertrand Ave · 3+1 · −1 bed</div><div class="cb">⌂ HomeLife/Future Realty</div></div>
+      <div class="comp"><div class="cp">$845,000</div><div class="cs" style="color:var(--em)">96% of ask · sold 41d</div><div class="cm">12 Cardwell Ave · 3+2 · match</div><div class="cb">⌂ RE/MAX Hallmark</div></div>
+      <div class="comp"><div class="cp">$910,000</div><div class="cs" style="color:var(--ro)">103% · sold 8d</div><div class="cm">8 Glenwatford Dr · +200 sqft</div><div class="cb">⌂ Royal LePage</div></div>
+      <div class="comp"><div class="cp">$915,000</div><div class="cs" style="color:var(--cy)">FOR SALE · 12d</div><div class="cm">51 Bertrand Ave · 3+2 · live comp</div><div class="cb">⌂ Century 21</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // persona swap
+  const data = {
+    cashflow:{thesis:"<b>Cashflow play with a basement suite.</b> A legal second unit moves the cap rate <b>3.9% → 5.4%</b> — top-quartile for E04.", lead:"m-cap"},
+    flipper:{thesis:"<b>Distress + cosmetic flip.</b> 38-day True DOM and a $30K cut signal a motivated seller; ARV after a $55K refresh pencils to <b>~$985K</b>.", lead:"m-cf"},
+    homebuyer:{thesis:"<b>Starter with rental offset.</b> The basement suite carries ~$1,900/mo of the mortgage; all-in lands near <b>$3,100/mo</b> after rent.", lead:"m-dscr"},
+    builder:{thesis:"<b>Infill candidate.</b> 33ft frontage on RD permits a garden suite + second unit; <b>$/buildable-ft</b> beats the E04 land median by 12%.", lead:"m-cap"}
+  };
+  document.querySelectorAll('.pchip').forEach(c=>c.addEventListener('click',()=>{
+    document.querySelectorAll('.pchip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    const d=data[c.dataset.p];
+    document.getElementById('thesis').innerHTML=d.thesis;
+    document.querySelectorAll('.um').forEach(m=>m.classList.remove('lead'));
+    document.getElementById(d.lead).classList.add('lead');
+  }));
+
+  // live underwriting
+  const price=899000;
+  const dp=document.getElementById('dp'), rt=document.getElementById('rt'), rn=document.getElementById('rn');
+  function fmt(n){return n.toLocaleString('en-US')}
+  function recompute(){
+    const dpPct=+dp.value, rate=+rt.value/100, rent=+rn.value;
+    document.getElementById('dpval').textContent=dpPct;
+    document.getElementById('rtval').textContent=rate.toFixed(2);
+    document.getElementById('rnval').textContent=fmt(rent);
+    const loan=price*(1-dpPct/100);
+    const mRate=rate/100/12, n=300; // 25yr
+    const pmt=loan*mRate/(1-Math.pow(1+mRate,-n));
+    const taxes=4210/12, ins=120, maint=180, condo=0;
+    const opex=taxes+ins+maint+condo;
+    const noiMo=rent-opex;                     // before debt
+    const cashflow=Math.round(noiMo-pmt);
+    const capRate=((rent-opex)*12)/price*100;
+    const dscr=(noiMo)/pmt;
+    document.getElementById('cap').textContent=capRate.toFixed(1)+'%';
+    document.getElementById('cf').textContent=(cashflow>=0?'+$':'-$')+fmt(Math.abs(cashflow));
+    document.getElementById('cf').style.color = cashflow>=0?'var(--em)':'var(--ro)';
+    document.getElementById('dscr').textContent=dscr.toFixed(2);
+    document.getElementById('dscr').style.color = dscr>=1.2?'var(--em)':dscr>=1?'var(--am)':'var(--ro)';
+    document.getElementById('carry').textContent='$'+fmt(Math.round(pmt+opex))+'/mo';
+  }
+  [dp,rt,rn].forEach(s=>s.addEventListener('input',recompute));
+  recompute();
+</script>
+</body>
+</html>

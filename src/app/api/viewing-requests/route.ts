@@ -13,6 +13,13 @@ const LISTING_KEY_RE = /^[A-Z]\d{6,9}$/;
 // Pragmatic strict-enough email shape: one @, a dot in the domain, ≥2-char TLD.
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX = { name: 120, email: 254, phone: 40, preferredTime: 200, message: 2000, address: 300 };
+// CTA-ladder intents. All route to this one pipeline; the label tags the email subject
+// and is prepended to the stored message, so no new table/column is needed.
+const INTENT_LABELS: Record<string, string> = {
+  viewing: "Viewing request",
+  question: "Question",
+  price_opinion: "Price second-opinion",
+};
 
 function bad(error: string) {
   return NextResponse.json({ success: false, error }, { status: 400 });
@@ -36,6 +43,12 @@ export async function POST(req: NextRequest) {
     const preferredTime = typeof body?.preferredTime === "string" ? body.preferredTime.trim() : "";
     const message = typeof body?.message === "string" ? body.message.trim() : "";
     const address = typeof body?.address === "string" ? body.address.trim() : "";
+    const intent =
+      typeof body?.intent === "string" && body.intent in INTENT_LABELS ? body.intent : "viewing";
+    const leadLabel = INTENT_LABELS[intent];
+    // Non-viewing intents tag the message so the lead type survives without a schema change.
+    const taggedMessage =
+      intent === "viewing" ? message || null : `[${leadLabel}]${message ? ` ${message}` : ""}`;
 
     if (!LISTING_KEY_RE.test(listingKey)) return bad("Invalid listing key");
     if (!name || name.length > MAX.name) return bad("Name is required");
@@ -51,7 +64,7 @@ export async function POST(req: NextRequest) {
       email,
       phone: phone || null,
       preferred_time: preferredTime || null,
-      message: message || null,
+      message: taggedMessage,
     });
     if (error) {
       console.error("[viewing-requests] insert failed:", error.message);
@@ -68,7 +81,7 @@ export async function POST(req: NextRequest) {
           from,
           to,
           replyTo: email,
-          subject: `Viewing request — ${address || listingKey}`,
+          subject: `${leadLabel} — ${address || listingKey}`,
           text: [
             `Listing: ${listingKey}${address ? ` — ${address}` : ""}`,
             `Name: ${name}`,

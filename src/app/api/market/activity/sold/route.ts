@@ -20,8 +20,8 @@
  * firm") date, the true SOLD date. The VOW feed reports sold deals with a lag, so very
  * recent windows (1-7d) undercount and fill in over the following weeks.
  *
- * Query params: region (required), windowDays, types (comma keys), minBeds, minBaths,
- *   minGarage, basement (1/0), minFrontage, limit.
+ * Query params: region (required), windowDays, types (comma keys), minPrice, maxPrice,
+ *   minBeds, minBaths, minGarage, basement (1/0), minFrontage, limit.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -131,8 +131,12 @@ export async function GET(req: NextRequest) {
     area,
     windowDays: Math.min(num("windowDays", 1), maxWindow),
     typeKeys: (sp.get("types") || "").split(",").map((s) => s.trim()).filter(Boolean),
+    minPrice: num("minPrice"),
+    maxPrice: num("maxPrice"),
     minBeds: num("minBeds"),
+    bedsExact: sp.get("bedsExact") === "1",
     minBaths: num("minBaths"),
+    bathsExact: sp.get("bathsExact") === "1",
     minGarage: num("minGarage"),
     basementFinished: sp.get("basement") === "1",
     minFrontage: num("minFrontage"),

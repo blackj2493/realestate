@@ -12,6 +12,14 @@ export interface RecentListing {
   price: number;
   thumb?: string;
   city?: string;
+  /**
+   * Listing brokerage (ListOfficeName). TRREB §6.3(c) mandates the brokerage on
+   * EVERY displayed listing — including recently-viewed cards — at the same
+   * weight as other detail lines. Captured in the snapshot at record-view time
+   * (recordView), so existing entries saved before this field shipped simply
+   * omit it and the card renders the line conditionally.
+   */
+  brokerage?: string;
   viewedAt: number;
 }
 

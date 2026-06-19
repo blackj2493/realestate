@@ -16,11 +16,17 @@ export interface SoldQueryArgs {
   windowDays: number;
   limit: number;
   dealType: "sold" | "leased" | "delisted";
-  /** Basic property filters to constrain comp results. Only beds/baths/types — no
-   *  persona/investor metrics (comps have no forward metrics). */
+  /** Basic property filters to constrain comp results. Price/beds/baths/types only —
+   *  no persona/investor metrics (comps have no forward metrics). Price maps to
+   *  ClosePrice (Sold/Leased) or ListPrice (De-listed) server-side. */
   filters?: {
+    minPrice?: number;
+    maxPrice?: number;
     minBeds?: number;
+    /** Exact-count mode for beds (matches the For Sale Min/Exact toggle). */
+    bedsExact?: boolean;
     minBaths?: number;
+    bathsExact?: boolean;
     /** Dashboard type keys (e.g. "detached", "semi") for variantsForKeys expansion
      *  in the sold route. Raw PropertySubType spellings are NOT accepted here. */
     types?: string[];
@@ -41,8 +47,12 @@ export function buildSoldQuery({ mapBounds, location, windowDays, limit, dealTyp
   p.set("windowDays", String(clampWindowDays(windowDays, dealType)));
   p.set("limit", String(limit));
   p.set("dealType", dealType);
+  if (filters?.minPrice) p.set("minPrice", String(filters.minPrice));
+  if (filters?.maxPrice) p.set("maxPrice", String(filters.maxPrice));
   if (filters?.minBeds) p.set("minBeds", String(filters.minBeds));
+  if (filters?.bedsExact) p.set("bedsExact", "1");
   if (filters?.minBaths) p.set("minBaths", String(filters.minBaths));
+  if (filters?.bathsExact) p.set("bathsExact", "1");
   if (filters?.types?.length) p.set("types", filters.types.join(","));
   return p.toString();
 }

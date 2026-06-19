@@ -6,9 +6,10 @@
 
 import { Check } from "lucide-react";
 import WatchHeart from "@/components/watchlist/WatchHeart";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { useCommandCenterStore, MAX_SELECTED } from "@/lib/stores/commandCenterStore";
 import type { ListingDocument } from "@/lib/typesense/client";
+import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
@@ -22,6 +23,10 @@ import type { CohortRanker } from "./cohortPercentiles";
 interface LedgerRowProps {
   property: ListingDocument;
   columns: ColumnDef[];
+  /** Desktop column grid: the width-fitted subset actually rendered as cells.
+   *  Falls back to `columns` when omitted. Mobile (compact) ignores this and
+   *  renders every analytical column as a chip. */
+  visibleColumns?: ColumnDef[];
   onClick: () => void;
   isSelected?: boolean;
   isHovered?: boolean;
@@ -32,6 +37,9 @@ interface LedgerRowProps {
   onToggleSelect?: () => void;
   /** Signed-in? Gates VOW-derived row metrics (True DOM, distress flags, deal score) for anon (§6.2(f)). */
   isAuthed?: boolean;
+  /** The single Estimated Sale Price (list-anchored, AVM fallback), batched by the panel
+   *  for authed users. Undefined for anon / comps → the "likely close" line is omitted. */
+  salePrice?: SalePriceEstimate | null;
   /** Card mode for narrow panels (audit C4): render only the photo + address
    *  card, dropping the fixed numeric columns that would starve the price. */
   compact?: boolean;
@@ -53,6 +61,22 @@ function PctTag({ p }: { p: number | null | undefined }) {
   return (
     <span className="ml-1 text-[9px] font-normal text-slate-500" title={`${p}th percentile of current results`}>
       P{p}
+    </span>
+  );
+}
+
+/**
+ * AlphaFlagBadge — the persona "alpha" badge (NEW / SUITE POTENTIAL / DENSITY
+ * READY …) or `null` when the listing has none. Single source for the badge so
+ * the desktop alphaFlag column, the mobile chip, and the address fold-in (shown
+ * when the alphaFlag column is squeezed out at narrow widths) can't drift.
+ */
+function AlphaFlagBadge({ doc, isAuthed }: { doc: ListingDocument; isAuthed: boolean }) {
+  const flag = getAlphaFlag(doc, isAuthed);
+  if (flag.variant === "none") return null;
+  return (
+    <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
+      {flag.label}
     </span>
   );
 }
@@ -145,12 +169,43 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
   }
 }
 
+/** The single Estimated Sale Price ("likely close") line — list-anchored where we can,
+ *  AVM fallback. VOW-gated: the panel only fetches it for authed users, so anon rows never
+ *  receive `salePrice` and this renders nothing. */
+function SaleLine({ salePrice }: { salePrice?: SalePriceEstimate | null }) {
+  if (!salePrice || !(salePrice.value > 0)) return null;
+  const d = salePrice.deltaVsAskPct;
+  const tag =
+    d != null && d < -0.001
+      ? `${(Math.abs(d) * 100).toFixed(1)}% under ask`
+      : d != null && d > 0.001
+        ? `${(d * 100).toFixed(1)}% over ask`
+        : "near ask";
+  return (
+    <p
+      className="mt-0.5 font-mono text-[11px] text-emerald-300/90"
+      title="Estimated sale price — what this home is likely to close at"
+    >
+      ≈ {formatPrice(salePrice.value)} <span className="text-emerald-400/70">likely close</span>
+      <span className="text-slate-500"> · {tag}</span>
+    </p>
+  );
+}
+
 /** Desktop column cell — value at the persona's fixed width + alignment. */
-function Cell({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
+function Cell({ doc, col, isAuthed, alphaInline, salePrice, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; alphaInline?: boolean; salePrice?: SalePriceEstimate | null; ranker?: CohortRanker }) {
   if (col.type === "address")
     return (
       <div className={cn("min-w-0", col.width)}>
+        {/* When the alphaFlag column is squeezed out at narrow widths, fold its
+            badge in here so the moat signal is never lost (CLAUDE.md §10). */}
+        {alphaInline && (
+          <div className="mb-1 empty:hidden">
+            <AlphaFlagBadge doc={doc} isAuthed={isAuthed} />
+          </div>
+        )}
         <ListingCardBody doc={doc} />
+        <SaleLine salePrice={salePrice} />
       </div>
     );
   if (col.type === "alphaFlag") {
@@ -180,15 +235,7 @@ function Cell({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: Colum
  * headers are hidden in card mode. This is what keeps the moat visible on mobile.
  */
 function MetricChip({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
-  if (col.type === "alphaFlag") {
-    const flag = getAlphaFlag(doc, isAuthed);
-    if (flag.variant === "none") return null;
-    return (
-      <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
-        {flag.label}
-      </span>
-    );
-  }
+  if (col.type === "alphaFlag") return <AlphaFlagBadge doc={doc} isAuthed={isAuthed} />;
   return (
     <span className="inline-flex items-baseline gap-1 rounded-sm bg-slate-800/50 px-1.5 py-0.5 font-mono text-xs">
       <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{col.header}</span>
@@ -197,7 +244,7 @@ function MetricChip({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col:
   );
 }
 
-export default function LedgerRow({ property, columns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false, ranker }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, visibleColumns, salePrice, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false, ranker }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
   // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
@@ -209,6 +256,11 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
   // the moat on mobile — chips put the differentiating numbers back without crushing
   // the price, since they flow vertically instead of as fixed-width columns.
   const analyticalColumns = columns.filter((c) => c.type !== "address");
+  // Desktop: render the width-fitted subset as columns. If the alphaFlag column
+  // got squeezed out, fold its badge into the address card so it stays visible.
+  const desktopColumns = visibleColumns ?? columns;
+  const foldAlpha =
+    columns.some((c) => c.type === "alphaFlag") && !desktopColumns.some((c) => c.type === "alphaFlag");
 
   return (
     <div
@@ -279,6 +331,7 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
       {compact ? (
         <div className="min-w-0 flex-1">
           <ListingCardBody doc={property} />
+          <SaleLine salePrice={salePrice} />
           {analyticalColumns.length > 0 && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {analyticalColumns.map((col) => (
@@ -288,7 +341,17 @@ export default function LedgerRow({ property, columns, onClick, isSelected, isHo
           )}
         </div>
       ) : (
-        columns.map((col) => <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} ranker={ranker} />)
+        desktopColumns.map((col) => (
+          <Cell
+            key={col.type}
+            doc={property}
+            col={col}
+            isAuthed={isAuthed}
+            alphaInline={col.type === "address" && foldAlpha}
+            salePrice={col.type === "address" ? salePrice : undefined}
+            ranker={ranker}
+          />
+        ))
       )}
     </div>
   );

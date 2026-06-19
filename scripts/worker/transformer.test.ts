@@ -25,8 +25,8 @@ vi.mock('@/lib/amenities/nearestAmenities', () => ({
 }));
 // Worker-internal services that hit Supabase at runtime — neutered.
 vi.mock('./services/rentAVM', () => ({ fetchRentAVM: vi.fn() }));
-vi.mock('./services/trueValueCalculator', () => ({
-  fetchTrueValue: vi.fn(),
+vi.mock('./services/ratioPriceCalculator', () => ({
+  resolveRatioPrice: vi.fn(),
   fetchMillRate: vi.fn(),
 }));
 vi.mock('./resolveLocation', () => ({

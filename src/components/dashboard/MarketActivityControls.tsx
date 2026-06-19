@@ -31,14 +31,14 @@ function MinSelect({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="flex items-center gap-1.5">
+    <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
       <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="border border-slate-700 bg-slate-900/60 px-2 py-1 text-xs text-slate-200 outline-none focus:border-cyan-500/60"
+        className="border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500/60"
       >
         {options.map((o) => (
           <option key={o.v} value={o.v}>
@@ -101,9 +101,11 @@ export default function MarketActivityControls({
 
   return (
     <div className="border border-slate-800 bg-slate-900/40 p-3">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      {/* Mobile: single-row horizontal scroll (no wrap) so 9 controls don't stack into
+          a ragged blob; sm+ keeps the original wrapping layout. Children never shrink. */}
+      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 sm:flex-wrap sm:gap-x-6 sm:gap-y-3 sm:overflow-visible sm:pb-0">
         {/* Sale vs Rent — scopes every surface (the rest of the bar refines within it) */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
           <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
             For
           </span>
@@ -133,7 +135,7 @@ export default function MarketActivityControls({
         </div>
 
         {/* Window */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
           <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
             Window
           </span>
@@ -157,7 +159,7 @@ export default function MarketActivityControls({
         </div>
 
         {/* Property type popover */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => (typeOpen ? setTypeOpen(false) : openTypes())}
@@ -265,7 +267,7 @@ export default function MarketActivityControls({
           type="button"
           onClick={() => set({ basementFinished: !lens.basementFinished })}
           className={cn(
-            "flex items-center gap-2 border px-2.5 py-1 text-xs transition-colors",
+            "flex shrink-0 items-center gap-2 whitespace-nowrap border px-2.5 py-1 text-xs transition-colors",
             lens.basementFinished
               ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
               : "border-slate-700 text-slate-400 hover:border-slate-600"
@@ -290,7 +292,7 @@ export default function MarketActivityControls({
             onClick={() =>
               onChange({ ...DEFAULT_ACTIVITY_LENS, windowDays: lens.windowDays })
             }
-            className="terminal-font text-[10px] uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-rose-400 hover:underline"
+            className="terminal-font shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-rose-400 hover:underline"
           >
             Clear filters
           </button>

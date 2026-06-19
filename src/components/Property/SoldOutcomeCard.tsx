@@ -3,7 +3,7 @@
 /**
  * SoldOutcomeCard — "Our Call vs. The Sale". Once a listing sells we show the
  * receipt: how close our closest model (almost always the Expected Sale Price;
- * True Value when the AVM was nearer) came to the actual close. Confidence-aware
+ * comparable-sales value when the AVM was nearer) came to the actual close. Confidence-aware
  * copy: |diff| ≤ 3% gets the headline "Within X%" treatment; bigger misses get
  * neutral framing — a miss must never read as a hidden flex (spec §2).
  *

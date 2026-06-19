@@ -28,6 +28,20 @@ describe("filterRegistry — clause builders", () => {
   it("baths emits a >= clause", () => {
     expect(FILTERS_BY_KEY.baths.buildClause(2)).toBe("BathroomsTotalInteger:>=2");
   });
+  it("beds emits an exact above-grade clause in exact mode", () => {
+    expect(FILTERS_BY_KEY.beds.buildClause({ n: 3, exact: true })).toBe(
+      "(BedroomsAboveGrade:=3 || (BedroomsAboveGrade:=0 && BedroomsTotal:=3))"
+    );
+  });
+  it("baths emits an exact (=) clause in exact mode", () => {
+    expect(FILTERS_BY_KEY.baths.buildClause({ n: 2, exact: true })).toBe("BathroomsTotalInteger:=2");
+  });
+  it("a bare stepper number is still read as a minimum (back-compat)", () => {
+    expect(FILTERS_BY_KEY.beds.buildClause({ n: 0, exact: true })).toBeNull();
+    expect(FILTERS_BY_KEY.baths.buildClause(2)).toBe(
+      FILTERS_BY_KEY.baths.buildClause({ n: 2, exact: false })
+    );
+  });
   it("homeType backtick-quotes each subtype in an OR group", () => {
     expect(FILTERS_BY_KEY.homeType.buildClause(["Detached", "Condo Apartment"])).toBe(
       "(PropertySubType:=`Detached` || PropertySubType:=`Condo Apartment`)"
@@ -44,6 +58,9 @@ describe("filterRegistry — chip labels", () => {
   });
   it("formats beds", () => {
     expect(FILTERS_BY_KEY.beds.chipLabel(3)).toBe("3+ Bd");
+  });
+  it("drops the + on an exact bed count", () => {
+    expect(FILTERS_BY_KEY.beds.chipLabel({ n: 3, exact: true })).toBe("3 Bd");
   });
   it("summarizes multiple home types", () => {
     expect(FILTERS_BY_KEY.homeType.chipLabel(["Detached", "Multiplex"])).toBe("2 types");
@@ -84,6 +101,9 @@ describe("MORE_FILTERS (Phase 2)", () => {
   });
   it("parking emits a >= stepper clause", () => {
     expect(FILTERS_BY_KEY.parking.buildClause(2)).toBe("ParkingTotal:>=2");
+  });
+  it("parking emits an exact (=) clause in exact mode", () => {
+    expect(FILTERS_BY_KEY.parking.buildClause({ n: 2, exact: true })).toBe("ParkingTotal:=2");
   });
   it("maintFee emits an upper bound", () => {
     expect(FILTERS_BY_KEY.maintFee.buildClause([0, 600])).toBe("AssociationFee:<=600");

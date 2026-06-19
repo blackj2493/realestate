@@ -40,6 +40,8 @@ describe("adapter — delisted comp", () => {
     soldDate: "2026-05-22T00:00:00.000Z",
     propertySubType: "Detached",
     beds: 3,
+    bedsAbove: 3,
+    bedsBelow: 0,
     baths: 2.5,
     sqft: null,
     brokerage: "Acme Realty",

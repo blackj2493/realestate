@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PUREPROPERTY // Compare view (prototype v2)</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#0e131b; --panel2:#121925; --bd:#1d2532; --bd2:#26303f;
+    --dim:#697485; --dim2:#414b59; --txt:#cdd4de; --bright:#f1f4f8;
+    --g:#27e0a0; --gbg:#0c1d16; --gbd:#1c4a37;
+    --r:#ff6470; --rbg:#1c0f12; --rbd:#5a2730;
+    --am:#ffb454; --cy:#56c7ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--txt);
+    font:13px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow:hidden}
+  .num{font-variant-numeric:tabular-nums;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  .app{display:flex;flex-direction:column;height:100vh}
+
+  /* header */
+  header{display:flex;align-items:center;gap:16px;padding:11px 18px;border-bottom:1px solid var(--bd);background:var(--panel)}
+  .back{display:flex;align-items:center;gap:6px;color:var(--dim);text-decoration:none;font-size:12.5px;padding:5px 9px;border-radius:6px;border:1px solid transparent}
+  .back:hover{background:var(--panel2);border-color:var(--bd2);color:var(--txt)}
+  .htitle{font-weight:700;font-size:15px;color:var(--bright);letter-spacing:.01em}
+  .htitle b{color:var(--g)}
+  .hsub{color:var(--dim);font-size:12px}
+  header .spacer{flex:1}
+  .seg{display:flex;border:1px solid var(--bd2);border-radius:8px;overflow:hidden}
+  .seg button{background:transparent;color:var(--dim);border:0;padding:7px 16px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px}
+  .seg button.on{background:var(--panel2);color:var(--bright)}
+
+  /* assumptions strip */
+  .strip{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--bd);background:#0b0f16;color:var(--dim);font-size:12px}
+  .strip b{color:var(--txt)}
+  .strip .pill{padding:2px 9px;border:1px solid var(--bd2);border-radius:20px;font-size:11px}
+
+  .stage{flex:1;min-height:0;overflow:auto;padding:20px 18px 28px}
+
+  /* ===== TABLE VIEW ===== */
+  .ctable{width:100%;border-collapse:separate;border-spacing:0;min-width:980px}
+  .ctable th,.ctable td{border-bottom:1px solid var(--bd);padding:0}
+  .rowlbl{width:170px;text-align:left;vertical-align:middle;padding:13px 14px 13px 4px;color:var(--dim);font-size:12px;position:sticky;left:0;background:var(--bg);z-index:2}
+  .rowlbl .lh{color:var(--txt);font-weight:600;font-size:12.5px;display:block}
+  .rowlbl .lhint{color:var(--dim2);font-size:10.5px}
+  .pcol{padding:0 10px;min-width:152px;vertical-align:bottom;text-align:left}
+
+  /* property header card */
+  .phead{padding:14px 12px 13px}
+  .pnum{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--panel2);color:var(--dim);font-size:11px;font-weight:700;margin-bottom:8px}
+  .paddr{color:var(--bright);font-weight:700;font-size:14px}
+  .pmeta{color:var(--dim);font-size:11.5px;margin-top:2px}
+  .pprice{color:var(--bright);font-size:18px;font-weight:700;margin-top:7px}
+  .pbrk{color:var(--dim2);font-size:10px;letter-spacing:.03em;margin-top:5px;text-transform:uppercase}
+
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;border:1px solid}
+  .b-best{color:var(--g);background:var(--gbg);border-color:var(--gbd)}
+  .b-warn{color:var(--am);background:#1a1408;border-color:#5a4218}
+  .b-over{color:var(--r);background:var(--rbg);border-color:var(--rbd)}
+  .b-neu{color:var(--dim);background:var(--panel2);border-color:var(--bd2)}
+
+  .cell{padding:12px;font-size:14px}
+  .cell .big{font-size:15px;color:var(--txt)}
+  .cell.win{background:var(--gbg);box-shadow:inset 2px 0 0 var(--g)}
+  .cell.win .big,.cell.win .v{color:var(--g);font-weight:700}
+  .winlab{display:block;font-size:9.5px;color:var(--g);font-weight:700;letter-spacing:.05em;margin-top:3px}
+  .vchip{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;margin-top:5px}
+  .vchip.under{color:var(--g);background:var(--gbg)}
+  .vchip.over{color:var(--r);background:var(--rbg)}
+  .vchip.at{color:var(--dim);background:var(--panel2)}
+  .pos{color:var(--g)} .neg{color:var(--r)} .warn{color:var(--am)} .mut{color:var(--dim)}
+  .strike{color:var(--dim2);text-decoration:line-through;margin-right:6px;font-size:12px}
+  .tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid;margin:2px 3px 0 0}
+  .tag.ok{color:var(--g);border-color:var(--gbd);background:var(--gbg)}
+  .tag.bad{color:var(--am);border-color:#5a4218;background:#1a1408}
+  .tag.geo{color:var(--cy);border-color:#1c4254;background:#08161d}
+  .dash{color:var(--dim2)}
+
+  /* ===== PLOT VIEW ===== */
+  .plotwrap{max-width:1040px;margin:0 auto}
+  .howto{color:var(--dim);font-size:12.5px;margin:0 0 14px;text-align:center}
+  .howto b{color:var(--txt)}
+  svg.plot{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--bd);border-radius:12px}
+  .qlabel{font-weight:800;font-size:12px;letter-spacing:.04em}
+  .qsub{font-size:10.5px}
+  .axlbl{fill:var(--dim);font-size:11.5px;font-weight:600;font-family:inherit}
+  .dotlbl{fill:var(--bright);font-size:12px;font-weight:600;font-family:inherit}
+  .dotsub{fill:var(--dim);font-size:11px;font-family:inherit}
+  .pnumdot{fill:#0a0e14;font-size:10px;font-weight:700;font-family:inherit}
+  .gridln{stroke:#161d28;stroke-width:1}
+  .legend{display:flex;gap:20px;justify-content:center;margin-top:14px;color:var(--dim);font-size:12px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+  .scrolly::-webkit-scrollbar{width:10px;height:10px}
+  .scrolly::-webkit-scrollbar-thumb{background:#222c39;border-radius:6px}
+  footer{padding:7px 18px;border-top:1px solid var(--bd);background:var(--panel);color:var(--dim2);font-size:10.5px;letter-spacing:.03em}
+  footer .ok{color:var(--g)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back" href="#">‹ Back to results</a>
+    <div>
+      <div class="htitle">Compare <b id="cnt">6</b> shortlisted homes</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="seg" id="seg">
+      <button data-v="table" class="on">▦ Table</button>
+      <button data-v="plot">⊹ Value plot</button>
+    </div>
+  </header>
+
+  <div class="strip">
+    <span class="pill">Selected from your map / list</span>
+    <span>Cash flow assumes <b>20% down · 4.04% 5yr fixed · 30yr</b>. “vs nearby” = each home’s $/sqft against the <b>median for its submarket</b>.</span>
+  </div>
+
+  <div class="stage scrolly" id="stage"></div>
+
+  <footer><span class="ok">● COMPLIANT</span> &nbsp; brokerage shown per home · deterministic metrics, no LLM · distributions from precomputed region aggregates</footer>
+</div>
+
+<script>
+// 6 hand-picked shortlist properties (real Typesense field names in comments)
+const P=[
+  {id:1, addr:'47 Birch Ave', region:'Hamilton Centre', type:'Detached', beds:'4+1', sqft:1850,
+   price:749000, psf:405, medPsf:545, cap:0.058, cashMo:210, trueDom:18, shownDom:18, relisted:false,
+   suite:'EXISTING_SUITE', dropPct:0, geo:null, brk:'RE/MAX HALLMARK'},
+  {id:2, addr:'122 Maple Dr', region:'Mississauga', type:'Detached', beds:'4', sqft:1950,
+   price:1560000, psf:800, medPsf:735, cap:0.032, cashMo:-2340, trueDom:9, shownDom:9, relisted:false,
+   suite:'NONE', dropPct:0, geo:null, brk:'ROYAL LEPAGE'},
+  {id:3, addr:'8 Cedar Cres', region:'Oshawa O’Neill', type:'Semi-Detached', beds:'3+1', sqft:1500,
+   price:615000, psf:410, medPsf:475, cap:0.061, cashMo:180, trueDom:142, shownDom:11, relisted:true,
+   suite:'POTENTIAL_CANDIDATE', dropPct:7, geo:null, brk:'IPRO REALTY'},
+  {id:4, addr:'215 Oak St', region:'Scarborough', type:'Detached', beds:'3', sqft:1580,
+   price:1090000, psf:690, medPsf:690, cap:0.040, cashMo:-760, trueDom:34, shownDom:34, relisted:false,
+   suite:'NONE', dropPct:0, geo:null, brk:'KELLER WILLIAMS'},
+  {id:5, addr:'60 Elm Way', region:'Brampton', type:'Detached', beds:'4', sqft:2050,
+   price:985000, psf:480, medPsf:520, cap:0.046, cashMo:-120, trueDom:67, shownDom:67, relisted:false,
+   suite:'POTENTIAL_CANDIDATE', dropPct:5, geo:'flood', brk:'CENTURY 21'},
+  {id:6, addr:'19 Pine Gate', region:'Vaughan Maple', type:'Detached', beds:'4', sqft:2200,
+   price:1480000, psf:673, medPsf:795, cap:0.042, cashMo:-540, trueDom:22, shownDom:22, relisted:false,
+   suite:'NONE', dropPct:0, geo:null, brk:'HOMELIFE'},
+];
+P.forEach(p=>p.valuePct=(p.medPsf-p.psf)/p.medPsf); // + = under comps
+
+// auto takeaway badge
+function takeaway(p){
+  if(p.trueDom>110||p.dropPct>=6) return {cls:'b-warn',t:'⚠ Stale / motivated'};
+  if(p.valuePct>0.18 && p.cap>=0.05 && p.cashMo>=0) return {cls:'b-best',t:'★ Best value'};
+  if(p.valuePct<0 && p.cap<0.04) return {cls:'b-over',t:'Overpriced'};
+  if(p.geo) return {cls:'b-warn',t:'⚠ Diligence flag'};
+  return {cls:'b-neu',t:'At market'};
+}
+const fP=p=>p>=1e6?'$'+(p/1e6).toFixed(2)+'M':'$'+Math.round(p/1e3)+'K';
+const fC=c=>(c>=0?'+$':'−$')+Math.abs(c).toLocaleString();
+
+// winners per metric
+const W={
+  value:Math.max(...P.map(p=>p.valuePct)),
+  cap:Math.max(...P.map(p=>p.cap)),
+  cash:Math.max(...P.map(p=>p.cashMo)),
+  dom:Math.min(...P.map(p=>p.trueDom)),
+};
+
+// ── TABLE ──
+function valueChip(p){
+  const pct=Math.round(Math.abs(p.valuePct)*100);
+  if(p.valuePct>0.02) return `<span class="vchip under">${pct}% under nearby</span>`;
+  if(p.valuePct<-0.02) return `<span class="vchip over">${pct}% over nearby</span>`;
+  return `<span class="vchip at">at market</span>`;
+}
+function suiteCell(p){
+  if(p.suite==='EXISTING_SUITE') return '<span class="tag ok">Legal suite (rented)</span>';
+  if(p.suite==='POTENTIAL_CANDIDATE') return '<span class="tag ok">Suite potential</span>';
+  return '<span class="dash">—</span>';
+}
+function watchCell(p){
+  let h='';
+  if(p.relisted) h+=`<span class="tag bad">Relisted</span>`;
+  if(p.dropPct>0) h+=`<span class="tag bad">▼${p.dropPct}% cut</span>`;
+  if(p.geo) h+=`<span class="tag geo">${p.geo.toUpperCase()}</span>`;
+  return h||'<span class="dash">—</span>';
+}
+function domCell(p){
+  const warn=p.trueDom>90, win=p.trueDom===W.dom;
+  const strike=p.relisted?`<span class="strike num">${p.shownDom}d shown</span>`:'';
+  return `${strike}<span class="num ${warn?'warn':''}">${p.trueDom}d</span>`+(win?'<span class="winlab">freshest</span>':'');
+}
+function renderTable(){
+  const rows=[
+    {lh:'Price',hint:'list price', cell:p=>`<div class="big num">${fP(p.price)}</div>`},
+    {lh:'$/sqft vs nearby',hint:'lower = better value', win:'value',
+      cell:p=>`<div class="num">$${p.psf}</div>${valueChip(p)}`+(p.valuePct===W.value?'<span class="winlab">best value</span>':'')},
+    {lh:'Layout',hint:'beds · type', cell:p=>`${p.beds} bed · ${p.type}`},
+    {lh:'Size',hint:'interior sqft', cell:p=>`<span class="num">${p.sqft.toLocaleString()}</span> sqft`},
+    {lh:'Cap rate',hint:'annual yield', win:'cap',
+      cell:p=>`<span class="big num">${(p.cap*100).toFixed(1)}%</span>`+(p.cap===W.cap?'<span class="winlab">highest yield</span>':'')},
+    {lh:'Cash flow / mo',hint:'after mortgage + costs', win:'cash',
+      cell:p=>`<span class="big num ${p.cashMo>=0?'pos':'neg'}">${fC(p.cashMo)}</span>`+(p.cashMo===W.cash?'<span class="winlab">best cashflow</span>':'')},
+    {lh:'True DOM',hint:'real days on market', win:'dom', cell:domCell},
+    {lh:'Suite',hint:'second-unit income', cell:suiteCell},
+    {lh:'Watch-outs',hint:'risk signals', cell:watchCell},
+  ];
+  let h='<table class="ctable"><thead><tr><th class="rowlbl"></th>';
+  P.forEach(p=>{ h+=`<th class="pcol"><div class="phead">
+      <span class="pnum">#${p.id}</span>
+      <div class="paddr">${p.addr}</div>
+      <div class="pmeta">${p.region}</div>
+      <div class="pprice num">${fP(p.price)}</div>
+      <div class="pbrk">${p.brk}</div></div></th>`; });
+  h+='</tr><tr><th class="rowlbl"><span class="lh">Takeaway</span></th>';
+  P.forEach(p=>{const t=takeaway(p);h+=`<td class="pcol" style="padding-bottom:10px"><span class="badge ${t.cls}">${t.t}</span></td>`;});
+  h+='</tr></thead><tbody>';
+  rows.forEach(r=>{
+    h+=`<tr><td class="rowlbl"><span class="lh">${r.lh}</span><span class="lhint">${r.hint}</span></td>`;
+    P.forEach(p=>{
+      const win = r.win && ({value:p.valuePct===W.value,cap:p.cap===W.cap,cash:p.cashMo===W.cash,dom:p.trueDom===W.dom})[r.win];
+      h+=`<td class="pcol"><div class="cell ${win?'win':''}">${r.cell(p)}</div></td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  return h;
+}
+
+// ── PLOT ──
+const NS='http://www.w3.org/2000/svg';
+function E(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function renderPlot(){
+  const W_=1000,H_=560,PAD={l:70,r:40,t:46,b:64};
+  const X0=PAD.l,X1=W_-PAD.r,Y0=H_-PAD.b,Y1=PAD.t;
+  const xDom=[-0.14,0.32], yDom=[0.028,0.066];
+  const xS=v=>X0+(Math.max(xDom[0],Math.min(xDom[1],v))-xDom[0])/(xDom[1]-xDom[0])*(X1-X0); // right=cheaper
+  const yS=v=>Y0+(Math.max(yDom[0],Math.min(yDom[1],v))-yDom[0])/(yDom[1]-yDom[0])*(Y1-Y0); // up=higher yield
+  const xMid=xS(0.10), yMid=yS(0.047);
+  const svg=E('svg',{class:'plot',viewBox:`0 0 ${W_} ${H_}`});
+
+  // quadrant tints
+  svg.appendChild(E('rect',{x:xMid,y:Y1,width:X1-xMid,height:yMid-Y1,fill:'rgba(39,224,160,.07)'}));     // TR best value
+  svg.appendChild(E('rect',{x:X0,y:yMid,width:xMid-X0,height:Y0-yMid,fill:'rgba(255,100,112,.06)'}));     // BL overpriced
+  // dividers
+  svg.appendChild(E('line',{x1:xMid,y1:Y1,x2:xMid,y2:Y0,stroke:'#222c39','stroke-dasharray':'4 4'}));
+  svg.appendChild(E('line',{x1:X0,y1:yMid,x2:X1,y2:yMid,stroke:'#222c39','stroke-dasharray':'4 4'}));
+
+  // quadrant labels (corners)
+  const ql=(x,y,anc,col,t,s)=>{svg.appendChild(E('text',{x,y,'text-anchor':anc,class:'qlabel',fill:col},t));
+    svg.appendChild(E('text',{x,y:y+15,'text-anchor':anc,class:'qsub',fill:'var(--dim)'},s));};
+  ql(X1-10,Y1+18,'end','var(--g)','BEST VALUE','cheaper + higher yield');
+  ql(X0+10,Y1+18,'start','var(--dim)','PREMIUM','pricey, still yields');
+  ql(X1-10,Y0-22,'end','var(--dim)','CHEAP, LOW YIELD','price is right, return isn’t');
+  ql(X0+10,Y0-22,'start','var(--r)','OVERPRICED','pricey + low yield');
+
+  // axis labels
+  svg.appendChild(E('text',{x:(X0+X1)/2,y:H_-20,'text-anchor':'middle',class:'axlbl'},'◄  pricier vs nearby            VALUE            cheaper vs nearby  ►'));
+  svg.appendChild(E('text',{x:22,y:(Y0+Y1)/2,'text-anchor':'middle',class:'axlbl',transform:`rotate(-90 22 ${(Y0+Y1)/2})`},'▼ lower yield        CAP RATE        higher yield ▲'));
+
+  // dots + labels
+  P.forEach(p=>{
+    const cx=xS(p.valuePct), cy=yS(p.cap);
+    const best = p.valuePct>0.16 && p.cap>0.05;
+    const over = p.valuePct<0.02 && p.cap<0.042;
+    const col = best?'var(--g)':over?'var(--r)':'#8794a6';
+    svg.appendChild(E('circle',{cx,cy,r:13,fill:col,'fill-opacity':.22,stroke:col,'stroke-width':2}));
+    svg.appendChild(E('circle',{cx,cy,r:13,fill:'none'}));
+    svg.appendChild(E('text',{x:cx,y:cy+3.5,'text-anchor':'middle',class:'pnumdot'},'#'+p.id));
+    // label placement: left of dot if it's on the right side, else right
+    const right = cx>(X0+X1)/2;
+    const lx = right?cx-20:cx+20, anc = right?'end':'start';
+    svg.appendChild(E('text',{x:lx,y:cy-2,'text-anchor':anc,class:'dotlbl'},p.addr));
+    svg.appendChild(E('text',{x:lx,y:cy+13,'text-anchor':anc,class:'dotsub'},`${fP(p.price)} · ${(p.cap*100).toFixed(1)}% · ${p.valuePct>0?Math.round(p.valuePct*100)+'% under':Math.round(-p.valuePct*100)+'% over'}`));
+  });
+
+  const wrap=document.createElement('div');wrap.className='plotwrap';
+  wrap.innerHTML='<p class="howto">Each dot is one shortlisted home. <b>Up = better yield, right = better value.</b> The top-right (green) corner is the sweet spot.</p>';
+  wrap.appendChild(svg);
+  wrap.insertAdjacentHTML('beforeend',
+    '<div class="legend"><span><i style="background:var(--g)"></i>best-value corner</span>'+
+    '<span><i style="background:var(--r)"></i>overpriced corner</span>'+
+    '<span><i style="background:#8794a6"></i>in between</span></div>');
+  return wrap;
+}
+
+// ── view switch ──
+const stage=document.getElementById('stage');
+let view='table';
+function render(){
+  document.getElementById('cnt').textContent=P.length;
+  stage.innerHTML='';
+  if(view==='table') stage.innerHTML=renderTable();
+  else stage.appendChild(renderPlot());
+}
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); view=b.dataset.v; render();
+});
+render();
+</script>
+</body>
+</html>

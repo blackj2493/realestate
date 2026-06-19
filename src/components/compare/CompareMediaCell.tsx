@@ -49,7 +49,7 @@ export default function CompareMediaCell({ listing }: { listing: ListingDocument
             type="button"
             onClick={() => step(-1)}
             aria-label="Previous photo"
-            className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-slate-950/70 p-1 text-slate-200 hover:bg-slate-900"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-slate-950/70 p-2.5 text-slate-200 hover:bg-slate-900 md:left-1 md:p-1"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -57,7 +57,7 @@ export default function CompareMediaCell({ listing }: { listing: ListingDocument
             type="button"
             onClick={() => step(1)}
             aria-label="Next photo"
-            className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-slate-950/70 p-1 text-slate-200 hover:bg-slate-900"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-slate-950/70 p-2.5 text-slate-200 hover:bg-slate-900 md:right-1 md:p-1"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

@@ -44,9 +44,9 @@ export default function ListingEstimateCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>True Value</CardTitle>
+          <CardTitle>Estimated Value</CardTitle>
           <p className="text-xs text-muted-foreground">
-            What the asset itself is worth — independent of asking price.
+            What comparable sales suggest this home is worth.
           </p>
         </CardHeader>
         <CardContent>
@@ -56,7 +56,7 @@ export default function ListingEstimateCard({
               <p className="text-xs font-mono text-muted-foreground">Range $000K – $000K</p>
               <p className="text-sm font-medium text-muted-foreground">↓ $00,000 below ask</p>
             </div>
-            <VowGateOverlay message="Sign in to view the True Value" />
+            <VowGateOverlay message="Sign in to view the Estimated Value" />
           </div>
         </CardContent>
       </Card>
@@ -69,9 +69,9 @@ export default function ListingEstimateCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>True Value</CardTitle>
+        <CardTitle>Estimated Value</CardTitle>
         <p className="text-xs text-muted-foreground">
-          What the asset itself is worth — independent of asking price.
+          What comparable sales suggest this home is worth.
         </p>
       </CardHeader>
       <CardContent>

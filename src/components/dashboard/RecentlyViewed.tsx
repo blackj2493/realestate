@@ -51,6 +51,13 @@ export default function RecentlyViewed() {
                   {item.city}
                 </p>
               )}
+              {/* Listing brokerage (ListOfficeName) — TRREB §6.3(c) mandates the
+                  brokerage on EVERY listing shown, including recently-viewed
+                  cards, at the same weight as sibling detail lines. Conditional:
+                  snapshots saved before this field shipped omit it. */}
+              {item.brokerage && (
+                <p className="truncate text-[11px] text-slate-300">{item.brokerage}</p>
+              )}
             </div>
           </Link>
         ))}

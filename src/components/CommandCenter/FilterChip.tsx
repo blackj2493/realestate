@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Popover } from "@/components/ui/popover";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
+import { readStepper } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useRangeHistogram } from "@/hooks/useRangeHistogram";
 import { supportsHistogram } from "@/lib/filters/histogram";
@@ -56,7 +57,7 @@ export default function FilterChip({ def, value, onChange, onClear }: FilterChip
         <RangeControl def={def} value={value as [number, number]} onChange={onChange} />
       )}
       {def.control === "stepper" && (
-        <StepperControl def={def} value={value as number} onChange={onChange} />
+        <StepperControl def={def} value={value} onChange={onChange} />
       )}
       {def.control === "enum" && (
         <EnumControl def={def} value={value as string[]} onChange={onChange} />
@@ -127,27 +128,52 @@ function StepperControl({
   onChange,
 }: {
   def: FilterDef;
-  value: number;
+  value: FilterValue;
   onChange: (v: FilterValue) => void;
 }) {
+  const { n: current, exact } = readStepper(value);
   const max = def.max ?? 7;
   const options = Array.from({ length: max + 1 }, (_, i) => i);
   return (
     <div className="flex flex-col gap-2">
-      <span className={cn(LABEL, "text-slate-400")}>{def.label}</span>
+      <div className="flex items-center justify-between">
+        <span className={cn(LABEL, "text-slate-400")}>{def.label}</span>
+        {/* Min = "N or more" (the default); Exact = "exactly N". Mode is preserved
+            when the count changes, so toggling re-labels the buttons in place. */}
+        <div className="flex border border-slate-800">
+          {[
+            { label: "Min", exact: false },
+            { label: "Exact", exact: true },
+          ].map((m) => (
+            <button
+              key={m.label}
+              onClick={() => onChange({ n: current, exact: m.exact })}
+              className={cn(
+                LABEL,
+                "px-2 py-0.5 transition-colors",
+                exact === m.exact
+                  ? "bg-cyan-500/10 text-cyan-300"
+                  : "text-slate-500 hover:text-slate-300"
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="flex flex-wrap gap-1">
         {options.map((n) => (
           <button
             key={n}
-            onClick={() => onChange(n)}
+            onClick={() => onChange({ n, exact })}
             className={cn(
               "h-7 w-9 border text-xs font-semibold transition-colors",
-              value === n
+              current === n
                 ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300"
                 : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
             )}
           >
-            {n === 0 ? "Any" : `${n}+`}
+            {n === 0 ? "Any" : exact ? `${n}` : `${n}+`}
           </button>
         ))}
       </div>

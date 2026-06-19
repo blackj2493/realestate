@@ -157,7 +157,13 @@ export default function RegionScorecard({
         Region Scorecard <span className="text-slate-500">· {regions.length}</span>
       </h2>
 
-      <div className="relative overflow-x-auto border border-slate-800">
+      {/* Mobile-only affordance: the 1000px table scrolls horizontally; tell the user. */}
+      <p className="terminal-font text-[10px] uppercase tracking-wider text-slate-500 md:hidden">
+        ← Scroll for more metrics →
+      </p>
+
+      {/* `after:` right-edge fade (md:hidden) signals more columns scroll off-screen. */}
+      <div className="relative overflow-x-auto border border-slate-800 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-10 after:bg-gradient-to-l after:from-slate-950 after:to-transparent md:after:hidden">
         <div className={cn("min-w-[1000px]", locked && "blur-sm select-none")}>
           {/* Header */}
           <div className={`grid ${GRID} border-b border-slate-800 bg-slate-900/60`}>

@@ -202,7 +202,7 @@ export default function MapControlRail() {
     );
 
   return (
-    <div className="absolute left-0 top-0 z-20 flex h-full w-[68px] flex-col items-center gap-1 border-r border-slate-800 bg-slate-950/85 py-3 backdrop-blur-md">
+    <div className="absolute left-0 top-0 z-20 hidden h-full w-[68px] flex-col items-center gap-1 border-r border-slate-800 bg-slate-950/85 py-3 backdrop-blur-md md:flex">
       <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-600">Layers</span>
       {layerTiles.map(renderTile)}
       <div className="my-1.5 h-px w-7 bg-slate-800" />

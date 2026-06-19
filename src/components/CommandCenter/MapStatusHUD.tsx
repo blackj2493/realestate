@@ -58,7 +58,7 @@ export default function MapStatusHUD({
       setColorBand(activeIdx === i ? null : { metricId: metricDef.id, index: i });
 
     return (
-      <div className="absolute bottom-4 left-16 z-10 border border-slate-700 bg-slate-900/90 px-3 py-2 backdrop-blur-md">
+      <div className="absolute bottom-4 left-2 z-10 max-w-[calc(100vw-1rem)] border border-slate-700 bg-slate-900/90 px-3 py-2 backdrop-blur-md md:left-16">
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Color</span>
           <span className="text-[11px] font-medium text-slate-200">{metricDef.label}</span>
@@ -109,7 +109,7 @@ export default function MapStatusHUD({
   // ── Static legend (persona / School default) ───────────────────────────────
   const range = mapMode === "heatmap" ? ALPHA_GLOW_RANGE : colorConfig.range;
   return (
-    <div className="absolute bottom-4 left-16 z-10 border border-slate-700 bg-slate-900/90 px-3 py-2 backdrop-blur-md">
+    <div className="absolute bottom-4 left-2 z-10 max-w-[calc(100vw-1rem)] border border-slate-700 bg-slate-900/90 px-3 py-2 backdrop-blur-md md:left-16">
       <div className="flex items-center gap-2">
         <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Color</span>
         <span className="text-[11px] text-slate-400">{colorConfig.legendLow}</span>

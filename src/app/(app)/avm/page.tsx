@@ -11,11 +11,11 @@ import { AVMCalculator } from '@/components/avm';
 
 export default async function AVMPage() {
   if (!(await getCurrentUser())) {
-    redirect('/hidden-equity');
+    redirect('/hidden-equity?next=/avm');
   }
 
   return (
-    <div className="min-h-screen bg-black text-gray-100">
+    <div className="min-h-app bg-background text-foreground">
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
