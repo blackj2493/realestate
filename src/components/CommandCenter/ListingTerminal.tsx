@@ -73,6 +73,9 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [nearbySchools, setNearbySchools] = useState<NearbySchool[]>([]);
   const [nearbyTotal, setNearbyTotal] = useState(0);
 
+  // Active persona — the Deal Score card opens on the user's current lens.
+  const activePersona = useCommandCenterStore((s) => s.activePersona);
+
   // Multi-select (comparison) + real media/rooms hydrated from the Vault on open.
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const isSelected = useCommandCenterStore((s) => s.selectedIds.has(property.id));
@@ -416,7 +419,7 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             <div className="space-y-4">
               {/* Deal Score — flagship signal, pinned to the top of the rail */}
               {dealScore ? (
-                <DealScoreCard dealScore={dealScore} locked={!isAuthed && hasDealScore} />
+                <DealScoreCard dealScore={dealScore} locked={!isAuthed && hasDealScore} initialPersona={activePersona} />
               ) : (
                 <div className="animate-pulse rounded-lg border border-slate-800 bg-slate-900/50 p-4">
                   <div className="mb-3 h-3 w-24 rounded bg-slate-800" />

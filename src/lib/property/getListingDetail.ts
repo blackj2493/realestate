@@ -26,7 +26,7 @@ import {
   type CorpStats,
   type TrendBucket,
 } from "@/lib/condo/feeStability";
-import { computeDealScore, type DealScoreResult } from "@/lib/dealScore/computeDealScore";
+import { computeDealScore, EMPTY_DEAL_SCORE, type DealScoreResult } from "@/lib/dealScore/computeDealScore";
 import { generatePropertyHash } from "@/lib/typesense/TemporalDistressEngine";
 import { ProptXClient } from "@/lib/proptx/client";
 import type { RoomData } from "@/lib/room-utils";
@@ -134,7 +134,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     full_payload: gatedPayload,
     estimate: null,
     valueAdd: null,
-    dealScore: { score: null, grade: null, verdict: "", components: [] },
+    dealScore: EMPTY_DEAL_SCORE,
     expectedSale: null,
     saleHistory: gateSaleHistory(detail.saleHistory, false),
     priceTimeline: { ...detail.priceTimeline, trueDom: null, totalPriceDrop: 0, originalPrice: null },
@@ -424,7 +424,7 @@ export const getListingDetail = cache(
       console.error(`[getListingDetail] Fee stability failed for ${listingKey}:`, feeError);
     }
 
-    // Deal Score — deterministic 0–100 score over already-derived metrics (§4: no LLM).
+    // Core listing scalars used by the Deal Score, Expected Sale, and timeline below.
     const payload = (listing.full_payload as Record<string, unknown>) ?? {};
     const listPrice =
       typeof payload["ListPrice"] === "number" ? (payload["ListPrice"] as number) : null;
@@ -434,15 +434,30 @@ export const getListingDetail = cache(
         : null;
     const realCapRate = await capRatePromise;
 
-    const dealScore = computeDealScore({
-      listPrice,
-      originalListPrice,
-      avmEstimate: estimate
-        ? { estimatedValue: estimate.estimatedValue, confidence: estimate.confidence }
-        : null,
-      domDays: deriveDomDays(payload),
-      capRatePct: realCapRate,
-    });
+    const ratioSub =
+      listing.property_sub_type ??
+      (typeof payload["PropertySubType"] === "string" ? (payload["PropertySubType"] as string) : null);
+
+    // Expected Sale Price — list-aware (list × cohort close/list ratio). VOW-derived
+    // (raw_vow_sold); getCloseListRatio is unstable_cache'd 24h per cohort so this never
+    // scans the table per page load (Disk IO budget). Best-effort, never blocks. Computed
+    // BEFORE the Deal Score so its likely-close + ratio can seed the suggested-offer band.
+    let expectedSale: ExpectedSale | null = null;
+    try {
+      if (listPrice && listPrice > 0) {
+        const ratioCity =
+          listing.city ?? (typeof payload["City"] === "string" ? (payload["City"] as string) : null);
+        const ratio = await getCloseListRatio(ratioCity, ratioSub);
+        expectedSale = computeExpectedSale(listPrice, ratio);
+      }
+    } catch (esErr) {
+      console.error(`[getListingDetail] Expected Sale failed for ${listingKey}:`, esErr);
+    }
+
+    // Deal Score is computed AFTER True DOM is resolved (below) so its Negotiability
+    // pillar uses the same campaign-stitched True DOM the page displays — NOT the raw
+    // feed DaysOnMarket, which resets to ~0 on a terminate-and-relist (e.g. N13410488:
+    // feed ~13d from OriginalEntryTimestamp vs True DOM 24d).
 
     // Status resolution — sold comes straight from the payload (Query B upserts the
     // Closed payload into `listings`); Terminated/Expired/Suspended live ONLY in
@@ -464,24 +479,6 @@ export const getListingDetail = cache(
       } catch (dlErr) {
         console.error(`[getListingDetail] delisted lookup failed for ${listingKey}:`, dlErr);
       }
-    }
-
-    // Expected Sale Price — list-aware (list × cohort close/list ratio). VOW-derived
-    // (raw_vow_sold); getCloseListRatio is unstable_cache'd 24h per cohort so this
-    // never scans the table per page load (Disk IO budget). Best-effort, never blocks.
-    let expectedSale: ExpectedSale | null = null;
-    try {
-      if (listPrice && listPrice > 0) {
-        const ratioCity =
-          listing.city ?? (typeof payload["City"] === "string" ? (payload["City"] as string) : null);
-        const ratioSub =
-          listing.property_sub_type ??
-          (typeof payload["PropertySubType"] === "string" ? (payload["PropertySubType"] as string) : null);
-        const ratio = await getCloseListRatio(ratioCity, ratioSub);
-        expectedSale = computeExpectedSale(listPrice, ratio);
-      }
-    } catch (esErr) {
-      console.error(`[getListingDetail] Expected Sale failed for ${listingKey}:`, esErr);
     }
 
     // Best-effort prior-sale ledger — ONE indexed PK point-lookup on the precomputed
@@ -576,6 +573,22 @@ export const getListingDetail = cache(
       (typeof payload["true_dom"] === "number"
         ? (payload["true_dom"] as number)
         : deriveDomDays(payload));
+
+    // Deal Score — deterministic 0–100 score over already-derived metrics (§4: no LLM).
+    // domDays uses the resolved True DOM (campaign-stitched) so the Negotiability pillar
+    // matches the True DOM shown elsewhere on the page; falls back to the feed DOM.
+    const dealScore = computeDealScore({
+      listPrice,
+      originalListPrice,
+      avmEstimate: estimate
+        ? { estimatedValue: estimate.estimatedValue, confidence: estimate.confidence }
+        : null,
+      domDays: trueDom ?? deriveDomDays(payload),
+      capRatePct: realCapRate,
+      subType: ratioSub,
+      expectedSalePrice: expectedSale?.expectedPrice ?? null,
+      closeListRatio: expectedSale?.ratio ?? null,
+    });
     const originalPrice =
       originalListPrice && listPrice && originalListPrice > listPrice
         ? originalListPrice

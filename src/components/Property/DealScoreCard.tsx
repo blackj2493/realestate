@@ -1,25 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, TrendingUp, TrendingDown, Minus, Gauge } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, TrendingUp, TrendingDown, Minus, Gauge, Target } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
-import type {
-  DealScoreResult,
-  DealScoreGrade,
-  DealScoreComponent,
+import {
+  PERSONA_WEIGHTS,
+  type DealScoreResult,
+  type DealScoreGrade,
+  type DealScoreComponent,
+  type DealPersona,
 } from "@/lib/dealScore/computeDealScore";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 /**
- * Deal Score UI — the flagship "is this a good deal?" signal.
+ * Deal Score UI — the flagship "is this a good deal — for ME?" signal.
  *
- * `DealScoreCard` shows the score ring, grade, verdict, and an expandable
- * breakdown of every component (transparency is what makes the score feel earned).
- * `DealScoreBadge` is the compact pill for page headers and rows.
+ * `DealScoreCard` shows the score ring, grade, verdict, a per-persona LENS switcher
+ * (the same property scores differently for a homebuyer vs a cashflow investor), a
+ * suggested-OFFER band, and an expandable breakdown of the pillars that count for the
+ * selected lens. Lens switching is fully client-side — the engine ships every persona's
+ * headline + the persona-independent pillars, so no refetch is needed.
  *
  * The score is OUR deterministic metric (CLAUDE.md §4) — the disclaimer makes that
  * explicit so it is never mistaken for an MLS/TRREB figure.
  */
+
+const PERSONA_LABEL: Record<DealPersona, string> = {
+  smart: "Homebuyer",
+  cashflow: "Cashflow",
+  flippers: "Flipper",
+  builders: "Builder",
+};
+const PERSONA_ORDER: DealPersona[] = ["smart", "cashflow", "flippers", "builders"];
 
 function gradeStyles(grade: DealScoreGrade | null): {
   text: string;
@@ -121,12 +133,27 @@ export function DealScoreBadge({
 export default function DealScoreCard({
   dealScore,
   locked,
+  /** Initial lens — defaults to whichever persona the engine scored (the app default). */
+  initialPersona,
 }: {
   dealScore: DealScoreResult;
   /** VOW gate: the score embeds the AVM — render a blurred "Login Required" teaser for anon. */
   locked?: boolean;
+  initialPersona?: DealPersona;
 }) {
   const [open, setOpen] = useState(false);
+  // Personas that actually scored for this listing (a lens with no applicable pillars is hidden).
+  const scoredPersonas = useMemo(
+    () => PERSONA_ORDER.filter((p) => dealScore.personaScores?.[p]?.score != null),
+    [dealScore.personaScores]
+  );
+  const defaultPersona =
+    initialPersona && scoredPersonas.includes(initialPersona)
+      ? initialPersona
+      : scoredPersonas.includes(dealScore.persona)
+        ? dealScore.persona
+        : scoredPersonas[0];
+  const [persona, setPersona] = useState<DealPersona | undefined>(defaultPersona);
 
   if (locked) {
     return (
@@ -149,30 +176,72 @@ export default function DealScoreCard({
     );
   }
 
-  // No component had data — render a quiet "not enough data" state instead of a 0.
-  if (dealScore.score === null || dealScore.grade === null) {
+  const active = persona ? dealScore.personaScores?.[persona] : undefined;
+
+  // No persona could be scored — render a quiet "not enough data" state instead of a 0.
+  if (!persona || !active || active.score === null || active.grade === null) {
     return (
       <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
         <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
           <Gauge className="h-4 w-4 text-slate-500" />
           Deal Score
         </h3>
-        <p className="text-xs text-slate-500">{dealScore.verdict}</p>
+        <p className="text-xs text-slate-500">{dealScore.verdict || "Not enough data to score this listing."}</p>
       </div>
     );
   }
 
-  const s = gradeStyles(dealScore.grade);
+  const s = gradeStyles(active.grade);
   const R = 34;
   const C = 2 * Math.PI * R;
-  const offset = C * (1 - dealScore.score / 100);
+  const offset = C * (1 - active.score / 100);
+
+  // Pillars that count for the selected lens (points are persona-independent; weight isn't).
+  const weights = PERSONA_WEIGHTS[persona];
+  const lensPillars = dealScore.pillars.filter((p) => weights[p.key] > 0);
+  const band = dealScore.offerBand;
 
   return (
     <div className={cn("rounded-lg border bg-slate-900/50 p-4", s.border)}>
-      <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
-        <Gauge className={cn("h-4 w-4", s.text)} />
-        Deal Score
+      <h3 className="mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+        <span className="flex items-center gap-2">
+          <Gauge className={cn("h-4 w-4", s.text)} />
+          Deal Score
+        </span>
+        {dealScore.confidence && (
+          <span className="rounded border border-slate-700 bg-slate-800/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-slate-400">
+            {dealScore.confidence} confidence
+          </span>
+        )}
       </h3>
+
+      {/* Lens switcher — the same property, scored for each investor type. */}
+      {scoredPersonas.length > 1 && (
+        <div role="radiogroup" aria-label="Deal Score lens" className="mb-3 flex flex-wrap gap-1.5">
+          {scoredPersonas.map((p) => {
+            const g = dealScore.personaScores[p];
+            const ps = gradeStyles(g.grade);
+            const on = p === persona;
+            return (
+              <button
+                key={p}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setPersona(p)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+                  on ? cn(ps.bg, ps.border, ps.text) : "border-slate-800 bg-slate-900/40 text-slate-400 hover:bg-slate-800/60"
+                )}
+                title={`${PERSONA_LABEL[p]}: Deal Score ${g.score} (${g.grade})`}
+              >
+                {PERSONA_LABEL[p]}
+                <span className={cn("font-mono font-bold", on ? "" : "text-slate-500")}>{g.grade}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         {/* Score ring */}
@@ -193,17 +262,39 @@ export default function DealScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={cn("font-mono text-2xl font-bold leading-none", s.text)}>{dealScore.score}</span>
-            <span className={cn("mt-0.5 text-[11px] font-bold", s.text)}>{dealScore.grade}</span>
+            <span className={cn("font-mono text-2xl font-bold leading-none", s.text)}>{active.score}</span>
+            <span className={cn("mt-0.5 text-[11px] font-bold", s.text)}>{active.grade}</span>
           </div>
         </div>
 
         {/* Verdict */}
         <div className="min-w-0">
-          <p className="text-sm font-medium leading-snug text-slate-200">{dealScore.verdict}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Out of 100 · {dealScore.components.length} signals</p>
+          <p className="text-sm font-medium leading-snug text-slate-200">{active.verdict}</p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            For the {PERSONA_LABEL[persona]} lens · {lensPillars.length} signals
+          </p>
         </div>
       </div>
+
+      {/* Suggested move — the offer band (persona-independent). */}
+      {band && (
+        <div className="mt-3 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-3 py-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
+            <Target className="h-3.5 w-3.5" />
+            Suggested move
+          </p>
+          {band.hotMarket ? (
+            <p className="mt-1 text-sm font-medium text-slate-200">
+              Expect to compete near {formatPrice(band.likelyClose)}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm font-medium text-slate-200">
+              Offer {formatPrice(band.aggressive)}–{formatPrice(band.likelyClose)}
+            </p>
+          )}
+          <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{band.note}</p>
+        </div>
+      )}
 
       {/* Expandable breakdown */}
       <button
@@ -218,7 +309,7 @@ export default function DealScoreCard({
 
       {open && (
         <div className="mt-3 space-y-3">
-          {dealScore.components.map((c) => (
+          {lensPillars.map((c) => (
             <div key={c.key}>
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
@@ -245,7 +336,8 @@ export default function DealScoreCard({
       )}
 
       <p className="mt-3 text-[10px] leading-snug text-slate-600">
-        PureProperty Deal Score — our deterministic deal metric, not an MLS/TRREB figure. For research only.
+        PureProperty Deal Score — our deterministic deal metric, not an MLS/TRREB figure. Suggested
+        offer is informational, not advice. For research only.
       </p>
     </div>
   );
