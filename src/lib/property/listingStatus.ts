@@ -24,7 +24,7 @@ export interface SoldStatus {
   label: "SOLD" | "LEASED";
   /** VOW-gated. Null when not disclosed (DoNotDiscloseUntilClosingYN) or for anon. */
   closePrice: number | null;
-  closeDate: string | null;
+  soldDate: string | null;
 }
 
 export interface DelistedStatus {
@@ -55,9 +55,14 @@ export function resolveListingStatus(
       mls === "leased" || tx.startsWith("for lease") ? "LEASED" : "SOLD";
     const cp = payload["ClosePrice"];
     const closePrice = typeof cp === "number" && cp > 0 ? cp : null;
-    const cd = payload["CloseDate"] ?? payload["PurchaseContractDate"];
-    const closeDate = typeof cd === "string" && cd ? cd : null;
-    return { kind: "sold", label, closePrice, closeDate };
+    // Sold date = the firm/contract date (PurchaseContractDate), NOT CloseDate.
+    // CloseDate is the future possession/completion date — for a firm-but-not-yet-
+    // closed sale it can be months ahead (e.g. "SOLD Jul 2026" while still June),
+    // and it disagrees with the map surface (soldMapper uses PurchaseContractDate).
+    // Fall back to CloseDate only when the contract date is absent.
+    const cd = payload["PurchaseContractDate"] ?? payload["CloseDate"];
+    const soldDate = typeof cd === "string" && cd ? cd : null;
+    return { kind: "sold", label, closePrice, soldDate };
   }
 
   if (delistedRow) {
@@ -99,7 +104,7 @@ export function fillClosePriceFromSaleHistory(
   return {
     ...status,
     closePrice: own.close_price,
-    closeDate: status.closeDate ?? own.close_date,
+    soldDate: status.soldDate ?? own.close_date,
   };
 }
 
@@ -152,7 +157,7 @@ export function pickSoldAccuracy(args: {
 export function gateListingStatus(status: ListingStatus, isAuthed: boolean): ListingStatus {
   if (isAuthed) return status;
   if (status.kind === "sold")
-    return { kind: "sold", label: status.label, closePrice: null, closeDate: null };
+    return { kind: "sold", label: status.label, closePrice: null, soldDate: null };
   if (status.kind === "delisted")
     return {
       kind: "delisted",

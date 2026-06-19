@@ -257,7 +257,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const soldAccuracy = view.soldAccuracy;
   const isActiveListing = status.kind === "active";
   const soldPrice = status.kind === "sold" ? status.closePrice : null;
-  const soldDate = status.kind === "sold" ? status.closeDate : null;
+  const soldDate = status.kind === "sold" ? status.soldDate : null;
   const saleHistory = view.saleHistory;
   // Prior sold prices for the price-history chart — authed only (events are empty otherwise).
   const saleMarkers: SaleMarker[] = saleHistory.events
@@ -527,7 +527,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {status.kind === "sold" && (
                 <SoldOutcomeCard
                   accuracy={soldAccuracy}
-                  closeDate={soldDate}
+                  soldDate={soldDate}
                   locked={!isAuthed && hasSoldAccuracy}
                 />
               )}

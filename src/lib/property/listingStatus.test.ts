@@ -25,7 +25,22 @@ describe("resolveListingStatus", () => {
       { StandardStatus: "Closed", MlsStatus: "Sold", ClosePrice: 875_000, CloseDate: "2026-06-09" },
       null
     );
-    expect(s).toEqual({ kind: "sold", label: "SOLD", closePrice: 875_000, closeDate: "2026-06-09" });
+    expect(s).toEqual({ kind: "sold", label: "SOLD", closePrice: 875_000, soldDate: "2026-06-09" });
+  });
+
+  it("sold date prefers PurchaseContractDate (firm date) over CloseDate (future possession)", () => {
+    // A firm-but-not-yet-closed sale: contract date is now, CloseDate is months out.
+    // The badge must read the firm date, not the future possession date.
+    const s = resolveListingStatus(
+      {
+        MlsStatus: "Sold",
+        ClosePrice: 875_000,
+        PurchaseContractDate: "2026-05-20",
+        CloseDate: "2026-07-31",
+      },
+      null
+    );
+    expect(s).toMatchObject({ kind: "sold", soldDate: "2026-05-20" });
   });
 
   it("sold from MlsStatus=Sold alone (case-insensitive, payload StandardStatus stale)", () => {
@@ -50,7 +65,7 @@ describe("resolveListingStatus", () => {
       { StandardStatus: "Closed", MlsStatus: "Sold", ClosePrice: 0, PurchaseContractDate: "2026-06-01" },
       null
     );
-    expect(s).toEqual({ kind: "sold", label: "SOLD", closePrice: null, closeDate: "2026-06-01" });
+    expect(s).toEqual({ kind: "sold", label: "SOLD", closePrice: null, soldDate: "2026-06-01" });
   });
 
   it("delisted from the archive row when payload looks frozen-Active", () => {
@@ -83,10 +98,10 @@ describe("fillClosePriceFromSaleHistory", () => {
     kind: "sold",
     label: "SOLD",
     closePrice: null,
-    closeDate: null,
+    soldDate: null,
   } as const;
 
-  it("fills closePrice/closeDate from this listing's OWN sale event only", () => {
+  it("fills closePrice/soldDate from this listing's OWN sale event only", () => {
     const filled = fillClosePriceFromSaleHistory(soldNoPrice, "X13146238", [
       { listing_key: "OLD2019", close_price: 600_000, close_date: "2019-05-01" },
       { listing_key: "X13146238", close_price: 875_000, close_date: "2026-06-09" },
@@ -95,7 +110,7 @@ describe("fillClosePriceFromSaleHistory", () => {
       kind: "sold",
       label: "SOLD",
       closePrice: 875_000,
-      closeDate: "2026-06-09",
+      soldDate: "2026-06-09",
     });
   });
 
@@ -106,12 +121,12 @@ describe("fillClosePriceFromSaleHistory", () => {
     expect(filled.kind === "sold" && filled.closePrice).toBeNull();
   });
 
-  it("does NOT overwrite an existing closeDate", () => {
-    const withDate = { ...soldNoPrice, closeDate: "2026-05-01" };
+  it("does NOT overwrite an existing soldDate", () => {
+    const withDate = { ...soldNoPrice, soldDate: "2026-05-01" };
     const filled = fillClosePriceFromSaleHistory(withDate, "X13146238", [
       { listing_key: "X13146238", close_price: 875_000, close_date: "2026-06-09" },
     ]);
-    expect(filled).toMatchObject({ closePrice: 875_000, closeDate: "2026-05-01" });
+    expect(filled).toMatchObject({ closePrice: 875_000, soldDate: "2026-05-01" });
   });
 
   it("is a no-op for already-priced sold and for non-sold statuses", () => {
@@ -156,16 +171,16 @@ describe("pickSoldAccuracy", () => {
 
 describe("gateListingStatus", () => {
   it("authed users see everything unchanged", () => {
-    const sold = { kind: "sold", label: "SOLD", closePrice: 875_000, closeDate: "2026-06-09" } as const;
+    const sold = { kind: "sold", label: "SOLD", closePrice: 875_000, soldDate: "2026-06-09" } as const;
     expect(gateListingStatus(sold, true)).toBe(sold);
   });
 
   it("anon keeps the sold KIND + label but loses price/date (HouseSigma model)", () => {
     const gated = gateListingStatus(
-      { kind: "sold", label: "LEASED", closePrice: 2_600, closeDate: "2026-06-09" },
+      { kind: "sold", label: "LEASED", closePrice: 2_600, soldDate: "2026-06-09" },
       false
     );
-    expect(gated).toEqual({ kind: "sold", label: "LEASED", closePrice: null, closeDate: null });
+    expect(gated).toEqual({ kind: "sold", label: "LEASED", closePrice: null, soldDate: null });
   });
 
   it("anon keeps the delisted KIND but loses all VOW specifics", () => {

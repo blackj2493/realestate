@@ -28,11 +28,11 @@ function fmtDate(iso: string): string {
 
 export default function SoldOutcomeCard({
   accuracy,
-  closeDate,
+  soldDate,
   locked,
 }: {
   accuracy: SoldAccuracy | null;
-  closeDate?: string | null;
+  soldDate?: string | null;
   /** VOW gate: render a blurred "sign in" teaser for anon (only when data exists). */
   locked?: boolean;
 }) {
@@ -61,7 +61,7 @@ export default function SoldOutcomeCard({
 
   const absPct = Math.abs(accuracy.diffPct) * 100;
   const brag = absPct <= BRAG_THRESHOLD_PCT;
-  const soldLine = `${formatPrice(accuracy.closePrice)}${closeDate ? ` on ${fmtDate(closeDate)}` : ""}`;
+  const soldLine = `${formatPrice(accuracy.closePrice)}${soldDate ? ` on ${fmtDate(soldDate)}` : ""}`;
 
   return (
     <Card>
