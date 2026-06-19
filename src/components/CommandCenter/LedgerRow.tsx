@@ -246,7 +246,9 @@ function MetricChip({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col:
 
 export default function LedgerRow({ property, columns, visibleColumns, salePrice, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false, ranker }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
-  const deal = dealScoreFromDocument(property);
+  // Grade for the active lens, so the row matches what the detail card opens on.
+  const activePersona = useCommandCenterStore((s) => s.activePersona);
+  const deal = dealScoreFromDocument(property, undefined, activePersona);
   // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
   // already-checked row always stays enabled so the user can swap one out.
   const selectionFull = useCommandCenterStore((s) => s.selectedIds.size >= MAX_SELECTED);

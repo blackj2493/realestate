@@ -135,10 +135,11 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
 
   // ── THE CATCH — negatives ledger (top 3 by severity) ──
   const negs: Array<{ sev: number; text: string }> = [];
-  // Reuse Deal Score's own buyer-unfavorable components (yield excluded — its detail
+  // Reuse Deal Score's own buyer-unfavorable pillars (yield/upside excluded — their detail
   // isn't negatively worded). detail is already deterministic & human-readable.
   for (const c of view.dealScore.components) {
-    if (c.direction === "down" && c.key !== "yield") negs.push({ sev: 62 - c.points, text: c.detail.toLowerCase() });
+    if (c.direction === "down" && c.key !== "yield" && c.key !== "upside")
+      negs.push({ sev: 62 - c.points, text: c.detail.toLowerCase() });
   }
   if (view.campaignHistory.campaignCount > 1 && trueDom != null) {
     negs.push({

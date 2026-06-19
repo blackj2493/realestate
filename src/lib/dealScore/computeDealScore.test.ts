@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { computeDealScore } from './computeDealScore';
 
-describe('computeDealScore', () => {
+describe('computeDealScore (v2 pillar/persona)', () => {
   it('returns null when no input has data', () => {
     const r = computeDealScore({ listPrice: null });
     expect(r.score).toBeNull();
     expect(r.grade).toBeNull();
     expect(r.components).toEqual([]);
+    expect(r.pillars).toEqual([]);
   });
 
   it('returns null when listPrice is 0 or negative', () => {
@@ -14,12 +15,12 @@ describe('computeDealScore', () => {
     expect(computeDealScore({ listPrice: -100 }).score).toBeNull();
   });
 
-  it('A+ when listed well below a HIGH-confidence estimate', () => {
+  it('A+ when listed well below a HIGH-confidence estimate (homebuyer lens)', () => {
     const r = computeDealScore({
       listPrice: 800_000,
       avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
     });
-    // discount = (1M - 800k) / 1M = 20% → anchor extrapolates to 100
+    // discount = (1M - 800k) / 1M = 20% → Price pillar maxes to 100; only pillar → score 100
     expect(r.score).toBeGreaterThanOrEqual(85);
     expect(r.grade).toBe('A+');
     expect(r.components[0].direction).toBe('up');
@@ -30,100 +31,157 @@ describe('computeDealScore', () => {
       listPrice: 1_200_000,
       avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
     });
-    // discount = -20% → 0 points
+    // discount = -20% → 0 points → F
     expect(r.score).toBeLessThanOrEqual(45);
     expect(['D', 'F']).toContain(r.grade);
   });
 
-  it('weights the value component DOWN when AVM confidence is LOW', () => {
+  it('a fairly-priced home is no longer an F (the v1 regression we fixed)', () => {
+    // Listed ~2.7% above comps, fresh-ish, thin cap — the Strathmore case. Homebuyer lens
+    // drops Yield, so the thin cap no longer tanks it.
+    const r = computeDealScore({
+      listPrice: 1_149_900,
+      avmEstimate: { estimatedValue: 1_119_365, confidence: 'HIGH' },
+      domDays: 26,
+      capRatePct: 2.75,
+      subType: 'Detached',
+    });
+    expect(r.persona).toBe('smart');
+    // Yield is NOT part of the homebuyer blend.
+    expect(r.components.find((c) => c.key === 'yield')).toBeUndefined();
+    expect(['C', 'D']).toContain(r.grade);
+    expect(r.grade).not.toBe('F');
+  });
+
+  it('weights the Price pillar DOWN when AVM confidence is LOW', () => {
+    // Two-pillar case (price + terms) so the confidence multiplier surfaces.
     const high = computeDealScore({
       listPrice: 800_000,
       avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
+      domDays: 30,
     });
     const low = computeDealScore({
       listPrice: 800_000,
       avmEstimate: { estimatedValue: 1_000_000, confidence: 'LOW' },
+      domDays: 30,
     });
-    // Same points, but lower-confidence weight pulls the renormalized average toward
-    // a balanced 50 (single-component case keeps points the same, so add a
-    // second component to surface the effect).
-    const highMulti = computeDealScore({
-      listPrice: 800_000,
-      avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
-      capRatePct: 4, // neutral-ish yield component pulls the average down
-    });
-    const lowMulti = computeDealScore({
-      listPrice: 800_000,
-      avmEstimate: { estimatedValue: 1_000_000, confidence: 'LOW' },
-      capRatePct: 4,
-    });
-    // The HIGH-confidence run gives the (high-points) value component MORE weight,
-    // so its final score must exceed the LOW-confidence run's.
-    expect(highMulti.score!).toBeGreaterThan(lowMulti.score!);
-    // Sanity: the single-component runs are identical because there's nothing else to dilute.
-    expect(high.score).toBe(low.score);
+    expect(high.score!).toBeGreaterThan(low.score!);
+    // Single-pillar runs are identical (nothing to dilute).
+    const highSolo = computeDealScore({ listPrice: 800_000, avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' } });
+    const lowSolo = computeDealScore({ listPrice: 800_000, avmEstimate: { estimatedValue: 1_000_000, confidence: 'LOW' } });
+    expect(highSolo.score).toBe(lowSolo.score);
   });
 
-  it('value component: relative $-free detail (for The Read) + comp-value dollar (breakdown only)', () => {
+  it('Price pillar: relative $-free detail (for The Read) + comp-value dollar (breakdown only)', () => {
     const r = computeDealScore({
       listPrice: 1_200_000,
       avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
     });
-    const v = r.components.find((c) => c.key === 'value')!;
+    const v = r.components.find((c) => c.key === 'price')!;
     expect(v.label).toBe('Value vs Comps');
-    expect(v.compValue).toBe(1_000_000); // breakdown-only dollar, labeled "comp value"
+    expect(v.compValue).toBe(1_000_000);
     expect(v.detail).toMatch(/comparable sales/i);
-    expect(v.detail).not.toMatch(/\$/); // no competing dollar in the copy The Read reuses
+    expect(v.detail).not.toMatch(/\$/);
   });
 
-  it('motivation component rewards bigger price cuts', () => {
-    const noCut = computeDealScore({
-      listPrice: 1_000_000,
-      originalListPrice: 1_000_000,
-    });
-    const bigCut = computeDealScore({
-      listPrice: 850_000,
-      originalListPrice: 1_000_000,
-    });
+  it('Terms pillar rewards bigger price cuts', () => {
+    const noCut = computeDealScore({ listPrice: 1_000_000, originalListPrice: 1_000_000 });
+    const bigCut = computeDealScore({ listPrice: 850_000, originalListPrice: 1_000_000 });
     expect(bigCut.score!).toBeGreaterThan(noCut.score!);
   });
 
-  it('leverage component rewards longer days-on-market', () => {
+  it('Terms pillar rewards longer days-on-market', () => {
     const fresh = computeDealScore({ listPrice: 1_000_000, domDays: 1 });
     const stale = computeDealScore({ listPrice: 1_000_000, domDays: 90 });
     expect(stale.score!).toBeGreaterThan(fresh.score!);
   });
 
-  it('yield component is included only when capRatePct > 0', () => {
-    const without = computeDealScore({ listPrice: 1_000_000, domDays: 30 });
-    const withYield = computeDealScore({
-      listPrice: 1_000_000,
-      domDays: 30,
-      capRatePct: 8,
-    });
-    expect(without.components.find((c) => c.key === 'yield')).toBeUndefined();
-    expect(withYield.components.find((c) => c.key === 'yield')).toBeDefined();
+  it('Yield is excluded from the homebuyer lens but included for cashflow', () => {
+    const input = { listPrice: 1_000_000, domDays: 30, capRatePct: 8, subType: 'Detached' as const };
+    const homebuyer = computeDealScore(input, 'smart');
+    const cashflow = computeDealScore(input, 'cashflow');
+    expect(homebuyer.components.find((c) => c.key === 'yield')).toBeUndefined();
+    expect(cashflow.components.find((c) => c.key === 'yield')).toBeDefined();
   });
 
-  it('renormalizes — a single high-scoring component yields a high final score', () => {
+  it('Yield is asset-class-relative: a cap well above the type baseline scores high', () => {
+    // Default baseline ~3.2%; 8% cap → far above → near max.
+    const r = computeDealScore({ listPrice: 1_000_000, capRatePct: 8 }, 'cashflow');
+    const y = r.components.find((c) => c.key === 'yield')!;
+    expect(y.points).toBeGreaterThan(85);
+  });
+
+  it('renormalizes — a single high-scoring pillar yields a high final score', () => {
     const r = computeDealScore({ listPrice: 1_000_000, domDays: 90 });
-    // 100-point leverage with no other dimensions to dilute → score = 100
     expect(r.score).toBe(100);
   });
 
-  it('produces all 4 components when every input is present', () => {
+  it('produces all four pillars for the flipper lens when every input is present', () => {
+    const r = computeDealScore(
+      {
+        listPrice: 850_000,
+        originalListPrice: 1_000_000,
+        avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
+        domDays: 60,
+        capRatePct: 7,
+        subType: 'Detached',
+        lotSqft: 6000,
+        suitePotential: true,
+      },
+      'flippers'
+    );
+    expect(r.components.map((c) => c.key).sort()).toEqual(['price', 'terms', 'upside', 'yield']);
+  });
+
+  it('always returns all four persona headlines', () => {
     const r = computeDealScore({
-      listPrice: 850_000,
-      originalListPrice: 1_000_000,
-      avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
-      domDays: 60,
-      capRatePct: 7,
+      listPrice: 1_000_000,
+      avmEstimate: { estimatedValue: 1_050_000, confidence: 'HIGH' },
+      domDays: 40,
+      capRatePct: 6,
+      subType: 'Detached',
     });
-    expect(r.components.map((c) => c.key).sort()).toEqual([
-      'leverage',
-      'motivation',
-      'value',
-      'yield',
-    ]);
+    expect(Object.keys(r.personaScores).sort()).toEqual(['builders', 'cashflow', 'flippers', 'smart']);
+    for (const k of ['smart', 'cashflow', 'flippers', 'builders'] as const) {
+      expect(typeof r.personaScores[k].score).toBe('number');
+    }
+  });
+
+  it('offer band: anchors the likely close to the expected sale and offers below it', () => {
+    const r = computeDealScore({
+      listPrice: 1_000_000,
+      avmEstimate: { estimatedValue: 1_100_000, confidence: 'HIGH' },
+      domDays: 40,
+      expectedSalePrice: 980_000,
+      closeListRatio: 0.98,
+    });
+    expect(r.offerBand).not.toBeNull();
+    expect(r.offerBand!.likelyClose).toBe(980_000);
+    expect(r.offerBand!.aggressive).toBeLessThanOrEqual(980_000);
+    expect(r.offerBand!.hotMarket).toBe(false);
+  });
+
+  it('offer band: flags a hot market when the cohort closes above ask', () => {
+    const r = computeDealScore({
+      listPrice: 1_000_000,
+      avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
+      expectedSalePrice: 1_030_000,
+      closeListRatio: 1.03,
+    });
+    expect(r.offerBand!.hotMarket).toBe(true);
+  });
+
+  it('confidence is HIGH only with a HIGH AVM and ≥2 pillars', () => {
+    const two = computeDealScore({
+      listPrice: 800_000,
+      avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
+      domDays: 30,
+    });
+    expect(two.confidence).toBe('HIGH');
+    const solo = computeDealScore({
+      listPrice: 800_000,
+      avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
+    });
+    expect(solo.confidence).toBe('LOW'); // single pillar
   });
 });

@@ -10,7 +10,7 @@
  * remaining signals renormalize automatically (Command Center list behaviour).
  */
 
-import { computeDealScore, type DealScoreResult } from "./computeDealScore";
+import { computeDealScore, type DealScoreResult, type DealPersona } from "./computeDealScore";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
 
@@ -19,21 +19,35 @@ export interface DocumentDealScoreEstimate {
   confidence: "HIGH" | "MEDIUM" | "LOW";
 }
 
+/**
+ * @param persona which lens the headline score is for — pass the Command Center's
+ *   activePersona so a list/map grade matches what the detail card opens on. Defaults
+ *   to "smart" (the app default Homebuyer lens). Note: the Homebuyer lens excludes the
+ *   Yield pillar by design, so `.components` only contains "yield" for yield-weighting
+ *   lenses (cashflow/flippers).
+ */
 export function dealScoreFromDocument(
   doc: ListingDocument,
-  estimate?: DocumentDealScoreEstimate | null
+  estimate?: DocumentDealScoreEstimate | null,
+  persona: DealPersona = "smart"
 ): DealScoreResult {
   const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket;
   const capRate = capRateOrNull(doc.cap_rate_est);
 
-  return computeDealScore({
-    listPrice: doc.ListPrice ?? null,
-    originalListPrice: doc.OriginalListPrice ?? null,
-    avmEstimate:
-      estimate && estimate.estimatedValue > 0
-        ? { estimatedValue: estimate.estimatedValue, confidence: estimate.confidence }
-        : null,
-    domDays: typeof dom === "number" ? dom : null,
-    capRatePct: capRate,
-  });
+  return computeDealScore(
+    {
+      listPrice: doc.ListPrice ?? null,
+      originalListPrice: doc.OriginalListPrice ?? null,
+      avmEstimate:
+        estimate && estimate.estimatedValue > 0
+          ? { estimatedValue: estimate.estimatedValue, confidence: estimate.confidence }
+          : null,
+      domDays: typeof dom === "number" ? dom : null,
+      capRatePct: capRate,
+      // Selects the asset-class yield baseline (so the cashflow lens scores cap rate
+      // relative to this property type, not one absolute curve).
+      subType: doc.PropertySubType ?? null,
+    },
+    persona
+  );
 }
