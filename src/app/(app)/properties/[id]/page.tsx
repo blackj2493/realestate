@@ -12,7 +12,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Square, Car, AlertTriangle, Building2 } from "lucide-react";
+import { Bed, Bath, Square, Car, AlertTriangle, Building2, ChevronDown } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
@@ -51,6 +51,8 @@ import ListingActions from "./ListingActions";
 import NearbySchools from "./NearbySchools";
 import NearbyAmenities from "./NearbyAmenities";
 import PropertyNotFound from "./PropertyNotFound";
+import DetailMobileNav from "./DetailMobileNav";
+import ClampText from "./ClampText";
 
 export const dynamic = "force-dynamic";
 
@@ -308,6 +310,17 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   // not VOW-gated, so view.geoFlags is populated for anon users too. Feeds The Read.
   const diligenceFlags = buildDiligenceFlags(view.full_payload, view.geoFlags);
 
+  // Mobile section jumper — lets phones skip straight to a section instead of
+  // scrolling the full ~10-screen page (financials stack last on mobile).
+  const navSections = [
+    { id: "overview", label: "Overview" },
+    { id: "financials", label: "Financials" },
+    { id: "details", label: "Details" },
+    ...(rooms.length > 0 ? [{ id: "rooms", label: "Rooms" }] : []),
+    { id: "history", label: "History" },
+    { id: "comps", label: "Comps" },
+  ];
+
   return (
     <main className="min-h-app bg-slate-950 text-slate-200">
       {jsonLd && (
@@ -333,11 +346,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           ← Back to Command Center
         </Link>
 
+        <DetailMobileNav sections={navSections} />
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_3fr]">
           {/* ── LEFT (70%) ── */}
           <div>
             {/* Header */}
-            <div className="mb-6">
+            <div id="overview" className="mb-6 scroll-mt-28">
               {badges.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {badges.map((b, i) => (
@@ -477,7 +492,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
 
             {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12) */}
-            <PropertyDataSheet groups={datasheet} />
+            <div id="details" className="scroll-mt-28">
+              <PropertyDataSheet groups={datasheet} />
+            </div>
 
             {/* Things to Know — interpretive diligence flags (sourced; §4-safe) */}
             <ThingsToKnowCard flags={diligenceFlags} />
@@ -489,14 +506,19 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             <NearbyAmenities listingId={id} />
 
             {/* Room Dimensions — proportional, drawn-to-scale room map */}
-            {rooms.length > 0 && <RoomMap rooms={rooms} className="mb-6" />}
+            {rooms.length > 0 && (
+              <div id="rooms" className="scroll-mt-28">
+                <RoomMap rooms={rooms} className="mb-6" />
+              </div>
+            )}
 
             {/* Remarks */}
             <Section title="Unvarnished Remarks" icon={<AlertTriangle className="h-4 w-4 text-amber-400" />}>
               <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">
-                  {p.PublicRemarks || "No remarks available."}
-                </p>
+                <ClampText
+                  text={p.PublicRemarks || "No remarks available."}
+                  className="text-sm leading-relaxed text-slate-300"
+                />
               </div>
             </Section>
 
@@ -520,7 +542,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </div>
 
           {/* ── RIGHT (30%, sticky) ── */}
-          <div>
+          <div id="financials" className="scroll-mt-28">
             <div className="sticky top-6 space-y-4">
               {/* Sold: lead with the accuracy receipt — Deal Score / Expected Sale are
                   for live asks; their job here is done. */}
@@ -632,7 +654,21 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         </div>
 
         {/* ── FULL-WIDTH: Property History — timeline + campaign/sale tables, given room out of the 30% rail ── */}
-        <section className="mt-6">
+        <section id="history" className="mt-6 scroll-mt-28">
+          {/* Mobile: collapse this tall band behind a tap. Pure CSS (a peer
+              checkbox), so it stays server-rendered — no client boundary, no
+              hydration flash. Desktop (md+) always shows it and hides the toggle. */}
+          <input type="checkbox" id="history-toggle" className="peer sr-only" tabIndex={-1} aria-hidden="true" />
+          <label
+            htmlFor="history-toggle"
+            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-slate-800 py-3 peer-checked:[&_svg]:rotate-180 md:hidden"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-100">
+              Property History
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform" />
+          </label>
+          <div className="hidden peer-checked:block md:block">
           {isAuthed && view.campaignHistory.events.length > 0 ? (
             <CampaignHistoryChart
               events={view.campaignHistory.events}
@@ -657,9 +693,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           ) : (
             <CampaignHistorySection className="mt-4" campaignHistory={view.campaignHistory} isAuthed={isAuthed} />
           )}
+          </div>
         </section>
 
         {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island ── */}
+        <div id="comps" className="scroll-mt-28">
         <SimilarProperties
           subjectId={id}
           cityRegion={p.CityRegion ?? null}
@@ -673,6 +711,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           listPrice={price}
           area={p.BuildingAreaTotal ?? 0}
         />
+        </div>
       </div>
 
       {/* Mobile sticky Save + Contact — the right rail (with these actions) stacks
