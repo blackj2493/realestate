@@ -21,7 +21,8 @@ import {
   GitCompareArrows,
   Check,
   Bookmark,
-  BookmarkCheck
+  BookmarkCheck,
+  CalendarDays
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import Logo from '@/components/Logo';
@@ -35,7 +36,8 @@ import type { SaleHistory, PriceTimeline } from '@/lib/property/getListingDetail
 import ImageBentoGrid from '@/components/Property/ImageBentoGrid';
 import MediaGalleryOverlay from '@/components/Property/MediaGalleryOverlay';
 import DealScoreCard, { DealScoreBadge } from '@/components/Property/DealScoreCard';
-import ListingEstimateCard from '@/components/Property/ListingEstimateCard';
+import EstimatedSaleCard from '@/components/Property/EstimatedSaleCard';
+import type { SalePriceEstimate } from '@/lib/avm/salePrice';
 import Disclaimers from '@/components/hiddenEquity/Disclaimers';
 import SocialProofBar from '@/components/Property/SocialProofBar';
 import RoomMap from '@/components/Property/RoomMap';
@@ -45,6 +47,7 @@ import type { AVMResult } from '@/lib/avm/types';
 import type { ListingDocument } from '@/lib/typesense/client';
 import { useCommandCenterStore } from '@/lib/stores/commandCenterStore';
 import { useWatchlistStore } from '@/lib/watchlist/useWatchlist';
+import WatchButton from '@/components/watchlist/WatchButton';
 import ScheduleViewingForm from '@/components/Property/ScheduleViewingForm';
 
 interface ListingTerminalProps {
@@ -81,6 +84,8 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [detailRooms, setDetailRooms] = useState<RoomData[]>([]);
   const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
   const [estimate, setEstimate] = useState<AVMResult | null>(null);
+  const [salePrice, setSalePrice] = useState<SalePriceEstimate | null>(null);
+  const [hasExpectedSale, setHasExpectedSale] = useState(false);
   const [saleHistory, setSaleHistory] = useState<SaleHistory | null>(null);
   const [priceTimeline, setPriceTimeline] = useState<PriceTimeline | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
@@ -123,10 +128,12 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     setDetailRooms([]);
     setDealScore(null);
     setEstimate(null);
+    setSalePrice(null);
     setSaleHistory(null);
     setPriceTimeline(null);
     setIsAuthed(false);
     setHasEstimate(false);
+    setHasExpectedSale(false);
     setHasDealScore(false);
     setIsGalleryOpen(false);
     (async () => {
@@ -140,10 +147,12 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
         setDetailRooms(Array.isArray(r) ? (r as RoomData[]) : []);
         setDealScore(data?.dealScore ?? null);
         setEstimate(data?.estimate ?? null);
+        setSalePrice(data?.salePrice ?? null);
         setSaleHistory(data?.saleHistory ?? null);
         setPriceTimeline(data?.priceTimeline ?? null);
         setIsAuthed(!!data?.isAuthed);
         setHasEstimate(!!data?.hasEstimate);
+        setHasExpectedSale(!!data?.hasExpectedSale);
         setHasDealScore(!!data?.hasDealScore);
       } catch {
         /* keep index-only fallbacks */
@@ -233,13 +242,28 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
             </Link>
             <PrimaryNav variant="compact" className="hidden sm:flex" />
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close listing"
-            className="rounded-full border border-slate-700 bg-slate-800 p-2 transition-colors hover:bg-slate-700"
-          >
-            <X className="h-5 w-5 text-slate-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Prominent save — top of the detail so it never gets buried below the
+                calculator rail (esp. on mobile, where the rail stacks far below). */}
+            <WatchButton
+              item={{
+                listing_key: property.id,
+                address: property.UnparsedAddress,
+                city: property.City,
+                list_price: property.ListPrice,
+                thumb: property.primaryImageUrl,
+                status: property.Status,
+              }}
+              label="Save"
+            />
+            <button
+              onClick={onClose}
+              aria-label="Close listing"
+              className="rounded-full border border-slate-700 bg-slate-800 p-2 transition-colors hover:bg-slate-700"
+            >
+              <X className="h-5 w-5 text-slate-400" />
+            </button>
+          </div>
         </div>
 
         {/* 70/30 split on desktop; stacks to a single scroll column on mobile so the
@@ -406,16 +430,18 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 </div>
               )}
 
-              {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
-              <ListingEstimateCard
-                estimate={estimate}
+              {/* The single Estimated Sale Price — list-anchored where we can, AVM fallback;
+                  resolved server-side so this matches the full listing page exactly. */}
+              <EstimatedSaleCard
+                salePrice={salePrice}
                 listPrice={property.ListPrice}
-                cityRegion={property.City}
-                locked={!isAuthed && hasEstimate}
+                city={property.City}
+                propertySubType={property.PropertySubType}
+                locked={!isAuthed && (hasEstimate || hasExpectedSale)}
               />
 
-              {/* §6.3(i)/(k) disclaimer for the AVM-derived estimate above (parity with the full report). */}
-              {(estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
+              {/* §6.3(i)/(k) disclaimer for the VOW-derived estimate above (parity with the full report). */}
+              {((salePrice?.value ?? 0) > 0 || (estimate?.estimatedValue ?? 0) > 0) && <Disclaimers />}
 
               {/* Property Summary Card */}
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4">
@@ -526,6 +552,38 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Mobile sticky action bar — Save + Contact pinned to the bottom of the
+            panel so the funnel's two key actions never scroll away (the calculator
+            rail, with the inline Schedule-Viewing form, stacks far below on mobile). */}
+        <div
+          className="flex shrink-0 items-center gap-2 border-t border-slate-800 bg-slate-950/95 px-3 pt-2.5 backdrop-blur lg:hidden"
+          style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
+        >
+          <WatchButton
+            item={{
+              listing_key: property.id,
+              address: property.UnparsedAddress,
+              city: property.City,
+              list_price: property.ListPrice,
+              thumb: property.primaryImageUrl,
+              status: property.Status,
+            }}
+            label="Save"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent('pp:open-viewing', { detail: { listingKey: property.id } })
+              )
+            }
+            className="flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            <CalendarDays className="h-4 w-4" />
+            Contact
+          </button>
         </div>
       </div>
 

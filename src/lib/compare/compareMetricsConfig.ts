@@ -7,6 +7,7 @@
  */
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { CompareEstimate } from "@/lib/property/getCompareData";
+import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { UnderwritingResult } from "@/lib/underwriting/computeUnderwriting";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 import { formatPrice } from "@/lib/utils";
@@ -28,6 +29,8 @@ export type CellKind = "numeric" | "text" | "dealScore" | "estValue" | "discount
 export interface MetricContext {
   listing: ListingDocument;
   estimate?: CompareEstimate;
+  /** The single list-anchored "Estimated Sale Price" (AVM fallback) — same as the listing page. */
+  salePrice?: SalePriceEstimate | null;
   underwriting?: UnderwritingResult;
   isAuthed: boolean;
 }
@@ -138,9 +141,13 @@ export const COMPARE_METRICS: CompareMetric[] = [
     get: (c) => dealScoreFromDocument(c.listing, c.estimate?.estimatedValue && c.estimate.confidence
       ? { estimatedValue: c.estimate.estimatedValue, confidence: c.estimate.confidence } : null).score,
     winner: "high", gated: true },
-  { key: "estValue", label: "Est. Value", group: "valuationDeal", cellKind: "estValue",
-    get: (c) => c.estimate?.estimatedValue ?? null, format: formatPrice, winner: null, gated: true },
-  { key: "vsEstimate", label: "vs Estimate", group: "valuationDeal", cellKind: "discount",
+  // The single headline price: list-anchored Estimated Sale Price (AVM fallback) — same
+  // number the listing page shows. (Was the raw list-blind AVM "Est. Value".)
+  { key: "estValue", label: "Est. Sale Price", group: "valuationDeal", cellKind: "estValue",
+    get: (c) => c.salePrice?.value ?? null, format: formatPrice, winner: null, gated: true },
+  // The per-listing deal signal: how the ask compares to our INDEPENDENT comp valuation
+  // (the AVM). Distinct from the sale price — it's the arbitrage lens, not a competing price.
+  { key: "vsEstimate", label: "vs Comp Value", group: "valuationDeal", cellKind: "discount",
     get: discountPctOf, format: (v) => `${Math.abs(v).toFixed(1)}% ${v >= 0 ? "under" : "over"}`,
     winner: "high", gated: true },
   { key: "listPrice", label: "List Price", group: "valuationDeal", cellKind: "numeric",

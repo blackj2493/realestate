@@ -9,10 +9,64 @@
  */
 
 import type { ListingDocument } from "@/lib/typesense/client";
-import type { ColumnType } from "@/lib/personas/personaConfig";
+import type { ColumnType, ColumnDef } from "@/lib/personas/personaConfig";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 
 export type SortDir = "asc" | "desc";
+
+// ============================================================================
+// Width-aware column fit (desktop)
+// ============================================================================
+
+/** Tailwind width class → px for the fixed analytical columns the personas use. */
+const COLUMN_PX: Record<string, number> = {
+  "w-16": 64,
+  "w-20": 80,
+  "w-24": 96,
+  "w-32": 128,
+};
+
+// Row chrome left of the analytical columns — MUST mirror LedgerRow's markup:
+// the px-3 row padding, the w-5 select checkbox, the w-24 thumbnail, and the
+// gap-3 flex gap between every adjacent child.
+const ROW_PAD = 24; // px-3 (both sides)
+const CHECKBOX = 20; // w-5
+const THUMB = 96; // w-24
+const GAP = 12; // gap-3
+/** Floor for the flexing address/price card so it stays legible (audit C4: the
+ *  price clipped to "$8…" when columns starved it). Below this we drop a column. */
+const ADDRESS_MIN = 160;
+
+const colPx = (col: ColumnDef): number => COLUMN_PX[col.width.trim()] ?? 96;
+
+/**
+ * fitLedgerColumns — the subset of persona columns that fit a ledger `width` px wide.
+ *
+ * The address card always stays (it flexes). Analytical columns are added in
+ * config order while the address card keeps ≥ ADDRESS_MIN px; the first that
+ * doesn't fit — and everything after it — is dropped. `alphaFlag` is the last
+ * (and widest, w-32) column in every persona, so it is the first to go when the
+ * panel is narrow — exactly right, since it is the only non-sortable column, so
+ * the sortable metric columns survive the squeeze.
+ */
+export function fitLedgerColumns(columns: ColumnDef[], width: number): ColumnDef[] {
+  const address = columns.find((c) => c.type === "address");
+  const analytical = columns.filter((c) => c.type !== "address");
+  if (width <= 0) return address ? [address] : [...columns];
+
+  const kept: ColumnDef[] = [];
+  for (const col of analytical) {
+    const candidate = [...kept, col];
+    const nChildren = 2 + 1 + candidate.length; // checkbox + thumb + address + analytical
+    const gaps = (nChildren - 1) * GAP;
+    const fixed = CHECKBOX + THUMB + candidate.reduce((s, c) => s + colPx(c), 0);
+    const addressWidth = width - ROW_PAD - fixed - gaps;
+    if (addressWidth >= ADDRESS_MIN) kept.push(col);
+    else break; // monotonic: every further column only shrinks the address more
+  }
+  const keptTypes = new Set(kept.map((c) => c.type));
+  return columns.filter((c) => c.type === "address" || keptTypes.has(c.type));
+}
 
 /** Monthly carrying cost — explicit field, else a deterministic 80% LTV @ 7% / 30yr estimate. */
 export function carryFor(p: ListingDocument): number {

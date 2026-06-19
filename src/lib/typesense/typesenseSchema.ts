@@ -47,6 +47,9 @@ export const indexedFields: IndexedField[] = [
   { name: 'BedroomsBelowGrade', type: 'int32', facet: false, sort: false, optional: true },
   { name: 'BathroomsTotalInteger', type: 'int32', facet: false, sort: true },
   { name: 'ParkingTotal', type: 'int32', facet: false, sort: true },
+  // Garage (covered) spaces — size/frontage/price-tier proxy for the comparables matcher.
+  // optional: backfilled in-place; absent ≠ 0 (unknown vs no garage).
+  { name: 'CoveredSpaces', type: 'int32', facet: false, sort: false, optional: true },
 
   // Location — city/region dropdowns are real facets; PostalCode is too high-cardinality.
   // UnparsedAddress: indexed (not faceted) so the search bar can typeahead street
@@ -197,6 +200,8 @@ export const typesenseSchema = {
     { name: 'BedroomsBelowGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
     { name: 'BathroomsTotalInteger', type: 'int32' as const, facet: false, sort: true },
     { name: 'ParkingTotal', type: 'int32' as const, facet: false, sort: true },
+    // Garage (covered) spaces — comparables size/frontage proxy; optional (absent ≠ 0).
+    { name: 'CoveredSpaces', type: 'int32' as const, facet: false, sort: false, optional: true },
     { name: 'City', type: 'string' as const, facet: true },
     { name: 'CityRegion', type: 'string' as const, facet: true },
     { name: 'UnparsedAddress', type: 'string' as const, facet: false, optional: true },
@@ -327,6 +332,8 @@ export interface TypesensePropertyDocument {
   BedroomsBelowGrade?: number;
   BathroomsTotalInteger: number;
   ParkingTotal: number;
+  /** Garage (covered) parking spaces; omitted when unknown (≠ 0 = no garage). */
+  CoveredSpaces?: number;
   
   // Location
   City: string | null;

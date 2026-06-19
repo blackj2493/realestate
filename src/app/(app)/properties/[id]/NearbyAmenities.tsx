@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingCart, Dumbbell } from "lucide-react";
+import { ShoppingCart, Dumbbell, Store } from "lucide-react";
 import { searchListings } from "@/lib/typesense/client";
 
 interface NearbyAmenity {
@@ -16,6 +16,8 @@ interface AmenitiesResponse {
   recreation: NearbyAmenity[];
   groceryTotal: number;
   recreationTotal: number;
+  /** Nearest Costco warehouse (drive-to; searched beyond the walkable radius). */
+  costco: { name: string; distanceKm: number } | null;
 }
 
 /**
@@ -53,7 +55,7 @@ export default function NearbyAmenities({ listingId }: { listingId: string }) {
     };
   }, [listingId]);
 
-  if (!data || (data.grocery.length === 0 && data.recreation.length === 0)) return null;
+  if (!data || (data.grocery.length === 0 && data.recreation.length === 0 && !data.costco)) return null;
 
   return (
     <div className="mb-6">
@@ -67,6 +69,7 @@ export default function NearbyAmenities({ listingId }: { listingId: string }) {
           items={data.grocery}
           total={data.groceryTotal}
           accent="text-emerald-400"
+          costco={data.costco}
         />
         <AmenityColumn
           icon={<Dumbbell className="h-4 w-4 text-sky-400" />}
@@ -90,16 +93,20 @@ function AmenityColumn({
   items,
   total,
   accent,
+  costco,
 }: {
   icon: React.ReactNode;
   label: string;
   items: NearbyAmenity[];
   total: number;
   accent: string;
+  /** When provided (Grocery column), pinned as a highlighted Costco row at the top. */
+  costco?: { name: string; distanceKm: number } | null;
 }) {
-  if (items.length === 0) return null;
+  if (items.length === 0 && !costco) return null;
   const shown = items.slice(0, 4);
   const moreCount = Math.max(0, total - shown.length);
+  const costcoCity = costco?.name.includes("—") ? costco.name.split("—")[1].trim() : null;
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
@@ -108,6 +115,17 @@ function AmenityColumn({
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">{label}</span>
       </div>
       <ul className="space-y-1.5">
+        {costco && (
+          <li className="flex items-start justify-between gap-2 rounded-md bg-amber-500/10 px-1.5 py-1">
+            <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight text-amber-300">
+              <Store className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Costco{costcoCity ? ` · ${costcoCity}` : ""}</span>
+            </span>
+            <span className="shrink-0 font-mono text-[11px] font-semibold text-amber-400">
+              {costco.distanceKm.toFixed(1)} km
+            </span>
+          </li>
+        )}
         {shown.map((a) => (
           <li key={a.id} className="flex items-start justify-between gap-2">
             <span className="truncate text-sm leading-tight text-slate-200">{a.name}</span>

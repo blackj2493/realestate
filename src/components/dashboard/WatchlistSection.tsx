@@ -74,7 +74,46 @@ export default function WatchlistSection() {
   const signedIn = useWatchlistStore((s) => s.signedIn);
   const { changes, rollup, loading } = useWatchlistSnapshot();
 
-  if (loading || changes.length === 0) return null;
+  // While hydrating, render nothing (the snapshot hook resolves quickly).
+  if (loading) return null;
+
+  // Empty watchlist: instead of vanishing, surface an inviting CTA so a fresh
+  // high-intent user has an obvious next step (mobile = primary funnel).
+  if (changes.length === 0) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
+            Watchlist
+          </h2>
+          {!signedIn && (
+            <Link
+              href="/login"
+              className="terminal-font text-[11px] uppercase tracking-wider text-cyan-400 hover:underline"
+            >
+              Sign in to sync across devices →
+            </Link>
+          )}
+        </div>
+
+        <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-12 text-center">
+          <h3 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-200">
+            Nothing saved yet
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
+            Save listings to track price drops, days-on-market, and status changes —
+            all in one place.
+          </p>
+          <Link
+            href="/properties"
+            className="terminal-font mt-6 inline-flex min-h-[44px] items-center gap-2 border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 text-xs uppercase tracking-wider text-cyan-200 hover:bg-cyan-500/20"
+          >
+            Browse properties →
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3">
@@ -99,6 +138,7 @@ export default function WatchlistSection() {
         {changes.map((change) => {
           const item = change.item;
           const price = change.current?.ListPrice ?? item.list_price;
+          const brokerage = change.current?.ListOfficeName;
           return (
             <div
               key={item.listing_key}
@@ -106,7 +146,7 @@ export default function WatchlistSection() {
             >
               <WatchButton
                 item={item}
-                className="absolute right-1.5 top-1.5 z-10 rounded bg-slate-950/70 p-1.5 backdrop-blur"
+                className="absolute right-1.5 top-1.5 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-slate-950/70 p-1.5 backdrop-blur"
               />
               <Link href={`/properties/${item.listing_key}`} className="block">
                 <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
@@ -124,6 +164,14 @@ export default function WatchlistSection() {
                     <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">
                       {item.city}
                     </p>
+                  )}
+                  {/* Listing brokerage (ListOfficeName) — TRREB §6.3(c) mandates the
+                      brokerage on EVERY listing shown, including saved/watchlist cards,
+                      at the same size/weight as other detail lines (no visual de-emphasis).
+                      Re-hydrated live from Typesense via change.current; rendered
+                      conditionally so off-market cards (no live doc) never break. */}
+                  {brokerage && (
+                    <p className="truncate text-[11px] text-slate-300">{brokerage}</p>
                   )}
                 </div>
               </Link>

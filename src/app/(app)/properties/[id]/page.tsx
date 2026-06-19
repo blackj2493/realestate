@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Bed, Bath, Square, Car, AlertTriangle, Building2 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
+import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -24,9 +25,12 @@ import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
 import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
 import { buildDatasheet } from "@/lib/property/datasheet";
+import ThingsToKnowCard from "@/components/Property/ThingsToKnowCard";
+import { buildDiligenceFlags } from "@/lib/property/diligence";
+import YourTakeCard from "@/components/Property/YourTakeCard";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
-import ExpectedSaleCard from "@/components/Property/ExpectedSaleCard";
+import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
 import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
@@ -37,6 +41,10 @@ import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCa
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
+import TheReadCard from "@/components/Property/TheReadCard";
+import { buildTheRead } from "@/lib/property/theRead";
+import WatchButton from "@/components/watchlist/WatchButton";
+import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -224,7 +232,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   if (!detail) {
     return (
-      <main className="min-h-screen bg-slate-950">
+      <main className="min-h-app bg-slate-950">
         <PropertyNotFound id={id} />
       </main>
     );
@@ -259,6 +267,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Address Unavailable";
   const price = p.ListPrice || 0;
+  // THE single price number — list-anchored Expected Sale where we can (most accurate),
+  // AVM as the honest fallback. Replaces the old two-number display. (null for anon: the
+  // VOW-gated view nulls both inputs → the card renders its locked teaser.)
+  const salePrice = resolveSalePrice({
+    listPrice: price > 0 ? price : null,
+    isActive: status.kind === "active",
+    expectedSale: view.expectedSale,
+    estimate: view.estimate,
+  });
   const dom = p.DaysOnMarket ?? calculateDaysOnMarket(p.OriginalEntryTimestamp);
   // True DOM (stitched across relists) from the Temporal Distress Engine; falls back to raw DOM.
   // Gated (null) for anon → falls back to raw IDX DaysOnMarket.
@@ -286,9 +303,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   // Gated payload (defense-in-depth): anon view has sold price/date keys scrubbed,
   // so a future registry field can never surface them here. Identical for authed users.
   const datasheet = buildDatasheet(view.full_payload);
+  // Things to Know — payload-derived diligence flags (Phase 1) merged with
+  // geo-joined public-records flags (Phase 2: flood/rail/traffic). Public data is
+  // not VOW-gated, so view.geoFlags is populated for anon users too. Feeds The Read.
+  const diligenceFlags = buildDiligenceFlags(view.full_payload, view.geoFlags);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-slate-950 text-slate-200">
       {jsonLd && (
         <script
           type="application/ld+json"
@@ -301,9 +322,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         price={price}
         thumb={detail.media_urls[0]}
         city={detail.city ?? undefined}
+        brokerage={p.ListOfficeName}
       />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
+      <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
         <Link
           href="/properties"
           className="mb-4 inline-block text-sm text-cyan-400 transition-colors hover:text-cyan-300"
@@ -323,7 +345,22 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   ))}
                 </div>
               )}
-              <h1 className="mb-2 text-2xl font-bold text-slate-100">{address}</h1>
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <h1 className="text-2xl font-bold text-slate-100">{address}</h1>
+                {/* Prominent save — top of the detail so it's reachable without
+                    scrolling past the entire financial workup (mirrors the dashboard). */}
+                <WatchButton
+                  item={{
+                    listing_key: id,
+                    address,
+                    city: detail.city ?? undefined,
+                    list_price: price,
+                    thumb: detail.media_urls[0],
+                  }}
+                  label="Save"
+                  className="min-h-[44px] shrink-0 md:min-h-0"
+                />
+              </div>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {status.kind === "sold" ? (
                   <>
@@ -416,6 +453,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               )}
             </div>
 
+            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
+            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} />}
+
             {/* Social proof — honest, deterministic activity counters */}
             <SocialProofBar listingId={id} className="mb-6" />
 
@@ -438,6 +478,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
             {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12) */}
             <PropertyDataSheet groups={datasheet} />
+
+            {/* Things to Know — interpretive diligence flags (sourced; §4-safe) */}
+            <ThingsToKnowCard flags={diligenceFlags} />
 
             {/* Schools */}
             <NearbySchools listingId={id} />
@@ -463,6 +506,17 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 {p.ListOfficeName || "Brokerage information not available"}
               </p>
             </Section>
+
+            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage) */}
+            <YourTakeCard
+              listingKey={id}
+              metrics={{
+                listPrice: price || null,
+                capRatePct: view.capRatePct,
+                beds: p.BedroomsTotal ?? null,
+                trueDom,
+              }}
+            />
           </div>
 
           {/* ── RIGHT (30%, sticky) ── */}
@@ -482,25 +536,32 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
               )}
 
-              {/* True Value — our list-blind AVM ("what the asset is worth") */}
-              <ListingEstimateCard
-                estimate={view.estimate}
-                listPrice={price}
-                cityRegion={p.CityRegion}
-                city={p.City}
-                locked={!isAuthed && hasEstimate}
-                hideAskDelta={status.kind === "sold"}
-              />
-
-              {/* Expected Sale Price — only meaningful against a live ask */}
-              {isActiveListing && (
-                <ExpectedSaleCard
-                  expectedSale={view.expectedSale}
-                  estimate={view.estimate}
+              {isActiveListing ? (
+                /* ONE number: the Estimated Sale Price (list-anchored where we can be,
+                   AVM as fallback). The intrinsic AVM lives on as the faint "comparable
+                   value" band inside this card + as the Deal Score signal above. */
+                <EstimatedSaleCard
+                  salePrice={salePrice}
                   listPrice={price}
                   city={p.City}
                   propertySubType={p.PropertySubType}
-                  locked={!isAuthed && hasExpectedSale}
+                  locked={!isAuthed && (hasEstimate || hasExpectedSale)}
+                />
+              ) : status.kind === "sold" && hasSoldAccuracy ? (
+                /* Sold WITH a receipt: the "Our Call vs. The Sale" card above IS the single
+                   number. Don't also show a standalone True Value — that was the confusing
+                   second estimate the user flagged. */
+                null
+              ) : (
+                /* Delisted/off-market, or sold without a receipt: the independent True
+                   Value is the only number we can offer (no live ask to anchor to). */
+                <ListingEstimateCard
+                  estimate={view.estimate}
+                  listPrice={price}
+                  cityRegion={p.CityRegion}
+                  city={p.City}
+                  locked={!isAuthed && hasEstimate}
+                  hideAskDelta={status.kind === "sold"}
                 />
               )}
 
@@ -508,7 +569,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
 
               {/* Compliance disclaimer for the AVM-derived figures above (estimate + value-add) */}
-              {(view.estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
+              {((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
+                <Disclaimers />
+              )}
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
@@ -603,11 +666,28 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           city={p.City ?? null}
           subType={p.PropertySubType ?? null}
           beds={p.BedroomsTotal ?? 0}
+          bedsAbove={p.BedroomsAboveGrade ?? 0}
+          bedsBelow={p.BedroomsBelowGrade ?? 0}
+          garage={p.CoveredSpaces ?? null}
           baths={p.BathroomsTotalInteger ?? 0}
           listPrice={price}
           area={p.BuildingAreaTotal ?? 0}
         />
       </div>
+
+      {/* Mobile sticky Save + Contact — the right rail (with these actions) stacks
+          far below the fold on phones; this keeps the funnel reachable. */}
+      <MobileActionBar
+        item={{
+          listing_key: id,
+          address,
+          city: detail.city ?? undefined,
+          list_price: price,
+          thumb: detail.media_urls[0],
+        }}
+        listingKey={id}
+        canContact={isActiveListing}
+      />
     </main>
   );
 }

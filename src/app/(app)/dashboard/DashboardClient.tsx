@@ -28,6 +28,7 @@ import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
+import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
 import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -79,7 +80,7 @@ export default function DashboardClient() {
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
 
-  if (!ready) return <div className="min-h-screen bg-slate-950" aria-busy="true" />;
+  if (!ready) return <div className="min-h-app bg-slate-950" aria-busy="true" />;
 
   // Persona reorders which boards lead (non-destructive — config.boards stays the
   // user's enable/disable set).
@@ -89,7 +90,7 @@ export default function DashboardClient() {
   const hasRegions = config.regions.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-app bg-slate-950 text-slate-100">
       <MissionControlHeader
         name={name}
         persona={config.persona}
@@ -97,7 +98,13 @@ export default function DashboardClient() {
         onToggleConfig={() => setShowConfig((v) => !v)}
       />
 
-      <main className="mx-auto max-w-[1600px] space-y-8 px-4 py-6">
+      {/* Safe-area insets via max() so they only ever ADD to the existing
+          gutters (env() = 0 off-notch → pixel-identical to the original
+          px-4 py-6). Keeps the bottom compliance line clear of the home
+          indicator without changing desktop spacing. */}
+      <main className="mx-auto max-w-[1600px] space-y-8 pt-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <PasskeyPrompt />
+
         {showConfig && <DashboardConfigPanel config={config} onChange={update} />}
 
         <ActionFeed

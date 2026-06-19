@@ -75,6 +75,9 @@ export interface SchoolState {
   system: SchoolSystem;
   minScore: number; // 0–10; 0 = no score filter (sort/shade only)
   targetSchool: { id: string; name: string } | null;
+  /** Draw real attendance-boundary polygons on the map (overlay; independent of the
+   *  score filter). Drives useSchoolCatchmentLayers for the current level/system. */
+  showZones: boolean;
 }
 
 const defaultSchool: SchoolState = {
@@ -83,6 +86,7 @@ const defaultSchool: SchoolState = {
   system: "public",
   minScore: 0,
   targetSchool: null,
+  showZones: false,
 };
 
 export type AmenityKind = "grocery" | "recreation" | "either";

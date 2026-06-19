@@ -87,10 +87,16 @@ export default function DashboardConfigPanel({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Add a city or neighbourhood…"
+              type="search"
+              inputMode="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="search"
               className="w-full border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
             />
             {suggestions.length > 0 && (
-              <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto border border-slate-700 bg-slate-900 shadow-lg">
+              <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto border border-slate-700 bg-slate-900 shadow-lg">
                 {suggestions.map((s) => (
                   <li key={`${s.kind}:${s.label}`}>
                     <button

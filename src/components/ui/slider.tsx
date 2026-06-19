@@ -48,7 +48,7 @@ const Slider = React.forwardRef<
           aria-label={ariaLabel}
           aria-valuetext={getAriaValueText ? getAriaValueText(values[i], i) : undefined}
           className={cn(
-            "block h-3.5 w-3.5 border border-slate-950 ring-offset-slate-950 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+            "relative block h-3.5 w-3.5 border border-slate-950 ring-offset-slate-950 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 after:absolute after:content-[''] after:inset-[-14px] after:rounded-full",
             thumbClassName ?? "bg-cyan-400"
           )}
         />

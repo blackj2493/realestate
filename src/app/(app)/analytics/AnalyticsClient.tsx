@@ -60,7 +60,7 @@ function YoYBadge({ pct }: { pct: number | null }) {
   if (pct == null) return null;
   return (
     <span
-      className={`terminal-font text-[10px] font-bold uppercase tracking-wider ${
+      className={`terminal-font text-xs font-bold uppercase tracking-wider ${
         pct >= 0 ? "text-emerald-400" : "text-rose-400"
       }`}
     >
@@ -85,7 +85,7 @@ interface KpiProps {
 function KpiCard({ label, value, sub, loading }: KpiProps) {
   return (
     <div className="border border-slate-800 bg-slate-900/40 px-4 py-3">
-      <p className="terminal-font text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      <p className="terminal-font text-xs font-bold uppercase tracking-wider text-slate-400">
         {label}
       </p>
       {loading ? (
@@ -93,7 +93,7 @@ function KpiCard({ label, value, sub, loading }: KpiProps) {
       ) : (
         <p className="mt-1 font-mono text-xl font-bold text-slate-100">{value}</p>
       )}
-      <div className="mt-1 min-h-[16px] text-[11px] text-slate-500">{!loading && sub}</div>
+      <div className="mt-1 min-h-[16px] text-xs text-slate-400">{!loading && sub}</div>
     </div>
   );
 }
@@ -176,8 +176,8 @@ export default function AnalyticsClient() {
   const lineFmt = metric === "ppsf" ? (v: number) => `$${Math.round(v)}` : fmtPrice;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
-      <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="min-h-app bg-slate-950 text-slate-200">
+      <div className="mx-auto max-w-6xl px-4 py-6 pb-safe">
         {/* Header: title + region picker */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -189,19 +189,19 @@ export default function AnalyticsClient() {
             </p>
           </div>
           <LocationSearch
-            className="w-full md:w-80"
+            className="w-full md:w-80 [&_input]:h-11 md:[&_input]:h-7"
             onPlace={(label) => setRegion(label)}
             placeholder="Change city or neighbourhood…"
           />
         </div>
 
         {/* Property-type scope chips */}
-        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+        <div className="mt-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar md:flex-wrap pb-1 -mx-4 px-4">
           <button
             type="button"
             onClick={() => setTypeKeys([])}
             aria-pressed={typeKeys.length === 0}
-            className={`terminal-font border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+            className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               typeKeys.length === 0
                 ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
                 : "border-slate-700 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
@@ -217,7 +217,7 @@ export default function AnalyticsClient() {
                 type="button"
                 onClick={() => toggleType(o.key)}
                 aria-pressed={active}
-                className={`terminal-font border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
                   active
                     ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
                     : "border-slate-700 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
@@ -265,7 +265,7 @@ export default function AnalyticsClient() {
             sub={
               temp && (
                 <span
-                  className={`terminal-font inline-block border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${temp.cls}`}
+                  className={`terminal-font inline-block border px-2 py-1 text-[11px] font-bold uppercase tracking-wider ${temp.cls}`}
                 >
                   {temp.label}
                 </span>
@@ -309,7 +309,7 @@ export default function AnalyticsClient() {
                       type="button"
                       onClick={() => setMetric(id)}
                       aria-pressed={active}
-                      className={`terminal-font border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
+                      className={`terminal-font min-h-[44px] flex items-center border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                         active
                           ? "bg-cyan-500/20 text-cyan-300"
                           : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
@@ -325,7 +325,7 @@ export default function AnalyticsClient() {
               </span>
             </div>
           </div>
-          <div className="h-[380px] p-3">
+          <div className="h-[240px] sm:h-[320px] lg:h-[380px] p-3">
             {loading && <div className="h-full w-full animate-pulse bg-slate-800/40" />}
             {!loading && points.length === 0 && (
               <p className="flex h-full items-center justify-center text-xs text-slate-500">
@@ -359,8 +359,13 @@ export default function AnalyticsClient() {
                     stroke="#334155"
                     width={36}
                     allowDecimals={false}
+                    hide={!isSales}
                   />
                   <Tooltip
+                    trigger="click"
+                    wrapperStyle={{ zIndex: 50 }}
+                    cursor={{ fill: "rgba(100,116,139,0.15)" }}
+                    allowEscapeViewBox={{ x: false, y: false }}
                     contentStyle={{ background: "#0f172a", border: "1px solid #334155", fontSize: 12 }}
                     labelFormatter={shortMonth}
                     formatter={(value, name) => {
@@ -413,7 +418,22 @@ export default function AnalyticsClient() {
           exclusively for consumers&apos; personal, non-commercial use and may only be used by
           consumers that have a bona fide interest in the purchase, sale, or lease of real estate.
         </p>
+
+        {/* Spacer so the fixed mobile CTA never covers the notice above. */}
+        {!loading && <div className="h-20 md:hidden" />}
       </div>
+
+      {/* Mobile-only lead path: jump from market data to live listings. */}
+      {!loading && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950/95 px-4 py-3 pb-safe backdrop-blur md:hidden">
+          <a
+            href={`/properties?city=${encodeURIComponent(region)}`}
+            className="terminal-font flex min-h-[44px] items-center justify-center border border-cyan-500/60 bg-cyan-500/20 px-4 text-xs font-bold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/30"
+          >
+            See live deals in {region} →
+          </a>
+        </div>
+      )}
     </div>
   );
 }

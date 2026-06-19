@@ -31,7 +31,7 @@ export default function MapModeDock() {
   // MapStatusHUD (z-10), whose wide count line can otherwise overlap and intercept
   // clicks on the Listings segment when the map is narrowed by the ledger.
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2">
+    <div className="absolute bottom-16 left-2 z-20 translate-x-0 md:bottom-4 md:left-1/2 md:-translate-x-1/2">
       <div className="flex overflow-hidden border border-slate-700 bg-slate-900/90 backdrop-blur-md">
         {SEGMENTS.filter((s) => ENABLED.includes(s.id)).map((s) => {
           const active = mapMode === s.id;
@@ -43,7 +43,7 @@ export default function MapModeDock() {
               onClick={() => setMapMode(s.id)}
               aria-pressed={active}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors md:px-4 md:py-2 md:text-sm",
                 active ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-100"
               )}
             >

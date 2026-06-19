@@ -1,6 +1,8 @@
 /** Pure filter builders for the sold/delisted comp route — kept out of
  *  route.ts so node-env tests don't load next/server. */
 
+import { aboveGradeBedsClause, exactAboveGradeBedsClause } from "@/lib/filters/filterRegistry";
+
 const DAY_MS = 86_400_000;
 
 /**
@@ -21,8 +23,12 @@ export interface SoldParams {
   area: SoldArea;
   windowDays: number;
   typeKeys: string[];
+  minPrice: number;
+  maxPrice: number;
   minBeds: number;
+  bedsExact: boolean;
   minBaths: number;
+  bathsExact: boolean;
   minGarage: number;
   basementFinished: boolean;
   minFrontage: number;
@@ -87,13 +93,27 @@ export function buildSoldFilter(
     clauses.push(`ClosePrice:>=1`);
   }
 
+  // Price band — Sold/Leased filter the achieved sale price (ClosePrice); De-listed
+  // rows never transacted, so the final ask (ListPrice) carries the band instead.
+  const priceField = p.dealType === "delisted" ? "ListPrice" : "ClosePrice";
+  if (p.minPrice > 0) clauses.push(`${priceField}:>=${Math.floor(p.minPrice)}`);
+  if (p.maxPrice > 0) clauses.push(`${priceField}:<=${Math.floor(p.maxPrice)}`);
+
   const variants = variantsForKeysFn ? variantsForKeysFn(p.typeKeys) : [];
   if (variants.length > 0) {
     const ors = variants.map((v) => `PropertySubType:=\`${v.replace(/`/g, "")}\``);
     clauses.push(`(${ors.join(" || ")})`);
   }
-  if (p.minBeds > 0) clauses.push(`BedroomsTotal:>=${p.minBeds}`);
-  if (p.minBaths > 0) clauses.push(`BathroomsTotalInteger:>=${p.minBaths}`);
+  // Beds: above-grade with a total fallback — identical semantics to the For Sale
+  // filter. "3 bd" means 3 ABOVE grade, so a 1+4 basement-heavy home no longer
+  // surfaces under it. Min ("3+") vs Exact ("exactly 3") follows the bar's toggle.
+  // Every doc carries an explicit BedroomsAboveGrade (de-listed + legacy backfilled
+  // via backfill-delisted-bedroom-grade.ts), so the clause's `:=0` total-fallback
+  // branch is reachable and nothing is silently dropped.
+  if (p.minBeds > 0) {
+    clauses.push(p.bedsExact ? exactAboveGradeBedsClause(p.minBeds) : aboveGradeBedsClause(p.minBeds));
+  }
+  if (p.minBaths > 0) clauses.push(`BathroomsTotalInteger:${p.bathsExact ? "=" : ">="}${p.minBaths}`);
   if (p.minGarage > 0) clauses.push(`ParkingTotal:>=${p.minGarage}`);
   // BasementTier 1-5 = finished/partially-finished space (deterministic tier).
   if (p.basementFinished) clauses.push(`BasementTier:<=5`);

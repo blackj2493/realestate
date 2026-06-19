@@ -18,7 +18,7 @@ import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
 import { fetchRentAVM, type RentAVMResult } from './services/rentAVM';
-import { fetchTrueValue, fetchMillRate } from './services/trueValueCalculator';
+import { resolveRatioPrice, fetchMillRate } from './services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
 import { resolveLocation } from './resolveLocation';
@@ -690,6 +690,7 @@ export interface TransformResult {
     LotSqftTotal?: number;
     ApproximateAge?: string;
     ParkingTotal?: number;
+    CoveredSpaces?: number;
     BuildingAreaTotal?: number;
     isDistressed: boolean;
     targetGrossYield?: number;
@@ -844,12 +845,12 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     console.warn('[Transformer] Rent AVM lookup failed:', err);
   }
 
-  // === Phase 3: True Value & Mill Rate (async Supabase lookups) ===
-  let trueValue = { calculation_price: raw.ListPrice || 0, true_value: raw.ListPrice || 0, is_price_discovery: false };
+  // === Phase 3: Ratio-price basis & Mill Rate (async Supabase lookups) ===
+  let ratioPrice = { calculation_price: raw.ListPrice || 0, is_price_discovery: false };
   let millRate = { base_mill_rate: 0.0095, city: raw.City || '' };
   try {
-    [trueValue, millRate] = await Promise.all([
-      fetchTrueValue({
+    [ratioPrice, millRate] = await Promise.all([
+      resolveRatioPrice({
         listPrice: raw.ListPrice || 0,
         propertySubType: raw.PropertySubType || '',
         cityRegion: raw.CityRegion || raw.City || '',
@@ -857,7 +858,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       fetchMillRate(raw.CityRegion || raw.City || ''),
     ]);
   } catch (err) {
-    console.warn('[Transformer] True Value/Mill Rate lookup failed:', err);
+    console.warn('[Transformer] Ratio-price/Mill Rate lookup failed:', err);
   }
 
   // === Phase 3: Financial Metrics Calculation ===
@@ -866,8 +867,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     annual_rent: rentAVM.annual_rent,
     annual_rent_p10: rentAVM.annual_rent_p10,
     has_rent_data: rentAVM.has_data,
-    calculation_price: trueValue.calculation_price,
-    is_price_discovery: trueValue.is_price_discovery,
+    calculation_price: ratioPrice.calculation_price,
+    is_price_discovery: ratioPrice.is_price_discovery,
     propertySubType: raw.PropertySubType || '',
     listPrice: raw.ListPrice || 0,
     // For-lease listings carry monthly rent in ListPrice — the engine zeroes
@@ -995,6 +996,11 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.ApproximateAge = raw.ApproximateAge || '';
   typesensePayload.Status = raw.Status || raw.MlsStatus || raw.StandardStatus || '';
   typesensePayload.ParkingTotal = (raw.ParkingTotal !== undefined && raw.ParkingTotal !== null) ? raw.ParkingTotal : 0;
+  // Garage (covered) spaces — size/frontage proxy for the comparables matcher. Emitted
+  // ONLY when present so "unknown" stays absent (neutral score) vs. 0 = "no garage".
+  if (raw.CoveredSpaces !== undefined && raw.CoveredSpaces !== null) {
+    typesensePayload.CoveredSpaces = parseInt(String(raw.CoveredSpaces), 10);
+  }
   typesensePayload.BuildingAreaTotal = (raw.BuildingAreaTotal !== undefined && raw.BuildingAreaTotal !== null) ? parseFloat(String(raw.BuildingAreaTotal)) : 0;
   // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;
@@ -1032,7 +1038,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   }
 
   // Price discovery flag from TrueValue service
-  typesensePayload.price_discovery_flag = trueValue.is_price_discovery;
+  typesensePayload.price_discovery_flag = ratioPrice.is_price_discovery;
 
   // Builder/Land Development metrics
   (typesensePayload as any).lot_width_ft = builderMetrics.lot_width_ft;

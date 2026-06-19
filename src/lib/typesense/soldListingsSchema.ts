@@ -34,6 +34,14 @@ export const soldListingsSchema = {
     { name: 'UnparsedAddress', type: 'string' as const, facet: false, optional: true },
     { name: 'PropertySubType', type: 'string' as const, facet: true },
     { name: 'BedroomsTotal', type: 'int32' as const, facet: false, sort: true },
+    // Above/below-grade split — powers the "4+2" comp label and the similar-listings
+    // matcher's grade-aware bed score. Optional: legacy docs (pre-reindex) omit them and
+    // fall back to BedroomsTotal via splitBeds(). See scripts/admin/add-sold-bedroom-grade-fields.ts.
+    { name: 'BedroomsAboveGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
+    { name: 'BedroomsBelowGrade', type: 'int32' as const, facet: false, sort: false, optional: true },
+    // Garage (covered) parking spaces — a size/frontage/price-tier proxy in the comp score.
+    // Optional so "unknown garage" (field omitted) scores neutral, distinct from 0 = no garage.
+    { name: 'CoveredSpaces', type: 'int32' as const, facet: false, sort: false, optional: true },
     // float (not int32): VOW bathrooms_total_integer is NUMERIC and can be fractional (e.g. 2.5).
     { name: 'BathroomsTotalInteger', type: 'float' as const, facet: false, sort: true },
     { name: 'BuildingAreaTotal', type: 'int32' as const, facet: false, sort: true },
@@ -83,6 +91,12 @@ export interface SoldListingDocument {
   UnparsedAddress?: string;
   PropertySubType: string;
   BedroomsTotal: number;
+  /** Bedrooms above grade (omitted on legacy pre-reindex docs). */
+  BedroomsAboveGrade?: number;
+  /** Bedrooms below grade / basement (omitted on legacy pre-reindex docs). */
+  BedroomsBelowGrade?: number;
+  /** Garage (covered) parking spaces; omitted when unknown (≠ 0 = no garage). */
+  CoveredSpaces?: number;
   BathroomsTotalInteger: number;
   BuildingAreaTotal: number;
   ParkingTotal: number;

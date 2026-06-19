@@ -79,8 +79,11 @@ export interface SoldIndexInput {
   building_area_total: number | null;
   lot_width: number | null;
   bedrooms_above_grade: number | null;
+  bedrooms_below_grade: number | null;
   bathrooms_total_integer: number | null;
   parking_total: number | null;
+  /** Garage (covered) spaces — null when the feed omits it (≠ 0 = no garage). */
+  covered_spaces: number | null;
   list_price: number | null;
   close_price: number;
   purchase_contract_date: string | null;
@@ -120,6 +123,12 @@ export function toSoldDocument(
     ? selectPrimaryImage(rawMedia as { media?: any[]; images?: any[] })
     : null;
 
+  // raw_vow_sold carries the grade split but no separate total column, so the true
+  // BedroomsTotal is above + below. (Previously BedroomsTotal was set to above-grade
+  // ONLY — a latent bug: a 4+2 sold home indexed as "4", mismatching the subject's
+  // true total of 6 in the comparables matcher.)
+  const bedsAbove = toInt(r.bedrooms_above_grade);
+  const bedsBelow = toInt(r.bedrooms_below_grade);
   const doc: SoldListingDocument = {
     id: r.listing_key,
     ClosePrice: toInt(r.close_price),
@@ -128,7 +137,9 @@ export function toSoldDocument(
     CityRegion: r.city_region ?? '',
     UnparsedAddress: r.unparsed_address ?? '',
     PropertySubType: r.property_sub_type ?? '',
-    BedroomsTotal: toInt(r.bedrooms_above_grade),
+    BedroomsTotal: bedsAbove + bedsBelow,
+    BedroomsAboveGrade: bedsAbove,
+    BedroomsBelowGrade: bedsBelow,
     BathroomsTotalInteger: toFloat(r.bathrooms_total_integer),
     BuildingAreaTotal: toInt(r.building_area_total),
     ParkingTotal: toInt(r.parking_total),
@@ -137,6 +148,9 @@ export function toSoldDocument(
     ListOfficeName: listOfficeName ?? '',
     PurchaseContractDate: ms,
   };
+  // Optional: only emit when the feed has a value, so "unknown garage" stays absent
+  // (neutral in the comp score) rather than collapsing to 0 = "no garage".
+  if (r.covered_spaces != null) doc.CoveredSpaces = toInt(r.covered_spaces);
   if (primaryImageUrl) doc.primaryImageUrl = primaryImageUrl;
   doc.DealType = deriveDealType(r.mls_status, r.transaction_type);
 
@@ -221,7 +235,8 @@ async function backfill(): Promise<void> {
   const nowISO = new Date().toISOString();
   const columns =
     'listing_key, unparsed_address, city_region, city, postal_code, property_sub_type, ' +
-    'building_area_total, lot_width, bedrooms_above_grade, bathrooms_total_integer, ' +
+    'building_area_total, lot_width, bedrooms_above_grade, bedrooms_below_grade, ' +
+    'covered_spaces, bathrooms_total_integer, ' +
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
     'brokerage:raw_payload->>ListOfficeName, ' +
     'mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, ' +

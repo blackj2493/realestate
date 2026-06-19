@@ -25,6 +25,7 @@ import {
   toDeckPosition,
 } from "./mapLogic";
 import ListingMapPopup from "./ListingMapPopup";
+import { useSchoolCatchmentLayers, type CatchmentHover } from "./useSchoolCatchmentLayers";
 
 interface AlphaMapProps {
   properties: ListingDocument[];
@@ -74,6 +75,8 @@ export default function AlphaMap({
   const [mapReady, setMapReady] = useState(false);
   // Pinned, interactive popup: the card(s) at a clicked pin/stacked cluster.
   const [popup, setPopup] = useState<{ x: number; y: number; listings: ListingDocument[] } | null>(null);
+  // Floating label for a hovered school catchment / proximity circle.
+  const [catchmentHover, setCatchmentHover] = useState<CatchmentHover | null>(null);
 
   // Render mode is lifted to the store so the Mode dock / rail can drive it.
   const mapMode = useCommandCenterStore((s) => s.mapMode);
@@ -589,6 +592,36 @@ export default function AlphaMap({
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
   }, [renderData, heatData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
 
+  // Current viewport extent for the school-zone overlay — computed locally (not via
+  // the store's settle-gated mapBounds) so zones paint the moment they're toggled on.
+  const overlayBounds = useMemo(() => {
+    const dims = dimsRef.current;
+    if (!dims || dims.width === 0 || dims.height === 0) return null;
+    try {
+      const vp = new WebMercatorViewport({
+        width: dims.width,
+        height: dims.height,
+        longitude: viewState.longitude,
+        latitude: viewState.latitude,
+        zoom: viewState.zoom,
+        pitch: viewState.pitch ?? 0,
+        bearing: viewState.bearing ?? 0,
+      });
+      const [west, south, east, north] = vp.getBounds();
+      return { west, south, east, north };
+    } catch {
+      return null;
+    }
+  }, [viewState]);
+
+  // School attendance-boundary overlay (real catchments + approximate proximity
+  // circle). Prepended below the listing pins so pins stay clickable.
+  const catchmentLayers = useSchoolCatchmentLayers({
+    zoom: viewState.zoom,
+    bounds: overlayBounds,
+    onHover: setCatchmentHover,
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
     if (!params.viewState) return;
@@ -662,10 +695,10 @@ export default function AlphaMap({
         onResize={({ width, height }) => {
           dimsRef.current = { width, height };
         }}
-        onDragStart={() => setPopup(null)}
+        onDragStart={() => { setPopup(null); setCatchmentHover(null); }}
         onDragEnd={handleDragEnd}
         controller={true}
-        layers={[...layers, ...drawLayers]}
+        layers={[...catchmentLayers, ...layers, ...drawLayers]}
         onClick={(info) => {
           if (isDrawing) {
             if (!info.coordinate) return;
@@ -718,6 +751,24 @@ export default function AlphaMap({
             onSelectProperty?.(l);
           }}
         />
+      )}
+
+      {/* Hovered school-zone label — emerald for official boundaries, amber for the
+          approximate proximity circle. Positioned at the cursor over the canvas. */}
+      {catchmentHover && (
+        <div
+          className="pointer-events-none absolute z-20 max-w-[260px] -translate-x-1/2 -translate-y-full border bg-slate-900/95 px-2.5 py-1.5 backdrop-blur-md"
+          style={{
+            left: catchmentHover.x,
+            top: catchmentHover.y - 10,
+            borderColor: catchmentHover.approximate ? "rgba(245,158,11,0.5)" : "rgba(16,185,129,0.5)",
+          }}
+        >
+          <div className="text-xs font-medium text-slate-100">{catchmentHover.name}</div>
+          <div className={`text-[10px] leading-tight ${catchmentHover.approximate ? "text-amber-300/90" : "text-emerald-300/90"}`}>
+            {catchmentHover.detail}
+          </div>
+        </div>
       )}
 
       {/* Select-mode hint — centered toast so it clears the left rail/drawer. */}

@@ -8,6 +8,8 @@ export interface SoldListing {
   soldDate: string | null;
   propertySubType: string | null;
   beds: number | null;
+  bedsAbove: number | null;
+  bedsBelow: number | null;
   baths: number | null;
   sqft: number | null;
   brokerage: string | null;
@@ -42,6 +44,8 @@ export function mapSoldDoc(d: Record<string, unknown>): SoldListing {
     soldDate: Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null,
     propertySubType: (d.PropertySubType as string) || null,
     beds: posOrNull(d.BedroomsTotal),
+    bedsAbove: posOrNull(d.BedroomsAboveGrade),
+    bedsBelow: posOrNull(d.BedroomsBelowGrade),
     baths: posOrNull(d.BathroomsTotalInteger),
     sqft: posOrNull(d.BuildingAreaTotal),
     brokerage: (d.ListOfficeName as string) || null,

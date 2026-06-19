@@ -13,6 +13,10 @@
 
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
+import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
+import { computeExpectedSale } from "@/lib/avm/expectedSale";
+import { resolveSalePrice, type SalePriceEstimate } from "@/lib/avm/salePrice";
+import type { AVMResult } from "@/lib/avm/types";
 
 export type EstimateConfidence = "HIGH" | "MEDIUM" | "LOW";
 
@@ -31,6 +35,53 @@ export interface CompareData {
   listings: ListingDocument[];
   /** Per-listing-key cached estimate (missing key = no precomputed estimate yet). */
   estimates: Record<string, CompareEstimate>;
+  /**
+   * Per-listing-key single "Estimated Sale Price" (list-anchored where we can, AVM
+   * fallback) — the SAME number the listing page shows, so Compare stays consistent.
+   */
+  salePrices: Record<string, SalePriceEstimate | null>;
+}
+
+/**
+ * Resolve the single Estimated Sale Price per compared listing. List-anchored where a
+ * trustworthy cohort close/list ratio exists (getCloseListRatio is unstable_cache'd 24h
+ * per cohort, so a handful of compared listings is cheap), else the cached AVM. Mirrors
+ * the listing page's resolveSalePrice so the number is identical across surfaces.
+ */
+async function fetchSalePrices(
+  listings: ListingDocument[],
+  estimates: Record<string, CompareEstimate>
+): Promise<Record<string, SalePriceEstimate | null>> {
+  const out: Record<string, SalePriceEstimate | null> = {};
+  await Promise.all(
+    listings.map(async (l) => {
+      const listPrice = l.ListPrice && l.ListPrice > 0 ? l.ListPrice : null;
+      let expectedSale = null;
+      if (listPrice) {
+        try {
+          const ratio = await getCloseListRatio(l.City ?? null, l.PropertySubType ?? null);
+          expectedSale = computeExpectedSale(listPrice, ratio);
+        } catch {
+          expectedSale = null;
+        }
+      }
+      const est = estimates[l.id];
+      // Slim AVM shim for the fallback path (resolver only reads these fields). The compare
+      // estimate carries no bands; the resolver synthesizes a ±10% one when it falls back.
+      const avmShim: AVMResult | null =
+        est?.estimatedValue && est.estimatedValue > 0
+          ? ({
+              estimatedValue: est.estimatedValue,
+              anchorPrice: est.estimatedValue,
+              lowBand: 0,
+              highBand: 0,
+              confidence: est.confidence ?? "LOW",
+            } as AVMResult)
+          : null;
+      out[l.id] = resolveSalePrice({ listPrice, isActive: true, expectedSale, estimate: avmShim });
+    })
+  );
+  return out;
 }
 
 async function fetchEstimates(ids: string[]): Promise<Record<string, CompareEstimate>> {
@@ -60,7 +111,7 @@ async function fetchEstimates(ids: string[]): Promise<Record<string, CompareEsti
 }
 
 export async function getCompareData(ids: string[]): Promise<CompareData> {
-  if (ids.length === 0) return { listings: [], estimates: {} };
+  if (ids.length === 0) return { listings: [], estimates: {}, salePrices: {} };
 
   const [listingsRes, estimates] = await Promise.all([
     searchListings({ query: "*", rawFilterBy: `id:[${ids.join(",")}]`, perPage: ids.length }),
@@ -73,5 +124,7 @@ export async function getCompareData(ids: string[]): Promise<CompareData> {
     .map((id) => byId.get(id))
     .filter((l): l is ListingDocument => Boolean(l));
 
-  return { listings, estimates };
+  const salePrices = await fetchSalePrices(listings, estimates);
+
+  return { listings, estimates, salePrices };
 }

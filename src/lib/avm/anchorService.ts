@@ -21,11 +21,10 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AVMInput, AnchorBasis } from './types';
+import type { AVMInput, AnchorBasis, AvmTuning } from './types';
 import {
   COMP_WINDOW_MO,
   H_DAYS,
-  TAU2,
   SIGMA2,
   HUBER_K,
   Z_CLAMP,
@@ -35,6 +34,8 @@ import {
   BW_LOT,
   BW_SQFT,
   MIN_SALE_PRICE,
+  DEFAULT_TUNING,
+  resolveTau2,
 } from './types';
 import type { CoefficientRow } from './matrixService';
 import { rawVariantsOf, cityRegionLookupCandidates } from './normalizeType';
@@ -66,13 +67,44 @@ export interface CompRow {
   interior_tier: number | null;
   exterior_tier: number | null;
   basement_tier: number | null;
+  /** Full 6-char postal for hierarchical geo weighting. Optional: when the column is
+   * still FSA-truncated (legacy rows) or null, geo weighting degrades gracefully. */
+  postal_code?: string | null;
 }
 
-/** Scalar columns pulled for both the standard anchor and the peer comp-grid. */
+/** Scalar columns pulled for both the standard anchor and the peer comp-grid.
+ *  postal_code is FSA-only on legacy rows; backfill it from raw_payload->>PostalCode to
+ *  unlock full block/building-level geo weighting (see geoMatchWeight). */
 const COMP_SELECT =
   'close_price, purchase_contract_date, close_date, building_area_total, ' +
   'lot_width, lot_depth, bedrooms_above_grade, bathrooms_total_integer, parking_total, ' +
-  'interior_tier, exterior_tier, basement_tier';
+  'interior_tier, exterior_tier, basement_tier, postal_code';
+
+/** Normalize a postal code to compact uppercase (no spaces). */
+function normPostal(p: string | null | undefined): string {
+  return (p ?? '').replace(/\s+/g, '').toUpperCase();
+}
+
+/**
+ * Hierarchical geographic comp weight: a multiplicative upweight for comps near the
+ * subject. Same full 6-char postal (same building/block) → geoFull; same first 4
+ * (FSA + first LDU char, a block cluster) → geoBlock; same FSA (first 3, the
+ * neighbourhood) → geoFsa; otherwise 1.0. Returns 1.0 when either postal is unknown,
+ * so the estimate is unchanged for subjects/comps without a postal. Pure, deterministic.
+ */
+export function geoMatchWeight(
+  subjectPostal: string | null | undefined,
+  compPostal: string | null | undefined,
+  tuning: AvmTuning
+): number {
+  const s = normPostal(subjectPostal);
+  const c = normPostal(compPostal);
+  if (s.length < 3 || c.length < 3) return 1;
+  if (s.length >= 6 && c.length >= 6 && s === c) return tuning.geoFull;
+  if (s.length >= 4 && c.length >= 4 && s.slice(0, 4) === c.slice(0, 4)) return tuning.geoBlock;
+  if (s.slice(0, 3) === c.slice(0, 3)) return tuning.geoFsa;
+  return 1;
+}
 
 export interface TrendRow {
   period_end: string;
@@ -181,7 +213,8 @@ export function computeAnchorFromData(
   input: AVMInput,
   coefficients: CoefficientRow[],
   basePriceFallback: number | null,
-  data: AnchorInputData
+  data: AnchorInputData,
+  tuning: AvmTuning = DEFAULT_TUNING
 ): AnchorResult {
   const cityRegionCandidates = cityRegionLookupCandidates(input.cityRegion);
   const comps = data.comps.filter(
@@ -215,7 +248,7 @@ export function computeAnchorFromData(
     if (priorLevel === null) return UNAVAILABLE;
     return {
       anchorLevel: priorLevel,
-      predSD: Math.sqrt(TAU2),
+      predSD: tuning.priorSd,
       nEff: 0,
       comps: 0,
       basis: priorBasisSeed,
@@ -225,7 +258,7 @@ export function computeAnchorFromData(
   // ── Per-comp ℓ_i, de-staled to now ───────────────────────────────────────
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
 
-  type Adjusted = { l: number; ageDays: number };
+  type Adjusted = { l: number; ageDays: number; geoW: number };
   const adjusted: Adjusted[] = [];
   for (const c of comps) {
     const dateIso = c.purchase_contract_date || c.close_date!;
@@ -234,22 +267,25 @@ export function computeAnchorFromData(
     const l = lRaw + gPrime;
     if (!Number.isFinite(l)) continue;
     const ageDays = Math.max(0, (nowMs - new Date(dateIso).getTime()) / (1000 * 86400));
-    adjusted.push({ l, ageDays });
+    const geoW = geoMatchWeight(input.postalCode, c.postal_code, tuning);
+    adjusted.push({ l, ageDays, geoW });
   }
 
   if (adjusted.length === 0) {
     if (priorLevel === null) return UNAVAILABLE;
     return {
       anchorLevel: priorLevel,
-      predSD: Math.sqrt(TAU2),
+      predSD: tuning.priorSd,
       nEff: 0,
       comps: 0,
       basis: priorBasisSeed,
     };
   }
 
-  // ── Robust, recency-weighted local estimate ──────────────────────────────
-  const recencyW = adjusted.map((a) => Math.exp(-a.ageDays / H_DAYS));
+  // ── Robust, recency- (and geo-) weighted local estimate ──────────────────
+  // geoW (1.0 when no postal / geo off) upweights comps in the subject's own pocket,
+  // so the local level reflects the home's block, not the whole community average.
+  const recencyW = adjusted.map((a) => Math.exp(-a.ageDays / H_DAYS) * a.geoW);
   const lValues = adjusted.map((a) => a.l);
   const wmed = weightedMedian(lValues, recencyW);
   const residuals = lValues.map((l) => l - wmed);
@@ -269,7 +305,7 @@ export function computeAnchorFromData(
     if (priorLevel === null) return UNAVAILABLE;
     return {
       anchorLevel: priorLevel,
-      predSD: Math.sqrt(TAU2),
+      predSD: tuning.priorSd,
       nEff: 0,
       comps: 0,
       basis: priorBasisSeed,
@@ -286,9 +322,17 @@ export function computeAnchorFromData(
   // ── Bayesian shrinkage toward prior ──────────────────────────────────────
   if (priorLevel !== null) {
     const wLocal = 1 / V;
-    const wPrior = 1 / TAU2;
+    // Prior variance is nEff-adaptive (DEFAULT_TUNING → flat TAU2): comp-rich cohorts
+    // weaken the prior so an expensive home escapes the pull to the community median.
+    const wPrior = 1 / resolveTau2(tuning, nEff);
     const anchorLevel = (wLocal * lLocal + wPrior * priorLevel) / (wLocal + wPrior);
-    const predSD = Math.sqrt(1 / (wLocal + wPrior));
+    const estVar = 1 / (wLocal + wPrior);
+    // PREDICTION interval for THIS home, not a confidence interval for the mean:
+    // add the irreducible spread of comparable sales (robust `scale`, an as-of
+    // quantity computed only from comps dated < t — leakage-safe). The legacy mode
+    // returns only the estimation SD, which collapses to ~4% and undercovers ~3.7×.
+    const predSD =
+      tuning.predMode === 'predictive' ? Math.sqrt(estVar + scale * scale) : Math.sqrt(estVar);
     const fracLocal = wLocal / (wLocal + wPrior);
     return {
       anchorLevel,
@@ -304,7 +348,7 @@ export function computeAnchorFromData(
   // missing for this cohort).
   return {
     anchorLevel: lLocal,
-    predSD: Math.sqrt(V),
+    predSD: tuning.predMode === 'predictive' ? Math.sqrt(V + scale * scale) : Math.sqrt(V),
     nEff,
     comps: adjusted.length,
     basis: 'local',
@@ -477,7 +521,8 @@ export function peerLevelFromComps(
   coefficients: CoefficientRow[],
   trend: TrendRow[],
   nowMs: number,
-  basis: AnchorBasis = 'peer'
+  basis: AnchorBasis = 'peer',
+  tuning: AvmTuning = DEFAULT_TUNING
 ): AnchorResult | null {
   const usable = comps.filter(
     (c) => c.close_price > 0 && (c.purchase_contract_date || c.close_date)
@@ -497,7 +542,7 @@ export function peerLevelFromComps(
     const predicted = neutralized + subjPremium + destale;
     if (!Number.isFinite(predicted)) continue;
     const ageDays = Math.max(0, (nowMs - new Date(dateIso).getTime()) / (1000 * 86400));
-    const w = Math.exp(-ageDays / H_DAYS) * similarityWeight(subject, c);
+    const w = Math.exp(-ageDays / H_DAYS) * similarityWeight(subject, c) * geoMatchWeight(subject.postalCode, c.postal_code, tuning);
     if (!(w > 0)) continue;
     preds.push(predicted);
     weights.push(w);
@@ -519,12 +564,16 @@ export function peerLevelFromComps(
   const sumW2 = w2.reduce((a, x) => a + x * x, 0);
   const nEff = (sumW * sumW) / sumW2;
   const variance = preds.reduce((a, p, i) => a + w2[i] * (p - center) ** 2, 0) / sumW;
-  // Band = standard error of the weighted mean (uncertainty of the ESTIMATE, which
-  // shrinks with effective sample size) — consistent with the anchor pipeline's
-  // SIGMA2/nEff. Using the raw comp dispersion here over-states uncertainty and trips
-  // BAND_LOW suppression even when many comps pin the centre well. Floored so a few
-  // near-identical comps can't claim absurd precision.
-  const predSD = Math.max(Math.sqrt(Math.max(variance, 0) / Math.max(nEff, 1)), 0.02);
+  // PREDICTION interval for THIS home: the comp dispersion (√variance) is the
+  // irreducible spread of comparable sales and does NOT shrink with n; add the
+  // standard-error-of-the-mean term (variance/nEff) for estimation uncertainty.
+  // Legacy mode returns only the SE-of-the-mean, which collapses to ~2-4% and trips
+  // overconfident bands. predictive: predSD = √(variance·(1 + 1/nEff)).
+  const safeVar = Math.max(variance, 0);
+  const predSD =
+    tuning.predMode === 'predictive'
+      ? Math.max(Math.sqrt(safeVar * (1 + 1 / Math.max(nEff, 1))), 0.02)
+      : Math.max(Math.sqrt(safeVar / Math.max(nEff, 1)), 0.02);
 
   return { anchorLevel: center, predSD, nEff, comps: usable.length, basis };
 }

@@ -53,9 +53,9 @@ export default function MetricRow({
               {v != null ? (
                 <span className="inline-flex items-center gap-1.5">
                   {formatPrice(v)}
-                  {ctx.estimate?.confidence && (
+                  {ctx.salePrice?.confidence && (
                     <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                      {ctx.estimate.confidence.toLowerCase()}
+                      {ctx.salePrice.confidence.toLowerCase()}
                     </span>
                   )}
                 </span>

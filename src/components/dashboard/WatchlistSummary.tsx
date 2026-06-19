@@ -8,7 +8,9 @@ function Tile({ label, value }: { label: string; value: string }) {
       <div className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
         {label}
       </div>
-      <div className="terminal-font text-lg font-bold text-cyan-400">{value}</div>
+      <div className="terminal-font truncate text-lg font-bold text-cyan-400" title={value}>
+        {value}
+      </div>
     </div>
   );
 }

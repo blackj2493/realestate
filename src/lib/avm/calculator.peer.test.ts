@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { estimateFromMarketData, isFeatureOutlier, type AVMMarketData } from './calculator';
 import type { AVMInput } from './types';
-import { CONFIDENCE_HIGH, CONFIDENCE_MEDIUM, MIN_PEERS_FOR_HIGH } from './types';
+import { CONFIDENCE_HIGH, CONFIDENCE_MEDIUM, MIN_PEERS_FOR_HIGH, LEGACY_TUNING } from './types';
 import type { AnchorResult } from './anchorService';
 import type { CoefficientRow } from './matrixService';
 
@@ -51,8 +51,10 @@ describe('isFeatureOutlier — the cohort model implies a premium beyond the cla
   it('true for a luxury outlier with strong coefficients', () => {
     expect(isFeatureOutlier(outlierInput, strongCoeffs)).toBe(true);
   });
-  it('false for a typical home (implied premium within the clamp)', () => {
-    expect(isFeatureOutlier(typicalInput, strongCoeffs)).toBe(false);
+  it('false for a typical home (implied premium within the legacy clamp)', () => {
+    // LEGACY_TUNING peerTrigger=0.4 (prod lowers it to 0.25 to route more premium
+    // homes to the well-calibrated peer grid). This home's Σβz≈0.27 sits between them.
+    expect(isFeatureOutlier(typicalInput, strongCoeffs, LEGACY_TUNING)).toBe(false);
   });
   it('is engine-independent — still true for an outlier even when r2 would be below the gate', () => {
     // The outlier signal must NOT depend on r2: anchor-only cohorts (low r2) are
@@ -92,8 +94,11 @@ describe('estimateFromMarketData — peer branch (saturating home only)', () => 
   });
 
   it('floor mode (peer === null): keeps the clamped number but caps confidence and relabels basis', () => {
-    const clamped = estimateFromMarketData(outlierInput, base); // no peer → today's clamped value
-    const floored = estimateFromMarketData(outlierInput, { ...base, peer: null });
+    // LEGACY_TUNING: legacy 'floor' KEEPS the clamped number. Production suppresses it
+    // (suppressFloor=true) — see calculator.production.test.ts — because the backtest
+    // showed 'floor' is a −42…−77% under-estimate.
+    const clamped = estimateFromMarketData(outlierInput, base, LEGACY_TUNING); // no peer → today's clamped value
+    const floored = estimateFromMarketData(outlierInput, { ...base, peer: null }, LEGACY_TUNING);
     expect(floored.estimatedValue).toBe(clamped.estimatedValue); // number unchanged
     expect(floored.basis).toBe('floor');
     expect(floored.confidence).not.toBe(CONFIDENCE_HIGH); // capped down from HIGH
@@ -120,8 +125,9 @@ describe('estimateFromMarketData — ANCHOR-ONLY outlier (r2 below gate, the E13
   });
 
   it('floor mode (peer === null): keeps the anchor number but caps confidence and relabels basis', () => {
-    const bare = estimateFromMarketData(outlierInput, anchorOnly); // ~anchor, no peer
-    const floored = estimateFromMarketData(outlierInput, { ...anchorOnly, peer: null });
+    // LEGACY_TUNING: legacy 'floor' keeps the number (prod suppresses — see production test).
+    const bare = estimateFromMarketData(outlierInput, anchorOnly, LEGACY_TUNING); // ~anchor, no peer
+    const floored = estimateFromMarketData(outlierInput, { ...anchorOnly, peer: null }, LEGACY_TUNING);
     expect(floored.estimatedValue).toBe(bare.estimatedValue);
     expect(floored.basis).toBe('floor');
     expect(floored.confidence).not.toBe(CONFIDENCE_HIGH);
@@ -171,8 +177,9 @@ describe('estimateFromMarketData — peer ignored unless the clamp binds (no-reg
       coefficients: strongCoeffs,
     };
     const peer = anchor(Math.log(1_700_000), 0.06, 'peer', 12);
-    const withPeer = estimateFromMarketData(typicalInput, { ...base, peer });
-    const noPeer = estimateFromMarketData(typicalInput, base);
+    // LEGACY_TUNING peerTrigger=0.4 → this home is non-saturating → peer ignored.
+    const withPeer = estimateFromMarketData(typicalInput, { ...base, peer }, LEGACY_TUNING);
+    const noPeer = estimateFromMarketData(typicalInput, base, LEGACY_TUNING);
     expect(withPeer.estimatedValue).toBe(noPeer.estimatedValue);
     expect(withPeer.basis).toBe(noPeer.basis);
   });

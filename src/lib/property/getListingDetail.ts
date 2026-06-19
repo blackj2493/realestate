@@ -50,6 +50,7 @@ import {
   type ListingStatus,
   type SoldAccuracy,
 } from "@/lib/property/listingStatus";
+import type { DiligenceFlag } from "@/lib/property/diligence";
 
 /** One prior sold campaign for this physical property (from property_sale_history). */
 export interface SaleEvent {
@@ -140,6 +141,11 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     campaignHistory: gateCampaignHistory(detail.campaignHistory, false),
     status: gateListingStatus(detail.status, false),
     soldAccuracy: null,
+    capRatePct: null,
+    // geoFlags are PUBLIC-records facts (flood/rail/traffic), NOT TRREB VOW data —
+    // intentionally NOT nulled: {...detail} passes them through for anon users too
+    // (Phase 2 plan §2/§4.1). Do not "fix" this by gating them.
+    geoFlags: detail.geoFlags,
   };
 }
 
@@ -164,6 +170,14 @@ export interface ListingDetail {
   status: ListingStatus;
   /** How close our closest model came to the actual sale (sold only; VOW-gated). */
   soldAccuracy: SoldAccuracy | null;
+  /** Extrapolated cap rate % (Typesense cap_rate_est, sanity-banded). null when absent. */
+  capRatePct: number | null;
+  /**
+   * Geo-joined public-records diligence flags (flood/rail/traffic), precomputed by
+   * enrichGeoFlags.ts. Merged into Things to Know as `external`. PUBLIC data → not
+   * VOW-gated; best-effort, [] on miss/error.
+   */
+  geoFlags: DiligenceFlag[];
   /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
   rooms: RoomData[];
 }
@@ -186,6 +200,25 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
     setTimeout(() => reject(new Error(`${label} timeout`)), ms);
   });
   return Promise.race([promise, timeout]);
+}
+
+/**
+ * Defensively coerce the listing_geo_flags.flags JSONB into DiligenceFlag[]. The
+ * column is written by enrichGeoFlags.ts, but the read path validates shape so a
+ * malformed/legacy row degrades to [] instead of rendering garbage.
+ */
+function asDiligenceFlags(raw: unknown): DiligenceFlag[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (f): f is DiligenceFlag =>
+      !!f &&
+      typeof f === "object" &&
+      typeof (f as DiligenceFlag).id === "string" &&
+      ((f as DiligenceFlag).kind === "warn" || (f as DiligenceFlag).kind === "info") &&
+      typeof (f as DiligenceFlag).severity === "number" &&
+      typeof (f as DiligenceFlag).title === "string" &&
+      typeof (f as DiligenceFlag).source === "string"
+  );
 }
 
 /**
@@ -556,6 +589,26 @@ export const getListingDetail = cache(
       trueDom,
     };
 
+    // Best-effort geo "Things to Know" flags — ONE indexed PK point-lookup on the
+    // precomputed listing_geo_flags table. The PostGIS spatial joins run offline in
+    // enrichGeoFlags.ts; we never run a spatial query at request time (§5 Disk-IO).
+    // PUBLIC-records data (flood/rail/traffic) → NOT VOW-gated (see gateVowDerived).
+    let geoFlags: DiligenceFlag[] = [];
+    try {
+      const { data: gRow } = await withTimeout(
+        supabase
+          .from("listing_geo_flags")
+          .select("flags")
+          .eq("listing_key", listingKey)
+          .maybeSingle(),
+        4000,
+        "Geo flags"
+      );
+      if (gRow) geoFlags = asDiligenceFlags(gRow.flags);
+    } catch (geoErr) {
+      console.error(`[getListingDetail] Geo flags failed for ${listingKey}:`, geoErr);
+    }
+
     return {
       listing_key: listing.listing_key,
       full_payload: payload,
@@ -573,6 +626,8 @@ export const getListingDetail = cache(
       campaignHistory,
       status,
       soldAccuracy,
+      capRatePct: realCapRate,
+      geoFlags,
       rooms,
     };
   }

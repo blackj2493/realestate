@@ -23,6 +23,7 @@ import {
   rankSimilar,
   classifyMatchQuality,
   buildAttrDeltas,
+  splitBeds,
   type SubjectAttrs,
   type CandidateAttrs,
   type MatchTier,
@@ -38,7 +39,7 @@ const CANDIDATE_FETCH = 80;
 const RESULT_LIMIT = 8;
 const SOLD_WINDOW_DAYS = 180;
 const FORSALE_FIELDS =
-  "id,ListPrice,UnparsedAddress,City,CityRegion,PropertySubType,BedroomsTotal,BathroomsTotalInteger,ParkingTotal,ListOfficeName,primaryImageUrl,RawImages,calculatedDOM";
+  "id,ListPrice,UnparsedAddress,City,CityRegion,PropertySubType,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,BathroomsTotalInteger,ParkingTotal,CoveredSpaces,ListOfficeName,primaryImageUrl,RawImages,calculatedDOM";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -63,6 +64,8 @@ export interface SimilarForSaleCard {
   city: string | null;
   price: number;
   beds: number;
+  bedsAbove: number;
+  bedsBelow: number;
   baths: number;
   propertySubType: string | null;
   brokerage: string | null;
@@ -80,6 +83,8 @@ export interface SimilarSoldCard {
   listPrice: number | null;
   soldDate: string | null;
   beds: number | null;
+  bedsAbove: number | null;
+  bedsBelow: number | null;
   baths: number | null;
   propertySubType: string | null;
   brokerage: string | null;
@@ -92,11 +97,23 @@ export interface SimilarSoldCard {
 type Doc = Record<string, unknown>;
 const numField = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
+// CoveredSpaces is an optional index field: undefined → unknown (neutral score),
+// a present number (including 0 = no garage) → a real value.
+const garageField = (v: unknown): number | null => (v == null ? null : numField(v));
+
 function forSaleAttrs(d: Doc): CandidateAttrs {
+  const { above, below } = splitBeds({
+    total: numField(d.BedroomsTotal),
+    above: d.BedroomsAboveGrade as number | undefined,
+    below: d.BedroomsBelowGrade as number | undefined,
+  });
   return {
     cityRegion: (d.CityRegion as string) || null,
     subType: (d.PropertySubType as string) || null,
     beds: numField(d.BedroomsTotal),
+    bedsAbove: above,
+    bedsBelow: below,
+    garage: garageField(d.CoveredSpaces),
     price: numField(d.ListPrice),
     area: 0, // BuildingAreaTotal is not reliably present on the active index → neutral
   };
@@ -105,10 +122,18 @@ function forSaleAttrs(d: Doc): CandidateAttrs {
 function soldAttrs(d: Doc, nowMs: number): CandidateAttrs {
   const ms = Number(d.PurchaseContractDate);
   const daysAgo = Number.isFinite(ms) && ms > 0 ? (nowMs - ms) / 86_400_000 : 999;
+  const { above, below } = splitBeds({
+    total: numField(d.BedroomsTotal),
+    above: d.BedroomsAboveGrade as number | undefined,
+    below: d.BedroomsBelowGrade as number | undefined,
+  });
   return {
     cityRegion: (d.CityRegion as string) || null,
     subType: (d.PropertySubType as string) || null,
     beds: numField(d.BedroomsTotal),
+    bedsAbove: above,
+    bedsBelow: below,
+    garage: garageField(d.CoveredSpaces),
     price: numField(d.ClosePrice),
     area: numField(d.BuildingAreaTotal),
     daysAgo,
@@ -119,6 +144,11 @@ function toForSaleCard(r: RankedSimilar<Doc>, subject: DeltaInput): SimilarForSa
   const d = r.item;
   const imgs = Array.isArray(d.RawImages) ? (d.RawImages as string[]) : [];
   const beds = numField(d.BedroomsTotal);
+  const { above: bedsAbove, below: bedsBelow } = splitBeds({
+    total: beds,
+    above: d.BedroomsAboveGrade as number | undefined,
+    below: d.BedroomsBelowGrade as number | undefined,
+  });
   const baths = numField(d.BathroomsTotalInteger);
   const price = numField(d.ListPrice);
   return {
@@ -127,6 +157,8 @@ function toForSaleCard(r: RankedSimilar<Doc>, subject: DeltaInput): SimilarForSa
     city: (d.City as string) || null,
     price,
     beds,
+    bedsAbove,
+    bedsBelow,
     baths,
     propertySubType: (d.PropertySubType as string) || null,
     brokerage: (d.ListOfficeName as string) || null,
@@ -149,6 +181,8 @@ function toSoldCard(r: RankedSimilar<Doc>, subject: DeltaInput): SimilarSoldCard
     listPrice: m.listPrice,
     soldDate: m.soldDate,
     beds: m.beds,
+    bedsAbove: m.bedsAbove,
+    bedsBelow: m.bedsBelow,
     baths: m.baths,
     propertySubType: m.propertySubType,
     brokerage: m.brokerage,
@@ -172,12 +206,21 @@ const numParam = (v: string | null): number => {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sp = new URL(req.url).searchParams;
+  const { above: subjAbove, below: subjBelow } = splitBeds({
+    total: numParam(sp.get("beds")),
+    above: sp.get("bedsAbove") != null ? numParam(sp.get("bedsAbove")) : undefined,
+    below: sp.get("bedsBelow") != null ? numParam(sp.get("bedsBelow")) : undefined,
+  });
   const subject: SubjectAttrs = {
     id,
     cityRegion: (sp.get("cityRegion") || "").trim() || null,
     city: (sp.get("city") || "").trim() || null,
     subType: (sp.get("subType") || "").trim() || null,
     beds: numParam(sp.get("beds")),
+    bedsAbove: subjAbove,
+    bedsBelow: subjBelow,
+    // Absent param → unknown garage (neutral); present (incl. "0") → real value.
+    garage: sp.get("garage") != null && sp.get("garage") !== "" ? numParam(sp.get("garage")) : null,
     listPrice: numParam(sp.get("listPrice")),
     area: numParam(sp.get("area")),
   };

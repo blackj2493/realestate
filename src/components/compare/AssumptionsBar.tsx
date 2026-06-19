@@ -1,6 +1,6 @@
 "use client";
 
-import { Percent, Home, GitCompareArrows } from "lucide-react";
+import { Percent, Home, GitCompareArrows, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,8 @@ export default function AssumptionsBar({
 }) {
   return (
     <div className="sticky top-0 z-20 mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border border-slate-800 bg-slate-900/80 px-4 py-3 backdrop-blur">
-      <div className="min-w-[160px] flex-1">
+      {/* Sliders: inline on desktop; collapsed behind a toggle on mobile to kill the ~180px sticky wall. */}
+      <div className="hidden min-w-[160px] flex-1 md:block">
         <div className="mb-1 flex items-center justify-between">
           <Label className="flex items-center gap-1 text-xs text-slate-400">
             <Home className="h-3 w-3" /> Down Payment
@@ -38,7 +39,7 @@ export default function AssumptionsBar({
         <Slider value={[downPaymentPct]} onValueChange={([v]) => onDownPayment(v)} min={5} max={50} step={1} />
       </div>
 
-      <div className="min-w-[160px] flex-1">
+      <div className="hidden min-w-[160px] flex-1 md:block">
         <div className="mb-1 flex items-center justify-between">
           <Label className="flex items-center gap-1 text-xs text-slate-400">
             <Percent className="h-3 w-3" /> Interest Rate
@@ -48,13 +49,13 @@ export default function AssumptionsBar({
         <Slider value={[interestRatePct]} onValueChange={([v]) => onInterestRate(v)} min={3} max={12} step={0.125} />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:flex-nowrap">
         <LensSelector lens={lens} onChange={onLens} />
         <button
           type="button"
           onClick={() => onDiffToggle(!diffOnly)}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all active:scale-95",
             diffOnly
               ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-100"
               : "border-slate-700 text-slate-400 hover:text-slate-200"
@@ -66,7 +67,37 @@ export default function AssumptionsBar({
         </button>
       </div>
 
-      <p className="w-full text-[10px] text-slate-600">
+      {/* Mobile-only disclosure for the carry/rate sliders. */}
+      <details className="group w-full flex-none md:hidden">
+        <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-slate-300">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+          Assumptions
+          <span className="text-slate-500">({downPaymentPct}% down · {interestRatePct.toFixed(2)}%)</span>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-3 space-y-4">
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <Label className="flex items-center gap-1 text-xs text-slate-400">
+                <Home className="h-3 w-3" /> Down Payment
+              </Label>
+              <span className="font-mono text-xs text-emerald-400">{downPaymentPct}%</span>
+            </div>
+            <Slider value={[downPaymentPct]} onValueChange={([v]) => onDownPayment(v)} min={5} max={50} step={1} />
+          </div>
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <Label className="flex items-center gap-1 text-xs text-slate-400">
+                <Percent className="h-3 w-3" /> Interest Rate
+              </Label>
+              <span className="font-mono text-xs text-emerald-400">{interestRatePct.toFixed(3)}%</span>
+            </div>
+            <Slider value={[interestRatePct]} onValueChange={([v]) => onInterestRate(v)} min={3} max={12} step={0.125} />
+          </div>
+        </div>
+      </details>
+
+      <p className="hidden w-full text-[10px] text-slate-600 md:block">
         Carry, cap rate &amp; cashflow recompute live from your assumptions — list-price math, not advice.
         Rent is a per-property estimate; adjust it in each column.
       </p>

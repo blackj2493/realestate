@@ -7,6 +7,7 @@ import {
   CONFIDENCE_HIGH,
   CONFIDENCE_LOW,
   BAND_LOW,
+  LEGACY_TUNING,
 } from './types';
 import type { AnchorResult } from './anchorService';
 import type { CoefficientRow } from './matrixService';
@@ -66,7 +67,8 @@ describe('estimateFromMarketData — guard rails', () => {
       basePrice: null,
       coefficients: [],
     };
-    const r = estimateFromMarketData(baseInput, market);
+    // LEGACY_TUNING: legacy bandLow=0.25 suppression threshold (prod raises it to 0.45).
+    const r = estimateFromMarketData(baseInput, market, LEGACY_TUNING);
     expect(r.estimatedValue).toBe(0);
     expect(r.lowBand).toBe(0);
     expect(r.highBand).toBe(0);
@@ -179,12 +181,14 @@ describe('estimateFromMarketData — coefficient-adjusted path', () => {
     const coefficients: CoefficientRow[] = [
       { featureName: 'building_area_total', beta: 5, mean: 1500, std: 500 },
     ];
+    // LEGACY_TUNING: pins the legacy ±0.4 clamp (prod raises adjClamp to 0.9 so premium
+    // homes can escape the neighbourhood ceiling — the 2M+ under-valuation fix).
     const r = estimateFromMarketData(baseInput, {
       anchor: anchorAt(LN_800K, 0.05),
       r2: 0.6,
       basePrice: null,
       coefficients,
-    });
+    }, LEGACY_TUNING);
     // exp(ADJ_CLAMP=0.4) ≈ 1.4918, so the estimate must not exceed ~800k * 1.4918.
     expect(r.estimatedValue).toBeLessThanOrEqual(Math.round(800_000 * Math.exp(0.4)) + 1);
   });

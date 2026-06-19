@@ -12,7 +12,7 @@ import {
   type TrendRow,
 } from './anchorService';
 import type { AVMInput } from './types';
-import { TAU2, SIGMA2 } from './types';
+import { TAU2, SIGMA2, LEGACY_TUNING } from './types';
 import type { CoefficientRow } from './matrixService';
 
 const NOW = Date.parse('2026-05-01T00:00:00Z');
@@ -66,7 +66,9 @@ describe('computeAnchorFromData', () => {
   });
 
   it('falls back to the Base_Price prior when no comps and no trend', () => {
-    const r = computeAnchorFromData(subject, noCoeffs, 800_000, data());
+    // LEGACY_TUNING: this pins the legacy prior-only predSD (= √TAU2). Production
+    // (DEFAULT_TUNING) uses priorSd=0.22 — a wider, honest band for no-comp homes.
+    const r = computeAnchorFromData(subject, noCoeffs, 800_000, data(), LEGACY_TUNING);
     expect(r.basis).toBe('parent');
     expect(Math.exp(r.anchorLevel)).toBeCloseTo(800_000, -2);
     expect(r.predSD).toBeCloseTo(Math.sqrt(TAU2), 10);
