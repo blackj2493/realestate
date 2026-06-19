@@ -35,22 +35,33 @@ const RANK_OPTIONS: { key: RankKey; label: string; hint: string; field: keyof Le
 export default function SubmarketLeaderboard() {
   const [scores, setScores] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [rankBy, setRankBy] = useState<RankKey>("yield");
 
   useEffect(() => {
     // One batched request (was 30: fetchRegionScore × 15 markets × 2 endpoints, half of
     // which — the price-trend calls — were never displayed here). `loading` starts true.
+    // Bounded by an AbortController so a slow/hung backend can never leave the panel
+    // pulsing an empty 8-row skeleton forever — it falls through to the empty state.
     let alive = true;
-    fetch("/api/market/leaderboard")
-      .then((r) => (r.ok ? r.json() : { markets: [] }))
-      .then((d: { markets?: LeaderboardRow[] }) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    fetch("/api/market/leaderboard", { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : { markets: [], locked: false }))
+      .then((d: { markets?: LeaderboardRow[]; locked?: boolean }) => {
         if (!alive) return;
         setScores(Array.isArray(d.markets) ? d.markets : []);
+        setLocked(Boolean(d.locked));
       })
       .catch(() => alive && setScores([]))
-      .finally(() => alive && setLoading(false));
+      .finally(() => {
+        clearTimeout(timer);
+        if (alive) setLoading(false);
+      });
     return () => {
       alive = false;
+      ctrl.abort();
+      clearTimeout(timer);
     };
   }, []);
 
@@ -99,9 +110,18 @@ export default function SubmarketLeaderboard() {
         </p>
 
         <div className="divide-y divide-slate-800/60 border border-slate-800">
-          {loading
-            ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-[46px] animate-pulse bg-slate-900/40" />)
-            : ranked.map(({ s, v }, i) => (
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[46px] animate-pulse bg-slate-900/40" />)
+          ) : locked ? (
+            <p className="px-3 py-8 text-center text-xs text-slate-500">
+              Accept the data terms to unlock the full GTA leaderboard.
+            </p>
+          ) : ranked.length === 0 ? (
+            <p className="px-3 py-8 text-center text-xs text-slate-500">
+              No ranked markets right now — check back after the next daily sync.
+            </p>
+          ) : (
+            ranked.map(({ s, v }, i) => (
                 <div key={s.region} className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-900/40">
                   <span className={cn("w-6 shrink-0 text-center font-mono text-sm font-bold", i === 0 ? "text-cyan-300" : "text-slate-500")}>
                     {i + 1}
@@ -122,7 +142,8 @@ export default function SubmarketLeaderboard() {
                     {v != null ? fmtMetric(v) : "—"}
                   </span>
                 </div>
-              ))}
+              ))
+          )}
         </div>
 
         <p className="text-[11px] leading-relaxed text-slate-600">
