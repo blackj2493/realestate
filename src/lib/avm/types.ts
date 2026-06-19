@@ -278,11 +278,16 @@ export const DEFAULT_TUNING: AvmTuning = {
   tau2Schedule: null,
   suppressFloor: true,
   suppressExotic: true,
-  // Geo weights OFF by default until measured; set by the 'geo' harness variant, then
-  // promoted here if the backtest delta justifies it (needs the postal_code backfill).
-  geoFull: 1,
-  geoBlock: 1,
-  geoFsa: 1,
+  // Hierarchical geographic comp weighting (validated 2026-06-17). Same building/block
+  // (full 6-char postal) ×6, block cluster (FSA+LDU1) ×2.5, FSA ×1.4. Measured gain
+  // (full postal): overall ±10% +1.0pp, band coverage +1.4pp, condo band +3.7pp, no
+  // regressions. Pre-backfill the comp column is FSA-truncated so only the ×1.4 FSA leg
+  // fires (measured ≈ neutral-positive, safe); the full gain activates once postal_code
+  // is backfilled from raw_payload->>PostalCode (scripts/admin/backfill-postal.ts).
+  // Subject postal comes from mapListingToAVMInput (live) / payload (backtest).
+  geoFull: 6,
+  geoBlock: 2.5,
+  geoFsa: 1.4,
 };
 
 /** Resolve the effective prior variance for a given effective sample size. */

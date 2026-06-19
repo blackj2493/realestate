@@ -114,6 +114,11 @@ function buildTuning(variant: string): AvmTuning {
       return { ...DEFAULT_TUNING, geoFull: 2.5, geoBlock: 1.6, geoFsa: 1.2 };
     case 'geo_heavy':
       return { ...DEFAULT_TUNING, geoFull: 6, geoBlock: 2.5, geoFsa: 1.4 };
+    case 'geo_xheavy':
+      return { ...DEFAULT_TUNING, geoFull: 10, geoBlock: 3.5, geoFsa: 1.6 };
+    // geo_heavy weights but comps use the FSA-only scalar column (the live PRE-backfill state).
+    case 'geo_fsaonly':
+      return { ...DEFAULT_TUNING, geoFull: 6, geoBlock: 2.5, geoFsa: 1.4 };
     default:
       console.warn(`[experiment] unknown variant "${variant}" → DEFAULT_TUNING`);
       return DEFAULT_TUNING;
@@ -379,7 +384,9 @@ function toCompRow(c: Sale): CompRow {
     interior_tier: c.interior_tier,
     exterior_tier: c.exterior_tier,
     basement_tier: c.basement_tier,
-    postal_code: c.pcfull, // full payload postal for geo weighting
+    // full payload postal for geo weighting; geo_fsaonly mimics the live pre-backfill
+    // state where the comp postal column is still FSA-truncated.
+    postal_code: VARIANT === 'geo_fsaonly' ? c.postal_code : c.pcfull,
   };
 }
 function inputFromSale(s: Sale): AVMInput {
