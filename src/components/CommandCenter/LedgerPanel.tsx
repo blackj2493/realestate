@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LedgerRow from "./LedgerRow";
+import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
 import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, type SortDir } from "./columnSort";
@@ -76,6 +77,45 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     () => (sort ? [...visible].sort(compareByColumn(sort.type, sort.dir)) : visible),
     [visible, sort]
   );
+
+  // The single Estimated Sale Price for the visible ACTIVE rows, batched (VOW-gated →
+  // authed only). One call per result set, deduped to distinct cohorts server-side; sold/
+  // leased/de-listed comps are skipped (the "likely close" is a live-ask concept).
+  const [salePriceById, setSalePriceById] = useState<Record<string, SalePriceEstimate | null>>({});
+  const saleItems = useMemo(
+    () =>
+      visible
+        .filter((p) => !p.compKind && !p.IsSoldComp && p.ListPrice && p.ListPrice > 0)
+        .slice(0, 120)
+        .map((p) => ({ id: p.id, listPrice: p.ListPrice, city: p.City, propertySubType: p.PropertySubType })),
+    [visible]
+  );
+  const saleKey = useMemo(() => saleItems.map((i) => i.id).join(","), [saleItems]);
+  useEffect(() => {
+    // No fetch when signed out or nothing to price; display is gated by isAuthed below,
+    // so stale-by-id entries are never read (avoids a synchronous reset in the effect).
+    if (!isAuthed || saleItems.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/estimates/sale-price", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: saleItems }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setSalePriceById(data?.salePrices ?? {});
+      } catch {
+        /* additive — leave rows without the line */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // saleKey captures row membership; saleItems is derived from the same source.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saleKey, isAuthed]);
 
   return (
     <div ref={rootRef} className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
@@ -187,6 +227,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               property={property}
               columns={columns}
               visibleColumns={visibleColumns}
+              salePrice={isAuthed ? salePriceById[property.id] : undefined}
               compact={cardMode}
               isAuthed={isAuthed}
               onClick={() => setSelectedProperty(property)}

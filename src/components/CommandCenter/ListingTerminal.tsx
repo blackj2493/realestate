@@ -36,7 +36,8 @@ import type { SaleHistory, PriceTimeline } from '@/lib/property/getListingDetail
 import ImageBentoGrid from '@/components/Property/ImageBentoGrid';
 import MediaGalleryOverlay from '@/components/Property/MediaGalleryOverlay';
 import DealScoreCard, { DealScoreBadge } from '@/components/Property/DealScoreCard';
-import ListingEstimateCard from '@/components/Property/ListingEstimateCard';
+import EstimatedSaleCard from '@/components/Property/EstimatedSaleCard';
+import type { SalePriceEstimate } from '@/lib/avm/salePrice';
 import Disclaimers from '@/components/hiddenEquity/Disclaimers';
 import SocialProofBar from '@/components/Property/SocialProofBar';
 import RoomMap from '@/components/Property/RoomMap';
@@ -83,6 +84,8 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
   const [detailRooms, setDetailRooms] = useState<RoomData[]>([]);
   const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
   const [estimate, setEstimate] = useState<AVMResult | null>(null);
+  const [salePrice, setSalePrice] = useState<SalePriceEstimate | null>(null);
+  const [hasExpectedSale, setHasExpectedSale] = useState(false);
   const [saleHistory, setSaleHistory] = useState<SaleHistory | null>(null);
   const [priceTimeline, setPriceTimeline] = useState<PriceTimeline | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
@@ -125,10 +128,12 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
     setDetailRooms([]);
     setDealScore(null);
     setEstimate(null);
+    setSalePrice(null);
     setSaleHistory(null);
     setPriceTimeline(null);
     setIsAuthed(false);
     setHasEstimate(false);
+    setHasExpectedSale(false);
     setHasDealScore(false);
     setIsGalleryOpen(false);
     (async () => {
@@ -142,10 +147,12 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
         setDetailRooms(Array.isArray(r) ? (r as RoomData[]) : []);
         setDealScore(data?.dealScore ?? null);
         setEstimate(data?.estimate ?? null);
+        setSalePrice(data?.salePrice ?? null);
         setSaleHistory(data?.saleHistory ?? null);
         setPriceTimeline(data?.priceTimeline ?? null);
         setIsAuthed(!!data?.isAuthed);
         setHasEstimate(!!data?.hasEstimate);
+        setHasExpectedSale(!!data?.hasExpectedSale);
         setHasDealScore(!!data?.hasDealScore);
       } catch {
         /* keep index-only fallbacks */
@@ -423,16 +430,18 @@ export default function ListingTerminal({ property, isOpen, onClose }: ListingTe
                 </div>
               )}
 
-              {/* PureProperty Estimate — our AVM, directly under the Deal Score */}
-              <ListingEstimateCard
-                estimate={estimate}
+              {/* The single Estimated Sale Price — list-anchored where we can, AVM fallback;
+                  resolved server-side so this matches the full listing page exactly. */}
+              <EstimatedSaleCard
+                salePrice={salePrice}
                 listPrice={property.ListPrice}
-                cityRegion={property.City}
-                locked={!isAuthed && hasEstimate}
+                city={property.City}
+                propertySubType={property.PropertySubType}
+                locked={!isAuthed && (hasEstimate || hasExpectedSale)}
               />
 
-              {/* §6.3(i)/(k) disclaimer for the AVM-derived estimate above (parity with the full report). */}
-              {(estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
+              {/* §6.3(i)/(k) disclaimer for the VOW-derived estimate above (parity with the full report). */}
+              {((salePrice?.value ?? 0) > 0 || (estimate?.estimatedValue ?? 0) > 0) && <Disclaimers />}
 
               {/* Property Summary Card */}
               <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4">

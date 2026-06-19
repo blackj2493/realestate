@@ -67,7 +67,7 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   const va = view.valueAdd;
   const netUpside = hasValueAdd(va) ? va.headlineUpside : 0;
   const motivated = view.campaignHistory.campaignCount > 1 || drop > 0;
-  const nudge = tier === "lite" ? " Sign in for our AVM, Deal Score and reno-upside read." : "";
+  const nudge = tier === "lite" ? " Sign in for our price estimate, Deal Score and reno-upside read." : "";
 
   // ── THESIS per persona (null-guarded clauses degrade cleanly in lite) ──
   const thesisByPersona: Record<PersonaType, string> = {
@@ -75,7 +75,7 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
       suite
         ? `Starter you don't carry alone — a basement suite can offset the mortgage; run the sandbox for your all-in.`
         : overUnderPct !== null && overUnderPct < -1
-          ? `Priced ${signedPct(overUnderPct)} vs our estimate — a fair entry without a bidding war.`
+          ? `Priced ${signedPct(overUnderPct)} vs comparable sales — a fair entry without a bidding war.`
           : `Conventional ${subType?.toLowerCase() ?? "home"} — value is in condition and location; verify both in person.`,
     cashflow:
       income && capRatePct !== null
@@ -105,18 +105,23 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     });
   }
 
-  // ── PRICE READ ──
+  // ── PRICE READ ── lead with the ONE number (Estimated Sale Price); the AVM appears only
+  // as a relative "vs comparable sales" deal note, never as a competing dollar estimate.
   let priceRead: string;
-  if (tier === "full" && est && overUnderPct !== null) {
-    const a = `Asking ${money(listPrice)} vs our ${money(est)} estimate (${signedPct(overUnderPct)}).`;
-    const b = view.expectedSale
-      ? ` Model expects it closes near ${money(view.expectedSale.expectedPrice)} — ${pct1(view.expectedSale.ratio * 100)} of ask.`
-      : ``;
+  if (tier === "full") {
     const c =
       drop > 0
         ? ` Already cut ${money(drop)} from the original ask${trueDom != null ? ` over ${trueDom}d` : ``}.`
         : ``;
-    priceRead = a + b + c;
+    const exp = view.expectedSale;
+    if (exp) {
+      const gap =
+        overUnderPct !== null ? ` Ask runs ${signedPct(overUnderPct)} vs comparable sales.` : ``;
+      priceRead = `Asking ${money(listPrice)} — likely closes near ${money(exp.expectedPrice)} (${pct1(exp.ratio * 100)} of ask).${gap}${c}`;
+    } else {
+      // No trustworthy ratio → the AVM IS the single number (the card's fallback).
+      priceRead = `Asking ${money(listPrice)} — comparable sales value it near ${money(est as number)}${overUnderPct !== null ? ` (${signedPct(overUnderPct)})` : ``}.${c}`;
+    }
   } else {
     const a = `Asking ${money(listPrice)}.`;
     const c =

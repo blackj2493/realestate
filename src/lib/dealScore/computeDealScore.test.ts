@@ -64,6 +64,18 @@ describe('computeDealScore', () => {
     expect(high.score).toBe(low.score);
   });
 
+  it('value component: relative $-free detail (for The Read) + comp-value dollar (breakdown only)', () => {
+    const r = computeDealScore({
+      listPrice: 1_200_000,
+      avmEstimate: { estimatedValue: 1_000_000, confidence: 'HIGH' },
+    });
+    const v = r.components.find((c) => c.key === 'value')!;
+    expect(v.label).toBe('Value vs Comps');
+    expect(v.compValue).toBe(1_000_000); // breakdown-only dollar, labeled "comp value"
+    expect(v.detail).toMatch(/comparable sales/i);
+    expect(v.detail).not.toMatch(/\$/); // no competing dollar in the copy The Read reuses
+  });
+
   it('motivation component rewards bigger price cuts', () => {
     const noCut = computeDealScore({
       listPrice: 1_000_000,

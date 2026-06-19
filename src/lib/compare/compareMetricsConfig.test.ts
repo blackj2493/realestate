@@ -107,6 +107,22 @@ describe("lensGroupOrder", () => {
   });
 });
 
+describe("Est. Sale Price metric", () => {
+  const m = COMPARE_METRICS.find((x) => x.key === "estValue")!;
+  it("reads the single list-anchored sale price, not the raw AVM", () => {
+    const c: MetricContext = {
+      listing: L({ ListPrice: 1_000_000 }),
+      isAuthed: true,
+      salePrice: { value: 965_000 } as never,
+    };
+    expect(m.get!(c)).toBe(965_000);
+    expect(m.label).toBe("Est. Sale Price");
+  });
+  it("is null when no sale price could be resolved", () => {
+    expect(m.get!(ctx(L({ ListPrice: 1_000_000 })))).toBeNull();
+  });
+});
+
 describe("compare Value-Add Cap Rate", () => {
   const m = COMPARE_METRICS.find((x) => x.key === "capRateVA")!;
   it("reads the real cap_rate_est, band-guarded", () => {

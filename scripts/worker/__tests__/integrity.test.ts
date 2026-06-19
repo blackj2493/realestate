@@ -85,10 +85,9 @@ vi.mock('../services/rentAVM', () => ({
     has_data: false,
   })),
 }));
-vi.mock('../services/trueValueCalculator', () => ({
-  fetchTrueValue: vi.fn(async () => ({
+vi.mock('../services/ratioPriceCalculator', () => ({
+  resolveRatioPrice: vi.fn(async () => ({
     calculation_price: 1_699_900,
-    true_value: 1_699_900,
     is_price_discovery: false,
   })),
   fetchMillRate: vi.fn(async () => ({ base_mill_rate: 0.010, city: 'Brampton' })),

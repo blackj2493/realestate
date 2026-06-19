@@ -26,6 +26,7 @@ import type { PersonaType } from "@/lib/personas/personaConfig";
 export default function CompareClient({
   listings,
   estimates,
+  salePrices,
   isAuthed,
 }: CompareData & { isAuthed: boolean }) {
   const [lens, setLens] = useState<PersonaType>("smart");
@@ -42,10 +43,11 @@ export default function CompareClient({
     () => listings.map((l) => ({
       listing: l,
       estimate: estimates[l.id],
+      salePrice: salePrices[l.id],
       underwriting: uw.resultById[l.id],
       isAuthed,
     })),
-    [listings, estimates, uw.resultById, isAuthed]
+    [listings, estimates, salePrices, uw.resultById, isAuthed]
   );
 
   if (listings.length === 0) {
@@ -173,8 +175,10 @@ export default function CompareClient({
       )}
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-600">
-        Est. Value is our True Value estimate — our own deterministic model, not an MLS/TRREB figure.
-        Carry, cap rate &amp; cashflow are computed from your assumptions and a rent estimate, not advice.
+        Est. Sale Price is our list-anchored model of what this home is likely to close at; vs Comp
+        Value compares the ask to recent comparable sales. Our own deterministic models, not MLS/TRREB
+        figures. Carry, cap rate &amp; cashflow are computed from your assumptions and a rent estimate,
+        not advice.
       </p>
     </div>
   );

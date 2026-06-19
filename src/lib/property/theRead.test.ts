@@ -21,11 +21,11 @@ const base = (over: Partial<ListingDetail> = {}): ListingDetail =>
       components: [
         {
           key: "value",
-          label: "Value vs Estimate",
+          label: "Value vs Comps",
           points: 30,
           weight: 35,
           direction: "down",
-          detail: "Listed 4.3% above our $862,000 estimate (high confidence)",
+          detail: "Listed 4.3% above comparable sales (high confidence)",
         },
       ],
     },
@@ -52,8 +52,10 @@ describe("buildTheRead", () => {
     const r = buildTheRead(base());
     expect(r.tier).toBe("full");
     expect(r.catch_).toMatch(/relisted 2×/i);
-    expect(r.catch_).toMatch(/above our \$862,000/i);
+    expect(r.catch_).toMatch(/above comparable sales/i);
     expect(r.priceRead).toMatch(/closes near \$868K/);
+    // The Read must NOT surface a competing dollar AVM "estimate" anymore.
+    expect(r.priceRead).not.toMatch(/our \$[\d,]+ estimate/i);
     expect(r.grade).toBe("B");
   });
 

@@ -136,9 +136,9 @@ describe("pickSoldAccuracy", () => {
     expect(a.diffPct).toBeCloseTo((872_000 - 875_000) / 875_000, 6);
   });
 
-  it("picks True Value when the AVM was nearer", () => {
+  it("picks Comparable Sales (AVM) when it was nearer", () => {
     const a = pickSoldAccuracy({ closePrice: 700_000, avmValue: 705_000, expectedSalePrice: 850_000 })!;
-    expect(a.modelLabel).toBe("True Value");
+    expect(a.modelLabel).toBe("Comparable Sales");
     expect(a.estimateValue).toBe(705_000);
   });
 

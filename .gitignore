@@ -54,3 +54,10 @@ scripts/.reindex-cursor
 
 # Superpowers brainstorming companion artifacts
 .superpowers/
+
+# Backtest / experiment analysis outputs (large, throwaway — reproduce via scripts/admin)
+/avm-*.json
+.qa-run/
+
+# QA smoke-audit scratch (page snapshots + smoke logs — regenerated, not source)
+audit/

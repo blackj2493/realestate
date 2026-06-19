@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Bed, Bath, Square, Car, AlertTriangle, Building2 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
+import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -29,7 +30,7 @@ import { buildDiligenceFlags } from "@/lib/property/diligence";
 import YourTakeCard from "@/components/Property/YourTakeCard";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
-import ExpectedSaleCard from "@/components/Property/ExpectedSaleCard";
+import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
 import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
@@ -266,6 +267,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Address Unavailable";
   const price = p.ListPrice || 0;
+  // THE single price number — list-anchored Expected Sale where we can (most accurate),
+  // AVM as the honest fallback. Replaces the old two-number display. (null for anon: the
+  // VOW-gated view nulls both inputs → the card renders its locked teaser.)
+  const salePrice = resolveSalePrice({
+    listPrice: price > 0 ? price : null,
+    isActive: status.kind === "active",
+    expectedSale: view.expectedSale,
+    estimate: view.estimate,
+  });
   const dom = p.DaysOnMarket ?? calculateDaysOnMarket(p.OriginalEntryTimestamp);
   // True DOM (stitched across relists) from the Temporal Distress Engine; falls back to raw DOM.
   // Gated (null) for anon → falls back to raw IDX DaysOnMarket.
@@ -526,25 +536,32 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
               )}
 
-              {/* True Value — our list-blind AVM ("what the asset is worth") */}
-              <ListingEstimateCard
-                estimate={view.estimate}
-                listPrice={price}
-                cityRegion={p.CityRegion}
-                city={p.City}
-                locked={!isAuthed && hasEstimate}
-                hideAskDelta={status.kind === "sold"}
-              />
-
-              {/* Expected Sale Price — only meaningful against a live ask */}
-              {isActiveListing && (
-                <ExpectedSaleCard
-                  expectedSale={view.expectedSale}
-                  estimate={view.estimate}
+              {isActiveListing ? (
+                /* ONE number: the Estimated Sale Price (list-anchored where we can be,
+                   AVM as fallback). The intrinsic AVM lives on as the faint "comparable
+                   value" band inside this card + as the Deal Score signal above. */
+                <EstimatedSaleCard
+                  salePrice={salePrice}
                   listPrice={price}
                   city={p.City}
                   propertySubType={p.PropertySubType}
-                  locked={!isAuthed && hasExpectedSale}
+                  locked={!isAuthed && (hasEstimate || hasExpectedSale)}
+                />
+              ) : status.kind === "sold" && hasSoldAccuracy ? (
+                /* Sold WITH a receipt: the "Our Call vs. The Sale" card above IS the single
+                   number. Don't also show a standalone True Value — that was the confusing
+                   second estimate the user flagged. */
+                null
+              ) : (
+                /* Delisted/off-market, or sold without a receipt: the independent True
+                   Value is the only number we can offer (no live ask to anchor to). */
+                <ListingEstimateCard
+                  estimate={view.estimate}
+                  listPrice={price}
+                  cityRegion={p.CityRegion}
+                  city={p.City}
+                  locked={!isAuthed && hasEstimate}
+                  hideAskDelta={status.kind === "sold"}
                 />
               )}
 
@@ -552,7 +569,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
 
               {/* Compliance disclaimer for the AVM-derived figures above (estimate + value-add) */}
-              {(view.estimate?.estimatedValue ?? 0) > 0 && <Disclaimers />}
+              {((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
+                <Disclaimers />
+              )}
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">

@@ -84,8 +84,8 @@ export default function CompareValuePlot({
         <Lock className="mb-3 h-6 w-6 text-cyan-400" />
         <p className="mb-1 text-sm font-medium text-slate-200">The value plot is members-only</p>
         <p className="mb-4 max-w-sm text-xs leading-relaxed text-slate-400">
-          It maps each home against our PureProperty Estimate — a VOW-derived figure we only show to
-          signed-in members. The table works either way.
+          It maps each home against our comp value — what recent comparable sales support — a
+          VOW-derived figure we only show to signed-in members. The table works either way.
         </p>
         <Link
           href="/login"
@@ -100,9 +100,9 @@ export default function CompareValuePlot({
   if (points.length < 2) {
     return (
       <Panel>
-        <p className="mb-1 text-sm font-medium text-slate-200">Not enough estimates to plot</p>
+        <p className="mb-1 text-sm font-medium text-slate-200">Not enough comp values to plot</p>
         <p className="max-w-sm text-xs leading-relaxed text-slate-400">
-          The value plot needs our Estimate for at least 2 of these homes — {points.length} of{" "}
+          The value plot needs our comp value for at least 2 of these homes — {points.length} of{" "}
           {contexts.length} are ready. Use the table view in the meantime.
         </p>
       </Panel>
@@ -128,13 +128,13 @@ export default function CompareValuePlot({
   const xMid = xS(0), yMid = yS(capMedian);
 
   const fmtDisc = (d: number) =>
-    d >= 0 ? `${d.toFixed(0)}% under est.` : `${Math.abs(d).toFixed(0)}% over est.`;
+    d >= 0 ? `${d.toFixed(0)}% under comps` : `${Math.abs(d).toFixed(0)}% over comps`;
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
       <p className="mb-3 text-center text-xs text-slate-400">
         Each dot is one shortlisted home. <b className="text-slate-200">Up = higher yield, right = better value</b>{" "}
-        (listed under our Estimate). The top-right corner is the sweet spot.
+        (listed under comp value). The top-right corner is the sweet spot.
       </p>
 
       <div className="flex flex-col gap-4 lg:flex-row">
@@ -153,11 +153,11 @@ export default function CompareValuePlot({
           <QLabel x={X1 - 8} y={Y1 + 16} anchor="end" color={C.best} title="BEST VALUE" sub="cheaper + higher yield" />
           <QLabel x={X0 + 8} y={Y1 + 16} anchor="start" color={C.sub} title="PREMIUM" sub="pricey, still yields" />
           <QLabel x={X1 - 8} y={Y0 - 20} anchor="end" color={C.sub} title="CHEAP, LOW YIELD" sub="price is right, return isn’t" />
-          <QLabel x={X0 + 8} y={Y0 - 20} anchor="start" color={C.over} title="OVERPRICED" sub="over estimate + low yield" />
+          <QLabel x={X0 + 8} y={Y0 - 20} anchor="start" color={C.over} title="OVERPRICED" sub="over comp value + low yield" />
 
           {/* axis captions */}
           <text x={(X0 + X1) / 2} y={H - 16} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.axis}>
-            ◄ over our Estimate &nbsp;&nbsp; PRICE vs ESTIMATE &nbsp;&nbsp; under our Estimate ►
+            ◄ over comp value &nbsp;&nbsp; PRICE vs COMPS &nbsp;&nbsp; under comp value ►
           </text>
           <text
             x={16}

@@ -31,6 +31,13 @@ export interface DealScoreComponent {
   direction: DealScoreDirection;
   /** Human-readable one-liner explaining the sub-score. */
   detail: string;
+  /**
+   * The comp-value dollar behind the "value" component (the AVM). Shown ONLY in the
+   * expanded Deal Score breakdown, clearly labeled "comp value" — never in the headline
+   * copy / The Read, where the single Estimated Sale Price is the number. Absent on other
+   * components.
+   */
+  compValue?: number;
 }
 
 export interface DealScoreInput {
@@ -169,19 +176,24 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
     const points = interpolate(discountPct, VALUE_ANCHORS);
     const weight = WEIGHT_VALUE * CONFIDENCE_MULTIPLIER[input.avmEstimate.confidence];
     const absPct = Math.abs(discountPct);
+    // Relative to recent comparable sales — NOT a competing dollar "estimate" (that word
+    // is reserved for the headline Estimated Sale Price). Keeps the deal signal, drops the
+    // conflicting figure. Same source feeds the Deal Score breakdown AND "The Read" catch.
+    const conf = `${input.avmEstimate.confidence.toLowerCase()} confidence`;
     const detail =
       discountPct >= 0.5
-        ? `Listed ${absPct.toFixed(1)}% below our ${fmtMoney(est)} estimate (${input.avmEstimate.confidence.toLowerCase()} confidence)`
+        ? `Listed ${absPct.toFixed(1)}% below comparable sales (${conf})`
         : discountPct <= -0.5
-        ? `Listed ${absPct.toFixed(1)}% above our ${fmtMoney(est)} estimate (${input.avmEstimate.confidence.toLowerCase()} confidence)`
-        : `Priced in line with our ${fmtMoney(est)} estimate (${input.avmEstimate.confidence.toLowerCase()} confidence)`;
+        ? `Listed ${absPct.toFixed(1)}% above comparable sales (${conf})`
+        : `Priced in line with comparable sales (${conf})`;
     components.push({
       key: "value",
-      label: "Value vs Estimate",
+      label: "Value vs Comps",
       points,
       weight,
       direction: directionFor(points),
       detail,
+      compValue: Math.round(est), // breakdown-only dollar (labeled "comp value")
     });
   }
 

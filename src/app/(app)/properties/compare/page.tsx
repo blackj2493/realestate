@@ -35,20 +35,27 @@ export default async function ComparePage({
 
   // Fetch listings + their precomputed estimates server-side so the valuation rows
   // and corrected $/sqft render instantly (no live AVM round-trip).
-  const { listings, estimates } = await getCompareData(idList);
+  const { listings, estimates, salePrices } = await getCompareData(idList);
 
-  // VOW gate: AVM estimates + stitched True DOM are VOW-derived. For anonymous users
-  // never send them to the client — drop the estimates and strip TrueDom (True DOM
-  // falls back to raw IDX DOM); CompareClient renders locked cells + a sign-in banner.
+  // VOW gate: AVM estimates, the list-anchored Estimated Sale Price + stitched True DOM are
+  // VOW-derived. For anonymous users never send them to the client — drop the estimates +
+  // sale prices and strip TrueDom (True DOM falls back to raw IDX DOM); CompareClient
+  // renders locked cells + a sign-in banner.
   const isAuthed = !!(await getCurrentUser());
   const gatedEstimates = isAuthed ? estimates : {};
+  const gatedSalePrices = isAuthed ? salePrices : {};
   const gatedListings: ListingDocument[] = isAuthed
     ? listings
     : listings.map((l) => ({ ...l, TrueDom: undefined }));
 
   return (
     <main className="min-h-app bg-slate-950 text-slate-200">
-      <CompareClient listings={gatedListings} estimates={gatedEstimates} isAuthed={isAuthed} />
+      <CompareClient
+        listings={gatedListings}
+        estimates={gatedEstimates}
+        salePrices={gatedSalePrices}
+        isAuthed={isAuthed}
+      />
     </main>
   );
 }

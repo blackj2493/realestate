@@ -1,7 +1,14 @@
 /**
- * True Value Calculator Service
- * Phase 3: Defeats $1 bidding war edge cases for Cap Rate/Yield/Tax Burden
- * 
+ * Ratio-Price Calculator Service
+ * Phase 3: resolves the PURCHASE-PRICE BASIS used for the financial RATIO metrics
+ * (Cap Rate / Gross Yield / Tax Burden) — NOT a valuation. For a normal listing this is
+ * simply the list price; it only substitutes a city-region average to defeat "$1 bidding
+ * war" edge cases (sub-$200K freehold asks) that would otherwise produce absurd cap rates.
+ *
+ * NOTE: this is deliberately NOT the AVM / "True Value" (src/lib/avm) — it is the price you
+ * divide rent/tax by. Renamed from the old `trueValueCalculator` to avoid colliding with the
+ * AVM-based "True Value"/comparable-value concept shown on the listing page.
+ *
  * Fetches city_region_avg_price and municipal_mill_rates from Supabase.
  */
 
@@ -13,21 +20,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export interface TrueValueResult {
+export interface RatioPriceResult {
+  /** Price the ratio metrics divide by: list price, or city-region avg for $1 listings. */
   calculation_price: number;
-  true_value: number;
+  /** True when we substituted a city-region average (the list price was an outlier). */
   is_price_discovery: boolean;
 }
 
 /**
- * Defeats $1 bidding war listings for Cap Rate / Yield / Tax Burden calculations.
- * When ListPrice < $200K + Detached/Semi-Detached, fallback to city_region_avg_price.
+ * Resolve the ratio-price basis. Defeats $1 bidding-war listings for Cap Rate / Yield /
+ * Tax Burden: when ListPrice < $200K + Detached/Semi-Detached, fall back to
+ * city_region_avg_price; otherwise the list price is the basis.
  */
-export async function fetchTrueValue(params: {
+export async function resolveRatioPrice(params: {
   listPrice: number;
   propertySubType: string;
   cityRegion: string;
-}): Promise<TrueValueResult> {
+}): Promise<RatioPriceResult> {
   const { listPrice, propertySubType, cityRegion } = params;
   const isFreehold = !['Condo Apt', 'Condo Townhouse'].includes(propertySubType);
   const isLowPrice = listPrice < 200000 && isFreehold && ['Detached', 'Semi-Detached'].includes(propertySubType);
@@ -43,14 +52,12 @@ export async function fetchTrueValue(params: {
     const fallbackPrice = data?.avg_sale_price || listPrice;
     return {
       calculation_price: fallbackPrice,
-      true_value: fallbackPrice,
       is_price_discovery: true,
     };
   }
 
   return {
     calculation_price: listPrice,
-    true_value: listPrice,
     is_price_discovery: false,
   };
 }
@@ -79,4 +86,4 @@ export async function fetchMillRate(cityRegion: string): Promise<MillRateResult>
   };
 }
 
-export default { fetchTrueValue, fetchMillRate };
+export default { resolveRatioPrice, fetchMillRate };

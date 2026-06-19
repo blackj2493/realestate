@@ -6,9 +6,10 @@
 
 import { Check } from "lucide-react";
 import WatchHeart from "@/components/watchlist/WatchHeart";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { useCommandCenterStore, MAX_SELECTED } from "@/lib/stores/commandCenterStore";
 import type { ListingDocument } from "@/lib/typesense/client";
+import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
@@ -35,6 +36,9 @@ interface LedgerRowProps {
   onToggleSelect?: () => void;
   /** Signed-in? Gates VOW-derived row metrics (True DOM, distress flags, deal score) for anon (§6.2(f)). */
   isAuthed?: boolean;
+  /** The single Estimated Sale Price (list-anchored, AVM fallback), batched by the panel
+   *  for authed users. Undefined for anon / comps → the "likely close" line is omitted. */
+  salePrice?: SalePriceEstimate | null;
   /** Card mode for narrow panels (audit C4): render only the photo + address
    *  card, dropping the fixed numeric columns that would starve the price. */
   compact?: boolean;
@@ -122,8 +126,31 @@ function ColumnValue({ doc, col, isAuthed }: { doc: ListingDocument; col: Column
   }
 }
 
+/** The single Estimated Sale Price ("likely close") line — list-anchored where we can,
+ *  AVM fallback. VOW-gated: the panel only fetches it for authed users, so anon rows never
+ *  receive `salePrice` and this renders nothing. */
+function SaleLine({ salePrice }: { salePrice?: SalePriceEstimate | null }) {
+  if (!salePrice || !(salePrice.value > 0)) return null;
+  const d = salePrice.deltaVsAskPct;
+  const tag =
+    d != null && d < -0.001
+      ? `${(Math.abs(d) * 100).toFixed(1)}% under ask`
+      : d != null && d > 0.001
+        ? `${(d * 100).toFixed(1)}% over ask`
+        : "near ask";
+  return (
+    <p
+      className="mt-0.5 font-mono text-[11px] text-emerald-300/90"
+      title="Estimated sale price — what this home is likely to close at"
+    >
+      ≈ {formatPrice(salePrice.value)} <span className="text-emerald-400/70">likely close</span>
+      <span className="text-slate-500"> · {tag}</span>
+    </p>
+  );
+}
+
 /** Desktop column cell — value at the persona's fixed width + alignment. */
-function Cell({ doc, col, isAuthed, alphaInline }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; alphaInline?: boolean }) {
+function Cell({ doc, col, isAuthed, alphaInline, salePrice }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; alphaInline?: boolean; salePrice?: SalePriceEstimate | null }) {
   if (col.type === "address")
     return (
       <div className={cn("min-w-0", col.width)}>
@@ -135,6 +162,7 @@ function Cell({ doc, col, isAuthed, alphaInline }: { doc: ListingDocument; col: 
           </div>
         )}
         <ListingCardBody doc={doc} />
+        <SaleLine salePrice={salePrice} />
       </div>
     );
   if (col.type === "alphaFlag") {
@@ -173,7 +201,7 @@ function MetricChip({ doc, col, isAuthed }: { doc: ListingDocument; col: ColumnD
   );
 }
 
-export default function LedgerRow({ property, columns, visibleColumns, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, visibleColumns, salePrice, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   const deal = dealScoreFromDocument(property);
   // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
@@ -260,6 +288,7 @@ export default function LedgerRow({ property, columns, visibleColumns, onClick, 
       {compact ? (
         <div className="min-w-0 flex-1">
           <ListingCardBody doc={property} />
+          <SaleLine salePrice={salePrice} />
           {analyticalColumns.length > 0 && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {analyticalColumns.map((col) => (
@@ -270,7 +299,14 @@ export default function LedgerRow({ property, columns, visibleColumns, onClick, 
         </div>
       ) : (
         desktopColumns.map((col) => (
-          <Cell key={col.type} doc={property} col={col} isAuthed={isAuthed} alphaInline={col.type === "address" && foldAlpha} />
+          <Cell
+            key={col.type}
+            doc={property}
+            col={col}
+            isAuthed={isAuthed}
+            alphaInline={col.type === "address" && foldAlpha}
+            salePrice={col.type === "address" ? salePrice : undefined}
+          />
         ))
       )}
     </div>
