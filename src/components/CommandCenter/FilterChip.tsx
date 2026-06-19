@@ -53,6 +53,27 @@ export default function FilterChip({ def, value, onChange, onClear }: FilterChip
 
   return (
     <Popover trigger={trigger} className="w-56">
+      <FilterControl def={def} value={value} onChange={onChange} />
+    </Popover>
+  );
+}
+
+/**
+ * FilterControl — the bare expanded control (range slider / stepper / enum list)
+ * with no chip or popover wrapper. Shared by FilterChip's popover (desktop) and
+ * the mobile filter sheet, so the control logic lives in exactly one place.
+ */
+export function FilterControl({
+  def,
+  value,
+  onChange,
+}: {
+  def: FilterDef;
+  value: FilterValue;
+  onChange: (value: FilterValue) => void;
+}) {
+  return (
+    <>
       {def.control === "range" && (
         <RangeControl def={def} value={value as [number, number]} onChange={onChange} />
       )}
@@ -62,7 +83,7 @@ export default function FilterChip({ def, value, onChange, onClear }: FilterChip
       {def.control === "enum" && (
         <EnumControl def={def} value={value as string[]} onChange={onChange} />
       )}
-    </Popover>
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { CORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
@@ -14,6 +14,7 @@ import InvestorChip from "./InvestorChip";
 import SoldWindowDropdown from "./SoldWindowDropdown";
 import LayerChips from "./LayerChips";
 import AddFilterPalette from "./AddFilterPalette";
+import MobileFilterSheet from "./MobileFilterSheet";
 import { Popover } from "@/components/ui/popover";
 import { formatResultNudge } from "./filterNudge";
 import { anyControlActive } from "./investorControls";
@@ -94,8 +95,57 @@ export default function FilterBar() {
     clearAddedFilters();
   };
 
+  // Mobile (<md): the inline chip row scrolls its controls off the right edge,
+  // so the bar collapses to a "Filters" button that opens MobileFilterSheet.
+  // Build the render-ready item lists once and share them with the sheet.
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const coreItems = CORE_FILTERS.map((def) => {
+    const useDef =
+      def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
+    return {
+      def: useDef,
+      value: universalFilters[def.key] ?? useDef.defaultValue,
+      onChange: (v: FilterValue) => setUniversalFilter(def.key, v),
+    };
+  });
+  const addedItems = addedDefs.map((def) => ({
+    def,
+    value: universalFilters[def.key] ?? def.defaultValue,
+    onChange: (v: FilterValue) => setUniversalFilter(def.key, v),
+  }));
+  const activeFilterCount =
+    [...CORE_FILTERS, ...addedDefs].filter((d) =>
+      d.isActive(universalFilters[d.key] ?? d.defaultValue)
+    ).length + (investorActive ? 1 : 0);
+  const soldWindowVisible =
+    activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted");
+
   return (
-    <div className="no-scrollbar flex h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3">
+    <>
+      {/* MOBILE (<md): layers stay inline (tab-like); all other filters move into
+          the sheet behind a prominent, count-badged Filters button. */}
+      <div className="flex items-center gap-2 border-t border-slate-800 bg-slate-950 px-3 py-2 md:hidden">
+        <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto">
+          <LayerChips />
+          {soldWindowVisible && <SoldWindowDropdown />}
+        </div>
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="relative flex min-h-[40px] shrink-0 items-center gap-1.5 border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-100 transition-colors active:bg-slate-800"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* DESKTOP (md+): the full inline instrument bar. */}
+      <div className="no-scrollbar hidden h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3 md:flex">
       {/* Listing-status layers — multi-select For Sale·Sold·Leased·For Rent. */}
       <LayerChips />
       {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && <SoldWindowDropdown />}
@@ -192,6 +242,21 @@ export default function FilterBar() {
           {nudge.text}
         </span>
       </div>
-    </div>
+      </div>
+
+      {sheetOpen && (
+        <MobileFilterSheet
+          onClose={() => setSheetOpen(false)}
+          coreItems={coreItems}
+          addedItems={addedItems}
+          controls={controls}
+          showInvestor={investorLayer}
+          showAdvanced={!compOnly}
+          clearAll={clearAll}
+          anyActive={anyActive}
+          resultCount={totalCount}
+        />
+      )}
+    </>
   );
 }
