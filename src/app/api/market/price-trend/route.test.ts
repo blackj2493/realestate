@@ -1,10 +1,17 @@
 /**
  * Tests for GET /api/market/price-trend
  *
- * Covers three audit findings consolidated into this route:
- *   MEDIUM-23: `%`/`_` wildcard injection via the `region` param → 400
- *   MEDIUM-8:  multi-word regions produce unquoted .or() values → PostgREST parse failure
- *   MEDIUM-10: .limit(20000) silently capped at 1,000 by PostgREST → pagination via .range()
+ * The heavy aggregation now lives in the region_price_trend RPC (migration 040); the
+ * route is a gate + cache wrapper that maps the RPC's { points, summary } payload and
+ * computes monthlyVelocity in Node. These tests cover:
+ *   - MEDIUM-23: `%`/`_` wildcard injection via the `region` param → 400 (no DB call)
+ *   - the RPC is called with the resolved scope and its points/summary are returned
+ *   - monthlyVelocity is derived from the RPC points over the 6 settled months (2..7 back)
+ *   - an RPC error surfaces as a 500 with an empty summary
+ *
+ * (The former MEDIUM-8 quoted-.or() and MEDIUM-10 pagination tests are retired: the RPC
+ * takes the region as a bound parameter and aggregates server-side, so there is no
+ * client-built .or() filter and no 1,000-row PostgREST pagination to guard.)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -35,67 +42,28 @@ import { GET } from './route';
 
 // ── stub helpers ─────────────────────────────────────────────────────────────
 
-/** Row shape the route bucketing keeps: valid date ≤24 months ago, price >0. */
-function makeRow(i: number) {
-  // Spread 2,500 rows evenly across the last 20 months so every row survives the
-  // 24-month cutoff filter inside computeTrend.
-  const d = new Date();
-  d.setMonth(d.getMonth() - (i % 20)); // 0..19 months ago
-  return {
-    close_price: 700000 + i,
-    list_price: 690000 + i,
-    purchase_contract_date: d.toISOString(),
-    building_area_total: 1200,
-  };
+/** 'YYYY-MM' key for N months back from now, in UTC (matches computeTrend's monthKey). */
+function monthKeyBack(n: number): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Captured .or() call argument(s) — set by the stub. */
-let capturedOrArg = '';
-
-/**
- * Chainable Supabase stub that records the `.or()` argument and returns slices of
- * `dataset` via `.range(from, to)` to simulate PostgREST pagination.
- */
-function supabaseReturningSlices(dataset: ReturnType<typeof makeRow>[]) {
-  let rangeFrom = 0;
-  let rangeTo = 0;
-
-  const q: Record<string, unknown> = {};
-  for (const m of ['from', 'select', 'gte', 'in', 'order']) {
-    q[m] = vi.fn(() => q);
-  }
-  q.or = vi.fn((arg: string) => {
-    capturedOrArg = arg;
-    return q;
-  });
-  q.range = vi.fn((f: number, t: number) => {
-    rangeFrom = f;
-    rangeTo = t;
-    return q;
-  });
-  // Thenable — resolves with the slice PostgREST would return for this page.
-  q.then = (resolve: (v: unknown) => unknown) =>
-    Promise.resolve(
-      resolve({ data: dataset.slice(rangeFrom, rangeTo + 1), error: null })
-    );
-
-  return q as unknown as ReturnType<typeof getServiceRoleClient> & {
-    or: ReturnType<typeof vi.fn>;
-    range: ReturnType<typeof vi.fn>;
-  };
+/** Mock service-role client whose .rpc() resolves to the given { data, error }. */
+function supabaseRpc(result: { data: unknown; error: unknown }) {
+  const rpc = vi.fn().mockResolvedValue(result);
+  vi.mocked(getServiceRoleClient).mockReturnValue(
+    { rpc } as unknown as ReturnType<typeof getServiceRoleClient>
+  );
+  return rpc;
 }
-
-// ── utilities ─────────────────────────────────────────────────────────────────
 
 function makePriceTrendRequest(region: string) {
-  return new NextRequest(
-    `http://localhost/api/market/price-trend?region=${region}`
-  );
+  return new NextRequest(`http://localhost/api/market/price-trend?region=${region}`);
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  capturedOrArg = '';
 });
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -111,36 +79,64 @@ describe('GET /api/market/price-trend', () => {
     expect(getServiceRoleClient).not.toHaveBeenCalled();
   });
 
-  // ── MEDIUM-8: quoted .or() values for multi-word regions ────────────────────
-  it('MEDIUM-8: double-quotes multi-word region values in the .or() call', async () => {
-    const stub = supabaseReturningSlices([]);
-    vi.mocked(getServiceRoleClient).mockReturnValue(stub);
-
-    const region = 'Vales of Castlemore North';
-    const res = await GET(makePriceTrendRequest(encodeURIComponent(region)));
-    expect(res.status).toBe(200);
-
-    // PostgREST needs the values double-quoted when they contain spaces.
-    expect(capturedOrArg).toContain(`city.ilike."${region}"`);
-    expect(capturedOrArg).toContain(`city_region.ilike."${region}"`);
-  });
-
-  // ── MEDIUM-10: paginate past PostgREST 1k cap ───────────────────────────────
-  it('MEDIUM-10: paginates with .range() and collects all rows from a 2,500-row dataset', async () => {
-    const dataset = Array.from({ length: 2500 }, (_, i) => makeRow(i));
-    const stub = supabaseReturningSlices(dataset);
-    vi.mocked(getServiceRoleClient).mockReturnValue(stub);
+  // ── RPC wiring: scope passed in, points/summary returned ────────────────────
+  it('calls region_price_trend with the region and returns its points + summary', async () => {
+    const rpc = supabaseRpc({
+      data: {
+        points: [{ month: '2026-01', medianPrice: 800000, medianPpsf: 500, sales: 10 }],
+        summary: { soldToListPct: 99.1, pctOverAsking: 22, listPriceCoverage: 0.9, sales90: 120 },
+      },
+      error: null,
+    });
 
     const res = await GET(makePriceTrendRequest('Brampton'));
     expect(res.status).toBe(200);
 
-    // The builder loop must have called .range() at least 3 times (pages 0-999, 1000-1999, 2000-2999).
-    expect(stub.range).toHaveBeenCalledTimes(3);
+    expect(rpc).toHaveBeenCalledWith(
+      'region_price_trend',
+      expect.objectContaining({ p_region: 'Brampton', p_subtypes: null, p_months: 24 })
+    );
 
-    // All 2,500 rows fed into the monthly buckets — total sales across all returned
-    // TrendPoints must equal the dataset length (every row has a valid date/price).
-    const body: { points: { sales: number }[] } = await res.json();
-    const totalSales = body.points.reduce((sum, p) => sum + p.sales, 0);
-    expect(totalSales).toBe(2500);
+    const body = await res.json();
+    expect(body.region).toBe('Brampton');
+    expect(body.points).toHaveLength(1);
+    expect(body.summary.soldToListPct).toBe(99.1);
+    expect(body.summary.sales90).toBe(120);
+  });
+
+  // ── monthlyVelocity is derived in Node from the settled months (2..7 back) ──
+  it('computes monthlyVelocity from the 6 settled months, excluding the latest two', async () => {
+    const points = [
+      // Months 0 and 1 are still accruing — must be EXCLUDED from velocity.
+      { month: monthKeyBack(0), medianPrice: 9, medianPpsf: 9, sales: 1000 },
+      { month: monthKeyBack(1), medianPrice: 9, medianPpsf: 9, sales: 1000 },
+      // Months 2..7 are settled — averaged. 6 months × 12 sales / 6 = 12.
+      ...[2, 3, 4, 5, 6, 7].map((n) => ({
+        month: monthKeyBack(n),
+        medianPrice: 800000,
+        medianPpsf: 500,
+        sales: 12,
+      })),
+    ];
+    supabaseRpc({
+      data: { points, summary: { soldToListPct: null, pctOverAsking: null, listPriceCoverage: 0, sales90: 0 } },
+      error: null,
+    });
+
+    const res = await GET(makePriceTrendRequest('Brampton'));
+    const body = await res.json();
+    expect(body.summary.monthlyVelocity).toBe(12);
+  });
+
+  // ── RPC error → 500 with empty summary ──────────────────────────────────────
+  it('returns 500 with an empty summary when the RPC errors', async () => {
+    supabaseRpc({ data: null, error: { message: 'boom' } });
+
+    const res = await GET(makePriceTrendRequest('Brampton'));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('boom');
+    expect(body.points).toEqual([]);
+    expect(body.summary.sales90).toBe(0);
   });
 });

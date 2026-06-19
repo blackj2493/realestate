@@ -34,6 +34,17 @@ import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 
 const DEFAULT_REGION = "Brampton";
 
+/** Server-prefetched initial scope + payloads (from analytics/page.tsx). */
+export interface AnalyticsInitial {
+  region: string;
+  typeKeys: string[];
+  trend: PriceTrendResp | null;
+  stats: RegionStatsResp | null;
+}
+
+const makeScopeKey = (region: string, typeKeys: string[]) =>
+  `${region}|${[...typeKeys].sort().join(",")}`;
+
 type Metric = "price" | "ppsf" | "sales";
 
 const METRIC_TABS: [Metric, string][] = [
@@ -98,28 +109,44 @@ function KpiCard({ label, value, sub, loading }: KpiProps) {
   );
 }
 
-export default function AnalyticsClient() {
+export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [region, setRegion] = useState(() => (searchParams.get("region") || DEFAULT_REGION).trim());
+  // When the server prefetched a scope, seed state from it so the first render matches
+  // (initial.region/typeKeys were derived from the same URL the server read).
+  const [region, setRegion] = useState(() =>
+    initial ? initial.region : (searchParams.get("region") || DEFAULT_REGION).trim()
+  );
   const [typeKeys, setTypeKeys] = useState<string[]>(() =>
-    (searchParams.get("types") || "")
-      .split(",")
-      .map((k) => k.trim().toLowerCase())
-      .filter((k) => PROPERTY_TYPE_OPTIONS.some((o) => o.key === k))
+    initial
+      ? initial.typeKeys
+      : (searchParams.get("types") || "")
+          .split(",")
+          .map((k) => k.trim().toLowerCase())
+          .filter((k) => PROPERTY_TYPE_OPTIONS.some((o) => o.key === k))
   );
   // One result object per fetched scope; `loading` is derived by comparing the
   // result's scope key to the current one (no synchronous setState in effects).
+  // Seeded with the server-prefetched payload so above-the-fold KPIs paint instantly.
   const [result, setResult] = useState<{
     key: string;
     trend: PriceTrendResp | null;
     stats: RegionStatsResp | null;
     error: boolean;
-  } | null>(null);
+  } | null>(() =>
+    initial
+      ? {
+          key: makeScopeKey(initial.region, initial.typeKeys),
+          trend: initial.trend,
+          stats: initial.stats,
+          error: initial.trend == null && initial.stats == null,
+        }
+      : null
+  );
   const [metric, setMetric] = useState<Metric>("price");
 
-  const scopeKey = `${region}|${[...typeKeys].sort().join(",")}`;
+  const scopeKey = makeScopeKey(region, typeKeys);
 
   // Mirror scope into the URL (shareable, refresh-safe). replace() keeps history clean.
   useEffect(() => {
@@ -132,6 +159,10 @@ export default function AnalyticsClient() {
 
   useEffect(() => {
     let alive = true;
+    // Already have data for this scope (server-seeded on mount, or previously fetched) —
+    // skip the redundant round-trip. The effect re-runs only when scopeKey changes, so
+    // `result` here is the latest at that point. New scopes fall through to fetch.
+    if (result?.key === scopeKey) return;
     const t = typeKeys.length ? `&types=${encodeURIComponent(typeKeys.join(","))}` : "";
     const q = encodeURIComponent(region);
     Promise.all([

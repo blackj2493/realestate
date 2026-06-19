@@ -1,226 +1,38 @@
 /**
  * GET /api/market/price-trend?region=<city|neighbourhood>
  *
- * Monthly median SOLD price + median $/sqft for a market area over the trailing
- * 24 months, from raw_vow_sold (read-only — CLAUDE.md §12). Powers the home
- * dashboard "Market Pulse" chart — the kind of sold-trend HouseSigma shows but
- * Realtor.ca hides.
+ * Monthly median SOLD price + median $/sqft for a market area over the trailing 24
+ * months, plus a 90-day sold-to-list summary, from raw_vow_sold (read-only — §12).
  *
- * Result is wrapped in unstable_cache (24h) so repeated dashboard loads never
- * re-scan the 217k-row table at request time (Supabase Disk IO budget — memory
- * supabase-io-budget). Uses the service-role client because raw_vow_sold is not
- * readable by the anon key (RLS).
+ * The heavy lifting now lives in the region_price_trend RPC (migration 040): one SQL
+ * pass with percentile_cont instead of the old up-to-8-page Node pagination that
+ * seq-scanned the 223k-row table per page (the cause of /analytics taking 8-10s). This
+ * handler is a thin gate + cache wrapper around getTrendCached (src/lib/market/aggregates).
+ * Result is cached 24h per scope so repeated loads never re-run the scan at request time.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
-import { getServiceRoleClient } from "@/lib/supabase/client";
-import { variantsForKeys, parseTypeKeys } from "@/lib/dashboard/propertyTypes";
+import { parseTypeKeys } from "@/lib/dashboard/propertyTypes";
 import { getConsumer } from "@/lib/auth/requireConsumer";
+import { getTrendCached, EMPTY_SUMMARY, type Scope } from "@/lib/market/aggregates";
 
-export const dynamic = "force-dynamic"; // caching is handled by unstable_cache per region
+export const dynamic = "force-dynamic"; // caching is handled by unstable_cache per scope
 
-const MONTHS = 24;
-// Cached 24h (one read/region/day) and only 3 small columns, so a generous cap is
-// safe for the IO budget while ensuring a full 24 months of a high-volume city fits.
-const MAX_ROWS = 20000;
-
-interface TrendPoint {
-  month: string; // YYYY-MM
-  medianPrice: number;
-  medianPpsf: number | null;
-  sales: number;
-}
-
-// Region-level sold-side summary (Region Scorecard). Coverage-gated: sold-to-list is
-// only trustworthy where list_price is actually populated, so it nulls out below 50%.
-interface TrendSummary {
-  soldToListPct: number | null; // avg(close/list)*100 over last 90d, list_price>0
-  pctOverAsking: number | null; // share of those that sold above ask
-  listPriceCoverage: number; // 0..1 — rows with list_price / rows, last 90d
-  sales90: number; // sold count in the trailing 90 days (laggy near the edge)
-  monthlyVelocity: number | null; // avg monthly sales over the 6 complete months before this one
-}
-
-interface TrendResult {
-  points: TrendPoint[];
-  summary: TrendSummary;
-}
-
-const EMPTY_SUMMARY: TrendSummary = {
-  soldToListPct: null,
-  pctOverAsking: null,
-  listPriceCoverage: 0,
-  sales90: 0,
-  monthlyVelocity: null,
-};
-
-function median(nums: number[]): number {
-  if (nums.length === 0) return 0;
-  const s = [...nums].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
-
-function monthKey(d: Date): string {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-async function computeTrend(
-  region: string,
-  typeKeys: string[],
-  minBeds: number,
-  minBaths: number,
-  minParking: number,
-  minFrontage: number
-): Promise<TrendResult> {
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - MONTHS);
-  const cutoff90 = new Date();
-  cutoff90.setDate(cutoff90.getDate() - 90);
-
-  const sb = getServiceRoleClient();
-  // Match either municipality (city) or community (city_region). ilike = case-insensitive.
-  // Input is already validated by REGION_RE in GET (no metacharacters).
-  // PostgREST .or() requires double-quoted values when they contain spaces —
-  // unquoted, "Vales of Castlemore North" is a parse error and silently matches
-  // nothing (audit MEDIUM-8). Input is already validated against REGION_RE, which
-  // excludes the quote character itself.
-  const safe = region.trim();
-
-  // Property-type filter: exact spelling match (incl. trailing-space "Semi-Detached ").
-  // Empty ⇒ all types (unchanged behaviour).
-  const variants = variantsForKeys(typeKeys);
-
-  // Paginate past the PostgREST 1,000-row hard cap (audit MEDIUM-10).
-  // PostgREST builders are single-use, so filters are applied via a closure
-  // that constructs a fresh query per page.
-  const PAGE = 1000; // PostgREST hard cap per response
-  const buildQuery = () => {
-    // PurchaseContractDate = the "Sold Date" (deal signed). close_date is the later
-    // completion date and is frequently null/future, so it makes a poor trend axis.
-    let q = sb
-      .from("raw_vow_sold")
-      .select("close_price, list_price, purchase_contract_date, building_area_total")
-      .or(`city.ilike."${safe}",city_region.ilike."${safe}"`)
-      // $50k floor excludes lease/rental rows that leak into the sold feed (e.g. $2,200).
-      .gte("close_price", 50000)
-      .gte("purchase_contract_date", cutoff.toISOString());
-    if (variants.length) q = q.in("property_sub_type", variants);
-    // Beds/baths floor — flat sold columns (the sold feed maps BedroomsTotal →
-    // bedrooms_above_grade; ingester.ts). `.gte` excludes NULL beds, matching the
-    // active RPC's full_payload cast and Typesense (missing ⇒ 0). 0 ⇒ no floor.
-    if (minBeds > 0) q = q.gte("bedrooms_above_grade", minBeds);
-    if (minBaths > 0) q = q.gte("bathrooms_total_integer", minBaths);
-    // Parking/frontage floor — flat sold columns (ingester.ts writes parking_total /
-    // lot_width). Same NULL-excluding `.gte` semantics as beds/baths. 0 ⇒ no floor.
-    if (minParking > 0) q = q.gte("parking_total", minParking);
-    if (minFrontage > 0) q = q.gte("lot_width", minFrontage);
-    return q;
-  };
-
-  type Row = { close_price: unknown; list_price: unknown; purchase_contract_date: unknown; building_area_total: unknown };
-  const rows: Row[] = [];
-  for (let from = 0; rows.length < MAX_ROWS; from += PAGE) {
-    const { data, error } = await buildQuery()
-      .order("purchase_contract_date", { ascending: false })
-      .order("listing_key") // deterministic tie-break across pages
-      .range(from, from + PAGE - 1);
-    if (error) throw new Error(error.message);
-    rows.push(...(data ?? []));
-    if (!data || data.length < PAGE) break;
-  }
-
-  const buckets = new Map<string, { prices: number[]; ppsf: number[] }>();
-  // Trailing-90-day sold-to-list accumulators (current market heat).
-  let r90 = 0; // sold rows in last 90d
-  let r90WithList = 0; // ...with a usable list price
-  let ratioSum = 0;
-  let overAsk = 0;
-
-  for (const row of rows) {
-    const d = row.purchase_contract_date ? new Date(row.purchase_contract_date as string) : null;
-    if (!d || Number.isNaN(d.getTime())) continue;
-    const price = Number(row.close_price);
-    if (!Number.isFinite(price) || price <= 0) continue;
-
-    const key = monthKey(d);
-    let b = buckets.get(key);
-    if (!b) {
-      b = { prices: [], ppsf: [] };
-      buckets.set(key, b);
-    }
-    b.prices.push(price);
-    const sqft = Number(row.building_area_total);
-    if (Number.isFinite(sqft) && sqft > 0) b.ppsf.push(price / sqft);
-
-    if (d >= cutoff90) {
-      r90++;
-      const list = Number(row.list_price);
-      // $50k floor mirrors close_price; ratio sanity bounds drop data-entry errors.
-      if (Number.isFinite(list) && list >= 50000) {
-        const ratio = price / list;
-        if (ratio > 0.5 && ratio < 2) {
-          r90WithList++;
-          ratioSum += ratio;
-          if (price > list) overAsk++;
-        }
-      }
-    }
-  }
-
-  const points = [...buckets.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([month, b]) => ({
-      month,
-      medianPrice: Math.round(median(b.prices)),
-      medianPpsf: b.ppsf.length ? Math.round(median(b.ppsf)) : null,
-      sales: b.prices.length,
-    }));
-
-  // monthlyVelocity: average monthly sales over 6 SETTLED months. We skip not only the
-  // current (partial) month but ALSO the most-recently-completed one (i starts at 2):
-  // sales are keyed by purchase_contract_date, which keeps accruing for weeks after a month
-  // ends because deals report to the feed late. So the latest "complete" month is still
-  // under-reported when the dashboard is loaded early in the following month — including it
-  // would crater velocity and spike months-of-supply. Averaging months 2..7 back keeps the
-  // figure stable regardless of view date. Missing months count as 0 (genuine quiet months).
-  const salesByMonth = new Map(points.map((p) => [p.month, p.sales]));
-  const now = new Date();
-  let velSum = 0;
-  for (let i = 2; i <= 7; i++) {
-    const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    velSum += salesByMonth.get(monthKey(m)) ?? 0;
-  }
-  const monthlyVelocity = velSum > 0 ? velSum / 6 : null;
-
-  const coverage = r90 > 0 ? r90WithList / r90 : 0;
-  const trustworthy = coverage >= 0.5 && r90WithList >= 10;
-  const summary: TrendSummary = {
-    soldToListPct: trustworthy ? Math.round((ratioSum / r90WithList) * 1000) / 10 : null,
-    pctOverAsking: trustworthy ? Math.round((overAsk / r90WithList) * 1000) / 10 : null,
-    listPriceCoverage: Math.round(coverage * 100) / 100,
-    sales90: r90,
-    monthlyVelocity,
-  };
-
-  return { points, summary };
-}
+// Letters/digits/spaces/hyphen/apostrophe/period only — matches every real GTA
+// municipality & community name and excludes PostgREST/ilike metacharacters.
+const REGION_RE = /^[\p{L}\p{N}\s\-'.]{1,60}$/u;
 
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
   const typeKeys = parseTypeKeys(params);
-  const minBeds = Math.max(0, Math.floor(Number(params.get("minBeds")) || 0));
-  const minBaths = Math.max(0, Number(params.get("minBaths")) || 0);
-  const minParking = Math.max(0, Math.floor(Number(params.get("minParking")) || 0));
-  const minFrontage = Math.max(0, Number(params.get("minFrontage")) || 0);
+  const scope: Scope = {
+    minBeds: Math.max(0, Math.floor(Number(params.get("minBeds")) || 0)),
+    minBaths: Math.max(0, Number(params.get("minBaths")) || 0),
+    minParking: Math.max(0, Math.floor(Number(params.get("minParking")) || 0)),
+    minFrontage: Math.max(0, Number(params.get("minFrontage")) || 0),
+  };
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
-
-  // Letters/digits/spaces/hyphen/apostrophe/period only — matches every real GTA
-  // municipality & community name and excludes PostgREST/ilike metacharacters
-  // (% _ , ( ) ") outright. Resolves audit MEDIUM-23.
-  const REGION_RE = /^[\p{L}\p{N}\s\-'.]{1,60}$/u;
   if (!REGION_RE.test(region)) {
     return NextResponse.json({ error: "Invalid region" }, { status: 400 });
   }
@@ -233,22 +45,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, locked: true });
   }
 
-  const typeKey = typeKeys.length ? [...typeKeys].sort().join(",") : "all";
-  const cacheKey = `${typeKey}|b${minBeds}|w${minBaths}|p${minParking}|f${minFrontage}`;
   try {
-    const { points, summary } = await unstable_cache(
-      () => computeTrend(region, typeKeys, minBeds, minBaths, minParking, minFrontage),
-      // v8 = paginated (MEDIUM-10) + quoted .or() values (MEDIUM-8) + REGION_RE (MEDIUM-23).
-      // v7 = parking/frontage floor. v6 = beds/baths. v5 = multi-type keys (types=a,b).
-      // v4 = lag-robust monthlyVelocity window. cacheKey folds in type + beds + baths +
-      // parking + frontage so each scope combination caches independently.
-      ["market-price-trend", "v8", region.toLowerCase(), cacheKey],
-      { revalidate: 86400 }
-    )();
+    const { points, summary } = await getTrendCached(region, typeKeys, scope);
     return NextResponse.json({ region, points, summary });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[market/price-trend]", region, cacheKey, msg);
+    console.error("[market/price-trend]", region, msg);
     return NextResponse.json({ region, points: [], summary: EMPTY_SUMMARY, error: msg }, { status: 500 });
   }
 }

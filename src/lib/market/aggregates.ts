@@ -1,0 +1,206 @@
+/**
+ * Server-side market-aggregate data layer — the single source of truth for the two
+ * full-population aggregate computations behind /analytics and the dashboard:
+ *
+ *   - getTrendCached  → monthly sold-trend (median price/$psf, sales) + 90d summary,
+ *                       via the region_price_trend RPC (migration 040 — one SQL pass;
+ *                       replaced the old 8-page Node pagination over raw_vow_sold).
+ *   - getStatsCached  → active-inventory scalars (cap rate, active count, stale count),
+ *                       via the region_active_aggregates RPC (migration 020).
+ *
+ * Both are wrapped in unstable_cache (24h, aligned with the daily sync) and use the
+ * service-role client because raw_vow_sold / listings aggregation must bypass anon RLS.
+ * Caller is responsible for the VOW consumer gate BEFORE invoking these (the gate is
+ * request-scoped and must not be folded into the request-independent cache).
+ *
+ * Extracted from the price-trend / region-stats route handlers so the route handlers,
+ * the batched /api/market/leaderboard endpoint, and the server-rendered analytics page
+ * all share ONE cached computation (and one cache entry) per scope.
+ */
+
+import { unstable_cache } from "next/cache";
+import { getServiceRoleClient } from "@/lib/supabase/client";
+import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+
+const MONTHS = 24;
+
+export interface Scope {
+  minBeds: number;
+  minBaths: number;
+  minParking: number;
+  minFrontage: number;
+}
+
+export const ZERO_SCOPE: Scope = { minBeds: 0, minBaths: 0, minParking: 0, minFrontage: 0 };
+
+// ── Price trend (sold side) ──────────────────────────────────────────────────────────
+
+export interface TrendPoint {
+  month: string; // YYYY-MM
+  medianPrice: number;
+  medianPpsf: number | null;
+  sales: number;
+}
+
+export interface TrendSummary {
+  soldToListPct: number | null;
+  pctOverAsking: number | null;
+  listPriceCoverage: number;
+  sales90: number;
+  monthlyVelocity: number | null;
+}
+
+export interface TrendResult {
+  points: TrendPoint[];
+  summary: TrendSummary;
+}
+
+export const EMPTY_SUMMARY: TrendSummary = {
+  soldToListPct: null,
+  pctOverAsking: null,
+  listPriceCoverage: 0,
+  sales90: 0,
+  monthlyVelocity: null,
+};
+
+function monthKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Shape returned by the region_price_trend RPC (JSONB { points, summary }). */
+interface TrendRpcResult {
+  points: TrendPoint[];
+  summary: Omit<TrendSummary, "monthlyVelocity">;
+}
+
+async function computeTrend(region: string, typeKeys: string[], scope: Scope): Promise<TrendResult> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+
+  // One SQL pass (percentile_cont by month). raw_vow_sold stays read-only (§12).
+  const { data, error } = await sb.rpc("region_price_trend", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_min_beds: scope.minBeds,
+    p_min_baths: scope.minBaths,
+    p_min_parking: scope.minParking,
+    p_min_frontage: scope.minFrontage,
+    p_months: MONTHS,
+  });
+  if (error) throw new Error(error.message);
+
+  const result = (data ?? {}) as Partial<TrendRpcResult>;
+  const points = Array.isArray(result.points) ? result.points : [];
+  const summaryBase = result.summary ?? {
+    soldToListPct: null,
+    pctOverAsking: null,
+    listPriceCoverage: 0,
+    sales90: 0,
+  };
+
+  // monthlyVelocity: average monthly sales over 6 SETTLED months (i = 2..7 back). We skip
+  // both the current partial month AND the most-recently-completed one, because sales are
+  // keyed by purchase_contract_date, which keeps accruing for weeks after a month ends —
+  // including the latest "complete" month would crater velocity early in the next month.
+  // Kept in Node (depends on "today") and unit-tested via the route. Missing months ⇒ 0.
+  const salesByMonth = new Map(points.map((p) => [p.month, p.sales]));
+  const now = new Date();
+  let velSum = 0;
+  for (let i = 2; i <= 7; i++) {
+    const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    velSum += salesByMonth.get(monthKey(m)) ?? 0;
+  }
+  const monthlyVelocity = velSum > 0 ? velSum / 6 : null;
+
+  return {
+    points,
+    summary: {
+      soldToListPct: summaryBase.soldToListPct ?? null,
+      pctOverAsking: summaryBase.pctOverAsking ?? null,
+      listPriceCoverage: summaryBase.listPriceCoverage ?? 0,
+      sales90: summaryBase.sales90 ?? 0,
+      monthlyVelocity,
+    },
+  };
+}
+
+// ── Region active stats ──────────────────────────────────────────────────────────────
+
+export interface RegionStats {
+  activeCount: number;
+  capSample: number;
+  medianCapRate: number | null;
+  avgCapRate: number | null;
+  topCapRate: number | null;
+  staleCount: number;
+}
+
+export const EMPTY_STATS: RegionStats = {
+  activeCount: 0,
+  capSample: 0,
+  medianCapRate: null,
+  avgCapRate: null,
+  topCapRate: null,
+  staleCount: 0,
+};
+
+async function computeStats(region: string, typeKeys: string[], scope: Scope): Promise<RegionStats> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_active_aggregates", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_min_beds: scope.minBeds,
+    p_min_baths: scope.minBaths,
+    p_min_parking: scope.minParking,
+    p_min_frontage: scope.minFrontage,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_STATS;
+
+  const num = (v: unknown): number | null => {
+    if (v == null) return null; // SQL NULL must stay null (Number(null) === 0 would lie)
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  return {
+    activeCount: num(row.active_count) ?? 0,
+    capSample: num(row.cap_sample) ?? 0,
+    medianCapRate: num(row.median_cap_rate),
+    avgCapRate: num(row.avg_cap_rate),
+    topCapRate: num(row.top_cap_rate),
+    staleCount: num(row.stale_count) ?? 0,
+  };
+}
+
+// ── Cache wrappers ───────────────────────────────────────────────────────────────────
+
+const scopeKey = (s: Scope) => `b${s.minBeds}|w${s.minBaths}|p${s.minParking}|f${s.minFrontage}`;
+const typeKey = (typeKeys: string[]) => (typeKeys.length ? [...typeKeys].sort().join(",") : "all");
+
+/** Cached monthly sold-trend for a scope. Caller must pass the VOW gate first. */
+export function getTrendCached(region: string, typeKeys: string[], scope: Scope): Promise<TrendResult> {
+  const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
+  return unstable_cache(
+    () => computeTrend(region, typeKeys, scope),
+    // v10 = Toronto district-code roll-up (migration 042); v9 = SQL-aggregated RPC (040).
+    // Bumped so the stale empty-Toronto entries cached under v9 are not served post-fix.
+    ["market-price-trend", "v10", region.toLowerCase(), k],
+    { revalidate: 86400 }
+  )();
+}
+
+/** Cached active-inventory stats for a scope. Caller must pass the VOW gate first. */
+export function getStatsCached(region: string, typeKeys: string[], scope: Scope): Promise<RegionStats> {
+  const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
+  return unstable_cache(
+    () => computeStats(region, typeKeys, scope),
+    // v5 = Toronto district-code roll-up (migration 042); v4 = parking/frontage floor (027).
+    // Bumped so the stale empty-Toronto entries cached under v4 are not served post-fix.
+    ["market-region-stats", "v5", region.toLowerCase(), k],
+    { revalidate: 86400 }
+  )();
+}

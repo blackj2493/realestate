@@ -14,34 +14,40 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Trophy, ArrowUpRight } from "lucide-react";
-import { fetchRegionScore, type RegionScore } from "@/lib/dashboard/marketAggregates";
-import { REGION_TO_CITIES, citiesFromRegions } from "@/lib/dashboard/config";
 import { cn } from "@/lib/utils";
 
-/** Curated GTA market set, flattened from the apply-flow region map. */
-const MARKETS = citiesFromRegions(Object.keys(REGION_TO_CITIES));
+/** One row of the batched /api/market/leaderboard payload. */
+interface LeaderboardRow {
+  region: string;
+  activeCount: number | null;
+  stalePct: number | null;
+  medianCapRate: number | null;
+}
 
 type RankKey = "yield" | "leverage" | "inventory";
 
-const RANK_OPTIONS: { key: RankKey; label: string; hint: string; field: keyof RegionScore }[] = [
+const RANK_OPTIONS: { key: RankKey; label: string; hint: string; field: keyof LeaderboardRow }[] = [
   { key: "yield", label: "Yield", hint: "median cap rate", field: "medianCapRate" },
   { key: "leverage", label: "Buyer leverage", hint: "% stale (90d+ True DOM)", field: "stalePct" },
   { key: "inventory", label: "Inventory", hint: "active listings", field: "activeCount" },
 ];
 
 export default function SubmarketLeaderboard() {
-  const [scores, setScores] = useState<RegionScore[]>([]);
+  const [scores, setScores] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [rankBy, setRankBy] = useState<RankKey>("yield");
 
   useEffect(() => {
-    // Fetch once on mount; `loading` already starts true, so no setState here.
+    // One batched request (was 30: fetchRegionScore × 15 markets × 2 endpoints, half of
+    // which — the price-trend calls — were never displayed here). `loading` starts true.
     let alive = true;
-    Promise.allSettled(MARKETS.map((m) => fetchRegionScore(m)))
-      .then((rs) => {
+    fetch("/api/market/leaderboard")
+      .then((r) => (r.ok ? r.json() : { markets: [] }))
+      .then((d: { markets?: LeaderboardRow[] }) => {
         if (!alive) return;
-        setScores(rs.map((r, i) => (r.status === "fulfilled" ? r.value : emptyScore(MARKETS[i]))));
+        setScores(Array.isArray(d.markets) ? d.markets : []);
       })
+      .catch(() => alive && setScores([]))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
@@ -89,7 +95,7 @@ export default function SubmarketLeaderboard() {
         </div>
 
         <p className="text-[11px] text-slate-500">
-          {MARKETS.length} GTA markets ranked by {opt.hint} — all active inventory. Click a market to open it in the terminal.
+          {scores.length ? `${scores.length} ` : ""}GTA markets ranked by {opt.hint} — all active inventory. Click a market to open it in the terminal.
         </p>
 
         <div className="divide-y divide-slate-800/60 border border-slate-800">
@@ -126,23 +132,4 @@ export default function SubmarketLeaderboard() {
       </section>
     </div>
   );
-}
-
-function emptyScore(region: string): RegionScore {
-  return {
-    region,
-    medianPrice: null,
-    priceSeries: [],
-    yoyPct: null,
-    medianPpsf: null,
-    ppsfYoyPct: null,
-    activeCount: null,
-    monthsOfSupply: null,
-    soldToListPct: null,
-    pctOverAsking: null,
-    medianCapRate: null,
-    topCapRate: null,
-    stalePct: null,
-    temperature: null,
-  };
 }
