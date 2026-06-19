@@ -27,11 +27,12 @@ export default function MapModeDock() {
   const mapMode = useCommandCenterStore((s) => s.mapMode);
   const setMapMode = useCommandCenterStore((s) => s.setMapMode);
 
-  // z-20 keeps the (interactive) mode control clickable above the bottom-left
-  // MapStatusHUD (z-10), whose wide count line can otherwise overlap and intercept
-  // clicks on the Listings segment when the map is narrowed by the ledger.
+  // Desktop: bottom-center dock. Mobile: relocated to the top-left corner so the
+  // crowded bottom edge (legend HUD + the fixed List/Map toggle) no longer stacks
+  // three controls on top of each other on a ~360px canvas. z-20 keeps it above
+  // the MapStatusHUD (z-10) it now sits just above at top-left.
   return (
-    <div className="absolute bottom-16 left-2 z-20 translate-x-0 md:bottom-4 md:left-1/2 md:-translate-x-1/2">
+    <div className="absolute left-2 top-3 z-20 md:bottom-4 md:left-1/2 md:top-auto md:-translate-x-1/2">
       <div className="flex overflow-hidden border border-slate-700 bg-slate-900/90 backdrop-blur-md">
         {SEGMENTS.filter((s) => ENABLED.includes(s.id)).map((s) => {
           const active = mapMode === s.id;

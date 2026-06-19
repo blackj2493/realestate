@@ -69,7 +69,7 @@ export function AVMCalculator() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left: Property Form */}
-      <Card className="p-6 bg-gray-900/50 border-gray-800">
+      <Card className="p-4 sm:p-6 bg-gray-900/50 border-gray-800">
         <div className="space-y-6">
           <div>
             <h2 className="text-lg font-mono text-gray-100 mb-1">PROPERTY PROFILE</h2>
@@ -80,14 +80,14 @@ export function AVMCalculator() {
             <Button
               onClick={handleCalculate}
               disabled={isLoading}
-              className="flex-1 bg-blue-700 hover:bg-blue-600 text-white font-mono"
+              className="flex-1 min-h-[44px] bg-blue-700 hover:bg-blue-600 text-white font-mono"
             >
               {isLoading ? 'CALCULATING…' : 'CALCULATE ESTIMATE'}
             </Button>
             <Button
               onClick={reset}
               variant="outline"
-              className="border-gray-700 text-gray-400 hover:text-gray-200"
+              className="min-h-[44px] shrink-0 border-gray-700 text-gray-400 hover:text-gray-200"
             >
               RESET
             </Button>
