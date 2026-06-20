@@ -1,23 +1,24 @@
 /**
  * QuickLookPanel — the Command Center's interim "quick look" drawer (desktop only).
  *
- * Deliberately ZERO-FETCH: every value renders from the Typesense `ListingDocument`
- * already in memory (the list/map result), plus a client-side Deal Score via
- * `dealScoreFromDocument`. The heavy detail (full media, schools, room map, AVM
- * estimate, DOM timeline, sale history, Underwriting Sandbox) lives on the full
- * server-rendered report at /properties/[id] — reached via "Open Full Report".
+ * Mostly zero-fetch: the header, photo, specs, quick tiles and Structural Vitals all
+ * render instantly from the Typesense `ListingDocument` already in memory. ONE focused
+ * call (/api/property/[id]/deal-score) hydrates the AVM-anchored Deal Score + Estimated
+ * Sale so they match the full report /properties/[id] EXACTLY (same engine, same gating).
+ * The heavy detail (full media, schools, room map, DOM timeline, sale history, the
+ * Underwriting Sandbox) still lives only on the full report.
  *
- * Mobile never mounts this: `useOpenListing` routes phone clicks straight to the
- * full report. See src/hooks/useOpenListing.ts and src/app/properties/page.tsx.
+ * Mobile never mounts this: `useOpenListing` routes phone clicks straight to the full
+ * report. See src/hooks/useOpenListing.ts and src/app/properties/page.tsx.
  *
  * Compliance (CLAUDE.md §4): brokerage (`ListOfficeName`) is displayed in the same
- * treatment as the other details; the Deal Score is deterministic (no LLM); no
- * VOW/AVM-derived numbers are surfaced here (deferred to the gated full report).
+ * treatment as the other details; the Deal Score / estimate are deterministic (no LLM)
+ * and VOW-gated for anonymous users; the AVM disclaimer renders with the estimate.
  */
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -26,6 +27,7 @@ import {
   Bath,
   Square,
   Car,
+  Home,
   Building2,
   ExternalLink,
   GitCompareArrows,
@@ -34,12 +36,16 @@ import {
 import { cn, formatPrice } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { AlphaBadge, detectPropertyBadges } from "./AlphaBadge";
-import { DealScoreBadge } from "@/components/Property/DealScoreCard";
-import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
+import DealScoreCard from "@/components/Property/DealScoreCard";
+import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
+import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import WatchButton from "@/components/watchlist/WatchButton";
+import type { SalePriceEstimate } from "@/lib/avm/salePrice";
+import type { AVMResult } from "@/lib/avm/types";
+import type { DealScoreResult } from "@/lib/dealScore/computeDealScore";
 
 interface QuickLookPanelProps {
   property: ListingDocument;
@@ -49,9 +55,19 @@ interface QuickLookPanelProps {
 const pct = (v: number | null) => (v != null ? `${v.toFixed(1)}%` : "—");
 
 export default function QuickLookPanel({ property, onClose }: QuickLookPanelProps) {
-  const activePersona = useCommandCenterStore((s) => s.activePersona);
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const isSelected = useCommandCenterStore((s) => s.selectedIds.has(property.id));
+
+  // Authoritative, AVM-anchored Deal Score + Estimated Sale — fetched so they match the
+  // full report exactly (the index doc alone has no AVM, so a local compute would diverge).
+  const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
+  const [estimate, setEstimate] = useState<AVMResult | null>(null);
+  const [salePrice, setSalePrice] = useState<SalePriceEstimate | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [hasDealScore, setHasDealScore] = useState(false);
+  const [hasEstimate, setHasEstimate] = useState(false);
+  const [hasExpectedSale, setHasExpectedSale] = useState(false);
+  const [loadingScore, setLoadingScore] = useState(true);
 
   // Esc closes; lock body scroll while the drawer is open.
   useEffect(() => {
@@ -67,19 +83,55 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
     };
   }, [onClose]);
 
-  // Client-side, deterministic Deal Score from the index doc (no AVM fetch). The
-  // full report shows the AVM-anchored authoritative score.
-  const deal = dealScoreFromDocument(property, undefined, activePersona);
+  // Single focused fetch for the AVM-anchored score slice. The panel is keyed by
+  // listing id in the parent, so it remounts fresh per property — no manual reset needed.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/property/${property.id}/deal-score`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setDealScore(data?.dealScore ?? null);
+        setEstimate(data?.estimate ?? null);
+        setSalePrice(data?.salePrice ?? null);
+        setIsAuthed(!!data?.isAuthed);
+        setHasDealScore(!!data?.hasDealScore);
+        setHasEstimate(!!data?.hasEstimate);
+        setHasExpectedSale(!!data?.hasExpectedSale);
+      } catch {
+        /* keep the lean header — score cards simply stay hidden */
+      } finally {
+        if (!cancelled) setLoadingScore(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [property.id]);
+
   const badges = detectPropertyBadges(
     property as Parameters<typeof detectPropertyBadges>[0]
   ).slice(0, 3);
 
   const dom = property.TrueDom ?? property.calculatedDOM ?? property.DaysOnMarket ?? 0;
-  // Longer DOM = more negotiating room (buyer-favourable), so green at the top end.
   const domColor = dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-300";
   const yieldEst = grossYieldOrNull(property.gross_yield_est);
   const capRate = capRateOrNull(property.cap_rate_est);
   const hero = property.primaryImageUrl || property.thumbnailUrl;
+  const sqft = property.BuildingAreaTotal && property.BuildingAreaTotal > 0
+    ? property.BuildingAreaTotal.toLocaleString()
+    : "—";
+  const lot = property.LotWidth
+    ? `${property.LotWidth} × ${property.LotDepth || "?"}`
+    : property.LotSqftTotal
+      ? `${property.LotSqftTotal.toLocaleString()} sqft`
+      : "—";
+  const cooling = Array.isArray(property.Cooling) ? property.Cooling.join(", ") : property.Cooling;
+  const showEstimate = !loadingScore && (!!salePrice || (!isAuthed && (hasEstimate || hasExpectedSale)));
+  const showDisclaimer =
+    !loadingScore && ((salePrice?.value ?? 0) > 0 || (estimate?.estimatedValue ?? 0) > 0);
 
   return (
     <>
@@ -162,24 +214,55 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           <div className="my-4 grid grid-cols-4 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
             <Spec icon={<Bed className="h-4 w-4 text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
             <Spec icon={<Bath className="h-4 w-4 text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
-            <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={property.BuildingAreaTotal?.toLocaleString() || "N/A"} label="Sqft" />
+            <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={sqft} label="Sqft" />
             <Spec icon={<Car className="h-4 w-4 text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
           </div>
 
-          {/* Signal tiles — all from the index doc */}
+          {/* Signal tiles — instant from the index doc, while the score cards hydrate */}
           <div className="mb-4 grid grid-cols-3 gap-2">
             <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} />
             <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-400" />
             <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-slate-200" />
           </div>
 
-          {/* Deal Score — deterministic, computed client-side from the doc */}
-          {deal.score !== null && (
-            <div className="mb-4 flex items-center gap-3 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
-              <DealScoreBadge score={deal.score} grade={deal.grade} />
-              {deal.verdict && <p className="text-xs leading-snug text-slate-400">{deal.verdict}</p>}
+          {/* Deal Score — AVM-anchored, fetched so it matches the full report exactly */}
+          <div className="mb-4">
+            {loadingScore ? (
+              <ScoreSkeleton />
+            ) : dealScore ? (
+              <DealScoreCard dealScore={dealScore} locked={!isAuthed && hasDealScore} />
+            ) : null}
+          </div>
+
+          {/* Estimated Sale — flagship "shadow data" valuation */}
+          {showEstimate && (
+            <div className="mb-4">
+              <EstimatedSaleCard
+                salePrice={salePrice}
+                listPrice={property.ListPrice}
+                city={property.City}
+                propertySubType={property.PropertySubType}
+                locked={!isAuthed && (hasEstimate || hasExpectedSale)}
+              />
+              {showDisclaimer && <Disclaimers />}
             </div>
           )}
+
+          {/* Structural Vitals — zero-fetch, scannable facts from the index doc */}
+          <div className="mb-4">
+            <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+              <Home className="h-4 w-4 text-emerald-400" />
+              Structural Vitals
+            </h3>
+            <table className="w-full border-collapse text-sm">
+              <tbody className="divide-y divide-slate-800">
+                <Vital k="Lot" v={lot} />
+                <Vital k="Property Age" v={property.ApproximateAge || "—"} />
+                <Vital k="Heating" v={property.Heating || "—"} />
+                <Vital k="Cooling" v={cooling || "—"} />
+              </tbody>
+            </table>
+          </div>
 
           {/* CTAs */}
           <Link
@@ -218,7 +301,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           </div>
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-600">
-            Full financials, schools, room map, sale history &amp; the Underwriting Sandbox live in the full report.
+            Schools, room map, sale history &amp; the Underwriting Sandbox live in the full report.
           </p>
         </div>
       </aside>
@@ -241,6 +324,30 @@ function Tile({ label, value, valueClass }: { label: string; value: string; valu
     <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-2.5 text-center">
       <div className="text-[9px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className={cn("mt-1 font-mono text-sm font-bold", valueClass)}>{value}</div>
+    </div>
+  );
+}
+
+function Vital({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <tr>
+      <td className="w-1/3 py-2 text-slate-500">{k}</td>
+      <td className="py-2 font-mono text-slate-200">{v}</td>
+    </tr>
+  );
+}
+
+function ScoreSkeleton() {
+  return (
+    <div className="animate-pulse rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+      <div className="mb-3 h-3 w-24 rounded bg-slate-800" />
+      <div className="flex items-center gap-4">
+        <div className="h-[88px] w-[88px] rounded-full bg-slate-800" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-full rounded bg-slate-800" />
+          <div className="h-3 w-2/3 rounded bg-slate-800" />
+        </div>
+      </div>
     </div>
   );
 }

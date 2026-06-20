@@ -415,6 +415,7 @@ function CommandCenterContent() {
           the !isMobile guard also unmounts it cleanly on a resize down to phone. */}
       {selectedProperty && !isMobile && (
         <QuickLookPanel
+          key={selectedProperty.id}
           property={selectedProperty}
           onClose={() => setIsTerminalOpen(false)}
         />
