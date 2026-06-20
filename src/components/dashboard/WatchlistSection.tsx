@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
+import ShowMoreButton from "./ShowMoreButton";
 import { useWatchlistStore, type WatchItem } from "@/lib/watchlist/useWatchlist";
 import {
   useWatchlistSnapshot,
@@ -70,9 +72,12 @@ function ChangeChips({ change }: { change: WatchlistChange }) {
   );
 }
 
+const LIMIT = 6;
+
 export default function WatchlistSection() {
   const signedIn = useWatchlistStore((s) => s.signedIn);
   const { changes, rollup, loading } = useWatchlistSnapshot();
+  const [expanded, setExpanded] = useState(false);
 
   // While hydrating, render nothing (the snapshot hook resolves quickly).
   if (loading) return null;
@@ -135,7 +140,7 @@ export default function WatchlistSection() {
       <WatchlistPulseStrip rollup={rollup} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {changes.map((change) => {
+        {(expanded ? changes : changes.slice(0, LIMIT)).map((change) => {
           const item = change.item;
           const price = change.current?.ListPrice ?? item.list_price;
           const brokerage = change.current?.ListOfficeName;
@@ -179,6 +184,14 @@ export default function WatchlistSection() {
           );
         })}
       </div>
+
+      {changes.length > LIMIT && (
+        <ShowMoreButton
+          expanded={expanded}
+          hiddenCount={changes.length - LIMIT}
+          onToggle={() => setExpanded((v) => !v)}
+        />
+      )}
     </section>
   );
 }

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { getRecentlyViewed, type RecentListing } from "@/lib/dashboard/recentlyViewed";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
+import ShowMoreButton from "./ShowMoreButton";
+
+const LIMIT = 5;
 
 function Thumb({ item }: { item: RecentListing }) {
   return (
@@ -19,6 +22,7 @@ function Thumb({ item }: { item: RecentListing }) {
 
 export default function RecentlyViewed() {
   const [items, setItems] = useState<RecentListing[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setItems(getRecentlyViewed());
@@ -26,17 +30,21 @@ export default function RecentlyViewed() {
 
   if (items.length === 0) return null;
 
+  const visible = expanded ? items : items.slice(0, LIMIT);
+
   return (
     <section className="space-y-3">
       <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
         Recently Viewed
       </h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {items.map((item) => (
+      {/* Mobile: a snap-scroll rail of larger cards (~62% wide so the next peeks).
+          sm+: the original responsive grid. */}
+      <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-4 xl:grid-cols-6">
+        {visible.map((item) => (
           <Link
             key={item.id}
             href={`/properties/${item.id}`}
-            className="group border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-600"
+            className="group w-[62%] shrink-0 snap-start border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-600 sm:w-auto sm:shrink"
           >
             <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
               <Thumb item={item} />
@@ -62,6 +70,14 @@ export default function RecentlyViewed() {
           </Link>
         ))}
       </div>
+
+      {items.length > LIMIT && (
+        <ShowMoreButton
+          expanded={expanded}
+          hiddenCount={items.length - LIMIT}
+          onToggle={() => setExpanded((v) => !v)}
+        />
+      )}
     </section>
   );
 }
