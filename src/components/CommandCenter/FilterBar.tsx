@@ -1,23 +1,23 @@
 "use client";
 
 import React from "react";
-import { Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { CORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
+import { CORE_FILTERS, MORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive, typeOptionsForClass, priceConfig } from "@/lib/filters/fundamentals";
 import { PERSONA_CONFIG, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
-import InvestorChip from "./InvestorChip";
 import SoldWindowDropdown from "./SoldWindowDropdown";
 import LayerChips from "./LayerChips";
-import AddFilterPalette from "./AddFilterPalette";
 import MobileFilterSheet from "./MobileFilterSheet";
-import { Popover } from "@/components/ui/popover";
+import FilterDrawer from "./FilterDrawer";
+import ActiveFilterStrip from "./ActiveFilterStrip";
+import { buildFilterTokens } from "./filterTokens";
 import { formatResultNudge } from "./filterNudge";
-import { anyControlActive } from "./investorControls";
+import { anyControlActive, isControlActive } from "./investorControls";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -43,6 +43,7 @@ export default function FilterBar() {
     totalCount,
     activePersona,
     filters,
+    setFilter,
     setFilters,
     transactionMode,
     activeLayers,
@@ -99,6 +100,9 @@ export default function FilterBar() {
   // so the bar collapses to a "Filters" button that opens MobileFilterSheet.
   // Build the render-ready item lists once and share them with the sheet.
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  // Desktop: the deep field library + investor signals live in a right-side drawer
+  // behind a single count-badged button, instead of overflowing the bar.
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const coreItems = CORE_FILTERS.map((def) => {
     const useDef =
       def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
@@ -119,6 +123,27 @@ export default function FilterBar() {
     ).length + (investorActive ? 1 : 0);
   const soldWindowVisible =
     activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted");
+
+  // Badge for the desktop "Filters" drawer button — only the filters that LIVE in
+  // the drawer (deep property fields + investor signals), so it doesn't double-count
+  // the basics that stay inline on the bar.
+  const drawerActiveCount =
+    MORE_FILTERS.filter((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)).length +
+    (investorLayer ? controls.filter((c) => isControlActive(c, filters)).length : 0);
+
+  // Flatten the active filters (core + added + investor) into one removable token
+  // list for the summary strip. Gates mirror the chip rows: added + investor are
+  // active-browse only (!compOnly); investor is also residential-sale (investorLayer).
+  const tokens = buildFilterTokens({
+    coreItems,
+    addedItems,
+    controls,
+    filters,
+    setFilter,
+    removeAddedFilter,
+    showAdvanced: !compOnly,
+    showInvestor: investorLayer,
+  });
 
   return (
     <>
@@ -144,105 +169,76 @@ export default function FilterBar() {
         </button>
       </div>
 
-      {/* DESKTOP (md+): the full inline instrument bar. */}
-      <div className="no-scrollbar hidden h-11 items-center gap-x-2 overflow-x-auto border-t border-slate-800 bg-slate-950 px-3 md:flex">
-      {/* Listing-status layers — multi-select For Sale·Sold·Leased·For Rent. */}
-      <LayerChips />
-      {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && <SoldWindowDropdown />}
-
-      {/* Basics (class · price · beds · baths · type) constrain the active AND the
-          comp queries alike, so they stay visible in comp-only Sold/De-listed mode. */}
-      <FundamentalToggle
-        ariaLabel="Property class"
-        value={propertyClass}
-        onChange={setPropertyClass}
-        options={[
-          { value: "residential", label: "Residential" },
-          { value: "commercial", label: "Commercial" },
-        ]}
-      />
-      <div className="h-5 w-px shrink-0 bg-slate-800" />
-
-      {/* Persona preset now lives centered in the TopCommandBar (lifted out
-          of this row). Investor chips below still gate on `investorLayer`. */}
-      {CORE_FILTERS.map((def) => {
-        const useDef =
-          def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
-        return (
-          <FilterChip
-            key={def.key}
-            def={useDef}
-            value={universalFilters[def.key] ?? useDef.defaultValue}
-            onChange={(v) => setUniversalFilter(def.key, v)}
-            onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
+      {/* DESKTOP (md+): pinned mode anchors · scrolling filter chips · pinned nudge.
+          Layers + class no longer scroll off the right edge, and every applied filter
+          is summarised (and cleared) in the ActiveFilterStrip below. */}
+      <div className="hidden h-11 items-center border-t border-slate-800 bg-slate-950 md:flex">
+        {/* Pinned-left: listing-status layers + sold window + property class. */}
+        <div className="flex shrink-0 items-center gap-x-2 pl-3 pr-1">
+          <LayerChips />
+          {soldWindowVisible && <SoldWindowDropdown />}
+          <FundamentalToggle
+            ariaLabel="Property class"
+            value={propertyClass}
+            onChange={setPropertyClass}
+            options={[
+              { value: "residential", label: "Residential" },
+              { value: "commercial", label: "Commercial" },
+            ]}
           />
-        );
-      })}
+        </div>
+        <div className="h-5 w-px shrink-0 bg-slate-800" />
 
-      {/* Investor chips, deeper added filters and the +Add palette are active-browse
-          only: comps carry no forward metrics and the comp route ignores the deeper
-          fields, so showing them under Sold/De-listed would be misleading no-ops. */}
-      {!compOnly && (
-        <>
-          {investorLayer && (
-            <>
-              <div className="h-5 w-px shrink-0 bg-slate-800" />
-              {controls.map((c, i) => (
-                <InvestorChip key={`${activePersona}-${i}`} control={c} />
-              ))}
-            </>
+        {/* Scrolling-middle: just the basics (price · beds · baths · type). The deep
+            field library + investor signals now live in the Filters drawer, so this
+            row no longer overflows. The persona preset is centered in TopCommandBar. */}
+        <div className="no-scrollbar flex flex-1 items-center gap-x-2 overflow-x-auto px-2">
+          {CORE_FILTERS.map((def) => {
+            const useDef =
+              def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
+            return (
+              <FilterChip
+                key={def.key}
+                def={useDef}
+                value={universalFilters[def.key] ?? useDef.defaultValue}
+                onChange={(v) => setUniversalFilter(def.key, v)}
+                onClear={() => setUniversalFilter(def.key, freshDefault(useDef.defaultValue))}
+              />
+            );
+          })}
+        </div>
+
+        {/* Pinned-right: the Filters drawer button (deep + investor; active-browse only)
+            and the live result nudge. Clear lives in the strip below now. */}
+        <div className="flex shrink-0 items-center gap-3 pl-2 pr-3">
+          {!compOnly && (
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className={cn(
+                LABEL,
+                "relative flex items-center gap-1.5 border border-slate-700 px-2.5 py-1.5 text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+              Filters
+              {drawerActiveCount > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
+                  {drawerActiveCount}
+                </span>
+              )}
+            </button>
           )}
-
-          {addedDefs.map((def) => (
-            <FilterChip
-              key={def.key}
-              def={def}
-              value={universalFilters[def.key] ?? def.defaultValue}
-              onChange={(v) => setUniversalFilter(def.key, v)}
-              onClear={() => {
-                setUniversalFilter(def.key, freshDefault(def.defaultValue));
-                removeAddedFilter(def.key);
-              }}
-            />
-          ))}
-
-          <Popover
-            trigger={
-              <span
-                className={cn(
-                  LABEL,
-                  "flex shrink-0 cursor-pointer items-center gap-1 border border-dashed border-slate-700 px-2.5 py-1.5 text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
-                )}
-              >
-                <Plus className="h-3 w-3" />
-                Add filter
-              </span>
-            }
-            className="p-2"
-          >
-            <AddFilterPalette />
-          </Popover>
-        </>
-      )}
-
-      <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
-        {anyActive && (
-          <button
-            onClick={clearAll}
-            className={cn(
-              LABEL,
-              "flex items-center gap-1.5 border border-slate-700 px-2 py-1 text-slate-300 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
-            )}
-          >
-            Clear
-            <RotateCcw className="h-3 w-3" />
-          </button>
-        )}
-        <span className={cn(LABEL, nudge.overflowing ? "text-amber-400" : "text-slate-400")}>
-          {nudge.text}
-        </span>
+          <span className={cn(LABEL, nudge.overflowing ? "text-amber-400" : "text-slate-400")}>
+            {nudge.text}
+          </span>
+        </div>
       </div>
-      </div>
+
+      {/* Consolidated active-query summary — the one place that shows every applied
+          filter at once (incl. ones scrolled off the bar or hidden on mobile), each
+          removable, with a single Clear all. Renders nothing when no filter is set. */}
+      <ActiveFilterStrip tokens={tokens} onClearAll={clearAll} />
 
       {sheetOpen && (
         <MobileFilterSheet
@@ -252,6 +248,17 @@ export default function FilterBar() {
           controls={controls}
           showInvestor={investorLayer}
           showAdvanced={!compOnly}
+          clearAll={clearAll}
+          anyActive={anyActive}
+          resultCount={totalCount}
+        />
+      )}
+
+      {drawerOpen && (
+        <FilterDrawer
+          onClose={() => setDrawerOpen(false)}
+          controls={controls}
+          showInvestor={investorLayer}
           clearAll={clearAll}
           anyActive={anyActive}
           resultCount={totalCount}

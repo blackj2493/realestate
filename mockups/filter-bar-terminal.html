@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Filter Bar — Anchor · Query · Catalog (⌘K) prototype</title>
+<style>
+  :root{
+    --slate-950:#020617; --slate-900:#0f172a; --slate-850:#172033; --slate-800:#1e293b;
+    --slate-700:#334155; --slate-600:#475569; --slate-500:#64748b; --slate-400:#94a3b8;
+    --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9;
+    --emerald-400:#34d399; --emerald-500:#10b981;
+    --rose-300:#fda4af; --rose-500:#f43f5e;
+    --violet-300:#c4b5fd; --teal-300:#5eead4; --amber-400:#fbbf24; --amber-300:#fcd34d;
+    --cyan-300:#67e8f9; --cyan-400:#22d3ee; --cyan-500:#06b6d4;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:#01040c; color:var(--slate-100); font-family:var(--sans);
+    display:flex; align-items:center; justify-content:center; min-height:100vh; padding:22px;
+  }
+  .frame{
+    position:relative; width:100%; max-width:1240px; height:812px; border-radius:14px;
+    overflow:hidden; border:1px solid var(--slate-800); background:var(--slate-950);
+    box-shadow:0 30px 80px rgba(0,0,0,.6); display:flex; flex-direction:column;
+  }
+  .label{font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;}
+  .mono{font-family:var(--mono)}
+
+  /* ---------- top context bar ---------- */
+  .topbar{height:48px; flex:0 0 48px; display:flex; align-items:center; gap:16px;
+    padding:0 16px; border-bottom:1px solid var(--slate-800); background:var(--slate-950);}
+  .logo{font-weight:800; letter-spacing:.02em; font-size:14px;}
+  .logo .dot{color:var(--emerald-400)}
+  .search{flex:0 1 300px; height:30px; display:flex; align-items:center; gap:8px; padding:0 10px;
+    border:1px solid var(--slate-800); border-radius:7px; color:var(--slate-500); font-size:12px; background:var(--slate-900);}
+  .navlink{font-size:12px; color:var(--slate-400); padding:4px 8px; border-radius:6px;}
+  .navlink.active{color:var(--slate-100)}
+  .spacer{margin-left:auto}
+  .persona{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--slate-400)}
+  .persona .chip{font-family:var(--mono); font-size:11px; color:#0a0f1e; font-weight:700;
+    background:linear-gradient(180deg,#fcd34d,#f59e0b); border-radius:6px; padding:4px 10px;}
+
+  /* ================= THE FILTER BAR (the prototype) ================= */
+  .fbar{flex:0 0 auto; background:var(--slate-950); border-bottom:1px solid var(--slate-800)}
+
+  /* line 1 — anchors + quick actions (always present) */
+  .fbar-main{display:flex; align-items:center; gap:10px; height:46px; padding:0 14px; overflow:hidden}
+
+  /* segmented controls (mode anchors — pinned, never reflow) */
+  .seg{display:flex; align-items:stretch; border:1px solid var(--slate-800); border-radius:7px; overflow:hidden; flex:0 0 auto}
+  .seg button{font:inherit; cursor:pointer; border:0; background:var(--slate-900); color:var(--slate-400);
+    padding:0 11px; height:30px; font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+    border-right:1px solid var(--slate-800); transition:.12s}
+  .seg button:last-child{border-right:0}
+  .seg button:hover{color:var(--slate-200)}
+  .seg button[data-on="1"]{color:#01040c; font-weight:700}
+  .seg.layers button[data-k="forSale"][data-on="1"]{background:var(--emerald-500)}
+  .seg.layers button[data-k="sold"][data-on="1"]{background:var(--rose-500); color:#fff}
+  .seg.layers button[data-k="leased"][data-on="1"]{background:#8b5cf6; color:#fff}
+  .seg.layers button[data-k="delisted"][data-on="1"]{background:var(--amber-400)}
+  .seg.layers button[data-k="forRent"][data-on="1"]{background:#14b8a6; color:#fff}
+  .seg.klass button[data-on="1"]{background:var(--slate-200); color:#01040c}
+
+  .vsep{width:1px; height:24px; background:var(--slate-800); flex:0 0 auto}
+
+  /* quick anchor filter buttons (the 95% filters) */
+  .quick{display:flex; align-items:center; gap:6px; height:30px; padding:0 11px; cursor:pointer;
+    border:1px solid var(--slate-800); border-radius:7px; background:var(--slate-900); color:var(--slate-300);
+    font-size:11px; font-weight:600; transition:.12s; flex:0 0 auto; white-space:nowrap}
+  .quick:hover{border-color:var(--slate-700); color:var(--slate-100)}
+  .quick[data-active="1"]{border-color:rgba(34,211,238,.5); background:rgba(34,211,238,.1); color:var(--cyan-300)}
+  .quick .car{font-size:9px; color:var(--slate-500)}
+
+  /* the catalog button — collapses ALL deeper/investor filters */
+  .catalog{display:flex; align-items:center; gap:7px; height:30px; padding:0 12px; cursor:pointer;
+    border:1px solid var(--slate-700); border-radius:7px; background:linear-gradient(180deg,#13203a,#0d1830);
+    color:var(--slate-200); font-size:11px; font-weight:600; transition:.12s; flex:0 0 auto}
+  .catalog:hover{border-color:rgba(34,211,238,.5); color:var(--cyan-300)}
+  .catalog .cnt{display:grid; place-items:center; min-width:16px; height:16px; padding:0 4px; border-radius:99px;
+    background:var(--cyan-500); color:#01040c; font-size:10px; font-weight:800; font-family:var(--mono)}
+
+  /* ⌘K launcher */
+  .cmdk{display:flex; align-items:center; gap:8px; height:30px; padding:0 11px; cursor:pointer;
+    border:1px dashed var(--slate-700); border-radius:7px; color:var(--slate-400); font-size:11px;
+    transition:.12s; flex:0 0 auto}
+  .cmdk:hover{border-color:rgba(34,211,238,.5); color:var(--cyan-300)}
+  .kbd{font-family:var(--mono); font-size:10px; color:var(--slate-300); border:1px solid var(--slate-700);
+    border-bottom-width:2px; border-radius:5px; padding:1px 5px; background:var(--slate-900)}
+
+  .nudge{margin-left:auto; flex:0 0 auto; font-family:var(--mono); font-size:11px; color:var(--slate-400)}
+  .nudge b{color:var(--cyan-300); font-weight:700}
+  .nudge.warn b{color:var(--amber-400)}
+
+  /* line 2 — the QUERY STRIP (only when ≥1 filter active) */
+  .qstrip{display:flex; align-items:center; gap:8px; min-height:38px; padding:7px 14px;
+    border-top:1px solid var(--slate-850); background:rgba(8,15,30,.55); flex-wrap:wrap}
+  .qstrip.empty{color:var(--slate-600); font-size:11.5px}
+  .qstrip .lead{font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--slate-500); font-weight:700}
+  .token{display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 4px 0 10px; border-radius:6px;
+    border:1px solid rgba(34,211,238,.4); background:rgba(34,211,238,.1); color:var(--cyan-300);
+    font-family:var(--mono); font-size:11.5px; font-weight:600; white-space:nowrap}
+  .token.invest{border-color:rgba(251,191,36,.42); background:rgba(251,191,36,.1); color:var(--amber-300)}
+  .token .xt{display:grid; place-items:center; width:18px; height:18px; border-radius:4px; cursor:pointer; color:inherit; opacity:.65}
+  .token .xt:hover{opacity:1; background:rgba(255,255,255,.08)}
+  .token svg{width:11px;height:11px}
+  .clearall{margin-left:6px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--slate-400);
+    cursor:pointer; border:1px solid var(--slate-800); border-radius:6px; padding:5px 9px; background:transparent}
+  .clearall:hover{color:var(--rose-300); border-color:rgba(244,63,94,.4)}
+  .qhint .kbd{margin:0 2px}
+
+  /* ---------- body: ledger + map (context only) ---------- */
+  .body{flex:1; display:flex; min-height:0}
+  .ledger{flex:0 0 300px; border-right:1px solid var(--slate-800); background:rgba(2,6,23,.7); overflow:hidden}
+  .ledger h4{margin:0; padding:10px 14px; font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--slate-500); border-bottom:1px solid var(--slate-800)}
+  .lrow{padding:11px 14px; border-bottom:1px solid var(--slate-850); display:flex; flex-direction:column; gap:3px}
+  .lrow.sel{background:rgba(6,182,212,.08); box-shadow:inset 2px 0 0 var(--cyan-400)}
+  .lrow .addr{font-size:12.5px; color:var(--slate-200); font-weight:600}
+  .lrow .meta{font-size:11px; color:var(--slate-500); font-family:var(--mono)}
+  .map{flex:1; position:relative; overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 70% 20%, rgba(6,182,212,.1), transparent 60%),
+      radial-gradient(90% 80% at 25% 80%, rgba(16,185,129,.1), transparent 55%),
+      linear-gradient(160deg,#0a1322,#0b1424 60%,#0a1120);}
+  .grid-overlay{position:absolute; inset:0; opacity:.22;
+    background-image:linear-gradient(rgba(148,163,184,.12) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(148,163,184,.12) 1px,transparent 1px); background-size:46px 46px;}
+  .hex{position:absolute; width:54px; height:48px; opacity:.5;
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);}
+  .maptag{position:absolute; left:16px; bottom:16px; font-family:var(--mono); font-size:10px; color:var(--slate-500);
+    background:rgba(2,6,23,.7); border:1px solid var(--slate-800); border-radius:7px; padding:6px 10px}
+
+  /* ---------- popovers ---------- */
+  .pop{position:absolute; z-index:40; min-width:228px; background:#0a1120; border:1px solid var(--slate-700);
+    border-radius:10px; box-shadow:0 20px 50px rgba(0,0,0,.6); padding:12px; display:none}
+  .pop.show{display:block; animation:pop .12s ease}
+  @keyframes pop{from{opacity:0; transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .pop h5{margin:0 0 8px; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--slate-500);
+    display:flex; justify-content:space-between; align-items:center}
+  .pop h5 .val{font-family:var(--mono); font-size:12px; color:var(--cyan-400); text-transform:none; letter-spacing:0}
+  .histo{display:flex; align-items:flex-end; gap:2px; height:42px; margin-bottom:10px}
+  .histo i{flex:1; background:rgba(34,211,238,.22); border-radius:2px 2px 0 0; min-height:3px}
+  .histo i.dim{background:var(--slate-800)}
+  .rangerow{display:flex; align-items:center; gap:7px}
+  .rangerow input{width:100%; height:30px; background:var(--slate-950); border:1px solid var(--slate-700);
+    border-radius:6px; color:var(--slate-100); font-family:var(--mono); font-size:12px; padding:0 8px; text-align:center}
+  .rangerow span{font-size:10px; color:var(--slate-500); text-transform:uppercase}
+  .steprow{display:flex; flex-wrap:wrap; gap:5px}
+  .step{width:38px; height:30px; border:1px solid var(--slate-800); border-radius:6px; background:var(--slate-900);
+    color:var(--slate-300); font-size:12px; font-weight:600; cursor:pointer; font-family:var(--mono)}
+  .step[data-on="1"]{border-color:rgba(34,211,238,.6); background:rgba(34,211,238,.12); color:var(--cyan-300)}
+  .modetoggle{display:flex; border:1px solid var(--slate-800); border-radius:6px; overflow:hidden}
+  .modetoggle button{flex:1; border:0; background:transparent; color:var(--slate-500); font:inherit; font-size:10px;
+    text-transform:uppercase; letter-spacing:.06em; padding:5px 0; cursor:pointer}
+  .modetoggle button[data-on="1"]{background:rgba(34,211,238,.12); color:var(--cyan-300)}
+  .optrow{display:flex; align-items:center; justify-content:space-between; padding:7px 4px; cursor:pointer; font-size:12.5px;
+    color:var(--slate-300); border-radius:6px}
+  .optrow:hover{background:rgba(148,163,184,.06)}
+  .optrow .ck{display:grid; place-items:center; width:15px; height:15px; border:1px solid var(--slate-600); border-radius:3px}
+  .optrow[data-on="1"]{color:var(--cyan-300)}
+  .optrow[data-on="1"] .ck{border-color:var(--cyan-500); background:rgba(34,211,238,.2)}
+  .optrow .ck b{width:7px;height:7px;background:var(--cyan-400);border-radius:1px;display:none}
+  .optrow[data-on="1"] .ck b{display:block}
+  .optrow .n{font-family:var(--mono); font-size:10.5px; color:var(--slate-500)}
+
+  /* ---------- ⌘K command palette ---------- */
+  .overlay{position:absolute; inset:0; z-index:60; display:none; background:rgba(2,6,23,.72); backdrop-filter:blur(2px);
+    align-items:flex-start; justify-content:center; padding-top:96px}
+  .overlay.show{display:flex}
+  .palette{width:540px; max-width:92%; background:#0a1120; border:1px solid var(--slate-700); border-radius:14px;
+    box-shadow:0 40px 90px rgba(0,0,0,.7); overflow:hidden; animation:pop .14s ease}
+  .pal-input{display:flex; align-items:center; gap:11px; padding:14px 16px; border-bottom:1px solid var(--slate-800)}
+  .pal-input .pr{color:var(--cyan-400); font-family:var(--mono); font-weight:700; font-size:15px}
+  .pal-input input{flex:1; background:transparent; border:0; outline:0; color:var(--slate-100); font-size:16px; font-family:var(--mono)}
+  .pal-input input::placeholder{color:var(--slate-600)}
+  .pal-list{max-height:340px; overflow-y:auto; padding:8px}
+  .pal-list::-webkit-scrollbar{width:0}
+  .pal-sect{font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--slate-600); padding:9px 10px 5px; font-weight:700;
+    display:flex; align-items:center; gap:7px}
+  .pal-sect .sugg{color:var(--amber-400)}
+  .pal-item{display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:8px; cursor:pointer}
+  .pal-item.hi{background:rgba(34,211,238,.1)}
+  .pal-ic{display:grid; place-items:center; width:26px; height:26px; border-radius:7px; background:var(--slate-850);
+    color:var(--slate-400); flex:0 0 auto; font-family:var(--mono); font-size:12px; font-weight:700}
+  .pal-item.sugg .pal-ic{background:rgba(251,191,36,.14); color:var(--amber-300)}
+  .pal-tx{flex:1; min-width:0}
+  .pal-tx .t{font-size:13px; color:var(--slate-100)}
+  .pal-tx .s{font-size:11px; color:var(--slate-500); margin-top:1px}
+  .pal-tx .t em{font-style:normal; color:var(--cyan-300)}
+  .pal-meta{font-family:var(--mono); font-size:10px; color:var(--slate-600); flex:0 0 auto}
+  .pal-foot{display:flex; gap:16px; padding:9px 16px; border-top:1px solid var(--slate-800); font-size:10.5px; color:var(--slate-600)}
+  .pal-foot b{color:var(--slate-400); font-weight:600}
+  .pal-foot .kbd{font-size:9px}
+
+  /* ---------- catalog drawer (the promoted mobile-sheet, on desktop) ---------- */
+  .drawer{position:absolute; top:0; right:0; height:100%; width:360px; z-index:50; transform:translateX(100%);
+    background:linear-gradient(180deg,#0b1322,#0a1020); border-left:1px solid var(--slate-800);
+    box-shadow:-24px 0 60px rgba(0,0,0,.5); display:flex; flex-direction:column; transition:transform .2s cubic-bezier(.22,1,.36,1)}
+  .drawer.show{transform:none}
+  .dr-head{display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-bottom:1px solid var(--slate-800)}
+  .dr-head .t{display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--slate-100); font-weight:700}
+  .dr-search{margin:12px 16px 6px; height:32px; display:flex; align-items:center; gap:8px; padding:0 10px;
+    border:1px solid var(--slate-800); border-radius:7px; color:var(--slate-500); font-size:12px}
+  .dr-body{flex:1; overflow-y:auto; padding:8px 16px 16px}
+  .dr-body::-webkit-scrollbar{width:0}
+  .dr-cat{font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--slate-500); font-weight:700; margin:16px 0 7px}
+  .dr-item{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--slate-800);
+    border-radius:8px; margin-bottom:6px; cursor:pointer; transition:.12s}
+  .dr-item:hover{border-color:var(--slate-700)}
+  .dr-item[data-on="1"]{border-color:rgba(34,211,238,.45); background:rgba(34,211,238,.07)}
+  .dr-item[data-on="1"].inv{border-color:rgba(251,191,36,.45); background:rgba(251,191,36,.07)}
+  .dr-item .nm{font-size:12.5px; color:var(--slate-200)}
+  .dr-item .vl{font-family:var(--mono); font-size:11px; color:var(--slate-500)}
+  .dr-item[data-on="1"] .vl{color:var(--cyan-300)}
+  .dr-item[data-on="1"].inv .vl{color:var(--amber-300)}
+  .iconbtn{display:grid; place-items:center; width:30px; height:30px; border-radius:7px; border:1px solid var(--slate-700);
+    background:var(--slate-800); color:var(--slate-400); cursor:pointer}
+  .iconbtn:hover{color:var(--slate-200)}
+  svg.i{width:14px;height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+
+  /* ---------- annotation legend ---------- */
+  .legend{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:6; width:min(680px,92%);
+    background:rgba(2,6,23,.86); border:1px solid var(--slate-800); border-radius:11px; padding:11px 16px; backdrop-filter:blur(5px)}
+  .legend h5{margin:0 0 7px; font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--slate-500)}
+  .legend ul{margin:0; padding:0; list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:5px 22px}
+  .legend li{font-size:11px; color:var(--slate-400); display:flex; gap:7px; align-items:flex-start; line-height:1.35}
+  .legend .tick{flex:0 0 auto; font-family:var(--mono); font-weight:700; color:var(--cyan-400)}
+  .legend b{color:var(--slate-200); font-weight:600}
+</style>
+</head>
+<body>
+<div class="frame" id="frame">
+
+  <!-- ===== top context bar ===== -->
+  <div class="topbar">
+    <div class="logo">Pure<span class="dot">Property</span></div>
+    <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Toronto · Roncesvalles</div>
+    <span class="navlink active">Terminal</span>
+    <span class="navlink">Analytics</span>
+    <span class="navlink">AVM</span>
+    <div class="spacer"></div>
+    <div class="persona">Persona <span class="chip">Cashflow ▾</span></div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- ===============     THE FILTER BAR (prototype)   ============= -->
+  <!-- ============================================================= -->
+  <div class="fbar">
+
+    <!-- line 1 : anchors (pinned) + quick filters + catalog + ⌘K + nudge -->
+    <div class="fbar-main">
+      <!-- MODE anchors — pinned left, never reflow -->
+      <div class="seg layers" id="segLayers">
+        <button data-k="forSale">For Sale</button>
+        <button data-k="sold">Sold</button>
+        <button data-k="leased">Leased</button>
+        <button data-k="delisted">De-listed</button>
+        <button data-k="forRent">For Rent</button>
+      </div>
+      <div class="seg klass" id="segKlass">
+        <button data-k="residential">Res</button>
+        <button data-k="commercial">Comm</button>
+      </div>
+
+      <div class="vsep"></div>
+
+      <!-- 95% quick filters -->
+      <div class="quick" id="qPrice">Price <span class="car">▾</span></div>
+      <div class="quick" id="qBeds">Beds <span class="car">▾</span></div>
+      <div class="quick" id="qType">Type <span class="car">▾</span></div>
+
+      <!-- everything else collapses here -->
+      <div class="catalog" id="catalogBtn">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 4h18M6 9h12M9 14h6M11 19h2"/></svg>
+        Filters <span class="cnt" id="catCount" style="display:none">0</span>
+      </div>
+
+      <div class="cmdk" id="cmdkBtn">
+        <svg class="i" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        Command <span class="kbd">⌘K</span>
+      </div>
+
+      <div class="nudge" id="nudge"><b>142</b> results</div>
+    </div>
+
+    <!-- line 2 : the QUERY STRIP — only the ACTIVE filters, as a sentence -->
+    <div class="qstrip empty" id="qstrip"></div>
+  </div>
+
+  <!-- ===== body (context) ===== -->
+  <div class="body">
+    <div class="ledger">
+      <h4>Ledger · sorted by Deal Score</h4>
+      <div class="lrow sel"><span class="addr">412 Roncesvalles Ave</span><span class="meta">$1,189,000 · 3bd · DOM 62</span></div>
+      <div class="lrow"><span class="addr">88 Marine Parade Dr</span><span class="meta">$929,000 · 2bd · DOM 14</span></div>
+      <div class="lrow"><span class="addr">1500 Bathurst St</span><span class="meta">$1,449,000 · 4bd · DOM 9</span></div>
+      <div class="lrow"><span class="addr">21 Earlscourt Ave</span><span class="meta">$849,900 · 3bd · DOM 41</span></div>
+      <div class="lrow"><span class="addr">77 Indian Grove</span><span class="meta">$1,675,000 · 5bd · DOM 5</span></div>
+      <div class="lrow"><span class="addr">300 Front St W</span><span class="meta">$799,000 · 1bd · DOM 73</span></div>
+    </div>
+    <div class="map">
+      <div class="grid-overlay"></div>
+      <div class="hex" style="left:60%;top:25%;background:var(--cyan-500)"></div>
+      <div class="hex" style="left:67%;top:31%;background:var(--emerald-500)"></div>
+      <div class="hex" style="left:54%;top:34%;background:var(--amber-400)"></div>
+      <div class="hex" style="left:40%;top:60%;background:var(--emerald-500)"></div>
+      <div class="hex" style="left:47%;top:66%;background:var(--cyan-500)"></div>
+      <div class="maptag mono">deck.gl · yield-colored · 142 pins</div>
+    </div>
+  </div>
+
+  <!-- ===== popovers ===== -->
+  <div class="pop" id="popPrice">
+    <h5>Price <span class="val" id="popPriceVal">Any</span></h5>
+    <div class="histo" id="popPriceHisto"></div>
+    <div class="rangerow">
+      <input id="priceMin" placeholder="No min" inputmode="numeric"/>
+      <span>to</span>
+      <input id="priceMax" placeholder="No max" inputmode="numeric"/>
+    </div>
+  </div>
+
+  <div class="pop" id="popBeds">
+    <h5>Beds <div class="modetoggle" id="bedsMode"><button data-m="min" data-on="1">Min</button><button data-m="exact">Exact</button></div></h5>
+    <div class="steprow" id="bedsSteps"></div>
+  </div>
+
+  <div class="pop" id="popType">
+    <h5>Property Type</h5>
+    <div id="typeOpts"></div>
+  </div>
+
+  <!-- ===== ⌘K command palette ===== -->
+  <div class="overlay" id="overlay">
+    <div class="palette" onclick="event.stopPropagation()">
+      <div class="pal-input">
+        <span class="pr">›</span>
+        <input id="palInput" placeholder="Filter by anything — try “under 800k”, “4bd finished basement”, “cap > 5”…" autocomplete="off"/>
+      </div>
+      <div class="pal-list" id="palList"></div>
+      <div class="pal-foot">
+        <span><b>↑↓</b> navigate</span><span><b>↵</b> apply</span><span><b>esc</b> close</span>
+        <span style="margin-left:auto"><b class="mono">⌘K</b> reaches every filter — no scrolling</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== catalog drawer (promoted mobile sheet) ===== -->
+  <div class="drawer" id="drawer" onclick="event.stopPropagation()">
+    <div class="dr-head">
+      <span class="t"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18M6 9h12M9 14h6M11 19h2"/></svg> All Filters</span>
+      <button class="iconbtn" id="drawerClose"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="dr-search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Search filters…</div>
+    <div class="dr-body" id="drawerBody"></div>
+  </div>
+
+  <!-- ===== annotation ===== -->
+  <div class="legend">
+    <h5>What changed — Anchor · Query · Catalog</h5>
+    <ul>
+      <li><span class="tick">1</span><span><b>Mode anchors pinned</b> — Layers + Res/Comm never scroll off or reflow.</span></li>
+      <li><span class="tick">2</span><span><b>Query strip</b> shows only <em>active</em> filters as a removable sentence — the missing "what's applied" view.</span></li>
+      <li><span class="tick">3</span><span><b>One "Filters" button</b> collapses 15+ deep/investor chips — zero horizontal scroll.</span></li>
+      <li><span class="tick">4</span><span><b>⌘K command line</b> parses <em>any</em> filter (incl. cap/yield/lot) — terminal-native, no hunting.</span></li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+//// ----- state -----
+const S = {
+  layers: new Set(['forSale']),
+  klass: 'residential',
+  price: {min:null, max:null},
+  beds: {n:0, exact:false},
+  types: new Set(),
+  deep: {}, // key -> {label, value, invest?}
+};
+
+//// ----- filter catalog (mirrors filterRegistry: core + MORE_FILTERS + investor) -----
+const TYPES = ['Detached','Semi-Detached','Townhouse','Condo Apt','Condo Townhouse'];
+const CATALOG = [
+  // deep "Property" filters (MORE_FILTERS)
+  {key:'basement', cat:'Property', label:'Basement', kind:'enum', opts:['Finished','Walk-Out','Separate Entrance','Apartment'], n:'48%'},
+  {key:'suite',    cat:'Property', label:'Suite Potential', kind:'toggle', token:'Suite potential', n:'61%'},
+  {key:'multiUnit',cat:'Property', label:'Multi-Unit', kind:'enum', opts:['Existing multi-unit','Prime candidate'], n:'9%'},
+  {key:'parking',  cat:'Property', label:'Parking', kind:'step', unit:'Parking', n:''},
+  {key:'kitchens', cat:'Property', label:'Kitchens', kind:'step', unit:'Kitchen', n:''},
+  {key:'lotSize',  cat:'Property', label:'Lot Size', kind:'rangeNum', unit:'sf', n:''},
+  {key:'lotFront', cat:'Property', label:'Lot Frontage', kind:'rangeNum', unit:'ft', n:''},
+  {key:'age',      cat:'Property', label:'Property Age', kind:'enum', opts:['New','0-5 yrs','6-15 yrs','16-30 yrs'], n:''},
+  {key:'maintFee', cat:'Property', label:'Maint. Fee', kind:'rangeNum', unit:'/mo', n:''},
+  // investor (persona) controls
+  {key:'cap',   cat:'Investor', label:'Cap Rate', kind:'min', unit:'%', invest:true, n:'sortable'},
+  {key:'yield', cat:'Investor', label:'Gross Yield', kind:'min', unit:'%', invest:true, n:'sortable'},
+  {key:'carry', cat:'Investor', label:'Max Carry Cost', kind:'max', unit:'/mo', invest:true},
+  {key:'dom',   cat:'Investor', label:'True DOM', kind:'min', unit:'d', invest:true},
+  {key:'drop',  cat:'Investor', label:'Price Drop', kind:'min', unit:'%', invest:true},
+  {key:'stale', cat:'Investor', label:'Stale Only', kind:'toggle', token:'Stale only', invest:true},
+  {key:'zoning',cat:'Investor', label:'Density-Ready', kind:'toggle', token:'Density-ready', invest:true, n:'14%'},
+];
+const BY_KEY = Object.fromEntries(CATALOG.map(c=>[c.key,c]));
+
+//// ----- formatting -----
+const fmtK = v => v>=1e6 ? '$'+(v/1e6).toFixed(v%1e6?1:0)+'M' : v>=1e3 ? '$'+Math.round(v/1e3)+'k' : '$'+v;
+const parseMoney = s => { if(!s) return null; s=(''+s).toLowerCase().replace(/[$,\s]/g,'');
+  let m=s.match(/^([\d.]+)(k|m)?$/); if(!m) return null; let n=parseFloat(m[1]); if(m[2]==='k')n*=1e3; if(m[2]==='m')n*=1e6; return Math.round(n); };
+
+//// ----- derived: result count (fake but reactive) -----
+function resultCount(){
+  let n = 142;
+  if(S.price.min) n=Math.round(n*0.7);
+  if(S.price.max) n=Math.round(n*0.65);
+  if(S.beds.n) n=Math.round(n*(0.9-S.beds.n*0.08));
+  n -= S.types.size*9;
+  n -= Object.keys(S.deep).length*11;
+  return Math.max(3, n);
+}
+
+//// ----- render -----
+function activeTokens(){
+  const t=[];
+  // price
+  if(S.price.min||S.price.max){
+    let lbl = S.price.min&&S.price.max ? fmtK(S.price.min)+'–'+fmtK(S.price.max)
+            : S.price.min ? fmtK(S.price.min)+'+' : '≤'+fmtK(S.price.max);
+    t.push({id:'price', label:lbl});
+  }
+  if(S.beds.n) t.push({id:'beds', label:S.beds.n+(S.beds.exact?'':'+')+' Bd'});
+  if(S.types.size) t.push({id:'type', label: S.types.size===1?[...S.types][0]:S.types.size+' types'});
+  for(const k in S.deep){ const d=S.deep[k]; t.push({id:'deep:'+k, label:d.label, invest:d.invest}); }
+  return t;
+}
+
+function render(){
+  // segmented anchors
+  document.querySelectorAll('#segLayers button').forEach(b=> b.dataset.on = S.layers.has(b.dataset.k)?'1':'0');
+  document.querySelectorAll('#segKlass button').forEach(b=> b.dataset.on = (S.klass===b.dataset.k)?'1':'0');
+
+  // quick buttons active state + inline label
+  const pAct=!!(S.price.min||S.price.max), bAct=!!S.beds.n, tAct=!!S.types.size;
+  qPrice.dataset.active=pAct?'1':'0';
+  qPrice.firstChild.textContent = pAct ? (S.price.min&&S.price.max?fmtK(S.price.min)+'–'+fmtK(S.price.max):S.price.min?fmtK(S.price.min)+'+':'≤'+fmtK(S.price.max))+' ' : 'Price ';
+  qBeds.dataset.active=bAct?'1':'0';
+  qBeds.firstChild.textContent = bAct ? S.beds.n+(S.beds.exact?'':'+')+' Bd ' : 'Beds ';
+  qType.dataset.active=tAct?'1':'0';
+  qType.firstChild.textContent = tAct ? (S.types.size===1?[...S.types][0]:S.types.size+' types')+' ' : 'Type ';
+
+  // catalog count = deep filters only
+  const dc=Object.keys(S.deep).length;
+  catCount.style.display = dc?'grid':'none'; catCount.textContent=dc;
+
+  // query strip
+  const tokens=activeTokens();
+  const strip=document.getElementById('qstrip');
+  if(!tokens.length){
+    strip.className='qstrip empty';
+    strip.innerHTML = '<span class="lead">No filters</span> <span class="qhint">— pick Price / Beds / Type, hit <span class="kbd">Filters</span>, or press <span class="kbd">⌘K</span></span>';
+  } else {
+    strip.className='qstrip';
+    strip.innerHTML = '<span class="lead">Showing</span>' + tokens.map(tk=>
+      `<span class="token ${tk.invest?'invest':''}">${tk.label}<span class="xt" data-rm="${tk.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg></span></span>`
+    ).join('') + '<button class="clearall" id="clearAll">Clear all</button>';
+  }
+
+  // nudge
+  const n=resultCount();
+  nudge.className = n>500?'nudge warn':'nudge';
+  nudge.innerHTML = `<b>${n}</b> result${n===1?'':'s'}` + (n>500?' · narrow to map all':'');
+}
+
+//// ----- remove token -----
+document.getElementById('qstrip').addEventListener('click', e=>{
+  const rm=e.target.closest('[data-rm]'); if(rm){ removeFilter(rm.dataset.rm); }
+  if(e.target.id==='clearAll'){ S.price={min:null,max:null}; S.beds={n:0,exact:false}; S.types.clear(); S.deep={}; render(); }
+});
+function removeFilter(id){
+  if(id==='price') S.price={min:null,max:null};
+  else if(id==='beds') S.beds={n:0,exact:false};
+  else if(id==='type') S.types.clear();
+  else if(id.startsWith('deep:')) delete S.deep[id.slice(5)];
+  render(); syncDrawer();
+}
+
+//// ----- anchors -----
+segLayers.addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return;
+  const k=b.dataset.k; if(S.layers.has(k)&&S.layers.size>1) S.layers.delete(k); else S.layers.add(k); render(); });
+segKlass.addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ S.klass=b.dataset.k; render(); } });
+
+//// ----- popovers -----
+function openPop(pop, anchor){
+  closePops();
+  const r=anchor.getBoundingClientRect(), f=frame.getBoundingClientRect();
+  pop.style.left=(r.left-f.left)+'px'; pop.style.top=(r.bottom-f.top+6)+'px';
+  pop.classList.add('show');
+}
+function closePops(){ document.querySelectorAll('.pop').forEach(p=>p.classList.remove('show')); }
+document.addEventListener('click', e=>{ if(!e.target.closest('.pop')&&!e.target.closest('.quick')) closePops(); });
+
+// price histogram (static shape)
+const PHISTO=[3,6,10,16,22,26,24,19,14,10,7,5,3,2];
+function drawPriceHisto(){
+  const lo=S.price.min??0, hi=S.price.max??3e6;
+  popPriceHisto.innerHTML = PHISTO.map((h,i)=>{ const c=(i+0.5)/PHISTO.length*3e6;
+    const dim = c<lo||c>hi ? 'dim':''; return `<i class="${dim}" style="height:${h*1.6}px"></i>`; }).join('');
+  popPriceVal.textContent = (S.price.min||S.price.max) ? (S.price.min?fmtK(S.price.min):'$0')+'–'+(S.price.max?fmtK(S.price.max):'$3M') : 'Any';
+}
+qPrice.addEventListener('click', ()=>{ openPop(popPrice,qPrice); priceMin.value=S.price.min?S.price.min:''; priceMax.value=S.price.max?S.price.max:''; drawPriceHisto(); });
+priceMin.addEventListener('input', ()=>{ S.price.min=parseMoney(priceMin.value); drawPriceHisto(); render(); });
+priceMax.addEventListener('input', ()=>{ S.price.max=parseMoney(priceMax.value); drawPriceHisto(); render(); });
+
+// beds stepper
+function drawBeds(){
+  bedsSteps.innerHTML = Array.from({length:8},(_,i)=>i).map(n=>
+    `<button class="step" data-n="${n}" data-on="${S.beds.n===n?'1':'0'}">${n===0?'Any':S.beds.exact?n:n+'+'}</button>`).join('');
+  bedsMode.querySelectorAll('button').forEach(b=> b.dataset.on=((b.dataset.m==='exact')===S.beds.exact)?'1':'0');
+}
+qBeds.addEventListener('click', ()=>{ openPop(popBeds,qBeds); drawBeds(); });
+bedsSteps.addEventListener('click', e=>{ const b=e.target.closest('.step'); if(b){ S.beds.n=+b.dataset.n; drawBeds(); render(); } });
+bedsMode.addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ S.beds.exact=b.dataset.m==='exact'; drawBeds(); render(); } });
+
+// type enum
+function drawType(){
+  typeOpts.innerHTML = TYPES.map(t=>
+    `<div class="optrow" data-t="${t}" data-on="${S.types.has(t)?'1':'0'}"><span><span class="ck"><b></b></span> ${t}</span><span class="n">${Math.round(Math.random()*40+8)}</span></div>`).join('');
+}
+qType.addEventListener('click', ()=>{ openPop(popType,qType); drawType(); });
+typeOpts.addEventListener('click', e=>{ const r=e.target.closest('.optrow'); if(r){ const t=r.dataset.t;
+  S.types.has(t)?S.types.delete(t):S.types.add(t); drawType(); render(); } });
+
+//// ----- catalog drawer -----
+function drawDrawer(){
+  const cats=['Property','Investor'];
+  drawerBody.innerHTML = cats.map(cat=>{
+    const items=CATALOG.filter(c=>c.cat===cat);
+    return `<div class="dr-cat">${cat}</div>` + items.map(c=>{
+      const on=!!S.deep[c.key];
+      const vl = on ? S.deep[c.key].label.replace(/^.*?:\s*/,'') : (c.kind==='toggle'?'Off': c.n||'Add');
+      return `<div class="dr-item ${c.invest?'inv':''}" data-k="${c.key}" data-on="${on?'1':'0'}">
+        <span class="nm">${c.label}</span><span class="vl">${on? '✓ '+miniVal(c):c.n||(c.kind==='toggle'?'':'Any')}</span></div>`;
+    }).join('');
+  }).join('');
+}
+function miniVal(c){ const d=S.deep[c.key]; if(!d) return ''; return d.short||d.label; }
+function toggleDeep(key){
+  const c=BY_KEY[key];
+  if(S.deep[key]){ delete S.deep[key]; }
+  else {
+    // demo defaults per kind
+    let label, short;
+    if(c.kind==='toggle'){ label=c.token; short='On'; }
+    else if(c.kind==='enum'){ const v=c.opts[0]; label=`${c.label}: ${v}`; short=v; }
+    else if(c.kind==='min'){ const v=c.key==='cap'?5:c.key==='yield'?4:c.key==='dom'?30:c.key==='drop'?3:1; label=`${c.label} ≥ ${v}${c.unit}`; short=`≥${v}${c.unit}`; }
+    else if(c.kind==='max'){ const v=c.key==='carry'?2500:1; label=`${c.label} ≤ ${v}${c.unit}`; short=`≤${v}${c.unit}`; }
+    else if(c.kind==='step'){ label=`2+ ${c.unit}`; short='2+'; }
+    else if(c.kind==='rangeNum'){ const v=c.key==='lotSize'?5000:c.key==='lotFront'?40:200; label=`${c.label} ${v}+${c.unit}`; short=`${v}+`; }
+    S.deep[key]={label, short, invest:c.invest};
+  }
+  render(); drawDrawer();
+}
+function syncDrawer(){ if(drawer.classList.contains('show')) drawDrawer(); }
+catalogBtn.addEventListener('click', ()=>{ drawer.classList.add('show'); drawDrawer(); });
+drawerClose.addEventListener('click', ()=> drawer.classList.remove('show'));
+drawerBody.addEventListener('click', e=>{ const it=e.target.closest('.dr-item'); if(it) toggleDeep(it.dataset.k); });
+frame.addEventListener('click', e=>{ if(drawer.classList.contains('show') && !e.target.closest('#drawer') && !e.target.closest('#catalogBtn')) drawer.classList.remove('show'); });
+
+//// ----- ⌘K command palette -----
+let palIdx=0, palResults=[];
+function palCommands(q){
+  q=q.trim().toLowerCase();
+  const out=[];
+  // 1) live parse of the literal query
+  const parsed=parseCommand(q);
+  if(parsed) out.push({...parsed, parsed:true});
+  // 2) catalog as searchable commands
+  const quick=[
+    {label:'Price', s:'e.g. “under 800k”, “500k-1.2m”', apply:()=>{}, key:'price'},
+    {label:'Beds', s:'e.g. “4bd”, “3+ beds”', apply:()=>{}, key:'beds'},
+    {label:'Property Type', s:'detached · semi · townhouse · condo', apply:()=>{}, key:'type'},
+  ];
+  const all=[...quick, ...CATALOG.map(c=>({label:c.label, s:catHint(c), key:c.key, invest:c.invest}))];
+  for(const c of all){ if(!q || c.label.toLowerCase().includes(q) || (c.s||'').toLowerCase().includes(q))
+    out.push({title:c.label, sub:c.s, key:c.key, invest:c.invest, ic:c.label[0]}); }
+  return out;
+}
+function catHint(c){
+  if(c.kind==='toggle') return 'Toggle · '+(c.n?c.n+' of area':'flag');
+  if(c.kind==='enum') return c.opts.slice(0,3).join(' · ');
+  if(c.kind==='min') return 'minimum '+c.unit+(c.n?' · '+c.n:'');
+  if(c.kind==='max') return 'maximum '+c.unit;
+  if(c.kind==='step') return 'count of '+c.unit;
+  if(c.kind==='rangeNum') return 'range '+c.unit;
+  return '';
+}
+function parseCommand(q){
+  if(!q) return null;
+  let m;
+  if((m=q.match(/(?:under|<|max|below)\s*\$?([\d.,]+\s*[km]?)/))){ const v=parseMoney(m[1]); if(v) return {title:`Price ≤ ${fmtK(v)}`, sub:'set max price', run:()=>{S.price.max=v;}, ic:'$'}; }
+  if((m=q.match(/(?:over|>|min|above)\s*\$?([\d.,]+\s*[km]?)/))){ const v=parseMoney(m[1]); if(v) return {title:`Price ≥ ${fmtK(v)}`, sub:'set min price', run:()=>{S.price.min=v;}, ic:'$'}; }
+  if((m=q.match(/\$?([\d.]+\s*[km])\s*[-–to]+\s*\$?([\d.]+\s*[km])/))){ const a=parseMoney(m[1]),b=parseMoney(m[2]); if(a&&b) return {title:`Price ${fmtK(a)}–${fmtK(b)}`, sub:'set price range', run:()=>{S.price.min=a;S.price.max=b;}, ic:'$'}; }
+  if((m=q.match(/(\d)\s*\+?\s*(?:bd|bed|beds|bedroom)/))){ const n=+m[1]; return {title:`${n}+ Beds`, sub:'minimum bedrooms', run:()=>{S.beds.n=n;S.beds.exact=false;}, ic:'B'}; }
+  for(const t of TYPES){ if(q && (t.toLowerCase().startsWith(q)||t.toLowerCase().split(/[\s-]/)[0]===q.split(' ')[0])){ return {title:`Type: ${t}`, sub:'property type', run:()=>{S.types.add(t);}, ic:'T'}; } }
+  if((m=q.match(/cap\s*(?:rate)?\s*(?:>|≥|over|above)?\s*([\d.]+)/))){ const v=+m[1]; return {title:`Cap Rate ≥ ${v}%`, sub:'investor · cashflow', invest:true, run:()=>{S.deep.cap={label:`Cap Rate ≥ ${v}%`,short:`≥${v}%`,invest:true};}, ic:'%'}; }
+  if((m=q.match(/yield\s*(?:>|≥|over)?\s*([\d.]+)/))){ const v=+m[1]; return {title:`Gross Yield ≥ ${v}%`, sub:'investor', invest:true, run:()=>{S.deep.yield={label:`Gross Yield ≥ ${v}%`,short:`≥${v}%`,invest:true};}, ic:'%'}; }
+  if(q.includes('finished basement')||q==='walkout'||q.includes('walk-out')){ const v=q.includes('walk')?'Walk-Out':'Finished'; return {title:`Basement: ${v}`, sub:'property', run:()=>{S.deep.basement={label:`Basement: ${v}`,short:v};}, ic:'⌂'}; }
+  if(q.includes('suite')){ return {title:'Suite potential', sub:'property · 61% of area', run:()=>{S.deep.suite={label:'Suite potential',short:'On'};}, ic:'⌂'}; }
+  if((m=q.match(/(\d)\s*\+?\s*park/))){ const n=+m[1]; return {title:`${n}+ Parking`, sub:'property', run:()=>{S.deep.parking={label:`${n}+ Parking`,short:n+'+'};}, ic:'P'}; }
+  return null;
+}
+function applyCommand(cmd){
+  if(cmd.run) cmd.run();
+  else if(cmd.key){ // open the matching control
+    const map={price:qPrice, beds:qBeds, type:qType};
+    if(map[cmd.key]){ closeOverlay(); map[cmd.key].click(); return; }
+    if(BY_KEY[cmd.key]){ toggleDeep(cmd.key); }
+  }
+  render(); closeOverlay();
+}
+function drawPalette(q){
+  // facet-aware suggestions when empty
+  let html='';
+  if(!q.trim()){
+    html += `<div class="pal-sect"><svg class="i sugg" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z"/></svg> Suggested in Roncesvalles</div>`;
+    const sugg=[
+      {title:'Suite potential', sub:'61% of listings here have it', key:'suite'},
+      {title:'Density-Ready (zoning)', sub:'14% — upzoning candidates', key:'zoning'},
+      {title:'Cap Rate ≥ 5%', sub:'matches your Cashflow persona', key:'cap', invest:true},
+    ];
+    html += sugg.map((c,i)=>palRow(c,i,true)).join('');
+    html += `<div class="pal-sect">All filters</div>`;
+  }
+  palResults = palCommands(q);
+  html += palResults.map((c,i)=> palRow(c, i+(q.trim()?0:3), false, q)).join('');
+  palList.innerHTML = html;
+  palIdx=0; highlightPal();
+}
+function palRow(c,i,sugg,q){
+  const title=c.title||c.label; const sub=c.sub||c.s||'';
+  const ic=c.ic|| title[0];
+  const meta = c.parsed?'<span class="pal-meta">↵ apply</span>': c.invest?'<span class="pal-meta">investor</span>':'';
+  return `<div class="pal-item ${sugg?'sugg':''} ${(c.invest&&!sugg)?'':''}" data-i="${i}" data-key="${c.key||''}" data-parsed="${c.parsed?1:0}">
+    <span class="pal-ic">${ic}</span>
+    <span class="pal-tx"><span class="t">${c.parsed?'<em>'+title+'</em>':title}</span><span class="s">${sub}</span></span>
+    ${meta}</div>`;
+}
+let palFlat=[];
+function rebuildFlat(){ palFlat=[...palList.querySelectorAll('.pal-item')]; }
+function highlightPal(){ rebuildFlat(); palFlat.forEach((el,i)=> el.classList.toggle('hi', i===palIdx)); palFlat[palIdx]?.scrollIntoView({block:'nearest'}); }
+function palettePick(el){
+  const key=el.dataset.key, parsed=el.dataset.parsed==='1';
+  if(parsed){ const cmd=palCommands(palInput.value)[0]; applyCommand(cmd); return; }
+  // suggestion or catalog row
+  if(key){ if(['price','beds','type'].includes(key)){ closeOverlay(); ({price:qPrice,beds:qBeds,type:qType})[key].click(); }
+    else { toggleDeep(key); closeOverlay(); } return; }
+}
+palList.addEventListener('click', e=>{ const it=e.target.closest('.pal-item'); if(it) palettePick(it); });
+palInput.addEventListener('input', ()=> drawPalette(palInput.value));
+function openOverlay(){ overlay.classList.add('show'); palInput.value=''; drawPalette(''); setTimeout(()=>palInput.focus(),30); }
+function closeOverlay(){ overlay.classList.remove('show'); }
+cmdkBtn.addEventListener('click', openOverlay);
+overlay.addEventListener('click', closeOverlay);
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); overlay.classList.contains('show')?closeOverlay():openOverlay(); }
+  if(!overlay.classList.contains('show')) return;
+  if(e.key==='Escape') closeOverlay();
+  if(e.key==='ArrowDown'){ e.preventDefault(); palIdx=Math.min(palIdx+1,palFlat.length-1); highlightPal(); }
+  if(e.key==='ArrowUp'){ e.preventDefault(); palIdx=Math.max(palIdx-1,0); highlightPal(); }
+  if(e.key==='Enter'){ e.preventDefault(); palFlat[palIdx] && palettePick(palFlat[palIdx]); }
+});
+
+//// ----- seed a couple of filters so the query strip is visible on load -----
+S.price.max=800000; S.beds.n=4; S.types.add('Detached'); S.deep.basement={label:'Basement: Finished',short:'Finished'}; S.deep.cap={label:'Cap Rate ≥ 5%',short:'≥5%',invest:true};
+render();
+</script>
+</body>
+</html>

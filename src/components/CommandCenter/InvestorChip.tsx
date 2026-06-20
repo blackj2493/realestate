@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Popover } from "@/components/ui/popover";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { defaultTerminalFilters, type ControlDef } from "@/lib/personas/personaConfig";
+import { type ControlDef } from "@/lib/personas/personaConfig";
 import { useRangeHistogram } from "@/hooks/useRangeHistogram";
 import { supportsHistogram, HISTOGRAM_BANDS } from "@/lib/filters/histogram";
-import { isControlActive, investorChipLabel } from "./investorControls";
+import { isControlActive, investorChipLabel, resetControlToDefault } from "./investorControls";
 import RangeHistogram from "./RangeHistogram";
 import NumberInput from "./NumberInput";
 
@@ -193,12 +193,7 @@ export default function InvestorChip({ control }: { control: ControlDef }) {
 
   const clear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (control.kind === "slider") {
-      setFilter(control.key, defaultTerminalFilters[control.key]);
-    } else {
-      setFilter(control.minKey, defaultTerminalFilters[control.minKey]);
-      setFilter(control.maxKey, defaultTerminalFilters[control.maxKey]);
-    }
+    resetControlToDefault(control, setFilter);
   };
 
   const trigger = (

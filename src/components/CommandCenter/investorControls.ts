@@ -41,3 +41,20 @@ export function investorChipLabel(c: ControlDef, f: TerminalFilterState): string
 export function anyControlActive(controls: ControlDef[], f: TerminalFilterState): boolean {
   return controls.some((c) => isControlActive(c, f));
 }
+
+/**
+ * Reset a control's bound value(s) to the terminal defaults. Shared by the chip's
+ * "×" (InvestorChip) and the active-filter strip token remove, so the clear
+ * semantics can't drift between the two surfaces.
+ */
+export function resetControlToDefault(
+  c: ControlDef,
+  setFilter: <K extends keyof TerminalFilterState>(key: K, value: TerminalFilterState[K]) => void
+): void {
+  if (c.kind === "range") {
+    setFilter(c.minKey, defaultTerminalFilters[c.minKey]);
+    setFilter(c.maxKey, defaultTerminalFilters[c.maxKey]);
+  } else {
+    setFilter(c.key, defaultTerminalFilters[c.key]);
+  }
+}

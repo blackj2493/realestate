@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_LIST, type MapMode } from "@/lib/personas/personaConfig";
 import { MAP_METRICS } from "@/lib/personas/mapMetrics";
+import { FILTERS_BY_KEY } from "@/lib/filters/filterRegistry";
+import { parseFilterCommands, type FilterCommand } from "./filterCommands";
 
 interface Command {
   id: string;
@@ -38,6 +40,10 @@ export default function MapCommandPalette() {
   const setColorMetricId = useCommandCenterStore((s) => s.setColorMetricId);
   const setTimelineActive = useCommandCenterStore((s) => s.setTimelineActive);
   const timelineActive = useCommandCenterStore((s) => s.timelineActive);
+  const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
+  const addFilter = useCommandCenterStore((s) => s.addFilter);
+  const transactionMode = useCommandCenterStore((s) => s.transactionMode);
+  const propertyClass = useCommandCenterStore((s) => s.propertyClass);
 
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -66,6 +72,21 @@ export default function MapCommandPalette() {
   }, [open]);
 
   const close = () => setOpen(false);
+
+  // Apply a parsed filter action via the same store setters the chips/drawer use.
+  // Enums merge into the current selection (read at click-time via getState, so the
+  // palette needn't subscribe to every filter change); pinned basics aren't "added".
+  const runFilterCommand = (fc: FilterCommand) => {
+    if (fc.control === "enum") {
+      const current = (useCommandCenterStore.getState().universalFilters[fc.key] as string[]) ?? [];
+      const next = current.includes(fc.option) ? current : [...current, fc.option];
+      setUniversalFilter(fc.key, next);
+    } else {
+      setUniversalFilter(fc.key, fc.value);
+    }
+    if (!FILTERS_BY_KEY[fc.key]?.defaultPinned) addFilter(fc.key);
+    close();
+  };
 
   const commands: Command[] = useMemo(() => {
     const list: Command[] = [];
@@ -97,6 +118,25 @@ export default function MapCommandPalette() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return commands;
+
+    // Parsed filter actions lead — typing "under 800k" or "4bd" should resolve to a
+    // filter, not a city search. An "Apply all" row fronts a multi-filter query.
+    const parsed = parseFilterCommands(query, { transactionMode, propertyClass });
+    const filterCmds: Command[] = parsed.map((fc) => ({
+      id: `filter-${fc.id}`,
+      group: "Filter",
+      label: fc.label,
+      run: () => runFilterCommand(fc),
+    }));
+    if (parsed.length > 1) {
+      filterCmds.unshift({
+        id: "filter-all",
+        group: "Filter",
+        label: `Apply all — ${parsed.map((p) => p.label).join(" · ")}`,
+        run: () => parsed.forEach(runFilterCommand),
+      });
+    }
+
     const matched = commands.filter((c) => c.label.toLowerCase().includes(q));
     const goto: Command = {
       id: "goto",
@@ -104,9 +144,9 @@ export default function MapCommandPalette() {
       label: `Search “${query.trim()}”`,
       run: () => { setLocation(query.trim()); close(); },
     };
-    return [...matched, goto];
+    return [...filterCmds, ...matched, goto];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, commands]);
+  }, [query, commands, transactionMode, propertyClass]);
 
   if (!open) return null;
 
@@ -136,7 +176,7 @@ export default function MapCommandPalette() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setHighlight(0); }}
             onKeyDown={onKeyDown}
-            placeholder="Jump to a city, switch persona, color, mode…"
+            placeholder="Filter (4bd, under 800k, finished basement), jump to a city, switch mode…"
             className="h-11 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
           <kbd className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">ESC</kbd>
