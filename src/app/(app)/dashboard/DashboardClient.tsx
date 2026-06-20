@@ -134,6 +134,7 @@ export default function DashboardClient() {
             minBaths={config.marketActivity.minBaths}
             minGarage={config.marketActivity.minGarage}
             minFrontage={config.marketActivity.minFrontage}
+            basement={config.marketActivity.basement}
           />
         )}
 

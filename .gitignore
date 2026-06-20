@@ -52,6 +52,9 @@ coverage/
 # Reindexer resume checkpoint (runtime state)
 scripts/.reindex-cursor
 
+# Admin backfill resume cursors (runtime state)
+scripts/admin/.backfill-*-cursor.json
+
 # Superpowers brainstorming companion artifacts
 .superpowers/
 

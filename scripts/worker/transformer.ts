@@ -25,12 +25,22 @@ import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '@/lib/schools/nearestSchools';
 import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
+import { deriveBasementTier } from '@/lib/avm/conditionScoring';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 const BASELINE_RENT = 1200;  // Monthly rent placeholder per bedroom
+
+/** Coerce a raw RESO scalar to a finite number, else 0 — used for the flat dimension
+ *  columns (migration 045). 0 = missing, matching the Typesense extraction so a stored
+ *  row is never NULL and the region RPC's full_payload fallback only fires pre-backfill. */
+function numOr0(v: unknown): number {
+  if (v === undefined || v === null || v === '') return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
 
 // Initialize postal codes on module load
 if (!isDataLoaded()) {
@@ -651,6 +661,14 @@ export interface TransformResult {
     extrapolated_cap_rate: number;
     cap_rate_est: number | null;
     property_hash: string;
+    // Flat dimension columns (migration 045) — let region_active_aggregates floor on
+    // beds/baths/parking/frontage/basement WITHOUT detoasting full_payload. Mirror the
+    // same values extracted for Typesense below; basement_tier is the canonical 1-9 tier.
+    bedrooms_total: number;
+    bathrooms_total_integer: number;
+    parking_total: number;
+    lot_width: number;
+    basement_tier: number;
     // Flat carry cost columns (migration 005)
     monthly_carry_cost: number;
     monthly_mortgage: number;
@@ -918,6 +936,14 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // engine is retired (§9); region_active_aggregates reads only cap_rate_est.
     cap_rate_est: metrics3?.cap_rate_est || null,
     property_hash: trueDOM.propertyHash,
+    // Flat dimension columns (migration 045). Same extraction as the Typesense payload
+    // below (0 = missing, mirrors that path) so the region RPC never has to detoast
+    // full_payload for these floors. basement_tier via the canonical shared deriver.
+    bedrooms_total: numOr0(raw.BedroomsTotal),
+    bathrooms_total_integer: numOr0(raw.BathroomsTotalInteger),
+    parking_total: numOr0(raw.ParkingTotal),
+    lot_width: numOr0(raw.LotWidth),
+    basement_tier: deriveBasementTier(raw as Record<string, unknown>),
     // Flat carry cost columns (migration 005)
     monthly_carry_cost: carryCost.trueCarryCost,
     monthly_mortgage: carryCost.monthlyMortgage,

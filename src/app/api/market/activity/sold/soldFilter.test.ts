@@ -12,7 +12,8 @@ const base: SoldParams = {
   minBaths: 0,
   bathsExact: false,
   minGarage: 0,
-  basementFinished: false,
+  garageExact: false,
+  basement: "any",
   minFrontage: 0,
   limit: 100,
   dealType: "sold",
@@ -91,5 +92,26 @@ describe("buildSoldFilter — beds (grade-aware, matches For Sale)", () => {
   it("baths follow the same min/exact toggle", () => {
     expect(buildSoldFilter({ ...base, minBaths: 2 })).toContain("BathroomsTotalInteger:>=2");
     expect(buildSoldFilter({ ...base, minBaths: 2, bathsExact: true })).toContain("BathroomsTotalInteger:=2");
+  });
+
+  it("parking follows the same min/exact toggle", () => {
+    expect(buildSoldFilter({ ...base, minGarage: 2 })).toContain("ParkingTotal:>=2");
+    expect(buildSoldFilter({ ...base, minGarage: 2, garageExact: true })).toContain("ParkingTotal:=2");
+  });
+});
+
+describe("buildSoldFilter — basement tier bands", () => {
+  it("omits any basement clause when set to 'any'", () => {
+    expect(buildSoldFilter(base)).not.toContain("BasementTier");
+  });
+
+  it("finished maps to tiers 1-5", () => {
+    expect(buildSoldFilter({ ...base, basement: "finished" })).toContain("BasementTier:<=5");
+  });
+
+  it("unfinished maps to the 6-8 band (excludes no-basement tier 9)", () => {
+    const f = buildSoldFilter({ ...base, basement: "unfinished" });
+    expect(f).toContain("(BasementTier:>=6 && BasementTier:<=8)");
+    expect(f).not.toContain("BasementTier:<=5");
   });
 });

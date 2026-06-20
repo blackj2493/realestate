@@ -26,11 +26,13 @@ export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const region = (params.get("region") || "").trim();
   const typeKeys = parseTypeKeys(params);
+  const basementRaw = params.get("basement");
   const scope: Scope = {
     minBeds: Math.max(0, Math.floor(Number(params.get("minBeds")) || 0)),
     minBaths: Math.max(0, Number(params.get("minBaths")) || 0),
     minParking: Math.max(0, Math.floor(Number(params.get("minParking")) || 0)),
     minFrontage: Math.max(0, Number(params.get("minFrontage")) || 0),
+    basement: basementRaw === "finished" || basementRaw === "unfinished" ? basementRaw : "any",
   };
   if (!region) return NextResponse.json({ region: "", points: [], summary: EMPTY_SUMMARY });
   if (!REGION_RE.test(region)) {

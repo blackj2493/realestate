@@ -30,7 +30,8 @@ export interface SoldParams {
   minBaths: number;
   bathsExact: boolean;
   minGarage: number;
-  basementFinished: boolean;
+  garageExact: boolean;
+  basement: "any" | "finished" | "unfinished";
   minFrontage: number;
   limit: number;
   dealType: "sold" | "leased" | "delisted";
@@ -114,9 +115,13 @@ export function buildSoldFilter(
     clauses.push(p.bedsExact ? exactAboveGradeBedsClause(p.minBeds) : aboveGradeBedsClause(p.minBeds));
   }
   if (p.minBaths > 0) clauses.push(`BathroomsTotalInteger:${p.bathsExact ? "=" : ">="}${p.minBaths}`);
-  if (p.minGarage > 0) clauses.push(`ParkingTotal:>=${p.minGarage}`);
-  // BasementTier 1-5 = finished/partially-finished space (deterministic tier).
-  if (p.basementFinished) clauses.push(`BasementTier:<=5`);
+  if (p.minGarage > 0) clauses.push(`ParkingTotal:${p.garageExact ? "=" : ">="}${p.minGarage}`);
+  // Basement: the sold collection carries only the integer BasementTier (no
+  // BasementType string), so finished/unfinished are tier bands —
+  // 1-5 = finished/partially-finished, 6-8 = unfinished (full/partial/crawl),
+  // 9 = no basement (BASEMENT_NONE_TIER). See conditionScoring.deriveBasementTier.
+  if (p.basement === "finished") clauses.push(`BasementTier:<=5`);
+  else if (p.basement === "unfinished") clauses.push(`(BasementTier:>=6 && BasementTier:<=8)`);
   if (p.minFrontage > 0) clauses.push(`LotWidth:>=${p.minFrontage}`);
 
   return clauses.join(" && ");

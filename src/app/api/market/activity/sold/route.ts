@@ -21,7 +21,8 @@
  * recent windows (1-7d) undercount and fill in over the following weeks.
  *
  * Query params: region (required), windowDays, types (comma keys), minPrice, maxPrice,
- *   minBeds, minBaths, minGarage, basement (1/0), minFrontage, limit.
+ *   minBeds, bedsExact (1), minBaths, bathsExact (1), minGarage, garageExact (1),
+ *   basement (finished|unfinished; legacy "1" = finished), minFrontage, limit.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -127,6 +128,15 @@ export async function GET(req: NextRequest) {
   // De-listed window is capped at its Typesense retention (DELISTED_DISPLAY_MAX_DAYS).
   const maxWindow = dealType === "delisted" ? DELISTED_DISPLAY_MAX_DAYS : MAX_WINDOW_DAYS;
 
+  // Tri-state basement; "1" is the legacy finished-only value (pre-tri-state clients).
+  const basementRaw = sp.get("basement");
+  const basement: SoldParams["basement"] =
+    basementRaw === "unfinished"
+      ? "unfinished"
+      : basementRaw === "finished" || basementRaw === "1"
+        ? "finished"
+        : "any";
+
   const params: SoldParams = {
     area,
     windowDays: Math.min(num("windowDays", 1), maxWindow),
@@ -138,7 +148,8 @@ export async function GET(req: NextRequest) {
     minBaths: num("minBaths"),
     bathsExact: sp.get("bathsExact") === "1",
     minGarage: num("minGarage"),
-    basementFinished: sp.get("basement") === "1",
+    garageExact: sp.get("garageExact") === "1",
+    basement,
     minFrontage: num("minFrontage"),
     limit: Math.min(num("limit", 5), MAX_LIST),
     dealType,

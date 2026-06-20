@@ -209,6 +209,7 @@ export default function RegionComparisonTiles({
             minBaths: lens.minBaths,
             minParking: lens.minGarage,
             minFrontage: lens.minFrontage,
+            basement: lens.basement,
           }),
           // Specialty shares honor the full scope incl. sale/lease + beds/baths.
           needSpecialty

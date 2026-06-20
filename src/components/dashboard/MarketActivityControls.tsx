@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover } from "@/components/ui/popover";
 import {
   ACTIVITY_WINDOWS,
   DEFAULT_ACTIVITY_LENS,
@@ -50,14 +51,99 @@ function MinSelect({
   );
 }
 
-const minOpts = (max: number, suffix = "+") =>
-  [{ v: 0, t: "Any" }].concat(
-    Array.from({ length: max }, (_, i) => ({ v: i + 1, t: `${i + 1}${suffix}` }))
-  );
 const frontageOpts = [0, 30, 40, 50, 75, 100].map((v) => ({
   v,
   t: v === 0 ? "Any" : `${v}'+`,
 }));
+
+const STEP_LABEL = "terminal-font text-[10px] font-semibold uppercase tracking-wider";
+
+/**
+ * Count filter (beds / baths / parking) — mirrors the Command Center terminal's
+ * stepper: a Min/Exact toggle plus an "Any, 1+/=1 … N+/=N" button grid, in a
+ * portaled popover so it escapes the bar's horizontal-scroll clip.
+ */
+function StepperPopover({
+  label,
+  value,
+  exact,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  exact: boolean;
+  max: number;
+  onChange: (next: { n: number; exact: boolean }) => void;
+}) {
+  const summary = value === 0 ? "Any" : exact ? `${value}` : `${value}+`;
+  const options = Array.from({ length: max + 1 }, (_, i) => i);
+  const trigger = (
+    <span
+      className={cn(
+        "flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border px-2.5 py-1 text-xs transition-colors",
+        value > 0
+          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
+          : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-cyan-500/60"
+      )}
+    >
+      <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+        {label}
+      </span>
+      {summary}
+      <ChevronDown className="h-3 w-3 text-slate-500" />
+    </span>
+  );
+  return (
+    <Popover trigger={trigger} className="w-52">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className={cn(STEP_LABEL, "text-slate-400")}>{label}</span>
+          {/* Min = "N or more" (default); Exact = "exactly N". Mode survives a
+              count change so toggling re-labels the grid in place. */}
+          <div className="flex border border-slate-800">
+            {[
+              { t: "Min", exact: false },
+              { t: "Exact", exact: true },
+            ].map((m) => (
+              <button
+                key={m.t}
+                type="button"
+                onClick={() => onChange({ n: value, exact: m.exact })}
+                className={cn(
+                  STEP_LABEL,
+                  "px-2 py-0.5 transition-colors",
+                  exact === m.exact
+                    ? "bg-cyan-500/10 text-cyan-300"
+                    : "text-slate-500 hover:text-slate-300"
+                )}
+              >
+                {m.t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {options.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange({ n, exact })}
+              className={cn(
+                "h-7 w-9 border text-xs font-semibold transition-colors",
+                value === n
+                  ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300"
+                  : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
+              )}
+            >
+              {n === 0 ? "Any" : exact ? `${n}` : `${n}+`}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Popover>
+  );
+}
 
 export default function MarketActivityControls({
   lens,
@@ -96,7 +182,7 @@ export default function MarketActivityControls({
     lens.minBeds === 0 &&
     lens.minBaths === 0 &&
     lens.minGarage === 0 &&
-    !lens.basementFinished &&
+    lens.basement === "any" &&
     lens.minFrontage === 0;
 
   return (
@@ -236,24 +322,27 @@ export default function MarketActivityControls({
           )}
         </div>
 
-        {/* Min selectors */}
-        <MinSelect
+        {/* Count steppers (Min/Exact) — mirror the terminal's beds/baths/parking */}
+        <StepperPopover
           label="Beds"
           value={lens.minBeds}
-          options={minOpts(5)}
-          onChange={(v) => set({ minBeds: v })}
+          exact={lens.bedsExact}
+          max={5}
+          onChange={({ n, exact }) => set({ minBeds: n, bedsExact: exact })}
         />
-        <MinSelect
+        <StepperPopover
           label="Baths"
           value={lens.minBaths}
-          options={minOpts(5)}
-          onChange={(v) => set({ minBaths: v })}
+          exact={lens.bathsExact}
+          max={5}
+          onChange={({ n, exact }) => set({ minBaths: n, bathsExact: exact })}
         />
-        <MinSelect
+        <StepperPopover
           label="Parking"
           value={lens.minGarage}
-          options={minOpts(4)}
-          onChange={(v) => set({ minGarage: v })}
+          exact={lens.garageExact}
+          max={4}
+          onChange={({ n, exact }) => set({ minGarage: n, garageExact: exact })}
         />
         <MinSelect
           label="Frontage"
@@ -262,29 +351,36 @@ export default function MarketActivityControls({
           onChange={(v) => set({ minFrontage: v })}
         />
 
-        {/* Basement */}
-        <button
-          type="button"
-          onClick={() => set({ basementFinished: !lens.basementFinished })}
-          className={cn(
-            "flex shrink-0 items-center gap-2 whitespace-nowrap border px-2.5 py-1 text-xs transition-colors",
-            lens.basementFinished
-              ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
-              : "border-slate-700 text-slate-400 hover:border-slate-600"
-          )}
-        >
-          <span
-            className={cn(
-              "flex h-4 w-4 items-center justify-center border",
-              lens.basementFinished
-                ? "border-cyan-500 bg-cyan-500 text-slate-950"
-                : "border-slate-600"
-            )}
-          >
-            {lens.basementFinished && <span className="text-[9px] font-black">✓</span>}
+        {/* Basement — Any / Finished / Unfinished (maps on both New and Sold) */}
+        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+          <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+            Basement
           </span>
-          Finished basement
-        </button>
+          <div className="flex border border-slate-700">
+            {(
+              [
+                { v: "any", t: "Any" },
+                { v: "finished", t: "Finished" },
+                { v: "unfinished", t: "Unfinished" },
+              ] as const
+            ).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => set({ basement: o.v })}
+                aria-pressed={lens.basement === o.v}
+                className={cn(
+                  "terminal-font px-2.5 py-1 text-xs transition-colors",
+                  lens.basement === o.v
+                    ? "bg-cyan-500 text-slate-950"
+                    : "text-slate-400 hover:bg-slate-800"
+                )}
+              >
+                {o.t}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {!isDefault && (
           <button

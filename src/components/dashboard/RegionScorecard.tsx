@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
 import { fetchRegionScore, type RegionScore } from "@/lib/dashboard/marketAggregates";
+import type { BasementFilter } from "@/lib/dashboard/config";
 import {
   TEMP,
   YoY,
@@ -63,6 +64,7 @@ export default function RegionScorecard({
   minBaths = 0,
   minGarage = 0,
   minFrontage = 0,
+  basement = "any",
 }: {
   regions: string[];
   /** Global lens property-type keys ([] = all). Drives the sold/active aggregates. */
@@ -72,6 +74,8 @@ export default function RegionScorecard({
   minBaths?: number;
   minGarage?: number;
   minFrontage?: number;
+  /** Global lens basement finish (any = no filter). Scopes sold + active medians (migration 043). */
+  basement?: BasementFilter;
 }) {
   const [scores, setScores] = useState<RegionScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +85,7 @@ export default function RegionScorecard({
   // Stable dependencies so the effect doesn't re-fire on every parent render.
   const regionsKey = regions.join("|");
   const typesKey = [...propertyTypes].sort().join(",");
-  const scopeKey = `${minBeds}|${minBaths}|${minGarage}|${minFrontage}`;
+  const scopeKey = `${minBeds}|${minBaths}|${minGarage}|${minFrontage}|${basement}`;
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -92,6 +96,7 @@ export default function RegionScorecard({
           minBaths,
           minParking: minGarage,
           minFrontage,
+          basement,
         })
       )
     )

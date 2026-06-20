@@ -15,9 +15,12 @@ export function scopeKey(lens: MarketActivityLens): string {
     lens.transactionType,
     [...lens.propertyTypes].sort().join(","),
     lens.minBeds,
+    lens.bedsExact ? "e" : "m",
     lens.minBaths,
+    lens.bathsExact ? "e" : "m",
     lens.minGarage,
-    lens.basementFinished ? 1 : 0,
+    lens.garageExact ? "e" : "m",
+    lens.basement,
     lens.minFrontage,
   ].join("|");
 }

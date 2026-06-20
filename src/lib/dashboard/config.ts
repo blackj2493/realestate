@@ -49,6 +49,13 @@ export interface ApplyProfile {
  *  threshold proxy once TransactionType was added to the live schema, 2026-05-28.) */
 export type TransactionScope = 'sale' | 'lease';
 
+/**
+ * Basement finish filter. `any` = no constraint; `finished` and `unfinished`
+ * map to the active (BasementType) and sold (BasementTier band) collections —
+ * see queries.ts / soldFilter.ts. Replaced the old boolean `basementFinished`.
+ */
+export type BasementFilter = 'any' | 'finished' | 'unfinished';
+
 export interface MarketActivityLens {
   /** trailing-window in days for both New and Sold counts. */
   windowDays: number;
@@ -56,14 +63,20 @@ export interface MarketActivityLens {
   transactionType: TransactionScope;
   /** selected property-type option keys (see propertyTypes.ts); [] = all types. */
   propertyTypes: string[];
-  /** minimum bedrooms (0 = any). */
+  /** bedrooms count for the beds filter (0 = any); min vs exact set by bedsExact. */
   minBeds: number;
-  /** minimum bathrooms (0 = any). */
+  /** match beds exactly (`=`) instead of as a minimum (`>=`). */
+  bedsExact: boolean;
+  /** bathrooms count (0 = any); min vs exact set by bathsExact. */
   minBaths: number;
-  /** minimum parking/garage spaces (0 = any). */
+  /** match baths exactly (`=`) instead of as a minimum (`>=`). */
+  bathsExact: boolean;
+  /** parking/garage count (0 = any); min vs exact set by garageExact. */
   minGarage: number;
-  /** require a finished basement. */
-  basementFinished: boolean;
+  /** match parking exactly (`=`) instead of as a minimum (`>=`). */
+  garageExact: boolean;
+  /** basement finish constraint: any | finished | unfinished. */
+  basement: BasementFilter;
   /** minimum lot frontage in feet (0 = any). */
   minFrontage: number;
 }
@@ -76,9 +89,12 @@ export const DEFAULT_ACTIVITY_LENS: MarketActivityLens = {
   transactionType: 'sale',
   propertyTypes: [],
   minBeds: 0,
+  bedsExact: false,
   minBaths: 0,
+  bathsExact: false,
   minGarage: 0,
-  basementFinished: false,
+  garageExact: false,
+  basement: 'any',
   minFrontage: 0,
 };
 
@@ -171,7 +187,15 @@ export function seedConfigFromProfile(p: ApplyProfile): DashboardConfig {
 
 /** Merge a stored (possibly partial/legacy) lens onto the defaults. */
 function mergeLens(raw: unknown): MarketActivityLens {
-  const l = (raw ?? {}) as Partial<MarketActivityLens>;
+  // `basementFinished` is the pre-tri-state legacy key; read it off the raw object
+  // so an old localStorage value upgrades to `basement: 'finished'` cleanly.
+  const l = (raw ?? {}) as Partial<MarketActivityLens> & { basementFinished?: unknown };
+  const basement: BasementFilter =
+    l.basement === 'finished' || l.basement === 'unfinished' || l.basement === 'any'
+      ? l.basement
+      : l.basementFinished === true
+        ? 'finished'
+        : 'any';
   return {
     windowDays:
       typeof l.windowDays === 'number' && ACTIVITY_WINDOWS.includes(l.windowDays as 1)
@@ -180,9 +204,12 @@ function mergeLens(raw: unknown): MarketActivityLens {
     transactionType: l.transactionType === 'lease' ? 'lease' : 'sale',
     propertyTypes: Array.isArray(l.propertyTypes) ? l.propertyTypes : [],
     minBeds: typeof l.minBeds === 'number' ? l.minBeds : 0,
+    bedsExact: l.bedsExact === true,
     minBaths: typeof l.minBaths === 'number' ? l.minBaths : 0,
+    bathsExact: l.bathsExact === true,
     minGarage: typeof l.minGarage === 'number' ? l.minGarage : 0,
-    basementFinished: l.basementFinished === true,
+    garageExact: l.garageExact === true,
+    basement,
     minFrontage: typeof l.minFrontage === 'number' ? l.minFrontage : 0,
   };
 }

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Option A — Quick Look drawer mockup</title>
+<style>
+  :root{
+    --slate-950:#020617; --slate-900:#0f172a; --slate-850:#172033; --slate-800:#1e293b;
+    --slate-700:#334155; --slate-600:#475569; --slate-500:#64748b; --slate-400:#94a3b8;
+    --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9;
+    --emerald-400:#34d399; --emerald-500:#10b981; --emerald-600:#059669;
+    --cyan-400:#22d3ee; --cyan-500:#06b6d4; --amber-400:#fbbf24; --purple-400:#c084fc;
+    --red-400:#f87171;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--slate-950); color:var(--slate-100); font-family:var(--sans);
+    display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px;
+  }
+  .frame{
+    position:relative; width:100%; max-width:1180px; height:760px; border-radius:14px;
+    overflow:hidden; border:1px solid var(--slate-800);
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
+  }
+
+  /* ---------- Command Center backdrop (dimmed) ---------- */
+  .backdrop{position:absolute; inset:0; display:flex; flex-direction:column;
+    filter:saturate(.85) brightness(.5); }
+  .topbar{height:48px; flex:0 0 48px; display:flex; align-items:center; gap:14px;
+    padding:0 16px; border-bottom:1px solid var(--slate-800); background:rgba(15,23,42,.9);}
+  .logo{font-weight:800; letter-spacing:.04em; font-size:14px;}
+  .logo .dot{color:var(--emerald-400)}
+  .navlink{font-size:12px; color:var(--slate-400); padding:4px 8px; border-radius:6px;}
+  .navlink.active{color:var(--slate-100); background:var(--slate-800)}
+  .pill{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--slate-400);
+    border:1px solid var(--slate-700); border-radius:999px; padding:4px 12px;}
+  .body{flex:1; display:flex; min-height:0}
+  .ledger{flex:0 0 320px; border-right:1px solid var(--slate-800); background:rgba(2,6,23,.8);
+    overflow:hidden;}
+  .ledger h4{margin:0; padding:10px 14px; font-size:10px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--slate-500); border-bottom:1px solid var(--slate-800)}
+  .row{padding:11px 14px; border-bottom:1px solid var(--slate-850); display:flex;
+    flex-direction:column; gap:3px}
+  .row.sel{background:rgba(6,182,212,.08); box-shadow:inset 2px 0 0 var(--cyan-400)}
+  .row .addr{font-size:12.5px; color:var(--slate-200); font-weight:600}
+  .row .meta{font-size:11px; color:var(--slate-500); font-family:var(--mono)}
+  .map{flex:1; position:relative; overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 70% 20%, rgba(6,182,212,.12), transparent 60%),
+      radial-gradient(90% 80% at 25% 80%, rgba(16,185,129,.12), transparent 55%),
+      linear-gradient(160deg,#0a1322,#0b1424 60%,#0a1120);}
+  .hex{position:absolute; width:60px; height:52px; opacity:.55;
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);}
+  .grid-overlay{position:absolute; inset:0; opacity:.25;
+    background-image:linear-gradient(rgba(148,163,184,.12) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(148,163,184,.12) 1px,transparent 1px);
+    background-size:46px 46px;}
+
+  /* scrim above the dimmed command center */
+  .scrim{position:absolute; inset:0; background:rgba(2,6,23,.45); backdrop-filter:blur(1.5px);}
+
+  /* ---------- Quick Look panel (Option A) ---------- */
+  .panel{position:absolute; top:0; right:0; height:100%; width:392px;
+    background:linear-gradient(180deg,#0b1322,#0a1020); border-left:1px solid var(--slate-800);
+    box-shadow:-24px 0 60px rgba(0,0,0,.55); display:flex; flex-direction:column;
+    animation:slideIn .35s cubic-bezier(.22,1,.36,1);}
+  @keyframes slideIn{from{transform:translateX(40px);opacity:.3}to{transform:none;opacity:1}}
+  .panel-head{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid var(--slate-800);}
+  .ql-tag{display:flex; align-items:center; gap:7px; font-size:10.5px; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--cyan-400); font-weight:700;}
+  .ql-tag svg{width:13px;height:13px}
+  .iconbtn{display:grid; place-items:center; width:30px; height:30px; border-radius:999px;
+    border:1px solid var(--slate-700); background:var(--slate-800); color:var(--slate-400); cursor:pointer}
+  .iconbtn:hover{background:var(--slate-700); color:var(--slate-200)}
+
+  .panel-scroll{flex:1; overflow-y:auto; padding:16px}
+  .panel-scroll::-webkit-scrollbar{width:0}
+
+  /* hero image */
+  .hero{position:relative; height:188px; border-radius:12px; overflow:hidden;
+    border:1px solid var(--slate-800);
+    background:
+      radial-gradient(120% 120% at 30% 0%, rgba(148,163,184,.18), transparent 55%),
+      linear-gradient(135deg,#243247,#16202f 55%,#1b2536);
+    background-color:#1b2536;
+    display:flex; align-items:flex-end; padding:10px;}
+  .hero .ph{position:absolute; inset:0; display:grid; place-items:center; color:var(--slate-600);
+    font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-family:var(--mono)}
+  .badges{position:relative; display:flex; gap:6px; flex-wrap:wrap; z-index:2}
+  .badge{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.04em;
+    padding:3px 7px; border-radius:6px; border:1px solid; backdrop-filter:blur(4px)}
+  .badge.cut{color:var(--red-400); border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.12)}
+  .badge.dom{color:var(--amber-400); border-color:rgba(251,191,36,.4); background:rgba(251,191,36,.12)}
+  .badge.suite{color:var(--emerald-400); border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.12)}
+  .gallery-count{position:absolute; top:10px; right:10px; z-index:2; font-family:var(--mono);
+    font-size:10px; color:var(--slate-300); background:rgba(2,6,23,.7); border:1px solid var(--slate-700);
+    border-radius:6px; padding:2px 7px}
+
+  /* headline */
+  .addr{margin:14px 0 4px; font-size:18px; font-weight:700; color:var(--slate-100); line-height:1.25}
+  .priceline{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+  .price{font-family:var(--mono); font-size:24px; font-weight:700; color:var(--emerald-400)}
+  .subtype{font-size:12px; color:var(--slate-500)}
+
+  /* spec strip */
+  .specs{display:flex; align-items:center; gap:0; margin:14px 0; padding:10px 0;
+    border-top:1px solid var(--slate-800); border-bottom:1px solid var(--slate-800)}
+  .spec{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px}
+  .spec + .spec{border-left:1px solid var(--slate-800)}
+  .spec svg{width:15px;height:15px}
+  .spec .v{font-family:var(--mono); font-size:14px; font-weight:700; color:var(--slate-200)}
+  .spec .k{font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--slate-500)}
+  .ic-bed{color:var(--emerald-400)} .ic-bath{color:var(--cyan-400)}
+  .ic-sqft{color:var(--purple-400)} .ic-park{color:var(--amber-400)}
+
+  /* signal tiles */
+  .signals{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px}
+  .tile{background:rgba(15,23,42,.6); border:1px solid var(--slate-800); border-radius:10px;
+    padding:10px; text-align:center}
+  .tile .k{font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--slate-500)}
+  .tile .v{font-family:var(--mono); font-size:15px; font-weight:700; margin-top:3px; color:var(--slate-200)}
+  .tile .v.warn{color:var(--amber-400)} .tile .v.good{color:var(--emerald-400)}
+
+  /* deal score compact */
+  .deal{display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:10px;
+    border:1px solid rgba(52,211,153,.25); background:rgba(52,211,153,.06); margin-bottom:16px}
+  .ring{position:relative; width:58px; height:58px; flex:0 0 auto; border-radius:999px;
+    background:conic-gradient(var(--emerald-400) 0 78%, rgba(148,163,184,.18) 78% 100%);
+    display:grid; place-items:center}
+  .ring::after{content:""; position:absolute; inset:6px; border-radius:999px; background:#0a1020}
+  .ring b{position:relative; font-family:var(--mono); font-size:17px; color:var(--emerald-400)}
+  .deal .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--slate-500)}
+  .deal .grade{font-size:16px; font-weight:700; color:var(--slate-100); margin-top:2px}
+  .deal .why{font-size:11px; color:var(--slate-400); margin-top:3px; line-height:1.35}
+
+  /* CTAs */
+  .cta-primary{display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    padding:12px; border-radius:10px; border:none; cursor:pointer; font-size:14px; font-weight:700;
+    color:#04130c; background:var(--emerald-500)}
+  .cta-primary:hover{background:var(--emerald-400)}
+  .cta-primary svg{width:16px;height:16px}
+  .cta-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px}
+  .cta-ghost{display:flex; align-items:center; justify-content:center; gap:6px; padding:9px 6px;
+    border-radius:9px; border:1px solid var(--slate-700); background:transparent; cursor:pointer;
+    color:var(--slate-300); font-size:12px; font-weight:600}
+  .cta-ghost:hover{background:var(--slate-800)}
+  .cta-ghost svg{width:14px;height:14px}
+  .footnote{margin-top:14px; font-size:10.5px; line-height:1.5; color:var(--slate-600); text-align:center}
+  .footnote b{color:var(--slate-400); font-weight:600}
+
+  /* legend */
+  .legend{position:absolute; left:16px; bottom:16px; z-index:5; max-width:360px;
+    background:rgba(2,6,23,.82); border:1px solid var(--slate-800); border-radius:10px; padding:12px 14px;
+    backdrop-filter:blur(4px)}
+  .legend h5{margin:0 0 8px; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--slate-500)}
+  .legend ul{margin:0; padding:0; list-style:none; display:grid; gap:5px}
+  .legend li{font-size:11px; color:var(--slate-400); display:flex; gap:7px; align-items:flex-start}
+  .tick{flex:0 0 auto; font-family:var(--mono); font-weight:700}
+  .tick.keep{color:var(--emerald-400)} .tick.cut{color:var(--red-400)}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <!-- ===== Dimmed Command Center backdrop ===== -->
+  <div class="backdrop">
+    <div class="topbar">
+      <div class="logo">Pure<span class="dot">Property</span></div>
+      <span class="navlink active">Terminal</span>
+      <span class="navlink">Analytics</span>
+      <span class="navlink">AVM</span>
+      <span class="navlink">Watchlist</span>
+      <span class="pill">1,000 results · 38ms</span>
+    </div>
+    <div class="body">
+      <div class="ledger">
+        <h4>Ledger · sorted by Deal Score</h4>
+        <div class="row sel"><span class="addr">412 Roncesvalles Ave</span><span class="meta">$1,189,000 · 3bd · DOM 62</span></div>
+        <div class="row"><span class="addr">88 Marine Parade Dr</span><span class="meta">$929,000 · 2bd · DOM 14</span></div>
+        <div class="row"><span class="addr">1500 Bathurst St</span><span class="meta">$1,449,000 · 4bd · DOM 9</span></div>
+        <div class="row"><span class="addr">21 Earlscourt Ave</span><span class="meta">$849,900 · 3bd · DOM 41</span></div>
+        <div class="row"><span class="addr">77 Indian Grove</span><span class="meta">$1,675,000 · 5bd · DOM 5</span></div>
+        <div class="row"><span class="addr">300 Front St W</span><span class="meta">$799,000 · 1bd · DOM 73</span></div>
+      </div>
+      <div class="map">
+        <div class="grid-overlay"></div>
+        <div class="hex" style="left:60%;top:25%;background:var(--cyan-500)"></div>
+        <div class="hex" style="left:67%;top:31%;background:var(--emerald-500)"></div>
+        <div class="hex" style="left:54%;top:34%;background:var(--amber-400)"></div>
+        <div class="hex" style="left:40%;top:60%;background:var(--emerald-500)"></div>
+        <div class="hex" style="left:47%;top:66%;background:var(--cyan-500)"></div>
+        <div class="hex" style="left:33%;top:54%;background:var(--purple-400)"></div>
+      </div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+
+  <!-- ===== Option A: slim Quick Look panel ===== -->
+  <aside class="panel">
+    <div class="panel-head">
+      <span class="ql-tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        Quick Look
+      </span>
+      <button class="iconbtn" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="panel-scroll">
+      <!-- hero (single primary image — already in the Typesense doc; no media fetch) -->
+      <div class="hero">
+        <div class="ph">primary photo</div>
+        <span class="gallery-count">1 / 24</span>
+        <div class="badges">
+          <span class="badge cut">PRICE CUT −4.2%</span>
+          <span class="badge dom">STALE · 62D</span>
+          <span class="badge suite">SUITE POTENTIAL</span>
+        </div>
+      </div>
+
+      <!-- headline -->
+      <h1 class="addr">412 Roncesvalles Ave</h1>
+      <div class="priceline">
+        <span class="price">$1,189,000</span>
+        <span class="subtype">Toronto · Semi-Detached</span>
+      </div>
+
+      <!-- spec strip -->
+      <div class="specs">
+        <div class="spec"><svg class="ic-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9v11M2 13h20v7M22 20v-6a3 3 0 0 0-3-3H8M6 9a2 2 0 1 0 0 .01"/></svg><span class="v">3</span><span class="k">Beds</span></div>
+        <div class="spec"><svg class="ic-bath" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M6 12V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6"/></svg><span class="v">2</span><span class="k">Baths</span></div>
+        <div class="spec"><svg class="ic-sqft" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg><span class="v">1,650</span><span class="k">Sqft</span></div>
+        <div class="spec"><svg class="ic-park" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M6 17l1.5-6h9L18 17M7 11l1-4h8l1 4"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg><span class="v">2</span><span class="k">Parking</span></div>
+      </div>
+
+      <!-- signal tiles (all values already present in the search doc) -->
+      <div class="signals">
+        <div class="tile"><div class="k">True DOM</div><div class="v warn">62d</div></div>
+        <div class="tile"><div class="k">Est. Sale</div><div class="v warn">−4%</div></div>
+        <div class="tile"><div class="k">Gross Yield</div><div class="v good">5.1%</div></div>
+      </div>
+
+      <!-- compact deal score -->
+      <div class="deal">
+        <div class="ring"><b>78</b></div>
+        <div>
+          <div class="lbl">Deal Score</div>
+          <div class="grade">B+ · Strong</div>
+          <div class="why">Priced below comps; long DOM signals negotiating room.</div>
+        </div>
+      </div>
+
+      <!-- CTAs -->
+      <button class="cta-primary">
+        Open Full Report
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M7 7h10v10"/></svg>
+      </button>
+      <div class="cta-row">
+        <button class="cta-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save</button>
+        <button class="cta-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>Compare</button>
+        <button class="cta-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Tour</button>
+      </div>
+
+      <p class="footnote">
+        Full financials, schools, room map, sale history &amp; the<br>
+        <b>Underwriting Sandbox</b> live in the full report →
+      </p>
+    </div>
+  </aside>
+
+  <!-- what changed -->
+  <div class="legend">
+    <h5>Option A — what the drawer becomes</h5>
+    <ul>
+      <li><span class="tick keep">KEEP</span> instant-render from the search doc: photo, price, specs, badges, DOM, est-sale Δ, Deal Score, CTAs</li>
+      <li><span class="tick cut">CUT→</span> moved to full report (the ~6–8 on-open API calls): media bento, schools, room map, AVM fetch, DOM timeline, sale history, Underwriting Sandbox, social proof</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

@@ -21,6 +21,7 @@
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import type { BasementFilter } from "@/lib/dashboard/config";
 
 const MONTHS = 24;
 
@@ -29,9 +30,17 @@ export interface Scope {
   minBaths: number;
   minParking: number;
   minFrontage: number;
+  /** basement finish constraint (any = no filter). Mirrors the dashboard lens. */
+  basement: BasementFilter;
 }
 
-export const ZERO_SCOPE: Scope = { minBeds: 0, minBaths: 0, minParking: 0, minFrontage: 0 };
+export const ZERO_SCOPE: Scope = {
+  minBeds: 0,
+  minBaths: 0,
+  minParking: 0,
+  minFrontage: 0,
+  basement: "any",
+};
 
 // ── Price trend (sold side) ──────────────────────────────────────────────────────────
 
@@ -86,6 +95,7 @@ async function computeTrend(region: string, typeKeys: string[], scope: Scope): P
     p_min_parking: scope.minParking,
     p_min_frontage: scope.minFrontage,
     p_months: MONTHS,
+    p_basement: scope.basement,
   });
   if (error) throw new Error(error.message);
 
@@ -154,6 +164,7 @@ async function computeStats(region: string, typeKeys: string[], scope: Scope): P
     p_min_baths: scope.minBaths,
     p_min_parking: scope.minParking,
     p_min_frontage: scope.minFrontage,
+    p_basement: scope.basement,
   });
   if (error) throw new Error(error.message);
 
@@ -178,7 +189,8 @@ async function computeStats(region: string, typeKeys: string[], scope: Scope): P
 
 // ── Cache wrappers ───────────────────────────────────────────────────────────────────
 
-const scopeKey = (s: Scope) => `b${s.minBeds}|w${s.minBaths}|p${s.minParking}|f${s.minFrontage}`;
+const scopeKey = (s: Scope) =>
+  `b${s.minBeds}|w${s.minBaths}|p${s.minParking}|f${s.minFrontage}|x${s.basement}`;
 const typeKey = (typeKeys: string[]) => (typeKeys.length ? [...typeKeys].sort().join(",") : "all");
 
 /** Cached monthly sold-trend for a scope. Caller must pass the VOW gate first. */
@@ -186,9 +198,9 @@ export function getTrendCached(region: string, typeKeys: string[], scope: Scope)
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeTrend(region, typeKeys, scope),
-    // v10 = Toronto district-code roll-up (migration 042); v9 = SQL-aggregated RPC (040).
-    // Bumped so the stale empty-Toronto entries cached under v9 are not served post-fix.
-    ["market-price-trend", "v10", region.toLowerCase(), k],
+    // v11 = basement filter (migration 043); v10 = Toronto district roll-up (042); v9 = RPC (040).
+    // Bumped so entries cached under v10 (no basement dimension) are not served post-migration.
+    ["market-price-trend", "v11", region.toLowerCase(), k],
     { revalidate: 86400 }
   )();
 }
@@ -198,9 +210,9 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeStats(region, typeKeys, scope),
-    // v5 = Toronto district-code roll-up (migration 042); v4 = parking/frontage floor (027).
-    // Bumped so the stale empty-Toronto entries cached under v4 are not served post-fix.
-    ["market-region-stats", "v5", region.toLowerCase(), k],
+    // v6 = basement filter (migration 043); v5 = Toronto district roll-up (042); v4 = parking (027).
+    // Bumped so entries cached under v5 (no basement dimension) are not served post-migration.
+    ["market-region-stats", "v6", region.toLowerCase(), k],
     { revalidate: 86400 }
   )();
 }

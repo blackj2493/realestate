@@ -207,6 +207,12 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       extrapolated_cap_rate: p.extrapolated_cap_rate,
       cap_rate_est: p.cap_rate_est,
       property_hash: metrics?.property_hash || '',
+      // Flat dimension columns (migration 045) — region RPC floors without detoast
+      bedrooms_total: p.bedrooms_total,
+      bathrooms_total_integer: p.bathrooms_total_integer,
+      parking_total: p.parking_total,
+      lot_width: p.lot_width,
+      basement_tier: p.basement_tier,
       // Flat carry cost columns (migration 005)
       monthly_carry_cost: p.monthly_carry_cost,
       monthly_mortgage: p.monthly_mortgage,

@@ -104,6 +104,23 @@ describe('GET /api/market/price-trend', () => {
     expect(body.summary.sales90).toBe(120);
   });
 
+  // ── basement param → p_basement (migration 043) ─────────────────────────────
+  it('defaults p_basement to "any" and forwards a finished/unfinished constraint', async () => {
+    const anyRpc = supabaseRpc({ data: { points: [], summary: {} }, error: null });
+    await GET(makePriceTrendRequest('Brampton'));
+    expect(anyRpc).toHaveBeenCalledWith(
+      'region_price_trend',
+      expect.objectContaining({ p_basement: 'any' })
+    );
+
+    const finRpc = supabaseRpc({ data: { points: [], summary: {} }, error: null });
+    await GET(new NextRequest('http://localhost/api/market/price-trend?region=Brampton&basement=unfinished'));
+    expect(finRpc).toHaveBeenCalledWith(
+      'region_price_trend',
+      expect.objectContaining({ p_basement: 'unfinished' })
+    );
+  });
+
   // ── monthlyVelocity is derived in Node from the settled months (2..7 back) ──
   it('computes monthlyVelocity from the 6 settled months, excluding the latest two', async () => {
     const points = [

@@ -48,10 +48,19 @@ function soldQueryParams(area: Area, lens: MarketActivityLens, limit: number): s
     p.set("polygon", area.polygon.map(([lat, lng]) => `${lat},${lng}`).join(","));
   }
   if (lens.propertyTypes.length) p.set("types", lens.propertyTypes.join(","));
-  if (lens.minBeds > 0) p.set("minBeds", String(lens.minBeds));
-  if (lens.minBaths > 0) p.set("minBaths", String(lens.minBaths));
-  if (lens.minGarage > 0) p.set("minGarage", String(lens.minGarage));
-  if (lens.basementFinished) p.set("basement", "1");
+  if (lens.minBeds > 0) {
+    p.set("minBeds", String(lens.minBeds));
+    if (lens.bedsExact) p.set("bedsExact", "1");
+  }
+  if (lens.minBaths > 0) {
+    p.set("minBaths", String(lens.minBaths));
+    if (lens.bathsExact) p.set("bathsExact", "1");
+  }
+  if (lens.minGarage > 0) {
+    p.set("minGarage", String(lens.minGarage));
+    if (lens.garageExact) p.set("garageExact", "1");
+  }
+  if (lens.basement !== "any") p.set("basement", lens.basement);
   if (lens.minFrontage > 0) p.set("minFrontage", String(lens.minFrontage));
   return p.toString();
 }

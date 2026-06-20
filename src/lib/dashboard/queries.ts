@@ -12,7 +12,7 @@
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
 import type { BoardDef } from './boards';
-import type { MarketActivityLens } from './config';
+import type { BasementFilter, MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
 
@@ -146,9 +146,21 @@ const FINISHED_BASEMENT_VALUES = [
   'Partially Finished',
 ];
 
-function finishedBasementClause(): string {
-  const ors = FINISHED_BASEMENT_VALUES.map((v) => `BasementType:=\`${v}\``);
+// The canonical "no finished space" token on the active (IDX) BasementType field.
+// The sold side has no BasementType — it bands the integer BasementTier instead
+// (see soldFilter.ts) — so the two collections express "unfinished" differently.
+const UNFINISHED_BASEMENT_VALUES = ['Unfinished'];
+
+function basementTypeClause(values: string[]): string {
+  const ors = values.map((v) => `BasementType:=\`${v}\``);
   return `(${ors.join(' || ')})`;
+}
+
+/** Active-side basement clause, or undefined for the unconstrained `any`. */
+function basementClause(basement: BasementFilter): string | undefined {
+  if (basement === 'finished') return basementTypeClause(FINISHED_BASEMENT_VALUES);
+  if (basement === 'unfinished') return basementTypeClause(UNFINISHED_BASEMENT_VALUES);
+  return undefined;
 }
 
 /**
@@ -175,10 +187,10 @@ export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
     areaFilter(area),
     transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
-    lens.minBeds > 0 ? `BedroomsTotal:>=${lens.minBeds}` : undefined,
-    lens.minBaths > 0 ? `BathroomsTotalInteger:>=${lens.minBaths}` : undefined,
-    lens.minGarage > 0 ? `ParkingTotal:>=${lens.minGarage}` : undefined,
-    lens.basementFinished ? finishedBasementClause() : undefined,
+    lens.minBeds > 0 ? `BedroomsTotal:${lens.bedsExact ? '=' : '>='}${lens.minBeds}` : undefined,
+    lens.minBaths > 0 ? `BathroomsTotalInteger:${lens.bathsExact ? '=' : '>='}${lens.minBaths}` : undefined,
+    lens.minGarage > 0 ? `ParkingTotal:${lens.garageExact ? '=' : '>='}${lens.minGarage}` : undefined,
+    basementClause(lens.basement),
     lens.minFrontage > 0 ? `LotWidth:>=${lens.minFrontage}` : undefined
   );
 }

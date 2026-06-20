@@ -9,6 +9,8 @@
  * surface as null so the UI shows "—" rather than a guess.
  */
 
+import type { BasementFilter } from "@/lib/dashboard/config";
+
 export interface RegionScore {
   region: string;
   /** VOW gate: anon received a `locked` shape from the endpoints — render a sign-in overlay. */
@@ -121,6 +123,8 @@ export interface RegionScoreScope {
   minBaths?: number;
   minParking?: number;
   minFrontage?: number;
+  /** basement finish constraint; omit or 'any' ⇒ no filter. */
+  basement?: BasementFilter;
 }
 
 export async function fetchRegionScore(
@@ -139,12 +143,15 @@ export async function fetchRegionScore(
   const minBaths = pos(scope.minBaths);
   const minParking = pos(scope.minParking);
   const minFrontage = pos(scope.minFrontage);
+  // Basement finish — only sent when constraining (finished/unfinished); 'any'/absent ⇒ no param.
+  const basement = scope.basement && scope.basement !== "any" ? scope.basement : "";
   const s =
     t +
     (minBeds ? `&minBeds=${minBeds}` : "") +
     (minBaths ? `&minBaths=${minBaths}` : "") +
     (minParking ? `&minParking=${minParking}` : "") +
-    (minFrontage ? `&minFrontage=${minFrontage}` : "");
+    (minFrontage ? `&minFrontage=${minFrontage}` : "") +
+    (basement ? `&basement=${basement}` : "");
   const [trendR, statsR] = await Promise.allSettled([
     getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${s}`),
     getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${s}`),
