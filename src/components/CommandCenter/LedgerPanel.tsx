@@ -15,15 +15,18 @@ import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColu
 import { makeCohortRanker } from "./cohortPercentiles";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useOpenListing } from "@/hooks/useOpenListing";
 
 interface LedgerPanelProps {
   className?: string;
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, setSelectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
     useCommandCenterStore();
   const isAuthed = useIsAuthed();
+  // Mobile → full report; desktop → in-page Quick Look drawer.
+  const openListing = useOpenListing();
 
   // Card vs. column layout is DEVICE-driven, not panel-width-driven: desktop
   // always gets the sortable column grid (the whole point of the terminal),
@@ -237,7 +240,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               salePrice={isAuthed ? salePriceById[property.id] : undefined}
               compact={cardMode}
               isAuthed={isAuthed}
-              onClick={() => setSelectedProperty(property)}
+              onClick={() => openListing(property)}
               isSelected={selectedProperty?.id === property.id}
               isHovered={hoveredId === property.id}
               onHoverChange={(hovered) => setHoveredId(hovered ? property.id : null)}

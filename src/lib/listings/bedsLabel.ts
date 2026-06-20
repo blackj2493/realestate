@@ -2,8 +2,8 @@
  * "4+1" bed label — above-grade beds, plus below-grade when present.
  *
  * Single source of truth so the Command Center cards (ListingCardBody), the
- * terminal (ListingTerminal), and the server-rendered /properties/[id] detail
- * page all render beds identically. Pure (no React, no "use client") so it can
+ * Quick Look drawer (QuickLookPanel), and the server-rendered /properties/[id]
+ * detail page all render beds identically. Pure (no React, no "use client") so it can
  * be imported by Server Components too.
  *
  * Falls back to the total when above-grade is missing or stored as 0 (TRREB
