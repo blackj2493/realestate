@@ -21,6 +21,7 @@ import {
   MapStatusHUD,
   MapTimeline,
   MapCommandPalette,
+  MobileMapTools,
 } from "@/components/CommandCenter";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
@@ -342,6 +343,9 @@ function CommandCenterContent() {
             metricDef={activeMetric}
             commuteActive={commute.enabled}
           />
+          {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
+              which are otherwise desktop-only via MapControlRail/MapDrawer. */}
+          <MobileMapTools />
           {/* Save the current custom area as a Market Bubble. Self-hides when no
               draw / commute / school filter is active. */}
           <div className="pointer-events-auto absolute right-3 top-3 z-30">

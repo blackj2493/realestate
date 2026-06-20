@@ -13,6 +13,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Scale, Bookmark, History, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
 import SchoolFilter from "./SchoolFilter";
@@ -22,7 +23,7 @@ import MapDrawPanel from "./MapDrawPanel";
 import MapComparePanel from "./MapComparePanel";
 import MapLensesPanel from "./MapLensesPanel";
 
-const TITLES: Record<RailModule, string> = {
+export const TITLES: Record<RailModule, string> = {
   commute: "Commute",
   school: "Schools",
   amenity: "Walkable To",
@@ -33,7 +34,7 @@ const TITLES: Record<RailModule, string> = {
   lenses: "Saved Views",
 };
 
-const ICONS: Record<RailModule, LucideIcon> = {
+export const ICONS: Record<RailModule, LucideIcon> = {
   commute: Navigation,
   school: GraduationCap,
   amenity: ShoppingCart,
@@ -66,7 +67,7 @@ function DrawerHeader({ module, onClose }: { module: RailModule; onClose: () => 
   );
 }
 
-function renderContent(module: RailModule) {
+export function renderModulePanel(module: RailModule) {
   switch (module) {
     case "commute":
       return (
@@ -102,6 +103,9 @@ function renderContent(module: RailModule) {
 export default function MapDrawer() {
   const activeModule = useCommandCenterStore((s) => s.activeModule);
   const setActiveModule = useCommandCenterStore((s) => s.setActiveModule);
+  // On phones (<md) the panels render inside MobileMapTools' bottom sheet instead
+  // of this left-edge drawer — bail here so each panel mounts exactly once.
+  const isMobile = useIsMobile(767);
 
   // Render-gate so the panel can play an exit animation before unmounting.
   const [rendered, setRendered] = useState<RailModule | null>(activeModule);
@@ -118,8 +122,9 @@ export default function MapDrawer() {
     return () => clearTimeout(t);
   }, [activeModule]);
 
+  if (isMobile) return null;
   if (!rendered) return null;
-  const content = renderContent(rendered);
+  const content = renderModulePanel(rendered);
   if (!content) return null;
 
   return (
