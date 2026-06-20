@@ -210,6 +210,45 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             </p>
           )}
 
+          {/* Primary actions — kept near the top so the full report is one click away,
+              without scrolling past the analysis below. */}
+          <div className="mt-4 space-y-2">
+            <Link
+              href={`/properties/${property.id}`}
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open Full Report
+            </Link>
+            <div className="grid grid-cols-2 gap-2">
+              <WatchButton
+                item={{
+                  listing_key: property.id,
+                  address: property.UnparsedAddress,
+                  city: property.City,
+                  list_price: property.ListPrice,
+                  thumb: property.primaryImageUrl,
+                  status: property.Status,
+                }}
+                label="Save"
+              />
+              <button
+                type="button"
+                onClick={() => toggleSelected(property.id)}
+                aria-pressed={isSelected}
+                className={cn(
+                  "flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+                  isSelected
+                    ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
+                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
+                )}
+              >
+                {isSelected ? <Check className="h-4 w-4" /> : <GitCompareArrows className="h-4 w-4" />}
+                {isSelected ? "Added" : "Compare"}
+              </button>
+            </div>
+          </div>
+
           {/* Specs */}
           <div className="my-4 grid grid-cols-4 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
             <Spec icon={<Bed className="h-4 w-4 text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
@@ -264,44 +303,8 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             </table>
           </div>
 
-          {/* CTAs */}
-          <Link
-            href={`/properties/${property.id}`}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Open Full Report
-          </Link>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <WatchButton
-              item={{
-                listing_key: property.id,
-                address: property.UnparsedAddress,
-                city: property.City,
-                list_price: property.ListPrice,
-                thumb: property.primaryImageUrl,
-                status: property.Status,
-              }}
-              label="Save"
-            />
-            <button
-              type="button"
-              onClick={() => toggleSelected(property.id)}
-              aria-pressed={isSelected}
-              className={cn(
-                "flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-                isSelected
-                  ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
-                  : "border-slate-700 text-slate-300 hover:bg-slate-800"
-              )}
-            >
-              {isSelected ? <Check className="h-4 w-4" /> : <GitCompareArrows className="h-4 w-4" />}
-              {isSelected ? "Added" : "Compare"}
-            </button>
-          </div>
-
-          <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-600">
-            Schools, room map, sale history &amp; the Underwriting Sandbox live in the full report.
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-slate-600">
+            The full report adds schools, room map, sale history &amp; the Underwriting Sandbox.
           </p>
         </div>
       </aside>
