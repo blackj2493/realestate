@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
 import { useRouter } from "next/navigation";
+import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
 
 interface LocationSearchProps {
@@ -57,7 +58,8 @@ export default function LocationSearch({
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
   const totalCount = useCommandCenterStore((s) => s.totalCount);
-  const setSelectedProperty = useCommandCenterStore((s) => s.setSelectedProperty);
+  // Mobile → full report; desktop → in-page Quick Look drawer (inplace mode only).
+  const openListing = useOpenListing();
   const router = useRouter();
 
   const [value, setValue] = React.useState("");
@@ -116,7 +118,7 @@ export default function LocationSearch({
     } else if (mode === "navigate") {
       router.push(targetToHref(t));
     } else if (t.action === "open-listing") {
-      setSelectedProperty(t.listing); // opens the in-page listing terminal
+      openListing(t.listing); // desktop → Quick Look drawer; mobile → full report
     } else {
       setLocation(t.label); // drives the existing debounced search
     }

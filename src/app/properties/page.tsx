@@ -14,7 +14,6 @@ import { Loader2, List, Map as MapIcon } from "lucide-react";
 import {
   TopCommandBar,
   LedgerPanel,
-  ListingTerminal,
   MapControlRail,
   MapDrawer,
   MapModeDock,
@@ -23,9 +22,12 @@ import {
   MapCommandPalette,
   MobileMapTools,
 } from "@/components/CommandCenter";
+import QuickLookPanel from "@/components/CommandCenter/QuickLookPanel";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useOpenListing } from "@/hooks/useOpenListing";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
@@ -82,8 +84,6 @@ function CommandCenterContent() {
     location,
     setLocation,
     selectedProperty,
-    setSelectedProperty,
-    isTerminalOpen,
     setIsTerminalOpen,
     commute,
     school,
@@ -104,6 +104,10 @@ function CommandCenterContent() {
     setSoldLocked,
     soldLocked,
   } = useCommandCenterStore();
+
+  // Property-open routing: mobile (≤767) → full report; desktop → Quick Look drawer.
+  const openListing = useOpenListing();
+  const isMobile = useIsMobile(767);
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
   useCommuteIsochrone();
@@ -327,7 +331,7 @@ function CommandCenterContent() {
             properties={displayed}
             colorConfig={mapColorConfig}
             heatAggregation={heatAggregation}
-            onSelectProperty={setSelectedProperty}
+            onSelectProperty={openListing}
             currentSearchQuery={`${activePersona}:${location}`}
             className="h-full w-full"
           />
@@ -406,10 +410,12 @@ function CommandCenterContent() {
         })}
       </div>
 
-      {selectedProperty && (
-        <ListingTerminal
+      {/* Desktop-only interim Quick Look (zero-fetch preview). On mobile, clicks
+          route straight to /properties/[id] (useOpenListing), so this never mounts;
+          the !isMobile guard also unmounts it cleanly on a resize down to phone. */}
+      {selectedProperty && !isMobile && (
+        <QuickLookPanel
           property={selectedProperty}
-          isOpen={isTerminalOpen}
           onClose={() => setIsTerminalOpen(false)}
         />
       )}
