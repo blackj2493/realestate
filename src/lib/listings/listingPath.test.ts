@@ -1,0 +1,73 @@
+import { describe, expect, it } from "vitest";
+import { slugify, buildListingPath, extractListingKey } from "./listingPath";
+
+describe("slugify", () => {
+  it("lowercases and dash-collapses", () => {
+    expect(slugify("3380 Singleton Avenue 107")).toBe("3380-singleton-avenue-107");
+  });
+  it("strips punctuation and unit symbols", () => {
+    expect(slugify("100 King St. W, Unit #5B")).toBe("100-king-st-w-unit-5b");
+  });
+  it("folds diacritics", () => {
+    expect(slugify("Rue Beauprésent")).toBe("rue-beaupresent");
+  });
+  it("trims and collapses dash runs", () => {
+    expect(slugify("  --Lake   Shore-- ")).toBe("lake-shore");
+  });
+});
+
+describe("buildListingPath", () => {
+  it("builds the canonical descriptive path", () => {
+    expect(
+      buildListingPath({
+        ListingKey: "X12639568",
+        UnparsedAddress: "3380 Singleton Avenue 107",
+        City: "London",
+        StateOrProvince: "ON",
+      }),
+    ).toBe("/property/on/london/3380-singleton-avenue-107-X12639568");
+  });
+
+  it("uppercases a lowercase key", () => {
+    expect(
+      buildListingPath({ ListingKey: "x12639568", UnparsedAddress: "1 A St", City: "London" }),
+    ).toBe("/property/on/london/1-a-st-X12639568");
+  });
+
+  it("returns null without a valid ListingKey (the only un-synthesizable field)", () => {
+    expect(buildListingPath({ ListingKey: "", City: "London" })).toBeNull();
+    expect(buildListingPath({ ListingKey: "NOTAKEY", City: "London" })).toBeNull();
+    expect(buildListingPath({ City: "London" })).toBeNull();
+  });
+
+  it("falls back safely when city/address are missing (still unique via key)", () => {
+    expect(buildListingPath({ ListingKey: "W1234567" })).toBe("/property/on/on/W1234567");
+  });
+
+  it("defaults province to ON", () => {
+    const path = buildListingPath({ ListingKey: "C2345678", City: "Toronto", UnparsedAddress: "5 Bay St" });
+    expect(path).toBe("/property/on/toronto/5-bay-st-C2345678");
+  });
+});
+
+describe("extractListingKey", () => {
+  it("pulls the key from a catch-all segment array", () => {
+    expect(extractListingKey(["on", "london", "3380-singleton-avenue-107-X12639568"])).toBe(
+      "X12639568",
+    );
+  });
+  it("pulls the key from a raw last segment", () => {
+    expect(extractListingKey("5-bay-st-C2345678")).toBe("C2345678");
+  });
+  it("handles a key-only segment (no descriptive prefix)", () => {
+    expect(extractListingKey(["on", "on", "W1234567"])).toBe("W1234567");
+  });
+  it("is case-insensitive and canonicalizes to uppercase", () => {
+    expect(extractListingKey("foo-x12639568")).toBe("X12639568");
+  });
+  it("returns null when no key is present", () => {
+    expect(extractListingKey("just-an-address")).toBeNull();
+    expect(extractListingKey([])).toBeNull();
+    expect(extractListingKey("")).toBeNull();
+  });
+});

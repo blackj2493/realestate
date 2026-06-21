@@ -16,6 +16,7 @@ import { Bed, Bath, Square, Car, AlertTriangle, Building2, ChevronDown } from "l
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
+import { buildListingPath } from "@/lib/listings/listingPath";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
@@ -59,6 +60,27 @@ import ClampText from "./ClampText";
 export const dynamic = "force-dynamic";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
+
+/**
+ * Canonical descriptive URL for a listing (Phase 1c):
+ *   {SITE}/property/{prov}/{city}/{address}-{KEY}
+ * Used by the page metadata + JSON-LD regardless of which URL the visitor arrived on
+ * (the middleware rewrites the descriptive path to this /properties/[id] route). Falls
+ * back to the legacy /properties/<KEY> path if the payload can't form a slug.
+ */
+function listingCanonical(
+  id: string,
+  p: { UnparsedAddress?: string; City?: string; StateOrProvince?: string },
+): string {
+  const path =
+    buildListingPath({
+      ListingKey: id,
+      UnparsedAddress: p.UnparsedAddress,
+      City: p.City,
+      StateOrProvince: p.StateOrProvince,
+    }) ?? `/properties/${id}`;
+  return `${SITE_URL}${path}`;
+}
 
 interface RawListing {
   ListingKey?: string;
@@ -142,7 +164,7 @@ export async function generateMetadata({
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Listing";
   const price = p.ListPrice || 0;
-  const canonical = `${SITE_URL}/properties/${id}`;
+  const canonical = listingCanonical(id, p);
   const statusSuffix =
     detail.status.kind === "sold"
       ? ` — ${detail.status.label}`
@@ -190,7 +212,7 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   const subType = (p.PropertySubType || "").toLowerCase();
   // Accommodation (Place) subtype carries the structural facts (beds/baths/area).
   const accommodationType = /condo|apartment/.test(subType) ? "Apartment" : "SingleFamilyResidence";
-  const url = `${SITE_URL}/properties/${id}`;
+  const url = listingCanonical(id, p);
   const photos = detail.media_urls.slice(0, 8);
   const availability =
     detail.status.kind === "sold"
