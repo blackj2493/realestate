@@ -1,0 +1,177 @@
+/**
+ * City hub — /property/{prov}/{city} (Phase 2a).
+ *
+ * Server-rendered, crawlable HTML page listing active For-Sale listings in a city,
+ * each linking to its listing page. This is the crawl path Googlebot lacks today (the
+ * Command Center is a client-only WebGL map), AND it targets "homes for sale in {city}"
+ * searches the address pages can't.
+ *
+ * Public + anon-only → statically generated + revalidated (no per-request auth, unlike
+ * the listing page). Queries Typesense exclusively (CLAUDE.md §3B/§5).
+ *
+ * Compliance: ≤100 listings per query (§4); each card shows the listing brokerage in the
+ * same size as other details (§6.3c, baked into PropertyCard); the IDX deemed-reliable +
+ * bona-fide notice renders below (§6.3 i/k); active IDX feed data only; deterministic
+ * (no LLM, §4); thin hubs (< MIN_INDEXABLE listings) are noindexed to avoid doorway/thin
+ * pages.
+ *
+ * NOTE (2a scope): city is matched by de-slugifying the URL to the TRREB City value, so
+ * only clean single-token cities (London, Brampton, …) resolve. Toronto's district codes
+ * ("Toronto C06") need the normalized CitySlug field added in 2b to consolidate.
+ */
+
+import type { Metadata } from "next";
+import Link from "next/link";
+import { cache } from "react";
+import { Building2 } from "lucide-react";
+import { searchListings, type ListingDocument } from "@/lib/typesense/client";
+import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
+import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+
+export const revalidate = 3600; // hourly — public category page, no auth gating
+export const dynamicParams = true;
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
+const PER_PAGE = 48; // well under the §4 cap of 100
+const MIN_INDEXABLE = 3; // fewer than this → noindex (thin-content / doorway guard)
+
+/** "richmond-hill" → "Richmond Hill" (best-effort de-slug to the TRREB City value). */
+function deslugCity(slug: string): string {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** One Typesense query, shared by generateMetadata + the page (React-cache deduped). */
+const getCityListings = cache(async (cityName: string) => {
+  try {
+    return await searchListings({
+      query: "*",
+      rawFilterBy: `City:=\`${cityName}\` && TransactionType:=\`For Sale\` && PropertyType:!=Commercial`,
+      perPage: PER_PAGE,
+      sortBy: "ListPrice",
+      sortOrder: "desc",
+    });
+  } catch (err) {
+    console.error(`[CityHub] Typesense query failed for "${cityName}":`, err);
+    return { listings: [] as ListingDocument[], totalFound: 0, page: 1, perPage: PER_PAGE, processingTimeMs: 0 };
+  }
+});
+
+function toCardData(doc: ListingDocument): PropertyCardData {
+  return {
+    id: doc.id,
+    listingId: doc.id,
+    address: doc.UnparsedAddress ?? "Address unavailable",
+    city: doc.City ?? "",
+    price: doc.ListPrice ?? 0,
+    previousPrice: doc.OriginalListPrice,
+    propertyType: doc.PropertySubType ?? doc.PropertyType ?? "",
+    bedrooms: doc.BedroomsTotal ?? 0,
+    bathrooms: doc.BathroomsTotalInteger ?? 0,
+    squareFeet: doc.BuildingAreaTotal,
+    daysOnMarket: doc.calculatedDOM,
+    brokerage: doc.ListOfficeName, // §6.3(c) — PropertyCard renders "Listed by …"
+    photoUrl: doc.thumbnailUrl ?? doc.primaryImageUrl ?? null,
+    maintenance: doc.AssociationFee,
+  };
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ prov: string; city: string }>;
+}): Promise<Metadata> {
+  const { prov, city } = await params;
+  const cityName = deslugCity(city);
+  const { totalFound } = await getCityListings(cityName);
+  const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
+  const provLabel = prov.toUpperCase();
+
+  const title = `Homes for Sale in ${cityName}, ${provLabel} | PureProperty`;
+  const description =
+    totalFound > 0
+      ? `Browse ${totalFound} active ${cityName} listings for sale. Compare prices, beds, baths, and brokerage details on PureProperty.`
+      : `Active real estate listings for sale in ${cityName}, ${provLabel}.`;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+    alternates: { canonical },
+    // Thin hubs must not be indexed (Google doorway/thin-content policy).
+    robots: totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
+    openGraph: { title, description, url: canonical, siteName: "PureProperty", type: "website" },
+  };
+}
+
+export default async function CityHubPage({
+  params,
+}: {
+  params: Promise<{ prov: string; city: string }>;
+}) {
+  const { prov, city } = await params;
+  const cityName = deslugCity(city);
+  const { listings, totalFound } = await getCityListings(cityName);
+  const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
+  const provLabel = prov.toUpperCase();
+
+  const breadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Properties", item: `${SITE_URL}/properties` },
+      { "@type": "ListItem", position: 3, name: `${cityName}, ${provLabel}`, item: canonical },
+    ],
+  };
+
+  return (
+    <main className="min-h-app bg-slate-950 text-slate-200">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
+
+      <div className="mx-auto max-w-[1400px] px-4 py-8">
+        <nav className="mb-4 text-sm text-slate-500">
+          <Link href="/" className="hover:text-cyan-400">Home</Link>
+          <span className="mx-2">/</span>
+          <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
+          <span className="mx-2">/</span>
+          <span className="text-slate-300">{cityName}</span>
+        </nav>
+
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
+            Homes for Sale in {cityName}, {provLabel}
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            {totalFound > 0
+              ? `${totalFound.toLocaleString()} active ${totalFound === 1 ? "listing" : "listings"} for sale`
+              : `No active listings for sale in ${cityName} right now.`}
+          </p>
+        </header>
+
+        {listings.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {listings.map((doc) => (
+              <PropertyCard key={doc.id} property={toCardData(doc)} showSaveButton={false} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
+            <Building2 className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+            <p>Nothing active here at the moment.</p>
+            <Link href="/properties" className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
+              Explore the full map →
+            </Link>
+          </div>
+        )}
+
+        <div className="mt-8">
+          <ListingComplianceNotice />
+        </div>
+      </div>
+    </main>
+  );
+}
