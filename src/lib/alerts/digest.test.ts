@@ -140,6 +140,6 @@ describe("renderAlertsDigest — drop-row edge cases", () => {
 
   it("text fallback ends with the dashboard link", () => {
     const { text } = renderAlertsDigest(payload({ drops: [baseDrop] }));
-    expect(text).toContain("Open your dashboard: https://pureproperty.ca/dashboard");
+    expect(text).toContain("Open your dashboard: https://www.pureproperty.ca/dashboard");
   });
 });

@@ -38,7 +38,7 @@ export interface DigestPayload {
   bubbles: BubbleSection[];
 }
 
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://pureproperty.ca").replace(/\/$/, "");
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-CA")}`;
 const listingUrl = (key: string) => `${SITE}/properties/${encodeURIComponent(key)}`;

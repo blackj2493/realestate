@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://pureproperty.ca").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
 // Refresh daily (matches the ETL cadence). Compliance: the `listings` table is the
 // active IDX feed only — sold/VOW records live in raw_vow_sold and are never emitted.
