@@ -23,7 +23,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
-import { Building2, TrendingUp } from "lucide-react";
+import { Building2, TrendingUp, GraduationCap } from "lucide-react";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
@@ -133,12 +133,20 @@ export default async function CityHubPage({
               : `No active listings for sale in ${cityName} right now.`}
           </p>
           {totalFound > 0 && (
-            <Link
-              href={`/investments/${city}/highest-cap-rate`}
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
-            >
-              <TrendingUp className="h-4 w-4" /> Highest cap-rate investments in {cityName} →
-            </Link>
+            <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:gap-5">
+              <Link
+                href={`/investments/${city}/highest-cap-rate`}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+              >
+                <TrendingUp className="h-4 w-4" /> Highest cap-rate investments in {cityName} →
+              </Link>
+              <Link
+                href={`/family/${city}/top-rated-schools`}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+              >
+                <GraduationCap className="h-4 w-4" /> Homes near top-rated schools in {cityName} →
+              </Link>
+            </div>
           )}
         </header>
 

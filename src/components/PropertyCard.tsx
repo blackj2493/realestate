@@ -9,6 +9,7 @@ import {
   Calendar,
   Home,
   TrendingDown,
+  GraduationCap,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -43,6 +44,10 @@ export interface PropertyCardData {
   suiteScore?: number;
   // Phase 5: Stale Inventory
   isStale?: boolean;
+  // Smart-Homebuyer hub: best-rated nearby school score (0–10, PureProperty School
+  // Score from EQAO / OGL-Ontario). PUBLIC open-data, not a gated metric — set only by
+  // the schools hub so the badge stays exclusive to it.
+  topSchoolScore?: number;
 }
 
 interface PropertyCardProps {
@@ -147,6 +152,14 @@ export function PropertyCard({
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
+            {/* School-score badge (Smart-Homebuyer hub only). Public EQAO/OGL-Ontario
+                open data — shown, not gated. */}
+            {property.topSchoolScore !== undefined && property.topSchoolScore > 0 && (
+              <span className="px-2 py-1 text-xs font-semibold text-emerald-50 bg-emerald-600/90 border border-emerald-400/30 rounded-md flex items-center gap-1">
+                <GraduationCap className="h-3 w-3" />
+                Schools {property.topSchoolScore.toFixed(1)}
+              </span>
+            )}
             {/* Suite Status Badge (top-left) - highest priority */}
             {property.suiteStatus === 'EXISTING_SUITE' && (
               <span className="px-2 py-1 text-xs font-mono font-semibold text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-md">
