@@ -16,6 +16,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { cityHubsWithInventory } from "@/lib/listings/cityHubs";
+import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { deslugCity } from "@/lib/listings/listingPath";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/property`,
     siteName: "PureProperty",
     type: "website",
+    images: [ogImageUrl({ eyebrow: "Ontario Real Estate", title: "Homes for Sale by City", subtitle: "Browse active listings across every Ontario city." })],
   },
 };
 

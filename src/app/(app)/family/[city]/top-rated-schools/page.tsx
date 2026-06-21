@@ -30,6 +30,7 @@ import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
+import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -88,7 +89,14 @@ export async function generateMetadata({
     description,
     alternates: { canonical },
     robots: totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
-    openGraph: { title, description, url: canonical, siteName: "PureProperty", type: "website" },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      siteName: "PureProperty",
+      type: "website",
+      images: [ogImageUrl({ eyebrow: "Top-Rated Schools", title: `${cityName}, ON`, subtitle: "Homes near the best-rated schools." })],
+    },
   };
 }
 

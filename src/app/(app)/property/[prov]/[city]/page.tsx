@@ -30,6 +30,7 @@ import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause, neighbourhoodsForCity } from "@/lib/listings/cityHubs";
+import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -85,7 +86,20 @@ export async function generateMetadata({
     alternates: { canonical },
     // Thin hubs must not be indexed (Google doorway/thin-content policy).
     robots: totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
-    openGraph: { title, description, url: canonical, siteName: "PureProperty", type: "website" },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      siteName: "PureProperty",
+      type: "website",
+      images: [
+        ogImageUrl({
+          eyebrow: "Homes for Sale",
+          title: `${cityName}, ${provLabel}`,
+          subtitle: "Listings, schools, walkability & investment potential.",
+        }),
+      ],
+    },
   };
 }
 

@@ -27,6 +27,7 @@ import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { regionsForHoodSlug, cityFilterClause, cityRegionFilterClause } from "@/lib/listings/cityHubs";
+import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -85,7 +86,14 @@ export async function generateMetadata({
     alternates: { canonical },
     // Thin neighbourhoods must not be indexed (Google doorway/thin-content policy).
     robots: totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
-    openGraph: { title, description, url: canonical, siteName: "PureProperty", type: "website" },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      siteName: "PureProperty",
+      type: "website",
+      images: [ogImageUrl({ eyebrow: "Homes for Sale", title: `${hoodName}, ${cityName}`, subtitle: "Active listings in this neighbourhood." })],
+    },
   };
 }
 

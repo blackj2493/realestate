@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import WatchlistInit from "@/components/watchlist/WatchlistInit";
+import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const jetbrainsMono = JetBrains_Mono({
@@ -27,6 +28,13 @@ export const metadata: Metadata = {
     title: "PureProperty | Ontario Real Estate Listings & Market Intelligence",
     description:
       "Every active Ontario MLS® listing, decoded — cap rate, schools, walkability, and development potential in one place.",
+    images: [
+      ogImageUrl({
+        eyebrow: "Ontario Real Estate",
+        title: "Every listing, decoded.",
+        subtitle: "Cap-rate, school, walkability & development intelligence the portals don't show.",
+      }),
+    ],
   },
   twitter: { card: "summary_large_image", title: "PureProperty", description: "Ontario real estate, decoded for serious buyers and investors." },
 };
