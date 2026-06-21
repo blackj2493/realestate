@@ -68,13 +68,17 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.
  * (the middleware rewrites the descriptive path to this /properties/[id] route). Falls
  * back to the legacy /properties/<KEY> path if the payload can't form a slug.
  */
-function listingCanonical(
-  id: string,
-  p: { UnparsedAddress?: string; City?: string; StateOrProvince?: string },
-): string {
+function listingCanonical(id: string, p: RawListing): string {
   const path =
     buildListingPath({
       ListingKey: id,
+      StreetNumber: p.StreetNumber,
+      StreetName: p.StreetName,
+      StreetSuffix: p.StreetSuffix,
+      StreetDirPrefix: p.StreetDirPrefix,
+      StreetDirSuffix: p.StreetDirSuffix,
+      UnitNumber: p.UnitNumber,
+      ApartmentNumber: p.ApartmentNumber,
       UnparsedAddress: p.UnparsedAddress,
       City: p.City,
       StateOrProvince: p.StateOrProvince,
@@ -87,6 +91,13 @@ interface RawListing {
   ListPrice?: number;
   OriginalListPrice?: number;
   UnparsedAddress?: string;
+  StreetNumber?: string;
+  StreetName?: string;
+  StreetSuffix?: string;
+  StreetDirPrefix?: string;
+  StreetDirSuffix?: string;
+  UnitNumber?: string;
+  ApartmentNumber?: string;
   City?: string;
   CityRegion?: string;
   StateOrProvince?: string;

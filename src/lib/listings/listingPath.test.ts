@@ -48,6 +48,31 @@ describe("buildListingPath", () => {
     const path = buildListingPath({ ListingKey: "C2345678", City: "Toronto", UnparsedAddress: "5 Bay St" });
     expect(path).toBe("/property/on/toronto/5-bay-st-C2345678");
   });
+
+  it("prefers structured street fields over the full UnparsedAddress (no city/postal in slug)", () => {
+    expect(
+      buildListingPath({
+        ListingKey: "C12893986",
+        StreetNumber: "31",
+        StreetName: "Tippett",
+        StreetSuffix: "Rd",
+        UnitNumber: "607",
+        UnparsedAddress: "31 Tippett Rd 607 Toronto C06 ON M3H 0C8",
+        City: "Toronto C06",
+        StateOrProvince: "ON",
+      }),
+    ).toBe("/property/on/toronto-c06/31-tippett-rd-607-C12893986");
+  });
+
+  it("falls back to the street portion (before the first comma) of UnparsedAddress", () => {
+    expect(
+      buildListingPath({
+        ListingKey: "W7654321",
+        UnparsedAddress: "12 Main St, Brampton, ON L6Y 1A1",
+        City: "Brampton",
+      }),
+    ).toBe("/property/on/brampton/12-main-st-W7654321");
+  });
 });
 
 describe("extractListingKey", () => {

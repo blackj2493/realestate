@@ -24,9 +24,36 @@ export function slugify(input: string): string {
 /** Minimal payload shape needed to build a path. */
 export interface ListingPathInput {
   ListingKey?: string | null;
+  // Structured street fields (preferred — yield a clean street-only slug).
+  StreetNumber?: string | null;
+  StreetName?: string | null;
+  StreetSuffix?: string | null;
+  StreetDirPrefix?: string | null;
+  StreetDirSuffix?: string | null;
+  UnitNumber?: string | null;
+  ApartmentNumber?: string | null;
+  // Fallback only — the FULL address (street + city + prov + postal), so it must be
+  // trimmed to the street portion before use or the slug duplicates city/prov/postal.
   UnparsedAddress?: string | null;
   City?: string | null;
   StateOrProvince?: string | null;
+}
+
+/**
+ * Street-only address for the slug. Prefers the structured TRREB fields (so the slug is
+ * e.g. "31-tippett-rd-607", NOT "31-tippett-rd-607-toronto-c06-on-m3h-0c8"). Falls back
+ * to the part of UnparsedAddress before the first comma when structured fields are absent.
+ */
+function streetAddress(p: ListingPathInput): string {
+  const street = [p.StreetDirPrefix, p.StreetNumber, p.StreetName, p.StreetSuffix, p.StreetDirSuffix]
+    .map((x) => (x ?? "").toString().trim())
+    .filter(Boolean)
+    .join(" ");
+  const unit = (p.UnitNumber || p.ApartmentNumber || "").toString().trim();
+  if (street) return unit ? `${street} ${unit}` : street;
+
+  const ua = (p.UnparsedAddress ?? "").toString();
+  return ua.includes(",") ? ua.split(",")[0] : ua; // best-effort street slice
 }
 
 /**
@@ -40,7 +67,7 @@ export function buildListingPath(p: ListingPathInput): string | null {
 
   const prov = slugify(p.StateOrProvince || "ON") || "on";
   const city = slugify(p.City || "") || "on";
-  const addr = slugify(p.UnparsedAddress || "");
+  const addr = slugify(streetAddress(p));
 
   const tail = addr ? `${addr}-${key}` : key;
   return `/property/${prov}/${city}/${tail}`;
