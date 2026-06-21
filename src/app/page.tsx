@@ -68,6 +68,15 @@ export default function HomePage() {
             Explore the Terminal &rarr;
           </Link>
 
+          {/* Crawlable entry to the city-hub directory — Googlebot can't crawl the
+              client-only terminal above, so this is the top of the SEO hub tree. */}
+          <Link
+            href="/property"
+            className="terminal-font mt-3.5 text-[11px] uppercase tracking-[0.22em] text-slate-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+          >
+            Browse homes by city &rarr;
+          </Link>
+
           <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-slate-400 [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers
           </p>

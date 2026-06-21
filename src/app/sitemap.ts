@@ -73,6 +73,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/properties`, changeFrequency: "hourly", priority: 0.9 },
+    // /property = the crawlable city directory (top of the hub tree); /properties is the
+    // client-only terminal Googlebot can't crawl.
+    { url: `${SITE_URL}/property`, changeFrequency: "daily", priority: 0.9 },
   ];
 
   const hubRoutes = await cityHubRoutes();
