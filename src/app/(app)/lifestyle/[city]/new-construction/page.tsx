@@ -23,6 +23,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -155,6 +156,15 @@ export default async function NewBuildHubPage({
               See all homes for sale in {cityName} →
             </Link>
           </div>
+        )}
+
+        {totalFound > 0 && (
+          <HubFaq
+            faqs={[
+              { q: `What counts as new construction on PureProperty?`, a: `Homes the MLS® lists as "New" or built within roughly the last five years. ${totalFound.toLocaleString()} such homes are for sale in ${cityName}.` },
+              { q: `How do I find newly built homes in ${cityName}?`, a: `This page shows ${cityName}'s new-construction and newly-built listings, freshest first.` },
+            ]}
+          />
         )}
 
         <div className="mt-8">

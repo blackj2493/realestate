@@ -28,6 +28,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause, neighbourhoodsForCity } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -221,6 +222,17 @@ export default async function CityHubPage({
               ))}
             </div>
           </section>
+        )}
+
+        {totalFound > 0 && (
+          <HubFaq
+            faqs={[
+              { q: `How many homes are for sale in ${cityName}?`, a: `There are currently ${totalFound.toLocaleString()} active homes for sale in ${cityName}, ${provLabel} on PureProperty, refreshed daily from the MLS®.` },
+              { q: `How can I find investment properties in ${cityName}?`, a: `PureProperty ranks ${cityName} listings by estimated cap rate so cash-flow investors can find the highest-yield homes, and flags properties with multi-unit development potential.` },
+              { q: `How do I find homes near top-rated schools in ${cityName}?`, a: `PureProperty's ${cityName} school view ranks homes by the rating of nearby schools, using the PureProperty School Score derived from EQAO (Government of Ontario) data.` },
+              { q: `Which ${cityName} homes are the most walkable?`, a: `PureProperty ranks ${cityName} homes by walking distance to grocery stores so you can find the most walkable listings.` },
+            ]}
+          />
         )}
 
         <div className="mt-8">

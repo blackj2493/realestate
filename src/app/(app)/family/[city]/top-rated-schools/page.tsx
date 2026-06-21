@@ -28,6 +28,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -181,6 +182,16 @@ export default async function SchoolHubPage({
             within ~2.5&nbsp;km; proximity is straight-line and is not a guaranteed
             catchment. Open a listing to see every nearby school and its score.
           </p>
+        )}
+
+        {totalFound > 0 && (
+          <HubFaq
+            faqs={[
+              { q: `What is the PureProperty School Score?`, a: `A 0–10 rating of a school's performance derived from EQAO data published by the Government of Ontario (OGL-Ontario).` },
+              { q: `How do I find homes near top-rated schools in ${cityName}?`, a: `This page ranks ${cityName} homes by the best-rated school within about 2.5 km. ${totalFound.toLocaleString()} homes currently qualify.` },
+              { q: `Does living near a school guarantee enrolment?`, a: `No. Proximity is straight-line distance and is not a guaranteed catchment — confirm boundaries with the local school board.` },
+            ]}
+          />
         )}
 
         <div className="mt-8">

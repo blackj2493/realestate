@@ -36,6 +36,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -177,6 +178,15 @@ export default async function WalkableHubPage({
             straight-line, not walking distance. Open a listing to see all nearby groceries
             and recreation.
           </p>
+        )}
+
+        {totalFound > 0 && (
+          <HubFaq
+            faqs={[
+              { q: `What makes a home "walkable" on PureProperty?`, a: `PureProperty flags homes within a short walk (about 1.5 km) of a grocery store and ranks them closest-first. ${totalFound.toLocaleString()} ${cityName} homes currently qualify.` },
+              { q: `How is walking distance measured?`, a: `As straight-line distance to the nearest grocery store (Overture Maps / OpenStreetMap), not exact walking-route distance.` },
+            ]}
+          />
         )}
 
         <div className="mt-8">

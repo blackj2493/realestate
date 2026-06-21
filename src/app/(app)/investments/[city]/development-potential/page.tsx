@@ -25,6 +25,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -163,6 +164,15 @@ export default async function DevHubPage({
               See all homes for sale in {cityName} →
             </Link>
           </div>
+        )}
+
+        {totalFound > 0 && (
+          <HubFaq
+            faqs={[
+              { q: `What makes a property a development candidate?`, a: `PureProperty flags properties as prime multi-unit / density candidates based on lot size, parking, and property type. ${totalFound.toLocaleString()} qualify in ${cityName}.` },
+              { q: `How can I see the development analysis for a property?`, a: `Open any listing and sign in to see its multi-unit / density potential. This page ranks candidates by lot size, largest first.` },
+            ]}
+          />
         )}
 
         <div className="mt-8">

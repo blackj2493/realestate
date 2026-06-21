@@ -25,6 +25,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -154,6 +155,16 @@ export default async function CapRateHubPage({
               See all homes for sale in {cityName} →
             </Link>
           </div>
+        )}
+
+        {totalFound > 0 && (
+          <HubFaq
+            faqs={[
+              { q: `What is a cap rate?`, a: `A capitalization (cap) rate estimates a rental property's annual return as a percentage of its price. A higher cap rate generally signals stronger cash-flow potential.` },
+              { q: `How does PureProperty rank cap-rate homes in ${cityName}?`, a: `PureProperty estimates each ${cityName} property's cap rate from its list price and market rent, then ranks them highest-first. Open a listing and sign in to see its projected yield.` },
+              { q: `How many cash-flow properties are for sale in ${cityName}?`, a: `${totalFound.toLocaleString()} ${cityName} properties with a computed cap rate are currently listed for sale on PureProperty.` },
+            ]}
+          />
         )}
 
         <div className="mt-8">
