@@ -26,11 +26,23 @@ export function renderOgImage(opts: { title: string; subtitle?: string; eyebrow?
           fontFamily: "sans-serif",
         }}
       >
-        {/* Wordmark */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 20, height: 20, borderRadius: 5, background: "#34d399" }} />
-          <div style={{ fontSize: 34, fontWeight: 700, color: "#e2e8f0", letterSpacing: "-0.02em" }}>
-            PureProperty
+        {/* Wordmark — matches logo.svg: white "‹" chevron + PURE / PROPERTY / .ca colour
+            treatment. Chevron drawn inline (pure shape, resvg-safe); the logo's own <text>
+            won't rasterize reliably without its font, so the wordmark is rebuilt here. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <svg width="26" height="44" viewBox="0 0 26 44" fill="none">
+            <path
+              d="M20 6 L7 22 L20 38"
+              stroke="#FFFFFF"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 38, fontWeight: 700, letterSpacing: "0.01em" }}>
+            <div style={{ display: "flex", color: "#FFFFFF" }}>PURE</div>
+            <div style={{ display: "flex", color: "#8FA4B8", fontWeight: 400 }}>PROPERTY</div>
+            <div style={{ display: "flex", color: "#6B7E92", fontWeight: 400 }}>.ca</div>
           </div>
         </div>
 
