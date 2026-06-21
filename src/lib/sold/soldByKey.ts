@@ -83,6 +83,43 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
   }
 }
 
+/** One sold/off-market record reduced to the PUBLIC fields needed to build an /address URL. */
+export interface SoldSitemapEntry {
+  id: string;
+  city: string;
+  address: string;
+}
+
+/**
+ * PUBLIC-safe export of the sold_listings collection (the rolling ~180-day window) for the
+ * /sitemap-addresses.xml route. include_fields pulls ONLY id/City/UnparsedAddress — no VOW
+ * fields (not even the sold date) are fetched, so nothing sensitive enters sitemap
+ * generation. Capped at `max`. Best-effort ([] on failure).
+ */
+export async function getSoldSitemapEntries(max: number): Promise<SoldSitemapEntry[]> {
+  try {
+    const raw = (await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .export({ include_fields: "id,UnparsedAddress,City" })) as string;
+    const out: SoldSitemapEntry[] = [];
+    for (const line of raw.split("\n")) {
+      if (out.length >= max) break;
+      if (!line.trim()) continue;
+      try {
+        const d = JSON.parse(line) as Partial<SoldListingDocument>;
+        if (d.id) out.push({ id: d.id, city: d.City ?? "", address: d.UnparsedAddress ?? "" });
+      } catch {
+        /* skip malformed line */
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error("[soldByKey] sitemap export failed:", err);
+    return [];
+  }
+}
+
 /**
  * FULL sold record (VOW Listing Information). Call ONLY after getConsumer() confirms a
  * registered consumer — never on the anonymous path.
