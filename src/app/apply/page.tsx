@@ -262,13 +262,13 @@ export default function ApplyPage() {
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
 
-        <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">
+        <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-6 md:px-10 md:py-10">
           {/* Title */}
           <div className="text-center">
-            <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
+            <h1 className="text-3xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
               Terminal Access Application
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:mt-4 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               {
                 "Built for principals and analysts — not agents prospecting for clients. Tell us how you invest and the terminal opens to the right tools."
               }
@@ -317,7 +317,7 @@ export default function ApplyPage() {
           </div>
 
           {/* Stepper — mobile */}
-          <div className="mt-8 md:hidden">
+          <div className="mt-6 md:hidden">
             <p className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-emerald-300">
               Step {step} of 3 · {currentLabel}
             </p>
@@ -330,8 +330,8 @@ export default function ApplyPage() {
           </div>
 
           {/* Body: form + rail */}
-          <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-6 md:p-8">
+          <div className="mt-6 grid gap-8 md:mt-10 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5 md:p-8">
               {error && (
                 <div className="mb-6 rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
                   {error}
