@@ -131,3 +131,16 @@ jobs:
           ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
         run: npx tsx scripts/worker/alerts.ts
+
+      # Refresh cached listing detail for everything synced today so nightly changes
+      # appear immediately instead of within the page's 1h TTL. Additive — must never
+      # break the core sync, so continue-on-error; no-ops cleanly if REVALIDATE_SECRET
+      # is unset. Runs last: it only reads listings.synced_at, set by the sync above.
+      - name: Revalidate Synced Listings
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+        run: npx tsx scripts/worker/revalidateListings.ts

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag, revalidatePath } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { ProptXClient } from "@/lib/proptx/client";
 import { processBatch } from "../../../../scripts/worker/sync";
+import { listingCacheTag } from "@/lib/property/listingCacheTag";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // single-listing quick-sync only; the full ETL runs via GitHub Actions cron
@@ -10,6 +12,22 @@ export const maxDuration = 60; // single-listing quick-sync only; the full ETL r
 // Strict validation is the OData-injection guard — listingKey is interpolated into
 // two $filter strings below, so nothing outside this shape may pass.
 const LISTING_KEY_RE = /^[A-Z]\d{6,9}$/;
+
+/**
+ * Bust the cached listing detail + page after a successful quick-sync so the freshly
+ * synced record is visible immediately (and evicts any cached not-found null). Best-
+ * effort — a revalidation hiccup must never fail an otherwise-successful sync.
+ */
+function revalidateListing(listingKey: string): void {
+  try {
+    // Next 16: { expire: 0 } forces immediate expiration so a freshly quick-synced
+    // listing (and any cached not-found null) is evicted at once, not stale-served.
+    revalidateTag(listingCacheTag(listingKey), { expire: 0 });
+    revalidatePath(`/properties/${listingKey}`);
+  } catch (e) {
+    console.warn(`[Quick-Sync] revalidate failed for ${listingKey}:`, e);
+  }
+}
 
 /**
  * POST /api/sync - Handle quick-sync requests for individual listings
@@ -106,6 +124,7 @@ export async function POST(request: NextRequest) {
           console.warn(`[Quick-Sync] Supabase ok but Typesense write failed for ${listingKey} — nightly sync will repair the index.`);
         }
         console.log(`[Quick-Sync] Full pipeline synced listing: ${listingKey}`);
+        revalidateListing(listingKey);
         return NextResponse.json({
           success: true,
           message: "Listing synced successfully",
@@ -148,6 +167,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`[Quick-Sync] Successfully synced listing (minimal): ${listingKey}`);
+      revalidateListing(listingKey);
       return NextResponse.json({
         success: true,
         message: "Listing synced successfully",

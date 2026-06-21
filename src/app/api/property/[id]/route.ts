@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
+import { gateVowDerived } from "@/lib/property/getListingDetail";
+import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 
@@ -15,7 +16,7 @@ export async function GET(
   try {
     console.log(`[Property API] Fetching listing: ${listingKey}`);
 
-    const detail = await getListingDetail(listingKey);
+    const detail = await getListingDetailCached(listingKey);
 
     if (!detail) {
       console.log(`[Property API] Listing not found in database: ${listingKey}`);

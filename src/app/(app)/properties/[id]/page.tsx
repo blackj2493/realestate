@@ -14,7 +14,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Bed, Bath, Square, Car, AlertTriangle, Building2, ChevronDown } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
-import { getListingDetail, gateVowDerived } from "@/lib/property/getListingDetail";
+import { gateVowDerived } from "@/lib/property/getListingDetail";
+import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
@@ -33,6 +34,7 @@ import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
 import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
+import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
@@ -128,7 +130,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const detail = await getListingDetail(id).catch(() => null);
+  const detail = await getListingDetailCached(id).catch(() => null);
 
   if (!detail) {
     return {
@@ -182,55 +184,88 @@ export async function generateMetadata({
   };
 }
 
-function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDetail>>) {
+function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDetailCached>>) {
   if (!detail) return null;
   const p = detail.full_payload as RawListing;
   const subType = (p.PropertySubType || "").toLowerCase();
-  const schemaType = /condo|apartment/.test(subType) ? "Apartment" : "SingleFamilyResidence";
+  // Accommodation (Place) subtype carries the structural facts (beds/baths/area).
+  const accommodationType = /condo|apartment/.test(subType) ? "Apartment" : "SingleFamilyResidence";
+  const url = `${SITE_URL}/properties/${id}`;
+  const photos = detail.media_urls.slice(0, 8);
+  const availability =
+    detail.status.kind === "sold"
+      ? "https://schema.org/SoldOut"
+      : detail.status.kind === "delisted"
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock";
 
+  // Listing brokerage (§6.3(c)) — surfaced in structured data as well as on-page.
+  // RealEstateOrganization is the listing OFFICE (ListOfficeName), not an agent.
+  const broker = p.ListOfficeName
+    ? { "@type": "RealEstateOrganization", name: p.ListOfficeName }
+    : undefined;
+
+  // @graph: a RealEstateListing (the page) → its Accommodation (the property) →
+  // a clean BreadcrumbList. Note: Google has no real-estate rich result, so the
+  // listing/offer nodes are for entity understanding only; the BreadcrumbList is
+  // the single node here that actually renders as a SERP rich result, so it is
+  // kept strictly valid (3 distinct URLs, sequential positions).
   return {
     "@context": "https://schema.org",
-    "@type": schemaType,
-    name: p.UnparsedAddress || "Property listing",
-    description: cleanDescription(p.PublicRemarks, 500) || undefined,
-    url: `${SITE_URL}/properties/${id}`,
-    image: detail.media_urls.slice(0, 8),
-    numberOfRooms: p.RoomsTotal || detail.rooms.length || undefined,
-    numberOfBedrooms: p.BedroomsTotal || undefined,
-    numberOfBathroomsTotal: p.BathroomsTotalInteger || undefined,
-    ...(p.BuildingAreaTotal
-      ? { floorSize: { "@type": "QuantitativeValue", value: p.BuildingAreaTotal, unitCode: "FTK" } }
-      : {}),
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: p.UnparsedAddress || undefined,
-      addressLocality: p.City || detail.city || undefined,
-      addressRegion: p.StateOrProvince || "ON",
-      postalCode: p.PostalCode || undefined,
-      addressCountry: "CA",
-    },
-    ...(p.OriginalEntryTimestamp ? { datePosted: p.OriginalEntryTimestamp } : {}),
-    offers: {
-      "@type": "Offer",
-      price: p.ListPrice || 0,
-      priceCurrency: "CAD",
-      availability:
-        detail.status.kind === "sold"
-          ? "https://schema.org/SoldOut"
-          : detail.status.kind === "delisted"
-            ? "https://schema.org/OutOfStock"
-            : "https://schema.org/InStock",
-      url: `${SITE_URL}/properties/${id}`,
-      ...(p.ListOfficeName
-        ? { seller: { "@type": "RealEstateAgent", name: p.ListOfficeName } }
-        : {}),
-    },
+    "@graph": [
+      {
+        "@type": "RealEstateListing",
+        "@id": `${url}#listing`,
+        url,
+        name: p.UnparsedAddress || "Property listing",
+        description: cleanDescription(p.PublicRemarks, 500) || undefined,
+        ...(p.OriginalEntryTimestamp ? { datePosted: p.OriginalEntryTimestamp } : {}),
+        ...(photos.length ? { image: photos } : {}),
+        mainEntity: { "@id": `${url}#property` },
+        ...(broker ? { provider: broker } : {}),
+      },
+      {
+        "@type": accommodationType,
+        "@id": `${url}#property`,
+        name: p.UnparsedAddress || "Property listing",
+        numberOfRooms: p.RoomsTotal || detail.rooms.length || undefined,
+        numberOfBedrooms: p.BedroomsTotal || undefined,
+        numberOfBathroomsTotal: p.BathroomsTotalInteger || undefined,
+        ...(p.BuildingAreaTotal
+          ? { floorSize: { "@type": "QuantitativeValue", value: p.BuildingAreaTotal, unitCode: "FTK" } }
+          : {}),
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: p.UnparsedAddress || undefined,
+          addressLocality: p.City || detail.city || undefined,
+          addressRegion: p.StateOrProvince || "ON",
+          postalCode: p.PostalCode || undefined,
+          addressCountry: "CA",
+        },
+        offers: {
+          "@type": "Offer",
+          price: p.ListPrice || 0,
+          priceCurrency: "CAD",
+          availability,
+          url,
+          ...(broker ? { seller: broker } : {}),
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: "Properties", item: `${SITE_URL}/properties` },
+          { "@type": "ListItem", position: 3, name: p.UnparsedAddress || "Listing", item: url },
+        ],
+      },
+    ],
   };
 }
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = await getListingDetail(id).catch(() => null);
+  const detail = await getListingDetailCached(id).catch(() => null);
 
   if (!detail) {
     return (
@@ -712,6 +747,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           area={p.BuildingAreaTotal ?? 0}
         />
         </div>
+
+        {/* IDX consumer notice — unconditional on every listing page (§6.3(i)+(k)),
+            independent of whether AVM figures rendered above. */}
+        <ListingComplianceNotice className="mt-8" />
       </div>
 
       {/* Mobile sticky Save + Contact — the right rail (with these actions) stacks
