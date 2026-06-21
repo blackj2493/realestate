@@ -17,7 +17,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   evaluateRules,
   failCount,
-  activeRuleCount,
+  purchaseOnlyRuleCount,
+  PURCHASE_ONLY_RULES,
   DEFAULT_RULES,
   type RuleSet,
   type ListingMetrics,
@@ -54,9 +55,12 @@ const RULE_FIELDS: { key: keyof RuleSet; label: string; suffix?: string; prefix?
 export default function YourTakeCard({
   listingKey,
   metrics,
+  isLease = false,
 }: {
   listingKey: string;
   metrics: ListingMetrics;
+  /** Lease listings skip the purchase-only rules (cap rate, max price) in the auto-screen. */
+  isLease?: boolean;
 }) {
   const [hydrated, setHydrated] = useState(false);
   const [rules, setRules] = useState<RuleSet>(DEFAULT_RULES);
@@ -91,9 +95,13 @@ export default function YourTakeCard({
     }, 400);
   }
 
-  const results = hydrated ? evaluateRules(metrics, rules) : [];
+  const results = hydrated ? evaluateRules(metrics, rules, { isLease }) : [];
   const fails = failCount(results);
-  const active = activeRuleCount(rules);
+  // active = rules actually evaluated for THIS listing (purchase-only rules are dropped
+  // on leases), so the verdict count matches the chips shown.
+  const active = results.length;
+  // Purchase-only rules the user set but which don't apply here (lease) → explain, don't ghost-pass.
+  const skippedPurchaseRules = hydrated && isLease ? purchaseOnlyRuleCount(rules) : 0;
 
   return (
     <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
@@ -108,8 +116,15 @@ export default function YourTakeCard({
         {RULE_FIELDS.map((f) => {
           const stored = rules[f.key];
           const shown = stored == null ? "" : String(f.scale ? stored / f.scale : stored);
+          // Purchase-only rules (cap rate, max price) don't apply to a lease — dim the
+          // input and flag it, but keep it editable (rules are global across listings).
+          const na = isLease && PURCHASE_ONLY_RULES.has(f.key);
           return (
-            <label key={f.key} className="flex flex-col gap-1">
+            <label
+              key={f.key}
+              className={`flex flex-col gap-1 ${na ? "opacity-40" : ""}`}
+              title={na ? "Doesn't apply to lease listings" : undefined}
+            >
               <span className="font-mono text-[9px] uppercase tracking-wide text-slate-500">{f.label}</span>
               <span className="flex items-center gap-0.5 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
                 {f.prefix && <span className="text-[11px] text-slate-500">{f.prefix}</span>}
@@ -130,11 +145,15 @@ export default function YourTakeCard({
 
       {/* Verdict against the rules */}
       {active === 0 ? (
-        <p className="mb-3 text-[11px] text-slate-500">Set your deal-breakers above to auto-screen every listing.</p>
+        <p className="mb-3 text-[11px] text-slate-500">
+          {skippedPurchaseRules > 0
+            ? "Your cap-rate & price filters don't apply to leases — set a beds or True DOM rule to screen rentals."
+            : "Set your deal-breakers above to auto-screen every listing."}
+        </p>
       ) : (
         <div className="mb-3">
           <p className={`mb-1.5 font-mono text-[11px] font-bold ${fails > 0 ? "text-rose-400" : "text-emerald-400"}`}>
-            {fails > 0 ? `⚑ Fails ${fails} of your ${active} rule${active === 1 ? "" : "s"}` : `✓ Meets all ${active} of your rules`}
+            {fails > 0 ? `⚑ Fails ${fails} of your ${active} rule${active === 1 ? "" : "s"}` : `✓ Meets all ${active} of your rule${active === 1 ? "" : "s"}`}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {results.map((r) => (
@@ -153,6 +172,9 @@ export default function YourTakeCard({
               </span>
             ))}
           </div>
+          {skippedPurchaseRules > 0 && (
+            <p className="mt-1.5 text-[10px] text-slate-500">Cap-rate & price filters skipped — they don&apos;t apply to leases.</p>
+          )}
         </div>
       )}
 
