@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { extractListingKey } from '@/lib/listings/listingPath';
 
+// NOTE: this file MUST live at src/middleware.ts (NOT the project root). The app is
+// under src/, so Next.js only picks up middleware from src/ — a root middleware.ts is
+// silently ignored (which is why session-refresh + the rewrite below never ran before).
+
 export async function middleware(request: NextRequest) {
   // Phase 1c — descriptive listing URLs. /property/{prov}/{city}/{address}-{KEY}
   // rewrites INTERNALLY to the existing /properties/{KEY} route: the URL bar stays
