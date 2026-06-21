@@ -115,6 +115,10 @@ export const indexedFields: IndexedField[] = [
   // Standard API Inputs (low-cardinality enums)
   { name: 'OccupantType', type: 'string', facet: true },
   { name: 'PossessionType', type: 'string', facet: true },
+  // Compass facing for the Faces filter — DirectionFaces (houses) → Exposure (condos),
+  // normalised to 8 points (src/lib/listings/directionFaces.ts). Low-card facet = cheap
+  // RAM. optional: backfilled in-place on existing docs (absent until backfill runs).
+  { name: 'DirectionFaces', type: 'string', facet: true, optional: true },
 
   // Status & Age
   { name: 'Status', type: 'string', facet: true },
@@ -259,6 +263,9 @@ export const typesenseSchema = {
     // Standard API Inputs
     { name: 'OccupantType', type: 'string' as const, facet: true },
     { name: 'PossessionType', type: 'string' as const, facet: true },
+    // Compass facing (DirectionFaces → Exposure, normalised). Low-card facet; optional
+    // (backfilled in-place). See scripts/admin/add-direction-faces.ts.
+    { name: 'DirectionFaces', type: 'string' as const, facet: true, optional: true },
 
     { name: 'Status', type: 'string' as const, facet: true },
     { name: 'ApproximateAge', type: 'string' as const, facet: true },
@@ -421,6 +428,9 @@ export interface TypesensePropertyDocument {
   OccupantType: string | null;
   /** Possession type: null | null */
   PossessionType: string | null;
+  /** Normalised compass facing (DirectionFaces for houses, Exposure for condos);
+   *  one of the 8 points or "" when unknown. Omitted on docs predating the backfill. */
+  DirectionFaces?: string;
   
   // ─── Temporal Distress (Phase 4) ──────────────────────────────────────
   /** SHA-256 hash of normalized address for entity resolution (stored, not indexed) */

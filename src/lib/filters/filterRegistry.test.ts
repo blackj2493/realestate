@@ -83,8 +83,8 @@ describe("buildUniversalFilterString", () => {
 });
 
 describe("MORE_FILTERS (Phase 2)", () => {
-  it("registers 14 filters total (4 pinned + 10 added)", () => {
-    expect(ALL_FILTERS.length).toBe(14);
+  it("registers 16 filters total (4 pinned + 12 added)", () => {
+    expect(ALL_FILTERS.length).toBe(16);
     expect(ALL_FILTERS.filter((f) => f.defaultPinned).length).toBe(4);
   });
   it("basement backtick-quotes BasementType values in an OR group", () => {
@@ -105,11 +105,22 @@ describe("MORE_FILTERS (Phase 2)", () => {
   it("parking emits an exact (=) clause in exact mode", () => {
     expect(FILTERS_BY_KEY.parking.buildClause({ n: 2, exact: true })).toBe("ParkingTotal:=2");
   });
+  it("garage emits a CoveredSpaces >= stepper clause, null at 0", () => {
+    expect(FILTERS_BY_KEY.garage.buildClause(2)).toBe("CoveredSpaces:>=2");
+    expect(FILTERS_BY_KEY.garage.buildClause(0)).toBeNull();
+  });
+  it("faces backtick-quotes DirectionFaces values in an OR group", () => {
+    expect(FILTERS_BY_KEY.faces.buildClause(["North", "South West"])).toBe(
+      "(DirectionFaces:=`North` || DirectionFaces:=`South West`)"
+    );
+    expect(FILTERS_BY_KEY.faces.buildClause([])).toBeNull();
+  });
   it("maintFee emits an upper bound", () => {
     expect(FILTERS_BY_KEY.maintFee.buildClause([0, 600])).toBe("AssociationFee:<=600");
   });
   it("FACET_FIELDS lists the faceted enum fields", () => {
     expect(FACET_FIELDS).toContain("BasementType");
     expect(FACET_FIELDS).toContain("PropertySubType");
+    expect(FACET_FIELDS).toContain("DirectionFaces");
   });
 });

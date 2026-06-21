@@ -1,5 +1,6 @@
 import type { FilterDef, FilterValue, StepperValue, UniversalFilterState } from "./types";
 import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig } from "./fundamentals";
+import { DIRECTION_OPTIONS } from "@/lib/listings/directionFaces";
 
 const fmtPrice = (v: number): string =>
   v >= 1_000_000
@@ -315,9 +316,18 @@ export const MORE_FILTERS: FilterDef[] = [
       { value: "100+", label: "100+ yrs" },
     ],
   }),
+  enumFilter({
+    key: "faces",
+    label: "Faces",
+    field: "DirectionFaces",
+    options: DIRECTION_OPTIONS,
+  }),
   rangeFilter({ key: "lotSize", label: "Lot Size", field: "LotSqftTotal", min: 0, max: 20000, step: 500, fmt: fmtSqft }),
   rangeFilter({ key: "lotFrontage", label: "Lot Frontage", field: "LotWidth", min: 0, max: 200, step: 5, fmt: fmtFt }),
   stepperFilter({ key: "parking", label: "Parking", field: "ParkingTotal", max: 8, unit: "Parking" }),
+  // Covered (garage) spaces — distinct from total Parking, which includes the
+  // driveway. CoveredSpaces is already an indexed int32, so this is filter-only.
+  stepperFilter({ key: "garage", label: "Garage", field: "CoveredSpaces", max: 4, unit: "Garage" }),
   stepperFilter({ key: "kitchens", label: "Kitchens", field: "KitchensTotal", max: 4, unit: "Kitchen" }),
   rangeFilter({ key: "maintFee", label: "Maint. Fee", field: "AssociationFee", min: 0, max: 2000, step: 50, fmt: fmtFee }),
 ];
@@ -333,6 +343,7 @@ export const FACET_FIELDS = [
   "multi_unit_status",
   "OccupantType",
   "ApproximateAge",
+  "DirectionFaces",
 ];
 
 export const FILTERS_BY_KEY: Record<string, FilterDef> = Object.fromEntries(

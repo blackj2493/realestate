@@ -26,6 +26,7 @@ import { assignSchools } from '@/lib/schools/nearestSchools';
 import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 import { deriveBasementTier } from '@/lib/avm/conditionScoring';
+import { normalizeDirectionFaces } from '@/lib/listings/directionFaces';
 
 // ============================================================================
 // Configuration
@@ -743,6 +744,8 @@ export interface TransformResult {
     OccupantType?: string;
     // PossessionType - also required by Typesense schema
     PossessionType?: string;
+    // Normalised compass facing for the Faces filter (DirectionFaces → Exposure).
+    DirectionFaces?: string;
     // Multi-Unit Scoring (Phase 2)
     multi_unit_status?: MultiUnitStatus;
     surplus_parking_count?: number;
@@ -1045,6 +1048,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
 
   // PossessionType - also required by Typesense schema
   typesensePayload.PossessionType = raw.PossessionType || '';
+
+  // Compass facing for the Faces filter — DirectionFaces (houses) → Exposure (condos),
+  // normalised to one of the 8 points or '' (see src/lib/listings/directionFaces.ts).
+  typesensePayload.DirectionFaces = normalizeDirectionFaces(raw);
 
   // Phase 3: Extrapolated Cap Rate (proForma computed above, before the Supabase payload).
   typesensePayload.TotalCapitalBasis = proForma.total_capital_basis;
