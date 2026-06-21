@@ -506,3 +506,94 @@ export function tourForSurface(
 
 /** Surfaces that get an offered first-run tour. */
 export const TOUR_SURFACES: DiscoverySurface[] = ["terminal", "listing", "dashboard"];
+
+// ── Visual styling (bento tiles + card-deck previews) ────────────────────────
+
+export type AccentKey =
+  | "emerald"
+  | "blue"
+  | "violet"
+  | "cyan"
+  | "amber"
+  | "slate"
+  | "indigo"
+  | "rose";
+
+/**
+ * Full literal gradient class strings (Tailwind JIT needs them spelled out, not
+ * composed at runtime). Keyed by accent; used by the bento tiles and tour cards.
+ */
+export const GRADIENTS: Record<AccentKey, string> = {
+  emerald: "from-emerald-400 to-teal-500",
+  blue: "from-sky-400 to-indigo-500",
+  violet: "from-violet-400 to-fuchsia-500",
+  cyan: "from-cyan-400 to-blue-500",
+  amber: "from-amber-400 to-orange-500",
+  slate: "from-slate-400 to-cyan-500",
+  indigo: "from-indigo-400 to-violet-500",
+  rose: "from-rose-400 to-pink-500",
+};
+
+const ACCENT_BY_ID: Record<string, AccentKey> = {
+  "command-palette": "slate",
+  glossary: "blue",
+  "watchlist-alerts": "rose",
+  "terminal-search": "cyan",
+  "terminal-filters": "indigo",
+  "terminal-rail": "cyan",
+  "rail-schools": "blue",
+  "rail-commute": "violet",
+  "rail-draw": "cyan",
+  "rail-color": "emerald",
+  "rail-timeline": "amber",
+  "rail-compare": "slate",
+  "rail-saved": "indigo",
+  "terminal-map-modes": "blue",
+  "terminal-quicklook": "slate",
+  "listing-deal-score": "emerald",
+  "listing-the-read": "emerald",
+  "listing-underwriting": "cyan",
+  "listing-room-map": "blue",
+  "listing-force-appreciation": "amber",
+  "listing-condo-stability": "slate",
+  "listing-things-to-know": "amber",
+  "dashboard-persona": "violet",
+  "dashboard-action-feed": "cyan",
+  "dashboard-config": "slate",
+  avm: "cyan",
+  "hidden-equity": "amber",
+  analytics: "indigo",
+};
+
+export function accentFor(f: { id: string }): AccentKey {
+  return ACCENT_BY_ID[f.id] ?? "cyan";
+}
+
+/**
+ * Features that get an ambient, pulsing coachmark dot on the real UI until the
+ * user actually uses them. Curated to controls with a reliable "used" signal
+ * (rail tiles, ⌘K, persona switcher, config gear) so a dot always clears when
+ * the tool is touched — never a stuck dot on a passive, display-only card.
+ */
+export const COACH_IDS = new Set<string>([
+  "rail-commute",
+  "rail-schools",
+  "rail-color",
+  "rail-draw",
+  "rail-compare",
+  "rail-saved",
+  "rail-timeline",
+  "command-palette",
+  "dashboard-persona",
+  "dashboard-config",
+]);
+
+/** Coach features on a surface that the user hasn't used yet (for ambient dots). */
+export function coachFeaturesForSurface(
+  surface: DiscoverySurface,
+  used: Record<string, number>
+): FeatureWithCta[] {
+  return featuresForSurface(surface).filter(
+    (f) => COACH_IDS.has(f.id) && used[f.id] === undefined
+  );
+}

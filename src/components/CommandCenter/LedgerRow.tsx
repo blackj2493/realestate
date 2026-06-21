@@ -308,13 +308,15 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
 
       {/* Thumbnail + overlays (DealScore pill, save heart). The outer wrapper
           is `relative` so the absolute children position against this box;
-          ListingThumbnail fills it via `absolute inset-0`. */}
-      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-sm">
+          ListingThumbnail fills it via `absolute inset-0`. Sized ~4:3 landscape;
+          stays under the text block's height so the row doesn't grow, and the
+          source (TRREB ~240px variant) stays sharp at this scale. */}
+      <div className="relative h-28 w-36 shrink-0 overflow-hidden rounded-sm">
         <ListingThumbnail
           src={src}
           alt={property.UnparsedAddress || "Property"}
           className="absolute inset-0"
-          sizes="96px"
+          sizes="144px"
         />
         {deal.score !== null && isAuthed && (
           <DealScoreGradePill

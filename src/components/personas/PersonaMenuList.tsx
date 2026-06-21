@@ -8,10 +8,10 @@ const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
 /**
  * Shared persona dropdown body — the four-persona option list with the gold
- * active state and check mark. Rendered inside a Popover by both the terminal's
- * PresetChip and the dashboard's PersonaLens so the two selectors stay visually
- * identical even though they bind to different state (command-center store vs.
- * dashboard config). Change the option styling here once; both surfaces follow.
+ * active state and check mark. Rendered inside a Popover by PersonaLens on both
+ * the dashboard and the terminal, so the two selectors stay visually identical
+ * even though they bind to different state (command-center store vs. dashboard
+ * config). Change the option styling here once; both surfaces follow.
  */
 export default function PersonaMenuList({
   value,

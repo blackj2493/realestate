@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import FilterBar from "./FilterBar";
 import LocationSearch from "./LocationSearch";
-import PresetChip from "./PresetChip";
+import PersonaLens from "@/components/dashboard/PersonaLens";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 import PrimaryNav from "@/components/layout/PrimaryNav";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -27,7 +27,8 @@ interface TopCommandBarProps {
 }
 
 export default function TopCommandBar({ className }: TopCommandBarProps) {
-  const { transactionMode, propertyClass, activeLayers } = useCommandCenterStore();
+  const { transactionMode, propertyClass, activeLayers, activePersona, setActivePersona } =
+    useCommandCenterStore();
   // The persona preset is residential-sale only — rent/commercial and comp-only
   // (Sold/Leased) views are basic browse, the same gating the filter row uses.
   const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
@@ -74,16 +75,13 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           </div>
         </div>
 
-        {/* Center: persona preset — the gold selector (lifted up from the filter
-            row), labelled so it's clear this is the persona selector. */}
-        <div className="flex items-center justify-center gap-2">
+        {/* Center: persona lens — the SAME elevated gold selector as the dashboard
+            (PersonaLens, compact density), centered in the bar. No caption here:
+            the dense top row has no room for one, and the gold button is
+            self-evident. Residential-sale only. */}
+        <div className="flex items-center justify-center">
           {investorLayer && (
-            <>
-              <span className="hidden text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:inline">
-                Persona
-              </span>
-              <PresetChip />
-            </>
+            <PersonaLens persona={activePersona} onChange={setActivePersona} compact />
           )}
         </div>
 

@@ -3,6 +3,7 @@
 import { Plus } from "lucide-react";
 import PersonaLens from "@/components/dashboard/PersonaLens";
 import type { PersonaType } from "@/lib/personas/personaConfig";
+import { useDiscovery } from "@/lib/discovery/useDiscovery";
 
 /**
  * Dashboard control toolbar. The logo / global search / alerts / account live
@@ -42,7 +43,12 @@ export default function MissionControlHeader({
 
         {/* Center: the persona lens — the dashboard's hero control */}
         <div className="lg:justify-self-center">
-          <PersonaLens persona={persona} onChange={onPersonaChange} />
+          <PersonaLens
+            persona={persona}
+            onChange={onPersonaChange}
+            caption="Viewing your dashboard as"
+            dataTour="dashboard-persona"
+          />
         </div>
 
         {/* Right: add a city / neighbourhood (+ configure boards) */}
@@ -50,7 +56,10 @@ export default function MissionControlHeader({
           <button
             type="button"
             data-tour="dashboard-config"
-            onClick={onToggleConfig}
+            onClick={() => {
+              useDiscovery.getState().markUsed("dashboard-config");
+              onToggleConfig();
+            }}
             className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-slate-700 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-300 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
           >
             <Plus className="h-3.5 w-3.5 text-cyan-400" /> Add Markets

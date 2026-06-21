@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { SEARCH_BRAND } from "@/lib/brand";
 import {
   TrendingUp,
   Home,
@@ -322,7 +323,7 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
         </div>
         <div className="flex items-center gap-2 mt-1">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <p className="text-[10px] text-emerald-500/70">Typesense: Connected</p>
+          <p className="text-[10px] text-emerald-500/70">{SEARCH_BRAND}: Connected</p>
         </div>
       </div>
 

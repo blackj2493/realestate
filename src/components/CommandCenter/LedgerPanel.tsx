@@ -7,6 +7,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SEARCH_BRAND } from "@/lib/brand";
 import LedgerRow from "./LedgerRow";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -153,7 +154,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
             </>
           ) : (
             <>
-              Typesense Search:{" "}
+              {SEARCH_BRAND}:{" "}
               <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
               <span className="mx-1.5 text-slate-600">|</span>
               Instant Query <span className="text-cyan-400">&lt;{ms}ms</span>
