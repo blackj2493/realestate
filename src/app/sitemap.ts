@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { cityHubsWithInventory } from "@/lib/listings/cityHubs";
+import { cityHubsWithInventory, neighbourhoodHubsForSitemap } from "@/lib/listings/cityHubs";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -21,12 +21,15 @@ const HUB_MIN = 5; // don't sitemap a city hub that would render thin (the hub n
  * failure), so the listing sitemap below is never affected.
  */
 async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
-  // City hubs + the persona hubs (cap-rate investor 2c, top-schools 2d), each counted
-  // over its OWN sub-population so we never sitemap a hub that would render thin/noindex.
-  const [cityHubs, capRateHubs, schoolHubs] = await Promise.all([
+  // City hubs + the persona hubs (cap-rate investor 2c, top-schools 2d) + the
+  // neighbourhood hubs (2e). City/persona hubs are each counted over their OWN
+  // sub-population so we never sitemap a hub that would render thin/noindex; the
+  // neighbourhood enumeration applies the same >= HUB_MIN floor per (city, region).
+  const [cityHubs, capRateHubs, schoolHubs, hoodHubs] = await Promise.all([
     cityHubsWithInventory(HUB_MIN),
     cityHubsWithInventory(HUB_MIN, "ExtrapolatedCapRate:>0"),
     cityHubsWithInventory(HUB_MIN, "BestSchoolScoreNearby:>0"),
+    neighbourhoodHubsForSitemap(HUB_MIN),
   ]);
   return [
     ...cityHubs.map(({ slug }) => ({
@@ -43,6 +46,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/family/${slug}/top-rated-schools`,
       changeFrequency: "daily" as const,
       priority: 0.7,
+    })),
+    ...hoodHubs.map(({ citySlug, hoodSlug }) => ({
+      url: `${SITE_URL}/property/on/${citySlug}/${hoodSlug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.6,
     })),
   ];
 }

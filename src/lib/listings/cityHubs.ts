@@ -154,3 +154,54 @@ export async function regionsForHoodSlug(
   }
   return { cities, regions, name, total };
 }
+
+/**
+ * Every (citySlug, neighbourhoodSlug) with >= `min` active listings, for the sitemap.
+ * ONE City-facet round-trip builds the slug→City-values groups; then each qualifying
+ * city's CityRegion facet is fetched with bounded concurrency (so we don't open ~200
+ * simultaneous Typesense connections at build time). Capped at `maxTotal` to stay within
+ * the 50k-URL sitemap budget alongside the listing URLs — any overflow is still
+ * link-discoverable from the city hubs. Fully best-effort ([] on any failure) so it can
+ * NEVER break the sitemap build.
+ */
+export async function neighbourhoodHubsForSitemap(
+  min: number,
+  maxTotal = 3000
+): Promise<{ citySlug: string; hoodSlug: string; count: number }[]> {
+  try {
+    const cityFacet = await getCityFacet();
+    const citiesBySlug = new Map<string, string[]>();
+    const totalBySlug = new Map<string, number>();
+    for (const [city, count] of Object.entries(cityFacet)) {
+      const slug = cityHubSlug(city);
+      if (!slug) continue;
+      citiesBySlug.set(slug, [...(citiesBySlug.get(slug) ?? []), city]);
+      totalBySlug.set(slug, (totalBySlug.get(slug) ?? 0) + count);
+    }
+    // Only enumerate neighbourhoods for cities that themselves clear the bar.
+    const slugs = [...citiesBySlug.keys()].filter((s) => (totalBySlug.get(s) ?? 0) >= min);
+
+    const out: { citySlug: string; hoodSlug: string; count: number }[] = [];
+    const CONCURRENCY = 8;
+    for (let i = 0; i < slugs.length && out.length < maxTotal; i += CONCURRENCY) {
+      const chunk = slugs.slice(i, i + CONCURRENCY);
+      const facets = await Promise.all(
+        chunk.map((slug) => getCityRegionFacet(citiesBySlug.get(slug) ?? []))
+      );
+      chunk.forEach((citySlug, j) => {
+        const bySlug = new Map<string, number>();
+        for (const [region, count] of Object.entries(facets[j])) {
+          const hoodSlug = slugify(region);
+          if (!hoodSlug) continue;
+          bySlug.set(hoodSlug, (bySlug.get(hoodSlug) ?? 0) + count);
+        }
+        for (const [hoodSlug, count] of bySlug) {
+          if (count >= min) out.push({ citySlug, hoodSlug, count });
+        }
+      });
+    }
+    return out.slice(0, maxTotal);
+  } catch {
+    return [];
+  }
+}
