@@ -15,15 +15,17 @@ const ACTIVE_FILTER = "TransactionType:=`For Sale` && PropertyType:!=Commercial"
 const FACET_CAP = 250;
 
 /**
- * Raw TRREB City value → active For-Sale count; {} on failure. Not React-cache wrapped:
- * the sitemap calls it once, and the hub's own React-cached getCityHub dedups it per
- * request — wrapping here would also pull `cache()` into the (Node) sitemap test runtime.
+ * Raw TRREB City value → active For-Sale count; {} on failure. `extraFilter` narrows the
+ * population (e.g. "ExtrapolatedCapRate:>0" to count only cap-rate-bearing inventory).
+ * Not React-cache wrapped: the sitemap calls it once, and the hub's own React-cached
+ * getCityHub dedups it per request — wrapping would also pull `cache()` into the (Node)
+ * sitemap test runtime.
  */
-export async function getCityFacet(): Promise<Record<string, number>> {
+export async function getCityFacet(extraFilter = ""): Promise<Record<string, number>> {
   try {
     const res = await searchListings({
       query: "*",
-      rawFilterBy: ACTIVE_FILTER,
+      rawFilterBy: extraFilter ? `${ACTIVE_FILTER} && ${extraFilter}` : ACTIVE_FILTER,
       perPage: 1,
       facetBy: "City",
       maxFacetValues: FACET_CAP,
@@ -58,9 +60,12 @@ export function cityFilterClause(cities: string[]): string {
   return `(${cities.map((c) => `City:=\`${c}\``).join(" || ")})`;
 }
 
-/** Distinct hub slugs (district-split cities consolidated) with >= min active listings. */
-export async function cityHubsWithInventory(min: number): Promise<{ slug: string; count: number }[]> {
-  const facet = await getCityFacet();
+/**
+ * Distinct hub slugs (district-split cities consolidated) with >= min active listings.
+ * `extraFilter` lets callers count a sub-population (e.g. cap-rate hubs).
+ */
+export async function cityHubsWithInventory(min: number, extraFilter = ""): Promise<{ slug: string; count: number }[]> {
+  const facet = await getCityFacet(extraFilter);
   const bySlug = new Map<string, number>();
   for (const [city, count] of Object.entries(facet)) {
     const slug = cityHubSlug(city);

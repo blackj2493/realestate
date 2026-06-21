@@ -23,9 +23,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, TrendingUp } from "lucide-react";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
-import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
+import { PropertyCard } from "@/components/PropertyCard";
+import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
@@ -59,25 +60,6 @@ const getCityHub = cache(async (slug: string) => {
     return { listings: [] as ListingDocument[], totalFound: 0 };
   }
 });
-
-function toCardData(doc: ListingDocument): PropertyCardData {
-  return {
-    id: doc.id,
-    listingId: doc.id,
-    address: doc.UnparsedAddress ?? "Address unavailable",
-    city: doc.City ?? "",
-    price: doc.ListPrice ?? 0,
-    previousPrice: doc.OriginalListPrice,
-    propertyType: doc.PropertySubType ?? doc.PropertyType ?? "",
-    bedrooms: doc.BedroomsTotal ?? 0,
-    bathrooms: doc.BathroomsTotalInteger ?? 0,
-    squareFeet: doc.BuildingAreaTotal,
-    daysOnMarket: doc.calculatedDOM,
-    brokerage: doc.ListOfficeName, // §6.3(c) — PropertyCard renders "Listed by …"
-    photoUrl: doc.thumbnailUrl ?? doc.primaryImageUrl ?? null,
-    maintenance: doc.AssociationFee,
-  };
-}
 
 export async function generateMetadata({
   params,
@@ -150,6 +132,14 @@ export default async function CityHubPage({
               ? `${totalFound.toLocaleString()} active ${totalFound === 1 ? "listing" : "listings"} for sale`
               : `No active listings for sale in ${cityName} right now.`}
           </p>
+          {totalFound > 0 && (
+            <Link
+              href={`/investments/${city}/highest-cap-rate`}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+            >
+              <TrendingUp className="h-4 w-4" /> Highest cap-rate investments in {cityName} →
+            </Link>
+          )}
         </header>
 
         {listings.length > 0 ? (

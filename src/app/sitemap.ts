@@ -21,12 +21,24 @@ const HUB_MIN = 5; // don't sitemap a city hub that would render thin (the hub n
  * failure), so the listing sitemap below is never affected.
  */
 async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
-  const hubs = await cityHubsWithInventory(HUB_MIN);
-  return hubs.map(({ slug }) => ({
-    url: `${SITE_URL}/property/on/${slug}`,
-    changeFrequency: "daily" as const,
-    priority: 0.8,
-  }));
+  // City hubs + the cap-rate investor hubs (Phase 2c), counted over their own
+  // sub-populations so we never sitemap a hub that would render thin/noindex.
+  const [cityHubs, capRateHubs] = await Promise.all([
+    cityHubsWithInventory(HUB_MIN),
+    cityHubsWithInventory(HUB_MIN, "ExtrapolatedCapRate:>0"),
+  ]);
+  return [
+    ...cityHubs.map(({ slug }) => ({
+      url: `${SITE_URL}/property/on/${slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+    })),
+    ...capRateHubs.map(({ slug }) => ({
+      url: `${SITE_URL}/investments/${slug}/highest-cap-rate`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+  ];
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
