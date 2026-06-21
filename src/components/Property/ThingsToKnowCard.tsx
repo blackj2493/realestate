@@ -11,7 +11,7 @@ export default function ThingsToKnowCard({ flags }: { flags: DiligenceFlag[] }) 
   const warnCount = flags.filter((f) => f.kind === "warn").length;
 
   return (
-    <section className="mb-6 rounded-xl border border-amber-500/25 bg-slate-900/40 p-4">
+    <section data-tour="listing-things-to-know" className="mb-6 rounded-xl border border-amber-500/25 bg-slate-900/40 p-4">
       <h3 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.09em] text-slate-300">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         Things to Know

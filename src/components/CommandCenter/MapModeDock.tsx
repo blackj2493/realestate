@@ -32,7 +32,7 @@ export default function MapModeDock() {
   // three controls on top of each other on a ~360px canvas. z-20 keeps it above
   // the MapStatusHUD (z-10) it now sits just above at top-left.
   return (
-    <div className="absolute left-2 top-3 z-20 md:bottom-4 md:left-1/2 md:top-auto md:-translate-x-1/2">
+    <div data-tour="terminal-map-modes" className="absolute left-2 top-3 z-20 md:bottom-4 md:left-1/2 md:top-auto md:-translate-x-1/2">
       <div className="flex overflow-hidden border border-slate-700 bg-slate-900/90 backdrop-blur-md">
         {SEGMENTS.filter((s) => ENABLED.includes(s.id)).map((s) => {
           const active = mapMode === s.id;

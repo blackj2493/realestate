@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover } from "@/components/ui/popover";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { PERSONA_LIST, PERSONA_CONFIG } from "@/lib/personas/personaConfig";
+import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
+import PersonaMenuList from "@/components/personas/PersonaMenuList";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -38,34 +39,13 @@ export default function PresetChip() {
   return (
     <Popover trigger={trigger} className="w-56 p-1">
       {(close) => (
-        <div className="flex flex-col">
-          <span className={cn(LABEL, "px-2 py-1.5 text-slate-500")}>Preset</span>
-          {PERSONA_LIST.map((p) => {
-            const Icon = p.icon;
-            const selected = p.id === activePersona;
-            return (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setActivePersona(p.id);
-                  close();
-                }}
-                className={cn(
-                  "flex items-center justify-between gap-2 px-2 py-1.5 text-left text-xs transition-colors",
-                  selected
-                    ? "text-amber-300"
-                    : "text-slate-300 hover:bg-amber-400/10 hover:text-amber-200"
-                )}
-              >
-                <span className="flex items-center gap-2">
-                  <Icon className="h-3.5 w-3.5" />
-                  {p.label}
-                </span>
-                {selected && <Check className="h-3.5 w-3.5" />}
-              </button>
-            );
-          })}
-        </div>
+        <PersonaMenuList
+          value={activePersona}
+          onSelect={(p) => {
+            setActivePersona(p);
+            close();
+          }}
+        />
       )}
     </Popover>
   );

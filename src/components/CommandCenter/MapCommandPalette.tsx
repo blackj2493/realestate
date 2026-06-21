@@ -15,6 +15,17 @@ import { PERSONA_LIST, type MapMode } from "@/lib/personas/personaConfig";
 import { MAP_METRICS } from "@/lib/personas/mapMetrics";
 import { FILTERS_BY_KEY } from "@/lib/filters/filterRegistry";
 import { parseFilterCommands, type FilterCommand } from "./filterCommands";
+import { useDiscovery } from "@/lib/discovery/useDiscovery";
+
+/** Rail module → discovery feature id, so opening a tool credits the mastery meter. */
+const MODULE_FEATURE: Record<string, string> = {
+  commute: "rail-commute",
+  school: "rail-schools",
+  color: "rail-color",
+  draw: "rail-draw",
+  compare: "rail-compare",
+  lenses: "rail-saved",
+};
 
 interface Command {
   id: string;
@@ -67,6 +78,8 @@ export default function MapCommandPalette() {
     if (open) {
       setQuery("");
       setHighlight(0);
+      // Discovering the palette at all is a mastery milestone.
+      useDiscovery.getState().markUsed("command-palette");
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
@@ -104,13 +117,14 @@ export default function MapCommandPalette() {
       ["compare", "Compare"],
       ["lenses", "Saved Views"],
     ] as const).forEach(([mod, label]) =>
-      list.push({ id: `open-${mod}`, group: "Open", label: `Open ${label}`, run: () => { setActiveModule(mod); close(); } })
+      list.push({ id: `open-${mod}`, group: "Open", label: `Open ${label}`, run: () => { setActiveModule(mod); const fid = MODULE_FEATURE[mod]; if (fid) useDiscovery.getState().markUsed(fid); close(); } })
     );
     list.push({ id: "color-default", group: "Color by", label: "Color: Persona default", run: () => { setColorMetricId(null); close(); } });
     MAP_METRICS.forEach((m) =>
       list.push({ id: `color-${m.id}`, group: "Color by", label: `Color: ${m.label}`, run: () => { setColorMetricId(m.id); close(); } })
     );
-    list.push({ id: "timeline", group: "View", label: timelineActive ? "Hide timeline" : "Show timeline", run: () => { setTimelineActive(!timelineActive); close(); } });
+    list.push({ id: "timeline", group: "View", label: timelineActive ? "Hide timeline" : "Show timeline", run: () => { setTimelineActive(!timelineActive); useDiscovery.getState().markUsed("rail-timeline"); close(); } });
+    list.push({ id: "open-guide", group: "Help", label: "Open Feature Guide  (press ?)", run: () => { useDiscovery.getState().openGuide("page"); close(); } });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timelineActive]);

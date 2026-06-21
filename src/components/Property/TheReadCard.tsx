@@ -26,7 +26,7 @@ export default function TheReadCard({
   const [persona, setPersona] = useState<PersonaType>(defaultPersona);
 
   return (
-    <div className="mb-6 rounded-xl border border-emerald-500/30 bg-slate-900/40 p-4 shadow-[0_0_0_1px_rgba(52,211,153,0.06)]">
+    <div data-tour="listing-the-read" className="mb-6 rounded-xl border border-emerald-500/30 bg-slate-900/40 p-4 shadow-[0_0_0_1px_rgba(52,211,153,0.06)]">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
         <h2 className="text-[11px] font-bold uppercase tracking-[0.09em] text-slate-300">The Read</h2>

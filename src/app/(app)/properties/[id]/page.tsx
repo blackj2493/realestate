@@ -23,6 +23,8 @@ import { shouldRender as hasValueAddData } from "@/components/Property/forceAppr
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
+import RentalSnapshot from "@/components/Property/RentalSnapshot";
+import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
 import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
@@ -133,6 +135,7 @@ interface RawListing {
   LotDepth?: number;
   LotSizeUnits?: string;
   BuildingAreaTotal?: number;
+  LivingAreaRange?: string;
   ParkingTotal?: number;
   CoveredSpaces?: number;
   HeatType?: string;
@@ -144,6 +147,10 @@ interface RawListing {
   StandardStatus?: string;
   DaysOnMarket?: number;
   OriginalEntryTimestamp?: string;
+  TransactionType?: string;
+  LeaseTerm?: string;
+  DepositRequired?: boolean;
+  RentIncludes?: string[];
 }
 
 function calculateDaysOnMarket(ts?: string): number {
@@ -246,8 +253,20 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   // Listing brokerage (§6.3(c)) — surfaced in structured data as well as on-page.
   // RealEstateOrganization is the listing OFFICE (ListOfficeName), not an agent.
   const broker = p.ListOfficeName
-    ? { "@type": "RealEstateOrganization", name: p.ListOfficeName }
+    ? { "@type": "RealEstateOrganization" as const, name: p.ListOfficeName }
     : undefined;
+
+  // For-Lease listings carry the monthly rent in ListPrice; modelled as a recurring
+  // per-month price (not a bare sale `price`) so search engines don't read the rental
+  // as a home for sale at the rent figure. See buildListingOffer.
+  const isLease = /lease/i.test(p.TransactionType ?? "");
+  const offer = buildListingOffer({
+    listPrice: p.ListPrice || 0,
+    isLease,
+    availability,
+    url,
+    seller: broker,
+  });
 
   // @graph: a RealEstateListing (the page) → its Accommodation (the property) →
   // a clean BreadcrumbList. Note: Google has no real-estate rich result, so the
@@ -286,14 +305,7 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
           postalCode: p.PostalCode || undefined,
           addressCountry: "CA",
         },
-        offers: {
-          "@type": "Offer",
-          price: p.ListPrice || 0,
-          priceCurrency: "CAD",
-          availability,
-          url,
-          ...(broker ? { seller: broker } : {}),
-        },
+        offers: offer,
       },
       {
         "@type": "BreadcrumbList",
@@ -379,6 +391,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   // fabrication on these parcels. Gate it so the sandbox shows carrying cost
   // only rather than inventing a rent.
   const incomeApplicable = isIncomeProperty(p.PropertySubType);
+  // For-Lease listings carry the monthly rent in ListPrice, not a purchase price, so
+  // the buy-and-hold Underwriting Sandbox can only fabricate (a $540 down payment, a
+  // 516% cap rate). Detect the lease and show a Rental Snapshot instead. Same criterion
+  // datasheet.ts uses to gate the Lease Terms group (§6.3(f)).
+  const isLease = /lease/i.test(p.TransactionType ?? "");
   const jsonLd = buildJsonLd(id, detail);
 
   const badges = detectPropertyBadges({
@@ -641,9 +658,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           {/* ── RIGHT (30%, sticky) ── */}
           <div id="financials" className="scroll-mt-28">
             <div className="sticky top-6 space-y-4">
+              {/* The financial cards below (sold-accuracy receipt, Deal Score, Estimated
+                  Sale Price / True Value, Force Appreciation) are all AVM-derived and assume
+                  a SALE. They're gated off on LEASE listings, where ListPrice is the monthly
+                  rent — estimating, scoring, or force-appreciating a sale value there is a
+                  fabrication. The RentalSnapshot below is the lease's financial card instead. */}
+
               {/* Sold: lead with the accuracy receipt — Deal Score / Expected Sale are
                   for live asks; their job here is done. */}
-              {status.kind === "sold" && (
+              {status.kind === "sold" && !isLease && (
                 <SoldOutcomeCard
                   accuracy={soldAccuracy}
                   soldDate={soldDate}
@@ -651,11 +674,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 />
               )}
 
-              {isActiveListing && (
+              {isActiveListing && !isLease && (
                 <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
               )}
 
-              {isActiveListing ? (
+              {!isLease && (isActiveListing ? (
                 /* ONE number: the Estimated Sale Price (list-anchored where we can be,
                    AVM as fallback). The intrinsic AVM lives on as the faint "comparable
                    value" band inside this card + as the Deal Score signal above. */
@@ -682,13 +705,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   locked={!isAuthed && hasEstimate}
                   hideAskDelta={status.kind === "sold"}
                 />
-              )}
+              ))}
 
               {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}
-              <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
+              {!isLease && (
+                <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
+              )}
 
               {/* Compliance disclaimer for the AVM-derived figures above (estimate + value-add) */}
-              {((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
+              {!isLease && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
                 <Disclaimers />
               )}
 
@@ -706,7 +731,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                     />
                   )}
                   <SummaryRow
-                    label="List Price"
+                    label={isLease ? "Monthly Rent" : "List Price"}
                     value={formatPrice(price)}
                     valueClass={isActiveListing ? "text-emerald-400" : "text-slate-400"}
                   />
@@ -726,14 +751,26 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
 
-              <UnderwritingSandbox
-                listingId={id}
-                listPrice={soldPrice ?? price}
-                annualTaxes={p.TaxAnnualAmount || 0}
-                monthlyFees={p.AssociationFee || 0}
-                hasSuitePotential={hasSuitePotential}
-                incomeApplicable={incomeApplicable}
-              />
+              {isLease ? (
+                <RentalSnapshot
+                  monthlyRent={soldPrice ?? price}
+                  leased={status.kind === "sold"}
+                  buildingAreaTotal={p.BuildingAreaTotal ?? null}
+                  livingAreaRange={p.LivingAreaRange ?? null}
+                  leaseTerm={p.LeaseTerm ?? null}
+                  depositRequired={p.DepositRequired ?? null}
+                  rentIncludes={p.RentIncludes ?? null}
+                />
+              ) : (
+                <UnderwritingSandbox
+                  listingId={id}
+                  listPrice={soldPrice ?? price}
+                  annualTaxes={p.TaxAnnualAmount || 0}
+                  monthlyFees={p.AssociationFee || 0}
+                  hasSuitePotential={hasSuitePotential}
+                  incomeApplicable={incomeApplicable}
+                />
+              )}
 
               {/* Property History (timeline + campaign/sale tables) moved to the full-width band below the grid. */}
               <CondoFeeStabilityCard feeStability={detail.feeStability} />

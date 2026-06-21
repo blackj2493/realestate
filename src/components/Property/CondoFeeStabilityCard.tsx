@@ -46,7 +46,7 @@ export default function CondoFeeStabilityCard({
   const { unitFeePsf, area, trend } = feeStability;
 
   return (
-    <Card>
+    <Card data-tour="listing-condo-stability">
       <CardHeader>
         <CardTitle>Condo Fee Stability</CardTitle>
       </CardHeader>

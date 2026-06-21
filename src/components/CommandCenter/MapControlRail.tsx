@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
 type RailTile =
-  | { kind: "drawer"; module: RailModule; label: string; description: string; icon: LucideIcon; dataActive?: boolean; badge?: number }
-  | { kind: "action"; id: string; label: string; description: string; icon: LucideIcon; active?: boolean; badge?: number; onClick: () => void };
+  | { kind: "drawer"; module: RailModule; label: string; description: string; icon: LucideIcon; dataActive?: boolean; badge?: number; tourId?: string }
+  | { kind: "action"; id: string; label: string; description: string; icon: LucideIcon; active?: boolean; badge?: number; onClick: () => void; tourId?: string };
 
 function Tile({
   icon: Icon,
@@ -29,6 +29,7 @@ function Tile({
   dataActive,
   badge,
   onClick,
+  tourId,
 }: {
   icon: LucideIcon;
   label: string;
@@ -37,12 +38,15 @@ function Tile({
   dataActive?: boolean;
   badge?: number;
   onClick: () => void;
+  /** Discovery spotlight anchor — lets the Feature Guide point at this exact tile. */
+  tourId?: string;
 }) {
   return (
     <div className="group relative flex justify-center">
       <button
         type="button"
         onClick={onClick}
+        data-tour={tourId}
         aria-label={description ? `${label}: ${description}` : label}
         aria-pressed={open}
         className={cn(
@@ -105,6 +109,7 @@ export default function MapControlRail() {
       description: "Shade a drive/walk/cycle time zone and filter to homes inside it",
       icon: Navigation,
       dataActive: commuteEnabled,
+      tourId: "rail-commute",
     },
     {
       kind: "drawer",
@@ -113,6 +118,7 @@ export default function MapControlRail() {
       description: "Shade school quality and filter to homes near a chosen school",
       icon: GraduationCap,
       dataActive: schoolEnabled,
+      tourId: "rail-schools",
     },
     {
       kind: "drawer",
@@ -129,6 +135,7 @@ export default function MapControlRail() {
       description: "Color the map by price, yield, days-on-market & more",
       icon: Palette,
       dataActive: colorMetricId !== null,
+      tourId: "rail-color",
     },
     {
       kind: "drawer",
@@ -137,6 +144,7 @@ export default function MapControlRail() {
       description: "Lasso your own area to search inside it",
       icon: Lasso,
       dataActive: isDrawing || drawPolygon !== null,
+      tourId: "rail-draw",
     },
   ];
 
@@ -150,6 +158,7 @@ export default function MapControlRail() {
       icon: Scale,
       dataActive: selectedCount > 0,
       badge: selectedCount,
+      tourId: "rail-compare",
     },
     {
       kind: "drawer",
@@ -157,6 +166,7 @@ export default function MapControlRail() {
       label: "Saved Views",
       description: "Save this persona, filters & colors and reopen in one click",
       icon: Bookmark,
+      tourId: "rail-saved",
     },
     {
       kind: "action",
@@ -166,6 +176,7 @@ export default function MapControlRail() {
       icon: History,
       active: timelineActive,
       onClick: () => setTimelineActive(!timelineActive),
+      tourId: "rail-timeline",
     },
     {
       kind: "action",
@@ -174,6 +185,7 @@ export default function MapControlRail() {
       description: "Jump to a city, persona, map mode or tool (⌘K)",
       icon: Zap,
       onClick: togglePalette,
+      tourId: "command-palette",
     },
   ];
 
@@ -187,6 +199,7 @@ export default function MapControlRail() {
         open={activeModule === t.module}
         dataActive={t.dataActive}
         badge={t.badge}
+        tourId={t.tourId}
         onClick={() => toggleModule(t.module)}
       />
     ) : (
@@ -197,12 +210,16 @@ export default function MapControlRail() {
         description={t.description}
         open={t.active}
         badge={t.badge}
+        tourId={t.tourId}
         onClick={t.onClick}
       />
     );
 
   return (
-    <div className="absolute left-0 top-0 z-20 hidden h-full w-[68px] flex-col items-center gap-1 border-r border-slate-800 bg-slate-950/85 py-3 backdrop-blur-md md:flex">
+    <div
+      data-tour="terminal-rail"
+      className="absolute left-0 top-0 z-20 hidden h-full w-[68px] flex-col items-center gap-1 border-r border-slate-800 bg-slate-950/85 py-3 backdrop-blur-md md:flex"
+    >
       <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-600">Layers</span>
       {layerTiles.map(renderTile)}
       <div className="my-1.5 h-px w-7 bg-slate-800" />

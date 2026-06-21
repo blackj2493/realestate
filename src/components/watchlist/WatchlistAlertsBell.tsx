@@ -141,6 +141,7 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
     <div className={cn("relative", className)}>
       <button
         type="button"
+        data-tour="watchlist-alerts"
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label={`Watchlist alerts${unseenCount ? ` (${unseenCount} new)` : ""}`}
         aria-expanded={open}

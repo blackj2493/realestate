@@ -42,7 +42,7 @@ export default function ForceAppreciationCard({
 }) {
   if (locked) {
     return (
-      <Card>
+      <Card data-tour="listing-force-appreciation">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Renovation Upside</CardTitle>
         </CardHeader>
@@ -68,7 +68,7 @@ export default function ForceAppreciationCard({
   const hasRecommended = v.recommendedRows.length > 0;
 
   return (
-    <Card>
+    <Card data-tour="listing-force-appreciation">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>Renovation Upside</CardTitle>
         <span

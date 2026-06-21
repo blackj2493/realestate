@@ -69,7 +69,9 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           </Link>
 
           {/* Location search is hidden on mobile to make room for the persona. */}
-          <LocationSearch className="hidden min-w-0 flex-1 sm:block" />
+          <div data-tour="terminal-search" className="hidden min-w-0 flex-1 sm:block">
+            <LocationSearch className="w-full" />
+          </div>
         </div>
 
         {/* Center: persona preset — the gold selector (lifted up from the filter
@@ -133,7 +135,9 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
       )}
 
       {/* Unified composable filter bar (basics + investor + add) */}
-      <FilterBar />
+      <div data-tour="terminal-filters">
+        <FilterBar />
+      </div>
     </div>
   );
 }

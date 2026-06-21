@@ -203,7 +203,7 @@ export default function DealScoreCard({
   const band = dealScore.offerBand;
 
   return (
-    <div className={cn("rounded-lg border bg-slate-900/50 p-4", s.border)}>
+    <div data-tour="listing-deal-score" className={cn("rounded-lg border bg-slate-900/50 p-4", s.border)}>
       <h3 className="mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
         <span className="flex items-center gap-2">
           <Gauge className={cn("h-4 w-4", s.text)} />

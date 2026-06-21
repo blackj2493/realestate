@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import WatchlistInit from "@/components/watchlist/WatchlistInit";
+import DiscoveryRoot from "@/components/discovery/DiscoveryRoot";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -94,6 +95,7 @@ export default function RootLayout({
         />
         <WatchlistInit />
         {children}
+        <DiscoveryRoot />
         <Toaster />
       </body>
     </html>

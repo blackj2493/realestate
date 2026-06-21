@@ -258,7 +258,7 @@ export default function RoomMap({
   }
 
   return (
-    <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div data-tour="listing-room-map" className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
       <Header unit={unit} setUnit={setUnit} mode={mode} setMode={setMode} showToggle={hasScaled} />
 
       {/* Level filter pills (double as the floor legend) */}

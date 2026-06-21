@@ -135,7 +135,7 @@ export default function UnderwritingSandbox({
   const cashflowTone = result.monthlyCashflow >= 0 ? "good" : "bad";
 
   return (
-    <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div data-tour="listing-underwriting" className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <Calculator className="h-4 w-4 text-emerald-400" />

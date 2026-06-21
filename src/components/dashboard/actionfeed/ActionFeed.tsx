@@ -37,7 +37,7 @@ export default function ActionFeed({
   const visible = expanded ? items : items.slice(0, LIMIT);
 
   return (
-    <section className="space-y-2">
+    <section data-tour="dashboard-action-feed" className="space-y-2">
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
         <Activity className="h-4 w-4 text-cyan-400" />
         <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
