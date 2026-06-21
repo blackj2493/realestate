@@ -38,8 +38,9 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
     vi.mocked(getServiceRoleClient).mockReturnValue(stub);
 
     const entries = await sitemap();
-    // 2 static routes + every listing
-    expect(entries.length).toBe(2 + 2500);
+    // 3 static routes (/, /properties, /property) + every listing. Hub routes are []
+    // here: searchListings throws without a Typesense key, caught best-effort.
+    expect(entries.length).toBe(3 + 2500);
     // PAGE must be ≤ 1000 (PostgREST hard cap) and the loop must have paged ≥ 3 times
     expect(stub.range).toHaveBeenCalledTimes(3);
     const [f0, t0] = stub.range.mock.calls[0];
@@ -53,6 +54,7 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
     vi.mocked(getServiceRoleClient).mockReturnValue(q as unknown as ReturnType<typeof getServiceRoleClient>);
 
     const entries = await sitemap();
-    expect(entries.length).toBe(2);
+    // 3 static routes (/, /properties, /property) survive a DB failure.
+    expect(entries.length).toBe(3);
   });
 });
