@@ -10,6 +10,7 @@ import {
   Home,
   TrendingDown,
   GraduationCap,
+  Footprints,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -48,6 +49,9 @@ export interface PropertyCardData {
   // Score from EQAO / OGL-Ontario). PUBLIC open-data, not a gated metric — set only by
   // the schools hub so the badge stays exclusive to it.
   topSchoolScore?: number;
+  // Walkability hub: straight-line km to the nearest grocery (Overture/OSM public
+  // open-data). Set only by the walkability hub so the badge stays exclusive to it.
+  nearestGroceryKm?: number;
 }
 
 interface PropertyCardProps {
@@ -66,6 +70,17 @@ export function PropertyCard({
   // Determine if price was reduced
   const priceReduced = property.previousPrice && property.previousPrice > property.price;
   const priceDiff = priceReduced ? (property.previousPrice ?? 0) - property.price : 0;
+
+  // Walkability badge label (0 is a valid distance; 99 is the "none nearby" sentinel).
+  // Sub-km distances are floored/rounded to the nearest 50 m to avoid false precision
+  // (and the odd-looking "0 m") on straight-line data.
+  const groceryKm = property.nearestGroceryKm;
+  const groceryLabel =
+    groceryKm !== undefined && groceryKm < 90
+      ? groceryKm < 1
+        ? `${Math.max(50, Math.round((groceryKm * 1000) / 50) * 50)} m`
+        : `${groceryKm.toFixed(1)} km`
+      : null;
 
   const getDaysText = (days: number) => {
     if (days === 0) return "Today";
@@ -158,6 +173,14 @@ export function PropertyCard({
               <span className="px-2 py-1 text-xs font-semibold text-emerald-50 bg-emerald-600/90 border border-emerald-400/30 rounded-md flex items-center gap-1">
                 <GraduationCap className="h-3 w-3" />
                 Schools {property.topSchoolScore.toFixed(1)}
+              </span>
+            )}
+            {/* Walkability badge (walkability hub only). Public Overture/OSM open data —
+                shown, not gated. */}
+            {groceryLabel && (
+              <span className="px-2 py-1 text-xs font-semibold text-sky-50 bg-sky-600/90 border border-sky-400/30 rounded-md flex items-center gap-1">
+                <Footprints className="h-3 w-3" />
+                {groceryLabel}
               </span>
             )}
             {/* Suite Status Badge (top-left) - highest priority */}

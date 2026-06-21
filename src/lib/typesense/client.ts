@@ -219,6 +219,14 @@ export interface ListingDocument {
   SecPublicDistanceKm?: number;
   SecCatholicSchool?: string;
   SecCatholicDistanceKm?: number;
+
+  // ─── Amenity proximity (Overture Maps / OSM) — walkability ────────────────
+  // Straight-line km to the nearest grocery / recreation centre (NO_AMENITY_KM=99 when
+  // none within MAX_AMENITY_KM). Km is indexed + sortable; names are display cargo.
+  NearestGroceryKm?: number;
+  NearestGroceryName?: string;
+  NearestRecCentreKm?: number;
+  NearestRecCentreName?: string;
 }
 
 export interface SearchFilters {

@@ -25,10 +25,12 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   // neighbourhood hubs (2e). City/persona hubs are each counted over their OWN
   // sub-population so we never sitemap a hub that would render thin/noindex; the
   // neighbourhood enumeration applies the same >= HUB_MIN floor per (city, region).
-  const [cityHubs, capRateHubs, schoolHubs, hoodHubs] = await Promise.all([
+  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, hoodHubs] = await Promise.all([
     cityHubsWithInventory(HUB_MIN),
     cityHubsWithInventory(HUB_MIN, "ExtrapolatedCapRate:>0"),
     cityHubsWithInventory(HUB_MIN, "BestSchoolScoreNearby:>0"),
+    // Walkable filter MUST match the hub page's WALKABLE_KM (most-walkable/page.tsx).
+    cityHubsWithInventory(HUB_MIN, "NearestGroceryKm:<=1.5"),
     neighbourhoodHubsForSitemap(HUB_MIN),
   ]);
   return [
@@ -44,6 +46,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
     })),
     ...schoolHubs.map(({ slug }) => ({
       url: `${SITE_URL}/family/${slug}/top-rated-schools`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+    ...walkableHubs.map(({ slug }) => ({
+      url: `${SITE_URL}/lifestyle/${slug}/most-walkable`,
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),
