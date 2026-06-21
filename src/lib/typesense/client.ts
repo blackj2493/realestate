@@ -279,6 +279,7 @@ export interface SearchOptions {
   rawFilterBy?: string;  // Raw Typesense filter_by string (appended via &&) for persona builders
   geoPolygon?: [number, number][];  // Commute isochrone ring in [lat, lng] order
   facetBy?: string;
+  maxFacetValues?: number;  // facet values to return (default 50; city hubs need all districts)
 }
 
 export interface SearchResult {
@@ -312,7 +313,8 @@ export async function searchListings(
     sortOrder = 'asc',
     rawFilterBy,
     geoPolygon,
-    facetBy
+    facetBy,
+    maxFacetValues
   } = options;
 
   // TRREB §4: never let any caller exceed the 100-listing display cap (audit LOW-1).
@@ -435,7 +437,7 @@ export async function searchListings(
 
   if (facetBy) {
     searchParams.facet_by = facetBy;
-    searchParams.max_facet_values = 50;
+    searchParams.max_facet_values = maxFacetValues ?? 50;
   }
 
   // Apply filter string

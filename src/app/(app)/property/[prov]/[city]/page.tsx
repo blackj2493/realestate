@@ -28,6 +28,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { deslugCity } from "@/lib/listings/listingPath";
+import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -36,19 +37,26 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.
 const PER_PAGE = 48; // well under the §4 cap of 100
 const MIN_INDEXABLE = 3; // fewer than this → noindex (thin-content / doorway guard)
 
-/** One Typesense query, shared by generateMetadata + the page (React-cache deduped). */
-const getCityListings = cache(async (cityName: string) => {
+/**
+ * Resolve a hub SLUG → its listings, grouping all TRREB City values that normalize to it
+ * (so /property/on/toronto gathers every "Toronto C0x"/"W0x" district). Shared by
+ * generateMetadata + the page (React-cache deduped).
+ */
+const getCityHub = cache(async (slug: string) => {
+  const { cities } = await citiesForHubSlug(slug);
+  if (cities.length === 0) return { listings: [] as ListingDocument[], totalFound: 0 };
   try {
-    return await searchListings({
+    const res = await searchListings({
       query: "*",
-      rawFilterBy: `City:=\`${cityName}\` && TransactionType:=\`For Sale\` && PropertyType:!=Commercial`,
+      rawFilterBy: `${cityFilterClause(cities)} && TransactionType:=\`For Sale\` && PropertyType:!=Commercial`,
       perPage: PER_PAGE,
       sortBy: "ListPrice",
       sortOrder: "desc",
     });
+    return { listings: res.listings, totalFound: res.totalFound };
   } catch (err) {
-    console.error(`[CityHub] Typesense query failed for "${cityName}":`, err);
-    return { listings: [] as ListingDocument[], totalFound: 0, page: 1, perPage: PER_PAGE, processingTimeMs: 0 };
+    console.error(`[CityHub] listing query failed for "${slug}":`, err);
+    return { listings: [] as ListingDocument[], totalFound: 0 };
   }
 });
 
@@ -78,7 +86,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { prov, city } = await params;
   const cityName = deslugCity(city);
-  const { totalFound } = await getCityListings(cityName);
+  const { totalFound } = await getCityHub(city);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
 
@@ -106,7 +114,7 @@ export default async function CityHubPage({
 }) {
   const { prov, city } = await params;
   const cityName = deslugCity(city);
-  const { listings, totalFound } = await getCityListings(cityName);
+  const { listings, totalFound } = await getCityHub(city);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
 

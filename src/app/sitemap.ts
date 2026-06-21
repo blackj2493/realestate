@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { searchListings } from "@/lib/typesense/client";
-import { cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
+import { cityHubsWithInventory } from "@/lib/listings/cityHubs";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -15,39 +14,19 @@ const HUB_MIN = 5; // don't sitemap a city hub that would render thin (the hub n
 
 /**
  * Crawlable city-hub URLs (/property/on/{city}) — the internal-link entry points to
- * listings (the Command Center is a client-only WebGL map Googlebot can't crawl). Built
- * from the Typesense City facet (active For-Sale only). Emits only hubs that round-trip
- * (cityHubResolves) with enough inventory; district-split cities (Toronto, London) come
- * online once 2b-ii's normalized CitySlug lands. Capped at the facet's top 50 cities
- * (max_facet_values) — the high-inventory markets. Best-effort: [] on any Typesense
- * failure, so the listing sitemap below is never affected.
+ * listings (the Command Center is a client-only WebGL map Googlebot can't crawl).
+ * cityHubsWithInventory groups the Typesense City facet by normalized slug, so
+ * district-split cities (Toronto C0x, London S/N/E) consolidate into one hub each, with
+ * only hubs that clear HUB_MIN active listings emitted. Best-effort ([] on any Typesense
+ * failure), so the listing sitemap below is never affected.
  */
 async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
-  try {
-    const res = await searchListings({
-      query: "*",
-      rawFilterBy: "TransactionType:=`For Sale` && PropertyType:!=Commercial",
-      perPage: 1,
-      facetBy: "City",
-    });
-    const facet = (res.facetDistribution?.City ?? {}) as Record<string, number>;
-    const seen = new Set<string>();
-    const routes: MetadataRoute.Sitemap = [];
-    for (const [city, count] of Object.entries(facet)) {
-      if (count < HUB_MIN || !cityHubResolves(city)) continue;
-      const slug = cityHubSlug(city);
-      if (seen.has(slug)) continue; // de-dupe (e.g. multiple raw values → one slug)
-      seen.add(slug);
-      routes.push({
-        url: `${SITE_URL}/property/on/${slug}`,
-        changeFrequency: "daily" as const,
-        priority: 0.8,
-      });
-    }
-    return routes;
-  } catch {
-    return [];
-  }
+  const hubs = await cityHubsWithInventory(HUB_MIN);
+  return hubs.map(({ slug }) => ({
+    url: `${SITE_URL}/property/on/${slug}`,
+    changeFrequency: "daily" as const,
+    priority: 0.8,
+  }));
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

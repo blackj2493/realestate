@@ -120,16 +120,18 @@ describe("city hub slug round-trip", () => {
     expect(deslugCity("richmond-hill")).toBe("Richmond Hill");
   });
 
-  it("cityHubSlug strips Toronto district codes but keeps word-suffix areas", () => {
+  it("cityHubSlug strips Toronto district codes and directional area suffixes", () => {
     expect(cityHubSlug("Mississauga")).toBe("mississauga");
     expect(cityHubSlug("Toronto C06")).toBe("toronto");
-    expect(cityHubSlug("London South")).toBe("london-south");
+    expect(cityHubSlug("London South")).toBe("london"); // directional suffix stripped
+    expect(cityHubSlug("Richmond Hill")).toBe("richmond-hill"); // "Hill" is not directional
   });
 
-  it("cityHubResolves only when the slug round-trips to the exact City value", () => {
+  it("cityHubResolves for any city with a non-empty hub slug (district-split included)", () => {
     expect(cityHubResolves("Mississauga")).toBe(true);
-    expect(cityHubResolves("London South")).toBe(true); // word suffix survives
-    expect(cityHubResolves("Toronto C06")).toBe(false); // district stripped → needs 2b-ii
-    expect(cityHubResolves("St. Catharines")).toBe(false); // period lost → needs 2b-ii
+    expect(cityHubResolves("Toronto C06")).toBe(true); // → /property/on/toronto (facet-grouped, 2b-ii)
+    expect(cityHubResolves("St. Catharines")).toBe(true); // → /property/on/st-catharines
+    expect(cityHubResolves("")).toBe(false);
+    expect(cityHubResolves("   ")).toBe(false);
   });
 });

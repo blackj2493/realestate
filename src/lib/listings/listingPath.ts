@@ -23,12 +23,17 @@ export function slugify(input: string): string {
 
 /**
  * Clean municipality name for the URL. TRREB encodes Toronto as "Toronto C06" /
- * "Toronto W01" / "Toronto E04" (internal district codes nobody searches for); strip
- * the trailing code so all Toronto listings consolidate under /toronto/. Non-Toronto
- * cities (London, Brampton, …) have no code and pass through unchanged.
+ * "Toronto W01" / "Toronto E04" (codes nobody searches for) and uses directional area
+ * suffixes for some cities ("London South" / "North" / "East"). Strip both so each city's
+ * listings consolidate under one slug (/toronto, /london). Other cities (Mississauga,
+ * Brampton, …) have no suffix and pass through unchanged. No Ontario municipality ends in
+ * a bare cardinal direction, so the directional strip is safe.
  */
 function municipality(city: string): string {
-  return city.replace(/\s+[CEW]\d{2}\s*$/i, "").trim();
+  return city
+    .replace(/\s+[CEW]\d{2}\s*$/i, "")
+    .replace(/\s+(North|South|East|West)\s*$/i, "")
+    .trim();
 }
 
 /** Minimal payload shape needed to build a path. */
@@ -114,13 +119,11 @@ export function cityHubSlug(city: string): string {
 }
 
 /**
- * Does a /property/{prov}/{slug} hub round-trip back to this exact City value? True only
- * when nothing is lost: Mississauga ✓, London South ✓; but "Toronto C06" → "toronto" does
- * NOT round-trip (district-stripped) and "St. Catharines" loses its period — both need the
- * normalized CitySlug field (2b-ii). Sitemap/breadcrumb only emit hubs that resolve, so
- * we never link to a hub that would render empty.
+ * Does this City value map to a usable hub? With Phase 2b-ii's facet-grouping resolution
+ * (cityHubs.ts), every real city resolves — including district-split ones (Toronto C0x →
+ * /toronto) and period-cities (St. Catharines) — so this is simply "yields a non-empty
+ * slug". Gates the listing-page breadcrumb crawl link.
  */
 export function cityHubResolves(city: string): boolean {
-  const slug = cityHubSlug(city);
-  return slug.length > 0 && deslugCity(slug) === city;
+  return cityHubSlug(city).length > 0;
 }
