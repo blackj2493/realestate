@@ -49,7 +49,7 @@ describe("buildListingPath", () => {
     expect(path).toBe("/property/on/toronto/5-bay-st-C2345678");
   });
 
-  it("prefers structured street fields over the full UnparsedAddress (no city/postal in slug)", () => {
+  it("prefers structured street fields AND strips the TRREB district code from Toronto", () => {
     expect(
       buildListingPath({
         ListingKey: "C12893986",
@@ -61,7 +61,17 @@ describe("buildListingPath", () => {
         City: "Toronto C06",
         StateOrProvince: "ON",
       }),
-    ).toBe("/property/on/toronto-c06/31-tippett-rd-607-C12893986");
+    ).toBe("/property/on/toronto/31-tippett-rd-607-C12893986");
+  });
+
+  it("strips C/E/W Toronto district codes but leaves other cities untouched", () => {
+    expect(buildListingPath({ ListingKey: "E1234567", City: "Toronto E04", UnparsedAddress: "9 Foo Ave" }))
+      .toBe("/property/on/toronto/9-foo-ave-E1234567");
+    expect(buildListingPath({ ListingKey: "W7654321", City: "Toronto W01", UnparsedAddress: "9 Foo Ave" }))
+      .toBe("/property/on/toronto/9-foo-ave-W7654321");
+    // No code → unchanged (and not a false-positive strip).
+    expect(buildListingPath({ ListingKey: "X2223334", City: "Brampton", UnparsedAddress: "9 Foo Ave" }))
+      .toBe("/property/on/brampton/9-foo-ave-X2223334");
   });
 
   it("falls back to the street portion (before the first comma) of UnparsedAddress", () => {

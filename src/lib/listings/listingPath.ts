@@ -21,6 +21,16 @@ export function slugify(input: string): string {
     .replace(/-{2,}/g, "-"); // collapse runs
 }
 
+/**
+ * Clean municipality name for the URL. TRREB encodes Toronto as "Toronto C06" /
+ * "Toronto W01" / "Toronto E04" (internal district codes nobody searches for); strip
+ * the trailing code so all Toronto listings consolidate under /toronto/. Non-Toronto
+ * cities (London, Brampton, …) have no code and pass through unchanged.
+ */
+function municipality(city: string): string {
+  return city.replace(/\s+[CEW]\d{2}\s*$/i, "").trim();
+}
+
 /** Minimal payload shape needed to build a path. */
 export interface ListingPathInput {
   ListingKey?: string | null;
@@ -66,7 +76,7 @@ export function buildListingPath(p: ListingPathInput): string | null {
   if (!KEY_RE.test(key)) return null;
 
   const prov = slugify(p.StateOrProvince || "ON") || "on";
-  const city = slugify(p.City || "") || "on";
+  const city = slugify(municipality(p.City || "")) || "on";
   const addr = slugify(streetAddress(p));
 
   const tail = addr ? `${addr}-${key}` : key;
