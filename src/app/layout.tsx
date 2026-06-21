@@ -11,9 +11,55 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
+
 export const metadata: Metadata = {
-  title: "PureProperty - Real Estate Market Analytics",
-  description: "Find your dream home with advanced market analytics and real-time MLS listings.",
+  metadataBase: new URL(SITE_URL),
+  // Default title/description for the homepage + any page that doesn't set its own
+  // (the hubs all override with absolute titles, so no template is used here).
+  title: "PureProperty | Ontario Real Estate Listings & Market Intelligence",
+  description:
+    "Browse every active Ontario MLS® listing on PureProperty — with cap-rate, school, walkability, and development intelligence the consumer portals don't show. Built for serious buyers and investors.",
+  openGraph: {
+    type: "website",
+    siteName: "PureProperty",
+    url: SITE_URL,
+    title: "PureProperty | Ontario Real Estate Listings & Market Intelligence",
+    description:
+      "Every active Ontario MLS® listing, decoded — cap rate, schools, walkability, and development potential in one place.",
+  },
+  twitter: { card: "summary_large_image", title: "PureProperty", description: "Ontario real estate, decoded for serious buyers and investors." },
+};
+
+// Sitewide brand entity (Organization) + site (WebSite) structured data. Renders on every
+// page; Google de-dupes. The WebSite SearchAction can power a sitelinks search box, and
+// Organization establishes the brand entity (name/logo/url) for the Knowledge Graph.
+const ORG_AND_SITE_JSONLD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "PureProperty",
+      url: SITE_URL,
+      logo: `${SITE_URL}/logo.svg`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: "PureProperty",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${SITE_URL}/properties?search={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
 };
 
 // Mobile viewport: device-width + viewport-fit=cover so safe-area-inset env()
@@ -34,6 +80,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className={`${inter.className} min-h-app bg-background text-foreground`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_AND_SITE_JSONLD) }}
+        />
         <WatchlistInit />
         {children}
         <Toaster />
