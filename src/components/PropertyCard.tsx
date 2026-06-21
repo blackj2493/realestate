@@ -11,6 +11,7 @@ import {
   TrendingDown,
   GraduationCap,
   Footprints,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -52,6 +53,9 @@ export interface PropertyCardData {
   // Walkability hub: straight-line km to the nearest grocery (Overture/OSM public
   // open-data). Set only by the walkability hub so the badge stays exclusive to it.
   nearestGroceryKm?: number;
+  // New-construction hub: TRREB ApproximateAge bucket ("New" / "0-5"). Public IDX field;
+  // set only by the new-construction hub so the badge stays exclusive to it.
+  approximateAge?: string;
 }
 
 interface PropertyCardProps {
@@ -181,6 +185,13 @@ export function PropertyCard({
               <span className="px-2 py-1 text-xs font-semibold text-sky-50 bg-sky-600/90 border border-sky-400/30 rounded-md flex items-center gap-1">
                 <Footprints className="h-3 w-3" />
                 {groceryLabel}
+              </span>
+            )}
+            {/* New-construction badge (new-construction hub only). Public IDX age field. */}
+            {property.approximateAge && (
+              <span className="px-2 py-1 text-xs font-semibold text-violet-50 bg-violet-600/90 border border-violet-400/30 rounded-md flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                {property.approximateAge === "New" ? "New build" : `${property.approximateAge} yrs`}
               </span>
             )}
             {/* Suite Status Badge (top-left) - highest priority */}

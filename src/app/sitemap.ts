@@ -25,12 +25,14 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   // neighbourhood hubs (2e). City/persona hubs are each counted over their OWN
   // sub-population so we never sitemap a hub that would render thin/noindex; the
   // neighbourhood enumeration applies the same >= HUB_MIN floor per (city, region).
-  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, hoodHubs] = await Promise.all([
+  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, newBuildHubs, hoodHubs] = await Promise.all([
     cityHubsWithInventory(HUB_MIN),
     cityHubsWithInventory(HUB_MIN, "ExtrapolatedCapRate:>0"),
     cityHubsWithInventory(HUB_MIN, "BestSchoolScoreNearby:>0"),
     // Walkable filter MUST match the hub page's WALKABLE_KM (most-walkable/page.tsx).
     cityHubsWithInventory(HUB_MIN, "NearestGroceryKm:<=1.5"),
+    // New-build filter MUST match NEW_BUILD_FILTER (new-construction/page.tsx).
+    cityHubsWithInventory(HUB_MIN, "(ApproximateAge:=`New` || ApproximateAge:=`0-5`)"),
     neighbourhoodHubsForSitemap(HUB_MIN),
   ]);
   return [
@@ -51,6 +53,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
     })),
     ...walkableHubs.map(({ slug }) => ({
       url: `${SITE_URL}/lifestyle/${slug}/most-walkable`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+    ...newBuildHubs.map(({ slug }) => ({
+      url: `${SITE_URL}/lifestyle/${slug}/new-construction`,
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),

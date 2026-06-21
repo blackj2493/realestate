@@ -23,7 +23,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
-import { Building2, TrendingUp, GraduationCap, Footprints } from "lucide-react";
+import { Building2, TrendingUp, GraduationCap, Footprints, Sparkles } from "lucide-react";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
@@ -156,6 +156,12 @@ export default async function CityHubPage({
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-400 transition-colors hover:text-sky-300"
               >
                 <Footprints className="h-4 w-4" /> Most walkable homes in {cityName} →
+              </Link>
+              <Link
+                href={`/lifestyle/${city}/new-construction`}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-400 transition-colors hover:text-violet-300"
+              >
+                <Sparkles className="h-4 w-4" /> New construction in {cityName} →
               </Link>
             </div>
           )}
