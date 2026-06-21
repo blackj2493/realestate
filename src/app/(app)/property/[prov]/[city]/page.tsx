@@ -29,7 +29,7 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { deslugCity } from "@/lib/listings/listingPath";
-import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
+import { citiesForHubSlug, cityFilterClause, neighbourhoodsForCity } from "@/lib/listings/cityHubs";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -100,6 +100,11 @@ export default async function CityHubPage({
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
 
+  // Crawlable links to this city's neighbourhood hubs (CityRegion breakout). Only those
+  // clearing MIN_INDEXABLE are linked, so we never point internal links at thin/noindex
+  // pages. Best-effort: [] on any Typesense failure (the city hub still renders).
+  const neighbourhoods = (await neighbourhoodsForCity(city)).filter((n) => n.count >= MIN_INDEXABLE);
+
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -164,6 +169,26 @@ export default async function CityHubPage({
               Explore the full map →
             </Link>
           </div>
+        )}
+
+        {neighbourhoods.length > 0 && (
+          <section className="mt-10" aria-labelledby="hoods-heading">
+            <h2 id="hoods-heading" className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+              Browse {cityName} by neighbourhood
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {neighbourhoods.map((n) => (
+                <Link
+                  key={n.slug}
+                  href={`/property/${prov.toLowerCase()}/${city}/${n.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
+                >
+                  {n.name}
+                  <span className="text-xs text-slate-500">{n.count}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
         )}
 
         <div className="mt-8">
