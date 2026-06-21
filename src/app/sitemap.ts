@@ -25,7 +25,7 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   // neighbourhood hubs (2e). City/persona hubs are each counted over their OWN
   // sub-population so we never sitemap a hub that would render thin/noindex; the
   // neighbourhood enumeration applies the same >= HUB_MIN floor per (city, region).
-  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, newBuildHubs, hoodHubs] = await Promise.all([
+  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, newBuildHubs, devHubs, hoodHubs] = await Promise.all([
     cityHubsWithInventory(HUB_MIN),
     cityHubsWithInventory(HUB_MIN, "ExtrapolatedCapRate:>0"),
     cityHubsWithInventory(HUB_MIN, "BestSchoolScoreNearby:>0"),
@@ -33,6 +33,8 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
     cityHubsWithInventory(HUB_MIN, "NearestGroceryKm:<=1.5"),
     // New-build filter MUST match NEW_BUILD_FILTER (new-construction/page.tsx).
     cityHubsWithInventory(HUB_MIN, "(ApproximateAge:=`New` || ApproximateAge:=`0-5`)"),
+    // Dev filter MUST match PRIME_FILTER (development-potential/page.tsx).
+    cityHubsWithInventory(HUB_MIN, "multi_unit_status:=`PRIME_CANDIDATE`"),
     neighbourhoodHubsForSitemap(HUB_MIN),
   ]);
   return [
@@ -58,6 +60,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
     })),
     ...newBuildHubs.map(({ slug }) => ({
       url: `${SITE_URL}/lifestyle/${slug}/new-construction`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+    ...devHubs.map(({ slug }) => ({
+      url: `${SITE_URL}/investments/${slug}/development-potential`,
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),

@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Footprints,
   Sparkles,
+  Ruler,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -56,6 +57,9 @@ export interface PropertyCardData {
   // New-construction hub: TRREB ApproximateAge bucket ("New" / "0-5"). Public IDX field;
   // set only by the new-construction hub so the badge stays exclusive to it.
   approximateAge?: string;
+  // Builder/development hub: total lot area in sqft (public IDX field). Set only by the
+  // development hub. The proprietary multiplex verdict that RANKS the hub stays gated.
+  lotSqftTotal?: number;
 }
 
 interface PropertyCardProps {
@@ -192,6 +196,14 @@ export function PropertyCard({
               <span className="px-2 py-1 text-xs font-semibold text-violet-50 bg-violet-600/90 border border-violet-400/30 rounded-md flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
                 {property.approximateAge === "New" ? "New build" : `${property.approximateAge} yrs`}
+              </span>
+            )}
+            {/* Lot-size badge (development hub only). Public IDX lot area — the gated
+                multiplex verdict that ranks the hub is never shown. */}
+            {property.lotSqftTotal !== undefined && property.lotSqftTotal > 0 && (
+              <span className="px-2 py-1 text-xs font-semibold text-orange-50 bg-orange-600/90 border border-orange-400/30 rounded-md flex items-center gap-1">
+                <Ruler className="h-3 w-3" />
+                {Math.round(property.lotSqftTotal).toLocaleString()} sqft lot
               </span>
             )}
             {/* Suite Status Badge (top-left) - highest priority */}
