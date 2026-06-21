@@ -27,6 +27,7 @@ import { Building2 } from "lucide-react";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import { deslugCity } from "@/lib/listings/listingPath";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -34,15 +35,6 @@ export const dynamicParams = true;
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const PER_PAGE = 48; // well under the §4 cap of 100
 const MIN_INDEXABLE = 3; // fewer than this → noindex (thin-content / doorway guard)
-
-/** "richmond-hill" → "Richmond Hill" (best-effort de-slug to the TRREB City value). */
-function deslugCity(slug: string): string {
-  return slug
-    .split("-")
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 /** One Typesense query, shared by generateMetadata + the page (React-cache deduped). */
 const getCityListings = cache(async (cityName: string) => {

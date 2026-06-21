@@ -16,7 +16,7 @@ import { Bed, Bath, Square, Car, AlertTriangle, Building2, ChevronDown } from "l
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
-import { buildListingPath } from "@/lib/listings/listingPath";
+import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
@@ -84,6 +84,16 @@ function listingCanonical(id: string, p: RawListing): string {
       StateOrProvince: p.StateOrProvince,
     }) ?? `/properties/${id}`;
   return `${SITE_URL}${path}`;
+}
+
+/**
+ * Path to this listing's city hub (/property/{prov}/{city}), or null when the hub
+ * wouldn't resolve (district-split cities like Toronto/London — see cityHubResolves;
+ * they come online with 2b-ii's CitySlug). Drives the breadcrumb crawl-link + JSON-LD.
+ */
+function cityHubPath(p: { City?: string; StateOrProvince?: string }): string | null {
+  if (!p.City || !cityHubResolves(p.City)) return null;
+  return `/property/${(p.StateOrProvince || "ON").toLowerCase()}/${cityHubSlug(p.City)}`;
 }
 
 interface RawListing {
@@ -224,6 +234,7 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   // Accommodation (Place) subtype carries the structural facts (beds/baths/area).
   const accommodationType = /condo|apartment/.test(subType) ? "Apartment" : "SingleFamilyResidence";
   const url = listingCanonical(id, p);
+  const cityPath = cityHubPath(p);
   const photos = detail.media_urls.slice(0, 8);
   const availability =
     detail.status.kind === "sold"
@@ -289,7 +300,15 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
           { "@type": "ListItem", position: 2, name: "Properties", item: `${SITE_URL}/properties` },
-          { "@type": "ListItem", position: 3, name: p.UnparsedAddress || "Listing", item: url },
+          ...(cityPath && p.City
+            ? [{ "@type": "ListItem", position: 3, name: p.City, item: `${SITE_URL}${cityPath}` }]
+            : []),
+          {
+            "@type": "ListItem",
+            position: cityPath ? 4 : 3,
+            name: p.UnparsedAddress || "Listing",
+            item: url,
+          },
         ],
       },
     ],
@@ -336,6 +355,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Address Unavailable";
+  const cityHref = cityHubPath(p);
   const price = p.ListPrice || 0;
   // THE single price number — list-anchored Expected Sale where we can (most accurate),
   // AVM as the honest fallback. Replaces the old two-number display. (null for anon: the
@@ -407,12 +427,21 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       />
 
       <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
-        <Link
-          href="/properties"
-          className="mb-4 inline-block text-sm text-cyan-400 transition-colors hover:text-cyan-300"
-        >
-          ← Back to Command Center
-        </Link>
+        {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
+            that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
+        <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
+          <Link href="/properties" className="text-cyan-400 transition-colors hover:text-cyan-300">
+            Command Center
+          </Link>
+          {cityHref && p.City && (
+            <>
+              <span aria-hidden>/</span>
+              <Link href={cityHref} className="text-cyan-400 transition-colors hover:text-cyan-300">
+                Homes for sale in {p.City}
+              </Link>
+            </>
+          )}
+        </nav>
 
         <DetailMobileNav sections={navSections} />
 

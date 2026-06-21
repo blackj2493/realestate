@@ -96,3 +96,31 @@ export function extractListingKey(slug: string | string[]): string | null {
   const key = tail.trim().toUpperCase();
   return KEY_RE.test(key) ? key : null;
 }
+
+// ── City hubs (Phase 2) ────────────────────────────────────────────────────────
+
+/** URL city slug → candidate TRREB City value, e.g. "richmond-hill" → "Richmond Hill". */
+export function deslugCity(slug: string): string {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** TRREB City value → hub URL slug (district code stripped): "Toronto C06" → "toronto". */
+export function cityHubSlug(city: string): string {
+  return slugify(municipality(city));
+}
+
+/**
+ * Does a /property/{prov}/{slug} hub round-trip back to this exact City value? True only
+ * when nothing is lost: Mississauga ✓, London South ✓; but "Toronto C06" → "toronto" does
+ * NOT round-trip (district-stripped) and "St. Catharines" loses its period — both need the
+ * normalized CitySlug field (2b-ii). Sitemap/breadcrumb only emit hubs that resolve, so
+ * we never link to a hub that would render empty.
+ */
+export function cityHubResolves(city: string): boolean {
+  const slug = cityHubSlug(city);
+  return slug.length > 0 && deslugCity(slug) === city;
+}

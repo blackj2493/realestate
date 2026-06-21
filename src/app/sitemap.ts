@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { searchListings } from "@/lib/typesense/client";
+import { cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -9,12 +11,52 @@ export const revalidate = 86400;
 
 const PAGE = 1000; // PostgREST hard-caps a single response at 1000 rows — must paginate
 const MAX_URLS = 45_000; // headroom under the 50k-URL sitemap protocol limit
+const HUB_MIN = 5; // don't sitemap a city hub that would render thin (the hub noindexes < 3)
+
+/**
+ * Crawlable city-hub URLs (/property/on/{city}) — the internal-link entry points to
+ * listings (the Command Center is a client-only WebGL map Googlebot can't crawl). Built
+ * from the Typesense City facet (active For-Sale only). Emits only hubs that round-trip
+ * (cityHubResolves) with enough inventory; district-split cities (Toronto, London) come
+ * online once 2b-ii's normalized CitySlug lands. Capped at the facet's top 50 cities
+ * (max_facet_values) — the high-inventory markets. Best-effort: [] on any Typesense
+ * failure, so the listing sitemap below is never affected.
+ */
+async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
+  try {
+    const res = await searchListings({
+      query: "*",
+      rawFilterBy: "TransactionType:=`For Sale` && PropertyType:!=Commercial",
+      perPage: 1,
+      facetBy: "City",
+    });
+    const facet = (res.facetDistribution?.City ?? {}) as Record<string, number>;
+    const seen = new Set<string>();
+    const routes: MetadataRoute.Sitemap = [];
+    for (const [city, count] of Object.entries(facet)) {
+      if (count < HUB_MIN || !cityHubResolves(city)) continue;
+      const slug = cityHubSlug(city);
+      if (seen.has(slug)) continue; // de-dupe (e.g. multiple raw values → one slug)
+      seen.add(slug);
+      routes.push({
+        url: `${SITE_URL}/property/on/${slug}`,
+        changeFrequency: "daily" as const,
+        priority: 0.8,
+      });
+    }
+    return routes;
+  } catch {
+    return [];
+  }
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/properties`, changeFrequency: "hourly", priority: 0.9 },
   ];
+
+  const hubRoutes = await cityHubRoutes();
 
   try {
     const supabase = getServiceRoleClient();
@@ -30,7 +72,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       rows.push(...data);
       if (data.length < PAGE) break;
     }
-    if (rows.length === 0) return staticRoutes;
 
     const listingRoutes: MetadataRoute.Sitemap = rows
       .slice(0, MAX_URLS)
@@ -42,9 +83,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       }));
 
-    return [...staticRoutes, ...listingRoutes];
+    return [...staticRoutes, ...hubRoutes, ...listingRoutes];
   } catch {
-    // Missing env at build / DB unavailable — still emit the static routes.
-    return staticRoutes;
+    // Missing env at build / DB unavailable — still emit the static + hub routes.
+    return [...staticRoutes, ...hubRoutes];
   }
 }

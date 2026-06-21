@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { slugify, buildListingPath, extractListingKey } from "./listingPath";
+import {
+  slugify,
+  buildListingPath,
+  extractListingKey,
+  deslugCity,
+  cityHubSlug,
+  cityHubResolves,
+} from "./listingPath";
 
 describe("slugify", () => {
   it("lowercases and dash-collapses", () => {
@@ -104,5 +111,25 @@ describe("extractListingKey", () => {
     expect(extractListingKey("just-an-address")).toBeNull();
     expect(extractListingKey([])).toBeNull();
     expect(extractListingKey("")).toBeNull();
+  });
+});
+
+describe("city hub slug round-trip", () => {
+  it("deslugCity title-cases dash-separated slugs", () => {
+    expect(deslugCity("mississauga")).toBe("Mississauga");
+    expect(deslugCity("richmond-hill")).toBe("Richmond Hill");
+  });
+
+  it("cityHubSlug strips Toronto district codes but keeps word-suffix areas", () => {
+    expect(cityHubSlug("Mississauga")).toBe("mississauga");
+    expect(cityHubSlug("Toronto C06")).toBe("toronto");
+    expect(cityHubSlug("London South")).toBe("london-south");
+  });
+
+  it("cityHubResolves only when the slug round-trips to the exact City value", () => {
+    expect(cityHubResolves("Mississauga")).toBe(true);
+    expect(cityHubResolves("London South")).toBe(true); // word suffix survives
+    expect(cityHubResolves("Toronto C06")).toBe(false); // district stripped → needs 2b-ii
+    expect(cityHubResolves("St. Catharines")).toBe(false); // period lost → needs 2b-ii
   });
 });
