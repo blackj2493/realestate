@@ -646,6 +646,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage) */}
             <YourTakeCard
               listingKey={id}
+              isLease={isLease}
               metrics={{
                 listPrice: price || null,
                 capRatePct: view.capRatePct,

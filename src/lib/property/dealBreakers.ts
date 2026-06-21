@@ -34,6 +34,24 @@ export interface ListingMetrics {
   trueDom: number | null;
 }
 
+/**
+ * Rules that only make sense for a PURCHASE. On a For-Lease listing a rental has no
+ * purchase cap rate, and ListPrice is the monthly rent (so "price ≤ $900K" is an
+ * always-true non-test) — screening on these would manufacture a misleading pass.
+ * Beds and True DOM are universal and still apply to leases.
+ */
+export const PURCHASE_ONLY_RULES: ReadonlySet<keyof RuleSet> = new Set(["minCapRatePct", "maxPrice"]);
+
+export interface EvaluateOptions {
+  /** True for lease listings — purchase-only rules are skipped (not evaluated). */
+  isLease?: boolean;
+}
+
+/** How many purchase-only rules the user has set (drives the "n/a on leases" note). */
+export function purchaseOnlyRuleCount(rules: RuleSet): number {
+  return [...PURCHASE_ONLY_RULES].filter((k) => rules[k] != null).length;
+}
+
 export type RuleStatus = "pass" | "fail" | "unknown";
 
 export interface RuleResult {
@@ -51,10 +69,11 @@ function money(v: number): string {
 }
 
 /** Evaluate a listing against the rules the user has actually set (non-null). */
-export function evaluateRules(m: ListingMetrics, rules: RuleSet): RuleResult[] {
+export function evaluateRules(m: ListingMetrics, rules: RuleSet, opts: EvaluateOptions = {}): RuleResult[] {
   const out: RuleResult[] = [];
+  const skipPurchase = !!opts.isLease;
 
-  if (rules.minCapRatePct != null) {
+  if (rules.minCapRatePct != null && !skipPurchase) {
     const label = `Cap rate ≥ ${rules.minCapRatePct}%`;
     if (m.capRatePct == null) out.push({ key: "minCapRatePct", label, status: "unknown", detail: "no cap-rate estimate" });
     else {
@@ -63,7 +82,7 @@ export function evaluateRules(m: ListingMetrics, rules: RuleSet): RuleResult[] {
     }
   }
 
-  if (rules.maxPrice != null) {
+  if (rules.maxPrice != null && !skipPurchase) {
     const label = `Price ≤ ${money(rules.maxPrice)}`;
     if (m.listPrice == null || m.listPrice <= 0) out.push({ key: "maxPrice", label, status: "unknown", detail: "no price" });
     else {
