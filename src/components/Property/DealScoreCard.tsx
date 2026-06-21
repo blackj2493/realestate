@@ -11,6 +11,7 @@ import {
   type DealPersona,
 } from "@/lib/dealScore/computeDealScore";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import InfoDot from "@/components/ui/InfoDot";
 
 /**
  * Deal Score UI — the flagship "is this a good deal — for ME?" signal.
@@ -207,6 +208,7 @@ export default function DealScoreCard({
         <span className="flex items-center gap-2">
           <Gauge className={cn("h-4 w-4", s.text)} />
           Deal Score
+          <InfoDot term="dealScore" />
         </span>
         {dealScore.confidence && (
           <span className="rounded border border-slate-700 bg-slate-800/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-slate-400">

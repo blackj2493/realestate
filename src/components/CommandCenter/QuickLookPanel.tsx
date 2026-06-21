@@ -38,6 +38,8 @@ import type { ListingDocument } from "@/lib/typesense/client";
 import { AlphaBadge, detectPropertyBadges } from "./AlphaBadge";
 import DealScoreCard from "@/components/Property/DealScoreCard";
 import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
+import InfoDot from "@/components/ui/InfoDot";
+import type { GlossaryKey } from "@/lib/glossary";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
@@ -259,9 +261,9 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
 
           {/* Signal tiles — instant from the index doc, while the score cards hydrate */}
           <div className="mb-4 grid grid-cols-3 gap-2">
-            <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} />
-            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-400" />
-            <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-slate-200" />
+            <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
+            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-400" term="grossYield" />
+            <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-slate-200" term="capRate" />
           </div>
 
           {/* Deal Score — AVM-anchored, fetched so it matches the full report exactly */}
@@ -322,10 +324,23 @@ function Spec({ icon, value, label }: { icon: React.ReactNode; value: React.Reac
   );
 }
 
-function Tile({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+function Tile({
+  label,
+  value,
+  valueClass,
+  term,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+  term?: GlossaryKey;
+}) {
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-2.5 text-center">
-      <div className="text-[9px] uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-wide text-slate-500">
+        {label}
+        {term && <InfoDot term={term} />}
+      </div>
       <div className={cn("mt-1 font-mono text-sm font-bold", valueClass)}>{value}</div>
     </div>
   );

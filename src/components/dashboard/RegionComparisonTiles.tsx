@@ -42,6 +42,8 @@ import {
   compactPrice,
   DASH,
 } from "@/components/dashboard/metricViz";
+import InfoDot from "@/components/ui/InfoDot";
+import type { GlossaryKey } from "@/lib/glossary";
 
 type Dir = "higherGood" | "lowerGood" | "neutral";
 type Kind = "yoySpark" | "peer" | "threshold";
@@ -61,6 +63,8 @@ interface TileMetric {
   sub?: (d: RegionData) => string | null;
   dir: Dir;
   kind: Kind;
+  /** Glossary term explained via a ⓘ next to the tile label (optional). */
+  glossaryKey?: GlossaryKey;
 }
 
 const SPECIALTY = new Set<HeadlineMetricId>(SPECIALTY_METRIC_IDS);
@@ -76,8 +80,8 @@ const share = (count: number, active: number): number | null =>
 const METRICS: Partial<Record<HeadlineMetricId, TileMetric>> = {
   // ── RegionScore-backed ──
   medianPrice: { label: "Median Price", get: (d) => d.score.medianPrice, format: compactPrice, dir: "neutral", kind: "yoySpark" },
-  medianPpsf: { label: "$ / Sqft", get: (d) => d.score.medianPpsf, format: ppsf, dir: "lowerGood", kind: "peer" },
-  medianCapRate: { label: "Median Cap Rate", get: (d) => d.score.medianCapRate, format: pct1, dir: "higherGood", kind: "peer" },
+  medianPpsf: { label: "$ / Sqft", get: (d) => d.score.medianPpsf, format: ppsf, dir: "lowerGood", kind: "peer", glossaryKey: "ppsf" },
+  medianCapRate: { label: "Median Cap Rate", get: (d) => d.score.medianCapRate, format: pct1, dir: "higherGood", kind: "peer", glossaryKey: "capRate" },
   monthsSupply: { label: "Months Supply", get: (d) => d.score.monthsOfSupply, format: mo, dir: "lowerGood", kind: "peer" },
   soldToList: { label: "Sold / List", get: (d) => d.score.soldToListPct, format: pct1, dir: "neutral", kind: "threshold" },
   pctStale: { label: "% Stale", get: (d) => d.score.stalePct, format: (n) => `${n.toFixed(0)}%`, dir: "lowerGood", kind: "peer" },
@@ -141,8 +145,9 @@ function Tile({
 
   return (
     <div className="flex flex-col gap-1 border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <div className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
         {metric.label}
+        {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
       </div>
       <div className={`terminal-font text-lg font-bold ${valueClass}`}>
         {value == null ? DASH : metric.format(value)}

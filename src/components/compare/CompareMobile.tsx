@@ -16,6 +16,7 @@ import {
 import CompareMediaCell from "./CompareMediaCell";
 import RentInput from "./RentInput";
 import LockedCell from "./LockedCell";
+import InfoDot from "@/components/ui/InfoDot";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -67,7 +68,10 @@ export default function CompareMobile({
           LABEL_W
         )}
       >
-        {metric.label}
+        <span className="inline-flex items-center gap-1">
+          {metric.label}
+          {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
+        </span>
       </div>
       <div className="flex gap-2 py-2 pr-3">
         {contexts.map((ctx, i) => (

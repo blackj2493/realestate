@@ -10,6 +10,7 @@ import type { CompareEstimate } from "@/lib/property/getCompareData";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { UnderwritingResult } from "@/lib/underwriting/computeUnderwriting";
 import type { PersonaType } from "@/lib/personas/personaConfig";
+import type { GlossaryKey } from "@/lib/glossary";
 import { formatPrice } from "@/lib/utils";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { winnerIndices, bestValue, type WinnerDirection } from "./winner";
@@ -55,6 +56,8 @@ export interface CompareMetric {
   alwaysShow?: boolean;
   /** Small tag appended to each populated cell (e.g. "est"). */
   tag?: (ctx: MetricContext) => string | null;
+  /** Glossary term explained via a ⓘ next to the row label. */
+  glossaryKey?: GlossaryKey;
 }
 
 // ── Group metadata ────────────────────────────────────────────────────────────
@@ -140,33 +143,35 @@ export const COMPARE_METRICS: CompareMetric[] = [
   { key: "dealScore", label: "Deal Score", group: "valuationDeal", cellKind: "dealScore",
     get: (c) => dealScoreFromDocument(c.listing, c.estimate?.estimatedValue && c.estimate.confidence
       ? { estimatedValue: c.estimate.estimatedValue, confidence: c.estimate.confidence } : null).score,
-    winner: "high", gated: true },
+    winner: "high", gated: true, glossaryKey: "dealScore" },
   // The single headline price: list-anchored Estimated Sale Price (AVM fallback) — same
   // number the listing page shows. (Was the raw list-blind AVM "Est. Value".)
   { key: "estValue", label: "Est. Sale Price", group: "valuationDeal", cellKind: "estValue",
-    get: (c) => c.salePrice?.value ?? null, format: formatPrice, winner: null, gated: true },
+    get: (c) => c.salePrice?.value ?? null, format: formatPrice, winner: null, gated: true,
+    glossaryKey: "estSalePrice" },
   // The per-listing deal signal: how the ask compares to our INDEPENDENT comp valuation
   // (the AVM). Distinct from the sale price — it's the arbitrage lens, not a competing price.
   { key: "vsEstimate", label: "vs Comp Value", group: "valuationDeal", cellKind: "discount",
     get: discountPctOf, format: (v) => `${Math.abs(v).toFixed(1)}% ${v >= 0 ? "under" : "over"}`,
-    winner: "high", gated: true },
+    winner: "high", gated: true, glossaryKey: "vsCompValue" },
   { key: "listPrice", label: "List Price", group: "valuationDeal", cellKind: "numeric",
     get: (c) => c.listing.ListPrice ?? null, format: formatPrice, winner: "low", magnitude: true },
   { key: "ppsf", label: "Price / Sqft", group: "valuationDeal", cellKind: "numeric",
-    get: ppsfOf, format: fmtMoney, winner: "low", magnitude: true },
+    get: ppsfOf, format: fmtMoney, winner: "low", magnitude: true, glossaryKey: "ppsf" },
 
   // Cashflow & Carry (recomputed live — NOT gated)
   { key: "capRateUw", label: "Cap Rate", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.capRatePct ?? null, format: fmtPct1, winner: "high",
-    tag: () => "est" },
+    tag: () => "est", glossaryKey: "capRate" },
   { key: "capRateVA", label: "Est. Cap Rate", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => capRateOrNull(c.listing.cap_rate_est), format: fmtPct1, winner: "high",
-    tag: () => "est" },
+    tag: () => "est", glossaryKey: "capRate" },
   { key: "cashflow", label: "Monthly Cashflow", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.monthlyCashflow ?? null, format: fmtSignedPerMo, winner: "high",
-    tag: () => "est" },
+    tag: () => "est", glossaryKey: "cashflow" },
   { key: "carry", label: "Monthly Carry", group: "cashflowCarry", cellKind: "numeric",
-    get: (c) => c.underwriting?.monthlyCarry ?? null, format: fmtPerMo, winner: "low" },
+    get: (c) => c.underwriting?.monthlyCarry ?? null, format: fmtPerMo, winner: "low",
+    glossaryKey: "carry" },
   { key: "taxes", label: "Annual Taxes", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.listing.TaxAnnualAmount ?? null, format: formatPrice, winner: "low" },
   { key: "fees", label: "Monthly Fees", group: "cashflowCarry", cellKind: "numeric",
@@ -174,9 +179,10 @@ export const COMPARE_METRICS: CompareMetric[] = [
 
   // Distress & Timing
   { key: "trueDom", label: "True DOM", group: "distressTiming", cellKind: "numeric",
-    get: (c) => domOf(c.listing), format: fmtDays, winner: "high" },
+    get: (c) => domOf(c.listing), format: fmtDays, winner: "high", glossaryKey: "dom" },
   { key: "priceDrop", label: "Price Drop", group: "distressTiming", cellKind: "numeric",
-    get: (c) => priceDropPct(c.listing), format: (v) => `${v}%`, winner: "high" },
+    get: (c) => priceDropPct(c.listing), format: (v) => `${v}%`, winner: "high",
+    glossaryKey: "priceDrop" },
   { key: "stale", label: "Stale", group: "distressTiming", cellKind: "text", gated: true,
     getText: (c) => (c.listing.IsStale ? "Stale (>90d)" : "Fresh") },
 
@@ -184,7 +190,8 @@ export const COMPARE_METRICS: CompareMetric[] = [
   { key: "suite", label: "Suite", group: "suiteDensity", cellKind: "text",
     getText: (c) => suiteText(c.listing) },
   { key: "suiteScore", label: "Suite Score", group: "suiteDensity", cellKind: "numeric",
-    get: (c) => c.listing.SuiteScore ?? null, format: (v) => `${v}/6`, winner: "high" },
+    get: (c) => c.listing.SuiteScore ?? null, format: (v) => `${v}/6`, winner: "high",
+    glossaryKey: "suiteScore" },
   { key: "multiUnit", label: "Multi-Unit", group: "suiteDensity", cellKind: "text",
     getText: (c) => multiUnitText(c.listing) },
   { key: "surplusParking", label: "Surplus Parking", group: "suiteDensity", cellKind: "numeric",

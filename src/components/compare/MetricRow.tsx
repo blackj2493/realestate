@@ -3,6 +3,7 @@
 import { cn, formatPrice } from "@/lib/utils";
 import { DealScoreBadge } from "@/components/Property/DealScoreCard";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
+import InfoDot from "@/components/ui/InfoDot";
 import LockedCell from "./LockedCell";
 import type { CompareMetric, MetricContext, ResolvedRow } from "@/lib/compare/compareMetricsConfig";
 
@@ -18,7 +19,12 @@ export default function MetricRow({
   const fmt = metric.format ?? ((x: number) => `${x}`);
   return (
     <tr className="hover:bg-slate-900/30">
-      <td className="sticky left-0 z-10 bg-slate-950 p-3 text-slate-500">{metric.label}</td>
+      <td className="sticky left-0 z-10 bg-slate-950 p-3 text-slate-500">
+        <span className="inline-flex items-center gap-1">
+          {metric.label}
+          {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
+        </span>
+      </td>
       {contexts.map((ctx, i) => {
         if (resolved.locked[i]) {
           return <td key={ctx.listing.id} className="p-3"><LockedCell /></td>;

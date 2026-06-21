@@ -28,6 +28,8 @@ import { cn, formatPrice } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import InfoDot from "@/components/ui/InfoDot";
+import type { GlossaryKey } from "@/lib/glossary";
 import {
   computeUnderwriting,
   seedAssumptions,
@@ -60,14 +62,20 @@ function Metric({
   label,
   value,
   tone = "neutral",
+  term,
 }: {
   label: string;
   value: string;
   tone?: "neutral" | "good" | "bad";
+  /** Optional glossary key — renders a ⓘ next to the label explaining the term. */
+  term?: GlossaryKey;
 }) {
   return (
     <div className="bg-slate-800/50 rounded p-2">
-      <span className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</span>
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</span>
+        {term && <InfoDot term={term} />}
+      </div>
       <p
         className={cn(
           "text-sm font-bold font-mono",
@@ -173,16 +181,17 @@ export default function UnderwritingSandbox({
 
           {/* Key metrics */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Metric label="Cap Rate" value={pct(result.capRatePct)} />
+            <Metric label="Cap Rate" value={pct(result.capRatePct)} term="capRate" />
             <Metric
               label="Cash-on-Cash"
               value={pct(result.cashOnCashPct)}
               tone={result.cashOnCashPct >= 0 ? "good" : "bad"}
+              term="cashOnCash"
             />
-            <Metric label="Monthly Carry" value={`${formatPrice(result.monthlyCarry)}/mo`} />
-            <Metric label="Monthly NOI" value={`${formatPrice(result.monthlyNOI)}/mo`} />
-            <Metric label="Gross Yield (rent)" value={pct(result.grossYieldPct)} />
-            <Metric label="DSCR" value={result.dscr === null ? "—" : result.dscr.toFixed(2)} />
+            <Metric label="Monthly Carry" value={`${formatPrice(result.monthlyCarry)}/mo`} term="carry" />
+            <Metric label="Monthly NOI" value={`${formatPrice(result.monthlyNOI)}/mo`} term="noi" />
+            <Metric label="Gross Yield (rent)" value={pct(result.grossYieldPct)} term="grossYield" />
+            <Metric label="DSCR" value={result.dscr === null ? "—" : result.dscr.toFixed(2)} term="dscr" />
           </div>
         </>
       ) : (
@@ -210,10 +219,10 @@ export default function UnderwritingSandbox({
 
           {/* Cost-side metrics */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Metric label="Down Payment" value={formatPrice(result.downPayment)} />
-            <Metric label="Loan Amount" value={formatPrice(result.loanAmount)} />
+            <Metric label="Down Payment" value={formatPrice(result.downPayment)} term="downPayment" />
+            <Metric label="Loan Amount" value={formatPrice(result.loanAmount)} term="loanAmount" />
             <Metric label="Monthly Mortgage" value={`${formatPrice(result.monthlyMortgage)}/mo`} />
-            <Metric label="Annual Carry" value={`${formatPrice(result.monthlyCarry * 12)}/yr`} />
+            <Metric label="Annual Carry" value={`${formatPrice(result.monthlyCarry * 12)}/yr`} term="carry" />
           </div>
         </>
       )}
@@ -256,7 +265,10 @@ export default function UnderwritingSandbox({
 
       {/* Amortization */}
       <div className="mb-4">
-        <Label className="text-xs text-slate-400 mb-1 block">Amortization</Label>
+        <div className="flex items-center gap-1 mb-1">
+          <Label className="text-xs text-slate-400">Amortization</Label>
+          <InfoDot term="amortization" />
+        </div>
         <select
           value={a.amortYears}
           onChange={(e) => set("amortYears", Number(e.target.value))}
@@ -289,7 +301,10 @@ export default function UnderwritingSandbox({
           {/* Vacancy */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs text-slate-400">Vacancy</Label>
+              <div className="flex items-center gap-1">
+                <Label className="text-xs text-slate-400">Vacancy</Label>
+                <InfoDot term="vacancy" />
+              </div>
               <span className="text-xs font-mono text-slate-300">{a.vacancyPct.toFixed(1)}%</span>
             </div>
             <Slider
@@ -304,7 +319,10 @@ export default function UnderwritingSandbox({
           {/* Opex */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs text-slate-400">Operating Expenses</Label>
+              <div className="flex items-center gap-1">
+                <Label className="text-xs text-slate-400">Operating Expenses</Label>
+                <InfoDot term="opex" />
+              </div>
               <span className="text-xs font-mono text-slate-300">{a.opexPct.toFixed(0)}%</span>
             </div>
             <Slider

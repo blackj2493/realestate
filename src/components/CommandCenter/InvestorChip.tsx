@@ -12,6 +12,7 @@ import { supportsHistogram, HISTOGRAM_BANDS } from "@/lib/filters/histogram";
 import { isControlActive, investorChipLabel, resetControlToDefault } from "./investorControls";
 import RangeHistogram from "./RangeHistogram";
 import NumberInput from "./NumberInput";
+import InfoDot from "@/components/ui/InfoDot";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -103,7 +104,10 @@ function InvestorControlInner({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className={cn(LABEL, "text-slate-400")}>{control.label}</span>
+        <span className={cn(LABEL, "flex items-center gap-1 text-slate-400")}>
+          {control.label}
+          {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
+        </span>
         <span className="font-mono text-xs text-cyan-400">{valueText}</span>
       </div>
 

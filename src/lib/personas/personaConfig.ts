@@ -27,6 +27,7 @@
 import { DollarSign, TrendingUp, Home, Hammer, type LucideIcon } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import type { GlossaryKey } from "@/lib/glossary";
 
 export type PersonaType = "smart" | "cashflow" | "flippers" | "builders";
 
@@ -97,6 +98,8 @@ export type ControlDef =
       format: (v: number) => string;
       /** Typesense numeric field for the distribution histogram (optional). */
       field?: string;
+      /** Glossary term explained via a ⓘ next to the control label (optional). */
+      glossaryKey?: GlossaryKey;
     }
   | {
       kind: "range";
@@ -110,8 +113,10 @@ export type ControlDef =
       format: (v: number) => string;
       /** Typesense numeric field for the distribution histogram (optional). */
       field?: string;
+      /** Glossary term explained via a ⓘ next to the control label (optional). */
+      glossaryKey?: GlossaryKey;
     }
-  | { kind: "toggle"; key: BoolKey; label: string; short?: string };
+  | { kind: "toggle"; key: BoolKey; label: string; short?: string; glossaryKey?: GlossaryKey };
 
 const fmtPct = (v: number) => `${v}%`;
 const fmtMoney = (v: number) =>
@@ -235,8 +240,8 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     controls: [
       // This control thresholds cap_rate_est (real, indexed). The "Yield" label is
       // a legacy misnomer — kept to avoid churning the chip UI; it filters cap rate.
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
+      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "grossYield" },
+      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom", glossaryKey: "dom" },
       { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
       { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
       { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex" },
@@ -268,8 +273,8 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     short: "Cashflow",
     icon: DollarSign,
     controls: [
-      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est" },
-      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost" },
+      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "capRate" },
+      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost", glossaryKey: "carry" },
       { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
       { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex" },
     ],
@@ -299,8 +304,8 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     short: "Flipper",
     icon: TrendingUp,
     controls: [
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom" },
-      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney, field: "TotalPriceDrop" },
+      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom", glossaryKey: "dom" },
+      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney, field: "TotalPriceDrop", glossaryKey: "priceDrop" },
       { kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
       { kind: "toggle", key: "staleOnly", label: "Stale Only", short: "Stale Only" },
     ],

@@ -71,6 +71,12 @@ export default function LegalDocument({
             >
               Privacy
             </Link>
+            <Link
+              href="/glossary"
+              className="px-2 py-3 text-slate-300 transition-colors hover:text-cyan-300 active:text-cyan-400"
+            >
+              Glossary
+            </Link>
           </nav>
         </div>
       </header>

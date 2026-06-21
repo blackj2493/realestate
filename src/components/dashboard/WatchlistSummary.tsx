@@ -1,12 +1,15 @@
 "use client";
 
 import type { WatchlistRollup } from "@/lib/watchlist/useWatchlistSnapshot";
+import InfoDot from "@/components/ui/InfoDot";
+import type { GlossaryKey } from "@/lib/glossary";
 
-function Tile({ label, value }: { label: string; value: string }) {
+function Tile({ label, value, term }: { label: string; value: string; term?: GlossaryKey }) {
   return (
     <div className="border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <div className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
         {label}
+        {term && <InfoDot term={term} />}
       </div>
       <div className="terminal-font truncate text-lg font-bold text-cyan-400" title={value}>
         {value}
@@ -42,7 +45,7 @@ export default function WatchlistSummary({ rollup }: { rollup: WatchlistRollup }
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <Tile label="Saved" value={rollup.count.toLocaleString()} />
       <Tile label="Price Range" value={range} />
-      <Tile label="Avg Cap Rate" value={cap} />
+      <Tile label="Avg Cap Rate" value={cap} term="capRate" />
       <Tile label="Best Deal Score" value={best} />
     </div>
   );
