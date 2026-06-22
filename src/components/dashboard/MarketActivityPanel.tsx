@@ -7,10 +7,15 @@ import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
 import { areaKey, type Area } from "@/lib/dashboard/area";
 import type { SoldListing } from "@/app/api/market/activity/sold/route";
 import ActivityRow from "./ActivityRow";
+import ShowMoreButton from "./ShowMoreButton";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 
 const LIST_LIMIT = 100; // New side (Typesense, free) — TRREB §6.3(b) per-query display cap
 const SOLD_LIST_LIMIT = 25; // Sold side: only ~5 visible (scroll); smaller payload, same cap rules
+// Collapsed row cap — show a short list, then a "Show N more" toggle (same pattern
+// as Recently Viewed / Action Feed). Keeps the dashboard short on mobile, where the
+// list was previously uncapped (md:max-h only capped desktop) and ran very long.
+const ROW_LIMIT = 5;
 const DAY_MS = 86_400_000;
 
 function relTime(ts?: number): string {
@@ -106,11 +111,13 @@ export default function MarketActivityPanel({
   const [newCount, setNewCount] = useState<number | null>(null);
   const [newRows, setNewRows] = useState<ListingDocument[] | null>(null);
   const [newErr, setNewErr] = useState(false);
+  const [newExpanded, setNewExpanded] = useState(false);
 
   const [soldCount, setSoldCount] = useState<number | null>(null);
   const [soldRows, setSoldRows] = useState<SoldListing[] | null>(null);
   const [soldErr, setSoldErr] = useState(false);
   const [soldLocked, setSoldLocked] = useState(false);
+  const [soldExpanded, setSoldExpanded] = useState(false);
 
   const lensKey = JSON.stringify(lens);
   const key = areaKey(area);
@@ -120,10 +127,12 @@ export default function MarketActivityPanel({
     setNewCount(null);
     setNewRows(null);
     setNewErr(false);
+    setNewExpanded(false);
     setSoldCount(null);
     setSoldRows(null);
     setSoldErr(false);
     setSoldLocked(false);
+    setSoldExpanded(false);
 
     Promise.all([
       fetchNewCount(area, lens),
@@ -162,12 +171,16 @@ export default function MarketActivityPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, lensKey]);
 
+  // Collapsed to ROW_LIMIT until the user taps "Show more" — keeps the mobile list short.
+  const visibleNew = newRows ? (newExpanded ? newRows : newRows.slice(0, ROW_LIMIT)) : null;
+  const visibleSold = soldRows ? (soldExpanded ? soldRows : soldRows.slice(0, ROW_LIMIT)) : null;
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* New listings (active / IDX) */}
       <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="New Listings" accent="text-cyan-400" count={newCount} />
-        <div className="overflow-y-auto md:max-h-[360px]">
+        <div>
           {newRows === null && !newErr && <Skeleton />}
           {newErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
           {newRows && newRows.length === 0 && (
@@ -175,7 +188,7 @@ export default function MarketActivityPanel({
               No new listings in this window
             </p>
           )}
-          {newRows?.map((l) => (
+          {visibleNew?.map((l) => (
             <ActivityRow
               key={l.id}
               id={l.id}
@@ -194,12 +207,19 @@ export default function MarketActivityPanel({
             />
           ))}
         </div>
+        {newRows && newRows.length > ROW_LIMIT && (
+          <ShowMoreButton
+            expanded={newExpanded}
+            hiddenCount={newRows.length - ROW_LIMIT}
+            onToggle={() => setNewExpanded((v) => !v)}
+          />
+        )}
       </div>
 
       {/* Sold (VOW) — gated: anon sees the count + blurred "Login Required" rows */}
       <div className="flex flex-col border border-slate-800 bg-slate-900/40">
         <CountHeader title="Sold" accent="text-emerald-400" count={soldCount} />
-        <div className="overflow-y-auto md:max-h-[360px]">
+        <div>
           {soldLocked ? (
             <div className="relative min-h-[208px]">
               <div className="space-y-2 p-2 blur-sm select-none" aria-hidden="true">
@@ -231,7 +251,7 @@ export default function MarketActivityPanel({
                   No sales in this window
                 </p>
               )}
-              {soldRows?.map((l) => (
+              {visibleSold?.map((l) => (
                 <ActivityRow
                   key={l.id}
                   id={l.id}
@@ -251,6 +271,13 @@ export default function MarketActivityPanel({
             </>
           )}
         </div>
+        {!soldLocked && soldRows && soldRows.length > ROW_LIMIT && (
+          <ShowMoreButton
+            expanded={soldExpanded}
+            hiddenCount={soldRows.length - ROW_LIMIT}
+            onToggle={() => setSoldExpanded((v) => !v)}
+          />
+        )}
       </div>
       {/* TRREB §6.3(i)/(k): reliability + bona-fide-interest notice, local to the sold rows. */}
       <p className="text-[10px] leading-snug text-slate-600 md:col-span-2">
