@@ -76,10 +76,11 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         </div>
 
         {/* Center: persona lens — the SAME elevated gold selector as the dashboard
-            (PersonaLens, compact density), centered in the bar. No caption here:
-            the dense top row has no room for one, and the gold button is
-            self-evident. Residential-sale only. */}
-        <div className="flex items-center justify-center">
+            (PersonaLens, compact density), centered in the bar. Residential-sale
+            only. sm+ ONLY: on phones a bare icon-only chip collided with the
+            wordmark and read as a stray logo, so the lens moves to its own labeled
+            row below (see the sm:hidden block after this bar). */}
+        <div className="hidden items-center justify-center sm:flex">
           {investorLayer && (
             <PersonaLens persona={activePersona} onChange={setActivePersona} compact />
           )}
@@ -102,6 +103,19 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           <WatchlistAlertsBell />
         </div>
       </div>
+
+      {/* Mobile-only persona row — phones have no room for a labeled lens in the
+          dense top bar without it overlapping the wordmark, so it gets its own
+          row with a clear "Lens" label and the full persona name. Residential-sale
+          only, mirroring the desktop center cell; hidden from sm up. */}
+      {investorLayer && (
+        <div className="flex items-center justify-center gap-2 border-t border-slate-800/60 px-3 py-2 sm:hidden">
+          <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-slate-500">
+            Lens
+          </span>
+          <PersonaLens persona={activePersona} onChange={setActivePersona} short />
+        </div>
+      )}
 
       {/* Mobile-only full-width search sheet. Reuses the SAME LocationSearch
           (inplace mode → drives the live terminal search). Backdrop tap or the

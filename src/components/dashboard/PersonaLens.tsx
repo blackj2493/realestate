@@ -29,6 +29,7 @@ export default function PersonaLens({
   onChange,
   caption,
   compact = false,
+  short = false,
   dataTour,
 }: {
   persona: PersonaType;
@@ -36,11 +37,15 @@ export default function PersonaLens({
   /** Small label shown above the button. Omit on dense bars to avoid clutter. */
   caption?: string;
   compact?: boolean;
+  /** Use the persona's short name (e.g. "Flipper") so the button stays one line in
+   *  narrow rows like the mobile terminal lens. Falls back to the full label. */
+  short?: boolean;
   /** Optional discovery spotlight anchor (e.g. "dashboard-persona"). */
   dataTour?: string;
 }) {
   const active = PERSONA_CONFIG[persona];
   const ActiveIcon = active.icon;
+  const label = short ? active.short ?? active.label : active.label;
 
   // Trigger is a <span>, not a <button>: Popover supplies the click handler on
   // its own wrapper <div>, and nesting interactive elements breaks a11y /
@@ -64,7 +69,7 @@ export default function PersonaLens({
           compact ? "hidden text-xs sm:inline" : "text-sm"
         )}
       >
-        {active.label}
+        {label}
       </span>
       <ChevronDown
         className={cn(
