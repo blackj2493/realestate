@@ -70,6 +70,13 @@ export interface OfferBand {
   note: string;
   /** Cohort closes ABOVE ask → the band shifts up and the copy says "expect to compete". */
   hotMarket: boolean;
+  /**
+   * Provenance of `likelyClose`: the list-anchored Expected Sale model (~2% median
+   * |%err|, carries close-rate data) vs the AVM fallback (~11%, NO close-rate signal).
+   * When AVM-based, `note` degrades so the copy never claims comparable-closing support
+   * it doesn't have — and the UI can flag the band as indicative.
+   */
+  basis: "expected-sale" | "avm";
 }
 
 /** A single persona's headline (for the lens switcher). */
@@ -450,12 +457,17 @@ function computeOfferBand(
   const aggressive = Math.round(Math.min(fairValue, likelyClose) * (1 - motivation));
   const ceiling = Math.round(Math.max(fairValue, likelyClose));
   const hotMarket = typeof input.closeListRatio === "number" && input.closeListRatio > 1.0;
+  // Provenance: the high-confidence list-anchored Expected Sale, or the AVM fallback.
+  // When AVM-based there is no close-rate signal, so the copy must NOT claim comps support.
+  const basis: "expected-sale" | "avm" = expected !== null ? "expected-sale" : "avm";
 
   const note = hotMarket
     ? `Homes here close above ask — expect to compete near ${fmtMoney(likelyClose)}.`
-    : `Comparable closings support ${fmtMoney(Math.min(aggressive, likelyClose))}–${fmtMoney(likelyClose)}; overpaying above ~${fmtMoney(ceiling)}.`;
+    : basis === "expected-sale"
+      ? `Comparable closings support ${fmtMoney(Math.min(aggressive, likelyClose))}–${fmtMoney(likelyClose)}; overpaying above ~${fmtMoney(ceiling)}.`
+      : `Our comparable-sales estimate (no recent close-rate data) — treat ${fmtMoney(Math.min(aggressive, likelyClose))}–${fmtMoney(likelyClose)} as indicative; above ~${fmtMoney(ceiling)} looks rich.`;
 
-  return { aggressive: Math.min(aggressive, likelyClose), likelyClose, ceiling, note, hotMarket };
+  return { aggressive: Math.min(aggressive, likelyClose), likelyClose, ceiling, note, hotMarket, basis };
 }
 
 /**
