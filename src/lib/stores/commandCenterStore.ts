@@ -16,6 +16,7 @@ import { makeDefaultUniversalFilters } from "@/lib/filters/filterRegistry";
 import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/filters/fundamentals";
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
+import { SCOPE_DEFAULT_PERSONA } from "@/lib/personas/resolvePersona";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -262,7 +263,7 @@ export interface CommandCenterState {
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
-  activePersona: "flippers",
+  activePersona: SCOPE_DEFAULT_PERSONA.terminal,
   setActivePersona: (persona) => set({ activePersona: persona }),
 
   filters: { ...defaultTerminalFilters },

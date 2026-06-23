@@ -13,6 +13,7 @@ import CompareClient from "./CompareClient";
 import { getCompareData } from "@/lib/property/getCompareData";
 import { getCurrentUser } from "@/lib/supabase/server";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { resolvePersona } from "@/lib/personas/resolvePersona";
 
 export const metadata: Metadata = {
   title: "Compare Properties | PureProperty",
@@ -24,9 +25,12 @@ const MAX_COLUMNS = 8;
 export default async function ComparePage({
   searchParams,
 }: {
-  searchParams: Promise<{ ids?: string }>;
+  searchParams: Promise<{ ids?: string; lens?: string }>;
 }) {
-  const { ids } = await searchParams;
+  const { ids, lens } = await searchParams;
+  // Persona lens carried from the terminal (&lens=) so Compare opens on the lens
+  // the user was browsing in; falls back to the Homebuyer view.
+  const initialLens = resolvePersona("compare", { url: lens });
   const idList = (ids || "")
     .split(",")
     .map((s) => s.trim())
@@ -55,6 +59,7 @@ export default async function ComparePage({
         estimates={gatedEstimates}
         salePrices={gatedSalePrices}
         isAuthed={isAuthed}
+        initialLens={initialLens}
       />
     </main>
   );

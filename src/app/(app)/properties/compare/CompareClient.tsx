@@ -28,8 +28,9 @@ export default function CompareClient({
   estimates,
   salePrices,
   isAuthed,
-}: CompareData & { isAuthed: boolean }) {
-  const [lens, setLens] = useState<PersonaType>("smart");
+  initialLens,
+}: CompareData & { isAuthed: boolean; initialLens?: PersonaType }) {
+  const [lens, setLens] = useState<PersonaType>(initialLens ?? "smart");
   const [diffOnly, setDiffOnly] = useState(false);
   // Table is the familiar default; the value plot earns its place once there are
   // enough homes to show a cluster (and only when signed in, since its value axis

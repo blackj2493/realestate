@@ -31,6 +31,7 @@ const OBJECTIVES = [
   "Source zoning & conversion upside",
   "Target distressed & off-market deals",
   "Land assembly / development",
+  "Buy a home with hidden value (suite / basement potential)",
 ];
 const REGIONS = [
   "Toronto",
