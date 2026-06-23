@@ -196,7 +196,7 @@ export const COMPARE_METRICS: CompareMetric[] = [
     getText: (c) => multiUnitText(c.listing) },
   { key: "surplusParking", label: "Surplus Parking", group: "suiteDensity", cellKind: "numeric",
     get: (c) => c.listing.surplus_parking_count ?? null, format: fmtInt, winner: "high" },
-  { key: "densityReady", label: "Density Ready", group: "suiteDensity", cellKind: "text",
+  { key: "densityReady", label: "Surplus-Parking Lot", group: "suiteDensity", cellKind: "text",
     getText: (c) => (c.listing.is_density_ready ? "Yes" : "No") },
 
   // Structural

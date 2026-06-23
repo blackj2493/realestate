@@ -94,9 +94,9 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     })(),
     builders:
       frontage && frontage >= 30
-        ? `Infill candidate: ${frontage}ft frontage${densityReady ? `, density-ready zoning` : ``} — check $/buildable-ft before the cashflow.`
+        ? `Infill candidate: ${frontage}ft frontage${densityReady ? `, plus surplus parking (possible wider lot)` : ``} — check $/buildable-ft before the cashflow.`
         : densityReady
-          ? `Density-ready zoning — assembly or multiplex potential worth a feasibility pass.`
+          ? `Surplus parking on a detached lot — possible infill play; confirm lot size and zoning before a feasibility pass.`
           : `Standard lot (${frontage ? `${frontage}ft` : "frontage n/a"}) — limited land play.`,
   };
   if (tier === "lite") {

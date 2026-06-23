@@ -21,7 +21,7 @@ export function GET() {
 
 ## Investment & development hubs (unique data)
 - [Highest cap-rate homes in Toronto](${SITE_URL}/investments/toronto/highest-cap-rate): active listings ranked by estimated cap rate for cash-flow investors.
-- [Development-potential homes in Mississauga](${SITE_URL}/investments/mississauga/development-potential): properties flagged as prime multi-unit / density candidates, ranked by lot size.
+- [Development-potential homes in Mississauga](${SITE_URL}/investments/mississauga/development-potential): properties flagged as prime multi-unit / surplus-parking lot candidates, ranked by lot size.
 
 ## Family & lifestyle hubs (unique data)
 - [Homes near top-rated schools in Toronto](${SITE_URL}/family/toronto/top-rated-schools): listings ranked by the rating of nearby schools (PureProperty School Score, from EQAO / Government of Ontario data).

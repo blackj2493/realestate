@@ -192,8 +192,8 @@ export function buildDiligenceFlags(p: RawPayload, external: DiligenceFlag[] = [
       id: "density",
       kind: "info",
       severity: 25,
-      title: "Density-ready zoning — garden suite / multiplex potential",
-      source: "Zoning overlay",
+      title: "Detached lot with surplus parking — possible infill / multiplex (verify zoning)",
+      source: "Derived from feed",
     });
 
   const dir = str(p, "DirectionFaces");
