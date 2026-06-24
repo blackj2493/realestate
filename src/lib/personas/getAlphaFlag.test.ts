@@ -21,10 +21,10 @@ describe("getAlphaFlag VOW anon-gating (§6.2(f))", () => {
     expect(getAlphaFlag(doc({ TrueDom: 3 }), true).variant).toBe("new");
   });
 
-  it("keeps IDX-public flags (zoning / suite / density) for anon", () => {
+  it("keeps IDX-public flags (zoning / suite / surplus-parking) for anon", () => {
     expect(getAlphaFlag(doc({ zoning_designation: "CMU" }), false).variant).toBe("zoning");
     expect(getAlphaFlag(doc({ SuiteStatus: "POTENTIAL_CANDIDATE" }), false).variant).toBe("suite");
-    expect(getAlphaFlag(doc({ is_density_ready: true }), false).variant).toBe("density");
+    expect(getAlphaFlag(doc({ is_density_ready: true }), false).variant).toBe("lot");
   });
 
   it("falls through gated → next public flag for anon (distressed+zoning → zoning)", () => {

@@ -94,7 +94,7 @@ export const BOARDS: Record<BoardId, BoardDef> = {
   },
   density: {
     id: 'density',
-    title: 'Density-Ready Lots',
+    title: 'Surplus-Parking Lots',
     metricField: 'LotSqftTotal',
     metricLabel: 'LOT',
     formatMetric: sqft,

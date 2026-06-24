@@ -170,9 +170,10 @@ export function detectPropertyBadges(property: {
     badges.push({ variant: 'motivated-seller', label: 'MOTIVATED' });
   }
 
-  // Phase 2: Density Ready badge
+  // Surplus-parking lot badge: is_density_ready = detached + ≥2 surplus parking
+  // (parkingCalculator.ts), a lot observation — NOT a zoning/density-ready fact.
   if (property.is_density_ready) {
-    badges.push({ variant: 'suite-potential', label: 'DENSITY READY' });
+    badges.push({ variant: 'suite-potential', label: 'SURPLUS PARKING' });
   }
 
   return badges;

@@ -243,7 +243,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "grossYield" },
       { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom", glossaryKey: "dom" },
       { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
-      { kind: "toggle", key: "zoningPotential", label: "Zoning Potential", short: "Density Ready" },
+      { kind: "toggle", key: "zoningPotential", label: "Surplus Parking", short: "Parking" },
       { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex" },
     ],
     buildFilterString: (f) =>
@@ -339,7 +339,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt, field: "LotWidth" },
       { kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥", min: 0, max: 20000, step: 500, format: fmtNum, field: "LotSqftTotal" },
       { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
-      { kind: "toggle", key: "zoningPotential", label: "Density Ready", short: "Density Ready" },
+      { kind: "toggle", key: "zoningPotential", label: "Surplus Parking", short: "Parking" },
     ],
     buildFilterString: (f) =>
       join([
@@ -353,10 +353,10 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
       { type: "lotDims", header: "Lot", width: "w-24", align: "right" },
       { type: "zoning", header: "Zoning", width: "w-20", align: "right" },
-      { type: "density", header: "Density", width: "w-16", align: "center" },
+      { type: "density", header: "Surplus", width: "w-16", align: "center" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Low", legendHigh: "High Density" },
+    mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Fewer", legendHigh: "More" },
     defaultMapMode: "heatmap",
   },
 };

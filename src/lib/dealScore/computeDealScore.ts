@@ -393,7 +393,7 @@ function upsidePillar(input: DealScoreInput): Pillar | null {
   points = clamp(points, 0, 100);
   const bits: string[] = [];
   if (hasLot) bits.push(`${Math.round(input.lotSqft as number).toLocaleString("en-CA")} sqft lot`);
-  if (input.densityReady) bits.push("density-ready");
+  if (input.densityReady) bits.push("surplus parking");
   if (input.suitePotential) bits.push("suite potential");
   return {
     key: "upside",

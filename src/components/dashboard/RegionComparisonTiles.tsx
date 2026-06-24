@@ -104,7 +104,7 @@ const METRICS: Partial<Record<HeadlineMetricId, TileMetric>> = {
     kind: "peer",
   },
   densityShare: {
-    label: "Density-Ready",
+    label: "Surplus-Parking",
     get: (d) => (d.specialty ? share(d.specialty.densityReadyCount, d.specialty.activeCount) : null),
     format: pct1,
     sub: (d) => (d.specialty ? `${d.specialty.densityReadyCount.toLocaleString()} lots` : null),
