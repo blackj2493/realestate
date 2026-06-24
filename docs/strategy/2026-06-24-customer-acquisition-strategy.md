@@ -1,5 +1,7 @@
 # PureProperty.ca — Customer Acquisition Strategy
 
+> ⚠️ **SUPERSEDED by `2026-06-24-customer-acquisition-strategy-v2-web-grounded.md`.** This version's generation agents ran headless and could not reach the web, so its precedents are from model knowledge. The v2 edition replaces those assumptions with cited web research (HouseSigma/Zoocasa/Properly growth, programmatic-SEO ranking data, data-PR precedents, community-seeding realities). Read v2 for the current plan; this file is kept as the workflow-output record.
+
 **Date:** 2026-06-24
 **Method:** 64-agent adversarial workflow — 8 strategy lenses → distilled to 8 candidates → 5 skeptics attacked each (code-grounded) → weighted scoring → synthesis → hard red-team → refine → 4 independent confidence judges.
 **Panel-voted confidence:** **54%** (individual votes: 55 / 52 / 52 / 55). The refined plan self-rates **~40% at 6 months.**
