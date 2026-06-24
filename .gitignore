@@ -62,5 +62,8 @@ scripts/admin/.backfill-*-cursor.json
 /avm-*.json
 .qa-run/
 
+# Phase-Zero min-n study run output (reproduce via scripts/admin/phaseZeroMinN.ts)
+/phase-zero-minn-*.json
+
 # QA smoke-audit scratch (page snapshots + smoke logs — regenerated, not source)
 audit/
