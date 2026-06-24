@@ -44,6 +44,58 @@ This is the primary interface and the core engine of the platform.
 
 ---
 
+## 3.5 Built Feature Inventory (Ground Truth — last verified 2026-06-24)
+
+> **Orientation for future agents — READ THIS BEFORE ASSUMING ANYTHING IS MISSING.**
+> PureProperty is **NOT greenfield**. The platform enumerated below is **already built and in the repo**. The consumer-facing data portal, the investor terminal, the valuation engines, the SEO surface, and the account/alert loops all exist today. Before proposing to "add" any capability here, assume it exists, find it, and read the cited code first. This is a map for navigation, not a backlog. (Numbered 3.5 on purpose — do not renumber §4–§12; cross-references like "§4" and "§6.3(b)" depend on them.)
+
+### A. Consumer SEO / discovery surface — the public, crawlable portal ("Engine A")
+- **Programmatic persona hubs**, city-templated, each with FAQ + breadcrumb JSON-LD and a `<3-listing` noindex thin-content guard:
+  - `/investments/[city]/highest-cap-rate`, `/investments/[city]/development-potential`
+  - `/family/[city]/top-rated-schools`
+  - `/lifestyle/[city]/most-walkable`, `/lifestyle/[city]/new-construction`
+- **City + neighbourhood hubs:** `/property` (city directory) → `/property/[prov]/[city]` → `/property/[prov]/[city]/[neighbourhood]`
+- **Address pages:** `/address/[prov]/[city]/[slug]`; **listing detail:** `/properties/[id]` (canonical descriptive URL rewritten via `middleware.ts`)
+- **Sitemaps** (`src/app/sitemap.ts`, `src/app/addresses/sitemap.ts`) emit up to ~45k active listing URLs daily (sold never emitted); `/llms.txt` (`src/app/llms.txt/route.ts`) for AI-search discovery.
+- **VELVET-ROPE-FOR-SEO INVARIANT (do not break):** a proprietary metric (cap rate, multi-unit verdict) may *rank/order* a public hub, but must **never render in public HTML** — it unlocks only inside an authed (`isConsumer`) branch. This is how the hubs earn long-tail traffic without violating VOW.
+
+### B. The Terminal / Command Center (`/properties`, client-only, Typesense-exclusive)
+- **Deck.gl + Mapbox WebGL map** (`src/components/Map/AlphaMap.tsx`): pins / hexagon-heatmap / 3D-extrusion modes; supercluster; viewport-scoped (≤100 cap, reports total).
+- **4 persona lenses** (Smart / Cashflow / Flipper / Builder) re-skin filters, ledger columns, map color ramps, default map mode — `src/lib/personas/personaConfig.ts`.
+- **Instrument rail** (`src/components/CommandCenter/MapControlRail.tsx`, one drawer at a time): commute isochrone, school-quality lens (+ real catchment polygons), walkability lens, freehand draw, compare basket (≤8), **temporal True-DOM scrubber**, paint-by-metric, saved lenses (localStorage).
+- **Percentile-ranked ledger** (`LedgerPanel.tsx`), alpha badges, Quick Look drawer.
+- **State:** `src/lib/stores/commandCenterStore.ts` (Zustand) — single source of truth.
+
+### C. Dashboard / Mission Control (`/dashboard`, authed)
+- Action feed ("since last visit"), watchlist, **new/sold market-activity panels** (display-cap compliant), **region scorecard + submarket leaderboard** (full-population aggregates via RPC), market-pulse heatmaps, **saved "market bubbles"** (draw / commute / school) rendered as dashboard sections with optional alerts.
+
+### D. Individual Listing Page + financial engine (`/properties/[id]`, 70/30 view)
+- **Deal Score** (`src/lib/dealScore/`): 0–100, persona-weighted 4-pillar (Price/Terms/Yield/Upside), letter grade + **suggested-offer band**.
+- **Estimated Sale Price** (`src/lib/avm/salePrice.ts`): list-anchored close/list cohort model (~2% median |%err|), AVM fallback (~11%).
+- **Underwriting Sandbox** (`src/lib/underwriting/`): live cap rate / cash-on-cash / DSCR / NOI / carry from editable assumptions; savable per user+listing.
+- **The Read** (persona verdict + "the catch"), **Things to Know** (diligence flags), **Rental Snapshot** (lease listings), **Similar Properties** (buyer-browse vs appraiser-comps ordering), **Sale/Campaign History** charts.
+
+### E. Valuation & value-add engines
+- **AVM "Coefficient Engine"** (`src/lib/avm/`): trained linear model, R²-gated (≥0.50 → coefficient mode, else anchor), Kish-effective sample size, confidence bands. Surfaced at `/avm` (authed).
+- **Hidden Equity / Force Appreciation** (`src/lib/avm/valueAdd/`): per-renovation-move ROI + payback ratios, ceiling/thin-cohort suppression. Surfaced at `/hidden-equity` (gated) and `/whats-my-home-hiding` (public teaser, lead-capture).
+- **Condo Fee Stability** (`src/lib/condo/feeStability.ts`): 24-month building fee-trend + neighbourhood fee/sqft benchmarking, privacy-floored.
+
+### F. Derived "shadow" metrics (the differentiators — non-VOW where noted, visible to anon)
+- **True DOM** (`src/lib/campaignHistory/trueDom.ts`): relist-stitched Temporal Distress Engine (≤35-day gap merges campaigns).
+- **Price Compression** (peak-to-current drop %, >15% alarm), **Suite/Multi-unit + density-ready detection**, **Sold-Accuracy receipts** ("our call vs the sale", authed).
+
+### G. Data engines (`src/lib/`)
+- **Schools** (EQAO open data, 4-panel nearest + 2.5 km membership), **Amenities** (Overture Maps grocery/rec + Costco drive-to), **Isochrone** (Mapbox proxy), **Geocode** (Mapbox forward), **Market Trends / Region Stats** (Supabase RPCs, 24h-cached, VOW-gated where sold-derived).
+
+### H. Accounts & growth loops
+- **3-step velvet-rope `/apply`** (writes `terminal_applications`, rate-limited), **magic-link auth** (Supabase), **VOW terms gate** `/welcome` (versioned attestation), cross-device **watchlist** + **email alerts**, **market bubbles** w/ alerts, **share links** (`/share/[token]`, ≤100, anon-friendly), **viewing-request** lead capture.
+
+### Data coverage model (intentional — do not "fix" without discussing)
+- **Typesense holds ALL live active inventory** (IDX active + VOW active), kept current by the daily delta sync. This is the search index the entire frontend queries.
+- **Sold/closed inventory is a deliberate 180-day rolling window** in the live sold collection. Rationale (owner's decision): the cost of indexing unbounded sold history is not justified, and sold comps older than ~180 days add noise without materially changing AVM/Deal-Score/market-stat outputs. The **full ~217k historical sold archive still lives in Supabase `raw_vow_sold`** (read-only, see §12) for any model that genuinely needs deep history; the 180-day window is the *hot/served* layer, not the *only* copy. Treat "180 days of served sold data" as a designed tradeoff, not a gap.
+
+---
+
 ## 4. Strict Legal & Compliance Guardrails (CRITICAL)
 Any code touching the TRREB IDX/VOW data feeds must adhere strictly to board agreements. **Failure to comply risks API revocation.**
 - **No AI Data Processing:** You are strictly forbidden from passing raw IDX/VOW Listing Information through any LLM or AI System for transformation. All derived metrics (Yield, True DOM, Cap Rate) must be calculated using deterministic, hardcoded logic in the Node.js ETL pipeline.
