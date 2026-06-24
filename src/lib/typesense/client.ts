@@ -251,7 +251,8 @@ export interface SearchFilters {
   propertyTypes?: string[];
   
   // Financial
-  maxTaxes?: number;
+  // NOTE: no maxTaxes filter — TaxAnnualAmount is intentionally index:false in the
+  // Typesense schema (display/calc only, not filterable), so a tax filter would 400.
   maxAssociationFee?: number;
   
   // Transaction
@@ -378,9 +379,7 @@ export async function searchListings(
   }
   
   // Financial filters
-  if (filters.maxTaxes !== undefined) {
-    filterParts.push(`TaxAnnualAmount:<=${filters.maxTaxes}`);
-  }
+  // (no TaxAnnualAmount filter: that field is index:false — see SearchFilters above)
   if (filters.maxAssociationFee !== undefined) {
     filterParts.push(`AssociationFee:<=${filters.maxAssociationFee}`);
   }
