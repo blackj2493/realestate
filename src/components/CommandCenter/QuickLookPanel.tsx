@@ -59,6 +59,8 @@ const pct = (v: number | null) => (v != null ? `${v.toFixed(1)}%` : "—");
 export default function QuickLookPanel({ property, onClose }: QuickLookPanelProps) {
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const isSelected = useCommandCenterStore((s) => s.selectedIds.has(property.id));
+  // Carry the active lens to the full report so it opens on the same persona.
+  const activePersona = useCommandCenterStore((s) => s.activePersona);
 
   // Authoritative, AVM-anchored Deal Score + Estimated Sale — fetched so they match the
   // full report exactly (the index doc alone has no AVM, so a local compute would diverge).
@@ -216,7 +218,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
               without scrolling past the analysis below. */}
           <div className="mt-4 space-y-2">
             <Link
-              href={`/properties/${property.id}`}
+              href={`/properties/${property.id}?lens=${activePersona}`}
               className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
             >
               <ExternalLink className="h-4 w-4" />

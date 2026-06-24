@@ -25,16 +25,20 @@ export function useOpenListing(): (property: ListingDocument) => void {
   const router = useRouter();
   const isMobile = useIsMobile(767);
   const setSelectedProperty = useCommandCenterStore((s) => s.setSelectedProperty);
+  // Carry the active lens so the detail page opens on the persona the user was
+  // browsing in (lens continuity). Desktop opens the in-page drawer instead, which
+  // already reads the live store, so it needs no param.
+  const activePersona = useCommandCenterStore((s) => s.activePersona);
 
   return useCallback(
     (property: ListingDocument) => {
       if (isMobile) {
-        router.push(`/properties/${property.id}`);
+        router.push(`/properties/${property.id}?lens=${activePersona}`);
       } else {
         setSelectedProperty(property);
       }
     },
-    [isMobile, router, setSelectedProperty]
+    [isMobile, router, setSelectedProperty, activePersona]
   );
 }
 

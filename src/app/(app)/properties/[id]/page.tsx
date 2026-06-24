@@ -48,6 +48,7 @@ import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
+import { resolvePersona } from "@/lib/personas/resolvePersona";
 import WatchButton from "@/components/watchlist/WatchButton";
 import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
@@ -327,8 +328,18 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   };
 }
 
-export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PropertyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ lens?: string }>;
+}) {
   const { id } = await params;
+  // Persona lens carried from the terminal (?lens=) so the Deal Score + The Read
+  // open on the lens the user was browsing in; falls back to the Homebuyer view.
+  const { lens: lensParam } = await searchParams;
+  const lens = resolvePersona("detail", { url: lensParam });
   const detail = await getListingDetailCached(id).catch(() => null);
 
   if (!detail) {
@@ -558,7 +569,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   </span>
                 )}
                 {isActiveListing && (
-                  <DealScoreBadge score={view.dealScore.score} grade={view.dealScore.grade} />
+                  <DealScoreBadge
+                    score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
+                    grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
+                  />
                 )}
               </div>
               {status.kind === "delisted" && (
@@ -583,7 +597,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
 
             {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
-            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} />}
+            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />}
 
             {/* Social proof — honest, deterministic activity counters */}
             <SocialProofBar listingId={id} className="mb-6" />
@@ -676,7 +690,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               )}
 
               {isActiveListing && !isLease && (
-                <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} />
+                <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
               )}
 
               {!isLease && (isActiveListing ? (

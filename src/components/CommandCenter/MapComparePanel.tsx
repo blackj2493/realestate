@@ -26,6 +26,8 @@ export default function MapComparePanel() {
   const setShowSelectedOnly = useCommandCenterStore((s) => s.setShowSelectedOnly);
   const selectionLimitHit = useCommandCenterStore((s) => s.selectionLimitHit);
   const searchResult = useCommandCenterStore((s) => s.searchResult);
+  // Carry the active lens so Compare opens on the persona the user was browsing in.
+  const activePersona = useCommandCenterStore((s) => s.activePersona);
 
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -38,7 +40,7 @@ export default function MapComparePanel() {
     [searchResult, selectedIds]
   );
   const missing = count - docs.length;
-  const compareHref = `/properties/compare?ids=${encodeURIComponent(listingKeys.join(","))}`;
+  const compareHref = `/properties/compare?ids=${encodeURIComponent(listingKeys.join(","))}&lens=${activePersona}`;
 
   return (
     <div className="flex max-h-[70vh] flex-col">

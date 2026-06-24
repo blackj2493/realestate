@@ -68,7 +68,7 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortBy: 'SuiteScore',
     sortOrder: 'desc',
     rawFilterBy: 'SuiteScore:>=3',
-    objectives: ['Source zoning & conversion upside'],
+    objectives: ['Source zoning & conversion upside', 'Buy a home with hidden value (suite / basement potential)'],
   },
   fresh: {
     id: 'fresh',

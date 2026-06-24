@@ -12,6 +12,7 @@ import {
   orderBoardsByObjectives,
 } from './boards';
 import { PERSONA_CONFIG, type PersonaType } from '@/lib/personas/personaConfig';
+import { personaFromObjectives, SCOPE_DEFAULT_PERSONA } from '@/lib/personas/resolvePersona';
 
 /**
  * Dashboard persona — reuses the Command Center's PersonaType vocabulary, but
@@ -19,7 +20,7 @@ import { PERSONA_CONFIG, type PersonaType } from '@/lib/personas/personaConfig';
  * own `commandCenterStore.activePersona` is a SEPARATE in-memory value (a transient
  * analysis session); the two are intentionally not shared.
  */
-export const DEFAULT_PERSONA: PersonaType = 'smart';
+export const DEFAULT_PERSONA: PersonaType = SCOPE_DEFAULT_PERSONA.dashboard;
 
 const isPersona = (v: unknown): v is PersonaType =>
   typeof v === 'string' && v in PERSONA_CONFIG;
@@ -168,11 +169,9 @@ export function citiesFromRegions(regions: string[]): string[] {
  * switch personas at runtime.
  */
 export function personaFromProfile(p: ApplyProfile | null): PersonaType {
-  const objectives = p?.objectives ?? [];
-  if (objectives.includes('Land assembly / development')) return 'builders';
-  if (objectives.includes('Target distressed & off-market deals')) return 'flippers';
-  if (objectives.includes('Analyze rental yield / cap rates')) return 'cashflow';
-  return DEFAULT_PERSONA;
+  // Single source of truth for the objective→persona map (resolvePersona.ts),
+  // total over the objective set; falls back to the dashboard default on no match.
+  return personaFromObjectives(p?.objectives) ?? DEFAULT_PERSONA;
 }
 
 export function seedConfigFromProfile(p: ApplyProfile): DashboardConfig {
