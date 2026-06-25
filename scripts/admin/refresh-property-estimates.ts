@@ -22,6 +22,11 @@
  *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts               # dry-run (no writes)
  *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --limit 2000  # dry-run, first 2000 rows
  *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --apply        # write full table
+ *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --apply --since 2026-06-24T03:00:00Z  # delta: only listings re-synced since
+ *
+ * The nightly daily-sync workflow runs the --since (delta) form so it finishes in
+ * minutes; run the bare --apply (full table) form periodically to re-base every row
+ * against the latest market anchors.
  */
 
 // MUST set TLS env var BEFORE importing the supabase client.
@@ -50,6 +55,18 @@ const limitArg = process.argv.find((a) => a.startsWith('--limit'));
 const ROW_LIMIT = limitArg
   ? parseInt(limitArg.includes('=') ? limitArg.split('=')[1] : process.argv[process.argv.indexOf(limitArg) + 1], 10)
   : Infinity;
+
+// Delta window (nightly): when set, ONLY listings whose listings.synced_at is at/after
+// this ISO timestamp are refreshed. A listing's estimate inputs only change when the
+// daily sync re-ingests it (price/status/payload bump), so a delta pass keeps the same
+// rows fresh as a full recompute would — at a fraction of the cost. Omit --since for a
+// full-table recompute (e.g. a periodic workflow_dispatch run that re-bases every row
+// against the latest market anchors). This is what stops the step from scanning ~77k
+// rows nightly and blowing the GitHub Actions 6h job ceiling.
+const sinceArg = process.argv.find((a) => a.startsWith('--since'));
+const SINCE = sinceArg
+  ? (sinceArg.includes('=') ? sinceArg.split('=')[1] : process.argv[process.argv.indexOf(sinceArg) + 1])
+  : undefined;
 
 // ── IO pacing (deliberately gentle) ──────────────────────────────────────────
 const CHUNK_SIZE = 400; // rows per read page (each detoasts full_payload)
@@ -235,11 +252,17 @@ async function getMarketStatic(
 async function readPage(cursor: string, pageSize: number): Promise<ListingRow[] | null> {
   let attempt = 0;
   for (;;) {
-    const { data, error } = await sb
+    // Keyset-paginate on the PK (listing_key) and FILTER on synced_at when delta —
+    // never ORDER on synced_at (unindexed → statement timeout, CLAUDE.md §12). The
+    // synced_at filter also short-circuits full_payload detoast for the ~95% of rows
+    // that didn't change today, which is the bulk of the cost.
+    let query = sb
       .from('listings')
       .select('listing_key, list_price, full_payload')
       .gt('listing_key', cursor)
-      .gte('list_price', PRICE_FLOOR)
+      .gte('list_price', PRICE_FLOOR);
+    if (SINCE) query = query.gte('synced_at', SINCE);
+    const { data, error } = await query
       .order('listing_key', { ascending: true })
       .limit(pageSize);
 
@@ -284,6 +307,7 @@ async function main() {
   console.log('========================================');
   console.log('  Refresh property_estimates ← active listings');
   console.log(`  Mode: ${APPLY ? 'APPLY (writing)' : 'DRY-RUN (no writes)'}`);
+  console.log(`  Scope: ${SINCE ? `DELTA (synced_at >= ${SINCE})` : 'FULL TABLE'}`);
   if (Number.isFinite(ROW_LIMIT)) console.log(`  Row limit: ${ROW_LIMIT}`);
   console.log('========================================\n');
 

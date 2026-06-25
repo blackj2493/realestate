@@ -24,6 +24,11 @@ jobs:
         run: npm ci # Uses package-lock.json for a clean install
 
       - name: Run Daily Sync Script
+        # The load-bearing core sync. Observed runtime ~1h; 120m gives headroom while
+        # bounding a hung fetch so it can't consume the whole job and starve the steps
+        # below (a hang here exits non-zero, which is the correct, visible failure —
+        # the cursor is NOT advanced on failure, CLAUDE.md §12).
+        timeout-minutes: 120
         env:
           # FEED ISOLATION: IDX and VOW are TWO DISTINCT TRREB tokens with no fallback.
           # Read by scripts/worker/ingester.ts:242-243.
@@ -42,9 +47,10 @@ jobs:
       # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.
       - name: Refresh Condo Fee Stats
         # Additive aggregation for a single listing-page card — must never break the
-        # core daily sync. (This step has never actually run: prior jobs always died at
-        # the sync step above, so its first real execution is unverified in CI.)
+        # core daily sync. timeout-minutes bounds it so a hang here can't cascade into
+        # skipping the revalidate step at the end (the 2026-06-16→24 outage root cause).
         continue-on-error: true
+        timeout-minutes: 20
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -57,6 +63,7 @@ jobs:
       # daily sync, so continue-on-error.
       - name: Refresh Property Sale History
         continue-on-error: true
+        timeout-minutes: 20
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -70,6 +77,7 @@ jobs:
       # break the core sync, so continue-on-error.
       - name: Refresh AVM Sqft Calibration
         continue-on-error: true
+        timeout-minutes: 20
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -85,6 +93,7 @@ jobs:
       # continue-on-error.
       - name: Refresh AVM Trend + Offset
         continue-on-error: true
+        timeout-minutes: 15
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -97,12 +106,21 @@ jobs:
       # fallback; reads listings + raw_vow_sold (anchor) READ-ONLY, writes the
       # separate property_estimates table; Supabase creds only. Additive — must
       # never break the core sync, so continue-on-error.
+      #
+      # DELTA (--since ~25h): only re-estimate listings re-synced today. The full-table
+      # form scanned ~77k active listings nightly (~4.5h) and blew the 6h job ceiling —
+      # which silently SKIPPED the "Revalidate Synced Listings" step below, so price
+      # changes stopped reaching the listing pages (outage 2026-06-16→24). A listing's
+      # estimate inputs only change when the sync re-ingests it, so the delta pass keeps
+      # the same rows fresh in minutes. Run the bare --apply (full table) form via
+      # workflow_dispatch periodically to re-base every row against the latest anchors.
       - name: Refresh Property Estimates
         continue-on-error: true
+        timeout-minutes: 30
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npx tsx scripts/admin/refresh-property-estimates.ts --apply
+        run: npx tsx scripts/admin/refresh-property-estimates.ts --apply --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
 
       # Precompute geo "Things to Know" flags (flood now; rail/traffic later) for
       # listings synced in the last day, into listing_geo_flags. PUBLIC-records
@@ -114,6 +132,7 @@ jobs:
       # cleanly (and is skipped) if the DATABASE_URL secret is unset.
       - name: Enrich Geo Things-to-Know Flags
         continue-on-error: true
+        timeout-minutes: 25
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/worker/enrichGeoFlags.ts --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
@@ -123,6 +142,7 @@ jobs:
       # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
       - name: Send Watchlist Alerts
         continue-on-error: true
+        timeout-minutes: 15
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -136,8 +156,11 @@ jobs:
       # appear immediately instead of within the page's 1h TTL. Additive — must never
       # break the core sync, so continue-on-error; no-ops cleanly if REVALIDATE_SECRET
       # is unset. Runs last: it only reads listings.synced_at, set by the sync above.
+      # The per-step timeouts above sum to well under the 6h job ceiling, so this step
+      # is now GUARANTEED to be reached even if every preceding refresh step times out.
       - name: Revalidate Synced Listings
         continue-on-error: true
+        timeout-minutes: 20
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
