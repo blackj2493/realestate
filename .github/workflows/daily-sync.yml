@@ -7,6 +7,11 @@ on:
   # Also allow manual triggering from the GitHub website
   workflow_dispatch:
 
+# Least privilege: checkout needs contents:read; the failure notifier opens an issue.
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   run-ingester:
     runs-on: ubuntu-latest
@@ -167,3 +172,47 @@ jobs:
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: npx tsx scripts/worker/revalidateListings.ts
+
+  # ── Failure notifier ────────────────────────────────────────────────────────
+  # Fires ONLY when run-ingester fails — i.e. the core sync step exits non-zero
+  # (ingester.ts now exits 1 on a failed sync) or hits its timeout. The additive
+  # refresh steps are continue-on-error, so they never trip this; this alerts on a
+  # REAL sync failure only. Opens a GitHub issue (which emails the repo owner — zero
+  # extra secrets); to avoid daily spam it comments on the existing open issue instead
+  # of creating a new one when a 'sync-failure' issue is already open.
+  notify-failure:
+    needs: run-ingester
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open / update sync-failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'sync-failure';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `🔴 **${context.workflow}** failed.`,
+              ``,
+              `- Run: ${runUrl}`,
+              `- Commit: \`${context.sha.slice(0, 7)}\``,
+              `- Trigger: ${context.eventName}`,
+              ``,
+              `The core sync exited non-zero (or timed out). The sync_state cursor is preserved on failure, so the next run re-attempts the same window.`,
+              ``,
+              `cc @${context.repo.owner}`,
+            ].join('\n');
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: label,
+            });
+            if (open.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: open.data[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `🔴 Daily sync failed`, body, labels: [label],
+              });
+            }

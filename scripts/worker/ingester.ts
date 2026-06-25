@@ -1287,7 +1287,19 @@ async function main() {
   const args = process.argv.slice(2);
   
   if (args[0] === 'sync') {
-    await runDeltaSync();
+    const result = await runDeltaSync();
+    // Exit non-zero when the sync did not fully succeed, so CI marks the run failed and
+    // the failure notifier in daily-sync.yml fires. runDeltaSync catches its OWN errors
+    // and returns success:false (it never throws), so without this the process would
+    // exit 0 and a real failure would show up GREEN — no alert. The sync_state cursor is
+    // already preserved on failure inside runDeltaSync (CLAUDE.md §12), so exiting here
+    // is purely about surfacing the failure.
+    if (!result.success) {
+      console.error(
+        `\n❌ Sync finished with ${result.errors.length} error(s) — exiting 1 so the run is marked failed.`
+      );
+      process.exitCode = 1;
+    }
   } else if (args[0] === 'test') {
     // Test fetch with IDX token
     const token = IDX_TOKEN;
