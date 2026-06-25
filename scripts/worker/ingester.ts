@@ -620,32 +620,58 @@ interface SyncState {
  */
 export async function readSyncState(): Promise<SyncState> {
   const client = getServiceRoleClient();
-  
-  const { data, error } = await client
-    .from('sync_state')
-    .select('*')
-    .eq('id', 'master')
-    .single();
-  
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // No row exists - create default (48 hours ago for catch-up)
-      console.log('   📝 No sync_state found, initializing with 48h default...');
-      const defaultTimestamp = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-      await client
+
+  // This is the FIRST DB call of the run and the cursor's only source of truth. A
+  // transient network blip here (e.g. "Premature close", ECONNRESET) used to fail the
+  // ENTIRE nightly sync — and because the cursor was never read, the failure path then
+  // clobbered it with `now` (gap). Retry transient errors with backoff before giving
+  // up; a real Postgres error (carries a `code`) is not transient and is rethrown at once.
+  const MAX_ATTEMPTS = 4;
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const { data, error } = await client
         .from('sync_state')
-        .insert({ id: 'master', last_sync_timestamp: defaultTimestamp, status: 'idle' });
-      return { lastSyncTimestamp: defaultTimestamp, syncType: 'delta', recordsSynced: 0, status: 'idle' };
+        .select('*')
+        .eq('id', 'master')
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No row exists - create default (48 hours ago for catch-up)
+          console.log('   📝 No sync_state found, initializing with 48h default...');
+          const defaultTimestamp = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          await client
+            .from('sync_state')
+            .insert({ id: 'master', last_sync_timestamp: defaultTimestamp, status: 'idle' });
+          return { lastSyncTimestamp: defaultTimestamp, syncType: 'delta', recordsSynced: 0, status: 'idle' };
+        }
+        throw error;
+      }
+
+      return {
+        lastSyncTimestamp: data.last_sync_timestamp,
+        syncType: data.sync_type || 'delta',
+        recordsSynced: data.records_synced || 0,
+        status: data.status || 'idle'
+      };
+    } catch (err: any) {
+      lastErr = err;
+      // A structured Postgres error (has a non-PGRST116 `code`) is a real, non-transient
+      // failure — don't waste retries on it.
+      if (err && typeof err === 'object' && 'code' in err && err.code && err.code !== 'PGRST116') {
+        throw err;
+      }
+      if (attempt < MAX_ATTEMPTS) {
+        const backoff = 1000 * 2 ** (attempt - 1); // 1s, 2s, 4s
+        console.warn(
+          `   ⏳ readSyncState attempt ${attempt}/${MAX_ATTEMPTS} failed: ${describeError(err)} — retrying in ${backoff}ms…`
+        );
+        await sleep(backoff);
+      }
     }
-    throw error;
   }
-  
-  return {
-    lastSyncTimestamp: data.last_sync_timestamp,
-    syncType: data.sync_type || 'delta',
-    recordsSynced: data.records_synced || 0,
-    status: data.status || 'idle'
-  };
+  throw lastErr;
 }
 
 /**
@@ -1269,8 +1295,18 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     // Best-effort: if the DB itself is down, this write will 522 too — don't let
     // that throw mask the original failure.
     try {
-      const failureCursor = nextSyncCursor('failed', previousCursor, new Date().toISOString());
-      await updateSyncState(failureCursor, result.activeRecords + result.soldRecords, 'failed');
+      if (previousCursor === null) {
+        // readSyncState() never returned the real cursor (it threw, even after retries).
+        // Writing `now` here would CLOBBER the stored cursor and skip every listing
+        // modified since the last good sync (CLAUDE.md §12). Leave sync_state's timestamp
+        // untouched so the next run re-reads the TRUE cursor and re-runs the window.
+        console.error(
+          '   ⚠️  Cursor unknown (readSyncState failed) — NOT writing sync_state, to avoid rolling the cursor forward into a gap.'
+        );
+      } else {
+        const failureCursor = nextSyncCursor('failed', previousCursor, new Date().toISOString());
+        await updateSyncState(failureCursor, result.activeRecords + result.soldRecords, 'failed');
+      }
     } catch (stateErr: any) {
       console.error('   ⚠️  Could not record failed sync_state:', describeError(stateErr));
     }
