@@ -198,9 +198,10 @@ export function getTrendCached(region: string, typeKeys: string[], scope: Scope)
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeTrend(region, typeKeys, scope),
-    // v11 = basement filter (migration 043); v10 = Toronto district roll-up (042); v9 = RPC (040).
-    // Bumped so entries cached under v10 (no basement dimension) are not served post-migration.
-    ["market-price-trend", "v11", region.toLowerCase(), k],
+    // v12 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v11);
+    // v11 = basement filter (043); v10 = Toronto district roll-up (042); v9 = RPC (040).
+    // Bumped so stale empty Ottawa entries (and any v11 entry) are not served post-migration.
+    ["market-price-trend", "v12", region.toLowerCase(), k],
     { revalidate: 86400 }
   )();
 }
@@ -210,9 +211,10 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeStats(region, typeKeys, scope),
-    // v6 = basement filter (migration 043); v5 = Toronto district roll-up (042); v4 = parking (027).
-    // Bumped so entries cached under v5 (no basement dimension) are not served post-migration.
-    ["market-region-stats", "v6", region.toLowerCase(), k],
+    // v7 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v6);
+    // v6 = basement filter (043); v5 = Toronto district roll-up (042); v4 = parking (027).
+    // Bumped so stale empty Ottawa entries (and any v6 entry) are not served post-migration.
+    ["market-region-stats", "v7", region.toLowerCase(), k],
     { revalidate: 86400 }
   )();
 }
