@@ -1,0 +1,104 @@
+name: Property Estimates Recompute (Twice-Weekly)
+
+# Full-table AVM recompute of property_estimates, re-basing EVERY active listing
+# against the latest market anchors. The daily sync only refreshes estimates for
+# listings it re-ingested that night (refresh-property-estimates.ts --since), so
+# unchanged listings would otherwise drift as new sold comps move their market.
+# This pass closes that gap, twice a week.
+#
+# Why sharded: the unsharded full run scans the whole active table (~5-6h+) and
+# exceeds GitHub's hard 6h per-job ceiling — the exact failure mode that silently
+# broke the daily sync (2026-06-16→24). Splitting into a parallel matrix by the last
+# digit of listing_key (--shard i/n) gives each shard a fraction of the table, so
+# every shard finishes well inside one job.
+#
+# Timing: runs Sunday & Wednesday 07:00 UTC, AFTER the 03:00 daily sync has refreshed
+# the AVM calibration / trend / community-offset / raw_vow_sold anchors that morning,
+# so the recompute uses same-day-fresh market data.
+
+# MANUAL FALLBACK ONLY — the scheduled twice-weekly recompute now runs on RAILWAY CRON
+# (npm run sync:recompute, unsharded — Railway has no 6h job ceiling). See
+# docs/railway-cron-setup.md. Schedule removed so it can't auto-run and double-write.
+on:
+  workflow_dispatch:
+
+# Least privilege: checkout needs contents:read; the failure notifier opens an issue.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  recompute:
+    runs-on: ubuntu-latest
+    # Bound each shard well under the 6h job ceiling; a shard is ~1/5 of the table.
+    timeout-minutes: 300
+    strategy:
+      # One shard failing must not cancel the others — each slice is independent.
+      fail-fast: false
+      # Cap concurrency to 2 so we never put 5x the read/IO load on Supabase at once
+      # (respects the Disk IO budget, CLAUDE.md §12). 5 shards × ~1h ÷ 2 ≈ 3h wall clock.
+      max-parallel: 2
+      matrix:
+        shard: ['1/5', '2/5', '3/5', '4/5', '5/5']
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Full recompute of this shard's slice. Reads listings + raw_vow_sold (anchor) +
+      # the avm_* tables READ-ONLY, writes the separate property_estimates table;
+      # Supabase REST creds only (no TRREB tokens). Idempotent upserts keyed on
+      # listing_key, so a re-run or overlap is safe.
+      - name: Refresh Property Estimates (shard ${{ matrix.shard }})
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-property-estimates.ts --apply --shard "${{ matrix.shard }}"
+
+  # ── Failure notifier ────────────────────────────────────────────────────────
+  # Fires when ANY recompute shard fails. Opens (or comments on the existing open)
+  # 'recompute-failure' issue, which emails the repo owner — no extra secrets.
+  notify-failure:
+    needs: recompute
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open / update recompute-failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'recompute-failure';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `🔴 **${context.workflow}** failed (one or more shards).`,
+              ``,
+              `- Run: ${runUrl}`,
+              `- Commit: \`${context.sha.slice(0, 7)}\``,
+              `- Trigger: ${context.eventName}`,
+              ``,
+              `property_estimates upserts are idempotent, so a re-run is safe.`,
+              ``,
+              `cc @${context.repo.owner}`,
+            ].join('\n');
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: label,
+            });
+            if (open.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: open.data[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `🔴 Property estimates recompute failed`, body, labels: [label],
+              });
+            }

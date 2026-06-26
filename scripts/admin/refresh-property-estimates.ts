@@ -22,6 +22,13 @@
  *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts               # dry-run (no writes)
  *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --limit 2000  # dry-run, first 2000 rows
  *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --apply        # write full table
+ *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --apply --since 2026-06-24T03:00:00Z  # delta: only listings re-synced since
+ *   npx.cmd tsx --env-file=.env scripts/admin/refresh-property-estimates.ts --apply --shard 1/5  # full table, slice 1 of 5 (by last digit of listing_key)
+ *
+ * The nightly daily-sync workflow runs the --since (delta) form so it finishes in
+ * minutes. The weekly weekly-estimates-recompute workflow runs the bare --apply (full
+ * table) form sharded across a parallel matrix (--shard i/n) to re-base every row
+ * against the latest market anchors — the unsharded full run exceeds the 6h job cap.
  */
 
 // MUST set TLS env var BEFORE importing the supabase client.
@@ -50,6 +57,44 @@ const limitArg = process.argv.find((a) => a.startsWith('--limit'));
 const ROW_LIMIT = limitArg
   ? parseInt(limitArg.includes('=') ? limitArg.split('=')[1] : process.argv[process.argv.indexOf(limitArg) + 1], 10)
   : Infinity;
+
+// Delta window (nightly): when set, ONLY listings whose listings.synced_at is at/after
+// this ISO timestamp are refreshed. A listing's estimate inputs only change when the
+// daily sync re-ingests it (price/status/payload bump), so a delta pass keeps the same
+// rows fresh as a full recompute would — at a fraction of the cost. Omit --since for a
+// full-table recompute (e.g. a periodic workflow_dispatch run that re-bases every row
+// against the latest market anchors). This is what stops the step from scanning ~77k
+// rows nightly and blowing the GitHub Actions 6h job ceiling.
+const sinceArg = process.argv.find((a) => a.startsWith('--since'));
+const SINCE = sinceArg
+  ? (sinceArg.includes('=') ? sinceArg.split('=')[1] : process.argv[process.argv.indexOf(sinceArg) + 1])
+  : undefined;
+
+// Shard ("--shard i/n", 1-based): partition the full table into n disjoint slices by
+// the LAST DIGIT of listing_key (TREB MLS suffixes are numeric → digits are uniformly
+// distributed, so the slices are balanced). Shard i owns the digits d where d % n ==
+// i-1. Lets the WEEKLY full recompute (no --since) run as a parallel matrix so each
+// shard finishes well inside a single GitHub 6h job — the whole-table run on its own
+// exceeds 6h. Ignored when --since is set (a delta is already small enough). Assumes
+// numeric-suffixed keys (true for the TRREB IDX/VOW feeds); any non-digit-suffixed key
+// would fall outside every shard, so do NOT use --shard for a guaranteed-complete pass
+// on a feed with alphanumeric suffixes — use the bare full run there.
+const shardArg = process.argv.find((a) => a.startsWith('--shard'));
+let SHARD_DIGITS: string[] | null = null;
+if (shardArg && !SINCE) {
+  const raw = shardArg.includes('=')
+    ? shardArg.split('=')[1]
+    : process.argv[process.argv.indexOf(shardArg) + 1];
+  const [iStr, nStr] = String(raw ?? '').split('/');
+  const i = parseInt(iStr, 10);
+  const n = parseInt(nStr, 10);
+  if (!Number.isInteger(i) || !Number.isInteger(n) || n < 1 || n > 10 || i < 1 || i > n) {
+    console.error(`❌ invalid --shard "${raw}" — expected "i/n" with 1 <= i <= n <= 10`);
+    process.exit(1);
+  }
+  SHARD_DIGITS = [];
+  for (let d = 0; d < 10; d++) if (d % n === i - 1) SHARD_DIGITS.push(String(d));
+}
 
 // ── IO pacing (deliberately gentle) ──────────────────────────────────────────
 const CHUNK_SIZE = 400; // rows per read page (each detoasts full_payload)
@@ -235,11 +280,21 @@ async function getMarketStatic(
 async function readPage(cursor: string, pageSize: number): Promise<ListingRow[] | null> {
   let attempt = 0;
   for (;;) {
-    const { data, error } = await sb
+    // Keyset-paginate on the PK (listing_key) and FILTER on synced_at when delta —
+    // never ORDER on synced_at (unindexed → statement timeout, CLAUDE.md §12). The
+    // synced_at filter also short-circuits full_payload detoast for the ~95% of rows
+    // that didn't change today, which is the bulk of the cost.
+    let query = sb
       .from('listings')
       .select('listing_key, list_price, full_payload')
       .gt('listing_key', cursor)
-      .gte('list_price', PRICE_FLOOR)
+      .gte('list_price', PRICE_FLOOR);
+    if (SINCE) query = query.gte('synced_at', SINCE);
+    // Disjoint shard slice: last digit of listing_key ∈ this shard's digit set. The
+    // filter runs in PostgREST (before projection), so non-shard rows are never
+    // detoasted — that's what splits the expensive full_payload read across the matrix.
+    if (SHARD_DIGITS) query = query.or(SHARD_DIGITS.map((d) => `listing_key.like.*${d}`).join(','));
+    const { data, error } = await query
       .order('listing_key', { ascending: true })
       .limit(pageSize);
 
@@ -284,6 +339,8 @@ async function main() {
   console.log('========================================');
   console.log('  Refresh property_estimates ← active listings');
   console.log(`  Mode: ${APPLY ? 'APPLY (writing)' : 'DRY-RUN (no writes)'}`);
+  console.log(`  Scope: ${SINCE ? `DELTA (synced_at >= ${SINCE})` : 'FULL TABLE'}`);
+  if (SHARD_DIGITS) console.log(`  Shard: listing_key ending in {${SHARD_DIGITS.join(', ')}}`);
   if (Number.isFinite(ROW_LIMIT)) console.log(`  Row limit: ${ROW_LIMIT}`);
   console.log('========================================\n');
 
