@@ -9,7 +9,6 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import crossFetch from 'cross-fetch';
 import { makeTimeoutFetch } from './timeoutFetch';
 
 // Environment variables (sanitized to strip invisible characters)
@@ -19,11 +18,19 @@ const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').
 
 // Bounded request timeout so a dead/unreachable origin (e.g. Cloudflare 522 when the
 // Supabase compute is Unhealthy) fails fast and retryable instead of hanging forever —
-// cross-fetch ships with NO timeout. Override via SUPABASE_FETCH_TIMEOUT_MS if needed.
+// native fetch ships with NO timeout. Override via SUPABASE_FETCH_TIMEOUT_MS if needed.
 const _supabaseFetchTimeout = Number(process.env.SUPABASE_FETCH_TIMEOUT_MS);
 const SUPABASE_FETCH_TIMEOUT_MS =
   Number.isFinite(_supabaseFetchTimeout) && _supabaseFetchTimeout > 0 ? _supabaseFetchTimeout : 30000;
-const timeoutFetch = makeTimeoutFetch(crossFetch as typeof fetch, SUPABASE_FETCH_TIMEOUT_MS);
+// Wrap Node's native fetch (undici on Node 18+, the browser's fetch client-side) — NOT
+// cross-fetch. cross-fetch delegates to node-fetch, which throws
+// `FetchError: Invalid response body … Premature close` when an upstream truncates the
+// REST response body mid-stream (observed on GitHub Actions' egress to Supabase: Supabase
+// logs a 200 but the runner never receives the full body). That killed the daily ETL on
+// its very first sync_state read, before any listing was processed. undici tolerates that
+// path and is the fetch supabase-js uses by default. Bound to globalThis so the bare call
+// inside makeTimeoutFetch keeps the correct receiver.
+const timeoutFetch = makeTimeoutFetch(globalThis.fetch.bind(globalThis), SUPABASE_FETCH_TIMEOUT_MS);
 
 // Singleton instances
 let serverClient: SupabaseClient | null = null;
@@ -44,7 +51,7 @@ export function getServerClient(): SupabaseClient {
         autoRefreshToken: false
       },
       global: {
-        fetch: timeoutFetch // <-- bounded-timeout fetch (cross-fetch had none)
+        fetch: timeoutFetch // <-- bounded-timeout fetch (native fetch has none)
       }
     });
   }
@@ -69,7 +76,7 @@ export function getServiceRoleClient(): SupabaseClient {
         autoRefreshToken: false
       },
       global: {
-        fetch: timeoutFetch // <-- bounded-timeout fetch (cross-fetch had none)
+        fetch: timeoutFetch // <-- bounded-timeout fetch (native fetch has none)
       }
     });
   }

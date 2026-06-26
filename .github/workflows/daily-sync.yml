@@ -1,12 +1,16 @@
 name: Daily Real Estate Sync
 
-# MANUAL FALLBACK ONLY. The scheduled daily sync now runs on RAILWAY CRON
-# (npm run sync:daily → scripts/worker/dailySync.ts), because GitHub Actions' egress
-# to Supabase began truncating REST responses ("premature close") while Supabase and
-# the Railway app stayed healthy. See docs/railway-cron-setup.md. This workflow is kept
-# as a free, on-demand backup you can trigger by hand when GitHub's path is healthy.
-# The schedule is intentionally removed so it can't auto-run, fail, and double-sync.
+# Scheduled daily sync (3:00 AM UTC). The earlier "premature close" failures were a
+# node-fetch bug — cross-fetch (→ node-fetch) choked on truncated REST response bodies on
+# GitHub Actions' egress to Supabase. Fixed at the root in src/lib/supabase/client.ts by
+# wrapping native fetch (undici), which tolerates that path — so this runs reliably on
+# GitHub Actions again and the schedule is restored. (A Railway-cron alternative was
+# started but never finished; see docs/railway-cron-setup.md. Run only ONE scheduler to
+# avoid double-sync.)
 on:
+  schedule:
+    - cron: '0 3 * * *'
+  # Also allow manual triggering from the GitHub website / `gh workflow run`.
   workflow_dispatch:
 
 # Least privilege: checkout needs contents:read; the failure notifier opens an issue.
