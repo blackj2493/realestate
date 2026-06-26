@@ -244,7 +244,6 @@ export default function FilterBar() {
         <MobileFilterSheet
           onClose={() => setSheetOpen(false)}
           coreItems={coreItems}
-          addedItems={addedItems}
           controls={controls}
           showInvestor={investorLayer}
           showAdvanced={!compOnly}

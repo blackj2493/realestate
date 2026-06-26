@@ -15,12 +15,16 @@ import React from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
+import { MORE_FILTERS } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { FilterControl } from "./FilterChip";
+import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 import FundamentalToggle from "./FundamentalToggle";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
+
+const freshDefault = (v: FilterValue): FilterValue =>
+  Array.isArray(v) ? ([...v] as FilterValue) : v;
 
 export interface FilterItem {
   def: FilterDef;
@@ -32,13 +36,11 @@ interface MobileFilterSheetProps {
   onClose: () => void;
   /** Scoped core filters (class-aware price + type), ready to render expanded. */
   coreItems: FilterItem[];
-  /** User-added deeper filters (active-browse only). */
-  addedItems: FilterItem[];
   /** Persona investor controls (cap-rate / yield thresholds, etc.). */
   controls: React.ComponentProps<typeof InvestorChip>["control"][];
   /** Show the persona investor chips (residential-sale, active layer). */
   showInvestor: boolean;
-  /** Show advanced (investor + added) sections (false in comp-only Sold/De-listed). */
+  /** Show advanced (deep field library + investor) sections (false in comp-only Sold/De-listed). */
   showAdvanced: boolean;
   clearAll: () => void;
   anyActive: boolean;
@@ -49,7 +51,6 @@ interface MobileFilterSheetProps {
 export default function MobileFilterSheet({
   onClose,
   coreItems,
-  addedItems,
   controls,
   showInvestor,
   showAdvanced,
@@ -59,6 +60,13 @@ export default function MobileFilterSheet({
 }: MobileFilterSheetProps) {
   const propertyClass = useCommandCenterStore((s) => s.propertyClass);
   const setPropertyClass = useCommandCenterStore((s) => s.setPropertyClass);
+  // Deep field library — read the same store slices the desktop FilterDrawer does
+  // so the two surfaces share one source of truth (and the active-filter strip
+  // stays in sync via addFilter/removeAddedFilter).
+  const universalFilters = useCommandCenterStore((s) => s.universalFilters);
+  const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
+  const addFilter = useCommandCenterStore((s) => s.addFilter);
+  const removeAddedFilter = useCommandCenterStore((s) => s.removeAddedFilter);
 
   // Lock body scroll while open; close on Escape.
   React.useEffect(() => {
@@ -122,12 +130,33 @@ export default function MobileFilterSheet({
             </section>
           ))}
 
-          {showAdvanced &&
-            addedItems.map(({ def, value, onChange }) => (
-              <section key={def.key} className="border-t border-slate-800/70 pt-4">
-                <FilterControl def={def} value={value} onChange={onChange} />
-              </section>
-            ))}
+          {/* More filters — the full deep field library, identical to the desktop
+              "Filters" drawer. On mobile there's no separate drawer, so these live
+              here as tap-to-open chips (their popovers portal above the sheet). */}
+          {showAdvanced && (
+            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+              <span className={LABEL}>More filters</span>
+              <div className="flex flex-wrap gap-2">
+                {MORE_FILTERS.map((def) => (
+                  <FilterChip
+                    key={def.key}
+                    def={def}
+                    value={universalFilters[def.key] ?? def.defaultValue}
+                    onChange={(v) => {
+                      setUniversalFilter(def.key, v);
+                      // Track the key so the active-filter strip sees it (mirrors drawer).
+                      if (def.isActive(v)) addFilter(def.key);
+                      else removeAddedFilter(def.key);
+                    }}
+                    onClear={() => {
+                      setUniversalFilter(def.key, freshDefault(def.defaultValue));
+                      removeAddedFilter(def.key);
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {showAdvanced && showInvestor && controls.length > 0 && (
             <section className="space-y-2 border-t border-slate-800/70 pt-4">
