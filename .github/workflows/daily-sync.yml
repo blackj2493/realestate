@@ -35,11 +35,18 @@ jobs:
         run: npm ci # Uses package-lock.json for a clean install
 
       - name: Run Daily Sync Script
-        # The load-bearing core sync. Observed runtime ~1h; 120m gives headroom while
-        # bounding a hung fetch so it can't consume the whole job and starve the steps
-        # below (a hang here exits non-zero, which is the correct, visible failure —
-        # the cursor is NOT advanced on failure, CLAUDE.md §12).
-        timeout-minutes: 120
+        # The load-bearing core sync. Measured cost is ~2 min per 100-listing page
+        # (per-page /Media + /PropertyRooms enrichment + Supabase upsert + Typesense
+        # index), and the active feed churns ~5.5k listings/day → ~120-180 min for a
+        # NORMAL daily delta (Query A+B+C+reconcile), more when catching up a multi-day
+        # backlog. The old 120m cap was below even a normal run, so the core sync timed
+        # out before advancing the cursor — and since the cursor only moves on full
+        # success, every retry re-attempted an ever-growing window and timed out again.
+        # 300m clears a multi-day backlog and leaves a buffer before GitHub's 6h job
+        # ceiling; the downstream refresh steps are continue-on-error and self-heal if
+        # squeezed. A genuine hang still exits non-zero (cursor NOT advanced, §12).
+        # TODO(perf): parallelize per-page media/rooms enrichment to cut the ~2min/page.
+        timeout-minutes: 300
         env:
           # FEED ISOLATION: IDX and VOW are TWO DISTINCT TRREB tokens with no fallback.
           # Read by scripts/worker/ingester.ts:242-243.
