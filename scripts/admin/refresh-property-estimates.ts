@@ -35,8 +35,6 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import * as https from 'https';
-import crossFetch from 'cross-fetch';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
 import { estimateFromMarketData, shouldEvaluatePeers, resolveModel, type AVMMarketData } from '@/lib/avm/calculator';
@@ -45,11 +43,11 @@ import { type CoefficientRow } from '@/lib/avm/matrixService';
 import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 import type { RoomData } from '@/lib/room-utils';
 
-// Patch global fetch with a TLS-relaxed agent for the Supabase client.
-const agent = new https.Agent({ rejectUnauthorized: false });
-(global as unknown as { fetch: typeof fetch }).fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
-  // @ts-expect-error agent is a node-fetch option, not standard
-  crossFetch(url, { ...init, agent })) as typeof fetch;
+// Supabase client uses Node's native fetch (undici). We deliberately do NOT override
+// global.fetch with cross-fetch/node-fetch: node-fetch throws `FetchError: … Premature
+// close` on GitHub Actions' egress to Supabase (it killed the daily ETL — see
+// src/lib/supabase/client.ts), and its TLS-relaxed agent isn't needed (the core sync
+// verifies certs fine over the same path).
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
 const APPLY = process.argv.includes('--apply');
