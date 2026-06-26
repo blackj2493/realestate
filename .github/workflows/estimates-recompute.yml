@@ -16,9 +16,10 @@ name: Property Estimates Recompute (Twice-Weekly)
 # the AVM calibration / trend / community-offset / raw_vow_sold anchors that morning,
 # so the recompute uses same-day-fresh market data.
 
+# MANUAL FALLBACK ONLY — the scheduled twice-weekly recompute now runs on RAILWAY CRON
+# (npm run sync:recompute, unsharded — Railway has no 6h job ceiling). See
+# docs/railway-cron-setup.md. Schedule removed so it can't auto-run and double-write.
 on:
-  schedule:
-    - cron: '0 7 * * 0,3' # Sundays & Wednesdays 07:00 UTC
   workflow_dispatch:
 
 # Least privilege: checkout needs contents:read; the failure notifier opens an issue.
