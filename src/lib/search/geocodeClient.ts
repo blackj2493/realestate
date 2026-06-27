@@ -10,11 +10,11 @@ export interface GeoHit {
   lng: number;
 }
 
-export async function geocodeAddress(query: string): Promise<GeoHit | null> {
+export async function geocodeAddress(query: string, signal?: AbortSignal): Promise<GeoHit | null> {
   const q = query.trim();
   if (q.length < 3) return null;
   try {
-    const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`, { signal });
     if (!res.ok) return null;
     const data = (await res.json()) as { results?: GeoHit[] };
     return data.results?.[0] ?? null;

@@ -109,6 +109,9 @@ export default function AlphaMap({
   const isInteracting = useRef(false);
   const lastSearchQuery = useRef(currentSearchQuery);
   const mapInitialized = useRef(false);
+  // Signature of the result set we last framed — lets the auto-fit wait for a new
+  // query's data to actually arrive before reframing (results lag the query string).
+  const lastFitData = useRef("");
 
   // Viewport-query plumbing: report the visible extent so the search scopes to
   // what's on screen (HouseSigma-style progressive reveal under the 100-cap).
@@ -203,22 +206,34 @@ export default function AlphaMap({
   useEffect(() => {
     if (commuteRing) return;
     if (isInteracting.current || validProperties.length === 0) return;
-    const changed = lastSearchQuery.current !== currentSearchQuery;
-    if (mapInitialized.current && !changed) return;
 
-    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
-    for (const p of validProperties) {
-      const lat = p.location[0];
-      const lng = p.location[1];
-      minLng = Math.min(minLng, lng);
-      maxLng = Math.max(maxLng, lng);
-      minLat = Math.min(minLat, lat);
-      maxLat = Math.max(maxLat, lat);
+    // A new query (area/persona) changes currentSearchQuery a render BEFORE its
+    // results land, so we must not frame the PREVIOUS query's listings. Track a
+    // cheap signature of the result set and wait until the data itself changes.
+    const first = validProperties[0]?.id ?? "";
+    const last = validProperties[validProperties.length - 1]?.id ?? "";
+    const dataSig = `${validProperties.length}:${first}:${last}`;
+    const queryChanged = lastSearchQuery.current !== currentSearchQuery;
+    if (queryChanged) {
+      if (dataSig === lastFitData.current) return; // still the old query's data — wait
+      lastSearchQuery.current = currentSearchQuery;
+    } else if (mapInitialized.current) {
+      return; // same query, viewport drill-down — keep the camera where the user left it
     }
-    const centerLng = (minLng + maxLng) / 2;
-    const centerLat = (minLat + maxLat) / 2;
-    const maxRange = Math.max(maxLng - minLng, maxLat - minLat);
-    const zoom = maxRange > 0 ? Math.max(8, Math.min(15, 12 - Math.log10(maxRange * 100))) : 10;
+
+    // Frame the DENSE cluster (where the majority are), not the full extent. The
+    // ≤100 results are sorted by the persona metric (cap rate, DOM…) so they can
+    // be geographically scattered — a raw min/max bbox then zooms out to a province
+    // view. Center on the MEDIAN point and frame the 10–90th-percentile span so a
+    // handful of far-flung outliers never drag the camera out.
+    const lats = validProperties.map((p) => p.location[0]).sort((a, b) => a - b);
+    const lngs = validProperties.map((p) => p.location[1]).sort((a, b) => a - b);
+    const pct = (arr: number[], p: number) =>
+      arr[Math.min(arr.length - 1, Math.max(0, Math.round(p * (arr.length - 1))))];
+    const centerLat = pct(lats, 0.5);
+    const centerLng = pct(lngs, 0.5);
+    const maxRange = Math.max(pct(lats, 0.9) - pct(lats, 0.1), pct(lngs, 0.9) - pct(lngs, 0.1));
+    const zoom = maxRange > 0 ? Math.max(8, Math.min(15, 12 - Math.log10(maxRange * 100))) : 13;
 
     markProgrammatic(800);
     setViewState({
@@ -232,7 +247,7 @@ export default function AlphaMap({
     });
     mapInitialized.current = true;
     setMapReady(true);
-    lastSearchQuery.current = currentSearchQuery;
+    lastFitData.current = dataSig;
   }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode]);
 
   // Fit to the commute zone whenever the isochrone changes (frames the whole

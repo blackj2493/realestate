@@ -90,6 +90,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqId = React.useRef(0);
+  const abortRef = React.useRef<AbortController | null>(null);
 
   // Persona badges for address rows (computed from the listings already in hand).
   const badgeFor = React.useMemo(() => {
@@ -127,15 +128,29 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     }
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
+      // Cancel any in-flight suggest so keystrokes don't saturate the connection
+      // pool, and fail fast (8s) rather than hang on the client's 30s timeout.
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      const failFast = setTimeout(() => ctrl.abort(), 8000);
       const mine = ++reqId.current;
       const p = parseNlQuery(q);
       setParsed(p.isStructured ? p : null);
-      const g = await federatedSuggest(q);
-      if (mine !== reqId.current) return; // a newer keystroke won
-      setGroups(g);
-      setHighlight(-1);
-      setSearching(false);
-      setOpen(true);
+      try {
+        const g = await federatedSuggest(q, ctrl.signal);
+        if (mine !== reqId.current) return; // a newer keystroke won
+        setGroups(g);
+      } catch {
+        if (mine === reqId.current) setGroups([]); // aborted / backend slow → empty
+      } finally {
+        clearTimeout(failFast);
+        if (mine === reqId.current) {
+          setHighlight(-1);
+          setSearching(false);
+          setOpen(true);
+        }
+      }
     }, SUGGEST_DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

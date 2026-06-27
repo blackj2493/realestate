@@ -37,11 +37,15 @@ function geoOf(listing: ListingDocument): { lat: number; lng: number; zoom?: num
   return undefined;
 }
 
-export async function federatedSuggest(query: string): Promise<SuggestGroup[]> {
+export async function federatedSuggest(query: string, signal?: AbortSignal): Promise<SuggestGroup[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   const needle = q.toLowerCase();
   const client = getTypesenseClient();
+  // Abortable so a newer keystroke cancels the in-flight request instead of
+  // piling up connections (the 6-per-host browser cap is what makes a slow
+  // backend feel "stuck"). typesense-js 3.x honours abortSignal.
+  const opts = signal ? { abortSignal: signal } : undefined;
 
   const addresses: SuggestItem[] = [];
   const communities: SuggestItem[] = [];
@@ -53,12 +57,15 @@ export async function federatedSuggest(query: string): Promise<SuggestGroup[]> {
   if (MLS_RE.test(q)) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r: any = await client.collections("properties").documents().search({
-        q: "*",
-        query_by: "City",
-        filter_by: `id:=${q.toUpperCase()}`,
-        per_page: 1,
-      });
+      const r: any = await client.collections("properties").documents().search(
+        {
+          q: "*",
+          query_by: "City",
+          filter_by: `id:=${q.toUpperCase()}`,
+          per_page: 1,
+        },
+        opts
+      );
       const doc = r.hits?.[0]?.document as ListingDocument | undefined;
       if (doc)
         mls.push({
@@ -91,14 +98,15 @@ export async function federatedSuggest(query: string): Promise<SuggestGroup[]> {
     response = await client
       .collections("properties")
       .documents()
-      .search({ ...base, query_by: "UnparsedAddress,City,CityRegion" });
-  } catch {
+      .search({ ...base, query_by: "UnparsedAddress,City,CityRegion" }, opts);
+  } catch (err) {
+    if (signal?.aborted) throw err; // a newer keystroke cancelled this — bail
     addressSearchable = false;
     try {
       response = await client
         .collections("properties")
         .documents()
-        .search({ ...base, query_by: "City,CityRegion" });
+        .search({ ...base, query_by: "City,CityRegion" }, opts);
     } catch {
       response = null;
     }
@@ -161,8 +169,10 @@ export async function federatedSuggest(query: string): Promise<SuggestGroup[]> {
   }
 
   // 4) Geo fallback — typed address with no active listing still flies the map.
-  if (hasStreetNumber(q) && addresses.length === 0) {
-    const hit = await geocodeAddress(q);
+  //    Only when it really looks like a street address (number + a name word), to
+  //    avoid an extra round-trip on every digit typed.
+  if (addresses.length === 0 && /\d+\s+\w/.test(q)) {
+    const hit = await geocodeAddress(q, signal);
     if (hit) {
       geo.push({
         id: `geo:${hit.lat},${hit.lng}`,
