@@ -214,6 +214,14 @@ export interface CommandCenterState {
   mapBounds: MapBounds | null;
   setMapBounds: (bounds: MapBounds | null) => void;
 
+  // Search V2: imperative map fly-to. The search bar sets a target; AlphaMap
+  // consumes it (the `nonce` bumps so re-selecting the same place re-flies).
+  flyTo: { lat: number; lng: number; zoom?: number; nonce: number } | null;
+  setFlyTo: (target: { lat: number; lng: number; zoom?: number } | null) => void;
+  // A pin dropped at a searched/geocoded address that has no active listing.
+  searchPin: { lat: number; lng: number; label?: string } | null;
+  setSearchPin: (pin: { lat: number; lng: number; label?: string } | null) => void;
+
   // Map render mode (Instrument Deck mode dock). Lifted out of AlphaMap so the
   // rail/dock can drive it. Reset to the persona default on persona change.
   mapMode: MapMode;
@@ -403,6 +411,14 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   mapBounds: null,
   setMapBounds: (bounds) => set({ mapBounds: bounds }),
+
+  flyTo: null,
+  setFlyTo: (target) =>
+    set((state) => ({
+      flyTo: target ? { ...target, nonce: (state.flyTo?.nonce ?? 0) + 1 } : null,
+    })),
+  searchPin: null,
+  setSearchPin: (pin) => set({ searchPin: pin }),
 
   mapMode: "listings",
   setMapMode: (mode) => set({ mapMode: mode }),

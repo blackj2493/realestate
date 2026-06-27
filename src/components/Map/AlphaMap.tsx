@@ -96,6 +96,9 @@ export default function AlphaMap({
   const finishDrawing = useCommandCenterStore((s) => s.finishDrawing);
   const timelineActive = useCommandCenterStore((s) => s.timelineActive);
   const domCenter = useCommandCenterStore((s) => s.domCenter);
+  // Search V2: imperative fly-to target + a dropped search pin.
+  const flyTo = useCommandCenterStore((s) => s.flyTo);
+  const searchPin = useCommandCenterStore((s) => s.searchPin);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -255,6 +258,47 @@ export default function AlphaMap({
       transitionInterpolator: new FlyToInterpolator(),
     }));
   }, [commuteRing, markProgrammatic]);
+
+  // Search V2: imperative fly-to from the search bar. Re-runs on every nonce bump
+  // (re-selecting the same place re-flies). Flagged programmatic so the settle
+  // handler never mistakes the animated fly for a user pan (which would re-query).
+  const flyNonce = flyTo?.nonce ?? 0;
+  useEffect(() => {
+    if (!flyTo) return;
+    isInteracting.current = false;
+    markProgrammatic(1000);
+    setViewState((vs) => ({
+      ...vs,
+      longitude: flyTo.lng,
+      latitude: flyTo.lat,
+      zoom: flyTo.zoom ?? 14,
+      transitionDuration: 1000,
+      transitionInterpolator: new FlyToInterpolator(),
+    }));
+    setMapReady(true);
+    mapInitialized.current = true;
+    // Only re-fly when the nonce changes; flyTo carries the latest coords.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyNonce, markProgrammatic]);
+
+  // A pin dropped at a searched/geocoded address (no listing) — cyan dot.
+  const searchPinLayer = useMemo<Layer[]>(() => {
+    if (!searchPin) return [];
+    return [
+      new ScatterplotLayer<{ lat: number; lng: number }>({
+        id: "search-pin",
+        data: [searchPin],
+        getPosition: (d) => [d.lng, d.lat],
+        getRadius: 9,
+        radiusUnits: "pixels",
+        getFillColor: [34, 211, 238, 255],
+        stroked: true,
+        getLineColor: [255, 255, 255, 255],
+        lineWidthMinPixels: 2,
+        pickable: false,
+      }),
+    ];
+  }, [searchPin]);
 
   // For sparse metrics (cap rate / gross yield), exclude listings without an estimate
   // from the HexagonLayer so "no data" doesn't drag the MEAN toward zero.
@@ -698,7 +742,7 @@ export default function AlphaMap({
         onDragStart={() => { setPopup(null); setCatchmentHover(null); }}
         onDragEnd={handleDragEnd}
         controller={true}
-        layers={[...catchmentLayers, ...layers, ...drawLayers]}
+        layers={[...catchmentLayers, ...layers, ...drawLayers, ...searchPinLayer]}
         onClick={(info) => {
           if (isDrawing) {
             if (!info.coordinate) return;
