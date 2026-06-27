@@ -20,7 +20,12 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 import { REGION_TO_CITIES, citiesFromRegions } from '@/lib/dashboard/config';
+
+// Load env for standalone/local runs (.env.local, .env). In CI the daily-sync workflow
+// supplies these via `env:`; dotenv never overrides an already-present process.env value.
+dotenv.config({ path: ['.env.local', '.env'] });
 
 const APPLY = process.argv.includes('--apply');
 
