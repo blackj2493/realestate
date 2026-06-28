@@ -1,0 +1,33 @@
+name: Warm Sitemaps
+
+# Keeps the dynamic sitemaps cached at the edge so Google's sitemap fetcher never hits a
+# slow COLD generation. Without this, a low-traffic sitemap (e.g. /addresses/sitemap.xml,
+# which exports ~45k sold rows on a cache miss → ~6.5s) gets into a vicious cycle: it
+# fails "Couldn't fetch" in Search Console → gets no successful traffic → its cache
+# evicts → the next Google fetch hits the cold ~6.5s gen → times out → fails again. A
+# cheap GET every 6h keeps the cache fresh, so Google always gets a fast (~1s) cached
+# response. Read-only; safe to run anytime.
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm sitemaps
+        run: |
+          status=0
+          for url in \
+            "https://www.pureproperty.ca/sitemap.xml" \
+            "https://www.pureproperty.ca/addresses/sitemap.xml"; do
+            echo "Warming $url"
+            code=$(curl -s -o /dev/null -w "%{http_code} %{time_total}s" --max-time 180 "$url") || true
+            echo "  -> $code"
+          done
+          # Always succeed: warming is best-effort and must never fail the workflow.
+          exit 0
