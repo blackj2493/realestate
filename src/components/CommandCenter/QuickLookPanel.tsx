@@ -126,7 +126,9 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const hero = property.primaryImageUrl || property.thumbnailUrl;
   const sqft = property.BuildingAreaTotal && property.BuildingAreaTotal > 0
     ? property.BuildingAreaTotal.toLocaleString()
-    : "—";
+    // BuildingAreaTotal is ~never filled for houses; fall back to the TRREB
+    // LivingAreaRange band ("2500-3000") so houses show sqft instead of a dash.
+    : property.LivingAreaRange?.trim() || "—";
   const lot = property.LotWidth
     ? `${property.LotWidth} × ${property.LotDepth || "?"}`
     : property.LotSqftTotal

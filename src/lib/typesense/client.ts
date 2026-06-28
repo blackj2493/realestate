@@ -38,7 +38,16 @@ export function getTypesenseClient(): Client {
         }
       ],
       apiKey: SEARCH_API_KEY,
-      connectionTimeoutSeconds: 30,
+      // Resilience: healthy queries answer in <1s, so a request that hasn't responded
+      // in a few seconds is almost certainly a STALE keep-alive connection (cloud LBs
+      // silently drop idle conns; the browser reuses the dead one and the request hangs).
+      // The old 30s timeout turned that into a 30s "Network Error" that blanked the
+      // terminal. Fail fast (8s) and let the client retry on a FRESH connection — which
+      // succeeds immediately since the cluster itself is healthy.
+      connectionTimeoutSeconds: 8,   // was 30
+      numRetries: 3,                 // retry a stuck conn on a fresh one (default would do fewer)
+      retryIntervalSeconds: 0.5,     // brief backoff between attempts
+      healthcheckIntervalSeconds: 15, // re-probe a node marked unhealthy sooner (default 60)
     });
   }
   return client;
@@ -112,6 +121,9 @@ export interface ListingDocument {
   ApproximateAge?: string;
   ParkingTotal?: number;
   BuildingAreaTotal?: number;
+  // TRREB sqft band ("2500-3000"). Stored-only display cargo; BuildingAreaTotal is
+  // ~never filled for houses, so this is the sqft fallback on cards / quick-look.
+  LivingAreaRange?: string;
   
   // Derived Metrics
   isDistressed: boolean;
@@ -712,6 +724,7 @@ export async function indexListing(listing: ListingDocument): Promise<void> {
   if (listing.ApproximateAge) document.ApproximateAge = listing.ApproximateAge;
   if (listing.ParkingTotal !== undefined) document.ParkingTotal = listing.ParkingTotal;
   if (listing.BuildingAreaTotal !== undefined) document.BuildingAreaTotal = listing.BuildingAreaTotal;
+  if (listing.LivingAreaRange) document.LivingAreaRange = listing.LivingAreaRange;
   if (listing.calculatedDOM !== undefined) document.calculatedDOM = listing.calculatedDOM;
   if (listing.thumbnailUrl) document.thumbnailUrl = listing.thumbnailUrl;
   if (listing.ListOfficeName) document.ListOfficeName = listing.ListOfficeName;

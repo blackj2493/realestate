@@ -613,7 +613,13 @@ export default async function PropertyPage({
               <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
               <SpecCell
                 icon={<Square className="h-5 w-5 text-purple-400" />}
-                value={p.BuildingAreaTotal ? p.BuildingAreaTotal.toLocaleString() : "N/A"}
+                value={
+                  p.BuildingAreaTotal
+                    ? p.BuildingAreaTotal.toLocaleString()
+                    : // BuildingAreaTotal is ~never filled for houses; fall back to the
+                      // TRREB LivingAreaRange band (e.g. "2500-3000") shown in the data sheet.
+                      p.LivingAreaRange?.trim() || "N/A"
+                }
                 label="Sqft"
               />
               <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />

@@ -711,6 +711,7 @@ export interface TransformResult {
     ParkingTotal?: number;
     CoveredSpaces?: number;
     BuildingAreaTotal?: number;
+    LivingAreaRange?: string;
     isDistressed: boolean;
     targetGrossYield?: number;
     hasSecondarySuitePotential: boolean;
@@ -1031,6 +1032,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     typesensePayload.CoveredSpaces = parseInt(String(raw.CoveredSpaces), 10);
   }
   typesensePayload.BuildingAreaTotal = (raw.BuildingAreaTotal !== undefined && raw.BuildingAreaTotal !== null) ? parseFloat(String(raw.BuildingAreaTotal)) : 0;
+  // LivingAreaRange — TRREB sqft band ("2500-3000"). Stored-only display cargo (like
+  // BuildingAreaTotal): undeclared in the schema, so returned but not filter/sortable.
+  // BuildingAreaTotal is ~never filled for houses, so this is the headline sqft fallback.
+  typesensePayload.LivingAreaRange = raw.LivingAreaRange || '';
   // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;
   typesensePayload.primaryImageUrl = primaryThumbnailUrl || '';

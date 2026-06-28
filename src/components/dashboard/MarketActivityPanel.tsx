@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
+import { parseLivingAreaRange } from "@/lib/condo/feeStability";
 import { areaKey, type Area } from "@/lib/dashboard/area";
 import type { SoldListing } from "@/app/api/market/activity/sold/route";
 import ActivityRow from "./ActivityRow";
@@ -202,7 +203,13 @@ export default function MarketActivityPanel({
               propertySubType={l.PropertySubType}
               beds={l.BedroomsTotal}
               baths={l.BathroomsTotalInteger}
-              sqft={l.BuildingAreaTotal}
+              // BuildingAreaTotal is ~never filled for houses; fall back to the
+              // LivingAreaRange band midpoint (ActivityRow renders sqft as a number).
+              sqft={
+                l.BuildingAreaTotal && l.BuildingAreaTotal > 0
+                  ? l.BuildingAreaTotal
+                  : parseLivingAreaRange(l.LivingAreaRange)
+              }
               watchable
             />
           ))}
