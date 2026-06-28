@@ -19,8 +19,12 @@ export const SEARCH_V2_ENABLED =
  */
 export const SOLD_PRICE_GATED = true;
 
-/** Min query length before we hit the network for suggestions. */
-export const SUGGEST_MIN_CHARS = 2;
+/** Min query length before we hit the network for suggestions. 3 (not 2) avoids a
+ *  burst of low-value queries on the first couple keystrokes of every word. */
+export const SUGGEST_MIN_CHARS = 3;
 
-/** Debounce (ms) for the suggest typeahead. */
-export const SUGGEST_DEBOUNCE_MS = 180;
+/** Debounce (ms) for the suggest typeahead. Deliberately unhurried (350ms) so fast
+ *  typing fires ONE query on the pause, not one per keystroke — this keeps the
+ *  per-host connection pool free for the main listings/map query, which shares the
+ *  same Typesense origin and must never be starved by typeahead churn. */
+export const SUGGEST_DEBOUNCE_MS = 350;
