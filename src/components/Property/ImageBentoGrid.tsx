@@ -1,12 +1,31 @@
 "use client";
 
 import Image from "next/image";
-import { CameraOff, Images } from "lucide-react";
+import { CameraOff, Images, Play } from "lucide-react";
 
 interface ImageBentoGridProps {
   images: string[];
   onClick?: () => void;
   className?: string;
+  /** Unbranded virtual-tour URL — surfaces as a badge on the hero (opens in a new tab). */
+  tourUrl?: string;
+}
+
+/** "▶ Virtual Tour" badge overlaid on the hero — high-intent, so it rides the photo
+ *  (where the eye already is) instead of being buried in the data sheet. */
+function TourBadge({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="absolute left-3 top-3 z-20 flex min-h-[40px] items-center gap-2 rounded-md border border-cyan-400/50 bg-slate-950/80 px-3 py-2 font-mono text-xs tracking-wide text-cyan-200 backdrop-blur-sm transition-colors hover:bg-slate-900/90"
+    >
+      <Play className="h-4 w-4 fill-current" />
+      VIRTUAL TOUR
+    </a>
+  );
 }
 
 // Fallback placeholder when no images
@@ -19,7 +38,7 @@ function EmptyState() {
   );
 }
 
-export default function ImageBentoGrid({ images, onClick, className = "" }: ImageBentoGridProps) {
+export default function ImageBentoGrid({ images, onClick, className = "", tourUrl }: ImageBentoGridProps) {
   // No images - show placeholder
   if (!images || images.length === 0) {
     return (
@@ -54,6 +73,8 @@ export default function ImageBentoGrid({ images, onClick, className = "" }: Imag
           sizes="100vw"
           priority
         />
+
+        {tourUrl && <TourBadge url={tourUrl} />}
 
         {/* "VIEW ALL PHOTOS (N)" pill — ≥44px tap target */}
         <div className="absolute bottom-3 right-3 flex items-center gap-2 min-h-[44px] px-4 py-2 bg-black/70 backdrop-blur-sm rounded-md">
@@ -98,6 +119,7 @@ export default function ImageBentoGrid({ images, onClick, className = "" }: Imag
           sizes="(max-width: 768px) 100vw, 35vw"
           priority
         />
+        {tourUrl && <TourBadge url={tourUrl} />}
       </div>
 
       {/* Right column, row 1 — top pair of thumbnails stacked vertically */}
