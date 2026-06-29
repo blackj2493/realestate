@@ -53,8 +53,13 @@ export function mapStatus(standard?: string, mls?: string): CampaignStatus {
 
 function resolveEndDate(raw: RawVowCampaign, status: CampaignStatus): string | null {
   switch (status) {
-    case 'Sold': return strOrNull(raw.CloseDate) ?? strOrNull(raw.PurchaseContractDate);
-    case 'Leased': return strOrNull(raw.CloseDate) ?? strOrNull(raw.PurchaseContractDate);
+    // The sale/lease END date is the FIRM (contract) date, NOT CloseDate. CloseDate is
+    // the future possession/completion date — often weeks past the firm date — so using
+    // it overstates True DOM and disagrees with the sold-date everything else shows
+    // (lib/property/listingStatus.ts and the sold map both use PurchaseContractDate).
+    // Fall back to CloseDate only when the contract date is absent.
+    case 'Sold': return strOrNull(raw.PurchaseContractDate) ?? strOrNull(raw.CloseDate);
+    case 'Leased': return strOrNull(raw.PurchaseContractDate) ?? strOrNull(raw.CloseDate);
     case 'Terminated': return strOrNull(raw.TerminatedDate) ?? strOrNull(raw.UnavailableDate);
     case 'Expired': return strOrNull(raw.ExpirationDate) ?? strOrNull(raw.UnavailableDate);
     case 'Suspended': return strOrNull(raw.SuspendedDate) ?? strOrNull(raw.UnavailableDate);
