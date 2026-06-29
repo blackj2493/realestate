@@ -32,6 +32,8 @@ const scoreColor = (s: number | null) =>
 export default function NearbySchools({ listingId }: { listingId: string }) {
   const [schools, setSchools] = useState<NearbySchool[]>([]);
   const [total, setTotal] = useState(0);
+  // Compact by default — the list can run long; show the nearest few and let the user expand.
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,17 +65,24 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
 
   if (schools.length === 0) return null;
 
-  const shown = schools.slice(0, 8);
-  const moreCount = Math.max(0, total - shown.length);
+  const list = schools.slice(0, 8);
+  const COLLAPSED = 3; // nearest few; the rest are one tap away
+  const visible = expanded ? list : list.slice(0, COLLAPSED);
+  const hiddenInList = list.length - COLLAPSED;
+  const moreCount = Math.max(0, total - list.length);
 
   return (
     <div className="mb-6">
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
         <GraduationCap className="h-4 w-4 text-emerald-400" />
         Schools near this home
+        <span className="font-mono text-xs font-normal normal-case tracking-normal text-slate-500">
+          · {list.length}
+          {moreCount > 0 ? "+" : ""}
+        </span>
       </h3>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {shown.map((s) => (
+        {visible.map((s) => (
           <div key={s.id} className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm leading-tight text-slate-200">{s.name}</p>
@@ -96,6 +105,17 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
           </div>
         ))}
       </div>
+      {hiddenInList > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 min-h-[44px] text-xs font-medium text-cyan-400 transition-colors hover:text-cyan-300 md:min-h-0"
+        >
+          {expanded
+            ? "Show fewer schools ▴"
+            : `Show ${hiddenInList} more school${hiddenInList === 1 ? "" : "s"} ▾`}
+        </button>
+      )}
       {moreCount > 0 && (
         <p className="mt-2 text-[11px] text-slate-500">+{moreCount} more within 2.5 km</p>
       )}

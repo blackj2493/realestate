@@ -474,8 +474,8 @@ export default async function PropertyPage({
         <DetailMobileNav sections={navSections} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_3fr]">
-          {/* ── LEFT (70%) ── */}
-          <div>
+          {/* ── LEFT-TOP: triage + verdict. Desktop col 1 / row 1; renders FIRST on mobile. ── */}
+          <div className="lg:col-start-1 lg:row-start-1">
             {/* Header */}
             <div id="overview" className="mb-6 scroll-mt-28">
               {badges.length > 0 && (
@@ -596,13 +596,8 @@ export default async function PropertyPage({
               )}
             </div>
 
-            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
-            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />}
-
-            {/* Social proof — honest, deterministic activity counters */}
-            <SocialProofBar listingId={id} className="mb-6" />
-
-            {/* Gallery */}
+            {/* Gallery — leads the page: the photo is the universal triage hook (now above the
+                verdict; social proof moved down to the action cluster in the rail). */}
             <div className="mb-6">
               <PropertyGallery images={detail.media_urls} />
             </div>
@@ -619,59 +614,17 @@ export default async function PropertyPage({
               <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
             </div>
 
-            {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12) */}
-            <div id="details" className="scroll-mt-28">
-              <PropertyDataSheet groups={datasheet} />
-            </div>
+            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
+            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />}
 
-            {/* Things to Know — interpretive diligence flags (sourced; §4-safe) */}
+            {/* Things to Know — interpretive diligence flags surfaced beside the verdict (loss-aversion) */}
             <ThingsToKnowCard flags={diligenceFlags} />
 
-            {/* Schools */}
-            <NearbySchools listingId={id} />
-
-            {/* Grocery + recreation proximity */}
-            <NearbyAmenities listingId={id} />
-
-            {/* Room Dimensions — proportional, drawn-to-scale room map */}
-            {rooms.length > 0 && (
-              <div id="rooms" className="scroll-mt-28">
-                <RoomMap rooms={rooms} className="mb-6" />
-              </div>
-            )}
-
-            {/* Remarks */}
-            <Section title="Unvarnished Remarks" icon={<AlertTriangle className="h-4 w-4 text-amber-400" />}>
-              <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
-                <ClampText
-                  text={p.PublicRemarks || "No remarks available."}
-                  className="text-sm leading-relaxed text-slate-300"
-                />
-              </div>
-            </Section>
-
-            {/* Brokerage (mandatory display) */}
-            <Section title="Listed By" icon={<Building2 className="h-4 w-4 text-emerald-400" />}>
-              <p className="text-sm text-slate-300">
-                {p.ListOfficeName || "Brokerage information not available"}
-              </p>
-            </Section>
-
-            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage) */}
-            <YourTakeCard
-              listingKey={id}
-              isLease={isLease}
-              metrics={{
-                listPrice: price || null,
-                capRatePct: view.capRatePct,
-                beds: p.BedroomsTotal ?? null,
-                trueDom,
-              }}
-            />
           </div>
 
-          {/* ── RIGHT (30%, sticky) ── */}
-          <div id="financials" className="scroll-mt-28">
+          {/* ── RIGHT rail (decision cockpit): desktop col 2 spanning rows 1-2; renders SECOND on
+               mobile so the Deal Score / Estimate / CTA aren't buried beneath the full detail stack. ── */}
+          <div id="financials" className="scroll-mt-28 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="sticky top-6 space-y-4">
               {/* The financial cards below (sold-accuracy receipt, Deal Score, Estimated
                   Sale Price / True Value, Force Appreciation) are all AVM-derived and assume
@@ -722,15 +675,23 @@ export default async function PropertyPage({
                 />
               ))}
 
-              {/* Force-Appreciation — renovation ROI from the Value-Add Engine */}
+              {/* Renovation upside — Force-Appreciation ROI from the Value-Add Engine. One of the
+                  product's headline differentiators, so it sits directly beneath the sale estimate. */}
               {!isLease && (
                 <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
               )}
 
-              {/* Compliance disclaimer for the AVM-derived figures above (estimate + value-add) */}
-              {!isLease && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
-                <Disclaimers />
-              )}
+              {/* Commit cluster — primary actions + honest social proof, kept HIGH and reachable
+                  (actions were at the bottom of the rail; social proof was above the gallery). */}
+              <ListingActions
+                id={id}
+                address={address}
+                city={detail.city ?? undefined}
+                price={price}
+                thumb={detail.media_urls[0]}
+                statusKind={status.kind}
+              />
+              <SocialProofBar listingId={id} />
 
               {/* Asset Summary */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
@@ -787,18 +748,59 @@ export default async function PropertyPage({
                 />
               )}
 
-              {/* Property History (timeline + campaign/sale tables) moved to the full-width band below the grid. */}
-              <CondoFeeStabilityCard feeStability={detail.feeStability} />
+              {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add) */}
+              {!isLease && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
+                <Disclaimers />
+              )}
 
-              <ListingActions
-                id={id}
-                address={address}
-                city={detail.city ?? undefined}
-                price={price}
-                thumb={detail.media_urls[0]}
-                statusKind={status.kind}
-              />
+              {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
+              <CondoFeeStabilityCard feeStability={detail.feeStability} />
             </div>
+          </div>
+
+          {/* ── LEFT-REST: deep detail. Desktop col 1 / row 2; renders THIRD on mobile (after the cockpit). ── */}
+          <div className="lg:col-start-1 lg:row-start-2">
+            {/* Remarks (the listing's own description) */}
+            <Section title="Unvarnished Remarks" icon={<AlertTriangle className="h-4 w-4 text-amber-400" />}>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+                <ClampText
+                  text={p.PublicRemarks || "No remarks available."}
+                  className="text-sm leading-relaxed text-slate-300"
+                />
+              </div>
+            </Section>
+
+            {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12).
+                Brokerage (§6.3(c)) is displayed in the header + the compliance notice, so the
+                standalone "Listed By" block was dropped as redundant. */}
+            <div id="details" className="scroll-mt-28">
+              <PropertyDataSheet groups={datasheet} />
+            </div>
+
+            {/* Room Dimensions — proportional, drawn-to-scale room map */}
+            {rooms.length > 0 && (
+              <div id="rooms" className="scroll-mt-28">
+                <RoomMap rooms={rooms} className="mb-6" />
+              </div>
+            )}
+
+            {/* Schools */}
+            <NearbySchools listingId={id} />
+
+            {/* Grocery + recreation proximity */}
+            <NearbyAmenities listingId={id} />
+
+            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage) */}
+            <YourTakeCard
+              listingKey={id}
+              isLease={isLease}
+              metrics={{
+                listPrice: price || null,
+                capRatePct: view.capRatePct,
+                beds: p.BedroomsTotal ?? null,
+                trueDom,
+              }}
+            />
           </div>
         </div>
 

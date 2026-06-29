@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Listing Page — Reordered (proposed) · desktop + mobile</title>
+<style>
+  :root{
+    --slate-950:#020617; --slate-900:#0f172a; --slate-850:#131c2e; --slate-800:#1e293b;
+    --slate-700:#334155; --slate-600:#475569; --slate-500:#64748b; --slate-400:#94a3b8;
+    --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9;
+    --emerald-400:#34d399; --emerald-500:#10b981;
+    --cyan-400:#22d3ee; --cyan-500:#06b6d4;
+    --amber-400:#fbbf24; --amber-300:#fcd34d;
+    --rose-400:#fb7185; --rose-500:#f43f5e;
+    --violet-400:#a78bfa; --sky-400:#38bdf8; --purple-400:#c084fc;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#060a14; color:var(--slate-200); font-family:var(--sans); padding:32px 18px 80px; -webkit-font-smoothing:antialiased;}
+  a{color:inherit; text-decoration:none}
+
+  .board{max-width:1480px; margin:0 auto;}
+  .board > header{margin:0 0 26px}
+  .board > header h1{font-size:20px; font-weight:800; letter-spacing:.02em; margin:0 0 4px}
+  .board > header h1 .dot{color:var(--emerald-400)}
+  .board > header p{margin:0; color:var(--slate-500); font-size:13px; max-width:760px}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:11px; color:var(--slate-500)}
+  .legend b{color:var(--cyan-400); font-weight:600}
+
+  .lane-title{display:flex; align-items:center; gap:10px; margin:34px 0 12px; color:var(--slate-400);
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase;}
+  .lane-title::after{content:""; flex:1; height:1px; background:var(--slate-800)}
+
+  /* ───── device frames ───── */
+  .frame{border:1px solid var(--slate-800); border-radius:16px; overflow:hidden;
+    box-shadow:0 30px 90px rgba(0,0,0,.55); background:var(--slate-950);}
+  .frame.desktop{max-width:1340px}
+  .chrome{height:42px; display:flex; align-items:center; gap:8px; padding:0 14px;
+    background:#0b1220; border-bottom:1px solid var(--slate-800)}
+  .dot3{display:flex; gap:6px} .dot3 i{width:11px;height:11px;border-radius:50%;display:block}
+  .dot3 i:nth-child(1){background:#ff5f57} .dot3 i:nth-child(2){background:#febc2e} .dot3 i:nth-child(3){background:#28c840}
+  .urlbar{flex:1; margin-left:8px; height:26px; border-radius:7px; background:#0f1729; border:1px solid var(--slate-800);
+    display:flex; align-items:center; padding:0 10px; gap:8px; color:var(--slate-400); font-size:12px; font-family:var(--mono)}
+  .urlbar .lock{color:var(--slate-600)}
+
+  /* app top nav */
+  .appnav{height:46px; display:flex; align-items:center; gap:20px; padding:0 20px; border-bottom:1px solid var(--slate-800);
+    background:rgba(8,14,26,.9)}
+  .appnav .brand{font-weight:800; font-size:14px; letter-spacing:.03em}
+  .appnav .brand .dot{color:var(--emerald-400)}
+  .appnav .search{margin-left:6px; width:240px; height:28px; border-radius:7px; border:1px solid var(--slate-800);
+    background:#0c1424; color:var(--slate-500); font-size:11.5px; display:flex; align-items:center; padding:0 10px; gap:7px}
+  .appnav .links{margin-left:auto; display:flex; align-items:center; gap:18px; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--slate-500)}
+  .appnav .links .on{color:var(--cyan-400); border-bottom:2px solid var(--cyan-400); padding-bottom:13px; margin-bottom:-15px}
+  .appnav .user{font-family:var(--mono); font-size:11px; color:var(--slate-400); border:1px solid var(--slate-700); border-radius:999px; padding:4px 11px}
+
+  .page{padding:18px 20px 26px}
+
+  /* ───── shared atoms ───── */
+  .crumbs{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--slate-500); margin-bottom:14px}
+  .crumbs a{color:var(--cyan-400)}
+  .card{border:1px solid var(--slate-800); border-radius:11px; background:linear-gradient(180deg,rgba(15,23,42,.7),rgba(15,23,42,.45)); padding:15px}
+  .card + .card{margin-top:14px}
+  .lab{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--slate-500); font-weight:600}
+  .h3{display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--slate-200); font-weight:700; margin:0 0 11px}
+  .mono{font-family:var(--mono)}
+  .muted{color:var(--slate-500)} .dim{color:var(--slate-400)}
+  .chip{display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.04em;
+    border-radius:6px; padding:3px 8px; border:1px solid transparent}
+  .chip.suite{color:var(--cyan-400); background:rgba(34,211,238,.10); border-color:rgba(34,211,238,.3)}
+  .chip.deal{color:var(--emerald-400); background:rgba(52,211,153,.10); border-color:rgba(52,211,153,.32)}
+  .chip.relist{color:var(--cyan-400); background:rgba(34,211,238,.10); border-color:rgba(34,211,238,.3)}
+  .chip.ask{color:var(--slate-300); background:var(--slate-800)}
+  .chip.warn{color:var(--amber-400); background:rgba(251,191,36,.10); border-color:rgba(251,191,36,.3)}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:7px; height:40px; border-radius:9px; font-weight:600; font-size:13px; cursor:pointer; border:1px solid var(--slate-700); color:var(--slate-200); background:transparent}
+  .btn.primary{background:rgba(6,182,212,.14); border-color:rgba(34,211,238,.4); color:#a5f0fb}
+  .btn.save{border-color:rgba(52,211,153,.35); color:var(--emerald-400)}
+  .btn.block{width:100%}
+  .ico{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ico.sm{width:14px;height:14px}
+  .pill-sticky{font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--slate-500); border:1px dashed var(--slate-700); border-radius:999px; padding:2px 8px}
+
+  /* identity bar */
+  .ident h1{font-size:23px; font-weight:800; color:var(--slate-100); margin:0 0 7px; line-height:1.15}
+  .priceline{display:flex; flex-wrap:wrap; align-items:baseline; gap:7px 14px}
+  .price{font-family:var(--mono); font-size:30px; font-weight:800; color:var(--emerald-400)}
+  .statusbadge{font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.08em; padding:3px 9px; border-radius:6px;
+    color:var(--emerald-400); background:rgba(52,211,153,.13)}
+  .specrow{display:flex; flex-wrap:wrap; gap:7px 18px; align-items:center; margin-top:11px; color:var(--slate-300); font-size:13px}
+  .specrow .s{display:flex; align-items:center; gap:7px} .specrow .s .v{font-family:var(--mono); font-weight:700; color:var(--slate-100)}
+  .specrow .brk{display:flex; align-items:center; gap:6px; color:var(--slate-400)}
+
+  /* gallery */
+  .gallery{display:grid; grid-template-columns:1fr; gap:9px}
+  .hero{position:relative; aspect-ratio:16/9; border-radius:11px; overflow:hidden; border:1px solid var(--slate-800);
+    background:linear-gradient(135deg,#13233b,#0d1830);}
+  .hero img{width:100%;height:100%;object-fit:cover;display:block}
+  .hero .nav{position:absolute; top:50%; transform:translateY(-50%); width:34px;height:34px;border-radius:50%;
+    background:rgba(2,6,23,.6); border:1px solid var(--slate-700); display:flex;align-items:center;justify-content:center; color:#fff; backdrop-filter:blur(4px)}
+  .hero .nav.l{left:10px} .hero .nav.r{right:10px}
+  .hero .count{position:absolute; right:10px; bottom:10px; font-family:var(--mono); font-size:11px; color:#e2e8f0;
+    background:rgba(2,6,23,.6); border:1px solid var(--slate-700); border-radius:6px; padding:3px 8px; backdrop-filter:blur(4px)}
+  .hero .save{position:absolute; right:10px; top:10px; width:40px;height:40px;border-radius:9px; background:rgba(2,6,23,.55); border:1px solid var(--slate-700); display:flex;align-items:center;justify-content:center; color:var(--emerald-400); backdrop-filter:blur(4px)}
+  .thumbs{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+  .thumbs div{aspect-ratio:4/3; border-radius:8px; overflow:hidden; border:1px solid var(--slate-800); background:#13233b; cursor:pointer}
+  .thumbs div.more{display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; color:var(--slate-300); background:#0f1c30}
+  .thumbs img{width:100%;height:100%;object-fit:cover}
+
+  /* the read */
+  .read{border-left:3px solid var(--cyan-500)}
+  .read .persona{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--cyan-300,#67e8f9); border:1px solid var(--slate-700); border-radius:7px; padding:3px 9px; display:inline-flex; gap:6px; align-items:center}
+  .read p{margin:0; font-size:13.5px; line-height:1.55; color:var(--slate-300)}
+  .read .more{margin-top:8px; font-size:12px; color:var(--cyan-400)}
+
+  /* things to know */
+  .ttk .flag{display:flex; gap:10px; padding:9px 0; border-top:1px solid rgba(30,41,59,.6); font-size:13px; color:var(--slate-300)}
+  .ttk .flag:first-of-type{border-top:0}
+  .ttk .flag .ic{flex:none; margin-top:1px}
+  .ttk .flag.amber .ic{color:var(--amber-400)} .ttk .flag.rose .ic{color:var(--rose-400)} .ttk .flag.cyan .ic{color:var(--cyan-400)}
+  .ttk .flag small{display:block; color:var(--slate-500); margin-top:2px; font-size:11.5px}
+
+  /* deal score cockpit */
+  .cockpit{border-left:3px solid var(--emerald-500)}
+  .gauge{display:flex; align-items:center; gap:14px}
+  .grade{width:64px;height:64px;border-radius:14px; display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(52,211,153,.10); border:1px solid rgba(52,211,153,.35)}
+  .grade .g{font-family:var(--mono); font-size:24px; font-weight:800; color:var(--emerald-400); line-height:1}
+  .grade .n{font-family:var(--mono); font-size:10px; color:var(--slate-400); margin-top:3px}
+  .gauge .meta{flex:1}
+  .track{height:7px; border-radius:999px; background:var(--slate-800); overflow:hidden; margin:8px 0 5px}
+  .track i{display:block; height:100%; width:86%; background:linear-gradient(90deg,var(--emerald-500),var(--emerald-400))}
+  .est{display:flex; align-items:baseline; justify-content:space-between; margin-top:2px}
+  .est .v{font-family:var(--mono); font-size:21px; font-weight:800; color:var(--slate-100)}
+  .est .d{font-family:var(--mono); font-size:12px; color:var(--emerald-400)}
+
+  /* summary rows */
+  .rows{display:flex; flex-direction:column; gap:9px}
+  .rows .r{display:flex; justify-content:space-between; font-size:12.5px}
+  .rows .r .k{color:var(--slate-500)} .rows .r .v{font-family:var(--mono); color:var(--slate-200)}
+  .rows .r .v.em{color:var(--emerald-400)} .rows .r .v.am{color:var(--amber-400)}
+
+  /* social proof line */
+  .proof{display:flex; gap:14px; margin-top:11px; font-size:11.5px; color:var(--slate-500)}
+  .proof b{color:var(--slate-300); font-family:var(--mono)}
+
+  /* datasheet (collapsed groups) */
+  details.ds{border:1px solid var(--slate-800); border-radius:9px; overflow:hidden; background:rgba(15,23,42,.4)}
+  details.ds + details.ds{margin-top:8px}
+  details.ds > summary{list-style:none; cursor:pointer; padding:11px 13px; display:flex; align-items:center; justify-content:space-between;
+    font-size:12.5px; color:var(--slate-200); font-weight:600}
+  details.ds > summary::-webkit-details-marker{display:none}
+  details.ds .grid{padding:2px 13px 13px; display:grid; grid-template-columns:1fr 1fr; gap:8px 22px}
+  details.ds .grid .r{display:flex; justify-content:space-between; font-size:12px; border-bottom:1px solid rgba(30,41,59,.5); padding:5px 0}
+  details.ds .grid .r .k{color:var(--slate-500)} details.ds .grid .r .v{font-family:var(--mono); color:var(--slate-300)}
+  .chev{transition:transform .2s} details[open] .chev{transform:rotate(180deg)}
+
+  /* schools/amenities mini */
+  .mini2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .scrow{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; padding:7px 0; border-top:1px solid rgba(30,41,59,.55)}
+  .scrow:first-of-type{border-top:0}
+  .scrow .nm{color:var(--slate-300)} .scrow .sc{font-family:var(--mono); color:var(--emerald-400)}
+  .scrow .km{font-family:var(--mono); color:var(--slate-500)}
+
+  /* history */
+  .histchart{height:120px; position:relative; border:1px solid var(--slate-800); border-radius:9px; overflow:hidden;
+    background:radial-gradient(120% 100% at 50% 0,rgba(34,211,238,.06),transparent 60%),#0c1424}
+  .dombar{margin-top:12px}
+  .domtrack{height:30px; border-radius:7px; background:rgba(34,211,238,.10); border:1px solid rgba(34,211,238,.28); display:flex; align-items:center; padding:0 12px; color:var(--cyan-400); font-family:var(--mono); font-size:12px; font-weight:600}
+  table.hist{width:100%; border-collapse:collapse; font-size:12px}
+  table.hist th{text-align:left; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--slate-500); font-weight:600; padding:7px 6px; border-bottom:1px solid var(--slate-800)}
+  table.hist td{padding:8px 6px; border-bottom:1px solid rgba(30,41,59,.5); font-family:var(--mono); color:var(--slate-300)}
+  table.hist td.ev{font-weight:700}
+  td .sold{color:var(--amber-300)} td .list{color:var(--emerald-400)} td .pc{color:var(--amber-400)} td .term{color:var(--rose-400)}
+
+  /* comps */
+  .comps{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .comp{border:1px solid var(--slate-800); border-radius:10px; overflow:hidden; background:rgba(15,23,42,.5)}
+  .comp .ph{aspect-ratio:16/10; background:#13233b; position:relative}
+  .comp .ph img{width:100%;height:100%;object-fit:cover}
+  .comp .ph .tag{position:absolute; left:8px; top:8px; font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.06em; padding:2px 7px; border-radius:5px}
+  .comp .ph .tag.sold{color:var(--rose-400); background:rgba(244,63,94,.16)}
+  .comp .ph .tag.live{color:var(--emerald-400); background:rgba(16,185,129,.16)}
+  .comp .bd{padding:10px 11px}
+  .comp .bd .p{font-family:var(--mono); font-weight:800; color:var(--slate-100); font-size:14px}
+  .comp .bd .a{font-size:11.5px; color:var(--slate-400); margin-top:2px}
+  .comp .bd .m{font-size:10.5px; color:var(--slate-500); margin-top:5px; font-family:var(--mono)}
+
+  .notice{margin-top:20px; font-size:10.5px; line-height:1.5; color:var(--slate-600); border-top:1px solid var(--slate-800); padding-top:12px}
+
+  /* desktop grid */
+  .grid7030{display:grid; grid-template-columns:1fr; gap:18px}
+  @media(min-width:1100px){ .grid7030{grid-template-columns:7fr 3fr} }
+  .rail{display:flex; flex-direction:column; gap:14px}
+  .rail .stickytag{display:flex; justify-content:flex-end}
+  .ident-bar{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; padding-bottom:16px; border-bottom:1px solid var(--slate-800); margin-bottom:18px}
+
+  /* ───── phone ───── */
+  .phone{width:404px; max-width:100%; border:10px solid #0b1220; border-radius:42px; overflow:hidden; position:relative;
+    box-shadow:0 30px 90px rgba(0,0,0,.6); background:var(--slate-950)}
+  .phone .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:150px; height:26px; background:#0b1220; border-radius:0 0 16px 16px; z-index:40}
+  .phone .scroller{height:850px; overflow-y:auto; position:relative}
+  .phone .scroller::-webkit-scrollbar{width:0}
+  .mhead{position:sticky; top:0; z-index:30; background:rgba(8,12,22,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--slate-800);
+    padding:30px 16px 9px; display:flex; align-items:center; gap:10px}
+  .mhead .back{color:var(--slate-400)}
+  .mhead .ttl{font-size:13px; font-weight:700; color:var(--slate-100)} .mhead .sub{font-family:var(--mono); font-size:11px; color:var(--slate-400)}
+  .chips{position:sticky; top:64px; z-index:20; display:flex; gap:7px; padding:9px 14px; overflow-x:auto; background:rgba(6,10,20,.9); border-bottom:1px solid var(--slate-800)}
+  .chips span{flex:none; font-size:11px; letter-spacing:.04em; color:var(--slate-400); border:1px solid var(--slate-800); border-radius:999px; padding:4px 11px; background:#0d1626}
+  .chips span.on{color:var(--cyan-400); border-color:rgba(34,211,238,.4); background:rgba(34,211,238,.08)}
+  .mbody{padding:14px}
+  .mbody > *{margin-bottom:14px}
+  .mbar{position:sticky; bottom:0; z-index:35; display:flex; gap:10px; padding:11px 14px calc(11px + env(safe-area-inset-bottom));
+    background:rgba(8,12,22,.95); backdrop-filter:blur(8px); border-top:1px solid var(--slate-800)}
+  .order-note{font-size:11px; color:var(--slate-600); font-family:var(--mono); margin:2px 0 7px; letter-spacing:.04em}
+  .num{display:inline-flex; width:17px;height:17px; align-items:center; justify-content:center; border-radius:50%; background:var(--slate-800); color:var(--slate-300); font-family:var(--mono); font-size:10px; margin-right:6px}
+</style>
+</head>
+<body>
+<div class="board">
+  <header>
+    <h1>PURE<span class="dot">PROPERTY</span>.ca — Listing page, <span style="color:var(--cyan-400)">reordered</span></h1>
+    <p>Proposed element order for the individual listing page, in the live design language. Sequenced around the three-beat decision loop — <b style="color:var(--slate-300)">Triage → Judge → Commit</b> — with the financial cockpit pulled up so it isn't buried (esp. on mobile). Sample: an active, relisted listing so the full cockpit renders.</p>
+    <div class="legend">
+      <span>🟢 <b>Triage</b> photos · identity · price</span>
+      <span>🔵 <b>Judge</b> The Read · Deal Score · Est. Sale · risks · history</span>
+      <span>🟡 <b>Commit</b> sticky CTA · social proof</span>
+    </div>
+  </header>
+
+  <!-- ════════════════════════ DESKTOP ════════════════════════ -->
+  <div class="lane-title">Desktop · 70 / 30, sticky cockpit</div>
+  <div class="frame desktop">
+    <div class="chrome">
+      <span class="dot3"><i></i><i></i><i></i></span>
+      <span class="urlbar"><svg class="ico sm lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> localhost:3000/properties/N13485582</span>
+    </div>
+    <div class="appnav">
+      <span class="brand">PURE<span class="dot">PROPERTY</span>.ca</span>
+      <span class="search"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Vaughan, ON</span>
+      <span class="links"><a class="on">Dashboard</a><a>Map Terminal</a><a>Market Trends</a><span class="user">BLACKJ2991</span></span>
+    </div>
+
+    <div class="page">
+      <!-- breadcrumb + persistent actions -->
+      <div class="crumbs">
+        <a>Command Center</a><span class="muted">/</span><a>Homes for sale in Vaughan</a>
+        <span style="margin-left:auto; display:flex; gap:9px">
+          <button class="btn save" style="height:34px"><svg class="ico sm" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save</button>
+          <button class="btn" style="height:34px"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg> Share</button>
+        </span>
+      </div>
+
+      <!-- IDENTITY BAR: anchor + verdict in one second -->
+      <div class="ident-bar">
+        <div class="ident">
+          <div style="display:flex; gap:8px; margin-bottom:9px">
+            <span class="chip suite">SUITE POTENTIAL</span>
+            <span class="chip relist">RELISTED · NEW MLS#</span>
+          </div>
+          <h1>127 Via Toscana, Vaughan, ON L4H 3C1</h1>
+          <div class="priceline">
+            <span class="price">$1,679,900</span>
+            <span class="statusbadge">FOR SALE</span>
+            <span class="chip deal">B+ DEAL · est $1.72M</span>
+            <span class="muted" style="font-size:13px">Vaughan, Detached · Listed 12 days ago</span>
+          </div>
+          <div class="specrow">
+            <span class="s"><svg class="ico" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="M2 17v-4a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v4M2 17h20M2 17v3M22 17v3M4 10V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/></svg> <span class="v">4</span> Beds</span>
+            <span class="s"><svg class="ico" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M4 12V6a2 2 0 0 1 2-2 2 2 0 0 1 2 2M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/></svg> <span class="v">4</span> Baths</span>
+            <span class="s"><svg class="ico" viewBox="0 0 24 24" style="color:var(--purple-400)"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg> <span class="v">2,450</span> Sqft</span>
+            <span class="s"><svg class="ico" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M5 17a2 2 0 1 0 0-.01M19 17a2 2 0 1 0 0-.01M3 17v-4l2-5h12l2 5v4M5 13h14"/></svg> <span class="v">2</span> Parking</span>
+            <span class="brk"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg> Listed by Royal LePage Your Community Realty</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 70 / 30 -->
+      <div class="grid7030">
+        <!-- LEFT -->
+        <div>
+          <!-- HERO GALLERY -->
+          <div class="gallery" style="margin-bottom:16px">
+            <div class="hero">
+              <img id="heroImg" src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1280&q=80&auto=format&fit=crop" alt="exterior" onerror="this.style.display='none'">
+              <span class="save"><svg class="ico" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+              <span class="nav l">‹</span><span class="nav r">›</span>
+              <span class="count">1 / 32</span>
+            </div>
+            <div class="thumbs">
+              <div onclick="swap(this)"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#13233b'"></div>
+              <div onclick="swap(this)"><img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#15263d'"></div>
+              <div onclick="swap(this)"><img src="https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=400&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#13233b'"></div>
+              <div onclick="swap(this)"><img src="https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=400&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#15263d'"></div>
+              <div class="more">+27</div>
+            </div>
+          </div>
+
+          <!-- THE READ -->
+          <div class="card read">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> The Read
+              <span class="persona"><svg class="ico sm" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg> Smart Homebuyer ▾</span>
+            </div>
+            <p>Priced ~3% under the last three comparable sales on the street, and the finished walk-out basement reads <b style="color:var(--cyan-300,#67e8f9)">suite-ready</b>. Two prior campaigns terminated before this relist — soft demand at the old ask, so there's likely room to negotiate. Taxes and fees are average for the pocket.</p>
+            <div class="more">Why this verdict ▾</div>
+          </div>
+
+          <!-- THINGS TO KNOW -->
+          <div class="card ttk">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Things to Know <span class="muted" style="font-weight:600">· 3</span></div>
+            <div class="flag cyan"><svg class="ico sm ic" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg><div>Relisted under a new MLS# <small>Previously listed as N13135326 — terminated after 20 days. This is the same property, fresh campaign.</small></div></div>
+            <div class="flag amber"><svg class="ico sm ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>Backs onto a stormwater pond <small>Privacy upside, but check the grading / drainage on inspection.</small></div></div>
+            <div class="flag rose"><svg class="ico sm ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div>Furnace ~16 yrs old <small>Near typical end-of-life — budget a possible replacement.</small></div></div>
+          </div>
+
+          <!-- DESCRIPTION -->
+          <div class="card">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M4 6h16M4 12h16M4 18h10"/></svg> Description</div>
+            <p style="margin:0; font-size:13px; line-height:1.6; color:var(--slate-300)">Stunning 4-bedroom detached in sought-after Vellore Village. Soaring 9ft ceilings, hardwood throughout, chef's kitchen with quartz counters and a walk-out to a landscaped yard. Professionally finished basement with separate entrance — ideal for an in-law suite or rental potential…
+              <span style="color:var(--cyan-400)"> more ▾</span></p>
+          </div>
+
+          <!-- DETAILS / DATA SHEET (collapsed groups) -->
+          <div style="margin-top:14px">
+            <div class="lab" style="margin-bottom:9px">Property data sheet</div>
+            <details class="ds" open>
+              <summary>Building &amp; interior <svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+              <div class="grid">
+                <div class="r"><span class="k">Style</span><span class="v">2-Storey</span></div>
+                <div class="r"><span class="k">Age</span><span class="v">16–30 yrs</span></div>
+                <div class="r"><span class="k">Kitchens</span><span class="v">1 + 1</span></div>
+                <div class="r"><span class="k">Basement</span><span class="v">Fin · Sep entr.</span></div>
+                <div class="r"><span class="k">Heat</span><span class="v">Forced air · gas</span></div>
+                <div class="r"><span class="k">Cooling</span><span class="v">Central air</span></div>
+              </div>
+            </details>
+            <details class="ds">
+              <summary>Lot &amp; exterior <svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+              <div class="grid"><div class="r"><span class="k">Frontage</span><span class="v">38 ft</span></div><div class="r"><span class="k">Depth</span><span class="v">95 ft</span></div></div>
+            </details>
+            <details class="ds">
+              <summary>Financial <svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+              <div class="grid"><div class="r"><span class="k">Taxes (yr)</span><span class="v">$6,480</span></div><div class="r"><span class="k">Assoc. fee</span><span class="v">None</span></div></div>
+            </details>
+          </div>
+
+          <!-- ROOMS + SCHOOLS/AMENITIES -->
+          <div class="card" style="margin-top:14px">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--violet-400)"><path d="M3 3h18v18H3zM3 9h18M9 21V9M15 9v12"/></svg> Room dimensions · to scale</div>
+            <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:6px; height:130px">
+              <div style="border:1px solid var(--slate-700); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--slate-400)">Living 18'×14'</div>
+              <div style="display:grid; grid-template-rows:1fr 1fr; gap:6px">
+                <div style="border:1px solid var(--slate-700); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--slate-400)">Kitchen 12'×11'</div>
+                <div style="border:1px solid var(--slate-700); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--slate-400)">Primary 15'×13'</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mini2" style="margin-top:14px">
+            <div class="card">
+              <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="m22 10-10-5L2 10l10 5 10-5zM6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></svg> Schools</div>
+              <div class="scrow"><span class="nm">Vellore Woods PS</span><span class="sc">8.4 <span class="km">· 0.6km</span></span></div>
+              <div class="scrow"><span class="nm">St. Veronica CES</span><span class="sc">7.9 <span class="km">· 1.1km</span></span></div>
+              <div class="scrow"><span class="nm">Maple HS</span><span class="sc">8.1 <span class="km">· 1.8km</span></span></div>
+            </div>
+            <div class="card">
+              <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg> Amenities</div>
+              <div class="scrow"><span class="nm">Longo's</span><span class="km">0.8 km</span></div>
+              <div class="scrow"><span class="nm">Vellore Village CC</span><span class="km">1.2 km</span></div>
+              <div class="scrow"><span class="nm">Hwy 400 access</span><span class="km">2.4 km</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: STICKY COCKPIT -->
+        <div class="rail">
+          <div class="stickytag"><span class="pill-sticky">sticky · follows scroll</span></div>
+
+          <div class="card cockpit">
+            <div class="h3" style="margin-bottom:13px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg> Deal Score</div>
+            <div class="gauge">
+              <div class="grade"><span class="g">B+</span><span class="n">86/100</span></div>
+              <div class="meta">
+                <div style="font-size:12px; color:var(--slate-300)">Strong buy for <b style="color:var(--cyan-300,#67e8f9)">Smart Homebuyer</b></div>
+                <div class="track"><i></i></div>
+                <div style="font-size:11px; color:var(--slate-500)">Top 14% of active comparable listings</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Estimated Sale Price</div>
+            <div class="est"><span class="v">$1,724,000</span><span class="d">+2.6% vs ask</span></div>
+            <div style="font-size:11px; color:var(--slate-500); margin-top:6px">List-anchored estimate · comparable-sales band $1.66M–$1.79M</div>
+          </div>
+
+          <div class="card" style="border-color:rgba(34,211,238,.25)">
+            <button class="btn primary block" style="height:46px; font-size:14px"><svg class="ico" viewBox="0 0 24 24"><path d="M4 4h16v12H5.2L4 17.5z"/></svg> Contact Agent</button>
+            <div style="display:flex; gap:10px; margin-top:10px">
+              <button class="btn save block"><svg class="ico sm" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save</button>
+              <button class="btn block"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg> Share</button>
+            </div>
+            <div class="proof">
+              <span><svg class="ico sm" viewBox="0 0 24 24" style="display:inline;vertical-align:-2px"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> <b>14</b> viewing today</span>
+              <span><svg class="ico sm" viewBox="0 0 24 24" style="display:inline;vertical-align:-2px"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> <b>6</b> watching</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--slate-300)"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg> Asset Summary</div>
+            <div class="rows">
+              <div class="r"><span class="k">List Price</span><span class="v em">$1,679,900</span></div>
+              <div class="r"><span class="k">Est. Cap Rate</span><span class="v">3.8%</span></div>
+              <div class="r"><span class="k">Annual Taxes</span><span class="v">$6,480</span></div>
+              <div class="r"><span class="k">Monthly Fees</span><span class="v">None</span></div>
+              <div class="r"><span class="k">True DOM</span><span class="v am">12 days</span></div>
+            </div>
+          </div>
+
+          <details class="ds">
+            <summary style="padding:14px 15px"><span style="display:flex;align-items:center;gap:8px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="M3 3v18h18M9 17V9M13 17V5M17 17v-6"/></svg> Underwriting Sandbox</span> <svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <div style="padding:0 15px 15px; font-size:12px; color:var(--slate-500)">Adjust down payment, rate &amp; rent to model cap rate, cash flow and break-even. <span style="color:var(--cyan-400)">Open ▸</span></div>
+          </details>
+
+          <div class="card">
+            <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M3 17 9 11l4 4 8-8M21 7v6M21 7h-6"/></svg> Force Appreciation</div>
+            <div style="font-size:12px; color:var(--slate-400)">Suite conversion ROI: <span class="mono" style="color:var(--emerald-400)">+$118k</span> value on <span class="mono">$62k</span> spend.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULL-WIDTH PROPERTY HISTORY -->
+      <div style="margin-top:24px">
+        <div class="h3" style="font-size:13px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> Property History</div>
+        <div class="histchart">
+          <svg viewBox="0 0 800 120" preserveAspectRatio="none" style="width:100%;height:100%">
+            <polyline points="20,40 220,40 220,58 470,58 470,30 780,30" fill="none" stroke="#22d3ee" stroke-width="2.5"/>
+            <circle cx="220" cy="58" r="4" fill="#fb7185"/><circle cx="470" cy="30" r="4" fill="#34d399"/>
+            <text x="222" y="76" fill="#fb7185" font-size="11" font-family="monospace">Terminated</text>
+            <text x="430" y="20" fill="#34d399" font-size="11" font-family="monospace">Relisted</text>
+          </svg>
+        </div>
+        <div class="dombar"><div class="domtrack">True DOM 12d  ·  $1,729,000 → $1,679,900 (−2.9% across 2 campaigns)</div></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:16px">
+          <div class="card" style="padding:8px 13px 13px">
+            <div class="lab" style="margin:8px 0">Listing History · 3×</div>
+            <table class="hist">
+              <thead><tr><th>Date</th><th>Event</th><th style="text-align:right">Price</th><th style="text-align:right">MLS#</th></tr></thead>
+              <tbody>
+                <tr><td>Jun 6, 2026</td><td class="ev"><span class="list">Listed for Sale</span></td><td style="text-align:right">$1,679,900</td><td style="text-align:right">N13485582</td></tr>
+                <tr><td>May 5, 2026</td><td class="ev"><span class="term">Terminated</span></td><td style="text-align:right">$1,729,000</td><td style="text-align:right">N13135326</td></tr>
+                <tr><td>Apr 2, 2026</td><td class="ev"><span class="list">Listed for Sale</span></td><td style="text-align:right">$1,729,000</td><td style="text-align:right">N13135326</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card" style="padding:8px 13px 13px">
+            <div class="lab" style="margin:8px 0">Sale History · 1</div>
+            <table class="hist">
+              <thead><tr><th>Date</th><th style="text-align:right">List</th><th style="text-align:right">Sold</th><th style="text-align:right">Type</th></tr></thead>
+              <tbody><tr><td>Aug 18, 2019</td><td style="text-align:right">$1,180,000</td><td style="text-align:right" class="sold">$1,212,000</td><td style="text-align:right">Detached</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPS -->
+      <div style="margin-top:24px">
+        <div class="h3" style="font-size:13px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="M3 21h18M5 21V7l5-4 5 4M15 21V11l4-3 0 13M8 9h.01M8 13h.01M8 17h.01"/></svg> Comparable Properties</div>
+        <div class="comps">
+          <div class="comp"><div class="ph"><img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=500&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#15263d'"><span class="tag sold">SOLD</span></div><div class="bd"><div class="p">$1,705,000</div><div class="a">141 Via Toscana, Vaughan</div><div class="m">4bd · 4ba · sold 11d ago · 101% ask</div></div></div>
+          <div class="comp"><div class="ph"><img src="https://images.unsplash.com/photo-1576941089067-2de3c901e126?w=500&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#13233b'"><span class="tag live">FOR SALE</span></div><div class="bd"><div class="p">$1,749,000</div><div class="a">98 Marc Santi Blvd, Vaughan</div><div class="m">4bd · 3ba · 8 days on market</div></div></div>
+          <div class="comp"><div class="ph"><img src="https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=500&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#15263d'"><span class="tag sold">SOLD</span></div><div class="bd"><div class="p">$1,640,000</div><div class="a">212 Fiori Dr, Vaughan</div><div class="m">4bd · 4ba · sold 24d ago · 98% ask</div></div></div>
+        </div>
+      </div>
+
+      <div class="notice">IDX/VOW — Listing data displayed under the TRREB VOW &amp; IDX rules for your personal, non-commercial use. Estimated values are model-derived and not an appraisal. Brokerage: Royal LePage Your Community Realty.</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════ MOBILE ════════════════════════ -->
+  <div class="lane-title">Mobile · single column — cockpit lifted out of the basement</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="scroller">
+      <!-- sticky mini-header -->
+      <div class="mhead">
+        <span class="back">‹</span>
+        <div><div class="ttl">127 Via Toscana</div><div class="sub">$1,679,900 · For Sale</div></div>
+        <span style="margin-left:auto; display:flex; gap:8px">
+          <span style="color:var(--emerald-400)"><svg class="ico" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+          <span style="color:var(--slate-400)"><svg class="ico" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg></span>
+        </span>
+      </div>
+      <!-- section chips -->
+      <div class="chips"><span class="on">Overview</span><span>Money</span><span>Details</span><span>History</span><span>Comps</span></div>
+
+      <div class="mbody">
+        <!-- 1 · HERO -->
+        <div class="order-note"><span class="num">1</span>Triage — the hook, first</div>
+        <div class="hero" style="margin-bottom:6px">
+          <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=80&auto=format&fit=crop" onerror="this.style.display='none'">
+          <span class="nav l">‹</span><span class="nav r">›</span><span class="count">1 / 32</span>
+        </div>
+
+        <!-- 2 · IDENTITY -->
+        <div class="card">
+          <div style="display:flex; gap:7px; margin-bottom:8px"><span class="chip suite">SUITE POTENTIAL</span><span class="chip relist">RELISTED</span></div>
+          <h1 style="font-size:18px; font-weight:800; color:var(--slate-100); margin:0 0 8px">127 Via Toscana, Vaughan</h1>
+          <div class="priceline"><span class="price" style="font-size:25px">$1,679,900</span><span class="statusbadge">FOR SALE</span></div>
+          <div style="margin-top:8px"><span class="chip deal">B+ DEAL · est $1.72M</span></div>
+          <div class="specrow" style="margin-top:11px; font-size:12.5px">
+            <span class="s" style="gap:5px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--emerald-400)"><path d="M2 17v-4a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v4M2 17h20"/></svg><span class="v">4</span></span>
+            <span class="s" style="gap:5px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M4 12V6a2 2 0 0 1 4 0M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/></svg><span class="v">4</span></span>
+            <span class="s" style="gap:5px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--purple-400)"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg><span class="v">2,450</span></span>
+            <span class="s" style="gap:5px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M3 17v-4l2-5h12l2 5v4M5 13h14"/></svg><span class="v">2</span></span>
+          </div>
+          <div style="margin-top:9px; font-size:11.5px; color:var(--slate-400)">Listed by Royal LePage Your Community Realty</div>
+          <div style="display:flex; gap:9px; margin-top:12px">
+            <button class="btn save block" style="height:38px"><svg class="ico sm" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save</button>
+            <button class="btn block" style="height:38px"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg> Share</button>
+          </div>
+        </div>
+
+        <!-- 3 · THE READ -->
+        <div class="card read">
+          <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> The Read <span class="persona" style="margin-left:auto">Homebuyer ▾</span></div>
+          <p>~3% under recent street comps; finished walk-out basement reads suite-ready. Two prior campaigns terminated — likely negotiating room.</p>
+          <div class="more">Why ▾</div>
+        </div>
+
+        <!-- 4 · DEAL COCKPIT (moved up) -->
+        <div class="order-note"><span class="num">4</span>Judge — financial cockpit, <b style="color:var(--cyan-400)">pulled up from dead-last</b></div>
+        <div class="card cockpit">
+          <div class="gauge" style="margin-bottom:13px">
+            <div class="grade"><span class="g">B+</span><span class="n">86</span></div>
+            <div class="meta"><div style="font-size:12px;color:var(--slate-300)">Strong buy · Smart Homebuyer</div><div class="track"><i></i></div>
+              <div class="est"><span class="v" style="font-size:18px">Est $1,724,000</span><span class="d">+2.6%</span></div></div>
+          </div>
+          <div class="rows" style="border-top:1px solid var(--slate-800); padding-top:11px">
+            <div class="r"><span class="k">Est. Cap Rate</span><span class="v">3.8%</span></div>
+            <div class="r"><span class="k">True DOM</span><span class="v am">12 days</span></div>
+            <div class="r"><span class="k">Taxes · Fees</span><span class="v">$6,480 · $0</span></div>
+          </div>
+          <button class="btn block" style="margin-top:12px; height:38px"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 3v18h18M9 17V9M13 17V5M17 17v-6"/></svg> Open underwriting ▸</button>
+        </div>
+
+        <!-- 5 · THINGS TO KNOW -->
+        <div class="card ttk">
+          <div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Things to Know · 3</div>
+          <div class="flag cyan"><svg class="ico sm ic" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg><div>Relisted under a new MLS# <small>Was N13135326 (terminated after 20d).</small></div></div>
+          <div class="flag amber"><svg class="ico sm ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3z"/></svg><div>Backs onto a stormwater pond</div></div>
+          <div class="flag rose"><svg class="ico sm ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div>Furnace ~16 yrs old</div></div>
+        </div>
+
+        <!-- 6 · DESCRIPTION -->
+        <div class="card"><div class="h3"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--amber-400)"><path d="M4 6h16M4 12h16M4 18h10"/></svg> Description</div>
+          <p style="margin:0;font-size:12.5px;line-height:1.55;color:var(--slate-300)">Stunning 4-bed detached in Vellore Village. 9ft ceilings, chef's kitchen, finished basement w/ separate entrance… <span style="color:var(--cyan-400)">more ▾</span></p></div>
+
+        <!-- 7 · DETAILS (collapsed) -->
+        <details class="ds"><summary style="padding:13px 14px"><span style="display:flex;align-items:center;gap:8px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--slate-300)"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg> Property data sheet</span><svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="grid"><div class="r"><span class="k">Style</span><span class="v">2-Storey</span></div><div class="r"><span class="k">Age</span><span class="v">16–30y</span></div><div class="r"><span class="k">Basement</span><span class="v">Fin · Sep</span></div><div class="r"><span class="k">Heat</span><span class="v">Gas FA</span></div></div>
+        </details>
+        <!-- 8 · ROOMS / SCHOOLS (collapsed) -->
+        <details class="ds"><summary style="padding:13px 14px"><span style="display:flex;align-items:center;gap:8px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--violet-400)"><path d="M3 3h18v18H3zM9 21V9"/></svg> Rooms · Schools · Amenities</span><svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div style="padding:0 14px 13px"><div class="scrow"><span class="nm">Vellore Woods PS</span><span class="sc">8.4 · 0.6km</span></div><div class="scrow"><span class="nm">Longo's</span><span class="km">0.8 km</span></div></div>
+        </details>
+        <!-- 9 · HISTORY (collapsed) -->
+        <details class="ds"><summary style="padding:13px 14px"><span style="display:flex;align-items:center;gap:8px"><svg class="ico sm" viewBox="0 0 24 24" style="color:var(--cyan-400)"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> Property History · True DOM 12d</span><svg class="ico sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div style="padding:0 14px 13px"><table class="hist"><tbody>
+            <tr><td>Jun 6</td><td class="ev"><span class="list">Listed</span></td><td style="text-align:right">$1,679,900</td></tr>
+            <tr><td>May 5</td><td class="ev"><span class="term">Terminated</span></td><td style="text-align:right">$1,729,000</td></tr>
+          </tbody></table></div>
+        </details>
+
+        <!-- 10 · COMPS -->
+        <div class="order-note"><span class="num">10</span>Peak-end — keep exploring</div>
+        <div style="display:flex; gap:11px; overflow-x:auto; padding-bottom:4px">
+          <div class="comp" style="flex:0 0 175px"><div class="ph"><img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#15263d'"><span class="tag sold">SOLD</span></div><div class="bd"><div class="p">$1,705,000</div><div class="a">141 Via Toscana</div></div></div>
+          <div class="comp" style="flex:0 0 175px"><div class="ph"><img src="https://images.unsplash.com/photo-1576941089067-2de3c901e126?w=400&q=70&auto=format&fit=crop" onerror="this.parentElement.style.background='#13233b'"><span class="tag live">FOR SALE</span></div><div class="bd"><div class="p">$1,749,000</div><div class="a">98 Marc Santi Blvd</div></div></div>
+        </div>
+
+        <div class="notice">IDX/VOW — personal, non-commercial use. Estimates are model-derived, not an appraisal.</div>
+      </div>
+
+      <!-- sticky bottom action bar -->
+      <div class="mbar">
+        <button class="btn save block"><svg class="ico sm" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved</button>
+        <button class="btn primary block"><svg class="ico sm" viewBox="0 0 24 24"><path d="M4 4h16v12H5.2L4 17.5z"/></svg> Contact</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // gallery: swap hero with clicked thumbnail (desktop)
+  function swap(el){
+    var img = el.querySelector('img'); if(!img) return;
+    var hero = document.getElementById('heroImg');
+    var tmp = hero.src; hero.src = img.src; img.src = tmp;
+    hero.style.display = '';
+  }
+</script>
+</body>
+</html>
