@@ -130,9 +130,12 @@ export default function AlphaMap({
   // mistakes an auto-fit/cluster-expand animation for a user pan (which would loop).
   const markProgrammatic = useCallback((durationMs: number) => {
     programmaticRef.current = true;
+    // Outlast the transition AND the 350ms settle debounce (+ jitter), so a bounds
+    // report scheduled during an auto-fit doesn't fire after programmaticRef expires
+    // (which would re-query the auto-framed viewport → search→fit→search loop).
     setTimeout(() => {
       programmaticRef.current = false;
-    }, durationMs + 150);
+    }, durationMs + 500);
   }, []);
 
   // Compute the padded viewport extent and push it to the store.
@@ -711,7 +714,10 @@ export default function AlphaMap({
         params.interactionState.isZooming)
     );
     isInteracting.current = interacting;
-    if (interacting) userMovedRef.current = true;
+    // Only a GENUINE user gesture flags a re-query. A programmatic transition (auto-fit
+    // / fly) can report isZooming as its zoom animates — guarding on !programmaticRef
+    // keeps those from ever setting userMovedRef, so the post-fit settle never re-queries.
+    if (interacting && !programmaticRef.current) userMovedRef.current = true;
     // Debounced settle: re-query the new viewport, but only for genuine user
     // movement (programmatic auto-fit flies are flagged and skipped → no loop).
     if (reportTimer.current) clearTimeout(reportTimer.current);

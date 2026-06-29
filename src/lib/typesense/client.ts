@@ -44,9 +44,13 @@ export function getTypesenseClient(): Client {
       // The old 30s timeout turned that into a 30s "Network Error" that blanked the
       // terminal. Fail fast (8s) and let the client retry on a FRESH connection — which
       // succeeds immediately since the cluster itself is healthy.
-      connectionTimeoutSeconds: 8,   // was 30
-      numRetries: 3,                 // retry a stuck conn on a fresh one (default would do fewer)
-      retryIntervalSeconds: 0.5,     // brief backoff between attempts
+      // Balance: 8s was too aggressive — a legitimately heavy query that crossed 8s
+      // got aborted and retry-stormed (3×8s) instead of completing. 15s tolerates an
+      // occasional slow query while still failing a genuinely stuck (stale keep-alive)
+      // connection so the retry can land on a fresh one.
+      connectionTimeoutSeconds: 15,  // was 30, then briefly 8
+      numRetries: 2,
+      retryIntervalSeconds: 1,
       healthcheckIntervalSeconds: 15, // re-probe a node marked unhealthy sooner (default 60)
     });
   }
@@ -301,6 +305,9 @@ export interface SearchOptions {
   geoPolygon?: [number, number][];  // Commute isochrone ring in [lat, lng] order
   facetBy?: string;
   maxFacetValues?: number;  // facet values to return (default 50; city hubs need all districts)
+  /** Typesense exclude_fields. Defaults to the heavy detail-only fields (RawImages /
+   *  RawRooms) so bulk list/map fetches stay light; pass "" to fetch every field. */
+  excludeFields?: string;
 }
 
 export interface SearchResult {
@@ -335,7 +342,8 @@ export async function searchListings(
     rawFilterBy,
     geoPolygon,
     facetBy,
-    maxFacetValues
+    maxFacetValues,
+    excludeFields
   } = options;
 
   // TRREB §4: never let any caller exceed the 100-listing display cap (audit LOW-1).
@@ -458,6 +466,13 @@ export async function searchListings(
     searchParams.facet_by = facetBy;
     searchParams.max_facet_values = maxFacetValues ?? 50;
   }
+
+  // Trim the payload. RawImages (the full photo-URL gallery — ~1.1 MB per 100 docs)
+  // and RawRooms are detail-page-only; bulk list/map views never render them, yet
+  // shipping them made every terminal query ~1.7 MB and multi-second. Default-exclude
+  // both (~75% smaller). A caller that genuinely needs them passes excludeFields: "".
+  const exclude = excludeFields ?? "RawImages,RawRooms";
+  if (exclude) searchParams.exclude_fields = exclude;
 
   // Apply filter string
   if (filterParts.length > 0) {

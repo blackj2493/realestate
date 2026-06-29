@@ -114,7 +114,10 @@ export async function getCompareData(ids: string[]): Promise<CompareData> {
   if (ids.length === 0) return { listings: [], estimates: {}, salePrices: {} };
 
   const [listingsRes, estimates] = await Promise.all([
-    searchListings({ query: "*", rawFilterBy: `id:[${ids.join(",")}]`, perPage: ids.length }),
+    // excludeFields:"" overrides searchListings' default (which drops RawImages to keep
+    // bulk map/list fetches light) — Compare needs the full photo gallery, and it's only
+    // a handful of docs by id, so the heavy fields are cheap here.
+    searchListings({ query: "*", rawFilterBy: `id:[${ids.join(",")}]`, perPage: ids.length, excludeFields: "" }),
     fetchEstimates(ids),
   ]);
 
