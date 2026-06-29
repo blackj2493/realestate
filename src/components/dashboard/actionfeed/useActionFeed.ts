@@ -25,6 +25,9 @@ import type { PersonaType } from "@/lib/personas/personaConfig";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 
 export type FeedKind =
+  | "WATCH_SOLD"
+  | "WATCH_LEASED"
+  | "WATCH_RELISTED"
   | "WATCH_OFF_MARKET"
   | "WATCH_PRICE_DROP"
   | "WATCH_STALE"
@@ -46,11 +49,19 @@ export interface FeedItem {
 }
 
 const CHIP = {
+  sold: "text-rose-400 bg-rose-400/10 border-rose-400/30",
+  leased: "text-violet-400 bg-violet-400/10 border-violet-400/30",
+  relisted: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
   off: "text-amber-400 bg-amber-400/10 border-amber-400/30",
   drop: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
   stale: "text-rose-400 bg-rose-400/10 border-rose-400/30",
   new: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
 } as const;
+
+/** "terminated" → "Terminated". */
+function titleCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 /** The active persona's lead-board filter clause — defines "relevant" new listings. */
 function personaLeadFilter(persona: PersonaType): string | undefined {
@@ -76,11 +87,17 @@ export function useActionFeed({
   const [newItems, setNewItems] = useState<FeedItem[]>([]);
   const [newLoading, setNewLoading] = useState(false);
 
-  // Keys already on the watchlist — never duplicate them as "new".
-  const watchKeys = useMemo(
-    () => new Set(changes.map((c) => c.item.listing_key)),
-    [changes]
-  );
+  // Keys already on the watchlist — never duplicate them as "new". A relisted item's
+  // NEW MLS# is itself an active listing, so fold it in too or it shows up twice
+  // (once as "Relisted", once as "New in your market").
+  const watchKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of changes) {
+      s.add(c.item.listing_key);
+      if (c.disposition?.kind === "relisted") s.add(c.disposition.newKey);
+    }
+    return s;
+  }, [changes]);
 
   const regionsKey = regions.join("|");
   useEffect(() => {
@@ -140,15 +157,48 @@ export function useActionFeed({
         brokerage: c.current?.ListOfficeName ?? null,
       };
       if (c.offMarket) {
-        watch.push({
-          ...base,
-          kind: "WATCH_OFF_MARKET",
-          priority: 1,
-          rank: 0,
-          headline: "Left the market since you saved it",
-          chipText: "Off-market",
-          chipCls: CHIP.off,
-        });
+        const disp = c.disposition;
+        if (disp?.kind === "relisted") {
+          // Point the card at the NEW active listing (new MLS#, current ask).
+          watch.push({
+            ...base,
+            listingKey: disp.newKey,
+            address: disp.newAddress ?? base.address,
+            price: disp.newPrice ?? base.price,
+            kind: "WATCH_RELISTED",
+            priority: 1,
+            rank: 0,
+            headline: "Relisted under a new MLS #",
+            chipText: "Relisted",
+            chipCls: CHIP.relisted,
+          });
+        } else if (disp?.kind === "sold" || disp?.kind === "leased") {
+          const sold = disp.kind === "sold";
+          watch.push({
+            ...base,
+            kind: sold ? "WATCH_SOLD" : "WATCH_LEASED",
+            priority: 1,
+            rank: 0,
+            headline: sold ? "Sold since you saved it" : "Leased since you saved it",
+            chipText: sold ? "Sold" : "Leased",
+            chipCls: sold ? CHIP.sold : CHIP.leased,
+          });
+        } else {
+          // Terminated/Expired/Suspended, an unexplained vanish, or still resolving.
+          const reason = disp?.kind === "off-market" ? disp.reason : "gone";
+          watch.push({
+            ...base,
+            kind: "WATCH_OFF_MARKET",
+            priority: 1,
+            rank: 0,
+            headline:
+              reason !== "gone"
+                ? `Off-market · ${titleCase(reason)} since you saved it`
+                : "Left the market since you saved it",
+            chipText: "Off-market",
+            chipCls: CHIP.off,
+          });
+        }
       } else if (c.priceDeltaSinceSave != null && c.priceDeltaSinceSave < 0) {
         const drop = Math.abs(c.priceDeltaSinceSave);
         watch.push({
