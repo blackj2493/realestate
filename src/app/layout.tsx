@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import PostHogProvider from "@/components/analytics/PostHogProvider";
 import WatchlistInit from "@/components/watchlist/WatchlistInit";
 import DiscoveryRoot from "@/components/discovery/DiscoveryRoot";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -93,10 +94,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_AND_SITE_JSONLD) }}
         />
-        <WatchlistInit />
-        {children}
-        <DiscoveryRoot />
-        <Toaster />
+        <PostHogProvider>
+          <WatchlistInit />
+          {children}
+          <DiscoveryRoot />
+          <Toaster />
+        </PostHogProvider>
       </body>
     </html>
   );
