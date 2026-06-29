@@ -481,6 +481,11 @@ export async function searchListings(
   const exclude = excludeFields ?? "RawImages,RawRooms";
   if (exclude) searchParams.exclude_fields = exclude;
 
+  // Serve repeated identical queries (return-to-view, re-applied filters, the dashboard's
+  // stable scopes) from Typesense's result cache instead of recomputing. Listing data only
+  // changes on the daily sync, so the ~60s cache window is never meaningfully stale.
+  searchParams.use_cache = true;
+
   // Apply filter string
   if (filterParts.length > 0) {
     const filterString = filterParts.join(' && ');

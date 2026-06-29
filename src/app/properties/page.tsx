@@ -72,6 +72,31 @@ const MAX_LISTINGS = 100;
 // metric sorts (cap rate, yield) don't apply.
 const BASIC_SORT = "ListPrice";
 
+// Heavy fields the terminal map/ledger never RENDER — trimmed from the bulk query so each
+// search stays light. Audited 2026-06 against every terminal consumer (map color, ledger
+// columns, deal score, persona ranking, AlphaBadge, comps anchor, Quick Look): the school
+// SCORE fields ARE used (kept), but school NAMES/distances, NearbySchools (filter-only,
+// applied server-side), PropertyHash, and amenity NAMES are not. RawImages/RawRooms are
+// detail/compare-only. This is the superset of searchListings' default (RawImages,RawRooms)
+// and is passed ONLY here — other callers (SEO school pages, detail, compare) keep the
+// conservative default so nothing they display is trimmed.
+const TERMINAL_EXCLUDE_FIELDS = [
+  "RawImages",
+  "RawRooms",
+  "NearbySchools",
+  "ElemPublicSchool",
+  "ElemPublicDistanceKm",
+  "ElemCatholicSchool",
+  "ElemCatholicDistanceKm",
+  "SecPublicSchool",
+  "SecPublicDistanceKm",
+  "SecCatholicSchool",
+  "SecCatholicDistanceKm",
+  "PropertyHash",
+  "NearestGroceryName",
+  "NearestRecCentreName",
+].join(",");
+
 function CommandCenterContent() {
   const searchParams = useSearchParams();
   const {
@@ -237,6 +262,7 @@ function CommandCenterContent() {
       filters: mapBounds ? { boundingBox: mapBounds } : undefined,
       perPage: MAX_LISTINGS,
       facetBy: FACET_FIELDS.join(","),
+      excludeFields: TERMINAL_EXCLUDE_FIELDS,
       sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
       sortOrder: "desc",
     });
