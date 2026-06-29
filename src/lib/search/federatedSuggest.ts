@@ -13,7 +13,6 @@
 
 import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client";
 import { geocodeAddress } from "./geocodeClient";
-import { SOLD_PRICE_GATED } from "./searchConfig";
 import type { SuggestGroup, SuggestItem } from "./types";
 
 const SALES_FLOOR = "ListPrice:>=100000";
@@ -37,9 +36,18 @@ function geoOf(listing: ListingDocument): { lat: number; lng: number; zoom?: num
   return undefined;
 }
 
-export async function federatedSuggest(query: string, signal?: AbortSignal): Promise<SuggestGroup[]> {
+export async function federatedSuggest(
+  query: string,
+  signal?: AbortSignal,
+  options?: { structured?: boolean }
+): Promise<SuggestGroup[]> {
   const q = query.trim();
   if (q.length < 2) return [];
+  // A structured (NL→chips) query is a DESCRIPTION, not an address: skip the address,
+  // sold-teaser and geocode paths (they read the raw sentence literally and produce
+  // nonsense — e.g. geocoding "…2 bedrooms…" to a street in Newfoundland). The chip
+  // preview is the real answer; here we keep only community facets.
+  const structured = options?.structured ?? false;
   const needle = q.toLowerCase();
   const client = getTypesenseClient();
   // Abortable so a newer keystroke cancels the in-flight request instead of
@@ -50,7 +58,6 @@ export async function federatedSuggest(query: string, signal?: AbortSignal): Pro
   const addresses: SuggestItem[] = [];
   const communities: SuggestItem[] = [];
   const mls: SuggestItem[] = [];
-  const sold: SuggestItem[] = [];
   const geo: SuggestItem[] = [];
 
   // 1) MLS# exact — the key IS the document id.
@@ -137,7 +144,7 @@ export async function federatedSuggest(query: string, signal?: AbortSignal): Pro
     // Addresses — only when the query carries a street number (address intent) or
     // there are no community matches, so a bare city name doesn't flood with its
     // own listings.
-    if (addressSearchable && (hasStreetNumber(q) || communities.length === 0)) {
+    if (!structured && addressSearchable && (hasStreetNumber(q) || communities.length === 0)) {
       const seenAddr = new Set<string>();
       for (const h of (response.hits || []) as Array<{ document: ListingDocument }>) {
         const doc = h.document;
@@ -156,22 +163,10 @@ export async function federatedSuggest(query: string, signal?: AbortSignal): Pro
     }
   }
 
-  // 3) Sold — VOW-gated CTA on address-intent queries (no prices ever leave here).
-  if (hasStreetNumber(q)) {
-    sold.push({
-      id: "sold:teaser",
-      category: "sold",
-      label: "See recent solds near this address",
-      sublabel: SOLD_PRICE_GATED ? "Unlock sold prices — free" : "Recent comparable sales",
-      sold: { priceMasked: SOLD_PRICE_GATED },
-      provenance: "sold",
-    });
-  }
-
-  // 4) Geo fallback — typed address with no active listing still flies the map.
+  // 3) Geo fallback — typed address with no active listing still flies the map.
   //    Only when it really looks like a street address (number + a name word), to
   //    avoid an extra round-trip on every digit typed.
-  if (addresses.length === 0 && /\d+\s+\w/.test(q)) {
+  if (!structured && addresses.length === 0 && /\d+\s+\w/.test(q)) {
     const hit = await geocodeAddress(q, signal);
     if (hit) {
       geo.push({
@@ -189,7 +184,6 @@ export async function federatedSuggest(query: string, signal?: AbortSignal): Pro
     [mls, "mls"],
     [addresses.slice(0, 5), "address"],
     [geo, "geo"],
-    [sold, "sold"],
     [communities.slice(0, 6), "community"],
   ];
   return order

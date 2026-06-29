@@ -43,6 +43,8 @@ import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
 import { queryPlan } from "@/lib/sold/layers";
 import { mergeLayers } from "@/lib/sold/mergeLayers";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
+import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
+import { syncChips } from "@/lib/search/chipApply";
 
 /**
  * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
@@ -103,6 +105,14 @@ function CommandCenterContent() {
     soldWindowDays,
     setSoldLocked,
     soldLocked,
+    setSoldCount,
+    searchPin,
+    exitComps,
+    setUniversalFilter,
+    setFilter,
+    setSchool,
+    addFilter,
+    removeAddedFilter,
   } = useCommandCenterStore();
 
   // Property-open routing: mobile (≤767) → full report; desktop → Quick Look drawer.
@@ -148,6 +158,39 @@ function CommandCenterContent() {
     const cityParam = searchParams.get("city") || searchParams.get("search") || "";
     if (cityParam && cityParam !== location) setLocation(cityParam);
   }, [searchParams, location, setLocation]);
+
+  // Hydrate the FULL filter set from a deep link (?beds=&maxPrice=&type=…). A search
+  // typed anywhere — the global header on any app page — serializes its parsed chips
+  // into the URL (chipUrl); here we reconstruct those chips and run the SAME applier
+  // the terminal's own NL bar uses (syncChips), so a deep link yields byte-identical
+  // state to typing the query in place. Plain `?city=` links carry no structured key,
+  // so the seed effect above handles them and this no-ops. Guarded to hydrate once per
+  // distinct param string (re-navigating with new params re-hydrates; renders don't).
+  const hydratedParamsRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = searchParams.toString();
+    if (hydratedParamsRef.current === key) return;
+    if (!hasStructuredParams(searchParams)) return;
+    hydratedParamsRef.current = key;
+    syncChips(paramsToChips(searchParams), {
+      setUniversalFilter,
+      setFilter,
+      setLocation,
+      setSchool,
+      addFilter,
+      removeAddedFilter,
+      priceBounds: priceConfig(transactionMode),
+    });
+  }, [
+    searchParams,
+    setUniversalFilter,
+    setFilter,
+    setLocation,
+    setSchool,
+    addFilter,
+    removeAddedFilter,
+    transactionMode,
+  ]);
 
   const persona = PERSONA_CONFIG[activePersona];
 
@@ -244,6 +287,20 @@ function CommandCenterContent() {
       }
       if (mappedKeys.length > 0) compFilters.types = [...new Set(mappedKeys)];
 
+      // Comps-on-demand: when a subject anchor is set (the address you clicked "Comps"
+      // on), define comps by the SUBJECT — same property type + a ±30% price band — not
+      // by the terminal filters. This turns "every recent sold in view" into genuine
+      // comparables: a 3-bed townhouse shows townhouses, not condos & mansions.
+      if (searchPin?.comps) {
+        compFilters.minBeds = undefined;
+        compFilters.bedsExact = undefined;
+        compFilters.minBaths = undefined;
+        compFilters.bathsExact = undefined;
+        compFilters.types = searchPin.types?.length ? searchPin.types : undefined;
+        compFilters.minPrice = searchPin.minPrice || undefined;
+        compFilters.maxPrice = searchPin.maxPrice || undefined;
+      }
+
       // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
       // whichever layers are lit, in parallel; then merge into one recency-sorted list.
       const [compRes, activeRes] = await Promise.all([
@@ -254,6 +311,7 @@ function CommandCenterContent() {
       ]);
 
       setSoldLocked(plan.comps.length > 0 && compRes.locked);
+      setSoldCount(compRes.count);
 
       const sources: ListingDocument[][] = [];
       if (compRes.docs.length) sources.push(compRes.docs);
@@ -270,7 +328,14 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, setSoldLocked, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount]);
+
+  // Drop any stale comps/search pin when the user navigates to a NEW area (location
+  // change only — NOT on layer toggles, so the pin set alongside the Sold toggle in
+  // comps-on-demand survives). The pin's own ✕ and the search-bar clear remove it too.
+  useEffect(() => {
+    exitComps();
+  }, [location, exitComps]);
 
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded

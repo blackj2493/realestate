@@ -20,14 +20,20 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useOpenListing } from "@/hooks/useOpenListing";
+import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { priceConfig } from "@/lib/filters/fundamentals";
 import { federatedSuggest } from "@/lib/search/federatedSuggest";
+import { fetchChipPreview, type ChipPreview } from "@/lib/search/chipPreview";
+import { schoolScoreField } from "@/lib/schools/schoolLens";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { syncChips } from "@/lib/search/chipApply";
 import { rankListings, type RankBadge } from "@/lib/search/personaRank";
+import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
-import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS } from "@/lib/search/searchConfig";
+import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
+import { recordParse, parseMissRate } from "@/lib/search/parseMetrics";
 import type { SuggestGroup, SuggestItem, ParsedQuery } from "@/lib/search/types";
+import type { ListingDocument } from "@/lib/typesense/client";
 import SearchChipsRow from "./search/SearchChipsRow";
 import SearchAnswerCard from "./search/SearchAnswerCard";
 import SearchEmptyState, { type WatchedArea } from "./search/SearchEmptyState";
@@ -61,11 +67,14 @@ function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
 export default function LocationSearchV2({ className, placeholder: placeholderProp }: Props) {
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
+  const searchVisibleArea = useCommandCenterStore((s) => s.searchVisibleArea);
   const totalCount = useCommandCenterStore((s) => s.totalCount);
   const activePersona = useCommandCenterStore((s) => s.activePersona);
   const transactionMode = useCommandCenterStore((s) => s.transactionMode);
   const setFlyTo = useCommandCenterStore((s) => s.setFlyTo);
   const setSearchPin = useCommandCenterStore((s) => s.setSearchPin);
+  const enterComps = useCommandCenterStore((s) => s.enterComps);
+  const exitComps = useCommandCenterStore((s) => s.exitComps);
   const toggleLayer = useCommandCenterStore((s) => s.toggleLayer);
   const activeLayers = useCommandCenterStore((s) => s.activeLayers);
   const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
@@ -75,16 +84,24 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   const removeAddedFilter = useCommandCenterStore((s) => s.removeAddedFilter);
   const commute = useCommandCenterStore((s) => s.commute);
   const school = useCommandCenterStore((s) => s.school);
+  // The active school lens's indexed field — so a school chip previews on the SAME field
+  // Apply filters on (otherwise the preview count diverges from the applied result).
+  const schoolField = schoolScoreField(school.level, school.system);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
   const openListing = useOpenListing();
+  const authed = useIsAuthed();
 
   const [value, setValue] = React.useState("");
   const [open, setOpen] = React.useState(false);
   const [groups, setGroups] = React.useState<SuggestGroup[]>([]);
   const [parsed, setParsed] = React.useState<ParsedQuery | null>(null);
+  // Real filtered preview for a structured query ("N listings match these chips").
+  const [preview, setPreview] = React.useState<ChipPreview | null>(null);
   const [searching, setSearching] = React.useState(false);
   const [highlight, setHighlight] = React.useState(-1);
   const [recents, setRecents] = React.useState<RecentSearch[]>([]);
+  // Dev-only: live parser diagnostics (chips read + words unmatched) for the overlay.
+  const [parseMeta, setParseMeta] = React.useState<{ chips: number; unmatched: string } | null>(null);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -123,6 +140,8 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     if (q.length < SUGGEST_MIN_CHARS) {
       setGroups([]);
       setParsed(null);
+      setParseMeta(null);
+      setPreview(null);
       setSearching(false);
       return;
     }
@@ -137,12 +156,19 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       const mine = ++reqId.current;
       const p = parseNlQuery(q);
       setParsed(p.isStructured ? p : null);
+      if (SEARCH_DEBUG) setParseMeta({ chips: p.chips.length, unmatched: p.unmatched });
       try {
-        const g = await federatedSuggest(q, ctrl.signal);
+        const [g, pv] = await Promise.all([
+          // Structured → federatedSuggest skips the raw address/geo/sold paths (they read
+          // the sentence literally); the chip preview is the real answer.
+          federatedSuggest(q, ctrl.signal, { structured: p.isStructured }),
+          p.isStructured ? fetchChipPreview(p.chips, schoolField, ctrl.signal) : Promise.resolve(null),
+        ]);
         if (mine !== reqId.current) return; // a newer keystroke won
         setGroups(g);
+        setPreview(pv);
       } catch {
-        if (mine === reqId.current) setGroups([]); // aborted / backend slow → empty
+        if (mine === reqId.current) { setGroups([]); setPreview(null); } // aborted / slow
       } finally {
         clearTimeout(failFast);
         if (mine === reqId.current) {
@@ -155,7 +181,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [value]);
+  }, [value, schoolField]);
 
   const close = () => {
     setOpen(false);
@@ -198,18 +224,37 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   // Comp-on-demand from a specific address row.
   const findComps = (item: SuggestItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (item.geo) {
-      setFlyTo({ lat: item.geo.lat, lng: item.geo.lng, zoom: 15 });
-      setSearchPin({ lat: item.geo.lat, lng: item.geo.lng, label: item.label });
+    // Constrain comps to the SUBJECT (same type + price band) via the shared anchor
+    // helper — identical to the map popup + ledger entry points. zoom 14 (not 15) so the
+    // viewport box around the address captures a few km of comps. enterComps switches to
+    // a SOLD-only view so the count/list/pins all show the same constrained comps.
+    const anchor = item.listing ? compsAnchorForListing(item.listing) : null;
+    if (anchor) {
+      setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: 14 });
+      enterComps({ ...anchor, label: item.label });
+    } else if (item.geo) {
+      setFlyTo({ lat: item.geo.lat, lng: item.geo.lng, zoom: 14 });
+      enterComps({ lat: item.geo.lat, lng: item.geo.lng, label: item.label });
     }
-    if (!activeLayers.has("sold")) toggleLayer("sold");
     setValue("");
     close();
+  };
+
+  // "3 bd · 4 ba · Townhouse · $1,599,000" line under a preview sample.
+  const previewMeta = (d: ListingDocument): string => {
+    const parts: string[] = [];
+    const beds = d.BedroomsAboveGrade || d.BedroomsTotal;
+    if (beds) parts.push(`${beds} bd`);
+    if (d.BathroomsTotalInteger) parts.push(`${d.BathroomsTotalInteger} ba`);
+    if (d.PropertySubType) parts.push(d.PropertySubType.trim());
+    if (d.ListPrice) parts.push(`$${d.ListPrice.toLocaleString("en-US")}`);
+    return parts.join(" · ");
   };
 
   // Apply the parsed NL chips to the live query.
   const applyNl = (chips = parsed?.chips ?? []) => {
     if (!chips.length) return;
+    if (SEARCH_DEBUG) recordParse({ q: value.trim(), chips: chips.length, unmatched: parsed?.unmatched ?? "" });
     syncChips(chips, {
       setUniversalFilter,
       setFilter,
@@ -323,6 +368,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 setValue("");
                 setGroups([]);
                 setParsed(null);
+                exitComps();
                 inputRef.current?.focus();
               }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
@@ -350,29 +396,77 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 setRecents([]);
               }}
               onSearchThisArea={() => {
-                setLocation("");
+                searchVisibleArea();
                 close();
               }}
             />
           ) : (
             <>
+              {SEARCH_DEBUG && parseMeta && (
+                <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-950 px-3 py-1 font-mono text-[9px] text-slate-500">
+                  <span className="text-slate-400">parser</span>
+                  <span>
+                    {parseMeta.chips} chip{parseMeta.chips === 1 ? "" : "s"}
+                  </span>
+                  {parseMeta.unmatched ? (
+                    <span className="text-amber-400">· unmatched: “{parseMeta.unmatched}”</span>
+                  ) : (
+                    <span className="text-emerald-500/80">· all words read</span>
+                  )}
+                  {(() => {
+                    const { total, misses } = parseMissRate();
+                    return total > 0 ? (
+                      <span className="ml-auto text-slate-600">
+                        session miss {misses}/{total}
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              )}
               {parsed?.isStructured && <SearchChipsRow chips={parsed.chips} onRemove={removeChip} />}
 
-              {showAnswer && (
-                <SearchAnswerCard
-                  area={answerArea}
-                  activeCount={topCommunity?.count}
-                  onUnlock={() => {
-                    if (!activeLayers.has("sold")) toggleLayer("sold");
-                    close();
-                  }}
-                />
+              {showAnswer && <SearchAnswerCard area={answerArea} activeCount={topCommunity?.count} />}
+
+              {/* Structured query → a PEEK at the real filtered matches (these honour the
+                  chips, unlike the raw address list which is suppressed above). The samples
+                  aren't individual links — tapping any of them APPLIES the filters and shows
+                  the whole set on the map + ledger (same as the button below). */}
+              {parsed?.isStructured && preview && (
+                <div>
+                  <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-slate-500">
+                    <span>Matching listings</span>
+                    <span className="text-cyan-400/80">{preview.count.toLocaleString()} match</span>
+                  </div>
+                  {preview.listings.length === 0 ? (
+                    <div className="px-3 py-2 font-mono text-[11px] text-slate-500">
+                      No active listings match these filters.
+                    </div>
+                  ) : (
+                    preview.listings.map((listing) => (
+                      <button
+                        key={listing.id}
+                        type="button"
+                        onClick={() => applyNl()}
+                        title="See all matches on the map"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-slate-800"
+                      >
+                        <Home className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate font-mono text-xs text-slate-200">
+                            {listing.UnparsedAddress || "—"}
+                          </span>
+                          <span className="truncate text-[10px] text-slate-500">{previewMeta(listing)}</span>
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
 
-              {searching && groups.length === 0 && (
+              {searching && groups.length === 0 && !(parsed?.isStructured && preview) && (
                 <div className="px-3 py-3 font-mono text-xs text-slate-500">Searching…</div>
               )}
-              {!searching && groups.length === 0 && (
+              {!searching && groups.length === 0 && !(parsed?.isStructured && preview) && (
                 <div className="px-3 py-3 font-mono text-xs text-slate-500">
                   No matches for “{value.trim()}”. Try an address, community, school, or MLS#.
                 </div>
@@ -402,7 +496,11 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate font-mono text-xs text-slate-200">{item.label}</span>
                           {item.sublabel && (
-                            <span className="truncate text-[10px] text-slate-500">{item.sublabel}</span>
+                            <span className="truncate text-[10px] text-slate-500">
+                              {item.category === "sold" && authed
+                                ? "See recent comparable sales on the map"
+                                : item.sublabel}
+                            </span>
                           )}
                           {badges.length > 0 && (
                             <span className="mt-1 flex flex-wrap gap-1">
@@ -420,10 +518,20 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
 
                         {item.category === "sold" && (
                           <span className="flex items-center gap-1.5">
-                            <span className="select-none font-mono text-xs text-rose-300 blur-[4px]">$6XX,XXX</span>
-                            <span className="bg-cyan-500 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-950">
-                              Unlock
-                            </span>
+                            {authed ? (
+                              <span className="border border-cyan-500/40 bg-cyan-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-300">
+                                View
+                              </span>
+                            ) : (
+                              <>
+                                <span className="select-none font-mono text-xs text-rose-300 blur-[4px]">
+                                  $6XX,XXX
+                                </span>
+                                <span className="bg-cyan-500 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-950">
+                                  Unlock
+                                </span>
+                              </>
+                            )}
                           </span>
                         )}
                         {item.category === "community" && item.count !== undefined && (
@@ -439,7 +547,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             className="hidden shrink-0 items-center gap-1 border border-slate-700 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
                           >
                             <Crosshair className="h-2.5 w-2.5" />
-                            Comps
+                            Comparable sales
                           </span>
                         )}
                         {item.provenance && item.category !== "sold" && item.category !== "community" && (
@@ -460,7 +568,9 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                   className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-slate-800 bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
                 >
                   <Sparkles className="h-3 w-3" />
-                  Apply {parsed.chips.length} filters
+                  {preview && preview.count > 0
+                    ? `See all ${preview.count.toLocaleString()} matches on the map`
+                    : `Apply ${parsed.chips.length} filters`}
                 </button>
               )}
             </>

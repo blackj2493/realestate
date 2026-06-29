@@ -28,3 +28,12 @@ export const SUGGEST_MIN_CHARS = 3;
  *  per-host connection pool free for the main listings/map query, which shares the
  *  same Typesense origin and must never be starved by typeahead churn. */
 export const SUGGEST_DEBOUNCE_MS = 350;
+
+/**
+ * Dev-only parse diagnostics: a tiny overlay in the suggest panel showing how many
+ * chips were read and which words went unmatched — so the parser's real miss-rate is
+ * visible while testing. Defaults ON in dev, OFF in prod; force with
+ * NEXT_PUBLIC_SEARCH_DEBUG=1/0.
+ */
+export const SEARCH_DEBUG =
+  (process.env.NEXT_PUBLIC_SEARCH_DEBUG ?? (process.env.NODE_ENV !== "production" ? "1" : "0")) !== "0";

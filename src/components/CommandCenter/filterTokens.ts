@@ -45,8 +45,12 @@ export function buildFilterTokens(opts: {
   removeAddedFilter: (key: string) => void;
   showAdvanced: boolean;
   showInvestor: boolean;
+  /** Active map lenses (school / commute / walkability). These are GLOBAL state, not
+   *  universal filters, so they'd otherwise be invisible in the strip and survive a
+   *  "Clear all" — surfacing them here makes each one visible and removable. */
+  lenses?: Array<{ id: string; active: boolean; label: string; onRemove: () => void }>;
 }): FilterToken[] {
-  const { coreItems, addedItems, controls, filters, setFilter, removeAddedFilter, showAdvanced, showInvestor } = opts;
+  const { coreItems, addedItems, controls, filters, setFilter, removeAddedFilter, showAdvanced, showInvestor, lenses } = opts;
   const tokens: FilterToken[] = [];
 
   for (const { def, value, onChange } of coreItems) {
@@ -58,6 +62,12 @@ export function buildFilterTokens(opts: {
         onRemove: () => onChange(freshDefault(def.defaultValue)),
       });
     }
+  }
+
+  // Map lenses sit alongside the core filters so an applied "School ≥ 9.0" (e.g. from a
+  // natural-language search) shows as a removable token instead of silently persisting.
+  for (const l of lenses ?? []) {
+    if (l.active) tokens.push({ id: l.id, label: l.label, tone: "core", onRemove: l.onRemove });
   }
 
   if (showAdvanced) {

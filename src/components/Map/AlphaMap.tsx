@@ -6,13 +6,14 @@ import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer, PathLayer } from "@deck.gl/layers";
 import { Map, NavigationControl, Layer as MapboxLayer } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
-import { Layers, MapPin } from "lucide-react";
+import { Layers, MapPin, X } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { isDelistedDealType } from "@/lib/sold/dealType";
 import { ALPHA_GLOW_RANGE, type MapColorConfig } from "@/lib/personas/personaConfig";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
@@ -98,7 +99,11 @@ export default function AlphaMap({
   const domCenter = useCommandCenterStore((s) => s.domCenter);
   // Search V2: imperative fly-to target + a dropped search pin.
   const flyTo = useCommandCenterStore((s) => s.flyTo);
+  const setFlyTo = useCommandCenterStore((s) => s.setFlyTo);
   const searchPin = useCommandCenterStore((s) => s.searchPin);
+  const enterComps = useCommandCenterStore((s) => s.enterComps);
+  const exitComps = useCommandCenterStore((s) => s.exitComps);
+  const soldCount = useCommandCenterStore((s) => s.soldCount);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -164,6 +169,16 @@ export default function AlphaMap({
   useEffect(() => () => {
     if (reportTimer.current) clearTimeout(reportTimer.current);
   }, []);
+
+  // "Search this map area": commit the CURRENT viewport as the search box. Deferred a
+  // tick so it lands AFTER the page's location-change reset (which nulls mapBounds) —
+  // otherwise the reset would wipe the box we just set. The nonce ignores the initial 0.
+  const searchAreaNonce = useCommandCenterStore((s) => s.searchAreaNonce);
+  useEffect(() => {
+    if (searchAreaNonce === 0) return;
+    const t = setTimeout(() => computeAndReportBounds(), 0);
+    return () => clearTimeout(t);
+  }, [searchAreaNonce, computeAndReportBounds]);
 
   // Mode change re-tilts the camera (flat for Listings, pitched for Heatmap/3D)
   // with an animated transition so switching modes feels physical, not a cut.
@@ -809,6 +824,13 @@ export default function AlphaMap({
             setPopup(null);
             onSelectProperty?.(l);
           }}
+          onComps={(l) => {
+            const anchor = compsAnchorForListing(l);
+            if (!anchor) return;
+            setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: 14 });
+            enterComps(anchor);
+            setPopup(null);
+          }}
         />
       )}
 
@@ -834,6 +856,35 @@ export default function AlphaMap({
       {isSelectMode && (
         <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md">
           <p className="font-mono text-xs text-cyan-200">Tap properties to add to your selection</p>
+        </div>
+      )}
+
+      {/* Search / comps anchor chip — identifies the dropped pin and (for comps-on-demand)
+          reports how many recent solds are in view, so a sparse area reads as data, not a
+          stray circle. The ✕ removes the pin. */}
+      {searchPin && (
+        <div className="pointer-events-auto absolute left-1/2 top-4 z-20 flex max-w-[92%] -translate-x-1/2 items-center gap-2 border border-cyan-500/40 bg-slate-900/95 px-3 py-1.5 font-mono text-xs text-cyan-100 backdrop-blur-md">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+          {searchPin.comps ? (
+            <span className="truncate">
+              Comparable sales near <span className="text-slate-100">{searchPin.label ?? "this address"}</span>
+              {" · "}
+              <span className={soldCount > 0 ? "text-cyan-300" : "text-amber-300"}>
+                {soldCount > 0 ? `${soldCount.toLocaleString()} similar sold` : "no similar solds found"}
+              </span>
+            </span>
+          ) : (
+            <span className="truncate text-slate-100">{searchPin.label ?? "Dropped pin"}</span>
+          )}
+          <button
+            type="button"
+            onClick={() => exitComps()}
+            className="ml-1 flex shrink-0 items-center gap-1 border border-slate-600 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-slate-300 transition-colors hover:border-rose-500/50 hover:text-rose-200"
+            aria-label={searchPin.comps ? "Exit comparable sales view" : "Clear pin"}
+          >
+            <X className="h-3 w-3" />
+            {searchPin.comps ? "Exit" : null}
+          </button>
         </div>
       )}
     </div>
