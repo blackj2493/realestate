@@ -53,6 +53,29 @@ describe('normalizeCampaign', () => {
     expect(() => normalizeCampaign({ ListingKey: 'Y' })).not.toThrow();
   });
 
+  it('uses the FIRM (contract) date, not CloseDate, as a Sold end_date', () => {
+    // W13432106 (45 Penbridge Cir): sold firm Jun 23, closes/possession Aug 5. The
+    // sold date is the firm date — using CloseDate would inflate True DOM by ~6 weeks
+    // and disagree with the badge + Sale History.
+    const e = normalizeCampaign({
+      ListingKey: 'W13432106', StandardStatus: 'Closed', MlsStatus: 'Sold',
+      TransactionType: 'For Sale', OriginalEntryTimestamp: '2026-06-11T00:00:00Z',
+      ListPrice: 789000, OriginalListPrice: 789000, ClosePrice: 905000,
+      PurchaseContractDate: '2026-06-23', CloseDate: '2026-08-05',
+    })!;
+    expect(e.status).toBe('Sold');
+    expect(e.end_date).toBe('2026-06-23');
+    expect(e.close_price).toBe(905000);
+  });
+
+  it('falls back to CloseDate when the contract date is absent', () => {
+    const e = normalizeCampaign({
+      ListingKey: 'Z', StandardStatus: 'Closed', MlsStatus: 'Sold',
+      TransactionType: 'For Sale', ClosePrice: 500000, CloseDate: '2026-08-05',
+    })!;
+    expect(e.end_date).toBe('2026-08-05');
+  });
+
   it('classifies For Lease as Lease', () => {
     const e = normalizeCampaign({ ListingKey: 'L', TransactionType: 'For Lease', StandardStatus: 'Expired', MlsStatus: 'Expired', ExpirationDate: '2025-10-30' })!;
     expect(e.transaction_type).toBe('Lease');
