@@ -12,36 +12,74 @@
 
 "use client";
 
-import { X } from "lucide-react";
+import { X, Crosshair } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "@/components/CommandCenter/ListingCardBody";
+import WatchHeart from "@/components/watchlist/WatchHeart";
 
 const POPUP_W = 340;
-const CARD_EST_H = 96; // header + ~3 cards governs the on-screen clamp
+const CARD_EST_H = 300; // full-photo card (hero + details + comps) governs the on-screen clamp
+const POPUP_MAX_H = 440; // tall enough to show one full hero card; multiple cards scroll
 
-function PopupCard({ listing, onSelect }: { listing: ListingDocument; onSelect: (l: ListingDocument) => void }) {
+function PopupCard({
+  listing,
+  onSelect,
+  onComps,
+}: {
+  listing: ListingDocument;
+  onSelect: (l: ListingDocument) => void;
+  onComps?: (l: ListingDocument) => void;
+}) {
   const src = listing.thumbnailUrl || listing.primaryImageUrl;
   const deal = dealScoreFromDocument(listing);
+  const loc = listing.location;
+  const canComp = Boolean(onComps && Array.isArray(loc) && (loc[0] || loc[1]));
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(listing)}
-      className="flex w-full items-stretch gap-3 border-b border-slate-800/60 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-slate-800/50"
-    >
-      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-sm">
-        <ListingThumbnail src={src} alt={listing.UnparsedAddress || "Property"} className="absolute inset-0" sizes="96px" />
-        {deal.score !== null && (
-          <DealScoreGradePill score={deal.score} grade={deal.grade} className="absolute left-1 top-1 z-10 backdrop-blur-sm" />
-        )}
+    <div className="border-b border-slate-800/60 last:border-b-0">
+      {/* Clickable body is a DIV (not a button) so the Save heart — itself a button —
+          can overlay the photo without nesting a <button> inside a <button>. */}
+      <div
+        onClick={() => onSelect(listing)}
+        className="block w-full cursor-pointer text-left transition-colors hover:bg-slate-800/50"
+      >
+        {/* Full-width hero photo (HouseSigma-style) — the listing's main visual, not a
+            cramped thumbnail. Deal pill + Save heart overlay the corners. */}
+        <div className="relative h-44 w-full overflow-hidden bg-slate-800">
+          <ListingThumbnail src={src} alt={listing.UnparsedAddress || "Property"} className="absolute inset-0" sizes="340px" />
+          {deal.score !== null && (
+            <DealScoreGradePill score={deal.score} grade={deal.grade} className="absolute left-2 top-2 z-10 backdrop-blur-sm" />
+          )}
+          <WatchHeart
+            item={{ listing_key: listing.id, address: listing.UnparsedAddress, city: listing.City, thumb: src, list_price: listing.ListPrice, status: listing.Status }}
+            className="absolute right-2 top-2 z-10 rounded-md bg-slate-900/70 p-1.5 transition-colors hover:bg-slate-900"
+            iconClassName="h-4 w-4 text-slate-200"
+          />
+        </div>
+        <div className="px-3 py-2.5">
+          <ListingCardBody doc={listing} />
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <ListingCardBody doc={listing} />
-      </div>
-    </button>
+      {canComp && (
+        <div className="px-3 pb-2.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onComps!(listing);
+            }}
+            title="Show recent comparable sales near this home"
+            className="flex items-center gap-1.5 border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/20"
+          >
+            <Crosshair className="h-3 w-3" />
+            Comparable sales
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -52,6 +90,7 @@ export default function ListingMapPopup({
   dims,
   onClose,
   onSelect,
+  onComps,
 }: {
   listings: ListingDocument[];
   x: number;
@@ -59,6 +98,8 @@ export default function ListingMapPopup({
   dims: { width: number; height: number } | null;
   onClose: () => void;
   onSelect: (l: ListingDocument) => void;
+  /** Enter comps-on-demand anchored to a card's home (sold-only, type + price band). */
+  onComps?: (l: ListingDocument) => void;
 }) {
   if (!listings.length) return null;
 
@@ -66,14 +107,14 @@ export default function ListingMapPopup({
   const containerH = dims?.height ?? 600;
 
   const left = Math.max(8, Math.min(x - POPUP_W / 2, containerW - POPUP_W - 8));
-  const estH = 34 + Math.min(listings.length, 3) * CARD_EST_H;
+  const estH = Math.min(POPUP_MAX_H, 34 + listings.length * CARD_EST_H);
   let top = y + 14;
   if (top + estH > containerH - 8) top = Math.max(8, containerH - estH - 8);
 
   return (
     <div
-      className="pointer-events-auto absolute z-30 flex max-h-[330px] flex-col overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
-      style={{ left, top, width: POPUP_W }}
+      className="pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
+      style={{ left, top, width: POPUP_W, maxHeight: POPUP_MAX_H }}
     >
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-1.5">
@@ -93,7 +134,7 @@ export default function ListingMapPopup({
       {/* Cards — max ~3 visible, rest scroll */}
       <div className={cn("min-h-0 flex-1 overflow-y-auto")}>
         {listings.map((l) => (
-          <PopupCard key={l.id} listing={l} onSelect={onSelect} />
+          <PopupCard key={l.id} listing={l} onSelect={onSelect} onComps={onComps} />
         ))}
       </div>
     </div>
