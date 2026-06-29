@@ -12,7 +12,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Square, Car, FileText, Building2, ChevronDown } from "lucide-react";
+import { Bed, Bath, Square, Car, FileText, Building2, ChevronDown, Clock } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -571,6 +571,24 @@ export default async function PropertyPage({
                 {isActiveListing && (
                   <span className="text-sm font-semibold text-slate-400">
                     Listed {dom} {dom === 1 ? "day" : "days"} ago
+                  </span>
+                )}
+                {/* True DOM — our headline signal. Surfaced in the header ONLY when it
+                    exceeds the current listing's age, i.e. the listing was re-posted to
+                    reset its public days-on-market. The contrast with "Listed N days ago"
+                    is the point. VOW-derived, so it self-hides for anon (trueDom → dom). */}
+                {isActiveListing && trueDom > dom && (
+                  <span
+                    title={`This property has spent ${trueDom} days on market across all of its listings. The current listing is only ${dom} day${dom === 1 ? "" : "s"} old — it was re-listed, which resets the public days-on-market.`}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-xs font-bold tracking-wide",
+                      trueDom >= 90
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
+                        : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    True DOM {trueDom}d
                   </span>
                 )}
                 {status.kind === "sold" && (
