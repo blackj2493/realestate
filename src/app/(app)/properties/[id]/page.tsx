@@ -12,7 +12,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Square, Car, AlertTriangle, Building2, ChevronDown } from "lucide-react";
+import { Bed, Bath, Square, Car, FileText, Building2, ChevronDown } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -172,6 +172,12 @@ function cleanDescription(remarks: string | undefined, max = 155): string {
   if (!remarks) return "";
   const flat = remarks.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+}
+
+/** An http(s) URL from a raw payload value, else null (defence vs feed garbage). */
+function httpUrlOrNull(v: unknown): string | null {
+  const s = typeof v === "string" ? v.trim() : "";
+  return /^https?:\/\//i.test(s) ? s : null;
 }
 
 // ── SEO metadata (shares the cached getListingDetail call with the page body) ──
@@ -421,6 +427,10 @@ export default async function PropertyPage({
   // Gated payload (defense-in-depth): anon view has sold price/date keys scrubbed,
   // so a future registry field can never surface them here. Identical for authed users.
   const datasheet = buildDatasheet(view.full_payload);
+  // Virtual tour — surfaced as a badge on the gallery (high-intent) rather than buried
+  // in the data sheet. Prefer the unbranded (IDX-safe) URL; fall back to the branded one.
+  const vp = view.full_payload as Record<string, unknown>;
+  const tourUrl = httpUrlOrNull(vp.VirtualTourURLUnbranded) ?? httpUrlOrNull(vp.VirtualTourURLBranded);
   // Things to Know — payload-derived diligence flags (Phase 1) merged with
   // geo-joined public-records flags (Phase 2: flood/rail/traffic). Public data is
   // not VOW-gated, so view.geoFlags is populated for anon users too. Feeds The Read.
@@ -599,7 +609,7 @@ export default async function PropertyPage({
             {/* Gallery — leads the page: the photo is the universal triage hook (now above the
                 verdict; social proof moved down to the action cluster in the rail). */}
             <div className="mb-6">
-              <PropertyGallery images={detail.media_urls} />
+              <PropertyGallery images={detail.media_urls} tourUrl={tourUrl ?? undefined} />
             </div>
 
             {/* Specs */}
@@ -761,7 +771,7 @@ export default async function PropertyPage({
           {/* ── LEFT-REST: deep detail. Desktop col 1 / row 2; renders THIRD on mobile (after the cockpit). ── */}
           <div className="lg:col-start-1 lg:row-start-2">
             {/* Remarks (the listing's own description) */}
-            <Section title="Unvarnished Remarks" icon={<AlertTriangle className="h-4 w-4 text-amber-400" />}>
+            <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-400" />}>
               <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
