@@ -74,6 +74,22 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-condo-fee-stats.ts --apply
 
+      # Precompute base-scope market aggregates (cap rate, active/stale counts, 24mo sold
+      # trend) for every curated market into market_summary (migration 048), so the
+      # Submarket Leaderboard / Region Scorecard read ONE ready-made row instead of running
+      # the ~43s region_*_aggregates RPCs live on the request path (Toronto exceeded the 30s
+      # Supabase fetch timeout, hanging the Market Trends page). Sequential per market — never
+      # the old 15-way fan-out that hit the 60s statement_timeout. Reads listings +
+      # raw_vow_sold, writes the separate market_summary table; Supabase creds only. Additive
+      # — must never break the core sync, so continue-on-error.
+      - name: Refresh Market Summary
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-market-summary.ts --apply
+
       # Refresh the precomputed prior-sale ledger from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate property_sale_history table;
       # needs only the Supabase credentials (no TRREB tokens). Powers the listing-page
