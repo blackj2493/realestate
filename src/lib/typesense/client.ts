@@ -38,6 +38,13 @@ export function getTypesenseClient(): Client {
         }
       ],
       apiKey: SEARCH_API_KEY,
+      // Send the (already-public, search-only) key as a URL query param instead of the
+      // X-TYPESENSE-API-KEY header. That custom header forced a CORS *preflight* (OPTIONS)
+      // on every browser→Typesense GET, and the preflight cache is keyed by full URL, so
+      // each distinct query re-paid a 1–6s OPTIONS. Without the custom header these GET
+      // searches are "simple requests" → no preflight at all. (The key is already in the
+      // client bundle via NEXT_PUBLIC, so putting it in the URL is not a new exposure.)
+      sendApiKeyAsQueryParam: true,
       // Resilience: healthy queries answer in <1s, so a request that hasn't responded
       // in a few seconds is almost certainly a STALE keep-alive connection (cloud LBs
       // silently drop idle conns; the browser reuses the dead one and the request hangs).
