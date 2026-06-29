@@ -6,15 +6,20 @@
  * scroll. Each card reuses ListingCardBody so it is visually identical to the
  * right-hand ledger list; clicking a card opens that property's detail.
  *
- * Rendered as a sibling overlay inside AlphaMap's `relative` container, so x/y
- * (deck.gl pixel coords) position it directly; it is clamped to stay on-screen.
+ * Rendered as a sibling overlay inside AlphaMap's `relative` container.
+ *
+ * Desktop: anchored at the clicked point (deck.gl pixel coords x/y), clamped to
+ * stay on-screen. Mobile: a full-width bottom sheet pinned just above the
+ * floating control band (List/Map toggle + Tools launcher, both z-40) so those
+ * controls no longer overlap the card — the anchored card was ~340px on a ~360px
+ * canvas and routinely landed under the bottom band.
  */
 
 "use client";
 
 import { X, Crosshair } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
@@ -101,21 +106,12 @@ export default function ListingMapPopup({
   /** Enter comps-on-demand anchored to a card's home (sold-only, type + price band). */
   onComps?: (l: ListingDocument) => void;
 }) {
+  // Hooks must run before any early return.
+  const isMobile = useIsMobile(767);
   if (!listings.length) return null;
 
-  const containerW = dims?.width ?? 800;
-  const containerH = dims?.height ?? 600;
-
-  const left = Math.max(8, Math.min(x - POPUP_W / 2, containerW - POPUP_W - 8));
-  const estH = Math.min(POPUP_MAX_H, 34 + listings.length * CARD_EST_H);
-  let top = y + 14;
-  if (top + estH > containerH - 8) top = Math.max(8, containerH - estH - 8);
-
-  return (
-    <div
-      className="pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
-      style={{ left, top, width: POPUP_W, maxHeight: POPUP_MAX_H }}
-    >
+  const inner = (
+    <>
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-1.5">
         <span className="font-mono text-[11px] uppercase tracking-wider text-slate-400">
@@ -131,12 +127,49 @@ export default function ListingMapPopup({
         </button>
       </div>
 
-      {/* Cards — max ~3 visible, rest scroll */}
-      <div className={cn("min-h-0 flex-1 overflow-y-auto")}>
+      {/* Cards — rest scroll within the capped height */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {listings.map((l) => (
           <PopupCard key={l.id} listing={l} onSelect={onSelect} onComps={onComps} />
         ))}
       </div>
+    </>
+  );
+
+  // Mobile: a full-width bottom sheet that sits ABOVE the floating control band
+  // (List/Map toggle + Tools launcher, ~bottom-3, z-40), so those controls and
+  // the top-corner ones (MapModeDock/SaveBubble) no longer overlap the card.
+  // `absolute` (not `fixed`) keeps it inside the map container's stacking +
+  // overflow context; z-40 clears MapModeDock (z-20) / MapStatusHUD (z-10) /
+  // SaveBubble (z-30) beneath it. maxHeight leaves the top controls visible.
+  if (isMobile) {
+    return (
+      <div
+        className="pointer-events-auto absolute inset-x-2 z-40 flex flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 4rem)", maxHeight: "min(58vh, 27.5rem)" }}
+        role="dialog"
+        aria-label={`${listings.length} listing${listings.length === 1 ? "" : "s"} at this location`}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  // Desktop: anchored at the clicked pixel, clamped to stay on-screen.
+  const containerW = dims?.width ?? 800;
+  const containerH = dims?.height ?? 600;
+
+  const left = Math.max(8, Math.min(x - POPUP_W / 2, containerW - POPUP_W - 8));
+  const estH = Math.min(POPUP_MAX_H, 34 + listings.length * CARD_EST_H);
+  let top = y + 14;
+  if (top + estH > containerH - 8) top = Math.max(8, containerH - estH - 8);
+
+  return (
+    <div
+      className="pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
+      style={{ left, top, width: POPUP_W, maxHeight: POPUP_MAX_H }}
+    >
+      {inner}
     </div>
   );
 }
