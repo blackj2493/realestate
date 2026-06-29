@@ -23,6 +23,7 @@ import { searchListings, type ListingDocument } from "@/lib/typesense/client";
 import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { useWatchlistStore, type WatchItem } from "./useWatchlist";
+import type { Disposition } from "./disposition";
 
 // TRREB listing keys: a board letter + 5–10 digits (e.g. W12632618). Anything else
 // can't be a Typesense id, so we exclude it from the fetch (treated as off-market).
@@ -32,6 +33,12 @@ export interface WatchlistChange {
   item: WatchItem; // stored snapshot (price/status at save time)
   current?: ListingDocument; // live doc; undefined when off-market
   offMarket: boolean;
+  /**
+   * WHY it's off-market — sold / leased / relisted (new MLS#) / off-market reason.
+   * Resolved server-side (sold_listings + active-index relist lookup) for off-market
+   * items only; undefined while that fetch is in flight (UI falls back to generic).
+   */
+  disposition?: Disposition;
   priceDeltaSinceSave?: number; // current.ListPrice − item.list_price
   totalPriceDrop?: number; // listing's own drop from original ask
   trueDom?: number;
@@ -51,6 +58,12 @@ export interface WatchlistRollup {
   avgCapRateSample: number; // n listings with a real cap estimate (§7 honesty)
   bestDeal: { score: number; grade: string; address?: string } | null; // strongest buy right now
   priceDrops: number; // items cheaper than when you saved them
+  // Disposition-resolved outcomes for items that left the active index. `offMarket` is
+  // the residual (terminated/expired/suspended/gone, or still resolving) — sold/leased/
+  // relisted are broken out so the Pulse strip never lumps a relist in with a sale.
+  sold: number;
+  leased: number;
+  relisted: number;
   offMarket: number;
   goingStale: number;
 }
@@ -118,7 +131,7 @@ export function useWatchlistSnapshot(): WatchlistSnapshot {
     };
   }, [keyParam]);
 
-  const changes = useMemo<WatchlistChange[]>(
+  const baseChanges = useMemo<WatchlistChange[]>(
     () =>
       items.map((item) => {
         const current = docs[item.listing_key];
@@ -139,12 +152,63 @@ export function useWatchlistSnapshot(): WatchlistSnapshot {
     [items, docs, hydrated]
   );
 
+  // The off-market subset (+ saved address) we ask the server to disambiguate.
+  const offMarketItems = useMemo(
+    () =>
+      baseChanges
+        .filter((c) => c.offMarket)
+        .map((c) => ({ listing_key: c.item.listing_key, address: c.item.address ?? null }))
+        .sort((a, b) => a.listing_key.localeCompare(b.listing_key)),
+    [baseChanges]
+  );
+  // Stable signature → the disposition fetch only re-runs when the off-market SET
+  // (or a saved address) actually changes, not on every render.
+  const offMarketSig = useMemo(() => JSON.stringify(offMarketItems), [offMarketItems]);
+
+  const [dispositions, setDispositions] = useState<Record<string, Disposition>>({});
+
+  useEffect(() => {
+    if (offMarketItems.length === 0) {
+      setDispositions({});
+      return;
+    }
+    let alive = true;
+    fetch("/api/watchlist/dispositions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: offMarketItems }),
+    })
+      .then((r) => (r.ok ? r.json() : { dispositions: {} }))
+      .then((d: { dispositions?: Record<string, Disposition> }) => {
+        if (alive) setDispositions(d.dispositions ?? {});
+      })
+      .catch(() => {
+        /* keep generic "off-market" on failure — never worse than before this layer */
+      });
+    return () => {
+      alive = false;
+    };
+    // offMarketItems is fully captured by offMarketSig.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offMarketSig]);
+
+  const changes = useMemo<WatchlistChange[]>(
+    () =>
+      baseChanges.map((c) =>
+        c.offMarket ? { ...c, disposition: dispositions[c.item.listing_key] } : c
+      ),
+    [baseChanges, dispositions]
+  );
+
   const rollup = useMemo<WatchlistRollup>(() => {
     let minPrice: number | null = null;
     let maxPrice: number | null = null;
     let capSum = 0;
     let capN = 0;
     let priceDrops = 0;
+    let sold = 0;
+    let leased = 0;
+    let relisted = 0;
     let offMarket = 0;
     let goingStale = 0;
     let bestDeal: WatchlistRollup["bestDeal"] = null;
@@ -174,7 +238,13 @@ export function useWatchlistSnapshot(): WatchlistSnapshot {
       }
 
       if (c.priceDeltaSinceSave != null && c.priceDeltaSinceSave < 0) priceDrops += 1;
-      if (c.offMarket) offMarket += 1;
+      if (c.offMarket) {
+        const kind = c.disposition?.kind;
+        if (kind === "sold") sold += 1;
+        else if (kind === "leased") leased += 1;
+        else if (kind === "relisted") relisted += 1;
+        else offMarket += 1; // terminated/expired/suspended/gone, or still resolving
+      }
       if (c.isStale) goingStale += 1;
     }
 
@@ -186,6 +256,9 @@ export function useWatchlistSnapshot(): WatchlistSnapshot {
       avgCapRateSample: capN,
       bestDeal,
       priceDrops,
+      sold,
+      leased,
+      relisted,
       offMarket,
       goingStale,
     };

@@ -30,11 +30,32 @@ function ChangeChips({ change }: { change: WatchlistChange }) {
   const chips: { key: string; text: string; cls: string }[] = [];
 
   if (change.offMarket) {
-    chips.push({
-      key: "off",
-      text: "Off-market",
-      cls: "text-amber-400 bg-amber-400/10 border-amber-400/30",
-    });
+    const disp = change.disposition;
+    if (disp?.kind === "relisted") {
+      chips.push({
+        key: "relisted",
+        text: "Relisted",
+        cls: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
+      });
+    } else if (disp?.kind === "sold") {
+      chips.push({
+        key: "sold",
+        text: "Sold",
+        cls: "text-rose-400 bg-rose-400/10 border-rose-400/30",
+      });
+    } else if (disp?.kind === "leased") {
+      chips.push({
+        key: "leased",
+        text: "Leased",
+        cls: "text-violet-400 bg-violet-400/10 border-violet-400/30",
+      });
+    } else {
+      chips.push({
+        key: "off",
+        text: "Off-market",
+        cls: "text-amber-400 bg-amber-400/10 border-amber-400/30",
+      });
+    }
   } else {
     const d = change.priceDeltaSinceSave;
     if (d != null && d !== 0) {
@@ -142,7 +163,10 @@ export default function WatchlistSection() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {(expanded ? changes : changes.slice(0, LIMIT)).map((change) => {
           const item = change.item;
-          const price = change.current?.ListPrice ?? item.list_price;
+          // A relisted listing follows the property to its new live MLS# (new link + ask).
+          const relist = change.disposition?.kind === "relisted" ? change.disposition : null;
+          const linkKey = relist?.newKey ?? item.listing_key;
+          const price = relist?.newPrice ?? change.current?.ListPrice ?? item.list_price;
           const brokerage = change.current?.ListOfficeName;
           return (
             <div
@@ -153,7 +177,7 @@ export default function WatchlistSection() {
                 item={item}
                 className="absolute right-1.5 top-1.5 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-slate-950/70 p-1.5 backdrop-blur"
               />
-              <Link href={`/properties/${item.listing_key}`} className="block">
+              <Link href={`/properties/${linkKey}`} className="block">
                 <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
                   <Thumb item={item} />
                   <ChangeChips change={change} />
