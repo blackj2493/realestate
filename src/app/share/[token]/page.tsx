@@ -11,6 +11,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { notFound } from "next/navigation";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { resolveSqft } from "@/lib/condo/feeStability";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,9 @@ function toCardData(row: ListingRow): PropertyCardData {
       (p.PropertySubType as string) || row.property_sub_type || (p.PropertyType as string) || "Residential",
     bedrooms: num(p.BedroomsTotal) ?? 0,
     bathrooms: num(p.BathroomsTotalInteger) ?? 0,
-    squareFeet: num(p.BuildingAreaTotal),
+    // BuildingAreaTotal is ~never filled for houses; resolveSqft falls back to the
+    // TRREB LivingAreaRange band midpoint (sanity-bounded) so cards show sqft for houses.
+    squareFeet: resolveSqft(p) ?? undefined,
     daysOnMarket: num(p.DaysOnMarket),
     brokerage: (p.ListOfficeName as string) || "Unknown",
     photoUrl: row.media_urls?.[0] ?? null,
