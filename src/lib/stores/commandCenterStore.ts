@@ -143,6 +143,9 @@ export interface CommandCenterState {
   setSoldWindowDays: (days: number) => void;
   soldLocked: boolean;
   setSoldLocked: (locked: boolean) => void;
+  /** Total comps found by the last sold/comps fetch — drives the comps-anchor chip. */
+  soldCount: number;
+  setSoldCount: (n: number) => void;
   propertyClass: PropertyClass;
   setPropertyClass: (cls: PropertyClass) => void;
 
@@ -213,6 +216,52 @@ export interface CommandCenterState {
   // Current map viewport (null = whole-zone, no bounding-box constraint)
   mapBounds: MapBounds | null;
   setMapBounds: (bounds: MapBounds | null) => void;
+  /** Bumped by "Search this map area": clears the place filter and signals the map to
+   *  commit its CURRENT viewport as the search box, so results scope to what's on screen
+   *  (ignoring any typed place) instead of broadening to everything. */
+  searchAreaNonce: number;
+  searchVisibleArea: () => void;
+
+  // Search V2: imperative map fly-to. The search bar sets a target; AlphaMap
+  // consumes it (the `nonce` bumps so re-selecting the same place re-flies).
+  flyTo: { lat: number; lng: number; zoom?: number; nonce: number } | null;
+  setFlyTo: (target: { lat: number; lng: number; zoom?: number } | null) => void;
+  // A pin dropped at a searched/geocoded address that has no active listing.
+  /** A dropped map pin. For comps-on-demand it also carries the subject's constraints
+   *  (type keys + ±band price) so the sold-comp fetch returns SIMILAR solds, not all. */
+  searchPin: {
+    lat: number;
+    lng: number;
+    label?: string;
+    comps?: boolean;
+    types?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+  } | null;
+  setSearchPin: (
+    pin: {
+      lat: number;
+      lng: number;
+      label?: string;
+      comps?: boolean;
+      types?: string[];
+      minPrice?: number;
+      maxPrice?: number;
+    } | null
+  ) => void;
+  /** Enter comps-on-demand for one address: focus the view on SOLD only (so the count,
+   *  list, and pins all show the SAME similar comps — not For Sale stacked on top) and
+   *  carry the subject's type + price band on the pin to constrain the fetch. */
+  enterComps: (pin: {
+    lat: number;
+    lng: number;
+    label?: string;
+    types?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+  }) => void;
+  /** Leave comps mode: drop the pin and, only if we were in comps, restore For Sale. */
+  exitComps: () => void;
 
   // Map render mode (Instrument Deck mode dock). Lifted out of AlphaMap so the
   // rail/dock can drive it. Reset to the persona default on persona change.
@@ -301,6 +350,9 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
         activeLayers: next,
         transactionMode: tx,
         universalFilters: { ...state.universalFilters, price: [min, max] },
+        // Manually touching the layer tabs takes you OUT of comps-on-demand: drop the
+        // anchor + constraint so the layers behave normally again (a discoverable exit).
+        ...(state.searchPin?.comps ? { searchPin: null, soldCount: 0 } : {}),
       };
     }),
 
@@ -308,6 +360,8 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setSoldWindowDays: (days) => set({ soldWindowDays: days }),
   soldLocked: false,
   setSoldLocked: (locked) => set({ soldLocked: locked }),
+  soldCount: 0,
+  setSoldCount: (n) => set({ soldCount: n }),
   propertyClass: "residential",
   // Switching class clears the Property Type picker — residential & commercial use
   // different PropertySubType spellings, so a stale selection would zero out results.
@@ -403,6 +457,44 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   mapBounds: null,
   setMapBounds: (bounds) => set({ mapBounds: bounds }),
+  searchAreaNonce: 0,
+  searchVisibleArea: () => set((s) => ({ location: "", searchAreaNonce: s.searchAreaNonce + 1 })),
+
+  flyTo: null,
+  setFlyTo: (target) =>
+    set((state) => ({
+      flyTo: target ? { ...target, nonce: (state.flyTo?.nonce ?? 0) + 1 } : null,
+    })),
+  searchPin: null,
+  setSearchPin: (pin) => set({ searchPin: pin }),
+  enterComps: (pin) =>
+    set((state) => {
+      // Sold-only: queryPlan then fetches just the (constrained) comps, so totalCount =
+      // the comp count = the chip count = the pins. No For Sale stacked on top.
+      const next = new Set<LayerKey>(["sold"]);
+      const tx = transactionModeForLayers(next);
+      const { min, max } = priceConfig(tx);
+      return {
+        searchPin: { ...pin, comps: true },
+        activeLayers: next,
+        transactionMode: tx,
+        universalFilters: { ...state.universalFilters, price: [min, max] },
+      };
+    }),
+  exitComps: () =>
+    set((state) => {
+      if (!state.searchPin?.comps) return { searchPin: null }; // plain pin → just drop it
+      const next = new Set<LayerKey>(["forSale"]);
+      const tx = transactionModeForLayers(next);
+      const { min, max } = priceConfig(tx);
+      return {
+        searchPin: null,
+        soldCount: 0,
+        activeLayers: next,
+        transactionMode: tx,
+        universalFilters: { ...state.universalFilters, price: [min, max] },
+      };
+    }),
 
   mapMode: "listings",
   setMapMode: (mode) => set({ mapMode: mode }),

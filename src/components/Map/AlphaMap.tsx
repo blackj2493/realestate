@@ -6,13 +6,14 @@ import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer, PathLayer } from "@deck.gl/layers";
 import { Map, NavigationControl, Layer as MapboxLayer } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
-import { Layers, MapPin } from "lucide-react";
+import { Layers, MapPin, X } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { isDelistedDealType } from "@/lib/sold/dealType";
 import { ALPHA_GLOW_RANGE, type MapColorConfig } from "@/lib/personas/personaConfig";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
@@ -96,6 +97,13 @@ export default function AlphaMap({
   const finishDrawing = useCommandCenterStore((s) => s.finishDrawing);
   const timelineActive = useCommandCenterStore((s) => s.timelineActive);
   const domCenter = useCommandCenterStore((s) => s.domCenter);
+  // Search V2: imperative fly-to target + a dropped search pin.
+  const flyTo = useCommandCenterStore((s) => s.flyTo);
+  const setFlyTo = useCommandCenterStore((s) => s.setFlyTo);
+  const searchPin = useCommandCenterStore((s) => s.searchPin);
+  const enterComps = useCommandCenterStore((s) => s.enterComps);
+  const exitComps = useCommandCenterStore((s) => s.exitComps);
+  const soldCount = useCommandCenterStore((s) => s.soldCount);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -106,6 +114,9 @@ export default function AlphaMap({
   const isInteracting = useRef(false);
   const lastSearchQuery = useRef(currentSearchQuery);
   const mapInitialized = useRef(false);
+  // Signature of the result set we last framed — lets the auto-fit wait for a new
+  // query's data to actually arrive before reframing (results lag the query string).
+  const lastFitData = useRef("");
 
   // Viewport-query plumbing: report the visible extent so the search scopes to
   // what's on screen (HouseSigma-style progressive reveal under the 100-cap).
@@ -159,6 +170,16 @@ export default function AlphaMap({
     if (reportTimer.current) clearTimeout(reportTimer.current);
   }, []);
 
+  // "Search this map area": commit the CURRENT viewport as the search box. Deferred a
+  // tick so it lands AFTER the page's location-change reset (which nulls mapBounds) —
+  // otherwise the reset would wipe the box we just set. The nonce ignores the initial 0.
+  const searchAreaNonce = useCommandCenterStore((s) => s.searchAreaNonce);
+  useEffect(() => {
+    if (searchAreaNonce === 0) return;
+    const t = setTimeout(() => computeAndReportBounds(), 0);
+    return () => clearTimeout(t);
+  }, [searchAreaNonce, computeAndReportBounds]);
+
   // Mode change re-tilts the camera (flat for Listings, pitched for Heatmap/3D)
   // with an animated transition so switching modes feels physical, not a cut.
   useEffect(() => {
@@ -200,22 +221,34 @@ export default function AlphaMap({
   useEffect(() => {
     if (commuteRing) return;
     if (isInteracting.current || validProperties.length === 0) return;
-    const changed = lastSearchQuery.current !== currentSearchQuery;
-    if (mapInitialized.current && !changed) return;
 
-    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
-    for (const p of validProperties) {
-      const lat = p.location[0];
-      const lng = p.location[1];
-      minLng = Math.min(minLng, lng);
-      maxLng = Math.max(maxLng, lng);
-      minLat = Math.min(minLat, lat);
-      maxLat = Math.max(maxLat, lat);
+    // A new query (area/persona) changes currentSearchQuery a render BEFORE its
+    // results land, so we must not frame the PREVIOUS query's listings. Track a
+    // cheap signature of the result set and wait until the data itself changes.
+    const first = validProperties[0]?.id ?? "";
+    const last = validProperties[validProperties.length - 1]?.id ?? "";
+    const dataSig = `${validProperties.length}:${first}:${last}`;
+    const queryChanged = lastSearchQuery.current !== currentSearchQuery;
+    if (queryChanged) {
+      if (dataSig === lastFitData.current) return; // still the old query's data — wait
+      lastSearchQuery.current = currentSearchQuery;
+    } else if (mapInitialized.current) {
+      return; // same query, viewport drill-down — keep the camera where the user left it
     }
-    const centerLng = (minLng + maxLng) / 2;
-    const centerLat = (minLat + maxLat) / 2;
-    const maxRange = Math.max(maxLng - minLng, maxLat - minLat);
-    const zoom = maxRange > 0 ? Math.max(8, Math.min(15, 12 - Math.log10(maxRange * 100))) : 10;
+
+    // Frame the DENSE cluster (where the majority are), not the full extent. The
+    // ≤100 results are sorted by the persona metric (cap rate, DOM…) so they can
+    // be geographically scattered — a raw min/max bbox then zooms out to a province
+    // view. Center on the MEDIAN point and frame the 10–90th-percentile span so a
+    // handful of far-flung outliers never drag the camera out.
+    const lats = validProperties.map((p) => p.location[0]).sort((a, b) => a - b);
+    const lngs = validProperties.map((p) => p.location[1]).sort((a, b) => a - b);
+    const pct = (arr: number[], p: number) =>
+      arr[Math.min(arr.length - 1, Math.max(0, Math.round(p * (arr.length - 1))))];
+    const centerLat = pct(lats, 0.5);
+    const centerLng = pct(lngs, 0.5);
+    const maxRange = Math.max(pct(lats, 0.9) - pct(lats, 0.1), pct(lngs, 0.9) - pct(lngs, 0.1));
+    const zoom = maxRange > 0 ? Math.max(8, Math.min(15, 12 - Math.log10(maxRange * 100))) : 13;
 
     markProgrammatic(800);
     setViewState({
@@ -229,7 +262,7 @@ export default function AlphaMap({
     });
     mapInitialized.current = true;
     setMapReady(true);
-    lastSearchQuery.current = currentSearchQuery;
+    lastFitData.current = dataSig;
   }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode]);
 
   // Fit to the commute zone whenever the isochrone changes (frames the whole
@@ -255,6 +288,47 @@ export default function AlphaMap({
       transitionInterpolator: new FlyToInterpolator(),
     }));
   }, [commuteRing, markProgrammatic]);
+
+  // Search V2: imperative fly-to from the search bar. Re-runs on every nonce bump
+  // (re-selecting the same place re-flies). Flagged programmatic so the settle
+  // handler never mistakes the animated fly for a user pan (which would re-query).
+  const flyNonce = flyTo?.nonce ?? 0;
+  useEffect(() => {
+    if (!flyTo) return;
+    isInteracting.current = false;
+    markProgrammatic(1000);
+    setViewState((vs) => ({
+      ...vs,
+      longitude: flyTo.lng,
+      latitude: flyTo.lat,
+      zoom: flyTo.zoom ?? 14,
+      transitionDuration: 1000,
+      transitionInterpolator: new FlyToInterpolator(),
+    }));
+    setMapReady(true);
+    mapInitialized.current = true;
+    // Only re-fly when the nonce changes; flyTo carries the latest coords.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyNonce, markProgrammatic]);
+
+  // A pin dropped at a searched/geocoded address (no listing) — cyan dot.
+  const searchPinLayer = useMemo<Layer[]>(() => {
+    if (!searchPin) return [];
+    return [
+      new ScatterplotLayer<{ lat: number; lng: number }>({
+        id: "search-pin",
+        data: [searchPin],
+        getPosition: (d) => [d.lng, d.lat],
+        getRadius: 9,
+        radiusUnits: "pixels",
+        getFillColor: [34, 211, 238, 255],
+        stroked: true,
+        getLineColor: [255, 255, 255, 255],
+        lineWidthMinPixels: 2,
+        pickable: false,
+      }),
+    ];
+  }, [searchPin]);
 
   // For sparse metrics (cap rate / gross yield), exclude listings without an estimate
   // from the HexagonLayer so "no data" doesn't drag the MEAN toward zero.
@@ -698,7 +772,7 @@ export default function AlphaMap({
         onDragStart={() => { setPopup(null); setCatchmentHover(null); }}
         onDragEnd={handleDragEnd}
         controller={true}
-        layers={[...catchmentLayers, ...layers, ...drawLayers]}
+        layers={[...catchmentLayers, ...layers, ...drawLayers, ...searchPinLayer]}
         onClick={(info) => {
           if (isDrawing) {
             if (!info.coordinate) return;
@@ -750,6 +824,13 @@ export default function AlphaMap({
             setPopup(null);
             onSelectProperty?.(l);
           }}
+          onComps={(l) => {
+            const anchor = compsAnchorForListing(l);
+            if (!anchor) return;
+            setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: 14 });
+            enterComps(anchor);
+            setPopup(null);
+          }}
         />
       )}
 
@@ -775,6 +856,35 @@ export default function AlphaMap({
       {isSelectMode && (
         <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md">
           <p className="font-mono text-xs text-cyan-200">Tap properties to add to your selection</p>
+        </div>
+      )}
+
+      {/* Search / comps anchor chip — identifies the dropped pin and (for comps-on-demand)
+          reports how many recent solds are in view, so a sparse area reads as data, not a
+          stray circle. The ✕ removes the pin. */}
+      {searchPin && (
+        <div className="pointer-events-auto absolute left-1/2 top-4 z-20 flex max-w-[92%] -translate-x-1/2 items-center gap-2 border border-cyan-500/40 bg-slate-900/95 px-3 py-1.5 font-mono text-xs text-cyan-100 backdrop-blur-md">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+          {searchPin.comps ? (
+            <span className="truncate">
+              Comparable sales near <span className="text-slate-100">{searchPin.label ?? "this address"}</span>
+              {" · "}
+              <span className={soldCount > 0 ? "text-cyan-300" : "text-amber-300"}>
+                {soldCount > 0 ? `${soldCount.toLocaleString()} similar sold` : "no similar solds found"}
+              </span>
+            </span>
+          ) : (
+            <span className="truncate text-slate-100">{searchPin.label ?? "Dropped pin"}</span>
+          )}
+          <button
+            type="button"
+            onClick={() => exitComps()}
+            className="ml-1 flex shrink-0 items-center gap-1 border border-slate-600 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-slate-300 transition-colors hover:border-rose-500/50 hover:text-rose-200"
+            aria-label={searchPin.comps ? "Exit comparable sales view" : "Clear pin"}
+          >
+            <X className="h-3 w-3" />
+            {searchPin.comps ? "Exit" : null}
+          </button>
         </div>
       )}
     </div>

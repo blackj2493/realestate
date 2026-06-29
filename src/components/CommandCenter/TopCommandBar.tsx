@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import FilterBar from "./FilterBar";
 import LocationSearch from "./LocationSearch";
+import LocationSearchV2 from "./LocationSearchV2";
+import { SEARCH_V2_ENABLED } from "@/lib/search/searchConfig";
 import PersonaLens from "@/components/dashboard/PersonaLens";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 import PrimaryNav from "@/components/layout/PrimaryNav";
@@ -71,7 +73,11 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
 
           {/* Location search is hidden on mobile to make room for the persona. */}
           <div data-tour="terminal-search" className="hidden min-w-0 flex-1 sm:block">
-            <LocationSearch className="w-full" />
+            {SEARCH_V2_ENABLED ? (
+              <LocationSearchV2 className="w-full" />
+            ) : (
+              <LocationSearch className="w-full" />
+            )}
           </div>
         </div>
 
@@ -131,7 +137,11 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           />
           <div className="relative border-b border-slate-800 bg-slate-950 px-3 pb-3 pt-3">
             <div className="flex items-center gap-2">
-              <LocationSearch className="min-w-0 flex-1" />
+              {SEARCH_V2_ENABLED ? (
+                <LocationSearchV2 className="min-w-0 flex-1" />
+              ) : (
+                <LocationSearch className="min-w-0 flex-1" />
+              )}
               <button
                 type="button"
                 onClick={() => setSearchOpen(false)}

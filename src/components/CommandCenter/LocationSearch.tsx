@@ -14,7 +14,7 @@
 "use client";
 
 import React from "react";
-import { Search, X, MapPin, Home, Hash } from "lucide-react";
+import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -22,6 +22,8 @@ import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
 import { useRouter } from "next/navigation";
 import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
+import { parseNlQuery } from "@/lib/search/nlParse";
+import { chipsToQueryString } from "@/lib/search/chipUrl";
 
 interface LocationSearchProps {
   className?: string;
@@ -110,6 +112,21 @@ export default function LocationSearch({
     inputRef.current?.blur();
   };
 
+  // Lightweight NL parse of the raw input (pure, runs per keystroke). In navigate
+  // mode a STRUCTURED query ("4 bed townhouse under 900k in milton") becomes a
+  // deep link into the terminal rather than a bare place search — the terminal
+  // hydrates the full filter set from the URL (see chipUrl + chipApply). Plain
+  // places stay plain (isStructured === false) and flow through the typeahead.
+  const nl = React.useMemo(() => parseNlQuery(value), [value]);
+  const showStructured = mode === "navigate" && nl.isStructured;
+
+  const goStructured = () => {
+    const qs = chipsToQueryString(nl.chips);
+    router.push(`/properties${qs ? `?${qs}` : ""}`);
+    setValue("");
+    closeAndBlur();
+  };
+
   // Apply a resolved target. navigate mode routes; inplace mode mutates the store
   // exactly as before (city → setLocation, listing → setSelectedProperty).
   const applyTarget = (t: SearchTarget) => {
@@ -154,6 +171,8 @@ export default function LocationSearch({
     e.preventDefault();
     if (open && highlight >= 0 && highlight < suggestions.length) {
       select(suggestions[highlight]);
+    } else if (showStructured) {
+      goStructured(); // "4 bed townhouse under 900k" → deep link, not a place
     } else if (value.trim()) {
       applyTarget(resolveTextTarget(value));
     }
@@ -200,12 +219,32 @@ export default function LocationSearch({
         </div>
       </form>
 
-      {open && (suggestions.length > 0 || searching || value.trim().length >= 2) && (
+      {open && (suggestions.length > 0 || searching || showStructured || value.trim().length >= 2) && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto border border-slate-700 bg-slate-900">
+          {/* Structured-query shortcut: parsed the sentence into filters → deep-link
+              into the terminal. Sits above place/address matches and is the default
+              Enter action (highlight stays -1 until the user arrows into a place). */}
+          {showStructured && (
+            <button
+              type="button"
+              onMouseEnter={() => setHighlight(-1)}
+              onClick={goStructured}
+              className="flex w-full items-center gap-2.5 border-b border-slate-800 bg-cyan-500/5 px-3 py-2 text-left transition-colors hover:bg-cyan-500/10"
+            >
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-mono text-xs text-cyan-200">
+                  {nl.chips.map((c) => c.label).join("  ·  ")}
+                </span>
+                <span className="truncate text-[10px] text-slate-500">Search all matches on the map</span>
+              </span>
+              <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            </button>
+          )}
           {searching && suggestions.length === 0 && (
             <div className="px-3 py-2 font-mono text-xs text-slate-500">Searching…</div>
           )}
-          {!searching && suggestions.length === 0 && value.trim().length >= 2 && (
+          {!searching && suggestions.length === 0 && !showStructured && value.trim().length >= 2 && (
             <div className="px-3 py-2 font-mono text-xs text-slate-500">
               No matches for “{value.trim()}”. Try a city, neighbourhood, address, or MLS#.
             </div>

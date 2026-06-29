@@ -18,6 +18,7 @@ import ActiveFilterStrip from "./ActiveFilterStrip";
 import { buildFilterTokens } from "./filterTokens";
 import { formatResultNudge } from "./filterNudge";
 import { anyControlActive, isControlActive } from "./investorControls";
+import { SCHOOL_LEVEL_LABEL } from "@/lib/schools/schoolLens";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -49,7 +50,39 @@ export default function FilterBar() {
     activeLayers,
     propertyClass,
     setPropertyClass,
+    school,
+    resetSchool,
+    commute,
+    resetCommute,
+    amenity,
+    resetAmenity,
   } = useCommandCenterStore();
+
+  // Global map lenses (school / commute / walkability) — not universal filters, so they
+  // need to be surfaced as their own removable tokens (and cleared on "Clear all"),
+  // otherwise e.g. a "School ≥ 9.0" applied by a natural-language search lingers invisibly.
+  const lenses = [
+    {
+      id: "school",
+      active: school.enabled && (school.minScore > 0 || !!school.targetSchool),
+      label: school.targetSchool
+        ? `Near ${school.targetSchool.name}`
+        : `${SCHOOL_LEVEL_LABEL[school.level]} school ≥ ${school.minScore.toFixed(1)}`,
+      onRemove: resetSchool,
+    },
+    {
+      id: "commute",
+      active: commute.enabled && !!commute.destination,
+      label: commute.destination ? `${commute.minutes}-min ${commute.mode} → ${commute.destination.label}` : "",
+      onRemove: resetCommute,
+    },
+    {
+      id: "amenity",
+      active: amenity.enabled,
+      label: `${amenity.kind === "grocery" ? "Grocery" : amenity.kind === "recreation" ? "Recreation" : "Amenity"} ≤ ${amenity.maxKm}km`,
+      onRemove: resetAmenity,
+    },
+  ];
 
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
   const controls = PERSONA_CONFIG[activePersona].controls;
@@ -87,13 +120,19 @@ export default function FilterBar() {
     CORE_FILTERS.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)) ||
     addedDefs.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue));
   const investorActive = anyControlActive(controls, filters);
-  const anyActive = universalActive || investorActive;
+  const lensActive = lenses.some((l) => l.active);
+  const anyActive = universalActive || investorActive || lensActive;
 
-  // Clear the filter chips only — leaves the commute/school map lenses intact.
+  // Clear EVERYTHING the user is filtering by — universal chips, investor controls, AND
+  // the global map lenses (school / commute / walkability). The lenses used to survive
+  // this, which left e.g. a search-applied "School ≥ 9.0" stuck on with no way to clear it.
   const clearAll = () => {
     setFilters({ ...defaultTerminalFilters });
     resetUniversalFilters();
     clearAddedFilters();
+    resetSchool();
+    resetCommute();
+    resetAmenity();
   };
 
   // Mobile (<md): the inline chip row scrolls its controls off the right edge,
@@ -143,6 +182,7 @@ export default function FilterBar() {
     removeAddedFilter,
     showAdvanced: !compOnly,
     showInvestor: investorLayer,
+    lenses,
   });
 
   return (

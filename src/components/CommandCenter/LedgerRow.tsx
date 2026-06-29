@@ -4,11 +4,14 @@
 
 "use client";
 
-import { Check } from "lucide-react";
+import { useState } from "react";
+import { Check, Crosshair } from "lucide-react";
 import WatchHeart from "@/components/watchlist/WatchHeart";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCommandCenterStore, MAX_SELECTED } from "@/lib/stores/commandCenterStore";
 import type { ListingDocument } from "@/lib/typesense/client";
+import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
+import CompsPopover from "./CompsPopover";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
@@ -249,6 +252,18 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
   // Grade for the active lens, so the row matches what the detail card opens on.
   const activePersona = useCommandCenterStore((s) => s.activePersona);
   const deal = dealScoreFromDocument(property, undefined, activePersona);
+  // Comps peek: hover reveals a Comps button; clicking opens an inline popover. "See all"
+  // escalates to the full map comps view (enterComps) — same anchor as every entry point.
+  const enterComps = useCommandCenterStore((s) => s.enterComps);
+  const setFlyTo = useCommandCenterStore((s) => s.setFlyTo);
+  const [compsOpen, setCompsOpen] = useState(false);
+  const seeAllComps = () => {
+    const anchor = compsAnchorForListing(property);
+    if (!anchor) return;
+    setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: 14 });
+    enterComps(anchor);
+    setCompsOpen(false);
+  };
   // Block adding once the Compare basket is full (MAX_SELECTED). Removing an
   // already-checked row always stays enabled so the user can swap one out.
   const selectionFull = useCommandCenterStore((s) => s.selectedIds.size >= MAX_SELECTED);
@@ -270,12 +285,39 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => onHoverChange?.(false)}
       className={cn(
-        "group flex cursor-pointer items-center gap-3 border-b border-slate-800/50 px-3 py-2.5 transition-colors hover:bg-slate-800/50",
+        "group relative flex cursor-pointer items-center gap-3 border-b border-slate-800/50 px-3 py-2.5 transition-colors hover:bg-slate-800/50",
         isHovered && !isSelected && "bg-slate-800/50 ring-1 ring-inset ring-cyan-500/40",
         isSelected && "border-l-2 border-l-cyan-500 bg-cyan-900/20",
         isChecked && !isSelected && "bg-cyan-900/10"
       )}
     >
+      {/* Comps peek — trigger pinned to the row's BOTTOM-RIGHT (the Alpha flag is
+          vertically centred, so this corner is clear), popover opens below-right. */}
+      {!compact && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCompsOpen((o) => !o);
+            }}
+            title="Recent comparable sales near this home"
+            aria-label="Show comparable sales"
+            className={cn(
+              "absolute bottom-1.5 right-2 z-20 items-center gap-1 border border-cyan-500/40 bg-slate-900/95 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/20",
+              compsOpen ? "flex" : "hidden group-hover:flex"
+            )}
+          >
+            <Crosshair className="h-3 w-3" />
+            Comparable sales
+          </button>
+          {compsOpen && (
+            <div className="absolute right-2 top-full z-30 mt-1" onClick={(e) => e.stopPropagation()}>
+              <CompsPopover listing={property} onClose={() => setCompsOpen(false)} onSeeAll={seeAllComps} />
+            </div>
+          )}
+        </>
+      )}
       {/* Multi-select checkbox */}
       <button
         type="button"
