@@ -21,6 +21,7 @@ import { SEARCH_V2_ENABLED } from "@/lib/search/searchConfig";
 import PersonaLens from "@/components/dashboard/PersonaLens";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 import PrimaryNav from "@/components/layout/PrimaryNav";
+import MobileNav from "@/components/layout/MobileNav";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { isInvestorLayerActive } from "@/lib/filters/fundamentals";
 
@@ -107,6 +108,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           </button>
           <PrimaryNav variant="compact" className="hidden sm:flex" />
           <WatchlistAlertsBell />
+          {/* Hamburger nav — phones hide the inline PrimaryNav (above), so this
+              slide-in drawer (same NAV_ITEMS) is the only cross-page jump on
+              mobile. Matches PrimaryNav's sm breakpoint so exactly one shows. */}
+          <MobileNav className="sm:hidden" />
         </div>
       </div>
 
