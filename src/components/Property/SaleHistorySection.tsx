@@ -24,7 +24,7 @@ function fmtDate(iso: string | null): string {
 
 function HeaderRow() {
   return (
-    <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+    <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
       <th className="py-2 text-left font-medium">Date</th>
       <th className="py-2 text-right font-medium">List</th>
       <th className="py-2 text-right font-medium">Sold</th>
@@ -43,11 +43,11 @@ export default function SaleHistorySection({
   className?: string;
 }) {
   const Title = (
-    <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+    <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
       <History className="h-4 w-4 text-amber-400" />
       Sale History
       {saleHistory.saleCount > 0 && (
-        <span className="ml-1 rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
+        <span className="ml-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
           {saleHistory.saleCount}
         </span>
       )}
@@ -57,9 +57,9 @@ export default function SaleHistorySection({
   // ── Empty: no recorded prior sales ──────────────────────────────────────────
   if (!saleHistory.available || saleHistory.saleCount === 0) {
     return (
-      <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+      <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
         {Title}
-        <p className="text-xs text-slate-500">No recorded prior sales for this address.</p>
+        <p className="text-xs text-muted-foreground">No recorded prior sales for this address.</p>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export default function SaleHistorySection({
   if (!isAuthed) {
     const placeholders = Array.from({ length: Math.min(saleHistory.saleCount, 5) });
     return (
-      <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+      <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
         {Title}
         <div className="relative">
           <table className="w-full text-sm" aria-hidden="true">
@@ -77,7 +77,7 @@ export default function SaleHistorySection({
             </thead>
             <tbody className="select-none blur-sm">
               {placeholders.map((_, i) => (
-                <tr key={i} className="border-b border-slate-800/40 font-mono text-xs text-slate-400">
+                <tr key={i} className="border-b border-border/40 font-mono text-xs text-muted-foreground">
                   <td className="py-2 text-left">2023 ··· ··</td>
                   <td className="py-2 text-right">$•,•••,•••</td>
                   <td className="py-2 text-right">$•,•••,•••</td>
@@ -87,20 +87,20 @@ export default function SaleHistorySection({
             </tbody>
           </table>
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-slate-950/50 backdrop-blur-[1px]">
-            <Lock className="h-5 w-5 text-cyan-400" />
-            <p className="text-xs text-slate-300">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-background/50 backdrop-blur-[1px]">
+            <Lock className="h-5 w-5 text-primary" />
+            <p className="text-xs text-foreground">
               {saleHistory.saleCount} prior sale{saleHistory.saleCount > 1 ? "s" : ""} on record
             </p>
             <Link
               href="/login"
-              className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20"
+              className="rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
             >
               Sign in to view sold prices
             </Link>
           </div>
         </div>
-        <p className="mt-3 text-[10px] leading-snug text-slate-600">
+        <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
           Sold data via TRREB VOW — viewable to signed-in users for personal, non-commercial use.
         </p>
       </div>
@@ -109,28 +109,28 @@ export default function SaleHistorySection({
 
   // ── Authenticated: full ledger ───────────────────────────────────────────────
   return (
-    <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+    <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
       {Title}
       <table className="w-full text-sm">
         <thead>
           <HeaderRow />
         </thead>
-        <tbody className="divide-y divide-slate-800/50">
+        <tbody className="divide-y divide-border/50">
           {saleHistory.events.map((e, i) => (
             <tr key={`${e.listing_key}-${i}`} className="font-mono text-xs">
-              <td className="py-2 text-left text-slate-300">{fmtDate(e.contract_date || e.close_date)}</td>
-              <td className="py-2 text-right text-slate-400">
+              <td className="py-2 text-left text-foreground">{fmtDate(e.contract_date || e.close_date)}</td>
+              <td className="py-2 text-right text-muted-foreground">
                 {e.list_price ? formatPrice(e.list_price) : "—"}
               </td>
               <td className="py-2 text-right text-amber-400">
                 {e.close_price ? formatPrice(e.close_price) : "—"}
               </td>
-              <td className="py-2 text-right text-slate-500">{e.sub_type || "—"}</td>
+              <td className="py-2 text-right text-muted-foreground">{e.sub_type || "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <p className="mt-3 text-[10px] leading-snug text-slate-600">
+      <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
         Sold data via TRREB VOW — for your personal, non-commercial use.
       </p>
     </div>
