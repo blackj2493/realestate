@@ -3,8 +3,6 @@ import { buildTerminalCoreClauses } from "./terminalQuery";
 import { makeDefaultUniversalFilters } from "./filterRegistry";
 import { defaultTerminalFilters } from "@/lib/personas/personaConfig";
 
-const noopPersona = { buildFilterString: () => "" };
-
 describe("buildTerminalCoreClauses", () => {
   it("residential sale defaults → floor + sale + not-commercial", () => {
     const clauses = buildTerminalCoreClauses({
@@ -12,7 +10,6 @@ describe("buildTerminalCoreClauses", () => {
       propertyClass: "residential",
       universalFilters: makeDefaultUniversalFilters(),
       filters: defaultTerminalFilters,
-      persona: noopPersona,
     });
     expect(clauses).toEqual([
       "ListPrice:>=100000",
@@ -21,20 +18,40 @@ describe("buildTerminalCoreClauses", () => {
     ]);
   });
 
-  it("rent flips the floor + transaction and keeps commercial gating", () => {
+  it("applies a set investor signal in residential-sale, persona-independent", () => {
+    const clauses = buildTerminalCoreClauses({
+      transactionMode: "sale",
+      propertyClass: "residential",
+      universalFilters: makeDefaultUniversalFilters(),
+      filters: { ...defaultTerminalFilters, minPriceDrop: 50000 },
+    });
+    expect(clauses.some((c) => c.includes("TotalPriceDrop:>=50000"))).toBe(true);
+  });
+
+  it("commercial+rent turns the investor layer off → investor clause omitted", () => {
     const clauses = buildTerminalCoreClauses({
       transactionMode: "rent",
       propertyClass: "commercial",
       universalFilters: makeDefaultUniversalFilters(),
-      filters: defaultTerminalFilters,
-      persona: { buildFilterString: () => "ExtrapolatedCapRate:>=5" },
+      filters: { ...defaultTerminalFilters, minCapRate: 5 },
     });
-    // commercial+rent ⇒ investor layer off ⇒ persona clause omitted
     expect(clauses).toEqual([
       "ListPrice:>=1",
       "TransactionType:=`For Lease`",
       "PropertyType:=Commercial",
     ]);
+    expect(clauses.some((c) => c.includes("cap_rate_est"))).toBe(false);
+  });
+
+  it("excludePersona drops the investor clause (investor-chip histogram base)", () => {
+    const clauses = buildTerminalCoreClauses({
+      transactionMode: "sale",
+      propertyClass: "residential",
+      universalFilters: makeDefaultUniversalFilters(),
+      filters: { ...defaultTerminalFilters, minPriceDrop: 50000 },
+      excludePersona: true,
+    });
+    expect(clauses.some((c) => c.includes("TotalPriceDrop"))).toBe(false);
   });
 
   it("excludeUniversalKey drops that field's clause (histogram base)", () => {
@@ -46,7 +63,6 @@ describe("buildTerminalCoreClauses", () => {
       propertyClass: "residential",
       universalFilters: uf,
       filters: defaultTerminalFilters,
-      persona: noopPersona,
     });
     expect(withPrice).toContain("ListPrice:>=600000 && ListPrice:<=1200000");
     expect(withPrice).toContain(
@@ -58,7 +74,6 @@ describe("buildTerminalCoreClauses", () => {
       propertyClass: "residential",
       universalFilters: uf,
       filters: defaultTerminalFilters,
-      persona: noopPersona,
       excludeUniversalKey: "price",
     });
     expect(minusPrice.some((c) => c.includes("ListPrice:>=600000"))).toBe(false);

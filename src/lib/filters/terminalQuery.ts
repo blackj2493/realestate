@@ -16,23 +16,18 @@ import {
   type PropertyClass,
 } from "./fundamentals";
 import type { UniversalFilterState } from "./types";
-import type { TerminalFilterState } from "@/lib/personas/personaConfig";
-
-interface PersonaLike {
-  buildFilterString: (f: TerminalFilterState) => string;
-}
+import { buildInvestorClause, type TerminalFilterState } from "@/lib/personas/personaConfig";
 
 export interface TerminalCoreArgs {
   transactionMode: TransactionMode;
   propertyClass: PropertyClass;
   universalFilters: UniversalFilterState;
   filters: TerminalFilterState;
-  persona: PersonaLike;
   /** Drop one universal filter key — the histogram excludes its own field. */
   excludeUniversalKey?: string;
-  /** Drop the whole persona investor clause — investor-chip histograms show a
-   *  metric's full distribution over the basic-filtered set, not narrowed by the
-   *  other investor controls (and so never self-collapse on the dragged one). */
+  /** Drop the whole investor clause — investor-chip histograms show a metric's
+   *  full distribution over the basic-filtered set, not narrowed by the other
+   *  investor controls (and so never self-collapse on the dragged one). */
   excludePersona?: boolean;
 }
 
@@ -50,7 +45,6 @@ export function buildTerminalCoreClauses(args: TerminalCoreArgs): string[] {
     propertyClass,
     universalFilters,
     filters,
-    persona,
     excludeUniversalKey,
     excludePersona,
   } = args;
@@ -71,7 +65,7 @@ export function buildTerminalCoreClauses(args: TerminalCoreArgs): string[] {
     buildTransactionClause(transactionMode),
     buildClassClause(propertyClass),
     priceClause,
-    investorLayer && !excludePersona ? persona.buildFilterString(filters) : "",
+    investorLayer && !excludePersona ? buildInvestorClause(filters) : "",
     universalFilter,
   ].filter((c): c is string => Boolean(c));
 }

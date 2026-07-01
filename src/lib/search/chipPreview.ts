@@ -21,7 +21,6 @@ import type { TerminalFilterState } from "@/lib/personas/personaConfig";
 import type { ParsedChip } from "./types";
 
 const SAMPLE = 3;
-const NO_PERSONA = { buildFilterString: () => "" };
 
 /** Map the parsed chips onto a UniversalFilterState — the same structural keys
  *  chipApply.syncChips writes. Location is the text query (handled below); persona-only
@@ -73,7 +72,6 @@ export async function fetchChipPreview(
     propertyClass: "residential",
     universalFilters: chipsToUniversalFilters(chips),
     filters: {} as TerminalFilterState,
-    persona: NO_PERSONA,
     excludePersona: true,
   });
   // Non-universal chips — mirror exactly what syncChips → school lens / persona apply.

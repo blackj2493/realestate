@@ -4,6 +4,10 @@ import {
   type TerminalFilterState,
 } from "@/lib/personas/personaConfig";
 
+/** Stable id for a control (slider/toggle use `key`, range uses `minKey`) — used to
+ *  dedupe the persona-pinned set against the rest of the investor catalog. */
+export const controlId = (c: ControlDef): string => (c.kind === "range" ? c.minKey : c.key);
+
 /** True when a control's bound value(s) differ from the terminal defaults. */
 export function isControlActive(c: ControlDef, f: TerminalFilterState): boolean {
   if (c.kind === "slider") return f[c.key] !== defaultTerminalFilters[c.key];

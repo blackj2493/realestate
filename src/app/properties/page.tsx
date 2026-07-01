@@ -230,7 +230,7 @@ function CommandCenterContent() {
   // but it never touches state, so the fan-out below can run it in parallel.
   const runActiveSearch = useCallback(async (): Promise<SearchResult> => {
     const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
-    const coreClauses = buildTerminalCoreClauses({ transactionMode, propertyClass, universalFilters, filters, persona });
+    const coreClauses = buildTerminalCoreClauses({ transactionMode, propertyClass, universalFilters, filters });
     const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
     const schoolParts: string[] = [];
     if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);

@@ -36,9 +36,11 @@ interface MobileFilterSheetProps {
   onClose: () => void;
   /** Scoped core filters (class-aware price + type), ready to render expanded. */
   coreItems: FilterItem[];
-  /** Persona investor controls (cap-rate / yield thresholds, etc.). */
+  /** The active persona's PINNED investor controls (shown first). */
   controls: React.ComponentProps<typeof InvestorChip>["control"][];
-  /** Show the persona investor chips (residential-sale, active layer). */
+  /** Every OTHER investor signal — addable regardless of persona. */
+  moreControls: React.ComponentProps<typeof InvestorChip>["control"][];
+  /** Show the investor chips (residential-sale, active layer). */
   showInvestor: boolean;
   /** Show advanced (deep field library + investor) sections (false in comp-only Sold/De-listed). */
   showAdvanced: boolean;
@@ -52,6 +54,7 @@ export default function MobileFilterSheet({
   onClose,
   coreItems,
   controls,
+  moreControls,
   showInvestor,
   showAdvanced,
   clearAll,
@@ -163,6 +166,17 @@ export default function MobileFilterSheet({
               <span className={LABEL}>Persona signals</span>
               <div className="flex flex-wrap gap-2">
                 {controls.map((c, i) => (
+                  <InvestorChip key={i} control={c} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {showAdvanced && showInvestor && moreControls.length > 0 && (
+            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+              <span className={LABEL}>More investor signals</span>
+              <div className="flex flex-wrap gap-2">
+                {moreControls.map((c, i) => (
                   <InvestorChip key={i} control={c} />
                 ))}
               </div>

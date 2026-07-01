@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { buildBands, supportsHistogram, HISTOGRAM_BANDS } from "@/lib/filters/histogram";
 import { searchHistogram } from "@/lib/typesense/client";
@@ -38,7 +37,6 @@ export function useRangeHistogram({
   const propertyClass = useCommandCenterStore((s) => s.propertyClass);
   const universalFilters = useCommandCenterStore((s) => s.universalFilters);
   const filters = useCommandCenterStore((s) => s.filters);
-  const activePersona = useCommandCenterStore((s) => s.activePersona);
 
   const baseFilterBy = useMemo(
     () =>
@@ -47,11 +45,10 @@ export function useRangeHistogram({
         propertyClass,
         universalFilters,
         filters,
-        persona: PERSONA_CONFIG[activePersona],
         excludeUniversalKey: filterKey,
         excludePersona,
       }).join(" && "),
-    [transactionMode, propertyClass, universalFilters, filters, activePersona, filterKey, excludePersona]
+    [transactionMode, propertyClass, universalFilters, filters, filterKey, excludePersona]
   );
 
   const [counts, setCounts] = useState<number[]>([]);
