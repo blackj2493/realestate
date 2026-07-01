@@ -398,10 +398,11 @@ function CommandCenterContent() {
   const showSoldLock = soldLocked && compOnly;
   const soldLockMsg = `${totalCount.toLocaleString()} gated market record${totalCount === 1 ? "" : "s"} — sign in to view`;
 
-  // Mobile-only list/map switch. The map is list-first-hidden on mobile; this is
-  // the "one tap away" to it. Desktop shows both panes, so the control is md:hidden.
-  // The map mounts in a hidden container on mobile, so nudge it to resize on reveal.
-  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  // Mobile-only list/map switch. The map is the default view on mobile; the list
+  // (full-width card ledger) is one tap away. Desktop shows both panes, so the
+  // control is md:hidden. The effect below nudges the map to resize whenever it's
+  // shown — on first mount (map is the default) and when revealed from the list.
+  const [mobileView, setMobileView] = useState<"list" | "map">("map");
   useEffect(() => {
     if (mobileView !== "map") return;
     const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
@@ -413,10 +414,10 @@ function CommandCenterContent() {
       <TopCommandBar className="shrink-0" />
 
       <div className="flex min-h-0 flex-1">
-        {/* Map — fills remaining width. Hidden on mobile (<md): the terminal's
-            desktop split crushed the ledger into ~390px (audit C4), so mobile
-            shows the full-width card ledger instead. A map/list toggle is a
-            follow-up. */}
+        {/* Map — fills remaining width. On mobile (<md) it's the default view; the
+            full-width card ledger is one tap away via the toggle (the desktop split
+            crushed the ledger into ~390px, audit C4, so on mobile the two swap
+            full-screen rather than showing side by side). */}
         <div className={cn("relative min-w-0 flex-1 md:block", mobileView === "map" ? "block" : "hidden")}>
           <AlphaMap
             properties={displayed}
@@ -475,8 +476,8 @@ function CommandCenterContent() {
         </div>
       </div>
 
-      {/* Mobile-only list/map toggle — the one-tap path to the map (which is
-          list-first-hidden <md). Desktop shows both panes, so it's md:hidden. */}
+      {/* Mobile-only list/map toggle — one tap between the default map and the
+          full-width list ledger. Desktop shows both panes, so it's md:hidden. */}
       <div
         className="fixed left-1/2 z-40 flex -translate-x-1/2 overflow-hidden rounded-full border border-slate-700 bg-slate-900/95 shadow-lg backdrop-blur md:hidden"
         style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
