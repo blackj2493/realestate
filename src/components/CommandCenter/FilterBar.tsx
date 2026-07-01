@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { CORE_FILTERS, MORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive, typeOptionsForClass, priceConfig } from "@/lib/filters/fundamentals";
-import { PERSONA_CONFIG, defaultTerminalFilters } from "@/lib/personas/personaConfig";
+import { PERSONA_CONFIG, INVESTOR_CONTROLS, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
@@ -17,7 +17,7 @@ import FilterDrawer from "./FilterDrawer";
 import ActiveFilterStrip from "./ActiveFilterStrip";
 import { buildFilterTokens } from "./filterTokens";
 import { formatResultNudge } from "./filterNudge";
-import { anyControlActive, isControlActive } from "./investorControls";
+import { anyControlActive, isControlActive, controlId } from "./investorControls";
 import { SCHOOL_LEVEL_LABEL } from "@/lib/schools/schoolLens";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
@@ -85,7 +85,12 @@ export default function FilterBar() {
   ];
 
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
+  // The active persona PINS this subset; every other investor signal stays reachable
+  // via "+ Add filter" (moreControls), and the query/strip operate over the FULL
+  // catalog so a signal set under any persona keeps applying + showing.
   const controls = PERSONA_CONFIG[activePersona].controls;
+  const personaControlIds = new Set(controls.map(controlId));
+  const moreControls = INVESTOR_CONTROLS.filter((c) => !personaControlIds.has(controlId(c)));
 
   // Comp-only = no active (sale/rent) layer lit → hide the active-browse controls.
   const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
@@ -119,7 +124,7 @@ export default function FilterBar() {
   const universalActive =
     CORE_FILTERS.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)) ||
     addedDefs.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue));
-  const investorActive = anyControlActive(controls, filters);
+  const investorActive = anyControlActive(INVESTOR_CONTROLS, filters);
   const lensActive = lenses.some((l) => l.active);
   const anyActive = universalActive || investorActive || lensActive;
 
@@ -168,7 +173,7 @@ export default function FilterBar() {
   // the basics that stay inline on the bar.
   const drawerActiveCount =
     MORE_FILTERS.filter((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)).length +
-    (investorLayer ? controls.filter((c) => isControlActive(c, filters)).length : 0);
+    (investorLayer ? INVESTOR_CONTROLS.filter((c) => isControlActive(c, filters)).length : 0);
 
   // Flatten the active filters (core + added + investor) into one removable token
   // list for the summary strip. Gates mirror the chip rows: added + investor are
@@ -176,7 +181,10 @@ export default function FilterBar() {
   const tokens = buildFilterTokens({
     coreItems,
     addedItems,
-    controls,
+    // The strip surfaces EVERY active investor signal (full catalog), not just the
+    // active persona's — so a value set under another persona is visible + removable,
+    // never silently applied.
+    controls: INVESTOR_CONTROLS,
     filters,
     setFilter,
     removeAddedFilter,
@@ -285,6 +293,7 @@ export default function FilterBar() {
           onClose={() => setSheetOpen(false)}
           coreItems={coreItems}
           controls={controls}
+          moreControls={moreControls}
           showInvestor={investorLayer}
           showAdvanced={!compOnly}
           clearAll={clearAll}
@@ -297,6 +306,7 @@ export default function FilterBar() {
         <FilterDrawer
           onClose={() => setDrawerOpen(false)}
           controls={controls}
+          moreControls={moreControls}
           showInvestor={investorLayer}
           clearAll={clearAll}
           anyActive={anyActive}

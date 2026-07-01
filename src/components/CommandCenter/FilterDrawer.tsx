@@ -32,9 +32,11 @@ const controlKey = (c: ControlDef): string => (c.kind === "range" ? c.minKey : c
 
 interface FilterDrawerProps {
   onClose: () => void;
-  /** Persona investor controls (cap-rate / yield / carry thresholds, etc.). */
+  /** The active persona's PINNED investor controls (shown first, prominent). */
   controls: ControlDef[];
-  /** Show the persona investor section (residential-sale, active layer). */
+  /** Every OTHER investor signal — addable here regardless of persona. */
+  moreControls: ControlDef[];
+  /** Show the investor sections (residential-sale, active layer). */
   showInvestor: boolean;
   clearAll: () => void;
   anyActive: boolean;
@@ -45,6 +47,7 @@ interface FilterDrawerProps {
 export default function FilterDrawer({
   onClose,
   controls,
+  moreControls,
   showInvestor,
   clearAll,
   anyActive,
@@ -71,15 +74,13 @@ export default function FilterDrawer({
   }, [onClose]);
 
   const needle = q.trim().toLowerCase();
+  const matchesNeedle = (c: ControlDef) =>
+    (c.short ?? c.label).toLowerCase().includes(needle) || c.label.toLowerCase().includes(needle);
   const propertyDefs = MORE_FILTERS.filter((d) => d.label.toLowerCase().includes(needle));
-  const investorMatches = showInvestor
-    ? controls.filter(
-        (c) =>
-          (c.short ?? c.label).toLowerCase().includes(needle) ||
-          c.label.toLowerCase().includes(needle)
-      )
-    : [];
-  const empty = propertyDefs.length === 0 && investorMatches.length === 0;
+  const investorMatches = showInvestor ? controls.filter(matchesNeedle) : [];
+  const moreInvestorMatches = showInvestor ? moreControls.filter(matchesNeedle) : [];
+  const empty =
+    propertyDefs.length === 0 && investorMatches.length === 0 && moreInvestorMatches.length === 0;
 
   return (
     <div className="fixed inset-0 z-[60] hidden md:block" role="dialog" aria-modal="true" aria-label="All filters">
@@ -149,6 +150,17 @@ export default function FilterDrawer({
               <span className={LABEL}>Investor · Persona signals</span>
               <div className="flex flex-wrap gap-2">
                 {investorMatches.map((c) => (
+                  <InvestorChip key={controlKey(c)} control={c} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {moreInvestorMatches.length > 0 && (
+            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+              <span className={LABEL}>More investor signals</span>
+              <div className="flex flex-wrap gap-2">
+                {moreInvestorMatches.map((c) => (
                   <InvestorChip key={controlKey(c)} control={c} />
                 ))}
               </div>

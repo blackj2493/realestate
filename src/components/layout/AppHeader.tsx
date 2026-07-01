@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { Search, X } from "lucide-react";
 import Logo from "@/components/Logo";
 import AccountButton from "@/components/auth/AccountButton";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
@@ -36,6 +39,29 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const home = homeHref ?? (variant === "app" ? "/dashboard" : "/");
 
+  // Mobile/tablet search: the inline LocationSearch is `hidden lg:block`, so below
+  // lg there was otherwise no way to search from app pages (e.g. /analytics). A
+  // search icon opens a full-width sheet that reuses the SAME navigate-mode
+  // LocationSearch — mirroring the terminal's TopCommandBar pattern.
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Close the sheet after any in-app navigation (selecting a result router.pushes
+  // to a new route). Uses the "adjust state during render" pattern rather than a
+  // setState-in-effect (https://react.dev/learn/you-might-not-need-an-effect).
+  const pathname = usePathname();
+  const [sheetPath, setSheetPath] = useState(pathname);
+  if (pathname !== sheetPath) {
+    setSheetPath(pathname);
+    setSearchOpen(false);
+  }
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [searchOpen]);
+
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
@@ -62,11 +88,51 @@ export default function AppHeader({
 
         <div className="flex shrink-0 items-center gap-3">
           {right}
+          {/* Mobile/tablet search trigger — the inline search is hidden below lg,
+              so this icon is the only way to search there (fixes /analytics et al). */}
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+              className="inline-flex items-center justify-center p-2 text-slate-400 transition-colors hover:text-cyan-400 lg:hidden"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          )}
           <WatchlistAlertsBell />
           <AccountButton />
           {variant === "app" && <MobileNav className="md:hidden" />}
         </div>
       </div>
+
+      {/* Mobile/tablet full-width search sheet — reuses the SAME navigate-mode
+          LocationSearch. Backdrop tap / Done / Escape close it; selecting a result
+          navigates and the pathname effect above closes it. */}
+      {search && searchOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col lg:hidden" role="dialog" aria-modal="true" aria-label="Search">
+          <button
+            type="button"
+            aria-label="Close search"
+            onClick={() => setSearchOpen(false)}
+            className="absolute inset-0 bg-slate-950/80"
+          />
+          <div className="relative border-b border-slate-800 bg-slate-950 px-3 pb-3 pt-3">
+            <div className="flex items-center gap-2">
+              <LocationSearch mode="navigate" className="min-w-0 flex-1" />
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                aria-label="Close search"
+                className="flex h-11 min-w-[44px] shrink-0 items-center justify-center px-3 font-mono text-xs uppercase tracking-wider text-slate-400 hover:text-slate-200"
+              >
+                <X className="mr-1 h-4 w-4" />
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
