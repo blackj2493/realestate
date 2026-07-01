@@ -59,7 +59,10 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
 
 const CHUNK_SIZE = 500;
 const TYPESENSE_COLLECTION = 'listings';
-const TYPESENSE_HOST = (process.env.NEXT_PUBLIC_TYPESENSE_HOST || '9uyapwh6e5qmvl34p-1.a1.typesense.net').trim();
+// Typesense Cloud — hardcoded like client.ts / sync.ts. Do NOT read a host env var here:
+// the old NEXT_PUBLIC_TYPESENSE_HOST pointed at a dead Railway box, so the env-first read
+// could silently aim this backfill at a host that no longer exists.
+const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = parseInt(process.env.NEXT_PUBLIC_TYPESENSE_PORT || '443', 10);
 const TYPESENSE_PROTOCOL = (process.env.NEXT_PUBLIC_TYPESENSE_PROTOCOL || 'https').trim();
 const TYPESENSE_ADMIN_KEY = process.env.TYPESENSE_ADMIN_API_KEY || 'B6u0qIHDNhXZH8PMw0E6J5tB5aWvLXCn';

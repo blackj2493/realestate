@@ -11,7 +11,11 @@ import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 
-// Typesense configuration
+// Typesense configuration.
+// NOTE: the host is intentionally hardcoded (Typesense Cloud) and is NOT read from env.
+// There is no NEXT_PUBLIC_TYPESENSE_HOST — the old value pointed at a decommissioned
+// Railway box. The sync ETL (scripts/worker/sync.ts) writes to this same host; keep them
+// in lockstep if the cluster ever moves.
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
 const SEARCH_API_KEY = process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY ?? '';
