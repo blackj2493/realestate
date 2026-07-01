@@ -12,18 +12,20 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bed, Bath, Square, Car, FileText, Building2, ChevronDown, Clock } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
+import { basementLabel } from "@/lib/listings/basementLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
+import ZoningCard from "@/components/Property/ZoningCard";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
@@ -135,6 +137,10 @@ interface RawListing {
   LotWidth?: number;
   LotDepth?: number;
   LotSizeUnits?: string;
+  // Zoning — municipal open data (harvest-populated); shown via the attributed ZoningCard.
+  zoning_designation?: string;
+  zoning_desc?: string;
+  zoning_source?: string;
   BuildingAreaTotal?: number;
   LivingAreaRange?: string;
   ParkingTotal?: number;
@@ -630,8 +636,9 @@ export default async function PropertyPage({
               <PropertyGallery images={detail.media_urls} tourUrl={tourUrl ?? undefined} />
             </div>
 
-            {/* Specs */}
-            <div className="mb-6 grid grid-cols-4 gap-3">
+            {/* Specs — 3-up on mobile (wider cells so a long basement value wraps
+                cleanly), 5-up from sm↑ where all stats sit on one row. */}
+            <div className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-5">
               <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
               <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
               <SpecCell
@@ -646,6 +653,9 @@ export default async function PropertyPage({
                 label="Sqft"
               />
               <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
+              {/* Basement — promoted from the data sheet: walk-out/sep-entrance/apartment is the
+                  rental-suite signal the investor personas key on. Raw TRREB value(s), "None" when empty. */}
+              <SpecCell icon={<Layers className="h-5 w-5 text-indigo-400" />} value={basementLabel(p)} label="Basement" />
             </div>
 
             {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
@@ -787,6 +797,10 @@ export default async function PropertyPage({
                 <Disclaimers />
               )}
 
+              {/* Zoning — municipal open data (NOT MLS), its own attributed card. Renders
+                  nothing until zoning is harvested/backfilled for this listing. */}
+              <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
+
               {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
             </div>
@@ -840,10 +854,11 @@ export default async function PropertyPage({
 
         {/* ── FULL-WIDTH: Property History — timeline + campaign/sale tables, given room out of the 30% rail ── */}
         <section id="history" className="mt-6 scroll-mt-28">
-          {/* Mobile: collapse this tall band behind a tap. Pure CSS (a peer
-              checkbox), so it stays server-rendered — no client boundary, no
-              hydration flash. Desktop (md+) always shows it and hides the toggle. */}
-          <input type="checkbox" id="history-toggle" className="peer sr-only" tabIndex={-1} aria-hidden="true" />
+          {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
+              Pure CSS (a peer checkbox), so it stays server-rendered — no client
+              boundary, no hydration flash. Desktop (md+) always shows it and hides
+              the toggle. */}
+          <input type="checkbox" id="history-toggle" defaultChecked className="peer sr-only" tabIndex={-1} aria-hidden="true" />
           <label
             htmlFor="history-toggle"
             className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-slate-800 py-3 peer-checked:[&_svg]:rotate-180 md:hidden"

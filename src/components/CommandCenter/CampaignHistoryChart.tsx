@@ -202,6 +202,139 @@ function RibbonLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: number | 
   );
 }
 
+/* ── MOBILE price-path lane (phone-fit) ──────────────────────────────────────
+ * Same event-spaced trajectory as PricePathLane, but drawn in a ~360-wide viewBox
+ * (≈1 unit per CSS px on a phone) so labels render at their real size instead of
+ * the ~3.8px the 1000-wide desktop lane collapses to. Every point keeps a dot (the
+ * shape is the story); only the endpoints get price/date/status labels — unless the
+ * path is short (≤4), where labelling all still fits. Full detail lives in the table. */
+function MobilePricePathLane({ path }: { path: PricePathPoint[] }) {
+  const X0 = 46, X1 = 342, YT = 24, YB = 104;
+  const prices = path.map((p) => p.price);
+  let pMin = Math.min(...prices), pMax = Math.max(...prices);
+  if (pMin === pMax) { pMin -= 1; pMax += 1; }
+  const pad = (pMax - pMin) * 0.18;
+  pMin -= pad; pMax += pad;
+  const x = (i: number) => (path.length === 1 ? (X0 + X1) / 2 : X0 + (i / (path.length - 1)) * (X1 - X0));
+  const y = (p: number) => YT + ((pMax - p) / (pMax - pMin)) * (YB - YT);
+  const labelAll = path.length <= 4;
+  const grid = [pMax - pad / 2, (pMin + pMax) / 2, pMin + pad / 2];
+
+  return (
+    <svg viewBox="0 0 360 158" className="block h-auto w-full" role="img" aria-label="asking-price path by event">
+      <g stroke="#1e293b" strokeWidth={1}>
+        {grid.map((p, i) => <line key={i} x1={30} y1={y(p)} x2={360} y2={y(p)} />)}
+      </g>
+      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="end">
+        {grid.map((p, i) => <text key={i} x={28} y={y(p) + 4}>{compactPrice(p)}</text>)}
+      </g>
+      {path.slice(1).map((p, i) => (
+        <line
+          key={i}
+          x1={x(i)} y1={y(path[i].price)} x2={x(i + 1)} y2={y(p.price)}
+          stroke={p.offMarketBefore ? DIM : SALE}
+          strokeWidth={p.offMarketBefore ? 1.8 : 3}
+          strokeDasharray={p.offMarketBefore ? "3 5" : undefined}
+        />
+      ))}
+      {path.map((p, i) => {
+        const labeled = labelAll || i === 0 || i === path.length - 1;
+        const isActive = p.endStatus === "Active";
+        const fill = isActive ? CYAN : p.kind === "Price Changed" ? AMBER : SALE;
+        const anchor = i === 0 ? "start" : i === path.length - 1 ? "end" : "middle";
+        return (
+          <g key={i}>
+            <circle cx={x(i)} cy={y(p.price)} r={labeled ? 5.5 : 3.5} fill={fill} stroke="#0b1220" strokeWidth={1} />
+            {labeled && (
+              <>
+                <text x={x(i)} y={y(p.price) - 11} fill={fill} fontSize={12.5} fontWeight={700} textAnchor={anchor} fontFamily={MONO}>{compactPrice(p.price)}</text>
+                <text x={x(i)} y={132} fill="#94a3b8" fontSize={11.5} textAnchor={anchor} fontFamily={MONO}>{shortDate(p.dateMs)}</text>
+                {p.endStatus && (
+                  <text x={x(i)} y={148} fill={statusColor(p.endStatus)} fontSize={10.5} textAnchor={anchor} fontFamily={MONO}>{STATUS_LABEL[p.endStatus]}</text>
+                )}
+              </>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ── MOBILE timeline lane (phone-fit) ────────────────────────────────────────
+ * RibbonLane redrawn in a ~360-wide viewBox with taller bars, bigger month labels,
+ * and month ticks thinned to ≤5 so a phone can read them. Same Sale/Lease rows. */
+function MobileTimelineLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: number | null }) {
+  const X0 = 36, X1 = 348, ROW_H = 30, GAP = 14, TOP = 46;
+  const tMin = Math.min(...bars.map((b) => b.startMs));
+  const tMax = Math.max(...bars.map((b) => b.endMs));
+  const sx = (t: number) => (tMax === tMin ? X0 : X0 + ((t - tMin) / (tMax - tMin)) * (X1 - X0));
+
+  const saleRows = bars.filter((b) => b.kind === "Sale");
+  const leaseRows = bars.filter((b) => b.kind === "Lease");
+  const lanes = [{ label: "Sale", rows: saleRows }, ...(leaseRows.length ? [{ label: "Lease", rows: leaseRows }] : [])];
+
+  const rowY = (i: number) => TOP + i * (ROW_H + GAP);
+  const monthY = TOP + lanes.length * (ROW_H + GAP) + 2;
+  const H = monthY + 18;
+  let ticks = monthTicks(tMin, tMax);
+  if (ticks.length > 5) { const step = Math.ceil(ticks.length / 5); ticks = ticks.filter((_, i) => i % step === 0); }
+
+  const current = bars.filter((b) => b.isCurrent);
+  const span = current.length
+    ? {
+        x1: Math.max(X0, Math.min(...current.map((b) => sx(b.startMs))) - 3),
+        x2: Math.min(X1, Math.max(...current.map((b) => sx(b.endMs))) + 3),
+      }
+    : null;
+  const bracketCx = span ? Math.min(Math.max((span.x1 + span.x2) / 2, X0 + 40), X1 - 40) : 0;
+
+  return (
+    <svg viewBox={`0 0 360 ${H}`} className="block h-auto w-full" role="img" aria-label="campaign timeline by date">
+      <g stroke="#1e293b" strokeWidth={1}>
+        {ticks.map((t) => <line key={t} x1={sx(t)} y1={TOP - 8} x2={sx(t)} y2={monthY - 6} />)}
+      </g>
+      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="middle">
+        {ticks.map((t) => <text key={t} x={sx(t)} y={monthY + 9}>{monthLabel(t)}</text>)}
+      </g>
+
+      {span && (
+        <>
+          <line x1={span.x1} y1={TOP - 15} x2={span.x2} y2={TOP - 15} stroke={CYAN} strokeWidth={1.2} />
+          {trueDom != null && (
+            <text x={bracketCx} y={TOP - 20} fill={CYAN} fontSize={11.5} fontFamily={MONO} textAnchor="middle">True DOM {trueDom}d</text>
+          )}
+        </>
+      )}
+
+      <g fill="#64748b" fontSize={10.5} fontFamily={MONO}>
+        {lanes.map((ln, i) => <text key={ln.label} x={4} y={rowY(i) + ROW_H / 2 + 3.5}>{ln.label}</text>)}
+      </g>
+
+      {lanes.map((ln, i) =>
+        ln.rows.map((b) => {
+          const x1 = sx(b.startMs);
+          const w = Math.max(Math.min(sx(b.endMs), X1) - x1, 16);
+          const isSale = b.kind === "Sale";
+          const label = b.priceChanged && b.startPrice != null && b.endPrice != null
+            ? `${compactPrice(b.startPrice)}→${compactPrice(b.endPrice)}`
+            : b.startPrice != null ? compactPrice(b.startPrice) : "";
+          return (
+            <g key={b.listingKey}>
+              <rect x={x1} y={rowY(i)} width={w} height={ROW_H} rx={5}
+                fill={isSale ? SALE : LEASE}
+                stroke={b.isCurrent ? CYAN : "none"} strokeWidth={b.isCurrent ? 2 : 0} />
+              {w >= 74 && label && (
+                <text x={x1 + w / 2} y={rowY(i) + ROW_H / 2 + 4} fill={isSale ? "#062e22" : "#042c43"} fontSize={11} fontWeight={700} textAnchor="middle" fontFamily={MONO}>{label}</text>
+              )}
+            </g>
+          );
+        })
+      )}
+    </svg>
+  );
+}
+
 function LegendItem({ c, label, dashed, ring }: { c: string; label: string; dashed?: boolean; ring?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -267,14 +400,32 @@ export default function CampaignHistoryChart({
         </div>
       </div>
 
-      {pricePath.length > 0 && (
-        <>
-          <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate-500">Asking-price path · by event</div>
-          <PricePathLane path={pricePath} />
-          <div className="mb-1 mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-500">Timeline · by date</div>
-        </>
-      )}
-      <RibbonLane bars={bars} trueDom={trueDom} />
+      {/* Desktop (md+): the wide, event-spaced lanes. */}
+      <div className="hidden md:block">
+        {pricePath.length > 0 && (
+          <>
+            <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate-500">Asking-price path · by event</div>
+            <PricePathLane path={pricePath} />
+            <div className="mb-1 mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-500">Timeline · by date</div>
+          </>
+        )}
+        <RibbonLane bars={bars} trueDom={trueDom} />
+      </div>
+
+      {/* Mobile (<md): phone-tuned lanes — a ~360-wide viewBox renders labels at
+          real size (the desktop 1000-wide lanes collapse to ~3.8px text on a phone),
+          with fewer point labels and taller bars. Same data; full detail in the table. */}
+      <div className="md:hidden">
+        {pricePath.length > 0 && (
+          <>
+            <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate-500">Asking-price path</div>
+            <MobilePricePathLane path={pricePath} />
+            <div className="mb-1 mt-3 font-mono text-[10px] uppercase tracking-wider text-slate-500">Timeline</div>
+          </>
+        )}
+        <MobileTimelineLane bars={bars} trueDom={trueDom} />
+      </div>
+
       <Legend leaseCount={leaseCount} />
     </div>
   );
