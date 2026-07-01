@@ -109,8 +109,12 @@ Excluding the terminal is what keeps this out of the ~100–150 hr full-site ran
 ## Status
 - [x] Branch `feat/light-dark-theme`
 - [x] Design doc (this file)
-- [x] Phase 0 (start) — `MediaGallery` placeholders tokenized
-- [ ] Phase 0 (cont.) — `SpatialDistribution` + `MapView` popup (with design confirm)
-- [ ] Phase 1 — plumbing (next-themes, globals restructure, toggle, terminal pin)
+- [x] Phase 0 — `MediaGallery`, `SpatialDistribution`, `MapView` popup tokenized
+- [x] Phase 1 — plumbing: `next-themes`, globals split (light `:root` / dark `.dark`),
+      `ThemeProvider` (defaultTheme "dark" — UX unchanged), terminal pinned dark via
+      `properties/layout.tsx`, interim toggle in `(app)/layout.tsx`
+      - TODO when Phase 2 done: flip defaultTheme → "system"; move toggle into
+        `AppHeader`; add toggle to marketing/home (root) pages; theme the `--pp-*`
+        surface tokens for light (currently dark values shared on `:root`)
 - [ ] Phase 2 — consumer migration waves
 - [ ] Guardrails — scoped ESLint rule + Playwright dual-theme screenshots (LAST)

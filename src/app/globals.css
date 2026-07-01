@@ -3,34 +3,36 @@
 @tailwind utilities;
 
 /* ============================================================================
-   Design tokens — shadcn/ui theme variables (slate/emerald dark theme).
+   Design tokens — shadcn/ui theme variables.
    tailwind.config.ts maps colors to hsl(var(--token)); without these the
    ui/ primitives (Button, Card, Slider, Input, Select) render colorless.
-   App is dark-first, so the dark palette lives directly on :root.
+   LIGHT palette on :root (default); DARK palette under `.dark`, applied by
+   next-themes toggling the `dark` class on <html> (defaultTheme:"dark", so the
+   app is UNCHANGED until a user opts into light). See LIGHT_DARK_THEME_PLAN.
    ============================================================================ */
 @layer base {
   :root {
-    --background: 229 84% 5%; /* slate-950 */
-    --foreground: 214 32% 91%; /* slate-200 */
-    --card: 222 47% 11%; /* slate-900 */
-    --card-foreground: 214 32% 91%;
-    --popover: 222 47% 11%; /* slate-900 */
-    --popover-foreground: 214 32% 91%;
-    --primary: 189 94% 43%; /* cyan-500 */
-    --primary-foreground: 229 84% 5%;
-    --secondary: 217 33% 17%; /* slate-800 */
-    --secondary-foreground: 214 32% 91%;
-    --muted: 217 33% 17%; /* slate-800 */
-    --muted-foreground: 215 20% 65%; /* slate-400 */
-    --accent: 217 33% 17%; /* slate-800 */
-    --accent-foreground: 214 32% 91%;
+    --background: 0 0% 100%; /* white */
+    --foreground: 222 47% 11%; /* slate-900 */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 189 94% 43%; /* cyan-500 — brand, theme-independent */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%; /* slate-100 */
+    --muted-foreground: 215 16% 47%; /* slate-500 */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%; /* red-600 */
-    --destructive-foreground: 214 32% 91%;
-    --border: 215 28% 17%; /* slate-800 */
-    --input: 215 28% 17%; /* slate-800 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%; /* slate-200 */
+    --input: 214 32% 91%;
     --ring: 189 94% 43%; /* cyan-500 */
     --radius: 0rem; /* sharp geometry — zero rounded corners */
-    color-scheme: dark; /* iOS/macOS: render native scrollbars, form controls & status-bar text dark to match the UI (avoids light-mode chrome leaking onto the dark theme) */
+    color-scheme: light;
 
     /* ------------------------------------------------------------------
        Brand / Logo tokens (PureProperty.ca logo spec).
@@ -106,6 +108,31 @@
     --pp-text-2xl: 28px;
     --pp-text-3xl: 40px;
     --pp-text-display: 56px;
+  }
+
+  /* ── DARK palette — applied when next-themes puts `dark` on <html> (the default).
+     Only the shadcn tokens flip; the brand/pp-* tokens above are theme-independent. ── */
+  .dark {
+    --background: 229 84% 5%; /* slate-950 */
+    --foreground: 214 32% 91%; /* slate-200 */
+    --card: 222 47% 11%; /* slate-900 */
+    --card-foreground: 214 32% 91%;
+    --popover: 222 47% 11%; /* slate-900 */
+    --popover-foreground: 214 32% 91%;
+    --primary: 189 94% 43%; /* cyan-500 */
+    --primary-foreground: 229 84% 5%;
+    --secondary: 217 33% 17%; /* slate-800 */
+    --secondary-foreground: 214 32% 91%;
+    --muted: 217 33% 17%; /* slate-800 */
+    --muted-foreground: 215 20% 65%; /* slate-400 */
+    --accent: 217 33% 17%; /* slate-800 */
+    --accent-foreground: 214 32% 91%;
+    --destructive: 0 72% 51%; /* red-600 */
+    --destructive-foreground: 214 32% 91%;
+    --border: 215 28% 17%; /* slate-800 */
+    --input: 215 28% 17%; /* slate-800 */
+    --ring: 189 94% 43%; /* cyan-500 */
+    color-scheme: dark; /* native scrollbars/controls dark to match the UI */
   }
 }
 

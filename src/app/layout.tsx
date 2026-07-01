@@ -6,6 +6,7 @@ import PostHogProvider from "@/components/analytics/PostHogProvider";
 import WatchlistInit from "@/components/watchlist/WatchlistInit";
 import DiscoveryRoot from "@/components/discovery/DiscoveryRoot";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const jetbrainsMono = JetBrains_Mono({
@@ -88,18 +89,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    // `dark` is the SSR default so no-JS / slow loads stay dark (unchanged from
+    // before); next-themes reconciles it client-side and honors a saved light choice
+    // before paint. suppressHydrationWarning is required since next-themes edits the
+    // class on <html>.
+    <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} min-h-app bg-background text-foreground`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_AND_SITE_JSONLD) }}
         />
-        <PostHogProvider>
-          <WatchlistInit />
-          {children}
-          <DiscoveryRoot />
-          <Toaster />
-        </PostHogProvider>
+        <ThemeProvider>
+          <PostHogProvider>
+            <WatchlistInit />
+            {children}
+            <DiscoveryRoot />
+            <Toaster />
+          </PostHogProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
