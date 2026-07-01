@@ -25,7 +25,6 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
-import ZoningCard from "@/components/Property/ZoningCard";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
@@ -796,10 +795,6 @@ export default async function PropertyPage({
               {!isLease && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
                 <Disclaimers />
               )}
-
-              {/* Zoning — municipal open data (NOT MLS), its own attributed card. Renders
-                  nothing until zoning is harvested/backfilled for this listing. */}
-              <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
 
               {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
