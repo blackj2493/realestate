@@ -29,7 +29,7 @@ export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
   return (
     <Link
       href={`/properties/${card.id}`}
-      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-slate-800 border-l-cyan-500/40 bg-slate-900/50 transition-colors hover:border-slate-700 hover:border-l-cyan-400"
+      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-cyan-500/40 bg-card/50 transition-colors hover:border-border hover:border-l-cyan-400"
     >
       <div className="relative aspect-[4/3]">
         <ListingThumbnail
@@ -49,13 +49,13 @@ export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
             {formatPrice(card.price)}
           </span>
           {dom != null && (
-            <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
               {dom}d on market
             </span>
           )}
         </div>
-        <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-200">{card.address}</p>
-        <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+        <p className="mt-1 line-clamp-1 text-sm font-medium text-foreground">{card.address}</p>
+        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
           {beds && (
             <span className="flex items-center gap-1">
               <Bed className="h-3 w-3" />
@@ -71,7 +71,7 @@ export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
         </div>
         <DeltaChips deltas={card.deltas} className="mt-2" />
         {/* Brokerage — same text size as the details above (TRREB §6.3(c)). */}
-        <p className="mt-2 text-xs text-slate-500">Listed by {card.brokerage || "Unknown"}</p>
+        <p className="mt-2 text-xs text-muted-foreground">Listed by {card.brokerage || "Unknown"}</p>
         <p className="mt-1 text-[11px] text-cyan-300/80">{card.why}</p>
       </div>
     </Link>

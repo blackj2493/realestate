@@ -53,14 +53,14 @@ function gradeStyles(grade: DealScoreGrade | null): {
     case "F":
       return { text: "text-rose-400", ring: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40" };
     default:
-      return { text: "text-slate-400", ring: "text-slate-600", bg: "bg-slate-800/50", border: "border-slate-700" };
+      return { text: "text-muted-foreground", ring: "text-muted-foreground", bg: "bg-muted/50", border: "border-border" };
   }
 }
 
 function DirectionIcon({ direction }: { direction: DealScoreComponent["direction"] }) {
   if (direction === "up") return <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />;
   if (direction === "down") return <TrendingDown className="h-3.5 w-3.5 text-rose-400" />;
-  return <Minus className="h-3.5 w-3.5 text-slate-500" />;
+  return <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
 function barColor(points: number): string {
@@ -158,17 +158,17 @@ export default function DealScoreCard({
 
   if (locked) {
     return (
-      <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-        <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
-          <Gauge className="h-4 w-4 text-slate-500" />
+      <div className="rounded-lg border border-border bg-card/50 p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+          <Gauge className="h-4 w-4 text-muted-foreground" />
           Deal Score
         </h3>
         <div className="relative">
           <div className="flex items-center gap-4 blur-sm select-none" aria-hidden="true">
-            <div className="h-[88px] w-[88px] shrink-0 rounded-full border-[7px] border-slate-700" />
+            <div className="h-[88px] w-[88px] shrink-0 rounded-full border-[7px] border-border" />
             <div className="space-y-2">
-              <div className="h-3 w-32 rounded bg-slate-700/50" />
-              <div className="h-3 w-20 rounded bg-slate-700/40" />
+              <div className="h-3 w-32 rounded bg-muted/50" />
+              <div className="h-3 w-20 rounded bg-muted/40" />
             </div>
           </div>
           <VowGateOverlay message="Sign in to view the Deal Score" />
@@ -182,12 +182,12 @@ export default function DealScoreCard({
   // No persona could be scored — render a quiet "not enough data" state instead of a 0.
   if (!persona || !active || active.score === null || active.grade === null) {
     return (
-      <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-        <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
-          <Gauge className="h-4 w-4 text-slate-500" />
+      <div className="rounded-lg border border-border bg-card/50 p-4">
+        <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+          <Gauge className="h-4 w-4 text-muted-foreground" />
           Deal Score
         </h3>
-        <p className="text-xs text-slate-500">{dealScore.verdict || "Not enough data to score this listing."}</p>
+        <p className="text-xs text-muted-foreground">{dealScore.verdict || "Not enough data to score this listing."}</p>
       </div>
     );
   }
@@ -203,15 +203,15 @@ export default function DealScoreCard({
   const band = dealScore.offerBand;
 
   return (
-    <div data-tour="listing-deal-score" className={cn("rounded-lg border bg-slate-900/50 p-4", s.border)}>
-      <h3 className="mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+    <div data-tour="listing-deal-score" className={cn("rounded-lg border bg-card/50 p-4", s.border)}>
+      <h3 className="mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
         <span className="flex items-center gap-2">
           <Gauge className={cn("h-4 w-4", s.text)} />
           Deal Score
           <InfoDot term="dealScore" />
         </span>
         {dealScore.confidence && (
-          <span className="rounded border border-slate-700 bg-slate-800/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-slate-400">
+          <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-muted-foreground">
             {dealScore.confidence} confidence
           </span>
         )}
@@ -233,12 +233,12 @@ export default function DealScoreCard({
                 onClick={() => setPersona(p)}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
-                  on ? cn(ps.bg, ps.border, ps.text) : "border-slate-800 bg-slate-900/40 text-slate-400 hover:bg-slate-800/60"
+                  on ? cn(ps.bg, ps.border, ps.text) : "border-border bg-card/40 text-muted-foreground hover:bg-muted/60"
                 )}
                 title={`${PERSONA_LABEL[p]}: Deal Score ${g.score} (${g.grade})`}
               >
                 {PERSONA_LABEL[p]}
-                <span className={cn("font-mono font-bold", on ? "" : "text-slate-500")}>{g.grade}</span>
+                <span className={cn("font-mono font-bold", on ? "" : "text-muted-foreground")}>{g.grade}</span>
               </button>
             );
           })}
@@ -271,8 +271,8 @@ export default function DealScoreCard({
 
         {/* Verdict */}
         <div className="min-w-0">
-          <p className="text-sm font-medium leading-snug text-slate-200">{active.verdict}</p>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="text-sm font-medium leading-snug text-foreground">{active.verdict}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
             For the {PERSONA_LABEL[persona]} lens · {lensPillars.length} signals
           </p>
         </div>
@@ -286,15 +286,15 @@ export default function DealScoreCard({
             Suggested move
           </p>
           {band.hotMarket ? (
-            <p className="mt-1 text-sm font-medium text-slate-200">
+            <p className="mt-1 text-sm font-medium text-foreground">
               Expect to compete near {formatPrice(band.likelyClose)}
             </p>
           ) : (
-            <p className="mt-1 text-sm font-medium text-slate-200">
+            <p className="mt-1 text-sm font-medium text-foreground">
               Offer {formatPrice(band.aggressive)}–{formatPrice(band.likelyClose)}
             </p>
           )}
-          <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{band.note}</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{band.note}</p>
         </div>
       )}
 
@@ -303,7 +303,7 @@ export default function DealScoreCard({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="mt-3 flex w-full items-center justify-between rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800/60"
+        className="mt-3 flex w-full items-center justify-between rounded-md border border-border bg-card/40 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/60"
       >
         Why this score
         <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
@@ -314,22 +314,22 @@ export default function DealScoreCard({
           {lensPillars.map((c) => (
             <div key={c.key}>
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                   <DirectionIcon direction={c.direction} />
                   {c.label}
                 </span>
-                <span className="font-mono text-xs text-slate-400">{Math.round(c.points)}</span>
+                <span className="font-mono text-xs text-muted-foreground">{Math.round(c.points)}</span>
               </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn("h-full rounded-full", barColor(c.points))}
                   style={{ width: `${Math.round(c.points)}%` }}
                 />
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-slate-500">
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
                 {c.detail}
                 {c.compValue ? (
-                  <span className="text-slate-600"> · comp value {formatPrice(c.compValue)}</span>
+                  <span className="text-muted-foreground"> · comp value {formatPrice(c.compValue)}</span>
                 ) : null}
               </p>
             </div>
@@ -337,7 +337,7 @@ export default function DealScoreCard({
         </div>
       )}
 
-      <p className="mt-3 text-[10px] leading-snug text-slate-600">
+      <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
         PureProperty Deal Score — our deterministic deal metric, not an MLS/TRREB figure. Suggested
         offer is informational, not advice. For research only.
       </p>

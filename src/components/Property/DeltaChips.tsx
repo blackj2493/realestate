@@ -15,10 +15,10 @@ export function DeltaChips({ deltas, className = "" }: { deltas: AttrDelta[]; cl
       {deltas.map((d) => {
         const cls =
           d.kind === "price"
-            ? "bg-slate-800/70 text-slate-300"
+            ? "bg-muted/70 text-foreground"
             : d.direction === "up"
               ? "bg-emerald-400/10 text-emerald-300"
-              : "bg-slate-700/40 text-slate-400";
+              : "bg-muted/40 text-muted-foreground";
         return (
           <span
             key={d.kind}

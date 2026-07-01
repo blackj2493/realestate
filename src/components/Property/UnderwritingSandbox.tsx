@@ -71,9 +71,9 @@ function Metric({
   term?: GlossaryKey;
 }) {
   return (
-    <div className="bg-slate-800/50 rounded p-2">
+    <div className="bg-muted/50 rounded p-2">
       <div className="flex items-center gap-1">
-        <span className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
         {term && <InfoDot term={term} />}
       </div>
       <p
@@ -81,7 +81,7 @@ function Metric({
           "text-sm font-bold font-mono",
           tone === "good" && "text-emerald-400",
           tone === "bad" && "text-rose-400",
-          tone === "neutral" && "text-slate-200"
+          tone === "neutral" && "text-foreground"
         )}
       >
         {value}
@@ -135,11 +135,11 @@ export default function UnderwritingSandbox({
   const cashflowTone = result.monthlyCashflow >= 0 ? "good" : "bad";
 
   return (
-    <div data-tour="listing-underwriting" className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div data-tour="listing-underwriting" className={cn("bg-card/50 rounded-lg border border-border p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <Calculator className="h-4 w-4 text-emerald-400" />
-        <span className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+        <span className="text-sm font-semibold text-foreground uppercase tracking-wider">
           Underwriting Sandbox
         </span>
       </div>
@@ -174,7 +174,7 @@ export default function UnderwritingSandbox({
                 {formatPrice(Math.abs(result.monthlyCashflow))}
               </span>
             </div>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-muted-foreground">
               /mo after mortgage, taxes, fees, insurance & opex
             </span>
           </div>
@@ -197,16 +197,16 @@ export default function UnderwritingSandbox({
       ) : (
         <>
           {/* Hero: monthly carrying cost (no rental income on this property type) */}
-          <div className="rounded-lg p-3 mb-4 border bg-slate-800/40 border-slate-700">
+          <div className="rounded-lg p-3 mb-4 border bg-muted/40 border-border">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider text-slate-300">
+              <span className="text-xs uppercase tracking-wider text-foreground">
                 Monthly Carry
               </span>
-              <span className="text-2xl font-bold font-mono text-slate-100">
+              <span className="text-2xl font-bold font-mono text-foreground">
                 {formatPrice(result.monthlyCarry)}
               </span>
             </div>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-muted-foreground">
               /mo out of pocket — mortgage, taxes, fees & insurance
             </span>
           </div>
@@ -230,7 +230,7 @@ export default function UnderwritingSandbox({
       {/* Down payment */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <Label className="text-xs text-slate-400 flex items-center gap-1">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1">
             <Home className="h-3 w-3" /> Down Payment
           </Label>
           <span className="text-xs font-mono text-emerald-400">
@@ -249,7 +249,7 @@ export default function UnderwritingSandbox({
       {/* Interest rate */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <Label className="text-xs text-slate-400 flex items-center gap-1">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1">
             <Percent className="h-3 w-3" /> Interest Rate
           </Label>
           <span className="text-xs font-mono text-emerald-400">{a.interestRatePct.toFixed(3)}%</span>
@@ -266,13 +266,13 @@ export default function UnderwritingSandbox({
       {/* Amortization */}
       <div className="mb-4">
         <div className="flex items-center gap-1 mb-1">
-          <Label className="text-xs text-slate-400">Amortization</Label>
+          <Label className="text-xs text-muted-foreground">Amortization</Label>
           <InfoDot term="amortization" />
         </div>
         <select
           value={a.amortYears}
           onChange={(e) => set("amortYears", Number(e.target.value))}
-          className="w-full h-8 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 px-2"
+          className="w-full h-8 bg-muted border border-border rounded text-xs text-foreground px-2"
         >
           <option value={15}>15 years</option>
           <option value={20}>20 years</option>
@@ -286,7 +286,7 @@ export default function UnderwritingSandbox({
           {/* Monthly rent */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs text-slate-400">Monthly Rent</Label>
+              <Label className="text-xs text-muted-foreground">Monthly Rent</Label>
               <span className="text-[10px] text-amber-400/80">estimate — adjust</span>
             </div>
             <Input
@@ -294,7 +294,7 @@ export default function UnderwritingSandbox({
               inputMode="numeric"
               value={a.monthlyRent}
               onChange={(e) => set("monthlyRent", Math.max(0, Number(e.target.value)))}
-              className="h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+              className="h-8 bg-muted border-border text-xs font-mono text-foreground"
             />
           </div>
 
@@ -302,10 +302,10 @@ export default function UnderwritingSandbox({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1">
-                <Label className="text-xs text-slate-400">Vacancy</Label>
+                <Label className="text-xs text-muted-foreground">Vacancy</Label>
                 <InfoDot term="vacancy" />
               </div>
-              <span className="text-xs font-mono text-slate-300">{a.vacancyPct.toFixed(1)}%</span>
+              <span className="text-xs font-mono text-foreground">{a.vacancyPct.toFixed(1)}%</span>
             </div>
             <Slider
               value={[a.vacancyPct]}
@@ -320,10 +320,10 @@ export default function UnderwritingSandbox({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1">
-                <Label className="text-xs text-slate-400">Operating Expenses</Label>
+                <Label className="text-xs text-muted-foreground">Operating Expenses</Label>
                 <InfoDot term="opex" />
               </div>
-              <span className="text-xs font-mono text-slate-300">{a.opexPct.toFixed(0)}%</span>
+              <span className="text-xs font-mono text-foreground">{a.opexPct.toFixed(0)}%</span>
             </div>
             <Slider
               value={[a.opexPct]}
@@ -332,7 +332,7 @@ export default function UnderwritingSandbox({
               max={30}
               step={1}
             />
-            <span className="text-[10px] text-slate-600">mgmt + maintenance + reserves, on gross income</span>
+            <span className="text-[10px] text-muted-foreground">mgmt + maintenance + reserves, on gross income</span>
           </div>
         </>
       )}
@@ -341,16 +341,16 @@ export default function UnderwritingSandbox({
       <button
         type="button"
         onClick={() => setAdvanced((v) => !v)}
-        className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors mb-2"
+        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-2"
       >
         <ChevronDown className={cn("h-3 w-3 transition-transform", advanced && "rotate-180")} />
         Advanced
       </button>
       {advanced && (
-        <div className="space-y-4 mb-2 border-l border-slate-800 pl-3">
+        <div className="space-y-4 mb-2 border-l border-border pl-3">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs text-slate-400 flex items-center gap-1">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
                 <TrendingDown className="h-3 w-3 text-blue-400" /> Other / Suite Income
               </Label>
               <span className="text-xs font-mono text-blue-400">
@@ -366,19 +366,19 @@ export default function UnderwritingSandbox({
             />
           </div>
           <div>
-            <Label className="text-xs text-slate-400 mb-1 block">Insurance ($/mo)</Label>
+            <Label className="text-xs text-muted-foreground mb-1 block">Insurance ($/mo)</Label>
             <Input
               type="number"
               inputMode="numeric"
               value={a.insuranceMonthly}
               onChange={(e) => set("insuranceMonthly", Math.max(0, Number(e.target.value)))}
-              className="h-8 bg-slate-800 border-slate-700 text-xs font-mono text-slate-200"
+              className="h-8 bg-muted border-border text-xs font-mono text-foreground"
             />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs text-slate-400">Closing Costs</Label>
-              <span className="text-xs font-mono text-slate-300">{a.closingCostPct.toFixed(2)}%</span>
+              <Label className="text-xs text-muted-foreground">Closing Costs</Label>
+              <span className="text-xs font-mono text-foreground">{a.closingCostPct.toFixed(2)}%</span>
             </div>
             <Slider
               value={[a.closingCostPct]}
@@ -392,14 +392,14 @@ export default function UnderwritingSandbox({
       )}
 
       {/* Save scenario */}
-      <div className="border-t border-slate-800 pt-3 mt-3">
+      <div className="border-t border-border pt-3 mt-3">
         <div className="flex items-center gap-2">
           <Input
             value={scenarioName}
             onChange={(e) => setScenarioName(e.target.value)}
             placeholder="Name this scenario…"
             maxLength={120}
-            className="h-8 bg-slate-800 border-slate-700 text-xs text-slate-200"
+            className="h-8 bg-muted border-border text-xs text-foreground"
           />
           <button
             type="button"
@@ -416,7 +416,7 @@ export default function UnderwritingSandbox({
           </button>
         </div>
         {!signedIn && (
-          <p className="text-[10px] text-slate-600 mt-1.5">
+          <p className="text-[10px] text-muted-foreground mt-1.5">
             Saved on this device · sign in to sync across devices
           </p>
         )}
@@ -425,7 +425,7 @@ export default function UnderwritingSandbox({
       {/* Saved scenarios list */}
       {scenarios.length > 0 && (
         <div className="mt-3 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wider">
             <FolderOpen className="h-3 w-3" /> Saved Scenarios
           </div>
           {scenarios.map((s) => {
@@ -433,7 +433,7 @@ export default function UnderwritingSandbox({
             return (
               <div
                 key={s.id}
-                className="flex items-center justify-between gap-2 bg-slate-800/40 rounded px-2 py-1.5"
+                className="flex items-center justify-between gap-2 bg-muted/40 rounded px-2 py-1.5"
               >
                 <button
                   type="button"
@@ -441,7 +441,7 @@ export default function UnderwritingSandbox({
                   className="flex-1 min-w-0 text-left group"
                   title="Load this scenario"
                 >
-                  <span className="block truncate text-xs text-slate-200 group-hover:text-emerald-300">
+                  <span className="block truncate text-xs text-foreground group-hover:text-emerald-300">
                     {s.name}
                   </span>
                   <span
@@ -457,7 +457,7 @@ export default function UnderwritingSandbox({
                 <button
                   type="button"
                   onClick={() => removeScenario(listingId, s.id)}
-                  className="text-slate-600 hover:text-rose-400 transition-colors shrink-0"
+                  className="text-muted-foreground hover:text-rose-400 transition-colors shrink-0"
                   title="Delete scenario"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -469,7 +469,7 @@ export default function UnderwritingSandbox({
       )}
 
       {/* Disclaimer */}
-      <p className="text-[10px] text-slate-600 mt-3 leading-relaxed">
+      <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
         Based on your assumptions and estimates, not financial advice. Rent and operating
         figures are starting points — adjust to your underwriting.
       </p>

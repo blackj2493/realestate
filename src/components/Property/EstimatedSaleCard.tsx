@@ -125,7 +125,7 @@ export default function EstimatedSaleCard({
               Likely range {formatPrice(lowBand)} – {formatPrice(highBand)}
             </p>
             {hasAsk && (
-              <p className="mt-1 text-sm font-medium text-slate-300">
+              <p className="mt-1 text-sm font-medium text-foreground">
                 ≈ {formatPrice(deltaAbs)} ({deltaPctStr}) {below ? "below" : "above"} ask
                 {below ? " · room to negotiate" : ""}
               </p>
@@ -139,7 +139,7 @@ export default function EstimatedSaleCard({
             >
               {confidence} CONFIDENCE
             </span>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               {market ? "List-anchored" : "Comp-based"}
             </span>
           </div>
@@ -148,7 +148,7 @@ export default function EstimatedSaleCard({
           {market && (
             <p className="text-xs text-muted-foreground">
               {where} are closing at{" "}
-              <span className="font-mono text-slate-300">~{(market.ratio * 100).toFixed(1)}% of ask</span>{" "}
+              <span className="font-mono text-foreground">~{(market.ratio * 100).toFixed(1)}% of ask</span>{" "}
               right now ({market.sampleSize} recent{" "}
               {market.scope === "cohort" ? "comparable " : ""}sales, trailing {market.windowMonths} mo).
             </p>
@@ -157,11 +157,11 @@ export default function EstimatedSaleCard({
           {/* "How it lines up" axis: ask + estimate + (optional) comparable value range */}
           {(hasAsk || hasComp) && (
             <div className="pt-1">
-              <p className="mb-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">
+              <p className="mb-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                 How it lines up
               </p>
               <div className="relative h-9">
-                <div className="absolute left-0 right-0 top-4 h-1.5 rounded-full bg-slate-800" />
+                <div className="absolute left-0 right-0 top-4 h-1.5 rounded-full bg-muted" />
                 {/* comparable-value range segment (the AVM band) — secondary context */}
                 {hasComp && loPos !== null && hiPos !== null && (
                   <div
@@ -198,10 +198,10 @@ export default function EstimatedSaleCard({
               <ul className="mt-1.5 space-y-1 text-[11px]">
                 {hasComp && (
                   <li className="flex items-center justify-between">
-                    <span className="text-slate-400">
-                      <span className="text-slate-400">▬</span> Comparable value
+                    <span className="text-muted-foreground">
+                      <span className="text-muted-foreground">▬</span> Comparable value
                     </span>
-                    <span className="font-mono text-slate-300">
+                    <span className="font-mono text-foreground">
                       {formatPrice(compLo!)} – {formatPrice(compHi!)}
                     </span>
                   </li>
@@ -209,12 +209,12 @@ export default function EstimatedSaleCard({
                 {hasAsk && (
                   <li className="flex items-center justify-between">
                     <span className="text-amber-400">▲ Asking</span>
-                    <span className="font-mono text-slate-300">{formatPrice(listPrice)}</span>
+                    <span className="font-mono text-foreground">{formatPrice(listPrice)}</span>
                   </li>
                 )}
                 <li className="flex items-center justify-between">
                   <span className="text-emerald-400">◆ Estimated sale</span>
-                  <span className="font-mono text-slate-200">{formatPrice(value)}</span>
+                  <span className="font-mono text-foreground">{formatPrice(value)}</span>
                 </li>
               </ul>
             </div>

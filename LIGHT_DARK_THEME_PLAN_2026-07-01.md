@@ -116,5 +116,13 @@ Excluding the terminal is what keeps this out of the ~100–150 hr full-site ran
       - TODO when Phase 2 done: flip defaultTheme → "system"; move toggle into
         `AppHeader`; add toggle to marketing/home (root) pages; theme the `--pp-*`
         surface tokens for light (currently dark values shared on `:root`)
-- [ ] Phase 2 — consumer migration waves
+- [~] Phase 2 — consumer migration waves (codemod-assisted via `scripts/theme-codemod.mjs`)
+      - [x] Wave 1 — `SaleHistorySection` (manual)
+      - [x] Wave 2 — `src/components/Property/*` (codemod, 21 files; `ZoningCard` skipped = WIP)
+      - [ ] Next — `(app)/dashboard`, `(app)` pages, `components/compare`, shared
+      - [ ] Charts wave — hardcoded hex via a `useThemeColors` module (codemod doesn't touch hex)
+      - Refinement TODOs (light-mode only; dark is pixel-identical):
+        - Pin the fullscreen `MediaGalleryOverlay` + over-image chrome (e.g. `TourBadge`) dark
+        - Sweep residual slate in placeholder/focus/scrollbar variants the codemod skips
+        - Tune accent-on-light contrast (cyan/amber/emerald text on white)
 - [ ] Guardrails — scoped ESLint rule + Playwright dual-theme screenshots (LAST)

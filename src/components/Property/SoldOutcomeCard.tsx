@@ -75,21 +75,21 @@ export default function SoldOutcomeCard({
               <p className="text-3xl font-bold text-emerald-400">
                 Within {absPct.toFixed(1)}%
               </p>
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-foreground">
                 We expected{" "}
-                <span className="font-mono text-slate-100">{formatPrice(accuracy.estimateValue)}</span>{" "}
-                — it sold for <span className="font-mono text-slate-100">{soldLine}</span>.
+                <span className="font-mono text-foreground">{formatPrice(accuracy.estimateValue)}</span>{" "}
+                — it sold for <span className="font-mono text-foreground">{soldLine}</span>.
               </p>
             </>
           ) : (
             <>
-              <p className="text-3xl font-bold text-slate-200">
+              <p className="text-3xl font-bold text-foreground">
                 {accuracy.diffPct < 0 ? "Sold above" : "Sold below"} our call
               </p>
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-foreground">
                 We expected{" "}
-                <span className="font-mono text-slate-100">{formatPrice(accuracy.estimateValue)}</span>; it
-                sold for <span className="font-mono text-slate-100">{soldLine}</span> —{" "}
+                <span className="font-mono text-foreground">{formatPrice(accuracy.estimateValue)}</span>; it
+                sold for <span className="font-mono text-foreground">{soldLine}</span> —{" "}
                 {absPct.toFixed(1)}% {accuracy.diffPct < 0 ? "above" : "below"} our estimate.
               </p>
             </>

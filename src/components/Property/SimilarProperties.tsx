@@ -37,7 +37,7 @@ interface Props {
 const TIER_BADGE: Record<MatchTier, { label: string; cls: string } | null> = {
   close: { label: "Close comparables", cls: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
   partial: { label: "Few exact matches", cls: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
-  sparse: { label: "Limited activity", cls: "text-slate-400 bg-slate-700/30 border-slate-700" },
+  sparse: { label: "Limited activity", cls: "text-muted-foreground bg-muted/30 border-border" },
   none: null,
 };
 
@@ -60,7 +60,7 @@ function Row({ title, children, badge, action }: {
   return (
     <div className="mb-6">
       <div className="mb-3 flex items-center gap-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">{title}</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">{title}</h3>
         <Badge tier={badge} />
         <span className="ml-auto">{action}</span>
       </div>
@@ -109,10 +109,10 @@ export default function SimilarProperties(props: Props) {
   if (loading) {
     return (
       <section className="mt-8">
-        <div className="mb-3 h-4 w-48 rounded bg-slate-800" />
+        <div className="mb-3 h-4 w-48 rounded bg-muted" />
         <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-64 w-[260px] shrink-0 animate-pulse rounded-lg bg-slate-900/60" />
+            <div key={i} className="h-64 w-[260px] shrink-0 animate-pulse rounded-lg bg-card/60" />
           ))}
         </div>
       </section>
@@ -134,8 +134,8 @@ export default function SimilarProperties(props: Props) {
   ) : null;
 
   return (
-    <section className="mt-8 border-t border-slate-800 pt-6">
-      <h2 className="mb-4 text-lg font-bold text-slate-100">Comparable Properties</h2>
+    <section className="mt-8 border-t border-border pt-6">
+      <h2 className="mb-4 text-lg font-bold text-foreground">Comparable Properties</h2>
 
       {/* For Sale */}
       {hasForSale ? (
@@ -145,7 +145,7 @@ export default function SimilarProperties(props: Props) {
           ))}
         </Row>
       ) : (
-        <p className="mb-6 text-sm text-slate-500">No comparable active listings in {areaName} right now.</p>
+        <p className="mb-6 text-sm text-muted-foreground">No comparable active listings in {areaName} right now.</p>
       )}
 
       {/* Recently Sold */}
@@ -155,7 +155,7 @@ export default function SimilarProperties(props: Props) {
           badge={data.soldLocked ? "none" : data.matchQuality.sold}
           action={
             data.soldLocked ? (
-              <span className="text-xs text-slate-400">{data.soldCount} sold · sign in to view</span>
+              <span className="text-xs text-muted-foreground">{data.soldCount} sold · sign in to view</span>
             ) : (
               seeAll
             )
@@ -174,7 +174,7 @@ export default function SimilarProperties(props: Props) {
       )}
 
       {data.matchQuality.forSale === "sparse" && (
-        <p className="text-xs text-slate-500">Limited comparable activity in {areaName}.</p>
+        <p className="text-xs text-muted-foreground">Limited comparable activity in {areaName}.</p>
       )}
     </section>
   );

@@ -54,11 +54,11 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
 
   return (
     <div className="mb-6">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
         <Table2 className="h-4 w-4 text-emerald-400" />
         Property Data Sheet
       </h3>
-      <p className="mb-3 text-[10px] text-slate-600">
+      <p className="mb-3 text-[10px] text-muted-foreground">
         Information deemed reliable but is not guaranteed accurate by PROPTX.
       </p>
 
@@ -75,7 +75,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                 "shrink-0 rounded-full border px-3 py-1 font-mono text-xs transition-colors",
                 isRisk
                   ? "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-                  : "border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200",
+                  : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               {isRisk && <span aria-hidden="true">⚠ </span>}
@@ -98,8 +98,8 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                 sectionRefs.current[group.id] = el;
               }}
               className={cn(
-                "scroll-mt-6 rounded-lg border bg-slate-900/30",
-                isRisk ? "border-amber-500/30" : "border-slate-800",
+                "scroll-mt-6 rounded-lg border bg-card/30",
+                isRisk ? "border-amber-500/30" : "border-border",
               )}
             >
               <button
@@ -112,16 +112,16 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                 <span
                   className={cn(
                     "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider",
-                    isRisk ? "text-amber-300" : "text-slate-200",
+                    isRisk ? "text-amber-300" : "text-foreground",
                   )}
                 >
                   {isRisk && <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />}
                   {group.title}
-                  <span className="font-mono font-normal text-slate-500">· {rows.length}</span>
+                  <span className="font-mono font-normal text-muted-foreground">· {rows.length}</span>
                 </span>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 text-slate-500 transition-transform",
+                    "h-4 w-4 text-muted-foreground transition-transform",
                     isOpen ? "rotate-180" : "rotate-0",
                   )}
                 />
@@ -134,7 +134,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                 <div className="grid grid-cols-1 gap-y-2">
                   {rows.map((row) => (
                     <div key={row.key} className="flex items-baseline justify-between gap-4">
-                      <span className="shrink-0 text-xs text-slate-500">{row.label}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{row.label}</span>
                       {row.href ? (
                         <a
                           href={row.href}
@@ -149,7 +149,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                         <span
                           className={cn(
                             "min-w-0 break-words text-right font-mono text-sm",
-                            row.flagged ? "text-amber-300" : "text-slate-200",
+                            row.flagged ? "text-amber-300" : "text-foreground",
                           )}
                         >
                           {row.value}
