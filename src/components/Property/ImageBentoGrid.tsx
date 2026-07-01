@@ -93,7 +93,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
           right column holds two pairs of stacked thumbnails (rows 1 and 2), 4 thumbs
           total + "+N more" on the 4th. Visually unchanged from before. */}
       <div
-        className={`relative hidden md:grid md:grid-cols-2 md:grid-rows-2 gap-2 rounded-md overflow-hidden cursor-pointer group ${className}`}
+        className={`relative hidden md:grid md:grid-cols-[1.6fr_1fr] md:grid-rows-2 gap-2 rounded-md overflow-hidden cursor-pointer group ${className}`}
         onClick={onClick}
         role="button"
         tabIndex={0}
@@ -104,10 +104,11 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
           }
         }}
       >
-      {/* Hero — left column, full height.
-          sizes: full-width on mobile (single-column stack); ~35% of viewport on
-          desktop where the listing page uses a 70/30 split and the bento occupies
-          the 70% left pane (~50% of that pane width = ~35vw). */}
+      {/* Hero — left column, full height. Widened to ~62% of the bento (1.6fr:1fr)
+          so the lead photo reads bigger and stays landscape (thumbs take the rest),
+          instead of the old 50/50 that squeezed the hero toward square.
+          sizes is a no-op now (MLS photos render unoptimized) but kept roughly
+          accurate: full-width on mobile; ~44vw on the desktop 70/30 left pane. */}
       <div
         className="relative col-span-1 row-span-2 min-h-[180px] sm:min-h-[300px]"
         onClick={(e) => {
@@ -121,7 +122,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
           fill
           unoptimized
           className="object-cover rounded-md"
-          sizes="(max-width: 768px) 100vw, 35vw"
+          sizes="(max-width: 768px) 100vw, 44vw"
           priority
         />
         {tourUrl && <TourBadge url={tourUrl} />}
