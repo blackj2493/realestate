@@ -13,6 +13,15 @@ const nextConfig = {
     ];
   },
   images: {
+    // TRREB/MLS photos are already pre-sized (`rs:fit:…` variants) and carry a
+    // baked-in watermark that IDX §6.3(f) bars us from altering. Routing them
+    // through Next's optimizer re-encodes the bytes (watermark-strip risk) AND —
+    // because listings turn over daily — churns Vercel's image cache. That churn
+    // (transformations + cache writes) was ~77% of our Vercel bill for near-zero
+    // benefit on already-optimized source images. Serve original bytes straight
+    // from the source CDN. Individual galleries also set `unoptimized` on their
+    // <Image> (defense-in-depth); see ListingThumbnail.tsx for the same policy.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

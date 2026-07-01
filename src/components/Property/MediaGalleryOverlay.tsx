@@ -145,10 +145,14 @@ export default function MediaGalleryOverlay({
 
         {/* Current Image */}
         <div className="relative w-full h-full max-w-6xl max-h-[70vh]">
+          {/* unoptimized: serve TRREB's watermarked bytes as-is (IDX §6.3(f)) and
+              avoid paid image-optimizer cache churn on daily-changing listings.
+              Mirrors ListingThumbnail + next.config policy. */}
           <Image
             src={images[currentIndex]}
             alt={`Property image ${currentIndex + 1}`}
             fill
+            unoptimized
             className="object-contain"
             sizes="100vw"
             priority
@@ -189,6 +193,7 @@ export default function MediaGalleryOverlay({
                 src={image}
                 alt={`Thumbnail ${index + 1}`}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="80px"
               />

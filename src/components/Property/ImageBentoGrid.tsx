@@ -65,10 +65,14 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
           }
         }}
       >
+        {/* unoptimized: serve TRREB's pre-sized, watermarked bytes as-is. Next's
+            optimizer would re-encode (IDX §6.3(f) watermark risk) and its cache
+            churns with daily listing turnover. Mirrors ListingThumbnail + next.config. */}
         <Image
           src={images[0]}
           alt="Property main view"
           fill
+          unoptimized
           className="object-cover rounded-md"
           sizes="100vw"
           priority
@@ -115,6 +119,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
           src={images[0]}
           alt="Property main view"
           fill
+          unoptimized
           className="object-cover rounded-md"
           sizes="(max-width: 768px) 100vw, 35vw"
           priority
@@ -136,6 +141,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
               src={images[1]}
               alt="Property view 2"
               fill
+              unoptimized
               className="object-cover rounded-md"
               sizes="(max-width: 768px) 50vw, 18vw"
             />
@@ -153,6 +159,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
               src={images[2]}
               alt="Property view 3"
               fill
+              unoptimized
               className="object-cover rounded-md"
               sizes="(max-width: 768px) 50vw, 18vw"
             />
@@ -174,6 +181,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
               src={images[3]}
               alt="Property view 4"
               fill
+              unoptimized
               className="object-cover rounded-md"
               sizes="(max-width: 768px) 50vw, 18vw"
             />
@@ -191,6 +199,7 @@ export default function ImageBentoGrid({ images, onClick, className = "", tourUr
               src={images[4]}
               alt="Property view 5"
               fill
+              unoptimized
               className="object-cover rounded-md"
               sizes="(max-width: 768px) 50vw, 18vw"
             />
