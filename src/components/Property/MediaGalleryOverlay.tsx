@@ -110,7 +110,7 @@ export default function MediaGalleryOverlay({
   return (
     <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-slate-800">
         {/* Counter */}
         <div className="font-mono text-slate-400 text-sm">
           [{currentIndex + 1}] / [{images.length}]
@@ -128,7 +128,7 @@ export default function MediaGalleryOverlay({
 
       {/* Main Stage */}
       <div
-        className="flex-1 relative flex items-center justify-center p-8"
+        className="flex-1 relative flex items-center justify-center p-2 md:px-16 md:py-4"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -143,8 +143,11 @@ export default function MediaGalleryOverlay({
           </button>
         )}
 
-        {/* Current Image */}
-        <div className="relative w-full h-full max-w-6xl max-h-[70vh]">
+        {/* Current Image — fill the stage; object-contain keeps aspect ratio.
+            No max-w/max-h caps: the flex-1 stage between header and filmstrip is
+            the only bound, so the photo grows to the available space instead of
+            sitting boxed in the middle. Source is Large/Largest, so this stays sharp. */}
+        <div className="relative w-full h-full">
           {/* unoptimized: serve TRREB's watermarked bytes as-is (IDX §6.3(f)) and
               avoid paid image-optimizer cache churn on daily-changing listings.
               Mirrors ListingThumbnail + next.config policy. */}
@@ -172,7 +175,7 @@ export default function MediaGalleryOverlay({
       </div>
 
       {/* Filmstrip */}
-      <div className="border-t border-slate-800 bg-slate-900/50 p-4">
+      <div className="border-t border-slate-800 bg-slate-900/50 p-2 md:p-4">
         <div
           ref={filmstripRef}
           className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
@@ -182,7 +185,7 @@ export default function MediaGalleryOverlay({
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
-              className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden transition-all ${
+              className={`relative flex-shrink-0 w-14 h-14 md:w-20 md:h-20 rounded-md overflow-hidden transition-all ${
                 index === currentIndex
                   ? "ring-2 ring-emerald-500 opacity-100"
                   : "opacity-50 hover:opacity-75"
