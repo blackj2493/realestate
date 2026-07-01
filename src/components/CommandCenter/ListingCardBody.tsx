@@ -11,11 +11,12 @@
 "use client";
 
 import React from "react";
-import { BedDouble, Bath, Car, type LucideIcon } from "lucide-react";
+import { BedDouble, Bath, Car, Layers, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
 import { layerStatus, LAYER_TONE_CLASS } from "@/lib/listings/layerStatus";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
+import { basementLabel } from "@/lib/listings/basementLabel";
 import { soldVsAsk } from "@/lib/sold/delta";
 import { isDelistedDealType } from "@/lib/sold/dealType";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -51,11 +52,16 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
   const baths = doc.BathroomsTotalInteger;
   const parking = doc.ParkingTotal;
   const type = doc.PropertySubType || doc.PropertyType || "Residential";
+  // Only surface basement when it carries real info ("None" = condo/no data): the
+  // chip strip is dense, so we don't spend a slot on a non-signal.
+  const basementLbl = basementLabel(doc);
+  const basement = basementLbl !== "None" ? basementLbl : null;
 
   const chips = [
     beds ? <StatChip key="beds" icon={BedDouble} label={beds} /> : null,
     baths ? <StatChip key="baths" icon={Bath} label={String(baths)} /> : null,
     parking ? <StatChip key="parking" icon={Car} label={String(parking)} /> : null,
+    basement ? <StatChip key="basement" icon={Layers} label={basement} /> : null,
   ].filter(Boolean);
 
   const badge = statusBadge(doc.Status);

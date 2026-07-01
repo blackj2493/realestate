@@ -27,6 +27,7 @@ import {
   Bath,
   Square,
   Car,
+  Layers,
   Home,
   Building2,
   ExternalLink,
@@ -43,6 +44,7 @@ import type { GlossaryKey } from "@/lib/glossary";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
+import { basementLabel } from "@/lib/listings/basementLabel";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import WatchButton from "@/components/watchlist/WatchButton";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
@@ -256,11 +258,12 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           </div>
 
           {/* Specs */}
-          <div className="my-4 grid grid-cols-4 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
+          <div className="my-4 grid grid-cols-5 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
             <Spec icon={<Bed className="h-4 w-4 text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
             <Spec icon={<Bath className="h-4 w-4 text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
             <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={sqft} label="Sqft" />
             <Spec icon={<Car className="h-4 w-4 text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
+            <Spec icon={<Layers className="h-4 w-4 text-indigo-400" />} value={basementLabel(property)} label="Basement" />
           </div>
 
           {/* Signal tiles — instant from the index doc, while the score cards hydrate */}
