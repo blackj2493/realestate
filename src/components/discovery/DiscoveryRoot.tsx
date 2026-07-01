@@ -18,6 +18,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles, X, Compass, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import {
   surfaceForPath,
@@ -44,6 +45,7 @@ export default function DiscoveryRoot() {
 
   const pathname = usePathname() || "/";
   const surface = surfaceForPath(pathname);
+  const isMobile = useIsMobile();
 
   // Hydrate once on mount.
   React.useEffect(() => {
@@ -69,6 +71,11 @@ export default function DiscoveryRoot() {
   const [nudge, setNudge] = React.useState(false);
   const eligible =
     hydrated &&
+    // The terminal's mobile bottom strip (List/Map toggle, Tools launcher, and the
+    // map's property-card popup) is too dense for this bottom-left nudge to sit over
+    // without blocking taps — skip the first-run nudge there on phones. The Guide
+    // launcher still offers the tour, and desktop is unaffected.
+    !(surface === "terminal" && isMobile) &&
     TOUR_SURFACES.includes(surface) &&
     toursDone[surface] === undefined &&
     nudgesDone[surface] === undefined &&
