@@ -12,25 +12,25 @@
    ============================================================================ */
 @layer base {
   :root {
-    --background: 0 0% 100%; /* white */
+    --background: 210 40% 98%; /* slate-50 — tinted page so white cards lift off it */
     --foreground: 222 47% 11%; /* slate-900 */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 189 94% 43%; /* cyan-500 — brand, theme-independent */
+    --primary: 192 91% 36%; /* cyan-600 — deeper than dark-mode cyan for contrast on white */
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%; /* slate-100 */
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%; /* slate-100 */
-    --muted-foreground: 215 16% 47%; /* slate-500 */
+    --muted-foreground: 215 19% 35%; /* slate-600 — readable secondary text, not washed out */
     --accent: 210 40% 96%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%; /* red-600 */
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%; /* slate-200 */
-    --input: 214 32% 91%;
-    --ring: 189 94% 43%; /* cyan-500 */
+    --border: 215 25% 87%; /* ~slate-200/300 — visible card + divider edges */
+    --input: 215 25% 87%;
+    --ring: 192 91% 36%;
     --radius: 0rem; /* sharp geometry — zero rounded corners */
     color-scheme: light;
 
