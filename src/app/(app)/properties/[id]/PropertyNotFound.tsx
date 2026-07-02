@@ -43,7 +43,7 @@ export default function PropertyNotFound({ id }: { id: string }) {
         This listing is being synchronized from the MLS feed. It will be available shortly.
       </p>
       <div className="flex flex-col items-center gap-4">
-        <div className="animate-pulse text-emerald-400">Synchronizing listing data…</div>
+        <div className="animate-pulse text-emerald-600 dark:text-emerald-400">Synchronizing listing data…</div>
         <div className="flex items-center gap-3">
           <button
             type="button"

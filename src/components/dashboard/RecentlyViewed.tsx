@@ -50,7 +50,7 @@ export default function RecentlyViewed() {
               <Thumb item={item} />
             </div>
             <div className="p-2">
-              <div className="terminal-font text-xs font-semibold text-cyan-400">
+              <div className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">
                 {formatPrice(item.price)}
               </div>
               <p className="truncate text-[11px] text-foreground">{item.address}</p>

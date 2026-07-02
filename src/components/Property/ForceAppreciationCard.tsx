@@ -23,7 +23,7 @@ function LedgerRowView({ row }: { row: LedgerRow }) {
   return (
     <div className={`${COLS} text-xs`}>
       <span className="text-foreground leading-tight">{row.label}</span>
-      <span className="text-right font-mono text-emerald-400">+{formatPrice(row.valueTyp)}</span>
+      <span className="text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatPrice(row.valueTyp)}</span>
       <span className="text-right font-mono text-muted-foreground">−{formatPrice(row.costTyp)}</span>
       <span className="w-10 text-right font-mono text-muted-foreground">
         {Number.isFinite(row.payback) ? row.payback.toFixed(1) : "—"}×
@@ -51,7 +51,7 @@ export default function ForceAppreciationCard({
             <div className="space-y-2 blur-sm select-none" aria-hidden="true">
               <p className="text-sm">
                 <span className="text-muted-foreground">up to </span>
-                <span className="font-semibold text-emerald-400">$000,000</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">$000,000</span>
                 <span className="text-muted-foreground"> unlockable · ~$000,000 net after cost</span>
               </p>
               <div className="h-3 w-full rounded bg-muted/40" />
@@ -82,9 +82,9 @@ export default function ForceAppreciationCard({
         {hasRecommended && (
           <p className="text-sm">
             <span className="text-muted-foreground">up to </span>
-            <span className="font-semibold text-emerald-400">{formatPrice(v.headlineGross)}</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatPrice(v.headlineGross)}</span>
             <span className="text-muted-foreground"> unlockable · ~</span>
-            <span className="font-semibold text-emerald-400">{formatPrice(v.headlineNet)}</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatPrice(v.headlineNet)}</span>
             <span className="text-muted-foreground"> net after cost</span>
           </p>
         )}
@@ -102,9 +102,9 @@ export default function ForceAppreciationCard({
             <div className="flex items-center justify-between gap-2 border-t border-border pt-1 text-xs font-semibold">
               <span className="text-muted-foreground">Total</span>
               <span className="font-mono">
-                <span className="text-emerald-400">+{formatPrice(v.headlineGross)}</span>{" "}
+                <span className="text-emerald-600 dark:text-emerald-400">+{formatPrice(v.headlineGross)}</span>{" "}
                 <span className="text-muted-foreground">−{formatPrice(v.totalCosts)}</span>{" "}
-                <span className="text-emerald-400">= {formatPrice(v.headlineNet)} net</span>
+                <span className="text-emerald-600 dark:text-emerald-400">= {formatPrice(v.headlineNet)} net</span>
               </span>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function ForceAppreciationCard({
 
         {(v.moreRows.length > 0 || v.suppressed.length > 0) && (
           <details open={!hasRecommended}>
-            <summary className="cursor-pointer list-none text-xs text-cyan-400 hover:text-cyan-300">
+            <summary className="cursor-pointer list-none text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
               {hasRecommended ? "Why not the others?" : "Modeled moves (none pay back here)"}
             </summary>
             <div className="mt-2 space-y-1.5">

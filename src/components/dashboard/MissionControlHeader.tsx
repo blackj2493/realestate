@@ -62,7 +62,7 @@ export default function MissionControlHeader({
             }}
             className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-border px-3 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
           >
-            <Plus className="h-3.5 w-3.5 text-cyan-400" /> Add Markets
+            <Plus className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" /> Add Markets
           </button>
         </div>
       </div>

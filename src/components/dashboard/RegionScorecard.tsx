@@ -181,7 +181,7 @@ export default function RegionScorecard({
                   onClick={() => onSort(c.key)}
                   className={`terminal-font flex items-center gap-1 px-2 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors hover:text-cyan-300 ${
                     c.align === "right" ? "justify-end" : "justify-start"
-                  } ${active ? "text-cyan-400" : "text-muted-foreground"}`}
+                  } ${active ? "text-cyan-600 dark:text-cyan-400" : "text-muted-foreground"}`}
                 >
                   {c.label}
                   {active &&
@@ -224,7 +224,7 @@ export default function RegionScorecard({
                   <div className="flex flex-col items-end gap-0.5 px-2 py-2">
                     <div className="flex w-full items-center justify-end gap-2">
                       <Sparkline data={s.priceSeries} />
-                      <span className="terminal-font text-xs font-semibold text-cyan-400">
+                      <span className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">
                         {orDash(s.medianPrice, compactPrice)}
                       </span>
                     </div>

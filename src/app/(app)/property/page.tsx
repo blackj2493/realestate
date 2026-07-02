@@ -59,7 +59,7 @@ export default async function CityDirectoryPage() {
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
         <nav className="mb-4 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-cyan-400">Home</Link>
+          <Link href="/" className="hover:text-cyan-600 dark:hover:text-cyan-400">Home</Link>
           <span className="mx-2">/</span>
           <span className="text-foreground">Homes by City</span>
         </nav>

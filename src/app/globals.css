@@ -134,6 +134,15 @@
     --ring: 189 94% 43%; /* cyan-500 */
     color-scheme: dark; /* native scrollbars/controls dark to match the UI */
   }
+
+  /* Light-mode elevation — dark separates surfaces via contrast; light needs real
+     shadows so cards read as designed (HouseSigma/Zolo-style), not flat wireframes.
+     Scoped to rounded card surfaces + popovers; light only, so dark is untouched.
+     Explicit Tailwind shadow-* utilities still win (they sit in a later layer). */
+  :root:not(.dark) :is(.rounded-lg, .rounded-xl, .rounded-2xl).bg-card,
+  :root:not(.dark) .bg-popover {
+    box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 6px 16px -4px rgb(15 23 42 / 0.10);
+  }
 }
 
 /* ============================================================================

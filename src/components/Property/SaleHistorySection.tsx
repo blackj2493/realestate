@@ -44,7 +44,7 @@ export default function SaleHistorySection({
 }) {
   const Title = (
     <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-      <History className="h-4 w-4 text-amber-400" />
+      <History className="h-4 w-4 text-amber-600 dark:text-amber-400" />
       Sale History
       {saleHistory.saleCount > 0 && (
         <span className="ml-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -57,7 +57,7 @@ export default function SaleHistorySection({
   // ── Empty: no recorded prior sales ──────────────────────────────────────────
   if (!saleHistory.available || saleHistory.saleCount === 0) {
     return (
-      <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
+      <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
         {Title}
         <p className="text-xs text-muted-foreground">No recorded prior sales for this address.</p>
       </div>
@@ -68,7 +68,7 @@ export default function SaleHistorySection({
   if (!isAuthed) {
     const placeholders = Array.from({ length: Math.min(saleHistory.saleCount, 5) });
     return (
-      <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
+      <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
         {Title}
         <div className="relative">
           <table className="w-full text-sm" aria-hidden="true">
@@ -109,7 +109,7 @@ export default function SaleHistorySection({
 
   // ── Authenticated: full ledger ───────────────────────────────────────────────
   return (
-    <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
+    <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
       {Title}
       <table className="w-full text-sm">
         <thead>
@@ -122,7 +122,7 @@ export default function SaleHistorySection({
               <td className="py-2 text-right text-muted-foreground">
                 {e.list_price ? formatPrice(e.list_price) : "—"}
               </td>
-              <td className="py-2 text-right text-amber-400">
+              <td className="py-2 text-right text-amber-600 dark:text-amber-400">
                 {e.close_price ? formatPrice(e.close_price) : "—"}
               </td>
               <td className="py-2 text-right text-muted-foreground">{e.sub_type || "—"}</td>

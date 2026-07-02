@@ -175,7 +175,7 @@ export default function MediaGalleryOverlay({
       </div>
 
       {/* Filmstrip */}
-      <div className="border-t border-border bg-card/50 p-2 md:p-4">
+      <div className="border-t border-border bg-card p-2 md:p-4">
         <div
           ref={filmstripRef}
           className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"

@@ -35,25 +35,25 @@ function ChangeChips({ change }: { change: WatchlistChange }) {
       chips.push({
         key: "relisted",
         text: "Relisted",
-        cls: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
+        cls: "text-cyan-600 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
       });
     } else if (disp?.kind === "sold") {
       chips.push({
         key: "sold",
         text: "Sold",
-        cls: "text-rose-400 bg-rose-400/10 border-rose-400/30",
+        cls: "text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
       });
     } else if (disp?.kind === "leased") {
       chips.push({
         key: "leased",
         text: "Leased",
-        cls: "text-violet-400 bg-violet-400/10 border-violet-400/30",
+        cls: "text-violet-600 dark:text-violet-400 bg-violet-400/10 border-violet-400/30",
       });
     } else {
       chips.push({
         key: "off",
         text: "Off-market",
-        cls: "text-amber-400 bg-amber-400/10 border-amber-400/30",
+        cls: "text-amber-600 dark:text-amber-400 bg-amber-400/10 border-amber-400/30",
       });
     }
   } else {
@@ -64,15 +64,15 @@ function ChangeChips({ change }: { change: WatchlistChange }) {
         key: "delta",
         text: `${down ? "▼" : "▲"} ${formatPrice(Math.abs(d))}`,
         cls: down
-          ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30"
-          : "text-rose-400 bg-rose-400/10 border-rose-400/30",
+          ? "text-emerald-600 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/30"
+          : "text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
       });
     }
     if (change.isStale) {
       chips.push({
         key: "stale",
         text: "Stale",
-        cls: "text-rose-400 bg-rose-400/10 border-rose-400/30",
+        cls: "text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
       });
     }
   }
@@ -115,7 +115,7 @@ export default function WatchlistSection() {
           {!signedIn && (
             <Link
               href="/login"
-              className="terminal-font text-[11px] uppercase tracking-wider text-cyan-400 hover:underline"
+              className="terminal-font text-[11px] uppercase tracking-wider text-cyan-600 dark:text-cyan-400 hover:underline"
             >
               Sign in to sync across devices →
             </Link>
@@ -150,7 +150,7 @@ export default function WatchlistSection() {
         {!signedIn && (
           <Link
             href="/login"
-            className="terminal-font text-[11px] uppercase tracking-wider text-cyan-400 hover:underline"
+            className="terminal-font text-[11px] uppercase tracking-wider text-cyan-600 dark:text-cyan-400 hover:underline"
           >
             Sign in to sync across devices →
           </Link>
@@ -183,7 +183,7 @@ export default function WatchlistSection() {
                   <ChangeChips change={change} />
                 </div>
                 <div className="p-2">
-                  <div className="terminal-font text-xs font-semibold text-cyan-400">
+                  <div className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">
                     {price ? formatPrice(price) : "—"}
                   </div>
                   <p className="truncate text-[11px] text-foreground">

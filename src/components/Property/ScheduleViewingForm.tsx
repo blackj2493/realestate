@@ -166,7 +166,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
       {/* Name */}
       <div>
         <label htmlFor="sv-name" className="block text-xs font-medium text-muted-foreground mb-1">
-          Name <span className="text-rose-400">*</span>
+          Name <span className="text-rose-600 dark:text-rose-400">*</span>
         </label>
         <input
           id="sv-name"
@@ -186,7 +186,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
       {/* Email */}
       <div>
         <label htmlFor="sv-email" className="block text-xs font-medium text-muted-foreground mb-1">
-          Email <span className="text-rose-400">*</span>
+          Email <span className="text-rose-600 dark:text-rose-400">*</span>
         </label>
         <input
           id="sv-email"
@@ -264,7 +264,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
 
       {/* Inline error */}
       {errorMsg && (
-        <p className="text-xs text-rose-400">{errorMsg}</p>
+        <p className="text-xs text-rose-600 dark:text-rose-400">{errorMsg}</p>
       )}
 
       <button

@@ -122,9 +122,9 @@ const median = (nums: number[]): number | null => {
 
 /** Value color for the threshold metric (sold-to-list): seller's vs buyer's market. */
 function thresholdValueClass(v: number): string {
-  if (v >= 100) return "text-rose-400";
-  if (v < 97) return "text-cyan-400";
-  return "text-amber-400";
+  if (v >= 100) return "text-rose-600 dark:text-rose-400";
+  if (v < 97) return "text-cyan-600 dark:text-cyan-400";
+  return "text-amber-600 dark:text-amber-400";
 }
 
 function Tile({
@@ -140,7 +140,7 @@ function Tile({
   const valueClass =
     metric.kind === "threshold" && value != null
       ? thresholdValueClass(value)
-      : "text-cyan-400";
+      : "text-cyan-600 dark:text-cyan-400";
   const sub = value != null ? metric.sub?.(data) ?? null : null;
 
   return (

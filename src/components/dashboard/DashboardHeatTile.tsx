@@ -163,7 +163,7 @@ export default function DashboardHeatTile({ region }: { region: string }) {
           </div>
           <Link
             href={mapUrl}
-            className="terminal-font flex items-center gap-1 text-[11px] uppercase tracking-wider text-cyan-400 hover:underline"
+            className="terminal-font flex items-center gap-1 text-[11px] uppercase tracking-wider text-cyan-600 dark:text-cyan-400 hover:underline"
           >
             Open map <ArrowUpRight className="h-3 w-3" />
           </Link>

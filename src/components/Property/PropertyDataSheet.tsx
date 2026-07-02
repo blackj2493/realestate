@@ -55,7 +55,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
   return (
     <div className="mb-6">
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
-        <Table2 className="h-4 w-4 text-emerald-400" />
+        <Table2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
         Property Data Sheet
       </h3>
       <p className="mb-3 text-[10px] text-muted-foreground">
@@ -115,7 +115,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                     isRisk ? "text-amber-300" : "text-foreground",
                   )}
                 >
-                  {isRisk && <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />}
+                  {isRisk && <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />}
                   {group.title}
                   <span className="font-mono font-normal text-muted-foreground">· {rows.length}</span>
                 </span>

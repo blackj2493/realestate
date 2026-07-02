@@ -127,11 +127,11 @@ export default async function NeighbourhoodHubPage({
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
         <nav className="mb-4 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-cyan-400">Home</Link>
+          <Link href="/" className="hover:text-cyan-600 dark:hover:text-cyan-400">Home</Link>
           <span className="mx-2">/</span>
-          <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
+          <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
-          <Link href={cityHubPath} className="hover:text-cyan-400">{cityName}</Link>
+          <Link href={cityHubPath} className="hover:text-cyan-600 dark:hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
           <span className="text-foreground">{hoodName}</span>
         </nav>
@@ -157,7 +157,7 @@ export default async function NeighbourhoodHubPage({
           <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
             <Building2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>Nothing active in this neighbourhood at the moment.</p>
-            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
+            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →
             </Link>
           </div>

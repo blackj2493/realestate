@@ -179,7 +179,7 @@ export default function EstimatedSaleCard({
                 )}
                 {askPos !== null && (
                   <div
-                    className="absolute top-0 -translate-x-1/2 text-[9px] leading-none text-amber-400"
+                    className="absolute top-0 -translate-x-1/2 text-[9px] leading-none text-amber-600 dark:text-amber-400"
                     style={{ left: `${askPos}%` }}
                     title="Asking price"
                   >
@@ -187,7 +187,7 @@ export default function EstimatedSaleCard({
                   </div>
                 )}
                 <div
-                  className="absolute top-[11px] -translate-x-1/2 text-[11px] leading-none text-emerald-400"
+                  className="absolute top-[11px] -translate-x-1/2 text-[11px] leading-none text-emerald-600 dark:text-emerald-400"
                   style={{ left: `${valPos}%` }}
                   title="Estimated sale price"
                 >
@@ -208,12 +208,12 @@ export default function EstimatedSaleCard({
                 )}
                 {hasAsk && (
                   <li className="flex items-center justify-between">
-                    <span className="text-amber-400">▲ Asking</span>
+                    <span className="text-amber-600 dark:text-amber-400">▲ Asking</span>
                     <span className="font-mono text-foreground">{formatPrice(listPrice)}</span>
                   </li>
                 )}
                 <li className="flex items-center justify-between">
-                  <span className="text-emerald-400">◆ Estimated sale</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">◆ Estimated sale</span>
                   <span className="font-mono text-foreground">{formatPrice(value)}</span>
                 </li>
               </ul>

@@ -72,7 +72,7 @@ function YoYBadge({ pct }: { pct: number | null }) {
   return (
     <span
       className={`terminal-font text-xs font-bold uppercase tracking-wider ${
-        pct >= 0 ? "text-emerald-400" : "text-rose-400"
+        pct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
       }`}
     >
       {pct >= 0 ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
@@ -81,9 +81,9 @@ function YoYBadge({ pct }: { pct: number | null }) {
 }
 
 const TEMP_STYLE: Record<NonNullable<RegionScore["temperature"]>, { label: string; cls: string }> = {
-  hot: { label: "Seller's Market", cls: "bg-rose-500/15 text-rose-400 border-rose-500/40" },
-  balanced: { label: "Balanced", cls: "bg-amber-500/15 text-amber-400 border-amber-500/40" },
-  cold: { label: "Buyer's Market", cls: "bg-sky-500/15 text-sky-400 border-sky-500/40" },
+  hot: { label: "Seller's Market", cls: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40" },
+  balanced: { label: "Balanced", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40" },
+  cold: { label: "Buyer's Market", cls: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/40" },
 };
 
 interface KpiProps {
@@ -261,7 +261,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         </div>
 
         {error && (
-          <p className="mt-6 border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-400">
+          <p className="mt-6 border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-600 dark:text-rose-400">
             Failed to load market data — try again shortly.
           </p>
         )}

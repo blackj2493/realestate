@@ -37,7 +37,7 @@ export default function WatchHeart({
       }}
       className={className}
     >
-      <Heart className={cn(iconClassName, watched && "fill-red-500 text-red-500")} />
+      <Heart className={cn(iconClassName, watched && "fill-red-500 text-red-600 dark:text-red-500")} />
     </button>
   );
 }

@@ -50,7 +50,7 @@ export default function WatchButton({
             )
           : cn(
               "inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-cyan-300",
-              watched && "text-cyan-400"
+              watched && "text-cyan-600 dark:text-cyan-400"
             ),
         className
       )}

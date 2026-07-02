@@ -71,13 +71,13 @@ export default function SocialProofBar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-lg border border-border bg-card/50 px-4 py-2.5 text-xs",
+        "flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-lg border border-border bg-card px-4 py-2.5 text-xs",
         className
       )}
     >
       {stats.viewers > 0 && (
         <span className="flex items-center gap-1.5 text-muted-foreground">
-          <Eye className="h-3.5 w-3.5 text-cyan-400" />
+          <Eye className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
           <span className="font-mono font-semibold text-foreground">
             {stats.viewers.toLocaleString()}
           </span>
@@ -86,7 +86,7 @@ export default function SocialProofBar({
       )}
       {stats.watchers > 0 && (
         <span className="flex items-center gap-1.5 text-muted-foreground">
-          <Bookmark className="h-3.5 w-3.5 text-emerald-400" />
+          <Bookmark className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           <span className="font-mono font-semibold text-foreground">
             {stats.watchers.toLocaleString()}
           </span>

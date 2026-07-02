@@ -85,7 +85,7 @@ export default function SubmarketLeaderboard() {
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
           <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
-            <Trophy className="h-4 w-4 text-cyan-400" /> Submarket Leaderboard
+            <Trophy className="h-4 w-4 text-cyan-600 dark:text-cyan-400" /> Submarket Leaderboard
           </h2>
           <div className="inline-flex overflow-hidden rounded-md border border-border">
             {RANK_OPTIONS.map((o) => (

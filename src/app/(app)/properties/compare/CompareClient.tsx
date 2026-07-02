@@ -116,15 +116,15 @@ export default function CompareClient({
       <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border bg-card/50">
-              <th className="sticky left-0 z-10 min-w-[150px] bg-card/50 p-3 text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border bg-card">
+              <th className="sticky left-0 z-10 min-w-[150px] bg-card p-3 text-left text-xs uppercase tracking-wider text-muted-foreground">
                 Metric
               </th>
               {listings.map((l) => (
                 <th key={l.id} className="min-w-[220px] p-3 text-left align-top">
                   <CompareMediaCell listing={l} />
                   <Link href={`/properties/${l.id}`} className="group block">
-                    <p className="font-mono text-base font-bold text-emerald-400">{formatPrice(l.ListPrice)}</p>
+                    <p className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
                     <p className="text-xs leading-snug text-foreground group-hover:text-cyan-300">
                       {l.UnparsedAddress || l.City || "Address unavailable"}
                     </p>
@@ -189,7 +189,7 @@ function AnonBanner({ ids }: { ids: string[] }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-4 py-2.5">
       <p className="text-xs text-foreground">
-        <Lock className="mr-1.5 inline h-3.5 w-3.5 text-cyan-400" />
+        <Lock className="mr-1.5 inline h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
         Estimates, deal scores &amp; sold-derived metrics are members-only.
       </p>
       <Link
@@ -206,12 +206,12 @@ function Header() {
   return (
     <div className="mb-6 flex items-center justify-between">
       <div>
-        <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-400 transition-colors hover:text-cyan-300">
+        <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300">
           <ArrowLeft className="h-4 w-4" />
           Back to Command Center
         </Link>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <GitCompareArrows className="h-6 w-6 text-cyan-400" />
+          <GitCompareArrows className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
           Compare Properties
         </h1>
       </div>

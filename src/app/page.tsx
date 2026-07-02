@@ -35,7 +35,7 @@ export default function HomePage() {
 
         {/* Hero — compact so the comparison cards AND the CTA stay above the fold */}
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-5 text-center">
-          <p className="terminal-font mb-5 text-[14.4px] font-semibold uppercase tracking-[0.3em] text-emerald-400 md:text-[16.8px] [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
+          <p className="terminal-font mb-5 text-[14.4px] font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400 md:text-[16.8px] [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
             For serious buyers &amp; investors — not browsers
           </p>
 

@@ -23,7 +23,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
     return (
       <Link
         href="/login"
-        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50"
+        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card"
       >
         <div className="relative aspect-[4/3] bg-muted/60">
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
@@ -49,7 +49,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
   return (
     <Link
       href={`/properties/${card.id}`}
-      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50 transition-colors hover:border-border hover:border-l-rose-400"
+      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card transition-colors hover:border-border hover:border-l-rose-400"
     >
       <div className="relative aspect-[4/3]">
         <ListingThumbnail
@@ -65,7 +65,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-lg font-bold text-emerald-400">
+          <span className="font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
             {formatPrice(card.closePrice)}
           </span>
           {card.pctOfAsk != null && (

@@ -64,19 +64,19 @@ export default function NearbyAmenities({ listingId }: { listingId: string }) {
       </h3>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <AmenityColumn
-          icon={<ShoppingCart className="h-4 w-4 text-emerald-400" />}
+          icon={<ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
           label="Grocery"
           items={data.grocery}
           total={data.groceryTotal}
-          accent="text-emerald-400"
+          accent="text-emerald-600 dark:text-emerald-400"
           costco={data.costco}
         />
         <AmenityColumn
-          icon={<Dumbbell className="h-4 w-4 text-sky-400" />}
+          icon={<Dumbbell className="h-4 w-4 text-sky-600 dark:text-sky-400" />}
           label="Recreation"
           items={data.recreation}
           total={data.recreationTotal}
-          accent="text-sky-400"
+          accent="text-sky-600 dark:text-sky-400"
         />
       </div>
       <p className="mt-3 text-[10px] text-muted-foreground">
@@ -109,7 +109,7 @@ function AmenityColumn({
   const costcoCity = costco?.name.includes("—") ? costco.name.split("—")[1].trim() : null;
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-3">
+    <div className="rounded-lg border border-border bg-card p-3">
       <div className="mb-2 flex items-center gap-2">
         {icon}
         <span className="text-xs font-semibold uppercase tracking-wider text-foreground">{label}</span>
@@ -121,7 +121,7 @@ function AmenityColumn({
               <Store className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Costco{costcoCity ? ` · ${costcoCity}` : ""}</span>
             </span>
-            <span className="shrink-0 font-mono text-[11px] font-semibold text-amber-400">
+            <span className="shrink-0 font-mono text-[11px] font-semibold text-amber-600 dark:text-amber-400">
               {costco.distanceKm.toFixed(1)} km
             </span>
           </li>

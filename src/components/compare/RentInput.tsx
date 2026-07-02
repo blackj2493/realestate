@@ -22,7 +22,7 @@ export default function RentInput({
         className="h-10 w-full border-border bg-muted px-2 font-mono text-xs text-foreground md:h-6 md:w-20 md:px-1.5"
         aria-label="Monthly rent assumption"
       />
-      <span className="text-amber-400/80">/mo est</span>
+      <span className="text-amber-600 dark:text-amber-400/80">/mo est</span>
     </label>
   );
 }

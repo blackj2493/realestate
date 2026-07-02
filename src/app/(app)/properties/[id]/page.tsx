@@ -473,13 +473,13 @@ export default async function PropertyPage({
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-          <Link href="/properties" className="text-cyan-400 transition-colors hover:text-cyan-300">
+          <Link href="/properties" className="text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300">
             Command Center
           </Link>
           {cityHref && p.City && (
             <>
               <span aria-hidden>/</span>
-              <Link href={cityHref} className="text-cyan-400 transition-colors hover:text-cyan-300">
+              <Link href={cityHref} className="text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300">
                 Homes for sale in {p.City}
               </Link>
             </>
@@ -519,13 +519,13 @@ export default async function PropertyPage({
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {status.kind === "sold" ? (
                   <>
-                    <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-rose-400">
+                    <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-rose-600 dark:text-rose-400">
                       {status.label}
                       {soldDate ? ` ${fmtDate(soldDate)}` : ""}
                     </span>
                     {soldPrice ? (
                       <>
-                        <span className="font-mono text-3xl font-bold text-emerald-400">
+                        <span className="font-mono text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                           {formatPrice(soldPrice)}
                         </span>
                         {price > 0 && (
@@ -557,7 +557,7 @@ export default async function PropertyPage({
                   </>
                 ) : status.kind === "delisted" ? (
                   <>
-                    <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-400">
+                    <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-600 dark:text-amber-400">
                       OFF MARKET
                     </span>
                     <span className="font-mono text-3xl font-bold text-muted-foreground">
@@ -565,7 +565,7 @@ export default async function PropertyPage({
                     </span>
                   </>
                 ) : (
-                  <span className="font-mono text-3xl font-bold text-emerald-400">
+                  <span className="font-mono text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                     {formatPrice(price)}
                   </span>
                 )}
@@ -638,10 +638,10 @@ export default async function PropertyPage({
             {/* Specs — 3-up on mobile (wider cells so a long basement value wraps
                 cleanly), 5-up from sm↑ where all stats sit on one row. */}
             <div className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-5">
-              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
-              <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
+              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
+              <SpecCell icon={<Bath className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
               <SpecCell
-                icon={<Square className="h-5 w-5 text-purple-400" />}
+                icon={<Square className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
                 value={
                   p.BuildingAreaTotal
                     ? p.BuildingAreaTotal.toLocaleString()
@@ -651,10 +651,10 @@ export default async function PropertyPage({
                 }
                 label="Sqft"
               />
-              <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
+              <SpecCell icon={<Car className="h-5 w-5 text-amber-600 dark:text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
               {/* Basement — promoted from the data sheet: walk-out/sep-entrance/apartment is the
                   rental-suite signal the investor personas key on. Raw TRREB value(s), "None" when empty. */}
-              <SpecCell icon={<Layers className="h-5 w-5 text-indigo-400" />} value={basementLabel(p)} label="Basement" />
+              <SpecCell icon={<Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />} value={basementLabel(p)} label="Basement" />
             </div>
 
             {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
@@ -737,7 +737,7 @@ export default async function PropertyPage({
               <SocialProofBar listingId={id} />
 
               {/* Asset Summary */}
-              <div className="rounded-lg border border-border bg-card/50 p-4">
+              <div className="rounded-lg border border-border bg-card p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground">
                   Asset Summary
                 </h3>
@@ -746,13 +746,13 @@ export default async function PropertyPage({
                     <SummaryRow
                       label={status.kind === "sold" && status.label === "LEASED" ? "Leased Price" : "Sold Price"}
                       value={formatPrice(soldPrice)}
-                      valueClass="text-rose-400"
+                      valueClass="text-rose-600 dark:text-rose-400"
                     />
                   )}
                   <SummaryRow
                     label={isLease ? "Monthly Rent" : "List Price"}
                     value={formatPrice(price)}
-                    valueClass={isActiveListing ? "text-emerald-400" : "text-muted-foreground"}
+                    valueClass={isActiveListing ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}
                   />
                   <SummaryRow
                     label="Annual Taxes"
@@ -765,7 +765,7 @@ export default async function PropertyPage({
                   <SummaryRow
                     label="True DOM"
                     value={`${trueDom} days`}
-                    valueClass={trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-muted-foreground"}
+                    valueClass={trueDom > 45 ? "text-emerald-600 dark:text-emerald-400" : trueDom >= 14 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}
                   />
                 </div>
               </div>
@@ -804,7 +804,7 @@ export default async function PropertyPage({
           {/* ── LEFT-REST: deep detail. Desktop col 1 / row 2; renders THIRD on mobile (after the cockpit). ── */}
           <div className="lg:col-start-1 lg:row-start-2">
             {/* Remarks (the listing's own description) */}
-            <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-400" />}>
+            <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />}>
               <div className="rounded-lg border border-border bg-card/30 p-4">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
@@ -932,7 +932,7 @@ export default async function PropertyPage({
 
 function SpecCell({ icon, value, label }: { icon: React.ReactNode; value: React.ReactNode; label: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-3 text-center">
+    <div className="rounded-lg border border-border bg-card p-3 text-center">
       <div className="mx-auto mb-1 flex justify-center">{icon}</div>
       <span className="block font-mono text-lg font-bold text-foreground">{value}</span>
       <span className="block text-[10px] uppercase text-muted-foreground">{label}</span>

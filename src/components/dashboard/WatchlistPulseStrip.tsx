@@ -38,12 +38,12 @@ export default function WatchlistPulseStrip({ rollup }: { rollup: WatchlistRollu
 
   const segments = (
     [
-      { count: priceDrops, label: "price drop", color: "text-emerald-400", plural: true },
-      { count: sold, label: "sold", color: "text-rose-400", plural: false },
-      { count: leased, label: "leased", color: "text-violet-400", plural: false },
-      { count: relisted, label: "relisted", color: "text-cyan-400", plural: false },
-      { count: offMarket, label: "off-market", color: "text-amber-400", plural: true },
-      { count: goingStale, label: "going stale", color: "text-rose-400", plural: false },
+      { count: priceDrops, label: "price drop", color: "text-emerald-600 dark:text-emerald-400", plural: true },
+      { count: sold, label: "sold", color: "text-rose-600 dark:text-rose-400", plural: false },
+      { count: leased, label: "leased", color: "text-violet-600 dark:text-violet-400", plural: false },
+      { count: relisted, label: "relisted", color: "text-cyan-600 dark:text-cyan-400", plural: false },
+      { count: offMarket, label: "off-market", color: "text-amber-600 dark:text-amber-400", plural: true },
+      { count: goingStale, label: "going stale", color: "text-rose-600 dark:text-rose-400", plural: false },
     ] as const
   ).filter((s) => s.count > 0);
 

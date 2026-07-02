@@ -81,7 +81,7 @@ export default function CompareValuePlot({
   if (!isAuthed) {
     return (
       <Panel>
-        <Lock className="mb-3 h-6 w-6 text-cyan-400" />
+        <Lock className="mb-3 h-6 w-6 text-cyan-600 dark:text-cyan-400" />
         <p className="mb-1 text-sm font-medium text-foreground">The value plot is members-only</p>
         <p className="mb-4 max-w-sm text-xs leading-relaxed text-muted-foreground">
           It maps each home against our comp value — what recent comparable sales support — a
@@ -203,7 +203,7 @@ export default function CompareValuePlot({
                     {p.addr}
                   </Link>
                   <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                    <span className="text-emerald-400">{formatPrice(p.price)}</span> · {p.cap.toFixed(1)}% cap ·{" "}
+                    <span className="text-emerald-600 dark:text-emerald-400">{formatPrice(p.price)}</span> · {p.cap.toFixed(1)}% cap ·{" "}
                     <span style={{ color: col }}>{fmtDisc(p.discount)}</span>
                   </p>
                 </div>

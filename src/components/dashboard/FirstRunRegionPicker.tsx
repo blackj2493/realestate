@@ -82,7 +82,7 @@ export default function FirstRunRegionPicker({
       {/* Staged selection + commit. */}
       {selected.length > 0 && (
         <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5 text-cyan-400" />
+          <MapPin className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
           <span>{selected.join(" · ")}</span>
         </div>
       )}

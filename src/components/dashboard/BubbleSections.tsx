@@ -79,7 +79,7 @@ export default function BubbleSections({ lens, enabledBoards }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-2">
         <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
-          <Bookmark className="h-4 w-4 text-cyan-400" />
+          <Bookmark className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
           Market Bubbles
         </h2>
         <Link

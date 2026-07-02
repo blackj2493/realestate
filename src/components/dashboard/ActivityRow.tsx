@@ -76,7 +76,7 @@ export default function ActivityRow({
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end justify-between py-0.5 text-right">
-        <div className="terminal-font text-sm font-semibold text-cyan-400">
+        <div className="terminal-font text-sm font-semibold text-cyan-600 dark:text-cyan-400">
           {priceLabel ? (
             <span className="mr-1 text-[9px] uppercase tracking-wider text-muted-foreground">
               {priceLabel}

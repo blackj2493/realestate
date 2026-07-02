@@ -125,16 +125,16 @@ export default async function DevHubPage({
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
         <nav className="mb-4 text-sm text-muted-foreground">
-          <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
+          <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
-          <Link href={cityHubPath} className="hover:text-cyan-400">{cityName}</Link>
+          <Link href={cityHubPath} className="hover:text-cyan-600 dark:hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
           <span className="text-foreground">Development Potential</span>
         </nav>
 
         <header className="mb-6">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
-            <LandPlot className="h-6 w-6 text-orange-400" />
+            <LandPlot className="h-6 w-6 text-orange-600 dark:text-orange-400" />
             Homes with Development Potential in {cityName}, ON
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -144,7 +144,7 @@ export default async function DevHubPage({
           </p>
           {totalFound > 0 && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
-              <Lock className="h-3.5 w-3.5 text-cyan-400" />
+              <Lock className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
               Ranked by our multi-unit / density analysis. Open a listing and sign in to see each property&apos;s development potential.
             </p>
           )}
@@ -160,7 +160,7 @@ export default async function DevHubPage({
           <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
             <LandPlot className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>No prime development-candidate listings here right now.</p>
-            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
+            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →
             </Link>
           </div>

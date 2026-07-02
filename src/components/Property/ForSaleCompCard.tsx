@@ -29,7 +29,7 @@ export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
   return (
     <Link
       href={`/properties/${card.id}`}
-      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-cyan-500/40 bg-card/50 transition-colors hover:border-border hover:border-l-cyan-400"
+      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-cyan-500/40 bg-card transition-colors hover:border-border hover:border-l-cyan-400"
     >
       <div className="relative aspect-[4/3]">
         <ListingThumbnail
@@ -45,7 +45,7 @@ export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-lg font-bold text-cyan-400">
+          <span className="font-mono text-lg font-bold text-cyan-600 dark:text-cyan-400">
             {formatPrice(card.price)}
           </span>
           {dom != null && (

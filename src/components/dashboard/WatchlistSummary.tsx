@@ -11,7 +11,7 @@ function Tile({ label, value, term }: { label: string; value: string; term?: Glo
         {label}
         {term && <InfoDot term={term} />}
       </div>
-      <div className="terminal-font truncate text-lg font-bold text-cyan-400" title={value}>
+      <div className="terminal-font truncate text-lg font-bold text-cyan-600 dark:text-cyan-400" title={value}>
         {value}
       </div>
     </div>

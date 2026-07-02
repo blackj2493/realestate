@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 export default function LockedCell({ next }: { next?: string }) {
   const content = (
     <>
-      <Lock className="h-3.5 w-3.5 text-cyan-400/70" />
+      <Lock className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400/70" />
       <span aria-hidden="true" className="select-none blur-[2px]">•••</span>
     </>
   );

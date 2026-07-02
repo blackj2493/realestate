@@ -40,7 +40,7 @@ export default function ActionFeedItem({ item }: { item: FeedItem }) {
         </p>
       </div>
 
-      <div className="terminal-font shrink-0 text-right text-sm font-semibold text-cyan-400">
+      <div className="terminal-font shrink-0 text-right text-sm font-semibold text-cyan-600 dark:text-cyan-400">
         {item.price ? formatPrice(item.price) : "—"}
       </div>
     </Link>

@@ -51,7 +51,7 @@ export default function DashboardConfigPanel({
 
   return (
     <div className="border border-border bg-card/60 p-4">
-      <h2 className="terminal-font mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-400">
+      <h2 className="terminal-font mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
         Customize Workspace
       </h2>
 
@@ -75,7 +75,7 @@ export default function DashboardConfigPanel({
                   type="button"
                   onClick={() => removeRegion(r)}
                   aria-label={`Remove ${r}`}
-                  className="text-cyan-300/70 hover:text-rose-400"
+                  className="text-cyan-300/70 hover:text-rose-600 dark:hover:text-rose-400"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -105,7 +105,7 @@ export default function DashboardConfigPanel({
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
                     >
                       <span className="flex items-center gap-2">
-                        <Plus className="h-3 w-3 text-cyan-400" />
+                        <Plus className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
                         {s.label}
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           {s.kind}

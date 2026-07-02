@@ -43,23 +43,23 @@ function gradeStyles(grade: DealScoreGrade | null): {
   switch (grade) {
     case "A+":
     case "A":
-      return { text: "text-emerald-400", ring: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40" };
+      return { text: "text-emerald-600 dark:text-emerald-400", ring: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40" };
     case "B":
-      return { text: "text-lime-400", ring: "text-lime-400", bg: "bg-lime-500/10", border: "border-lime-500/40" };
+      return { text: "text-lime-600 dark:text-lime-400", ring: "text-lime-600 dark:text-lime-400", bg: "bg-lime-500/10", border: "border-lime-500/40" };
     case "C":
-      return { text: "text-amber-400", ring: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40" };
+      return { text: "text-amber-600 dark:text-amber-400", ring: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40" };
     case "D":
-      return { text: "text-orange-400", ring: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/40" };
+      return { text: "text-orange-600 dark:text-orange-400", ring: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/40" };
     case "F":
-      return { text: "text-rose-400", ring: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40" };
+      return { text: "text-rose-600 dark:text-rose-400", ring: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40" };
     default:
       return { text: "text-muted-foreground", ring: "text-muted-foreground", bg: "bg-muted/50", border: "border-border" };
   }
 }
 
 function DirectionIcon({ direction }: { direction: DealScoreComponent["direction"] }) {
-  if (direction === "up") return <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />;
-  if (direction === "down") return <TrendingDown className="h-3.5 w-3.5 text-rose-400" />;
+  if (direction === "up") return <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />;
+  if (direction === "down") return <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />;
   return <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
@@ -158,7 +158,7 @@ export default function DealScoreCard({
 
   if (locked) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4">
+      <div className="rounded-lg border border-border bg-card p-4">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
           <Gauge className="h-4 w-4 text-muted-foreground" />
           Deal Score
@@ -182,7 +182,7 @@ export default function DealScoreCard({
   // No persona could be scored — render a quiet "not enough data" state instead of a 0.
   if (!persona || !active || active.score === null || active.grade === null) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4">
+      <div className="rounded-lg border border-border bg-card p-4">
         <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
           <Gauge className="h-4 w-4 text-muted-foreground" />
           Deal Score
@@ -203,7 +203,7 @@ export default function DealScoreCard({
   const band = dealScore.offerBand;
 
   return (
-    <div data-tour="listing-deal-score" className={cn("rounded-lg border bg-card/50 p-4", s.border)}>
+    <div data-tour="listing-deal-score" className={cn("rounded-lg border bg-card p-4", s.border)}>
       <h3 className="mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
         <span className="flex items-center gap-2">
           <Gauge className={cn("h-4 w-4", s.text)} />

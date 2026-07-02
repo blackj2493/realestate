@@ -37,7 +37,7 @@ export default function MetricGroup({
 
   return (
     <tbody className="divide-y divide-border/70 border-b-4 border-slate-950">
-      <tr className="bg-card/50">
+      <tr className="bg-card">
         <td colSpan={colSpan} className="sticky left-0 z-10 p-0">
           <button
             type="button"

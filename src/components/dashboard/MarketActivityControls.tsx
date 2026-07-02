@@ -388,7 +388,7 @@ export default function MarketActivityControls({
             onClick={() =>
               onChange({ ...DEFAULT_ACTIVITY_LENS, windowDays: lens.windowDays })
             }
-            className="terminal-font shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-muted-foreground underline-offset-2 hover:text-rose-400 hover:underline"
+            className="terminal-font shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-muted-foreground underline-offset-2 hover:text-rose-600 dark:hover:text-rose-400 hover:underline"
           >
             Clear filters
           </button>

@@ -77,7 +77,7 @@ export default function MarketPulse({ location }: { location: string }) {
           {yoy != null && (
             <span
               className={`terminal-font text-[10px] font-bold uppercase tracking-wider ${
-                yoy >= 0 ? "text-emerald-400" : "text-rose-400"
+                yoy >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
               }`}
             >
               {yoy >= 0 ? "▲" : "▼"} {Math.abs(yoy).toFixed(1)}% YoY
@@ -128,7 +128,7 @@ export default function MarketPulse({ location }: { location: string }) {
           <div className="h-full w-full animate-pulse bg-muted/40" />
         )}
         {!locked && error && (
-          <p className="flex h-full items-center justify-center text-xs text-rose-400">
+          <p className="flex h-full items-center justify-center text-xs text-rose-600 dark:text-rose-400">
             Failed to load trend
           </p>
         )}

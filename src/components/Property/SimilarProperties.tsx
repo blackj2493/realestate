@@ -35,8 +35,8 @@ interface Props {
 }
 
 const TIER_BADGE: Record<MatchTier, { label: string; cls: string } | null> = {
-  close: { label: "Close comparables", cls: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
-  partial: { label: "Few exact matches", cls: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
+  close: { label: "Close comparables", cls: "text-emerald-600 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
+  partial: { label: "Few exact matches", cls: "text-amber-600 dark:text-amber-400 bg-amber-400/10 border-amber-400/20" },
   sparse: { label: "Limited activity", cls: "text-muted-foreground bg-muted/30 border-border" },
   none: null,
 };
@@ -128,7 +128,7 @@ export default function SimilarProperties(props: Props) {
   if (!hasForSale && !hasSold) return null;
 
   const seeAll = cityName ? (
-    <Link href={`/properties?city=${encodeURIComponent(cityName)}`} className="text-xs text-cyan-400 hover:text-cyan-300">
+    <Link href={`/properties?city=${encodeURIComponent(cityName)}`} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
       See all in {cityName} →
     </Link>
   ) : null;
