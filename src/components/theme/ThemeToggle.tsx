@@ -9,12 +9,13 @@ import { Moon, Sun } from "lucide-react";
  * explicit light/dark or "system". Renders a stable icon until mounted to avoid a
  * hydration mismatch (the server can't know the resolved theme).
  */
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({ className, showLabel = false }: { className?: string; showLabel?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const isDark = resolvedTheme === "dark";
+  const action = isDark ? "Light mode" : "Dark mode";
 
   return (
     <button
@@ -29,6 +30,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     >
       {/* Before mount, default to the Moon (server + first client render agree). */}
       {mounted && isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {showLabel && mounted && <span className="text-xs font-medium">{action}</span>}
     </button>
   );
 }
