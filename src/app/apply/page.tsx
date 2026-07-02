@@ -55,11 +55,11 @@ const ASSETS = [
 const CADENCE = ["0–1", "2–4", "5–9", "10+"];
 
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-900/60 px-3.5 py-2.5 text-base text-slate-100 placeholder:text-slate-600 outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40";
+  "w-full rounded-md border border-border bg-card/60 px-3.5 py-2.5 text-base text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       {children}
     </label>
   );
@@ -79,10 +79,10 @@ function Pill({
       type="button"
       onClick={onClick}
       className={cn(
-        "min-h-[44px] rounded-md border px-4 py-2 text-sm transition-colors [touch-action:manipulation] active:bg-slate-800",
+        "min-h-[44px] rounded-md border px-4 py-2 text-sm transition-colors [touch-action:manipulation] active:bg-muted",
         active
           ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-          : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600"
+          : "border-border bg-card/60 text-foreground hover:border-border"
       )}
     >
       {children}
@@ -104,10 +104,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-colors [touch-action:manipulation] active:bg-slate-800",
+        "inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-colors [touch-action:manipulation] active:bg-muted",
         active
           ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-          : "border-slate-700 bg-slate-900/60 text-slate-400 hover:border-slate-600"
+          : "border-border bg-card/60 text-muted-foreground hover:border-border"
       )}
     >
       {active && <Check className="h-3 w-3" />}
@@ -136,12 +136,12 @@ function CheckRow({
           "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
           checked
             ? "border-emerald-500 bg-emerald-500 text-slate-950"
-            : "border-slate-600 bg-slate-900"
+            : "border-border bg-card"
         )}
       >
         {checked && <Check className="h-3.5 w-3.5" />}
       </span>
-      <span className="text-sm leading-snug text-slate-300">{children}</span>
+      <span className="text-sm leading-snug text-foreground">{children}</span>
     </button>
   );
 }
@@ -258,7 +258,7 @@ export default function ApplyPage() {
   const currentLabel = STEPS[step - 1].label;
 
   return (
-    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-app overflow-hidden bg-background text-foreground">
       <HeroBackground variant="form" />
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
@@ -269,7 +269,7 @@ export default function ApplyPage() {
             <h1 className="text-3xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
               Terminal Access Application
             </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:mt-4 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-foreground md:mt-4 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               {
                 "Built for principals and analysts — not agents prospecting for clients. Tell us how you invest and the terminal opens to the right tools."
               }
@@ -291,7 +291,7 @@ export default function ApplyPage() {
                           ? "border-emerald-500 bg-emerald-500 text-slate-950"
                           : done
                           ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                          : "border-slate-700 bg-slate-900 text-slate-500"
+                          : "border-border bg-card text-muted-foreground"
                       )}
                     >
                       {done ? <Check className="h-3.5 w-3.5" /> : s.n}
@@ -302,15 +302,15 @@ export default function ApplyPage() {
                         active
                           ? "text-emerald-300"
                           : done
-                          ? "text-slate-400"
-                          : "text-slate-600"
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground"
                       )}
                     >
                       Step {s.n} · {s.label}
                     </span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <ChevronRight className="h-4 w-4 text-slate-700" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Fragment>
               );
@@ -322,7 +322,7 @@ export default function ApplyPage() {
             <p className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-emerald-300">
               Step {step} of 3 · {currentLabel}
             </p>
-            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-slate-800">
+            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-emerald-500 transition-all"
                 style={{ width: `${(step / 3) * 100}%` }}
@@ -332,7 +332,7 @@ export default function ApplyPage() {
 
           {/* Body: form + rail */}
           <div className="mt-6 grid gap-8 md:mt-10 lg:grid-cols-[minmax(0,1fr)_260px]">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5 md:p-8">
+            <div className="rounded-xl border border-border bg-card/70 backdrop-blur-md p-5 md:p-8">
               {error && (
                 <div className="mb-6 rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
                   {error}
@@ -499,7 +499,7 @@ export default function ApplyPage() {
                   >
                     {"I agree to the Terms of Service and Privacy Policy."}
                   </CheckRow>
-                  <p className="text-xs leading-snug text-slate-500">
+                  <p className="text-xs leading-snug text-muted-foreground">
                     Read our{" "}
                     <Link href="/terms" className="text-cyan-400 hover:underline">
                       Terms of Service
@@ -510,7 +510,7 @@ export default function ApplyPage() {
                     </Link>
                     .
                   </p>
-                  <p className="pt-1 text-xs leading-relaxed text-slate-600">
+                  <p className="pt-1 text-xs leading-relaxed text-muted-foreground">
                     {
                       "This does not constitute a consumer service agreement. VOW compliance is verified before access is granted."
                     }
@@ -527,8 +527,8 @@ export default function ApplyPage() {
                   className={cn(
                     "inline-flex min-h-[44px] items-center gap-2 rounded-md px-4 py-2.5 text-sm transition-colors [touch-action:manipulation]",
                     step === 1
-                      ? "cursor-not-allowed text-slate-700"
-                      : "text-slate-400 hover:text-slate-100 active:text-slate-300"
+                      ? "cursor-not-allowed text-muted-foreground"
+                      : "text-muted-foreground hover:text-foreground active:text-foreground"
                   )}
                 >
                   <ArrowLeft className="h-4 w-4" /> Back
@@ -563,17 +563,17 @@ export default function ApplyPage() {
 
             {/* Right rail */}
             <aside className="hidden lg:block">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5">
+              <div className="rounded-xl border border-border bg-card/70 backdrop-blur-md p-5">
                 <p className="terminal-font text-[10px] uppercase tracking-[0.2em] text-emerald-400/80">
                   Access protocol
                 </p>
-                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                   {
                     "Built for principals and analysts, not agents prospecting for clients. We ask how you invest so the terminal opens to the tools that fit you."
                   }
                 </p>
-                <div className="my-4 h-px bg-slate-800" />
-                <p className="text-xs leading-relaxed text-slate-500">
+                <div className="my-4 h-px bg-muted" />
+                <p className="text-xs leading-relaxed text-muted-foreground">
                   {
                     "You're in as soon as you confirm your email — no waiting, no gatekeeping."
                   }

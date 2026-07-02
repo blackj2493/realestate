@@ -36,14 +36,14 @@ export default function HubFaq({
   return (
     <section className="mt-10" aria-labelledby="faq-heading">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      <h2 id="faq-heading" className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+      <h2 id="faq-heading" className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground">
         {heading}
       </h2>
       <dl className="space-y-3">
         {faqs.map((f) => (
-          <div key={f.q} className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-            <dt className="text-sm font-semibold text-slate-200">{f.q}</dt>
-            <dd className="mt-1 text-sm leading-relaxed text-slate-400">{f.a}</dd>
+          <div key={f.q} className="rounded-lg border border-border bg-card/40 p-4">
+            <dt className="text-sm font-semibold text-foreground">{f.q}</dt>
+            <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">{f.a}</dd>
           </div>
         ))}
       </dl>

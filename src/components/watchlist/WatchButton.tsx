@@ -46,10 +46,10 @@ export default function WatchButton({
               "inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
               watched
                 ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
-                : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-cyan-300"
+                : "border-border text-foreground hover:bg-muted hover:text-cyan-300"
             )
           : cn(
-              "inline-flex items-center justify-center text-slate-500 transition-colors hover:text-cyan-300",
+              "inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-cyan-300",
               watched && "text-cyan-400"
             ),
         className

@@ -26,7 +26,7 @@ export default async function WelcomePage({
   if (await hasAcceptedTerms(user.id)) redirect(safeNext);
 
   return (
-    <div className="flex min-h-app flex-col bg-slate-950 text-slate-100">
+    <div className="flex min-h-app flex-col bg-background text-foreground">
       <header className="px-4 py-3">
         <Link href="/" className="inline-flex items-center" aria-label="PureProperty.ca home">
           <Logo size="md" theme="dark" />
@@ -34,11 +34,11 @@ export default async function WelcomePage({
       </header>
 
       <div className="flex flex-1 items-center justify-center p-4">
-        <div className="w-full max-w-lg border border-slate-800 bg-slate-900/40 p-6">
-          <h1 className="terminal-font text-center text-sm font-bold uppercase tracking-widest text-slate-100">
+        <div className="w-full max-w-lg border border-border bg-card/40 p-6">
+          <h1 className="terminal-font text-center text-sm font-bold uppercase tracking-widest text-foreground">
             VOW Access Terms
           </h1>
-          <p className="mx-auto mt-2 max-w-md text-center text-sm text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
             One step before you can view sold data and valuations. Confirm the following to unlock the
             terminal.
           </p>
@@ -49,7 +49,7 @@ export default async function WelcomePage({
         </div>
       </div>
 
-      <footer className="py-4 text-center text-[11px] text-slate-600">
+      <footer className="py-4 text-center text-[11px] text-muted-foreground">
         © {new Date().getFullYear()} PureProperty.ca · Powered by PROPTX MLS®
       </footer>
     </div>

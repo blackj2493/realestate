@@ -97,7 +97,7 @@ export default function PasskeyPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="absolute right-2 top-2 p-1 text-slate-500 transition-colors hover:text-slate-300 sm:static"
+        className="absolute right-2 top-2 p-1 text-muted-foreground transition-colors hover:text-foreground sm:static"
       >
         <X className="h-4 w-4" />
       </button>
@@ -105,10 +105,10 @@ export default function PasskeyPrompt() {
       <div className="flex items-start gap-3 pr-6 sm:pr-0">
         <Fingerprint className="mt-0.5 h-6 w-6 shrink-0 text-cyan-300" />
         <div>
-          <p className="terminal-font text-xs font-medium uppercase tracking-wider text-slate-100">
+          <p className="terminal-font text-xs font-medium uppercase tracking-wider text-foreground">
             Skip the email code next time
           </p>
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
             Add a passkey to sign in with Face ID, your fingerprint, or your
             device PIN — no code to type.
           </p>
@@ -121,7 +121,7 @@ export default function PasskeyPrompt() {
           type="button"
           onClick={dismiss}
           disabled={view === "saving"}
-          className="terminal-font min-h-[40px] px-3 py-2 text-[11px] uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300 disabled:opacity-50"
+          className="terminal-font min-h-[40px] px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
         >
           Not now
         </button>

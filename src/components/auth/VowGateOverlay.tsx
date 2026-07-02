@@ -39,12 +39,12 @@ export default function VowGateOverlay({
   return (
     <div
       className={cn(
-        "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded bg-slate-950/40 backdrop-blur-[2px]",
+        "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded bg-background/40 backdrop-blur-[2px]",
         className
       )}
     >
       <Lock className="h-5 w-5 text-cyan-300" />
-      {message && <p className="px-3 text-center text-xs text-slate-200">{message}</p>}
+      {message && <p className="px-3 text-center text-xs text-foreground">{message}</p>}
       <Link
         href={href}
         className="rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-1.5 text-xs font-semibold text-cyan-100 shadow-sm transition-colors hover:bg-cyan-500/30"

@@ -24,7 +24,7 @@ export default function PersonaMenuList({
 }) {
   return (
     <div className="flex flex-col">
-      <span className={cn(LABEL, "px-2 py-1.5 text-slate-500")}>{heading}</span>
+      <span className={cn(LABEL, "px-2 py-1.5 text-muted-foreground")}>{heading}</span>
       {PERSONA_LIST.map((p) => {
         const Icon = p.icon;
         const selected = p.id === value;
@@ -37,7 +37,7 @@ export default function PersonaMenuList({
               "flex items-center justify-between gap-2 px-2 py-1.5 text-left text-xs transition-colors",
               selected
                 ? "text-amber-300"
-                : "text-slate-300 hover:bg-amber-400/10 hover:text-amber-200"
+                : "text-foreground hover:bg-amber-400/10 hover:text-amber-200"
             )}
           >
             <span className="flex items-center gap-2">

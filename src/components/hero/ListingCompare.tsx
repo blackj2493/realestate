@@ -31,10 +31,10 @@ export default function ListingCompare() {
         <div className="flex items-center gap-2">
           <span className="h-px w-5 bg-slate-600" />
           <div>
-            <div className="terminal-font text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <div className="terminal-font text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Every other platform
             </div>
-            <div className="text-[10px] text-slate-600">Realtor.ca · HouseSigma · etc.</div>
+            <div className="text-[10px] text-muted-foreground">Realtor.ca · HouseSigma · etc.</div>
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl bg-white text-slate-900 opacity-95 shadow-2xl transition-transform duration-300 will-change-transform hover:-translate-y-1">
@@ -45,13 +45,13 @@ export default function ListingCompare() {
             <span className="absolute left-2.5 top-2.5 rounded bg-blue-600 px-2 py-[3px] text-[10px] font-bold tracking-[0.06em] text-white">
               NEW
             </span>
-            <span className="absolute right-2.5 top-2 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/90 text-[15px] text-slate-500 shadow">
+            <span className="absolute right-2.5 top-2 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/90 text-[15px] text-muted-foreground shadow">
               ♡
             </span>
           </div>
           <div className="p-4">
             <div className="text-[25px] font-extrabold tracking-tight">$899,000</div>
-            <div className="mt-2 flex gap-4 text-[13px] text-slate-600">
+            <div className="mt-2 flex gap-4 text-[13px] text-muted-foreground">
               <span>
                 <b className="text-slate-900">4</b> beds
               </span>
@@ -63,12 +63,12 @@ export default function ListingCompare() {
               </span>
             </div>
             <div className="mt-2.5 text-[14px] font-semibold">14 Maple Ave, Toronto, ON</div>
-            <div className="mt-0.5 text-[12px] text-slate-500">Detached · MLS® C12639568</div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">Detached · MLS® C12639568</div>
             <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-green-700">
               <span className="h-[7px] w-[7px] rounded-full bg-green-500" />
               Just listed · 5 days on market
             </div>
-            <div className="mt-3 border-t border-slate-200 pt-2.5 text-[11px] text-slate-400">
+            <div className="mt-3 border-t border-slate-200 pt-2.5 text-[11px] text-muted-foreground">
               Listed by ABC Realty Inc., Brokerage
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function ListingCompare() {
       {/* ── VS divider ── */}
       <div className="flex items-center justify-center py-1 md:py-0">
         <span
-          className="pp-pop terminal-font flex h-10 w-10 items-center justify-center rounded-full border border-slate-600 bg-slate-900/90 text-[12px] font-bold tracking-[0.08em] text-slate-300 shadow-lg"
+          className="pp-pop terminal-font flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/90 text-[12px] font-bold tracking-[0.08em] text-foreground shadow-lg"
           style={{ animationDelay: "0.3s" }}
         >
           VS

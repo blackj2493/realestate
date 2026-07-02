@@ -33,10 +33,10 @@ export default function RenovationRevealLocked({
   const hasBand = catalog.length > 0 && bandHigh > 0;
 
   return (
-    <div className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6">
+    <div className="space-y-5 rounded-xl border border-border bg-card p-6">
       {/* Blurred hero — real catalog cost band, teased behind blur */}
-      <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 text-center">
-        <p className="text-xs text-slate-400">
+      <div className="rounded-lg border border-border bg-background/40 p-4 text-center">
+        <p className="text-xs text-muted-foreground">
           {catalog.length} renovation {catalog.length === 1 ? 'move' : 'moves'} could apply
           to your home
         </p>
@@ -46,18 +46,18 @@ export default function RenovationRevealLocked({
         >
           {hasBand ? `${formatPrice(bandLow)}–${formatPrice(bandHigh)}` : '$00,000–$000,000'}
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted-foreground">
           to invest — sign in to see which ones pay you back most
         </p>
       </div>
 
       <div>
-        <p className="mb-2 text-sm text-slate-300">We&apos;ll rank these for your home:</p>
+        <p className="mb-2 text-sm text-foreground">We&apos;ll rank these for your home:</p>
         <div className="space-y-1.5">
           {catalog.map((m) => (
             <div key={m.key} className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-slate-300">{m.label}</span>
-              <span className="shrink-0 font-mono text-slate-400">
+              <span className="text-foreground">{m.label}</span>
+              <span className="shrink-0 font-mono text-muted-foreground">
                 {formatPrice(m.costLow)}–{formatPrice(m.costHigh)}
               </span>
             </div>
@@ -73,13 +73,13 @@ export default function RenovationRevealLocked({
         <Lock className="h-4 w-4" />
         Unlock my ranking{where} →
       </Link>
-      <p className="text-center text-[11px] leading-relaxed text-slate-500">
+      <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
         Free · one-tap sign-in · No spam — alerts are opt-in only.
         <br />
         PIPEDA-compliant.{' '}
         <Link
           href="/privacy"
-          className="text-slate-400 underline underline-offset-2 hover:text-slate-300"
+          className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
           Privacy
         </Link>

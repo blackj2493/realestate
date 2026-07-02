@@ -158,7 +158,7 @@ export default function Spotlight() {
     <div
       ref={bubbleRef}
       className={cn(
-        "pp-fade-up pointer-events-auto z-[210] w-80 max-w-[calc(100vw-1.5rem)] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl",
+        "pp-fade-up pointer-events-auto z-[210] w-80 max-w-[calc(100vw-1.5rem)] border border-cyan-500/40 bg-card p-4 shadow-2xl",
         centred && "relative"
       )}
       style={
@@ -175,24 +175,24 @@ export default function Spotlight() {
           <span className="inline-flex h-7 w-7 items-center justify-center border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
             <Icon className="h-4 w-4" />
           </span>
-          <p className="text-sm font-semibold text-slate-100">{feature.title}</p>
+          <p className="text-sm font-semibold text-foreground">{feature.title}</p>
         </div>
         <button
           type="button"
           onClick={endRun}
           aria-label="Close"
-          className="-mr-1 -mt-1 inline-flex h-7 w-7 items-center justify-center text-slate-500 transition-colors hover:text-slate-200"
+          className="-mr-1 -mt-1 inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <p className="mt-2 text-[13px] leading-relaxed text-slate-300">{feature.blurb}</p>
+      <p className="mt-2 text-[13px] leading-relaxed text-foreground">{feature.blurb}</p>
 
       {feature.shortcut && (
-        <p className="mt-2 text-[11px] text-slate-500">
+        <p className="mt-2 text-[11px] text-muted-foreground">
           Shortcut:{" "}
-          <kbd className="rounded border border-slate-700 px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+          <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-foreground">
             {feature.shortcut}
           </kbd>
         </p>
@@ -210,7 +210,7 @@ export default function Spotlight() {
       )}
 
       <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="text-[11px] uppercase tracking-wider text-slate-600">
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
           {total > 1 ? `Step ${run.index + 1} of ${total}` : ""}
         </span>
         <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export default function Spotlight() {
             <button
               type="button"
               onClick={runPrev}
-              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-slate-400 transition-colors hover:text-slate-200"
+              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Back
             </button>
@@ -227,7 +227,7 @@ export default function Spotlight() {
             <button
               type="button"
               onClick={endRun}
-              className="px-2 py-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300"
+              className="px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               Skip
             </button>
@@ -257,7 +257,7 @@ export default function Spotlight() {
       {centred ? (
         // No target on this page → dim everything and centre the explainer card.
         <div
-          className="pointer-events-auto absolute inset-0 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          className="pointer-events-auto absolute inset-0 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm"
           onClick={endRun}
         >
           <div onClick={(e) => e.stopPropagation()}>{bubble}</div>
