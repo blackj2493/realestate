@@ -14,6 +14,11 @@ data/_geo_src/
 data/orwn_track.geojson
 data/transit_stations.geojson
 
+# Zoning overlay — harvested municipal zoning polygons (~300MB across all sources).
+# Reproduce via scripts/admin/harvest-*-zoning.mjs; the live overlay reads PostGIS
+# (loaded by scripts/admin/load-zoning.ts). Never commit the raw/large data.
+scripts/admin/zoning-*.geojson
+
 # Production build
 build/
 

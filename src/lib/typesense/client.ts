@@ -201,7 +201,9 @@ export interface ListingDocument {
   LotSqftTotal?: number;
   lot_width_ft?: number;
   lot_depth_ft?: number;
-  zoning_designation?: string;
+  zoning_designation?: string; // municipal zone CODE (harvest-populated; MLS source is empty)
+  zoning_desc?: string;        // plain-language zone name (display cargo, from harvest)
+  zoning_source?: string;      // provenance key → src/lib/zoning/attribution.ts (display cargo)
   multiplex_by_right?: boolean;
   multi_unit_status?: 'NOT_VIABLE' | 'EXISTING_MULTI_UNIT' | 'PRIME_CANDIDATE' | 'MARGINAL_CANDIDATE' | string;
   is_density_ready?: boolean;

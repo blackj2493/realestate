@@ -177,6 +177,10 @@ export interface MapColorConfig {
   legendHigh: string;
   /** true → values are ~47% populated; the map must treat 0 as "no estimate", not "low". */
   sparse?: boolean;
+  /** Human-readable metric name for the heatmap hover tooltip (e.g. "Cap Rate"). */
+  label?: string;
+  /** Units-aware formatter for a metric value in the heatmap hover tooltip. */
+  format?: (v: number) => string;
 }
 
 // Low (muted) -> High (bright) green ramp — yield / cap rate
@@ -360,7 +364,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield", sparse: true },
+    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield", sparse: true, label: "Gross Yield", format: (v) => `${v.toFixed(1)}%` },
     defaultMapMode: "listings",
   },
 
@@ -379,7 +383,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap", sparse: true },
+    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap", sparse: true, label: "Cap Rate", format: (v) => `${v.toFixed(1)}%` },
     defaultMapMode: "heatmap",
   },
 
@@ -398,7 +402,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.TrueDom ?? d.calculatedDOM ?? 0, domain: [0, 180], range: DOM_RANGE, legendLow: "Fresh", legendHigh: "Stale" },
+    mapColor: { metric: (d) => d.TrueDom ?? d.calculatedDOM ?? 0, domain: [0, 180], range: DOM_RANGE, legendLow: "Fresh", legendHigh: "Stale", label: "True DOM", format: (v) => `${Math.round(v)}d` },
     defaultMapMode: "listings",
   },
 
@@ -413,11 +417,13 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
       { type: "lotDims", header: "Lot", width: "w-24", align: "right" },
-      { type: "zoning", header: "Zoning", width: "w-20", align: "right" },
+      // Zoning is NOT shown inline: it's municipal open-data (not MLS), so it lives in a
+      // dedicated attributed surface (property-detail Zoning card + map overlay) with source
+      // + by-law + "not a legal survey" disclaimer — never blended into these MLS columns.
       { type: "density", header: "Surplus", width: "w-16", align: "center" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Fewer", legendHigh: "More" },
+    mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Fewer", legendHigh: "More", label: "Surplus Parking", format: (v) => v.toFixed(1) },
     defaultMapMode: "heatmap",
   },
 };
