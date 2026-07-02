@@ -89,10 +89,10 @@ function PricePathLane({ path }: { path: PricePathPoint[] }) {
 
   return (
     <svg viewBox="0 0 1000 140" className="block h-auto w-full" role="img" aria-label="asking-price path by event">
-      <g stroke="#1e293b" strokeWidth={1}>
+      <g style={{ stroke: "hsl(var(--border))" }} strokeWidth={1}>
         {grid.map((p, i) => <line key={i} x1={40} y1={y(p)} x2={1000} y2={y(p)} />)}
       </g>
-      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="end">
+      <g style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={11} fontFamily={MONO} textAnchor="end">
         {grid.map((p, i) => <text key={i} x={36} y={y(p) + 4}>{compactPrice(p)}</text>)}
       </g>
       {/* segments between consecutive points (dashed across non-stitched gaps) */}
@@ -110,11 +110,11 @@ function PricePathLane({ path }: { path: PricePathPoint[] }) {
         const fill = isActive ? CYAN : p.kind === "Price Changed" ? AMBER : SALE;
         return (
           <g key={i}>
-            <circle cx={x(i)} cy={y(p.price)} r={5} fill={fill} stroke="#0b1220" strokeWidth={1} />
+            <circle cx={x(i)} cy={y(p.price)} r={5} fill={fill} style={{ stroke: "hsl(var(--card))" }} strokeWidth={1} />
             <text x={x(i)} y={y(p.price) - 10} fill={fill} fontSize={11} fontWeight={700} textAnchor="middle" fontFamily={MONO}>
               {compactPrice(p.price)}
             </text>
-            <text x={x(i)} y={122} fill="#94a3b8" fontSize={10.5} textAnchor="middle" fontFamily={MONO}>{shortDate(p.dateMs)}</text>
+            <text x={x(i)} y={122} style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={10.5} textAnchor="middle" fontFamily={MONO}>{shortDate(p.dateMs)}</text>
             {p.endStatus && (
               <text x={x(i)} y={136} fill={statusColor(p.endStatus)} fontSize={9.5} textAnchor="middle" fontFamily={MONO}>
                 {STATUS_LABEL[p.endStatus]}
@@ -158,10 +158,10 @@ function RibbonLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: number | 
 
   return (
     <svg viewBox={`0 0 1000 ${H}`} className="block h-auto w-full" role="img" aria-label="campaign timeline by date">
-      <g stroke="#1e293b" strokeWidth={1}>
+      <g style={{ stroke: "hsl(var(--border))" }} strokeWidth={1}>
         {ticks.map((t) => <line key={t} x1={sx(t)} y1={TOP - 8} x2={sx(t)} y2={monthY - 6} />)}
       </g>
-      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="middle">
+      <g style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={11} fontFamily={MONO} textAnchor="middle">
         {ticks.map((t) => <text key={t} x={sx(t)} y={monthY + 8}>{monthLabel(t)}</text>)}
       </g>
 
@@ -174,7 +174,7 @@ function RibbonLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: number | 
         </>
       )}
 
-      <g fill="#64748b" fontSize={10} fontFamily={MONO}>
+      <g style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={10} fontFamily={MONO}>
         {lanes.map((ln, i) => <text key={ln.label} x={6} y={rowY(i) + ROW_H / 2 + 3.5}>{ln.label}</text>)}
       </g>
 
@@ -222,10 +222,10 @@ function MobilePricePathLane({ path }: { path: PricePathPoint[] }) {
 
   return (
     <svg viewBox="0 0 360 158" className="block h-auto w-full" role="img" aria-label="asking-price path by event">
-      <g stroke="#1e293b" strokeWidth={1}>
+      <g style={{ stroke: "hsl(var(--border))" }} strokeWidth={1}>
         {grid.map((p, i) => <line key={i} x1={30} y1={y(p)} x2={360} y2={y(p)} />)}
       </g>
-      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="end">
+      <g style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={11} fontFamily={MONO} textAnchor="end">
         {grid.map((p, i) => <text key={i} x={28} y={y(p) + 4}>{compactPrice(p)}</text>)}
       </g>
       {path.slice(1).map((p, i) => (
@@ -244,11 +244,11 @@ function MobilePricePathLane({ path }: { path: PricePathPoint[] }) {
         const anchor = i === 0 ? "start" : i === path.length - 1 ? "end" : "middle";
         return (
           <g key={i}>
-            <circle cx={x(i)} cy={y(p.price)} r={labeled ? 5.5 : 3.5} fill={fill} stroke="#0b1220" strokeWidth={1} />
+            <circle cx={x(i)} cy={y(p.price)} r={labeled ? 5.5 : 3.5} fill={fill} style={{ stroke: "hsl(var(--card))" }} strokeWidth={1} />
             {labeled && (
               <>
                 <text x={x(i)} y={y(p.price) - 11} fill={fill} fontSize={12.5} fontWeight={700} textAnchor={anchor} fontFamily={MONO}>{compactPrice(p.price)}</text>
-                <text x={x(i)} y={132} fill="#94a3b8" fontSize={11.5} textAnchor={anchor} fontFamily={MONO}>{shortDate(p.dateMs)}</text>
+                <text x={x(i)} y={132} style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={11.5} textAnchor={anchor} fontFamily={MONO}>{shortDate(p.dateMs)}</text>
                 {p.endStatus && (
                   <text x={x(i)} y={148} fill={statusColor(p.endStatus)} fontSize={10.5} textAnchor={anchor} fontFamily={MONO}>{STATUS_LABEL[p.endStatus]}</text>
                 )}
@@ -291,10 +291,10 @@ function MobileTimelineLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: n
 
   return (
     <svg viewBox={`0 0 360 ${H}`} className="block h-auto w-full" role="img" aria-label="campaign timeline by date">
-      <g stroke="#1e293b" strokeWidth={1}>
+      <g style={{ stroke: "hsl(var(--border))" }} strokeWidth={1}>
         {ticks.map((t) => <line key={t} x1={sx(t)} y1={TOP - 8} x2={sx(t)} y2={monthY - 6} />)}
       </g>
-      <g fill="#64748b" fontSize={11} fontFamily={MONO} textAnchor="middle">
+      <g style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={11} fontFamily={MONO} textAnchor="middle">
         {ticks.map((t) => <text key={t} x={sx(t)} y={monthY + 9}>{monthLabel(t)}</text>)}
       </g>
 
@@ -307,7 +307,7 @@ function MobileTimelineLane({ bars, trueDom }: { bars: CampaignBar[]; trueDom: n
         </>
       )}
 
-      <g fill="#64748b" fontSize={10.5} fontFamily={MONO}>
+      <g style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={10.5} fontFamily={MONO}>
         {lanes.map((ln, i) => <text key={ln.label} x={4} y={rowY(i) + ROW_H / 2 + 3.5}>{ln.label}</text>)}
       </g>
 
@@ -352,7 +352,7 @@ function LegendItem({ c, label, dashed, ring }: { c: string; label: string; dash
 
 function Legend({ leaseCount }: { leaseCount: number }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
       <LegendItem c={SALE} label="For sale" />
       {leaseCount > 0 && <LegendItem c={LEASE} label="Lease" />}
       <LegendItem c={AMBER} label="Price change" />
@@ -379,15 +379,15 @@ export default function CampaignHistoryChart({
   const leaseCount = bars.filter((b) => b.kind === "Lease").length;
 
   return (
-    <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4 sm:p-5", className)}>
+    <div className={cn("rounded-lg border border-border bg-card p-4 sm:p-5", className)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-cyan-400" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-200">Property History</span>
+          <Activity className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Property History</span>
         </div>
-        <div className="font-mono text-xs text-slate-400">
+        <div className="font-mono text-xs text-muted-foreground">
           Listed <b className="text-emerald-400">{campaignCount}×</b>
-          {trueDom != null && <> · True DOM <span className="text-cyan-400">{trueDom}d</span></>}
+          {trueDom != null && <> · True DOM <span className="text-primary">{trueDom}d</span></>}
           {summary.originalSalePrice != null && summary.currentSalePrice != null && (
             <> · {compactPrice(summary.originalSalePrice)} → {compactPrice(summary.currentSalePrice)}
               {summary.dropPct != null && summary.dropPct !== 0 && (
@@ -404,9 +404,9 @@ export default function CampaignHistoryChart({
       <div className="hidden md:block">
         {pricePath.length > 0 && (
           <>
-            <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate-500">Asking-price path · by event</div>
+            <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Asking-price path · by event</div>
             <PricePathLane path={pricePath} />
-            <div className="mb-1 mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-500">Timeline · by date</div>
+            <div className="mb-1 mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Timeline · by date</div>
           </>
         )}
         <RibbonLane bars={bars} trueDom={trueDom} />
@@ -418,9 +418,9 @@ export default function CampaignHistoryChart({
       <div className="md:hidden">
         {pricePath.length > 0 && (
           <>
-            <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate-500">Asking-price path</div>
+            <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Asking-price path</div>
             <MobilePricePathLane path={pricePath} />
-            <div className="mb-1 mt-3 font-mono text-[10px] uppercase tracking-wider text-slate-500">Timeline</div>
+            <div className="mb-1 mt-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Timeline</div>
           </>
         )}
         <MobileTimelineLane bars={bars} trueDom={trueDom} />

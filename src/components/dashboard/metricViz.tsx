@@ -11,6 +11,7 @@
 
 import { LineChart, Line } from "recharts";
 import type { RegionScore } from "@/lib/dashboard/marketAggregates";
+import { useChartTheme } from "@/lib/theme/useChartTheme";
 
 export const DASH = "—";
 
@@ -43,10 +44,11 @@ export function Sparkline({
   width?: number;
   height?: number;
 }) {
+  const chart = useChartTheme();
   if (data.length < 2) return null;
   return (
     <LineChart width={width} height={height} data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-      <Line type="monotone" dataKey="v" stroke="#22d3ee" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+      <Line type="monotone" dataKey="v" stroke={chart.line} strokeWidth={1.5} dot={false} isAnimationActive={false} />
     </LineChart>
   );
 }

@@ -23,6 +23,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingDown, Calendar, History } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
+import { useChartTheme } from '@/lib/theme/useChartTheme';
 
 /** A recorded prior sale (already VOW-gated upstream): close price at a sale date. */
 export interface SaleMarker {
@@ -58,12 +59,12 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   if (active && payload && payload.length) {
     const kind = payload[0].payload?.kind;
     return (
-      <div className="bg-slate-900 border border-slate-700 rounded p-2 shadow-lg">
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className={cn('text-sm font-bold font-mono', kind === 'sold' ? 'text-amber-400' : 'text-emerald-400')}>
+      <div className="bg-card border border-border rounded p-2 shadow-lg">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={cn('text-sm font-bold font-mono', kind === 'sold' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
           {formatPrice(payload[0].value)}
         </p>
-        {kind && <p className="text-[10px] text-slate-500">{kind === 'sold' ? 'Sold' : 'Current asking'}</p>}
+        {kind && <p className="text-[10px] text-muted-foreground">{kind === 'sold' ? 'Sold' : 'Current asking'}</p>}
       </div>
     );
   }
@@ -105,6 +106,8 @@ export default function DOMTimelineChart({
   saleMarkers,
   className,
 }: DOMTimelineChartProps) {
+  const c = useChartTheme();
+
   // ── Mode 1: Price history (prior sales → current asking) ────────────────────
   const sales = (saleMarkers ?? [])
     .filter((s) => s && s.price > 0 && s.date && !Number.isNaN(new Date(s.date).getTime()))
@@ -120,13 +123,13 @@ export default function DOMTimelineChart({
     const apprPct = lastSold > 0 ? Math.round((apprDelta / lastSold) * 100) : 0;
 
     return (
-      <div className={cn('bg-slate-900/50 rounded-lg border border-slate-800 p-4', className)}>
+      <div className={cn('bg-card rounded-lg border border-border p-4', className)}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-amber-400" />
-            <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Price History</span>
+            <History className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Price History</span>
           </div>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {sales.length} prior sale{sales.length > 1 ? 's' : ''}
           </span>
         </div>
@@ -134,17 +137,17 @@ export default function DOMTimelineChart({
         <div className="h-32 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
               <XAxis
                 dataKey="date"
-                tick={{ fill: '#64748b', fontSize: 10 }}
-                tickLine={{ stroke: '#334155' }}
-                axisLine={{ stroke: '#334155' }}
+                tick={{ fill: c.axisText, fontSize: 10 }}
+                tickLine={{ stroke: c.axisLine }}
+                axisLine={{ stroke: c.axisLine }}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 10 }}
-                tickLine={{ stroke: '#334155' }}
-                axisLine={{ stroke: '#334155' }}
+                tick={{ fill: c.axisText, fontSize: 10 }}
+                tickLine={{ stroke: c.axisLine }}
+                axisLine={{ stroke: c.axisLine }}
                 tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                 domain={['dataMin - 50000', 'dataMax + 50000']}
               />
@@ -156,16 +159,16 @@ export default function DOMTimelineChart({
 
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800">
           <div className="text-center">
-            <span className="text-[10px] text-slate-500 uppercase">Last Sold</span>
-            <p className="text-xs font-mono text-amber-400">{formatPrice(lastSold)}</p>
+            <span className="text-[10px] text-muted-foreground uppercase">Last Sold</span>
+            <p className="text-xs font-mono text-amber-600 dark:text-amber-400">{formatPrice(lastSold)}</p>
           </div>
           <div className="text-center">
-            <span className="text-[10px] text-slate-500 uppercase">Now Asking</span>
-            <p className="text-xs font-mono text-emerald-400">{formatPrice(currentPrice)}</p>
+            <span className="text-[10px] text-muted-foreground uppercase">Now Asking</span>
+            <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">{formatPrice(currentPrice)}</p>
           </div>
           <div className="text-center">
-            <span className="text-[10px] text-slate-500 uppercase">vs Last Sold</span>
-            <p className={cn('text-xs font-mono', apprDelta >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+            <span className="text-[10px] text-muted-foreground uppercase">vs Last Sold</span>
+            <p className={cn('text-xs font-mono', apprDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
               {apprDelta >= 0 ? '+' : ''}
               {apprPct}%
             </p>
@@ -197,19 +200,19 @@ export default function DOMTimelineChart({
   const Header = (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-amber-400" />
-        <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+        <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
           Price Timeline
         </span>
       </div>
       <div className="flex items-center gap-2">
         {hasDrop && (
-          <div className="flex items-center gap-1 text-xs text-emerald-400">
+          <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
             <TrendingDown className="h-3 w-3" />
             <span>-{dropPercent}%</span>
           </div>
         )}
-        <span className="text-xs text-slate-500">{dom} days on market</span>
+        <span className="text-xs text-muted-foreground">{dom} days on market</span>
       </div>
     </div>
   );
@@ -217,11 +220,11 @@ export default function DOMTimelineChart({
   // Honest empty state — common for fresh active listings with no recorded reduction.
   if (!hasDrop) {
     return (
-      <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+      <div className={cn("bg-card rounded-lg border border-border p-4", className)}>
         {Header}
         <div className="flex h-32 flex-col items-center justify-center text-center">
-          <p className="font-mono text-lg text-slate-200">{formatPrice(currentPrice)}</p>
-          <p className="mt-1 text-xs text-slate-500">No recorded price changes</p>
+          <p className="font-mono text-lg text-foreground">{formatPrice(currentPrice)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">No recorded price changes</p>
           <p className="mt-0.5 text-[11px] text-slate-600">
             Listed {fmtDate(start)} · still at original asking
           </p>
@@ -236,23 +239,23 @@ export default function DOMTimelineChart({
   ];
 
   return (
-    <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div className={cn("bg-card rounded-lg border border-border p-4", className)}>
       {Header}
 
       <div className="h-32 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              tickLine={{ stroke: '#334155' }}
-              axisLine={{ stroke: '#334155' }}
+              tick={{ fill: c.axisText, fontSize: 10 }}
+              tickLine={{ stroke: c.axisLine }}
+              axisLine={{ stroke: c.axisLine }}
             />
             <YAxis
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              tickLine={{ stroke: '#334155' }}
-              axisLine={{ stroke: '#334155' }}
+              tick={{ fill: c.axisText, fontSize: 10 }}
+              tickLine={{ stroke: c.axisLine }}
+              axisLine={{ stroke: c.axisLine }}
               tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
               domain={['dataMin - 50000', 'dataMax + 50000']}
             />
@@ -272,16 +275,16 @@ export default function DOMTimelineChart({
 
       <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800">
         <div className="text-center">
-          <span className="text-[10px] text-slate-500 uppercase">Original</span>
+          <span className="text-[10px] text-muted-foreground uppercase">Original</span>
           <p className="text-xs font-mono text-slate-300">{formatPrice(original!)}</p>
         </div>
         <div className="text-center">
-          <span className="text-[10px] text-slate-500 uppercase">Current</span>
-          <p className="text-xs font-mono text-emerald-400">{formatPrice(currentPrice)}</p>
+          <span className="text-[10px] text-muted-foreground uppercase">Current</span>
+          <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">{formatPrice(currentPrice)}</p>
         </div>
         <div className="text-center">
-          <span className="text-[10px] text-slate-500 uppercase">Drop</span>
-          <p className="text-xs font-mono text-emerald-400">-{dropPercent}%</p>
+          <span className="text-[10px] text-muted-foreground uppercase">Drop</span>
+          <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">-{dropPercent}%</p>
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { smoothedYoY } from "@/lib/dashboard/marketAggregates";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { useChartTheme } from "@/lib/theme/useChartTheme";
 
 interface TrendPoint {
   month: string; // YYYY-MM
@@ -35,6 +36,7 @@ const fmtPrice = (v: number) =>
 const fmtPpsf = (v: number) => `$${Math.round(v)}`;
 
 export default function MarketPulse({ location }: { location: string }) {
+  const chart = useChartTheme();
   const [points, setPoints] = useState<TrendPoint[] | null>(null);
   const [error, setError] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -140,33 +142,33 @@ export default function MarketPulse({ location }: { location: string }) {
         {!locked && points && points.length > 0 && (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-              <CartesianGrid stroke="#1e293b" vertical={false} />
+              <CartesianGrid stroke={chart.grid} vertical={false} />
               <XAxis
                 dataKey="month"
                 tickFormatter={shortMonth}
-                tick={{ fill: "#64748b", fontSize: 10 }}
-                stroke="#334155"
+                tick={{ fill: chart.axisText, fontSize: 10 }}
+                stroke={chart.axisLine}
                 minTickGap={24}
               />
               {/* Left axis: price / $sqft */}
               <YAxis
                 yAxisId="left"
                 tickFormatter={lineFmt}
-                tick={{ fill: "#64748b", fontSize: 10 }}
-                stroke="#334155"
+                tick={{ fill: chart.axisText, fontSize: 10 }}
+                stroke={chart.axisLine}
                 width={48}
               />
               {/* Right axis: sold volume */}
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                tick={{ fill: "#475569", fontSize: 10 }}
-                stroke="#334155"
+                tick={{ fill: chart.axisText, fontSize: 10 }}
+                stroke={chart.axisLine}
                 width={32}
                 allowDecimals={false}
               />
               <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid #334155", fontSize: 12 }}
+                contentStyle={{ background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, fontSize: 12 }}
                 labelFormatter={shortMonth}
                 formatter={(value, name) => {
                   if (name === "sales") return [`${Number(value).toLocaleString()}`, "Sales"];
@@ -177,12 +179,12 @@ export default function MarketPulse({ location }: { location: string }) {
                   ];
                 }}
               />
-              <Bar yAxisId="right" dataKey="sales" fill="#1e3a4a" radius={[2, 2, 0, 0]} />
+              <Bar yAxisId="right" dataKey="sales" fill={chart.bar} radius={[2, 2, 0, 0]} />
               <Line
                 yAxisId="left"
                 type="monotone"
                 dataKey={lineKey}
-                stroke="#22d3ee"
+                stroke={chart.line}
                 strokeWidth={2}
                 dot={false}
                 connectNulls={false}

@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useChartTheme } from "@/lib/theme/useChartTheme";
 import {
   Bar,
   CartesianGrid,
@@ -110,6 +111,7 @@ function KpiCard({ label, value, sub, loading }: KpiProps) {
 }
 
 export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
+  const chart = useChartTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -366,19 +368,19 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             {!loading && points.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-                  <CartesianGrid stroke="#1e293b" vertical={false} />
+                  <CartesianGrid stroke={chart.grid} vertical={false} />
                   <XAxis
                     dataKey="month"
                     tickFormatter={shortMonth}
-                    tick={{ fill: "#64748b", fontSize: 10 }}
-                    stroke="#334155"
+                    tick={{ fill: chart.axisText, fontSize: 10 }}
+                    stroke={chart.axisLine}
                     minTickGap={24}
                   />
                   <YAxis
                     yAxisId="left"
                     tickFormatter={isSales ? undefined : lineFmt}
-                    tick={{ fill: "#64748b", fontSize: 10 }}
-                    stroke="#334155"
+                    tick={{ fill: chart.axisText, fontSize: 10 }}
+                    stroke={chart.axisLine}
                     width={52}
                     allowDecimals={false}
                     hide={isSales}
@@ -386,8 +388,8 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    tick={{ fill: "#475569", fontSize: 10 }}
-                    stroke="#334155"
+                    tick={{ fill: chart.axisText, fontSize: 10 }}
+                    stroke={chart.axisLine}
                     width={36}
                     allowDecimals={false}
                     hide={!isSales}
@@ -397,7 +399,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                     wrapperStyle={{ zIndex: 50 }}
                     cursor={{ fill: "rgba(100,116,139,0.15)" }}
                     allowEscapeViewBox={{ x: false, y: false }}
-                    contentStyle={{ background: "#0f172a", border: "1px solid #334155", fontSize: 12 }}
+                    contentStyle={{ background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, fontSize: 12 }}
                     labelFormatter={shortMonth}
                     formatter={(value, name) => {
                       if (name === "sales") return [Number(value).toLocaleString(), "Sales"];
@@ -408,13 +410,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                       ];
                     }}
                   />
-                  <Bar yAxisId="right" dataKey="sales" fill={isSales ? "#155e75" : "#1e3a4a"} radius={[2, 2, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="sales" fill={isSales ? chart.barAccent : chart.bar} radius={[2, 2, 0, 0]} />
                   {!isSales && (
                     <Line
                       yAxisId="left"
                       type="monotone"
                       dataKey={lineKey}
-                      stroke="#22d3ee"
+                      stroke={chart.line}
                       strokeWidth={2}
                       dot={false}
                       connectNulls={false}
