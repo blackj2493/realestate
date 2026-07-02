@@ -268,6 +268,10 @@ export interface CommandCenterState {
   mapMode: MapMode;
   setMapMode: (mode: MapMode) => void;
 
+  // Zoning overlay lens (municipal open data; independent of persona/mapMode).
+  showZoning: boolean;
+  setShowZoning: (v: boolean) => void;
+
   // Which rail module's drawer is open (null = closed). One at a time.
   activeModule: RailModule | null;
   setActiveModule: (module: RailModule | null) => void;
@@ -498,6 +502,9 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   mapMode: "listings",
   setMapMode: (mode) => set({ mapMode: mode }),
+
+  showZoning: false,
+  setShowZoning: (v) => set({ showZoning: v }),
 
   activeModule: null,
   setActiveModule: (module) => set({ activeModule: module }),

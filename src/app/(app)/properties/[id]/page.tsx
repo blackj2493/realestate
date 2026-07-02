@@ -25,6 +25,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
+import ZoningCard from "@/components/Property/ZoningCard";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
@@ -662,6 +663,10 @@ export default async function PropertyPage({
 
             {/* Things to Know — interpretive diligence flags surfaced beside the verdict (loss-aversion) */}
             <ThingsToKnowCard flags={diligenceFlags} />
+
+            {/* Zoning — municipal open data (NOT MLS), its own attributed card. Renders
+                nothing until zoning is harvested/backfilled for this listing. */}
+            <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
 
           </div>
 

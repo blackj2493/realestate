@@ -5,7 +5,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SEARCH_BRAND } from "@/lib/brand";
 import LedgerRow from "./LedgerRow";
@@ -191,20 +191,28 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               type="button"
               onClick={() => toggleSort(col.type)}
               aria-label={`Sort by ${col.header}`}
+              title={`Sort by ${col.header}`}
               className={cn(
                 headClass,
-                "flex items-center gap-0.5 transition-colors hover:text-slate-300",
-                active && "text-cyan-400",
+                // Sortable headers read brighter than the inert alphaFlag header and
+                // carry a persistent sort glyph, so it's obvious at rest that they
+                // click to sort — not just on hover or once already sorted.
+                "group flex cursor-pointer items-center gap-0.5 text-slate-400 transition-colors hover:text-slate-200",
+                active && "text-cyan-400 hover:text-cyan-400",
                 col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
               )}
             >
               <span className="truncate">{col.header}</span>
-              {active &&
-                (sort!.dir === "asc" ? (
+              {active ? (
+                sort!.dir === "asc" ? (
                   <ChevronUp className="h-3 w-3 shrink-0" />
                 ) : (
                   <ChevronDown className="h-3 w-3 shrink-0" />
-                ))}
+                )
+              ) : (
+                // Faint up/down glyph = "this column is sortable"; brightens on hover.
+                <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
+              )}
             </button>
           );
         })}

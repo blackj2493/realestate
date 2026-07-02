@@ -1,0 +1,492 @@
+{
+  "_meta": {
+    "purpose": "Registry of municipal zoning-by-law polygon data sources for the top TRREB markets, parallel to school-catchment-sources.json. Drives a future zoning harvest -> point-in-polygon backfill -> Typesense zoning_designation pipeline (same machinery as School-Aware Search).",
+    "verifiedOn": "2026-06-29",
+    "method": "Per-city WebSearch/WebFetch discovery + LIVE token-free ArcGIS REST probes: <layer>/query?where=1=1&returnCountOnly=true&f=json (count), <layer>?f=json (geometryType + fields), and an outFields sample of the zone-code field. Every featureCount below was returned by a successful live probe.",
+    "marketRank": "Covers two lenses. (A) Top 15 by transaction count (Toronto districts consolidated): Toronto 10371, Mississauga 2579, Brampton 2124, Hamilton 2110, London 1905, Vaughan 1363, Oakville 1259, Markham 1240, Richmond Hill 1066, Barrie 922, Kawartha Lakes 854, Burlington 820, Oshawa 727, Kitchener 687, Kingston 667. (B) BUILDER-LAND tier (added because transaction count under-weights developable land, which clusters on the urban fringe/exurbs): GTA growth-frontier = Caledon, Clarington, King, Whitchurch-Stouffville, Halton Hills, Milton, Georgina, Uxbridge, Erin; Simcoe fringe = Innisfil, Springwater, Oro-Medonte, Clearview, Tiny; Niagara fringe = Niagara Falls, Fort Erie. Land ranking was by vacant-land + large-lot (>=0.5/1 acre) facets on the live index. 31 municipalities verified total.",
+    "statusLegend": {
+      "verified_open_commercial": "Token-free queryable polygon layer AND an open license that permits commercial reuse with attribution. Ingest now.",
+      "open_license_gated": "Token-free queryable polygon layer, BUT the license prohibits or does not grant commercial reuse. Data is technically retrievable; needs written permission / legal clearance before commercial ingestion.",
+      "locked_fallback": "No token-free open zoning-by-law polygon layer (token-required service and/or only address-lookup). Use a coarser open proxy (Official Plan land-use) or request access from the City."
+    },
+    "harvesterMustHandle": [
+      "Paginate: every source caps maxRecordCount (1000-2000) and returns exceededTransferLimit; pull with resultOffset/resultRecordCount.",
+      "Reproject: native SR varies (UTM17N wkid 26917 or WebMercator 3857) -> request outSR=4326.",
+      "MapServer vs FeatureServer: some sources publish only a dynamic MapServer (still supports /query).",
+      "Multi-layer sources: Vaughan splits zoning across 12 category sublayers (/MapServer/0..11) - query each.",
+      "Status filtering: Richmond Hill By-law 93-25 is under OLT appeal - a STATUS field flags 'Under Appeal' zones.",
+      "Coverage gaps: Oakville layer is south of Dundas / Hwy407 only (North Oakville By-law 2009-189 is a separate dataset)."
+    ],
+    "licenseWarning": "31 municipalities. Commercial-clear (16): Toronto, Hamilton, London, Oakville, Barrie, Burlington, Oshawa, Kingston, Milton, Clarington(confirm clause), Springwater, Innisfil, Oro-Medonte, Tiny, Clearview, Niagara Falls. License-gated (12 - do NOT commercially ingest without written clearance): Mississauga, Markham (NON-COMMERCIAL), Vaughan, Richmond Hill, Kawartha Lakes, Kitchener, Whitchurch-Stouffville, King, Georgina, Erin, Fort Erie, Halton Hills (RESTRICTIVE). Locked / fallback (3): Brampton, Caledon, Uxbridge. KEY PATTERN: the 5 Simcoe townships are all commercial-clear via the Open Government Licence - Simcoe County (county-tier maps.simcoe.ca). Bonus open sources discovered (not in the 31): Scugog (ScugogZoning_2025), Bradford West Gwillimbury/Severn/Midland (Simcoe Public/Zoning_Dynamic layers 4/0/1).",
+    "countyTierSummary": "The `county_tier` section covers the recreational/rural LAND belt (upper-tier/single-tier sweep). Commercial-clear: Frontenac County (OGL, 4 townships - a top-2 large-lot market) + Simcoe County (OGL, 11 townships - the biggest single-license win). License-gated (open ACCESS but commercial PROHIBITED/unconfirmed): Bruce (consolidated layer, all 8), Grey (all 9), Haliburton (partial - Minden Hills missing), Peterborough (all 8 incl. Trent Lakes), Northumberland (only Hamilton Twp/Cobourg/Brighton open; high-land Trent Hills/Alnwick-Haldimand/Cramahe are PDF-locked), Norfolk (unconfirmed). Locked/fallback: District of Muskoka (every township behind a 403 token-proxy; only a 2023 Huntsville academic mirror is open), Prince Edward County (only a settlement-only fragment is reachable; the authoritative By-law 1816-2006 layer is firewalled from datacenter IPs - RE-PROBE from a residential/Canadian IP). PATTERN: rural counties DO publish efficient consolidated/per-township zoning, but mostly under NON-COMMERCIAL licenses; only Frontenac & Simcoe carry commercial OGLs.",
+    "phase1Scope": "DECISION (2026-07): harvest ONLY commercial-clear sources (data available AND commercial reuse licensed). Target = 26 municipalities: [cities] Toronto, Hamilton, London, Oakville, Barrie, Burlington, Oshawa, Kingston, Milton, Niagara Falls; [Simcoe County OGL] Springwater, Innisfil, Oro-Medonte, Tiny, Clearview, Wasaga Beach, Severn, Midland, Ramara, New Tecumseth, Bradford West Gwillimbury; [Frontenac County OGL] North Frontenac, Central Frontenac, South Frontenac, Frontenac Islands. Clarington = PENDING (confirm its commercial clause before including). EXCLUDE every license-gated + locked source until written permission is obtained. Start with Toronto (it uniquely carries FSI/unit-count density fields).",
+    "provenanceRequirement": "Zoning is sourced from municipal open-data APIs, NOT the MLS/listing feed - it MUST be displayed SEPARATELY and clearly attributed, never blended into MLS-derived columns as if it were listing data. Requirements: (a) per-source attribution string (OGL mandates it, e.g. 'Contains information licensed under the Open Government Licence - Toronto'); (b) label the source municipality + by-law + an 'approximate, not a legal survey' disclaimer; (c) REMOVE the inline Builders 'Zoning' ledger column (empty today + would misrepresent provenance once populated) and present zoning in a dedicated attributed surface; (d) store provenance next to the value (source municipality + by-law + as-of date).",
+    "geometryCaveat": "The per-source verification confirmed a queryable layer + count + fields via ArcGIS returnCountOnly — it did NOT prove GEOMETRY is retrievable. Some servers return attributes but SUPPRESS geometry for anonymous /query (confirmed for Toronto's gis.toronto.ca MapServer). At harvest time, verify geometry actually comes back; if not, use the source's open-data DOWNLOAD (CKAN / ArcGIS Hub GeoJSON export) — e.g. Toronto uses the CKAN `geometryDownload`. FeatureServers (Oakville, Hamilton, Simcoe, Frontenac AGOL, etc.) generally do return geometry via query, but confirm each."
+  },
+
+  "verified_open_commercial": [
+    {
+      "city": "Toronto", "listingCount": 10371, "status": "verified_open_commercial",
+      "service": "https://gis.toronto.ca/arcgis/rest/services/cot_geospatial11/MapServer/3",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 11892,
+      "byLaw": "569-2013",
+      "zoneCodeField": "ZN_ZONE", "descField": "ZN_STRING",
+      "densityFields": ["ZN_FSI_DENSITY", "ZN_UNIT_COUNT", "ZN_FRONTAGE", "ZN_AREA", "ZN_COVERAGE", "FSI_TOTAL", "ZN_HOLDING", "ZN_LU_CATEGORY"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 2000,
+      "license": "Open Government Licence – Toronto. Commercial use permitted, attribution required.",
+      "sourcePage": "https://open.toronto.ca/dataset/zoning-by-law/",
+      "geometryDownload": "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/34927e44-fc11-4336-a8aa-a0dfb27658b7/resource/d75fa1ed-cd04-4a0b-bb6d-2b928ffffa6e/download/zoning-area-4326.geojson (CKAN 'Zoning Area - 4326.geojson', ~50MB, WGS84, 11,719 polygons WITH geometry; fields ZN_ZONE + FRONTAGE/ZN_AREA/UNITS/PRCNT_* density)",
+      "notes": "GEOMETRY CORRECTION (2026-07): the gis.toronto.ca MapServer /query returns ATTRIBUTES ONLY — geometry is suppressed for anonymous query (returnGeometry ignored; the agent verified count/fields via returnCountOnly, NOT shapes). Use the CKAN `geometryDownload` above for polygons — that's what scripts/admin/harvest-toronto-zoning.mjs pulls. Backfill dry-run (2026-07): 19,451 of 27,688 Toronto listings matched a zone (70.3%). Uniquely carries by-right density (frontage/area/units). Avoid tiles.arcgis.com Toronto_Zones (TilesOnly + SECURE)."
+    },
+    {
+      "city": "Hamilton", "listingCount": 2110, "status": "verified_open_commercial",
+      "service": "https://services.arcgis.com/rYz782eMbySr2srL/arcgis/rest/services/Zoning_By_law_Boundary/FeatureServer/1",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 11979,
+      "byLaw": "05-200 (+ legacy pre-amalgamation by-laws)",
+      "zoneCodeField": "ZONING_CODE", "descField": "ZONING_DESC",
+      "candidateFields": ["PARENT_BY_LAW_NUMBER", "EXCEPTION1", "HOLDING1", "COMMUNITY", "URBAN_RURAL_SETTLE"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 2000,
+      "license": "City of Hamilton Open Data Licence (OGL-style). Commercial use permitted, attribution required.",
+      "sourcePage": "https://open.hamilton.ca/datasets/zoning-by-law-boundary",
+      "notes": "Polygon layer is at index /1 (NOT /0). Query-only, token-free. ~45MB; modified 2025-06-02. PARENT_BY_LAW_NUMBER distinguishes comprehensive 05-200 from legacy by-laws."
+    },
+    {
+      "city": "London", "listingCount": 1905, "status": "verified_open_commercial",
+      "service": "https://maps.london.ca/server/rest/services/OpenData/OpenData_Community/MapServer/16",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 6760,
+      "byLaw": "Z.-1",
+      "zoneCodeField": "GIS_FeatureKey", "descField": "GeneralizedLandUse",
+      "srid": "26917 (UTM17N)", "maxRecordCount": 1000,
+      "license": "City of London Open Data Terms of Use (open-government style). Commercial use permitted; attribution encouraged.",
+      "sourcePage": "https://opendata.london.ca/datasets/adaf9f5e53d7462594fa3ee4f5544d1a_16",
+      "notes": "GIS_FeatureKey (alias 'Z.-1 Zones') holds zone codes (AG2, ER, OS1, h-103*AG2...); GeneralizedLandUse = 8 broad categories. The hosted LMIS_Zoning FeatureServer appeared to be an empty placeholder - use this MapServer/16."
+    },
+    {
+      "city": "Oakville", "listingCount": 1259, "status": "verified_open_commercial",
+      "service": "https://maps.oakville.ca/oakgis/rest/services/SBS/Zoning_By_law_2014_014/FeatureServer/10",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 4418,
+      "byLaw": "2014-014",
+      "zoneCodeField": "ZONE", "descField": "ZONE_DESC",
+      "candidateFields": ["CLASS", "FULL_ZONING_DESC", "HOLD", "TEMP", "GROWTH_AREA", "BLDG_HEIGHTS", "SP_DESC"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": "low (exceededTransferLimit at 5)",
+      "license": "Open Government Licence – Town of Oakville (OGL-Canada 2.0 based). Commercial use permitted royalty-free with attribution.",
+      "sourcePage": "https://portal-exploreoakville.opendata.arcgis.com/items/54d77fc2abd34bc694b4ea1e57e2fa1c",
+      "notes": "Carries BLDG_HEIGHTS (useful for builder density signal). COVERAGE: south of Dundas / north of Hwy407 only; North Oakville (By-law 2009-189) is a SEPARATE dataset to harvest for full coverage."
+    },
+    {
+      "city": "Barrie", "listingCount": 922, "status": "verified_open_commercial",
+      "service": "https://gispublic.barrie.ca/arcgis/rest/services/Open_Data/Planning/MapServer/0",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 4323,
+      "byLaw": "In-force zoning by-law",
+      "zoneCodeField": "ZONING", "descField": "DESCRIPT",
+      "candidateFields": ["SPECIAL", "HOLD", "BYLAWNO", "LABEL"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 2000,
+      "license": "Open Government Licence – Barrie (OGL). Commercial reuse permitted with attribution. (ArcGIS item licenseInfo only shows a copyright/accuracy disclaimer; the portal dataset is published under OGL.)",
+      "sourcePage": "https://public-barrie.opendata.arcgis.com/datasets/zoning-by-law",
+      "notes": "Layer 0 = 'In Force Zoning By-Law'. SPECIAL/HOLD = exception/holding modifiers. No FeatureServer published - MapServer/query only."
+    },
+    {
+      "city": "Burlington", "listingCount": 820, "status": "verified_open_commercial",
+      "service": "https://mapping.burlington.ca/arcgisweb/rest/services/COB/Zoning_ByLaw/MapServer/6",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 1781,
+      "byLaw": "2020 (legacy; new 09-2026 in transition)",
+      "zoneCodeField": "FULL_ZONING", "descField": "NOTE",
+      "candidateFields": ["HTML", "VIEWER_HTML"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": "paginate",
+      "license": "City of Burlington Open Data Terms of Use. Commercial use permitted for any lawful purpose; attribution encouraged (not required). NOTE: licence is REVOCABLE and redistribution must include the Terms-of-Use URL.",
+      "sourcePage": "https://navburl-burlington.opendata.arcgis.com/datasets/Burlington::zoning-bylaw-1/about",
+      "notes": "Layer 6 = existing By-law 2020. NEWER richer option: .../COB/Zoning_ByLaw_2026/MapServer/0 (By-law 09-2026, 1747 polygons) splits base zone (ZONING) from EXCEPTION/HOLD_IND/ZoneType - better for category-vs-exception. Both by-laws in effect during transition. SHAPE.STArea()/STLength() field names contain parens - escape/exclude in queries."
+    },
+    {
+      "city": "Oshawa", "listingCount": 727, "status": "verified_open_commercial",
+      "service": "https://map.oshawa.ca/arcgis/rest/services/Operational/PopularLayers/MapServer/17",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 2458,
+      "byLaw": "60-94",
+      "zoneCodeField": "DESCRIPTION", "descField": null,
+      "candidateFields": [],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 1000,
+      "license": "Open Government Licence v2.0 - Oshawa (OGL-Canada adaptation). Commercial reuse permitted with attribution; reference-only liability disclaimer.",
+      "sourcePage": "https://city-oshawa.opendata.arcgis.com/datasets/oshawa::oshawa-zoning/about",
+      "notes": "Layer 17 ('Zoning') of the PopularLayers MapServer (the generic OpenData MapServer has NO zoning layer). Only attribute is DESCRIPTION (the raw code, e.g. R1-D, GI(3), R1-E.Y4.5) - no plain-language field; meanings in the Zoning Metadata PDF. minScale affects drawing only, not /query."
+    },
+    {
+      "city": "Kingston", "listingCount": 667, "status": "verified_open_commercial",
+      "service": "https://utility.arcgis.com/usrsvcs/servers/528acb24c6da484daf8a3974a6731954/rest/services/Planning/ParentZoning/FeatureServer/0",
+      "layerType": "FeatureServer (ArcGIS Hosted Service Proxy)", "geometryType": "esriGeometryPolygon", "featureCount": 2444,
+      "byLaw": "2022-62 (Schedule 1 Parent Zoning)",
+      "zoneCodeField": "ZONE_CODE", "descField": "ZONE_DESC",
+      "candidateFields": ["ZONE_CATEGORY"],
+      "srid": "26918 (UTM18N)", "maxRecordCount": "paginate",
+      "license": "City of Kingston Open Data Licence 1.0 (OGL-Ontario based). Commercial use EXPLICITLY permitted; attribution required.",
+      "sourcePage": "https://maps-cityofkingston.hub.arcgis.com/items/528acb24c6da484daf8a3974a6731954",
+      "notes": "ZONE_CATEGORY = 14 high-level categories. DURABILITY CAVEAT: the first-party api.cityofkingston.ca endpoint is token-locked (499); the token-free path is the utility.arcgis.com Hosted-Service PROXY tied to Hub item 528acb24... - works now (public, 170k+ views) but would break if the item is unshared."
+    },
+    {
+      "city": "Milton", "tier": "GTA growth-frontier (land)", "listingCount": 543, "status": "verified_open_commercial",
+      "service": "https://api.milton.ca/arcgis/rest/services/WebMaps/UrbanZoning_<datestamp>/MapServer/8",
+      "serviceResolver": "ArcGIS item 4b6840d0876b4b1494737315ab901728 (its 'url' field always points to the current MapServer/8; the literal URL carries a daily-rotating datestamp).",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 2497,
+      "byLaw": "016-2014 (URBAN only; rural Milton = By-law 144-2003, separate)",
+      "zoneCodeField": "ZONECODE", "descField": "ZONING", "candidateFields": ["LABEL", "WEBSITE"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 2000,
+      "license": "Open Government Licence - Milton. Commercial reuse permitted with attribution.",
+      "sourcePage": "https://discover-milton.hub.arcgis.com/datasets/urban-zoning-by-law-016-2014",
+      "notes": "Resolve via the stable item id (URL datestamp rotates). Urban by-law only - rural Milton is separate (144-2003). exceededTransferLimit=true -> paginate."
+    },
+    {
+      "city": "Clarington", "tier": "GTA growth-frontier (land)", "listingCount": 502, "status": "verified_open_commercial", "commercialUse": "LIKELY - confirm verbatim clause",
+      "service": "https://gis.clarington.net/arcgis/rest/services/AMANDA/AMANDA_Viewer/MapServer/7",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 2687,
+      "byLaw": "84-63 (urban) + 2005-109 Oak Ridges Moraine (layer /6, 615 polygons)",
+      "zoneCodeField": "Zoning", "descField": "Landuse", "candidateFields": ["Zoning_ByLaw", "Holding", "ZBA"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": "paginate",
+      "license": "Municipality of Clarington Open Data License v1 ('use freely and flexibly', attribution). Commercial clause NOT verbatim-confirmed - likely permitted; confirm before commercial ingest.",
+      "sourcePage": "https://gis.clarington.net/arcgis/rest/services/AMANDA/AMANDA_Viewer/MapServer",
+      "notes": "Query BOTH /7 (84-63 urban) and /6 (2005-109 ORM) for full coverage. '(H)' prefix = holding. Server needs curl -k (incomplete cert chain). Avoid parcel layers /3,/4 (MPAC/Teranet restrictions); zoning layers are Clarington's own."
+    },
+    {
+      "city": "Springwater", "tier": "Simcoe fringe (land)", "landSignal": "Barrie-fringe growth", "status": "verified_open_commercial",
+      "service": "https://maps.simcoe.ca/arcgis/rest/services/Springwater/Zoning/MapServer/7",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 2837,
+      "zoneCodeField": "ZONE_1", "descField": "LABEL", "candidateFields": ["EXCEPTION_2", "HOLD_3"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 2000,
+      "license": "Open Government Licence - Simcoe County v1.0. Commercial use explicitly permitted; attribution required.",
+      "sourcePage": "https://maps.simcoe.ca/arcgis/rest/services/Springwater/Zoning/MapServer",
+      "notes": "Simcoe County tier, DEDICATED Springwater-only service (no municipality filter). 35 base zone codes."
+    },
+    {
+      "city": "Innisfil", "tier": "Simcoe fringe (land)", "landSignal": "major growth (Orbit/Alcona)", "status": "verified_open_commercial",
+      "service": "https://maps.simcoe.ca/arcgis/rest/services/Innisfil/INN_PUBLIC_Zoning/MapServer/0",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 10951,
+      "zoneCodeField": "ZONE_1", "descField": "LABEL", "candidateFields": ["EXCEPTION_2", "HOLD_3", "ARN"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 1000,
+      "license": "Open Government Licence - Simcoe County v1.0. Commercial use explicitly permitted; attribution required.",
+      "sourcePage": "https://maps.simcoe.ca/arcgis/rest/services/Innisfil/INN_PUBLIC_Zoning/MapServer",
+      "notes": "Simcoe County tier, dedicated Innisfil service (parcel-level, ~11k). County-root Operational_Layers folder is token-locked (499), but per-municipality folders are open."
+    },
+    {
+      "city": "Oro-Medonte", "tier": "Simcoe fringe (land)", "landSignal": "107 half-acre lots", "status": "verified_open_commercial",
+      "service": "https://maps.simcoe.ca/arcgis/rest/services/Public/Zoning_Dynamic/MapServer/2",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 15007,
+      "zoneCodeField": "ZONE_1", "descField": "LABEL", "candidateFields": ["EXCEPTION_2", "HOLD_3", "ARN"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 1000,
+      "license": "Open Government Licence - Simcoe County v1.0. Commercial use explicitly permitted; attribution required.",
+      "sourcePage": "https://maps.simcoe.ca/arcgis/rest/services/Public/Zoning_Dynamic/MapServer",
+      "notes": "SHARED Public/Zoning_Dynamic MapServer: each municipality = numbered sublayer (0=Severn, 1=Midland, 2=Oro-Medonte, 3=Tiny, 4=Bradford West Gwillimbury). Oro-Medonte = layer 2. Lookup table dbo.tbl_ZONING_LU (id 5) maps codes->descriptions."
+    },
+    {
+      "city": "Tiny", "tier": "Simcoe fringe (land)", "landSignal": "81 vacant, 107 half-acre", "status": "verified_open_commercial",
+      "service": "https://maps.simcoe.ca/arcgis/rest/services/Public/Zoning_Dynamic/MapServer/3",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 13806,
+      "zoneCodeField": "ZONE_1", "descField": "LABEL", "candidateFields": ["EXCEPTION_2", "HOLD_3", "ARN"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 1000,
+      "license": "Open Government Licence - Simcoe County v1.0. Commercial use explicitly permitted; attribution required.",
+      "sourcePage": "https://maps.simcoe.ca/arcgis/rest/services/Public/Zoning_Dynamic/MapServer",
+      "notes": "Tiny = layer 3 of the shared Public/Zoning_Dynamic MapServer (RR=Rural Residential, SR=Shoreline Residential). Service title mislabeled 'Severn' (copy-paste artifact) but layer 3 is genuinely Tiny."
+    },
+    {
+      "city": "Clearview", "tier": "Simcoe fringe (land)", "landSignal": "89 half-acre, 78 one-acre", "status": "verified_open_commercial",
+      "service": "https://maps.simcoe.ca/arcgis/rest/services/Clearview/CLE_Zoning_Boundaries_Compare_Public/FeatureServer/0",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 2222,
+      "byLaw": "06-54 (in force; avoid the Draft-2025 sibling layer 1)",
+      "zoneCodeField": "ZONE_TYPE", "descField": "ZONE_DESC",
+      "srid": "3857 (WebMercator)", "maxRecordCount": 10000,
+      "license": "Open Government Licence - Simcoe County v1.0. Commercial use explicitly permitted; attribution required.",
+      "sourcePage": "https://maps.simcoe.ca/arcgis/rest/services/Clearview",
+      "notes": "Dedicated Clearview service (NOT in Public/Zoning_Dynamic). Layer 0 = in-force 06-54; layer 1 = draft 2025 (avoid). 238 distinct ZONE_TYPE codes."
+    },
+    {
+      "city": "Niagara Falls", "tier": "Niagara fringe (land)", "landSignal": "39 vacant land", "status": "verified_open_commercial",
+      "service": "https://services9.arcgis.com/oMFQlUUrLd1Uh1bd/arcgis/rest/services/Niagara_Falls_Zoning_Bylaw_79200/FeatureServer/0",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 1985,
+      "byLaw": "79-200 Stamford (main); split across 4 by-law layers by former township",
+      "zoneCodeField": "ZONE_ABR", "descField": "ZONE_TTL", "candidateFields": ["ZONE_TYPE", "BYLAW", "SPEC_PROV1"],
+      "srid": "2958 (NAD83 CSRS UTM17N)", "maxRecordCount": 2000,
+      "license": "Open Government Licence 2.0 - Niagara Falls. Commercial reuse permitted with attribution.",
+      "sourcePage": "https://niagaraopendata.ca/dataset/niagara-falls-zoning-bylaw-79200",
+      "notes": "Full city coverage = 4 layers (same org/schema): 79200_Stamford 1985 + B0395_Willoughby 140 + 1538_Crowland 20 + 7069_Humberstone 13. BYLAW field identifies source by-law."
+    }
+  ],
+
+  "open_license_gated": [
+    {
+      "city": "Mississauga", "listingCount": 2579, "status": "open_license_gated",
+      "service": "https://services7.arcgis.com/AJbWLzAgoYuSYK87/arcgis/rest/services/MississaugaZoning_Clipped/FeatureServer/0",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 2486,
+      "byLaw": "0225-2007",
+      "zoneCodeField": "ZONE_CODE", "descField": "ZONE_DESCR",
+      "candidateFields": ["ZONE_CATEG", "BASE_ZONE_", "BYLAW"],
+      "srid": "WebMercator", "maxRecordCount": "paginate",
+      "license": "GATED. Custom City of Mississauga GIS licence: 'informational use only', 'may not be modified or copied without written consent'. A portal blurb separately claims open reuse - contradictory. Treat as requiring written consent for commercial use.",
+      "sourcePage": "https://data.mississauga.ca/datasets/zoning/about",
+      "notes": "Endpoint clean & token-free. ZONE_CATEG = 12 high-level categories. Alternate service services6.../Mississauga_Zoning_Bylaw exists. License is the blocker, not access."
+    },
+    {
+      "city": "Vaughan", "listingCount": 1363, "status": "open_license_gated",
+      "service": "https://maps.vaughan.ca/arcgis/rest/services/VaughanZoning/VaughanZoning/MapServer",
+      "layerType": "MapServer (12 category sublayers /0..11)", "geometryType": "esriGeometryPolygon", "featureCount": 3900,
+      "byLaw": "1-88 (in effect; Comprehensive 001-2021 under OLT appeal)",
+      "zoneCodeField": "ZONE", "descField": "ZONE1",
+      "candidateFields": ["EXCEPTION", "SCHEDULE", "BLOCKNUMBER"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": "paginate",
+      "license": "GATED. Service copyrightText='City of Vaughan'; NO explicit open-data license found (vaughan.ca returns 403 to automated fetch). Commercial reuse not granted - verify terms with the City.",
+      "sourcePage": "https://www.vaughan.ca/business/online-maps",
+      "notes": "Zoning split across 12 category sublayers (largest: /9 Residential = 2033). Harvester must query all 12. featureCount=3900 is the sum."
+    },
+    {
+      "city": "Markham", "listingCount": 1240, "status": "open_license_gated",
+      "service": "https://services3.arcgis.com/OWiFbQmr7Eu5DHn1/arcgis/rest/services/MarkhamZoning/FeatureServer/10",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 5609,
+      "byLaw": "CZBL 2024-19",
+      "zoneCodeField": "ZONE_CODE", "descField": "ZONE_DESC",
+      "srid": "paginate", "maxRecordCount": 2000,
+      "license": "GATED / NON-COMMERCIAL. MappiT Interactive Zoning Map disclaimer: 'may not re-sell, sub-license, or operate a service bureau using the data or otherwise reproduce, publish or disseminate the data for commercial purposes.' The OGL-style Terms on data-markham.opendata.arcgis.com is York Region's hub and does NOT cover this layer.",
+      "sourcePage": "https://experience.arcgis.com/experience/c0f5d5fa61004716b88adbc0c804614a",
+      "notes": "Endpoint clean & token-free (ZONE_CODE e.g. RES-ES). Avoid the utility.arcgis.com/usrsvcs proxy (403). License explicitly bars commercial use."
+    },
+    {
+      "city": "Richmond Hill", "listingCount": 1066, "status": "open_license_gated",
+      "service": "https://services5.arcgis.com/cu2HFDk7AqvG7e31/arcgis/rest/services/CZBL_Schedules/FeatureServer/5",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 1382,
+      "byLaw": "93-25 (adopted, UNDER OLT APPEAL)",
+      "zoneCodeField": "ZONECODE", "descField": "ZONENAME",
+      "candidateFields": ["ZONECATEGORY", "STATUS", "HOLDINGPROVISION", "OLTBYLAW", "MZOBYLAW"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 2000,
+      "license": "GATED. No explicit license on the ArcGIS item (licenseInfo empty); shared Public with anonymous query enabled. Commercial reuse not granted - confirm with the City.",
+      "sourcePage": "https://experience.arcgis.com/experience/3845eb91c55d4a6aabb4d808e7512dc0",
+      "notes": "By-law 93-25 under OLT appeal - filter on STATUS ('Under Appeal'). Sibling 'CZBL_Proposed_6_11_2026' holds a newer proposed revision."
+    },
+    {
+      "city": "Kawartha Lakes", "listingCount": 854, "status": "open_license_gated",
+      "service": "https://services3.arcgis.com/RQBDTPtsbT0jebs7/arcgis/rest/services/All_Zoning_Merged_AGOL/FeatureServer/0",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 49803,
+      "byLaw": "Merged legacy former-township by-laws (consolidated in-force)",
+      "zoneCodeField": "Zone_Code", "descField": "Zone_Name",
+      "candidateFields": ["Zone_Type", "Zone_Excep", "Holding", "Township", "SOURCE_ZONING_BYLAW"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 2000,
+      "license": "GATED. AGOL item is public but licenseInfo empty; standard City disclaimer: 'provided as is and for reference only ... not a substitute for legal documentation.' Commercial reuse NOT expressly granted - verify with City.",
+      "sourcePage": "https://kawartha.maps.arcgis.com/home/item.html?id=dc650f43b3174175bad2e33097ee1b1b",
+      "notes": "On-prem gis.kawarthalakes.ca ZONING folder is token-locked (499); this AGOL hosted mirror is the token-free source. 49,803 features = parcel-level merge of legacy township by-laws (~25 pages to harvest). Zone_Code embeds exception/holding ('A1-18 (H)'); Zone_Excep/Holding parse separately. AVOID the WSP Canada DRAFT Rural Zoning consolidation (not adopted, not in-force)."
+    },
+    {
+      "city": "Kitchener", "listingCount": 687, "status": "open_license_gated",
+      "service": "https://utility.arcgis.com/usrsvcs/servers/119b393148dc4b30ae1094646c41b48a/rest/services/WebsiteMaps/Zoning_Lookup/FeatureServer/28",
+      "layerType": "FeatureServer (ArcGIS Hosted Service Proxy)", "geometryType": "esriGeometryPolygon", "featureCount": 69979,
+      "byLaw": "2019-051 (CRoZBy) + legacy 85-1",
+      "zoneCodeField": "ZONE_LABEL", "descField": "ZONE_SCHEDULE (URL to PDF, not text)",
+      "candidateFields": ["BASE_BYLAW", "STATUS", "SCHEDULE", "FULL_ADDRESS"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": 2000,
+      "license": "GATED. AGOL item licenseInfo is an 'as is' disclaimer (NOT the OGL-style Region of Waterloo open licence); boundaries deliberately approximate due to parcel-fabric licensing. Commercial reuse NOT granted - confirm with City.",
+      "sourcePage": "https://www.arcgis.com/home/item.html?id=119b393148dc4b30ae1094646c41b48a",
+      "notes": "STRUCTURAL CAVEAT: per-PARCEL layer (~70k polygons), NOT clean by-law zone-area polygons. Direct mapserver.kitchener.ca is token-locked (499); only this utility.arcgis.com proxy is token-free. ZONE_LABEL = composite with special-provision suffixes '(111)', holding 'H', multi-zone split by ';'. BASE_BYLAW distinguishes 2019-051 from legacy 85-1."
+    },
+    {
+      "city": "Whitchurch-Stouffville", "tier": "GTA growth-frontier (land)", "landSignal": "90 half-acre, 75 one-acre", "status": "open_license_gated",
+      "service": "https://services1.arcgis.com/VFFBuuDfBoQUIwDx/arcgis/rest/services/Stouffville_Planning_Zoning_JUL2024/FeatureServer/0",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 2123,
+      "byLaw": "2010-001-ZO", "zoneCodeField": "ZONE", "descField": "Zone_Name",
+      "candidateFields": ["Zone_Section", "By_law_Number", "AREA_ACRE", "AREA_HECT"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 2000,
+      "license": "GATED. Reserved copyright 'Corporation of the Town of Whitchurch-Stouffville'; no open-data license; commercial reuse not granted - confirm with Town.",
+      "sourcePage": "https://www.arcgis.com/home/item.html?id=b06bdb8f7cfe4c0caf41b4eecd129c5f",
+      "notes": "Town-tier (not York Region). Carries AREA_ACRE/AREA_HECT (useful for builders). Decoy to avoid: services7.arcgis.com/.../2021_Zoning_Districts = Brownsburg, INDIANA."
+    },
+    {
+      "city": "King", "tier": "GTA growth-frontier (land)", "landSignal": "122 half-acre, 94 one-acre", "status": "open_license_gated",
+      "service": "https://services1.arcgis.com/yIQ9Pn6suWK4pNeH/arcgis/rest/services/Township_of_King_Zoning_and_Conservation_Layers/FeatureServer/3",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 1151,
+      "byLaw": "2022-053 / 2017-66 / 2016-71", "zoneCodeField": "Zoning_Code", "descField": "Zoning_Land_Use",
+      "candidateFields": ["Zoning_Base_Code", "Zoning_Suffix_Code", "Holding_Symbol", "Zoning_Exception"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": "paginate",
+      "license": "GATED. 'As is' disclaimer only; no CC/OGL; commercial neither granted nor prohibited - verify with Township (serviceking@king.ca).",
+      "sourcePage": "https://kingtownship.maps.arcgis.com/apps/webappviewer/index.html?id=3c9e3c09a85c4c23bc00444a80ac377d",
+      "notes": "Township-tier. Layer 3 'Zoning' of the King Zoning+Conservation service. Clean base-code/suffix/holding/exception field split."
+    },
+    {
+      "city": "Georgina", "tier": "GTA growth-frontier (land)", "landSignal": "55 vacant land", "status": "open_license_gated",
+      "service": "https://maps.georgina.ca/arcgis/rest/services/GeorginaMap_W84/Georgina_Zoning_Online/MapServer/0",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 21198,
+      "byLaw": "500", "zoneCodeField": "Zoning", "descField": "Classification",
+      "candidateFields": ["Special_Provision", "Additional_Info"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": 20000,
+      "license": "GATED. Copyright 'Town of Georgina'; no open-data license; commercial not granted - confirm with Town.",
+      "sourcePage": "https://www.georgina.ca/living-here/planning-and-development/zoning",
+      "notes": "Town-tier. Parcel-level (~21k). Two parallel MapServers; W84 (this one) has richer fields. Additional_Info = links to By-law 500 PDFs."
+    },
+    {
+      "city": "Erin", "tier": "GTA growth-frontier (land)", "landSignal": "71 one-acre lots", "status": "open_license_gated",
+      "service": "https://services8.arcgis.com/qu8yojONWhklwVA3/arcgis/rest/services/ZoningErin/FeatureServer/2",
+      "layerType": "FeatureServer", "geometryType": "esriGeometryPolygon", "featureCount": 820,
+      "zoneCodeField": "ZoneLabel", "descField": "Zone", "candidateFields": ["Holding", "SpecPolicy", "SpecFlood"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": "paginate",
+      "license": "GATED. Wellington County tier; no OGL; 'free for public use' but commercial not granted - confirm with County of Wellington.",
+      "sourcePage": "https://www.arcgis.com/home/item.html?id=c54979ed5681418cab1fc5db396baab4",
+      "notes": "COUNTY TIER (Wellington), dedicated ZoningErin service (layers: 0 Special Policy, 1 Special Flood, 2 main zones). FIELD CAVEAT: code is in ZoneLabel (e.g. A/EP/NE), NAME is in Zone (inverted). Decoy: 'Town of Erin Zoning' on stc-hub = Erin, NEW YORK."
+    },
+    {
+      "city": "Fort Erie", "tier": "Niagara fringe (land)", "landSignal": "61 vacant land", "status": "open_license_gated",
+      "service": "https://maps.forterie.ca/server/rest/services/WEB_APPS/PlanningGeopediaLayers/MapServer/10",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 4194,
+      "zoneCodeField": "ZONE", "descField": "BASEZONE", "candidateFields": ["ZONE_DESCRIPTION", "EXCEPTION", "HOLDING", "BYLAW"],
+      "srid": "26917 (UTM17N)", "maxRecordCount": "paginate",
+      "license": "GATED. Service has empty copyrightText and is NOT published on niagaraopendata.ca, so OGL does not clearly apply; commercial not explicitly licensed - confirm with Town.",
+      "sourcePage": "https://www.forterie.ca/en/build-and-invest/zoning.aspx",
+      "notes": "Town-tier on the Town's own GeoPedia server. ZONE = full code+exception; BASEZONE = zone name; ZONE_DESCRIPTION = broad land-use category."
+    },
+    {
+      "city": "Halton Hills", "tier": "GTA growth-frontier (land)", "landSignal": "90 half-acre lots", "status": "open_license_gated",
+      "service": "https://map.haltonhills.ca/awse/rest/services/eP/MapServer/27",
+      "layerType": "MapServer", "geometryType": "esriGeometryPolygon", "featureCount": 1446,
+      "byLaw": "2010-0050", "zoneCodeField": "ZONING", "descField": "DESIGNATION",
+      "candidateFields": ["EXCEPTIONS", "SCHEDULE", "AMEND_BLAW1"],
+      "srid": "3857 (WebMercator)", "maxRecordCount": "paginate",
+      "license": "GATED / RESTRICTIVE. Copyright 'Corporation of the Town of Halton Hills', all rights reserved; Terms of Use: 'cannot be duplicated in whole or in part without the express written permission of the Town.' Commercial reuse NOT permitted without written permission.",
+      "sourcePage": "https://www.haltonhills.ca/en/business/zoning.aspx",
+      "notes": "Town-tier (not Halton Region). Layer 27 'Zoning2010_id056' of the 'eP' MapServer (Geocortex). No FeatureServer; query via MapServer layer."
+    }
+  ],
+
+  "locked_fallback": [
+    {
+      "city": "Brampton", "listingCount": 2124, "status": "locked_fallback",
+      "service": "https://maps1.brampton.ca/arcgis/rest/services/Zoning_Review/Zoning_By_Law_Review_Data/MapServer",
+      "probedResult": "HTTP 499 Token Required (also CZBL_Final, COB/Zoning) - NOT open.",
+      "fallbackLayer": "https://services3.arcgis.com/rl7ACuZkiFsmDA2g/arcgis/rest/services/Planning_Official_Plan/FeatureServer/4",
+      "fallbackType": "Official Plan LAND-USE designation (NOT zoning by-law)", "fallbackFeatureCount": 3612,
+      "fallbackZoneField": "OP_LANDUSE",
+      "fallbackLicense": "CC BY 4.0 (commercial reuse OK with attribution) - applies to the Official Plan layer only.",
+      "sourcePage": "https://geohub.brampton.ca/",
+      "notes": "Brampton's actual zoning by-law polygons are token-locked; only an address/parcel lookup app + a NON-spatial 'Zoning Bylaw Search Table' are open. Options: (a) request token/permission from City of Brampton, or (b) use the open Official Plan land-use polygons (OP_LANDUSE: RESIDENTIAL/INDUSTRIAL/OFFICE...) as a COARSE proxy until zoning access is granted."
+    },
+    {
+      "city": "Caledon", "tier": "GTA growth-frontier (land)", "landSignal": "180 half-acre, 141 one-acre (TOP land frontier)", "status": "locked_fallback",
+      "probedResult": "Comprehensive By-law 2006-50 zone-category polygons are PRIVATE: the digitized 'Northwest/South Caledon Zoning' web maps return HTTP 403 (GWM_0003 no permission).",
+      "partialLayer": "https://services3.arcgis.com/AbUjpCl3KckkXVBh/arcgis/rest/services/Non_Permitted_Use___Trucking_Depots_Webmap_WFL1/FeatureServer/28",
+      "partialNotes": "Layer 28 'PermittedZoning' is open + token-free (60 polygons, ZONING/Zone) but INDUSTRIAL-only - NOT full coverage.",
+      "openIndexOnly": "Zone_Map_Index_Layers/FeatureServer/0 + AGOL/Planning_Zone_Index (utility.arcgis.com proxy) carry index_no + a PDF link only, NO zone categories.",
+      "license": "No open-data license; liability disclaimer only. Commercial not granted.",
+      "sourcePage": "https://www.caledon.ca/en/town-services/zoning.aspx",
+      "notes": "HIGH-PRIORITY MISS: Caledon is the #1 land-development frontier but full zoning is locked. Options: request the digitized zoning layer from Town of Caledon Planning, use PDF maps + index, or use the industrial-only partial layer for employment lands."
+    },
+    {
+      "city": "Uxbridge", "tier": "GTA growth-frontier (land)", "landSignal": "31 five-acre lots", "status": "locked_fallback",
+      "probedResult": "No token-free ArcGIS zoning layer. By-law 81-19 published only as PDF schedules (A1-A6); uxbridge.ca blocks programmatic fetch (404).",
+      "bonusSibling": "Durham Region AGOL org (services1.arcgis.com/tFqRz8TAqe7XY7GD) hosts ScugogZoning_2025/FeatureServer (2527 polygons, OPEN) - Scugog is a free bonus source; no Uxbridge equivalent yet.",
+      "license": "No open-data license; PDF public records only.",
+      "sourcePage": "https://www.uxbridge.ca/en/business-and-development/zoning.aspx",
+      "notes": "PDF-only fallback. Re-check the Durham AGOL org periodically - Scugog is already published there, Uxbridge may follow. Durham regional MapServer carries no zoning (lower-tier function)."
+    }
+  ],
+
+  "county_tier": [
+    {
+      "county": "Frontenac County", "tierModel": "per_township_layers", "status": "verified_open_commercial",
+      "landRank": "#1-2 large-lot market", "membersCovered": ["North Frontenac", "Central Frontenac", "South Frontenac", "Frontenac Islands"], "membersMissing": [],
+      "services": {
+        "North Frontenac": "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/NF_Zoning_View/FeatureServer/0",
+        "Central Frontenac": "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/CF_Zoning_View/FeatureServer/0",
+        "South Frontenac": "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/SF_Zoning_View/FeatureServer/0",
+        "Frontenac Islands": "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/FI_Zoning_View/FeatureServer/0"
+      },
+      "geometryType": "esriGeometryPolygon", "featureCount": 24401, "srid": "26918 (UTM18N)",
+      "zoneCodeField": "varies (NF/CF/FI=Zoning, SF=Zone_Code)", "descField": "varies (SF=Zone_Label, CF=ByLaw, FI=Label)",
+      "license": "County of Frontenac Open Government Licence v1.0. Commercial reuse permitted with attribution.",
+      "sourcePage": "https://county-frontenac.hub.arcgis.com/",
+      "notes": "Per-township hosted FeatureServices on the County AGOL org (Kingston excluded - single-tier, already covered). On-prem frontenacmaps.ca was unreachable; AGOL Open Data View copies are authoritative. Central Frontenac has a newer 2022 authoritative layer (CF service layer 5). Field schemas differ per township - map per layer."
+    },
+    {
+      "county": "Simcoe County", "tierModel": "per_township_layers (+ shared Public/Zoning_Dynamic)", "status": "verified_open_commercial",
+      "membersCovered": ["Springwater", "Innisfil", "Oro-Medonte", "Tiny", "Clearview", "Wasaga Beach", "Severn", "Midland", "Ramara", "New Tecumseth", "Bradford West Gwillimbury"],
+      "membersMissing": ["Adjala-Tosorontio (token-locked)", "Essa (token-locked)", "Penetanguishene (token-locked)", "Tay (no zoning layer)", "Collingwood (no zoning layer)"],
+      "additionalServices": {
+        "Wasaga Beach": "https://maps.simcoe.ca/arcgis/rest/services/WasagaBeach/WB_ZoningWebsite/MapServer/1 (16635)",
+        "Severn": "https://maps.simcoe.ca/arcgis/rest/services/Public/Zoning_Dynamic/MapServer/0 (12188)",
+        "Midland": "https://maps.simcoe.ca/arcgis/rest/services/Public/Zoning_Dynamic/MapServer/1 (7047)",
+        "Ramara": "https://maps.simcoe.ca/arcgis/rest/services/Ramara/Ramara_OperationalLayers_Dynamic_Public/MapServer/1 (8291, field Zoning)",
+        "New Tecumseth": "https://maps.simcoe.ca/arcgis/rest/services/NewTecumseth/NewTecumseth_OperationalLayers_Dynamic_Public/MapServer/31 (1757, field Zoning)",
+        "Bradford West Gwillimbury": "https://maps.simcoe.ca/arcgis/rest/services/BWG/Zoning_Bylaw_Map/MapServer/0 (1596, field ZoneClass)"
+      },
+      "license": "Open Government Licence - Simcoe County. Commercial use permitted with attribution.",
+      "sourcePage": "https://maps.simcoe.ca/arcgis/rest/services",
+      "notes": "STANDOUT: 11 of 16 lower-tier members open under ONE commercial OGL. 5 detailed in verified_open_commercial above (Springwater/Innisfil/Oro-Medonte/Tiny/Clearview); 6 more listed here. Common field ZONE_1 (+EXCEPTION_2/HOLD_3); exceptions: Ramara/New Tecumseth=Zoning, BWG=ZoneClass, Clearview=ZONE_TYPE."
+    },
+    {
+      "county": "Bruce County", "tierModel": "consolidated_one_layer", "status": "open_license_gated",
+      "membersCovered": ["all 8 (Northern Bruce Peninsula, South Bruce Peninsula, Saugeen Shores, Kincardine, Arran-Elderslie, Brockton, Huron-Kinloss, South Bruce)"], "membersMissing": [],
+      "service": "https://maps.brucecounty.on.ca/arcgisserver/rest/services/public/planning_wa/MapServer/48",
+      "geometryType": "esriGeometryPolygon", "featureCount": 12499, "srid": "26917 (UTM17N)",
+      "zoneCodeField": "ZONECODE (municipality-prefixed)", "descField": "ZoneClass / ZONING", "municipalityField": "MUNICIPALITY",
+      "license": "GATED. County of Bruce proprietary Terms of Use (NOT OGL): attribution required; commercial reuse PROHIBITED ('shall not resell, market, or release... without explicit written permission'). GIS Coordinator jkraemer@brucecounty.on.ca.",
+      "sourcePage": "https://www.brucecounty.on.ca/services/planning-development/interactive-mapping",
+      "notes": "EFFICIENT: one consolidated layer (layer 48), all 8 members via MUNICIPALITY field; per-municipality sublayers also exist. Open-access but commercial-blocked. Zoning NOT in the County's open-data hub."
+    },
+    {
+      "county": "Grey County", "tierModel": "per_township_layers", "status": "open_license_gated",
+      "membersCovered": ["all 9 (West Grey, Grey Highlands, Meaford, The Blue Mountains, Chatsworth, Southgate, Georgian Bluffs, Owen Sound, Hanover)"], "membersMissing": [],
+      "service": "https://gis.grey.ca/server/rest/services/Public/Service_GreyCountyZoning/MapServer (8 members as sublayers); The Blue Mountains on its own server: https://gis.thebluemountains.ca/arcgis/rest/services/Public/Planning_Layers/MapServer/26",
+      "geometryType": "esriGeometryPolygon", "featureCount": 20894, "srid": "3857 (WebMercator)",
+      "zoneCodeField": "Zone (Meaford=Zoning; Blue Mountains adds ZONING_ID)", "descField": "Final_Type",
+      "license": "GATED. Grey County GIS Terms of Use: personal/non-commercial only; no copy/distribute/derivative/sell. Commercial reuse PROHIBITED without written permission.",
+      "sourcePage": "https://maps.grey.ca/",
+      "notes": "8 of 9 members are separate sublayers in one county MapServer (each own schema); The Blue Mountains is on its own server. Open-access, commercial-blocked."
+    },
+    {
+      "county": "Haliburton County", "tierModel": "consolidated_one_layer (partial)", "status": "open_license_gated",
+      "membersCovered": ["Dysart et al (3956)", "Algonquin Highlands (1326)", "Highlands East (18 - effectively incomplete)"], "membersMissing": ["Minden Hills (0 in consolidated layer; dedicated service 403-locked)"],
+      "service": "https://gis.haliburtoncounty.ca/arcgis/rest/services/1_RHIS_Zoning/Zoning_RHIS/MapServer/0",
+      "geometryType": "esriGeometryPolygon", "featureCount": 5300, "srid": "3857 (WebMercator)",
+      "zoneCodeField": "Zone", "descField": "ZoneDesc (+BuildTypes)", "municipalityField": "Muni",
+      "license": "GATED. County of Haliburton GIS Terms of Use: personal/non-commercial only. Commercial reuse PROHIBITED.",
+      "sourcePage": "https://gis-haliburtoncounty-ca-halcty.hub.arcgis.com/",
+      "notes": "Consolidated RHIS layer (Muni field) but PARTIAL - Minden Hills absent, Highlands East barely present. Per-township services (Minden Hills, Dysart) are 403-locked. Open-access (what exists), commercial-blocked."
+    },
+    {
+      "county": "Peterborough County", "tierModel": "per_township_layers (one shared FeatureServer)", "status": "open_license_gated",
+      "membersCovered": ["all 8 (Trent Lakes, Selwyn, Douro-Dummer, Otonabee-South Monaghan, Asphodel-Norwood, Cavan Monaghan, North Kawartha, Havelock-Belmont-Methuen)"], "membersMissing": [],
+      "service": "https://services3.arcgis.com/08bk1ZSzqef9JX5q/arcgis/rest/services/Zoning/FeatureServer (zoning sublayers 3,8,15,17,19,21,23,25; Trent Lakes=25)",
+      "geometryType": "esriGeometryPolygon", "featureCount": 23516, "srid": "2958 (NAD83 CSRS MTM10N)",
+      "zoneCodeField": "ZONECLASS", "descField": "ZONEDESC", "municipalityField": "(encoded by sublayer)",
+      "license": "GATED. County of Peterborough Terms of Use: NO commercial reuse ('may not be ... put to commercial use'). Written consent required.",
+      "sourcePage": "https://www.ptbocounty.ca/business-development/maps/",
+      "notes": "Full coverage incl. high-land Trent Lakes (layer 25). Consistent ZONECLASS/ZONEDESC + BYLAW_NUM/SCHEDULE_NAME across townships. Open-access, commercial-blocked. City of Peterborough is single-tier, out of scope."
+    },
+    {
+      "county": "Northumberland County", "tierModel": "mixed (per-municipality)", "status": "open_license_gated_partial",
+      "membersCovered": ["Hamilton Township (4909)", "Cobourg (1135)", "Brighton (1587)"], "membersMissing": ["Trent Hills (PDF/locked)", "Alnwick/Haldimand (PDF)", "Cramahe (PDF)", "Port Hope (PDF)"],
+      "service": "Hamilton Twp: https://maps.northumberlandcounty.ca/server/rest/services/DRAFT_Hamilton_Township_Public_Map_Update_MIL1/MapServer/564 | Cobourg: https://geo.cobourg.ca/server/rest/services/Operations/Planning_Zoning2/FeatureServer/0 | Brighton: https://services6.arcgis.com/jn1I20RxqyRF1ljA/arcgis/rest/services/Zoning_By_law_PublicView/FeatureServer/0",
+      "geometryType": "esriGeometryPolygon", "featureCount": 7631, "srid": "mixed (3857 / 26917)",
+      "zoneCodeField": "varies (Hamilton=Zoning, Cobourg=ZONING, Brighton=Full_Code)", "descField": "varies",
+      "license": "GATED. No OGL; County GIS Cooperative requires a Data Sharing Agreement + fees; member public-view services have no stated commercial grant.",
+      "sourcePage": "https://www.northumberland.ca/en/discovering-and-exploring/maps.aspx",
+      "notes": "WEAK FOR LAND: the high-land priority members (Trent Hills, Alnwick/Haldimand, Cramahe) are PDF-only / token-locked. Only Hamilton Twp/Cobourg/Brighton are queryable, and license-gated. No consolidated county layer."
+    },
+    {
+      "county": "Norfolk County", "tierModel": "single_tier", "status": "open_license_gated",
+      "membersCovered": ["Norfolk County (Simcoe, Port Dover, Delhi, Waterford)"], "membersMissing": [],
+      "service": "https://gis2.norfolkcounty.ca/arcgis/rest/services/Services_Public_GISviewer/Planning_And_Development/MapServer/1",
+      "geometryType": "esriGeometryPolygon", "featureCount": 1856, "srid": "26917 (UTM17N)",
+      "byLaw": "1-Z-2014", "zoneCodeField": "ZoneName_1 (DESCRIPTIVE names only, no short code)", "descField": "ZoneName_1",
+      "license": "GATED/UNCONFIRMED. Free via open-data portal but no OGL stated; commercial reuse unconfirmed - verify with NorfolkGIS@norfolkcounty.ca.",
+      "sourcePage": "https://www.norfolkcounty.ca/home-property-and-neighbourhood/maps-and-data/open-data/",
+      "notes": "Field caveat: ZoneName_1 holds full descriptive names (e.g. 'AGRICULTURAL ZONE'), no abbreviated code. Holding_1 = 0/1 flag. Decoy avoided: City of Norfolk VIRGINIA."
+    },
+    {
+      "county": "District of Muskoka", "tierModel": "per_township (token-locked proxy)", "status": "locked_fallback",
+      "membersCovered": [], "membersMissing": ["Huntsville", "Bracebridge", "Gravenhurst", "Muskoka Lakes", "Lake of Bays", "Georgian Bay (all authoritative services 403-locked)"],
+      "probedResult": "District hosts every township's zoning but all via stored-credential proxy (utility.arcgis.com/usrsvcs/...) returning HTTP 403 GWM_0003. No consolidated layer, no open download.",
+      "fallbackLayer": "https://services1.arcgis.com/DwLTn0u9VBSZvUPe/arcgis/rest/services/Huntsville_Public_Map_Zoning/FeatureServer/0 (University of Waterloo 2023 academic MIRROR of Huntsville, 16666 polys, EPSG:4326, fields BYLAW/ZONE_NAME/ZBL_07JUL)",
+      "license": "Unconfirmed; District GeoHub terms JS-only/unverified; Huntsville references an OGL but zoning not in its open catalog. uWaterloo mirror = academic snapshot, no license.",
+      "sourcePage": "https://map.muskoka.on.ca/",
+      "notes": "BIG RECREATIONAL CLUSTER, LOCKED. Request API/token or data-sharing agreement from District of Muskoka GIS. Only open copy is the 2023 Huntsville academic mirror."
+    },
+    {
+      "county": "Prince Edward County", "tierModel": "single_tier", "status": "fallback",
+      "landRank": "top-3 large-lot market", "membersCovered": [], "membersMissing": ["comprehensive county-wide zoning (By-law 1816-2006) - authoritative layer unreachable from datacenter egress"],
+      "openButPartial": "https://services5.arcgis.com/GGug3kAx2SJbWUe7/arcgis/rest/services/Prince_Edward_County_Geodatabase/FeatureServer/0 (1125 polys, SETTLEMENT-ONLY ~427 of ~260000 acres, zones CC/CG/CL/R2/R3 only - NO rural/ag/EP; unsuitable for large-lot use case)",
+      "authoritativeUnreached": "maps.thecounty.ca/pecountyext/rest/services/PEC_PublicViewerDynamic/MapServer ('Zoning By-law 1816-2006') - documented token-free on the County GIS page but host 50.115.181.174 is firewalled from cloud/datacenter IPs (TCP timeout); NOT verified.",
+      "license": "Unconfirmed.",
+      "sourcePage": "https://www.thecounty.ca/residents/services/gis-mapping/",
+      "notes": "RE-PROBED 2026-07-01 from a residential IP: host 50.115.181.174 (maps.thecounty.ca AND maps.pecounty.on.ca) still times out on BOTH :443 and :80 - DNS resolves but the server isn't accepting connections, so it's genuinely down/network-firewalled, NOT just a datacenter-IP block. The authoritative By-law 1816-2006 layer is currently UNREACHABLE. Only the settlement-only hosted fragment (services5.arcgis.com, 1125 polys) is reachable and it's unusable for rural land. ACTION: recheck later or contact PEC GIS for a data-sharing agreement / working endpoint."
+    }
+  ]
+}

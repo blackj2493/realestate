@@ -13,7 +13,7 @@
 "use client";
 
 import React from "react";
-import { Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
+import { Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Landmark, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 
@@ -99,6 +99,8 @@ export default function MapControlRail() {
   const timelineActive = useCommandCenterStore((s) => s.timelineActive);
   const setTimelineActive = useCommandCenterStore((s) => s.setTimelineActive);
   const togglePalette = useCommandCenterStore((s) => s.togglePalette);
+  const showZoning = useCommandCenterStore((s) => s.showZoning);
+  const setShowZoning = useCommandCenterStore((s) => s.setShowZoning);
 
   // Group 1 — map layers: tools that shape or visualize the search on the map.
   const layerTiles: RailTile[] = [
@@ -145,6 +147,16 @@ export default function MapControlRail() {
       icon: Lasso,
       dataActive: isDrawing || drawPolygon !== null,
       tourId: "rail-draw",
+    },
+    {
+      kind: "action",
+      id: "zoning",
+      label: "Zoning",
+      description: "Overlay municipal zoning (open data) — colored zone areas, with source & by-law. Zoom in to street level.",
+      icon: Landmark,
+      active: showZoning,
+      onClick: () => setShowZoning(!showZoning),
+      tourId: "rail-zoning",
     },
   ];
 
