@@ -118,24 +118,24 @@ export default async function NewBuildHubPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
+        <nav className="mb-4 text-sm text-muted-foreground">
           <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
           <Link href={cityHubPath} className="hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">New Construction</span>
+          <span className="text-foreground">New Construction</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-100 sm:text-3xl">
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
             <Sparkles className="h-6 w-6 text-violet-400" />
             New Construction &amp; Newly Built Homes in {cityName}, ON
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             {totalFound > 0
               ? `${totalFound.toLocaleString()} newly built ${totalFound === 1 ? "home" : "homes"} (built new or within ~5 years) — freshest listings first.`
               : `No new construction or newly built listings in ${cityName} right now.`}
@@ -149,8 +149,8 @@ export default async function NewBuildHubPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
-            <Sparkles className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+          <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
+            <Sparkles className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>No newly built listings here right now.</p>
             <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →

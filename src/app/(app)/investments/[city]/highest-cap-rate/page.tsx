@@ -112,30 +112,30 @@ export default async function CapRateHubPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
+        <nav className="mb-4 text-sm text-muted-foreground">
           <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
           <Link href={cityHubPath} className="hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">Highest Cap Rate</span>
+          <span className="text-foreground">Highest Cap Rate</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-100 sm:text-3xl">
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
             <TrendingUp className="h-6 w-6 text-emerald-400" />
             Highest Cap Rate Homes for Sale in {cityName}, ON
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             {totalFound > 0
               ? `${totalFound.toLocaleString()} ${totalFound === 1 ? "property" : "properties"} ranked by estimated cap rate — highest yield first.`
               : `No cash-flow listings with a computed cap rate in ${cityName} right now.`}
           </p>
           {totalFound > 0 && (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-xs text-slate-400">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
               <Lock className="h-3.5 w-3.5 text-cyan-400" />
               Ranked by our estimated cap rate. Open a listing and sign in to see each property&apos;s projected yield.
             </p>
@@ -149,7 +149,7 @@ export default async function CapRateHubPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
+          <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
             <p>No ranked cash-flow listings here right now.</p>
             <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →

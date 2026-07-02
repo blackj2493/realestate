@@ -48,7 +48,7 @@ export default function RegionDrilldown({
 
   return (
     <section id={id} className={cn("space-y-3 rounded-sm transition-shadow", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
         <button
           type="button"
           onClick={toggle}
@@ -56,19 +56,19 @@ export default function RegionDrilldown({
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           {expanded ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
           {icon}
-          <span className="terminal-font truncate text-sm font-bold uppercase tracking-widest text-slate-100">
+          <span className="terminal-font truncate text-sm font-bold uppercase tracking-widest text-foreground">
             {title}
           </span>
           {subtitle && (
-            <span className="truncate text-[11px] text-slate-500">{subtitle}</span>
+            <span className="truncate text-[11px] text-muted-foreground">{subtitle}</span>
           )}
           {!expanded && summary && (
-            <span className="terminal-font ml-auto shrink-0 truncate pl-2 text-[11px] text-slate-500">
+            <span className="terminal-font ml-auto shrink-0 truncate pl-2 text-[11px] text-muted-foreground">
               {summary}
             </span>
           )}

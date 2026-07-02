@@ -108,8 +108,8 @@ export default function WatchlistSection() {
   if (changes.length === 0) {
     return (
       <section className="space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
             Watchlist
           </h2>
           {!signedIn && (
@@ -122,11 +122,11 @@ export default function WatchlistSection() {
           )}
         </div>
 
-        <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-12 text-center">
-          <h3 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-200">
+        <div className="border border-dashed border-border bg-card/40 px-6 py-12 text-center">
+          <h3 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
             Nothing saved yet
           </h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Save listings to track price drops, days-on-market, and status changes —
             all in one place.
           </p>
@@ -143,9 +143,9 @@ export default function WatchlistSection() {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
-          Watchlist <span className="text-slate-500">· {rollup.count}</span>
+      <div className="flex items-center justify-between border-b border-border pb-2">
+        <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
+          Watchlist <span className="text-muted-foreground">· {rollup.count}</span>
         </h2>
         {!signedIn && (
           <Link
@@ -171,14 +171,14 @@ export default function WatchlistSection() {
           return (
             <div
               key={item.listing_key}
-              className="group relative border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-600"
+              className="group relative border border-border bg-card/40 transition-colors hover:border-border"
             >
               <WatchButton
                 item={item}
-                className="absolute right-1.5 top-1.5 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-slate-950/70 p-1.5 backdrop-blur"
+                className="absolute right-1.5 top-1.5 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-background/70 p-1.5 backdrop-blur"
               />
               <Link href={`/properties/${linkKey}`} className="block">
-                <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
+                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                   <Thumb item={item} />
                   <ChangeChips change={change} />
                 </div>
@@ -186,11 +186,11 @@ export default function WatchlistSection() {
                   <div className="terminal-font text-xs font-semibold text-cyan-400">
                     {price ? formatPrice(price) : "—"}
                   </div>
-                  <p className="truncate text-[11px] text-slate-300">
+                  <p className="truncate text-[11px] text-foreground">
                     {item.address || "Saved property"}
                   </p>
                   {item.city && (
-                    <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">
+                    <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
                       {item.city}
                     </p>
                   )}
@@ -200,7 +200,7 @@ export default function WatchlistSection() {
                       Re-hydrated live from Typesense via change.current; rendered
                       conditionally so off-market cards (no live doc) never break. */}
                   {brokerage && (
-                    <p className="truncate text-[11px] text-slate-300">{brokerage}</p>
+                    <p className="truncate text-[11px] text-foreground">{brokerage}</p>
                   )}
                 </div>
               </Link>

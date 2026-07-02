@@ -83,11 +83,11 @@ export default function SubmarketLeaderboard() {
   return (
     <div className="mx-auto max-w-6xl px-4 pt-6">
       <section className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-          <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+          <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
             <Trophy className="h-4 w-4 text-cyan-400" /> Submarket Leaderboard
           </h2>
-          <div className="inline-flex overflow-hidden rounded-md border border-slate-700">
+          <div className="inline-flex overflow-hidden rounded-md border border-border">
             {RANK_OPTIONS.map((o) => (
               <button
                 key={o.key}
@@ -96,7 +96,7 @@ export default function SubmarketLeaderboard() {
                 aria-pressed={rankBy === o.key}
                 className={cn(
                   "terminal-font px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors",
-                  rankBy === o.key ? "bg-slate-800 text-cyan-300" : "bg-slate-950 text-slate-400 hover:text-slate-200"
+                  rankBy === o.key ? "bg-muted text-cyan-300" : "bg-background text-muted-foreground hover:text-foreground"
                 )}
               >
                 {o.label}
@@ -105,40 +105,40 @@ export default function SubmarketLeaderboard() {
           </div>
         </div>
 
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-muted-foreground">
           {scores.length ? `${scores.length} ` : ""}GTA markets ranked by {opt.hint} — all active inventory. Click a market to open it in the terminal.
         </p>
 
-        <div className="divide-y divide-slate-800/60 border border-slate-800">
+        <div className="divide-y divide-border/60 border border-border">
           {loading ? (
-            Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[46px] animate-pulse bg-slate-900/40" />)
+            Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[46px] animate-pulse bg-card/40" />)
           ) : locked ? (
-            <p className="px-3 py-8 text-center text-xs text-slate-500">
+            <p className="px-3 py-8 text-center text-xs text-muted-foreground">
               Accept the data terms to unlock the full GTA leaderboard.
             </p>
           ) : ranked.length === 0 ? (
-            <p className="px-3 py-8 text-center text-xs text-slate-500">
+            <p className="px-3 py-8 text-center text-xs text-muted-foreground">
               No ranked markets right now — check back after the next daily sync.
             </p>
           ) : (
             ranked.map(({ s, v }, i) => (
-                <div key={s.region} className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-900/40">
-                  <span className={cn("w-6 shrink-0 text-center font-mono text-sm font-bold", i === 0 ? "text-cyan-300" : "text-slate-500")}>
+                <div key={s.region} className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-card/40">
+                  <span className={cn("w-6 shrink-0 text-center font-mono text-sm font-bold", i === 0 ? "text-cyan-300" : "text-muted-foreground")}>
                     {i + 1}
                   </span>
                   <Link
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
-                    className="terminal-font min-w-0 flex-1 truncate text-sm font-semibold text-slate-100 hover:text-cyan-300"
+                    className="terminal-font min-w-0 flex-1 truncate text-sm font-semibold text-foreground hover:text-cyan-300"
                   >
                     {s.region}
-                    <ArrowUpRight className="ml-1 inline h-3 w-3 text-slate-600" />
+                    <ArrowUpRight className="ml-1 inline h-3 w-3 text-muted-foreground" />
                   </Link>
-                  <div className="hidden gap-4 font-mono text-xs text-slate-400 sm:flex">
+                  <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">
                     <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
                     <span title="% stale (90d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
                     <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
                   </div>
-                  <span className={cn("w-20 shrink-0 text-right font-mono text-sm font-semibold", i === 0 ? "text-cyan-300" : "text-slate-200")}>
+                  <span className={cn("w-20 shrink-0 text-right font-mono text-sm font-semibold", i === 0 ? "text-cyan-300" : "text-foreground")}>
                     {v != null ? fmtMetric(v) : "—"}
                   </span>
                 </div>
@@ -146,7 +146,7 @@ export default function SubmarketLeaderboard() {
           )}
         </div>
 
-        <p className="text-[11px] leading-relaxed text-slate-600">
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
           Full-population aggregates over current active inventory (no 100-row sampling). Median cap requires ≥5 priced
           active listings; “stale” = 90d+ True DOM. Deterministic, no AI (§4).
         </p>

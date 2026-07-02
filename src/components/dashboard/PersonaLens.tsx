@@ -83,7 +83,7 @@ export default function PersonaLens({
   return (
     <div className="flex flex-col items-center gap-1">
       {caption && (
-        <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-slate-500">
+        <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           {caption}
         </span>
       )}

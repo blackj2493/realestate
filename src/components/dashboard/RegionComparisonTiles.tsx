@@ -144,8 +144,8 @@ function Tile({
   const sub = value != null ? metric.sub?.(data) ?? null : null;
 
   return (
-    <div className="flex flex-col gap-1 border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
+    <div className="flex flex-col gap-1 border border-border bg-card/40 px-3 py-2">
+      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
         {metric.label}
         {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
       </div>
@@ -159,7 +159,7 @@ function Tile({
             <YoY pct={data.score.yoyPct} />
           </div>
         ) : metric.kind === "threshold" ? (
-          <span className="terminal-font text-[10px] text-slate-500">
+          <span className="terminal-font text-[10px] text-muted-foreground">
             {value >= 100 ? "over asking" : "under asking"}
           </span>
         ) : peerMedian != null ? (
@@ -170,7 +170,7 @@ function Tile({
         )}
       </div>
       {sub && (
-        <div className="terminal-font text-[9px] uppercase tracking-wider text-slate-600">
+        <div className="terminal-font text-[9px] uppercase tracking-wider text-muted-foreground">
           {sub}
         </div>
       )}
@@ -258,7 +258,7 @@ export default function RegionComparisonTiles({
         {regions.map((r) => (
           <div key={r} className="grid grid-cols-3 gap-3">
             {metricIds.map((id) => (
-              <div key={id} className="h-[88px] animate-pulse border border-slate-800 bg-slate-900/40" />
+              <div key={id} className="h-[88px] animate-pulse border border-border bg-card/40" />
             ))}
           </div>
         ))}
@@ -271,7 +271,7 @@ export default function RegionComparisonTiles({
       {datas.map((d) => (
         <div key={d.score.region} className="space-y-1.5">
           {regions.length > 1 && (
-            <div className="terminal-font text-[11px] uppercase tracking-wider text-slate-400">
+            <div className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
               {d.score.region}
             </div>
           )}

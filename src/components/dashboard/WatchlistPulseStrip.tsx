@@ -48,12 +48,12 @@ export default function WatchlistPulseStrip({ rollup }: { rollup: WatchlistRollu
   ).filter((s) => s.count > 0);
 
   return (
-    <div className="flex items-center gap-2 border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <span className="terminal-font text-[10px] font-bold uppercase tracking-wider text-slate-500">
+    <div className="flex items-center gap-2 border border-border bg-card/40 px-3 py-2">
+      <span className="terminal-font text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         Pulse
       </span>
       {quiet ? (
-        <span className="terminal-font text-[11px] text-slate-500">
+        <span className="terminal-font text-[11px] text-muted-foreground">
           No changes since you saved these
         </span>
       ) : (
@@ -61,7 +61,7 @@ export default function WatchlistPulseStrip({ rollup }: { rollup: WatchlistRollu
           {segments.map((s, i) => (
             <span key={s.label} className="flex items-center gap-2">
               <Segment count={s.count} label={s.label} color={s.color} plural={s.plural} />
-              {i < segments.length - 1 && <span className="text-slate-600">·</span>}
+              {i < segments.length - 1 && <span className="text-muted-foreground">·</span>}
             </span>
           ))}
         </span>

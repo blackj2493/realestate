@@ -28,13 +28,13 @@ export default function MissionControlHeader({
   onToggleConfig: () => void;
 }) {
   return (
-    <div className="border-b border-slate-800/60 bg-slate-950/60">
+    <div className="border-b border-border/60 bg-background/60">
       <div className="flex flex-col items-center gap-3 px-4 py-3 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-4">
         {/* Left: workspace label */}
-        <span className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-slate-400 lg:justify-self-start lg:text-left">
+        <span className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground lg:justify-self-start lg:text-left">
           {name ? (
             <>
-              Workspace: <span className="text-slate-200">{name}</span> · Mission Control
+              Workspace: <span className="text-foreground">{name}</span> · Mission Control
             </>
           ) : (
             "Mission Control"
@@ -60,7 +60,7 @@ export default function MissionControlHeader({
               useDiscovery.getState().markUsed("dashboard-config");
               onToggleConfig();
             }}
-            className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-slate-700 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-300 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+            className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-border px-3 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
           >
             <Plus className="h-3.5 w-3.5 text-cyan-400" /> Add Markets
           </button>

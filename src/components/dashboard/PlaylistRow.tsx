@@ -21,7 +21,7 @@ export default function PlaylistRow({
   return (
     <Link
       href={`/properties/${listing.id}`}
-      className="group flex items-center gap-3 border-b border-slate-800/50 px-3 py-2 transition-colors last:border-b-0 hover:bg-slate-800/50"
+      className="group flex items-center gap-3 border-b border-border/50 px-3 py-2 transition-colors last:border-b-0 hover:bg-muted/50"
     >
       <ListingThumbnail
         src={raw}
@@ -30,10 +30,10 @@ export default function PlaylistRow({
         sizes="56px"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-sans text-xs font-medium text-slate-200">{addr}</p>
-        {/* Brokerage rendered at text-xs text-slate-400 — same size as sibling listing
+        <p className="truncate font-sans text-xs font-medium text-foreground">{addr}</p>
+        {/* Brokerage rendered at text-xs text-muted-foreground — same size as sibling listing
             details, per TRREB §6.3(c) (no visual de-emphasis vs other listing info). */}
-        <p className="truncate text-xs uppercase tracking-wide text-slate-400">
+        <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">
           {listing.City || "—"}
           {listing.ListOfficeName ? (
             <span className="normal-case tracking-normal"> · {listing.ListOfficeName}</span>
@@ -42,7 +42,7 @@ export default function PlaylistRow({
       </div>
       <div className="shrink-0 text-right">
         <div className="terminal-font text-xs font-semibold text-cyan-400">{metric}</div>
-        <div className="terminal-font text-[10px] text-slate-400">
+        <div className="terminal-font text-[10px] text-muted-foreground">
           {formatPrice(listing.ListPrice)}
         </div>
       </div>

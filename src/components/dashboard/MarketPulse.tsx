@@ -68,10 +68,10 @@ export default function MarketPulse({ location }: { location: string }) {
   );
 
   return (
-    <div className="border border-slate-800 bg-slate-900/40">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
+    <div className="border border-border bg-card/40">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex items-center gap-3">
-          <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-slate-200">
+          <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
             Market Pulse — {location}
           </h3>
           {yoy != null && (
@@ -85,7 +85,7 @@ export default function MarketPulse({ location }: { location: string }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex border border-slate-700">
+          <div className="flex border border-border">
             {([
               ["price", "Median Price"],
               ["ppsf", "$ / Sqft"],
@@ -97,10 +97,10 @@ export default function MarketPulse({ location }: { location: string }) {
                   type="button"
                   onClick={() => setMetric(id)}
                   aria-pressed={active}
-                  className={`terminal-font border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
+                  className={`terminal-font border-r border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                     active
                       ? "bg-cyan-500/20 text-cyan-300"
-                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
                   {label}
@@ -108,7 +108,7 @@ export default function MarketPulse({ location }: { location: string }) {
               );
             })}
           </div>
-          <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-slate-500 sm:inline">
+          <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">
             Sold · 24mo
           </span>
         </div>
@@ -125,7 +125,7 @@ export default function MarketPulse({ location }: { location: string }) {
           </div>
         )}
         {!locked && points === null && !error && (
-          <div className="h-full w-full animate-pulse bg-slate-800/40" />
+          <div className="h-full w-full animate-pulse bg-muted/40" />
         )}
         {!locked && error && (
           <p className="flex h-full items-center justify-center text-xs text-rose-400">
@@ -133,7 +133,7 @@ export default function MarketPulse({ location }: { location: string }) {
           </p>
         )}
         {!locked && points && points.length === 0 && !error && (
-          <p className="flex h-full items-center justify-center text-xs text-slate-500">
+          <p className="flex h-full items-center justify-center text-xs text-muted-foreground">
             No recent sold data for this area
           </p>
         )}

@@ -356,7 +356,7 @@ export default async function PropertyPage({
 
   if (!detail) {
     return (
-      <main className="min-h-app bg-slate-950">
+      <main className="min-h-app bg-background">
         <PropertyNotFound id={id} />
       </main>
     );
@@ -454,7 +454,7 @@ export default async function PropertyPage({
   ];
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       {jsonLd && (
         <script
           type="application/ld+json"
@@ -473,7 +473,7 @@ export default async function PropertyPage({
       <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
-        <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
+        <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
           <Link href="/properties" className="text-cyan-400 transition-colors hover:text-cyan-300">
             Command Center
           </Link>
@@ -502,7 +502,7 @@ export default async function PropertyPage({
                 </div>
               )}
               <div className="mb-2 flex items-start justify-between gap-3">
-                <h1 className="text-2xl font-bold text-slate-100">{address}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{address}</h1>
                 {/* Prominent save — top of the detail so it's reachable without
                     scrolling past the entire financial workup (mirrors the dashboard). */}
                 <WatchButton
@@ -531,10 +531,10 @@ export default async function PropertyPage({
                         </span>
                         {price > 0 && (
                           <>
-                            <span className="font-mono text-lg text-slate-500 line-through">
+                            <span className="font-mono text-lg text-muted-foreground line-through">
                               {formatPrice(price)}
                             </span>
-                            <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-300">
+                            <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
                               {((soldPrice / price) * 100).toFixed(1)}% of ask
                             </span>
                           </>
@@ -542,13 +542,13 @@ export default async function PropertyPage({
                       </>
                     ) : (
                       <>
-                        <span className="font-mono text-3xl font-bold text-slate-400">
+                        <span className="font-mono text-3xl font-bold text-muted-foreground">
                           {formatPrice(price)}
                         </span>
                         {hasSoldPrice && (
                           <Link
                             href="/login"
-                            className="rounded border border-slate-700 px-2 py-0.5 text-xs text-cyan-300 hover:bg-slate-800"
+                            className="rounded border border-border px-2 py-0.5 text-xs text-cyan-300 hover:bg-muted"
                           >
                             Sign in for the sold price
                           </Link>
@@ -561,7 +561,7 @@ export default async function PropertyPage({
                     <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-400">
                       OFF MARKET
                     </span>
-                    <span className="font-mono text-3xl font-bold text-slate-400">
+                    <span className="font-mono text-3xl font-bold text-muted-foreground">
                       {formatPrice(price)}
                     </span>
                   </>
@@ -570,12 +570,12 @@ export default async function PropertyPage({
                     {formatPrice(price)}
                   </span>
                 )}
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-muted-foreground">
                   {p.City}
                   {p.PropertySubType ? `, ${p.PropertySubType}` : ""}
                 </span>
                 {isActiveListing && (
-                  <span className="text-sm font-semibold text-slate-400">
+                  <span className="text-sm font-semibold text-muted-foreground">
                     Listed {dom} {dom === 1 ? "day" : "days"} ago
                   </span>
                 )}
@@ -598,7 +598,7 @@ export default async function PropertyPage({
                   </span>
                 )}
                 {status.kind === "sold" && (
-                  <span className="text-sm font-semibold text-slate-400">
+                  <span className="text-sm font-semibold text-muted-foreground">
                     Sold after {dom} {dom === 1 ? "day" : "days"} on market
                   </span>
                 )}
@@ -623,8 +623,8 @@ export default async function PropertyPage({
                 </p>
               )}
               {p.ListOfficeName && (
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Building2 className="h-4 w-4 text-slate-500" />
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
                   Listed by {p.ListOfficeName}
                 </p>
               )}
@@ -738,8 +738,8 @@ export default async function PropertyPage({
               <SocialProofBar listingId={id} />
 
               {/* Asset Summary */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-200">
+              <div className="rounded-lg border border-border bg-card/50 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground">
                   Asset Summary
                 </h3>
                 <div className="space-y-2 text-xs">
@@ -753,7 +753,7 @@ export default async function PropertyPage({
                   <SummaryRow
                     label={isLease ? "Monthly Rent" : "List Price"}
                     value={formatPrice(price)}
-                    valueClass={isActiveListing ? "text-emerald-400" : "text-slate-400"}
+                    valueClass={isActiveListing ? "text-emerald-400" : "text-muted-foreground"}
                   />
                   <SummaryRow
                     label="Annual Taxes"
@@ -766,7 +766,7 @@ export default async function PropertyPage({
                   <SummaryRow
                     label="True DOM"
                     value={`${trueDom} days`}
-                    valueClass={trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-slate-400"}
+                    valueClass={trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-muted-foreground"}
                   />
                 </div>
               </div>
@@ -810,10 +810,10 @@ export default async function PropertyPage({
           <div className="lg:col-start-1 lg:row-start-2">
             {/* Remarks (the listing's own description) */}
             <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-400" />}>
-              <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+              <div className="rounded-lg border border-border bg-card/30 p-4">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
-                  className="text-sm leading-relaxed text-slate-300"
+                  className="text-sm leading-relaxed text-foreground"
                 />
               </div>
             </Section>
@@ -861,12 +861,12 @@ export default async function PropertyPage({
           <input type="checkbox" id="history-toggle" defaultChecked className="peer sr-only" tabIndex={-1} aria-hidden="true" />
           <label
             htmlFor="history-toggle"
-            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-slate-800 py-3 peer-checked:[&_svg]:rotate-180 md:hidden"
+            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-border py-3 peer-checked:[&_svg]:rotate-180 md:hidden"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-100">
+            <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
               Property History
             </span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
           </label>
           <div className="hidden peer-checked:block md:block">
           {isAuthed && view.campaignHistory.events.length > 0 ? (
@@ -937,10 +937,10 @@ export default async function PropertyPage({
 
 function SpecCell({ icon, value, label }: { icon: React.ReactNode; value: React.ReactNode; label: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-center">
+    <div className="rounded-lg border border-border bg-card/50 p-3 text-center">
       <div className="mx-auto mb-1 flex justify-center">{icon}</div>
-      <span className="block font-mono text-lg font-bold text-slate-200">{value}</span>
-      <span className="block text-[10px] uppercase text-slate-500">{label}</span>
+      <span className="block font-mono text-lg font-bold text-foreground">{value}</span>
+      <span className="block text-[10px] uppercase text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -956,7 +956,7 @@ function Section({
 }) {
   return (
     <div className="mb-6">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
         {icon}
         {title}
       </h3>
@@ -968,7 +968,7 @@ function Section({
 function SummaryRow({
   label,
   value,
-  valueClass = "text-slate-300",
+  valueClass = "text-foreground",
 }: {
   label: string;
   value: string;
@@ -976,7 +976,7 @@ function SummaryRow({
 }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-500">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <span className={cn("font-mono", valueClass)}>{value}</span>
     </div>
   );

@@ -82,8 +82,8 @@ export default function CompareValuePlot({
     return (
       <Panel>
         <Lock className="mb-3 h-6 w-6 text-cyan-400" />
-        <p className="mb-1 text-sm font-medium text-slate-200">The value plot is members-only</p>
-        <p className="mb-4 max-w-sm text-xs leading-relaxed text-slate-400">
+        <p className="mb-1 text-sm font-medium text-foreground">The value plot is members-only</p>
+        <p className="mb-4 max-w-sm text-xs leading-relaxed text-muted-foreground">
           It maps each home against our comp value — what recent comparable sales support — a
           VOW-derived figure we only show to signed-in members. The table works either way.
         </p>
@@ -100,8 +100,8 @@ export default function CompareValuePlot({
   if (points.length < 2) {
     return (
       <Panel>
-        <p className="mb-1 text-sm font-medium text-slate-200">Not enough comp values to plot</p>
-        <p className="max-w-sm text-xs leading-relaxed text-slate-400">
+        <p className="mb-1 text-sm font-medium text-foreground">Not enough comp values to plot</p>
+        <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
           The value plot needs our comp value for at least 2 of these homes — {points.length} of{" "}
           {contexts.length} are ready. Use the table view in the meantime.
         </p>
@@ -131,9 +131,9 @@ export default function CompareValuePlot({
     d >= 0 ? `${d.toFixed(0)}% under comps` : `${Math.abs(d).toFixed(0)}% over comps`;
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-      <p className="mb-3 text-center text-xs text-slate-400">
-        Each dot is one shortlisted home. <b className="text-slate-200">Up = higher yield, right = better value</b>{" "}
+    <div className="rounded-lg border border-border bg-card/40 p-4">
+      <p className="mb-3 text-center text-xs text-muted-foreground">
+        Each dot is one shortlisted home. <b className="text-foreground">Up = higher yield, right = better value</b>{" "}
         (listed under comp value). The top-right corner is the sweet spot.
       </p>
 
@@ -191,7 +191,7 @@ export default function CompareValuePlot({
           {points.map((p) => {
             const col = C[classify(p, capMedian)];
             return (
-              <li key={p.n} className="flex items-start gap-2.5 rounded-md border border-slate-800/70 bg-slate-900/40 px-2.5 py-2">
+              <li key={p.n} className="flex items-start gap-2.5 rounded-md border border-border/70 bg-card/40 px-2.5 py-2">
                 <span
                   className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-slate-950"
                   style={{ backgroundColor: col }}
@@ -199,10 +199,10 @@ export default function CompareValuePlot({
                   {p.n}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/properties/${p.ctx.listing.id}`} className="block truncate text-xs font-medium text-slate-200 hover:text-cyan-300">
+                  <Link href={`/properties/${p.ctx.listing.id}`} className="block truncate text-xs font-medium text-foreground hover:text-cyan-300">
                     {p.addr}
                   </Link>
-                  <p className="mt-0.5 font-mono text-[11px] text-slate-400">
+                  <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                     <span className="text-emerald-400">{formatPrice(p.price)}</span> · {p.cap.toFixed(1)}% cap ·{" "}
                     <span style={{ color: col }}>{fmtDisc(p.discount)}</span>
                   </p>
@@ -213,7 +213,7 @@ export default function CompareValuePlot({
         </ol>
       </div>
 
-      <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1 text-[11px] text-slate-500">
+      <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
         <Legend color={C.best} label="best-value corner" />
         <Legend color={C.over} label="overpriced corner" />
         <Legend color={C.mid} label="in between" />
@@ -246,7 +246,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center">
+    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border border-border bg-card/40 p-8 text-center">
       {children}
     </div>
   );

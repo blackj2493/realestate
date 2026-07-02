@@ -136,12 +136,12 @@ export default function DashboardHeatTile({ region }: { region: string }) {
 
   return (
     <section className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-        <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
-          Neighbourhood Heat <span className="text-slate-500">· {region}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+        <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
+          Neighbourhood Heat <span className="text-muted-foreground">· {region}</span>
         </h2>
         <div className="flex items-center gap-2">
-          <div className="flex border border-slate-700">
+          <div className="flex border border-border">
             {METRICS.map((m) => {
               const active = m.id === metric;
               return (
@@ -150,10 +150,10 @@ export default function DashboardHeatTile({ region }: { region: string }) {
                   type="button"
                   onClick={() => setMetric(m.id)}
                   aria-pressed={active}
-                  className={`terminal-font border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
+                  className={`terminal-font border-r border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                     active
                       ? "bg-cyan-500/20 text-cyan-300"
-                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
                   {m.label}
@@ -170,26 +170,26 @@ export default function DashboardHeatTile({ region }: { region: string }) {
         </div>
       </div>
 
-      <div className="relative h-64 overflow-hidden border border-slate-800 bg-slate-950">
+      <div className="relative h-64 overflow-hidden border border-border bg-background">
         {!token || token === "your-mapbox-token" ? (
           <div className="flex h-full items-center justify-center text-center">
             <div>
-              <MapPin className="mx-auto mb-2 h-8 w-8 text-slate-700" />
-              <p className="terminal-font text-xs text-slate-400">Map not configured</p>
-              <p className="terminal-font mt-1 text-[10px] text-slate-600">
+              <MapPin className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+              <p className="terminal-font text-xs text-muted-foreground">Map not configured</p>
+              <p className="terminal-font mt-1 text-[10px] text-muted-foreground">
                 Add NEXT_PUBLIC_MAPBOX_TOKEN to .env
               </p>
             </div>
           </div>
         ) : loading ? (
           <div className="flex h-full items-center justify-center">
-            <p className="terminal-font text-xs text-slate-500">Loading heat…</p>
+            <p className="terminal-font text-xs text-muted-foreground">Loading heat…</p>
           </div>
         ) : points.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div>
-              <Layers className="mx-auto mb-2 h-8 w-8 text-slate-700" />
-              <p className="terminal-font text-xs text-slate-400">
+              <Layers className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+              <p className="terminal-font text-xs text-muted-foreground">
                 No {METRICS.find((m) => m.id === metric)!.label.toLowerCase()} data to map here
               </p>
             </div>
@@ -205,11 +205,11 @@ export default function DashboardHeatTile({ region }: { region: string }) {
               />
             </DeckGL>
             {/* Legend + honest sample-size caption */}
-            <div className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 border border-slate-700 bg-slate-950/80 px-2 py-1 backdrop-blur">
-              <span className="terminal-font text-[9px] uppercase tracking-wider text-slate-500">
+            <div className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 border border-border bg-background/80 px-2 py-1 backdrop-blur">
+              <span className="terminal-font text-[9px] uppercase tracking-wider text-muted-foreground">
                 {METRICS.find((m) => m.id === metric)!.label}
               </span>
-              <span className="flex items-center gap-1 text-[9px] text-slate-500">
+              <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
                 Low
                 <span
                   className="h-2 w-16 rounded-sm"
@@ -221,8 +221,8 @@ export default function DashboardHeatTile({ region }: { region: string }) {
                 High
               </span>
             </div>
-            <div className="pointer-events-none absolute bottom-2 right-2 border border-slate-700 bg-slate-950/80 px-2 py-1 backdrop-blur">
-              <span className="terminal-font text-[9px] uppercase tracking-wider text-slate-500">
+            <div className="pointer-events-none absolute bottom-2 right-2 border border-border bg-background/80 px-2 py-1 backdrop-blur">
+              <span className="terminal-font text-[9px] uppercase tracking-wider text-muted-foreground">
                 {points.length} of up to 100 active
               </span>
             </div>

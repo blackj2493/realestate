@@ -18,8 +18,8 @@ export default function MetricRow({
 }) {
   const fmt = metric.format ?? ((x: number) => `${x}`);
   return (
-    <tr className="hover:bg-slate-900/30">
-      <td className="sticky left-0 z-10 bg-slate-950 p-3 text-slate-500">
+    <tr className="hover:bg-card/30">
+      <td className="sticky left-0 z-10 bg-background p-3 text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           {metric.label}
           {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
@@ -48,30 +48,30 @@ export default function MetricRow({
                   <DealScoreBadge score={d.score} grade={d.grade} />
                   {isBest && <span className="text-[10px] uppercase text-emerald-500">best</span>}
                 </span>
-              ) : <span className="text-slate-600">—</span>}
+              ) : <span className="text-muted-foreground">—</span>}
             </td>
           );
         }
 
         if (metric.cellKind === "estValue") {
           return (
-            <td key={ctx.listing.id} className="p-3 font-mono text-slate-200">
+            <td key={ctx.listing.id} className="p-3 font-mono text-foreground">
               {v != null ? (
                 <span className="inline-flex items-center gap-1.5">
                   {formatPrice(v)}
                   {ctx.salePrice?.confidence && (
-                    <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       {ctx.salePrice.confidence.toLowerCase()}
                     </span>
                   )}
                 </span>
-              ) : <span className="text-xs text-slate-600">Insufficient comps</span>}
+              ) : <span className="text-xs text-muted-foreground">Insufficient comps</span>}
             </td>
           );
         }
 
         if (metric.cellKind === "discount") {
-          if (v == null) return <td key={ctx.listing.id} className="p-3 text-slate-600">—</td>;
+          if (v == null) return <td key={ctx.listing.id} className="p-3 text-muted-foreground">—</td>;
           const under = v >= 0;
           return (
             <td key={ctx.listing.id} className="p-3 font-mono">
@@ -94,13 +94,13 @@ export default function MetricRow({
             className={cn(
               "p-3",
               metric.cellKind === "numeric" && "font-mono",
-              isBest ? "font-bold text-emerald-400" : "text-slate-200"
+              isBest ? "font-bold text-emerald-400" : "text-foreground"
             )}
           >
-            {display ?? <span className="text-slate-600">—</span>}
+            {display ?? <span className="text-muted-foreground">—</span>}
             {isBest && <span className="ml-1.5 text-[10px] uppercase text-emerald-500">best</span>}
             {tag && <span className="ml-1.5 text-[10px] text-amber-400/80">{tag}</span>}
-            {delta && <span className="ml-1.5 text-[10px] text-slate-500">{delta}</span>}
+            {delta && <span className="ml-1.5 text-[10px] text-muted-foreground">{delta}</span>}
           </td>
         );
       })}

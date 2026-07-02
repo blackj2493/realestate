@@ -158,20 +158,20 @@ export default function RegionScorecard({
 
   return (
     <section className="space-y-2">
-      <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
-        Region Scorecard <span className="text-slate-500">· {regions.length}</span>
+      <h2 className="terminal-font border-b border-border pb-2 text-sm font-bold uppercase tracking-widest text-foreground">
+        Region Scorecard <span className="text-muted-foreground">· {regions.length}</span>
       </h2>
 
       {/* Mobile-only affordance: the 1000px table scrolls horizontally; tell the user. */}
-      <p className="terminal-font text-[10px] uppercase tracking-wider text-slate-500 md:hidden">
+      <p className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground md:hidden">
         ← Scroll for more metrics →
       </p>
 
       {/* `after:` right-edge fade (md:hidden) signals more columns scroll off-screen. */}
-      <div className="relative overflow-x-auto border border-slate-800 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-10 after:bg-gradient-to-l after:from-slate-950 after:to-transparent md:after:hidden">
+      <div className="relative overflow-x-auto border border-border after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-10 after:bg-gradient-to-l after:from-slate-950 after:to-transparent md:after:hidden">
         <div className={cn("min-w-[1000px]", locked && "blur-sm select-none")}>
           {/* Header */}
-          <div className={`grid ${GRID} border-b border-slate-800 bg-slate-900/60`}>
+          <div className={`grid ${GRID} border-b border-border bg-card/60`}>
             {COLUMNS.map((c) => {
               const active = sortKey === c.key;
               return (
@@ -181,7 +181,7 @@ export default function RegionScorecard({
                   onClick={() => onSort(c.key)}
                   className={`terminal-font flex items-center gap-1 px-2 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors hover:text-cyan-300 ${
                     c.align === "right" ? "justify-end" : "justify-start"
-                  } ${active ? "text-cyan-400" : "text-slate-400"}`}
+                  } ${active ? "text-cyan-400" : "text-muted-foreground"}`}
                 >
                   {c.label}
                   {active &&
@@ -198,10 +198,10 @@ export default function RegionScorecard({
           {/* Rows */}
           {loading
             ? regions.map((r) => (
-                <div key={r} className={`grid ${GRID} border-b border-slate-800/60`}>
+                <div key={r} className={`grid ${GRID} border-b border-border/60`}>
                   {COLUMNS.map((c) => (
                     <div key={c.key} className="px-2 py-3">
-                      <div className="h-3 w-full animate-pulse rounded bg-slate-800" />
+                      <div className="h-3 w-full animate-pulse rounded bg-muted" />
                     </div>
                   ))}
                 </div>
@@ -209,15 +209,15 @@ export default function RegionScorecard({
             : sorted.map((s) => (
                 <div
                   key={s.region}
-                  className={`grid ${GRID} items-center border-b border-slate-800/60 transition-colors hover:bg-slate-900/40`}
+                  className={`grid ${GRID} items-center border-b border-border/60 transition-colors hover:bg-card/40`}
                 >
                   {/* Region */}
                   <Link
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
-                    className="terminal-font flex items-center gap-1 px-2 py-3 text-xs font-semibold text-slate-100 hover:text-cyan-300"
+                    className="terminal-font flex items-center gap-1 px-2 py-3 text-xs font-semibold text-foreground hover:text-cyan-300"
                   >
                     <span className="truncate">{s.region}</span>
-                    <ArrowUpRight className="h-3 w-3 shrink-0 text-slate-600" />
+                    <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                   </Link>
 
                   {/* Median Price + sparkline + YoY */}
@@ -233,7 +233,7 @@ export default function RegionScorecard({
 
                   {/* $/Sqft + YoY */}
                   <div className="flex flex-col items-end gap-0.5 px-2 py-2">
-                    <span className="terminal-font text-xs text-slate-200">
+                    <span className="terminal-font text-xs text-foreground">
                       {orDash(s.medianPpsf, (n) => `$${Math.round(n)}`)}
                     </span>
                     <YoY pct={s.ppsfYoyPct} />
@@ -256,9 +256,9 @@ export default function RegionScorecard({
         {locked && <VowGateOverlay message="Sign in to view region market stats" />}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-slate-600">
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
         {filterParts.length > 0 && (
-          <span className="text-slate-400">Filtered to {filterParts.join(", ")}. </span>
+          <span className="text-muted-foreground">Filtered to {filterParts.join(", ")}. </span>
         )}
         Active metrics (cap rate, active count, % stale) are full-population over current active inventory.
         Median price, $/sqft, Sold/List & months of supply are from sold records (recent months lag).
@@ -270,7 +270,7 @@ export default function RegionScorecard({
 
 function Cell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="terminal-font px-2 py-3 text-right text-xs text-slate-200">{children}</div>
+    <div className="terminal-font px-2 py-3 text-right text-xs text-foreground">{children}</div>
   );
 }
 

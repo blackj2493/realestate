@@ -16,12 +16,12 @@ interface NearbySchool {
 
 const scoreColor = (s: number | null) =>
   s === null
-    ? "text-slate-400 bg-slate-700/40"
+    ? "text-muted-foreground bg-muted/40"
     : s >= 8
     ? "text-emerald-400 bg-emerald-400/10"
     : s >= 6
     ? "text-amber-400 bg-amber-400/10"
-    : "text-slate-400 bg-slate-700/40";
+    : "text-muted-foreground bg-muted/40";
 
 /**
  * Schools near this home. Coordinates aren't reliably stored in Supabase (raw lat/lng
@@ -73,19 +73,19 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
 
   return (
     <div className="mb-6">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
         <GraduationCap className="h-4 w-4 text-emerald-400" />
         Schools near this home
-        <span className="font-mono text-xs font-normal normal-case tracking-normal text-slate-500">
+        <span className="font-mono text-xs font-normal normal-case tracking-normal text-muted-foreground">
           · {list.length}
           {moreCount > 0 ? "+" : ""}
         </span>
       </h3>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {visible.map((s) => (
-          <div key={s.id} className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+          <div key={s.id} className="rounded-lg border border-border bg-card/50 p-3">
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm leading-tight text-slate-200">{s.name}</p>
+              <p className="text-sm leading-tight text-foreground">{s.name}</p>
               <span
                 className={cn(
                   "shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold",
@@ -95,7 +95,7 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
                 {s.score === null ? "—" : s.score.toFixed(1)}
               </span>
             </div>
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+            <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
               <span className="capitalize">
                 {s.system} {s.level}
               </span>
@@ -117,9 +117,9 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
         </button>
       )}
       {moreCount > 0 && (
-        <p className="mt-2 text-[11px] text-slate-500">+{moreCount} more within 2.5 km</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">+{moreCount} more within 2.5 km</p>
       )}
-      <p className="mt-2 text-[10px] text-slate-600">
+      <p className="mt-2 text-[10px] text-muted-foreground">
         PureProperty School Score (0–10) from EQAO data — Government of Ontario, OGL-Ontario.
         Distances are straight-line to the school; proximity is not a guaranteed catchment.
       </p>

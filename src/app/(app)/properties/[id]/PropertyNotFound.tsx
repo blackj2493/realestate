@@ -35,11 +35,11 @@ export default function PropertyNotFound({ id }: { id: string }) {
   }, [id]);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-20 text-center text-slate-200">
+    <div className="mx-auto max-w-2xl px-4 py-20 text-center text-foreground">
       <h1 className="mb-4 text-3xl font-bold">
         {status === "pending" ? "Property Syncing…" : "Loading…"}
       </h1>
-      <p className="mb-8 text-slate-400">
+      <p className="mb-8 text-muted-foreground">
         This listing is being synchronized from the MLS feed. It will be available shortly.
       </p>
       <div className="flex flex-col items-center gap-4">
@@ -48,13 +48,13 @@ export default function PropertyNotFound({ id }: { id: string }) {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-800"
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             Check Again
           </button>
           <Link
             href="/properties"
-            className="rounded-md px-4 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-slate-800"
+            className="rounded-md px-4 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-muted"
           >
             ← Back to Command Center
           </Link>

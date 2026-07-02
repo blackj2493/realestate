@@ -6,8 +6,8 @@ import type { GlossaryKey } from "@/lib/glossary";
 
 function Tile({ label, value, term }: { label: string; value: string; term?: GlossaryKey }) {
   return (
-    <div className="border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
+    <div className="border border-border bg-card/40 px-3 py-2">
+      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
         {label}
         {term && <InfoDot term={term} />}
       </div>

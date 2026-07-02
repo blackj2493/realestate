@@ -65,7 +65,7 @@ export function TemperatureBadge({
 }: {
   temperature: RegionScore["temperature"];
 }) {
-  if (!temperature) return <span className="text-xs text-slate-600">{DASH}</span>;
+  if (!temperature) return <span className="text-xs text-muted-foreground">{DASH}</span>;
   const t = TEMP[temperature];
   return (
     <span
@@ -98,7 +98,7 @@ export function PeerDelta({
   const delta = value - peerMedian;
   if (Math.abs(delta) < 1e-9) {
     return (
-      <span className="terminal-font text-[10px] text-slate-500">= peer avg</span>
+      <span className="terminal-font text-[10px] text-muted-foreground">= peer avg</span>
     );
   }
   const up = delta > 0;
@@ -106,7 +106,7 @@ export function PeerDelta({
     dir === "neutral" ? null : dir === "higherGood" ? up : !up;
   const cls =
     favourable == null
-      ? "text-slate-400"
+      ? "text-muted-foreground"
       : favourable
         ? "text-emerald-400"
         : "text-rose-400";

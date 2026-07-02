@@ -16,7 +16,7 @@ export default function LockedCell({ next }: { next?: string }) {
     return (
       <Link
         href={`/login?next=${encodeURIComponent(next)}`}
-        className="inline-flex items-center gap-1 text-slate-500"
+        className="inline-flex items-center gap-1 text-muted-foreground"
         title="Sign in to view"
       >
         {content}
@@ -25,7 +25,7 @@ export default function LockedCell({ next }: { next?: string }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-slate-500" title="Sign in to view">
+    <span className="inline-flex items-center gap-1 text-muted-foreground" title="Sign in to view">
       {content}
     </span>
   );

@@ -77,27 +77,27 @@ export default function BubbleSections({ lens, enabledBoards }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-100">
+      <div className="flex items-center justify-between border-b border-border pb-2">
+        <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
           <Bookmark className="h-4 w-4 text-cyan-400" />
           Market Bubbles
         </h2>
         <Link
           href="/properties"
-          className="terminal-font flex items-center gap-1 text-[11px] uppercase tracking-wider text-slate-400 hover:text-cyan-300"
+          className="terminal-font flex items-center gap-1 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-cyan-300"
         >
           <Plus className="h-3 w-3" /> Save new
         </Link>
       </div>
 
       {!loaded ? (
-        <div className="h-40 animate-pulse border border-slate-800 bg-slate-900/30" />
+        <div className="h-40 animate-pulse border border-border bg-card/30" />
       ) : bubbles.length === 0 ? (
-        <div className="border border-dashed border-slate-700 bg-slate-900/30 px-6 py-10 text-center">
-          <p className="terminal-font text-xs uppercase tracking-widest text-slate-300">
+        <div className="border border-dashed border-border bg-card/30 px-6 py-10 text-center">
+          <p className="terminal-font text-xs uppercase tracking-widest text-foreground">
             No bubbles saved yet
           </p>
-          <p className="mx-auto mt-2 max-w-md text-xs text-slate-500">
+          <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
             Save a draw, commute, or school area from the terminal to track its
             live inventory, new listings, and top deals right here.
           </p>

@@ -54,19 +54,19 @@ export default async function CityDirectoryPage() {
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
+        <nav className="mb-4 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-cyan-400">Home</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">Homes by City</span>
+          <span className="text-foreground">Homes by City</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">Homes for Sale by City in Ontario</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Homes for Sale by City in Ontario</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {cities.length > 0
               ? `Browse active listings across ${cities.length.toLocaleString()} Ontario ${cities.length === 1 ? "city" : "cities"}. Each city opens to its neighbourhoods, school, walkability, investment, and new-construction views.`
               : "Browse active real estate listings by city across Ontario."}
@@ -79,16 +79,16 @@ export default async function CityDirectoryPage() {
               <Link
                 key={slug}
                 href={`/property/on/${slug}`}
-                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2.5 text-sm text-slate-200 transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
+                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card/40 px-3 py-2.5 text-sm text-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
               >
                 <span className="truncate">{deslugCity(slug)}</span>
-                <span className="shrink-0 text-xs text-slate-500">{count.toLocaleString()}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{count.toLocaleString()}</span>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
-            <Building2 className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+          <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
+            <Building2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>City listings are loading. Check back shortly.</p>
           </div>
         )}

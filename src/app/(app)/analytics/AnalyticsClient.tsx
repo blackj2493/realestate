@@ -95,16 +95,16 @@ interface KpiProps {
 
 function KpiCard({ label, value, sub, loading }: KpiProps) {
   return (
-    <div className="border border-slate-800 bg-slate-900/40 px-4 py-3">
-      <p className="terminal-font text-xs font-bold uppercase tracking-wider text-slate-400">
+    <div className="border border-border bg-card/40 px-4 py-3">
+      <p className="terminal-font text-xs font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {loading ? (
-        <div className="mt-2 h-7 w-24 animate-pulse bg-slate-800/60" />
+        <div className="mt-2 h-7 w-24 animate-pulse bg-muted/60" />
       ) : (
-        <p className="mt-1 font-mono text-xl font-bold text-slate-100">{value}</p>
+        <p className="mt-1 font-mono text-xl font-bold text-foreground">{value}</p>
       )}
-      <div className="mt-1 min-h-[16px] text-xs text-slate-400">{!loading && sub}</div>
+      <div className="mt-1 min-h-[16px] text-xs text-muted-foreground">{!loading && sub}</div>
     </div>
   );
 }
@@ -207,15 +207,15 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const lineFmt = metric === "ppsf" ? (v: number) => `$${Math.round(v)}` : fmtPrice;
 
   return (
-    <div className="min-h-app bg-slate-950 text-slate-200">
+    <div className="min-h-app bg-background text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-6 pb-safe">
         {/* Header: title + region picker */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="terminal-font text-lg font-bold uppercase tracking-wider text-slate-100">
+            <h1 className="terminal-font text-lg font-bold uppercase tracking-wider text-foreground">
               Market Trends — {region}
             </h1>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               Full-population sold &amp; active aggregates · refreshed with the daily sync
             </p>
           </div>
@@ -235,7 +235,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               typeKeys.length === 0
                 ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
-                : "border-slate-700 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             }`}
           >
             All Types
@@ -251,7 +251,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                 className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
                   active
                     ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
-                    : "border-slate-700 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                    : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 {o.label}
@@ -325,13 +325,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         </div>
 
         {/* Trend chart */}
-        <div className="mt-5 border border-slate-800 bg-slate-900/40">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
-            <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-slate-200">
+        <div className="mt-5 border border-border bg-card/40">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
               24-Month Sold Trend
             </h2>
             <div className="flex items-center gap-2">
-              <div className="flex border border-slate-700">
+              <div className="flex border border-border">
                 {METRIC_TABS.map(([id, label]) => {
                   const active = id === metric;
                   return (
@@ -340,10 +340,10 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                       type="button"
                       onClick={() => setMetric(id)}
                       aria-pressed={active}
-                      className={`terminal-font min-h-[44px] flex items-center border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
+                      className={`terminal-font min-h-[44px] flex items-center border-r border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                         active
                           ? "bg-cyan-500/20 text-cyan-300"
-                          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       }`}
                     >
                       {label}
@@ -351,15 +351,15 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                   );
                 })}
               </div>
-              <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-slate-500 sm:inline">
+              <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">
                 Latest months still accruing
               </span>
             </div>
           </div>
           <div className="h-[240px] sm:h-[320px] lg:h-[380px] p-3">
-            {loading && <div className="h-full w-full animate-pulse bg-slate-800/40" />}
+            {loading && <div className="h-full w-full animate-pulse bg-muted/40" />}
             {!loading && points.length === 0 && (
-              <p className="flex h-full items-center justify-center text-xs text-slate-500">
+              <p className="flex h-full items-center justify-center text-xs text-muted-foreground">
                 No recent sold data for this scope
               </p>
             )}
@@ -444,7 +444,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         )}
 
         {/* §6.3(i)/(k) consumer notice — required on VOW-derived displays. */}
-        <p className="mt-8 text-center text-[11px] leading-relaxed text-slate-600">
+        <p className="mt-8 text-center text-[11px] leading-relaxed text-muted-foreground">
           Market data is deemed reliable but is not guaranteed accurate. Information is provided
           exclusively for consumers&apos; personal, non-commercial use and may only be used by
           consumers that have a bona fide interest in the purchase, sale, or lease of real estate.
@@ -456,7 +456,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
 
       {/* Mobile-only lead path: jump from market data to live listings. */}
       {!loading && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950/95 px-4 py-3 pb-safe backdrop-blur md:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 py-3 pb-safe backdrop-blur md:hidden">
           <a
             href={`/properties?city=${encodeURIComponent(region)}`}
             className="terminal-font flex min-h-[44px] items-center justify-center border border-cyan-500/60 bg-cyan-500/20 px-4 text-xs font-bold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/30"

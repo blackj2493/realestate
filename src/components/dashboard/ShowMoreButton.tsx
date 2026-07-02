@@ -27,7 +27,7 @@ export default function ShowMoreButton({
       onClick={onToggle}
       aria-expanded={expanded}
       className={cn(
-        "terminal-font flex min-h-[44px] w-full items-center justify-center gap-1.5 border border-slate-800 bg-slate-900/40 px-4 text-xs font-semibold uppercase tracking-wider text-cyan-300 transition-colors hover:border-slate-600 active:bg-slate-800",
+        "terminal-font flex min-h-[44px] w-full items-center justify-center gap-1.5 border border-border bg-card/40 px-4 text-xs font-semibold uppercase tracking-wider text-cyan-300 transition-colors hover:border-border active:bg-muted",
         className
       )}
     >

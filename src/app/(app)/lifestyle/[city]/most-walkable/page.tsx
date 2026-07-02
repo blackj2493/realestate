@@ -130,24 +130,24 @@ export default async function WalkableHubPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
+        <nav className="mb-4 text-sm text-muted-foreground">
           <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
           <Link href={cityHubPath} className="hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">Most Walkable</span>
+          <span className="text-foreground">Most Walkable</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-100 sm:text-3xl">
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
             <Footprints className="h-6 w-6 text-sky-400" />
             Most Walkable Homes for Sale in {cityName}, ON
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             {totalFound > 0
               ? `${totalFound.toLocaleString()} ${totalFound === 1 ? "home" : "homes"} within a short walk of a grocery store — closest first.`
               : `No walkable listings (grocery within ${WALKABLE_KM} km) in ${cityName} right now.`}
@@ -161,8 +161,8 @@ export default async function WalkableHubPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
-            <Footprints className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+          <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
+            <Footprints className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>No walkable listings here right now.</p>
             <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →
@@ -172,7 +172,7 @@ export default async function WalkableHubPage({
 
         {/* Amenity-data attribution + caveat — mirrors the listing page's NearbyAmenities. */}
         {totalFound > 0 && (
-          <p className="mt-6 text-[11px] leading-relaxed text-slate-600">
+          <p className="mt-6 text-[11px] leading-relaxed text-muted-foreground">
             Ranked by straight-line distance to the nearest grocery store. Places ©
             OpenStreetMap contributors, © Overture Maps Foundation. Distances are
             straight-line, not walking distance. Open a listing to see all nearby groceries
