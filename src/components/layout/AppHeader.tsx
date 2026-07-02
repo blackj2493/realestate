@@ -1,7 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import Link from "next/link";
+import { Search, X } from "lucide-react";
 import Logo from "@/components/Logo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import AccountButton from "@/components/auth/AccountButton";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
 import PrimaryNav from "@/components/layout/PrimaryNav";
@@ -36,17 +41,47 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const home = homeHref ?? (variant === "app" ? "/dashboard" : "/");
 
+  // Logo colours are theme-specific (white wordmark on dark, navy on light). Resolve
+  // the active theme so the logo stays legible on the now theme-aware header bar.
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const logoTheme = mounted && resolvedTheme === "light" ? "light" : "dark";
+
+  // Mobile/tablet search: the inline LocationSearch is `hidden lg:block`, so below
+  // lg there was otherwise no way to search from app pages (e.g. /analytics). A
+  // search icon opens a full-width sheet that reuses the SAME navigate-mode
+  // LocationSearch — mirroring the terminal's TopCommandBar pattern.
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Close the sheet after any in-app navigation (selecting a result router.pushes
+  // to a new route). Uses the "adjust state during render" pattern rather than a
+  // setState-in-effect (https://react.dev/learn/you-might-not-need-an-effect).
+  const pathname = usePathname();
+  const [sheetPath, setSheetPath] = useState(pathname);
+  if (pathname !== sheetPath) {
+    setSheetPath(pathname);
+    setSearchOpen(false);
+  }
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [searchOpen]);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
           {/* Smaller wordmark on phones so the logo + right cluster fit a 390px
               viewport without forcing the layout wider (which clips the nav button). */}
           <span className="md:hidden">
-            <Logo size="sm" theme="dark" />
+            <Logo size="sm" theme={logoTheme} />
           </span>
           <span className="hidden md:inline-flex">
-            <Logo size="md" theme="dark" />
+            <Logo size="md" theme={logoTheme} />
           </span>
         </Link>
 
@@ -62,11 +97,52 @@ export default function AppHeader({
 
         <div className="flex shrink-0 items-center gap-3">
           {right}
+          {/* Mobile/tablet search trigger — the inline search is hidden below lg,
+              so this icon is the only way to search there (fixes /analytics et al). */}
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+              className="inline-flex items-center justify-center p-2 text-muted-foreground transition-colors hover:text-primary lg:hidden"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          )}
+          <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
           <WatchlistAlertsBell />
           <AccountButton />
           {variant === "app" && <MobileNav className="md:hidden" />}
         </div>
       </div>
+
+      {/* Mobile/tablet full-width search sheet — reuses the SAME navigate-mode
+          LocationSearch. Backdrop tap / Done / Escape close it; selecting a result
+          navigates and the pathname effect above closes it. */}
+      {search && searchOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col lg:hidden" role="dialog" aria-modal="true" aria-label="Search">
+          <button
+            type="button"
+            aria-label="Close search"
+            onClick={() => setSearchOpen(false)}
+            className="absolute inset-0 bg-background/80"
+          />
+          <div className="relative border-b border-border bg-card px-3 pb-3 pt-3">
+            <div className="flex items-center gap-2">
+              <LocationSearch mode="navigate" className="min-w-0 flex-1" />
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                aria-label="Close search"
+                className="flex h-11 min-w-[44px] shrink-0 items-center justify-center px-3 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              >
+                <X className="mr-1 h-4 w-4" />
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
