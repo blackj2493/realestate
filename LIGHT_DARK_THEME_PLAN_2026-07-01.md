@@ -118,11 +118,20 @@ Excluding the terminal is what keeps this out of the ~100–150 hr full-site ran
         surface tokens for light (currently dark values shared on `:root`)
 - [~] Phase 2 — consumer migration waves (codemod-assisted via `scripts/theme-codemod.mjs`)
       - [x] Wave 1 — `SaleHistorySection` (manual)
-      - [x] Wave 2 — `src/components/Property/*` (codemod, 21 files; `ZoningCard` skipped = WIP)
-      - [ ] Next — `(app)/dashboard`, `(app)` pages, `components/compare`, shared
-      - [ ] Charts wave — hardcoded hex via a `useThemeColors` module (codemod doesn't touch hex)
-      - Refinement TODOs (light-mode only; dark is pixel-identical):
-        - Pin the fullscreen `MediaGalleryOverlay` + over-image chrome (e.g. `TourBadge`) dark
-        - Sweep residual slate in placeholder/focus/scrollbar variants the codemod skips
-        - Tune accent-on-light contrast (cyan/amber/emerald text on white)
+      - [x] Wave 2 — `src/components/Property/*` (21 files)
+      - [x] Wave 3 — `(app)` pages + `dashboard` + `compare` (56 files)
+      - [x] Wave 4 — remaining consumer components + public pages (29 files)
+      - [x] Homepage `src/app/page.tsx`
+      - => ALL codemod-able consumer slate utilities migrated; dark pixel-identical throughout.
+      - [ ] **Charts wave (remaining, needs VISUAL verification):** ~6 files with hardcoded
+            hex — `AnalyticsClient`, `RoomMap`, `CompareValuePlot`, `MarketPulse`, `metricViz`,
+            `hero/ListingCompare` (+ the CommandCenter charts `CampaignHistoryChart`/
+            `DOMTimelineChart` rendered on the consumer detail page). Hex ≠ exact token values,
+            so this DOES shift dark rendering slightly → smoke-test before committing. Approach:
+            a small theme-color module (CSS-var reads) for neutral grid/axis; keep semantic series.
+      - [ ] Residual sweep — ~23 files still have slate in variants the codemod skips
+            (`placeholder-slate`, `focus:border-slate`, `scrollbar-*-slate`, `from/to-slate`).
+      - Refinement TODOs (light-mode only): pin fullscreen `MediaGalleryOverlay`/over-image
+        chrome dark; tune accent-on-light contrast; add the toggle to marketing/root pages;
+        `SocialAuthButtons` Google button is intentional white (leave).
 - [ ] Guardrails — scoped ESLint rule + Playwright dual-theme screenshots (LAST)
