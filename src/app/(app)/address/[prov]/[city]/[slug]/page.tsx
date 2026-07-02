@@ -28,6 +28,7 @@ import { getConsumer } from "@/lib/auth/requireConsumer";
 import { assignSchools } from "@/lib/schools/nearestSchools";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import AddressSignInCta from "./AddressSignInCta";
 
 export const dynamic = "force-dynamic"; // render depends on auth (anon vs consumer)
 
@@ -187,12 +188,10 @@ export default async function AddressPage({
             <p className="mt-1 text-sm text-slate-400">
               Real estate boards require a verified account to view sale history and listing details. Sign in or create a free PureProperty account to see this property&apos;s record.
             </p>
-            <Link
-              href="/login"
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-md bg-emerald-500 px-6 text-sm font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400"
-            >
-              Sign in to see sale history
-            </Link>
+            <AddressSignInCta
+              intent={{ label: cityName, slug: cityHubSlug(pub.city) || city, prov: prov.toLowerCase() }}
+              next={`/address/${prov.toLowerCase()}/${city}/${slug}`}
+            />
           </section>
         )}
 
