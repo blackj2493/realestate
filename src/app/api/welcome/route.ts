@@ -20,7 +20,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { getTypesenseClient } from "@/lib/typesense/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
-import { renderWelcomeEmail, type WelcomeIntent } from "@/lib/alerts/welcome";
+import { renderWelcomeEmail, type WelcomeIntent, type WelcomeCardListing } from "@/lib/alerts/welcome";
 import { signUnsubscribe } from "@/lib/email/token";
 
 export const runtime = "nodejs";
@@ -39,17 +39,49 @@ function sanitizeIntent(v: unknown): WelcomeIntent | null {
   return { label, slug, prov };
 }
 
-/** Best-effort count of active (for-sale) listings in a city. null on any failure. */
-async function countActiveInCity(label: string): Promise<number | null> {
+/**
+ * Best-effort area preview: the active (for-sale) listing COUNT plus up to 2 sample
+ * listings to render as cards. One Typesense call — `found` is the count, `hits` the
+ * samples. Active listings only (collection `properties`); no sold/VOW data. Returns
+ * empty/null on any failure so a hiccup never blocks the welcome send.
+ */
+async function fetchAreaPreview(
+  label: string
+): Promise<{ count: number | null; listings: WelcomeCardListing[] }> {
   try {
     const ts = getTypesenseClient();
     const res = await ts
       .collections("properties")
       .documents()
-      .search({ q: "*", query_by: "City", filter_by: `City:=\`${label.replace(/`/g, "")}\``, per_page: 1 });
-    return typeof res.found === "number" ? res.found : null;
+      .search({
+        q: "*",
+        query_by: "City",
+        filter_by: `City:=\`${label.replace(/`/g, "")}\``,
+        per_page: 2,
+        // Small fields only — never RawImages (heavy). thumbnailUrl is the watermarked TRREB URL.
+        include_fields:
+          "id,UnparsedAddress,City,ListPrice,PropertySubType,PropertyType,BedroomsTotal,BathroomsTotalInteger,BuildingAreaTotal,ListOfficeName,thumbnailUrl,primaryImageUrl",
+      });
+    const count = typeof res.found === "number" ? res.found : null;
+    const listings: WelcomeCardListing[] = (res.hits ?? []).map((h) => {
+      const d = (h.document ?? {}) as Record<string, unknown>;
+      const id = typeof d.id === "string" ? d.id : "";
+      return {
+        address: (d.UnparsedAddress as string) ?? "Address unavailable",
+        city: (d.City as string) ?? "",
+        price: (d.ListPrice as number) ?? 0,
+        propertyType: (d.PropertySubType as string) ?? (d.PropertyType as string) ?? "",
+        beds: (d.BedroomsTotal as number) ?? 0,
+        baths: (d.BathroomsTotalInteger as number) ?? 0,
+        sqft: (d.BuildingAreaTotal as number) ?? null,
+        brokerage: (d.ListOfficeName as string) ?? null,
+        photoUrl: (d.thumbnailUrl as string) ?? (d.primaryImageUrl as string) ?? null,
+        url: id ? `${SITE}/properties/${id}` : undefined,
+      };
+    });
+    return { count, listings };
   } catch {
-    return null;
+    return { count: null, listings: [] };
   }
 }
 
@@ -108,7 +140,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "resend_unconfigured" }, { status: 200 });
   }
 
-  const listingCount = effectiveIntent?.label ? await countActiveInCity(effectiveIntent.label) : null;
+  const preview = effectiveIntent?.label
+    ? await fetchAreaPreview(effectiveIntent.label)
+    : { count: null, listings: [] as WelcomeCardListing[] };
+  const listingCount = preview.count;
   const ctaUrl = effectiveIntent?.label
     ? `${SITE}/properties?search=${encodeURIComponent(effectiveIntent.label)}`
     : `${SITE}/properties`;
@@ -118,6 +153,7 @@ export async function POST(req: NextRequest) {
     name: (profile.full_name as string) ?? null,
     intent: effectiveIntent,
     listingCount,
+    listings: preview.listings,
     siteUrl: SITE,
     ctaUrl,
     unsubscribeUrl,
