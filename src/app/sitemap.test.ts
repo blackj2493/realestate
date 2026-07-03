@@ -4,7 +4,20 @@ vi.mock('@/lib/supabase/client', () => ({
   getServiceRoleClient: vi.fn(),
 }));
 
+// Hub enumeration is Typesense-backed; stub it (default: no hubs, matching the old
+// behavior where searchListings threw without a key) so tests control it per-case.
+// Real module is spread so COMMERCIAL_ACTIVE_FILTER stays the genuine constant.
+vi.mock('@/lib/listings/cityHubs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/listings/cityHubs')>();
+  return {
+    ...actual,
+    cityHubsWithInventory: vi.fn(async () => []),
+    neighbourhoodHubsForSitemap: vi.fn(async () => []),
+  };
+});
+
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { cityHubsWithInventory, COMMERCIAL_ACTIVE_FILTER } from '@/lib/listings/cityHubs';
 import sitemap from './sitemap';
 
 /** Chainable stub whose range(from, to) returns a slice of `dataset`,
@@ -56,5 +69,19 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
     const entries = await sitemap();
     // 3 static routes (/, /properties, /property) survive a DB failure.
     expect(entries.length).toBe(3);
+  });
+
+  it('emits /commercial/on/{slug} hubs counted over the commercial population', async () => {
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseReturningSlices([row(1)]));
+    // Only the commercial-population call yields a hub; every residential-tree call
+    // (default base) stays empty — proving the URL comes from the commercial branch.
+    vi.mocked(cityHubsWithInventory).mockImplementation(
+      async (_min: number, _extraFilter?: string, baseFilter?: string) =>
+        baseFilter === COMMERCIAL_ACTIVE_FILTER ? [{ slug: 'mississauga', count: 382 }] : []
+    );
+
+    const entries = await sitemap();
+    expect(entries.some((e) => e.url.endsWith('/commercial/on/mississauga'))).toBe(true);
+    expect(entries.some((e) => e.url.includes('/property/on/'))).toBe(false);
   });
 });

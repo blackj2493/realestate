@@ -30,7 +30,12 @@ import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import HubFaq from "@/components/seo/HubFaq";
 import { deslugCity } from "@/lib/listings/listingPath";
-import { citiesForHubSlug, cityFilterClause, neighbourhoodsForCity } from "@/lib/listings/cityHubs";
+import {
+  citiesForHubSlug,
+  cityFilterClause,
+  neighbourhoodsForCity,
+  COMMERCIAL_ACTIVE_FILTER,
+} from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
@@ -119,6 +124,9 @@ export default async function CityHubPage({
   // clearing MIN_INDEXABLE are linked, so we never point internal links at thin/noindex
   // pages. Best-effort: [] on any Typesense failure (the city hub still renders).
   const neighbourhoods = (await neighbourhoodsForCity(city)).filter((n) => n.count >= MIN_INDEXABLE);
+  // Cross-link to the commercial hub tree (commercial-gap Phase 2), only when it clears
+  // the same floor — never link to a thin/noindex page.
+  const { total: commercialTotal } = await citiesForHubSlug(city, COMMERCIAL_ACTIVE_FILTER);
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -184,6 +192,14 @@ export default async function CityHubPage({
               >
                 <LandPlot className="h-4 w-4" /> Development potential in {cityName} →
               </Link>
+              {commercialTotal >= MIN_INDEXABLE && (
+                <Link
+                  href={`/commercial/${prov.toLowerCase()}/${city}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+                >
+                  <Building2 className="h-4 w-4" /> Commercial properties in {cityName} →
+                </Link>
+              )}
             </div>
           )}
         </header>
