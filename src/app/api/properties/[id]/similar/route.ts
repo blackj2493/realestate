@@ -38,8 +38,11 @@ const FORSALE_COLLECTION = "properties";
 const CANDIDATE_FETCH = 80;
 const RESULT_LIMIT = 8;
 const SOLD_WINDOW_DAYS = 180;
+// BuildingAreaTotal is stored-but-undeclared on the active index — include_fields
+// still returns stored fields, and commercial listings (unlike houses) fill it, so
+// commercial comps can score on area (commercial-gap Phase 1).
 const FORSALE_FIELDS =
-  "id,ListPrice,UnparsedAddress,City,CityRegion,PropertySubType,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,BathroomsTotalInteger,ParkingTotal,CoveredSpaces,ListOfficeName,primaryImageUrl,RawImages,calculatedDOM";
+  "id,ListPrice,UnparsedAddress,City,CityRegion,PropertySubType,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,BathroomsTotalInteger,ParkingTotal,CoveredSpaces,BuildingAreaTotal,ListOfficeName,primaryImageUrl,RawImages,calculatedDOM";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -115,7 +118,9 @@ function forSaleAttrs(d: Doc): CandidateAttrs {
     bedsBelow: below,
     garage: garageField(d.CoveredSpaces),
     price: numField(d.ListPrice),
-    area: 0, // BuildingAreaTotal is not reliably present on the active index → neutral
+    // ~Never filled for houses (sizeScore stays neutral there), but commercial
+    // listings carry it and the commercial scorer weights it heavily.
+    area: numField(d.BuildingAreaTotal),
   };
 }
 
@@ -224,6 +229,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     listPrice: numParam(sp.get("listPrice")),
     area: numParam(sp.get("area")),
   };
+  // Commercial subject → area/price/region scoring (no beds/garage); lease subject →
+  // comp against For-Lease inventory instead of For-Sale (commercial-gap Phase 1).
+  const isCommercial = sp.get("commercial") === "1";
+  const isLease = sp.get("lease") === "1";
   // Subject shape for the per-card "vs this home" delta chips (baths isn't a scoring signal).
   const subjectDelta: DeltaInput = {
     beds: subject.beds,
@@ -242,7 +251,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .search({
         q: "*",
         query_by: "City",
-        filter_by: buildForSaleSimilarFilter(subject),
+        filter_by: buildForSaleSimilarFilter(subject, { lease: isLease }),
         per_page: CANDIDATE_FETCH,
         page: 1,
         include_fields: FORSALE_FIELDS,
@@ -250,7 +259,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const docs = (res.hits ?? [])
       .map((h) => h.document as Doc)
       .filter((d) => String(d.id) !== id);
-    const ranked = rankSimilar<Doc>(subject, docs, forSaleAttrs, "sale", RESULT_LIMIT);
+    const ranked = rankSimilar<Doc>(subject, docs, forSaleAttrs, "sale", RESULT_LIMIT, {
+      commercial: isCommercial,
+    });
     forSale = ranked.map((r) => toForSaleCard(r, subjectDelta));
     forSaleTier = classifyMatchQuality(ranked);
   } catch (e) {
@@ -270,7 +281,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .search({
         q: "*",
         query_by: "UnparsedAddress",
-        filter_by: buildSoldSimilarFilter(subject, SOLD_WINDOW_DAYS, nowMs),
+        filter_by: buildSoldSimilarFilter(subject, SOLD_WINDOW_DAYS, nowMs, { lease: isLease }),
         sort_by: "PurchaseContractDate:desc",
         per_page: CANDIDATE_FETCH,
         page: 1,
@@ -280,7 +291,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const docs = (res.hits ?? [])
         .map((h) => h.document as Doc)
         .filter((d) => String(d.id) !== id);
-      const ranked = rankSimilar<Doc>(subject, docs, (d) => soldAttrs(d, nowMs), "sold", RESULT_LIMIT);
+      const ranked = rankSimilar<Doc>(subject, docs, (d) => soldAttrs(d, nowMs), "sold", RESULT_LIMIT, {
+        commercial: isCommercial,
+        leased: isLease,
+      });
       sold = ranked.map((r) => toSoldCard(r, subjectDelta));
       soldTier = classifyMatchQuality(ranked);
     }

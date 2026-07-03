@@ -75,3 +75,101 @@ describe("buildRentalSnapshot", () => {
     expect(s.rentIncludes).toEqual([]);
   });
 });
+
+// ── Commercial lease economics (commercial-gap Phase 1) ──
+import { buildCommercialLeaseSnapshot, classifyLeaseBasis } from "./rentalSnapshot";
+
+describe("classifyLeaseBasis", () => {
+  it("maps TRREB ListPriceUnit spellings to a basis", () => {
+    expect(classifyLeaseBasis("Month")).toBe("month");
+    expect(classifyLeaseBasis("Per Sq Ft")).toBe("psf-year");
+    expect(classifyLeaseBasis("Sq Ft Net")).toBe("psf-year");
+    expect(classifyLeaseBasis("Sq Ft Gross")).toBe("psf-year");
+    expect(classifyLeaseBasis("Year")).toBe("year");
+    expect(classifyLeaseBasis("Per Square Foot")).toBe("psf-year");
+    expect(classifyLeaseBasis("For Sale")).toBe("unknown");
+    expect(classifyLeaseBasis(undefined)).toBe("unknown");
+    expect(classifyLeaseBasis("")).toBe("unknown");
+  });
+
+  it("gross/net lease name the inclusions, not the period — must stay unknown", () => {
+    // "Gross Lease" / "Net Lease" say WHAT the rent covers, not whether the figure
+    // is monthly or annual — deriving either way risks a 12× fabrication.
+    expect(classifyLeaseBasis("Gross Lease")).toBe("unknown");
+    expect(classifyLeaseBasis("Net Lease")).toBe("unknown");
+    expect(classifyLeaseBasis("Plus Stock")).toBe("unknown");
+  });
+});
+
+describe("buildCommercialLeaseSnapshot", () => {
+  it("month basis: monthly verbatim, annual ×12, psf/yr derived from area", () => {
+    const s = buildCommercialLeaseSnapshot({
+      listPrice: 1900,
+      listPriceUnit: "Month",
+      buildingAreaTotal: 650,
+    });
+    expect(s.basis).toBe("month");
+    expect(s.monthlyRent).toBe(1900);
+    expect(s.annualRent).toBe(22800);
+    expect(s.perSqftYear).toBe(35.08);
+  });
+
+  it("psf-year basis: rate verbatim, totals derived from area", () => {
+    const s = buildCommercialLeaseSnapshot({
+      listPrice: 22,
+      listPriceUnit: "Per Sq Ft",
+      buildingAreaTotal: 3500,
+    });
+    expect(s.basis).toBe("psf-year");
+    expect(s.perSqftYear).toBe(22);
+    expect(s.annualRent).toBe(77000);
+    expect(s.monthlyRent).toBe(Math.round(77000 / 12));
+  });
+
+  it("never fabricates a denominator: psf basis with no area derives no totals", () => {
+    const s = buildCommercialLeaseSnapshot({ listPrice: 22, listPriceUnit: "Per Sq Ft" });
+    expect(s.perSqftYear).toBe(22);
+    expect(s.annualRent).toBeNull();
+    expect(s.monthlyRent).toBeNull();
+  });
+
+  it("$0/$1 placeholder asks derive nothing regardless of basis (feature-sweep find)", () => {
+    // Live case: a $1/sqft/yr industrial lease derived a real-looking "$52,970/mo".
+    for (const listPrice of [0, 1]) {
+      const s = buildCommercialLeaseSnapshot({
+        listPrice,
+        listPriceUnit: "Per Sq Ft",
+        buildingAreaTotal: 46242,
+      });
+      expect(s.monthlyRent, `price=${listPrice}`).toBeNull();
+      expect(s.annualRent, `price=${listPrice}`).toBeNull();
+      expect(s.perSqftYear, `price=${listPrice}`).toBeNull();
+      expect(s.areaSqft).toBe(46242); // area itself is still real data
+    }
+  });
+
+  it("unknown basis derives nothing", () => {
+    const s = buildCommercialLeaseSnapshot({
+      listPrice: 4000,
+      listPriceUnit: "Gross Lease",
+      buildingAreaTotal: 1200,
+    });
+    expect(s.basis).toBe("unknown");
+    expect(s.monthlyRent).toBeNull();
+    expect(s.annualRent).toBeNull();
+    expect(s.perSqftYear).toBeNull();
+  });
+
+  it("TMI: dedicated field verbatim wins; TaxType=TMI pair formats the tax amount", () => {
+    expect(buildCommercialLeaseSnapshot({ listPrice: 1, tmi: "$4.50" }).tmiDisplay).toBe("$4.50");
+    expect(
+      buildCommercialLeaseSnapshot({ listPrice: 1, taxType: "TMI", taxAnnualAmount: 18.4 })
+        .tmiDisplay
+    ).toBe("$18.40");
+    // Ordinary annual taxes are NOT TMI
+    expect(
+      buildCommercialLeaseSnapshot({ listPrice: 1, taxType: "Annual", taxAnnualAmount: 5000 })
+        .tmiDisplay
+    ).toBeNull();
+  });
+});

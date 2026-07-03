@@ -70,3 +70,32 @@ describe("buildListingOffer", () => {
     expect((lease.priceSpecification as { price: number }).price).toBe(0);
   });
 });
+
+// ── Commercial lease basis (commercial-gap Phase 1) ──
+describe("buildListingOffer — commercial lease basis", () => {
+  const base = { listPrice: 22, isLease: true, availability: SALE_AVAIL, url: "https://x.ca/l/1" };
+
+  it("year basis emits an ANN UnitPriceSpecification", () => {
+    const offer = buildListingOffer({ ...base, listPrice: 77000, leaseBasis: "year" }) as {
+      priceSpecification?: { unitCode: string; price: number };
+    };
+    expect(offer.priceSpecification?.unitCode).toBe("ANN");
+    expect(offer.priceSpecification?.price).toBe(77000);
+  });
+
+  it("psf-year and unknown bases omit the price spec entirely (never assert a wrong unit)", () => {
+    for (const leaseBasis of ["psf-year", "unknown"] as const) {
+      const offer = buildListingOffer({ ...base, leaseBasis });
+      expect(offer).not.toHaveProperty("priceSpecification");
+      expect(offer).not.toHaveProperty("price");
+      expect(offer.businessFunction).toBe("http://purl.org/goodrelations/v1#LeaseOut");
+    }
+  });
+
+  it("default (residential) lease stays per-month", () => {
+    const offer = buildListingOffer({ ...base, listPrice: 2700 }) as {
+      priceSpecification?: { unitCode: string };
+    };
+    expect(offer.priceSpecification?.unitCode).toBe("MON");
+  });
+});

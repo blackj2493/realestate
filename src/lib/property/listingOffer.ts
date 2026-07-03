@@ -24,6 +24,14 @@ export interface ListingOfferInput {
   listPrice: number;
   /** True when TransactionType is a lease (price is per-month rent, not a sale price). */
   isLease: boolean;
+  /**
+   * Lease quote basis (commercial-gap Phase 1). Residential leases are always
+   * per-month; COMMERCIAL leases may be quoted per month, per year, or as a
+   * $/sqft/yr rate (TRREB ListPriceUnit). "month"/"year" map to UN/CEFACT unit
+   * codes; "psf-year"/"unknown" omit the price spec entirely — asserting a wrong
+   * unit to crawlers is worse than asserting nothing. Defaults to "month".
+   */
+  leaseBasis?: "month" | "psf-year" | "year" | "unknown";
   /** schema.org availability enum URL (InStock / SoldOut / OutOfStock). */
   availability: string;
   /** Canonical listing URL. */
@@ -47,6 +55,12 @@ export function buildListingOffer(input: ListingOfferInput): Record<string, unkn
   };
 
   if (input.isLease) {
+    const basis = input.leaseBasis ?? "month";
+    if (basis === "psf-year" || basis === "unknown") {
+      // No single UN/CEFACT code expresses "$/sqft/yr", and an unknown basis could
+      // be anything — emit the lease offer without a price rather than lie.
+      return { ...base, businessFunction: `${GR}LeaseOut` };
+    }
     return {
       ...base,
       businessFunction: `${GR}LeaseOut`,
@@ -54,8 +68,9 @@ export function buildListingOffer(input: ListingOfferInput): Record<string, unkn
         "@type": "UnitPriceSpecification",
         price,
         priceCurrency: "CAD",
-        unitCode: "MON", // UN/CEFACT Common Code for "month"
-        unitText: "MONTH",
+        // UN/CEFACT Common Codes: MON = month, ANN = year
+        unitCode: basis === "year" ? "ANN" : "MON",
+        unitText: basis === "year" ? "YEAR" : "MONTH",
       },
     };
   }

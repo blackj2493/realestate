@@ -207,10 +207,35 @@ export function scoreSold(s: SubjectAttrs, c: CandidateAttrs): number {
   );
 }
 
+// Commercial weights (commercial-gap Phase 1): beds/garage don't exist on a
+// warehouse, and the exact-subtype family wall already pins the type, so the
+// discriminating axes are area (the commercial dimension), location and price.
+// Candidates missing BuildingAreaTotal get sizeScore's neutral 0.5, not a zero.
+export function scoreForSaleCommercial(s: SubjectAttrs, c: CandidateAttrs): number {
+  return (
+    35 * regionScore(s.cityRegion, c.cityRegion) +
+    25 * priceScore(s.listPrice, c.price) +
+    40 * sizeScore(s.area, c.area)
+  );
+}
+
+export function scoreSoldCommercial(s: SubjectAttrs, c: CandidateAttrs): number {
+  return (
+    25 * regionScore(s.cityRegion, c.cityRegion) +
+    40 * sizeScore(s.area, c.area) +
+    35 * recencyScore(c.daysAgo ?? 999)
+  );
+}
+
 const KEY_TO_LABEL = new Map(PROPERTY_TYPE_OPTIONS.map((o) => [o.key, o.label]));
 
 /** Human-readable reason a candidate is comparable (drives the per-card chip). */
-export function buildWhyLabel(s: SubjectAttrs, c: CandidateAttrs, kind: SimilarKind): string {
+export function buildWhyLabel(
+  s: SubjectAttrs,
+  c: CandidateAttrs,
+  kind: SimilarKind,
+  opts: { leased?: boolean } = {}
+): string {
   const region =
     regionScore(s.cityRegion, c.cityRegion) === 1
       ? "Same neighbourhood"
@@ -218,11 +243,13 @@ export function buildWhyLabel(s: SubjectAttrs, c: CandidateAttrs, kind: SimilarK
         ? `Nearby in ${s.city}`
         : "Nearby";
   const key = optionKeyForSubType(c.subType);
-  const typeLabel = key ? KEY_TO_LABEL.get(key) ?? "" : "";
+  // Unmapped sub-types (commercial: Office, Industrial, …) label with the raw
+  // spelling — the beds>0 gate already suppresses the "0bd" chip there.
+  const typeLabel = key ? KEY_TO_LABEL.get(key) ?? "" : (c.subType ?? "");
   const form = [c.beds > 0 ? `${c.beds}bd` : "", typeLabel].filter(Boolean).join(" ");
   let label = [region, form].filter(Boolean).join(" · ");
   if (kind === "sold" && c.daysAgo != null && c.daysAgo >= 0) {
-    label += ` · sold ${Math.round(c.daysAgo)}d ago`;
+    label += ` · ${opts.leased ? "leased" : "sold"} ${Math.round(c.daysAgo)}d ago`;
   }
   return label;
 }
@@ -233,16 +260,23 @@ export function rankSimilar<T>(
   items: T[],
   toAttrs: (t: T) => CandidateAttrs,
   kind: SimilarKind,
-  limit = 8
+  limit = 8,
+  opts: { commercial?: boolean; leased?: boolean } = {}
 ): RankedSimilar<T>[] {
-  const scorer = kind === "sale" ? scoreForSale : scoreSold;
+  const scorer = opts.commercial
+    ? kind === "sale"
+      ? scoreForSaleCommercial
+      : scoreSoldCommercial
+    : kind === "sale"
+      ? scoreForSale
+      : scoreSold;
   return items
     .map((item) => {
       const c = toAttrs(item);
       return {
         item,
         score: scorer(subject, c),
-        why: buildWhyLabel(subject, c, kind),
+        why: buildWhyLabel(subject, c, kind, { leased: opts.leased }),
         regionExact: regionScore(subject.cityRegion, c.cityRegion) === 1,
         subtypeExact: subtypeScore(subject.subType, c.subType) === 1,
       };
@@ -276,9 +310,14 @@ function familyClause(subType: string | null): string {
   return `(${variants.map((v) => `PropertySubType:=${bq(v)}`).join(" || ")})`;
 }
 
-/** Wide-net For-Sale filter: active + city floor + family wall. (Subject excluded in JS.) */
-export function buildForSaleSimilarFilter(s: SubjectAttrs): string {
-  const clauses: string[] = ["TransactionType:=`For Sale`"];
+/** Wide-net For-Sale filter: active + city floor + family wall. (Subject excluded in JS.)
+ *  A lease subject comps against other leases — same-subtype For-Lease inventory
+ *  (commercial-gap Phase 1; the family wall for unmapped commercial subtypes is
+ *  already exact-spelling, so Office only ever comps against Office). */
+export function buildForSaleSimilarFilter(s: SubjectAttrs, opts: { lease?: boolean } = {}): string {
+  const clauses: string[] = [
+    opts.lease ? "TransactionType:=`For Lease`" : "TransactionType:=`For Sale`",
+  ];
   if (s.city) clauses.push(`City:=${bq(s.city)}`);
   const fam = familyClause(s.subType);
   if (fam) clauses.push(fam);
@@ -286,11 +325,20 @@ export function buildForSaleSimilarFilter(s: SubjectAttrs): string {
 }
 
 /** Wide-net Sold filter: sold + price floor + window + city floor + family wall.
- *  `nowMs` is injected (not Date.now()) so the output is deterministic for tests. */
-export function buildSoldSimilarFilter(s: SubjectAttrs, windowDays: number, nowMs: number): string {
+ *  `nowMs` is injected (not Date.now()) so the output is deterministic for tests.
+ *  A LEASE subject comps against closed leases — those docs carry DealType
+ *  "leased", not "sold" (the old sold-only filter guaranteed zero lease comps;
+ *  commercial-gap findings fix). ClosePrice on a leased doc is the achieved rent,
+ *  so the >=1 floor still applies. */
+export function buildSoldSimilarFilter(
+  s: SubjectAttrs,
+  windowDays: number,
+  nowMs: number,
+  opts: { lease?: boolean } = {}
+): string {
   const cutoff = Math.floor(nowMs - windowDays * DAY_MS);
   const clauses: string[] = [
-    "DealType:=sold",
+    opts.lease ? "DealType:=leased" : "DealType:=sold",
     "ClosePrice:>=1",
     `PurchaseContractDate:>=${cutoff}`,
     `PurchaseContractDate:<=${nowMs}`,

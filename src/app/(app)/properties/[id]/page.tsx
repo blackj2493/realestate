@@ -16,6 +16,7 @@ import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
+import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
@@ -25,6 +26,8 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
+import CommercialLeaseSnapshot from "@/components/Property/CommercialLeaseSnapshot";
+import { classifyLeaseBasis } from "@/lib/property/rentalSnapshot";
 import ZoningCard from "@/components/Property/ZoningCard";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
@@ -137,6 +140,11 @@ interface RawListing {
   LotWidth?: number;
   LotDepth?: number;
   LotSizeUnits?: string;
+  // MLS zoning — agent-entered; sampled fill on commercial is ~1%, so the hero cell
+  // falls back to PropertyUse ("Industrial Condo", "Without Property"), which the
+  // feed fills reliably on Commercial-class listings.
+  Zoning?: string;
+  PropertyUse?: string;
   // Zoning — municipal open data (harvest-populated); shown via the attributed ZoningCard.
   zoning_designation?: string;
   zoning_desc?: string;
@@ -158,6 +166,12 @@ interface RawListing {
   LeaseTerm?: string;
   DepositRequired?: boolean;
   RentIncludes?: string[];
+  // Commercial lease/tax quote semantics (commercial-gap Phase 1): ListPriceUnit is
+  // the price basis ("Month", "Per Sq Ft", "Year", "For Sale"); TaxType="TMI" means
+  // TaxAnnualAmount carries the TMI figure, not an annual property tax.
+  ListPriceUnit?: string;
+  TaxType?: string | string[];
+  TMI?: string;
 }
 
 function calculateDaysOnMarket(ts?: string): number {
@@ -213,11 +227,14 @@ export async function generateMetadata({
         ? " — Off Market"
         : "";
   const title = `${address} — ${formatPrice(price)}${statusSuffix} | PureProperty`;
-  const description =
-    cleanDescription(p.PublicRemarks) ||
-    `${address}. ${p.BedroomsTotal ?? 0} bed, ${p.BathroomsTotalInteger ?? 0} bath ${
-      p.PropertySubType || "home"
-    } listed at ${formatPrice(price)}.`;
+  // Commercial has no beds/baths — the residential fallback would fabricate
+  // "0 bed, 0 bath Office" (commercial-gap Phase 0).
+  const fallbackDescription = isCommercialProperty(p.PropertyType)
+    ? `${address}. ${p.PropertySubType || "Commercial property"} listed at ${formatPrice(price)}.`
+    : `${address}. ${p.BedroomsTotal ?? 0} bed, ${p.BathroomsTotalInteger ?? 0} bath ${
+        p.PropertySubType || "home"
+      } listed at ${formatPrice(price)}.`;
+  const description = cleanDescription(p.PublicRemarks) || fallbackDescription;
   // Frozen-Active payloads (Terminated/Expired/Suspended) must noindex too — trust
   // the resolved status, not the stale payload field.
   const isActive =
@@ -252,7 +269,15 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   const p = detail.full_payload as RawListing;
   const subType = (p.PropertySubType || "").toLowerCase();
   // Accommodation (Place) subtype carries the structural facts (beds/baths/area).
-  const accommodationType = /condo|apartment/.test(subType) ? "Apartment" : "SingleFamilyResidence";
+  // Commercial-class listings are NOT accommodations — schema.org has no commercial
+  // real-estate subtype, so they get a plain Place node (no beds/baths/rooms) rather
+  // than lying to crawlers with SingleFamilyResidence (commercial-gap Phase 0).
+  const isCommercial = isCommercialProperty(p.PropertyType);
+  const accommodationType = isCommercial
+    ? "Place"
+    : /condo|apartment/.test(subType)
+      ? "Apartment"
+      : "SingleFamilyResidence";
   const url = listingCanonical(id, p);
   const cityPath = cityHubPath(p);
   const photos = detail.media_urls.slice(0, 8);
@@ -276,6 +301,9 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   const offer = buildListingOffer({
     listPrice: p.ListPrice || 0,
     isLease,
+    // Residential leases are always monthly; commercial leases carry their quote
+    // basis in ListPriceUnit — a $22/sqft/yr ask must not be emitted as $22/month.
+    ...(isLease && isCommercial ? { leaseBasis: classifyLeaseBasis(p.ListPriceUnit) } : {}),
     availability,
     url,
     seller: broker,
@@ -304,12 +332,18 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
         "@type": accommodationType,
         "@id": `${url}#property`,
         name: p.UnparsedAddress || "Property listing",
-        numberOfRooms: p.RoomsTotal || detail.rooms.length || undefined,
-        numberOfBedrooms: p.BedroomsTotal || undefined,
-        numberOfBathroomsTotal: p.BathroomsTotalInteger || undefined,
-        ...(p.BuildingAreaTotal
-          ? { floorSize: { "@type": "QuantitativeValue", value: p.BuildingAreaTotal, unitCode: "FTK" } }
-          : {}),
+        // Room/bed/bath counts + floorSize are Accommodation properties; a plain
+        // commercial Place carries only name/address/offer.
+        ...(isCommercial
+          ? {}
+          : {
+              numberOfRooms: p.RoomsTotal || detail.rooms.length || undefined,
+              numberOfBedrooms: p.BedroomsTotal || undefined,
+              numberOfBathroomsTotal: p.BathroomsTotalInteger || undefined,
+              ...(p.BuildingAreaTotal
+                ? { floorSize: { "@type": "QuantitativeValue", value: p.BuildingAreaTotal, unitCode: "FTK" } }
+                : {}),
+            }),
         address: {
           "@type": "PostalAddress",
           streetAddress: p.UnparsedAddress || undefined,
@@ -409,11 +443,18 @@ export default async function PropertyPage({
   const nowMs = Date.now();
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
+  // Commercial-gap Phase 0: everything AVM/persona-derived on this page (Deal Score,
+  // Estimated Sale, Renovation Upside, The Read, schools, beds/baths hero) is built
+  // for dwellings. Commercial-class listings arrive here via organic search (the
+  // sitemap emits all listings), so gate the residential machinery instead of
+  // rendering fabricated numbers on an office/retail/industrial asset.
+  const isCommercial = isCommercialProperty(p.PropertyType);
   // C2 (UX audit 2026-06-13): vacant land has no rental income, so the income
   // side of the underwrite (rent → cap rate, gross yield, cashflow) is a
   // fabrication on these parcels. Gate it so the sandbox shows carrying cost
-  // only rather than inventing a rent.
-  const incomeApplicable = isIncomeProperty(p.PropertySubType);
+  // only rather than inventing a rent. Commercial is gated for the same reason —
+  // belt-and-braces with the subtype patterns inside isIncomeProperty.
+  const incomeApplicable = !isCommercial && isIncomeProperty(p.PropertySubType);
   // For-Lease listings carry the monthly rent in ListPrice, not a purchase price, so
   // the buy-and-hold Underwriting Sandbox can only fabricate (a $540 down payment, a
   // 516% cap rate). Detect the lease and show a Rental Snapshot instead. Same criterion
@@ -481,7 +522,7 @@ export default async function PropertyPage({
             <>
               <span aria-hidden>/</span>
               <Link href={cityHref} className="text-cyan-400 transition-colors hover:text-cyan-300">
-                Homes for sale in {p.City}
+                {isCommercial ? `Properties in ${p.City}` : `Homes for sale in ${p.City}`}
               </Link>
             </>
           )}
@@ -568,6 +609,13 @@ export default async function PropertyPage({
                 ) : (
                   <span className="font-mono text-3xl font-bold text-emerald-400">
                     {formatPrice(price)}
+                    {/* Commercial lease quotes carry a basis ("Per Sq Ft", "Month") —
+                        a bare "$22" headline would read as a sale price. Verbatim unit. */}
+                    {isCommercial && isLease && p.ListPriceUnit && !/for sale/i.test(p.ListPriceUnit) && (
+                      <span className="ml-1.5 text-base font-semibold text-emerald-500/80">
+                        {p.ListPriceUnit}
+                      </span>
+                    )}
                   </span>
                 )}
                 <span className="text-sm text-slate-500">
@@ -602,7 +650,7 @@ export default async function PropertyPage({
                     Sold after {dom} {dom === 1 ? "day" : "days"} on market
                   </span>
                 )}
-                {isActiveListing && (
+                {isActiveListing && !isCommercial && (
                   <DealScoreBadge
                     score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
                     grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
@@ -637,7 +685,43 @@ export default async function PropertyPage({
             </div>
 
             {/* Specs — 3-up on mobile (wider cells so a long basement value wraps
-                cleanly), 5-up from sm↑ where all stats sit on one row. */}
+                cleanly), 5-up from sm↑ where all stats sit on one row. Commercial swaps
+                the dwelling stats (a warehouse is not "0 Beds / 0 Baths / Basement:
+                None") for Sqft / Type / Zoning / Parking. */}
+            {isCommercial ? (
+              <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SpecCell
+                  icon={<Square className="h-5 w-5 text-purple-400" />}
+                  value={p.BuildingAreaTotal ? p.BuildingAreaTotal.toLocaleString() : "N/A"}
+                  label="Sqft"
+                />
+                <SpecCell
+                  icon={<Building2 className="h-5 w-5 text-emerald-400" />}
+                  value={p.PropertySubType || "Commercial"}
+                  label="Type"
+                />
+                {/* MLS Zoning fill on commercial sampled at ~1%, so this cell degrades
+                    Zoning → municipal harvest → PropertyUse (reliably filled) → N/A,
+                    relabelling itself to match what it's actually showing. */}
+                <SpecCell
+                  icon={<FileText className="h-5 w-5 text-cyan-400" />}
+                  value={
+                    p.Zoning?.trim() ||
+                    p.zoning_designation?.trim() ||
+                    p.PropertyUse?.trim() ||
+                    "N/A"
+                  }
+                  label={
+                    p.Zoning?.trim() || p.zoning_designation?.trim()
+                      ? "Zoning"
+                      : p.PropertyUse?.trim()
+                        ? "Use"
+                        : "Zoning"
+                  }
+                />
+                <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
+              </div>
+            ) : (
             <div className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-5">
               <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
               <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
@@ -657,9 +741,13 @@ export default async function PropertyPage({
                   rental-suite signal the investor personas key on. Raw TRREB value(s), "None" when empty. */}
               <SpecCell icon={<Layers className="h-5 w-5 text-indigo-400" />} value={basementLabel(p)} label="Basement" />
             </div>
+            )}
 
-            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
-            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />}
+            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe).
+                Persona theses are residential (Homebuyer/Cashflow/Flipper/Builder) — off for commercial. */}
+            {isActiveListing && !isCommercial && (
+              <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />
+            )}
 
             {/* Things to Know — interpretive diligence flags surfaced beside the verdict (loss-aversion) */}
             <ThingsToKnowCard flags={diligenceFlags} />
@@ -680,9 +768,13 @@ export default async function PropertyPage({
                   rent — estimating, scoring, or force-appreciating a sale value there is a
                   fabrication. The RentalSnapshot below is the lease's financial card instead. */}
 
+              {/* Commercial: the whole AVM-derived stack below (sold-accuracy receipt,
+                  Deal Score, Estimated Sale / True Value, Renovation Upside) is trained
+                  on dwellings — suppressed rather than fabricated (commercial-gap Phase 0). */}
+
               {/* Sold: lead with the accuracy receipt — Deal Score / Expected Sale are
                   for live asks; their job here is done. */}
-              {status.kind === "sold" && !isLease && (
+              {status.kind === "sold" && !isLease && !isCommercial && (
                 <SoldOutcomeCard
                   accuracy={soldAccuracy}
                   soldDate={soldDate}
@@ -690,11 +782,11 @@ export default async function PropertyPage({
                 />
               )}
 
-              {isActiveListing && !isLease && (
+              {isActiveListing && !isLease && !isCommercial && (
                 <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
               )}
 
-              {!isLease && (isActiveListing ? (
+              {!isLease && !isCommercial && (isActiveListing ? (
                 /* ONE number: the Estimated Sale Price (list-anchored where we can be,
                    AVM as fallback). The intrinsic AVM lives on as the faint "comparable
                    value" band inside this card + as the Deal Score signal above. */
@@ -725,7 +817,7 @@ export default async function PropertyPage({
 
               {/* Renovation upside — Force-Appreciation ROI from the Value-Add Engine. One of the
                   product's headline differentiators, so it sits directly beneath the sale estimate. */}
-              {!isLease && (
+              {!isLease && !isCommercial && (
                 <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
               )}
 
@@ -755,12 +847,25 @@ export default async function PropertyPage({
                     />
                   )}
                   <SummaryRow
-                    label={isLease ? "Monthly Rent" : "List Price"}
+                    label={
+                      isLease
+                        ? isCommercial && p.ListPriceUnit && !/month/i.test(p.ListPriceUnit)
+                          ? // Commercial lease quoted on a non-monthly basis — label the
+                            // basis verbatim instead of asserting "Monthly Rent".
+                            `Asking Rent (${p.ListPriceUnit})`
+                          : "Monthly Rent"
+                        : "List Price"
+                    }
                     value={formatPrice(price)}
                     valueClass={isActiveListing ? "text-emerald-400" : "text-slate-400"}
                   />
                   <SummaryRow
-                    label="Annual Taxes"
+                    label={
+                      // TaxType="TMI" → TaxAnnualAmount is the TMI figure, not a property tax.
+                      isCommercial && typeof p.TaxType === "string" && p.TaxType.trim().toUpperCase() === "TMI"
+                        ? "TMI (as listed)"
+                        : "Annual Taxes"
+                    }
                     value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
                   />
                   <SummaryRow
@@ -776,6 +881,21 @@ export default async function PropertyPage({
               </div>
 
               {isLease ? (
+                isCommercial ? (
+                  /* Commercial lease — basis-aware economics ($/sqft/yr, TMI) instead of
+                     the residential rent-comp framing (commercial-gap Phase 1). */
+                  <CommercialLeaseSnapshot
+                    listPrice={soldPrice ?? price}
+                    listPriceUnit={p.ListPriceUnit ?? null}
+                    buildingAreaTotal={p.BuildingAreaTotal ?? null}
+                    leaseTerm={p.LeaseTerm ?? null}
+                    rentIncludes={p.RentIncludes ?? null}
+                    tmi={p.TMI ?? null}
+                    taxType={typeof p.TaxType === "string" ? p.TaxType : null}
+                    taxAnnualAmount={p.TaxAnnualAmount ?? null}
+                    leased={status.kind === "sold"}
+                  />
+                ) : (
                 <RentalSnapshot
                   monthlyRent={soldPrice ?? price}
                   leased={status.kind === "sold"}
@@ -785,6 +905,7 @@ export default async function PropertyPage({
                   depositRequired={p.DepositRequired ?? null}
                   rentIncludes={p.RentIncludes ?? null}
                 />
+                )
               ) : (
                 <UnderwritingSandbox
                   listingId={id}
@@ -797,7 +918,7 @@ export default async function PropertyPage({
               )}
 
               {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add) */}
-              {!isLease && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
+              {!isLease && !isCommercial && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
                 <Disclaimers />
               )}
 
@@ -832,23 +953,26 @@ export default async function PropertyPage({
               </div>
             )}
 
-            {/* Schools */}
-            <NearbySchools listingId={id} />
+            {/* Schools — "Schools near this home" is a dwelling lens; off for commercial. */}
+            {!isCommercial && <NearbySchools listingId={id} />}
 
             {/* Grocery + recreation proximity */}
             <NearbyAmenities listingId={id} />
 
-            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage) */}
-            <YourTakeCard
-              listingKey={id}
-              isLease={isLease}
-              metrics={{
-                listPrice: price || null,
-                capRatePct: view.capRatePct,
-                beds: p.BedroomsTotal ?? null,
-                trueDom,
-              }}
-            />
+            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage).
+                Deal-breaker rules (min beds, min cap) are residential — off for commercial. */}
+            {!isCommercial && (
+              <YourTakeCard
+                listingKey={id}
+                isLease={isLease}
+                metrics={{
+                  listPrice: price || null,
+                  capRatePct: view.capRatePct,
+                  beds: p.BedroomsTotal ?? null,
+                  trueDom,
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -896,7 +1020,9 @@ export default async function PropertyPage({
           </div>
         </section>
 
-        {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island ── */}
+        {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island.
+             Commercial subjects use exact-subtype + area/price matching; commercial
+             leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
         <div id="comps" className="scroll-mt-28">
         <SimilarProperties
           subjectId={id}
@@ -910,6 +1036,11 @@ export default async function PropertyPage({
           baths={p.BathroomsTotalInteger ?? 0}
           listPrice={price}
           area={p.BuildingAreaTotal ?? 0}
+          isCommercial={isCommercial}
+          // All lease subjects (residential rentals included) comp against For-Lease
+          // actives + DealType=leased closings — sale comps under a rental compare a
+          // monthly rent against purchase prices.
+          isLease={isLease}
         />
         </div>
 

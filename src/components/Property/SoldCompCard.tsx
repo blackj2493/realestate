@@ -17,8 +17,9 @@ function fmtSoldDate(iso: string | null): string {
     : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** A single recently-sold comp. `locked` (anonymous) blurs the VOW numbers. */
-export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?: boolean }) {
+/** A single recently-sold comp. `locked` (anonymous) blurs the VOW numbers.
+ *  `leased` relabels the badge/teaser for closed-lease comps (lease subjects). */
+export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; locked?: boolean; leased?: boolean }) {
   if (locked) {
     return (
       <Link
@@ -28,7 +29,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
         <div className="relative aspect-[4/3] bg-slate-800/60">
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400">
             <Lock className="h-5 w-5" />
-            <span className="text-xs">Sign in for sold price</span>
+            <span className="text-xs">Sign in for {leased ? "leased" : "sold"} price</span>
           </div>
         </div>
         <div className="space-y-1 p-3">
@@ -60,7 +61,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
           sizes="260px"
         />
         <span className="absolute left-2 top-2 rounded bg-rose-500/90 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-white">
-          SOLD{card.soldDate ? ` ${fmtSoldDate(card.soldDate)}` : ""}
+          {leased ? "LEASED" : "SOLD"}{card.soldDate ? ` ${fmtSoldDate(card.soldDate)}` : ""}
         </span>
       </div>
       <div className="p-3">
