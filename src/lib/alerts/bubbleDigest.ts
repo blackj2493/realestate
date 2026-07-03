@@ -12,6 +12,8 @@ export interface NewListingAlert {
   beds: number | null;
   baths: number | null;
   brokerage: string | null;
+  /** Watermarked TRREB thumbnail URL, or null → text-only card (no stock stand-in). */
+  thumb?: string | null;
   /** EntryTimestamp (unix ms) — used only for newest-first ordering. */
   entryMs: number;
 }

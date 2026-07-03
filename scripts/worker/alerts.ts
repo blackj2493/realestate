@@ -36,10 +36,12 @@ import {
   type DropAlert,
   type StatusChangeAlert,
 } from '@/lib/alerts/digest';
+import { signUnsubscribe } from '@/lib/email/token';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
 const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
 /** Same rental-noise floor as bubble stats (src/lib/bubbles/stats.ts). */
 const SALES_FLOOR = 'ListPrice:>=100000';
 /** §6.3b display cap — also bounds the per-bubble fetch. */
@@ -301,7 +303,7 @@ async function main() {
           sort_by: 'EntryTimestamp:desc',
           per_page: MAX_BUBBLE_FETCH,
           include_fields:
-            'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp',
+            'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,thumbnailUrl,primaryImageUrl',
         });
 
         const matches: NewListingAlert[] = (res.hits ?? []).map((h) => {
@@ -315,6 +317,7 @@ async function main() {
             beds: num(d.BedroomsTotal),
             baths: num(d.BathroomsTotalInteger),
             brokerage: (d.ListOfficeName as string) || null,
+            thumb: (d.thumbnailUrl as string) || (d.primaryImageUrl as string) || null,
             entryMs: Number(d.EntryTimestamp) || 0,
           };
         });
@@ -342,10 +345,17 @@ async function main() {
   ]);
 
   // One profile lookup per user, reused for sending and baseline gating.
+  // Null the email for opted-out users so downstream treats them as unsendable:
+  // the digest is skipped AND baselines still advance (no re-alert loop). CASL.
   const emails = new Map<string, string | null>();
   for (const userId of userIds) {
-    const { data: profile } = await supabase.from('profiles').select('email').eq('id', userId).single();
-    emails.set(userId, (profile?.email as string | undefined) ?? null);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, email_opt_out')
+      .eq('id', userId)
+      .single();
+    const optedOut = (profile as { email_opt_out?: boolean } | null)?.email_opt_out === true;
+    emails.set(userId, optedOut ? null : ((profile?.email as string | undefined) ?? null));
   }
 
   const sentUsers = new Set<string>();
@@ -361,7 +371,8 @@ async function main() {
     const email = emails.get(userId);
     if (!email) continue;
 
-    const { subject, html, text } = renderAlertsDigest(payload);
+    const unsubscribeUrl = `${SITE_URL}/api/email/unsubscribe?u=${encodeURIComponent(userId)}&t=${signUnsubscribe(userId)}`;
+    const { subject, html, text } = renderAlertsDigest(payload, { unsubscribeUrl });
     try {
       await resend.emails.send({ from: FROM, to: email, subject, html, text });
       sentUsers.add(userId);
