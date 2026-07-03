@@ -133,6 +133,21 @@ describe("buildCommercialLeaseSnapshot", () => {
     expect(s.monthlyRent).toBeNull();
   });
 
+  it("$0/$1 placeholder asks derive nothing regardless of basis (feature-sweep find)", () => {
+    // Live case: a $1/sqft/yr industrial lease derived a real-looking "$52,970/mo".
+    for (const listPrice of [0, 1]) {
+      const s = buildCommercialLeaseSnapshot({
+        listPrice,
+        listPriceUnit: "Per Sq Ft",
+        buildingAreaTotal: 46242,
+      });
+      expect(s.monthlyRent, `price=${listPrice}`).toBeNull();
+      expect(s.annualRent, `price=${listPrice}`).toBeNull();
+      expect(s.perSqftYear, `price=${listPrice}`).toBeNull();
+      expect(s.areaSqft).toBe(46242); // area itself is still real data
+    }
+  });
+
   it("unknown basis derives nothing", () => {
     const s = buildCommercialLeaseSnapshot({
       listPrice: 4000,

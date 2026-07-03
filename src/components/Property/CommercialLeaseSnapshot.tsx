@@ -54,11 +54,13 @@ export default function CommercialLeaseSnapshot({
           ? `${formatPrice(s.annualRent)}/yr`
           : formatPrice(input.listPrice); // unknown basis: verbatim, no unit claim
   const heroCaption =
-    s.basis === "unknown"
-      ? "asking rent as listed — basis not specified in the feed"
-      : leased
-        ? "achieved lease rate"
-        : "asking rent as quoted by the listing";
+    input.listPrice <= 1
+      ? "placeholder ask — contact the listing brokerage for pricing"
+      : s.basis === "unknown"
+        ? "asking rent as listed — basis not specified in the feed"
+        : leased
+          ? "achieved lease rate"
+          : "asking rent as quoted by the listing";
 
   return (
     <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
