@@ -322,3 +322,82 @@ describe("buildAttrDeltas", () => {
     expect(missing.find((x) => x.kind === "size")).toBeUndefined();
   });
 });
+
+// ── Commercial comps (commercial-gap Phase 1) ──
+// (buildForSaleSimilarFilter / buildWhyLabel / the attr types are already imported above)
+import { scoreForSaleCommercial } from "./similarListings";
+
+const COMMERCIAL_SUBJECT: SubjectAttrs = {
+  id: "W1",
+  cityRegion: "Islington-City Centre West",
+  city: "Toronto W08",
+  subType: "Industrial",
+  beds: 0,
+  bedsAbove: 0,
+  bedsBelow: 0,
+  garage: null,
+  listPrice: 3_999_000,
+  area: 3500,
+};
+
+const commercialCand = (over: Partial<CandidateAttrs>): CandidateAttrs => ({
+  cityRegion: "Islington-City Centre West",
+  subType: "Industrial",
+  beds: 0,
+  bedsAbove: 0,
+  bedsBelow: 0,
+  garage: null,
+  price: 3_999_000,
+  area: 3500,
+  ...over,
+});
+
+describe("commercial comps", () => {
+  it("family wall for commercial subtypes is exact-spelling (Office never comps Retail)", () => {
+    expect(buildForSaleSimilarFilter(COMMERCIAL_SUBJECT)).toContain(
+      "PropertySubType:=`Industrial`"
+    );
+    expect(buildForSaleSimilarFilter(COMMERCIAL_SUBJECT)).not.toContain("Detached");
+  });
+
+  it("lease subjects comp against For-Lease inventory", () => {
+    expect(buildForSaleSimilarFilter(COMMERCIAL_SUBJECT, { lease: true })).toContain(
+      "TransactionType:=`For Lease`"
+    );
+  });
+
+  it("lease subjects query closed LEASES, not sales (DealType leased)", () => {
+    const now = 1_750_000_000_000;
+    expect(buildSoldSimilarFilter(COMMERCIAL_SUBJECT, 180, now, { lease: true })).toContain(
+      "DealType:=leased"
+    );
+    // Default stays sold — residential sale pages unchanged
+    expect(buildSoldSimilarFilter(COMMERCIAL_SUBJECT, 180, now)).toContain("DealType:=sold");
+  });
+
+  it("why-label says 'leased Nd ago' for lease comps", () => {
+    const label = buildWhyLabel(
+      COMMERCIAL_SUBJECT,
+      commercialCand({ daysAgo: 12 }),
+      "sold",
+      { leased: true }
+    );
+    expect(label).toContain("leased 12d ago");
+    expect(label).not.toContain("sold 12d ago");
+  });
+
+  it("commercial scorer ranks closer area above closer beds/garage", () => {
+    const sameArea = scoreForSaleCommercial(COMMERCIAL_SUBJECT, commercialCand({}));
+    const halfArea = scoreForSaleCommercial(COMMERCIAL_SUBJECT, commercialCand({ area: 1750 }));
+    const noArea = scoreForSaleCommercial(COMMERCIAL_SUBJECT, commercialCand({ area: 0 }));
+    expect(sameArea).toBeGreaterThan(noArea); // neutral 0.5 when unknown
+    expect(noArea).toBeGreaterThan(halfArea - 40); // sanity: no crash weighting
+    expect(sameArea).toBeGreaterThan(halfArea);
+  });
+
+  it("why-label uses the raw subtype for unmapped (commercial) types, no 0bd chip", () => {
+    const label = buildWhyLabel(COMMERCIAL_SUBJECT, commercialCand({}), "sale");
+    expect(label).toContain("Industrial");
+    expect(label).not.toContain("0bd");
+  });
+});

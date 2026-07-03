@@ -197,8 +197,16 @@ export function seedAssumptions(listing: SeedInput): UnderwritingAssumptions {
  *
  * Audit finding C2 (2026-06-13): the sandbox showed "-$311/mo cashflow" on a
  * vacant-land parcel. Callers gate the income display on this.
+ *
+ * Commercial-gap Phase 0 (2026-07-03): the residential rent seed ("1% rule"
+ * scaled) is equally a fabrication on Commercial-class subtypes — Office,
+ * Commercial Retail, Industrial, Sale Of Business, Investment, Farm, Store W
+ * Apt/Office — which are valued on their own income statements (NOI, TMI),
+ * not a seeded dwelling rent. Word-boundaries where a bare substring could
+ * trip on community/style strings (Highland, Businessman's Corner — none live,
+ * but the feed is untrusted).
  */
 export function isIncomeProperty(propertySubType?: string | null): boolean {
   const t = (propertySubType || "").toLowerCase();
-  return !/vacant|\bland\b|parking|locker/.test(t);
+  return !/vacant|\bland\b|parking|locker|office|retail|industrial|commercial|\bbusiness\b|investment|\bfarm\b/.test(t);
 }

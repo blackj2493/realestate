@@ -12,11 +12,14 @@
  */
 
 import { formatPrice } from "@/lib/utils";
+import { isCommercialProperty } from "@/lib/filters/fundamentals";
 
 export type RawPayload = Record<string, unknown>;
 
 export type DatasheetGroupId =
   | "vitals"
+  | "commercial"
+  | "commercialFinancials"
   | "building"
   | "interior"
   | "exterior"
@@ -138,6 +141,10 @@ function posNum(p: RawPayload, key: string): string | null {
 
 const GROUPS: DatasheetGroupMeta[] = [
   { id: "vitals", title: "Vitals" },
+  // Commercial-class groups sit right under Vitals — for a warehouse or restaurant
+  // these ARE the headline facts (commercial-gap Phase 1).
+  { id: "commercial", title: "Commercial" },
+  { id: "commercialFinancials", title: "Commercial Financials" },
   { id: "building", title: "Building & Construction" },
   { id: "interior", title: "Interior" },
   { id: "exterior", title: "Exterior, Lot & Land" },
@@ -160,10 +167,30 @@ function isLeaseTransaction(p: RawPayload): boolean {
   return (str(p, "TransactionType") ?? "").toLowerCase().includes("lease");
 }
 
+/** Commercial groups apply only to the Commercial PropertyType class (same rule the
+ *  terminal filters by — fundamentals.ts buildClassClause). */
+function isCommercialClass(p: RawPayload): boolean {
+  return isCommercialProperty(str(p, "PropertyType"));
+}
+
 const GROUP_APPLIES: Partial<Record<DatasheetGroupId, (p: RawPayload) => boolean>> = {
   condo: isCondoClass,
   lease: isLeaseTransaction,
+  commercial: isCommercialClass,
+  commercialFinancials: isCommercialClass,
 };
+
+/** Area with its companion unit-code field: "3,500 Square Feet", "100%", "405 Sq Ft".
+ *  TRREB quotes commercial area splits either as sqft OR as a percent of the building
+ *  (unit code "%") — render the code verbatim, never guess a unit. */
+function areaWithUnit(p: RawPayload, areaKey: string, unitKey: string): string | null {
+  const v = num(p, areaKey);
+  if (v === null || v <= 0) return null;
+  const unit = str(p, unitKey);
+  const body = v.toLocaleString("en-CA");
+  if (!unit) return body;
+  return unit === "%" ? `${body}%` : `${body} ${unit}`;
+}
 
 // ── field registry ──
 
@@ -270,6 +297,93 @@ const FIELDS: DatasheetField[] = [
     },
   },
   { key: "CrossStreet", label: "Cross Street", group: "vitals", format: (p) => str(p, "CrossStreet") },
+
+  // ── Commercial (group gated by isCommercialClass; commercial-gap Phase 1) ──
+  // Field spellings verified against live PROPTX payloads (Industrial / Sale Of
+  // Business / Store W Apt/Office archetypes, 2026-07-03). Rows self-omit when the
+  // feed leaves them empty, so the uncommon ones cost nothing on thin listings.
+  { key: "PropertyUse", label: "Property Use", group: "commercial", format: (p) => str(p, "PropertyUse") },
+  { key: "BusinessType", label: "Business Type", group: "commercial", format: (p) => joined(p, "BusinessType") },
+  { key: "BusinessName", label: "Business Name", group: "commercial", format: (p) => str(p, "BusinessName") },
+  { key: "FreestandingYN", label: "Freestanding", group: "commercial", format: (p) => yes(p, "FreestandingYN") },
+  {
+    key: "BuildingAreaTotal",
+    label: "Total Area",
+    group: "commercial",
+    format: (p) => areaWithUnit(p, "BuildingAreaTotal", "BuildingAreaUnits"),
+  },
+  {
+    key: "OfficeApartmentArea",
+    label: "Office / Apt Area",
+    group: "commercial",
+    format: (p) => areaWithUnit(p, "OfficeApartmentArea", "OfficeApartmentAreaUnit"),
+  },
+  {
+    key: "RetailArea",
+    label: "Retail Area",
+    group: "commercial",
+    format: (p) => areaWithUnit(p, "RetailArea", "RetailAreaCode"),
+  },
+  {
+    key: "IndustrialArea",
+    label: "Industrial Area",
+    group: "commercial",
+    format: (p) => areaWithUnit(p, "IndustrialArea", "IndustrialAreaCode"),
+  },
+  {
+    key: "ClearHeightFeet",
+    label: "Clear Height",
+    group: "commercial",
+    format: (p) => {
+      const ft = num(p, "ClearHeightFeet");
+      if (ft === null || ft <= 0) return null;
+      const inches = num(p, "ClearHeightInches");
+      return inches && inches > 0 ? `${ft} ft ${inches} in` : `${ft} ft`;
+    },
+  },
+  {
+    key: "GradeLevelShippingDoors",
+    label: "Shipping Doors",
+    group: "commercial",
+    // Composite over the four door-type counts; only >0 segments (all-zero is noise).
+    format: (p) => {
+      const segs: string[] = [];
+      const push = (key: string, label: string) => {
+        const v = num(p, key);
+        if (v !== null && v > 0) segs.push(`${v} ${label}`);
+      };
+      push("GradeLevelShippingDoors", "grade-level");
+      push("TruckLevelShippingDoors", "truck-level");
+      push("DriveInLevelShippingDoors", "drive-in");
+      push("DoubleManShippingDoors", "double-man");
+      return segs.length > 0 ? segs.join(" · ") : null;
+    },
+  },
+  { key: "CraneYN", label: "Crane", group: "commercial", format: (p) => yes(p, "CraneYN") },
+  // "No" is a real answer for rail access on industrial — verbatim, not gated to Yes.
+  { key: "Rail", label: "Rail", group: "commercial", format: (p) => str(p, "Rail") },
+  { key: "OutsideStorageYN", label: "Outside Storage", group: "commercial", format: (p) => yes(p, "OutsideStorageYN") },
+  { key: "HoursDaysOfOperationDescription", label: "Hours of Operation", group: "commercial", format: (p) => str(p, "HoursDaysOfOperationDescription") },
+  { key: "SeatingCapacity", label: "Seating Capacity", group: "commercial", format: (p) => posNum(p, "SeatingCapacity") },
+  { key: "NumberOfFullTimeEmployees", label: "Full-Time Employees", group: "commercial", format: (p) => posNum(p, "NumberOfFullTimeEmployees") },
+  { key: "FranchiseYN", label: "Franchise", group: "commercial", format: (p) => yes(p, "FranchiseYN") },
+  { key: "LiquorLicenseYN", label: "Liquor License", group: "commercial", format: (p) => yes(p, "LiquorLicenseYN") },
+  { key: "FinancialStatementAvailableYN", label: "Financials Available", group: "commercial", format: (p) => yes(p, "FinancialStatementAvailableYN") },
+
+  // ── Commercial Financials (group gated by isCommercialClass) ──
+  // Values are agent-entered income-statement figures, rendered verbatim (money).
+  { key: "GrossRevenue", label: "Gross Revenue", group: "commercialFinancials", format: (p) => money(p, "GrossRevenue") },
+  { key: "OperatingExpense", label: "Operating Expenses", group: "commercialFinancials", format: (p) => money(p, "OperatingExpense") },
+  { key: "TaxesExpense", label: "Taxes Expense", group: "commercialFinancials", format: (p) => money(p, "TaxesExpense") },
+  { key: "InsuranceExpense", label: "Insurance Expense", group: "commercialFinancials", format: (p) => money(p, "InsuranceExpense") },
+  { key: "VacancyAllowance", label: "Vacancy Allowance", group: "commercialFinancials", format: (p) => money(p, "VacancyAllowance") },
+  { key: "EstimatedInventoryValueAtCost", label: "Inventory Value (at cost)", group: "commercialFinancials", format: (p) => money(p, "EstimatedInventoryValueAtCost") },
+  { key: "PercentBuilding", label: "% of Building", group: "commercialFinancials", format: (p) => str(p, "PercentBuilding") },
+  { key: "CommercialCondoFee", label: "Commercial Condo Fee", group: "commercialFinancials", format: (p) => money(p, "CommercialCondoFee") },
+  // TMI rides two shapes in the feed: a dedicated TMI string, or TaxAnnualAmount
+  // with TaxType="TMI" (then the Taxes group's "Annual Taxes" number IS the TMI
+  // figure). Surface the dedicated field verbatim when present.
+  { key: "TMI", label: "TMI", group: "commercialFinancials", format: (p) => str(p, "TMI") },
 
   // ── Building & Construction ──
   { key: "ConstructionMaterials", label: "Construction", group: "building", format: (p) => joined(p, "ConstructionMaterials") },

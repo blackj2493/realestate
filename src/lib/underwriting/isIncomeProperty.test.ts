@@ -32,6 +32,22 @@ describe("isIncomeProperty — C2 vacant-land gate", () => {
     expect(isIncomeProperty("Island Cottage")).toBe(true);
   });
 
+  it("returns false for Commercial-class subtypes (commercial-gap Phase 0)", () => {
+    // The residential rent seed is a fabrication on commercial assets — the sandbox
+    // must show carry-cost only (fundamentals.ts COMMERCIAL_TYPE_OPTIONS spellings).
+    for (const t of [
+      "Commercial Retail",
+      "Office",
+      "Industrial",
+      "Sale Of Business",
+      "Investment",
+      "Farm",
+      "Store W Apt/Office",
+    ]) {
+      expect(isIncomeProperty(t), t).toBe(false);
+    }
+  });
+
   it("defaults to income-applicable when subtype is missing", () => {
     expect(isIncomeProperty(undefined)).toBe(true);
     expect(isIncomeProperty(null)).toBe(true);

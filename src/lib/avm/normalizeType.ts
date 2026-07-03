@@ -40,7 +40,10 @@ export function isCanonicalSubType(normalized: string): boolean {
  * error) because they are land, non-dwelling, or income properties valued on a
  * different basis (cap rate, buildable area) than residential comps:
  *   Vacant Land, Farm, Rural Residential, Mobile/Trailer, Parking Space,
- *   Sale Of Business, Triplex/Fourplex/Multiplex.
+ *   Sale Of Business, Triplex/Fourplex/Multiplex — plus the Commercial-class
+ *   subtypes (Office, Commercial Retail, Industrial, Investment, Store W
+ *   Apt/Office, Land): the model is trained on dwellings only, so a commercial
+ *   "estimate" would be pure out-of-distribution noise (commercial-gap Phase 0).
  * NOTE: deliberately EXCLUDES Link (backtest 6% median — excellent), Duplex
  * (≈unbiased), Co-op/Co-Ownership (normalize to Condo Apartment), and Modular —
  * those are priceable and must keep publishing. Matched on the verbatim spelling.
@@ -56,11 +59,20 @@ const UNPRICEABLE_PATTERNS: readonly string[] = [
   'triplex',
   'fourplex',
   'multiplex',
+  // Commercial-class subtypes (fundamentals.ts COMMERCIAL_TYPE_OPTIONS)
+  'office',
+  'retail',
+  'industrial',
+  'investment',
+  'commercial',
 ];
 
 export function isUnpriceableType(rawSubType: string | null | undefined): boolean {
   const s = (rawSubType ?? '').trim().toLowerCase();
   if (!s) return false;
+  // Bare "Land" (the commercial subtype) — exact match only: a substring 'land'
+  // would false-trip on Highland/Island community/style strings.
+  if (s === 'land') return true;
   return UNPRICEABLE_PATTERNS.some((p) => s.includes(p));
 }
 

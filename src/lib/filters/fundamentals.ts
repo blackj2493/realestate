@@ -59,6 +59,15 @@ export function buildClassClause(cls: PropertyClass): string {
 }
 
 /**
+ * Class check for a single listing payload (detail page, cards). Mirrors
+ * buildClassClause: "Commercial" is the only non-residential PropertyType, so
+ * exact-match is the same rule the terminal filters by. Trimmed for feed safety.
+ */
+export function isCommercialProperty(propertyType?: string | null): boolean {
+  return (propertyType ?? "").trim() === "Commercial";
+}
+
+/**
  * Price floor. For sales, ListPrice is a sale price → keep the $100k floor that
  * drops $0/$1 placeholder listings. For rentals, ListPrice is a MONTHLY rent
  * (~$2k) → a $100k floor would hide every rental, so floor at $1 (drop $0 only).

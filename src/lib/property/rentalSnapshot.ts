@@ -91,6 +91,112 @@ function computeRentPerSqft(
   };
 }
 
+// ── Commercial lease economics (commercial-gap Phase 1) ──
+//
+// Commercial leases are NOT quoted like residential ones. TRREB's ListPriceUnit
+// carries the basis: "Month" (total monthly rent), "Per Sq Ft" / "Sq Ft Net" /
+// "Sq Ft Gross" (a $/sqft/yr rate — the industry convention), or "Year" (total
+// annual rent). Reading a $22/sqft/yr quote as a $22 monthly rent (or vice versa)
+// is a 1000× fabrication, so basis detection gates ALL derived math: an unknown
+// basis renders the asking figure verbatim and derives nothing.
+
+export type CommercialLeaseBasis = "month" | "psf-year" | "year" | "unknown";
+
+export interface CommercialLeaseInput {
+  /** ListPrice as fed — its meaning depends on listPriceUnit. */
+  listPrice: number;
+  /** TRREB ListPriceUnit, e.g. "Month", "Per Sq Ft", "Sq Ft Net", "Year". */
+  listPriceUnit?: string | null;
+  /** Leasable area (BuildingAreaTotal), sqft. Denominator/multiplier for psf math. */
+  buildingAreaTotal?: number | null;
+  leaseTerm?: string | null;
+  rentIncludes?: string[] | null;
+  /** Verbatim TMI string when the feed carries the dedicated field. */
+  tmi?: string | null;
+  /** TaxType/TaxAnnualAmount pair — TRREB also quotes TMI as TaxType="TMI". */
+  taxType?: string | null;
+  taxAnnualAmount?: number | null;
+}
+
+export interface CommercialLeaseSnapshot {
+  basis: CommercialLeaseBasis;
+  /** Monthly total rent; null when it cannot be derived without guessing. */
+  monthlyRent: number | null;
+  /** Annualized total rent; null when underivable. */
+  annualRent: number | null;
+  /** Asking rate in $/sqft/yr — the commercial comparison number; null when underivable. */
+  perSqftYear: number | null;
+  areaSqft: number | null;
+  leaseTerm: string | null;
+  /** Verbatim TMI display ("$4.50", "$18.40"), from the TMI field or the TaxType=TMI pair. */
+  tmiDisplay: string | null;
+  rentIncludes: string[];
+}
+
+/** Classify TRREB's ListPriceUnit into a lease-price basis. Unknown stays unknown. */
+export function classifyLeaseBasis(listPriceUnit?: string | null): CommercialLeaseBasis {
+  const u = (listPriceUnit ?? "").trim().toLowerCase();
+  if (!u) return "unknown";
+  if (u.includes("month")) return "month";
+  if (u.includes("sq")) return "psf-year"; // "Per Sq Ft", "Sq Ft Net", "Sq Ft Gross"
+  if (u.includes("year") || u.includes("annual")) return "year";
+  return "unknown";
+}
+
+/** Build the commercial-lease snapshot. Pure & deterministic; derives only what the
+ *  quoted basis supports — never guesses a denominator or a basis. */
+export function buildCommercialLeaseSnapshot(input: CommercialLeaseInput): CommercialLeaseSnapshot {
+  const price = Number.isFinite(input.listPrice) && input.listPrice > 0 ? input.listPrice : 0;
+  const area =
+    typeof input.buildingAreaTotal === "number" &&
+    Number.isFinite(input.buildingAreaTotal) &&
+    input.buildingAreaTotal > 0
+      ? input.buildingAreaTotal
+      : null;
+  const basis = classifyLeaseBasis(input.listPriceUnit);
+
+  let monthlyRent: number | null = null;
+  let annualRent: number | null = null;
+  let perSqftYear: number | null = null;
+  if (price > 0) {
+    if (basis === "month") {
+      monthlyRent = price;
+      annualRent = price * 12;
+      perSqftYear = area ? round2((price * 12) / area) : null;
+    } else if (basis === "year") {
+      annualRent = price;
+      monthlyRent = round2(price / 12);
+      perSqftYear = area ? round2(price / area) : null;
+    } else if (basis === "psf-year") {
+      perSqftYear = round2(price);
+      annualRent = area ? Math.round(price * area) : null;
+      monthlyRent = area ? Math.round((price * area) / 12) : null;
+    }
+  }
+
+  const tmiField = input.tmi && input.tmi.trim().length > 0 ? input.tmi.trim() : null;
+  const tmiFromTax =
+    (input.taxType ?? "").trim().toUpperCase() === "TMI" &&
+    typeof input.taxAnnualAmount === "number" &&
+    Number.isFinite(input.taxAnnualAmount) &&
+    input.taxAnnualAmount > 0
+      ? `$${input.taxAnnualAmount.toFixed(2)}`
+      : null;
+
+  return {
+    basis,
+    monthlyRent,
+    annualRent,
+    perSqftYear,
+    areaSqft: area,
+    leaseTerm: input.leaseTerm && input.leaseTerm.trim().length > 0 ? input.leaseTerm.trim() : null,
+    tmiDisplay: tmiField ?? tmiFromTax,
+    rentIncludes: (input.rentIncludes ?? [])
+      .map((s) => (typeof s === "string" ? s.trim() : ""))
+      .filter((s) => s.length > 0),
+  };
+}
+
 /** Build the lease-listing snapshot from raw listing fields. Pure & deterministic. */
 export function buildRentalSnapshot(input: RentalSnapshotInput): RentalSnapshot {
   const monthlyRent = Math.max(0, Number.isFinite(input.monthlyRent) ? input.monthlyRent : 0);

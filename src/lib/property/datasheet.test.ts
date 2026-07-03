@@ -525,3 +525,104 @@ describe("buildDatasheet — tranche 2", () => {
     expect(rowValue(p, "transaction", "Seller Property Info Statement")).toBe("Yes");
   });
 });
+
+// ── Commercial groups (commercial-gap Phase 1) ──
+
+/** Industrial-condo payload shaped like live PROPTX data (W-prefix archetype, 2026-07-03). */
+const INDUSTRIAL: RawPayload = {
+  PropertyType: "Commercial",
+  PropertySubType: "Industrial",
+  PropertyUse: "Industrial Condo",
+  BuildingAreaTotal: 3500,
+  BuildingAreaUnits: "Square Feet",
+  OfficeApartmentArea: 100,
+  OfficeApartmentAreaUnit: "%",
+  ClearHeightFeet: 12,
+  ClearHeightInches: 0,
+  GradeLevelShippingDoors: 0,
+  TruckLevelShippingDoors: 2,
+  DriveInLevelShippingDoors: 1,
+  DoubleManShippingDoors: 0,
+  FreestandingYN: false,
+  Rail: "No",
+  CommercialCondoFee: 1200,
+};
+
+describe("buildDatasheet — commercial groups", () => {
+  it("gates both commercial groups to the Commercial PropertyType class", () => {
+    const ids = buildDatasheet(INDUSTRIAL).map((g) => g.group.id);
+    expect(ids).toContain("commercial");
+    expect(ids).toContain("commercialFinancials");
+    // Residential payload never grows commercial groups, even with stray fields
+    const res = buildDatasheet({ ...DETACHED, ClearHeightFeet: 12, CommercialCondoFee: 900 });
+    expect(res.map((g) => g.group.id)).not.toContain("commercial");
+    expect(res.map((g) => g.group.id)).not.toContain("commercialFinancials");
+  });
+
+  it("renders area rows with their verbatim unit codes (sqft and percent)", () => {
+    expect(rowValue(INDUSTRIAL, "commercial", "Total Area")).toBe("3,500 Square Feet");
+    expect(rowValue(INDUSTRIAL, "commercial", "Office / Apt Area")).toBe("100%");
+    expect(
+      rowValue(
+        { ...INDUSTRIAL, RetailArea: 395, RetailAreaCode: "Sq Ft" },
+        "commercial",
+        "Retail Area"
+      )
+    ).toBe("395 Sq Ft");
+    // Zero/absent areas self-omit
+    expect(rowValue(INDUSTRIAL, "commercial", "Industrial Area")).toBeUndefined();
+  });
+
+  it("clear height renders feet with optional inches; zero suppressed", () => {
+    expect(rowValue(INDUSTRIAL, "commercial", "Clear Height")).toBe("12 ft");
+    expect(
+      rowValue({ ...INDUSTRIAL, ClearHeightInches: 6 }, "commercial", "Clear Height")
+    ).toBe("12 ft 6 in");
+    expect(
+      rowValue({ ...INDUSTRIAL, ClearHeightFeet: 0 }, "commercial", "Clear Height")
+    ).toBeUndefined();
+  });
+
+  it("shipping doors composite lists only >0 door types; all-zero omits the row", () => {
+    expect(rowValue(INDUSTRIAL, "commercial", "Shipping Doors")).toBe(
+      "2 truck-level · 1 drive-in"
+    );
+    expect(
+      rowValue(
+        { ...INDUSTRIAL, TruckLevelShippingDoors: 0, DriveInLevelShippingDoors: 0 },
+        "commercial",
+        "Shipping Doors"
+      )
+    ).toBeUndefined();
+  });
+
+  it("business rows render for a Sale Of Business payload", () => {
+    const biz: RawPayload = {
+      PropertyType: "Commercial",
+      PropertySubType: "Sale Of Business",
+      BusinessType: ["Restaurant"],
+      SeatingCapacity: 46,
+      NumberOfFullTimeEmployees: 5,
+      HoursDaysOfOperationDescription: "11-21",
+      FranchiseYN: false,
+      ChattelsYN: true,
+    };
+    expect(rowValue(biz, "commercial", "Business Type")).toBe("Restaurant");
+    expect(rowValue(biz, "commercial", "Seating Capacity")).toBe("46");
+    expect(rowValue(biz, "commercial", "Full-Time Employees")).toBe("5");
+    expect(rowValue(biz, "commercial", "Hours of Operation")).toBe("11-21");
+    // FranchiseYN=false → only-true policy omits the row
+    expect(rowValue(biz, "commercial", "Franchise")).toBeUndefined();
+  });
+
+  it("commercial financials render money rows and the verbatim TMI field", () => {
+    expect(rowValue(INDUSTRIAL, "commercialFinancials", "Commercial Condo Fee")).toBe("$1,200");
+    const withFin: RawPayload = { ...INDUSTRIAL, GrossRevenue: 250000, TMI: "$4.50" };
+    expect(rowValue(withFin, "commercialFinancials", "Gross Revenue")).toBe("$250,000");
+    expect(rowValue(withFin, "commercialFinancials", "TMI")).toBe("$4.50");
+  });
+
+  it("Rail renders verbatim (a 'No' is informative on industrial)", () => {
+    expect(rowValue(INDUSTRIAL, "commercial", "Rail")).toBe("No");
+  });
+});
