@@ -174,10 +174,11 @@ export default function SimilarProperties(props: Props) {
                 <SoldCompCard
                   key={i}
                   locked
+                  leased={isLease}
                   card={{} as SimilarSoldCard}
                 />
               ))
-            : data.sold.map((c) => <SoldCompCard key={c.id} card={c} />)}
+            : data.sold.map((c) => <SoldCompCard key={c.id} card={c} leased={isLease} />)}
         </Row>
       )}
 

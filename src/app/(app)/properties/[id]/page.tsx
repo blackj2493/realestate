@@ -1037,7 +1037,10 @@ export default async function PropertyPage({
           listPrice={price}
           area={p.BuildingAreaTotal ?? 0}
           isCommercial={isCommercial}
-          isLease={isCommercial && isLease}
+          // All lease subjects (residential rentals included) comp against For-Lease
+          // actives + DealType=leased closings — sale comps under a rental compare a
+          // monthly rent against purchase prices.
+          isLease={isLease}
         />
         </div>
 
