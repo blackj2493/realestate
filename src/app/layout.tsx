@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import PostHogProvider from "@/components/analytics/PostHogProvider";
 import WatchlistInit from "@/components/watchlist/WatchlistInit";
+import WelcomeOnSignup from "@/components/welcome/WelcomeOnSignup";
 import DiscoveryRoot from "@/components/discovery/DiscoveryRoot";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
@@ -96,6 +97,7 @@ export default function RootLayout({
         />
         <PostHogProvider>
           <WatchlistInit />
+          <WelcomeOnSignup />
           {children}
           <DiscoveryRoot />
           <Toaster />
