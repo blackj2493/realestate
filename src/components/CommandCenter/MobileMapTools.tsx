@@ -6,7 +6,8 @@
  * Compare, Commute, Walkable, Color By, Draw Area and Saved Views: a "Tools"
  * button on the map opens a bottom sheet — a grid of the same tools, each opening
  * its EXACT same panel (renderModulePanel) so the behaviour can't drift from
- * desktop. Hidden at md+ (the rail takes over there).
+ * desktop. Zoning is the exception: like the desktop rail's ZONING tile it's an
+ * instant on/off map lens (no panel). Hidden at md+ (the rail takes over there).
  */
 
 "use client";
@@ -23,6 +24,7 @@ import {
   Lasso,
   Scale,
   Bookmark,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,8 @@ export default function MobileMapTools() {
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
+  const showZoning = useCommandCenterStore((s) => s.showZoning);
+  const setShowZoning = useCommandCenterStore((s) => s.setShowZoning);
 
   const dataActive: Record<RailModule, boolean> = {
     commute: commuteEnabled,
@@ -62,7 +66,32 @@ export default function MobileMapTools() {
     lenses: false,
     time: false,
   };
-  const activeCount = TOOLS.filter((t) => dataActive[t.module]).length;
+
+  // Unified tile list: the panel-opening modules, plus Zoning — an instant on/off map
+  // lens (no panel), mirroring the desktop rail's ZONING action tile. Toggling it closes
+  // the sheet so the overlay is visible on the map underneath.
+  type MobileTile = { key: string; label: string; icon: LucideIcon; active: boolean; badge?: number; onClick: () => void };
+  const tiles: MobileTile[] = [
+    ...TOOLS.map((t) => ({
+      key: t.module,
+      label: t.label,
+      icon: t.icon,
+      active: dataActive[t.module],
+      badge: t.module === "compare" ? selectedCount : undefined,
+      onClick: () => setActiveModule(t.module),
+    })),
+    {
+      key: "zoning",
+      label: "Zoning",
+      icon: Landmark,
+      active: showZoning,
+      onClick: () => {
+        setShowZoning(!showZoning);
+        setOpen(false);
+      },
+    },
+  ];
+  const activeCount = tiles.filter((t) => t.active).length;
 
   React.useEffect(() => {
     if (!open) return;
@@ -139,25 +168,25 @@ export default function MobileMapTools() {
                 renderModulePanel(activeModule)
               ) : (
                 <div className="grid grid-cols-3 gap-2 p-3">
-                  {TOOLS.map((t) => {
+                  {tiles.map((t) => {
                     const Icon = t.icon;
                     return (
                       <button
-                        key={t.module}
+                        key={t.key}
                         type="button"
-                        onClick={() => setActiveModule(t.module)}
+                        onClick={t.onClick}
                         className={cn(
                           "relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-md border bg-slate-900/50 py-3 transition-colors active:bg-slate-800",
-                          dataActive[t.module] ? "border-cyan-500/50 text-cyan-200" : "border-slate-800 text-slate-300"
+                          t.active ? "border-cyan-500/50 text-cyan-200" : "border-slate-800 text-slate-300"
                         )}
                       >
-                        <Icon className={cn("h-5 w-5", dataActive[t.module] ? "text-cyan-300" : "text-cyan-400")} />
+                        <Icon className={cn("h-5 w-5", t.active ? "text-cyan-300" : "text-cyan-400")} />
                         <span className="text-[10px] font-semibold uppercase tracking-wide">{t.label}</span>
-                        {t.module === "compare" && selectedCount > 0 ? (
+                        {t.badge && t.badge > 0 ? (
                           <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
-                            {selectedCount}
+                            {t.badge}
                           </span>
-                        ) : dataActive[t.module] ? (
+                        ) : t.active ? (
                           <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-cyan-400" />
                         ) : null}
                       </button>
