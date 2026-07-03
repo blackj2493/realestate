@@ -158,7 +158,12 @@ export function buildCommercialLeaseSnapshot(input: CommercialLeaseInput): Comme
   let monthlyRent: number | null = null;
   let annualRent: number | null = null;
   let perSqftYear: number | null = null;
-  if (price > 0) {
+  // $0/$1 asks are placeholder pricing ("contact brokerage" convention — the same
+  // placeholders the terminal's ListPrice:>=1 rent floor tolerates). Deriving a
+  // "$52,970/mo total" from a $1/sqft placeholder amplifies noise into a
+  // real-looking figure, so placeholders derive nothing (found in the Phase-1
+  // feature sweep on a live $1/sqft industrial lease).
+  if (price > 1) {
     if (basis === "month") {
       monthlyRent = price;
       annualRent = price * 12;
