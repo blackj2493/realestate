@@ -95,13 +95,18 @@ function listingCanonical(id: string, p: RawListing): string {
 }
 
 /**
- * Path to this listing's city hub (/property/{prov}/{city}), or null when the hub
- * wouldn't resolve (district-split cities like Toronto/London — see cityHubResolves;
- * they come online with 2b-ii's CitySlug). Drives the breadcrumb crawl-link + JSON-LD.
+ * Path to this listing's city hub (/property/{prov}/{city} — or the commercial tree's
+ * /commercial/{prov}/{city} for Commercial-class listings, whose inventory the
+ * residential hubs exclude), or null when the hub wouldn't resolve (district-split
+ * cities like Toronto/London — see cityHubResolves; they come online with 2b-ii's
+ * CitySlug). Drives the breadcrumb crawl-link + JSON-LD.
  */
-function cityHubPath(p: { City?: string; StateOrProvince?: string }): string | null {
+function cityHubPath(
+  p: { City?: string; StateOrProvince?: string },
+  commercial = false
+): string | null {
   if (!p.City || !cityHubResolves(p.City)) return null;
-  return `/property/${(p.StateOrProvince || "ON").toLowerCase()}/${cityHubSlug(p.City)}`;
+  return `/${commercial ? "commercial" : "property"}/${(p.StateOrProvince || "ON").toLowerCase()}/${cityHubSlug(p.City)}`;
 }
 
 interface RawListing {
@@ -279,7 +284,7 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
       ? "Apartment"
       : "SingleFamilyResidence";
   const url = listingCanonical(id, p);
-  const cityPath = cityHubPath(p);
+  const cityPath = cityHubPath(p, isCommercial);
   const photos = detail.media_urls.slice(0, 8);
   const availability =
     detail.status.kind === "sold"
@@ -424,7 +429,14 @@ export default async function PropertyPage({
 
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Address Unavailable";
-  const cityHref = cityHubPath(p);
+  // Commercial-gap Phase 0: everything AVM/persona-derived on this page (Deal Score,
+  // Estimated Sale, Renovation Upside, The Read, schools, beds/baths hero) is built
+  // for dwellings. Commercial-class listings arrive here via organic search (the
+  // sitemap emits all listings), so gate the residential machinery instead of
+  // rendering fabricated numbers on an office/retail/industrial asset. Computed
+  // before cityHref so the breadcrumb routes into the commercial hub tree (Phase 2).
+  const isCommercial = isCommercialProperty(p.PropertyType);
+  const cityHref = cityHubPath(p, isCommercial);
   const price = p.ListPrice || 0;
   // THE single price number — list-anchored Expected Sale where we can (most accurate),
   // AVM as the honest fallback. Replaces the old two-number display. (null for anon: the
@@ -443,12 +455,6 @@ export default async function PropertyPage({
   const nowMs = Date.now();
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
-  // Commercial-gap Phase 0: everything AVM/persona-derived on this page (Deal Score,
-  // Estimated Sale, Renovation Upside, The Read, schools, beds/baths hero) is built
-  // for dwellings. Commercial-class listings arrive here via organic search (the
-  // sitemap emits all listings), so gate the residential machinery instead of
-  // rendering fabricated numbers on an office/retail/industrial asset.
-  const isCommercial = isCommercialProperty(p.PropertyType);
   // C2 (UX audit 2026-06-13): vacant land has no rental income, so the income
   // side of the underwrite (rent → cap rate, gross yield, cashflow) is a
   // fabrication on these parcels. Gate it so the sandbox shows carrying cost
@@ -522,7 +528,7 @@ export default async function PropertyPage({
             <>
               <span aria-hidden>/</span>
               <Link href={cityHref} className="text-cyan-400 transition-colors hover:text-cyan-300">
-                {isCommercial ? `Properties in ${p.City}` : `Homes for sale in ${p.City}`}
+                {isCommercial ? `Commercial properties in ${p.City}` : `Homes for sale in ${p.City}`}
               </Link>
             </>
           )}

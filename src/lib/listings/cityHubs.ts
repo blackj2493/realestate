@@ -10,22 +10,29 @@ import { cityHubSlug, slugify } from "./listingPath";
  */
 
 const ACTIVE_FILTER = "TransactionType:=`For Sale` && PropertyType:!=Commercial";
+/**
+ * The commercial population for the /commercial/{prov}/{city} hubs (commercial-gap
+ * Phase 2) — the exact inverse of ACTIVE_FILTER's class clause, so together the two
+ * hub trees partition the For-Sale inventory with no overlap and no gap.
+ */
+export const COMMERCIAL_ACTIVE_FILTER = "TransactionType:=`For Sale` && PropertyType:=Commercial";
 // Enough to capture every Ontario city + all Toronto/London district codes (default cap
 // is 50, which would drop the long tail of districts).
 const FACET_CAP = 250;
 
 /**
  * Raw TRREB City value → active For-Sale count; {} on failure. `extraFilter` narrows the
- * population (e.g. "ExtrapolatedCapRate:>0" to count only cap-rate-bearing inventory).
- * Not React-cache wrapped: the sitemap calls it once, and the hub's own React-cached
- * getCityHub dedups it per request — wrapping would also pull `cache()` into the (Node)
- * sitemap test runtime.
+ * population (e.g. "ExtrapolatedCapRate:>0" to count only cap-rate-bearing inventory);
+ * `baseFilter` swaps the population entirely (COMMERCIAL_ACTIVE_FILTER for the
+ * commercial hub tree). Not React-cache wrapped: the sitemap calls it once, and the
+ * hub's own React-cached getCityHub dedups it per request — wrapping would also pull
+ * `cache()` into the (Node) sitemap test runtime.
  */
-export async function getCityFacet(extraFilter = ""): Promise<Record<string, number>> {
+export async function getCityFacet(extraFilter = "", baseFilter = ACTIVE_FILTER): Promise<Record<string, number>> {
   try {
     const res = await searchListings({
       query: "*",
-      rawFilterBy: extraFilter ? `${ACTIVE_FILTER} && ${extraFilter}` : ACTIVE_FILTER,
+      rawFilterBy: extraFilter ? `${baseFilter} && ${extraFilter}` : baseFilter,
       perPage: 1,
       facetBy: "City",
       maxFacetValues: FACET_CAP,
@@ -37,8 +44,11 @@ export async function getCityFacet(extraFilter = ""): Promise<Record<string, num
 }
 
 /** Raw City values that normalize to this hub slug, plus their summed active count. */
-export async function citiesForHubSlug(slug: string): Promise<{ cities: string[]; total: number }> {
-  const facet = await getCityFacet();
+export async function citiesForHubSlug(
+  slug: string,
+  baseFilter = ACTIVE_FILTER
+): Promise<{ cities: string[]; total: number }> {
+  const facet = await getCityFacet("", baseFilter);
   const cities: string[] = [];
   let total = 0;
   for (const [city, count] of Object.entries(facet)) {
@@ -62,10 +72,15 @@ export function cityFilterClause(cities: string[]): string {
 
 /**
  * Distinct hub slugs (district-split cities consolidated) with >= min active listings.
- * `extraFilter` lets callers count a sub-population (e.g. cap-rate hubs).
+ * `extraFilter` lets callers count a sub-population (e.g. cap-rate hubs); `baseFilter`
+ * swaps the population (commercial hub tree).
  */
-export async function cityHubsWithInventory(min: number, extraFilter = ""): Promise<{ slug: string; count: number }[]> {
-  const facet = await getCityFacet(extraFilter);
+export async function cityHubsWithInventory(
+  min: number,
+  extraFilter = "",
+  baseFilter = ACTIVE_FILTER
+): Promise<{ slug: string; count: number }[]> {
+  const facet = await getCityFacet(extraFilter, baseFilter);
   const bySlug = new Map<string, number>();
   for (const [city, count] of Object.entries(facet)) {
     const slug = cityHubSlug(city);

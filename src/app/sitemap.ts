@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { cityHubsWithInventory, neighbourhoodHubsForSitemap } from "@/lib/listings/cityHubs";
+import {
+  cityHubsWithInventory,
+  neighbourhoodHubsForSitemap,
+  COMMERCIAL_ACTIVE_FILTER,
+} from "@/lib/listings/cityHubs";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -25,7 +29,7 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   // neighbourhood hubs (2e). City/persona hubs are each counted over their OWN
   // sub-population so we never sitemap a hub that would render thin/noindex; the
   // neighbourhood enumeration applies the same >= HUB_MIN floor per (city, region).
-  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, newBuildHubs, devHubs, hoodHubs] = await Promise.all([
+  const [cityHubs, capRateHubs, schoolHubs, walkableHubs, newBuildHubs, devHubs, hoodHubs, commercialHubs] = await Promise.all([
     cityHubsWithInventory(HUB_MIN),
     cityHubsWithInventory(HUB_MIN, "ExtrapolatedCapRate:>0"),
     cityHubsWithInventory(HUB_MIN, "BestSchoolScoreNearby:>0"),
@@ -36,6 +40,8 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
     // Dev filter MUST match PRIME_FILTER (development-potential/page.tsx).
     cityHubsWithInventory(HUB_MIN, "multi_unit_status:=`PRIME_CANDIDATE`"),
     neighbourhoodHubsForSitemap(HUB_MIN),
+    // Commercial hub tree (commercial-gap Phase 2) — counted over its OWN population.
+    cityHubsWithInventory(HUB_MIN, "", COMMERCIAL_ACTIVE_FILTER),
   ]);
   return [
     ...cityHubs.map(({ slug }) => ({
@@ -72,6 +78,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/property/on/${citySlug}/${hoodSlug}`,
       changeFrequency: "daily" as const,
       priority: 0.6,
+    })),
+    ...commercialHubs.map(({ slug }) => ({
+      url: `${SITE_URL}/commercial/on/${slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
     })),
   ];
 }
