@@ -12,7 +12,7 @@
    ============================================================================ */
 @layer base {
   :root {
-    --background: 210 40% 98%; /* slate-50 — tinted page so white cards lift off it */
+    --background: 214 24% 93%; /* cool light-grey ground (mirrors dark's page<card depth) so white cards read as raised, not washed */
     --foreground: 222 47% 11%; /* slate-900 */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -28,8 +28,8 @@
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%; /* red-600 */
     --destructive-foreground: 0 0% 100%;
-    --border: 215 25% 87%; /* ~slate-200/300 — visible card + divider edges */
-    --input: 215 25% 87%;
+    --border: 214 20% 84%; /* slate-300 — clearly visible card + divider edges on the grey ground */
+    --input: 214 20% 84%;
     --ring: 192 91% 36%;
     --radius: 0rem; /* sharp geometry — zero rounded corners */
     color-scheme: light;
