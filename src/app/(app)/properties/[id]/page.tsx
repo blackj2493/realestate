@@ -51,6 +51,7 @@ import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCa
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
+import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
@@ -850,6 +851,17 @@ export default async function PropertyPage({
                 thumb={detail.media_urls[0]}
                 statusKind={status.kind}
               />
+              {/* Anonymous-only, single-field email capture: converts the single-listing
+                  buyer-intent visitor (who won't sign up now) into a re-engageable lead.
+                  Signed-in users already get watchlist alerts, so it's suppressed for them. */}
+              {!isAuthed && (
+                <ListingAlertCapture
+                  listingKey={id}
+                  address={address}
+                  city={detail.city ?? undefined}
+                  statusKind={status.kind}
+                />
+              )}
               <SocialProofBar listingId={id} />
 
               {/* Asset Summary */}
@@ -1063,6 +1075,9 @@ export default async function PropertyPage({
           // actives + DealType=leased closings — sale comps under a rental compare a
           // monthly rent against purchase prices.
           isLease={isLease}
+          // Buyer-facing "browse more homes" CTAs land on the list-first city hub
+          // (SimilarProperties ignores it for lease/commercial, which the hub doesn't cover).
+          cityHubHref={cityHref}
         />
         </div>
 

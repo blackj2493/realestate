@@ -18,11 +18,14 @@ import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function VowGateOverlay({
+  headline,
   message,
   ctaLabel = "Login Required",
   next,
   className,
 }: {
+  /** Bold, specific value line (e.g. "See what this home should sell for"). Renders above `message`. */
+  headline?: string;
   /** Short teaser line above the CTA (e.g. "12 recent sales — sign in to view"). */
   message?: string;
   ctaLabel?: string;
@@ -39,15 +42,16 @@ export default function VowGateOverlay({
   return (
     <div
       className={cn(
-        "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded bg-slate-950/40 backdrop-blur-[2px]",
+        "absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 rounded bg-slate-950/55 px-4 text-center backdrop-blur-[2px]",
         className
       )}
     >
       <Lock className="h-5 w-5 text-cyan-300" />
-      {message && <p className="px-3 text-center text-xs text-slate-200">{message}</p>}
+      {headline && <p className="text-sm font-semibold leading-snug text-slate-100">{headline}</p>}
+      {message && <p className="max-w-[44ch] text-xs leading-snug text-slate-300">{message}</p>}
       <Link
         href={href}
-        className="rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-1.5 text-xs font-semibold text-cyan-100 shadow-sm transition-colors hover:bg-cyan-500/30"
+        className="mt-1 rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-1.5 text-xs font-semibold text-cyan-100 shadow-sm transition-colors hover:bg-cyan-500/30"
       >
         {ctaLabel}
       </Link>

@@ -47,7 +47,7 @@ export default function ForceAppreciationCard({
           <CardTitle>Renovation Upside</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative min-h-[8rem]">
             <div className="space-y-2 blur-sm select-none" aria-hidden="true">
               <p className="text-sm">
                 <span className="text-slate-400">up to </span>
@@ -57,7 +57,11 @@ export default function ForceAppreciationCard({
               <div className="h-3 w-full rounded bg-slate-700/40" />
               <div className="h-3 w-2/3 rounded bg-slate-700/40" />
             </div>
-            <VowGateOverlay message="Sign in to view value-add ROI" />
+            <VowGateOverlay
+              headline="See the renovation upside"
+              message="Which renovations actually pay back here — the added value, the cost, and the ROI — from our Value-Add engine."
+              ctaLabel="See it free →"
+            />
           </div>
         </CardContent>
       </Card>
