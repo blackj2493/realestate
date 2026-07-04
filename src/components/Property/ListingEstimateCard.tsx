@@ -50,13 +50,19 @@ export default function ListingEstimateCard({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative min-h-[8rem]">
             <div className="space-y-2 blur-sm select-none" aria-hidden="true">
               <p className="text-3xl font-bold text-primary">$0,000,000</p>
               <p className="text-xs font-mono text-muted-foreground">Range $000K – $000K</p>
               <p className="text-sm font-medium text-muted-foreground">↓ $00,000 below ask</p>
             </div>
-            <VowGateOverlay message="Sign in to view the Estimated Value" />
+            <VowGateOverlay
+              headline="See this home's estimated value"
+              message={`What recent comparable sales${
+                cityRegion ? ` in ${cityRegion}` : city ? ` in ${city}` : ""
+              } suggest it's worth, with a confidence range.`}
+              ctaLabel="See it free →"
+            />
           </div>
         </CardContent>
       </Card>

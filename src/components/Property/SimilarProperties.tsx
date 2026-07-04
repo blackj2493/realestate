@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { ForSaleCompCard } from "@/components/Property/ForSaleCompCard";
 import { SoldCompCard } from "@/components/Property/SoldCompCard";
 import type {
@@ -36,6 +37,13 @@ interface Props {
   isCommercial?: boolean;
   /** Lease subject → comp against For-Lease inventory instead of For-Sale. */
   isLease?: boolean;
+  /**
+   * Buyer-facing city-hub path (/property/{prov}/{city}) for the "browse more homes" CTAs.
+   * The hub is a crawlable, list-first For-Sale page — a softer landing than the investor
+   * terminal for organic (mostly buyer-intent) visitors. Falls back to the terminal city
+   * link when absent, or for lease/commercial subjects the hub doesn't cover.
+   */
+  cityHubHref?: string | null;
 }
 
 const TIER_BADGE: Record<MatchTier, { label: string; cls: string } | null> = {
@@ -74,7 +82,7 @@ function Row({ title, children, badge, action }: {
 }
 
 export default function SimilarProperties(props: Props) {
-  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area, isCommercial = false, isLease = false } = props;
+  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area, isCommercial = false, isLease = false, cityHubHref = null } = props;
   const [data, setData] = useState<SimilarResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -133,8 +141,18 @@ export default function SimilarProperties(props: Props) {
   const hasForSale = data.forSale.length > 0;
   if (!hasForSale && !hasSold) return null;
 
-  const seeAll = cityName ? (
-    <Link href={`/properties?city=${encodeURIComponent(cityName)}`} className="text-xs text-cyan-400 hover:text-cyan-300">
+  // Prefer the buyer-facing city hub (crawlable, list-first For-Sale page) over the investor
+  // terminal for standard sale subjects; lease/commercial (not covered by the hub) fall back
+  // to the terminal city view where they can be filtered.
+  const useHub = !!cityHubHref && !isLease && !isCommercial;
+  const browseHref = useHub
+    ? cityHubHref!
+    : cityName
+      ? `/properties?city=${encodeURIComponent(cityName)}`
+      : null;
+  const browseLabel = isLease ? "rentals" : "homes for sale";
+  const seeAll = browseHref && cityName ? (
+    <Link href={browseHref} className="text-xs text-cyan-400 hover:text-cyan-300">
       See all in {cityName} →
     </Link>
   ) : null;
@@ -184,6 +202,20 @@ export default function SimilarProperties(props: Props) {
 
       {data.matchQuality.forSale === "sparse" && (
         <p className="text-xs text-slate-500">Limited comparable activity in {areaName}.</p>
+      )}
+
+      {/* Buyer-facing next step — a prominent path to more inventory that lands on the
+          list-first city hub (not the investor terminal), for organic single-listing visitors. */}
+      {browseHref && cityName && (
+        <div className="mt-4 flex justify-center">
+          <Link
+            href={browseHref}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/60 px-5 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-cyan-200"
+          >
+            Browse all {browseLabel} in {cityName}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       )}
     </section>
   );

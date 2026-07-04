@@ -43,14 +43,18 @@ export default function SoldOutcomeCard({
           <CardTitle>Our Call vs. The Sale</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative min-h-[7.5rem]">
             <div className="space-y-2 blur-sm select-none" aria-hidden="true">
               <p className="text-3xl font-bold text-primary">Within 0.0%</p>
               <p className="text-sm text-muted-foreground">
                 We expected $0,000,000 — it sold for $0,000,000.
               </p>
             </div>
-            <VowGateOverlay message="Sign in to see the sold price and how close our estimate was" />
+            <VowGateOverlay
+              headline="See what it sold for"
+              message="This home has closed. Unlock the sold price and see how close our pre-sale estimate came."
+              ctaLabel="See the sold price →"
+            />
           </div>
         </CardContent>
       </Card>

@@ -50,13 +50,21 @@ export default function EstimatedSaleCard({
           <p className="text-xs text-muted-foreground">What this home is likely to close at.</p>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative min-h-[8.5rem]">
             <div className="space-y-2 blur-sm select-none" aria-hidden="true">
               <p className="text-3xl font-bold text-primary">$0,000,000</p>
               <p className="text-xs font-mono text-muted-foreground">Likely range $000K – $000K</p>
               <p className="text-sm font-medium text-muted-foreground">≈ $00,000 below ask</p>
             </div>
-            <VowGateOverlay message="Sign in to see what this home will likely close at" />
+            <VowGateOverlay
+              headline="See what this home should sell for"
+              message={`Our estimate of the likely closing price and range for this ${
+                propertySubType ?? "home"
+              }${city ? ` in ${city}` : ""}${
+                listPrice > 0 ? `, and how it stacks up against the ${formatPrice(listPrice)} ask` : ""
+              }.`}
+              ctaLabel="See it free →"
+            />
           </div>
         </CardContent>
       </Card>

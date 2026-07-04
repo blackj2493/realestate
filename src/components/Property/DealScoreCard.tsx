@@ -163,7 +163,7 @@ export default function DealScoreCard({
           <Gauge className="h-4 w-4 text-slate-500" />
           Deal Score
         </h3>
-        <div className="relative">
+        <div className="relative min-h-[8rem]">
           <div className="flex items-center gap-4 blur-sm select-none" aria-hidden="true">
             <div className="h-[88px] w-[88px] shrink-0 rounded-full border-[7px] border-slate-700" />
             <div className="space-y-2">
@@ -171,7 +171,11 @@ export default function DealScoreCard({
               <div className="h-3 w-20 rounded bg-slate-700/40" />
             </div>
           </div>
-          <VowGateOverlay message="Sign in to view the Deal Score" />
+          <VowGateOverlay
+            headline="See this home's Deal Score"
+            message="We grade every listing A–F for your investing style — scored against recent comparable sales, with a suggested offer range."
+            ctaLabel="See it free →"
+          />
         </div>
       </div>
     );
