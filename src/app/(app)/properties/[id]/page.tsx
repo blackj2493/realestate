@@ -782,6 +782,19 @@ export default async function PropertyPage({
                mobile so the Deal Score / Estimate / CTA aren't buried beneath the full detail stack. ── */}
           <div id="financials" className="scroll-mt-28 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="sticky top-6 space-y-4">
+              {/* Anonymous-only, single-field email capture — pinned to the TOP of the rail so the
+                  low-friction "email me if this changes" ask is visible without scrolling (it was
+                  previously buried under the CTA cluster). Signed-in users get watchlist alerts, so
+                  it's suppressed for them. */}
+              {!isAuthed && (
+                <ListingAlertCapture
+                  listingKey={id}
+                  address={address}
+                  city={detail.city ?? undefined}
+                  statusKind={status.kind}
+                />
+              )}
+
               {/* The financial cards below (sold-accuracy receipt, Deal Score, Estimated
                   Sale Price / True Value, Force Appreciation) are all AVM-derived and assume
                   a SALE. They're gated off on LEASE listings, where ListPrice is the monthly
@@ -851,17 +864,6 @@ export default async function PropertyPage({
                 thumb={detail.media_urls[0]}
                 statusKind={status.kind}
               />
-              {/* Anonymous-only, single-field email capture: converts the single-listing
-                  buyer-intent visitor (who won't sign up now) into a re-engageable lead.
-                  Signed-in users already get watchlist alerts, so it's suppressed for them. */}
-              {!isAuthed && (
-                <ListingAlertCapture
-                  listingKey={id}
-                  address={address}
-                  city={detail.city ?? undefined}
-                  statusKind={status.kind}
-                />
-              )}
               <SocialProofBar listingId={id} />
 
               {/* Asset Summary */}
