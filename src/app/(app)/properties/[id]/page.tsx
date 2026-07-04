@@ -26,8 +26,9 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
+import RentalGlance from "@/components/Property/RentalGlance";
 import CommercialLeaseSnapshot from "@/components/Property/CommercialLeaseSnapshot";
-import { classifyLeaseBasis } from "@/lib/property/rentalSnapshot";
+import { classifyLeaseBasis, buildRentalGlance } from "@/lib/property/rentalSnapshot";
 import ZoningCard from "@/components/Property/ZoningCard";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
@@ -477,6 +478,10 @@ export default async function PropertyPage({
   // 516% cap rate). Detect the lease and show a Rental Snapshot instead. Same criterion
   // datasheet.ts uses to gate the Lease Terms group (§6.3(f)).
   const isLease = /lease/i.test(p.TransactionType ?? "");
+  // Rental-at-a-glance facts (portion/pets/furnished/laundry/availability/payment) —
+  // public IDX fields, so the gated payload carries them for anon too. Residential
+  // leases only; commercial leases get the basis-aware CommercialLeaseSnapshot instead.
+  const rentalGlance = isLease && !isCommercial ? buildRentalGlance(view.full_payload) : null;
   const jsonLd = buildJsonLd(id, detail);
 
   const badges = detectPropertyBadges({
@@ -667,7 +672,7 @@ export default async function PropertyPage({
                     Sold after {dom} {dom === 1 ? "day" : "days"} on market
                   </span>
                 )}
-                {isActiveListing && !isCommercial && (
+                {isActiveListing && !isCommercial && !isLease && (
                   <DealScoreBadge
                     score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
                     grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
@@ -763,9 +768,14 @@ export default async function PropertyPage({
             </div>
             )}
 
+            {/* Rental at a glance — the facts a tenant scans for first, on residential
+                leases. Takes The Read's slot here, since that verdict is buyer-oriented. */}
+            {rentalGlance && <RentalGlance glance={rentalGlance} />}
+
             {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe).
-                Persona theses are residential (Homebuyer/Cashflow/Flipper/Builder) — off for commercial. */}
-            {isActiveListing && !isCommercial && (
+                Persona theses are residential (Homebuyer/Cashflow/Flipper/Builder) — off for
+                commercial, and off on leases (buyer/investor framing). */}
+            {isActiveListing && !isCommercial && !isLease && (
               <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />
             )}
 
@@ -863,13 +873,17 @@ export default async function PropertyPage({
                 price={price}
                 thumb={detail.media_urls[0]}
                 statusKind={status.kind}
+                isLease={isLease}
               />
-              <SocialProofBar listingId={id} />
+              <SocialProofBar listingId={id} isLease={isLease} />
 
-              {/* Asset Summary */}
+              {/* Asset / Rental Summary. On a residential lease the tenant pays neither the
+                  property taxes nor the condo fee, so those rows drop; "True DOM" reframes as
+                  how long the unit has been available. Commercial leases keep the TMI/tax row
+                  — it's the tenant's cost there. */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-200">
-                  Asset Summary
+                  {isLease ? "Rental Summary" : "Asset Summary"}
                 </h3>
                 <div className="space-y-2 text-xs">
                   {soldPrice !== null && (
@@ -892,21 +906,25 @@ export default async function PropertyPage({
                     value={formatPrice(price)}
                     valueClass={isActiveListing ? "text-emerald-400" : "text-slate-400"}
                   />
+                  {(!isLease || isCommercial) && (
+                    <>
+                      <SummaryRow
+                        label={
+                          // TaxType="TMI" → TaxAnnualAmount is the TMI figure, not a property tax.
+                          isCommercial && typeof p.TaxType === "string" && p.TaxType.trim().toUpperCase() === "TMI"
+                            ? "TMI (as listed)"
+                            : "Annual Taxes"
+                        }
+                        value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
+                      />
+                      <SummaryRow
+                        label="Monthly Fees"
+                        value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
+                      />
+                    </>
+                  )}
                   <SummaryRow
-                    label={
-                      // TaxType="TMI" → TaxAnnualAmount is the TMI figure, not a property tax.
-                      isCommercial && typeof p.TaxType === "string" && p.TaxType.trim().toUpperCase() === "TMI"
-                        ? "TMI (as listed)"
-                        : "Annual Taxes"
-                    }
-                    value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
-                  />
-                  <SummaryRow
-                    label="Monthly Fees"
-                    value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
-                  />
-                  <SummaryRow
-                    label="True DOM"
+                    label={isLease ? "Days Available" : "True DOM"}
                     value={`${trueDom} days`}
                     valueClass={trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-slate-400"}
                   />

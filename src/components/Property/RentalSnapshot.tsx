@@ -2,17 +2,20 @@
  * RentalSnapshot — the right-rail card shown on FOR-LEASE listings in place of the
  * Underwriting Sandbox.
  *
- * Why it exists: the Underwriting Sandbox is a buy-and-hold acquisition model that
- * reads `ListPrice` as a purchase price. On a lease listing `ListPrice` is the
- * monthly rent, so the sandbox fabricated a $540 down payment and a 516% cap rate.
- * A lease has no acquisition to underwrite; its value to a cashflow investor is as a
- * RENT COMP. So we surface the lease economics — annualized rent, rent-per-sqft,
- * term, deposit — instead of inventing a purchase.
+ * Audience: the PROSPECTIVE TENANT. The Underwriting Sandbox is a buy-and-hold
+ * acquisition model that reads `ListPrice` as a purchase price; on a lease `ListPrice`
+ * is the monthly rent, so it fabricated a $540 down payment and a 516% cap rate. A
+ * tenant has no acquisition to underwrite — they need to know whether they can AFFORD
+ * to live here: the all-in monthly cost, the up-front cash, the income a landlord will
+ * screen for, and the lease commitment. So we lead with those. (Rent-per-sqft, the
+ * investor's rent-comp metric, is kept but demoted to a footnote.)
  *
  * Presentational only (no state, no client hooks): all figures come from the pure,
  * deterministic `buildRentalSnapshot`. Visual language mirrors UnderwritingSandbox.
  *
- * Compliance (CLAUDE.md §4): deterministic arithmetic over active-listing fields.
+ * Compliance (CLAUDE.md §4): deterministic arithmetic over active-listing fields. The
+ * move-in and income figures are clearly labelled guidelines (first + last month; rent
+ * ≤ 30% of income), not listing facts.
  */
 
 import React from "react";
@@ -26,11 +29,12 @@ interface RentalSnapshotProps extends RentalSnapshotInput {
   className?: string;
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="bg-slate-800/50 rounded p-2">
       <span className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</span>
       <p className="text-sm font-bold font-mono text-slate-200">{value}</p>
+      {hint && <span className="text-[9px] text-slate-500">{hint}</span>}
     </div>
   );
 }
@@ -47,6 +51,7 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
 
   const depositValue =
     s.depositRequired === true ? "Required" : s.depositRequired === false ? "Not required" : "—";
+  const rentSqft = rentPerSqftDisplay(s);
 
   return (
     <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
@@ -73,23 +78,27 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
         </span>
       </div>
 
-      {/* Key metrics */}
+      {/* Key metrics — tenant affordability first (asking listings), lease terms always. */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <Metric label="Annualized Rent" value={`${formatPrice(s.annualRent)}/yr`} />
-        <Metric label="Rent / Sqft" value={rentPerSqftDisplay(s)} />
+        {!leased && s.monthlyRent > 0 && (
+          <>
+            <Metric label="Move-in (est.)" value={formatPrice(s.moveInEstimate)} hint="first + last month" />
+            <Metric label="Income to qualify" value={`${formatPrice(s.incomeToQualify)}/yr`} hint="rent ≤ 30% of income" />
+          </>
+        )}
         <Metric label="Lease Term" value={s.leaseTerm ?? "—"} />
         <Metric label="Deposit" value={depositValue} />
       </div>
 
       {/* Included in rent */}
       {s.rentIncludes.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-3">
           <span className="text-[10px] text-slate-500 uppercase tracking-wider">Included in Rent</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {s.rentIncludes.map((item) => (
               <span
                 key={item}
-                className="rounded bg-slate-800/60 px-2 py-0.5 text-[11px] text-slate-300"
+                className="rounded bg-emerald-900/20 px-2 py-0.5 text-[11px] text-emerald-300"
               >
                 {item}
               </span>
@@ -98,11 +107,30 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
         </div>
       )}
 
-      {/* Why no underwriting box here */}
-      <p className="text-[10px] text-slate-600 leading-relaxed">
-        This is a rental listing. Buy-and-hold underwriting — cap rate, cash-on-cash,
-        cashflow — applies to a purchase, not a lease, so it isn&apos;t shown here.
-        Use these figures as a rent comp when underwriting a comparable unit for sale.
+      {/* Not included — core utilities the tenant likely pays on top of rent */}
+      {s.utilitiesExtra.length > 0 && (
+        <div className="mb-3">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider">You Likely Pay On Top</span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {s.utilitiesExtra.map((item) => (
+              <span
+                key={item}
+                className="rounded bg-amber-900/20 px-2 py-0.5 text-[11px] text-amber-300"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+          <span className="mt-1 block text-[9px] text-slate-500">
+            Based on what the listing says is included — confirm with the landlord.
+          </span>
+        </div>
+      )}
+
+      {/* Footnote: annualized rent + the investor rent-comp metric, demoted */}
+      <p className="text-[10px] text-slate-500 leading-relaxed">
+        Annualized {formatPrice(s.annualRent)}/yr{rentSqft !== "—" ? ` · ${rentSqft}/sqft` : ""}.
+        {!leased && " Move-in and income figures are typical guidelines, not listing terms."}
       </p>
     </div>
   );

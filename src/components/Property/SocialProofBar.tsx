@@ -35,10 +35,14 @@ function getViewerId(): string {
 export default function SocialProofBar({
   listingId,
   className,
+  isLease = false,
 }: {
   listingId: string;
   className?: string;
+  /** Lease listing → the audience is prospective tenants, so "investor" reads as "renter". */
+  isLease?: boolean;
 }) {
+  const noun = isLease ? "renter" : "investor";
   const [stats, setStats] = useState<{ viewers: number; watchers: number } | null>(null);
 
   useEffect(() => {
@@ -81,7 +85,7 @@ export default function SocialProofBar({
           <span className="font-mono font-semibold text-slate-100">
             {stats.viewers.toLocaleString()}
           </span>
-          {stats.viewers === 1 ? "investor viewed this" : "investors viewed this"}
+          {stats.viewers === 1 ? `${noun} viewed this` : `${noun}s viewed this`}
         </span>
       )}
       {stats.watchers > 0 && (
@@ -90,7 +94,7 @@ export default function SocialProofBar({
           <span className="font-mono font-semibold text-slate-100">
             {stats.watchers.toLocaleString()}
           </span>
-          {stats.watchers === 1 ? "investor watching" : "watching"}
+          {stats.watchers === 1 ? `${noun} watching` : "watching"}
         </span>
       )}
     </div>
