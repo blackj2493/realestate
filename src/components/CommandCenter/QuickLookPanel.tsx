@@ -43,6 +43,7 @@ import InfoDot from "@/components/ui/InfoDot";
 import type { GlossaryKey } from "@/lib/glossary";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -64,6 +65,14 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   // Carry the active lens to the full report so it opens on the same persona.
   const activePersona = useCommandCenterStore((s) => s.activePersona);
 
+  // Commercial + lease listings are not residential SALES: the Deal Score, Estimated
+  // Sale, gross yield and cap rate below all assume one, so they're gated off exactly
+  // like the full report /properties/[id] does. Commercial also swaps the dwelling
+  // specs (a warehouse is not "0 Beds / Basement: None") for Area / Type / Parking.
+  const isCommercial = isCommercialProperty(property.PropertyType);
+  const isLease = /lease/i.test(property.TransactionType ?? "");
+  const showBuyerAnalytics = !isCommercial && !isLease;
+
   // Authoritative, AVM-anchored Deal Score + Estimated Sale — fetched so they match the
   // full report exactly (the index doc alone has no AVM, so a local compute would diverge).
   const [dealScore, setDealScore] = useState<DealScoreResult | null>(null);
@@ -73,7 +82,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const [hasDealScore, setHasDealScore] = useState(false);
   const [hasEstimate, setHasEstimate] = useState(false);
   const [hasExpectedSale, setHasExpectedSale] = useState(false);
-  const [loadingScore, setLoadingScore] = useState(true);
+  const [loadingScore, setLoadingScore] = useState(showBuyerAnalytics);
 
   // Esc closes; lock body scroll while the drawer is open.
   useEffect(() => {
@@ -92,6 +101,8 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   // Single focused fetch for the AVM-anchored score slice. The panel is keyed by
   // listing id in the parent, so it remounts fresh per property — no manual reset needed.
   useEffect(() => {
+    // Commercial/lease: no residential AVM score to show, so skip the fetch entirely.
+    if (!showBuyerAnalytics) return;
     let cancelled = false;
     (async () => {
       try {
@@ -115,11 +126,13 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
     return () => {
       cancelled = true;
     };
-  }, [property.id]);
+  }, [property.id, showBuyerAnalytics]);
 
-  const badges = detectPropertyBadges(
-    property as Parameters<typeof detectPropertyBadges>[0]
-  ).slice(0, 3);
+  // Suite-potential / investor badges are dwelling signals — an office isn't an
+  // "income suite", so commercial shows none.
+  const badges = isCommercial
+    ? []
+    : detectPropertyBadges(property as Parameters<typeof detectPropertyBadges>[0]).slice(0, 3);
 
   const dom = property.TrueDom ?? property.calculatedDOM ?? property.DaysOnMarket ?? 0;
   const domColor = dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-300";
@@ -257,33 +270,52 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             </div>
           </div>
 
-          {/* Specs */}
-          <div className="my-4 grid grid-cols-5 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
-            <Spec icon={<Bed className="h-4 w-4 text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
-            <Spec icon={<Bath className="h-4 w-4 text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
-            <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={sqft} label="Sqft" />
-            <Spec icon={<Car className="h-4 w-4 text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
-            <Spec icon={<Layers className="h-4 w-4 text-indigo-400" />} value={basementLabel(property)} label="Basement" />
-          </div>
+          {/* Specs — commercial swaps the dwelling stats (0 Beds / Basement: None) for
+              Area / Type / Parking, mirroring the full report. */}
+          {isCommercial ? (
+            <div className="my-4 grid grid-cols-3 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
+              <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={property.BuildingAreaTotal ? property.BuildingAreaTotal.toLocaleString() : "N/A"} label="Area" />
+              <Spec icon={<Building2 className="h-4 w-4 text-emerald-400" />} value={property.PropertySubType || "Commercial"} label="Type" />
+              <Spec icon={<Car className="h-4 w-4 text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
+            </div>
+          ) : (
+            <div className="my-4 grid grid-cols-5 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
+              <Spec icon={<Bed className="h-4 w-4 text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
+              <Spec icon={<Bath className="h-4 w-4 text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
+              <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={sqft} label="Sqft" />
+              <Spec icon={<Car className="h-4 w-4 text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
+              <Spec icon={<Layers className="h-4 w-4 text-indigo-400" />} value={basementLabel(property)} label="Basement" />
+            </div>
+          )}
 
-          {/* Signal tiles — instant from the index doc, while the score cards hydrate */}
-          <div className="mb-4 grid grid-cols-3 gap-2">
-            <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
-            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-400" term="grossYield" />
-            <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-slate-200" term="capRate" />
-          </div>
+          {/* Signal tiles — instant from the index doc. Gross yield / cap rate are
+              residential-sale metrics, so commercial/lease show True DOM alone. */}
+          {showBuyerAnalytics ? (
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
+              <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-400" term="grossYield" />
+              <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-slate-200" term="capRate" />
+            </div>
+          ) : (
+            <div className="mb-4 grid grid-cols-1 gap-2">
+              <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
+            </div>
+          )}
 
-          {/* Deal Score — AVM-anchored, fetched so it matches the full report exactly */}
-          <div className="mb-4">
-            {loadingScore ? (
-              <ScoreSkeleton />
-            ) : dealScore ? (
-              <DealScoreCard dealScore={dealScore} locked={!isAuthed && hasDealScore} />
-            ) : null}
-          </div>
+          {/* Deal Score — AVM-anchored, fetched so it matches the full report exactly.
+              Residential sales only — gated off for commercial + lease. */}
+          {showBuyerAnalytics && (
+            <div className="mb-4">
+              {loadingScore ? (
+                <ScoreSkeleton />
+              ) : dealScore ? (
+                <DealScoreCard dealScore={dealScore} locked={!isAuthed && hasDealScore} />
+              ) : null}
+            </div>
+          )}
 
-          {/* Estimated Sale — flagship "shadow data" valuation */}
-          {showEstimate && (
+          {/* Estimated Sale — flagship "shadow data" valuation (residential sales only) */}
+          {showBuyerAnalytics && showEstimate && (
             <div className="mb-4">
               <EstimatedSaleCard
                 salePrice={salePrice}
@@ -313,7 +345,8 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           </div>
 
           <p className="mt-2 text-center text-[11px] leading-relaxed text-slate-600">
-            The full report adds schools, room map, sale history &amp; the Underwriting Sandbox.
+            The full report adds schools, room map, sale history
+            {showBuyerAnalytics ? " & the Underwriting Sandbox" : " & the full breakdown"}.
           </p>
         </div>
       </aside>
