@@ -5,6 +5,9 @@ import {
   makeDefaultUniversalFilters,
   ALL_FILTERS,
   FACET_FIELDS,
+  coreFiltersForClass,
+  moreFiltersForClass,
+  inapplicableFilterKeysForClass,
 } from "./filterRegistry";
 
 describe("filterRegistry — clause builders", () => {
@@ -122,5 +125,40 @@ describe("MORE_FILTERS (Phase 2)", () => {
     expect(FACET_FIELDS).toContain("BasementType");
     expect(FACET_FIELDS).toContain("PropertySubType");
     expect(FACET_FIELDS).toContain("DirectionFaces");
+  });
+});
+
+describe("filterRegistry — class-scoped filter sets (commercial)", () => {
+  const keys = (list: { key: string }[]) => list.map((f) => f.key);
+
+  it("residential shows every filter and excludes nothing from the query", () => {
+    expect(keys(coreFiltersForClass("residential"))).toContain("beds");
+    expect(keys(coreFiltersForClass("residential"))).toContain("baths");
+    expect(inapplicableFilterKeysForClass("residential")).toEqual([]);
+  });
+
+  it("commercial drops beds/baths from core but keeps price + type", () => {
+    const core = keys(coreFiltersForClass("commercial"));
+    expect(core).toContain("price");
+    expect(core).toContain("homeType");
+    expect(core).not.toContain("beds");
+    expect(core).not.toContain("baths");
+  });
+
+  it("commercial keeps only commercial-relevant deep-library fields", () => {
+    const more = keys(moreFiltersForClass("commercial"));
+    expect(more).toEqual(expect.arrayContaining(["occupancy", "lotSize", "lotFrontage", "parking"]));
+    for (const residentialOnly of ["basement", "suite", "kitchens", "faces", "garage", "multiUnit"]) {
+      expect(more).not.toContain(residentialOnly);
+    }
+  });
+
+  it("commercial excludes residential-only keys from the query, but not price/type/lot", () => {
+    const excluded = inapplicableFilterKeysForClass("commercial");
+    expect(excluded).toEqual(expect.arrayContaining(["beds", "baths", "basement", "kitchens", "faces"]));
+    expect(excluded).not.toContain("price");
+    expect(excluded).not.toContain("homeType");
+    expect(excluded).not.toContain("occupancy");
+    expect(excluded).not.toContain("lotSize");
   });
 });

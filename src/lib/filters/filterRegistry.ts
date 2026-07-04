@@ -1,5 +1,5 @@
 import type { FilterDef, FilterValue, StepperValue, UniversalFilterState } from "./types";
-import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig } from "./fundamentals";
+import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig, type PropertyClass } from "./fundamentals";
 import { DIRECTION_OPTIONS } from "@/lib/listings/directionFaces";
 
 const fmtPrice = (v: number): string =>
@@ -334,6 +334,48 @@ export const MORE_FILTERS: FilterDef[] = [
 
 /** Pinned-by-default core + the opt-in deeper library. */
 export const ALL_FILTERS: FilterDef[] = [...CORE_FILTERS, ...MORE_FILTERS];
+
+/**
+ * Filter keys that apply to COMMERCIAL listings. A warehouse / office / retail unit has
+ * no beds, baths, basement, kitchens, suite potential, or exposure — those are
+ * residential-only, so in commercial mode they're hidden from the UI AND excluded from
+ * the query (a stale residential value must never silently filter out every commercial
+ * listing). Everything here is a field commercial inventory actually carries, and every
+ * one is ALREADY indexed — so class-gating the filter set is pure UI/query logic with
+ * ZERO added Typesense RAM.
+ */
+const COMMERCIAL_FILTER_KEYS = new Set<string>([
+  "price",
+  "homeType", // the bar scopes its options to the commercial PropertySubType set
+  "occupancy", // vacant possession vs tenanted — a core commercial consideration
+  "age",
+  "lotSize",
+  "lotFrontage",
+  "parking",
+  "maintFee", // commercial condos carry fees too
+]);
+
+/** CORE filter defs applicable to a class — commercial drops beds/baths. */
+export function coreFiltersForClass(cls: PropertyClass): FilterDef[] {
+  return cls === "commercial"
+    ? CORE_FILTERS.filter((f) => COMMERCIAL_FILTER_KEYS.has(f.key))
+    : CORE_FILTERS;
+}
+
+/** Deep-library filter defs applicable to a class — commercial keeps only the handful of
+ *  fields commercial inventory carries (lot/frontage/parking/occupancy/age/fee). */
+export function moreFiltersForClass(cls: PropertyClass): FilterDef[] {
+  return cls === "commercial"
+    ? MORE_FILTERS.filter((f) => COMMERCIAL_FILTER_KEYS.has(f.key))
+    : MORE_FILTERS;
+}
+
+/** Universal-filter keys to EXCLUDE from the query for a class — the residential-only
+ *  fields in commercial mode, so a hidden control's stale value is never applied. */
+export function inapplicableFilterKeysForClass(cls: PropertyClass): string[] {
+  if (cls !== "commercial") return [];
+  return ALL_FILTERS.filter((f) => !COMMERCIAL_FILTER_KEYS.has(f.key)).map((f) => f.key);
+}
 
 /** Low-cardinality enum fields already facet:true — requested so per-option counts show. */
 export const FACET_FIELDS = [

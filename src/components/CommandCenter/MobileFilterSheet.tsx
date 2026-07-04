@@ -15,7 +15,7 @@ import React from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
-import { MORE_FILTERS } from "@/lib/filters/filterRegistry";
+import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
@@ -140,7 +140,7 @@ export default function MobileFilterSheet({
             <section className="space-y-2 border-t border-slate-800/70 pt-4">
               <span className={LABEL}>More filters</span>
               <div className="flex flex-wrap gap-2">
-                {MORE_FILTERS.map((def) => (
+                {moreFiltersForClass(propertyClass).map((def) => (
                   <FilterChip
                     key={def.key}
                     def={def}
