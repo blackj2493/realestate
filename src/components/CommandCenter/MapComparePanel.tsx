@@ -104,7 +104,7 @@ export default function MapComparePanel() {
                     <p className="truncate text-xs font-medium text-foreground">
                       {d.UnparsedAddress?.trim() || d.City || "Address unavailable"}
                     </p>
-                    <p className="font-mono text-xs text-cyan-600 dark:text-cyan-400">
+                    <p className="font-mono text-xs text-cyan-700 dark:text-cyan-400">
                       {d.ListPrice ? `$${d.ListPrice.toLocaleString()}` : "—"}
                     </p>
                     {d.ListOfficeName && <p className="truncate text-[10px] text-muted-foreground">{d.ListOfficeName}</p>}

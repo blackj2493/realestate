@@ -57,7 +57,7 @@ export default function GlossaryPage() {
               <dd className="mt-1 space-y-1.5">
                 <p className="text-sm leading-relaxed text-foreground">{e.short}</p>
                 {e.formula && (
-                  <p className="font-mono text-xs leading-relaxed text-cyan-300/90">{e.formula}</p>
+                  <p className="font-mono text-xs leading-relaxed text-cyan-700/90 dark:text-cyan-300/90">{e.formula}</p>
                 )}
                 {e.context && (
                   <p className="text-xs leading-relaxed text-muted-foreground">{e.context}</p>

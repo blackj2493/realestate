@@ -19,7 +19,7 @@ export default function SearchChipsRow({ chips, onRemove }: Props) {
   return (
     <div className="border-b border-border bg-background/60 px-3 py-2.5">
       <div className="mb-2 flex items-center gap-1.5">
-        <Sparkles className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
+        <Sparkles className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           Interpreted · tap a chip to adjust
         </span>

@@ -27,7 +27,7 @@ function renderText(text: string): React.ReactNode {
       <a
         key={i}
         href={`mailto:${part}`}
-        className="break-words text-cyan-600 dark:text-cyan-400 underline"
+        className="break-words text-cyan-700 dark:text-cyan-400 underline"
       >
         {part}
       </a>

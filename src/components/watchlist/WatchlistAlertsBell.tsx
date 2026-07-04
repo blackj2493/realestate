@@ -194,10 +194,10 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
                       <p className="truncate text-xs font-medium text-foreground">{d.address}</p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                         <span className="text-muted-foreground line-through">{formatPrice(d.oldPrice)}</span>{" "}
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400">{formatPrice(d.newPrice)}</span>
+                        <span className="font-mono text-emerald-700 dark:text-emerald-400">{formatPrice(d.newPrice)}</span>
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-sm bg-rose-500/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-rose-300">
+                    <span className="shrink-0 rounded-sm bg-rose-600/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                       -{d.dropPct}%
                     </span>
                   </Link>

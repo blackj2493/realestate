@@ -43,23 +43,23 @@ function gradeStyles(grade: DealScoreGrade | null): {
   switch (grade) {
     case "A+":
     case "A":
-      return { text: "text-emerald-600 dark:text-emerald-400", ring: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40" };
+      return { text: "text-emerald-700 dark:text-emerald-400", ring: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40" };
     case "B":
       return { text: "text-lime-600 dark:text-lime-400", ring: "text-lime-600 dark:text-lime-400", bg: "bg-lime-500/10", border: "border-lime-500/40" };
     case "C":
-      return { text: "text-amber-600 dark:text-amber-400", ring: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40" };
+      return { text: "text-amber-700 dark:text-amber-400", ring: "text-amber-700 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40" };
     case "D":
-      return { text: "text-orange-600 dark:text-orange-400", ring: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/40" };
+      return { text: "text-orange-700 dark:text-orange-400", ring: "text-orange-700 dark:text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/40" };
     case "F":
-      return { text: "text-rose-600 dark:text-rose-400", ring: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40" };
+      return { text: "text-rose-700 dark:text-rose-400", ring: "text-rose-700 dark:text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40" };
     default:
       return { text: "text-muted-foreground", ring: "text-muted-foreground", bg: "bg-muted/50", border: "border-border" };
   }
 }
 
 function DirectionIcon({ direction }: { direction: DealScoreComponent["direction"] }) {
-  if (direction === "up") return <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />;
-  if (direction === "down") return <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />;
+  if (direction === "up") return <TrendingUp className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />;
+  if (direction === "down") return <TrendingDown className="h-3.5 w-3.5 text-rose-700 dark:text-rose-400" />;
   return <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 

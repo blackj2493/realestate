@@ -50,7 +50,7 @@ function DrawerHeader({ module, onClose }: { module: RailModule; onClose: () => 
   return (
     <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
       <span className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+        <Icon className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />
         <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground">
           {TITLES[module]}
         </span>

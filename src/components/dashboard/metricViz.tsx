@@ -30,7 +30,7 @@ export function YoY({ pct }: { pct: number | null }) {
   if (pct == null) return null;
   const up = pct >= 0;
   return (
-    <span className={`terminal-font text-[10px] ${up ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+    <span className={`terminal-font text-[10px] ${up ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"}`}>
       {up ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
     </span>
   );
@@ -58,9 +58,9 @@ export const TEMP: Record<
   NonNullable<RegionScore["temperature"]>,
   { label: string; cls: string; rank: number }
 > = {
-  hot: { label: "Hot", cls: "text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/30", rank: 3 },
-  balanced: { label: "Balanced", cls: "text-amber-600 dark:text-amber-400 bg-amber-400/10 border-amber-400/30", rank: 2 },
-  cold: { label: "Cold", cls: "text-cyan-600 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30", rank: 1 },
+  hot: { label: "Hot", cls: "text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/30", rank: 3 },
+  balanced: { label: "Balanced", cls: "text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/30", rank: 2 },
+  cold: { label: "Cold", cls: "text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30", rank: 1 },
 };
 
 export function TemperatureBadge({
@@ -105,8 +105,8 @@ export function PeerDelta({
     favourable == null
       ? "text-muted-foreground"
       : favourable
-        ? "text-emerald-600 dark:text-emerald-400"
-        : "text-rose-600 dark:text-rose-400";
+        ? "text-emerald-700 dark:text-emerald-400"
+        : "text-rose-700 dark:text-rose-400";
   return (
     <span className={`terminal-font text-[10px] ${cls}`}>
       {up ? "▲" : "▼"} {format(Math.abs(delta))} vs peers

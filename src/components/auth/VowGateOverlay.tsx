@@ -43,11 +43,11 @@ export default function VowGateOverlay({
         className
       )}
     >
-      <Lock className="h-5 w-5 text-cyan-300" />
+      <Lock className="h-5 w-5 text-cyan-700 dark:text-cyan-300" />
       {message && <p className="px-3 text-center text-xs text-foreground">{message}</p>}
       <Link
         href={href}
-        className="rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-1.5 text-xs font-semibold text-cyan-100 shadow-sm transition-colors hover:bg-cyan-500/30"
+        className="rounded-md border border-cyan-600 bg-cyan-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-cyan-700 dark:border-cyan-400/50 dark:bg-cyan-500/20 dark:text-cyan-100 dark:hover:bg-cyan-500/30"
       >
         {ctaLabel}
       </Link>

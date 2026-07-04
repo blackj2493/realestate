@@ -139,7 +139,7 @@ export default async function SchoolHubPage({
 
         <header className="mb-6">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
-            <GraduationCap className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            <GraduationCap className="h-6 w-6 text-emerald-700 dark:text-emerald-400" />
             Homes for Sale Near Top-Rated Schools in {cityName}, ON
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -150,7 +150,7 @@ export default async function SchoolHubPage({
           {totalFound > 0 && (
             <Link
               href={investorHubPath}
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 transition-colors hover:text-emerald-300"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 transition-colors hover:text-emerald-300"
             >
               <TrendingUp className="h-4 w-4" /> Highest cap-rate investments in {cityName} →
             </Link>
@@ -167,7 +167,7 @@ export default async function SchoolHubPage({
           <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
             <GraduationCap className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>No school-ranked listings here right now.</p>
-            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
+            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →
             </Link>
           </div>

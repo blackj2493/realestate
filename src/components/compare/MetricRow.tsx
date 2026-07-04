@@ -75,7 +75,7 @@ export default function MetricRow({
           const under = v >= 0;
           return (
             <td key={ctx.listing.id} className="p-3 font-mono">
-              <span className={cn("font-semibold", under ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400")}>
+              <span className={cn("font-semibold", under ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400")}>
                 {`${Math.abs(v).toFixed(1)}% ${under ? "under" : "over"}`}
               </span>
               {isBest && <span className="ml-1.5 text-[10px] uppercase text-emerald-600 dark:text-emerald-500">best</span>}
@@ -94,12 +94,12 @@ export default function MetricRow({
             className={cn(
               "p-3",
               metric.cellKind === "numeric" && "font-mono",
-              isBest ? "font-bold text-emerald-600 dark:text-emerald-400" : "text-foreground"
+              isBest ? "font-bold text-emerald-700 dark:text-emerald-400" : "text-foreground"
             )}
           >
             {display ?? <span className="text-muted-foreground">—</span>}
             {isBest && <span className="ml-1.5 text-[10px] uppercase text-emerald-600 dark:text-emerald-500">best</span>}
-            {tag && <span className="ml-1.5 text-[10px] text-amber-600 dark:text-amber-400/80">{tag}</span>}
+            {tag && <span className="ml-1.5 text-[10px] text-amber-700 dark:text-amber-400/80">{tag}</span>}
             {delta && <span className="ml-1.5 text-[10px] text-muted-foreground">{delta}</span>}
           </td>
         );

@@ -56,11 +56,11 @@ const TONE: Record<RankBadge["tone"], string> = {
 
 function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
   const cls = "h-3.5 w-3.5 shrink-0";
-  if (category === "address") return <Home className={cn(cls, "text-emerald-600 dark:text-emerald-400/80")} />;
+  if (category === "address") return <Home className={cn(cls, "text-emerald-700 dark:text-emerald-400/80")} />;
   if (category === "mls") return <Hash className={cn(cls, "text-muted-foreground")} />;
-  if (category === "community") return <MapPin className={cn(cls, "text-cyan-600 dark:text-cyan-400/80")} />;
-  if (category === "school") return <GraduationCap className={cn(cls, "text-amber-600 dark:text-amber-400/80")} />;
-  if (category === "geo") return <Navigation className={cn(cls, "text-cyan-600 dark:text-cyan-400")} />;
+  if (category === "community") return <MapPin className={cn(cls, "text-cyan-700 dark:text-cyan-400/80")} />;
+  if (category === "school") return <GraduationCap className={cn(cls, "text-amber-700 dark:text-amber-400/80")} />;
+  if (category === "geo") return <Navigation className={cn(cls, "text-cyan-700 dark:text-cyan-400")} />;
   return <span className="block h-2 w-2 shrink-0 rounded-full bg-rose-400" />; // sold
 }
 
@@ -409,7 +409,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                     {parseMeta.chips} chip{parseMeta.chips === 1 ? "" : "s"}
                   </span>
                   {parseMeta.unmatched ? (
-                    <span className="text-amber-600 dark:text-amber-400">· unmatched: “{parseMeta.unmatched}”</span>
+                    <span className="text-amber-700 dark:text-amber-400">· unmatched: “{parseMeta.unmatched}”</span>
                   ) : (
                     <span className="text-emerald-500/80">· all words read</span>
                   )}
@@ -435,7 +435,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 <div>
                   <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>Matching listings</span>
-                    <span className="text-cyan-600 dark:text-cyan-400/80">{preview.count.toLocaleString()} match</span>
+                    <span className="text-cyan-700 dark:text-cyan-400/80">{preview.count.toLocaleString()} match</span>
                   </div>
                   {preview.listings.length === 0 ? (
                     <div className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
@@ -450,7 +450,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         title="See all matches on the map"
                         className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted"
                       >
-                        <Home className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400/80" />
+                        <Home className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-400/80" />
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate font-mono text-xs text-foreground">
                             {listing.UnparsedAddress || "—"}
@@ -476,7 +476,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 <div key={g.category}>
                   <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>{g.title}</span>
-                    {g.category === "sold" && <span className="text-cyan-600 dark:text-cyan-400/80">VOW</span>}
+                    {g.category === "sold" && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
                   </div>
                   {g.items.map((item) => {
                     const idx = flat(item);
@@ -535,7 +535,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           </span>
                         )}
                         {item.category === "community" && item.count !== undefined && (
-                          <span className="shrink-0 font-mono text-[11px] text-cyan-600 dark:text-cyan-400">
+                          <span className="shrink-0 font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
                             {item.count.toLocaleString()}
                           </span>
                         )}

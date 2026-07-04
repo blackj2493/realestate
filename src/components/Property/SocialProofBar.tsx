@@ -81,7 +81,7 @@ export default function SocialProofBar({
     >
       {stats.viewers > 0 && (
         <span className="flex items-center gap-1.5 text-muted-foreground">
-          <Eye className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+          <Eye className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
           <span className="font-mono font-semibold text-foreground">
             {stats.viewers.toLocaleString()}
           </span>
@@ -90,7 +90,7 @@ export default function SocialProofBar({
       )}
       {stats.watchers > 0 && (
         <span className="flex items-center gap-1.5 text-muted-foreground">
-          <Bookmark className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          <Bookmark className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
           <span className="font-mono font-semibold text-foreground">
             {stats.watchers.toLocaleString()}
           </span>

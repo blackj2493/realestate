@@ -7,14 +7,14 @@ import { cn } from '@/lib/utils';
 
 // Badge variants based on the design spec
 export type BadgeVariant = 
-  | 'income-suite'      // text-emerald-600 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
-  | 'suite-potential'   // text-blue-600 dark:text-blue-400 bg-blue-400/10 border-blue-400/20
-  | 'distressed'        // text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/20
-  | 'holding-offers'    // text-amber-600 dark:text-amber-400 bg-amber-400/10 border-amber-400/20
-  | 'price-drop'        // text-emerald-600 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
+  | 'income-suite'      // text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
+  | 'suite-potential'   // text-blue-700 dark:text-blue-400 bg-blue-400/10 border-blue-400/20
+  | 'distressed'        // text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/20
+  | 'holding-offers'    // text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/20
+  | 'price-drop'        // text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
   | 'top-school-zone'   // text-purple-600 dark:text-purple-400 bg-purple-400/10 border-purple-400/20
-  | 'new-listing'       // text-cyan-600 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/20
-  | 'motivated-seller'; // text-orange-600 dark:text-orange-400 bg-orange-400/10 border-orange-400/20
+  | 'new-listing'       // text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/20
+  | 'motivated-seller'; // text-orange-700 dark:text-orange-400 bg-orange-400/10 border-orange-400/20
 
 interface AlphaBadgeProps {
   variant: BadgeVariant;

@@ -73,7 +73,7 @@ function YoYBadge({ pct }: { pct: number | null }) {
   return (
     <span
       className={`terminal-font text-xs font-bold uppercase tracking-wider ${
-        pct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+        pct >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
       }`}
     >
       {pct >= 0 ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
@@ -82,9 +82,9 @@ function YoYBadge({ pct }: { pct: number | null }) {
 }
 
 const TEMP_STYLE: Record<NonNullable<RegionScore["temperature"]>, { label: string; cls: string }> = {
-  hot: { label: "Seller's Market", cls: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40" },
-  balanced: { label: "Balanced", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40" },
-  cold: { label: "Buyer's Market", cls: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/40" },
+  hot: { label: "Seller's Market", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/40" },
+  balanced: { label: "Balanced", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40" },
+  cold: { label: "Buyer's Market", cls: "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/40" },
 };
 
 interface KpiProps {
@@ -236,7 +236,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             aria-pressed={typeKeys.length === 0}
             className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               typeKeys.length === 0
-                ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
+                ? "border-cyan-600 bg-cyan-600 text-white dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-300"
                 : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             }`}
           >
@@ -252,7 +252,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                 aria-pressed={active}
                 className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
                   active
-                    ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
+                    ? "border-cyan-600 bg-cyan-600 text-white dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-300"
                     : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
@@ -263,7 +263,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         </div>
 
         {error && (
-          <p className="mt-6 border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-600 dark:text-rose-400">
+          <p className="mt-6 border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
             Failed to load market data — try again shortly.
           </p>
         )}
@@ -344,7 +344,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                       aria-pressed={active}
                       className={`terminal-font min-h-[44px] flex items-center border-r border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                         active
-                          ? "bg-cyan-500/20 text-cyan-300"
+                          ? "bg-cyan-600 text-white dark:bg-cyan-500/20 dark:text-cyan-300"
                           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       }`}
                     >
@@ -461,7 +461,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 py-3 pb-safe backdrop-blur md:hidden">
           <a
             href={`/properties?city=${encodeURIComponent(region)}`}
-            className="terminal-font flex min-h-[44px] items-center justify-center border border-cyan-500/60 bg-cyan-500/20 px-4 text-xs font-bold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/30"
+            className="terminal-font flex min-h-[44px] items-center justify-center border border-cyan-600 bg-cyan-600 px-4 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-300 dark:hover:bg-cyan-500/30"
           >
             See live deals in {region} →
           </a>

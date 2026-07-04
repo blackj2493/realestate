@@ -172,7 +172,7 @@ export default function Spotlight() {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-7 w-7 items-center justify-center border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
+          <span className="inline-flex h-7 w-7 items-center justify-center border border-cyan-600/40 bg-cyan-600/10 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300">
             <Icon className="h-4 w-4" />
           </span>
           <p className="text-sm font-semibold text-foreground">{feature.title}</p>
@@ -202,7 +202,7 @@ export default function Spotlight() {
         <Link
           href={feature.href}
           onClick={endRun}
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-cyan-700 transition-colors hover:text-cyan-800 dark:text-cyan-300 dark:hover:text-cyan-200"
         >
           {feature.ctaLabel ?? "Open"}
           <ExternalLink className="h-3.5 w-3.5" />
@@ -235,7 +235,7 @@ export default function Spotlight() {
           <button
             type="button"
             onClick={runNext}
-            className="inline-flex items-center gap-1.5 border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
+            className="inline-flex items-center gap-1.5 border border-cyan-600 bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-cyan-700 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
           >
             {isLast ? (
               <>

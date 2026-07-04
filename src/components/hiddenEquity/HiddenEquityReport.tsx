@@ -23,7 +23,7 @@ function Row({ row }: { row: LedgerRow }) {
     <div className="flex items-center justify-between gap-2 text-xs">
       <span className="truncate text-foreground">{row.label}</span>
       <span className="flex shrink-0 items-center gap-2 font-mono">
-        <span className="text-emerald-600 dark:text-emerald-400">+{formatPrice(row.valueTyp)}</span>
+        <span className="text-emerald-700 dark:text-emerald-400">+{formatPrice(row.valueTyp)}</span>
         <span className="text-muted-foreground">−{formatPrice(row.costTyp)}</span>
         <PaybackBar payback={row.payback} />
         <span className="w-9 text-right text-muted-foreground">
@@ -73,7 +73,7 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
     <div className="space-y-6 rounded-xl border border-border bg-card p-6">
       {/* ── Estimate headline ── */}
       <div className="space-y-1">
-        <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+        <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
           {formatPrice(estimatedValue)}
         </p>
 
@@ -115,9 +115,9 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
           {/* Consumer-friendly headline */}
           <p className="text-sm text-foreground">
             You could unlock up to{" "}
-            <b className="text-emerald-600 dark:text-emerald-400">{formatPrice(v.headlineGross)}</b> in
+            <b className="text-emerald-700 dark:text-emerald-400">{formatPrice(v.headlineGross)}</b> in
             hidden equity — about{" "}
-            <b className="text-emerald-600 dark:text-emerald-400">{formatPrice(v.headlineNet)}</b> net of
+            <b className="text-emerald-700 dark:text-emerald-400">{formatPrice(v.headlineNet)}</b> net of
             renovation cost.
           </p>
 
@@ -138,7 +138,7 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
           {/* "Other moves" disclosure */}
           {(v.moreRows.length > 0 || v.suppressed.length > 0) && (
             <details>
-              <summary className="cursor-pointer list-none text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
+              <summary className="cursor-pointer list-none text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
                 Other moves
               </summary>
               <div className="mt-2 space-y-1.5">

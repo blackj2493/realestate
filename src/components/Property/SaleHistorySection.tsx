@@ -44,7 +44,7 @@ export default function SaleHistorySection({
 }) {
   const Title = (
     <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-      <History className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      <History className="h-4 w-4 text-amber-700 dark:text-amber-400" />
       Sale History
       {saleHistory.saleCount > 0 && (
         <span className="ml-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -122,7 +122,7 @@ export default function SaleHistorySection({
               <td className="py-2 text-right text-muted-foreground">
                 {e.list_price ? formatPrice(e.list_price) : "—"}
               </td>
-              <td className="py-2 text-right text-amber-600 dark:text-amber-400">
+              <td className="py-2 text-right text-amber-700 dark:text-amber-400">
                 {e.close_price ? formatPrice(e.close_price) : "—"}
               </td>
               <td className="py-2 text-right text-muted-foreground">{e.sub_type || "—"}</td>

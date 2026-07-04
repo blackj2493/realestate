@@ -140,7 +140,7 @@ export default function ListingCompare() {
               </div>
             </div>
             <div>
-              <div className="terminal-font text-[14px] font-bold text-red-600 dark:text-red-400">
+              <div className="terminal-font text-[14px] font-bold text-red-700 dark:text-red-400">
                 ⚠ $85K over comp value
               </div>
               <div className="mt-[3px] text-[11.5px] text-[#8fa4b8]">
@@ -161,13 +161,13 @@ export default function ListingCompare() {
                     style={{ left: "38%", width: "50%" }}
                   />
                   <div
-                    className="terminal-font absolute bottom-[15px] -translate-x-1/2 text-[10px] font-bold text-red-600 dark:text-red-400"
+                    className="terminal-font absolute bottom-[15px] -translate-x-1/2 text-[10px] font-bold text-red-700 dark:text-red-400"
                     style={{ left: "63%" }}
                   >
                     +$85K over
                   </div>
                   <div
-                    className="terminal-font absolute bottom-[15px] -translate-x-1/2 text-[10px] text-red-600 dark:text-red-400"
+                    className="terminal-font absolute bottom-[15px] -translate-x-1/2 text-[10px] text-red-700 dark:text-red-400"
                     style={{ left: "88%" }}
                   >
                     List $899K
@@ -181,7 +181,7 @@ export default function ListingCompare() {
                     style={{ left: "88%" }}
                   />
                   <div
-                    className="terminal-font absolute top-[15px] -translate-x-1/2 text-[10px] text-green-600 dark:text-green-400"
+                    className="terminal-font absolute top-[15px] -translate-x-1/2 text-[10px] text-green-700 dark:text-green-400"
                     style={{ left: "38%" }}
                   >
                     Worth $814K
@@ -205,7 +205,7 @@ export default function ListingCompare() {
                 </svg>
                 <div className="mt-2 text-[11px] text-[#8fa4b8]">
                   <span className="text-[#1dd3e0]">47 true days</span> · relisted 3× ·{" "}
-                  <span className="text-amber-600 dark:text-amber-400">2 cuts −$50K</span>
+                  <span className="text-amber-700 dark:text-amber-400">2 cuts −$50K</span>
                 </div>
               </Section>
               <Section bordered>
@@ -233,7 +233,7 @@ export default function ListingCompare() {
               <Section>
                 <H4>Renovation upside</H4>
                 <div className="mb-2 text-[11.5px] text-[#8fa4b8]">
-                  <b className="terminal-font text-[17px] text-green-600 dark:text-green-400">+$156K</b> unlockable · ~$58K
+                  <b className="terminal-font text-[17px] text-green-700 dark:text-green-400">+$156K</b> unlockable · ~$58K
                   net after cost
                 </div>
                 {RENO.map((r, i) => (
@@ -245,7 +245,7 @@ export default function ListingCompare() {
                         style={{ width: r.width, animationDelay: `${0.35 + i * 0.13}s` }}
                       />
                     </span>
-                    <span className="terminal-font text-right text-[11.5px] text-green-600 dark:text-green-400">{r.adds}</span>
+                    <span className="terminal-font text-right text-[11.5px] text-green-700 dark:text-green-400">{r.adds}</span>
                   </div>
                 ))}
               </Section>
@@ -266,7 +266,7 @@ export default function ListingCompare() {
                         style={{ width: s.width, animationDelay: `${0.5 + i * 0.12}s` }}
                       />
                     </span>
-                    <span className="terminal-font text-right text-[12px] font-bold text-green-600 dark:text-green-400">
+                    <span className="terminal-font text-right text-[12px] font-bold text-green-700 dark:text-green-400">
                       {s.score}
                     </span>
                   </div>

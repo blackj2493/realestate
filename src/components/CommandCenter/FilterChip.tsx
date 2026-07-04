@@ -112,7 +112,7 @@ function RangeControl({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className={cn(LABEL, "text-muted-foreground")}>{def.label}</span>
-        <span className="font-mono text-xs text-cyan-600 dark:text-cyan-400">{def.chipLabel(value)}</span>
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-400">{def.chipLabel(value)}</span>
       </div>
       {supportsHistogram(def.field) && (
         <RangeHistogram

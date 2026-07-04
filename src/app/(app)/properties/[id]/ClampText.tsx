@@ -46,7 +46,7 @@ export default function ClampText({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 active:text-cyan-300"
+        className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 active:text-cyan-300"
       >
         {expanded ? "Show less" : "Show more"}
       </button>

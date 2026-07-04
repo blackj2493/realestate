@@ -14,6 +14,7 @@ import {
 import { smoothedYoY } from "@/lib/dashboard/marketAggregates";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { useChartTheme } from "@/lib/theme/useChartTheme";
+import RegionSwitcher from "./RegionSwitcher";
 
 interface TrendPoint {
   month: string; // YYYY-MM
@@ -35,7 +36,15 @@ const fmtPrice = (v: number) =>
   v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(2)}M` : `$${Math.round(v / 1000)}K`;
 const fmtPpsf = (v: number) => `$${Math.round(v)}`;
 
-export default function MarketPulse({ location }: { location: string }) {
+export default function MarketPulse({
+  regions,
+  selected,
+  onSelect,
+}: {
+  regions: string[];
+  selected: string;
+  onSelect: (region: string) => void;
+}) {
   const chart = useChartTheme();
   const [points, setPoints] = useState<TrendPoint[] | null>(null);
   const [error, setError] = useState(false);
@@ -47,7 +56,7 @@ export default function MarketPulse({ location }: { location: string }) {
     setPoints(null);
     setError(false);
     setLocked(false);
-    fetch(`/api/market/price-trend?region=${encodeURIComponent(location)}`)
+    fetch(`/api/market/price-trend?region=${encodeURIComponent(selected)}`)
       .then((r) => r.json())
       .then((d) => {
         if (!alive) return;
@@ -58,7 +67,7 @@ export default function MarketPulse({ location }: { location: string }) {
     return () => {
       alive = false;
     };
-  }, [location]);
+  }, [selected]);
 
   const isPrice = metric === "price";
   const lineKey = isPrice ? "medianPrice" : "medianPpsf";
@@ -72,14 +81,17 @@ export default function MarketPulse({ location }: { location: string }) {
   return (
     <div className="dt-panel dt-reg border border-border bg-card dark:bg-card/40">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-            Market Pulse — {location}
+            Market Pulse{regions.length > 1 ? "" : ` — ${selected}`}
           </h3>
+          {regions.length > 1 && (
+            <RegionSwitcher regions={regions} selected={selected} onSelect={onSelect} />
+          )}
           {yoy != null && (
             <span
               className={`terminal-font text-[10px] font-bold uppercase tracking-wider ${
-                yoy >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                yoy >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
               }`}
             >
               {yoy >= 0 ? "▲" : "▼"} {Math.abs(yoy).toFixed(1)}% YoY
@@ -130,7 +142,7 @@ export default function MarketPulse({ location }: { location: string }) {
           <div className="h-full w-full animate-pulse bg-muted/40" />
         )}
         {!locked && error && (
-          <p className="flex h-full items-center justify-center text-xs text-rose-600 dark:text-rose-400">
+          <p className="flex h-full items-center justify-center text-xs text-rose-700 dark:text-rose-400">
             Failed to load trend
           </p>
         )}

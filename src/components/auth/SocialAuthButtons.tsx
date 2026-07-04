@@ -97,7 +97,7 @@ export default function SocialAuthButtons({
           {busy === "passkey" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Fingerprint className="h-4 w-4 text-cyan-300" />
+            <Fingerprint className="h-4 w-4 text-cyan-700 dark:text-cyan-300" />
           )}
           Sign in with a passkey
         </button>

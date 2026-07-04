@@ -152,7 +152,7 @@ export default function YourTakeCard({
         </p>
       ) : (
         <div className="mb-3">
-          <p className={`mb-1.5 font-mono text-[11px] font-bold ${fails > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+          <p className={`mb-1.5 font-mono text-[11px] font-bold ${fails > 0 ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"}`}>
             {fails > 0 ? `⚑ Fails ${fails} of your ${active} rule${active === 1 ? "" : "s"}` : `✓ Meets all ${active} of your rule${active === 1 ? "" : "s"}`}
           </p>
           <div className="flex flex-wrap gap-1.5">

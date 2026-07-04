@@ -58,11 +58,11 @@ export default function SearchEmptyState({
         <>
           <div className={GROUP}>
             <span>Watched areas</span>
-            <span className="text-cyan-600 dark:text-cyan-400/80">live</span>
+            <span className="text-cyan-700 dark:text-cyan-400/80">live</span>
           </div>
           {watched.map((w) => (
             <button key={w.id} type="button" onClick={() => onPickWatched(w.id)} className={ROW}>
-              <Diamond className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400/80" />
+              <Diamond className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400/80" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-mono text-xs text-foreground">{w.label}</span>
                 {w.sub && <span className="truncate text-[10px] text-muted-foreground">{w.sub}</span>}

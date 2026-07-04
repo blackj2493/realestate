@@ -180,10 +180,10 @@ export default function MarketActivityPanel({
     <div className="grid gap-4 md:grid-cols-2">
       {/* New listings (active / IDX) */}
       <div className="flex flex-col border border-border bg-card/40">
-        <CountHeader title="New Listings" accent="text-cyan-600 dark:text-cyan-400" count={newCount} />
+        <CountHeader title="New Listings" accent="text-cyan-700 dark:text-cyan-400" count={newCount} />
         <div>
           {newRows === null && !newErr && <Skeleton />}
-          {newErr && <p className="px-3 py-6 text-center text-xs text-rose-600 dark:text-rose-400">Failed to load</p>}
+          {newErr && <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>}
           {newRows && newRows.length === 0 && (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No new listings in this window
@@ -225,7 +225,7 @@ export default function MarketActivityPanel({
 
       {/* Sold (VOW) — gated: anon sees the count + blurred "Login Required" rows */}
       <div className="flex flex-col border border-border bg-card/40">
-        <CountHeader title="Sold" accent="text-emerald-600 dark:text-emerald-400" count={soldCount} />
+        <CountHeader title="Sold" accent="text-emerald-700 dark:text-emerald-400" count={soldCount} />
         <div>
           {soldLocked ? (
             <div className="relative min-h-[208px]">
@@ -252,7 +252,7 @@ export default function MarketActivityPanel({
           ) : (
             <>
               {soldRows === null && !soldErr && <Skeleton />}
-              {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-600 dark:text-rose-400">Failed to load</p>}
+              {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>}
               {soldRows && soldRows.length === 0 && (
                 <p className="px-3 py-6 text-center text-xs text-muted-foreground">
                   No sales in this window

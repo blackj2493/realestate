@@ -29,7 +29,7 @@ import type { RentalGlance as RentalGlanceData } from "@/lib/property/rentalSnap
 function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2.5 rounded-lg border border-border bg-card p-3">
-      <div className="mt-0.5 shrink-0 text-sky-600 dark:text-sky-400">{icon}</div>
+      <div className="mt-0.5 shrink-0 text-sky-700 dark:text-sky-400">{icon}</div>
       <div className="min-w-0">
         <span className="block text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
         <span className="block truncate text-base font-semibold text-foreground" title={value}>{value}</span>
@@ -68,7 +68,7 @@ export default function RentalGlance({ glance }: { glance: RentalGlanceData }) {
       {hasApply && (
         <div className="mt-2.5 rounded-lg border border-border bg-card p-3">
           <span className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-            <ClipboardCheck className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            <ClipboardCheck className="h-4 w-4 text-sky-700 dark:text-sky-400" />
             To Apply, Be Ready With
           </span>
           <div className="mt-2 flex flex-wrap gap-1.5">

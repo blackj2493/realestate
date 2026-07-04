@@ -41,7 +41,7 @@ export default function RenovationRevealLocked({
           to your home
         </p>
         <p
-          className="select-none text-3xl font-bold text-emerald-600 dark:text-emerald-400 blur-sm"
+          className="select-none text-3xl font-bold text-emerald-700 dark:text-emerald-400 blur-sm"
           aria-hidden="true"
         >
           {hasBand ? `${formatPrice(bandLow)}–${formatPrice(bandHigh)}` : '$00,000–$000,000'}

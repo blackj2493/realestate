@@ -81,7 +81,7 @@ export default function CompareMobile({
               "shrink-0 rounded px-2 py-1 font-mono text-sm",
               COL_W,
               resolved.winners.has(i)
-                ? "bg-emerald-500/10 font-bold text-emerald-600 dark:text-emerald-400"
+                ? "bg-emerald-500/10 font-bold text-emerald-700 dark:text-emerald-400"
                 : "text-foreground"
             )}
           >
@@ -91,7 +91,7 @@ export default function CompareMobile({
               resolved.displayed[i] ?? <span className="text-muted-foreground">—</span>
             )}
             {resolved.tags[i] && (
-              <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400/80">{resolved.tags[i]}</span>
+              <span className="ml-1 text-[10px] text-amber-700 dark:text-amber-400/80">{resolved.tags[i]}</span>
             )}
           </div>
         ))}
@@ -131,7 +131,7 @@ export default function CompareMobile({
                   </button>
                   <CompareMediaCell listing={l} />
                   <Link href={`/properties/${l.id}`} className="block">
-                    <p className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
+                    <p className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
                     <p className="text-[11px] leading-snug text-foreground">{l.UnparsedAddress || l.City || "—"}</p>
                   </Link>
                   {l.ListOfficeName && (

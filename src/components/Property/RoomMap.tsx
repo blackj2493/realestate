@@ -418,11 +418,11 @@ export default function RoomMap({
                   {formatDimensions(active.room.length, active.room.width)}
                 </span>
                 <span className="text-muted-foreground">·</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                <span className="font-mono text-emerald-700 dark:text-emerald-400">
                   {formatArea(active.room.areaMeters, unit)}
                 </span>
                 {active.room.isLikelyCombinedSpace && (
-                  <span className="text-amber-600 dark:text-amber-400/80">· likely combined space</span>
+                  <span className="text-amber-700 dark:text-amber-400/80">· likely combined space</span>
                 )}
               </span>
             ) : (
@@ -487,7 +487,7 @@ function Header({
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
-        <Ruler className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        <Ruler className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
         Room Dimensions
       </h3>
       <div className="flex items-center gap-1.5">
@@ -517,7 +517,7 @@ function Header({
               aria-label="Treemap view"
               className={cn(
                 "flex items-center px-1.5 py-1 transition-colors",
-                mode === "map" ? "bg-muted text-emerald-600 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground"
+                mode === "map" ? "bg-muted text-emerald-700 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <LayoutGrid className="h-3 w-3" />
@@ -529,7 +529,7 @@ function Header({
               aria-label="List view"
               className={cn(
                 "flex items-center px-1.5 py-1 transition-colors",
-                mode === "list" ? "bg-muted text-emerald-600 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground"
+                mode === "list" ? "bg-muted text-emerald-700 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <ListIcon className="h-3 w-3" />

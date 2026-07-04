@@ -51,7 +51,7 @@ export default function DashboardConfigPanel({
 
   return (
     <div className="border border-border bg-card/60 p-4">
-      <h2 className="terminal-font mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
+      <h2 className="terminal-font mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-400">
         Customize Workspace
       </h2>
 
@@ -68,14 +68,14 @@ export default function DashboardConfigPanel({
             {config.regions.map((r) => (
               <span
                 key={r}
-                className="inline-flex items-center gap-1.5 border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-200"
+                className="inline-flex items-center gap-1.5 border border-cyan-600/50 bg-cyan-600/10 px-2.5 py-1 text-xs text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200"
               >
                 {r}
                 <button
                   type="button"
                   onClick={() => removeRegion(r)}
                   aria-label={`Remove ${r}`}
-                  className="text-cyan-300/70 hover:text-rose-600 dark:hover:text-rose-400"
+                  className="text-cyan-700/70 hover:text-rose-600 dark:text-cyan-300/70 dark:hover:text-rose-400"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -105,7 +105,7 @@ export default function DashboardConfigPanel({
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
                     >
                       <span className="flex items-center gap-2">
-                        <Plus className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
+                        <Plus className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
                         {s.label}
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           {s.kind}
@@ -140,7 +140,7 @@ export default function DashboardConfigPanel({
                   className={cn(
                     "flex items-center gap-2 border px-3 py-2 text-left text-xs transition-colors",
                     on
-                      ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
+                      ? "border-cyan-600/60 bg-cyan-600/10 text-cyan-700 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200"
                       : "border-border bg-card/40 text-muted-foreground hover:border-border"
                   )}
                 >

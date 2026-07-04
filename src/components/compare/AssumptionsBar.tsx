@@ -34,7 +34,7 @@ export default function AssumptionsBar({
           <Label className="flex items-center gap-1 text-xs text-muted-foreground">
             <Home className="h-3 w-3" /> Down Payment
           </Label>
-          <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{downPaymentPct}%</span>
+          <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{downPaymentPct}%</span>
         </div>
         <Slider value={[downPaymentPct]} onValueChange={([v]) => onDownPayment(v)} min={5} max={50} step={1} />
       </div>
@@ -44,7 +44,7 @@ export default function AssumptionsBar({
           <Label className="flex items-center gap-1 text-xs text-muted-foreground">
             <Percent className="h-3 w-3" /> Interest Rate
           </Label>
-          <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{interestRatePct.toFixed(3)}%</span>
+          <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{interestRatePct.toFixed(3)}%</span>
         </div>
         <Slider value={[interestRatePct]} onValueChange={([v]) => onInterestRate(v)} min={3} max={12} step={0.125} />
       </div>
@@ -70,7 +70,7 @@ export default function AssumptionsBar({
       {/* Mobile-only disclosure for the carry/rate sliders. */}
       <details className="group w-full flex-none md:hidden">
         <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-foreground">
-          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
           Assumptions
           <span className="text-muted-foreground">({downPaymentPct}% down · {interestRatePct.toFixed(2)}%)</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -81,7 +81,7 @@ export default function AssumptionsBar({
               <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Home className="h-3 w-3" /> Down Payment
               </Label>
-              <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{downPaymentPct}%</span>
+              <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{downPaymentPct}%</span>
             </div>
             <Slider value={[downPaymentPct]} onValueChange={([v]) => onDownPayment(v)} min={5} max={50} step={1} />
           </div>
@@ -90,7 +90,7 @@ export default function AssumptionsBar({
               <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Percent className="h-3 w-3" /> Interest Rate
               </Label>
-              <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{interestRatePct.toFixed(3)}%</span>
+              <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{interestRatePct.toFixed(3)}%</span>
             </div>
             <Slider value={[interestRatePct]} onValueChange={([v]) => onInterestRate(v)} min={3} max={12} step={0.125} />
           </div>

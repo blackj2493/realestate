@@ -49,13 +49,13 @@ export interface FeedItem {
 }
 
 const CHIP = {
-  sold: "text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
-  leased: "text-violet-600 dark:text-violet-400 bg-violet-400/10 border-violet-400/30",
-  relisted: "text-cyan-600 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
-  off: "text-amber-600 dark:text-amber-400 bg-amber-400/10 border-amber-400/30",
-  drop: "text-emerald-600 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
-  stale: "text-rose-600 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
-  new: "text-cyan-600 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
+  sold: "text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
+  leased: "text-violet-700 dark:text-violet-400 bg-violet-400/10 border-violet-400/30",
+  relisted: "text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
+  off: "text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/30",
+  drop: "text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
+  stale: "text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
+  new: "text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
 } as const;
 
 /** "terminated" → "Terminated". */

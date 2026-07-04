@@ -74,7 +74,7 @@ export function HoldingBurnCard({
       {/* Primary: Max Holding Cost */}
       <div className="mb-4">
         <div className="text-xs font-mono text-muted-foreground mb-1">Monthly Burn</div>
-        <div className="text-3xl font-mono text-amber-600 dark:text-amber-400 uppercase tracking-tight">
+        <div className="text-3xl font-mono text-amber-700 dark:text-amber-400 uppercase tracking-tight">
           {formatCurrency(maxHoldingCost)}
         </div>
         <div className="text-xs font-mono text-muted-foreground mt-1">per month</div>
@@ -90,7 +90,7 @@ export function HoldingBurnCard({
         <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
             <span className="text-xs font-mono text-muted-foreground">Interest Rate</span>
-            <span className="text-xs font-mono text-amber-600 dark:text-amber-400">
+            <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
               {(interestRate * 100).toFixed(2)}%
             </span>
           </div>
@@ -107,7 +107,7 @@ export function HoldingBurnCard({
         <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
             <span className="text-xs font-mono text-muted-foreground">Timeline</span>
-            <span className="text-xs font-mono text-amber-600 dark:text-amber-400">
+            <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
               {timelineMonths} mo
             </span>
           </div>
@@ -124,7 +124,7 @@ export function HoldingBurnCard({
       {/* Secondary Output */}
       <div className="border-t border-border pt-3 mt-3">
         <div className="text-xs font-mono text-muted-foreground mb-1">Total Project Capital Risk</div>
-        <div className="text-xl font-mono text-rose-600 dark:text-rose-400">
+        <div className="text-xl font-mono text-rose-700 dark:text-rose-400">
           {formatCurrency(totalProjectCapitalRisk)}
         </div>
         <div className="text-xs font-mono text-muted-foreground mt-1">

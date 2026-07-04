@@ -72,7 +72,7 @@ export default function SoldOutcomeCard({
         <div className="space-y-3">
           {brag ? (
             <>
-              <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+              <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
                 Within {absPct.toFixed(1)}%
               </p>
               <p className="text-sm text-foreground">

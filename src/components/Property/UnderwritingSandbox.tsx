@@ -79,8 +79,8 @@ function Metric({
       <p
         className={cn(
           "text-sm font-bold font-mono",
-          tone === "good" && "text-emerald-600 dark:text-emerald-400",
-          tone === "bad" && "text-rose-600 dark:text-rose-400",
+          tone === "good" && "text-emerald-700 dark:text-emerald-400",
+          tone === "bad" && "text-rose-700 dark:text-rose-400",
           tone === "neutral" && "text-foreground"
         )}
       >
@@ -138,7 +138,7 @@ export default function UnderwritingSandbox({
     <div data-tour="listing-underwriting" className={cn("bg-card rounded-lg border border-border p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        <Calculator className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
         <span className="text-sm font-semibold text-foreground uppercase tracking-wider">
           Underwriting Sandbox
         </span>
@@ -159,7 +159,7 @@ export default function UnderwritingSandbox({
               <span
                 className={cn(
                   "text-xs uppercase tracking-wider",
-                  cashflowTone === "good" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  cashflowTone === "good" ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                 )}
               >
                 Monthly Cashflow
@@ -167,7 +167,7 @@ export default function UnderwritingSandbox({
               <span
                 className={cn(
                   "text-2xl font-bold font-mono",
-                  cashflowTone === "good" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  cashflowTone === "good" ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                 )}
               >
                 {result.monthlyCashflow >= 0 ? "+" : "−"}
@@ -211,7 +211,7 @@ export default function UnderwritingSandbox({
             </span>
           </div>
 
-          <p className="mb-4 text-[11px] leading-relaxed text-amber-600 dark:text-amber-400/80">
+          <p className="mb-4 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/80">
             No rental income applies to this property type (e.g. vacant land), so
             cap rate, yield and cashflow are not shown — they&apos;d be fabricated.
             Carrying cost only.
@@ -233,7 +233,7 @@ export default function UnderwritingSandbox({
           <Label className="text-xs text-muted-foreground flex items-center gap-1">
             <Home className="h-3 w-3" /> Down Payment
           </Label>
-          <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+          <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400">
             {a.downPaymentPct}% · {formatPrice(result.downPayment)}
           </span>
         </div>
@@ -252,7 +252,7 @@ export default function UnderwritingSandbox({
           <Label className="text-xs text-muted-foreground flex items-center gap-1">
             <Percent className="h-3 w-3" /> Interest Rate
           </Label>
-          <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">{a.interestRatePct.toFixed(3)}%</span>
+          <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400">{a.interestRatePct.toFixed(3)}%</span>
         </div>
         <Slider
           value={[a.interestRatePct]}
@@ -287,7 +287,7 @@ export default function UnderwritingSandbox({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
               <Label className="text-xs text-muted-foreground">Monthly Rent</Label>
-              <span className="text-[10px] text-amber-600 dark:text-amber-400/80">estimate — adjust</span>
+              <span className="text-[10px] text-amber-700 dark:text-amber-400/80">estimate — adjust</span>
             </div>
             <Input
               type="number"
@@ -351,9 +351,9 @@ export default function UnderwritingSandbox({
           <div>
             <div className="flex items-center justify-between mb-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <TrendingDown className="h-3 w-3 text-blue-600 dark:text-blue-400" /> Other / Suite Income
+                <TrendingDown className="h-3 w-3 text-blue-700 dark:text-blue-400" /> Other / Suite Income
               </Label>
-              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
+              <span className="text-xs font-mono text-blue-700 dark:text-blue-400">
                 {formatPrice(a.otherMonthlyIncome)}/mo
               </span>
             </div>
@@ -447,7 +447,7 @@ export default function UnderwritingSandbox({
                   <span
                     className={cn(
                       "text-[10px] font-mono",
-                      r.monthlyCashflow >= 0 ? "text-emerald-600 dark:text-emerald-400/80" : "text-rose-600 dark:text-rose-400/80"
+                      r.monthlyCashflow >= 0 ? "text-emerald-700 dark:text-emerald-400/80" : "text-rose-700 dark:text-rose-400/80"
                     )}
                   >
                     {r.monthlyCashflow >= 0 ? "+" : "−"}

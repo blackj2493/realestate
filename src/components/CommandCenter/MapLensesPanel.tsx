@@ -113,7 +113,7 @@ export default function MapLensesPanel() {
               key={lens.id}
               className="group flex items-center gap-2 border border-border bg-card px-2 py-1.5"
             >
-              <Bookmark className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400" />
+              <Bookmark className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
               <button
                 type="button"
                 onClick={() => apply(lens)}

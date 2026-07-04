@@ -122,9 +122,9 @@ const median = (nums: number[]): number | null => {
 
 /** Value color for the threshold metric (sold-to-list): seller's vs buyer's market. */
 function thresholdValueClass(v: number): string {
-  if (v >= 100) return "text-rose-600 dark:text-rose-400";
-  if (v < 97) return "text-cyan-600 dark:text-cyan-400";
-  return "text-amber-600 dark:text-amber-400";
+  if (v >= 100) return "text-rose-700 dark:text-rose-400";
+  if (v < 97) return "text-cyan-700 dark:text-cyan-400";
+  return "text-amber-700 dark:text-amber-400";
 }
 
 function Tile({
@@ -140,16 +140,16 @@ function Tile({
   const valueClass =
     metric.kind === "threshold" && value != null
       ? thresholdValueClass(value)
-      : "text-cyan-600 dark:text-cyan-400";
+      : "text-cyan-700 dark:text-cyan-400";
   const sub = value != null ? metric.sub?.(data) ?? null : null;
 
   return (
     <div className="flex flex-col gap-1 border border-border bg-card px-3 py-2 shadow-sm dark:bg-card/40 dark:shadow-none">
-      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+      <div className="terminal-font flex items-center gap-1 text-[11px] uppercase tracking-wider text-muted-foreground">
         {metric.label}
         {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
       </div>
-      <div className={`terminal-font text-xl font-extrabold ${valueClass}`}>
+      <div className={`terminal-font text-xl font-extrabold sm:text-2xl ${valueClass}`}>
         {value == null ? DASH : metric.format(value)}
       </div>
       <div className="flex min-h-[16px] items-center">
@@ -271,7 +271,7 @@ export default function RegionComparisonTiles({
       {datas.map((d) => (
         <div key={d.score.region} className="space-y-1.5">
           {regions.length > 1 && (
-            <div className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
+            <div className="terminal-font text-xs uppercase tracking-wider text-muted-foreground">
               {d.score.region}
             </div>
           )}

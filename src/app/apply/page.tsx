@@ -81,7 +81,7 @@ function Pill({
       className={cn(
         "min-h-[44px] rounded-md border px-4 py-2 text-sm transition-colors [touch-action:manipulation] active:bg-muted",
         active
-          ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+          ? "border-emerald-600 bg-emerald-600/10 text-emerald-700 dark:border-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-300"
           : "border-border bg-card/60 text-foreground hover:border-border"
       )}
     >
@@ -106,7 +106,7 @@ function Chip({
       className={cn(
         "inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-colors [touch-action:manipulation] active:bg-muted",
         active
-          ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+          ? "border-emerald-600 bg-emerald-600/10 text-emerald-700 dark:border-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-300"
           : "border-border bg-card/60 text-muted-foreground hover:border-border"
       )}
     >
@@ -300,7 +300,7 @@ export default function ApplyPage() {
                       className={cn(
                         "terminal-font text-[11px] uppercase tracking-[0.15em]",
                         active
-                          ? "text-emerald-300"
+                          ? "text-emerald-700 dark:text-emerald-300"
                           : done
                           ? "text-muted-foreground"
                           : "text-muted-foreground"
@@ -319,7 +319,7 @@ export default function ApplyPage() {
 
           {/* Stepper — mobile */}
           <div className="mt-6 md:hidden">
-            <p className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-emerald-300">
+            <p className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
               Step {step} of 3 · {currentLabel}
             </p>
             <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">

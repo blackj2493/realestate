@@ -249,7 +249,7 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
             </div>
           )}
 
-          {error && <p className="mt-3 text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+          {error && <p className="mt-3 text-xs text-rose-700 dark:text-rose-400">{error}</p>}
 
           {authPrompt && (
             <div className="mt-4 border-t border-border pt-4">

@@ -21,10 +21,10 @@ function fmtDate(iso: string): string {
 }
 
 const KIND_COLOR: Record<TimelineEventKind, string> = {
-  "Listed for Sale": "text-emerald-600 dark:text-emerald-400",
-  "Listed for Lease": "text-sky-600 dark:text-sky-400",
-  "Price Changed": "text-amber-600 dark:text-amber-400",
-  Terminated: "text-rose-600 dark:text-rose-400",
+  "Listed for Sale": "text-emerald-700 dark:text-emerald-400",
+  "Listed for Lease": "text-sky-700 dark:text-sky-400",
+  "Price Changed": "text-amber-700 dark:text-amber-400",
+  Terminated: "text-rose-700 dark:text-rose-400",
   Expired: "text-muted-foreground",
   Suspended: "text-muted-foreground",
   Sold: "text-amber-700 dark:text-amber-300",
@@ -40,7 +40,7 @@ function Row({ r }: { r: TimelineRow }) {
       <td className="py-2 text-right text-foreground">{r.price ? formatPrice(r.price) : "—"}</td>
       <td className="py-2 text-right">
         {r.deltaPct != null && Number.isFinite(r.deltaPct) ? (
-          <span className={r.deltaPct < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+          <span className={r.deltaPct < 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"}>
             {r.deltaPct > 0 ? "+" : ""}{Math.round(r.deltaPct * 100)}%
           </span>
         ) : ("—")}
@@ -60,7 +60,7 @@ export default function CampaignHistorySection({
   const [expanded, setExpanded] = useState(false);
   const Title = (
     <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-      <History className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      <History className="h-4 w-4 text-amber-700 dark:text-amber-400" />
       Listing History
       {campaignCount > 0 && (
         <span className="ml-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -93,7 +93,7 @@ export default function CampaignHistorySection({
             ))}
           </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-background/50 backdrop-blur-[1px]">
-            <Lock className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            <Lock className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />
             <p className="text-xs text-foreground">
               Listed {campaignCount}× {firstSeenDate ? `since ${new Date(firstSeenDate).getFullYear()}` : ""}
             </p>
@@ -135,7 +135,7 @@ export default function CampaignHistorySection({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-2 text-xs font-medium text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300"
+          className="mt-2 text-xs font-medium text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300"
         >
           {expanded ? "Show less ▴" : `Show all ${rows.length} events ▾`}
         </button>

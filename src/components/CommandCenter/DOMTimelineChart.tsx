@@ -61,7 +61,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
     return (
       <div className="bg-card border border-border rounded p-2 shadow-lg">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={cn('text-sm font-bold font-mono', kind === 'sold' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
+        <p className={cn('text-sm font-bold font-mono', kind === 'sold' ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400')}>
           {formatPrice(payload[0].value)}
         </p>
         {kind && <p className="text-[10px] text-muted-foreground">{kind === 'sold' ? 'Sold' : 'Current asking'}</p>}
@@ -126,7 +126,7 @@ export default function DOMTimelineChart({
       <div className={cn('bg-card rounded-lg border border-border p-4', className)}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <History className="h-4 w-4 text-amber-700 dark:text-amber-400" />
             <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Price History</span>
           </div>
           <span className="text-xs text-muted-foreground">
@@ -160,15 +160,15 @@ export default function DOMTimelineChart({
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border">
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground uppercase">Last Sold</span>
-            <p className="text-xs font-mono text-amber-600 dark:text-amber-400">{formatPrice(lastSold)}</p>
+            <p className="text-xs font-mono text-amber-700 dark:text-amber-400">{formatPrice(lastSold)}</p>
           </div>
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground uppercase">Now Asking</span>
-            <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">{formatPrice(currentPrice)}</p>
+            <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400">{formatPrice(currentPrice)}</p>
           </div>
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground uppercase">vs Last Sold</span>
-            <p className={cn('text-xs font-mono', apprDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+            <p className={cn('text-xs font-mono', apprDelta >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400')}>
               {apprDelta >= 0 ? '+' : ''}
               {apprPct}%
             </p>
@@ -200,14 +200,14 @@ export default function DOMTimelineChart({
   const Header = (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+        <Calendar className="h-4 w-4 text-amber-700 dark:text-amber-400" />
         <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
           Price Timeline
         </span>
       </div>
       <div className="flex items-center gap-2">
         {hasDrop && (
-          <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+          <div className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
             <TrendingDown className="h-3 w-3" />
             <span>-{dropPercent}%</span>
           </div>
@@ -280,11 +280,11 @@ export default function DOMTimelineChart({
         </div>
         <div className="text-center">
           <span className="text-[10px] text-muted-foreground uppercase">Current</span>
-          <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">{formatPrice(currentPrice)}</p>
+          <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400">{formatPrice(currentPrice)}</p>
         </div>
         <div className="text-center">
           <span className="text-[10px] text-muted-foreground uppercase">Drop</span>
-          <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">-{dropPercent}%</p>
+          <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400">-{dropPercent}%</p>
         </div>
       </div>
     </div>

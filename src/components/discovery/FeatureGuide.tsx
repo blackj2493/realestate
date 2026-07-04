@@ -115,7 +115,7 @@ export default function FeatureGuide() {
         <div className="border-b border-border px-4 pt-3.5 pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-cyan-300" />
+              <Sparkles className="h-4 w-4 text-cyan-700 dark:text-cyan-300" />
               <h2 className="terminal-font text-sm font-semibold uppercase tracking-wider text-foreground">
                 Feature Guide
               </h2>
@@ -167,7 +167,7 @@ export default function FeatureGuide() {
                 onClick={() => setTab(t.id)}
                 className={cn(
                   "relative px-3 py-2.5 text-xs font-medium transition-colors",
-                  active ? "text-cyan-200" : "text-muted-foreground hover:text-foreground"
+                  active ? "text-cyan-700 dark:text-cyan-200" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {t.label}
@@ -206,7 +206,7 @@ export default function FeatureGuide() {
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-medium text-foreground">{f.title}</p>
                       {isNew && (
-                        <span className="shrink-0 rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-300">
+                        <span className="shrink-0 rounded-sm bg-cyan-600/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
                           New
                         </span>
                       )}
@@ -225,7 +225,7 @@ export default function FeatureGuide() {
                       <button
                         type="button"
                         onClick={() => showFeature(f.id)}
-                        className="inline-flex items-center gap-1.5 border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1.5 text-[11px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
+                        className="inline-flex items-center gap-1.5 border border-cyan-600/50 bg-cyan-600/10 px-2.5 py-1.5 text-[11px] font-medium text-cyan-700 transition-colors hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
                       >
                         <Crosshair className="h-3.5 w-3.5" /> Show me
                       </button>

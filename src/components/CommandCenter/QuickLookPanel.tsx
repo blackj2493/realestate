@@ -122,7 +122,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   ).slice(0, 3);
 
   const dom = property.TrueDom ?? property.calculatedDOM ?? property.DaysOnMarket ?? 0;
-  const domColor = dom > 45 ? "text-emerald-600 dark:text-emerald-400" : dom >= 14 ? "text-amber-600 dark:text-amber-400" : "text-foreground";
+  const domColor = dom > 45 ? "text-emerald-700 dark:text-emerald-400" : dom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-foreground";
   const yieldEst = grossYieldOrNull(property.gross_yield_est);
   const capRate = capRateOrNull(property.cap_rate_est);
   const hero = property.primaryImageUrl || property.thumbnailUrl;
@@ -155,7 +155,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
       >
         {/* Header */}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-          <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
+          <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-400">
             <Search className="h-3.5 w-3.5" />
             Quick Look
           </span>
@@ -200,7 +200,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             {property.UnparsedAddress || "Address Unavailable"}
           </h1>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="font-mono text-2xl font-bold text-emerald-700 dark:text-emerald-400">
               {formatPrice(property.ListPrice)}
             </span>
             <span className="text-xs text-muted-foreground">
@@ -259,17 +259,17 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
 
           {/* Specs */}
           <div className="my-4 grid grid-cols-5 divide-x divide-border rounded-lg border border-border bg-card/40">
-            <Spec icon={<Bed className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
-            <Spec icon={<Bath className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
+            <Spec icon={<Bed className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
+            <Spec icon={<Bath className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
             <Spec icon={<Square className="h-4 w-4 text-purple-600 dark:text-purple-400" />} value={sqft} label="Sqft" />
-            <Spec icon={<Car className="h-4 w-4 text-amber-600 dark:text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
+            <Spec icon={<Car className="h-4 w-4 text-amber-700 dark:text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
             <Spec icon={<Layers className="h-4 w-4 text-indigo-400" />} value={basementLabel(property)} label="Basement" />
           </div>
 
           {/* Signal tiles — instant from the index doc, while the score cards hydrate */}
           <div className="mb-4 grid grid-cols-3 gap-2">
             <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
-            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-600 dark:text-emerald-400" term="grossYield" />
+            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-700 dark:text-emerald-400" term="grossYield" />
             <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-foreground" term="capRate" />
           </div>
 
@@ -299,7 +299,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           {/* Structural Vitals — zero-fetch, scannable facts from the index doc */}
           <div className="mb-4">
             <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-              <Home className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <Home className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
               Structural Vitals
             </h3>
             <table className="w-full border-collapse text-sm">

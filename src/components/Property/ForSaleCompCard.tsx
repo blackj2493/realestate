@@ -46,7 +46,7 @@ export function ForSaleCompCard({ card, mode = "sale" }: { card: SimilarForSaleC
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-lg font-bold text-cyan-600 dark:text-cyan-400">
+          <span className="font-mono text-lg font-bold text-cyan-700 dark:text-cyan-400">
             {formatPrice(card.price)}
             {isLease && <span className="text-xs font-normal text-muted-foreground">/mo</span>}
           </span>

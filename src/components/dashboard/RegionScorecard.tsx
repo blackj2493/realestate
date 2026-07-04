@@ -179,9 +179,9 @@ export default function RegionScorecard({
                   key={c.key}
                   type="button"
                   onClick={() => onSort(c.key)}
-                  className={`terminal-font flex items-center gap-1 px-2 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors hover:text-cyan-300 ${
+                  className={`terminal-font flex items-center gap-1 px-2 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors hover:text-cyan-700 dark:hover:text-cyan-300 ${
                     c.align === "right" ? "justify-end" : "justify-start"
-                  } ${active ? "text-cyan-600 dark:text-cyan-400" : "text-muted-foreground"}`}
+                  } ${active ? "text-cyan-700 dark:text-cyan-400" : "text-muted-foreground"}`}
                 >
                   {c.label}
                   {active &&
@@ -214,7 +214,7 @@ export default function RegionScorecard({
                   {/* Region */}
                   <Link
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
-                    className="terminal-font flex items-center gap-1 px-2 py-3 text-xs font-semibold text-foreground hover:text-cyan-300"
+                    className="terminal-font flex items-center gap-1 px-2 py-3 text-[13px] font-semibold text-foreground hover:text-cyan-700 dark:hover:text-cyan-300"
                   >
                     <span className="truncate">{s.region}</span>
                     <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -224,7 +224,7 @@ export default function RegionScorecard({
                   <div className="flex flex-col items-end gap-0.5 px-2 py-2">
                     <div className="flex w-full items-center justify-end gap-2">
                       <Sparkline data={s.priceSeries} />
-                      <span className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">
+                      <span className="terminal-font text-[13px] font-bold text-cyan-700 dark:text-cyan-400">
                         {orDash(s.medianPrice, compactPrice)}
                       </span>
                     </div>
@@ -233,7 +233,7 @@ export default function RegionScorecard({
 
                   {/* $/Sqft + YoY */}
                   <div className="flex flex-col items-end gap-0.5 px-2 py-2">
-                    <span className="terminal-font text-xs text-foreground">
+                    <span className="terminal-font text-[13px] text-foreground">
                       {orDash(s.medianPpsf, (n) => `$${Math.round(n)}`)}
                     </span>
                     <YoY pct={s.ppsfYoyPct} />
@@ -270,7 +270,7 @@ export default function RegionScorecard({
 
 function Cell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="terminal-font px-2 py-3 text-right text-xs text-foreground">{children}</div>
+    <div className="terminal-font px-2 py-3 text-right text-[13px] text-foreground">{children}</div>
   );
 }
 

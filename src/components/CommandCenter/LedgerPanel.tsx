@@ -132,17 +132,17 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     <div ref={rootRef} className={cn("flex h-full flex-col border-l border-border bg-background", className)}>
       {/* Typesense stat header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <Zap className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+        <Zap className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
         <p className="font-mono text-xs text-muted-foreground">
           {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) ? (
             <>
-              <span className="font-semibold text-cyan-600 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Comps
+              <span className="font-semibold text-cyan-700 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Comps
               <span className="mx-1.5 text-muted-foreground">|</span>
               {/* The de-listed fetch is capped at 90d while sold/leased go to 180d:
                   delisted-only shows the clamped figure; a mixed view annotates both
                   so the label never overstates the de-listed coverage. */}
               VOW · last{" "}
-              <span className="text-cyan-600 dark:text-cyan-400">
+              <span className="text-cyan-700 dark:text-cyan-400">
                 {!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")
                   ? Math.min(soldWindowDays, 90)
                   : soldWindowDays}
@@ -155,9 +155,9 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
           ) : (
             <>
               {SEARCH_BRAND}:{" "}
-              <span className="font-semibold text-cyan-600 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
+              <span className="font-semibold text-cyan-700 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
               <span className="mx-1.5 text-muted-foreground">|</span>
-              Instant Query <span className="text-cyan-600 dark:text-cyan-400">&lt;{ms}ms</span>
+              Instant Query <span className="text-cyan-700 dark:text-cyan-400">&lt;{ms}ms</span>
             </>
           )}
         </p>
@@ -198,7 +198,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
                 // carry a persistent sort glyph, so it's obvious at rest that they
                 // click to sort — not just on hover or once already sorted.
                 "group flex cursor-pointer items-center gap-0.5 text-muted-foreground transition-colors hover:text-foreground",
-                active && "text-cyan-600 dark:text-cyan-400 hover:text-cyan-400",
+                active && "text-cyan-700 dark:text-cyan-400 hover:text-cyan-400",
                 col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
               )}
             >
@@ -222,13 +222,13 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="mb-3 h-8 w-8 animate-spin text-cyan-600 dark:text-cyan-400" />
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-cyan-700 dark:text-cyan-400" />
             <span className="text-sm text-muted-foreground">SCANNING MARKET DATA...</span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center px-4 py-16">
-            <AlertCircle className="mb-3 h-8 w-8 text-rose-600 dark:text-rose-400" />
-            <span className="mb-1 text-sm text-rose-600 dark:text-rose-400">Search Error</span>
+            <AlertCircle className="mb-3 h-8 w-8 text-rose-700 dark:text-rose-400" />
+            <span className="mb-1 text-sm text-rose-700 dark:text-rose-400">Search Error</span>
             <span className="text-center text-xs text-muted-foreground">{error}</span>
           </div>
         ) : properties.length === 0 ? (

@@ -66,7 +66,7 @@ export function SoldCompCard({ card, locked, mode = "sale" }: { card: SimilarSol
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
+          <span className="font-mono text-lg font-bold text-emerald-700 dark:text-emerald-400">
             {formatPrice(card.closePrice)}
             {isLease && <span className="text-xs font-normal text-muted-foreground">/mo</span>}
           </span>

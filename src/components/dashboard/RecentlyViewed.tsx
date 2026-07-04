@@ -50,12 +50,12 @@ export default function RecentlyViewed() {
               <Thumb item={item} />
             </div>
             <div className="p-2">
-              <div className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">
+              <div className="terminal-font text-sm font-bold text-cyan-700 dark:text-cyan-400">
                 {formatPrice(item.price)}
               </div>
-              <p className="truncate text-[11px] text-foreground">{item.address}</p>
+              <p className="truncate text-xs text-foreground">{item.address}</p>
               {item.city && (
-                <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+                <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
                   {item.city}
                 </p>
               )}
@@ -64,7 +64,7 @@ export default function RecentlyViewed() {
                   cards, at the same weight as sibling detail lines. Conditional:
                   snapshots saved before this field shipped omit it. */}
               {item.brokerage && (
-                <p className="truncate text-[11px] text-foreground">{item.brokerage}</p>
+                <p className="truncate text-xs text-foreground">{item.brokerage}</p>
               )}
             </div>
           </Link>

@@ -115,7 +115,7 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
 
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-600 dark:text-emerald-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-700 dark:text-emerald-400" />
               Creating link...
             </div>
           ) : error ? (
@@ -153,14 +153,14 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
                   href={smsHref}
                   className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <MessageSquare className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <MessageSquare className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
                   Text it
                 </a>
                 <a
                   href={emailHref}
                   className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <Mail className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <Mail className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
                   Email
                 </a>
                 <button
@@ -168,7 +168,7 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
                   onClick={handleNativeShare}
                   className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <Share2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <Share2 className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
                   Share
                 </button>
               </div>

@@ -55,9 +55,9 @@ export default function TheReadCard({
         ))}
       </div>
 
-      <Row label="Thesis" color="text-emerald-600 dark:text-emerald-400" text={read.thesisByPersona[persona]} />
-      <Row label="The catch" color="text-amber-600 dark:text-amber-400" text={read.catch_} />
-      <Row label="Price read" color="text-cyan-600 dark:text-cyan-400" text={read.priceRead} />
+      <Row label="Thesis" color="text-emerald-700 dark:text-emerald-400" text={read.thesisByPersona[persona]} />
+      <Row label="The catch" color="text-amber-700 dark:text-amber-400" text={read.catch_} />
+      <Row label="Price read" color="text-cyan-700 dark:text-cyan-400" text={read.priceRead} />
 
       <p className="mt-2 font-mono text-[10px] text-muted-foreground">
         Generated deterministically from Deal Score · AVM · True DOM · Value-Add. No AI on feed data (§4).

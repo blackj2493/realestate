@@ -59,6 +59,11 @@ export default function DashboardClient() {
   });
   const [name, setName] = useState<string | undefined>(undefined);
   const [showConfig, setShowConfig] = useState(false);
+  // The city the single-region intelligence tiles (Neighbourhood Heat + Market
+  // Pulse) are focused on. Shared so both stay in sync; falls back to the first
+  // configured region until the user picks another (and if the picked one is
+  // later removed from the config).
+  const [intelRegion, setIntelRegion] = useState<string | null>(null);
   // The previous-visit cutoff for the action feed. Captured + re-stamped once on
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
@@ -89,6 +94,10 @@ export default function DashboardClient() {
     .map((id) => BOARDS[id])
     .filter(Boolean);
   const hasRegions = config.regions.length > 0;
+  // Effective focus city for the intelligence tiles: the user's pick if it's still
+  // a configured region, else the first region.
+  const intelActive =
+    intelRegion && config.regions.includes(intelRegion) ? intelRegion : config.regions[0];
 
   return (
     <div className="min-h-app bg-background text-foreground">
@@ -181,13 +190,24 @@ export default function DashboardClient() {
             );
           })}
 
-        {/* Primary-region intelligence: neighbourhood heat + price trend (V1). */}
-        {hasRegions && <DashboardHeatTile region={config.regions[0]} />}
+        {/* Region intelligence: neighbourhood heat + price trend. A shared city
+            switcher (rendered inside each tile when >1 region) keeps them in sync. */}
+        {hasRegions && (
+          <DashboardHeatTile
+            regions={config.regions}
+            selected={intelActive}
+            onSelect={setIntelRegion}
+          />
+        )}
 
         {hasRegions && (
           <section className="space-y-3">
             <ModuleHead title="Market Intelligence Pulse" />
-            <MarketPulse location={config.regions[0]} />
+            <MarketPulse
+              regions={config.regions}
+              selected={intelActive}
+              onSelect={setIntelRegion}
+            />
           </section>
         )}
 

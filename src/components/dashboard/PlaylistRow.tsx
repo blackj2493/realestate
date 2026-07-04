@@ -41,8 +41,8 @@ export default function PlaylistRow({
         </p>
       </div>
       <div className="shrink-0 text-right">
-        <div className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">{metric}</div>
-        <div className="terminal-font text-[10px] text-muted-foreground">
+        <div className="terminal-font text-sm font-bold text-cyan-700 dark:text-cyan-400">{metric}</div>
+        <div className="terminal-font text-[11px] text-muted-foreground">
           {formatPrice(listing.ListPrice)}
         </div>
       </div>

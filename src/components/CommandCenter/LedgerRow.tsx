@@ -102,7 +102,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
         );
       const shown = doc.DaysOnMarket ?? doc.calculatedDOM ?? null;
       const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
-      const color = dom > 90 ? "text-rose-600 dark:text-rose-400" : dom > 45 ? "text-cyan-600 dark:text-cyan-400" : dom >= 14 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
+      const color = dom > 90 ? "text-rose-700 dark:text-rose-400" : dom > 45 ? "text-cyan-700 dark:text-cyan-400" : dom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground";
       // Relisted: the board reset the clock. Strike the shown figure, keep True DOM (#4).
       const relisted = doc.TrueDom != null && shown != null && doc.TrueDom - shown >= RELIST_GAP_DAYS;
       return (
@@ -119,7 +119,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
     case "capRate": {
       const v = capRateOrNull(doc.cap_rate_est);
       return (
-        <span className="text-cyan-600 dark:text-cyan-400">
+        <span className="text-cyan-700 dark:text-cyan-400">
           {v != null ? `${v.toFixed(1)}%` : "—"}
           {v != null && <PctTag p={ranker?.("capRate", v)} />}
         </span>
@@ -129,7 +129,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       // gross_yield_est is already a PERCENT — no ×100 (that was for the old fraction targetGrossYield).
       const v = grossYieldOrNull(doc.gross_yield_est);
       return (
-        <span className="text-cyan-600 dark:text-cyan-400">
+        <span className="text-cyan-700 dark:text-cyan-400">
           {v != null ? `${v.toFixed(1)}%` : "—"}
           {v != null && <PctTag p={ranker?.("yield", v)} />}
         </span>
@@ -138,7 +138,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
     case "carryCost": {
       const v = carryFor(doc);
       return (
-        <span className="text-cyan-600 dark:text-cyan-400">
+        <span className="text-cyan-700 dark:text-cyan-400">
           ${v.toLocaleString()}
           <span className="text-[9px] text-muted-foreground">/mo</span>
           <PctTag p={ranker?.("carryCost", v)} />
@@ -147,7 +147,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
     }
     case "priceDrop":
       return (
-        <span className={cn("text-[13px]", doc.TotalPriceDrop ? "font-bold text-rose-600 dark:text-rose-400" : "text-muted-foreground")}>
+        <span className={cn("text-[13px]", doc.TotalPriceDrop ? "font-bold text-rose-700 dark:text-rose-400" : "text-muted-foreground")}>
           {doc.TotalPriceDrop ? `-$${doc.TotalPriceDrop.toLocaleString()}` : "—"}
           {doc.TotalPriceDrop ? <PctTag p={ranker?.("priceDrop", doc.TotalPriceDrop)} /> : null}
         </span>
@@ -164,9 +164,9 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       return <span className="text-foreground">{w ? `${w}′×${d ?? "?"}′` : "—"}</span>;
     }
     case "zoning":
-      return <span className={doc.multiplex_by_right ? "text-cyan-600 dark:text-cyan-400" : "text-foreground"}>{doc.zoning_designation || "—"}</span>;
+      return <span className={doc.multiplex_by_right ? "text-cyan-700 dark:text-cyan-400" : "text-foreground"}>{doc.zoning_designation || "—"}</span>;
     case "density":
-      return <span className={doc.is_density_ready ? "text-cyan-600 dark:text-cyan-400" : "text-muted-foreground"}>{doc.is_density_ready ? "YES" : "—"}</span>;
+      return <span className={doc.is_density_ready ? "text-cyan-700 dark:text-cyan-400" : "text-muted-foreground"}>{doc.is_density_ready ? "YES" : "—"}</span>;
     default:
       return null;
   }
@@ -189,7 +189,7 @@ function SaleLine({ salePrice }: { salePrice?: SalePriceEstimate | null }) {
       className="mt-0.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300/90"
       title="Estimated sale price — what this home is likely to close at"
     >
-      ≈ {formatPrice(salePrice.value)} <span className="text-emerald-600 dark:text-emerald-400/70">likely close</span>
+      ≈ {formatPrice(salePrice.value)} <span className="text-emerald-700 dark:text-emerald-400/70">likely close</span>
       <span className="text-muted-foreground"> · {tag}</span>
     </p>
   );

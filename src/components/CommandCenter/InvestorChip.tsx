@@ -108,7 +108,7 @@ function InvestorControlInner({
           {control.label}
           {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
         </span>
-        <span className="font-mono text-xs text-cyan-600 dark:text-cyan-400">{valueText}</span>
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-400">{valueText}</span>
       </div>
 
       {supportsHistogram(control.field) && (

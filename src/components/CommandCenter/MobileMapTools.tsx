@@ -95,7 +95,7 @@ export default function MobileMapTools() {
         className="absolute left-3 z-40 flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-4 py-2 text-sm font-semibold text-foreground shadow-lg backdrop-blur active:bg-muted md:hidden"
         style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
-        <SlidersHorizontal className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+        <SlidersHorizontal className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />
         Tools
         {activeCount > 0 && (
           <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -115,12 +115,12 @@ export default function MobileMapTools() {
                   onClick={() => setActiveModule(null)}
                   className="-ml-1 flex min-h-[44px] items-center gap-1 pr-2 text-sm font-semibold uppercase tracking-wider text-foreground"
                 >
-                  <ChevronLeft className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                  <ChevronLeft className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />
                   {TITLES[activeModule]}
                 </button>
               ) : (
                 <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
-                  <SlidersHorizontal className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                  <SlidersHorizontal className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />
                   Map Tools
                 </span>
               )}
@@ -151,7 +151,7 @@ export default function MobileMapTools() {
                           dataActive[t.module] ? "border-cyan-500/50 text-cyan-200" : "border-border text-foreground"
                         )}
                       >
-                        <Icon className={cn("h-5 w-5", dataActive[t.module] ? "text-cyan-700 dark:text-cyan-300" : "text-cyan-600 dark:text-cyan-400")} />
+                        <Icon className={cn("h-5 w-5", dataActive[t.module] ? "text-cyan-700 dark:text-cyan-300" : "text-cyan-700 dark:text-cyan-400")} />
                         <span className="text-[10px] font-semibold uppercase tracking-wide">{t.label}</span>
                         {t.module === "compare" && selectedCount > 0 ? (
                           <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">

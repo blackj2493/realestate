@@ -207,7 +207,7 @@ export default function FilterBar() {
           onClick={() => setSheetOpen(true)}
           className="relative flex min-h-[40px] shrink-0 items-center gap-1.5 border border-border bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground transition-colors active:bg-muted"
         >
-          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
           Filters
           {activeFilterCount > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -268,7 +268,7 @@ export default function FilterBar() {
                 "relative flex items-center gap-1.5 border border-border px-2.5 py-1.5 text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
               )}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
               Filters
               {drawerActiveCount > 0 && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -277,7 +277,7 @@ export default function FilterBar() {
               )}
             </button>
           )}
-          <span className={cn(LABEL, nudge.overflowing ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+          <span className={cn(LABEL, nudge.overflowing ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground")}>
             {nudge.text}
           </span>
         </div>

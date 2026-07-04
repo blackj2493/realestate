@@ -18,9 +18,9 @@ const scoreColor = (s: number | null) =>
   s === null
     ? "text-muted-foreground bg-muted/40"
     : s >= 8
-    ? "text-emerald-600 dark:text-emerald-400 bg-emerald-400/10"
+    ? "text-emerald-700 dark:text-emerald-400 bg-emerald-400/10"
     : s >= 6
-    ? "text-amber-600 dark:text-amber-400 bg-amber-400/10"
+    ? "text-amber-700 dark:text-amber-400 bg-amber-400/10"
     : "text-muted-foreground bg-muted/40";
 
 /**
@@ -74,7 +74,7 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
   return (
     <div className="mb-6">
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
-        <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        <GraduationCap className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
         Schools near this home
         <span className="font-mono text-xs font-normal normal-case tracking-normal text-muted-foreground">
           · {list.length}
@@ -109,7 +109,7 @@ export default function NearbySchools({ listingId }: { listingId: string }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-2 min-h-[44px] text-xs font-medium text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300 md:min-h-0"
+          className="mt-2 min-h-[44px] text-xs font-medium text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300 md:min-h-0"
         >
           {expanded
             ? "Show fewer schools ▴"

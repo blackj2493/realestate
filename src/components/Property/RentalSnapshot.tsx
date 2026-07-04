@@ -57,7 +57,7 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
     <div className={cn("bg-card rounded-lg border border-border p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <KeyRound className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+        <KeyRound className="h-4 w-4 text-sky-700 dark:text-sky-400" />
         <span className="text-sm font-semibold text-foreground uppercase tracking-wider">
           Rental Snapshot
         </span>
@@ -66,7 +66,7 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
       {/* Hero: monthly rent */}
       <div className="rounded-lg p-3 mb-4 border bg-sky-900/20 border-sky-800/50">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-sky-600 dark:text-sky-400">
+          <span className="text-xs uppercase tracking-wider text-sky-700 dark:text-sky-400">
             {leased ? "Leased Rent" : "Monthly Rent"}
           </span>
           <span className="text-2xl font-bold font-mono text-sky-700 dark:text-sky-300">

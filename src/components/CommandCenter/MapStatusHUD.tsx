@@ -23,7 +23,7 @@ function CountLine({ count, total, commuteActive }: { count: number; total: numb
   const capped = total > count;
   return (
     <div className="mt-1.5 font-mono text-xs text-foreground">
-      <span className="font-semibold text-cyan-600 dark:text-cyan-400">{count}</span>
+      <span className="font-semibold text-cyan-700 dark:text-cyan-400">{count}</span>
       {capped ? ` of ${total.toLocaleString()}` : ""} in {commuteActive ? "commute zone" : "view"}
       {capped && <span className="ml-1.5 text-muted-foreground">· zoom in to see all</span>}
     </div>

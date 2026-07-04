@@ -106,7 +106,7 @@ export default function MagicLinkForm({
         <button
           type="submit"
           disabled={status === "verifying" || code.length < 6}
-          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
+          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-600 bg-cyan-600 py-3 text-xs uppercase tracking-wider text-white transition-colors [touch-action:manipulation] hover:bg-cyan-700 active:bg-cyan-800 disabled:opacity-50 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20 dark:active:bg-cyan-500/30"
         >
           {status === "verifying" ? (
             <>
@@ -133,7 +133,7 @@ export default function MagicLinkForm({
             type="button"
             disabled={status === "sending"}
             onClick={() => void doSend()}
-            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-muted-foreground underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cyan-300 hover:underline active:text-cyan-200 disabled:opacity-50"
+            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-muted-foreground underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cyan-700 hover:underline active:text-cyan-800 disabled:opacity-50 dark:hover:text-cyan-300 dark:active:text-cyan-200"
           >
             Resend code
           </button>
@@ -173,7 +173,7 @@ export default function MagicLinkForm({
       <button
         type="submit"
         disabled={status === "sending"}
-        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
+        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-600 bg-cyan-600 py-3 text-xs uppercase tracking-wider text-white transition-colors [touch-action:manipulation] hover:bg-cyan-700 active:bg-cyan-800 disabled:opacity-50 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20 dark:active:bg-cyan-500/30"
       >
         {status === "sending" ? (
           <>

@@ -92,7 +92,7 @@ export default function WatchlistSection() {
             !signedIn ? (
               <Link
                 href="/login"
-                className="terminal-font text-[11px] normal-case tracking-wider text-cyan-600 dark:text-cyan-400 hover:underline"
+                className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline"
               >
                 Sign in to sync across devices →
               </Link>
@@ -110,7 +110,7 @@ export default function WatchlistSection() {
           </p>
           <Link
             href="/properties"
-            className="terminal-font mt-6 inline-flex min-h-[44px] items-center gap-2 border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 text-xs uppercase tracking-wider text-cyan-200 hover:bg-cyan-500/20"
+            className="terminal-font mt-6 inline-flex min-h-[44px] items-center gap-2 border border-cyan-600/50 bg-cyan-600/10 px-4 py-3 text-xs uppercase tracking-wider text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
           >
             Browse properties →
           </Link>
@@ -128,7 +128,7 @@ export default function WatchlistSection() {
           !signedIn ? (
             <Link
               href="/login"
-              className="terminal-font text-[11px] normal-case tracking-wider text-cyan-600 dark:text-cyan-400 hover:underline"
+              className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline"
             >
               Sign in to sync across devices →
             </Link>
@@ -162,14 +162,14 @@ export default function WatchlistSection() {
                   <ChangeChips change={change} />
                 </div>
                 <div className="p-2">
-                  <div className="terminal-font text-xs font-semibold text-cyan-600 dark:text-cyan-400">
+                  <div className="terminal-font text-sm font-bold text-cyan-700 dark:text-cyan-400">
                     {price ? formatPrice(price) : "—"}
                   </div>
-                  <p className="truncate text-[11px] text-foreground">
+                  <p className="truncate text-xs text-foreground">
                     {item.address || "Saved property"}
                   </p>
                   {item.city && (
-                    <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
                       {item.city}
                     </p>
                   )}
@@ -179,7 +179,7 @@ export default function WatchlistSection() {
                       Re-hydrated live from Typesense via change.current; rendered
                       conditionally so off-market cards (no live doc) never break. */}
                   {brokerage && (
-                    <p className="truncate text-[11px] text-foreground">{brokerage}</p>
+                    <p className="truncate text-xs text-foreground">{brokerage}</p>
                   )}
                 </div>
               </Link>

@@ -60,7 +60,7 @@ export default async function HiddenEquityPage({
         <ul className="mb-6 space-y-2">
           {benefits.map((b) => (
             <li key={b} className="flex items-start gap-2 text-sm text-foreground">
-              <span aria-hidden="true" className="mt-0.5 text-emerald-600 dark:text-emerald-400">
+              <span aria-hidden="true" className="mt-0.5 text-emerald-700 dark:text-emerald-400">
                 ✓
               </span>
               <span>{b}</span>
@@ -74,7 +74,7 @@ export default async function HiddenEquityPage({
           Just curious what a renovation could add?{" "}
           <Link
             href="/whats-my-home-hiding"
-            className="text-cyan-600 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+            className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
           >
             See your home&apos;s renovation upside — no sign-in →
           </Link>
@@ -92,7 +92,7 @@ export default async function HiddenEquityPage({
         Curious about a single renovation?{" "}
         <Link
           href="/whats-my-home-hiding"
-          className="text-cyan-600 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+          className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
         >
           Compare renovation payback →
         </Link>

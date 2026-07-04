@@ -60,7 +60,7 @@ export default function PlaylistBoard({
         </div>
       )}
       {error && (
-        <p className="px-3 py-6 text-center text-xs text-rose-600 dark:text-rose-400">Failed to load</p>
+        <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>
       )}
       {rows && rows.length === 0 && (
         <p className="px-3 py-6 text-center text-xs text-muted-foreground">No matching listings</p>

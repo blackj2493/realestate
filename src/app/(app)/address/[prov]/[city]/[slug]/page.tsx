@@ -99,7 +99,7 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
   ];
   return (
     <section className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-300">Sale history</h2>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Sale history</h2>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
         {rows.map(([k, v]) => (
           <div key={k}>
@@ -182,7 +182,7 @@ export default async function AddressPage({
           /* Anonymous → sign-in CTA. No VOW data is fetched or rendered. */
           <section className="mb-6 rounded-lg border border-border bg-card/40 p-5">
             <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Lock className="h-4 w-4 text-cyan-600 dark:text-cyan-400" /> This home isn&apos;t currently listed for sale.
+              <Lock className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> This home isn&apos;t currently listed for sale.
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Real estate boards require a verified account to view sale history and listing details. Sign in or create a free PureProperty account to see this property&apos;s record.
@@ -202,7 +202,7 @@ export default async function AddressPage({
             {(ctx.bestElem || ctx.bestSec) && (
               <div className="rounded-lg border border-border bg-card/40 p-4">
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Nearby schools
+                  <GraduationCap className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Nearby schools
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {ctx.bestElem ? `Best elementary ${ctx.bestElem.toFixed(1)}/10` : ""}
@@ -214,7 +214,7 @@ export default async function AddressPage({
             {ctx.groceryKm !== null && (
               <div className="rounded-lg border border-border bg-card/40 p-4">
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Footprints className="h-4 w-4 text-sky-600 dark:text-sky-400" /> Walkability
+                  <Footprints className="h-4 w-4 text-sky-700 dark:text-sky-400" /> Walkability
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   Nearest grocery {ctx.groceryKm < 1 ? `${Math.max(50, Math.round((ctx.groceryKm * 1000) / 50) * 50)} m` : `${ctx.groceryKm.toFixed(1)} km`} away

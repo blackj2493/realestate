@@ -187,9 +187,9 @@ function RangeSlider({
           <span className="text-xs text-muted-foreground font-medium">{label}</span>
         </div>
         <div className="flex items-center gap-1 font-mono text-xs">
-          <span className="text-emerald-600 dark:text-emerald-400">{prefix}{value[0]}{suffix}</span>
+          <span className="text-emerald-700 dark:text-emerald-400">{prefix}{value[0]}{suffix}</span>
           <span className="text-muted-foreground mx-1">—</span>
-          <span className="text-emerald-600 dark:text-emerald-400">{prefix}{value[1]}{suffix}</span>
+          <span className="text-emerald-700 dark:text-emerald-400">{prefix}{value[1]}{suffix}</span>
         </div>
       </div>
       <div className="px-1">
@@ -239,7 +239,7 @@ function SingleSlider({
           {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
           <span className="text-xs text-muted-foreground font-medium">{label}</span>
         </div>
-        <span className="font-mono text-sm text-emerald-600 dark:text-emerald-400">
+        <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">
           {prefix}{value}{suffix}
         </span>
       </div>
@@ -460,7 +460,7 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
               <SectionHeader icon={Bed} title="Bedroom Count" />
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-muted-foreground">Range</span>
-                <span className="font-mono text-sm text-emerald-600 dark:text-emerald-400">
+                <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">
                   {investorFilters.minBedrooms} — {investorFilters.maxBedrooms}
                 </span>
               </div>

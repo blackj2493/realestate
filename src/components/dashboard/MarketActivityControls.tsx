@@ -83,7 +83,7 @@ function StepperPopover({
       className={cn(
         "flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border px-2.5 py-1 text-xs transition-colors",
         value > 0
-          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
+          ? "border-cyan-600/60 bg-cyan-600/10 text-cyan-700 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200"
           : "border-border bg-card/60 text-foreground hover:border-cyan-500/60"
       )}
     >
@@ -264,7 +264,7 @@ export default function MarketActivityControls({
                 onClick={() => setDraftTypes([])}
                 className={cn(
                   "mb-1 flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs",
-                  draftTypes.length === 0 ? "text-cyan-300" : "text-foreground"
+                  draftTypes.length === 0 ? "text-cyan-700 dark:text-cyan-300" : "text-foreground"
                 )}
               >
                 <span
@@ -313,7 +313,7 @@ export default function MarketActivityControls({
                 <button
                   type="button"
                   onClick={saveTypes}
-                  className="border border-cyan-500/60 bg-cyan-500/20 px-3 py-1 text-xs text-cyan-200 hover:bg-cyan-500/30"
+                  className="border border-cyan-600 bg-cyan-600 px-3 py-1 text-xs text-white hover:bg-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-200 dark:hover:bg-cyan-500/30"
                 >
                   Save
                 </button>
