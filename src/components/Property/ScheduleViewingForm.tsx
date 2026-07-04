@@ -135,7 +135,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
   // ── Success confirmation ─────────────────────────────────────────────────────
   if (status === "success") {
     return (
-      <div className="rounded-md border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm text-emerald-300">
+      <div className="rounded-md border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
         Request sent — you&apos;ll hear back shortly.
       </div>
     );

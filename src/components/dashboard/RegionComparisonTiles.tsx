@@ -144,12 +144,12 @@ function Tile({
   const sub = value != null ? metric.sub?.(data) ?? null : null;
 
   return (
-    <div className="flex flex-col gap-1 border border-border bg-card/40 px-3 py-2">
+    <div className="flex flex-col gap-1 border border-border bg-card px-3 py-2 shadow-sm dark:bg-card/40 dark:shadow-none">
       <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
         {metric.label}
         {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
       </div>
-      <div className={`terminal-font text-lg font-bold ${valueClass}`}>
+      <div className={`terminal-font text-xl font-extrabold ${valueClass}`}>
         {value == null ? DASH : metric.format(value)}
       </div>
       <div className="flex min-h-[16px] items-center">

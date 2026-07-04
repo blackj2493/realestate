@@ -64,7 +64,7 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
           <span className="text-xs uppercase tracking-wider text-sky-600 dark:text-sky-400">
             {leased ? "Leased Rent" : "Monthly Rent"}
           </span>
-          <span className="text-2xl font-bold font-mono text-sky-300">
+          <span className="text-2xl font-bold font-mono text-sky-700 dark:text-sky-300">
             {formatPrice(s.monthlyRent)}
           </span>
         </div>

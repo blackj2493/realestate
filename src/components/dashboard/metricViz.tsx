@@ -12,6 +12,7 @@
 import { LineChart, Line } from "recharts";
 import type { RegionScore } from "@/lib/dashboard/marketAggregates";
 import { useChartTheme } from "@/lib/theme/useChartTheme";
+import { TempChip } from "@/components/daylight/primitives";
 
 export const DASH = "—";
 
@@ -68,14 +69,8 @@ export function TemperatureBadge({
   temperature: RegionScore["temperature"];
 }) {
   if (!temperature) return <span className="text-xs text-muted-foreground">{DASH}</span>;
-  const t = TEMP[temperature];
-  return (
-    <span
-      className={`terminal-font rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${t.cls}`}
-    >
-      {t.label}
-    </span>
-  );
+  // Daylight status-light in light (solid pill), the current translucent chip in dark.
+  return <TempChip kind={temperature} />;
 }
 
 /**

@@ -3,7 +3,20 @@
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
-import type { FeedItem } from "./useActionFeed";
+import { StatusLight, type StatusTone } from "@/components/daylight/primitives";
+import type { FeedItem, FeedKind } from "./useActionFeed";
+
+/** Feed event → status-light tone. Dark renders match the current chip palette;
+ *  light differentiates relisted=blue / new=green per the Daylight mockup. */
+const KIND_TONE: Record<FeedKind, StatusTone> = {
+  WATCH_SOLD: "sold",
+  WATCH_LEASED: "leased",
+  WATCH_RELISTED: "relisted",
+  WATCH_OFF_MARKET: "off",
+  WATCH_PRICE_DROP: "drop",
+  WATCH_STALE: "stale",
+  NEW_LISTING: "new",
+};
 
 /**
  * One action-feed row: thumbnail · headline + address + brokerage · status chip +
@@ -25,11 +38,9 @@ export default function ActionFeedItem({ item }: { item: FeedItem }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span
-            className={`terminal-font shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${item.chipCls}`}
-          >
+          <StatusLight tone={KIND_TONE[item.kind]} className="shrink-0">
             {item.chipText}
-          </span>
+          </StatusLight>
           <span className="truncate text-xs text-foreground">{item.headline}</span>
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.address}</p>

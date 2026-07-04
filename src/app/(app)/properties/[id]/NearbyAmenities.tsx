@@ -117,7 +117,7 @@ function AmenityColumn({
       <ul className="space-y-1.5">
         {costco && (
           <li className="flex items-start justify-between gap-2 rounded-md bg-amber-500/10 px-1.5 py-1">
-            <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight text-amber-300">
+            <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight text-amber-700 dark:text-amber-300">
               <Store className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Costco{costcoCity ? ` · ${costcoCity}` : ""}</span>
             </span>

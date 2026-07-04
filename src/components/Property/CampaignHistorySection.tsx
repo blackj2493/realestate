@@ -27,9 +27,9 @@ const KIND_COLOR: Record<TimelineEventKind, string> = {
   Terminated: "text-rose-600 dark:text-rose-400",
   Expired: "text-muted-foreground",
   Suspended: "text-muted-foreground",
-  Sold: "text-amber-300",
+  Sold: "text-amber-700 dark:text-amber-300",
   // Leased uses the sky/lease tone — same family as "Listed for Lease"
-  Leased: "text-sky-300",
+  Leased: "text-sky-700 dark:text-sky-300",
 };
 
 function Row({ r }: { r: TimelineRow }) {
@@ -97,7 +97,7 @@ export default function CampaignHistorySection({
             <p className="text-xs text-foreground">
               Listed {campaignCount}× {firstSeenDate ? `since ${new Date(firstSeenDate).getFullYear()}` : ""}
             </p>
-            <Link href="/login" className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20">
+            <Link href="/login" className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:text-cyan-300 transition-colors hover:bg-cyan-500/20">
               Sign in to view the full history
             </Link>
           </div>

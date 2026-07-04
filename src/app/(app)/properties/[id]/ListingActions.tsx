@@ -67,7 +67,7 @@ export default function ListingActions({
           statusKind === "delisted" && !watched
             ? "border-transparent bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
             : watched
-              ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
+              ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-700 hover:bg-cyan-500/25 dark:text-cyan-300"
               : "border-border text-foreground hover:bg-muted"
         )}
       >
@@ -88,7 +88,7 @@ export default function ListingActions({
         className={cn(
           "flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors",
           isSelected
-            ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
+            ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-700 hover:bg-cyan-500/25 dark:text-cyan-300"
             : "border-border text-foreground hover:bg-muted"
         )}
       >
@@ -99,7 +99,7 @@ export default function ListingActions({
       {compareIds.length >= 1 && (
         <Link
           href={compareHref}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md px-4 py-2 text-xs font-semibold text-cyan-300 transition-colors hover:bg-muted"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md px-4 py-2 text-xs font-semibold text-cyan-700 transition-colors hover:bg-muted dark:text-cyan-300"
         >
           Compare {compareIds.length} {compareIds.length === 1 ? "property" : "properties"}
           <ArrowRight className="h-3.5 w-3.5" />

@@ -473,13 +473,13 @@ export default async function PropertyPage({
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-          <Link href="/properties" className="text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300">
+          <Link href="/properties" className="text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-700 dark:hover:text-cyan-300">
             Command Center
           </Link>
           {cityHref && p.City && (
             <>
               <span aria-hidden>/</span>
-              <Link href={cityHref} className="text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-300">
+              <Link href={cityHref} className="text-cyan-600 dark:text-cyan-400 transition-colors hover:text-cyan-700 dark:hover:text-cyan-300">
                 Homes for sale in {p.City}
               </Link>
             </>
@@ -547,7 +547,7 @@ export default async function PropertyPage({
                         {hasSoldPrice && (
                           <Link
                             href="/login"
-                            className="rounded border border-border px-2 py-0.5 text-xs text-cyan-300 hover:bg-muted"
+                            className="rounded border border-border px-2 py-0.5 text-xs text-cyan-700 hover:bg-muted dark:text-cyan-300"
                           >
                             Sign in for the sold price
                           </Link>
@@ -588,8 +588,8 @@ export default async function PropertyPage({
                     className={cn(
                       "inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-xs font-bold tracking-wide",
                       trueDom >= 90
-                        ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
-                        : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                        ? "border-transparent bg-rose-600 text-white shadow-sm dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300"
+                        : "border-transparent bg-amber-500 text-white shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
                     )}
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -609,7 +609,7 @@ export default async function PropertyPage({
                 )}
               </div>
               {status.kind === "delisted" && (
-                <p className="mt-1 text-sm text-amber-300/80">
+                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
                   {status.mlsStatus
                     ? [
                         `${status.mlsStatus}${status.delistedDate ? ` ${fmtDate(status.delistedDate)}` : ""}`,

@@ -2,21 +2,7 @@
 
 import type { WatchlistRollup } from "@/lib/watchlist/useWatchlistSnapshot";
 import InfoDot from "@/components/ui/InfoDot";
-import type { GlossaryKey } from "@/lib/glossary";
-
-function Tile({ label, value, term }: { label: string; value: string; term?: GlossaryKey }) {
-  return (
-    <div className="border border-border bg-card/40 px-3 py-2">
-      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-        {term && <InfoDot term={term} />}
-      </div>
-      <div className="terminal-font truncate text-lg font-bold text-cyan-600 dark:text-cyan-400" title={value}>
-        {value}
-      </div>
-    </div>
-  );
-}
+import { Readout, ReadoutCell } from "@/components/daylight/primitives";
 
 function compactPrice(n: number): string {
   if (n >= 1_000_000) return `$${(Math.round((n / 1_000_000) * 100) / 100).toString()}M`;
@@ -27,6 +13,9 @@ function compactPrice(n: number): string {
 /**
  * At-a-glance characterization of the SAVED set — what you're watching, not a
  * portfolio of holdings. No sum metrics (you're not buying all of them).
+ *
+ * Rendered as a Daylight "readout" (graticule instrument strip) in light; reverts
+ * to the current gapped tiles in dark. Value colours are semantic in both themes.
  */
 export default function WatchlistSummary({ rollup }: { rollup: WatchlistRollup }) {
   if (rollup.count === 0) return null;
@@ -42,11 +31,20 @@ export default function WatchlistSummary({ rollup }: { rollup: WatchlistRollup }
   const best = rollup.bestDeal ? `${rollup.bestDeal.grade} · ${rollup.bestDeal.score}` : dash;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <Tile label="Saved" value={rollup.count.toLocaleString()} />
-      <Tile label="Price Range" value={range} />
-      <Tile label="Avg Cap Rate" value={cap} term="capRate" />
-      <Tile label="Best Deal Score" value={best} />
-    </div>
+    <Readout cols={4}>
+      <ReadoutCell label="Saved" value={rollup.count.toLocaleString()} />
+      <ReadoutCell label="Price Range" value={range} />
+      <ReadoutCell
+        label={
+          <>
+            Avg Cap Rate
+            <InfoDot term="capRate" />
+          </>
+        }
+        value={cap}
+        tone="up"
+      />
+      <ReadoutCell label="Best Deal Score" value={best} tone="sig" />
+    </Readout>
   );
 }

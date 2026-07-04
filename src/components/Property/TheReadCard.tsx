@@ -31,7 +31,7 @@ export default function TheReadCard({
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
         <h2 className="text-[11px] font-bold uppercase tracking-[0.09em] text-foreground">The Read</h2>
         {read.grade && (
-          <span className="ml-auto rounded bg-cyan-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-cyan-300">
+          <span className="ml-auto rounded bg-cyan-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-300">
             Deal Score {read.score} · {read.grade}
           </span>
         )}
@@ -46,7 +46,7 @@ export default function TheReadCard({
             aria-pressed={persona === c.id}
             className={`min-h-[36px] whitespace-nowrap rounded-full border px-3 text-[11px] font-semibold transition-colors [touch-action:manipulation] ${
               persona === c.id
-                ? "border-emerald-500/50 bg-emerald-500/[0.12] text-emerald-300"
+                ? "border-emerald-500/50 bg-emerald-500/[0.12] text-emerald-700 dark:text-emerald-300"
                 : "border-border text-muted-foreground active:bg-muted"
             }`}
           >

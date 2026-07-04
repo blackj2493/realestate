@@ -338,7 +338,13 @@ export default function RoomMap({
                           height={t.h}
                           rx={4}
                           fill={t.color}
-                          fillOpacity={isActive ? 0.5 : 0.26}
+                          // Stronger tint in light so tiles read as coloured (not washed)
+                          // under dark labels; dark mode keeps its original opacities.
+                          className={
+                            isActive
+                              ? "[fill-opacity:0.55] dark:[fill-opacity:0.5]"
+                              : "[fill-opacity:0.38] dark:[fill-opacity:0.26]"
+                          }
                           stroke={t.color}
                           strokeWidth={isActive ? 2.5 : 1.25}
                         />
@@ -362,8 +368,7 @@ export default function RoomMap({
                             x={t.x + 7}
                             y={t.y + 19}
                             fontSize={16}
-                            className="font-semibold"
-                            fill="#f1f5f9"
+                            className="font-semibold fill-slate-900 dark:fill-slate-100"
                             pointerEvents="none"
                           >
                             {truncate(t.room.name, t.w, 16)}
@@ -375,7 +380,7 @@ export default function RoomMap({
                             y={t.y + 37}
                             fontSize={13}
                             fontFamily="monospace"
-                            fill="#cbd5e1"
+                            className="fill-slate-700 dark:fill-slate-300"
                             pointerEvents="none"
                           >
                             {formatArea(t.room.areaMeters, unit)}
@@ -387,7 +392,7 @@ export default function RoomMap({
                             y={t.y + 53}
                             fontSize={12}
                             fontFamily="monospace"
-                            fill="#94a3b8"
+                            className="fill-slate-600 dark:fill-slate-400"
                             pointerEvents="none"
                           >
                             {t.room.length.toFixed(2)} × {t.room.width.toFixed(2)} m

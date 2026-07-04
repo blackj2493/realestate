@@ -74,7 +74,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1 font-mono text-xs transition-colors",
                 isRisk
-                  ? "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                  ? "border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
                   : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
@@ -112,7 +112,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                 <span
                   className={cn(
                     "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider",
-                    isRisk ? "text-amber-300" : "text-foreground",
+                    isRisk ? "text-amber-700 dark:text-amber-300" : "text-foreground",
                   )}
                 >
                   {isRisk && <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />}
@@ -140,7 +140,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                           href={row.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 px-2.5 py-0.5 font-mono text-xs text-cyan-300 hover:bg-cyan-500/10"
+                          className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 px-2.5 py-0.5 font-mono text-xs text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/10"
                         >
                           {row.value}
                           <ExternalLink className="h-3 w-3" />
@@ -149,7 +149,7 @@ export default function PropertyDataSheet({ groups }: { groups: ResolvedGroup[] 
                         <span
                           className={cn(
                             "min-w-0 break-words text-right font-mono text-sm",
-                            row.flagged ? "text-amber-300" : "text-foreground",
+                            row.flagged ? "text-amber-700 dark:text-amber-300" : "text-foreground",
                           )}
                         >
                           {row.value}

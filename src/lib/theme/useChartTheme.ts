@@ -19,8 +19,11 @@ export function useChartTheme() {
     surface: light ? "#ffffff" : "#0b1220", // dot stroke / plot background
     tooltipBg: light ? "#ffffff" : "#0f172a",
     tooltipBorder: light ? "#e2e8f0" : "#334155",
-    bar: light ? "#0e7490" : "#1e3a4a", // primary bars: cyan-700 (colourful on white) / navy
-    barAccent: light ? "#0891b2" : "#155e75", // secondary bars
-    line: light ? "#0891b2" : "#22d3ee", // trend line: cyan-600 / cyan-400
+    // Daylight chart palette (light): steel-blue sold-volume bars under a navy-ink
+    // trend line, with a teal "live" endpoint — the mockup's instrument look.
+    bar: light ? "#4f79a6" : "#1e3a4a", // steel blue / navy
+    barAccent: light ? "#6b93bf" : "#155e75", // secondary bars
+    line: light ? "#0a1828" : "#22d3ee", // navy ink / cyan-400
+    endpoint: light ? "#0b8fa0" : "#22d3ee", // teal signal dot on the latest point
   };
 }

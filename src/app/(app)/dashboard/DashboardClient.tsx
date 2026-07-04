@@ -27,6 +27,7 @@ import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
+import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
 import { regionArea } from "@/lib/dashboard/area";
@@ -185,9 +186,7 @@ export default function DashboardClient() {
 
         {hasRegions && (
           <section className="space-y-3">
-            <h2 className="terminal-font border-b border-border pb-2 text-sm font-bold uppercase tracking-widest text-foreground">
-              Market Intelligence Pulse
-            </h2>
+            <ModuleHead title="Market Intelligence Pulse" />
             <MarketPulse location={config.regions[0]} />
           </section>
         )}

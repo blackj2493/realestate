@@ -17,7 +17,7 @@ export function DeltaChips({ deltas, className = "" }: { deltas: AttrDelta[]; cl
           d.kind === "price"
             ? "bg-muted/70 text-foreground"
             : d.direction === "up"
-              ? "bg-emerald-400/10 text-emerald-300"
+              ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
               : "bg-muted/40 text-muted-foreground";
         return (
           <span

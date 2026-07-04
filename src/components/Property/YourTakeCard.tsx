@@ -162,9 +162,9 @@ export default function YourTakeCard({
                 title={r.detail}
                 className={`rounded px-2 py-0.5 font-mono text-[10px] font-semibold ${
                   r.status === "fail"
-                    ? "bg-rose-500/12 text-rose-300"
+                    ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
                     : r.status === "pass"
-                      ? "bg-emerald-500/12 text-emerald-300"
+                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
                       : "bg-muted/40 text-muted-foreground"
                 }`}
               >

@@ -20,9 +20,9 @@ function TourBadge({ url }: { url: string }) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className="absolute left-3 top-3 z-20 flex min-h-[40px] items-center gap-2 rounded-md border border-cyan-400/50 bg-background/80 px-3 py-2 font-mono text-xs tracking-wide text-cyan-200 backdrop-blur-sm transition-colors hover:bg-card/90"
+      className="absolute left-3 top-3 z-20 flex min-h-[40px] items-center gap-2 rounded-md border border-white/25 bg-slate-900/85 px-3 py-2 font-mono text-xs font-semibold tracking-wide text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-slate-900"
     >
-      <Play className="h-4 w-4 fill-current" />
+      <Play className="h-4 w-4 fill-current text-[color:var(--dt-sig)]" />
       VIRTUAL TOUR
     </a>
   );

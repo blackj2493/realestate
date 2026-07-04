@@ -22,6 +22,7 @@ import {
 } from "@/components/dashboard/metricViz";
 import { cn } from "@/lib/utils";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { ModuleHead } from "@/components/daylight/primitives";
 
 type SortKey =
   | "region"
@@ -158,17 +159,16 @@ export default function RegionScorecard({
 
   return (
     <section className="space-y-2">
-      <h2 className="terminal-font border-b border-border pb-2 text-sm font-bold uppercase tracking-widest text-foreground">
-        Region Scorecard <span className="text-muted-foreground">· {regions.length}</span>
-      </h2>
+      <ModuleHead title="Region Scorecard" count={regions.length} right="full-population · daily sync" />
 
       {/* Mobile-only affordance: the 1000px table scrolls horizontally; tell the user. */}
       <p className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground md:hidden">
         ← Scroll for more metrics →
       </p>
 
-      {/* `after:` right-edge fade (md:hidden) signals more columns scroll off-screen. */}
-      <div className="relative overflow-x-auto border border-border after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-10 after:bg-gradient-to-l after:from-slate-950 after:to-transparent md:after:hidden">
+      {/* `after:` right-edge fade (md:hidden) signals more columns scroll off-screen.
+          from-background so the fade matches the page ground in both themes. */}
+      <div className="dt-panel dt-reg relative overflow-x-auto border border-border bg-card after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-10 after:bg-gradient-to-l after:from-background after:to-transparent dark:bg-transparent md:after:hidden">
         <div className={cn("min-w-[1000px]", locked && "blur-sm select-none")}>
           {/* Header */}
           <div className={`grid ${GRID} border-b border-border bg-card/60`}>

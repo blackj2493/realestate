@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -41,12 +40,9 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const home = homeHref ?? (variant === "app" ? "/dashboard" : "/");
 
-  // Logo colours are theme-specific (white wordmark on dark, navy on light). Resolve
-  // the active theme so the logo stays legible on the now theme-aware header bar.
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const logoTheme = mounted && resolvedTheme === "light" ? "light" : "dark";
+  // The header is a permanently dark navy brand band in BOTH themes (see the
+  // `dark` class + .dt-header rule below), so the white wordmark is always correct.
+  const logoTheme = "dark";
 
   // Mobile/tablet search: the inline LocationSearch is `hidden lg:block`, so below
   // lg there was otherwise no way to search from app pages (e.g. /analytics). A
@@ -72,7 +68,7 @@ export default function AppHeader({
   }, [searchOpen]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
+    <header className="dt-header dark sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
           {/* Smaller wordmark on phones so the logo + right cluster fit a 390px

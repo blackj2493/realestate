@@ -25,7 +25,7 @@ export default function ThingsToKnowCard({ flags }: { flags: DiligenceFlag[] }) 
           <li key={f.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
             <span
               className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
-                f.kind === "warn" ? "bg-amber-500/[0.13] text-amber-600 dark:text-amber-400" : "bg-cyan-500/[0.12] text-cyan-300"
+                f.kind === "warn" ? "bg-amber-500/[0.13] text-amber-600 dark:text-amber-400" : "bg-cyan-500/[0.12] text-cyan-700 dark:text-cyan-300"
               }`}
             >
               {f.kind === "warn" ? <AlertTriangle className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
@@ -34,7 +34,7 @@ export default function ThingsToKnowCard({ flags }: { flags: DiligenceFlag[] }) 
               <p className="text-[13px] font-semibold leading-snug text-foreground">{f.title}</p>
               <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">Source: {f.source}</p>
               {f.ask && (
-                <p className={`mt-1 text-[12px] leading-snug ${f.kind === "warn" ? "text-amber-300/90" : "text-cyan-300/80"}`}>
+                <p className={`mt-1 text-[12px] leading-snug ${f.kind === "warn" ? "text-amber-700/90 dark:text-amber-300/90" : "text-cyan-700/80 dark:text-cyan-300/80"}`}>
                   {f.kind === "warn" ? "Worth asking: " : ""}
                   {f.ask}
                 </p>

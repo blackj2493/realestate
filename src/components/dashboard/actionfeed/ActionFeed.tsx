@@ -11,6 +11,7 @@ import { Activity } from "lucide-react";
 import { useActionFeed } from "./useActionFeed";
 import ActionFeedItem from "./ActionFeedItem";
 import ShowMoreButton from "@/components/dashboard/ShowMoreButton";
+import { ModuleHead, Panel } from "@/components/daylight/primitives";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -38,19 +39,17 @@ export default function ActionFeed({
 
   return (
     <section data-tour="dashboard-action-feed" className="space-y-2">
-      <div className="flex items-center gap-2 border-b border-border pb-2">
-        <Activity className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
-        <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
-          Since your last visit
-        </h2>
-        <span className="terminal-font text-sm text-muted-foreground">· {items.length}</span>
-      </div>
+      <ModuleHead
+        title="Since your last visit"
+        count={items.length}
+        icon={<Activity className="h-4 w-4" />}
+      />
 
-      <div className="border border-border bg-card/40">
+      <Panel>
         {visible.map((item) => (
           <ActionFeedItem key={`${item.kind}:${item.listingKey}`} item={item} />
         ))}
-      </div>
+      </Panel>
 
       {items.length > LIMIT && (
         <ShowMoreButton

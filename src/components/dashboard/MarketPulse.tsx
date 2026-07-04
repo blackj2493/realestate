@@ -70,7 +70,7 @@ export default function MarketPulse({ location }: { location: string }) {
   );
 
   return (
-    <div className="border border-border bg-card/40">
+    <div className="dt-panel dt-reg border border-border bg-card dark:bg-card/40">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex items-center gap-3">
           <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
@@ -101,7 +101,7 @@ export default function MarketPulse({ location }: { location: string }) {
                   aria-pressed={active}
                   className={`terminal-font border-r border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                     active
-                      ? "bg-cyan-500/20 text-cyan-300"
+                      ? "bg-[color:var(--dt-sig)] text-white dark:bg-cyan-500/20 dark:text-cyan-300"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
@@ -186,7 +186,22 @@ export default function MarketPulse({ location }: { location: string }) {
                 dataKey={lineKey}
                 stroke={chart.line}
                 strokeWidth={2}
-                dot={false}
+                // Teal "live" dot on the latest plotted point — the instrument endpoint.
+                dot={(p: { cx?: number; cy?: number; index?: number; key?: string }) =>
+                  p.cx == null || p.cy == null || p.index !== points.length - 1 ? (
+                    <g key={p.key ?? p.index} />
+                  ) : (
+                    <circle
+                      key={p.key ?? p.index}
+                      cx={p.cx}
+                      cy={p.cy}
+                      r={4}
+                      fill={chart.endpoint}
+                      stroke={chart.surface}
+                      strokeWidth={1.6}
+                    />
+                  )
+                }
                 connectNulls={false}
                 isAnimationActive={false}
               />

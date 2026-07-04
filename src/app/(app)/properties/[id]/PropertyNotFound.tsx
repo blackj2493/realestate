@@ -54,7 +54,7 @@ export default function PropertyNotFound({ id }: { id: string }) {
           </button>
           <Link
             href="/properties"
-            className="rounded-md px-4 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-muted"
+            className="rounded-md px-4 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-muted dark:text-cyan-300"
           >
             ← Back to Command Center
           </Link>

@@ -69,6 +69,17 @@ function barColor(points: number): string {
   return "bg-rose-500";
 }
 
+// Deal Score is a flagship USP signal, so in LIGHT its grade chips are SOLID,
+// grade-coded fills (white text) that pop; DARK keeps the original outline chip.
+const GRADE_BADGE: Record<DealScoreGrade, { solid: string; darkOutline: string }> = {
+  "A+": { solid: "bg-emerald-600", darkOutline: "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/40" },
+  A: { solid: "bg-emerald-600", darkOutline: "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/40" },
+  B: { solid: "bg-green-600", darkOutline: "dark:bg-lime-500/10 dark:text-lime-400 dark:border-lime-500/40" },
+  C: { solid: "bg-amber-500", darkOutline: "dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/40" },
+  D: { solid: "bg-orange-500", darkOutline: "dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/40" },
+  F: { solid: "bg-rose-600", darkOutline: "dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/40" },
+};
+
 /**
  * Ultra-compact grade chip for tight spots (thumbnail corners, table cells).
  * Shows the letter grade + score with grade-coded color.
@@ -83,20 +94,20 @@ export function DealScoreGradePill({
   className?: string;
 }) {
   if (score === null || grade === null) return null;
-  const s = gradeStyles(grade);
+  const g = GRADE_BADGE[grade];
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none",
-        s.bg,
-        s.border,
-        s.text,
+        "inline-flex items-center gap-1 rounded-sm border border-transparent px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white",
+        g.solid,
+        "dark:border dark:bg-transparent",
+        g.darkOutline,
         className
       )}
       title={`Deal Score ${score}/100 (grade ${grade}) — PureProperty's deterministic deal metric`}
     >
       {grade}
-      <span className="text-[9px] opacity-80">{score}</span>
+      <span className="text-[9px] opacity-90">{score}</span>
     </span>
   );
 }
@@ -112,21 +123,24 @@ export function DealScoreBadge({
   className?: string;
 }) {
   if (score === null || grade === null) return null;
-  const s = gradeStyles(grade);
+  const g = GRADE_BADGE[grade];
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-xs font-semibold",
-        s.bg,
-        s.border,
-        s.text,
+        "inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 font-mono text-xs font-bold shadow-sm",
+        // LIGHT: solid grade fill, white text
+        g.solid,
+        "text-white",
+        // DARK: original translucent outline chip
+        "dark:border dark:bg-transparent",
+        g.darkOutline,
         className
       )}
       title={`Deal Score ${score}/100 — PureProperty's deterministic deal metric`}
     >
       <Gauge className="h-3.5 w-3.5" />
       Deal Score {score}
-      <span className="rounded bg-black/30 px-1">{grade}</span>
+      <span className="rounded bg-black/25 px-1 dark:bg-black/30">{grade}</span>
     </span>
   );
 }
@@ -249,13 +263,13 @@ export default function DealScoreCard({
         {/* Score ring */}
         <div className="relative h-[88px] w-[88px] shrink-0">
           <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-            <circle cx="40" cy="40" r={R} fill="none" strokeWidth="7" className="text-slate-800" stroke="currentColor" />
+            <circle cx="40" cy="40" r={R} fill="none" strokeWidth="9" className="text-slate-200 dark:text-slate-800" stroke="currentColor" />
             <circle
               cx="40"
               cy="40"
               r={R}
               fill="none"
-              strokeWidth="7"
+              strokeWidth="9"
               strokeLinecap="round"
               className={s.ring}
               stroke="currentColor"
@@ -264,8 +278,8 @@ export default function DealScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={cn("font-mono text-2xl font-bold leading-none", s.text)}>{active.score}</span>
-            <span className={cn("mt-0.5 text-[11px] font-bold", s.text)}>{active.grade}</span>
+            <span className={cn("font-mono text-3xl font-extrabold leading-none", s.text)}>{active.score}</span>
+            <span className={cn("mt-0.5 text-xs font-bold", s.text)}>{active.grade}</span>
           </div>
         </div>
 
@@ -281,7 +295,7 @@ export default function DealScoreCard({
       {/* Suggested move — the offer band (persona-independent). */}
       {band && (
         <div className="mt-3 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-3 py-2.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
             <Target className="h-3.5 w-3.5" />
             Suggested move
           </p>

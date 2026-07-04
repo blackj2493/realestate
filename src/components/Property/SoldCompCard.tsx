@@ -92,7 +92,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
         <DeltaChips deltas={card.deltas} className="mt-2" />
         {/* Brokerage — same text size as the details above (TRREB §6.3(c)). */}
         <p className="mt-2 text-xs text-muted-foreground">Listed by {card.brokerage || "Unknown"}</p>
-        <p className="mt-1 text-[11px] text-cyan-300/80">{card.why}</p>
+        <p className="mt-1 text-[11px] text-cyan-700/80 dark:text-cyan-300/80">{card.why}</p>
       </div>
     </Link>
   );
