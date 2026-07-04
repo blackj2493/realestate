@@ -5,7 +5,7 @@
  * computed over exactly the population the user is filtering, minus the single
  * dimension they're dragging (excludeUniversalKey).
  */
-import { buildUniversalFilterString, makePriceDef } from "./filterRegistry";
+import { buildUniversalFilterString, makePriceDef, inapplicableFilterKeysForClass } from "./filterRegistry";
 import {
   buildTransactionClause,
   buildClassClause,
@@ -57,7 +57,13 @@ export function buildTerminalCoreClauses(args: TerminalCoreArgs): string[] {
       : priceDef.buildClause(universalFilters.price ?? priceDef.defaultValue);
 
   const universalFilter = buildUniversalFilterString(universalFilters, {
-    exclude: ["price", ...(excludeUniversalKey ? [excludeUniversalKey] : [])],
+    exclude: [
+      "price",
+      ...(excludeUniversalKey ? [excludeUniversalKey] : []),
+      // Commercial: residential-only fields (beds/baths/basement/kitchens/…) are hidden
+      // from the UI AND dropped here, so a stale value can't exclude all commercial docs.
+      ...inapplicableFilterKeysForClass(propertyClass),
+    ],
   });
 
   return [

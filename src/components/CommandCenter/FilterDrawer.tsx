@@ -16,7 +16,7 @@ import React from "react";
 import { X, SlidersHorizontal, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { MORE_FILTERS } from "@/lib/filters/filterRegistry";
+import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
 import type { ControlDef } from "@/lib/personas/personaConfig";
 import type { FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
@@ -57,6 +57,7 @@ export default function FilterDrawer({
   const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
   const addFilter = useCommandCenterStore((s) => s.addFilter);
   const removeAddedFilter = useCommandCenterStore((s) => s.removeAddedFilter);
+  const propertyClass = useCommandCenterStore((s) => s.propertyClass);
   const [q, setQ] = React.useState("");
 
   // Lock body scroll while open; close on Escape.
@@ -76,7 +77,7 @@ export default function FilterDrawer({
   const needle = q.trim().toLowerCase();
   const matchesNeedle = (c: ControlDef) =>
     (c.short ?? c.label).toLowerCase().includes(needle) || c.label.toLowerCase().includes(needle);
-  const propertyDefs = MORE_FILTERS.filter((d) => d.label.toLowerCase().includes(needle));
+  const propertyDefs = moreFiltersForClass(propertyClass).filter((d) => d.label.toLowerCase().includes(needle));
   const investorMatches = showInvestor ? controls.filter(matchesNeedle) : [];
   const moreInvestorMatches = showInvestor ? moreControls.filter(matchesNeedle) : [];
   const empty =
