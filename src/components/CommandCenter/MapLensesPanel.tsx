@@ -90,7 +90,7 @@ export default function MapLensesPanel() {
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && save()}
           placeholder="Name this view…"
-          className="h-8 min-w-0 flex-1 border border-slate-700 bg-slate-950 px-2 text-xs text-slate-200 placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none"
+          className="h-8 min-w-0 flex-1 border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-cyan-500/50 focus:outline-none"
         />
         <button
           type="button"
@@ -102,7 +102,7 @@ export default function MapLensesPanel() {
       </div>
 
       {lenses.length === 0 ? (
-        <p className="px-0.5 py-2 text-[11px] leading-relaxed text-slate-500">
+        <p className="px-0.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
           No saved lenses yet. Set up a persona, filters and color, then save it here to recall
           the whole view in one click.
         </p>
@@ -111,23 +111,23 @@ export default function MapLensesPanel() {
           {lenses.map((lens) => (
             <div
               key={lens.id}
-              className="group flex items-center gap-2 border border-slate-800 bg-slate-900 px-2 py-1.5"
+              className="group flex items-center gap-2 border border-border bg-card px-2 py-1.5"
             >
-              <Bookmark className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <Bookmark className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400" />
               <button
                 type="button"
                 onClick={() => apply(lens)}
                 className="min-w-0 flex-1 text-left"
                 title="Apply this lens"
               >
-                <p className="truncate text-xs font-medium text-slate-200 group-hover:text-cyan-200">{lens.name}</p>
-                <p className="truncate text-[10px] text-slate-500">{PERSONA_CONFIG[lens.persona].label}</p>
+                <p className="truncate text-xs font-medium text-foreground group-hover:text-cyan-200">{lens.name}</p>
+                <p className="truncate text-[10px] text-muted-foreground">{PERSONA_CONFIG[lens.persona].label}</p>
               </button>
               <button
                 type="button"
                 onClick={() => persist(lenses.filter((l) => l.id !== lens.id))}
                 aria-label="Delete lens"
-                className="shrink-0 text-slate-600 hover:text-rose-300"
+                className="shrink-0 text-muted-foreground hover:text-rose-300"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

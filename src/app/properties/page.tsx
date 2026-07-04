@@ -230,7 +230,7 @@ function CommandCenterContent() {
   // but it never touches state, so the fan-out below can run it in parallel.
   const runActiveSearch = useCallback(async (): Promise<SearchResult> => {
     const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
-    const coreClauses = buildTerminalCoreClauses({ transactionMode, propertyClass, universalFilters, filters, persona });
+    const coreClauses = buildTerminalCoreClauses({ transactionMode, propertyClass, universalFilters, filters });
     const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
     const schoolParts: string[] = [];
     if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
@@ -417,7 +417,12 @@ function CommandCenterContent() {
             desktop split crushed the ledger into ~390px (audit C4), so mobile
             shows the full-width card ledger instead. A map/list toggle is a
             follow-up. */}
-        <div className={cn("relative min-w-0 flex-1 md:block", mobileView === "map" ? "block" : "hidden")}>
+        {/* The map BASEMAP + deck.gl overlays are tuned dark (kept dark in both
+            themes). The control DECK (rail / mode-dock / HUD) is wrapped in a `dark`
+            scope so it stays dark-on-dark, but AlphaMap's listing popups + hover
+            tooltips sit OUTSIDE that scope, so they follow the theme — light content
+            cards over the dark map. */}
+        <div className={cn("relative min-w-0 flex-1 bg-slate-950 md:block", mobileView === "map" ? "block" : "hidden")}>
           <AlphaMap
             properties={displayed}
             colorConfig={mapColorConfig}
@@ -426,25 +431,29 @@ function CommandCenterContent() {
             currentSearchQuery={`${activePersona}:${location}`}
             className="h-full w-full"
           />
-          {/* Instrument Deck — control surface layered over the map */}
-          <MapControlRail />
-          <MapDrawer />
-          <MapModeDock />
-          <MapTimeline />
-          <MapStatusHUD
-            count={displayed.length}
-            total={totalCount}
-            colorConfig={mapColorConfig}
-            metricDef={activeMetric}
-            commuteActive={commute.enabled}
-          />
-          {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
-              which are otherwise desktop-only via MapControlRail/MapDrawer. */}
-          <MobileMapTools />
-          {/* Save the current custom area as a Market Bubble. Self-hides when no
-              draw / commute / school filter is active. */}
-          <div className="pointer-events-auto absolute right-3 top-3 z-30">
-            <SaveBubbleButton />
+          {/* Instrument Deck — dark control surface layered over the dark map. The
+              `dark` scope (display:contents = no layout box) keeps the rail / drawer /
+              mode-dock / HUD dark-styled even when the terminal is in light mode. */}
+          <div className="dark" style={{ display: "contents" }}>
+            <MapControlRail />
+            <MapDrawer />
+            <MapModeDock />
+            <MapTimeline />
+            <MapStatusHUD
+              count={displayed.length}
+              total={totalCount}
+              colorConfig={mapColorConfig}
+              metricDef={activeMetric}
+              commuteActive={commute.enabled}
+            />
+            {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
+                which are otherwise desktop-only via MapControlRail/MapDrawer. */}
+            <MobileMapTools />
+            {/* Save the current custom area as a Market Bubble. Self-hides when no
+                draw / commute / school filter is active. */}
+            <div className="pointer-events-auto absolute right-3 top-3 z-30">
+              <SaveBubbleButton />
+            </div>
           </div>
           {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>

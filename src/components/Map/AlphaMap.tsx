@@ -6,7 +6,7 @@ import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer, PathLayer } from "@deck.gl/layers";
 import { Map, NavigationControl, Layer as MapboxLayer } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
-import { Layers, MapPin, X } from "lucide-react";
+import { Layers, MapPin, X, Landmark } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -27,6 +27,8 @@ import {
 } from "./mapLogic";
 import ListingMapPopup from "./ListingMapPopup";
 import { useSchoolCatchmentLayers, type CatchmentHover } from "./useSchoolCatchmentLayers";
+import { useZoningLayers, type ZoningHover } from "./useZoningLayers";
+import { ZONING_SOURCES } from "@/lib/zoning/attribution";
 
 interface AlphaMapProps {
   properties: ListingDocument[];
@@ -60,6 +62,11 @@ const normMetric = (value: number, [lo, hi]: [number, number]) =>
 // Half-width (days) of the temporal scrubber's visible True-DOM window.
 const DOM_WINDOW_HALF = 22;
 
+// Heatmap drill-down: a hex holding at most this many listings opens them
+// directly in the popup; denser cells first zoom the camera in (the hexes are a
+// fixed world size, so revealing a packed cell needs a closer, re-queried view).
+const HEX_REVEAL_CAP = 12;
+
 export default function AlphaMap({
   properties,
   colorConfig,
@@ -78,9 +85,14 @@ export default function AlphaMap({
   const [popup, setPopup] = useState<{ x: number; y: number; listings: ListingDocument[] } | null>(null);
   // Floating label for a hovered school catchment / proximity circle.
   const [catchmentHover, setCatchmentHover] = useState<CatchmentHover | null>(null);
+  // Floating tooltip for a hovered heatmap hex (listing count + aggregate metric).
+  const [hexHover, setHexHover] = useState<{ x: number; y: number; count: number; metric?: string } | null>(null);
+  // Floating tooltip for a hovered zoning-overlay polygon (municipal open data).
+  const [zoningHover, setZoningHover] = useState<ZoningHover | null>(null);
 
   // Render mode is lifted to the store so the Mode dock / rail can drive it.
   const mapMode = useCommandCenterStore((s) => s.mapMode);
+  const showZoning = useCommandCenterStore((s) => s.showZoning); // toggled from the layers rail
   const hoveredId = useCommandCenterStore((s) => s.hoveredId);
   const setHoveredId = useCommandCenterStore((s) => s.setHoveredId);
   const selectedIds = useCommandCenterStore((s) => s.selectedIds);
@@ -504,8 +516,58 @@ export default function AlphaMap({
           pickable: true,
           autoHighlight: true,
           highlightColor: [255, 255, 255, 120],
+          // CPU aggregation so the picked bin carries its member listings
+          // (pointIndices/points) for hover stats + click drill-down. Trivially
+          // cheap at the ≤100-listing compliance cap.
+          gpuAggregation: false,
           // High ambient + low shininess = bright, luminous columns (faked glow).
           material: { ambient: 0.85, diffuse: 0.5, shininess: 8, specularColor: [40, 70, 90] },
+          // Hover → floating tooltip with the cell's listing count and (mean mode)
+          // its average metric, labeled + unit-formatted from the active color config.
+          onHover: (info) => {
+            const bin = info.object as { count?: number; colorValue?: number } | undefined;
+            if (!bin || bin.count == null) {
+              setHexHover((h) => (h ? null : h));
+              return false;
+            }
+            const metric =
+              heatAggregation === "mean" && colorConfig.label && colorConfig.format
+                ? `Avg ${colorConfig.label} · ${colorConfig.format(bin.colorValue ?? 0)}`
+                : undefined;
+            setHexHover({ x: info.x, y: info.y, count: bin.count, metric });
+            return true;
+          },
+          // Click → drill down. A cell with few listings (or one already zoomed in
+          // as far as the fixed-size hexes resolve) reveals them in the popup;
+          // a denser cell flies the camera into the hot spot and re-queries the
+          // tighter viewport so the next click can reach the listings.
+          onClick: (info) => {
+            // In draw mode, let the click fall through to the root handler (it adds
+            // a polygon vertex), so don't treat it as a drill-down.
+            if (isDrawing) return false;
+            const bin = info.object as
+              | { position?: [number, number]; count?: number; points?: MapDataPoint[] }
+              | undefined;
+            if (!bin || !bin.count) return false;
+            const listings = (bin.points ?? []) as ListingDocument[];
+            const atMaxZoom = (info.viewport?.zoom ?? 0) >= MAP_MAX_ZOOM - 0.5;
+            if (listings.length && (bin.count <= HEX_REVEAL_CAP || atMaxZoom)) {
+              setPopup({ x: info.x, y: info.y, listings });
+            } else if (bin.position) {
+              const [lng, lat] = bin.position;
+              setViewState((vs) => ({
+                ...vs,
+                longitude: lng,
+                latitude: lat,
+                zoom: Math.min(MAP_MAX_ZOOM, (vs.zoom ?? 0) + 2),
+                transitionDuration: 600,
+                transitionInterpolator: new FlyToInterpolator(),
+              }));
+              // Re-query the tighter viewport once the fly settles (mirrors cluster expand).
+              setTimeout(() => computeAndReportBounds(), 750);
+            }
+            return true;
+          },
           updateTriggers: {
             getColorWeight: [colorConfig, heatAggregation],
             getElevationWeight: [colorConfig, heatAggregation],
@@ -667,7 +729,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [renderData, heatData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing]);
+  }, [renderData, heatData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing, computeAndReportBounds]);
 
   // Current viewport extent for the school-zone overlay — computed locally (not via
   // the store's settle-gated mapBounds) so zones paint the moment they're toggled on.
@@ -697,6 +759,13 @@ export default function AlphaMap({
     zoom: viewState.zoom,
     bounds: overlayBounds,
     onHover: setCatchmentHover,
+  });
+
+  // Zoning overlay (municipal open data; viewport-scoped). Prepended below the pins.
+  const zoningLayers = useZoningLayers({
+    zoom: viewState.zoom,
+    bounds: overlayBounds,
+    onHover: setZoningHover,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -737,11 +806,11 @@ export default function AlphaMap({
 
   if (!mapboxToken || mapboxToken === "your-mapbox-token") {
     return (
-      <div className={`flex items-center justify-center bg-slate-950 ${className}`}>
+      <div className={`flex items-center justify-center bg-background ${className}`}>
         <div className="p-6 text-center">
-          <MapPin className="mx-auto mb-3 h-12 w-12 text-slate-700" />
-          <p className="font-medium text-slate-400">Map not configured</p>
-          <p className="mt-1 text-xs text-slate-600">Add NEXT_PUBLIC_MAPBOX_TOKEN to .env</p>
+          <MapPin className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
+          <p className="font-medium text-muted-foreground">Map not configured</p>
+          <p className="mt-1 text-xs text-muted-foreground">Add NEXT_PUBLIC_MAPBOX_TOKEN to .env</p>
         </div>
       </div>
     );
@@ -752,11 +821,11 @@ export default function AlphaMap({
   // 0 in-view results so viewport browsing into sparse areas isn't a dead end.
   if (validProperties.length === 0 && !commuteRing && !mapReady) {
     return (
-      <div className={`flex items-center justify-center bg-slate-950 ${className}`}>
+      <div className={`flex items-center justify-center bg-background ${className}`}>
         <div className="p-6 text-center">
-          <Layers className="mx-auto mb-3 h-12 w-12 text-slate-700" />
-          <p className="font-medium text-slate-400">No properties to visualize</p>
-          <p className="mt-1 text-xs text-slate-500">Adjust filters to see density</p>
+          <Layers className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
+          <p className="font-medium text-muted-foreground">No properties to visualize</p>
+          <p className="mt-1 text-xs text-muted-foreground">Adjust filters to see density</p>
         </div>
       </div>
     );
@@ -775,10 +844,10 @@ export default function AlphaMap({
         onResize={({ width, height }) => {
           dimsRef.current = { width, height };
         }}
-        onDragStart={() => { setPopup(null); setCatchmentHover(null); }}
+        onDragStart={() => { setPopup(null); setCatchmentHover(null); setHexHover(null); setZoningHover(null); }}
         onDragEnd={handleDragEnd}
         controller={true}
-        layers={[...catchmentLayers, ...layers, ...drawLayers, ...searchPinLayer]}
+        layers={[...catchmentLayers, ...zoningLayers, ...layers, ...drawLayers, ...searchPinLayer]}
         onClick={(info) => {
           if (isDrawing) {
             if (!info.coordinate) return;
@@ -844,16 +913,74 @@ export default function AlphaMap({
           approximate proximity circle. Positioned at the cursor over the canvas. */}
       {catchmentHover && (
         <div
-          className="pointer-events-none absolute z-20 max-w-[260px] -translate-x-1/2 -translate-y-full border bg-slate-900/95 px-2.5 py-1.5 backdrop-blur-md"
+          className="pointer-events-none absolute z-20 max-w-[260px] -translate-x-1/2 -translate-y-full border bg-card/95 px-2.5 py-1.5 backdrop-blur-md"
           style={{
             left: catchmentHover.x,
             top: catchmentHover.y - 10,
             borderColor: catchmentHover.approximate ? "rgba(245,158,11,0.5)" : "rgba(16,185,129,0.5)",
           }}
         >
-          <div className="text-xs font-medium text-slate-100">{catchmentHover.name}</div>
-          <div className={`text-[10px] leading-tight ${catchmentHover.approximate ? "text-amber-300/90" : "text-emerald-300/90"}`}>
+          <div className="text-xs font-medium text-foreground">{catchmentHover.name}</div>
+          <div className={`text-[10px] leading-tight ${catchmentHover.approximate ? "text-amber-700 dark:text-amber-300/90" : "text-emerald-700 dark:text-emerald-300/90"}`}>
             {catchmentHover.detail}
+          </div>
+        </div>
+      )}
+
+      {/* Hovered heatmap hex — listing count + (mean mode) the cell's average
+          metric. Anchored at the cursor; cyan to read as part of the heat layer.
+          Gated on heatmap mode so a tooltip left showing when the mode changes
+          (the hex layer, and thus its onHover, only exists here) disappears. */}
+      {mapMode === "heatmap" && hexHover && (
+        <div
+          className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full border border-cyan-500/50 bg-card/95 px-2.5 py-1.5 backdrop-blur-md"
+          style={{ left: hexHover.x, top: hexHover.y - 10 }}
+        >
+          <div className="text-xs font-medium text-foreground">
+            {hexHover.count.toLocaleString()} listing{hexHover.count === 1 ? "" : "s"}
+          </div>
+          {hexHover.metric && (
+            <div className="text-[10px] leading-tight text-cyan-700 dark:text-cyan-300/90">{hexHover.metric}</div>
+          )}
+        </div>
+      )}
+
+      {/* Hovered zoning polygon — municipal open data. Amber, to read as distinct from
+          MLS-derived data. */}
+      {showZoning && zoningHover && (
+        <div
+          className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full border border-amber-500/50 bg-card/95 px-2.5 py-1.5 backdrop-blur-md"
+          style={{ left: zoningHover.x, top: zoningHover.y - 10 }}
+        >
+          <div className="font-mono text-xs font-semibold text-amber-200">{zoningHover.code}</div>
+          <div className="text-[10px] leading-tight text-foreground">{zoningHover.category}</div>
+        </div>
+      )}
+
+      {/* Zoning legend + required licence attribution (municipal open data). The Zoning
+          overlay is toggled from the layers rail; the legend sits clear of that rail. */}
+      {showZoning && (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[280px] border border-amber-500/30 bg-card/90 px-2.5 py-2 backdrop-blur-md md:left-[76px]">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            <Landmark className="h-3 w-3" /> Zoning · municipal open data
+          </div>
+          <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[9px] text-foreground">
+            {[
+              ["Residential", "52,211,153"],
+              ["Commercial", "59,130,246"],
+              ["Employment", "167,139,250"],
+              ["Institutional", "45,212,191"],
+              ["Open space", "134,239,172"],
+            ].map(([label, rgb]) => (
+              <span key={label} className="inline-flex items-center gap-1">
+                <span className="inline-block h-2 w-2" style={{ background: `rgb(${rgb})` }} />
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="mt-1 text-[9px] leading-tight text-muted-foreground">
+            {viewState.zoom < 13 ? "Zoom in to street level to see zones. " : ""}
+            {ZONING_SOURCES.toronto.municipality} · {ZONING_SOURCES.toronto.bylaw}. {ZONING_SOURCES.toronto.attribution} Approximate — not a legal survey.
           </div>
         </div>
       )}
@@ -869,23 +996,23 @@ export default function AlphaMap({
           reports how many recent solds are in view, so a sparse area reads as data, not a
           stray circle. The ✕ removes the pin. */}
       {searchPin && (
-        <div className="pointer-events-auto absolute left-1/2 top-4 z-20 flex max-w-[92%] -translate-x-1/2 items-center gap-2 border border-cyan-500/40 bg-slate-900/95 px-3 py-1.5 font-mono text-xs text-cyan-100 backdrop-blur-md">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+        <div className="pointer-events-auto absolute left-1/2 top-4 z-20 flex max-w-[92%] -translate-x-1/2 items-center gap-2 border border-cyan-500/40 bg-card/95 px-3 py-1.5 font-mono text-xs text-cyan-100 backdrop-blur-md">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-300" />
           {searchPin.comps ? (
             <span className="truncate">
-              Comparable sales near <span className="text-slate-100">{searchPin.label ?? "this address"}</span>
+              Comparable sales near <span className="text-foreground">{searchPin.label ?? "this address"}</span>
               {" · "}
-              <span className={soldCount > 0 ? "text-cyan-300" : "text-amber-300"}>
+              <span className={soldCount > 0 ? "text-cyan-700 dark:text-cyan-300" : "text-amber-700 dark:text-amber-300"}>
                 {soldCount > 0 ? `${soldCount.toLocaleString()} similar sold` : "no similar solds found"}
               </span>
             </span>
           ) : (
-            <span className="truncate text-slate-100">{searchPin.label ?? "Dropped pin"}</span>
+            <span className="truncate text-foreground">{searchPin.label ?? "Dropped pin"}</span>
           )}
           <button
             type="button"
             onClick={() => exitComps()}
-            className="ml-1 flex shrink-0 items-center gap-1 border border-slate-600 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-slate-300 transition-colors hover:border-rose-500/50 hover:text-rose-200"
+            className="ml-1 flex shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-rose-500/50 hover:text-rose-200"
             aria-label={searchPin.comps ? "Exit comparable sales view" : "Clear pin"}
           >
             <X className="h-3 w-3" />

@@ -5,7 +5,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SEARCH_BRAND } from "@/lib/brand";
 import LedgerRow from "./LedgerRow";
@@ -129,20 +129,20 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   }, [saleKey, isAuthed]);
 
   return (
-    <div ref={rootRef} className={cn("flex h-full flex-col border-l border-slate-800 bg-slate-950", className)}>
+    <div ref={rootRef} className={cn("flex h-full flex-col border-l border-border bg-background", className)}>
       {/* Typesense stat header */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
-        <Zap className="h-3.5 w-3.5 text-cyan-400" />
-        <p className="font-mono text-xs text-slate-400">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2">
+        <Zap className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+        <p className="font-mono text-xs text-muted-foreground">
           {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) ? (
             <>
-              <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Comps
-              <span className="mx-1.5 text-slate-600">|</span>
+              <span className="font-semibold text-cyan-600 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Comps
+              <span className="mx-1.5 text-muted-foreground">|</span>
               {/* The de-listed fetch is capped at 90d while sold/leased go to 180d:
                   delisted-only shows the clamped figure; a mixed view annotates both
                   so the label never overstates the de-listed coverage. */}
               VOW · last{" "}
-              <span className="text-cyan-400">
+              <span className="text-cyan-600 dark:text-cyan-400">
                 {!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")
                   ? Math.min(soldWindowDays, 90)
                   : soldWindowDays}
@@ -150,14 +150,14 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               </span>
               {activeLayers.has("delisted") &&
                 (activeLayers.has("sold") || activeLayers.has("leased")) &&
-                soldWindowDays > 90 && <span className="text-slate-500"> · de-listed 90d</span>}
+                soldWindowDays > 90 && <span className="text-muted-foreground"> · de-listed 90d</span>}
             </>
           ) : (
             <>
               {SEARCH_BRAND}:{" "}
-              <span className="font-semibold text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
-              <span className="mx-1.5 text-slate-600">|</span>
-              Instant Query <span className="text-cyan-400">&lt;{ms}ms</span>
+              <span className="font-semibold text-cyan-600 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
+              <span className="mx-1.5 text-muted-foreground">|</span>
+              Instant Query <span className="text-cyan-600 dark:text-cyan-400">&lt;{ms}ms</span>
             </>
           )}
         </p>
@@ -165,12 +165,12 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
 
       {/* Column headers — desktop only (mobile card mode has no columns to sort).
           Mirrors the width-fitted `visibleColumns` so each header aligns with its cell. */}
-      <div className={cn("shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3 py-2", cardMode ? "hidden" : "flex")}>
+      <div className={cn("shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2", cardMode ? "hidden" : "flex")}>
         <div className="w-5 shrink-0" />
         <div className="h-px w-24 shrink-0" />
         {visibleColumns.map((col) => {
           const headClass = cn(
-            "text-[10px] font-semibold uppercase tracking-wider text-slate-500",
+            "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
             col.width,
             col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"
           );
@@ -191,20 +191,28 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               type="button"
               onClick={() => toggleSort(col.type)}
               aria-label={`Sort by ${col.header}`}
+              title={`Sort by ${col.header}`}
               className={cn(
                 headClass,
-                "flex items-center gap-0.5 transition-colors hover:text-slate-300",
-                active && "text-cyan-400",
+                // Sortable headers read brighter than the inert alphaFlag header and
+                // carry a persistent sort glyph, so it's obvious at rest that they
+                // click to sort — not just on hover or once already sorted.
+                "group flex cursor-pointer items-center gap-0.5 text-muted-foreground transition-colors hover:text-foreground",
+                active && "text-cyan-600 dark:text-cyan-400 hover:text-cyan-400",
                 col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
               )}
             >
               <span className="truncate">{col.header}</span>
-              {active &&
-                (sort!.dir === "asc" ? (
+              {active ? (
+                sort!.dir === "asc" ? (
                   <ChevronUp className="h-3 w-3 shrink-0" />
                 ) : (
                   <ChevronDown className="h-3 w-3 shrink-0" />
-                ))}
+                )
+              ) : (
+                // Faint up/down glyph = "this column is sortable"; brightens on hover.
+                <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
+              )}
             </button>
           );
         })}
@@ -214,20 +222,20 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="mb-3 h-8 w-8 animate-spin text-cyan-400" />
-            <span className="text-sm text-slate-400">SCANNING MARKET DATA...</span>
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm text-muted-foreground">SCANNING MARKET DATA...</span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center px-4 py-16">
-            <AlertCircle className="mb-3 h-8 w-8 text-rose-400" />
-            <span className="mb-1 text-sm text-rose-400">Search Error</span>
-            <span className="text-center text-xs text-slate-500">{error}</span>
+            <AlertCircle className="mb-3 h-8 w-8 text-rose-600 dark:text-rose-400" />
+            <span className="mb-1 text-sm text-rose-600 dark:text-rose-400">Search Error</span>
+            <span className="text-center text-xs text-muted-foreground">{error}</span>
           </div>
         ) : properties.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <MapPin className="mb-3 h-8 w-8 text-slate-700" />
-            <span className="mb-1 text-sm text-slate-400">No Assets Found</span>
-            <span className="text-xs text-slate-500">
+            <MapPin className="mb-3 h-8 w-8 text-muted-foreground" />
+            <span className="mb-1 text-sm text-muted-foreground">No Assets Found</span>
+            <span className="text-xs text-muted-foreground">
               {location ? `No properties in ${location}` : "Adjust your filters to expand search"}
             </span>
           </div>
@@ -254,14 +262,14 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       </div>
 
       {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && (
-        <p className="border-t border-slate-800 bg-slate-900 px-3 py-1.5 text-[9px] leading-tight text-slate-600">
+        <p className="border-t border-border bg-card px-3 py-1.5 text-[9px] leading-tight text-muted-foreground">
           Sold/leased/de-listed data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
         </p>
       )}
 
       {/* Footer */}
-      <div className="shrink-0 border-t border-slate-800 bg-slate-900 px-3 py-2">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="shrink-0 border-t border-border bg-card px-3 py-2">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
           <span>{isLoading ? "Scanning..." : `${properties.length} shown · ${totalCount.toLocaleString()} total`}</span>
           <span className="font-mono">PROPTX MLS®</span>
         </div>

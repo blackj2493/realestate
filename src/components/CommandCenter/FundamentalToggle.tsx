@@ -34,7 +34,7 @@ export default function FundamentalToggle<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="flex shrink-0 items-center divide-x divide-slate-800 border border-slate-800 bg-slate-900"
+      className="flex shrink-0 items-center divide-x divide-border border border-border bg-card"
     >
       {options.map((opt) => {
         const active = opt.value === value;
@@ -48,8 +48,8 @@ export default function FundamentalToggle<T extends string>({
               LABEL,
               "px-2.5 py-1.5 transition-colors",
               active
-                ? "bg-cyan-500/15 text-cyan-300"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             {opt.label}

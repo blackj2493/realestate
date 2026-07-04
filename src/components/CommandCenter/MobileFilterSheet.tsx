@@ -21,7 +21,7 @@ import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 import FundamentalToggle from "./FundamentalToggle";
 
-const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
+const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
 const freshDefault = (v: FilterValue): FilterValue =>
   Array.isArray(v) ? ([...v] as FilterValue) : v;
@@ -36,9 +36,11 @@ interface MobileFilterSheetProps {
   onClose: () => void;
   /** Scoped core filters (class-aware price + type), ready to render expanded. */
   coreItems: FilterItem[];
-  /** Persona investor controls (cap-rate / yield thresholds, etc.). */
+  /** The active persona's PINNED investor controls (shown first). */
   controls: React.ComponentProps<typeof InvestorChip>["control"][];
-  /** Show the persona investor chips (residential-sale, active layer). */
+  /** Every OTHER investor signal — addable regardless of persona. */
+  moreControls: React.ComponentProps<typeof InvestorChip>["control"][];
+  /** Show the investor chips (residential-sale, active layer). */
   showInvestor: boolean;
   /** Show advanced (deep field library + investor) sections (false in comp-only Sold/De-listed). */
   showAdvanced: boolean;
@@ -52,6 +54,7 @@ export default function MobileFilterSheet({
   onClose,
   coreItems,
   controls,
+  moreControls,
   showInvestor,
   showAdvanced,
   clearAll,
@@ -90,20 +93,20 @@ export default function MobileFilterSheet({
       aria-label="Filters"
     >
       {/* Backdrop — tap to dismiss. */}
-      <button type="button" aria-label="Close filters" onClick={onClose} className="absolute inset-0 bg-slate-950/80" />
+      <button type="button" aria-label="Close filters" onClick={onClose} className="absolute inset-0 bg-background/80" />
 
-      <div className="relative flex max-h-[88dvh] flex-col border-t border-slate-700 bg-slate-950 pb-safe">
+      <div className="relative flex max-h-[88dvh] flex-col border-t border-border bg-background pb-safe">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3 pt-safe">
-          <h2 className="flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-wider text-slate-100">
-            <SlidersHorizontal className="h-4 w-4 text-cyan-400" />
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 pt-safe">
+          <h2 className="flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-wider text-foreground">
+            <SlidersHorizontal className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
             Filters
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close filters"
-            className="-mr-2 flex h-11 w-11 items-center justify-center text-slate-400 hover:text-slate-200"
+            className="-mr-2 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </button>
@@ -125,7 +128,7 @@ export default function MobileFilterSheet({
           </section>
 
           {coreItems.map(({ def, value, onChange }) => (
-            <section key={def.key} className="border-t border-slate-800/70 pt-4">
+            <section key={def.key} className="border-t border-border/70 pt-4">
               <FilterControl def={def} value={value} onChange={onChange} />
             </section>
           ))}
@@ -134,7 +137,7 @@ export default function MobileFilterSheet({
               "Filters" drawer. On mobile there's no separate drawer, so these live
               here as tap-to-open chips (their popovers portal above the sheet). */}
           {showAdvanced && (
-            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+            <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>More filters</span>
               <div className="flex flex-wrap gap-2">
                 {MORE_FILTERS.map((def) => (
@@ -159,7 +162,7 @@ export default function MobileFilterSheet({
           )}
 
           {showAdvanced && showInvestor && controls.length > 0 && (
-            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+            <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>Persona signals</span>
               <div className="flex flex-wrap gap-2">
                 {controls.map((c, i) => (
@@ -168,17 +171,28 @@ export default function MobileFilterSheet({
               </div>
             </section>
           )}
+
+          {showAdvanced && showInvestor && moreControls.length > 0 && (
+            <section className="space-y-2 border-t border-border/70 pt-4">
+              <span className={LABEL}>More investor signals</span>
+              <div className="flex flex-wrap gap-2">
+                {moreControls.map((c, i) => (
+                  <InvestorChip key={i} control={c} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Footer — Clear + apply (count). Both are real 44px targets. */}
-        <div className="flex shrink-0 items-center gap-3 border-t border-slate-800 px-4 py-3">
+        <div className="flex shrink-0 items-center gap-3 border-t border-border px-4 py-3">
           {anyActive && (
             <button
               type="button"
               onClick={clearAll}
               className={cn(
-                "min-h-[44px] flex-1 border border-slate-700 px-4 font-mono text-xs font-semibold uppercase tracking-wider text-slate-300",
-                "transition-colors hover:border-cyan-500/50 hover:text-cyan-300 active:bg-slate-800"
+                "min-h-[44px] flex-1 border border-border px-4 font-mono text-xs font-semibold uppercase tracking-wider text-foreground",
+                "transition-colors hover:border-cyan-500/50 hover:text-cyan-300 active:bg-muted"
               )}
             >
               Clear all

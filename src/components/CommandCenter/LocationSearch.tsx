@@ -39,9 +39,9 @@ interface LocationSearchProps {
 }
 
 function SuggestionIcon({ kind }: { kind: SearchSuggestion["kind"] }) {
-  if (kind === "address") return <Home className="h-3.5 w-3.5 shrink-0 text-slate-500" />;
-  if (kind === "mls") return <Hash className="h-3.5 w-3.5 shrink-0 text-slate-500" />;
-  return <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-500" />;
+  if (kind === "address") return <Home className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+  if (kind === "mls") return <Hash className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+  return <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
 }
 
 const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
@@ -193,7 +193,7 @@ export default function LocationSearch({
     <div ref={containerRef} className={cn("relative", className)}>
       <form onSubmit={onSubmit}>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
             type="text"
@@ -205,13 +205,13 @@ export default function LocationSearch({
             onFocus={() => suggestions.length > 0 && setOpen(true)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            className="h-7 rounded-none border-slate-800 bg-slate-900 pl-9 pr-8 font-mono text-xs text-slate-200 placeholder:text-slate-500"
+            className="h-7 rounded-none border-border bg-card pl-9 pr-8 font-mono text-xs text-foreground placeholder:text-muted-foreground"
           />
           {showClear && (
             <button
               type="button"
               onClick={clear}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -220,7 +220,7 @@ export default function LocationSearch({
       </form>
 
       {open && (suggestions.length > 0 || searching || showStructured || value.trim().length >= 2) && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto border border-slate-700 bg-slate-900">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto border border-border bg-card">
           {/* Structured-query shortcut: parsed the sentence into filters → deep-link
               into the terminal. Sits above place/address matches and is the default
               Enter action (highlight stays -1 until the user arrows into a place). */}
@@ -229,23 +229,23 @@ export default function LocationSearch({
               type="button"
               onMouseEnter={() => setHighlight(-1)}
               onClick={goStructured}
-              className="flex w-full items-center gap-2.5 border-b border-slate-800 bg-cyan-500/5 px-3 py-2 text-left transition-colors hover:bg-cyan-500/10"
+              className="flex w-full items-center gap-2.5 border-b border-border bg-cyan-500/5 px-3 py-2 text-left transition-colors hover:bg-cyan-500/10"
             >
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-mono text-xs text-cyan-200">
                   {nl.chips.map((c) => c.label).join("  ·  ")}
                 </span>
-                <span className="truncate text-[10px] text-slate-500">Search all matches on the map</span>
+                <span className="truncate text-[10px] text-muted-foreground">Search all matches on the map</span>
               </span>
-              <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+              <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             </button>
           )}
           {searching && suggestions.length === 0 && (
-            <div className="px-3 py-2 font-mono text-xs text-slate-500">Searching…</div>
+            <div className="px-3 py-2 font-mono text-xs text-muted-foreground">Searching…</div>
           )}
           {!searching && suggestions.length === 0 && !showStructured && value.trim().length >= 2 && (
-            <div className="px-3 py-2 font-mono text-xs text-slate-500">
+            <div className="px-3 py-2 font-mono text-xs text-muted-foreground">
               No matches for “{value.trim()}”. Try a city, neighbourhood, address, or MLS#.
             </div>
           )}
@@ -257,21 +257,21 @@ export default function LocationSearch({
               onClick={() => select(s)}
               className={cn(
                 "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                i === highlight ? "bg-slate-800" : "hover:bg-slate-800"
+                i === highlight ? "bg-muted" : "hover:bg-muted"
               )}
             >
               <SuggestionIcon kind={s.kind} />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-mono text-xs text-slate-200">{s.label}</span>
+                <span className="truncate font-mono text-xs text-foreground">{s.label}</span>
                 {s.sublabel && (
-                  <span className="truncate text-[10px] text-slate-500">{s.sublabel}</span>
+                  <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
                 )}
               </span>
-              <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-600">
+              <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
                 {KIND_TAG[s.kind]}
               </span>
               {s.count !== undefined && (
-                <span className="w-16 shrink-0 text-right font-mono text-[11px] text-cyan-400">
+                <span className="w-16 shrink-0 text-right font-mono text-[11px] text-cyan-600 dark:text-cyan-400">
                   {s.count.toLocaleString()}
                 </span>
               )}

@@ -95,18 +95,18 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl focus:outline-none">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-5 shadow-2xl focus:outline-none">
           <div className="mb-4 flex items-start justify-between">
             <div>
-              <Dialog.Title className="text-base font-semibold text-slate-100">
+              <Dialog.Title className="text-base font-semibold text-foreground">
                 Share {listingKeys.length} {listingKeys.length === 1 ? "property" : "properties"}
               </Dialog.Title>
-              <Dialog.Description className="mt-1 text-xs text-slate-400">
+              <Dialog.Description className="mt-1 text-xs text-muted-foreground">
                 Anyone with the link can view this selection.
               </Dialog.Description>
             </div>
             <Dialog.Close
-              className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -114,12 +114,12 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-400">
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-600 dark:text-emerald-400" />
               Creating link...
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-3 text-sm text-rose-300">
+            <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-3 text-sm text-rose-700 dark:text-rose-300">
               {error}
             </div>
           ) : url ? (
@@ -130,7 +130,7 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
                   readOnly
                   value={url}
                   onFocus={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 truncate rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-slate-300 focus:border-emerald-500 focus:outline-none"
+                  className="min-w-0 flex-1 truncate rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:border-emerald-500 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -139,7 +139,7 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
                     "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors",
                     copied
                       ? "bg-emerald-500 text-slate-950"
-                      : "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                      : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25"
                   )}
                 >
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -151,24 +151,24 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <a
                   href={smsHref}
-                  className="flex flex-col items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-3 text-xs font-medium text-slate-200 transition-colors hover:bg-slate-800"
+                  className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <MessageSquare className="h-5 w-5 text-emerald-400" />
+                  <MessageSquare className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   Text it
                 </a>
                 <a
                   href={emailHref}
-                  className="flex flex-col items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-3 text-xs font-medium text-slate-200 transition-colors hover:bg-slate-800"
+                  className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <Mail className="h-5 w-5 text-emerald-400" />
+                  <Mail className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   Email
                 </a>
                 <button
                   type="button"
                   onClick={handleNativeShare}
-                  className="flex flex-col items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-3 text-xs font-medium text-slate-200 transition-colors hover:bg-slate-800"
+                  className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <Share2 className="h-5 w-5 text-emerald-400" />
+                  <Share2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   Share
                 </button>
               </div>

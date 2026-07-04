@@ -44,24 +44,24 @@ function PopupCard({
   const loc = listing.location;
   const canComp = Boolean(onComps && Array.isArray(loc) && (loc[0] || loc[1]));
   return (
-    <div className="border-b border-slate-800/60 last:border-b-0">
+    <div className="border-b border-border/60 last:border-b-0">
       {/* Clickable body is a DIV (not a button) so the Save heart — itself a button —
           can overlay the photo without nesting a <button> inside a <button>. */}
       <div
         onClick={() => onSelect(listing)}
-        className="block w-full cursor-pointer text-left transition-colors hover:bg-slate-800/50"
+        className="block w-full cursor-pointer text-left transition-colors hover:bg-muted/50"
       >
         {/* Full-width hero photo (HouseSigma-style) — the listing's main visual, not a
             cramped thumbnail. Deal pill + Save heart overlay the corners. */}
-        <div className="relative h-44 w-full overflow-hidden bg-slate-800">
+        <div className="relative h-44 w-full overflow-hidden bg-muted">
           <ListingThumbnail src={src} alt={listing.UnparsedAddress || "Property"} className="absolute inset-0" sizes="340px" />
           {deal.score !== null && (
             <DealScoreGradePill score={deal.score} grade={deal.grade} className="absolute left-2 top-2 z-10 backdrop-blur-sm" />
           )}
           <WatchHeart
             item={{ listing_key: listing.id, address: listing.UnparsedAddress, city: listing.City, thumb: src, list_price: listing.ListPrice, status: listing.Status }}
-            className="absolute right-2 top-2 z-10 rounded-md bg-slate-900/70 p-1.5 transition-colors hover:bg-slate-900"
-            iconClassName="h-4 w-4 text-slate-200"
+            className="absolute right-2 top-2 z-10 rounded-md bg-card/70 p-1.5 transition-colors hover:bg-card"
+            iconClassName="h-4 w-4 text-foreground"
           />
         </div>
         <div className="px-3 py-2.5">
@@ -77,7 +77,7 @@ function PopupCard({
               onComps!(listing);
             }}
             title="Show recent comparable sales near this home"
-            className="flex items-center gap-1.5 border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/20"
+            className="flex items-center gap-1.5 border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 transition-colors hover:bg-cyan-500/20"
           >
             <Crosshair className="h-3 w-3" />
             Comparable sales
@@ -113,15 +113,15 @@ export default function ListingMapPopup({
   const inner = (
     <>
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-1.5">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-slate-400">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
           {listings.length} Listing{listings.length === 1 ? "" : "s"} here
         </span>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="rounded-sm p-0.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-200"
+          className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -145,7 +145,7 @@ export default function ListingMapPopup({
   if (isMobile) {
     return (
       <div
-        className="pointer-events-auto absolute inset-x-2 z-40 flex flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
+        className="pointer-events-auto absolute inset-x-2 z-40 flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl shadow-black/60"
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 4rem)", maxHeight: "min(58vh, 27.5rem)" }}
         role="dialog"
         aria-label={`${listings.length} listing${listings.length === 1 ? "" : "s"} at this location`}
@@ -166,7 +166,7 @@ export default function ListingMapPopup({
 
   return (
     <div
-      className="pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl shadow-black/60"
+      className="pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-md border border-border bg-card shadow-2xl shadow-black/60"
       style={{ left, top, width: POPUP_W, maxHeight: POPUP_MAX_H }}
     >
       {inner}

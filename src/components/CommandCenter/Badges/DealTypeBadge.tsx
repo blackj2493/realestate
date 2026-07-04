@@ -20,7 +20,7 @@ export function DealTypeBadge({ dealTypeFlag, className = '' }: DealTypeBadgePro
       return (
         <div className={`
           animate-pulse bg-rose-500/10 border border-rose-500/30 
-          text-rose-400 font-mono text-xs px-2 py-0.5 rounded
+          text-rose-600 dark:text-rose-400 font-mono text-xs px-2 py-0.5 rounded
           ${className}
         `}>
           ⚠️ POWER OF SALE / BANK FORECLOSURE
@@ -31,7 +31,7 @@ export function DealTypeBadge({ dealTypeFlag, className = '' }: DealTypeBadgePro
       return (
         <div className={`
           bg-amber-500/10 border border-amber-500/30 
-          text-amber-400 font-mono text-xs px-2 py-0.5 rounded
+          text-amber-600 dark:text-amber-400 font-mono text-xs px-2 py-0.5 rounded
           ${className}
         `}>
           🔨 AS-IS / CONTRACTOR SPECIAL
@@ -42,7 +42,7 @@ export function DealTypeBadge({ dealTypeFlag, className = '' }: DealTypeBadgePro
       return (
         <div className={`
           bg-amber-500/10 border border-amber-500/30 
-          text-amber-400 font-mono text-xs px-2 py-0.5 rounded
+          text-amber-600 dark:text-amber-400 font-mono text-xs px-2 py-0.5 rounded
           ${className}
         `}>
           📋 ASSIGNMENT SALE
@@ -53,7 +53,7 @@ export function DealTypeBadge({ dealTypeFlag, className = '' }: DealTypeBadgePro
       return (
         <div className={`
           bg-blue-500/10 border border-blue-500/30 
-          text-blue-400 font-mono text-xs px-2 py-0.5 rounded
+          text-blue-600 dark:text-blue-400 font-mono text-xs px-2 py-0.5 rounded
           ${className}
         `}>
           💸 MOTIVATED SELLER

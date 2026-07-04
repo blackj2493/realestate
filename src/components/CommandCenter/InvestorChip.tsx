@@ -21,8 +21,8 @@ const chipClass = (active: boolean) =>
     "flex shrink-0 cursor-pointer items-center gap-1.5 border px-2.5 py-1.5 transition-all",
     LABEL,
     active
-      ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
-      : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+      ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+      : "border-border bg-card text-muted-foreground hover:border-border hover:text-foreground"
   );
 
 /** Bar count scaled to the control's resolution (small integer ranges get fewer). */
@@ -104,11 +104,11 @@ function InvestorControlInner({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className={cn(LABEL, "flex items-center gap-1 text-slate-400")}>
+        <span className={cn(LABEL, "flex items-center gap-1 text-muted-foreground")}>
           {control.label}
           {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
         </span>
-        <span className="font-mono text-xs text-cyan-400">{valueText}</span>
+        <span className="font-mono text-xs text-cyan-600 dark:text-cyan-400">{valueText}</span>
       </div>
 
       {supportsHistogram(control.field) && (
@@ -144,7 +144,7 @@ function InvestorControlInner({
               max={filters[control.maxKey]}
               onCommit={(n) => setFilter(control.minKey, n)}
             />
-            <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">to</span>
+            <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">to</span>
             <NumberInput
               value={filters[control.maxKey]}
               min={filters[control.minKey]}
@@ -165,7 +165,7 @@ function InvestorControlInner({
             onValueChange={([v]) => setFilter(control.key, v)}
           />
           <div className="flex items-center gap-1.5">
-            <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
               {control.op ?? "≥"}
             </span>
             <NumberInput

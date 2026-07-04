@@ -17,12 +17,12 @@ export default function SoldWindowDropdown() {
   const options = SOLD_WINDOW_OPTIONS.filter((d) => d <= cap);
   const value = Math.min(soldWindowDays, options[options.length - 1]);
   return (
-    <label className={`flex shrink-0 items-center gap-1.5 ${LABEL} text-slate-400`}>
+    <label className={`flex shrink-0 items-center gap-1.5 ${LABEL} text-muted-foreground`}>
       <span className="sr-only">Comp window</span>
       <select
         value={value}
         onChange={(e) => setSoldWindowDays(Number(e.target.value))}
-        className="border border-slate-800 bg-slate-900 px-2 py-1.5 text-cyan-300 focus:border-cyan-500/50 focus:outline-none"
+        className="border border-border bg-card px-2 py-1.5 text-cyan-700 dark:text-cyan-300 focus:border-cyan-500/50 focus:outline-none"
       >
         {options.map((d) => (
           <option key={d} value={d}>{fmt(d)}</option>

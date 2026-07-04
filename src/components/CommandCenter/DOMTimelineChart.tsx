@@ -157,7 +157,7 @@ export default function DOMTimelineChart({
           </ResponsiveContainer>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800">
+        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border">
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground uppercase">Last Sold</span>
             <p className="text-xs font-mono text-amber-600 dark:text-amber-400">{formatPrice(lastSold)}</p>
@@ -225,7 +225,7 @@ export default function DOMTimelineChart({
         <div className="flex h-32 flex-col items-center justify-center text-center">
           <p className="font-mono text-lg text-foreground">{formatPrice(currentPrice)}</p>
           <p className="mt-1 text-xs text-muted-foreground">No recorded price changes</p>
-          <p className="mt-0.5 text-[11px] text-slate-600">
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             Listed {fmtDate(start)} · still at original asking
           </p>
         </div>
@@ -273,10 +273,10 @@ export default function DOMTimelineChart({
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800">
+      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border">
         <div className="text-center">
           <span className="text-[10px] text-muted-foreground uppercase">Original</span>
-          <p className="text-xs font-mono text-slate-300">{formatPrice(original!)}</p>
+          <p className="text-xs font-mono text-foreground">{formatPrice(original!)}</p>
         </div>
         <div className="text-center">
           <span className="text-[10px] text-muted-foreground uppercase">Current</span>

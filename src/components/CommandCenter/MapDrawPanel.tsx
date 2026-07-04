@@ -44,7 +44,7 @@ export default function MapDrawPanel() {
           <button
             type="button"
             onClick={startDrawing}
-            className="flex flex-1 items-center justify-center gap-1.5 border border-slate-700 bg-slate-900 py-2 text-xs font-medium text-slate-200 hover:border-slate-600"
+            className="flex flex-1 items-center justify-center gap-1.5 border border-border bg-card py-2 text-xs font-medium text-foreground hover:border-border"
           >
             <PenTool className="h-3.5 w-3.5" /> Redraw
           </button>
@@ -65,20 +65,20 @@ export default function MapDrawPanel() {
 
   return (
     <div className="flex flex-col gap-3 p-3">
-      <p className="text-xs leading-relaxed text-slate-400">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         Click the map to drop points. Click the first point — or hit Finish — to close the
         shape and filter to it.
       </p>
-      <div className="font-mono text-[11px] text-slate-300">
-        Points placed: <span className="font-semibold text-cyan-300">{drawPoints.length}</span>
-        {!canFinish && <span className="ml-1 text-slate-500">· need {3 - drawPoints.length} more</span>}
+      <div className="font-mono text-[11px] text-foreground">
+        Points placed: <span className="font-semibold text-cyan-700 dark:text-cyan-300">{drawPoints.length}</span>
+        {!canFinish && <span className="ml-1 text-muted-foreground">· need {3 - drawPoints.length} more</span>}
       </div>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={undoDrawPoint}
           disabled={drawPoints.length === 0}
-          className="flex flex-1 items-center justify-center gap-1.5 border border-slate-700 bg-slate-900 py-2 text-xs font-medium text-slate-200 hover:border-slate-600 disabled:opacity-40"
+          className="flex flex-1 items-center justify-center gap-1.5 border border-border bg-card py-2 text-xs font-medium text-foreground hover:border-border disabled:opacity-40"
         >
           <Undo2 className="h-3.5 w-3.5" /> Undo
         </button>
@@ -97,7 +97,7 @@ export default function MapDrawPanel() {
           clearDraw();
           setActiveModule(null);
         }}
-        className="text-[11px] text-slate-500 hover:text-slate-300"
+        className="text-[11px] text-muted-foreground hover:text-foreground"
       >
         Cancel
       </button>

@@ -41,24 +41,24 @@ export function PriceCompressionCard({
 
   return (
     <div className={`
-      bg-slate-950 border border-slate-800 rounded-lg p-4
+      bg-background border border-border rounded-lg p-4
       ${className}
     `}>
       {/* Header */}
-      <div className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-3">
+      <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">
         Price Compression
       </div>
 
       {/* Primary: Price Drop Percentage */}
       <div className="mb-4">
-        <div className="text-xs font-mono text-slate-500 mb-1">Price Drop</div>
+        <div className="text-xs font-mono text-muted-foreground mb-1">Price Drop</div>
         <div className={`
           text-3xl font-mono uppercase tracking-tight
-          ${isAlarm ? 'text-rose-500' : 'text-amber-400'}
+          ${isAlarm ? 'text-rose-500' : 'text-amber-600 dark:text-amber-400'}
         `}>
           {truePriceDropPct.toFixed(1)}%
         </div>
-        <div className="text-xs font-mono text-slate-600 mt-1">
+        <div className="text-xs font-mono text-muted-foreground mt-1">
           from peak listing price
         </div>
       </div>
@@ -67,19 +67,19 @@ export function PriceCompressionCard({
       {isAlarm && (
         <div className={`
           animate-pulse bg-rose-500/10 border border-rose-500/30 
-          text-rose-400 font-mono text-xs px-2 py-1 rounded mb-4
+          text-rose-600 dark:text-rose-400 font-mono text-xs px-2 py-1 rounded mb-4
         `}>
           ⚠️ ALARM: INSTALMENT LIQUIDITY DRIFT &gt; 15%
         </div>
       )}
 
       {/* Secondary: Capital Discount */}
-      <div className="border-t border-slate-800 pt-3 mt-3">
-        <div className="text-xs font-mono text-slate-500 mb-1">Capital Discount</div>
-        <div className="text-xl font-mono text-emerald-400">
+      <div className="border-t border-border pt-3 mt-3">
+        <div className="text-xs font-mono text-muted-foreground mb-1">Capital Discount</div>
+        <div className="text-xl font-mono text-emerald-600 dark:text-emerald-400">
           -{formatCurrency(capitalDiscount)}
         </div>
-        <div className="text-xs font-mono text-slate-600 mt-1">
+        <div className="text-xs font-mono text-muted-foreground mt-1">
           {formatCurrency(peakPrice)} peak → {formatCurrency(currentPrice)} now
         </div>
       </div>

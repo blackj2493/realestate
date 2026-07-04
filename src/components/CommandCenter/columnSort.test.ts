@@ -44,7 +44,9 @@ describe("fitLedgerColumns", () => {
   });
 
   it("preserves config order of the kept columns", () => {
+    // The inline Builders "zoning" ledger column was intentionally removed — zoning now lives
+    // in the dedicated attributed ZoningCard + map overlay (never blended into MLS columns).
     const got = types(fitLedgerColumns(PERSONA_CONFIG.builders.columns, 760));
-    expect(got).toEqual(["address", "lotDims", "zoning", "density", "alphaFlag"]);
+    expect(got).toEqual(["address", "lotDims", "density", "alphaFlag"]);
   });
 });

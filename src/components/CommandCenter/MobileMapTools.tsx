@@ -92,10 +92,10 @@ export default function MobileMapTools() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Map tools"
-        className="absolute left-3 z-40 flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/95 px-4 py-2 text-sm font-semibold text-slate-200 shadow-lg backdrop-blur active:bg-slate-800 md:hidden"
+        className="absolute left-3 z-40 flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-4 py-2 text-sm font-semibold text-foreground shadow-lg backdrop-blur active:bg-muted md:hidden"
         style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
-        <SlidersHorizontal className="h-4 w-4 text-cyan-400" />
+        <SlidersHorizontal className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
         Tools
         {activeCount > 0 && (
           <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -106,21 +106,21 @@ export default function MobileMapTools() {
 
       {open && (
         <div className="fixed inset-0 z-[70] flex flex-col justify-end md:hidden" role="dialog" aria-modal="true" aria-label="Map tools">
-          <button type="button" aria-label="Close map tools" onClick={close} className="absolute inset-0 bg-slate-950/80" />
-          <div className="relative flex max-h-[85dvh] flex-col border-t border-slate-700 bg-slate-950 pb-safe">
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-3 pt-safe">
+          <button type="button" aria-label="Close map tools" onClick={close} className="absolute inset-0 bg-background/80" />
+          <div className="relative flex max-h-[85dvh] flex-col border-t border-border bg-background pb-safe">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-3 pt-safe">
               {activeModule ? (
                 <button
                   type="button"
                   onClick={() => setActiveModule(null)}
-                  className="-ml-1 flex min-h-[44px] items-center gap-1 pr-2 text-sm font-semibold uppercase tracking-wider text-slate-100"
+                  className="-ml-1 flex min-h-[44px] items-center gap-1 pr-2 text-sm font-semibold uppercase tracking-wider text-foreground"
                 >
-                  <ChevronLeft className="h-5 w-5 text-cyan-400" />
+                  <ChevronLeft className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
                   {TITLES[activeModule]}
                 </button>
               ) : (
-                <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-100">
-                  <SlidersHorizontal className="h-4 w-4 text-cyan-400" />
+                <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
+                  <SlidersHorizontal className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
                   Map Tools
                 </span>
               )}
@@ -128,7 +128,7 @@ export default function MobileMapTools() {
                 type="button"
                 onClick={close}
                 aria-label="Close map tools"
-                className="-mr-1 flex h-11 w-11 items-center justify-center text-slate-400 hover:text-slate-200"
+                className="-mr-1 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -147,11 +147,11 @@ export default function MobileMapTools() {
                         type="button"
                         onClick={() => setActiveModule(t.module)}
                         className={cn(
-                          "relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-md border bg-slate-900/50 py-3 transition-colors active:bg-slate-800",
-                          dataActive[t.module] ? "border-cyan-500/50 text-cyan-200" : "border-slate-800 text-slate-300"
+                          "relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-md border bg-card/50 py-3 transition-colors active:bg-muted",
+                          dataActive[t.module] ? "border-cyan-500/50 text-cyan-200" : "border-border text-foreground"
                         )}
                       >
-                        <Icon className={cn("h-5 w-5", dataActive[t.module] ? "text-cyan-300" : "text-cyan-400")} />
+                        <Icon className={cn("h-5 w-5", dataActive[t.module] ? "text-cyan-700 dark:text-cyan-300" : "text-cyan-600 dark:text-cyan-400")} />
                         <span className="text-[10px] font-semibold uppercase tracking-wide">{t.label}</span>
                         {t.module === "compare" && selectedCount > 0 ? (
                           <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">

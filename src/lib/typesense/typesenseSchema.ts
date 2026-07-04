@@ -111,6 +111,14 @@ export const indexedFields: IndexedField[] = [
   // Parking / Density
   { name: 'surplus_parking_count', type: 'int32', facet: false, sort: true },
   { name: 'is_density_ready', type: 'bool', facet: true },
+  // Municipal zoning code (e.g. Toronto "RD"). The transformer writes it from the MLS
+  // `Zoning` field, but that source is ~empty for residential — so it is stored-but-empty
+  // on every doc today (the Builders "Zoning" column shows "—"). To be POPULATED by the
+  // zoning-harvest backfill (scripts/admin/zoning-sources.json, Phase 1). Declared here so
+  // a future Builders zoning filter works; the live-collection alter runs WITH that backfill
+  // (cf. backfill-school-fields.ts), not standalone. Indexed but NOT faceted (RAM policy);
+  // optional (sparse/empty until the backfill lands).
+  { name: 'zoning_designation', type: 'string', facet: false, optional: true },
 
   // Standard API Inputs (low-cardinality enums)
   { name: 'OccupantType', type: 'string', facet: true },
@@ -172,6 +180,10 @@ export const unindexedFields: UnindexedField[] = [
   { name: 'primaryImageUrl', type: 'string', index: false, facet: false, optional: true },
   // Listing brokerage — display cargo for the TRREB §6.3(c) text label on every card.
   { name: 'ListOfficeName', type: 'string', index: false, facet: false, optional: true },
+  // Zoning cargo — municipal open data (NOT MLS), display-only. Plain-language name + a
+  // provenance key that resolves to source/by-law/attribution (src/lib/zoning/attribution.ts).
+  { name: 'zoning_desc', type: 'string', index: false, facet: false, optional: true },
+  { name: 'zoning_source', type: 'string', index: false, facet: false, optional: true },
   { name: 'RawRooms', type: 'auto', index: false, facet: false },
   { name: 'PropertyHash', type: 'string', index: false, facet: false },
   // School cargo (display only): per-panel nearest-school name + distance in km.
@@ -259,6 +271,10 @@ export const typesenseSchema = {
     // Parking / Density
     { name: 'surplus_parking_count', type: 'int32' as const, facet: false, sort: true },
     { name: 'is_density_ready', type: 'bool' as const, facet: true },
+    // Municipal zoning code — stored-but-empty today (MLS `Zoning` is ~empty); to be
+    // populated by the zoning-harvest backfill (Phase 1). Indexed (not faceted, RAM policy)
+    // for a future Builders zoning filter; optional (sparse). Live alter runs WITH the backfill.
+    { name: 'zoning_designation', type: 'string' as const, facet: false, optional: true },
 
     // Standard API Inputs
     { name: 'OccupantType', type: 'string' as const, facet: true },
@@ -303,6 +319,9 @@ export const typesenseSchema = {
     { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },
     // Listing brokerage — display cargo for the TRREB §6.3(c) text label on every card.
     { name: 'ListOfficeName', type: 'string' as const, index: false, facet: false, optional: true },
+    // Zoning cargo — municipal open data (NOT MLS), display-only (plain-language + provenance key).
+    { name: 'zoning_desc', type: 'string' as const, index: false, facet: false, optional: true },
+    { name: 'zoning_source', type: 'string' as const, index: false, facet: false, optional: true },
     { name: 'RawRooms', type: 'auto' as const, index: false, facet: false },
     // School cargo (display only): per-panel nearest-school name + distance.
     { name: 'ElemPublicSchool', type: 'string' as const, index: false, facet: false, optional: true },

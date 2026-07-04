@@ -95,12 +95,12 @@ function Stat({ value, label, gated }: { value: string; label: string; gated?: b
     <div>
       <div
         className={`font-mono text-base font-bold ${
-          gated ? "blur-[5px] select-none text-rose-300" : "text-slate-100"
+          gated ? "blur-[5px] select-none text-rose-700 dark:text-rose-300" : "text-foreground"
         }`}
       >
         {value}
       </div>
-      <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
     </div>
   );
 }
@@ -154,13 +154,13 @@ export default function SearchAnswerCard({ area, activeCount }: Props) {
   const loginHref = safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login";
 
   return (
-    <div className="border-b border-slate-800 bg-gradient-to-b from-cyan-950/30 to-slate-950 px-3 py-3">
+    <div className="border-b border-border bg-gradient-to-b from-cyan-950/30 to-slate-950 px-3 py-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-cyan-300">
+        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
           <TrendingUp className="h-3 w-3" />
           {area} · activity
         </span>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">last 12 mo</span>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">last 12 mo</span>
       </div>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-5">

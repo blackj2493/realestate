@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { CORE_FILTERS, MORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive, typeOptionsForClass, priceConfig } from "@/lib/filters/fundamentals";
-import { PERSONA_CONFIG, defaultTerminalFilters } from "@/lib/personas/personaConfig";
+import { PERSONA_CONFIG, INVESTOR_CONTROLS, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
@@ -17,7 +17,7 @@ import FilterDrawer from "./FilterDrawer";
 import ActiveFilterStrip from "./ActiveFilterStrip";
 import { buildFilterTokens } from "./filterTokens";
 import { formatResultNudge } from "./filterNudge";
-import { anyControlActive, isControlActive } from "./investorControls";
+import { anyControlActive, isControlActive, controlId } from "./investorControls";
 import { SCHOOL_LEVEL_LABEL } from "@/lib/schools/schoolLens";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
@@ -85,7 +85,12 @@ export default function FilterBar() {
   ];
 
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
+  // The active persona PINS this subset; every other investor signal stays reachable
+  // via "+ Add filter" (moreControls), and the query/strip operate over the FULL
+  // catalog so a signal set under any persona keeps applying + showing.
   const controls = PERSONA_CONFIG[activePersona].controls;
+  const personaControlIds = new Set(controls.map(controlId));
+  const moreControls = INVESTOR_CONTROLS.filter((c) => !personaControlIds.has(controlId(c)));
 
   // Comp-only = no active (sale/rent) layer lit → hide the active-browse controls.
   const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
@@ -119,7 +124,7 @@ export default function FilterBar() {
   const universalActive =
     CORE_FILTERS.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)) ||
     addedDefs.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue));
-  const investorActive = anyControlActive(controls, filters);
+  const investorActive = anyControlActive(INVESTOR_CONTROLS, filters);
   const lensActive = lenses.some((l) => l.active);
   const anyActive = universalActive || investorActive || lensActive;
 
@@ -168,7 +173,7 @@ export default function FilterBar() {
   // the basics that stay inline on the bar.
   const drawerActiveCount =
     MORE_FILTERS.filter((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)).length +
-    (investorLayer ? controls.filter((c) => isControlActive(c, filters)).length : 0);
+    (investorLayer ? INVESTOR_CONTROLS.filter((c) => isControlActive(c, filters)).length : 0);
 
   // Flatten the active filters (core + added + investor) into one removable token
   // list for the summary strip. Gates mirror the chip rows: added + investor are
@@ -176,7 +181,10 @@ export default function FilterBar() {
   const tokens = buildFilterTokens({
     coreItems,
     addedItems,
-    controls,
+    // The strip surfaces EVERY active investor signal (full catalog), not just the
+    // active persona's — so a value set under another persona is visible + removable,
+    // never silently applied.
+    controls: INVESTOR_CONTROLS,
     filters,
     setFilter,
     removeAddedFilter,
@@ -189,7 +197,7 @@ export default function FilterBar() {
     <>
       {/* MOBILE (<md): layers stay inline (tab-like); all other filters move into
           the sheet behind a prominent, count-badged Filters button. */}
-      <div className="flex items-center gap-2 border-t border-slate-800 bg-slate-950 px-3 py-2 md:hidden">
+      <div className="flex items-center gap-2 border-t border-border bg-background px-3 py-2 md:hidden">
         <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto">
           <LayerChips />
           {soldWindowVisible && <SoldWindowDropdown />}
@@ -197,9 +205,9 @@ export default function FilterBar() {
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="relative flex min-h-[40px] shrink-0 items-center gap-1.5 border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-100 transition-colors active:bg-slate-800"
+          className="relative flex min-h-[40px] shrink-0 items-center gap-1.5 border border-border bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground transition-colors active:bg-muted"
         >
-          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
           Filters
           {activeFilterCount > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -212,7 +220,7 @@ export default function FilterBar() {
       {/* DESKTOP (md+): pinned mode anchors · scrolling filter chips · pinned nudge.
           Layers + class no longer scroll off the right edge, and every applied filter
           is summarised (and cleared) in the ActiveFilterStrip below. */}
-      <div className="hidden h-11 items-center border-t border-slate-800 bg-slate-950 md:flex">
+      <div className="hidden h-11 items-center border-t border-border bg-background md:flex">
         {/* Pinned-left: listing-status layers + sold window + property class. */}
         <div className="flex shrink-0 items-center gap-x-2 pl-3 pr-1">
           <LayerChips />
@@ -227,7 +235,7 @@ export default function FilterBar() {
             ]}
           />
         </div>
-        <div className="h-5 w-px shrink-0 bg-slate-800" />
+        <div className="h-5 w-px shrink-0 bg-muted" />
 
         {/* Scrolling-middle: just the basics (price · beds · baths · type). The deep
             field library + investor signals now live in the Filters drawer, so this
@@ -257,10 +265,10 @@ export default function FilterBar() {
               onClick={() => setDrawerOpen(true)}
               className={cn(
                 LABEL,
-                "relative flex items-center gap-1.5 border border-slate-700 px-2.5 py-1.5 text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                "relative flex items-center gap-1.5 border border-border px-2.5 py-1.5 text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
               )}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
               Filters
               {drawerActiveCount > 0 && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -269,7 +277,7 @@ export default function FilterBar() {
               )}
             </button>
           )}
-          <span className={cn(LABEL, nudge.overflowing ? "text-amber-400" : "text-slate-400")}>
+          <span className={cn(LABEL, nudge.overflowing ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
             {nudge.text}
           </span>
         </div>
@@ -285,6 +293,7 @@ export default function FilterBar() {
           onClose={() => setSheetOpen(false)}
           coreItems={coreItems}
           controls={controls}
+          moreControls={moreControls}
           showInvestor={investorLayer}
           showAdvanced={!compOnly}
           clearAll={clearAll}
@@ -297,6 +306,7 @@ export default function FilterBar() {
         <FilterDrawer
           onClose={() => setDrawerOpen(false)}
           controls={controls}
+          moreControls={moreControls}
           showInvestor={investorLayer}
           clearAll={clearAll}
           anyActive={anyActive}

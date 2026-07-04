@@ -122,7 +122,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   ).slice(0, 3);
 
   const dom = property.TrueDom ?? property.calculatedDOM ?? property.DaysOnMarket ?? 0;
-  const domColor = dom > 45 ? "text-emerald-400" : dom >= 14 ? "text-amber-400" : "text-slate-300";
+  const domColor = dom > 45 ? "text-emerald-600 dark:text-emerald-400" : dom >= 14 ? "text-amber-600 dark:text-amber-400" : "text-foreground";
   const yieldEst = grossYieldOrNull(property.gross_yield_est);
   const capRate = capRateOrNull(property.cap_rate_est);
   const hero = property.primaryImageUrl || property.thumbnailUrl;
@@ -151,11 +151,11 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
         role="dialog"
         aria-modal="true"
         aria-label="Property quick look"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-slate-800 bg-slate-950 shadow-2xl animate-in slide-in-from-right duration-300"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-border bg-background shadow-2xl animate-in slide-in-from-right duration-300"
       >
         {/* Header */}
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-800 px-4">
-          <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-400">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+          <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
             <Search className="h-3.5 w-3.5" />
             Quick Look
           </span>
@@ -163,16 +163,16 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             type="button"
             onClick={onClose}
             aria-label="Close quick look"
-            className="rounded-full border border-slate-700 bg-slate-800 p-2 transition-colors hover:bg-slate-700"
+            className="rounded-full border border-border bg-muted p-2 transition-colors hover:bg-muted"
           >
-            <X className="h-4 w-4 text-slate-400" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto no-scrollbar p-4">
           {/* Hero — single primary image from the index (no media fetch) */}
-          <div className="relative mb-4 h-44 overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+          <div className="relative mb-4 h-44 overflow-hidden rounded-xl border border-border bg-card">
             {hero ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -182,7 +182,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
                 loading="lazy"
               />
             ) : (
-              <div className="flex h-full items-center justify-center font-mono text-xs uppercase tracking-widest text-slate-600">
+              <div className="flex h-full items-center justify-center font-mono text-xs uppercase tracking-widest text-muted-foreground">
                 No photo
               </div>
             )}
@@ -196,14 +196,14 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           </div>
 
           {/* Headline */}
-          <h1 className="text-lg font-bold leading-snug text-slate-100">
+          <h1 className="text-lg font-bold leading-snug text-foreground">
             {property.UnparsedAddress || "Address Unavailable"}
           </h1>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-2xl font-bold text-emerald-400">
+            <span className="font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {formatPrice(property.ListPrice)}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {property.City}
               {property.City ? " · " : ""}
               {property.PropertySubType || property.PropertyType}
@@ -212,8 +212,8 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
 
           {/* Brokerage — §4: same treatment as the other listing details, no visual separation */}
           {property.ListOfficeName && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-              <Building2 className="h-3.5 w-3.5 text-slate-500" />
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
               {property.ListOfficeName}
             </p>
           )}
@@ -247,8 +247,8 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
                 className={cn(
                   "flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
                   isSelected
-                    ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
-                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
+                    ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25"
+                    : "border-border text-foreground hover:bg-muted"
                 )}
               >
                 {isSelected ? <Check className="h-4 w-4" /> : <GitCompareArrows className="h-4 w-4" />}
@@ -258,19 +258,19 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           </div>
 
           {/* Specs */}
-          <div className="my-4 grid grid-cols-5 divide-x divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
-            <Spec icon={<Bed className="h-4 w-4 text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
-            <Spec icon={<Bath className="h-4 w-4 text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
-            <Spec icon={<Square className="h-4 w-4 text-purple-400" />} value={sqft} label="Sqft" />
-            <Spec icon={<Car className="h-4 w-4 text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
+          <div className="my-4 grid grid-cols-5 divide-x divide-border rounded-lg border border-border bg-card/40">
+            <Spec icon={<Bed className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />} value={bedsLabel(property) ?? (property.BedroomsTotal || 0)} label="Beds" />
+            <Spec icon={<Bath className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />} value={property.BathroomsTotalInteger || 0} label="Baths" />
+            <Spec icon={<Square className="h-4 w-4 text-purple-600 dark:text-purple-400" />} value={sqft} label="Sqft" />
+            <Spec icon={<Car className="h-4 w-4 text-amber-600 dark:text-amber-400" />} value={property.ParkingTotal || 0} label="Parking" />
             <Spec icon={<Layers className="h-4 w-4 text-indigo-400" />} value={basementLabel(property)} label="Basement" />
           </div>
 
           {/* Signal tiles — instant from the index doc, while the score cards hydrate */}
           <div className="mb-4 grid grid-cols-3 gap-2">
             <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
-            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-400" term="grossYield" />
-            <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-slate-200" term="capRate" />
+            <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-600 dark:text-emerald-400" term="grossYield" />
+            <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-foreground" term="capRate" />
           </div>
 
           {/* Deal Score — AVM-anchored, fetched so it matches the full report exactly */}
@@ -298,12 +298,12 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
 
           {/* Structural Vitals — zero-fetch, scannable facts from the index doc */}
           <div className="mb-4">
-            <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
-              <Home className="h-4 w-4 text-emerald-400" />
+            <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+              <Home className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               Structural Vitals
             </h3>
             <table className="w-full border-collapse text-sm">
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-border">
                 <Vital k="Lot" v={lot} />
                 <Vital k="Property Age" v={property.ApproximateAge || "—"} />
                 <Vital k="Heating" v={property.Heating || "—"} />
@@ -312,7 +312,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             </table>
           </div>
 
-          <p className="mt-2 text-center text-[11px] leading-relaxed text-slate-600">
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
             The full report adds schools, room map, sale history &amp; the Underwriting Sandbox.
           </p>
         </div>
@@ -325,8 +325,8 @@ function Spec({ icon, value, label }: { icon: React.ReactNode; value: React.Reac
   return (
     <div className="flex flex-col items-center gap-1 p-3">
       {icon}
-      <span className="font-mono text-sm font-bold text-slate-200">{value}</span>
-      <span className="text-[9px] uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="font-mono text-sm font-bold text-foreground">{value}</span>
+      <span className="text-[9px] uppercase tracking-wide text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -343,8 +343,8 @@ function Tile({
   term?: GlossaryKey;
 }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-2.5 text-center">
-      <div className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-wide text-slate-500">
+    <div className="rounded-lg border border-border bg-card/50 p-2.5 text-center">
+      <div className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-wide text-muted-foreground">
         {label}
         {term && <InfoDot term={term} />}
       </div>
@@ -356,21 +356,21 @@ function Tile({
 function Vital({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <tr>
-      <td className="w-1/3 py-2 text-slate-500">{k}</td>
-      <td className="py-2 font-mono text-slate-200">{v}</td>
+      <td className="w-1/3 py-2 text-muted-foreground">{k}</td>
+      <td className="py-2 font-mono text-foreground">{v}</td>
     </tr>
   );
 }
 
 function ScoreSkeleton() {
   return (
-    <div className="animate-pulse rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-      <div className="mb-3 h-3 w-24 rounded bg-slate-800" />
+    <div className="animate-pulse rounded-lg border border-border bg-card/50 p-4">
+      <div className="mb-3 h-3 w-24 rounded bg-muted" />
       <div className="flex items-center gap-4">
-        <div className="h-[88px] w-[88px] rounded-full bg-slate-800" />
+        <div className="h-[88px] w-[88px] rounded-full bg-muted" />
         <div className="flex-1 space-y-2">
-          <div className="h-3 w-full rounded bg-slate-800" />
-          <div className="h-3 w-2/3 rounded bg-slate-800" />
+          <div className="h-3 w-full rounded bg-muted" />
+          <div className="h-3 w-2/3 rounded bg-muted" />
         </div>
       </div>
     </div>

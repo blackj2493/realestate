@@ -386,12 +386,12 @@ export default function CampaignHistoryChart({
           <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Property History</span>
         </div>
         <div className="font-mono text-xs text-muted-foreground">
-          Listed <b className="text-emerald-400">{campaignCount}×</b>
+          Listed <b className="text-emerald-600 dark:text-emerald-400">{campaignCount}×</b>
           {trueDom != null && <> · True DOM <span className="text-primary">{trueDom}d</span></>}
           {summary.originalSalePrice != null && summary.currentSalePrice != null && (
             <> · {compactPrice(summary.originalSalePrice)} → {compactPrice(summary.currentSalePrice)}
               {summary.dropPct != null && summary.dropPct !== 0 && (
-                <span className={summary.dropPct < 0 ? "text-emerald-400" : "text-rose-400"}>
+                <span className={summary.dropPct < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
                   {" "}({summary.dropPct > 0 ? "+" : ""}{Math.round(summary.dropPct * 100)}%)
                 </span>
               )}

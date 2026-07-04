@@ -1,29 +1,37 @@
 import { describe, it, expect } from "vitest";
-import { PERSONA_CONFIG, defaultTerminalFilters } from "./personaConfig";
+import { PERSONA_CONFIG, defaultTerminalFilters, buildInvestorClause } from "./personaConfig";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 
 const f = (over = {}) => ({ ...defaultTerminalFilters, ...over });
 
-describe("cashflow persona — real cap field", () => {
+describe("buildInvestorClause — real cap field", () => {
   it("filters on cap_rate_est with the band ceiling, not ExtrapolatedCapRate", () => {
-    const s = PERSONA_CONFIG.cashflow.buildFilterString(f({ minCapRate: 5 }));
+    const s = buildInvestorClause(f({ minCapRate: 5 }));
     expect(s).toContain("cap_rate_est:>=5");
     expect(s).toContain("cap_rate_est:<=15");
     expect(s).not.toContain("ExtrapolatedCapRate");
   });
-  it("sorts on cap_rate_est", () => {
-    expect(PERSONA_CONFIG.cashflow.sortBy).toBe("cap_rate_est");
-  });
   it("emits no cap clause when the slider is at 0", () => {
-    expect(PERSONA_CONFIG.cashflow.buildFilterString(f())).not.toContain("cap_rate_est");
+    expect(buildInvestorClause(f())).not.toContain("cap_rate_est");
+  });
+  it("cashflow still sorts on cap_rate_est", () => {
+    expect(PERSONA_CONFIG.cashflow.sortBy).toBe("cap_rate_est");
   });
 });
 
-describe("smart persona — real cap field on the yield slider", () => {
-  it("thresholds cap_rate_est, not ExtrapolatedCapRate", () => {
-    const s = PERSONA_CONFIG.smart.buildFilterString(f({ minYield: 4 }));
+describe("buildInvestorClause — persona-independent (applies every set signal)", () => {
+  it("combines signals owned by different personas (cap rate + price drop together)", () => {
+    const s = buildInvestorClause(f({ minCapRate: 4, minPriceDrop: 50000 }));
     expect(s).toContain("cap_rate_est:>=4");
-    expect(s).not.toContain("ExtrapolatedCapRate");
+    expect(s).toContain("TotalPriceDrop:>=50000");
+  });
+  it("density toggle filters is_density_ready (was mislabeled 'Surplus Parking')", () => {
+    expect(buildInvestorClause(f({ zoningPotential: true }))).toContain("is_density_ready:=true");
+  });
+  it("surplus-parking slider is a distinct signal from the density toggle", () => {
+    const s = buildInvestorClause(f({ minSurplusParking: 2 }));
+    expect(s).toContain("surplus_parking_count:>=2");
+    expect(s).not.toContain("is_density_ready");
   });
 });
 

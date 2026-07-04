@@ -36,7 +36,6 @@ export type PersonaType = "smart" | "cashflow" | "flippers" | "builders";
 // ============================================================================
 
 export interface TerminalFilterState {
-  minYield: number; // % — thresholds cap_rate_est (label "Yield" is a legacy misnomer)
   minCapRate: number; // %
   maxCarryCost: number; // $/mo
   maxCapitalBurn: number; // $/mo
@@ -52,7 +51,6 @@ export interface TerminalFilterState {
 }
 
 export const defaultTerminalFilters: TerminalFilterState = {
-  minYield: 0,
   minCapRate: 0,
   maxCarryCost: 15000,
   maxCapitalBurn: 20000,
@@ -68,7 +66,6 @@ export const defaultTerminalFilters: TerminalFilterState = {
 };
 
 type NumericKey =
-  | "minYield"
   | "minCapRate"
   | "maxCarryCost"
   | "maxCapitalBurn"
@@ -85,6 +82,13 @@ type BoolKey = "zoningPotential" | "duplexCandidate" | "staleOnly";
 // Controls
 // ============================================================================
 
+/**
+ * Each control carries its own `buildClause` so the Typesense filter for a signal
+ * lives with its definition — the query then applies EVERY set investor control
+ * (see buildInvestorClause), independent of which persona is active. That's what
+ * lets a Cashflow user keep a Flipper's "Price Drop" applied, and what fixes a
+ * value set under one persona silently going dormant under another.
+ */
 export type ControlDef =
   | {
       kind: "slider";
@@ -100,6 +104,8 @@ export type ControlDef =
       field?: string;
       /** Glossary term explained via a ⓘ next to the control label (optional). */
       glossaryKey?: GlossaryKey;
+      /** Typesense filter_by fragment for the current value, or null when default. */
+      buildClause: (f: TerminalFilterState) => string | null;
     }
   | {
       kind: "range";
@@ -115,8 +121,18 @@ export type ControlDef =
       field?: string;
       /** Glossary term explained via a ⓘ next to the control label (optional). */
       glossaryKey?: GlossaryKey;
+      /** Typesense filter_by fragment for the current value, or null when default. */
+      buildClause: (f: TerminalFilterState) => string | null;
     }
-  | { kind: "toggle"; key: BoolKey; label: string; short?: string; glossaryKey?: GlossaryKey };
+  | {
+      kind: "toggle";
+      key: BoolKey;
+      label: string;
+      short?: string;
+      glossaryKey?: GlossaryKey;
+      /** Typesense filter_by fragment for the current value, or null when default. */
+      buildClause: (f: TerminalFilterState) => string | null;
+    };
 
 const fmtPct = (v: number) => `${v}%`;
 const fmtMoney = (v: number) =>
@@ -161,6 +177,10 @@ export interface MapColorConfig {
   legendHigh: string;
   /** true → values are ~47% populated; the map must treat 0 as "no estimate", not "low". */
   sparse?: boolean;
+  /** Human-readable metric name for the heatmap hover tooltip (e.g. "Cap Rate"). */
+  label?: string;
+  /** Units-aware formatter for a metric value in the heatmap hover tooltip. */
+  format?: (v: number) => string;
 }
 
 // Low (muted) -> High (bright) green ramp — yield / cap rate
@@ -217,8 +237,9 @@ export interface PersonaDef {
   /** Concise label for narrow viewports (mobile lens pills). Optional/additive. */
   short?: string;
   icon: LucideIcon;
+  /** The curated signals this persona pins by default. A subset of INVESTOR_CONTROLS;
+   *  every other signal stays reachable via the "+ Add filter" palette. */
   controls: ControlDef[];
-  buildFilterString: (f: TerminalFilterState) => string;
   sortBy?: string;
   columns: ColumnDef[];
   mapColor: MapColorConfig;
@@ -230,6 +251,100 @@ export interface PersonaDef {
 
 const join = (parts: string[]) => parts.filter(Boolean).join(" && ");
 
+// ============================================================================
+// Investor control catalog — the single, deduped source for every investor
+// signal. Each persona PINS a curated subset (its `controls`), but the catalog
+// is what the "+ Add filter" palette offers and what the query applies, so any
+// signal is reachable and active regardless of the active persona.
+// ============================================================================
+
+/** Cap rate (cap_rate_est). One canonical control — previously Smart exposed the
+ *  same field under the "Target Gross Yield" label, which read as a second metric. */
+const C_CAP_RATE: ControlDef = {
+  kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥",
+  min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "capRate",
+  buildClause: (f) => (f.minCapRate > 0 ? `cap_rate_est:>=${Math.max(f.minCapRate, 1)} && cap_rate_est:<=15` : null),
+};
+const C_TRUE_DOM: ControlDef = {
+  kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM",
+  min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom", glossaryKey: "dom",
+  buildClause: (f) =>
+    join([f.trueDomMin > 0 ? `TrueDom:>=${f.trueDomMin}` : "", f.trueDomMax < 365 ? `TrueDom:<=${f.trueDomMax}` : ""]) || null,
+};
+const C_CARRY_COST: ControlDef = {
+  kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤",
+  min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost", glossaryKey: "carry",
+  buildClause: (f) => (f.maxCarryCost < 15000 ? `MonthlyCarryCost:<=${f.maxCarryCost}` : null),
+};
+const C_CAPITAL_BURN: ControlDef = {
+  kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤",
+  min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly",
+  buildClause: (f) => (f.maxCapitalBurn < 20000 ? `CapitalBurnRateMonthly:<=${f.maxCapitalBurn}` : null),
+};
+const C_SURPLUS_PARKING: ControlDef = {
+  kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥",
+  min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count",
+  buildClause: (f) => (f.minSurplusParking > 0 ? `surplus_parking_count:>=${f.minSurplusParking}` : null),
+};
+const C_PRICE_DROP: ControlDef = {
+  kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥",
+  min: 0, max: 200000, step: 5000, format: fmtMoney, field: "TotalPriceDrop", glossaryKey: "priceDrop",
+  buildClause: (f) => (f.minPriceDrop > 0 ? `TotalPriceDrop:>=${f.minPriceDrop}` : null),
+};
+const C_FRONTAGE: ControlDef = {
+  kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥",
+  min: 0, max: 200, step: 5, format: fmtFt, field: "LotWidth",
+  buildClause: (f) => (f.minFrontage > 0 ? `LotWidth:>=${f.minFrontage}` : null),
+};
+const C_LOT_SQFT: ControlDef = {
+  kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥",
+  min: 0, max: 20000, step: 500, format: fmtNum, field: "LotSqftTotal",
+  buildClause: (f) => (f.minLotSqft > 0 ? `LotSqftTotal:>=${f.minLotSqft}` : null),
+};
+// Density / zoning potential (is_density_ready). FIX: this toggle was mislabeled
+// "Surplus Parking" in the Smart + Builders personas while it actually filters
+// density-readiness (and sat next to a real Surplus Parking slider in Builders).
+const C_DENSITY: ControlDef = {
+  kind: "toggle", key: "zoningPotential", label: "Zoning / Density Ready", short: "Density",
+  buildClause: (f) => (f.zoningPotential ? `is_density_ready:=true` : null),
+};
+const C_SUITE_DUPLEX: ControlDef = {
+  kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex",
+  buildClause: (f) =>
+    f.duplexCandidate
+      ? `(SuiteStatus:=POTENTIAL_CANDIDATE || SuiteStatus:=EXISTING_SUITE || multi_unit_status:=PRIME_CANDIDATE)`
+      : null,
+};
+const C_STALE: ControlDef = {
+  kind: "toggle", key: "staleOnly", label: "Stale Only", short: "Stale Only",
+  buildClause: (f) => (f.staleOnly ? `IsStale:=true` : null),
+};
+
+/** Every investor signal, deduped. Persona `controls` reference these by object. */
+export const INVESTOR_CONTROLS: ControlDef[] = [
+  C_CAP_RATE,
+  C_TRUE_DOM,
+  C_CARRY_COST,
+  C_CAPITAL_BURN,
+  C_SURPLUS_PARKING,
+  C_PRICE_DROP,
+  C_FRONTAGE,
+  C_LOT_SQFT,
+  C_DENSITY,
+  C_SUITE_DUPLEX,
+  C_STALE,
+];
+
+/**
+ * The investor filter_by fragment for the CURRENT terminal state — the union of
+ * every set control, persona-independent. Replaces the old per-persona
+ * buildFilterString so a signal set under any persona keeps applying everywhere
+ * (residential-sale gating still happens in buildTerminalCoreClauses).
+ */
+export function buildInvestorClause(f: TerminalFilterState): string {
+  return INVESTOR_CONTROLS.map((c) => c.buildClause(f)).filter(Boolean).join(" && ");
+}
+
 export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
   // ----- Smart Homebuyer (DEFAULT = mockup) -----
   smart: {
@@ -237,24 +352,11 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Smart Homebuyer",
     short: "Homebuyer",
     icon: Home,
-    controls: [
-      // This control thresholds cap_rate_est (real, indexed). The "Yield" label is
-      // a legacy misnomer — kept to avoid churning the chip UI; it filters cap rate.
-      { kind: "slider", key: "minYield", label: "Target Gross Yield", short: "Yield", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "grossYield" },
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom", glossaryKey: "dom" },
-      { kind: "slider", key: "maxCapitalBurn", label: "Capital Burn Rate (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
-      { kind: "toggle", key: "zoningPotential", label: "Surplus Parking", short: "Parking" },
-      { kind: "toggle", key: "duplexCandidate", label: "Duplex Candidate", short: "Duplex" },
-    ],
-    buildFilterString: (f) =>
-      join([
-        f.minYield > 0 ? `cap_rate_est:>=${Math.max(f.minYield, 1)} && cap_rate_est:<=15` : "",
-        f.trueDomMin > 0 ? `TrueDom:>=${f.trueDomMin}` : "",
-        f.trueDomMax < 365 ? `TrueDom:<=${f.trueDomMax}` : "",
-        f.maxCapitalBurn < 20000 ? `CapitalBurnRateMonthly:<=${f.maxCapitalBurn}` : "",
-        f.zoningPotential ? `is_density_ready:=true` : "",
-        f.duplexCandidate ? `(SuiteStatus:=POTENTIAL_CANDIDATE || SuiteStatus:=EXISTING_SUITE || multi_unit_status:=PRIME_CANDIDATE)` : "",
-      ]),
+    // Pinned signals for the homebuyer-investor lens; the rest stay one tap away
+    // in "+ Add filter". (Was a "Target Gross Yield" control that actually filtered
+    // cap rate — now the single Cap Rate control; the "Surplus Parking" toggle that
+    // actually filtered density is now the correctly-named Density control.)
+    controls: [C_CAP_RATE, C_TRUE_DOM, C_CAPITAL_BURN, C_DENSITY, C_SUITE_DUPLEX],
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
       { type: "trueDom", header: "True DOM", width: "w-16", align: "right" },
@@ -262,7 +364,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield", sparse: true },
+    mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield", sparse: true, label: "Gross Yield", format: (v) => `${v.toFixed(1)}%` },
     defaultMapMode: "listings",
   },
 
@@ -272,19 +374,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Cashflow Investor",
     short: "Cashflow",
     icon: DollarSign,
-    controls: [
-      { kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥", min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "capRate" },
-      { kind: "slider", key: "maxCarryCost", label: "Max Carry Cost (CAD/Mo)", short: "Carry Cost", op: "≤", min: 0, max: 15000, step: 250, format: fmtMoney, field: "MonthlyCarryCost", glossaryKey: "carry" },
-      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
-      { kind: "toggle", key: "duplexCandidate", label: "Suite / Duplex", short: "Suite / Duplex" },
-    ],
-    buildFilterString: (f) =>
-      join([
-        f.minCapRate > 0 ? `cap_rate_est:>=${Math.max(f.minCapRate, 1)} && cap_rate_est:<=15` : "",
-        f.maxCarryCost < 15000 ? `MonthlyCarryCost:<=${f.maxCarryCost}` : "",
-        f.minSurplusParking > 0 ? `surplus_parking_count:>=${f.minSurplusParking}` : "",
-        f.duplexCandidate ? `(SuiteStatus:=POTENTIAL_CANDIDATE || SuiteStatus:=EXISTING_SUITE || multi_unit_status:=PRIME_CANDIDATE)` : "",
-      ]),
+    controls: [C_CAP_RATE, C_CARRY_COST, C_SURPLUS_PARKING, C_SUITE_DUPLEX],
     sortBy: "cap_rate_est",
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
@@ -293,7 +383,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap", sparse: true },
+    mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap", sparse: true, label: "Cap Rate", format: (v) => `${v.toFixed(1)}%` },
     defaultMapMode: "heatmap",
   },
 
@@ -303,20 +393,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Flippers & Deal Hunters",
     short: "Flipper",
     icon: TrendingUp,
-    controls: [
-      { kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM", min: 0, max: 365, step: 5, format: fmtDays, field: "TrueDom", glossaryKey: "dom" },
-      { kind: "slider", key: "minPriceDrop", label: "Min Price Drop", short: "Price Drop", op: "≥", min: 0, max: 200000, step: 5000, format: fmtMoney, field: "TotalPriceDrop", glossaryKey: "priceDrop" },
-      { kind: "slider", key: "maxCapitalBurn", label: "Max Capital Burn (CAD/Mo)", short: "Capital Burn", op: "≤", min: 0, max: 20000, step: 250, format: fmtMoney, field: "CapitalBurnRateMonthly" },
-      { kind: "toggle", key: "staleOnly", label: "Stale Only", short: "Stale Only" },
-    ],
-    buildFilterString: (f) =>
-      join([
-        f.trueDomMin > 0 ? `TrueDom:>=${f.trueDomMin}` : "",
-        f.trueDomMax < 365 ? `TrueDom:<=${f.trueDomMax}` : "",
-        f.minPriceDrop > 0 ? `TotalPriceDrop:>=${f.minPriceDrop}` : "",
-        f.maxCapitalBurn < 20000 ? `CapitalBurnRateMonthly:<=${f.maxCapitalBurn}` : "",
-        f.staleOnly ? `IsStale:=true` : "",
-      ]),
+    controls: [C_TRUE_DOM, C_PRICE_DROP, C_CAPITAL_BURN, C_STALE],
     sortBy: "TrueDom",
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
@@ -325,7 +402,7 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.TrueDom ?? d.calculatedDOM ?? 0, domain: [0, 180], range: DOM_RANGE, legendLow: "Fresh", legendHigh: "Stale" },
+    mapColor: { metric: (d) => d.TrueDom ?? d.calculatedDOM ?? 0, domain: [0, 180], range: DOM_RANGE, legendLow: "Fresh", legendHigh: "Stale", label: "True DOM", format: (v) => `${Math.round(v)}d` },
     defaultMapMode: "listings",
   },
 
@@ -335,28 +412,18 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Builders & Developers",
     short: "Builder",
     icon: Hammer,
-    controls: [
-      { kind: "slider", key: "minFrontage", label: "Min Frontage", short: "Frontage", op: "≥", min: 0, max: 200, step: 5, format: fmtFt, field: "LotWidth" },
-      { kind: "slider", key: "minLotSqft", label: "Min Lot (sqft)", short: "Lot Size", op: "≥", min: 0, max: 20000, step: 500, format: fmtNum, field: "LotSqftTotal" },
-      { kind: "slider", key: "minSurplusParking", label: "Min Surplus Parking", short: "Surplus Parking", op: "≥", min: 0, max: 6, step: 1, format: fmtNum, field: "surplus_parking_count" },
-      { kind: "toggle", key: "zoningPotential", label: "Surplus Parking", short: "Parking" },
-    ],
-    buildFilterString: (f) =>
-      join([
-        f.minFrontage > 0 ? `LotWidth:>=${f.minFrontage}` : "",
-        f.minLotSqft > 0 ? `LotSqftTotal:>=${f.minLotSqft}` : "",
-        f.minSurplusParking > 0 ? `surplus_parking_count:>=${f.minSurplusParking}` : "",
-        f.zoningPotential ? `is_density_ready:=true` : "",
-      ]),
+    controls: [C_FRONTAGE, C_LOT_SQFT, C_SURPLUS_PARKING, C_DENSITY],
     sortBy: "LotWidth",
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
       { type: "lotDims", header: "Lot", width: "w-24", align: "right" },
-      { type: "zoning", header: "Zoning", width: "w-20", align: "right" },
+      // Zoning is NOT shown inline: it's municipal open-data (not MLS), so it lives in a
+      // dedicated attributed surface (property-detail Zoning card + map overlay) with source
+      // + by-law + "not a legal survey" disclaimer — never blended into these MLS columns.
       { type: "density", header: "Surplus", width: "w-16", align: "center" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
-    mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Fewer", legendHigh: "More" },
+    mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Fewer", legendHigh: "More", label: "Surplus Parking", format: (v) => v.toFixed(1) },
     defaultMapMode: "heatmap",
   },
 };
