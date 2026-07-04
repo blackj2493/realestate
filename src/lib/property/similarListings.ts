@@ -209,8 +209,14 @@ export function scoreSold(s: SubjectAttrs, c: CandidateAttrs): number {
 
 const KEY_TO_LABEL = new Map(PROPERTY_TYPE_OPTIONS.map((o) => [o.key, o.label]));
 
-/** Human-readable reason a candidate is comparable (drives the per-card chip). */
-export function buildWhyLabel(s: SubjectAttrs, c: CandidateAttrs, kind: SimilarKind): string {
+/** Human-readable reason a candidate is comparable (drives the per-card chip).
+ *  `opts.leased` swaps the closed-deal verb from "sold" to "leased" on rental comps. */
+export function buildWhyLabel(
+  s: SubjectAttrs,
+  c: CandidateAttrs,
+  kind: SimilarKind,
+  opts: { leased?: boolean } = {},
+): string {
   const region =
     regionScore(s.cityRegion, c.cityRegion) === 1
       ? "Same neighbourhood"
@@ -222,18 +228,20 @@ export function buildWhyLabel(s: SubjectAttrs, c: CandidateAttrs, kind: SimilarK
   const form = [c.beds > 0 ? `${c.beds}bd` : "", typeLabel].filter(Boolean).join(" ");
   let label = [region, form].filter(Boolean).join(" · ");
   if (kind === "sold" && c.daysAgo != null && c.daysAgo >= 0) {
-    label += ` · sold ${Math.round(c.daysAgo)}d ago`;
+    label += ` · ${opts.leased ? "leased" : "sold"} ${Math.round(c.daysAgo)}d ago`;
   }
   return label;
 }
 
-/** Score + sort + cap candidates, tagging each with its why-label and exact flags. */
+/** Score + sort + cap candidates, tagging each with its why-label and exact flags.
+ *  `whyOpts` is forwarded to buildWhyLabel (e.g. { leased: true } for rental comps). */
 export function rankSimilar<T>(
   subject: SubjectAttrs,
   items: T[],
   toAttrs: (t: T) => CandidateAttrs,
   kind: SimilarKind,
-  limit = 8
+  limit = 8,
+  whyOpts: { leased?: boolean } = {}
 ): RankedSimilar<T>[] {
   const scorer = kind === "sale" ? scoreForSale : scoreSold;
   return items
@@ -242,7 +250,7 @@ export function rankSimilar<T>(
       return {
         item,
         score: scorer(subject, c),
-        why: buildWhyLabel(subject, c, kind),
+        why: buildWhyLabel(subject, c, kind, whyOpts),
         regionExact: regionScore(subject.cityRegion, c.cityRegion) === 1,
         subtypeExact: subtypeScore(subject.subType, c.subType) === 1,
       };
@@ -285,12 +293,30 @@ export function buildForSaleSimilarFilter(s: SubjectAttrs): string {
   return clauses.join(" && ");
 }
 
-/** Wide-net Sold filter: sold + price floor + window + city floor + family wall.
- *  `nowMs` is injected (not Date.now()) so the output is deterministic for tests. */
-export function buildSoldSimilarFilter(s: SubjectAttrs, windowDays: number, nowMs: number): string {
+/** Wide-net For-Lease filter: active rentals + city floor + family wall. The lease
+ *  twin of buildForSaleSimilarFilter — on a rental listing, comparable RENTALS (not
+ *  homes for sale) are the meaningful comp set. (Subject excluded in JS.) */
+export function buildForLeaseSimilarFilter(s: SubjectAttrs): string {
+  const clauses: string[] = ["TransactionType:=`For Lease`"];
+  if (s.city) clauses.push(`City:=${bq(s.city)}`);
+  const fam = familyClause(s.subType);
+  if (fam) clauses.push(fam);
+  return clauses.join(" && ");
+}
+
+/** Wide-net closed-comp filter: sold (or leased) + price floor + window + city floor +
+ *  family wall. `dealType` selects the closed lens — "leased" pulls rental comps, whose
+ *  ClosePrice is the achieved monthly rent. `nowMs` is injected (not Date.now()) so the
+ *  output is deterministic for tests. */
+export function buildSoldSimilarFilter(
+  s: SubjectAttrs,
+  windowDays: number,
+  nowMs: number,
+  dealType: "sold" | "leased" = "sold",
+): string {
   const cutoff = Math.floor(nowMs - windowDays * DAY_MS);
   const clauses: string[] = [
-    "DealType:=sold",
+    `DealType:=${dealType}`,
     "ClosePrice:>=1",
     `PurchaseContractDate:>=${cutoff}`,
     `PurchaseContractDate:<=${nowMs}`,

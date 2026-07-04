@@ -17,8 +17,9 @@ function fmtSoldDate(iso: string | null): string {
     : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** A single recently-sold comp. `locked` (anonymous) blurs the VOW numbers. */
-export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?: boolean }) {
+/** A single recently-sold (or leased) comp. `locked` (anonymous) blurs the VOW numbers. */
+export function SoldCompCard({ card, locked, mode = "sale" }: { card: SimilarSoldCard; locked?: boolean; mode?: "sale" | "lease" }) {
+  const isLease = mode === "lease";
   if (locked) {
     return (
       <Link
@@ -28,7 +29,7 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
         <div className="relative aspect-[4/3] bg-muted/60">
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
             <Lock className="h-5 w-5" />
-            <span className="text-xs">Sign in for sold price</span>
+            <span className="text-xs">Sign in for {isLease ? "leased price" : "sold price"}</span>
           </div>
         </div>
         <div className="space-y-1 p-3">
@@ -60,13 +61,14 @@ export function SoldCompCard({ card, locked }: { card: SimilarSoldCard; locked?:
           sizes="260px"
         />
         <span className="absolute left-2 top-2 rounded bg-rose-500/90 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-white">
-          SOLD{card.soldDate ? ` ${fmtSoldDate(card.soldDate)}` : ""}
+          {isLease ? "LEASED" : "SOLD"}{card.soldDate ? ` ${fmtSoldDate(card.soldDate)}` : ""}
         </span>
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
             {formatPrice(card.closePrice)}
+            {isLease && <span className="text-xs font-normal text-muted-foreground">/mo</span>}
           </span>
           {card.pctOfAsk != null && (
             <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">

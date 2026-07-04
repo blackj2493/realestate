@@ -16,7 +16,8 @@ import type { SimilarForSaleCard } from "@/app/api/properties/[id]/similar/route
  * ROSE/EMERALD (closed). Badge → price → address → beds/baths → delta chips →
  * brokerage → "why" label, in the same order and sizes as the sold card.
  */
-export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
+export function ForSaleCompCard({ card, mode = "sale" }: { card: SimilarForSaleCard; mode?: "sale" | "lease" }) {
+  const isLease = mode === "lease";
   const dom = card.daysOnMarket;
   const isNew = dom != null && dom <= 7;
   // "4+2" when there are below-grade beds, else "4" — matches the subject detail page.
@@ -40,13 +41,14 @@ export function ForSaleCompCard({ card }: { card: SimilarForSaleCard }) {
           sizes="260px"
         />
         <span className="absolute left-2 top-2 rounded bg-cyan-500/90 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-white">
-          {isNew ? "NEW" : "FOR SALE"}
+          {isNew ? "NEW" : isLease ? "FOR RENT" : "FOR SALE"}
         </span>
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-lg font-bold text-cyan-600 dark:text-cyan-400">
             {formatPrice(card.price)}
+            {isLease && <span className="text-xs font-normal text-muted-foreground">/mo</span>}
           </span>
           {dom != null && (
             <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">

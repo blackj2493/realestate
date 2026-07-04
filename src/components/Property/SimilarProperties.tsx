@@ -12,6 +12,7 @@ import type {
 import type { MatchTier } from "@/lib/property/similarListings";
 
 interface SimilarResponse {
+  mode?: "sale" | "lease";
   forSale: SimilarForSaleCard[];
   sold: SimilarSoldCard[];
   soldLocked: boolean;
@@ -32,6 +33,8 @@ interface Props {
   baths: number;
   listPrice: number;
   area: number;
+  /** Rental subject → comp lists pull For-Lease + recently-leased instead of sale comps. */
+  isLease?: boolean;
 }
 
 const TIER_BADGE: Record<MatchTier, { label: string; cls: string } | null> = {
@@ -70,7 +73,7 @@ function Row({ title, children, badge, action }: {
 }
 
 export default function SimilarProperties(props: Props) {
-  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area } = props;
+  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area, isLease } = props;
   const [data, setData] = useState<SimilarResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -88,6 +91,8 @@ export default function SimilarProperties(props: Props) {
       baths: String(baths),
       listPrice: String(listPrice),
       area: String(area),
+      // Rental subject → route pulls For-Lease + leased comps instead of sale comps.
+      ...(isLease ? { lease: "1" } : {}),
     });
     setLoading(true);
     fetch(`/api/properties/${subjectId}/similar?${qs.toString()}`)
@@ -104,7 +109,7 @@ export default function SimilarProperties(props: Props) {
     return () => {
       alive = false;
     };
-  }, [subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area]);
+  }, [subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area, isLease]);
 
   if (loading) {
     return (
@@ -121,11 +126,17 @@ export default function SimilarProperties(props: Props) {
 
   if (!data) return null;
 
+  // Trust the server's resolved mode; fall back to the prop for a stale/partial payload.
+  const lease = (data.mode ?? (isLease ? "lease" : "sale")) === "lease";
   const areaName = data.area.cityRegion || data.area.city || "this area";
   const cityName = data.area.city;
   const hasSold = data.sold.length > 0 || (data.soldLocked && data.soldCount > 0);
   const hasForSale = data.forSale.length > 0;
   if (!hasForSale && !hasSold) return null;
+
+  const activeTitle = lease ? `For Rent in ${areaName}` : `For Sale in ${areaName}`;
+  const closedTitle = lease ? `Recently Leased in ${areaName}` : `Recently Sold in ${areaName}`;
+  const closedVerb = lease ? "leased" : "sold";
 
   const seeAll = cityName ? (
     <Link href={`/properties?city=${encodeURIComponent(cityName)}`} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-300">
@@ -137,25 +148,27 @@ export default function SimilarProperties(props: Props) {
     <section className="mt-8 border-t border-border pt-6">
       <h2 className="mb-4 text-lg font-bold text-foreground">Comparable Properties</h2>
 
-      {/* For Sale */}
+      {/* Active — For Sale, or For Rent on a rental subject */}
       {hasForSale ? (
-        <Row title={`For Sale in ${areaName}`} badge={data.matchQuality.forSale} action={seeAll}>
+        <Row title={activeTitle} badge={data.matchQuality.forSale} action={seeAll}>
           {data.forSale.map((c) => (
-            <ForSaleCompCard key={c.id} card={c} />
+            <ForSaleCompCard key={c.id} card={c} mode={lease ? "lease" : "sale"} />
           ))}
         </Row>
       ) : (
-        <p className="mb-6 text-sm text-muted-foreground">No comparable active listings in {areaName} right now.</p>
+        <p className="mb-6 text-sm text-muted-foreground">
+          No comparable {lease ? "rentals" : "active listings"} in {areaName} right now.
+        </p>
       )}
 
-      {/* Recently Sold */}
+      {/* Closed — Recently Sold, or Recently Leased on a rental subject */}
       {hasSold && (
         <Row
-          title={`Recently Sold in ${areaName}`}
+          title={closedTitle}
           badge={data.soldLocked ? "none" : data.matchQuality.sold}
           action={
             data.soldLocked ? (
-              <span className="text-xs text-muted-foreground">{data.soldCount} sold · sign in to view</span>
+              <span className="text-xs text-muted-foreground">{data.soldCount} {closedVerb} · sign in to view</span>
             ) : (
               seeAll
             )
@@ -166,10 +179,11 @@ export default function SimilarProperties(props: Props) {
                 <SoldCompCard
                   key={i}
                   locked
+                  mode={lease ? "lease" : "sale"}
                   card={{} as SimilarSoldCard}
                 />
               ))
-            : data.sold.map((c) => <SoldCompCard key={c.id} card={c} />)}
+            : data.sold.map((c) => <SoldCompCard key={c.id} card={c} mode={lease ? "lease" : "sale"} />)}
         </Row>
       )}
 

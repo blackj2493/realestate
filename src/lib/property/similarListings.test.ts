@@ -250,9 +250,14 @@ describe("buildWhyLabel", () => {
     const label = buildWhyLabel(SUBJECT, cand({ cityRegion: "Bram West", beds: 4, daysAgo: 22 }), "sold");
     expect(label).toBe("Nearby in Brampton · 4bd Detached · sold 22d ago");
   });
+
+  it("swaps the closed-deal verb to 'leased' for rental comps", () => {
+    const label = buildWhyLabel(SUBJECT, cand({ cityRegion: "Bram West", beds: 4, daysAgo: 22 }), "sold", { leased: true });
+    expect(label).toBe("Nearby in Brampton · 4bd Detached · leased 22d ago");
+  });
 });
 
-import { buildForSaleSimilarFilter, buildSoldSimilarFilter } from "./similarListings";
+import { buildForSaleSimilarFilter, buildForLeaseSimilarFilter, buildSoldSimilarFilter } from "./similarListings";
 
 describe("buildForSaleSimilarFilter", () => {
   it("scopes to For Sale + city + the subject's family only (no cross-family)", () => {
@@ -261,6 +266,17 @@ describe("buildForSaleSimilarFilter", () => {
     expect(f).toContain("City:=`Brampton`");
     expect(f).toContain("PropertySubType:=`Detached`");
     expect(f).toContain("PropertySubType:=`Condo Townhouse`");
+    expect(f).not.toContain("Condo Apartment"); // family wall
+  });
+});
+
+describe("buildForLeaseSimilarFilter", () => {
+  it("scopes to For Lease + city + the subject's family only (no cross-family)", () => {
+    const f = buildForLeaseSimilarFilter(SUBJECT);
+    expect(f).toContain("TransactionType:=`For Lease`");
+    expect(f).not.toContain("For Sale");
+    expect(f).toContain("City:=`Brampton`");
+    expect(f).toContain("PropertySubType:=`Detached`");
     expect(f).not.toContain("Condo Apartment"); // family wall
   });
 });
@@ -275,6 +291,14 @@ describe("buildSoldSimilarFilter", () => {
     expect(f).toContain(`PurchaseContractDate:>=${NOW - 180 * 86_400_000}`);
     expect(f).toContain("PropertySubType:=`Detached`");
     expect(f).not.toContain("Condo Apartment");
+  });
+
+  it("selects the leased lens when dealType is 'leased' (rental comps)", () => {
+    const NOW = 1_700_000_000_000;
+    const f = buildSoldSimilarFilter(SUBJECT, 180, NOW, "leased");
+    expect(f).toContain("DealType:=leased");
+    expect(f).not.toContain("DealType:=sold");
+    expect(f).toContain("ClosePrice:>=1");
   });
 });
 

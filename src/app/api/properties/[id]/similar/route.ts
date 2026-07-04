@@ -19,6 +19,7 @@ import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
 import { mapSoldDoc } from "@/app/api/market/activity/sold/soldMapper";
 import {
   buildForSaleSimilarFilter,
+  buildForLeaseSimilarFilter,
   buildSoldSimilarFilter,
   rankSimilar,
   classifyMatchQuality,
@@ -232,7 +233,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     area: subject.area,
   };
 
-  // ── For Sale (IDX, ungated) ──
+  // On a rental subject (?lease=1) the meaningful comps are other RENTALS, not homes
+  // for sale: the active list pulls For-Lease listings and the closed list pulls leased
+  // deals (ClosePrice = achieved monthly rent), so both stay in the same rent scale as
+  // the subject's ListPrice. The subject listing itself passes the flag from the page.
+  const isLease = sp.get("lease") === "1";
+
+  // ── Active listings (IDX, ungated) — For Sale, or For Lease on a rental subject ──
   let forSale: SimilarForSaleCard[] = [];
   let forSaleTier: MatchTier = "none";
   try {
@@ -242,7 +249,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .search({
         q: "*",
         query_by: "City",
-        filter_by: buildForSaleSimilarFilter(subject),
+        filter_by: isLease
+          ? buildForLeaseSimilarFilter(subject)
+          : buildForSaleSimilarFilter(subject),
         per_page: CANDIDATE_FETCH,
         page: 1,
         include_fields: FORSALE_FIELDS,
@@ -257,7 +266,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error("[properties/similar] forSale", e instanceof Error ? e.message : e);
   }
 
-  // ── Sold (VOW, gated) ──
+  // ── Closed comps (VOW, gated) — Recently Sold, or Recently Leased on a rental subject ──
   const { isConsumer } = await getConsumer();
   let sold: SimilarSoldCard[] = [];
   let soldTier: MatchTier = "none";
@@ -270,7 +279,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .search({
         q: "*",
         query_by: "UnparsedAddress",
-        filter_by: buildSoldSimilarFilter(subject, SOLD_WINDOW_DAYS, nowMs),
+        filter_by: buildSoldSimilarFilter(subject, SOLD_WINDOW_DAYS, nowMs, isLease ? "leased" : "sold"),
         sort_by: "PurchaseContractDate:desc",
         per_page: CANDIDATE_FETCH,
         page: 1,
@@ -280,7 +289,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const docs = (res.hits ?? [])
         .map((h) => h.document as Doc)
         .filter((d) => String(d.id) !== id);
-      const ranked = rankSimilar<Doc>(subject, docs, (d) => soldAttrs(d, nowMs), "sold", RESULT_LIMIT);
+      const ranked = rankSimilar<Doc>(subject, docs, (d) => soldAttrs(d, nowMs), "sold", RESULT_LIMIT, { leased: isLease });
       sold = ranked.map((r) => toSoldCard(r, subjectDelta));
       soldTier = classifyMatchQuality(ranked);
     }
@@ -289,6 +298,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   return NextResponse.json({
+    mode: isLease ? "lease" : "sale",
     forSale,
     sold,
     soldLocked: !isConsumer,

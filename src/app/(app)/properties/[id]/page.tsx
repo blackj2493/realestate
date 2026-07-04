@@ -25,6 +25,8 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
+import RentalGlance from "@/components/Property/RentalGlance";
+import { buildRentalGlance } from "@/lib/property/rentalSnapshot";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import RoomMap from "@/components/Property/RoomMap";
@@ -418,6 +420,9 @@ export default async function PropertyPage({
   // 516% cap rate). Detect the lease and show a Rental Snapshot instead. Same criterion
   // datasheet.ts uses to gate the Lease Terms group (§6.3(f)).
   const isLease = /lease/i.test(p.TransactionType ?? "");
+  // Rental-at-a-glance facts (pets/furnished/laundry/availability/parking) — public IDX
+  // fields, so the gated payload carries them for anon users too. Only built for leases.
+  const rentalGlance = isLease ? buildRentalGlance(view.full_payload) : null;
   const jsonLd = buildJsonLd(id, detail);
 
   const badges = detectPropertyBadges({
@@ -601,7 +606,7 @@ export default async function PropertyPage({
                     Sold after {dom} {dom === 1 ? "day" : "days"} on market
                   </span>
                 )}
-                {isActiveListing && (
+                {isActiveListing && !isLease && (
                   <DealScoreBadge
                     score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
                     grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
@@ -657,8 +662,13 @@ export default async function PropertyPage({
               <SpecCell icon={<Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />} value={basementLabel(p)} label="Basement" />
             </div>
 
-            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe) */}
-            {isActiveListing && <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />}
+            {/* Rental at a glance — the facts a tenant scans for first, on lease listings.
+                Takes The Read's slot here since that verdict is buyer/investor-oriented. */}
+            {isLease && rentalGlance && <RentalGlance glance={rentalGlance} />}
+
+            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe). Buyer/
+                investor framing (Deal Score, AVM, reno upside), so it's gated off on leases. */}
+            {isActiveListing && !isLease && <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />}
 
             {/* Things to Know — interpretive diligence flags surfaced beside the verdict (loss-aversion) */}
             <ThingsToKnowCard flags={diligenceFlags} />
@@ -733,13 +743,16 @@ export default async function PropertyPage({
                 price={price}
                 thumb={detail.media_urls[0]}
                 statusKind={status.kind}
+                isLease={isLease}
               />
-              <SocialProofBar listingId={id} />
+              <SocialProofBar listingId={id} isLease={isLease} />
 
-              {/* Asset Summary */}
+              {/* Asset / Rental Summary. On leases the tenant pays neither the property
+                  taxes nor the condo fee, so those rows drop; "True DOM" reframes as how
+                  long the unit has been available. */}
               <div className="rounded-lg border border-border bg-card p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground">
-                  Asset Summary
+                  {isLease ? "Rental Summary" : "Asset Summary"}
                 </h3>
                 <div className="space-y-2 text-xs">
                   {soldPrice !== null && (
@@ -754,16 +767,20 @@ export default async function PropertyPage({
                     value={formatPrice(price)}
                     valueClass={isActiveListing ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}
                   />
+                  {!isLease && (
+                    <>
+                      <SummaryRow
+                        label="Annual Taxes"
+                        value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
+                      />
+                      <SummaryRow
+                        label="Monthly Fees"
+                        value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
+                      />
+                    </>
+                  )}
                   <SummaryRow
-                    label="Annual Taxes"
-                    value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
-                  />
-                  <SummaryRow
-                    label="Monthly Fees"
-                    value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
-                  />
-                  <SummaryRow
-                    label="True DOM"
+                    label={isLease ? "Days Available" : "True DOM"}
                     value={`${trueDom} days`}
                     valueClass={trueDom > 45 ? "text-emerald-600 dark:text-emerald-400" : trueDom >= 14 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}
                   />
@@ -905,6 +922,7 @@ export default async function PropertyPage({
           baths={p.BathroomsTotalInteger ?? 0}
           listPrice={price}
           area={p.BuildingAreaTotal ?? 0}
+          isLease={isLease}
         />
         </div>
 
