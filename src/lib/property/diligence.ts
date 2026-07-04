@@ -15,6 +15,8 @@
  * passed in as `external`; they merge into the same sorted list.
  */
 
+import { isCommercialProperty } from "@/lib/filters/fundamentals";
+
 export type RawPayload = Record<string, unknown>;
 
 export interface DiligenceFlag {
@@ -76,6 +78,11 @@ function dedupe(values: string[]): string[] {
  */
 export function buildDiligenceFlags(p: RawPayload, external: DiligenceFlag[] = []): DiligenceFlag[] {
   const f: DiligenceFlag[] = [];
+  // Commercial-class listings get commercial framing: the dwelling-only flags
+  // (basement suite, infill density, sun orientation) are suppressed, dwelling
+  // wording ("older home", "furnace") switches to building/operating language,
+  // and a permitted-use prompt is added (commercial-gap follow-up).
+  const commercial = isCommercialProperty(str(p, "PropertyType"));
 
   // ── WARN — buyer-unfavorable / needs verification ──
   const easements = meaningful(list(p, "Disclosures"));
@@ -128,9 +135,11 @@ export function buildDiligenceFlags(p: RawPayload, external: DiligenceFlag[] = [
       id: "rented_equipment",
       kind: "warn",
       severity: 44,
-      title: `Equipment that transfers with the home: ${rented.join(" · ")}`,
+      title: `Equipment that transfers with the ${commercial ? "property" : "home"}: ${rented.join(" · ")}`,
       source: "TRREB disclosure",
-      ask: "Rentals (water heater, furnace, softener) add to monthly carry — confirm buyout costs.",
+      ask: commercial
+        ? "Rented or leased equipment adds to operating costs — confirm contracts and buyout terms."
+        : "Rentals (water heater, furnace, softener) add to monthly carry — confirm buyout costs.",
     });
 
   if (p.LocalImprovements === true) {
@@ -161,51 +170,72 @@ export function buildDiligenceFlags(p: RawPayload, external: DiligenceFlag[] = [
       id: "older_home",
       kind: "warn",
       severity: 34,
-      title: `Older home (${age} yrs)`,
+      title: `Older ${commercial ? "building" : "home"} (${age} yrs)`,
       source: "TRREB feed",
-      ask: "Budget for roof, furnace and electrical lifecycle — verify ages on site.",
+      ask: commercial
+        ? "Budget for roof, HVAC and electrical lifecycle — verify ages and maintenance records on site."
+        : "Budget for roof, furnace and electrical lifecycle — verify ages on site.",
     });
 
   // ── INFO — upside / neutral context ──
+  // Commercial: the permitted-use question is THE diligence item on a commercial
+  // acquisition — surface the listed use/zoning as the prompt anchor.
+  if (commercial) {
+    const use = str(p, "Zoning") ?? str(p, "PropertyUse");
+    if (use)
+      f.push({
+        id: "permitted_use",
+        kind: "info",
+        severity: 30,
+        title: `Listed use / zoning: ${use}`,
+        source: "TRREB feed",
+        ask: "Confirm your intended use is permitted under current zoning with the municipality before waiving conditions.",
+      });
+  }
+
+  // Dwelling-only signals (basement suite, infill density, sun orientation) are
+  // meaningless on a commercial asset — suppressed there.
   const kbg = num(p, "KitchensBelowGrade") ?? 0;
   const suiteStatus = str(p, "SuiteStatus");
-  if (suiteStatus === "EXISTING_SUITE")
-    f.push({
-      id: "suite",
-      kind: "info",
-      severity: 28,
-      title: "Existing second-unit / suite",
-      source: "Derived from feed",
-    });
-  else if (kbg > 0 || suiteStatus === "POTENTIAL_CANDIDATE")
-    f.push({
-      id: "suite",
-      kind: "info",
-      severity: 26,
-      title: "Basement-suite potential (kitchen below grade)",
-      source: "Derived from feed",
-      ask: "Confirm legal second-unit eligibility with the municipality.",
-    });
+  if (!commercial) {
+    if (suiteStatus === "EXISTING_SUITE")
+      f.push({
+        id: "suite",
+        kind: "info",
+        severity: 28,
+        title: "Existing second-unit / suite",
+        source: "Derived from feed",
+      });
+    else if (kbg > 0 || suiteStatus === "POTENTIAL_CANDIDATE")
+      f.push({
+        id: "suite",
+        kind: "info",
+        severity: 26,
+        title: "Basement-suite potential (kitchen below grade)",
+        source: "Derived from feed",
+        ask: "Confirm legal second-unit eligibility with the municipality.",
+      });
 
-  if (p.is_density_ready === true || p.multiplex_by_right === true)
-    f.push({
-      id: "density",
-      kind: "info",
-      severity: 25,
-      title: "Detached lot with surplus parking — possible infill / multiplex (verify zoning)",
-      source: "Derived from feed",
-    });
+    if (p.is_density_ready === true || p.multiplex_by_right === true)
+      f.push({
+        id: "density",
+        kind: "info",
+        severity: 25,
+        title: "Detached lot with surplus parking — possible infill / multiplex (verify zoning)",
+        source: "Derived from feed",
+      });
 
-  const dir = str(p, "DirectionFaces");
-  if (dir && /north/i.test(dir))
-    f.push({
-      id: "orientation",
-      kind: "info",
-      severity: 18,
-      title: `Front faces ${dir.toLowerCase()}`,
-      source: "Feed (DirectionFaces)",
-      ask: "A north-facing front means a south-exposed back yard, but front rooms see less direct sun.",
-    });
+    const dir = str(p, "DirectionFaces");
+    if (dir && /north/i.test(dir))
+      f.push({
+        id: "orientation",
+        kind: "info",
+        severity: 18,
+        title: `Front faces ${dir.toLowerCase()}`,
+        source: "Feed (DirectionFaces)",
+        ask: "A north-facing front means a south-exposed back yard, but front rooms see less direct sun.",
+      });
+  }
 
   return [...f, ...external].sort((a, b) =>
     a.kind === b.kind ? b.severity - a.severity : a.kind === "warn" ? -1 : 1,

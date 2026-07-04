@@ -46,3 +46,65 @@ describe("buildDiligenceFlags", () => {
     expect(buildDiligenceFlags(p)).toEqual(buildDiligenceFlags(p));
   });
 });
+
+// ── Commercial framing (commercial-gap follow-up) ──
+describe("buildDiligenceFlags — commercial", () => {
+  const COMMERCIAL = { PropertyType: "Commercial", PropertySubType: "Investment" };
+
+  it("suppresses the dwelling-only flags (suite, density, orientation)", () => {
+    const flags = buildDiligenceFlags({
+      ...COMMERCIAL,
+      KitchensBelowGrade: 1,
+      SuiteStatus: "EXISTING_SUITE",
+      is_density_ready: true,
+      DirectionFaces: "North",
+    });
+    const ids = flags.map((f) => f.id);
+    expect(ids).not.toContain("suite");
+    expect(ids).not.toContain("density");
+    expect(ids).not.toContain("orientation");
+  });
+
+  it("older buildings get building/HVAC wording, not home/furnace", () => {
+    const flag = buildDiligenceFlags({ ...COMMERCIAL, ApproximateAge: "51-99" }).find(
+      (f) => f.id === "older_home"
+    );
+    expect(flag?.title).toBe("Older building (51-99 yrs)");
+    expect(flag?.ask).toMatch(/HVAC/);
+    expect(flag?.ask).not.toMatch(/furnace/);
+  });
+
+  it("rented equipment says 'property' with operating-cost framing", () => {
+    const flag = buildDiligenceFlags({ ...COMMERCIAL, RentalItems: ["Compressor"] }).find(
+      (f) => f.id === "rented_equipment"
+    );
+    expect(flag?.title).toContain("transfers with the property");
+    expect(flag?.ask).toMatch(/operating costs/);
+  });
+
+  it("surfaces the permitted-use prompt from Zoning, falling back to PropertyUse", () => {
+    const fromZoning = buildDiligenceFlags({ ...COMMERCIAL, Zoning: "E1.0", PropertyUse: "Industrial Condo" });
+    expect(fromZoning.find((f) => f.id === "permitted_use")?.title).toBe("Listed use / zoning: E1.0");
+    const fromUse = buildDiligenceFlags({ ...COMMERCIAL, PropertyUse: "Industrial Condo" });
+    expect(fromUse.find((f) => f.id === "permitted_use")?.title).toBe(
+      "Listed use / zoning: Industrial Condo"
+    );
+    // No use data at all → no flag; and residential never gets it
+    expect(buildDiligenceFlags({ ...COMMERCIAL }).find((f) => f.id === "permitted_use")).toBeUndefined();
+    expect(
+      buildDiligenceFlags({ PropertyType: "Residential Freehold", Zoning: "R1" }).find(
+        (f) => f.id === "permitted_use"
+      )
+    ).toBeUndefined();
+  });
+
+  it("residential wording is unchanged (regression)", () => {
+    const flags = buildDiligenceFlags({
+      PropertyType: "Residential Freehold",
+      ApproximateAge: "51-99",
+      RentalItems: ["Hot Water Tank"],
+    });
+    expect(flags.find((f) => f.id === "older_home")?.title).toBe("Older home (51-99 yrs)");
+    expect(flags.find((f) => f.id === "rented_equipment")?.title).toContain("transfers with the home");
+  });
+});
