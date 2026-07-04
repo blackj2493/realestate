@@ -321,7 +321,8 @@ const APPLY_REQUIREMENTS: { key: string; label: string }[] = [
 ];
 
 export interface RentalGlance {
-  /** PetsAllowed — e.g. "Restricted", "Yes", "No". */
+  /** Pet policy — the structured PetsAllowed field when present, else inferred from the
+   *  listing description ("Yes" / "No" / "Negotiable"); null when neither says anything. */
   pets: string | null;
   /** Which part of the property is for lease — "Entire Property", "Basement", "Main", etc. */
   portion: string | null;
@@ -341,6 +342,47 @@ export interface RentalGlance {
   applyRequirements: string[];
 }
 
+/**
+ * Infer a pet policy from the listing's free-text description. Used ONLY as a fallback
+ * when the structured PetsAllowed field is empty — it's largely a condo field, so most
+ * freehold rentals leave it blank while stating the policy in the remarks ("No pets",
+ * "Pet friendly").
+ *
+ * Deterministic keyword classification (§4-safe — no LLM), and conservative by design:
+ * matches are word-bounded so "carpet" / "trumpet" never trigger it; only clear cases
+ * return a verdict; conflicting yes+no signals degrade to "Negotiable"; and silence
+ * returns null (we omit the tile rather than guess).
+ */
+export function petsFromRemarks(remarks: unknown): string | null {
+  if (typeof remarks !== "string" || remarks.trim().length === 0) return null;
+  const text = remarks.toLowerCase().replace(/\s+/g, " ");
+
+  // Negation guard: "pets allowed" / "pet friendly" immediately preceded by "no" or
+  // "not" is really the NEGATIVE case ("no pets allowed", "not pet friendly") — the most
+  // common phrasing. The positive + conditional patterns are lookbehind-guarded against
+  // it so the negative regex owns that intent instead of it reading as mixed/Negotiable.
+  const notNegated = "(?<!\\b(?:no|not)\\s)";
+  const negative =
+    /\bno\s+(pets?|dogs?|cats?)\b|\b(pets?|dogs?|cats?)\s+(are\s+)?not\s+(allowed|permitted|welcome)\b|\bnot\s+pet[-\s]?friendly\b|\bpet[-\s]?free\b/;
+  // Conditional first: "allowed with restrictions" must beat the plain "allowed" positive.
+  const conditional = new RegExp(
+    notNegated +
+      "(\\bpets?\\s+(negotiable|considered|restricted)\\b|\\bpets?\\s+(are\\s+)?(allowed|permitted|welcome)\\s+(with|upon)\\b|\\bpets?\\s+(on|upon)\\s+approval\\b|\\bpets?\\s+with\\s+restrictions?\\b|\\bsmall\\s+pets?\\b)"
+  );
+  const positive = new RegExp(
+    notNegated +
+      "(\\bpets?[-\\s]?friendly\\b|\\b(dogs?|cats?)[-\\s]?friendly\\b|\\b(pets?|dogs?|cats?)\\s+(are\\s+)?(welcome|allowed|permitted|ok|okay|fine)\\b|\\bwelcomes?\\s+pets?\\b)"
+  );
+
+  if (conditional.test(text)) return "Negotiable";
+  const neg = negative.test(text);
+  const pos = positive.test(text);
+  if (neg && pos) return "Negotiable"; // genuinely mixed (e.g. "cats ok, no dogs")
+  if (neg) return "No";
+  if (pos) return "Yes";
+  return null;
+}
+
 /** Build the at-a-glance rental facts from a raw listing payload. Pure & deterministic. */
 export function buildRentalGlance(p: RawPayload): RentalGlance {
   const laundry =
@@ -348,7 +390,7 @@ export function buildRentalGlance(p: RawPayload): RentalGlance {
   const availableRaw = gstr(p, "PossessionDate") ?? gstr(p, "PossessionType") ?? gstr(p, "PossessionDetails");
   const payment = [gstr(p, "PaymentFrequency"), gstr(p, "PaymentMethod")].filter(Boolean).join(" · ") || null;
   return {
-    pets: gjoined(p, "PetsAllowed"),
+    pets: gjoined(p, "PetsAllowed") ?? petsFromRemarks(p.PublicRemarks),
     portion: gjoined(p, "PortionPropertyLease"),
     furnished: gstr(p, "Furnished"),
     laundry,
