@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildRentalSnapshot, buildRentalGlance } from "./rentalSnapshot";
+import { buildRentalSnapshot, buildRentalGlance, petsFromRemarks } from "./rentalSnapshot";
 
 /**
  * The Rental Snapshot replaces the buy-and-hold Underwriting Sandbox on lease
@@ -115,6 +115,48 @@ describe("buildRentalGlance", () => {
     expect(buildRentalGlance({ PetsAllowed: ["Restricted"] }).pets).toBe("Restricted");
     expect(buildRentalGlance({ PetsAllowed: "Yes" }).pets).toBe("Yes");
     expect(buildRentalGlance({}).pets).toBeNull();
+  });
+
+  it("falls back to the description for pets when PetsAllowed is empty; structured wins", () => {
+    expect(buildRentalGlance({ PublicRemarks: "Bright unit. Pet friendly!" }).pets).toBe("Yes");
+    expect(buildRentalGlance({ PublicRemarks: "Sorry, no pets." }).pets).toBe("No");
+    // Structured field takes precedence over the remarks inference.
+    expect(buildRentalGlance({ PetsAllowed: ["Yes"], PublicRemarks: "no pets" }).pets).toBe("Yes");
+  });
+
+  describe("petsFromRemarks (description fallback)", () => {
+    it("classifies clear positive / negative / conditional phrasings", () => {
+      expect(petsFromRemarks("Pet friendly building")).toBe("Yes");
+      expect(petsFromRemarks("Pets welcome")).toBe("Yes");
+      expect(petsFromRemarks("Cats ok")).toBe("Yes");
+      expect(petsFromRemarks("No pets please")).toBe("No");
+      expect(petsFromRemarks("Pets are not allowed")).toBe("No");
+      expect(petsFromRemarks("Pet-free home")).toBe("No");
+      expect(petsFromRemarks("Pets negotiable")).toBe("Negotiable");
+      expect(petsFromRemarks("Pets allowed with restrictions")).toBe("Negotiable");
+      expect(petsFromRemarks("Small pets only")).toBe("Negotiable");
+      expect(petsFromRemarks("Pets on approval")).toBe("Negotiable");
+    });
+
+    it("reads negated 'allowed' / 'friendly' as No, not a mixed Negotiable", () => {
+      // "allowed" / "friendly" negated by a leading no/not must not read as positive.
+      expect(petsFromRemarks("No pets allowed")).toBe("No");
+      expect(petsFromRemarks("No smoking and no pets permitted")).toBe("No");
+      expect(petsFromRemarks("Not pet friendly")).toBe("No");
+      expect(petsFromRemarks("*Two Car Garage* No Smokers - No Pets Please")).toBe("No");
+    });
+
+    it("degrades genuinely conflicting yes+no signals to Negotiable", () => {
+      expect(petsFromRemarks("Cats ok, no dogs")).toBe("Negotiable");
+    });
+
+    it("does not trigger on 'pet' inside another word, or when pets aren't mentioned", () => {
+      expect(petsFromRemarks("New carpet and fresh paint throughout")).toBeNull();
+      expect(petsFromRemarks("Spacious 3-bedroom with parking")).toBeNull();
+      expect(petsFromRemarks("")).toBeNull();
+      expect(petsFromRemarks(null)).toBeNull();
+      expect(petsFromRemarks(undefined)).toBeNull();
+    });
   });
 
   it("surfaces which portion of the property is for lease (array-joined)", () => {
