@@ -484,14 +484,19 @@ export default async function PropertyPage({
   const rentalGlance = isLease && !isCommercial ? buildRentalGlance(view.full_payload) : null;
   const jsonLd = buildJsonLd(id, detail);
 
-  const badges = detectPropertyBadges({
-    hasSecondarySuitePotential: hasSuitePotential,
-    KitchensBelowGrade: p.KitchensBelowGrade,
-    PublicRemarks: p.PublicRemarks,
-    ListPrice: p.ListPrice,
-    OriginalListPrice: p.OriginalListPrice,
-    DaysOnMarket: dom,
-  });
+  // Suite-potential / school-zone / surplus-parking badges are dwelling-investor
+  // signals — an office isn't an "income suite" — so commercial shows none, matching
+  // the Quick Look drawer's gating.
+  const badges = isCommercial
+    ? []
+    : detectPropertyBadges({
+        hasSecondarySuitePotential: hasSuitePotential,
+        KitchensBelowGrade: p.KitchensBelowGrade,
+        PublicRemarks: p.PublicRemarks,
+        ListPrice: p.ListPrice,
+        OriginalListPrice: p.OriginalListPrice,
+        DaysOnMarket: dom,
+      });
 
   // Gated payload (defense-in-depth): anon view has sold price/date keys scrubbed,
   // so a future registry field can never surface them here. Identical for authed users.
