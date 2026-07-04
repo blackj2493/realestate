@@ -155,6 +155,9 @@ interface RawListing {
   zoning_desc?: string;
   zoning_source?: string;
   BuildingAreaTotal?: number;
+  // Unit for BuildingAreaTotal — "Square Feet", "Acres", "Square Metres". Area math
+  // ($/sqft) and the hero label must respect it; sqft may only be ASSUMED when absent.
+  BuildingAreaUnits?: string;
   LivingAreaRange?: string;
   ParkingTotal?: number;
   CoveredSpaces?: number;
@@ -437,6 +440,13 @@ export default async function PropertyPage({
   // before cityHref so the breadcrumb routes into the commercial hub tree (Phase 2).
   const isCommercial = isCommercialProperty(p.PropertyType);
   const cityHref = cityHubPath(p, isCommercial);
+  // BuildingAreaTotal in SQFT, or null when the feed quotes another unit (Acres,
+  // Square Metres — common on commercial/land). Everything that does per-sqft math
+  // (lease snapshots, comps area scoring) must consume THIS, never the raw field.
+  const areaSqftOrNull =
+    p.BuildingAreaTotal && (!p.BuildingAreaUnits || /feet|ft/i.test(p.BuildingAreaUnits))
+      ? p.BuildingAreaTotal
+      : null;
   const price = p.ListPrice || 0;
   // THE single price number — list-anchored Expected Sale where we can (most accurate),
   // AVM as the honest fallback. Replaces the old two-number display. (null for anon: the
@@ -696,10 +706,13 @@ export default async function PropertyPage({
                 None") for Sqft / Type / Zoning / Parking. */}
             {isCommercial ? (
               <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {/* Label honors BuildingAreaUnits — commercial/land area arrives in
+                    Square Feet, ACRES or Square Metres; a hardcoded "Sqft" made a
+                    16.41-acre Brampton parcel read as "16.41 Sqft" (43,000× off). */}
                 <SpecCell
                   icon={<Square className="h-5 w-5 text-purple-400" />}
                   value={p.BuildingAreaTotal ? p.BuildingAreaTotal.toLocaleString() : "N/A"}
-                  label="Sqft"
+                  label={buildingAreaUnitLabel(p.BuildingAreaUnits)}
                 />
                 <SpecCell
                   icon={<Building2 className="h-5 w-5 text-emerald-400" />}
@@ -889,11 +902,14 @@ export default async function PropertyPage({
               {isLease ? (
                 isCommercial ? (
                   /* Commercial lease — basis-aware economics ($/sqft/yr, TMI) instead of
-                     the residential rent-comp framing (commercial-gap Phase 1). */
+                     the residential rent-comp framing (commercial-gap Phase 1).
+                     areaSqftOrNull: the $/sqft math may only see a SQFT area — an
+                     acres-quoted BuildingAreaTotal (land leases) would inflate the
+                     rate ~43,560×, so non-sqft units pass null (rate omitted). */
                   <CommercialLeaseSnapshot
                     listPrice={soldPrice ?? price}
                     listPriceUnit={p.ListPriceUnit ?? null}
-                    buildingAreaTotal={p.BuildingAreaTotal ?? null}
+                    buildingAreaTotal={areaSqftOrNull}
                     leaseTerm={p.LeaseTerm ?? null}
                     rentIncludes={p.RentIncludes ?? null}
                     tmi={p.TMI ?? null}
@@ -905,7 +921,7 @@ export default async function PropertyPage({
                 <RentalSnapshot
                   monthlyRent={soldPrice ?? price}
                   leased={status.kind === "sold"}
-                  buildingAreaTotal={p.BuildingAreaTotal ?? null}
+                  buildingAreaTotal={areaSqftOrNull}
                   livingAreaRange={p.LivingAreaRange ?? null}
                   leaseTerm={p.LeaseTerm ?? null}
                   depositRequired={p.DepositRequired ?? null}
@@ -1041,7 +1057,7 @@ export default async function PropertyPage({
           garage={p.CoveredSpaces ?? null}
           baths={p.BathroomsTotalInteger ?? 0}
           listPrice={price}
-          area={p.BuildingAreaTotal ?? 0}
+          area={areaSqftOrNull ?? 0}
           isCommercial={isCommercial}
           // All lease subjects (residential rentals included) comp against For-Lease
           // actives + DealType=leased closings — sale comps under a rental compare a
@@ -1070,6 +1086,18 @@ export default async function PropertyPage({
       />
     </main>
   );
+}
+
+/**
+ * Hero label for BuildingAreaTotal. The feed quotes commercial/land area in
+ * "Square Feet", "Acres" or "Square Metres" (BuildingAreaUnits); default Sqft
+ * only when the unit field is absent.
+ */
+function buildingAreaUnitLabel(units?: string): string {
+  const u = (units ?? "").toLowerCase();
+  if (u.includes("acre")) return "Acres";
+  if (u.includes("metre") || u.includes("meter")) return "Sqm";
+  return "Sqft";
 }
 
 function SpecCell({ icon, value, label }: { icon: React.ReactNode; value: React.ReactNode; label: string }) {
