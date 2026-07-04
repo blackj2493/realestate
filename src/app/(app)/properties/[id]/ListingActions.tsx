@@ -21,6 +21,7 @@ export default function ListingActions({
   price,
   thumb,
   statusKind = "active",
+  isLease = false,
 }: {
   id: string;
   address?: string;
@@ -29,6 +30,8 @@ export default function ListingActions({
   thumb?: string;
   /** Drives the CTA set: sold/delisted drop Schedule Viewing; delisted promotes Watchlist. */
   statusKind?: "active" | "sold" | "delisted";
+  /** Lease listing → the CTA ladder drops the buyer-only "2nd opinion on price" rung. */
+  isLease?: boolean;
 }) {
   const selectedIds = useCommandCenterStore((s) => s.selectedIds);
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
@@ -44,7 +47,7 @@ export default function ListingActions({
     <div className="space-y-2 pt-2">
       {statusKind === "active" && (
         <>
-          <CtaLadder listingKey={id} />
+          <CtaLadder listingKey={id} isLease={isLease} />
           {/* Shared form: rendered (event-only) so every ladder rung opens it inline. */}
           <ScheduleViewingForm listingKey={id} address={address} price={price} renderTrigger={false} />
         </>

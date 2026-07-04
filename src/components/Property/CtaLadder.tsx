@@ -9,7 +9,7 @@ import { LEAD_INTENTS, type LeadIntent } from "./leadIntents";
  * so all paths feed one lead pipeline. The primary rung (book a viewing) is emphasized;
  * the lower-friction rungs sit below as ghost buttons.
  */
-export default function CtaLadder({ listingKey }: { listingKey: string }) {
+export default function CtaLadder({ listingKey, isLease = false }: { listingKey: string; isLease?: boolean }) {
   function open(intent: LeadIntent) {
     window.dispatchEvent(new CustomEvent("pp:open-viewing", { detail: { listingKey, intent } }));
   }
@@ -19,6 +19,10 @@ export default function CtaLadder({ listingKey }: { listingKey: string }) {
     question: HelpCircle,
     price_opinion: Scale,
   };
+
+  // "2nd opinion on price" is a buyer's question (is it fairly priced vs comparable
+  // SALES?) — not what a prospective tenant needs, so it drops on lease listings.
+  const lowerRungs: LeadIntent[] = isLease ? ["question"] : ["question", "price_opinion"];
 
   return (
     <div className="space-y-2">
@@ -34,7 +38,7 @@ export default function CtaLadder({ listingKey }: { listingKey: string }) {
       </button>
 
       {/* Lower-friction rungs */}
-      {(["question", "price_opinion"] as LeadIntent[]).map((id) => {
+      {lowerRungs.map((id) => {
         const def = LEAD_INTENTS[id];
         const Icon = ICONS[id];
         return (

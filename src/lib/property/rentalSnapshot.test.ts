@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildRentalSnapshot } from "./rentalSnapshot";
+import { buildRentalSnapshot, buildRentalGlance } from "./rentalSnapshot";
 
 /**
  * The Rental Snapshot replaces the buy-and-hold Underwriting Sandbox on lease
@@ -73,6 +73,110 @@ describe("buildRentalSnapshot", () => {
     expect(s.leaseTerm).toBeNull();
     expect(s.depositRequired).toBeNull();
     expect(s.rentIncludes).toEqual([]);
+  });
+
+  // ── tenant affordability guidelines ──
+
+  it("estimates move-in as first + last month (2× rent) and income at the 30% screen", () => {
+    const s = buildRentalSnapshot({ monthlyRent: 2700 });
+    expect(s.moveInEstimate).toBe(5400); // 2 × 2700
+    expect(s.incomeToQualify).toBe(108000); // 32400 / 0.30
+  });
+
+  it("zeroes the guidelines when rent is unknown (never fabricates a number)", () => {
+    const s = buildRentalSnapshot({ monthlyRent: Number.NaN });
+    expect(s.moveInEstimate).toBe(0);
+    expect(s.incomeToQualify).toBe(0);
+  });
+
+  it("lists core utilities NOT included as the tenant's extra cost", () => {
+    const s = buildRentalSnapshot({ monthlyRent: 2700, rentIncludes: ["Heat", "Water"] });
+    expect(s.utilitiesExtra).toEqual(["Hydro"]); // heat+water covered → hydro remains
+  });
+
+  it("treats 'Electricity' as covering Hydro", () => {
+    const s = buildRentalSnapshot({ monthlyRent: 2700, rentIncludes: ["Heat", "Water", "Electricity"] });
+    expect(s.utilitiesExtra).toEqual([]);
+  });
+
+  it("does not assert extra utilities when nothing is listed as included (no signal)", () => {
+    expect(buildRentalSnapshot({ monthlyRent: 2700 }).utilitiesExtra).toEqual([]);
+    expect(buildRentalSnapshot({ monthlyRent: 2700, rentIncludes: [] }).utilitiesExtra).toEqual([]);
+  });
+
+  it("treats an all-inclusive listing as no extra utilities", () => {
+    const s = buildRentalSnapshot({ monthlyRent: 2700, rentIncludes: ["All Inclusive"] });
+    expect(s.utilitiesExtra).toEqual([]);
+  });
+});
+
+describe("buildRentalGlance", () => {
+  it("surfaces pets from any lease (array-joined), independent of property type", () => {
+    expect(buildRentalGlance({ PetsAllowed: ["Restricted"] }).pets).toBe("Restricted");
+    expect(buildRentalGlance({ PetsAllowed: "Yes" }).pets).toBe("Yes");
+    expect(buildRentalGlance({}).pets).toBeNull();
+  });
+
+  it("surfaces which portion of the property is for lease (array-joined)", () => {
+    expect(buildRentalGlance({ PortionPropertyLease: ["Basement"] }).portion).toBe("Basement");
+    expect(buildRentalGlance({ PortionPropertyLease: ["Entire Property"] }).portion).toBe("Entire Property");
+    expect(buildRentalGlance({}).portion).toBeNull();
+  });
+
+  it("reads furnished, in-suite laundry, and parking", () => {
+    const g = buildRentalGlance({ Furnished: "Furnished", EnsuiteLaundryYN: true, ParkingTotal: 1 });
+    expect(g.furnished).toBe("Furnished");
+    expect(g.laundry).toBe("In-suite");
+    expect(g.parking).toBe(1);
+  });
+
+  it("falls back to LaundryFeatures when not ensuite, and CoveredSpaces for parking", () => {
+    const g = buildRentalGlance({ LaundryFeatures: ["Coin Operated"], CoveredSpaces: 2 });
+    expect(g.laundry).toBe("Coin Operated");
+    expect(g.parking).toBe(2);
+  });
+
+  it("combines payment frequency and method, else either alone, else null", () => {
+    expect(buildRentalGlance({ PaymentFrequency: "Monthly", PaymentMethod: "Cheque" }).payment).toBe("Monthly · Cheque");
+    expect(buildRentalGlance({ PaymentFrequency: "Monthly" }).payment).toBe("Monthly");
+    expect(buildRentalGlance({}).payment).toBeNull();
+  });
+
+  it("flags a private entrance only when strictly true", () => {
+    expect(buildRentalGlance({ PrivateEntranceYN: true }).privateEntrance).toBe(true);
+    expect(buildRentalGlance({ PrivateEntranceYN: false }).privateEntrance).toBe(false);
+    expect(buildRentalGlance({}).privateEntrance).toBe(false);
+  });
+
+  it("lists the tenant's application requirements from the YN flags", () => {
+    const g = buildRentalGlance({
+      RentalApplicationYN: true,
+      CreditCheckYN: true,
+      ReferencesRequiredYN: false,
+      EmploymentLetterYN: true,
+    });
+    expect(g.applyRequirements).toEqual(["Application", "Credit check", "Employment letter"]);
+    expect(buildRentalGlance({}).applyRequirements).toEqual([]);
+  });
+
+  it("formats an ISO possession date, else passes possession type/notes through", () => {
+    expect(buildRentalGlance({ PossessionDate: "2026-08-01" }).available).toBe("Aug 1, 2026");
+    expect(buildRentalGlance({ PossessionType: "Immediate" }).available).toBe("Immediate");
+    expect(buildRentalGlance({}).available).toBeNull();
+  });
+
+  it("returns all-empty on an empty payload (component renders nothing)", () => {
+    expect(buildRentalGlance({})).toEqual({
+      pets: null,
+      portion: null,
+      furnished: null,
+      laundry: null,
+      available: null,
+      parking: null,
+      payment: null,
+      privateEntrance: false,
+      applyRequirements: [],
+    });
   });
 });
 
