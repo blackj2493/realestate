@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { Plus } from "lucide-react";
 import {
   getConfig,
   saveConfig,
@@ -58,6 +59,9 @@ export default function DashboardClient() {
   });
   const [name, setName] = useState<string | undefined>(undefined);
   const [showConfig, setShowConfig] = useState(false);
+  // The first-run setup card stays open while the user builds their workspace (regions
+  // apply live as they're added). Opened on first run (no regions), collapsed via "Done".
+  const [pickerOpen, setPickerOpen] = useState(false);
   // The previous-visit cutoff for the action feed. Captured + re-stamped once on
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
@@ -65,10 +69,12 @@ export default function DashboardClient() {
   // The server page (page.tsx) already enforced an authenticated session, so we
   // just hydrate the localStorage-backed config/profile and enter.
   useEffect(() => {
-    setConfig(getConfig());
+    const cfg = getConfig();
+    setConfig(cfg);
     setName(getProfile()?.fullName);
     const previous = stampVisit();
     setSinceVisit(previous ?? Date.now() - SEVEN_DAYS_MS);
+    setPickerOpen(cfg.regions.length === 0); // first run → open the live setup card
     setReady(true);
   }, []);
 
@@ -76,6 +82,22 @@ export default function DashboardClient() {
     setConfig(c);
     saveConfig(c);
   };
+
+  // Auto-apply: add/remove a single region live so its dashboard sections appear/disappear
+  // instantly. Functional updates keep rapid clicks from racing on a stale `config`.
+  const addRegion = (area: string) =>
+    setConfig((prev) => {
+      if (!area || prev.regions.includes(area)) return prev;
+      const next = { ...prev, regions: [...prev.regions, area] };
+      saveConfig(next);
+      return next;
+    });
+  const removeRegion = (area: string) =>
+    setConfig((prev) => {
+      const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
+      saveConfig(next);
+      return next;
+    });
 
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
@@ -116,10 +138,25 @@ export default function DashboardClient() {
 
         <WatchlistSection />
 
-        {!hasRegions && (
+        {pickerOpen && (
           <FirstRunRegionPicker
-            onConfirm={(regions) => update({ ...config, regions })}
+            selected={config.regions}
+            onAdd={addRegion}
+            onRemove={removeRegion}
+            onDone={() => setPickerOpen(false)}
           />
+        )}
+
+        {/* Once collapsed, a slim way back into the live setup card to add more areas. */}
+        {!pickerOpen && hasRegions && (
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="terminal-font inline-flex min-h-[44px] items-center gap-1.5 border border-slate-700 bg-slate-900/40 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add areas
+          </button>
         )}
 
         {hasRegions && (

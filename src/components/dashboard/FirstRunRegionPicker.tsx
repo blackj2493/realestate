@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Plus, ArrowRight, MapPin } from "lucide-react";
+import { Check, Plus, ArrowRight, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LocationSearch from "@/components/CommandCenter/LocationSearch";
 
 /**
  * First-run market-area picker. Shown on the dashboard when the user has no saved
  * regions yet (a direct magic-link signup never went through /apply, so nothing
- * seeds config.regions). Lets them stage one or more markets — one-tap GTA quick
- * picks or a typeahead for anything else — then commit, populating the whole
- * dashboard in one step instead of leaving them on an empty "nothing yet" screen.
+ * seeds config.regions).
+ *
+ * Auto-apply: this is a CONTROLLED, live picker — every add/remove writes straight to
+ * config.regions (via onAdd/onRemove), so each area's scorecard + playlists appear in the
+ * dashboard the instant it's added, and vanish when removed. There is no stage-then-commit
+ * step (users were doing the work but not clicking the old "Enter your terminal" button, so
+ * the dashboard stayed empty — see PostHog). "Done" just collapses this setup card; the
+ * areas are already live.
  */
 const QUICK_PICKS = [
   "Toronto",
@@ -24,38 +28,40 @@ const QUICK_PICKS = [
 ];
 
 export default function FirstRunRegionPicker({
-  onConfirm,
+  selected,
+  onAdd,
+  onRemove,
+  onDone,
 }: {
-  onConfirm: (regions: string[]) => void;
+  /** Live regions from config.regions (controlled). */
+  selected: string[];
+  onAdd: (area: string) => void;
+  onRemove: (area: string) => void;
+  /** Collapse the setup card (areas are already applied). */
+  onDone: () => void;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
-
-  const add = (city: string) =>
-    setSelected((s) => (s.includes(city) ? s : [...s, city]));
-  const toggle = (city: string) =>
-    setSelected((s) => (s.includes(city) ? s.filter((c) => c !== city) : [...s, city]));
+  const has = selected.length > 0;
 
   return (
-    <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-12 text-center">
+    <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-8 text-center">
       <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-200">
         Set up your terminal
       </h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-        Add the cities or neighbourhoods you invest in to populate your investment
-        playlists, region scorecards, and market intelligence.
+        Add the cities or neighbourhoods you invest in — each one loads into your dashboard
+        below the moment you add it.
       </p>
 
-      {/* Typeahead for any city/neighbourhood. onPlace captures the label without
-          navigating or touching the Command Center store. */}
+      {/* Typeahead for any city/neighbourhood. onPlace adds it live. */}
       <div className="mx-auto mt-6 max-w-md text-left">
         <LocationSearch
           mode="inplace"
-          onPlace={add}
+          onPlace={onAdd}
           placeholder="Search a city or neighbourhood…"
         />
       </div>
 
-      {/* One-tap GTA quick picks. */}
+      {/* One-tap quick picks — toggle add/remove live. */}
       <div className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-2">
         {QUICK_PICKS.map((city) => {
           const on = selected.includes(city);
@@ -63,7 +69,7 @@ export default function FirstRunRegionPicker({
             <button
               key={city}
               type="button"
-              onClick={() => toggle(city)}
+              onClick={() => (on ? onRemove(city) : onAdd(city))}
               aria-pressed={on}
               className={cn(
                 "inline-flex min-h-[44px] items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium transition-colors",
@@ -79,21 +85,38 @@ export default function FirstRunRegionPicker({
         })}
       </div>
 
-      {/* Staged selection + commit. */}
-      {selected.length > 0 && (
-        <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-1.5 text-xs text-slate-400">
-          <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-          <span>{selected.join(" · ")}</span>
+      {/* Live selection as removable chips (each already loaded below). */}
+      {has && (
+        <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-2">
+          <MapPin className="h-4 w-4 shrink-0 text-cyan-400" />
+          {selected.map((area) => (
+            <span
+              key={area}
+              className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/40 bg-cyan-500/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-cyan-100"
+            >
+              {area}
+              <button
+                type="button"
+                onClick={() => onRemove(area)}
+                aria-label={`Remove ${area}`}
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-cyan-300/70 transition-colors hover:bg-cyan-500/25 hover:text-cyan-50"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
         </div>
       )}
+
+      {/* "Done" just collapses this card — the areas are already live in the dashboard. */}
       <button
         type="button"
-        disabled={selected.length === 0}
-        onClick={() => onConfirm(selected)}
+        disabled={!has}
+        onClick={onDone}
         className="terminal-font mt-6 inline-flex min-h-[44px] items-center gap-2 border border-cyan-500/50 bg-cyan-500/10 px-5 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors hover:bg-cyan-500/20 disabled:opacity-40"
       >
-        Enter your terminal
-        <ArrowRight className="h-4 w-4" />
+        {has ? `Done · ${selected.length} ${selected.length === 1 ? "area" : "areas"}` : "Add an area to begin"}
+        {has && <ArrowRight className="h-4 w-4" />}
       </button>
     </div>
   );
