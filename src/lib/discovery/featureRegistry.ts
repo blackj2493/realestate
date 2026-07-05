@@ -102,6 +102,13 @@ export interface FeatureDef {
   addedIn?: string;
   /** Counts toward the "tools explored" mastery meter. Default true. */
   mastery?: boolean;
+  /**
+   * Demo clip (silent, looping mp4 under /public/demos) shown as an expandable
+   * "Watch demo" player in the Feature Guide. Poster is the same path with .jpg.
+   * Clips are recorded by scripts/demos (real flows, VOW-safe); several features
+   * may share one clip (e.g. the listing-analysis stack).
+   */
+  demoVideo?: string;
 }
 
 /**
@@ -189,6 +196,7 @@ export const FEATURES: FeatureDef[] = [
     category: "Map tools",
     personas: ["smart"],
     anchor: '[data-tour="rail-commute"]',
+    demoVideo: "/demos/rail-commute.mp4",
   },
   {
     id: "rail-draw",
@@ -198,6 +206,7 @@ export const FEATURES: FeatureDef[] = [
     surfaces: ["terminal"],
     category: "Map tools",
     anchor: '[data-tour="rail-draw"]',
+    demoVideo: "/demos/rail-draw.mp4",
   },
   {
     id: "rail-color",
@@ -208,6 +217,7 @@ export const FEATURES: FeatureDef[] = [
     category: "Map tools",
     personas: ["cashflow", "builders"],
     anchor: '[data-tour="rail-color"]',
+    demoVideo: "/demos/rail-color.mp4",
   },
   {
     id: "rail-timeline",
@@ -229,6 +239,7 @@ export const FEATURES: FeatureDef[] = [
     category: "Map tools",
     anchor: '[data-tour="rail-compare"]',
     href: "/properties/compare",
+    demoVideo: "/demos/rail-compare.mp4",
   },
   {
     id: "rail-saved",
@@ -247,6 +258,7 @@ export const FEATURES: FeatureDef[] = [
     surfaces: ["terminal"],
     category: "Command Center",
     anchor: '[data-tour="terminal-map-modes"]',
+    demoVideo: "/demos/terminal-map-modes.mp4",
   },
   {
     id: "terminal-quicklook",
@@ -269,6 +281,7 @@ export const FEATURES: FeatureDef[] = [
     anchor: '[data-tour="listing-deal-score"]',
     glossaryKey: "dealScore",
     addedIn: DISCOVERY_VERSION,
+    demoVideo: "/demos/listing-unlocked.mp4",
   },
   {
     id: "listing-the-read",
@@ -278,6 +291,7 @@ export const FEATURES: FeatureDef[] = [
     surfaces: ["listing"],
     category: "Listing analysis",
     anchor: '[data-tour="listing-the-read"]',
+    demoVideo: "/demos/listing-unlocked.mp4",
   },
   {
     id: "listing-underwriting",
@@ -289,6 +303,7 @@ export const FEATURES: FeatureDef[] = [
     personas: ["cashflow"],
     anchor: '[data-tour="listing-underwriting"]',
     glossaryKey: "cashflow",
+    demoVideo: "/demos/listing-unlocked.mp4",
   },
   {
     id: "listing-room-map",
@@ -308,6 +323,7 @@ export const FEATURES: FeatureDef[] = [
     category: "Listing analysis",
     personas: ["flippers", "builders"],
     anchor: '[data-tour="listing-force-appreciation"]',
+    demoVideo: "/demos/listing-unlocked.mp4",
   },
   {
     id: "listing-condo-stability",

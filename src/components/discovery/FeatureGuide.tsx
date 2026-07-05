@@ -17,7 +17,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, X, Sparkles, Check, ExternalLink, Crosshair } from "lucide-react";
+import { Search, X, Sparkles, Check, ExternalLink, Crosshair, Play, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiscovery, type GuideTab } from "@/lib/discovery/useDiscovery";
 import {
@@ -51,6 +51,9 @@ export default function FeatureGuide() {
   const pathname = usePathname() || "/";
   const [persona, setPersona] = React.useState<PersonaType | undefined>(undefined);
   const [query, setQuery] = React.useState("");
+  // Feature id whose demo clip is expanded. The <video> mounts only while open,
+  // so closed rows cost zero bandwidth (poster/clip never fetched).
+  const [watchingId, setWatchingId] = React.useState<string | null>(null);
 
   // Read the user's persona (best-effort, client-only) whenever the guide opens.
   React.useEffect(() => {
@@ -149,7 +152,10 @@ export default function FeatureGuide() {
           <input
             autoFocus
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setWatchingId(null); // the row under the player is about to change
+            }}
             placeholder="Search features…"
             className="h-11 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
@@ -164,7 +170,10 @@ export default function FeatureGuide() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTab(t.id)}
+                onClick={() => {
+                  setTab(t.id);
+                  setWatchingId(null); // collapse the demo player across tab switches
+                }}
                 className={cn(
                   "relative px-3 py-2.5 text-xs font-medium transition-colors",
                   active ? "text-cyan-700 dark:text-cyan-200" : "text-muted-foreground hover:text-foreground"
@@ -194,11 +203,10 @@ export default function FeatureGuide() {
               const onThisPage = f.surfaces.includes(currentSurface);
               const isNew = newIds.has(f.id);
               const isUsed = used[f.id] !== undefined;
+              const watching = watchingId === f.id;
               return (
-                <div
-                  key={f.id}
-                  className="flex items-start gap-3 border-b border-border/60 px-4 py-3 last:border-b-0"
-                >
+                <div key={f.id} className="border-b border-border/60 px-4 py-3 last:border-b-0">
+                <div className="flex items-start gap-3">
                   <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center border border-border bg-muted/60 text-foreground">
                     <Icon className="h-4 w-4" />
                   </span>
@@ -221,6 +229,25 @@ export default function FeatureGuide() {
                     <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{f.category}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    {f.demoVideo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWatchingId(watching ? null : f.id);
+                          if (!watching) markSeen(f.id);
+                        }}
+                        aria-expanded={watching}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 border px-2.5 py-1.5 text-[11px] font-medium transition-colors",
+                          watching
+                            ? "border-cyan-600/50 bg-cyan-600/15 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-200"
+                            : "border-border text-foreground hover:border-cyan-500/50 hover:text-cyan-200"
+                        )}
+                      >
+                        {watching ? <ChevronUp className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        {watching ? "Hide demo" : "Watch demo"}
+                      </button>
+                    )}
                     {onThisPage ? (
                       <button
                         type="button"
@@ -250,6 +277,21 @@ export default function FeatureGuide() {
                       </button>
                     )}
                   </div>
+                </div>
+                {/* Expanded demo clip — mounted only while open, so collapsed rows
+                    never fetch the mp4/poster (Vercel-bandwidth-safe). Clips are
+                    recorded dark; keep the frame neutral in both themes. */}
+                {watching && f.demoVideo && (
+                  <video
+                    src={f.demoVideo}
+                    poster={f.demoVideo.replace(/\.mp4$/, ".jpg")}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="mt-3 w-full border border-border bg-black"
+                  />
+                )}
                 </div>
               );
             })

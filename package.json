@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "sync:daily": "tsx scripts/worker/dailySync.ts",
-    "sync:recompute": "tsx scripts/admin/refresh-property-estimates.ts --apply"
+    "sync:recompute": "tsx scripts/admin/refresh-property-estimates.ts --apply",
+    "demo:record": "tsx scripts/demos/record.ts",
+    "demo:fixture": "tsx scripts/demos/make-fixture.ts"
   },
   "dependencies": {
     "@deck.gl/aggregation-layers": "^9.3.2",

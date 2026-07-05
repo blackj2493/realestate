@@ -16,6 +16,7 @@ import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
+import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
@@ -411,7 +412,9 @@ export default async function PropertyPage({
   // client; the cards render blurred "Login Required" teasers (§4; §6.2(f)). The
   // has* flags (computed from the ungated detail) drive the teaser only where real
   // data exists, so we never tease an empty card.
-  const isAuthed = !!(await getCurrentUser());
+  // Synthetic PPDEMO fixtures render ungated (their "VOW" numbers are fabricated —
+  // see src/lib/demo/demoListing.ts); impossible outside DEMO_FIXTURES=1 dev runs.
+  const isAuthed = isDemoListingKey(id) || !!(await getCurrentUser());
   const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
   const hasValueAdd = hasValueAddData(detail.valueAdd);
   const hasDealScore = detail.dealScore.score !== null;

@@ -9,7 +9,7 @@
  * Sold/VOW data lives elsewhere and is never served here.
  */
 
-import { cache } from "react";
+import { cache as reactCache } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
@@ -51,6 +51,12 @@ import {
   type SoldAccuracy,
 } from "@/lib/property/listingStatus";
 import type { DiligenceFlag } from "@/lib/property/diligence";
+
+// react.cache is a Server-Components API: present under the Next runtime, undefined
+// when a plain-node script (tsx) imports this module (e.g. scripts/demos/make-fixture.ts).
+// Fall back to identity there — scripts don't need request-level memoization.
+const cache: typeof reactCache =
+  typeof reactCache === "function" ? reactCache : (((fn: unknown) => fn) as typeof reactCache);
 
 /** One prior sold campaign for this physical property (from property_sale_history). */
 export interface SaleEvent {

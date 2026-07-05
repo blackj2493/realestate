@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { getListingDetail, type ListingDetail } from "./getListingDetail";
 import { listingCacheTag } from "./listingCacheTag";
+import { isDemoListingKey, loadDemoListingDetail } from "@/lib/demo/demoListing";
 
 /**
  * Cross-request cache of the (VOW-UNGATED) listing detail, keyed + tagged by
@@ -24,6 +25,9 @@ import { listingCacheTag } from "./listingCacheTag";
  * out the 24h window.
  */
 export function getListingDetailCached(listingKey: string): Promise<ListingDetail | null> {
+  // Synthetic demo listings (clip recording, dev-only — see demoListing.ts)
+  // short-circuit to their fixture: no DB, no cache, impossible on Vercel.
+  if (isDemoListingKey(listingKey)) return loadDemoListingDetail(listingKey);
   return unstable_cache(() => getListingDetail(listingKey), ["listing-detail", listingKey], {
     tags: [listingCacheTag(listingKey)],
     revalidate: 3600,
