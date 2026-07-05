@@ -16,6 +16,11 @@ import LocationSearch from "@/components/CommandCenter/LocationSearch";
  * the dashboard stayed empty — see PostHog). "Done" just collapses this setup card; the
  * areas are already live.
  */
+// One-tap markets. Every entry must map to real inventory via areaFilter (see
+// CITY_GROUPS in @/lib/dashboard/area). "Ottawa" was removed: TRREB files its ~1,200
+// Ottawa listings under fragmented area names ("Ottawa Centre", "Orleans - …") that
+// don't roll up to a single "Ottawa" City value, so a bare "Ottawa" quick-pick loaded an
+// empty dashboard. Ottawa areas remain fully addable via the search box above.
 const QUICK_PICKS = [
   "Toronto",
   "Mississauga",
@@ -24,7 +29,6 @@ const QUICK_PICKS = [
   "Markham",
   "Oakville",
   "Hamilton",
-  "Ottawa",
 ];
 
 export default function FirstRunRegionPicker({
