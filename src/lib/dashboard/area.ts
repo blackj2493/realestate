@@ -40,14 +40,41 @@ export type Area =
     };
 
 /**
+ * District-split parent cities. TRREB stores Toronto as ~36 district codes
+ * ("Toronto C01" … "Toronto W10") and London as directional names ("London South"),
+ * so an exact City:=`Toronto` match hits almost nothing (1 stray listing) and its
+ * dashboard section renders empty. A region set to the PARENT name expands to the
+ * whole district set below (ranges verified against the live City facet 2026-07-04).
+ * Single-value cities (Mississauga, Brampton, …) aren't listed → no expansion. The
+ * city-hub tree resolves the same groups DYNAMICALLY (citiesForHubSlug, async); this
+ * is the synchronous counterpart the dashboard's sync filter builder needs.
+ */
+function torontoDistricts(): string[] {
+  const out = ["Toronto"];
+  for (const [p, n] of [["C", 15], ["E", 11], ["W", 10]] as const)
+    for (let i = 1; i <= n; i++) out.push(`Toronto ${p}${String(i).padStart(2, "0")}`);
+  return out;
+}
+const CITY_GROUPS: Record<string, string[]> = {
+  Toronto: torontoDistricts(),
+  London: ["London", "London North", "London South", "London East", "London West"],
+};
+
+/**
  * Typesense filter fragment to AND-join into rawFilterBy. Backtick-quoted
  * string values so names with spaces / hyphens parse safely; backticks inside
  * the value are stripped (defensive, no legitimate City/CityRegion/schoolKey
- * contains one).
+ * contains one). District-split parents (Toronto/London) expand to their whole
+ * City-group so the dashboard scopes the full city, not a single stray listing.
  */
 export function areaFilter(area: Area): string {
   if (area.kind === "region") {
     const safe = area.name.replace(/`/g, "");
+    const group = CITY_GROUPS[safe];
+    if (group) {
+      const cityOrs = group.map((c) => `City:=\`${c}\``).join(" || ");
+      return `(${cityOrs} || CityRegion:=\`${safe}\`)`;
+    }
     return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
   }
   if (area.kind === "school") {

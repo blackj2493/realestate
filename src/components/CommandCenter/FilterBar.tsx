@@ -4,7 +4,7 @@ import React from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
-import { CORE_FILTERS, MORE_FILTERS, FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
+import { FILTERS_BY_KEY, makePriceDef, coreFiltersForClass, moreFiltersForClass } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive, typeOptionsForClass, priceConfig } from "@/lib/filters/fundamentals";
 import { PERSONA_CONFIG, INVESTOR_CONTROLS, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
@@ -117,12 +117,22 @@ export default function FilterBar() {
     },
   };
 
+  // Class-scoped filter sets: commercial hides the residential-only fields (beds/baths,
+  // basement, kitchens, suite, exposure) from every surface — bar, drawer, mobile sheet.
+  // Zero RAM: these are all already-indexed fields; we're just choosing which to show
+  // per class (and terminalQuery drops the hidden ones from the query to match).
+  const coreFilters = coreFiltersForClass(propertyClass);
+  const moreFilters = moreFiltersForClass(propertyClass);
+
   const addedDefs = addedFilterKeys
     .map((k) => FILTERS_BY_KEY[k])
-    .filter((f): f is FilterDef => Boolean(f));
+    .filter((f): f is FilterDef => Boolean(f))
+    // Drop residential-only added chips in commercial mode (they'd be inert — the query
+    // excludes them — so showing them would just mislead).
+    .filter((f) => moreFilters.some((m) => m.key === f.key));
 
   const universalActive =
-    CORE_FILTERS.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)) ||
+    coreFilters.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)) ||
     addedDefs.some((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue));
   const investorActive = anyControlActive(INVESTOR_CONTROLS, filters);
   const lensActive = lenses.some((l) => l.active);
@@ -147,7 +157,7 @@ export default function FilterBar() {
   // Desktop: the deep field library + investor signals live in a right-side drawer
   // behind a single count-badged button, instead of overflowing the bar.
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const coreItems = CORE_FILTERS.map((def) => {
+  const coreItems = coreFilters.map((def) => {
     const useDef =
       def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
     return {
@@ -162,7 +172,7 @@ export default function FilterBar() {
     onChange: (v: FilterValue) => setUniversalFilter(def.key, v),
   }));
   const activeFilterCount =
-    [...CORE_FILTERS, ...addedDefs].filter((d) =>
+    [...coreFilters, ...addedDefs].filter((d) =>
       d.isActive(universalFilters[d.key] ?? d.defaultValue)
     ).length + (investorActive ? 1 : 0);
   const soldWindowVisible =
@@ -172,7 +182,7 @@ export default function FilterBar() {
   // the drawer (deep property fields + investor signals), so it doesn't double-count
   // the basics that stay inline on the bar.
   const drawerActiveCount =
-    MORE_FILTERS.filter((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)).length +
+    moreFilters.filter((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)).length +
     (investorLayer ? INVESTOR_CONTROLS.filter((c) => isControlActive(c, filters)).length : 0);
 
   // Flatten the active filters (core + added + investor) into one removable token
@@ -241,7 +251,7 @@ export default function FilterBar() {
             field library + investor signals now live in the Filters drawer, so this
             row no longer overflows. The persona preset is centered in TopCommandBar. */}
         <div className="no-scrollbar flex flex-1 items-center gap-x-2 overflow-x-auto px-2">
-          {CORE_FILTERS.map((def) => {
+          {coreFilters.map((def) => {
             const useDef =
               def.key === "homeType" ? scopedTypeDef : def.key === "price" ? scopedPriceDef : def;
             return (
