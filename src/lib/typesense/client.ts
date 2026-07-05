@@ -10,6 +10,7 @@
 import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
+import { toSimpleRing } from '@/lib/geo/simplifyRing';
 
 // Typesense configuration.
 // NOTE: the host is intentionally hardcoded (Typesense Cloud) and is NOT read from env.
@@ -517,11 +518,18 @@ export async function searchListings(
   // Commute isochrone polygon — same geopoint mechanism as the bounding box.
   // geoPolygon is already [lat, lng] pairs; flatten into the location:() filter.
   if (geoPolygon && geoPolygon.length >= 3) {
-    const coords = geoPolygon.map(([lat, lng]) => `${lat}, ${lng}`).join(', ');
-    const polyFilter = `location:(${coords})`;
-    searchParams.filter_by = searchParams.filter_by
-      ? `${searchParams.filter_by} && ${polyFilter}`
-      : polyFilter;
+    // Typesense 400s on closed or self-intersecting rings. /api/isochrone now
+    // emits simple open rings, but commute bubbles SAVED before that fix still
+    // replay the old broken shape — repair any ring at query time (the geometry
+    // is coordinate-order agnostic).
+    const ring = toSimpleRing(geoPolygon, 50);
+    if (ring.length >= 3) {
+      const coords = ring.map(([lat, lng]) => `${lat}, ${lng}`).join(', ');
+      const polyFilter = `location:(${coords})`;
+      searchParams.filter_by = searchParams.filter_by
+        ? `${searchParams.filter_by} && ${polyFilter}`
+        : polyFilter;
+    }
   }
 
   try {

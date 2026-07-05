@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
+import { toSimpleRing } from "@/lib/geo/simplifyRing";
 
 // 20 calls/min/IP — isochrone computations are heavier than geocodes.
 const limiter = makeRateLimiter({ windowMs: 60_000, max: 20 });
@@ -20,23 +21,11 @@ type Mode = "driving" | "walking" | "cycling";
 const MODES: Mode[] = ["driving", "walking", "cycling"];
 
 // Cap the ring so the Typesense `location:(...)` filter string stays small.
+// The ring is simplified via toSimpleRing (RDP + simplicity check + hull
+// fallback): the old even-step decimation produced SELF-INTERSECTING rings,
+// which Typesense rejects with a 400 ("Polygon is invalid: Edge A crosses
+// edge B") — surfacing in the terminal as "0 in commute zone".
 const MAX_VERTICES = 50;
-
-/** Evenly decimate a ring down to at most `max` points (keeps it closed). */
-function decimateRing(ring: [number, number][], max: number): [number, number][] {
-  if (ring.length <= max) return ring;
-  const closed = ring.length > 1 &&
-    ring[0][0] === ring[ring.length - 1][0] &&
-    ring[0][1] === ring[ring.length - 1][1];
-  const pts = closed ? ring.slice(0, -1) : ring;
-  const step = pts.length / (max - 1);
-  const out: [number, number][] = [];
-  for (let i = 0; i < max - 1; i++) {
-    out.push(pts[Math.floor(i * step)]);
-  }
-  out.push([out[0][0], out[0][1]]); // re-close
-  return out;
-}
 
 /** Pick the largest outer ring across Polygon / MultiPolygon geometries. */
 function extractOuterRing(geometry: {
@@ -125,7 +114,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const polygon = decimateRing(ring, MAX_VERTICES);
+    // Open (no duplicated closing vertex), simple, ≤ MAX_VERTICES. deck.gl's
+    // PolygonLayer auto-closes open rings, so the map contract is unchanged.
+    const polygon = toSimpleRing(ring, MAX_VERTICES);
+    if (polygon.length < 3) {
+      return NextResponse.json(
+        { error: "No reachable area for this destination" },
+        { status: 422 }
+      );
+    }
     return NextResponse.json({ polygon, minutes, mode });
   } catch (err) {
     console.error("[Isochrone API]", err);
