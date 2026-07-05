@@ -132,7 +132,7 @@ export default function HiddenEquityTool() {
           {treeLoading ? (
             <p className="text-sm text-gray-500">Loading neighbourhoods…</p>
           ) : treeError ? (
-            <p className="text-sm text-red-400">{treeError}</p>
+            <p className="text-sm text-red-700 dark:text-red-400">{treeError}</p>
           ) : (
             <HiddenEquityForm tree={tree} value={form} onChange={setForm} />
           )}
@@ -148,7 +148,7 @@ export default function HiddenEquityTool() {
           )}
 
           {submitError && (
-            <p className="text-sm text-red-400">{submitError}</p>
+            <p className="text-sm text-red-700 dark:text-red-400">{submitError}</p>
           )}
         </div>
       </Card>

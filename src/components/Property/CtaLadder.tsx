@@ -46,13 +46,13 @@ export default function CtaLadder({ listingKey, isLease = false }: { listingKey:
             key={id}
             type="button"
             onClick={() => open(id)}
-            className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-md border border-slate-700 px-4 py-2.5 text-left transition-colors hover:bg-slate-800 active:bg-slate-800 [touch-action:manipulation]"
+            className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-md border border-border px-4 py-2.5 text-left transition-colors hover:bg-muted active:bg-muted [touch-action:manipulation]"
           >
-            <span className="flex items-center gap-2 text-sm font-medium text-slate-200">
-              <Icon className="h-4 w-4 text-cyan-400" />
+            <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Icon className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />
               {def.rungLabel}
             </span>
-            <span className="hidden font-mono text-[10px] text-slate-500 sm:inline">{def.rungHint}</span>
+            <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">{def.rungHint}</span>
           </button>
         );
       })}

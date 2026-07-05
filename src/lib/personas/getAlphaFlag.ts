@@ -45,14 +45,16 @@ export function getAlphaFlag(d: ListingDocument, isAuthed: boolean = true): Alph
   return { label: "—", variant: "none" };
 }
 
+// Alpha Flag = a moat signal, so in LIGHT it's a SOLID saturated chip (white text)
+// that pops off the pale ledger; DARK keeps the original translucent chip (bright
+// text on a dark-appropriate tint). Colours only.
 export const ALPHA_FLAG_CLASS: Record<AlphaFlagVariant, string> = {
-  distressed: "text-rose-300 bg-rose-500/15 border-rose-500/30",
-  zoning: "text-cyan-300 bg-cyan-500/15 border-cyan-500/30",
-  suite: "text-blue-300 bg-blue-500/15 border-blue-500/30",
-  income: "text-cyan-200 bg-cyan-500/20 border-cyan-400/50",
-  // Brighter text + stronger fill/border so these read clearly on the dark bg.
-  lot: "text-cyan-100 bg-cyan-500/30 border-cyan-400/60",
-  stale: "text-amber-100 bg-amber-500/30 border-amber-400/60",
-  new: "text-cyan-200 bg-cyan-500/20 border-cyan-400/50",
-  none: "text-slate-500 bg-transparent border-transparent",
+  distressed: "bg-rose-600 text-white border-transparent dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+  zoning: "bg-cyan-700 text-white border-transparent dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30",
+  suite: "bg-blue-600 text-white border-transparent dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30",
+  income: "bg-emerald-600 text-white border-transparent dark:bg-cyan-500/20 dark:text-cyan-200 dark:border-cyan-400/50",
+  lot: "bg-cyan-700 text-white border-transparent dark:bg-cyan-500/30 dark:text-cyan-100 dark:border-cyan-400/60",
+  stale: "bg-amber-500 text-white border-transparent dark:bg-amber-500/30 dark:text-amber-100 dark:border-amber-400/60",
+  new: "bg-emerald-600 text-white border-transparent dark:bg-cyan-500/20 dark:text-cyan-200 dark:border-cyan-400/50",
+  none: "text-muted-foreground bg-transparent border-transparent",
 };

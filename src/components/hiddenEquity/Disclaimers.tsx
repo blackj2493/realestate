@@ -1,9 +1,9 @@
 export default function Disclaimers() {
   return (
-    <div className="space-y-1 rounded-md border border-slate-800 bg-slate-900/40 p-3 text-[11px] leading-relaxed text-slate-500">
+    <div className="space-y-1 rounded-md border border-border bg-card/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
       <p>
         This is an automated estimate generated from aggregate market data —{" "}
-        <span className="text-slate-400">not an appraisal</span> or professional opinion of value.
+        <span className="text-muted-foreground">not an appraisal</span> or professional opinion of value.
       </p>
       <p>Information herein is deemed reliable but is not guaranteed accurate by PROPTX.</p>
       <p>

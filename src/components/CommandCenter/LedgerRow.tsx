@@ -62,7 +62,7 @@ const RELIST_GAP_DAYS = 14;
 function PctTag({ p }: { p: number | null | undefined }) {
   if (p == null) return null;
   return (
-    <span className="ml-1 text-[9px] font-normal text-slate-500" title={`${p}th percentile of current results`}>
+    <span className="ml-1 text-[9px] font-normal text-muted-foreground" title={`${p}th percentile of current results`}>
       P{p}
     </span>
   );
@@ -96,21 +96,21 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       // True DOM is relist-corrected (VOW-derived) — gated for anon (§6.2(f)).
       if (!isAuthed)
         return (
-          <span className="text-slate-600" title="Sign in to view True DOM">
+          <span className="text-muted-foreground" title="Sign in to view True DOM">
             🔒
           </span>
         );
       const shown = doc.DaysOnMarket ?? doc.calculatedDOM ?? null;
       const dom = doc.TrueDom ?? doc.calculatedDOM ?? doc.DaysOnMarket ?? 0;
-      const color = dom > 90 ? "text-rose-400" : dom > 45 ? "text-cyan-400" : dom >= 14 ? "text-amber-400" : "text-slate-400";
+      const color = dom > 90 ? "text-rose-700 dark:text-rose-400" : dom > 45 ? "text-cyan-700 dark:text-cyan-400" : dom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground";
       // Relisted: the board reset the clock. Strike the shown figure, keep True DOM (#4).
       const relisted = doc.TrueDom != null && shown != null && doc.TrueDom - shown >= RELIST_GAP_DAYS;
       return (
         <span
-          className={cn(color, "font-semibold")}
+          className={cn(color, "text-[13px] font-bold")}
           title={relisted ? `Board shows ${shown}d — relisted; True DOM is ${dom}d` : undefined}
         >
-          {relisted && <span className="mr-1 font-normal text-slate-600 line-through">{shown}d</span>}
+          {relisted && <span className="mr-1 font-normal text-muted-foreground line-through">{shown}d</span>}
           {dom}d
           <PctTag p={ranker?.("trueDom", dom)} />
         </span>
@@ -119,7 +119,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
     case "capRate": {
       const v = capRateOrNull(doc.cap_rate_est);
       return (
-        <span className="text-cyan-400">
+        <span className="text-cyan-700 dark:text-cyan-400">
           {v != null ? `${v.toFixed(1)}%` : "—"}
           {v != null && <PctTag p={ranker?.("capRate", v)} />}
         </span>
@@ -129,7 +129,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       // gross_yield_est is already a PERCENT — no ×100 (that was for the old fraction targetGrossYield).
       const v = grossYieldOrNull(doc.gross_yield_est);
       return (
-        <span className="text-cyan-400">
+        <span className="text-cyan-700 dark:text-cyan-400">
           {v != null ? `${v.toFixed(1)}%` : "—"}
           {v != null && <PctTag p={ranker?.("yield", v)} />}
         </span>
@@ -138,35 +138,35 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
     case "carryCost": {
       const v = carryFor(doc);
       return (
-        <span className="text-cyan-400">
+        <span className="text-cyan-700 dark:text-cyan-400">
           ${v.toLocaleString()}
-          <span className="text-[9px] text-slate-500">/mo</span>
+          <span className="text-[9px] text-muted-foreground">/mo</span>
           <PctTag p={ranker?.("carryCost", v)} />
         </span>
       );
     }
     case "priceDrop":
       return (
-        <span className={doc.TotalPriceDrop ? "text-rose-400" : "text-slate-500"}>
+        <span className={cn("text-[13px]", doc.TotalPriceDrop ? "font-bold text-rose-700 dark:text-rose-400" : "text-muted-foreground")}>
           {doc.TotalPriceDrop ? `-$${doc.TotalPriceDrop.toLocaleString()}` : "—"}
           {doc.TotalPriceDrop ? <PctTag p={ranker?.("priceDrop", doc.TotalPriceDrop)} /> : null}
         </span>
       );
     case "suite":
       return (
-        <span className="text-blue-300">
+        <span className="text-blue-700 dark:text-blue-300">
           {doc.SuiteStatus === "EXISTING_SUITE" ? "EXISTING" : doc.SuiteStatus === "POTENTIAL_CANDIDATE" ? "CANDIDATE" : "—"}
         </span>
       );
     case "lotDims": {
       const w = doc.LotWidth ?? doc.lot_width_ft;
       const d = doc.LotDepth ?? doc.lot_depth_ft;
-      return <span className="text-slate-300">{w ? `${w}′×${d ?? "?"}′` : "—"}</span>;
+      return <span className="text-foreground">{w ? `${w}′×${d ?? "?"}′` : "—"}</span>;
     }
     case "zoning":
-      return <span className={doc.multiplex_by_right ? "text-cyan-400" : "text-slate-300"}>{doc.zoning_designation || "—"}</span>;
+      return <span className={doc.multiplex_by_right ? "text-cyan-700 dark:text-cyan-400" : "text-foreground"}>{doc.zoning_designation || "—"}</span>;
     case "density":
-      return <span className={doc.is_density_ready ? "text-cyan-400" : "text-slate-500"}>{doc.is_density_ready ? "YES" : "—"}</span>;
+      return <span className={doc.is_density_ready ? "text-cyan-700 dark:text-cyan-400" : "text-muted-foreground"}>{doc.is_density_ready ? "YES" : "—"}</span>;
     default:
       return null;
   }
@@ -186,11 +186,11 @@ function SaleLine({ salePrice }: { salePrice?: SalePriceEstimate | null }) {
         : "near ask";
   return (
     <p
-      className="mt-0.5 font-mono text-[11px] text-emerald-300/90"
+      className="mt-0.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300/90"
       title="Estimated sale price — what this home is likely to close at"
     >
-      ≈ {formatPrice(salePrice.value)} <span className="text-emerald-400/70">likely close</span>
-      <span className="text-slate-500"> · {tag}</span>
+      ≈ {formatPrice(salePrice.value)} <span className="text-emerald-700 dark:text-emerald-400/70">likely close</span>
+      <span className="text-muted-foreground"> · {tag}</span>
     </p>
   );
 }
@@ -216,7 +216,7 @@ function Cell({ doc, col, isAuthed, alphaInline, salePrice, ranker }: { doc: Lis
     return (
       <div className={cn("shrink-0", col.width, alignClass(col.align))}>
         {flag.variant === "none" ? (
-          <span className="text-xs text-slate-600">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         ) : (
           <span className={cn("inline-block rounded-none border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider", ALPHA_FLAG_CLASS[flag.variant])}>
             {flag.label}
@@ -240,8 +240,8 @@ function Cell({ doc, col, isAuthed, alphaInline, salePrice, ranker }: { doc: Lis
 function MetricChip({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
   if (col.type === "alphaFlag") return <AlphaFlagBadge doc={doc} isAuthed={isAuthed} />;
   return (
-    <span className="inline-flex items-baseline gap-1 rounded-sm bg-slate-800/50 px-1.5 py-0.5 font-mono text-xs">
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{col.header}</span>
+    <span className="inline-flex items-baseline gap-1 rounded-sm bg-muted/50 px-1.5 py-0.5 font-mono text-xs">
+      <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{col.header}</span>
       <ColumnValue doc={doc} col={col} isAuthed={isAuthed} ranker={ranker} />
     </span>
   );
@@ -285,8 +285,8 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => onHoverChange?.(false)}
       className={cn(
-        "group relative flex cursor-pointer items-center gap-3 border-b border-slate-800/50 px-3 py-2.5 transition-colors hover:bg-slate-800/50",
-        isHovered && !isSelected && "bg-slate-800/50 ring-1 ring-inset ring-cyan-500/40",
+        "group relative flex cursor-pointer items-center gap-3 border-b border-border/50 px-3 py-2.5 transition-colors hover:bg-muted/50",
+        isHovered && !isSelected && "bg-muted/50 ring-1 ring-inset ring-cyan-500/40",
         isSelected && "border-l-2 border-l-cyan-500 bg-cyan-900/20",
         isChecked && !isSelected && "bg-cyan-900/10"
       )}
@@ -304,7 +304,7 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
             title="Recent comparable sales near this home"
             aria-label="Show comparable sales"
             className={cn(
-              "absolute bottom-1.5 right-2 z-20 items-center gap-1 border border-cyan-500/40 bg-slate-900/95 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/20",
+              "absolute bottom-1.5 right-2 z-20 items-center gap-1 border border-cyan-500/40 bg-card/95 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 transition-colors hover:bg-cyan-500/20",
               compsOpen ? "flex" : "hidden group-hover:flex"
             )}
           >
@@ -341,8 +341,8 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
           isChecked
             ? "border-cyan-500 bg-cyan-500 text-slate-950"
             : selectDisabled
-            ? "cursor-not-allowed border-slate-800 text-transparent opacity-40"
-            : "border-slate-600 text-transparent hover:border-cyan-400"
+            ? "cursor-not-allowed border-border text-transparent opacity-40"
+            : "border-border text-transparent hover:border-cyan-400"
         )}
       >
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -369,8 +369,8 @@ export default function LedgerRow({ property, columns, visibleColumns, salePrice
         )}
         <WatchHeart
           item={{ listing_key: property.id, address: property.UnparsedAddress, city: property.City, thumb: src, list_price: property.ListPrice, status: property.Status }}
-          className="absolute right-1 top-1 z-10 rounded-none bg-slate-900/70 p-1 transition-colors hover:bg-slate-900"
-          iconClassName="h-3.5 w-3.5 text-slate-400"
+          className="absolute right-1 top-1 z-10 rounded-none bg-card/70 p-1 transition-colors hover:bg-card"
+          iconClassName="h-3.5 w-3.5 text-muted-foreground"
         />
       </div>
 

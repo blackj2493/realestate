@@ -81,30 +81,30 @@ export default function CommuteFilter() {
   return (
     <div>
       {/* Destination */}
-      <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Commute to
       </label>
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Address, station, or place…"
-          className="h-9 border-slate-700 bg-slate-950 pl-10 text-sm text-slate-200 placeholder:text-slate-500"
+          className="h-9 border-border bg-background pl-10 text-sm text-foreground placeholder:text-muted-foreground"
         />
       </div>
       {(results.length > 0 || searching) && (
-        <div className="mt-1 overflow-hidden rounded-none border border-slate-700 bg-slate-950">
+        <div className="mt-1 overflow-hidden rounded-none border border-border bg-background">
           {searching && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500">Searching…</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground">Searching…</div>
           )}
           {results.map((r, i) => (
             <button
               key={`${r.lat},${r.lng},${i}`}
               type="button"
               onClick={() => selectDestination(r)}
-              className="block w-full truncate px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800"
+              className="block w-full truncate px-3 py-2 text-left text-xs text-foreground hover:bg-muted"
             >
               {r.label}
             </button>
@@ -113,7 +113,7 @@ export default function CommuteFilter() {
       )}
 
       {/* Mode */}
-      <label className="mb-1.5 mt-4 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <label className="mb-1.5 mt-4 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Travel mode
       </label>
       <div className="flex gap-1.5">
@@ -128,8 +128,8 @@ export default function CommuteFilter() {
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-none border px-2 py-1.5 text-xs font-medium transition-all",
                 selected
-                  ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-300"
-                  : "border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200"
+                  ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
+                  : "border-border bg-muted text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -142,10 +142,10 @@ export default function CommuteFilter() {
 
       {/* Max time */}
       <div className="mb-1.5 mt-4 flex items-center justify-between">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Max time
         </label>
-        <span className="font-mono text-xs text-cyan-300">{commute.minutes} min</span>
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-300">{commute.minutes} min</span>
       </div>
       <Slider
         value={[commute.minutes]}
@@ -160,7 +160,7 @@ export default function CommuteFilter() {
         <button
           type="button"
           onClick={clear}
-          className="text-xs text-slate-500 hover:text-slate-300"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           Clear
         </button>

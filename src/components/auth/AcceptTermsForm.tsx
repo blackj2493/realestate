@@ -26,12 +26,12 @@ function CheckRow({
       <span
         className={cn(
           "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
-          checked ? "border-emerald-500 bg-emerald-500 text-slate-950" : "border-slate-600 bg-slate-900"
+          checked ? "border-emerald-500 bg-emerald-500 text-slate-950" : "border-border bg-card"
         )}
       >
         {checked && <Check className="h-3.5 w-3.5" />}
       </span>
-      <span className="text-sm leading-snug text-slate-300">{children}</span>
+      <span className="text-sm leading-snug text-foreground">{children}</span>
     </button>
   );
 }
@@ -86,7 +86,7 @@ export default function AcceptTermsForm({ next }: { next: string }) {
         only.
       </CheckRow>
 
-      <p className="text-[11px] leading-snug text-slate-500">
+      <p className="text-[11px] leading-snug text-muted-foreground">
         Read our full{" "}
         <Link href="/terms" className="text-cyan-400 hover:underline">
           Terms of Use
@@ -115,7 +115,7 @@ export default function AcceptTermsForm({ next }: { next: string }) {
         )}
       </button>
 
-      <p className="text-[11px] leading-relaxed text-slate-600">
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
         Data is deemed reliable but is not guaranteed accurate by PROPTX. Information herein must only
         be used by consumers with a bona fide interest in the purchase, sale, or lease of real estate
         and may not be used for any commercial purpose.

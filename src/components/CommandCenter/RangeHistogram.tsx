@@ -33,7 +33,7 @@ export default function RangeHistogram({
   const n = counts.length;
 
   if (loading && n === 0) {
-    return <div className="h-10 w-full animate-pulse bg-slate-800/60" aria-hidden />;
+    return <div className="h-10 w-full animate-pulse bg-muted/60" aria-hidden />;
   }
   // Nothing to show, or the field carries no data in this population (e.g. the
   // empty gross_yield_est) — hide rather than render a misleading flat line.
@@ -57,7 +57,7 @@ export default function RangeHistogram({
             style={{ height: `${heightPct}%` }}
             className={cn(
               "flex-1 transition-colors",
-              inSelection ? "bg-cyan-500/70" : "bg-slate-700/50"
+              inSelection ? "bg-cyan-500/70" : "bg-muted/50"
             )}
           />
         );

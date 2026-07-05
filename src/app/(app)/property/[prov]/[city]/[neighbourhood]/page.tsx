@@ -122,25 +122,25 @@ export default async function NeighbourhoodHubPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
-          <Link href="/" className="hover:text-cyan-400">Home</Link>
+        <nav className="mb-4 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-cyan-600 dark:hover:text-cyan-400">Home</Link>
           <span className="mx-2">/</span>
-          <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
+          <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
-          <Link href={cityHubPath} className="hover:text-cyan-400">{cityName}</Link>
+          <Link href={cityHubPath} className="hover:text-cyan-600 dark:hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">{hoodName}</span>
+          <span className="text-foreground">{hoodName}</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
             Homes for Sale in {hoodName}, {cityName}
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             {totalFound > 0
               ? `${totalFound.toLocaleString()} active ${totalFound === 1 ? "listing" : "listings"} for sale in this ${cityName} neighbourhood`
               : `No active listings for sale in ${hoodName} right now.`}
@@ -154,10 +154,10 @@ export default async function NeighbourhoodHubPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
-            <Building2 className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+          <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
+            <Building2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>Nothing active in this neighbourhood at the moment.</p>
-            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
+            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
               See all homes for sale in {cityName} →
             </Link>
           </div>

@@ -148,7 +148,7 @@ export default function RenovationFunnel({
           >
             {submitting ? 'Analyzing…' : "See what my home's hiding"}
           </Button>
-          {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+          {submitError && <p className="text-sm text-red-700 dark:text-red-400">{submitError}</p>}
         </div>
       </Card>
 

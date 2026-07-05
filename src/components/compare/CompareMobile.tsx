@@ -64,7 +64,7 @@ export default function CompareMobile({
     <div key={metric.key} className="flex">
       <div
         className={cn(
-          "sticky left-0 z-10 shrink-0 bg-slate-950 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500",
+          "sticky left-0 z-10 shrink-0 bg-background px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground",
           LABEL_W
         )}
       >
@@ -81,17 +81,17 @@ export default function CompareMobile({
               "shrink-0 rounded px-2 py-1 font-mono text-sm",
               COL_W,
               resolved.winners.has(i)
-                ? "bg-emerald-500/10 font-bold text-emerald-400"
-                : "text-slate-200"
+                ? "bg-emerald-500/10 font-bold text-emerald-700 dark:text-emerald-400"
+                : "text-foreground"
             )}
           >
             {resolved.locked[i] ? (
               <LockedCell next={compareNext} />
             ) : (
-              resolved.displayed[i] ?? <span className="text-slate-600">—</span>
+              resolved.displayed[i] ?? <span className="text-muted-foreground">—</span>
             )}
             {resolved.tags[i] && (
-              <span className="ml-1 text-[10px] text-amber-400/80">{resolved.tags[i]}</span>
+              <span className="ml-1 text-[10px] text-amber-700 dark:text-amber-400/80">{resolved.tags[i]}</span>
             )}
           </div>
         ))}
@@ -117,7 +117,7 @@ export default function CompareMobile({
           {/* Property identity row */}
           <div className="flex">
             {/* Sticky spacer aligned with the metric-label column. */}
-            <div className={cn("sticky left-0 z-10 shrink-0 bg-slate-950", LABEL_W)} />
+            <div className={cn("sticky left-0 z-10 shrink-0 bg-background", LABEL_W)} />
             <div className="flex gap-2 pr-3">
               {listings.map((l) => (
                 <div key={l.id} className={cn("relative shrink-0", COL_W)}>
@@ -125,17 +125,17 @@ export default function CompareMobile({
                     type="button"
                     onClick={() => removeId(l.id)}
                     aria-label={`Remove ${l.UnparsedAddress || "property"} from comparison`}
-                    className="absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/80 text-slate-300 hover:bg-slate-900 hover:text-slate-100"
+                    className="absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground hover:bg-card hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </button>
                   <CompareMediaCell listing={l} />
                   <Link href={`/properties/${l.id}`} className="block">
-                    <p className="font-mono text-sm font-bold text-emerald-400">{formatPrice(l.ListPrice)}</p>
-                    <p className="text-[11px] leading-snug text-slate-300">{l.UnparsedAddress || l.City || "—"}</p>
+                    <p className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
+                    <p className="text-[11px] leading-snug text-foreground">{l.UnparsedAddress || l.City || "—"}</p>
                   </Link>
                   {l.ListOfficeName && (
-                    <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{l.ListOfficeName}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{l.ListOfficeName}</p>
                   )}
                   <RentInput
                     value={rentById[l.id]}
@@ -150,7 +150,7 @@ export default function CompareMobile({
                 <Link
                   href="/properties"
                   className={cn(
-                    "flex min-h-[160px] shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-700 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200",
+                    "flex min-h-[160px] shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:border-slate-500 hover:text-foreground",
                     COL_W
                   )}
                 >
@@ -163,19 +163,19 @@ export default function CompareMobile({
 
           {/* Core comparison — always visible */}
           {coreRows.length > 0 && (
-            <div className="mt-4 divide-y divide-slate-800/70 border-y border-slate-800">
+            <div className="mt-4 divide-y divide-border/70 border-y border-border">
               {coreRows.map(row)}
             </div>
           )}
 
           {/* Additional metrics — grouped */}
           {groups.map(({ groupId, visible }) => (
-            <div key={groupId} className="mt-4 border-y border-slate-800">
+            <div key={groupId} className="mt-4 border-y border-border">
               {/* Heading pinned to the left edge while the columns scroll under it. */}
-              <div className="sticky left-0 z-10 inline-block bg-slate-900/50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <div className="sticky left-0 z-10 inline-block bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {GROUP_LABELS[groupId]}
               </div>
-              <div className="divide-y divide-slate-800/70">{visible.map(row)}</div>
+              <div className="divide-y divide-border/70">{visible.map(row)}</div>
             </div>
           ))}
         </div>

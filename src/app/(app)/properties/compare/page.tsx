@@ -53,7 +53,7 @@ export default async function ComparePage({
     : listings.map((l) => ({ ...l, TrueDom: undefined }));
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <CompareClient
         listings={gatedListings}
         estimates={gatedEstimates}

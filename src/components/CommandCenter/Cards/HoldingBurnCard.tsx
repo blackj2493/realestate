@@ -63,34 +63,34 @@ export function HoldingBurnCard({
 
   return (
     <div className={`
-      bg-slate-950 border border-slate-800 rounded-lg p-4
+      bg-background border border-border rounded-lg p-4
       ${className}
     `}>
       {/* Header */}
-      <div className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-3">
+      <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">
         Projected Holding Cost
       </div>
 
       {/* Primary: Max Holding Cost */}
       <div className="mb-4">
-        <div className="text-xs font-mono text-slate-500 mb-1">Monthly Burn</div>
-        <div className="text-3xl font-mono text-amber-400 uppercase tracking-tight">
+        <div className="text-xs font-mono text-muted-foreground mb-1">Monthly Burn</div>
+        <div className="text-3xl font-mono text-amber-700 dark:text-amber-400 uppercase tracking-tight">
           {formatCurrency(maxHoldingCost)}
         </div>
-        <div className="text-xs font-mono text-slate-600 mt-1">per month</div>
+        <div className="text-xs font-mono text-muted-foreground mt-1">per month</div>
       </div>
 
       {/* Override Section */}
-      <div className="border-t border-slate-800 pt-3 mt-3">
-        <div className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-3">
+      <div className="border-t border-border pt-3 mt-3">
+        <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">
           Override Parameters
         </div>
 
         {/* Interest Rate Slider */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-xs font-mono text-slate-400">Interest Rate</span>
-            <span className="text-xs font-mono text-amber-400">
+            <span className="text-xs font-mono text-muted-foreground">Interest Rate</span>
+            <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
               {(interestRate * 100).toFixed(2)}%
             </span>
           </div>
@@ -106,8 +106,8 @@ export function HoldingBurnCard({
         {/* Timeline Slider */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-xs font-mono text-slate-400">Timeline</span>
-            <span className="text-xs font-mono text-amber-400">
+            <span className="text-xs font-mono text-muted-foreground">Timeline</span>
+            <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
               {timelineMonths} mo
             </span>
           </div>
@@ -122,12 +122,12 @@ export function HoldingBurnCard({
       </div>
 
       {/* Secondary Output */}
-      <div className="border-t border-slate-800 pt-3 mt-3">
-        <div className="text-xs font-mono text-slate-500 mb-1">Total Project Capital Risk</div>
-        <div className="text-xl font-mono text-rose-400">
+      <div className="border-t border-border pt-3 mt-3">
+        <div className="text-xs font-mono text-muted-foreground mb-1">Total Project Capital Risk</div>
+        <div className="text-xl font-mono text-rose-700 dark:text-rose-400">
           {formatCurrency(totalProjectCapitalRisk)}
         </div>
-        <div className="text-xs font-mono text-slate-600 mt-1">
+        <div className="text-xs font-mono text-muted-foreground mt-1">
           {overrideMonthly}/mo × {timelineMonths} months
         </div>
       </div>

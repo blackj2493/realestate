@@ -39,7 +39,7 @@ export default function SaveBubbleButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 border border-cyan-500/50 bg-slate-900/85 px-3 py-2 text-[11px] font-medium text-cyan-200 shadow-lg backdrop-blur transition-colors hover:bg-cyan-500/15"
+        className="flex items-center gap-1.5 border border-cyan-500/50 bg-card/85 px-3 py-2 text-[11px] font-medium text-cyan-200 shadow-lg backdrop-blur transition-colors hover:bg-cyan-500/15"
       >
         <BookmarkPlus className="h-3.5 w-3.5" />
         Save as bubble

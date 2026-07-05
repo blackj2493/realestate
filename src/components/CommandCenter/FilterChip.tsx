@@ -32,8 +32,8 @@ export default function FilterChip({ def, value, onChange, onClear }: FilterChip
         "flex cursor-pointer items-center gap-1.5 border px-2.5 py-1.5 transition-all",
         LABEL,
         active
-          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
-          : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+          : "border-border bg-card text-muted-foreground hover:border-border hover:text-foreground"
       )}
     >
       {chipText}
@@ -111,8 +111,8 @@ function RangeControl({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className={cn(LABEL, "text-slate-400")}>{def.label}</span>
-        <span className="font-mono text-xs text-cyan-400">{def.chipLabel(value)}</span>
+        <span className={cn(LABEL, "text-muted-foreground")}>{def.label}</span>
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-400">{def.chipLabel(value)}</span>
       </div>
       {supportsHistogram(def.field) && (
         <RangeHistogram
@@ -136,7 +136,7 @@ function RangeControl({
       />
       <div className="flex items-center gap-1.5">
         <NumberInput value={lo} min={min} max={hi} onCommit={(n) => onChange([n, hi])} />
-        <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">to</span>
+        <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">to</span>
         <NumberInput value={hi} min={lo} max={max} onCommit={(n) => onChange([lo, n])} />
       </div>
     </div>
@@ -158,10 +158,10 @@ function StepperControl({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className={cn(LABEL, "text-slate-400")}>{def.label}</span>
+        <span className={cn(LABEL, "text-muted-foreground")}>{def.label}</span>
         {/* Min = "N or more" (the default); Exact = "exactly N". Mode is preserved
             when the count changes, so toggling re-labels the buttons in place. */}
-        <div className="flex border border-slate-800">
+        <div className="flex border border-border">
           {[
             { label: "Min", exact: false },
             { label: "Exact", exact: true },
@@ -173,8 +173,8 @@ function StepperControl({
                 LABEL,
                 "px-2 py-0.5 transition-colors",
                 exact === m.exact
-                  ? "bg-cyan-500/10 text-cyan-300"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {m.label}
@@ -190,8 +190,8 @@ function StepperControl({
             className={cn(
               "h-7 w-9 border text-xs font-semibold transition-colors",
               current === n
-                ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300"
-                : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
+                ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                : "border-border bg-card text-muted-foreground hover:border-border"
             )}
           >
             {n === 0 ? "Any" : exact ? `${n}` : `${n}+`}
@@ -218,7 +218,7 @@ function EnumControl({
   };
   return (
     <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
-      <span className={cn(LABEL, "mb-1 text-slate-400")}>{def.label}</span>
+      <span className={cn(LABEL, "mb-1 text-muted-foreground")}>{def.label}</span>
       {(def.options ?? []).map((opt) => {
         const checked = value.includes(opt.value);
         const n = counts?.[opt.value];
@@ -228,14 +228,14 @@ function EnumControl({
             onClick={() => toggle(opt.value)}
             className={cn(
               "flex items-center justify-between gap-2 px-1 py-1 text-left text-xs transition-colors",
-              checked ? "text-cyan-300" : "text-slate-400 hover:text-slate-200"
+              checked ? "text-cyan-700 dark:text-cyan-300" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <span className="flex items-center gap-2">
               <span
                 className={cn(
                   "flex h-3.5 w-3.5 items-center justify-center border",
-                  checked ? "border-cyan-500 bg-cyan-500/20" : "border-slate-600"
+                  checked ? "border-cyan-500 bg-cyan-500/20" : "border-border"
                 )}
               >
                 {checked && <span className="h-1.5 w-1.5 bg-cyan-400" />}
@@ -243,7 +243,7 @@ function EnumControl({
               {opt.label}
             </span>
             {n !== undefined && (
-              <span className="font-mono text-[10px] text-slate-500">{n.toLocaleString("en-US")}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{n.toLocaleString("en-US")}</span>
             )}
           </button>
         );

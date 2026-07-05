@@ -22,10 +22,10 @@ const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 function CountLine({ count, total, commuteActive }: { count: number; total: number; commuteActive: boolean }) {
   const capped = total > count;
   return (
-    <div className="mt-1.5 font-mono text-xs text-slate-300">
-      <span className="font-semibold text-cyan-400">{count}</span>
+    <div className="mt-1.5 font-mono text-xs text-foreground">
+      <span className="font-semibold text-cyan-700 dark:text-cyan-400">{count}</span>
       {capped ? ` of ${total.toLocaleString()}` : ""} in {commuteActive ? "commute zone" : "view"}
-      {capped && <span className="ml-1.5 text-slate-500">· zoom in to see all</span>}
+      {capped && <span className="ml-1.5 text-muted-foreground">· zoom in to see all</span>}
     </div>
   );
 }
@@ -58,22 +58,22 @@ export default function MapStatusHUD({
       setColorBand(activeIdx === i ? null : { metricId: metricDef.id, index: i });
 
     return (
-      <div className="absolute left-2 top-16 z-10 max-w-[80vw] border border-slate-700 bg-slate-900/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
+      <div className="absolute left-2 top-16 z-10 max-w-[80vw] border border-border bg-card/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Color</span>
-          <span className="text-[11px] font-medium text-slate-200">{metricDef.label}</span>
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Color</span>
+          <span className="text-[11px] font-medium text-foreground">{metricDef.label}</span>
           {activeIdx !== null && (
             <button
               type="button"
               onClick={() => setColorBand(null)}
-              className="ml-1 flex items-center gap-1 text-[10px] text-cyan-300 hover:text-cyan-100"
+              className="ml-1 flex items-center gap-1 text-[10px] text-cyan-700 dark:text-cyan-300 hover:text-cyan-100"
             >
               <X className="h-3 w-3" /> clear filter
             </button>
           )}
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <span className="text-[10px] text-slate-500">{metricDef.legendLow}</span>
+          <span className="text-[10px] text-muted-foreground">{metricDef.legendLow}</span>
           <div className="flex">
             {Array.from({ length: metricDef.bands }).map((_, i) => {
               const c = metricDef.range[Math.min(i, metricDef.range.length - 1)];
@@ -96,10 +96,10 @@ export default function MapStatusHUD({
               );
             })}
           </div>
-          <span className="text-[10px] text-slate-300">{metricDef.legendHigh}</span>
+          <span className="text-[10px] text-foreground">{metricDef.legendHigh}</span>
         </div>
         {activeIdx !== null && (
-          <div className="mt-1 font-mono text-[10px] text-cyan-300">Filtered to {fmtBand(activeIdx)}</div>
+          <div className="mt-1 font-mono text-[10px] text-cyan-700 dark:text-cyan-300">Filtered to {fmtBand(activeIdx)}</div>
         )}
         <CountLine count={count} total={total} commuteActive={commuteActive} />
       </div>
@@ -109,15 +109,15 @@ export default function MapStatusHUD({
   // ── Static legend (persona / School default) ───────────────────────────────
   const range = mapMode === "heatmap" ? ALPHA_GLOW_RANGE : colorConfig.range;
   return (
-    <div className="absolute left-2 top-16 z-10 max-w-[80vw] border border-slate-700 bg-slate-900/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
+    <div className="absolute left-2 top-16 z-10 max-w-[80vw] border border-border bg-card/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Color</span>
-        <span className="text-[11px] text-slate-400">{colorConfig.legendLow}</span>
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Color</span>
+        <span className="text-[11px] text-muted-foreground">{colorConfig.legendLow}</span>
         <div
           className="h-1.5 w-24 rounded-full"
           style={{ background: `linear-gradient(to right, ${rgb(range[0])}, ${rgb(range[range.length - 1])})` }}
         />
-        <span className="text-[11px] text-slate-200">{colorConfig.legendHigh}</span>
+        <span className="text-[11px] text-foreground">{colorConfig.legendHigh}</span>
       </div>
       <CountLine count={count} total={total} commuteActive={commuteActive} />
     </div>

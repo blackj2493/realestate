@@ -51,7 +51,7 @@ export function ListingThumbnail({
   const showImage = !errored && isUsable(src);
 
   return (
-    <div className={cn("relative overflow-hidden bg-slate-800", className)}>
+    <div className={cn("relative overflow-hidden bg-muted", className)}>
       {showImage ? (
         <Image
           src={src!}
@@ -67,7 +67,7 @@ export function ListingThumbnail({
       ) : (
         <div
           aria-label="No photo available"
-          className="flex h-full w-full items-center justify-center bg-slate-800/60 text-slate-500"
+          className="flex h-full w-full items-center justify-center bg-muted/60 text-muted-foreground"
         >
           <ImageOff className="h-1/3 w-1/3 opacity-50" strokeWidth={1.5} />
         </div>

@@ -20,6 +20,7 @@ import LocationSearchV2 from "./LocationSearchV2";
 import { SEARCH_V2_ENABLED } from "@/lib/search/searchConfig";
 import PersonaLens from "@/components/dashboard/PersonaLens";
 import WatchlistAlertsBell from "@/components/watchlist/WatchlistAlertsBell";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import PrimaryNav from "@/components/layout/PrimaryNav";
 import MobileNav from "@/components/layout/MobileNav";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -53,7 +54,7 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
   }, [searchOpen]);
 
   return (
-    <div className={cn("border-b border-slate-800 bg-slate-950", className)}>
+    <div className={cn("border-b border-border bg-background", className)}>
       {/* Context bar — three columns so the persona stays centered regardless of
           the left (logo + search) and right (nav + alerts) widths. minmax(0,1fr)
           lets the side columns shrink so the search can flex and the center stays
@@ -61,7 +62,7 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
       {/* Mobile: a simple 3-zone flex (logo · persona · bell) so the shrink-0
           logo never overflows its track into the centered persona (audit C4).
           sm+: the centered 3-column grid (persona stays truly centered). */}
-      <div className="flex h-12 items-center justify-between gap-2 px-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4 sm:px-4">
+      <div className="dt-header dark flex h-12 items-center justify-between gap-2 border-b border-border bg-card/95 px-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4 sm:px-4">
         {/* Left: wordmark + location search (search expands to fill the column) */}
         <div className="flex min-w-0 items-center gap-3">
           <Link
@@ -102,11 +103,12 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
             type="button"
             onClick={() => setSearchOpen(true)}
             aria-label="Search listings"
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-400 hover:text-slate-200 sm:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground sm:hidden"
           >
             <Search className="h-5 w-5" />
           </button>
           <PrimaryNav variant="compact" className="hidden sm:flex" />
+          <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
           <WatchlistAlertsBell />
           {/* Hamburger nav — phones hide the inline PrimaryNav (above), so this
               slide-in drawer (same NAV_ITEMS) is the only cross-page jump on
@@ -120,8 +122,8 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           row with a clear "Lens" label and the full persona name. Residential-sale
           only, mirroring the desktop center cell; hidden from sm up. */}
       {investorLayer && (
-        <div className="flex items-center justify-center gap-2 border-t border-slate-800/60 px-3 py-2 sm:hidden">
-          <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-slate-500">
+        <div className="flex items-center justify-center gap-2 border-t border-border/60 px-3 py-2 sm:hidden">
+          <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             Lens
           </span>
           <PersonaLens persona={activePersona} onChange={setActivePersona} short />
@@ -138,9 +140,9 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
             type="button"
             aria-label="Close search"
             onClick={() => setSearchOpen(false)}
-            className="absolute inset-0 bg-slate-950/80"
+            className="absolute inset-0 bg-background/80"
           />
-          <div className="relative border-b border-slate-800 bg-slate-950 px-3 pb-3 pt-3">
+          <div className="relative border-b border-border bg-background px-3 pb-3 pt-3">
             <div className="flex items-center gap-2">
               {SEARCH_V2_ENABLED ? (
                 <LocationSearchV2 className="min-w-0 flex-1" />
@@ -151,7 +153,7 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
                 type="button"
                 onClick={() => setSearchOpen(false)}
                 aria-label="Close search"
-                className="flex h-11 min-w-[44px] shrink-0 items-center justify-center px-3 font-mono text-xs uppercase tracking-wider text-slate-400 hover:text-slate-200"
+                className="flex h-11 min-w-[44px] shrink-0 items-center justify-center px-3 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
               >
                 <X className="mr-1 h-4 w-4" />
                 Done

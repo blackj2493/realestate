@@ -55,7 +55,7 @@ export default function DetailMobileNav({ sections }: { sections: NavSection[] }
   };
 
   return (
-    <nav className="sticky top-14 z-30 -mx-4 mb-4 border-b border-slate-800 bg-slate-950/95 backdrop-blur md:hidden">
+    <nav className="sticky top-14 z-30 -mx-4 mb-4 border-b border-border bg-background/95 backdrop-blur md:hidden">
       <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 py-2">
         {sections.map((s) => (
           <a
@@ -64,7 +64,7 @@ export default function DetailMobileNav({ sections }: { sections: NavSection[] }
             onClick={(e) => go(e, s.id)}
             className={cn(
               "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors",
-              active === s.id ? "bg-cyan-500 text-slate-950" : "bg-slate-900 text-slate-400 active:bg-slate-800"
+              active === s.id ? "bg-cyan-500 text-slate-950" : "bg-card text-muted-foreground active:bg-muted"
             )}
           >
             {s.label}

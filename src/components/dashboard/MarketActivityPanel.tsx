@@ -75,7 +75,7 @@ function Skeleton() {
   return (
     <div className="space-y-px p-2">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-20 animate-pulse bg-slate-800/40" />
+        <div key={i} className="h-20 animate-pulse bg-muted/40" />
       ))}
     </div>
   );
@@ -91,8 +91,8 @@ function CountHeader({
   count: number | null;
 }) {
   return (
-    <div className="flex items-baseline justify-between border-b border-slate-800 px-3 py-2">
-      <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-slate-200">
+    <div className="flex items-baseline justify-between border-b border-border px-3 py-2">
+      <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
         {title}
       </h3>
       <span className={`terminal-font text-xl font-bold ${accent}`}>
@@ -179,13 +179,13 @@ export default function MarketActivityPanel({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* New listings (active / IDX) */}
-      <div className="flex flex-col border border-slate-800 bg-slate-900/40">
-        <CountHeader title="New Listings" accent="text-cyan-400" count={newCount} />
+      <div className="flex flex-col border border-border bg-card/40">
+        <CountHeader title="New Listings" accent="text-cyan-700 dark:text-cyan-400" count={newCount} />
         <div>
           {newRows === null && !newErr && <Skeleton />}
-          {newErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
+          {newErr && <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>}
           {newRows && newRows.length === 0 && (
-            <p className="px-3 py-6 text-center text-xs text-slate-500">
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No new listings in this window
             </p>
           )}
@@ -224,18 +224,18 @@ export default function MarketActivityPanel({
       </div>
 
       {/* Sold (VOW) — gated: anon sees the count + blurred "Login Required" rows */}
-      <div className="flex flex-col border border-slate-800 bg-slate-900/40">
-        <CountHeader title="Sold" accent="text-emerald-400" count={soldCount} />
+      <div className="flex flex-col border border-border bg-card/40">
+        <CountHeader title="Sold" accent="text-emerald-700 dark:text-emerald-400" count={soldCount} />
         <div>
           {soldLocked ? (
             <div className="relative min-h-[208px]">
               <div className="space-y-2 p-2 blur-sm select-none" aria-hidden="true">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-slate-800/30 p-2">
-                    <div className="h-12 w-16 shrink-0 rounded bg-slate-700/50" />
+                  <div key={i} className="flex items-center gap-3 bg-muted/30 p-2">
+                    <div className="h-12 w-16 shrink-0 rounded bg-muted/50" />
                     <div className="flex-1 space-y-1.5">
-                      <div className="h-3 w-2/3 rounded bg-slate-700/50" />
-                      <div className="h-3 w-1/3 rounded bg-slate-700/40" />
+                      <div className="h-3 w-2/3 rounded bg-muted/50" />
+                      <div className="h-3 w-1/3 rounded bg-muted/40" />
                     </div>
                     <div className="h-4 w-14 rounded bg-emerald-700/30" />
                   </div>
@@ -252,9 +252,9 @@ export default function MarketActivityPanel({
           ) : (
             <>
               {soldRows === null && !soldErr && <Skeleton />}
-              {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>}
+              {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>}
               {soldRows && soldRows.length === 0 && (
-                <p className="px-3 py-6 text-center text-xs text-slate-500">
+                <p className="px-3 py-6 text-center text-xs text-muted-foreground">
                   No sales in this window
                 </p>
               )}
@@ -287,7 +287,7 @@ export default function MarketActivityPanel({
         )}
       </div>
       {/* TRREB §6.3(i)/(k): reliability + bona-fide-interest notice, local to the sold rows. */}
-      <p className="text-[10px] leading-snug text-slate-600 md:col-span-2">
+      <p className="text-[10px] leading-snug text-muted-foreground md:col-span-2">
         Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for
         consumers with a bona fide interest only, not for any commercial purpose.
       </p>

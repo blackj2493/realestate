@@ -23,9 +23,9 @@ export default async function LoginPage({
       : "";
 
   return (
-    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-app overflow-hidden bg-background text-foreground">
       {/* CSS-only background (no Mapbox/deck.gl on the auth page): grid + emerald wash + scrim */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-slate-950">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-background">
         <div className="grid-pattern absolute inset-0 opacity-20" />
         <div
           className="absolute inset-0"
@@ -61,19 +61,19 @@ export default async function LoginPage({
             <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
               Terminal Access
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               Sign in to sync your watchlist across devices and receive market alerts.
             </p>
           </div>
 
           {/* Card — translucent + blur to match the apply page form card */}
-          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-md md:p-8">
+          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-border bg-card/70 p-6 backdrop-blur-md md:p-8">
             <div className="mb-5">
               <SocialAuthButtons next={safeNext} />
             </div>
             <MagicLinkForm next={safeNext} initialEmail={initialEmail} />
 
-            <p className="mt-6 text-center text-sm text-slate-500">
+            <p className="mt-6 text-center text-sm text-muted-foreground">
               New here? Enter your email above — first sign-in creates your account.{" "}
               <Link href="/apply" className="text-cyan-400 underline">
                 Learn about Terminal Access
@@ -82,8 +82,8 @@ export default async function LoginPage({
             </p>
 
             {/* VOW compliance notice */}
-            <div className="mt-6 rounded-md border border-slate-800 bg-slate-950/60 p-4 text-[11px] leading-relaxed text-slate-500">
-              <p className="mb-1 font-medium uppercase tracking-wider text-slate-400">
+            <div className="mt-6 rounded-md border border-border bg-background/60 p-4 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="mb-1 font-medium uppercase tracking-wider text-muted-foreground">
                 VOW Access Notice
               </p>
               <p>
@@ -105,7 +105,7 @@ export default async function LoginPage({
           </div>
         </main>
 
-        <footer className="relative z-10 py-4 text-center text-[11px] text-slate-600">
+        <footer className="relative z-10 py-4 text-center text-[11px] text-muted-foreground">
           © {new Date().getFullYear()} PureProperty.ca
         </footer>
       </div>

@@ -108,21 +108,21 @@ export default function MediaGalleryOverlay({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-border">
         {/* Counter */}
-        <div className="font-mono text-slate-400 text-sm">
+        <div className="font-mono text-muted-foreground text-sm">
           [{currentIndex + 1}] / [{images.length}]
         </div>
 
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] hover:bg-slate-800 rounded-md transition-colors"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] hover:bg-muted rounded-md transition-colors"
           aria-label="Close gallery"
         >
-          <X className="w-6 h-6 text-slate-400" />
+          <X className="w-6 h-6 text-muted-foreground" />
         </button>
       </div>
 
@@ -136,10 +136,10 @@ export default function MediaGalleryOverlay({
         {images.length > 1 && (
           <button
             onClick={goToPrevious}
-            className="absolute left-4 z-10 p-3 bg-slate-900/80 hover:bg-slate-800 rounded-full transition-colors"
+            className="absolute left-4 z-10 p-3 bg-card/80 hover:bg-muted rounded-full transition-colors"
             aria-label="Previous image"
           >
-            <ChevronLeft className="w-8 h-8 text-slate-300" />
+            <ChevronLeft className="w-8 h-8 text-foreground" />
           </button>
         )}
 
@@ -166,16 +166,16 @@ export default function MediaGalleryOverlay({
         {images.length > 1 && (
           <button
             onClick={goToNext}
-            className="absolute right-4 z-10 p-3 bg-slate-900/80 hover:bg-slate-800 rounded-full transition-colors"
+            className="absolute right-4 z-10 p-3 bg-card/80 hover:bg-muted rounded-full transition-colors"
             aria-label="Next image"
           >
-            <ChevronRight className="w-8 h-8 text-slate-300" />
+            <ChevronRight className="w-8 h-8 text-foreground" />
           </button>
         )}
       </div>
 
       {/* Filmstrip */}
-      <div className="border-t border-slate-800 bg-slate-900/50 p-2 md:p-4">
+      <div className="border-t border-border bg-card p-2 md:p-4">
         <div
           ref={filmstripRef}
           className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"

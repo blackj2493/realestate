@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useChartTheme } from "@/lib/theme/useChartTheme";
 import {
   Bar,
   CartesianGrid,
@@ -72,7 +73,7 @@ function YoYBadge({ pct }: { pct: number | null }) {
   return (
     <span
       className={`terminal-font text-xs font-bold uppercase tracking-wider ${
-        pct >= 0 ? "text-emerald-400" : "text-rose-400"
+        pct >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
       }`}
     >
       {pct >= 0 ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
@@ -81,9 +82,9 @@ function YoYBadge({ pct }: { pct: number | null }) {
 }
 
 const TEMP_STYLE: Record<NonNullable<RegionScore["temperature"]>, { label: string; cls: string }> = {
-  hot: { label: "Seller's Market", cls: "bg-rose-500/15 text-rose-400 border-rose-500/40" },
-  balanced: { label: "Balanced", cls: "bg-amber-500/15 text-amber-400 border-amber-500/40" },
-  cold: { label: "Buyer's Market", cls: "bg-sky-500/15 text-sky-400 border-sky-500/40" },
+  hot: { label: "Seller's Market", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/40" },
+  balanced: { label: "Balanced", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40" },
+  cold: { label: "Buyer's Market", cls: "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/40" },
 };
 
 interface KpiProps {
@@ -95,21 +96,22 @@ interface KpiProps {
 
 function KpiCard({ label, value, sub, loading }: KpiProps) {
   return (
-    <div className="border border-slate-800 bg-slate-900/40 px-4 py-3">
-      <p className="terminal-font text-xs font-bold uppercase tracking-wider text-slate-400">
+    <div className="border border-border bg-card/40 px-4 py-3">
+      <p className="terminal-font text-xs font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {loading ? (
-        <div className="mt-2 h-7 w-24 animate-pulse bg-slate-800/60" />
+        <div className="mt-2 h-7 w-24 animate-pulse bg-muted/60" />
       ) : (
-        <p className="mt-1 font-mono text-xl font-bold text-slate-100">{value}</p>
+        <p className="mt-1 font-mono text-xl font-bold text-foreground">{value}</p>
       )}
-      <div className="mt-1 min-h-[16px] text-xs text-slate-400">{!loading && sub}</div>
+      <div className="mt-1 min-h-[16px] text-xs text-muted-foreground">{!loading && sub}</div>
     </div>
   );
 }
 
 export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
+  const chart = useChartTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -207,15 +209,15 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const lineFmt = metric === "ppsf" ? (v: number) => `$${Math.round(v)}` : fmtPrice;
 
   return (
-    <div className="min-h-app bg-slate-950 text-slate-200">
+    <div className="min-h-app bg-background text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-6 pb-safe">
         {/* Header: title + region picker */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="terminal-font text-lg font-bold uppercase tracking-wider text-slate-100">
+            <h1 className="terminal-font text-lg font-bold uppercase tracking-wider text-foreground">
               Market Trends — {region}
             </h1>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               Full-population sold &amp; active aggregates · refreshed with the daily sync
             </p>
           </div>
@@ -234,8 +236,8 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             aria-pressed={typeKeys.length === 0}
             className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               typeKeys.length === 0
-                ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
-                : "border-slate-700 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                ? "border-cyan-600 bg-cyan-600 text-white dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-300"
+                : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             }`}
           >
             All Types
@@ -250,8 +252,8 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                 aria-pressed={active}
                 className={`terminal-font shrink-0 min-h-[44px] flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
                   active
-                    ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300"
-                    : "border-slate-700 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                    ? "border-cyan-600 bg-cyan-600 text-white dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-300"
+                    : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 {o.label}
@@ -261,7 +263,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         </div>
 
         {error && (
-          <p className="mt-6 border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-400">
+          <p className="mt-6 border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
             Failed to load market data — try again shortly.
           </p>
         )}
@@ -325,13 +327,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         </div>
 
         {/* Trend chart */}
-        <div className="mt-5 border border-slate-800 bg-slate-900/40">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
-            <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-slate-200">
+        <div className="mt-5 border border-border bg-card/40">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
               24-Month Sold Trend
             </h2>
             <div className="flex items-center gap-2">
-              <div className="flex border border-slate-700">
+              <div className="flex border border-border">
                 {METRIC_TABS.map(([id, label]) => {
                   const active = id === metric;
                   return (
@@ -340,10 +342,10 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                       type="button"
                       onClick={() => setMetric(id)}
                       aria-pressed={active}
-                      className={`terminal-font min-h-[44px] flex items-center border-r border-slate-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
+                      className={`terminal-font min-h-[44px] flex items-center border-r border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0 ${
                         active
-                          ? "bg-cyan-500/20 text-cyan-300"
-                          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                          ? "bg-cyan-600 text-white dark:bg-cyan-500/20 dark:text-cyan-300"
+                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       }`}
                     >
                       {label}
@@ -351,34 +353,34 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                   );
                 })}
               </div>
-              <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-slate-500 sm:inline">
+              <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">
                 Latest months still accruing
               </span>
             </div>
           </div>
           <div className="h-[240px] sm:h-[320px] lg:h-[380px] p-3">
-            {loading && <div className="h-full w-full animate-pulse bg-slate-800/40" />}
+            {loading && <div className="h-full w-full animate-pulse bg-muted/40" />}
             {!loading && points.length === 0 && (
-              <p className="flex h-full items-center justify-center text-xs text-slate-500">
+              <p className="flex h-full items-center justify-center text-xs text-muted-foreground">
                 No recent sold data for this scope
               </p>
             )}
             {!loading && points.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-                  <CartesianGrid stroke="#1e293b" vertical={false} />
+                  <CartesianGrid stroke={chart.grid} vertical={false} />
                   <XAxis
                     dataKey="month"
                     tickFormatter={shortMonth}
-                    tick={{ fill: "#64748b", fontSize: 10 }}
-                    stroke="#334155"
+                    tick={{ fill: chart.axisText, fontSize: 10 }}
+                    stroke={chart.axisLine}
                     minTickGap={24}
                   />
                   <YAxis
                     yAxisId="left"
                     tickFormatter={isSales ? undefined : lineFmt}
-                    tick={{ fill: "#64748b", fontSize: 10 }}
-                    stroke="#334155"
+                    tick={{ fill: chart.axisText, fontSize: 10 }}
+                    stroke={chart.axisLine}
                     width={52}
                     allowDecimals={false}
                     hide={isSales}
@@ -386,8 +388,8 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    tick={{ fill: "#475569", fontSize: 10 }}
-                    stroke="#334155"
+                    tick={{ fill: chart.axisText, fontSize: 10 }}
+                    stroke={chart.axisLine}
                     width={36}
                     allowDecimals={false}
                     hide={!isSales}
@@ -397,7 +399,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                     wrapperStyle={{ zIndex: 50 }}
                     cursor={{ fill: "rgba(100,116,139,0.15)" }}
                     allowEscapeViewBox={{ x: false, y: false }}
-                    contentStyle={{ background: "#0f172a", border: "1px solid #334155", fontSize: 12 }}
+                    contentStyle={{ background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, fontSize: 12 }}
                     labelFormatter={shortMonth}
                     formatter={(value, name) => {
                       if (name === "sales") return [Number(value).toLocaleString(), "Sales"];
@@ -408,13 +410,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                       ];
                     }}
                   />
-                  <Bar yAxisId="right" dataKey="sales" fill={isSales ? "#155e75" : "#1e3a4a"} radius={[2, 2, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="sales" fill={isSales ? chart.barAccent : chart.bar} radius={[2, 2, 0, 0]} />
                   {!isSales && (
                     <Line
                       yAxisId="left"
                       type="monotone"
                       dataKey={lineKey}
-                      stroke="#22d3ee"
+                      stroke={chart.line}
                       strokeWidth={2}
                       dot={false}
                       connectNulls={false}
@@ -444,7 +446,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         )}
 
         {/* §6.3(i)/(k) consumer notice — required on VOW-derived displays. */}
-        <p className="mt-8 text-center text-[11px] leading-relaxed text-slate-600">
+        <p className="mt-8 text-center text-[11px] leading-relaxed text-muted-foreground">
           Market data is deemed reliable but is not guaranteed accurate. Information is provided
           exclusively for consumers&apos; personal, non-commercial use and may only be used by
           consumers that have a bona fide interest in the purchase, sale, or lease of real estate.
@@ -456,10 +458,10 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
 
       {/* Mobile-only lead path: jump from market data to live listings. */}
       {!loading && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950/95 px-4 py-3 pb-safe backdrop-blur md:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 py-3 pb-safe backdrop-blur md:hidden">
           <a
             href={`/properties?city=${encodeURIComponent(region)}`}
-            className="terminal-font flex min-h-[44px] items-center justify-center border border-cyan-500/60 bg-cyan-500/20 px-4 text-xs font-bold uppercase tracking-wider text-cyan-300 transition-colors hover:bg-cyan-500/30"
+            className="terminal-font flex min-h-[44px] items-center justify-center border border-cyan-600 bg-cyan-600 px-4 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-300 dark:hover:bg-cyan-500/30"
           >
             See live deals in {region} →
           </a>

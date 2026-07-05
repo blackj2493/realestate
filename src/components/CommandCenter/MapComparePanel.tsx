@@ -45,10 +45,10 @@ export default function MapComparePanel() {
   return (
     <div className="flex max-h-[70vh] flex-col">
       {/* Tap-to-add toggle + basket count */}
-      <div className="border-b border-slate-800 p-3">
+      <div className="border-b border-border p-3">
         <div className="mb-2 flex items-center justify-between text-[11px]">
-          <span className="font-medium text-slate-400">Compare basket</span>
-          <span className={cn("font-mono", atCap ? "text-amber-300" : "text-slate-500")}>
+          <span className="font-medium text-muted-foreground">Compare basket</span>
+          <span className={cn("font-mono", atCap ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground")}>
             {count}/{MAX_SELECTED}
           </span>
         </div>
@@ -60,10 +60,10 @@ export default function MapComparePanel() {
           className={cn(
             "flex w-full items-center justify-center gap-2 border py-2 text-xs font-medium transition-all",
             atCap && !isSelectMode
-              ? "cursor-not-allowed border-slate-800 bg-slate-900/50 text-slate-600"
+              ? "cursor-not-allowed border-border bg-card/50 text-muted-foreground"
               : isSelectMode
               ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-200"
-              : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-600"
+              : "border-border bg-card text-foreground hover:border-border"
           )}
         >
           <MousePointerClick className="h-3.5 w-3.5" />
@@ -73,7 +73,7 @@ export default function MapComparePanel() {
           <p
             className={cn(
               "mt-2 text-[10px] leading-relaxed",
-              selectionLimitHit ? "text-amber-300" : "text-slate-500"
+              selectionLimitHit ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground"
             )}
           >
             Limit of {MAX_SELECTED} reached — remove one to add another.
@@ -84,7 +84,7 @@ export default function MapComparePanel() {
       {/* Basket list */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {count === 0 ? (
-          <p className="p-3 text-xs leading-relaxed text-slate-500">
+          <p className="p-3 text-xs leading-relaxed text-muted-foreground">
             No properties selected yet. Turn on “Tap map to add” and click pins, or use the
             checkboxes in the listings panel.
           </p>
@@ -93,7 +93,7 @@ export default function MapComparePanel() {
             {docs.map((d) => {
               const src = d.thumbnailUrl || d.primaryImageUrl;
               return (
-                <div key={d.id} className="flex items-center gap-2.5 border-b border-slate-800/50 p-2">
+                <div key={d.id} className="flex items-center gap-2.5 border-b border-border/50 p-2">
                   <ListingThumbnail
                     src={src}
                     alt={d.UnparsedAddress || "Property"}
@@ -101,19 +101,19 @@ export default function MapComparePanel() {
                     sizes="64px"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-slate-200">
+                    <p className="truncate text-xs font-medium text-foreground">
                       {d.UnparsedAddress?.trim() || d.City || "Address unavailable"}
                     </p>
-                    <p className="font-mono text-xs text-cyan-400">
+                    <p className="font-mono text-xs text-cyan-700 dark:text-cyan-400">
                       {d.ListPrice ? `$${d.ListPrice.toLocaleString()}` : "—"}
                     </p>
-                    {d.ListOfficeName && <p className="truncate text-[10px] text-slate-500">{d.ListOfficeName}</p>}
+                    {d.ListOfficeName && <p className="truncate text-[10px] text-muted-foreground">{d.ListOfficeName}</p>}
                   </div>
                   <button
                     type="button"
                     onClick={() => toggleSelected(d.id)}
                     aria-label="Remove from selection"
-                    className="shrink-0 text-slate-500 hover:text-rose-300"
+                    className="shrink-0 text-muted-foreground hover:text-rose-300"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -121,7 +121,7 @@ export default function MapComparePanel() {
               );
             })}
             {missing > 0 && (
-              <p className="px-3 py-2 text-[10px] text-slate-500">
+              <p className="px-3 py-2 text-[10px] text-muted-foreground">
                 {missing} more selected {missing === 1 ? "listing isn’t" : "listings aren’t"} in the current view.
               </p>
             )}
@@ -131,7 +131,7 @@ export default function MapComparePanel() {
 
       {/* Actions */}
       {count > 0 && (
-        <div className="flex flex-col gap-2 border-t border-slate-800 p-3">
+        <div className="flex flex-col gap-2 border-t border-border p-3">
           <div className="flex gap-2">
             <button
               type="button"
@@ -140,7 +140,7 @@ export default function MapComparePanel() {
                 "flex flex-1 items-center justify-center gap-1.5 border py-2 text-xs font-medium transition-all",
                 showSelectedOnly
                   ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-200"
-                  : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-600"
+                  : "border-border bg-card text-foreground hover:border-border"
               )}
             >
               {showSelectedOnly ? <ListFilter className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -151,8 +151,8 @@ export default function MapComparePanel() {
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 border py-2 text-xs font-medium transition-all",
                 count >= 2
-                  ? "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-600"
-                  : "pointer-events-none border-slate-800 text-slate-600"
+                  ? "border-border bg-card text-foreground hover:border-border"
+                  : "pointer-events-none border-border text-muted-foreground"
               )}
               aria-disabled={count < 2}
               title={count < 2 ? "Select at least 2 to compare" : "Compare side by side"}
@@ -173,7 +173,7 @@ export default function MapComparePanel() {
             <button
               type="button"
               onClick={clearSelected}
-              className="flex items-center justify-center gap-1.5 border border-slate-700 px-3 py-2 text-xs font-medium text-slate-400 transition-colors hover:border-rose-500/40 hover:text-rose-300"
+              className="flex items-center justify-center gap-1.5 border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-rose-500/40 hover:text-rose-300"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>

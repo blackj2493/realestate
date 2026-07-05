@@ -197,7 +197,7 @@ export default function FilterBar() {
     <>
       {/* MOBILE (<md): layers stay inline (tab-like); all other filters move into
           the sheet behind a prominent, count-badged Filters button. */}
-      <div className="flex items-center gap-2 border-t border-slate-800 bg-slate-950 px-3 py-2 md:hidden">
+      <div className="flex items-center gap-2 border-t border-border bg-background px-3 py-2 md:hidden">
         <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto">
           <LayerChips />
           {soldWindowVisible && <SoldWindowDropdown />}
@@ -205,9 +205,9 @@ export default function FilterBar() {
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="relative flex min-h-[40px] shrink-0 items-center gap-1.5 border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-100 transition-colors active:bg-slate-800"
+          className="relative flex min-h-[40px] shrink-0 items-center gap-1.5 border border-border bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-foreground transition-colors active:bg-muted"
         >
-          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+          <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
           Filters
           {activeFilterCount > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -220,7 +220,7 @@ export default function FilterBar() {
       {/* DESKTOP (md+): pinned mode anchors · scrolling filter chips · pinned nudge.
           Layers + class no longer scroll off the right edge, and every applied filter
           is summarised (and cleared) in the ActiveFilterStrip below. */}
-      <div className="hidden h-11 items-center border-t border-slate-800 bg-slate-950 md:flex">
+      <div className="hidden h-11 items-center border-t border-border bg-background md:flex">
         {/* Pinned-left: listing-status layers + sold window + property class. */}
         <div className="flex shrink-0 items-center gap-x-2 pl-3 pr-1">
           <LayerChips />
@@ -235,7 +235,7 @@ export default function FilterBar() {
             ]}
           />
         </div>
-        <div className="h-5 w-px shrink-0 bg-slate-800" />
+        <div className="h-5 w-px shrink-0 bg-muted" />
 
         {/* Scrolling-middle: just the basics (price · beds · baths · type). The deep
             field library + investor signals now live in the Filters drawer, so this
@@ -265,10 +265,10 @@ export default function FilterBar() {
               onClick={() => setDrawerOpen(true)}
               className={cn(
                 LABEL,
-                "relative flex items-center gap-1.5 border border-slate-700 px-2.5 py-1.5 text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                "relative flex items-center gap-1.5 border border-border px-2.5 py-1.5 text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
               )}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+              <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
               Filters
               {drawerActiveCount > 0 && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 px-1 text-[10px] font-bold leading-none text-slate-950">
@@ -277,7 +277,7 @@ export default function FilterBar() {
               )}
             </button>
           )}
-          <span className={cn(LABEL, nudge.overflowing ? "text-amber-400" : "text-slate-400")}>
+          <span className={cn(LABEL, nudge.overflowing ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground")}>
             {nudge.text}
           </span>
         </div>

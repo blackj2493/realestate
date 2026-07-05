@@ -248,9 +248,9 @@ export default function RoomMap({
 
   if (raw.length === 0) {
     return (
-      <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+      <div className={cn("bg-card rounded-lg border border-border p-4", className)}>
         <Header unit={unit} setUnit={setUnit} mode={mode} setMode={setMode} showToggle={false} />
-        <p className="py-2 text-center text-xs text-slate-500">
+        <p className="py-2 text-center text-xs text-muted-foreground">
           Room details unavailable for this listing.
         </p>
       </div>
@@ -258,7 +258,7 @@ export default function RoomMap({
   }
 
   return (
-    <div data-tour="listing-room-map" className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div data-tour="listing-room-map" className={cn("bg-card rounded-lg border border-border p-4", className)}>
       <Header unit={unit} setUnit={setUnit} mode={mode} setMode={setMode} showToggle={hasScaled} />
 
       {/* Level filter pills (double as the floor legend) */}
@@ -291,10 +291,10 @@ export default function RoomMap({
                     style={{ backgroundColor: sec.color }}
                     aria-hidden
                   />
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-foreground">
                     {sec.floor}
                   </h4>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[10px] text-muted-foreground">
                     {sec.count} {sec.count === 1 ? "room" : "rooms"} · {formatArea(sec.areaMeters, unit)}
                   </span>
                 </div>
@@ -338,7 +338,13 @@ export default function RoomMap({
                           height={t.h}
                           rx={4}
                           fill={t.color}
-                          fillOpacity={isActive ? 0.5 : 0.26}
+                          // Stronger tint in light so tiles read as coloured (not washed)
+                          // under dark labels; dark mode keeps its original opacities.
+                          className={
+                            isActive
+                              ? "[fill-opacity:0.55] dark:[fill-opacity:0.5]"
+                              : "[fill-opacity:0.38] dark:[fill-opacity:0.26]"
+                          }
                           stroke={t.color}
                           strokeWidth={isActive ? 2.5 : 1.25}
                         />
@@ -362,8 +368,7 @@ export default function RoomMap({
                             x={t.x + 7}
                             y={t.y + 19}
                             fontSize={16}
-                            className="font-semibold"
-                            fill="#f1f5f9"
+                            className="font-semibold fill-slate-900 dark:fill-slate-100"
                             pointerEvents="none"
                           >
                             {truncate(t.room.name, t.w, 16)}
@@ -375,7 +380,7 @@ export default function RoomMap({
                             y={t.y + 37}
                             fontSize={13}
                             fontFamily="monospace"
-                            fill="#cbd5e1"
+                            className="fill-slate-700 dark:fill-slate-300"
                             pointerEvents="none"
                           >
                             {formatArea(t.room.areaMeters, unit)}
@@ -387,7 +392,7 @@ export default function RoomMap({
                             y={t.y + 53}
                             fontSize={12}
                             fontFamily="monospace"
-                            fill="#94a3b8"
+                            className="fill-slate-600 dark:fill-slate-400"
                             pointerEvents="none"
                           >
                             {t.room.length.toFixed(2)} × {t.room.width.toFixed(2)} m
@@ -404,48 +409,48 @@ export default function RoomMap({
           {/* Hover/focus detail strip */}
           <div className="mt-2 h-5 text-xs">
             {active ? (
-              <span className="flex flex-wrap items-center gap-x-2 text-slate-300">
-                <span className="font-semibold text-slate-100">{active.room.name}</span>
-                <span className="text-slate-500">·</span>
-                <span className="text-slate-400">{active.floor}</span>
-                <span className="text-slate-500">·</span>
-                <span className="font-mono text-slate-300">
+              <span className="flex flex-wrap items-center gap-x-2 text-foreground">
+                <span className="font-semibold text-foreground">{active.room.name}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-muted-foreground">{active.floor}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="font-mono text-foreground">
                   {formatDimensions(active.room.length, active.room.width)}
                 </span>
-                <span className="text-slate-500">·</span>
-                <span className="font-mono text-emerald-400">
+                <span className="text-muted-foreground">·</span>
+                <span className="font-mono text-emerald-700 dark:text-emerald-400">
                   {formatArea(active.room.areaMeters, unit)}
                 </span>
                 {active.room.isLikelyCombinedSpace && (
-                  <span className="text-amber-400/80">· likely combined space</span>
+                  <span className="text-amber-700 dark:text-amber-400/80">· likely combined space</span>
                 )}
               </span>
             ) : (
-              <span className="text-slate-600">Hover or tap a room for details</span>
+              <span className="text-muted-foreground">Hover or tap a room for details</span>
             )}
           </div>
         </>
       ) : (
         // ── List view (the ledger) — shows every room, even dimensionless ones ──
-        <div className="overflow-hidden rounded-md border border-slate-800">
+        <div className="overflow-hidden rounded-md border border-border">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-slate-900/60 text-xs uppercase text-slate-500">
+              <tr className="bg-card/60 text-xs uppercase text-muted-foreground">
                 <th className="px-3 py-2 text-left font-medium">Room</th>
                 <th className="px-3 py-2 text-left font-medium">Level</th>
                 <th className="px-3 py-2 text-right font-medium">Dimensions</th>
                 <th className="px-3 py-2 text-right font-medium">Area</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-border/60">
               {listRooms.map((r, i) => {
                 const hasDims = !!(r.RoomLength && r.RoomWidth);
                 return (
-                  <tr key={i} className="hover:bg-slate-900/40">
-                    <td className="px-3 py-2 text-slate-200">{normalize(r.RoomType) || "—"}</td>
-                    <td className="px-3 py-2 text-slate-400">{normalize(r.RoomLevel) || "—"}</td>
-                    <td className="px-3 py-2 text-right font-mono text-slate-300">{rawDims(r)}</td>
-                    <td className="px-3 py-2 text-right font-mono text-slate-400">
+                  <tr key={i} className="hover:bg-card/40">
+                    <td className="px-3 py-2 text-foreground">{normalize(r.RoomType) || "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{normalize(r.RoomLevel) || "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono text-foreground">{rawDims(r)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-muted-foreground">
                       {hasDims ? formatArea(r.RoomLength! * r.RoomWidth!, unit) : "—"}
                     </td>
                   </tr>
@@ -456,7 +461,7 @@ export default function RoomMap({
         </div>
       )}
 
-      <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
         Each floor is shown separately; tile size = room area (shared scale across floors).
         Dimensions as listed — schematic, not an architectural floor plan.
       </p>
@@ -481,13 +486,13 @@ function Header({
 }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
-      <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
-        <Ruler className="h-4 w-4 text-emerald-400" />
+      <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
+        <Ruler className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
         Room Dimensions
       </h3>
       <div className="flex items-center gap-1.5">
         {/* unit toggle */}
-        <div className="flex overflow-hidden rounded border border-slate-700">
+        <div className="flex overflow-hidden rounded border border-border">
           {(["sqm", "sqft"] as Unit[]).map((u) => (
             <button
               key={u}
@@ -495,7 +500,7 @@ function Header({
               onClick={() => setUnit(u)}
               className={cn(
                 "px-2 py-0.5 text-[10px] font-medium transition-colors",
-                unit === u ? "bg-slate-700 text-slate-100" : "text-slate-400 hover:text-slate-200"
+                unit === u ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {u === "sqm" ? "m²" : "ft²"}
@@ -504,7 +509,7 @@ function Header({
         </div>
         {/* treemap/list toggle */}
         {showToggle && (
-          <div className="flex overflow-hidden rounded border border-slate-700">
+          <div className="flex overflow-hidden rounded border border-border">
             <button
               type="button"
               onClick={() => setMode("map")}
@@ -512,7 +517,7 @@ function Header({
               aria-label="Treemap view"
               className={cn(
                 "flex items-center px-1.5 py-1 transition-colors",
-                mode === "map" ? "bg-slate-700 text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                mode === "map" ? "bg-muted text-emerald-700 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <LayoutGrid className="h-3 w-3" />
@@ -524,7 +529,7 @@ function Header({
               aria-label="List view"
               className={cn(
                 "flex items-center px-1.5 py-1 transition-colors",
-                mode === "list" ? "bg-slate-700 text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                mode === "list" ? "bg-muted text-emerald-700 dark:text-emerald-400" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <ListIcon className="h-3 w-3" />
@@ -554,8 +559,8 @@ function FilterPill({
       className={cn(
         "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
         active
-          ? "border-slate-500 bg-slate-700 text-slate-100"
-          : "border-slate-800 text-slate-400 hover:text-slate-200"
+          ? "border-slate-500 bg-muted text-foreground"
+          : "border-border text-muted-foreground hover:text-foreground"
       )}
     >
       {color && (

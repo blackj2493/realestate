@@ -22,7 +22,7 @@ export default function HeroBackground({
       : "radial-gradient(115% 95% at 50% 40%, rgba(2,6,23,0.06) 0%, rgba(2,6,23,0.5) 100%)";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-slate-950">
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-background">
       {/* Faint texture shown only until the map tiles load */}
       <div className="grid-pattern absolute inset-0 opacity-20" />
 

@@ -30,16 +30,16 @@ export function daysAgo(p: ListingDocument): number | null {
 }
 
 const BADGE_TONE: Record<BadgeTone, string> = {
-  warn: "bg-amber-500/15 text-amber-300",
-  info: "bg-sky-500/15 text-sky-300",
-  neutral: "bg-slate-500/15 text-slate-300",
+  warn: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  info: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  neutral: "bg-slate-500/15 text-foreground",
 };
 
 /** Compact icon + value chip for the bed/bath/parking strip. */
 function StatChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
     <span className="inline-flex items-center gap-1">
-      <Icon className="h-3.5 w-3.5 text-slate-500" />
+      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       {label}
     </span>
   );
@@ -80,29 +80,29 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
     const onIso = isLeased ? doc.LeasedDate : isDelisted ? doc.DelistedDate : doc.SoldDate;
     const on = onIso ? new Date(onIso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : null;
     const deltaTone =
-      delta?.direction === "over" ? "text-rose-300" : delta?.direction === "under" ? "text-emerald-300" : "text-slate-300";
+      delta?.direction === "over" ? "text-rose-700 dark:text-rose-300" : delta?.direction === "under" ? "text-emerald-700 dark:text-emerald-300" : "text-foreground";
     return (
       <>
         <div className="flex items-center gap-1.5 text-[10px]">
           <span className={cn("shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide", LAYER_TONE_CLASS[status.tone])}>
             {status.label}
           </span>
-          {on && <span className="text-slate-500">{on}</span>}
+          {on && <span className="text-muted-foreground">{on}</span>}
           {isDelisted && (doc.DaysOnMarket ?? 0) > 0 && (
-            <span className="text-slate-500">· survived {doc.DaysOnMarket}d</span>
+            <span className="text-muted-foreground">· survived {doc.DaysOnMarket}d</span>
           )}
         </div>
-        <p className="mt-0.5 font-sans text-base font-bold text-cyan-300">
+        <p className="mt-0.5 font-sans text-base font-bold text-cyan-700 dark:text-cyan-300">
           {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}${isLeased ? "/mo" : ""}` : "—"}
         </p>
         {delta && (
           <p className={cn("mt-0.5 font-mono text-xs font-semibold", deltaTone)}>
             {delta.direction === "at" ? "At ask" : `${delta.deltaPct > 0 ? "+" : ""}${delta.deltaPct}% ${delta.direction} ask`}
-            <span className="ml-1 text-slate-500">(asked ${(doc.OriginalListPrice ?? 0).toLocaleString()})</span>
+            <span className="ml-1 text-muted-foreground">(asked ${(doc.OriginalListPrice ?? 0).toLocaleString()})</span>
           </p>
         )}
         {isDelisted && (
-          <p className="mt-0.5 font-mono text-xs font-semibold text-amber-300">
+          <p className="mt-0.5 font-mono text-xs font-semibold text-amber-700 dark:text-amber-300">
             {askCut !== null
               ? `Cut ${askCut}% during campaign (from $${(doc.OriginalListPrice ?? 0).toLocaleString()})`
               : doc.OriginalListPrice && doc.OriginalListPrice === doc.ListPrice
@@ -110,23 +110,23 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
                 : "Last ask — did not sell"}
           </p>
         )}
-        <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
+        <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-foreground">{addr}</p>
         {chips.length > 0 && (
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-slate-300">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-foreground">
             {chips.map((chip, i) => (
               <React.Fragment key={i}>
-                {i > 0 && <span className="text-slate-600">·</span>}
+                {i > 0 && <span className="text-muted-foreground">·</span>}
                 {chip}
               </React.Fragment>
             ))}
           </div>
         )}
-        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
           <span className="normal-case tracking-normal">{doc.id}</span>
-          <span className="text-slate-600">·</span>
+          <span className="text-muted-foreground">·</span>
           <span>{type}</span>
           {/* TRREB §6.3(c): brokerage must always be displayed — fallback, never omit */}
-          <span className="text-slate-600">·</span>
+          <span className="text-muted-foreground">·</span>
           <span className="truncate normal-case tracking-normal">{doc.ListOfficeName || "Brokerage unavailable"}</span>
         </div>
       </>
@@ -142,7 +142,7 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
             <span
               className={cn(
                 "shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide",
-                /lease/i.test(doc.TransactionType) ? "bg-sky-500/15 text-sky-300" : "bg-emerald-500/15 text-emerald-300"
+                /lease/i.test(doc.TransactionType) ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
               )}
             >
               {doc.TransactionType}
@@ -158,25 +158,25 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
               {badge.label}
             </span>
           )}
-          {age !== null && <span className="text-slate-500">{age === 0 ? "today" : `${age}d ago`}</span>}
+          {age !== null && <span className="text-muted-foreground">{age === 0 ? "today" : `${age}d ago`}</span>}
         </div>
       )}
 
       {/* Price — own line so it never gets squeezed by the chip/freshness.
           No `truncate`: a price must never be ellipsis-clipped to "$8…" (audit C4). */}
-      <p className="mt-0.5 font-sans text-base font-bold text-cyan-300">
+      <p className="mt-0.5 font-sans text-base font-bold text-cyan-700 dark:text-cyan-300">
         {doc.ListPrice ? `$${doc.ListPrice.toLocaleString()}` : "—"}
       </p>
 
       {/* Address */}
-      <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-slate-200">{addr}</p>
+      <p className="mt-0.5 line-clamp-2 pr-2 font-sans text-sm font-medium leading-snug text-foreground">{addr}</p>
 
       {/* Bed / bath / parking strip — present chips joined by · separators */}
       {chips.length > 0 && (
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-slate-300">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-foreground">
           {chips.map((chip, i) => (
             <React.Fragment key={i}>
-              {i > 0 && <span className="text-slate-600">·</span>}
+              {i > 0 && <span className="text-muted-foreground">·</span>}
               {chip}
             </React.Fragment>
           ))}
@@ -184,12 +184,12 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
       )}
 
       {/* MLS# · type · brokerage (brokerage at sibling weight per TRREB §6.3(c)) */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-slate-500">
+      <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
         <span className="normal-case tracking-normal">{doc.id}</span>
-        <span className="text-slate-600">·</span>
+        <span className="text-muted-foreground">·</span>
         <span>{type}</span>
         {/* TRREB §6.3(c): brokerage must always be displayed — fallback, never omit */}
-        <span className="text-slate-600">·</span>
+        <span className="text-muted-foreground">·</span>
         <span className="truncate normal-case tracking-normal">{doc.ListOfficeName || "Brokerage unavailable"}</span>
       </div>
     </>

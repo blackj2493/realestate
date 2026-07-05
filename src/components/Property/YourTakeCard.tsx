@@ -104,11 +104,11 @@ export default function YourTakeCard({
   const skippedPurchaseRules = hydrated && isLease ? purchaseOnlyRuleCount(rules) : 0;
 
   return (
-    <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <div className="mb-6 rounded-xl border border-border bg-card/40 p-4">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.09em] text-slate-300">Your Take</h3>
-        <span className="ml-auto font-mono text-[10px] font-semibold text-slate-500">private · on this device</span>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.09em] text-foreground">Your Take</h3>
+        <span className="ml-auto font-mono text-[10px] font-semibold text-muted-foreground">private · on this device</span>
       </div>
 
       {/* Deal-breaker auto-screen */}
@@ -125,18 +125,18 @@ export default function YourTakeCard({
               className={`flex flex-col gap-1 ${na ? "opacity-40" : ""}`}
               title={na ? "Doesn't apply to lease listings" : undefined}
             >
-              <span className="font-mono text-[9px] uppercase tracking-wide text-slate-500">{f.label}</span>
-              <span className="flex items-center gap-0.5 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                {f.prefix && <span className="text-[11px] text-slate-500">{f.prefix}</span>}
+              <span className="font-mono text-[9px] uppercase tracking-wide text-muted-foreground">{f.label}</span>
+              <span className="flex items-center gap-0.5 rounded-md border border-border bg-background/60 px-2 py-1">
+                {f.prefix && <span className="text-[11px] text-muted-foreground">{f.prefix}</span>}
                 <input
                   inputMode="decimal"
                   defaultValue={shown}
                   key={`${f.key}-${hydrated}`} /* re-seed defaultValue after hydration */
                   onChange={(e) => updateRule(f.key, e.target.value, f.scale ?? 1)}
                   placeholder={f.placeholder}
-                  className="w-12 bg-transparent text-base font-mono text-slate-200 outline-none placeholder:text-slate-600"
+                  className="w-12 bg-transparent text-base font-mono text-foreground outline-none placeholder:text-muted-foreground"
                 />
-                {f.suffix && <span className="text-[11px] text-slate-500">{f.suffix}</span>}
+                {f.suffix && <span className="text-[11px] text-muted-foreground">{f.suffix}</span>}
               </span>
             </label>
           );
@@ -145,14 +145,14 @@ export default function YourTakeCard({
 
       {/* Verdict against the rules */}
       {active === 0 ? (
-        <p className="mb-3 text-[11px] text-slate-500">
+        <p className="mb-3 text-[11px] text-muted-foreground">
           {skippedPurchaseRules > 0
             ? "Your cap-rate & price filters don't apply to leases — set a beds or True DOM rule to screen rentals."
             : "Set your deal-breakers above to auto-screen every listing."}
         </p>
       ) : (
         <div className="mb-3">
-          <p className={`mb-1.5 font-mono text-[11px] font-bold ${fails > 0 ? "text-rose-400" : "text-emerald-400"}`}>
+          <p className={`mb-1.5 font-mono text-[11px] font-bold ${fails > 0 ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"}`}>
             {fails > 0 ? `⚑ Fails ${fails} of your ${active} rule${active === 1 ? "" : "s"}` : `✓ Meets all ${active} of your rule${active === 1 ? "" : "s"}`}
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -162,10 +162,10 @@ export default function YourTakeCard({
                 title={r.detail}
                 className={`rounded px-2 py-0.5 font-mono text-[10px] font-semibold ${
                   r.status === "fail"
-                    ? "bg-rose-500/12 text-rose-300"
+                    ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
                     : r.status === "pass"
-                      ? "bg-emerald-500/12 text-emerald-300"
-                      : "bg-slate-700/40 text-slate-400"
+                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+                      : "bg-muted/40 text-muted-foreground"
                 }`}
               >
                 {r.status === "fail" ? "✕" : r.status === "pass" ? "✓" : "?"} {r.label}
@@ -173,7 +173,7 @@ export default function YourTakeCard({
             ))}
           </div>
           {skippedPurchaseRules > 0 && (
-            <p className="mt-1.5 text-[10px] text-slate-500">Cap-rate & price filters skipped — they don&apos;t apply to leases.</p>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">Cap-rate & price filters skipped — they don&apos;t apply to leases.</p>
           )}
         </div>
       )}
@@ -184,7 +184,7 @@ export default function YourTakeCard({
         onChange={(e) => updateNote(e.target.value)}
         rows={2}
         placeholder="Private note — only you, only this device. e.g. 'confirm reserve fund · lowball at 860'"
-        className="w-full resize-none rounded-lg border border-slate-800 bg-slate-950/60 p-2.5 text-base text-slate-200 outline-none placeholder:text-slate-600 focus:border-slate-700"
+        className="w-full resize-none rounded-lg border border-border bg-background/60 p-2.5 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-border"
       />
     </div>
   );

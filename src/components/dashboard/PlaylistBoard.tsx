@@ -42,12 +42,12 @@ export default function PlaylistBoard({
   }, [board, key, scope]);
 
   return (
-    <div className="border border-slate-800 bg-slate-900/40">
-      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
-        <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-slate-200">
+    <div className="border border-border bg-card/40">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
           {board.title}
         </h3>
-        <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+        <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
           {board.metricLabel}
         </span>
       </div>
@@ -55,15 +55,15 @@ export default function PlaylistBoard({
       {rows === null && !error && (
         <div className="space-y-px p-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse bg-slate-800/40" />
+            <div key={i} className="h-12 animate-pulse bg-muted/40" />
           ))}
         </div>
       )}
       {error && (
-        <p className="px-3 py-6 text-center text-xs text-rose-400">Failed to load</p>
+        <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>
       )}
       {rows && rows.length === 0 && (
-        <p className="px-3 py-6 text-center text-xs text-slate-500">No matching listings</p>
+        <p className="px-3 py-6 text-center text-xs text-muted-foreground">No matching listings</p>
       )}
       {rows &&
         rows.length > 0 &&

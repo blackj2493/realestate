@@ -49,15 +49,15 @@ export default async function WhatsMyHomeHidingPage({
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
   return (
-    <div className="min-h-app bg-slate-950 text-slate-200">
+    <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
         <h1 className="mb-1 text-3xl font-bold text-white">What&apos;s my home hiding?</h1>
-        <p className="mb-3 max-w-2xl text-sm text-slate-400">
+        <p className="mb-3 max-w-2xl text-sm text-muted-foreground">
           Describe your home and see the renovations that pay back the most where you are —
           ranked by what actually sells nearby. Free.
         </p>
-        <p className="mb-8 text-xs text-slate-500">
+        <p className="mb-8 text-xs text-muted-foreground">
           Want your home&apos;s full estimated value too?{" "}
           <Link
             href="/hidden-equity"

@@ -33,13 +33,13 @@ function MinSelect({
 }) {
   return (
     <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-      <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+      <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500/60"
+        className="border border-border bg-card/60 px-2 py-1.5 text-xs text-foreground outline-none focus:border-cyan-500/60"
       >
         {options.map((o) => (
           <option key={o.v} value={o.v}>
@@ -83,25 +83,25 @@ function StepperPopover({
       className={cn(
         "flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border px-2.5 py-1 text-xs transition-colors",
         value > 0
-          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
-          : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-cyan-500/60"
+          ? "border-cyan-600/60 bg-cyan-600/10 text-cyan-700 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200"
+          : "border-border bg-card/60 text-foreground hover:border-cyan-500/60"
       )}
     >
-      <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+      <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
       {summary}
-      <ChevronDown className="h-3 w-3 text-slate-500" />
+      <ChevronDown className="h-3 w-3 text-muted-foreground" />
     </span>
   );
   return (
     <Popover trigger={trigger} className="w-52">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className={cn(STEP_LABEL, "text-slate-400")}>{label}</span>
+          <span className={cn(STEP_LABEL, "text-muted-foreground")}>{label}</span>
           {/* Min = "N or more" (default); Exact = "exactly N". Mode survives a
               count change so toggling re-labels the grid in place. */}
-          <div className="flex border border-slate-800">
+          <div className="flex border border-border">
             {[
               { t: "Min", exact: false },
               { t: "Exact", exact: true },
@@ -115,7 +115,7 @@ function StepperPopover({
                   "px-2 py-0.5 transition-colors",
                   exact === m.exact
                     ? "bg-cyan-500/10 text-cyan-300"
-                    : "text-slate-500 hover:text-slate-300"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {m.t}
@@ -133,7 +133,7 @@ function StepperPopover({
                 "h-7 w-9 border text-xs font-semibold transition-colors",
                 value === n
                   ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300"
-                  : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
+                  : "border-border bg-card text-muted-foreground hover:border-border"
               )}
             >
               {n === 0 ? "Any" : exact ? `${n}` : `${n}+`}
@@ -186,16 +186,16 @@ export default function MarketActivityControls({
     lens.minFrontage === 0;
 
   return (
-    <div className="border border-slate-800 bg-slate-900/40 p-3">
+    <div className="border border-border bg-card/40 p-3">
       {/* Mobile: single-row horizontal scroll (no wrap) so 9 controls don't stack into
           a ragged blob; sm+ keeps the original wrapping layout. Children never shrink. */}
       <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 sm:flex-wrap sm:gap-x-6 sm:gap-y-3 sm:overflow-visible sm:pb-0">
         {/* Sale vs Rent — scopes every surface (the rest of the bar refines within it) */}
         <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-          <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+          <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
             For
           </span>
-          <div className="flex border border-slate-700">
+          <div className="flex border border-border">
             {(
               [
                 { v: "sale", t: "Sale" },
@@ -211,7 +211,7 @@ export default function MarketActivityControls({
                   "terminal-font px-3 py-1 text-xs transition-colors",
                   lens.transactionType === o.v
                     ? "bg-cyan-500 text-slate-950"
-                    : "text-slate-400 hover:bg-slate-800"
+                    : "text-muted-foreground hover:bg-muted"
                 )}
               >
                 {o.t}
@@ -222,10 +222,10 @@ export default function MarketActivityControls({
 
         {/* Window */}
         <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-          <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+          <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
             Window
           </span>
-          <div className="flex border border-slate-700">
+          <div className="flex border border-border">
             {ACTIVITY_WINDOWS.map((w) => (
               <button
                 key={w}
@@ -235,7 +235,7 @@ export default function MarketActivityControls({
                   "terminal-font px-2.5 py-1 text-xs transition-colors",
                   lens.windowDays === w
                     ? "bg-cyan-500 text-slate-950"
-                    : "text-slate-400 hover:bg-slate-800"
+                    : "text-muted-foreground hover:bg-muted"
                 )}
               >
                 {WINDOW_LABEL[w] ?? `${w}D`}
@@ -249,22 +249,22 @@ export default function MarketActivityControls({
           <button
             type="button"
             onClick={() => (typeOpen ? setTypeOpen(false) : openTypes())}
-            className="flex items-center gap-1.5 border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-xs text-slate-200 hover:border-cyan-500/60"
+            className="flex items-center gap-1.5 border border-border bg-card/60 px-2.5 py-1 text-xs text-foreground hover:border-cyan-500/60"
           >
-            <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
               Type
             </span>
             {typeSummary}
-            <ChevronDown className="h-3 w-3 text-slate-500" />
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
           </button>
           {typeOpen && (
-            <div className="absolute z-20 mt-1 w-60 border border-slate-700 bg-slate-900 p-3 shadow-xl">
+            <div className="absolute z-20 mt-1 w-60 border border-border bg-card p-3 shadow-xl">
               <button
                 type="button"
                 onClick={() => setDraftTypes([])}
                 className={cn(
                   "mb-1 flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs",
-                  draftTypes.length === 0 ? "text-cyan-300" : "text-slate-300"
+                  draftTypes.length === 0 ? "text-cyan-700 dark:text-cyan-300" : "text-foreground"
                 )}
               >
                 <span
@@ -272,7 +272,7 @@ export default function MarketActivityControls({
                     "flex h-4 w-4 items-center justify-center border",
                     draftTypes.length === 0
                       ? "border-cyan-500 bg-cyan-500 text-slate-950"
-                      : "border-slate-600"
+                      : "border-border"
                   )}
                 >
                   {draftTypes.length === 0 && <span className="text-[9px] font-black">✓</span>}
@@ -287,12 +287,12 @@ export default function MarketActivityControls({
                       key={o.key}
                       type="button"
                       onClick={() => toggleDraft(o.key)}
-                      className="flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs text-slate-300 hover:text-slate-100"
+                      className="flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs text-foreground hover:text-foreground"
                     >
                       <span
                         className={cn(
                           "flex h-4 w-4 items-center justify-center border",
-                          on ? "border-cyan-500 bg-cyan-500 text-slate-950" : "border-slate-600"
+                          on ? "border-cyan-500 bg-cyan-500 text-slate-950" : "border-border"
                         )}
                       >
                         {on && <span className="text-[9px] font-black">✓</span>}
@@ -306,14 +306,14 @@ export default function MarketActivityControls({
                 <button
                   type="button"
                   onClick={() => setTypeOpen(false)}
-                  className="border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800"
+                  className="border border-border px-3 py-1 text-xs text-foreground hover:bg-muted"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={saveTypes}
-                  className="border border-cyan-500/60 bg-cyan-500/20 px-3 py-1 text-xs text-cyan-200 hover:bg-cyan-500/30"
+                  className="border border-cyan-600 bg-cyan-600 px-3 py-1 text-xs text-white hover:bg-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-200 dark:hover:bg-cyan-500/30"
                 >
                   Save
                 </button>
@@ -353,10 +353,10 @@ export default function MarketActivityControls({
 
         {/* Basement — Any / Finished / Unfinished (maps on both New and Sold) */}
         <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-          <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-500">
+          <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
             Basement
           </span>
-          <div className="flex border border-slate-700">
+          <div className="flex border border-border">
             {(
               [
                 { v: "any", t: "Any" },
@@ -373,7 +373,7 @@ export default function MarketActivityControls({
                   "terminal-font px-2.5 py-1 text-xs transition-colors",
                   lens.basement === o.v
                     ? "bg-cyan-500 text-slate-950"
-                    : "text-slate-400 hover:bg-slate-800"
+                    : "text-muted-foreground hover:bg-muted"
                 )}
               >
                 {o.t}
@@ -388,7 +388,7 @@ export default function MarketActivityControls({
             onClick={() =>
               onChange({ ...DEFAULT_ACTIVITY_LENS, windowDays: lens.windowDays })
             }
-            className="terminal-font shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-rose-400 hover:underline"
+            className="terminal-font shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-muted-foreground underline-offset-2 hover:text-rose-600 dark:hover:text-rose-400 hover:underline"
           >
             Clear filters
           </button>

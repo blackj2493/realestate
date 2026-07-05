@@ -83,8 +83,8 @@ export default function PasskeyPrompt() {
   if (view === "done") {
     return (
       <div className="flex items-center gap-3 border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
-        <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-300" />
-        <p className="terminal-font text-xs uppercase tracking-wider text-emerald-200">
+        <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+        <p className="terminal-font text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-200">
           Passkey enabled — next time, just use Face ID or your fingerprint.
         </p>
       </div>
@@ -97,18 +97,18 @@ export default function PasskeyPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="absolute right-2 top-2 p-1 text-slate-500 transition-colors hover:text-slate-300 sm:static"
+        className="absolute right-2 top-2 p-1 text-muted-foreground transition-colors hover:text-foreground sm:static"
       >
         <X className="h-4 w-4" />
       </button>
 
       <div className="flex items-start gap-3 pr-6 sm:pr-0">
-        <Fingerprint className="mt-0.5 h-6 w-6 shrink-0 text-cyan-300" />
+        <Fingerprint className="mt-0.5 h-6 w-6 shrink-0 text-cyan-700 dark:text-cyan-300" />
         <div>
-          <p className="terminal-font text-xs font-medium uppercase tracking-wider text-slate-100">
+          <p className="terminal-font text-xs font-medium uppercase tracking-wider text-foreground">
             Skip the email code next time
           </p>
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
             Add a passkey to sign in with Face ID, your fingerprint, or your
             device PIN — no code to type.
           </p>
@@ -121,7 +121,7 @@ export default function PasskeyPrompt() {
           type="button"
           onClick={dismiss}
           disabled={view === "saving"}
-          className="terminal-font min-h-[40px] px-3 py-2 text-[11px] uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300 disabled:opacity-50"
+          className="terminal-font min-h-[40px] px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
         >
           Not now
         </button>
@@ -129,7 +129,7 @@ export default function PasskeyPrompt() {
           type="button"
           onClick={() => void enable()}
           disabled={view === "saving"}
-          className="terminal-font inline-flex min-h-[40px] items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 px-4 py-2 text-[11px] uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
+          className="terminal-font inline-flex min-h-[40px] items-center justify-center gap-2 border border-cyan-600 bg-cyan-600 px-4 py-2 text-[11px] uppercase tracking-wider text-white transition-colors [touch-action:manipulation] hover:bg-cyan-700 active:bg-cyan-800 disabled:opacity-50 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20 dark:active:bg-cyan-500/30"
         >
           {view === "saving" ? (
             <>

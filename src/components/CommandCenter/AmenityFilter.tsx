@@ -29,8 +29,8 @@ const segBtn = (selected: boolean) =>
   cn(
     "flex flex-1 items-center justify-center gap-1.5 rounded-none border px-2 py-1.5 text-xs font-medium transition-all",
     selected
-      ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-300"
-      : "border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200"
+      ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
+      : "border-border bg-muted text-muted-foreground hover:text-foreground"
   );
 
 export default function AmenityFilter() {
@@ -41,7 +41,7 @@ export default function AmenityFilter() {
   return (
     <div>
       {/* Amenity kind */}
-      <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Walkable to
       </label>
       <div className="flex gap-1.5">
@@ -63,10 +63,10 @@ export default function AmenityFilter() {
 
       {/* Max distance */}
       <div className="mb-1.5 mt-4 flex items-center justify-between">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Max distance
         </label>
-        <span className="font-mono text-xs text-cyan-300">{fmtKm(amenity.maxKm)}</span>
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-300">{fmtKm(amenity.maxKm)}</span>
       </div>
       <Slider
         value={[amenity.maxKm]}
@@ -81,12 +81,12 @@ export default function AmenityFilter() {
         <button
           type="button"
           onClick={resetAmenity}
-          className="text-xs text-slate-500 hover:text-slate-300"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           Clear
         </button>
       </div>
-      <p className="mt-3 text-[9px] leading-tight text-slate-600">
+      <p className="mt-3 text-[9px] leading-tight text-muted-foreground">
         Straight-line distance to the nearest grocery / recreation centre. Places ©
         OpenStreetMap contributors, © Overture Maps Foundation.
       </p>

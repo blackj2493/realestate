@@ -48,9 +48,9 @@ export default async function HiddenEquityPage({
         ];
 
     return (
-      <main className="mx-auto max-w-md px-4 pb-safe pt-[max(env(safe-area-inset-top),4rem)] text-slate-200">
+      <main className="mx-auto max-w-md px-4 pb-safe pt-[max(env(safe-area-inset-top),4rem)] text-foreground">
         <h1 className="mb-2 text-2xl font-bold">{heading}</h1>
-        <p className="mb-4 text-sm text-slate-400">
+        <p className="mb-4 text-sm text-muted-foreground">
           {isAvm
             ? "A free, neighbourhood-calibrated valuation. Sign in to see your number."
             : "See your estimated value and the renovation moves that add the most equity nearby. Sign in to unlock your report."}
@@ -59,8 +59,8 @@ export default async function HiddenEquityPage({
         {/* Value-prop: make the payoff clear BEFORE asking for an email. */}
         <ul className="mb-6 space-y-2">
           {benefits.map((b) => (
-            <li key={b} className="flex items-start gap-2 text-sm text-slate-300">
-              <span aria-hidden="true" className="mt-0.5 text-emerald-400">
+            <li key={b} className="flex items-start gap-2 text-sm text-foreground">
+              <span aria-hidden="true" className="mt-0.5 text-emerald-700 dark:text-emerald-400">
                 ✓
               </span>
               <span>{b}</span>
@@ -70,11 +70,11 @@ export default async function HiddenEquityPage({
 
         <MagicLinkForm next={next} />
 
-        <p className="mt-6 text-xs text-slate-500">
+        <p className="mt-6 text-xs text-muted-foreground">
           Just curious what a renovation could add?{" "}
           <Link
             href="/whats-my-home-hiding"
-            className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+            className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
           >
             See your home&apos;s renovation upside — no sign-in →
           </Link>
@@ -83,16 +83,16 @@ export default async function HiddenEquityPage({
     );
   }
   return (
-    <main className="mx-auto max-w-[1200px] px-4 pb-safe py-8 text-slate-200">
+    <main className="mx-auto max-w-[1200px] px-4 pb-safe py-8 text-foreground">
       <h1 className="mb-1 text-2xl font-bold">Hidden Equity</h1>
-      <p className="mb-2 text-sm text-slate-400">
+      <p className="mb-2 text-sm text-muted-foreground">
         Your estimated value + the renovations that add the most where you are.
       </p>
-      <p className="mb-6 text-xs text-slate-500">
+      <p className="mb-6 text-xs text-muted-foreground">
         Curious about a single renovation?{" "}
         <Link
           href="/whats-my-home-hiding"
-          className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+          className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
         >
           Compare renovation payback →
         </Link>

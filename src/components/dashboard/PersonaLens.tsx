@@ -54,9 +54,12 @@ export default function PersonaLens({
     <span
       data-tour={dataTour}
       className={cn(
-        "terminal-font group flex cursor-pointer items-center border border-amber-400/60 bg-amber-400/10",
-        "text-amber-300 shadow-[0_0_24px_-6px_rgba(251,191,36,0.55)] transition-colors",
-        "hover:border-amber-300/80 hover:bg-amber-400/20",
+        "terminal-font group flex cursor-pointer items-center border transition-colors",
+        // LIGHT (Daylight) — a solid gold pill so the hero control pops off the
+        // pale ground (a translucent tint reads as washed out on white).
+        "border-[color:var(--dt-gold-line)] bg-[color:var(--dt-gold)] text-white shadow-[0_2px_12px_-2px_rgba(196,125,16,0.6)] hover:bg-[#b06e0c]",
+        // DARK (main mode) — the original elevated glass-gold lens, unchanged.
+        "dark:border-amber-400/60 dark:bg-amber-400/10 dark:text-amber-300 dark:shadow-[0_0_24px_-6px_rgba(251,191,36,0.55)] dark:hover:border-amber-300/80 dark:hover:bg-amber-400/20",
         compact ? "gap-2 px-3 py-2" : "gap-2.5 px-4 py-2.5"
       )}
     >
@@ -83,7 +86,7 @@ export default function PersonaLens({
   return (
     <div className="flex flex-col items-center gap-1">
       {caption && (
-        <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-slate-500">
+        <span className="terminal-font text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           {caption}
         </span>
       )}

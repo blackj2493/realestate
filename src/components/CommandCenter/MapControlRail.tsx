@@ -52,8 +52,8 @@ function Tile({
         className={cn(
           "relative flex w-[60px] flex-col items-center gap-1 border py-1.5 transition-all",
           open
-            ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-300"
-            : "border-transparent text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
+            ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"
+            : "border-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground"
         )}
       >
         {/* Open-state accent bar */}
@@ -77,9 +77,9 @@ function Tile({
       </button>
       {/* Description tooltip — explains what the tool does on hover */}
       {description && (
-        <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 flex max-w-[200px] -translate-y-1/2 flex-col gap-0.5 whitespace-normal border border-slate-700 bg-slate-900 px-2.5 py-1.5 opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-100">{label}</span>
-          <span className="text-[11px] leading-snug text-slate-400">{description}</span>
+        <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 flex max-w-[200px] -translate-y-1/2 flex-col gap-0.5 whitespace-normal border border-border bg-card px-2.5 py-1.5 opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground">{label}</span>
+          <span className="text-[11px] leading-snug text-muted-foreground">{description}</span>
         </span>
       )}
     </div>
@@ -230,12 +230,12 @@ export default function MapControlRail() {
   return (
     <div
       data-tour="terminal-rail"
-      className="absolute left-0 top-0 z-20 hidden h-full w-[68px] flex-col items-center gap-1 border-r border-slate-800 bg-slate-950/85 py-3 backdrop-blur-md md:flex"
+      className="absolute left-0 top-0 z-20 hidden h-full w-[68px] flex-col items-center gap-1 border-r border-border bg-background/85 py-3 backdrop-blur-md md:flex"
     >
-      <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-600">Layers</span>
+      <span className="text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">Layers</span>
       {layerTiles.map(renderTile)}
-      <div className="my-1.5 h-px w-7 bg-slate-800" />
-      <span className="text-[8px] font-semibold uppercase tracking-wider text-slate-600">Tools</span>
+      <div className="my-1.5 h-px w-7 bg-muted" />
+      <span className="text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">Tools</span>
       {toolTiles.map(renderTile)}
     </div>
   );

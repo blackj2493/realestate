@@ -36,13 +36,13 @@ export default function MetricGroup({
     : rows;
 
   return (
-    <tbody className="divide-y divide-slate-800/70 border-b-4 border-slate-950">
-      <tr className="bg-slate-900/50">
+    <tbody className="divide-y divide-border/70 border-b-4 border-slate-950">
+      <tr className="bg-card">
         <td colSpan={colSpan} className="sticky left-0 z-10 p-0">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200"
+            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
           >
             <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} />
             {GROUP_LABELS[groupId]}
@@ -51,7 +51,7 @@ export default function MetricGroup({
       </tr>
       {open && visible.length === 0 && (
         <tr>
-          <td colSpan={colSpan} className="px-3 py-2 text-xs italic text-slate-600">
+          <td colSpan={colSpan} className="px-3 py-2 text-xs italic text-muted-foreground">
             All identical
           </td>
         </tr>

@@ -33,7 +33,7 @@ export default function NumberInput({ value, min, max, onCommit }: NumberInputPr
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className="w-full border border-slate-700 bg-slate-950 px-2 py-1 text-center font-mono text-xs text-slate-200 focus:border-cyan-500/60 focus:outline-none"
+      className="w-full border border-border bg-background px-2 py-1 text-center font-mono text-xs text-foreground focus:border-cyan-500/60 focus:outline-none"
     />
   );
 }

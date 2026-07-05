@@ -42,16 +42,16 @@ export default function VowGateOverlay({
   return (
     <div
       className={cn(
-        "absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 rounded bg-slate-950/55 px-4 text-center backdrop-blur-[2px]",
+        "absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 rounded bg-background/40 px-4 text-center backdrop-blur-[2px]",
         className
       )}
     >
-      <Lock className="h-5 w-5 text-cyan-300" />
-      {headline && <p className="text-sm font-semibold leading-snug text-slate-100">{headline}</p>}
-      {message && <p className="max-w-[44ch] text-xs leading-snug text-slate-300">{message}</p>}
+      <Lock className="h-5 w-5 text-cyan-700 dark:text-cyan-300" />
+      {headline && <p className="text-sm font-semibold leading-snug text-foreground">{headline}</p>}
+      {message && <p className="max-w-[44ch] text-xs leading-snug text-muted-foreground">{message}</p>}
       <Link
         href={href}
-        className="mt-1 rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-1.5 text-xs font-semibold text-cyan-100 shadow-sm transition-colors hover:bg-cyan-500/30"
+        className="mt-1 rounded-md border border-cyan-600 bg-cyan-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-cyan-700 dark:border-cyan-400/50 dark:bg-cyan-500/20 dark:text-cyan-100 dark:hover:bg-cyan-500/30"
       >
         {ctaLabel}
       </Link>

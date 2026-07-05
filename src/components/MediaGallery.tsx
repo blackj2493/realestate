@@ -59,8 +59,8 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
   // If no media or all duplicates/failed, show placeholder
   if (!uniqueMedia.length) {
     return (
-      <div className="h-[600px] bg-gray-100 flex flex-col items-center justify-center rounded-lg">
-        <ImageIcon className="h-16 w-16 text-gray-400 mb-4" />
+      <div className="h-[600px] bg-muted flex flex-col items-center justify-center rounded-lg">
+        <ImageIcon className="h-16 w-16 text-muted-foreground mb-4" />
         <p className="text-muted-foreground">No images available</p>
       </div>
     );
@@ -72,7 +72,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
       <div className="relative grid grid-cols-4 grid-rows-2 gap-2 h-[600px] mb-8 rounded-lg overflow-hidden">
         {/* Main Large Image - takes 2x2 space */}
         <div 
-          className="col-span-2 row-span-2 relative cursor-pointer bg-gray-100"
+          className="col-span-2 row-span-2 relative cursor-pointer bg-muted"
           onClick={() => {
             setSelectedIndex(0);
             setShowLightbox(true);
@@ -90,7 +90,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
         {uniqueMedia.slice(1, 5).map((item, index) => (
           <div
             key={item.MediaKey || item.MediaURL}
-            className="relative cursor-pointer bg-gray-100"
+            className="relative cursor-pointer bg-muted"
             onClick={() => {
               setSelectedIndex(index + 1);
               setShowLightbox(true);

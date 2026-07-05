@@ -34,7 +34,7 @@ export default function RecentlyViewed() {
 
   return (
     <section className="space-y-3">
-      <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
+      <h2 className="terminal-font border-b border-border pb-2 text-sm font-bold uppercase tracking-widest text-foreground">
         Recently Viewed
       </h2>
       {/* Mobile: a snap-scroll rail of larger cards (~62% wide so the next peeks).
@@ -44,18 +44,18 @@ export default function RecentlyViewed() {
           <Link
             key={item.id}
             href={`/properties/${item.id}`}
-            className="group w-[62%] shrink-0 snap-start border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-600 sm:w-auto sm:shrink"
+            className="group w-[62%] shrink-0 snap-start border border-border bg-card/40 transition-colors hover:border-border sm:w-auto sm:shrink"
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
+            <div className="relative aspect-[4/3] overflow-hidden bg-muted">
               <Thumb item={item} />
             </div>
             <div className="p-2">
-              <div className="terminal-font text-xs font-semibold text-cyan-400">
+              <div className="terminal-font text-sm font-bold text-cyan-700 dark:text-cyan-400">
                 {formatPrice(item.price)}
               </div>
-              <p className="truncate text-[11px] text-slate-300">{item.address}</p>
+              <p className="truncate text-xs text-foreground">{item.address}</p>
               {item.city && (
-                <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">
+                <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
                   {item.city}
                 </p>
               )}
@@ -64,7 +64,7 @@ export default function RecentlyViewed() {
                   cards, at the same weight as sibling detail lines. Conditional:
                   snapshots saved before this field shipped omit it. */}
               {item.brokerage && (
-                <p className="truncate text-[11px] text-slate-300">{item.brokerage}</p>
+                <p className="truncate text-xs text-foreground">{item.brokerage}</p>
               )}
             </div>
           </Link>

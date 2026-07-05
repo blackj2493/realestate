@@ -13,6 +13,7 @@ import WatchButton from "@/components/watchlist/WatchButton";
 import WatchlistSummary from "./WatchlistSummary";
 import WatchlistPulseStrip from "./WatchlistPulseStrip";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
+import { ModuleHead, StatusLight, type StatusTone } from "@/components/daylight/primitives";
 
 function Thumb({ item }: { item: WatchItem }) {
   return (
@@ -25,36 +26,22 @@ function Thumb({ item }: { item: WatchItem }) {
   );
 }
 
-/** "What changed since you saved it" badges, overlaid top-left on the thumbnail. */
+/** "What changed since you saved it" badges, overlaid top-left on the thumbnail.
+ *  Daylight status-lights: solid saturated in light, the current translucent
+ *  chip in dark. */
 function ChangeChips({ change }: { change: WatchlistChange }) {
-  const chips: { key: string; text: string; cls: string }[] = [];
+  const chips: { key: string; text: string; tone: StatusTone }[] = [];
 
   if (change.offMarket) {
     const disp = change.disposition;
     if (disp?.kind === "relisted") {
-      chips.push({
-        key: "relisted",
-        text: "Relisted",
-        cls: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
-      });
+      chips.push({ key: "relisted", text: "Relisted", tone: "relisted" });
     } else if (disp?.kind === "sold") {
-      chips.push({
-        key: "sold",
-        text: "Sold",
-        cls: "text-rose-400 bg-rose-400/10 border-rose-400/30",
-      });
+      chips.push({ key: "sold", text: "Sold", tone: "sold" });
     } else if (disp?.kind === "leased") {
-      chips.push({
-        key: "leased",
-        text: "Leased",
-        cls: "text-violet-400 bg-violet-400/10 border-violet-400/30",
-      });
+      chips.push({ key: "leased", text: "Leased", tone: "leased" });
     } else {
-      chips.push({
-        key: "off",
-        text: "Off-market",
-        cls: "text-amber-400 bg-amber-400/10 border-amber-400/30",
-      });
+      chips.push({ key: "off", text: "Off-market", tone: "off" });
     }
   } else {
     const d = change.priceDeltaSinceSave;
@@ -63,17 +50,11 @@ function ChangeChips({ change }: { change: WatchlistChange }) {
       chips.push({
         key: "delta",
         text: `${down ? "▼" : "▲"} ${formatPrice(Math.abs(d))}`,
-        cls: down
-          ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30"
-          : "text-rose-400 bg-rose-400/10 border-rose-400/30",
+        tone: down ? "drop" : "sold",
       });
     }
     if (change.isStale) {
-      chips.push({
-        key: "stale",
-        text: "Stale",
-        cls: "text-rose-400 bg-rose-400/10 border-rose-400/30",
-      });
+      chips.push({ key: "stale", text: "Stale", tone: "stale" });
     }
   }
 
@@ -82,12 +63,9 @@ function ChangeChips({ change }: { change: WatchlistChange }) {
   return (
     <div className="absolute left-1.5 top-1.5 z-10 flex flex-col items-start gap-1">
       {chips.map((c) => (
-        <span
-          key={c.key}
-          className={`terminal-font rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider backdrop-blur ${c.cls}`}
-        >
+        <StatusLight key={c.key} tone={c.tone} className="shadow-[0_1px_3px_rgba(10,24,40,0.35)] dark:backdrop-blur">
           {c.text}
-        </span>
+        </StatusLight>
       ))}
     </div>
   );
@@ -108,31 +86,31 @@ export default function WatchlistSection() {
   if (changes.length === 0) {
     return (
       <section className="space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
-            Watchlist
-          </h2>
-          {!signedIn && (
-            <Link
-              href="/login"
-              className="terminal-font text-[11px] uppercase tracking-wider text-cyan-400 hover:underline"
-            >
-              Sign in to sync across devices →
-            </Link>
-          )}
-        </div>
+        <ModuleHead
+          title="Watchlist"
+          right={
+            !signedIn ? (
+              <Link
+                href="/login"
+                className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline"
+              >
+                Sign in to sync across devices →
+              </Link>
+            ) : undefined
+          }
+        />
 
-        <div className="border border-dashed border-slate-700 bg-slate-900/40 px-6 py-12 text-center">
-          <h3 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-200">
+        <div className="border border-dashed border-border bg-card/40 px-6 py-12 text-center">
+          <h3 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
             Nothing saved yet
           </h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Save listings to track price drops, days-on-market, and status changes —
             all in one place.
           </p>
           <Link
             href="/properties"
-            className="terminal-font mt-6 inline-flex min-h-[44px] items-center gap-2 border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 text-xs uppercase tracking-wider text-cyan-200 hover:bg-cyan-500/20"
+            className="terminal-font mt-6 inline-flex min-h-[44px] items-center gap-2 border border-cyan-600/50 bg-cyan-600/10 px-4 py-3 text-xs uppercase tracking-wider text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
           >
             Browse properties →
           </Link>
@@ -143,19 +121,20 @@ export default function WatchlistSection() {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-slate-100">
-          Watchlist <span className="text-slate-500">· {rollup.count}</span>
-        </h2>
-        {!signedIn && (
-          <Link
-            href="/login"
-            className="terminal-font text-[11px] uppercase tracking-wider text-cyan-400 hover:underline"
-          >
-            Sign in to sync across devices →
-          </Link>
-        )}
-      </div>
+      <ModuleHead
+        title="Watchlist"
+        count={rollup.count}
+        right={
+          !signedIn ? (
+            <Link
+              href="/login"
+              className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline"
+            >
+              Sign in to sync across devices →
+            </Link>
+          ) : undefined
+        }
+      />
 
       <WatchlistSummary rollup={rollup} />
       <WatchlistPulseStrip rollup={rollup} />
@@ -171,26 +150,26 @@ export default function WatchlistSection() {
           return (
             <div
               key={item.listing_key}
-              className="group relative border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-600"
+              className="group relative border border-border bg-card/40 transition-colors hover:border-border"
             >
               <WatchButton
                 item={item}
-                className="absolute right-1.5 top-1.5 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-slate-950/70 p-1.5 backdrop-blur"
+                className="absolute right-1.5 top-1.5 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-background/70 p-1.5 backdrop-blur"
               />
               <Link href={`/properties/${linkKey}`} className="block">
-                <div className="relative aspect-[4/3] overflow-hidden bg-slate-800">
+                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                   <Thumb item={item} />
                   <ChangeChips change={change} />
                 </div>
                 <div className="p-2">
-                  <div className="terminal-font text-xs font-semibold text-cyan-400">
+                  <div className="terminal-font text-sm font-bold text-cyan-700 dark:text-cyan-400">
                     {price ? formatPrice(price) : "—"}
                   </div>
-                  <p className="truncate text-[11px] text-slate-300">
+                  <p className="truncate text-xs text-foreground">
                     {item.address || "Saved property"}
                   </p>
                   {item.city && (
-                    <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">
+                    <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
                       {item.city}
                     </p>
                   )}
@@ -200,7 +179,7 @@ export default function WatchlistSection() {
                       Re-hydrated live from Typesense via change.current; rendered
                       conditionally so off-market cards (no live doc) never break. */}
                   {brokerage && (
-                    <p className="truncate text-[11px] text-slate-300">{brokerage}</p>
+                    <p className="truncate text-xs text-foreground">{brokerage}</p>
                   )}
                 </div>
               </Link>

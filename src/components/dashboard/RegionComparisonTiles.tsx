@@ -122,9 +122,9 @@ const median = (nums: number[]): number | null => {
 
 /** Value color for the threshold metric (sold-to-list): seller's vs buyer's market. */
 function thresholdValueClass(v: number): string {
-  if (v >= 100) return "text-rose-400";
-  if (v < 97) return "text-cyan-400";
-  return "text-amber-400";
+  if (v >= 100) return "text-rose-700 dark:text-rose-400";
+  if (v < 97) return "text-cyan-700 dark:text-cyan-400";
+  return "text-amber-700 dark:text-amber-400";
 }
 
 function Tile({
@@ -140,16 +140,16 @@ function Tile({
   const valueClass =
     metric.kind === "threshold" && value != null
       ? thresholdValueClass(value)
-      : "text-cyan-400";
+      : "text-cyan-700 dark:text-cyan-400";
   const sub = value != null ? metric.sub?.(data) ?? null : null;
 
   return (
-    <div className="flex flex-col gap-1 border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
+    <div className="flex flex-col gap-1 border border-border bg-card px-3 py-2 shadow-sm dark:bg-card/40 dark:shadow-none">
+      <div className="terminal-font flex items-center gap-1 text-[11px] uppercase tracking-wider text-muted-foreground">
         {metric.label}
         {metric.glossaryKey && <InfoDot term={metric.glossaryKey} />}
       </div>
-      <div className={`terminal-font text-lg font-bold ${valueClass}`}>
+      <div className={`terminal-font text-xl font-extrabold sm:text-2xl ${valueClass}`}>
         {value == null ? DASH : metric.format(value)}
       </div>
       <div className="flex min-h-[16px] items-center">
@@ -159,7 +159,7 @@ function Tile({
             <YoY pct={data.score.yoyPct} />
           </div>
         ) : metric.kind === "threshold" ? (
-          <span className="terminal-font text-[10px] text-slate-500">
+          <span className="terminal-font text-[10px] text-muted-foreground">
             {value >= 100 ? "over asking" : "under asking"}
           </span>
         ) : peerMedian != null ? (
@@ -170,7 +170,7 @@ function Tile({
         )}
       </div>
       {sub && (
-        <div className="terminal-font text-[9px] uppercase tracking-wider text-slate-600">
+        <div className="terminal-font text-[9px] uppercase tracking-wider text-muted-foreground">
           {sub}
         </div>
       )}
@@ -258,7 +258,7 @@ export default function RegionComparisonTiles({
         {regions.map((r) => (
           <div key={r} className="grid grid-cols-3 gap-3">
             {metricIds.map((id) => (
-              <div key={id} className="h-[88px] animate-pulse border border-slate-800 bg-slate-900/40" />
+              <div key={id} className="h-[88px] animate-pulse border border-border bg-card/40" />
             ))}
           </div>
         ))}
@@ -271,7 +271,7 @@ export default function RegionComparisonTiles({
       {datas.map((d) => (
         <div key={d.score.region} className="space-y-1.5">
           {regions.length > 1 && (
-            <div className="terminal-font text-[11px] uppercase tracking-wider text-slate-400">
+            <div className="terminal-font text-xs uppercase tracking-wider text-muted-foreground">
               {d.score.region}
             </div>
           )}

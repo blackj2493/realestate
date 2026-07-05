@@ -7,14 +7,14 @@ import { cn } from '@/lib/utils';
 
 // Badge variants based on the design spec
 export type BadgeVariant = 
-  | 'income-suite'      // text-emerald-400 bg-emerald-400/10 border-emerald-400/20
-  | 'suite-potential'   // text-blue-400 bg-blue-400/10 border-blue-400/20
-  | 'distressed'        // text-rose-400 bg-rose-400/10 border-rose-400/20
-  | 'holding-offers'    // text-amber-400 bg-amber-400/10 border-amber-400/20
-  | 'price-drop'        // text-emerald-400 bg-emerald-400/10 border-emerald-400/20
-  | 'top-school-zone'   // text-purple-400 bg-purple-400/10 border-purple-400/20
-  | 'new-listing'       // text-cyan-400 bg-cyan-400/10 border-cyan-400/20
-  | 'motivated-seller'; // text-orange-400 bg-orange-400/10 border-orange-400/20
+  | 'income-suite'      // text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
+  | 'suite-potential'   // text-blue-700 dark:text-blue-400 bg-blue-400/10 border-blue-400/20
+  | 'distressed'        // text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/20
+  | 'holding-offers'    // text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/20
+  | 'price-drop'        // text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
+  | 'top-school-zone'   // text-purple-600 dark:text-purple-400 bg-purple-400/10 border-purple-400/20
+  | 'new-listing'       // text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/20
+  | 'motivated-seller'; // text-orange-700 dark:text-orange-400 bg-orange-400/10 border-orange-400/20
 
 interface AlphaBadgeProps {
   variant: BadgeVariant;
@@ -24,50 +24,53 @@ interface AlphaBadgeProps {
 }
 
 // Badge styling configurations
-const badgeStyles: Record<BadgeVariant, { 
-  text: string; 
-  bg: string; 
-  border: string; 
+// Each variant carries a LIGHT rendering (darker -700 text on a -500/10 tint with a
+// -600/30 border, so the chip reads as saturated on white) and the original DARK
+// rendering under `dark:` (unchanged — the terminal ledger pins dark).
+const badgeStyles: Record<BadgeVariant, {
+  text: string;
+  bg: string;
+  border: string;
 }> = {
   'income-suite': {
-    text: 'text-emerald-400',
-    bg: 'bg-emerald-400/10',
-    border: 'border-emerald-400/20',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
+    border: 'border-emerald-600/30 dark:border-emerald-400/20',
   },
   'suite-potential': {
-    text: 'text-blue-400',
-    bg: 'bg-blue-400/10',
-    border: 'border-blue-400/20',
+    text: 'text-blue-700 dark:text-blue-400',
+    bg: 'bg-blue-500/10 dark:bg-blue-400/10',
+    border: 'border-blue-600/30 dark:border-blue-400/20',
   },
   'distressed': {
-    text: 'text-rose-400',
-    bg: 'bg-rose-400/10',
-    border: 'border-rose-400/20',
+    text: 'text-rose-700 dark:text-rose-400',
+    bg: 'bg-rose-500/10 dark:bg-rose-400/10',
+    border: 'border-rose-600/30 dark:border-rose-400/20',
   },
   'holding-offers': {
-    text: 'text-amber-400',
-    bg: 'bg-amber-400/10',
-    border: 'border-amber-400/20',
+    text: 'text-amber-700 dark:text-amber-400',
+    bg: 'bg-amber-500/10 dark:bg-amber-400/10',
+    border: 'border-amber-600/30 dark:border-amber-400/20',
   },
   'price-drop': {
-    text: 'text-emerald-400',
-    bg: 'bg-emerald-400/10',
-    border: 'border-emerald-400/20',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
+    border: 'border-emerald-600/30 dark:border-emerald-400/20',
   },
   'top-school-zone': {
-    text: 'text-purple-400',
-    bg: 'bg-purple-400/10',
-    border: 'border-purple-400/20',
+    text: 'text-purple-700 dark:text-purple-400',
+    bg: 'bg-purple-500/10 dark:bg-purple-400/10',
+    border: 'border-purple-600/30 dark:border-purple-400/20',
   },
   'new-listing': {
-    text: 'text-cyan-400',
-    bg: 'bg-cyan-400/10',
-    border: 'border-cyan-400/20',
+    text: 'text-cyan-700 dark:text-cyan-400',
+    bg: 'bg-cyan-500/10 dark:bg-cyan-400/10',
+    border: 'border-cyan-600/30 dark:border-cyan-400/20',
   },
   'motivated-seller': {
-    text: 'text-orange-400',
-    bg: 'bg-orange-400/10',
-    border: 'border-orange-400/20',
+    text: 'text-orange-700 dark:text-orange-400',
+    bg: 'bg-orange-500/10 dark:bg-orange-400/10',
+    border: 'border-orange-600/30 dark:border-orange-400/20',
   },
 };
 

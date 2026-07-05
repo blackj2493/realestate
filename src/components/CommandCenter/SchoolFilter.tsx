@@ -46,8 +46,8 @@ const segBtn = (selected: boolean) =>
   cn(
     "flex flex-1 items-center justify-center rounded-none border px-2 py-1.5 text-xs font-medium transition-all",
     selected
-      ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-300"
-      : "border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200"
+      ? "border-cyan-600/50 bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
+      : "border-border bg-muted text-muted-foreground hover:text-foreground"
   );
 
 export default function SchoolFilter() {
@@ -107,8 +107,8 @@ export default function SchoolFilter() {
         className={cn(
           "mb-2 flex w-full items-center justify-between border px-3 py-2 text-xs font-medium transition-all",
           school.showZones
-            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-            : "border-slate-700 bg-slate-800 text-slate-300 hover:text-slate-100"
+            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+            : "border-border bg-muted text-foreground hover:text-foreground"
         )}
       >
         <span className="flex items-center gap-2">
@@ -121,7 +121,7 @@ export default function SchoolFilter() {
           )}
         />
       </button>
-      <p className="mb-4 text-[9px] leading-tight text-slate-600">
+      <p className="mb-4 text-[9px] leading-tight text-muted-foreground">
         Official attendance boundaries where boards publish them (
         {school.level === "elementary" ? "elementary" : "secondary"},{" "}
         {school.system === "either" ? "public + catholic" : school.system}). Boundaries
@@ -129,7 +129,7 @@ export default function SchoolFilter() {
       </p>
 
       {/* Level */}
-      <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         School level
       </label>
       <div className="flex gap-1.5">
@@ -146,7 +146,7 @@ export default function SchoolFilter() {
       </div>
 
       {/* System */}
-      <label className="mb-1.5 mt-4 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <label className="mb-1.5 mt-4 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         System
       </label>
       <div className="flex gap-1.5">
@@ -164,10 +164,10 @@ export default function SchoolFilter() {
 
       {/* Min score */}
       <div className="mb-1.5 mt-4 flex items-center justify-between">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Min school score
         </label>
-        <span className="font-mono text-xs text-cyan-300">
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-300">
           {school.minScore > 0 ? `${school.minScore.toFixed(1)} / 10` : "Any"}
         </span>
       </div>
@@ -180,11 +180,11 @@ export default function SchoolFilter() {
       />
 
       {/* Target school */}
-      <label className="mb-1.5 mt-4 block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <label className="mb-1.5 mt-4 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Near a specific school
       </label>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
           value={query}
@@ -193,28 +193,28 @@ export default function SchoolFilter() {
             if (school.targetSchool) setSchool({ targetSchool: null });
           }}
           placeholder="Search school name…"
-          className="h-9 border-slate-700 bg-slate-950 pl-10 text-sm text-slate-200 placeholder:text-slate-500"
+          className="h-9 border-border bg-background pl-10 text-sm text-foreground placeholder:text-muted-foreground"
         />
       </div>
       {(results.length > 0 || searching) && (
-        <div className="mt-1 max-h-56 overflow-y-auto rounded-none border border-slate-700 bg-slate-950">
+        <div className="mt-1 max-h-56 overflow-y-auto rounded-none border border-border bg-background">
           {searching && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500">Searching…</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground">Searching…</div>
           )}
           {results.map((r) => (
             <button
               key={r.id}
               type="button"
               onClick={() => selectTarget(r)}
-              className="block w-full px-3 py-2 text-left hover:bg-slate-800"
+              className="block w-full px-3 py-2 text-left hover:bg-muted"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs text-slate-200">{r.name}</span>
+                <span className="truncate text-xs text-foreground">{r.name}</span>
                 {r.score !== null && (
-                  <span className="shrink-0 font-mono text-[10px] text-cyan-300">{r.score.toFixed(1)}</span>
+                  <span className="shrink-0 font-mono text-[10px] text-cyan-700 dark:text-cyan-300">{r.score.toFixed(1)}</span>
                 )}
               </div>
-              <div className="truncate text-[10px] text-slate-500">
+              <div className="truncate text-[10px] text-muted-foreground">
                 {r.city} · {r.system === "public" ? "Public" : "Catholic"} {r.level}
               </div>
             </button>
@@ -224,11 +224,11 @@ export default function SchoolFilter() {
 
       {/* Footer — clear the lens (the drawer's own X closes the panel). */}
       <div className="mt-4">
-        <button type="button" onClick={clear} className="text-xs text-slate-500 hover:text-slate-300">
+        <button type="button" onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
           Clear
         </button>
       </div>
-      <p className="mt-3 text-[9px] leading-tight text-slate-600">
+      <p className="mt-3 text-[9px] leading-tight text-muted-foreground">
         Scores are the PureProperty School Score, derived from EQAO results
         (Government of Ontario, OGL-Ontario). Nearest rated school — not a guaranteed
         catchment.

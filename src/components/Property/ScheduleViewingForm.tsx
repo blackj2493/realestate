@@ -135,7 +135,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
   // ── Success confirmation ─────────────────────────────────────────────────────
   if (status === "success") {
     return (
-      <div className="rounded-md border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm text-emerald-300">
+      <div className="rounded-md border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
         Request sent — you&apos;ll hear back shortly.
       </div>
     );
@@ -149,15 +149,15 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
     <form
       ref={formRef}
       onSubmit={(e) => void handleSubmit(e)}
-      className="rounded-md border border-slate-700 bg-slate-900 p-4 space-y-3"
+      className="rounded-md border border-border bg-card p-4 space-y-3"
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-200">{def.heading}</span>
+        <span className="text-sm font-semibold text-foreground">{def.heading}</span>
         <button
           type="button"
           onClick={close}
           aria-label="Close schedule viewing form"
-          className="text-slate-500 hover:text-slate-300 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -165,8 +165,8 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
 
       {/* Name */}
       <div>
-        <label htmlFor="sv-name" className="block text-xs font-medium text-slate-400 mb-1">
-          Name <span className="text-rose-400">*</span>
+        <label htmlFor="sv-name" className="block text-xs font-medium text-muted-foreground mb-1">
+          Name <span className="text-rose-700 dark:text-rose-400">*</span>
         </label>
         <input
           id="sv-name"
@@ -179,14 +179,14 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           autoComplete="name"
           autoCapitalize="words"
           enterKeyHint="next"
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
       {/* Email */}
       <div>
-        <label htmlFor="sv-email" className="block text-xs font-medium text-slate-400 mb-1">
-          Email <span className="text-rose-400">*</span>
+        <label htmlFor="sv-email" className="block text-xs font-medium text-muted-foreground mb-1">
+          Email <span className="text-rose-700 dark:text-rose-400">*</span>
         </label>
         <input
           id="sv-email"
@@ -200,13 +200,13 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           autoComplete="email"
           autoCorrect="off"
           enterKeyHint="next"
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
       {/* Phone */}
       <div>
-        <label htmlFor="sv-phone" className="block text-xs font-medium text-slate-400 mb-1">
+        <label htmlFor="sv-phone" className="block text-xs font-medium text-muted-foreground mb-1">
           Phone
         </label>
         <input
@@ -219,14 +219,14 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           inputMode="tel"
           autoComplete="tel"
           enterKeyHint="next"
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
       {/* Preferred time — viewing intent only */}
       {def.showTime && (
         <div>
-          <label htmlFor="sv-time" className="block text-xs font-medium text-slate-400 mb-1">
+          <label htmlFor="sv-time" className="block text-xs font-medium text-muted-foreground mb-1">
             Preferred time
           </label>
           <select
@@ -234,7 +234,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
             disabled={isSubmitting}
             value={preferredTime}
             onChange={(e) => setPreferredTime(e.target.value)}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+            className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
           >
             <option value="">Select a time…</option>
             <option value="Weekday mornings">Weekday mornings</option>
@@ -248,7 +248,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
 
       {/* Message */}
       <div>
-        <label htmlFor="sv-message" className="block text-xs font-medium text-slate-400 mb-1">
+        <label htmlFor="sv-message" className="block text-xs font-medium text-muted-foreground mb-1">
           {def.messageLabel}
         </label>
         <textarea
@@ -258,13 +258,13 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           onChange={(e) => setMessage(e.target.value)}
           placeholder={def.placeholder}
           rows={3}
-          className="w-full resize-none rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full resize-none rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
       {/* Inline error */}
       {errorMsg && (
-        <p className="text-xs text-rose-400">{errorMsg}</p>
+        <p className="text-xs text-rose-700 dark:text-rose-400">{errorMsg}</p>
       )}
 
       <button
@@ -276,9 +276,9 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
         {isSubmitting ? "Sending…" : def.submitLabel}
       </button>
 
-      <p className="text-center text-xs text-slate-500">
+      <p className="text-center text-xs text-muted-foreground">
         We&apos;ll only use this to arrange your viewing. No spam.{" "}
-        <a href="/privacy" className="underline hover:text-slate-400">
+        <a href="/privacy" className="underline hover:text-muted-foreground">
           Privacy policy
         </a>
         .

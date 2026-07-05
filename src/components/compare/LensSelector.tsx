@@ -11,7 +11,7 @@ export default function LensSelector({
   onChange: (lens: PersonaType) => void;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-slate-700 bg-slate-900/60 p-0.5">
+    <div className="inline-flex rounded-md border border-border bg-card/60 p-0.5">
       {PERSONA_LIST.map((p) => (
         <button
           key={p.id}
@@ -21,7 +21,7 @@ export default function LensSelector({
             "flex min-h-[44px] items-center justify-center rounded px-2.5 py-2.5 text-xs font-medium transition-colors md:min-h-0 md:py-1",
             lens === p.id
               ? "bg-cyan-500/20 text-cyan-100"
-              : "text-slate-400 hover:text-slate-200"
+              : "text-muted-foreground hover:text-foreground"
           )}
           title={p.label}
         >

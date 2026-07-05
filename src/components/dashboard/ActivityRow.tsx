@@ -7,7 +7,7 @@ import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 /**
  * Property-card row for the Market Activity lists (New or Sold): thumbnail + key
- * specs + price. Brokerage is rendered at text-xs text-slate-400 — same size as
+ * specs + price. Brokerage is rendered at text-xs text-muted-foreground — same size as
  * other listing details and not visually separated, per TRREB §6.3(c). Deep-links
  * to the detail page.
  */
@@ -51,7 +51,7 @@ export default function ActivityRow({
   return (
     <Link
       href={`/properties/${id}`}
-      className="group flex gap-3 border-b border-slate-800/50 p-2 transition-colors last:border-b-0 hover:bg-slate-800/50"
+      className="group flex gap-3 border-b border-border/50 p-2 transition-colors last:border-b-0 hover:bg-muted/50"
     >
       <ListingThumbnail
         src={image}
@@ -61,31 +61,31 @@ export default function ActivityRow({
       />
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
         <div className="min-w-0">
-          <p className="truncate font-sans text-xs font-medium text-slate-200">{addr}</p>
+          <p className="truncate font-sans text-xs font-medium text-foreground">{addr}</p>
           {specs.length > 0 && (
-            <p className="terminal-font mt-0.5 truncate text-[10px] uppercase tracking-wide text-slate-400">
+            <p className="terminal-font mt-0.5 truncate text-[10px] uppercase tracking-wide text-muted-foreground">
               {specs.join(" · ")}
             </p>
           )}
         </div>
-        {/* Brokerage rendered at text-xs text-slate-400 — same size as sibling listing
+        {/* Brokerage rendered at text-xs text-muted-foreground — same size as sibling listing
             details, per TRREB §6.3(c) (no visual de-emphasis vs other listing info). */}
-        <p className="truncate text-xs text-slate-400">
+        <p className="truncate text-xs text-muted-foreground">
           {city || "—"}
           {brokerage ? <span> · {brokerage}</span> : null}
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end justify-between py-0.5 text-right">
-        <div className="terminal-font text-sm font-semibold text-cyan-400">
+        <div className="terminal-font text-sm font-bold text-cyan-700 dark:text-cyan-400">
           {priceLabel ? (
-            <span className="mr-1 text-[9px] uppercase tracking-wider text-slate-500">
+            <span className="mr-1 text-[9px] uppercase tracking-wider text-muted-foreground">
               {priceLabel}
             </span>
           ) : null}
           {formatPrice(price)}
         </div>
         {caption ? (
-          <div className="terminal-font text-[10px] text-slate-400">{caption}</div>
+          <div className="terminal-font text-[10px] text-muted-foreground">{caption}</div>
         ) : null}
         {watchable ? (
           <WatchButton

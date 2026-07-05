@@ -3,34 +3,57 @@
 @tailwind utilities;
 
 /* ============================================================================
-   Design tokens — shadcn/ui theme variables (slate/emerald dark theme).
+   Design tokens — shadcn/ui theme variables.
    tailwind.config.ts maps colors to hsl(var(--token)); without these the
    ui/ primitives (Button, Card, Slider, Input, Select) render colorless.
-   App is dark-first, so the dark palette lives directly on :root.
+   LIGHT palette on :root (default); DARK palette under `.dark`, applied by
+   next-themes toggling the `dark` class on <html> (defaultTheme:"dark", so the
+   app is UNCHANGED until a user opts into light). See LIGHT_DARK_THEME_PLAN.
    ============================================================================ */
 @layer base {
   :root {
-    --background: 229 84% 5%; /* slate-950 */
-    --foreground: 214 32% 91%; /* slate-200 */
-    --card: 222 47% 11%; /* slate-900 */
-    --card-foreground: 214 32% 91%;
-    --popover: 222 47% 11%; /* slate-900 */
-    --popover-foreground: 214 32% 91%;
-    --primary: 189 94% 43%; /* cyan-500 */
-    --primary-foreground: 229 84% 5%;
-    --secondary: 217 33% 17%; /* slate-800 */
-    --secondary-foreground: 214 32% 91%;
-    --muted: 217 33% 17%; /* slate-800 */
-    --muted-foreground: 215 20% 65%; /* slate-400 */
-    --accent: 217 33% 17%; /* slate-800 */
-    --accent-foreground: 214 32% 91%;
+    --background: 219 33% 94%; /* Daylight blue-slate ground (#e9edf4) — mirrors dark's page<card depth so white cards read as raised, not washed */
+    --foreground: 222 47% 11%; /* slate-900 */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 192 91% 36%; /* cyan-600 — deeper than dark-mode cyan for contrast on white */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%; /* slate-100 */
+    --muted-foreground: 215 19% 35%; /* slate-600 — readable secondary text, not washed out */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%; /* red-600 */
-    --destructive-foreground: 214 32% 91%;
-    --border: 215 28% 17%; /* slate-800 */
-    --input: 215 28% 17%; /* slate-800 */
-    --ring: 189 94% 43%; /* cyan-500 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 20% 84%; /* slate-300 — clearly visible card + divider edges on the grey ground */
+    --input: 214 20% 84%;
+    --ring: 192 91% 36%;
     --radius: 0rem; /* sharp geometry — zero rounded corners */
-    color-scheme: dark; /* iOS/macOS: render native scrollbars, form controls & status-bar text dark to match the UI (avoids light-mode chrome leaking onto the dark theme) */
+    color-scheme: light;
+
+    /* ------------------------------------------------------------------
+       DAYLIGHT TERMINAL palette (light mode only — see the .dt-* device
+       classes below). Raw hex, consumed by the Daylight primitives via
+       var(). A single teal "signal" hue for live/interactive; green/red for
+       performance; blue=cold / amber=warn market temperature; gold=persona.
+       ------------------------------------------------------------------ */
+    --dt-line: #d8dfe7; /* panel edges / hairlines */
+    --dt-line2: #e9edf2; /* inner dividers (fainter) */
+    --dt-ink3: #8492a0; /* graticule ticks / tertiary mono */
+    --dt-panel2: #f3f6fb; /* row hover / recessed cell */
+    --dt-sig: #0b8fa0; /* teal — LIVE / interactive signal */
+    --dt-sig-bg: #dbeff1;
+    --dt-up: #1a8b4d; /* green — favourable / new */
+    --dt-down: #cf3a44; /* red — sold / adverse */
+    --dt-warn: #b3730f; /* amber — off-market / warm market */
+    --dt-cold: #3061c7; /* blue — relisted / cold market */
+    --dt-violet: #7c4dc4; /* leased */
+    --dt-gold: #c47d10; /* persona lens */
+    --dt-gold-line: #a86a0c;
+    --dt-sh: 0 1px 1px rgba(10, 24, 40, 0.03), 0 5px 14px -6px rgba(10, 24, 40, 0.12); /* instrument-panel lift */
 
     /* ------------------------------------------------------------------
        Brand / Logo tokens (PureProperty.ca logo spec).
@@ -107,6 +130,113 @@
     --pp-text-3xl: 40px;
     --pp-text-display: 56px;
   }
+
+  /* ── DARK palette — applied when next-themes puts `dark` on <html> (the default).
+     Only the shadcn tokens flip; the brand/pp-* tokens above are theme-independent. ── */
+  .dark {
+    --background: 229 84% 5%; /* slate-950 */
+    --foreground: 214 32% 91%; /* slate-200 */
+    --card: 222 47% 11%; /* slate-900 */
+    --card-foreground: 214 32% 91%;
+    --popover: 222 47% 11%; /* slate-900 */
+    --popover-foreground: 214 32% 91%;
+    --primary: 189 94% 43%; /* cyan-500 */
+    --primary-foreground: 229 84% 5%;
+    --secondary: 217 33% 17%; /* slate-800 */
+    --secondary-foreground: 214 32% 91%;
+    --muted: 217 33% 17%; /* slate-800 */
+    --muted-foreground: 215 20% 65%; /* slate-400 */
+    --accent: 217 33% 17%; /* slate-800 */
+    --accent-foreground: 214 32% 91%;
+    --destructive: 0 72% 51%; /* red-600 */
+    --destructive-foreground: 214 32% 91%;
+    --border: 215 28% 17%; /* slate-800 */
+    --input: 215 28% 17%; /* slate-800 */
+    --ring: 189 94% 43%; /* cyan-500 */
+    color-scheme: dark; /* native scrollbars/controls dark to match the UI */
+  }
+
+  /* Light-mode elevation — dark separates surfaces via contrast; light needs real
+     shadows so cards read as designed (HouseSigma/Zolo-style), not flat wireframes.
+     Scoped to rounded card surfaces + popovers; light only, so dark is untouched.
+     Explicit Tailwind shadow-* utilities still win (they sit in a later layer). */
+  :root:not(.dark) :is(.rounded-lg, .rounded-xl, .rounded-2xl).bg-card,
+  :root:not(.dark) .bg-popover {
+    box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 6px 16px -4px rgb(15 23 42 / 0.10);
+  }
+}
+
+/* ============================================================================
+   DAYLIGHT TERMINAL — light-mode design language (device styling).
+   Everything here is LIGHT-ONLY on purpose: dark mode is the product's main
+   mode and stays byte-identical. Decorative device markup that also renders in
+   dark is neutralised by the `.dt-light` gate or `:root:not(.dark)` scoping.
+   The React primitives live in src/components/daylight/. Grammar mirrors the
+   approved mockup: a tick-rule under every module head, teal corner register
+   marks on instrument panels, solid saturated status-lights, a graticule
+   readout, a single teal "live" signal.
+   ============================================================================ */
+
+/* Gate: decorative markup wrapped in .dt-light shows in light, vanishes in dark. */
+.dark .dt-light { display: none !important; }
+
+/* Device 1 — tick-rule: a measured graticule strip under each module heading. */
+.dt-rule {
+  height: 8px;
+  background:
+    linear-gradient(var(--dt-line), var(--dt-line)) 0 100% / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--dt-ink3) 0 1px, transparent 1px 26px) 0 100% / 100% 5px no-repeat;
+  opacity: 0.55;
+}
+
+/* Device 2 — register marks: teal L-ticks at opposing corners of a panel.
+   Scoped to light so the dark panels the same primitive renders stay clean. */
+:root:not(.dark) .dt-reg { position: relative; }
+:root:not(.dark) .dt-reg::before,
+:root:not(.dark) .dt-reg::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+  opacity: 0.75;
+  z-index: 1;
+}
+:root:not(.dark) .dt-reg::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid var(--dt-sig);
+  border-left: 1.5px solid var(--dt-sig);
+}
+:root:not(.dark) .dt-reg::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1.5px solid var(--dt-sig);
+  border-right: 1.5px solid var(--dt-sig);
+}
+
+/* Instrument-panel lift — soft shadow on Panel/Readout so white cards read as
+   raised off the blue-slate ground (mirrors the mockup). Light only. */
+:root:not(.dark) .dt-panel { box-shadow: var(--dt-sh); }
+
+/* Device 4 — brand header band: in light mode the app header is a permanently
+   dark navy bar (brand --pp-bg) with a teal signal-strip on its BOTTOM edge, so
+   it reads as an instrument masthead over the pale page. The header carries a
+   `dark` class too, so its contents (logo, nav, controls) resolve light-on-dark.
+   Dark page mode keeps its existing slate header (this rule doesn't apply). */
+:root:not(.dark) .dt-header {
+  background-color: #0a1828;
+  border-bottom: 3px solid var(--dt-sig);
+}
+
+/* Device 3 — live pulse dot: the single teal heartbeat in the header telemetry. */
+.dt-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dt-sig);
+  display: inline-block;
+  animation: pulse-slow 1.8s ease-in-out infinite;
 }
 
 /* ============================================================================

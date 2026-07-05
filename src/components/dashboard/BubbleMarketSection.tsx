@@ -118,7 +118,7 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
             setName(bubble.name);
           }
         }}
-        className="border-b border-cyan-500/40 bg-transparent px-1 text-sm text-slate-100 outline-none"
+        className="border-b border-cyan-500/40 bg-transparent px-1 text-sm text-foreground outline-none"
       />
     );
   }
@@ -126,12 +126,12 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
   return (
     <div className="relative flex items-center gap-1" ref={menuRef}>
       {confirmDelete ? (
-        <span className="flex items-center gap-2 text-xs text-rose-300">
+        <span className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-300">
           Delete?
           <button
             type="button"
             onClick={() => setConfirmDelete(false)}
-            className="border border-slate-700 px-2 py-0.5 text-[11px] text-slate-300 hover:border-slate-600"
+            className="border border-border px-2 py-0.5 text-[11px] text-foreground hover:border-border"
           >
             Cancel
           </button>
@@ -141,7 +141,7 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
               setConfirmDelete(false);
               await remove(bubble.id);
             }}
-            className="border border-rose-500/60 bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-200 hover:bg-rose-500/25"
+            className="border border-rose-500/60 bg-rose-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-rose-700 dark:bg-rose-500/15 dark:text-rose-200 dark:hover:bg-rose-500/25"
           >
             Delete
           </button>
@@ -150,21 +150,21 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
         <button
           type="button"
           onClick={() => setMenuOpen((o) => !o)}
-          className="rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           aria-label="Bubble actions"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
       )}
       {menuOpen && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-44 border border-slate-700 bg-slate-900 py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-20 mt-1 w-44 border border-border bg-card py-1 shadow-lg">
           <button
             type="button"
             onClick={() => {
               setRenaming(true);
               setMenuOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
           >
             <Pencil className="h-3 w-3" /> Rename
           </button>
@@ -174,7 +174,7 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
               setConfirmDelete(true);
               setMenuOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-rose-300 hover:bg-rose-500/10"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-rose-600 hover:bg-rose-500/10 dark:text-rose-300"
           >
             <Trash2 className="h-3 w-3" /> Delete
           </button>
@@ -205,8 +205,8 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
       className={cn(
         "flex h-7 w-7 items-center justify-center border transition-colors",
         enabled
-          ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-          : "border-slate-700 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+          ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
+          : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
       )}
     >
       {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
@@ -233,7 +233,7 @@ export default function BubbleMarketSection({
       // Deep-linked bubble (?bubble=<id>) opens expanded so the flash lands on data.
       defaultExpanded={highlight}
       icon={
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-300">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-600/15 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
           <Icon className="h-4 w-4" />
         </div>
       }
@@ -246,7 +246,7 @@ export default function BubbleMarketSection({
             onClick={() =>
               router.push(`/properties?bubble=${encodeURIComponent(bubble.id)}`)
             }
-            className="terminal-font flex items-center gap-1 border border-slate-700 px-2.5 py-1 text-[11px] uppercase tracking-wider text-slate-300 hover:border-cyan-600/60 hover:text-cyan-200"
+            className="terminal-font flex items-center gap-1 border border-border px-2.5 py-1 text-[11px] uppercase tracking-wider text-foreground hover:border-cyan-600/60 hover:text-cyan-700 dark:hover:text-cyan-200"
           >
             <ExternalLink className="h-3 w-3" /> Open in Terminal
           </button>
@@ -260,7 +260,7 @@ export default function BubbleMarketSection({
       <RegionStatTiles area={area} lens={lens} />
 
       {enabledBoards.length === 0 ? (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           No boards enabled — add metrics via Customize.
         </p>
       ) : (

@@ -139,23 +139,23 @@ export default async function CityHubPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
-          <Link href="/" className="hover:text-cyan-400">Home</Link>
+        <nav className="mb-4 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-cyan-600 dark:hover:text-cyan-400">Home</Link>
           <span className="mx-2">/</span>
-          <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
+          <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">{cityName}</span>
+          <span className="text-foreground">{cityName}</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
             Homes for Sale in {cityName}, {provLabel}
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             {totalFound > 0
               ? `${totalFound.toLocaleString()} active ${totalFound === 1 ? "listing" : "listings"} for sale`
               : `No active listings for sale in ${cityName} right now.`}
@@ -164,31 +164,31 @@ export default async function CityHubPage({
             <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-1.5">
               <Link
                 href={`/investments/${city}/highest-cap-rate`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 transition-colors hover:text-emerald-300"
               >
                 <TrendingUp className="h-4 w-4" /> Highest cap-rate investments in {cityName} →
               </Link>
               <Link
                 href={`/family/${city}/top-rated-schools`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 transition-colors hover:text-emerald-300"
               >
                 <GraduationCap className="h-4 w-4" /> Homes near top-rated schools in {cityName} →
               </Link>
               <Link
                 href={`/lifestyle/${city}/most-walkable`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-400 transition-colors hover:text-sky-300"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700 dark:text-sky-400 transition-colors hover:text-sky-300"
               >
                 <Footprints className="h-4 w-4" /> Most walkable homes in {cityName} →
               </Link>
               <Link
                 href={`/lifestyle/${city}/new-construction`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-400 transition-colors hover:text-violet-300"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-700 dark:text-violet-400 transition-colors hover:text-violet-300"
               >
                 <Sparkles className="h-4 w-4" /> New construction in {cityName} →
               </Link>
               <Link
                 href={`/investments/${city}/development-potential`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-400 transition-colors hover:text-orange-300"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 dark:text-orange-400 transition-colors hover:text-orange-300"
               >
                 <LandPlot className="h-4 w-4" /> Development potential in {cityName} →
               </Link>
@@ -211,10 +211,10 @@ export default async function CityHubPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-slate-400">
-            <Building2 className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+          <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
+            <Building2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>Nothing active here at the moment.</p>
-            <Link href="/properties" className="mt-3 inline-block text-sm text-cyan-400 hover:text-cyan-300">
+            <Link href="/properties" className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
               Explore the full map →
             </Link>
           </div>
@@ -222,7 +222,7 @@ export default async function CityHubPage({
 
         {neighbourhoods.length > 0 && (
           <section className="mt-10" aria-labelledby="hoods-heading">
-            <h2 id="hoods-heading" className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+            <h2 id="hoods-heading" className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground">
               Browse {cityName} by neighbourhood
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -230,10 +230,10 @@ export default async function CityHubPage({
                 <Link
                   key={n.slug}
                   href={`/property/${prov.toLowerCase()}/${city}/${n.slug}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
                 >
                   {n.name}
-                  <span className="text-xs text-slate-500">{n.count}</span>
+                  <span className="text-xs text-muted-foreground">{n.count}</span>
                 </Link>
               ))}
             </div>

@@ -77,7 +77,7 @@ export default function SocialAuthButtons({
         type="button"
         onClick={() => void signInWithGoogle()}
         disabled={busy !== null}
-        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2.5 border border-slate-600 bg-white py-3 text-xs font-medium uppercase tracking-wider text-slate-800 transition-colors [touch-action:manipulation] hover:bg-slate-100 active:bg-slate-200 disabled:opacity-50"
+        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2.5 border border-border bg-white py-3 text-xs font-medium uppercase tracking-wider text-slate-800 transition-colors [touch-action:manipulation] hover:bg-slate-100 active:bg-slate-200 disabled:opacity-50"
       >
         {busy === "google" ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -92,12 +92,12 @@ export default function SocialAuthButtons({
           type="button"
           onClick={() => void signInWithPasskey()}
           disabled={busy !== null}
-          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-slate-700 bg-slate-900/60 py-3 text-xs uppercase tracking-wider text-slate-200 transition-colors [touch-action:manipulation] hover:border-slate-500 hover:bg-slate-800/60 active:bg-slate-800 disabled:opacity-50"
+          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-border bg-card/60 py-3 text-xs uppercase tracking-wider text-foreground transition-colors [touch-action:manipulation] hover:border-slate-500 hover:bg-muted/60 active:bg-muted disabled:opacity-50"
         >
           {busy === "passkey" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Fingerprint className="h-4 w-4 text-cyan-300" />
+            <Fingerprint className="h-4 w-4 text-cyan-700 dark:text-cyan-300" />
           )}
           Sign in with a passkey
         </button>
@@ -107,11 +107,11 @@ export default function SocialAuthButtons({
 
       {/* Divider between one-click options and the email-code fallback */}
       <div className="flex items-center gap-3 pt-1">
-        <span className="h-px flex-1 bg-slate-800" />
-        <span className="terminal-font text-[10px] uppercase tracking-wider text-slate-600">
+        <span className="h-px flex-1 bg-muted" />
+        <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
           or use email
         </span>
-        <span className="h-px flex-1 bg-slate-800" />
+        <span className="h-px flex-1 bg-muted" />
       </div>
     </div>
   );

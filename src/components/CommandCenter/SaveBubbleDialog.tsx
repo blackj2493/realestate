@@ -202,30 +202,30 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl focus:outline-none">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-5 shadow-2xl focus:outline-none">
           <div className="mb-4 flex items-start justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-300">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-700 dark:text-cyan-300">
                 <Icon className="h-4 w-4" />
               </div>
               <div>
-                <Dialog.Title className="text-base font-semibold text-slate-100">
+                <Dialog.Title className="text-base font-semibold text-foreground">
                   Save as Market Bubble
                 </Dialog.Title>
-                <Dialog.Description className="mt-1 text-xs text-slate-400">
+                <Dialog.Description className="mt-1 text-xs text-muted-foreground">
                   {meta.tagline}. Stays on your dashboard with live sold + inventory stats.
                 </Dialog.Description>
               </div>
             </div>
             <Dialog.Close
-              className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>
 
-          <label className="terminal-font block text-[10px] uppercase tracking-wider text-slate-500">
+          <label className="terminal-font block text-[10px] uppercase tracking-wider text-muted-foreground">
             Bubble name
           </label>
           <input
@@ -233,7 +233,7 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
             onChange={(e) => setName(e.target.value.slice(0, 80))}
             autoFocus
             placeholder="e.g. North Brampton pocket"
-            className="mt-1 w-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-500/60"
+            className="mt-1 w-full border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-cyan-500/60"
           />
 
           {filterSummary.length > 0 && (
@@ -241,7 +241,7 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
               {filterSummary.map((chip) => (
                 <span
                   key={chip}
-                  className="rounded border border-slate-700 bg-slate-800/60 px-2 py-0.5 text-[10px] text-slate-300"
+                  className="rounded border border-border bg-muted/60 px-2 py-0.5 text-[10px] text-foreground"
                 >
                   {chip}
                 </span>
@@ -249,11 +249,11 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
             </div>
           )}
 
-          {error && <p className="mt-3 text-xs text-rose-400">{error}</p>}
+          {error && <p className="mt-3 text-xs text-rose-700 dark:text-rose-400">{error}</p>}
 
           {authPrompt && (
-            <div className="mt-4 border-t border-slate-800 pt-4">
-              <p className="mb-3 text-xs text-slate-400">
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="mb-3 text-xs text-muted-foreground">
                 Sign in to save your first bubble. Your draft is held safely — once
                 you verify the code, we&apos;ll finish saving and open your dashboard.
               </p>
@@ -266,7 +266,7 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300 hover:border-slate-600"
+                className="border border-border bg-card px-3 py-2 text-xs text-foreground hover:border-border"
               >
                 Cancel
               </button>

@@ -178,26 +178,26 @@ export default function MapCommandPalette() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/60 pt-[12vh] backdrop-blur-sm" onClick={close}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-background/60 pt-[12vh] backdrop-blur-sm" onClick={close}>
       <div
-        className="w-full max-w-lg border border-slate-700 bg-slate-900 shadow-2xl"
+        className="w-full max-w-lg border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 border-b border-slate-800 px-3">
-          <Search className="h-4 w-4 text-slate-500" />
+        <div className="flex items-center gap-2 border-b border-border px-3">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setHighlight(0); }}
             onKeyDown={onKeyDown}
             placeholder="Filter (4bd, under 800k, finished basement), jump to a city, switch mode…"
-            className="h-11 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+            className="h-11 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
-          <kbd className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">ESC</kbd>
+          <kbd className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">ESC</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto py-1">
           {filtered.length === 0 ? (
-            <p className="px-3 py-4 text-center text-xs text-slate-500">No matches</p>
+            <p className="px-3 py-4 text-center text-xs text-muted-foreground">No matches</p>
           ) : (
             filtered.map((c, i) => (
               <button
@@ -207,13 +207,13 @@ export default function MapCommandPalette() {
                 onClick={() => c.run()}
                 className={cn(
                   "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm",
-                  i === highlight ? "bg-cyan-500/15 text-cyan-100" : "text-slate-300"
+                  i === highlight ? "bg-cyan-500/15 text-cyan-100" : "text-foreground"
                 )}
               >
                 <span className="truncate">{c.label}</span>
                 <span className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-600">{c.group}</span>
-                  {i === highlight && <CornerDownLeft className="h-3.5 w-3.5 text-cyan-300" />}
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.group}</span>
+                  {i === highlight && <CornerDownLeft className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-300" />}
                 </span>
               </button>
             ))

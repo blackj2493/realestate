@@ -179,9 +179,9 @@ export default function SpatialDistribution({
   // Handle empty state
   if (!rooms || rooms.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-5" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <h2 className="text-sm font-semibold text-slate-700 mb-3">{title}</h2>
-        <p className="text-sm text-slate-400 py-8 text-center">No room data available</p>
+      <div className="bg-card rounded-xl shadow-md p-5" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <h2 className="text-sm font-semibold text-foreground mb-3">{title}</h2>
+        <p className="text-sm text-muted-foreground py-8 text-center">No room data available</p>
       </div>
     );
   }
@@ -189,25 +189,25 @@ export default function SpatialDistribution({
   const levelOptions = ["All Floors", ...availableLevels];
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="bg-card rounded-xl shadow-md overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Header */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-slate-800">{title}</h2>
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
         </div>
 
         {/* Modern Pill Toggle Controls */}
         <div className="flex items-center gap-4">
           {/* Floor filter - modern pill toggle */}
-          <div className="flex items-center bg-slate-100 rounded-full p-1">
+          <div className="flex items-center bg-muted rounded-full p-1">
             {levelOptions.map((level) => (
                 <button
                 key={level}
                 onClick={() => setSelectedLevel(level)}
                 className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
                   selectedLevel === level
-                    ? "bg-white text-slate-700 shadow-sm"
-                    : "text-slate-500 hover:text-slate-600"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {level}
@@ -216,11 +216,11 @@ export default function SpatialDistribution({
           </div>
 
           {/* Unit toggle - modern pill */}
-          <div className="flex items-center bg-slate-100 rounded-full p-1">
+          <div className="flex items-center bg-muted rounded-full p-1">
             <button
               onClick={() => setUnit("sqm")}
               className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                unit === "sqm" ? "bg-white text-slate-700 shadow-sm" : "text-slate-500"
+                unit === "sqm" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
               }`}
             >
               m²
@@ -228,7 +228,7 @@ export default function SpatialDistribution({
             <button
               onClick={() => setUnit("sqft")}
               className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                unit === "sqft" ? "bg-white text-slate-700 shadow-sm" : "text-slate-500"
+                unit === "sqft" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
               }`}
             >
               ft²
@@ -245,7 +245,7 @@ export default function SpatialDistribution({
                     className="w-2.5 h-2.5 rounded-full"
                     style={{ backgroundColor: colors.base }}
                   />
-                  <span className="text-sm text-slate-500 font-medium">{level}</span>
+                  <span className="text-sm text-muted-foreground font-medium">{level}</span>
                 </div>
               );
             })}
@@ -266,16 +266,16 @@ export default function SpatialDistribution({
             />
           </ResponsiveContainer>
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             No rooms for this floor
           </div>
         )}
       </div>
 
       {/* Clean List */}
-      <div className="border-t border-slate-100">
-        <div className="px-5 py-3 border-b border-slate-100">
-          <span className="text-sm font-medium text-slate-400 uppercase tracking-wider">Rooms ({filteredRooms.length})</span>
+      <div className="border-t border-border">
+        <div className="px-5 py-3 border-b border-border">
+          <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Rooms ({filteredRooms.length})</span>
         </div>
         <div className="max-h-[180px] overflow-y-auto">
           {filteredRooms.map((room) => {
@@ -286,20 +286,20 @@ export default function SpatialDistribution({
             return (
               <div
                 key={room.id}
-                className="flex items-center justify-between px-5 py-3 border-b border-slate-50"
+                className="flex items-center justify-between px-5 py-3 border-b border-border"
               >
                 <div className="flex items-center gap-2.5">
                   <div
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: colors.base }}
                   />
-                  <span className="text-sm text-slate-700 font-medium">{room.name}</span>
+                  <span className="text-sm text-foreground font-medium">{room.name}</span>
                   {room.isLikelyCombinedSpace && (
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">COMB</span>
+                    <span className="text-xs font-medium text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full">COMB</span>
                   )}
                 </div>
-                <span className="text-sm font-medium text-slate-700 tabular-nums">
-                  {areaValue} <span className="text-slate-400">{areaUnit}</span>
+                <span className="text-sm font-medium text-foreground tabular-nums">
+                  {areaValue} <span className="text-muted-foreground">{areaUnit}</span>
                 </span>
               </div>
             );

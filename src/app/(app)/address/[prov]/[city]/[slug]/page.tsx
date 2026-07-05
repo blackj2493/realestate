@@ -99,17 +99,17 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
   ];
   return (
     <section className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-300">Sale history</h2>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Sale history</h2>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
         {rows.map(([k, v]) => (
           <div key={k}>
-            <dt className="text-xs text-slate-500">{k}</dt>
-            <dd className="text-sm font-medium text-slate-100">{v}</dd>
+            <dt className="text-xs text-muted-foreground">{k}</dt>
+            <dd className="text-sm font-medium text-foreground">{v}</dd>
           </div>
         ))}
       </dl>
       {/* TRREB §6.3(c): brokerage shown with the listing details. */}
-      <p className="mt-3 text-sm text-slate-400">Listed by {d.ListOfficeName || "Unknown"}</p>
+      <p className="mt-3 text-sm text-muted-foreground">Listed by {d.ListOfficeName || "Unknown"}</p>
     </section>
   );
 }
@@ -155,21 +155,21 @@ export default async function AddressPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <div className="mx-auto max-w-[900px] px-4 py-8">
-        <nav className="mb-4 text-sm text-slate-500">
-          <Link href="/properties" className="hover:text-cyan-400">Properties</Link>
+        <nav className="mb-4 text-sm text-muted-foreground">
+          <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
-          <Link href={cityHref} className="hover:text-cyan-400">{cityName}</Link>
+          <Link href={cityHref} className="hover:text-cyan-600 dark:hover:text-cyan-400">{cityName}</Link>
           <span className="mx-2">/</span>
-          <span className="text-slate-300">{pub.address}</span>
+          <span className="text-foreground">{pub.address}</span>
         </nav>
 
         <header className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">{pub.address}</h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{pub.address}</h1>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4" />
             {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
           </p>
@@ -180,11 +180,11 @@ export default async function AddressPage({
           <GatedSection soldKey={pub.id} />
         ) : (
           /* Anonymous → sign-in CTA. No VOW data is fetched or rendered. */
-          <section className="mb-6 rounded-lg border border-slate-800 bg-slate-900/40 p-5">
-            <p className="flex items-center gap-2 text-sm font-medium text-slate-200">
-              <Lock className="h-4 w-4 text-cyan-400" /> This home isn&apos;t currently listed for sale.
+          <section className="mb-6 rounded-lg border border-border bg-card/40 p-5">
+            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Lock className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> This home isn&apos;t currently listed for sale.
             </p>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               Real estate boards require a verified account to view sale history and listing details. Sign in or create a free PureProperty account to see this property&apos;s record.
             </p>
             <Link
@@ -200,11 +200,11 @@ export default async function AddressPage({
         {ctx && (ctx.bestElem || ctx.bestSec || ctx.groceryKm !== null) && (
           <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {(ctx.bestElem || ctx.bestSec) && (
-              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-200">
-                  <GraduationCap className="h-4 w-4 text-emerald-400" /> Nearby schools
+              <div className="rounded-lg border border-border bg-card/40 p-4">
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <GraduationCap className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Nearby schools
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   {ctx.bestElem ? `Best elementary ${ctx.bestElem.toFixed(1)}/10` : ""}
                   {ctx.bestElem && ctx.bestSec ? " · " : ""}
                   {ctx.bestSec ? `Best secondary ${ctx.bestSec.toFixed(1)}/10` : ""}
@@ -212,11 +212,11 @@ export default async function AddressPage({
               </div>
             )}
             {ctx.groceryKm !== null && (
-              <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-200">
-                  <Footprints className="h-4 w-4 text-sky-400" /> Walkability
+              <div className="rounded-lg border border-border bg-card/40 p-4">
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Footprints className="h-4 w-4 text-sky-700 dark:text-sky-400" /> Walkability
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Nearest grocery {ctx.groceryKm < 1 ? `${Math.max(50, Math.round((ctx.groceryKm * 1000) / 50) * 50)} m` : `${ctx.groceryKm.toFixed(1)} km`} away
                   {ctx.groceryName ? ` (${ctx.groceryName})` : ""}.
                 </p>
@@ -227,13 +227,13 @@ export default async function AddressPage({
 
         {/* Public exploration links (internal-link value + crawl path). */}
         <section className="mb-8 flex flex-wrap gap-2">
-          <Link href={cityHref} className="rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300">
+          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
             Homes for sale in {cityName} →
           </Link>
-          <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300">
+          <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
             Top-rated schools in {cityName} →
           </Link>
-          <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300">
+          <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
             Most walkable homes in {cityName} →
           </Link>
         </section>

@@ -36,12 +36,12 @@ function Row({
         "flex w-full items-center justify-between gap-3 border px-3 py-2 text-left transition-all",
         selected
           ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
-          : "border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-slate-100"
+          : "border-border bg-card text-foreground hover:border-border hover:text-foreground"
       )}
     >
       <span className="flex min-w-0 flex-col">
         <span className="text-xs font-medium">{label}</span>
-        {hint && <span className="text-[10px] text-slate-500">{hint}</span>}
+        {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {ramp && (
@@ -50,7 +50,7 @@ function Row({
             style={{ background: `linear-gradient(to right, ${rgb(ramp[0])}, ${rgb(ramp[ramp.length - 1])})` }}
           />
         )}
-        {selected && <Check className="h-3.5 w-3.5 text-cyan-300" />}
+        {selected && <Check className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-300" />}
       </span>
     </button>
   );
@@ -62,7 +62,7 @@ export default function MapColorPanel() {
 
   return (
     <div className="flex flex-col gap-1.5 p-3">
-      <p className="px-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+      <p className="px-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Paint the map by
       </p>
       <Row

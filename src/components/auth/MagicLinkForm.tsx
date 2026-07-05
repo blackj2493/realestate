@@ -80,12 +80,12 @@ export default function MagicLinkForm({
   if (step === "code") {
     return (
       <form onSubmit={verify} className="space-y-3">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           Enter the code we sent to{" "}
-          <span className="text-slate-200">{email.trim()}</span>.
+          <span className="text-foreground">{email.trim()}</span>.
         </p>
         <div className="relative">
-          <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             id="otp-code"
             inputMode="numeric"
@@ -97,7 +97,7 @@ export default function MagicLinkForm({
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="Enter code"
-            className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-lg tracking-[0.4em] text-slate-200 outline-none placeholder:text-slate-600 placeholder:tracking-normal focus:border-cyan-500/60"
+            className="terminal-font w-full border border-border bg-card/60 py-2.5 pl-9 pr-3 text-lg tracking-[0.4em] text-foreground outline-none placeholder:text-muted-foreground placeholder:tracking-normal focus:border-cyan-500/60"
           />
         </div>
 
@@ -106,7 +106,7 @@ export default function MagicLinkForm({
         <button
           type="submit"
           disabled={status === "verifying" || code.length < 6}
-          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
+          className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-600 bg-cyan-600 py-3 text-xs uppercase tracking-wider text-white transition-colors [touch-action:manipulation] hover:bg-cyan-700 active:bg-cyan-800 disabled:opacity-50 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20 dark:active:bg-cyan-500/30"
         >
           {status === "verifying" ? (
             <>
@@ -125,7 +125,7 @@ export default function MagicLinkForm({
               setCode("");
               setError("");
             }}
-            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-slate-500 underline-offset-2 transition-colors [touch-action:manipulation] hover:text-slate-300 hover:underline active:text-slate-200"
+            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-muted-foreground underline-offset-2 transition-colors [touch-action:manipulation] hover:text-foreground hover:underline active:text-foreground"
           >
             ← Change email
           </button>
@@ -133,7 +133,7 @@ export default function MagicLinkForm({
             type="button"
             disabled={status === "sending"}
             onClick={() => void doSend()}
-            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-slate-500 underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cyan-300 hover:underline active:text-cyan-200 disabled:opacity-50"
+            className="terminal-font inline-flex min-h-[44px] items-center px-1 py-2 uppercase tracking-wider text-muted-foreground underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cyan-700 hover:underline active:text-cyan-800 disabled:opacity-50 dark:hover:text-cyan-300 dark:active:text-cyan-200"
           >
             Resend code
           </button>
@@ -146,12 +146,12 @@ export default function MagicLinkForm({
     <form onSubmit={sendCode} className="space-y-3">
       <label
         htmlFor="magic-email"
-        className="terminal-font block text-[10px] uppercase tracking-wider text-slate-500"
+        className="terminal-font block text-[10px] uppercase tracking-wider text-muted-foreground"
       >
         Email
       </label>
       <div className="relative">
-        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           id="magic-email"
           name="email"
@@ -164,7 +164,7 @@ export default function MagicLinkForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="terminal-font w-full border border-slate-700 bg-slate-900/60 py-2.5 pl-9 pr-3 text-base text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/60"
+          className="terminal-font w-full border border-border bg-card/60 py-2.5 pl-9 pr-3 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-cyan-500/60"
         />
       </div>
 
@@ -173,7 +173,7 @@ export default function MagicLinkForm({
       <button
         type="submit"
         disabled={status === "sending"}
-        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-500/50 bg-cyan-500/10 py-3 text-xs uppercase tracking-wider text-cyan-200 transition-colors [touch-action:manipulation] hover:bg-cyan-500/20 active:bg-cyan-500/30 disabled:opacity-50"
+        className="terminal-font flex min-h-[44px] w-full items-center justify-center gap-2 border border-cyan-600 bg-cyan-600 py-3 text-xs uppercase tracking-wider text-white transition-colors [touch-action:manipulation] hover:bg-cyan-700 active:bg-cyan-800 disabled:opacity-50 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20 dark:active:bg-cyan-500/30"
       >
         {status === "sending" ? (
           <>
@@ -184,7 +184,7 @@ export default function MagicLinkForm({
         )}
       </button>
 
-      <p className="text-center text-[11px] leading-relaxed text-slate-600">
+      <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
         No password needed. We email you a one-time code that expires shortly.
       </p>
     </form>

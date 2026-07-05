@@ -22,7 +22,7 @@ import type { FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 
-const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
+const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
 const freshDefault = (v: FilterValue): FilterValue =>
   Array.isArray(v) ? ([...v] as FilterValue) : v;
@@ -85,20 +85,20 @@ export default function FilterDrawer({
   return (
     <div className="fixed inset-0 z-[60] hidden md:block" role="dialog" aria-modal="true" aria-label="All filters">
       {/* Backdrop — click to dismiss. */}
-      <button type="button" aria-label="Close filters" onClick={onClose} className="absolute inset-0 bg-slate-950/70" />
+      <button type="button" aria-label="Close filters" onClick={onClose} className="absolute inset-0 bg-background/70" />
 
-      <div className="absolute right-0 top-0 flex h-full w-[360px] flex-col border-l border-slate-800 bg-slate-950 shadow-2xl">
+      <div className="absolute right-0 top-0 flex h-full w-[360px] flex-col border-l border-border bg-background shadow-2xl">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3">
-          <h2 className="flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-wider text-slate-100">
-            <SlidersHorizontal className="h-4 w-4 text-cyan-400" />
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-wider text-foreground">
+            <SlidersHorizontal className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />
             All Filters
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close filters"
-            className="-mr-2 flex h-9 w-9 items-center justify-center text-slate-400 hover:text-slate-200"
+            className="-mr-2 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </button>
@@ -106,14 +106,14 @@ export default function FilterDrawer({
 
         {/* Search */}
         <div className="shrink-0 px-4 pt-3">
-          <div className="flex items-center gap-2 border border-slate-800 bg-slate-900 px-2.5 focus-within:border-cyan-500/50">
-            <Search className="h-3.5 w-3.5 text-slate-500" />
+          <div className="flex items-center gap-2 border border-border bg-card px-2.5 focus-within:border-cyan-500/50">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search filters…"
               autoFocus
-              className="w-full bg-transparent py-2 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="w-full bg-transparent py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function FilterDrawer({
           )}
 
           {investorMatches.length > 0 && (
-            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+            <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>Investor · Persona signals</span>
               <div className="flex flex-wrap gap-2">
                 {investorMatches.map((c) => (
@@ -157,7 +157,7 @@ export default function FilterDrawer({
           )}
 
           {moreInvestorMatches.length > 0 && (
-            <section className="space-y-2 border-t border-slate-800/70 pt-4">
+            <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>More investor signals</span>
               <div className="flex flex-wrap gap-2">
                 {moreInvestorMatches.map((c) => (
@@ -168,18 +168,18 @@ export default function FilterDrawer({
           )}
 
           {empty && (
-            <p className="px-1 py-8 text-center text-xs text-slate-500">No filters match “{q}”.</p>
+            <p className="px-1 py-8 text-center text-xs text-muted-foreground">No filters match “{q}”.</p>
           )}
         </div>
 
         {/* Footer — Clear + apply (count). */}
-        <div className="flex shrink-0 items-center gap-3 border-t border-slate-800 px-4 py-3">
+        <div className="flex shrink-0 items-center gap-3 border-t border-border px-4 py-3">
           {anyActive && (
             <button
               type="button"
               onClick={clearAll}
               className={cn(
-                "min-h-[40px] flex-1 border border-slate-700 px-4 font-mono text-xs font-semibold uppercase tracking-wider text-slate-300",
+                "min-h-[40px] flex-1 border border-border px-4 font-mono text-xs font-semibold uppercase tracking-wider text-foreground",
                 "transition-colors hover:border-rose-500/40 hover:text-rose-300"
               )}
             >

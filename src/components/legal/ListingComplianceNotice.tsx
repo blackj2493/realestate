@@ -17,7 +17,7 @@ export default function ListingComplianceNotice({ className }: { className?: str
   return (
     <div
       className={cn(
-        "space-y-1 rounded-md border border-slate-800 bg-slate-900/40 p-3 text-[11px] leading-relaxed text-slate-500",
+        "space-y-1 rounded-md border border-border bg-card/40 p-3 text-[11px] leading-relaxed text-muted-foreground",
         className,
       )}
     >

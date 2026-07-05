@@ -33,7 +33,7 @@ export default function MapModeDock() {
   // the MapStatusHUD (z-10) it now sits just above at top-left.
   return (
     <div data-tour="terminal-map-modes" className="absolute left-2 top-3 z-20 md:bottom-4 md:left-1/2 md:top-auto md:-translate-x-1/2">
-      <div className="flex overflow-hidden border border-slate-700 bg-slate-900/90 backdrop-blur-md">
+      <div className="flex overflow-hidden border border-border bg-card/90 backdrop-blur-md">
         {SEGMENTS.filter((s) => ENABLED.includes(s.id)).map((s) => {
           const active = mapMode === s.id;
           const Icon = s.icon;
@@ -45,7 +45,7 @@ export default function MapModeDock() {
               aria-pressed={active}
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors md:px-4 md:py-2 md:text-sm",
-                active ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-slate-100"
+                active ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-300" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4" />

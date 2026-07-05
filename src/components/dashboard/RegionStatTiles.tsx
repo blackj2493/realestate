@@ -6,19 +6,7 @@ import { scopeKey } from "@/lib/dashboard/lensKey";
 import { areaKey, type Area } from "@/lib/dashboard/area";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import InfoDot from "@/components/ui/InfoDot";
-import type { GlossaryKey } from "@/lib/glossary";
-
-function Tile({ label, value, term }: { label: string; value: string; term?: GlossaryKey }) {
-  return (
-    <div className="border border-slate-800 bg-slate-900/40 px-3 py-2">
-      <div className="terminal-font flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
-        {label}
-        {term && <InfoDot term={term} />}
-      </div>
-      <div className="terminal-font text-lg font-bold text-cyan-400">{value}</div>
-    </div>
-  );
-}
+import { Readout, ReadoutCell } from "@/components/daylight/primitives";
 
 export default function RegionStatTiles({
   area,
@@ -52,10 +40,19 @@ export default function RegionStatTiles({
   const suite = s ? s.suiteCandidates.toLocaleString() : dash;
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      <Tile label="Active Listings" value={active} />
-      <Tile label="Top Cap Rate" value={cap} term="capRate" />
-      <Tile label="Suite Candidates" value={suite} />
-    </div>
+    <Readout cols={3}>
+      <ReadoutCell label="Active Listings" value={active} />
+      <ReadoutCell
+        label={
+          <>
+            Top Cap Rate
+            <InfoDot term="capRate" />
+          </>
+        }
+        value={cap}
+        tone="up"
+      />
+      <ReadoutCell label="Suite Candidates" value={suite} />
+    </Readout>
   );
 }

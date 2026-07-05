@@ -11,6 +11,8 @@
 
 import { LineChart, Line } from "recharts";
 import type { RegionScore } from "@/lib/dashboard/marketAggregates";
+import { useChartTheme } from "@/lib/theme/useChartTheme";
+import { TempChip } from "@/components/daylight/primitives";
 
 export const DASH = "—";
 
@@ -28,7 +30,7 @@ export function YoY({ pct }: { pct: number | null }) {
   if (pct == null) return null;
   const up = pct >= 0;
   return (
-    <span className={`terminal-font text-[10px] ${up ? "text-emerald-400" : "text-rose-400"}`}>
+    <span className={`terminal-font text-[10px] ${up ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"}`}>
       {up ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% YoY
     </span>
   );
@@ -43,10 +45,11 @@ export function Sparkline({
   width?: number;
   height?: number;
 }) {
+  const chart = useChartTheme();
   if (data.length < 2) return null;
   return (
     <LineChart width={width} height={height} data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-      <Line type="monotone" dataKey="v" stroke="#22d3ee" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+      <Line type="monotone" dataKey="v" stroke={chart.line} strokeWidth={1.5} dot={false} isAnimationActive={false} />
     </LineChart>
   );
 }
@@ -55,9 +58,9 @@ export const TEMP: Record<
   NonNullable<RegionScore["temperature"]>,
   { label: string; cls: string; rank: number }
 > = {
-  hot: { label: "Hot", cls: "text-rose-400 bg-rose-400/10 border-rose-400/30", rank: 3 },
-  balanced: { label: "Balanced", cls: "text-amber-400 bg-amber-400/10 border-amber-400/30", rank: 2 },
-  cold: { label: "Cold", cls: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30", rank: 1 },
+  hot: { label: "Hot", cls: "text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/30", rank: 3 },
+  balanced: { label: "Balanced", cls: "text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/30", rank: 2 },
+  cold: { label: "Cold", cls: "text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30", rank: 1 },
 };
 
 export function TemperatureBadge({
@@ -65,15 +68,9 @@ export function TemperatureBadge({
 }: {
   temperature: RegionScore["temperature"];
 }) {
-  if (!temperature) return <span className="text-xs text-slate-600">{DASH}</span>;
-  const t = TEMP[temperature];
-  return (
-    <span
-      className={`terminal-font rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${t.cls}`}
-    >
-      {t.label}
-    </span>
-  );
+  if (!temperature) return <span className="text-xs text-muted-foreground">{DASH}</span>;
+  // Daylight status-light in light (solid pill), the current translucent chip in dark.
+  return <TempChip kind={temperature} />;
 }
 
 /**
@@ -98,7 +95,7 @@ export function PeerDelta({
   const delta = value - peerMedian;
   if (Math.abs(delta) < 1e-9) {
     return (
-      <span className="terminal-font text-[10px] text-slate-500">= peer avg</span>
+      <span className="terminal-font text-[10px] text-muted-foreground">= peer avg</span>
     );
   }
   const up = delta > 0;
@@ -106,10 +103,10 @@ export function PeerDelta({
     dir === "neutral" ? null : dir === "higherGood" ? up : !up;
   const cls =
     favourable == null
-      ? "text-slate-400"
+      ? "text-muted-foreground"
       : favourable
-        ? "text-emerald-400"
-        : "text-rose-400";
+        ? "text-emerald-700 dark:text-emerald-400"
+        : "text-rose-700 dark:text-rose-400";
   return (
     <span className={`terminal-font text-[10px] ${cls}`}>
       {up ? "▲" : "▼"} {format(Math.abs(delta))} vs peers

@@ -27,6 +27,7 @@ import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
+import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
 import { regionArea } from "@/lib/dashboard/area";
@@ -40,8 +41,8 @@ const DashboardHeatTile = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-64 items-center justify-center border border-slate-800 bg-slate-950">
-        <p className="terminal-font text-xs text-slate-500">Loading map…</p>
+      <div className="flex h-64 items-center justify-center border border-border bg-background">
+        <p className="terminal-font text-xs text-muted-foreground">Loading map…</p>
       </div>
     ),
   }
@@ -58,6 +59,11 @@ export default function DashboardClient() {
   });
   const [name, setName] = useState<string | undefined>(undefined);
   const [showConfig, setShowConfig] = useState(false);
+  // The city the single-region intelligence tiles (Neighbourhood Heat + Market
+  // Pulse) are focused on. Shared so both stay in sync; falls back to the first
+  // configured region until the user picks another (and if the picked one is
+  // later removed from the config).
+  const [intelRegion, setIntelRegion] = useState<string | null>(null);
   // The previous-visit cutoff for the action feed. Captured + re-stamped once on
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
@@ -80,7 +86,7 @@ export default function DashboardClient() {
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
 
-  if (!ready) return <div className="min-h-app bg-slate-950" aria-busy="true" />;
+  if (!ready) return <div className="min-h-app bg-background" aria-busy="true" />;
 
   // Persona reorders which boards lead (non-destructive — config.boards stays the
   // user's enable/disable set).
@@ -88,9 +94,13 @@ export default function DashboardClient() {
     .map((id) => BOARDS[id])
     .filter(Boolean);
   const hasRegions = config.regions.length > 0;
+  // Effective focus city for the intelligence tiles: the user's pick if it's still
+  // a configured region, else the first region.
+  const intelActive =
+    intelRegion && config.regions.includes(intelRegion) ? intelRegion : config.regions[0];
 
   return (
-    <div className="min-h-app bg-slate-950 text-slate-100">
+    <div className="min-h-app bg-background text-foreground">
       <MissionControlHeader
         name={name}
         persona={config.persona}
@@ -161,7 +171,7 @@ export default function DashboardClient() {
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     No boards enabled — add metrics via Customize.
                   </p>
                 ) : (
@@ -180,22 +190,31 @@ export default function DashboardClient() {
             );
           })}
 
-        {/* Primary-region intelligence: neighbourhood heat + price trend (V1). */}
-        {hasRegions && <DashboardHeatTile region={config.regions[0]} />}
+        {/* Region intelligence: neighbourhood heat + price trend. A shared city
+            switcher (rendered inside each tile when >1 region) keeps them in sync. */}
+        {hasRegions && (
+          <DashboardHeatTile
+            regions={config.regions}
+            selected={intelActive}
+            onSelect={setIntelRegion}
+          />
+        )}
 
         {hasRegions && (
           <section className="space-y-3">
-            <h2 className="terminal-font border-b border-slate-800 pb-2 text-sm font-bold uppercase tracking-widest text-slate-100">
-              Market Intelligence Pulse
-            </h2>
-            <MarketPulse location={config.regions[0]} />
+            <ModuleHead title="Market Intelligence Pulse" />
+            <MarketPulse
+              regions={config.regions}
+              selected={intelActive}
+              onSelect={setIntelRegion}
+            />
           </section>
         )}
 
         {hasRegions && <RecentlyViewed />}
 
         {/* TRREB §6.3(i)/(k) — reliability + bona-fide-consumer notice. */}
-        <p className="border-t border-slate-800 pt-6 text-center text-[11px] leading-relaxed text-slate-600">
+        <p className="border-t border-border pt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
           Data is deemed reliable but is not guaranteed accurate by PROPTX. Information herein
           must only be used by consumers that have a bona fide interest in the purchase, sale, or
           lease of real estate and may not be used for any commercial purpose. Powered by PROPTX

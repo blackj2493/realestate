@@ -25,8 +25,8 @@ export default function ActiveFilterStrip({
   if (tokens.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 border-t border-slate-800/70 bg-slate-900/40 px-3 py-2">
-      <span className={cn(LABEL, "shrink-0 text-slate-500")}>Showing</span>
+    <div className="flex items-center gap-2 border-t border-border/70 bg-card/40 px-3 py-2">
+      <span className={cn(LABEL, "shrink-0 text-muted-foreground")}>Showing</span>
 
       <div className="no-scrollbar flex flex-1 flex-wrap items-center gap-1.5 md:flex-nowrap md:overflow-x-auto">
         {tokens.map((t) => (
@@ -35,8 +35,8 @@ export default function ActiveFilterStrip({
             className={cn(
               "flex shrink-0 items-center gap-1 border px-2 py-1 font-mono text-[11px] font-semibold",
               t.tone === "investor"
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                : "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                : "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
             )}
           >
             {t.label}
@@ -55,7 +55,7 @@ export default function ActiveFilterStrip({
         onClick={onClearAll}
         className={cn(
           LABEL,
-          "shrink-0 border border-slate-700 px-2 py-1 text-slate-400 transition-colors hover:border-rose-500/40 hover:text-rose-300"
+          "shrink-0 border border-border px-2 py-1 text-muted-foreground transition-colors hover:border-rose-500/40 hover:text-rose-300"
         )}
       >
         Clear all

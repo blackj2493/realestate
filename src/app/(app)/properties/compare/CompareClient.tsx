@@ -55,9 +55,9 @@ export default function CompareClient({
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-6">
         <Header />
-        <div className="py-20 text-center text-slate-400">
+        <div className="py-20 text-center text-muted-foreground">
           <p className="mb-4">No properties to compare.</p>
-          <Link href="/properties" className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">
+          <Link href="/properties" className="rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
             ← Pick properties in the Command Center
           </Link>
         </div>
@@ -86,11 +86,11 @@ export default function CompareClient({
 
       {/* View switch — side-by-side table vs value plot */}
       <div className="mb-3 mt-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           {listings.length} {listings.length === 1 ? "home" : "homes"} ·{" "}
           {view === "plot" ? "value plot" : "side-by-side"}
         </p>
-        <div className="inline-flex overflow-hidden rounded-md border border-slate-700">
+        <div className="inline-flex overflow-hidden rounded-md border border-border">
           {(["table", "plot"] as const).map((v) => (
             <button
               key={v}
@@ -99,7 +99,7 @@ export default function CompareClient({
               aria-pressed={view === v}
               className={cn(
                 "px-3 py-1.5 text-xs font-semibold transition-colors",
-                view === v ? "bg-slate-800 text-slate-100" : "bg-slate-950 text-slate-400 hover:text-slate-200"
+                view === v ? "bg-muted text-foreground" : "bg-background text-muted-foreground hover:text-foreground"
               )}
             >
               {v === "table" ? "▦ Table" : "⊹ Value plot"}
@@ -113,19 +113,19 @@ export default function CompareClient({
       ) : (
         <>
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-lg border border-slate-800 md:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-800 bg-slate-900/50">
-              <th className="sticky left-0 z-10 min-w-[150px] bg-slate-900/50 p-3 text-left text-xs uppercase tracking-wider text-slate-500">
+            <tr className="border-b border-border bg-card">
+              <th className="sticky left-0 z-10 min-w-[150px] bg-card p-3 text-left text-xs uppercase tracking-wider text-muted-foreground">
                 Metric
               </th>
               {listings.map((l) => (
                 <th key={l.id} className="min-w-[220px] p-3 text-left align-top">
                   <CompareMediaCell listing={l} />
                   <Link href={`/properties/${l.id}`} className="group block">
-                    <p className="font-mono text-base font-bold text-emerald-400">{formatPrice(l.ListPrice)}</p>
-                    <p className="text-xs leading-snug text-slate-300 group-hover:text-cyan-300">
+                    <p className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
+                    <p className="text-xs leading-snug text-foreground group-hover:text-cyan-300">
                       {l.UnparsedAddress || l.City || "Address unavailable"}
                     </p>
                   </Link>
@@ -139,7 +139,7 @@ export default function CompareClient({
             </tr>
           </thead>
           {/* Core comparison — the original always-visible rows, shown flat */}
-          <tbody className="divide-y divide-slate-800/70 border-b-4 border-slate-950">
+          <tbody className="divide-y divide-border/70 border-b-4 border-slate-950">
             {visibleRows(CORE_METRICS, contexts, diffOnly).map(({ metric, resolved }) => (
               <MetricRow key={metric.key} metric={metric} contexts={contexts} resolved={resolved} />
             ))}
@@ -175,7 +175,7 @@ export default function CompareClient({
         </>
       )}
 
-      <p className="mt-3 text-[11px] leading-relaxed text-slate-600">
+      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
         Est. Sale Price is our list-anchored model of what this home is likely to close at; vs Comp
         Value compares the ask to recent comparable sales. Our own deterministic models, not MLS/TRREB
         figures. Carry, cap rate &amp; cashflow are computed from your assumptions and a rent estimate,
@@ -188,8 +188,8 @@ export default function CompareClient({
 function AnonBanner({ ids }: { ids: string[] }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-4 py-2.5">
-      <p className="text-xs text-slate-300">
-        <Lock className="mr-1.5 inline h-3.5 w-3.5 text-cyan-400" />
+      <p className="text-xs text-foreground">
+        <Lock className="mr-1.5 inline h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
         Estimates, deal scores &amp; sold-derived metrics are members-only.
       </p>
       <Link
@@ -206,12 +206,12 @@ function Header() {
   return (
     <div className="mb-6 flex items-center justify-between">
       <div>
-        <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-400 transition-colors hover:text-cyan-300">
+        <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
           <ArrowLeft className="h-4 w-4" />
           Back to Command Center
         </Link>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-100">
-          <GitCompareArrows className="h-6 w-6 text-cyan-400" />
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+          <GitCompareArrows className="h-6 w-6 text-cyan-700 dark:text-cyan-400" />
           Compare Properties
         </h1>
       </div>

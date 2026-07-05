@@ -145,7 +145,7 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label={`Watchlist alerts${unseenCount ? ` (${unseenCount} new)` : ""}`}
         aria-expanded={open}
-        className="relative inline-flex h-11 w-11 items-center justify-center border border-slate-700 text-slate-300 transition-colors hover:border-cyan-500/60 hover:text-cyan-300"
+        className="relative inline-flex h-11 w-11 items-center justify-center border border-border text-foreground transition-colors hover:border-cyan-500/60 hover:text-cyan-300"
       >
         <Bell className="h-4 w-4" />
         {unseenCount > 0 && (
@@ -160,15 +160,15 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
           {/* Backdrop closes the panel */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
 
-          <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] border border-slate-700 bg-slate-950 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+          <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] border border-border bg-background shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Price-Drop Alerts
               </span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="-my-2 -mr-1 inline-flex h-11 w-11 items-center justify-center text-slate-500 transition-colors hover:text-slate-300"
+                className="-my-2 -mr-1 inline-flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                 aria-label="Close alerts"
               >
                 <X className="h-4 w-4" />
@@ -177,7 +177,7 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
 
             <div className="max-h-[70dvh] overflow-y-auto pb-safe">
               {drops.length === 0 ? (
-                <div className="px-3 py-6 text-center text-xs text-slate-500">
+                <div className="px-3 py-6 text-center text-xs text-muted-foreground">
                   {watchedIds.length === 0
                     ? "Save properties to your watchlist to get price-drop alerts."
                     : "No price drops on your watchlist yet."}
@@ -188,16 +188,16 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
                     key={d.id}
                     href={`/properties/${d.id}`}
                     onClick={() => setOpen(false)}
-                    className="flex items-start gap-3 border-b border-slate-800/60 px-3 py-2.5 transition-colors hover:bg-slate-900/60"
+                    className="flex items-start gap-3 border-b border-border/60 px-3 py-2.5 transition-colors hover:bg-card/60"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-slate-200">{d.address}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
-                        <span className="text-slate-500 line-through">{formatPrice(d.oldPrice)}</span>{" "}
-                        <span className="font-mono text-emerald-400">{formatPrice(d.newPrice)}</span>
+                      <p className="truncate text-xs font-medium text-foreground">{d.address}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        <span className="text-muted-foreground line-through">{formatPrice(d.oldPrice)}</span>{" "}
+                        <span className="font-mono text-emerald-700 dark:text-emerald-400">{formatPrice(d.newPrice)}</span>
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-sm bg-rose-500/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-rose-300">
+                    <span className="shrink-0 rounded-sm bg-rose-600/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                       -{d.dropPct}%
                     </span>
                   </Link>

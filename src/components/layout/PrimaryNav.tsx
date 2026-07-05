@@ -41,7 +41,7 @@ export default function PrimaryNav({ variant = "default", className }: PrimaryNa
               compact ? "px-2.5 py-1.5 text-[11px]" : "px-3 py-2 text-[11px]",
               active
                 ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-cyan-400"
+                : "border-transparent text-muted-foreground hover:text-cyan-400"
             )}
           >
             {item.label}

@@ -35,7 +35,7 @@ function BreakdownRow({ label, value }: BreakdownRowProps) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-gray-400">{label}</span>
-      <span className={value >= 0 ? 'text-green-400' : 'text-red-400'}>
+      <span className={value >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
         {sign}
         {formatCurrency(value)}
       </span>
@@ -86,7 +86,7 @@ export function AVMResultDisplay() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64 text-red-400">
+      <div className="flex items-center justify-center h-64 text-red-700 dark:text-red-400">
         {error}
       </div>
     );
@@ -145,7 +145,7 @@ export function AVMResultDisplay() {
             {isPositive ? '↑' : '↓'} {formatCurrency(Math.abs(adjustmentDiff))}
           </span>
           <span className="text-gray-500">|</span>
-          <span className={isPositive ? 'text-green-400' : 'text-red-400'}>
+          <span className={isPositive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
             {formatPct(result.totalAdjustmentPct)}
           </span>
         </div>

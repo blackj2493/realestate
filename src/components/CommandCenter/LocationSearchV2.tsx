@@ -44,23 +44,23 @@ interface Props {
 }
 
 const TONE: Record<RankBadge["tone"], string> = {
-  drop: "text-rose-300 border-rose-500/30 bg-rose-500/10",
-  stale: "text-amber-300 border-amber-500/30 bg-amber-500/10",
-  dom: "text-slate-300 border-slate-600 bg-slate-800/60",
-  cap: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
-  yield: "text-cyan-300 border-cyan-500/30 bg-cyan-500/10",
-  carry: "text-slate-300 border-slate-600 bg-slate-800/60",
-  lot: "text-cyan-300 border-cyan-500/30 bg-cyan-500/10",
-  zoning: "text-violet-300 border-violet-500/30 bg-violet-500/10",
+  drop: "text-rose-700 dark:text-rose-300 border-rose-500/30 bg-rose-500/10",
+  stale: "text-amber-700 dark:text-amber-300 border-amber-500/30 bg-amber-500/10",
+  dom: "text-foreground border-border bg-muted/60",
+  cap: "text-emerald-700 dark:text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
+  yield: "text-cyan-700 dark:text-cyan-300 border-cyan-500/30 bg-cyan-500/10",
+  carry: "text-foreground border-border bg-muted/60",
+  lot: "text-cyan-700 dark:text-cyan-300 border-cyan-500/30 bg-cyan-500/10",
+  zoning: "text-violet-700 dark:text-violet-300 border-violet-500/30 bg-violet-500/10",
 };
 
 function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
   const cls = "h-3.5 w-3.5 shrink-0";
-  if (category === "address") return <Home className={cn(cls, "text-emerald-400/80")} />;
-  if (category === "mls") return <Hash className={cn(cls, "text-slate-400")} />;
-  if (category === "community") return <MapPin className={cn(cls, "text-cyan-400/80")} />;
-  if (category === "school") return <GraduationCap className={cn(cls, "text-amber-400/80")} />;
-  if (category === "geo") return <Navigation className={cn(cls, "text-cyan-400")} />;
+  if (category === "address") return <Home className={cn(cls, "text-emerald-700 dark:text-emerald-400/80")} />;
+  if (category === "mls") return <Hash className={cn(cls, "text-muted-foreground")} />;
+  if (category === "community") return <MapPin className={cn(cls, "text-cyan-700 dark:text-cyan-400/80")} />;
+  if (category === "school") return <GraduationCap className={cn(cls, "text-amber-700 dark:text-amber-400/80")} />;
+  if (category === "geo") return <Navigation className={cn(cls, "text-cyan-700 dark:text-cyan-400")} />;
   return <span className="block h-2 w-2 shrink-0 rounded-full bg-rose-400" />; // sold
 }
 
@@ -340,7 +340,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     <div ref={containerRef} className={cn("relative", className)}>
       <form onSubmit={onSubmit}>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
             type="text"
@@ -352,10 +352,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
             onFocus={() => (value.trim().length >= SUGGEST_MIN_CHARS ? setOpen(true) : openEmpty())}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            className="h-7 rounded-none border-slate-800 bg-slate-900 pl-9 pr-16 font-mono text-xs text-slate-200 placeholder:text-slate-500"
+            className="h-7 rounded-none border-border bg-card pl-9 pr-16 font-mono text-xs text-foreground placeholder:text-muted-foreground"
           />
           {parsed?.isStructured && (
-            <span className="pointer-events-none absolute right-8 top-1/2 flex -translate-y-1/2 items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-300">
+            <span className="pointer-events-none absolute right-8 top-1/2 flex -translate-y-1/2 items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
               <Sparkles className="h-2.5 w-2.5" />
               AI
             </span>
@@ -371,7 +371,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 exitComps();
                 inputRef.current?.focus();
               }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -380,7 +380,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       </form>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[384px] max-w-[92vw] overflow-y-auto border border-slate-700 bg-slate-900 shadow-2xl">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[384px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
           {/* Empty state */}
           {value.trim().length < SUGGEST_MIN_CHARS ? (
             <SearchEmptyState
@@ -403,20 +403,20 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
           ) : (
             <>
               {SEARCH_DEBUG && parseMeta && (
-                <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-950 px-3 py-1 font-mono text-[9px] text-slate-500">
-                  <span className="text-slate-400">parser</span>
+                <div className="flex items-center gap-2 border-b border-border bg-background px-3 py-1 font-mono text-[9px] text-muted-foreground">
+                  <span className="text-muted-foreground">parser</span>
                   <span>
                     {parseMeta.chips} chip{parseMeta.chips === 1 ? "" : "s"}
                   </span>
                   {parseMeta.unmatched ? (
-                    <span className="text-amber-400">· unmatched: “{parseMeta.unmatched}”</span>
+                    <span className="text-amber-700 dark:text-amber-400">· unmatched: “{parseMeta.unmatched}”</span>
                   ) : (
                     <span className="text-emerald-500/80">· all words read</span>
                   )}
                   {(() => {
                     const { total, misses } = parseMissRate();
                     return total > 0 ? (
-                      <span className="ml-auto text-slate-600">
+                      <span className="ml-auto text-muted-foreground">
                         session miss {misses}/{total}
                       </span>
                     ) : null;
@@ -433,12 +433,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                   the whole set on the map + ledger (same as the button below). */}
               {parsed?.isStructured && preview && (
                 <div>
-                  <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-slate-500">
+                  <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>Matching listings</span>
-                    <span className="text-cyan-400/80">{preview.count.toLocaleString()} match</span>
+                    <span className="text-cyan-700 dark:text-cyan-400/80">{preview.count.toLocaleString()} match</span>
                   </div>
                   {preview.listings.length === 0 ? (
-                    <div className="px-3 py-2 font-mono text-[11px] text-slate-500">
+                    <div className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
                       No active listings match these filters.
                     </div>
                   ) : (
@@ -448,14 +448,14 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         type="button"
                         onClick={() => applyNl()}
                         title="See all matches on the map"
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-slate-800"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted"
                       >
-                        <Home className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
+                        <Home className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-400/80" />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-slate-200">
+                          <span className="truncate font-mono text-xs text-foreground">
                             {listing.UnparsedAddress || "—"}
                           </span>
-                          <span className="truncate text-[10px] text-slate-500">{previewMeta(listing)}</span>
+                          <span className="truncate text-[10px] text-muted-foreground">{previewMeta(listing)}</span>
                         </span>
                       </button>
                     ))
@@ -464,19 +464,19 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               )}
 
               {searching && groups.length === 0 && !(parsed?.isStructured && preview) && (
-                <div className="px-3 py-3 font-mono text-xs text-slate-500">Searching…</div>
+                <div className="px-3 py-3 font-mono text-xs text-muted-foreground">Searching…</div>
               )}
               {!searching && groups.length === 0 && !(parsed?.isStructured && preview) && (
-                <div className="px-3 py-3 font-mono text-xs text-slate-500">
+                <div className="px-3 py-3 font-mono text-xs text-muted-foreground">
                   No matches for “{value.trim()}”. Try an address, community, school, or MLS#.
                 </div>
               )}
 
               {groups.map((g) => (
                 <div key={g.category}>
-                  <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-slate-500">
+                  <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>{g.title}</span>
-                    {g.category === "sold" && <span className="text-cyan-400/80">VOW</span>}
+                    {g.category === "sold" && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
                   </div>
                   {g.items.map((item) => {
                     const idx = flat(item);
@@ -489,14 +489,14 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         onClick={() => selectItem(item)}
                         className={cn(
                           "group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                          idx === highlight ? "bg-slate-800" : "hover:bg-slate-800"
+                          idx === highlight ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
                         <CategoryIcon category={item.category} />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-slate-200">{item.label}</span>
+                          <span className="truncate font-mono text-xs text-foreground">{item.label}</span>
                           {item.sublabel && (
-                            <span className="truncate text-[10px] text-slate-500">
+                            <span className="truncate text-[10px] text-muted-foreground">
                               {item.category === "sold" && authed
                                 ? "See recent comparable sales on the map"
                                 : item.sublabel}
@@ -519,12 +519,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         {item.category === "sold" && (
                           <span className="flex items-center gap-1.5">
                             {authed ? (
-                              <span className="border border-cyan-500/40 bg-cyan-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-300">
+                              <span className="border border-cyan-500/40 bg-cyan-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
                                 View
                               </span>
                             ) : (
                               <>
-                                <span className="select-none font-mono text-xs text-rose-300 blur-[4px]">
+                                <span className="select-none font-mono text-xs text-rose-700 dark:text-rose-300 blur-[4px]">
                                   $6XX,XXX
                                 </span>
                                 <span className="bg-cyan-500 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-950">
@@ -535,7 +535,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           </span>
                         )}
                         {item.category === "community" && item.count !== undefined && (
-                          <span className="shrink-0 font-mono text-[11px] text-cyan-400">
+                          <span className="shrink-0 font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
                             {item.count.toLocaleString()}
                           </span>
                         )}
@@ -544,14 +544,14 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => findComps(item, e)}
-                            className="hidden shrink-0 items-center gap-1 border border-slate-700 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-slate-400 transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
+                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
                           >
                             <Crosshair className="h-2.5 w-2.5" />
                             Comparable sales
                           </span>
                         )}
                         {item.provenance && item.category !== "sold" && item.category !== "community" && (
-                          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-slate-600 sm:group-hover:hidden sm:block">
+                          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-muted-foreground sm:group-hover:hidden sm:block">
                             {item.provenance}
                           </span>
                         )}
@@ -565,7 +565,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 <button
                   type="button"
                   onClick={() => applyNl()}
-                  className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-slate-800 bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                  className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-border bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
                 >
                   <Sparkles className="h-3 w-3" />
                   {preview && preview.count > 0

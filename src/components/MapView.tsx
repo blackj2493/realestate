@@ -72,7 +72,7 @@ const PropertyMarker = memo(function PropertyMarker({
         transform hover:scale-110 hover:z-10 cursor-pointer
         ${isSelected 
           ? "bg-primary text-primary-foreground border-primary scale-110 z-20" 
-          : "bg-white text-foreground border-gray-200 hover:border-primary"
+          : "bg-card text-card-foreground border-border hover:border-primary"
         }
       `}
       style={{ fontSize: "10px", fontWeight: 600 }}
@@ -345,7 +345,7 @@ export default function MapView({
             className="property-popup"
           >
             {/* Card Container */}
-            <div className="w-80 bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="w-80 bg-popover rounded-xl shadow-2xl overflow-hidden">
               {/* Image Section */}
               <div className="relative h-44 overflow-hidden">
                 {selectedProperty.photoUrl ? (
@@ -355,14 +355,14 @@ export default function MapView({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                    <Building2 className="h-16 w-16 text-slate-300" />
+                  <div className="w-full h-full bg-gradient-to-br from-muted to-muted flex items-center justify-center">
+                    <Building2 className="h-16 w-16 text-muted-foreground" />
                   </div>
                 )}
                 
                 {/* Days on Market Badge */}
                 {selectedProperty.DaysOnMarket && (
-                  <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/95 backdrop-blur-sm text-slate-700 text-xs font-semibold rounded-md shadow-sm">
+                  <div className="absolute top-3 left-3 px-2.5 py-1 bg-background/90 backdrop-blur-sm text-foreground text-xs font-semibold rounded-md shadow-sm">
                     {selectedProperty.DaysOnMarket} Days on Market
                   </div>
                 )}
@@ -370,8 +370,8 @@ export default function MapView({
                 {/* Favorite Button */}
                 <WatchHeart
                   item={{ listing_key: selectedProperty.ListingKey, address: selectedProperty.UnparsedAddress, city: selectedProperty.City, thumb: selectedProperty.photoUrl ?? undefined, list_price: selectedProperty.ListPrice }}
-                  className="absolute top-3 right-3 p-2 bg-white/95 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
-                  iconClassName="h-4 w-4 text-slate-600"
+                  className="absolute top-3 right-3 p-2 bg-background/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-background transition-colors"
+                  iconClassName="h-4 w-4 text-foreground"
                 />
               </div>
               
@@ -379,40 +379,40 @@ export default function MapView({
               <div className="p-4">
                 {/* Price */}
                 <div className="flex items-baseline justify-between mb-1">
-                  <p className="text-2xl font-bold text-slate-900">
+                  <p className="text-2xl font-bold text-foreground">
                     {formatPrice(selectedProperty.ListPrice)}
                   </p>
                 </div>
                 
                 {/* Address */}
-                <p className="text-sm text-slate-700 font-medium line-clamp-1 mb-2">
+                <p className="text-sm text-foreground font-medium line-clamp-1 mb-2">
                   {selectedProperty.UnparsedAddress}
                 </p>
                 
                 {/* Property Details Row */}
-                <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center gap-1.5">
                     <Bed className="h-4 w-4" />
                     <span className="font-medium">{selectedProperty.BedroomsTotal || 0}</span>
-                    <span className="text-slate-400">bed</span>
+                    <span className="text-muted-foreground">bed</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Bath className="h-4 w-4" />
                     <span className="font-medium">{selectedProperty.BathroomsTotalInteger || 0}</span>
-                    <span className="text-slate-400">bath</span>
+                    <span className="text-muted-foreground">bath</span>
                   </div>
                   {selectedProperty.BuildingAreaTotal && (
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-4 w-4" />
                       <span className="font-medium">{selectedProperty.BuildingAreaTotal.toLocaleString()}</span>
-                      <span className="text-slate-400">sqft</span>
+                      <span className="text-muted-foreground">sqft</span>
                     </div>
                   )}
                 </div>
                 
                 {/* Brokerage */}
                 {selectedProperty.ListOfficeName && (
-                  <p className="text-xs text-slate-400 mb-3 truncate">
+                  <p className="text-xs text-muted-foreground mb-3 truncate">
                     Listed by: {selectedProperty.ListOfficeName}
                   </p>
                 )}
@@ -420,7 +420,7 @@ export default function MapView({
                 {/* Action Button */}
                 <a 
                   href={`/properties/${selectedProperty.ListingKey}`}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   Get More Details
                   <ExternalLink className="h-4 w-4" />
@@ -432,7 +432,7 @@ export default function MapView({
       </Map>
       
       {/* Property count indicator */}
-      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-md z-10">
+      <div className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-md z-10">
         <p className="text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{properties.length}</span> properties
         </p>

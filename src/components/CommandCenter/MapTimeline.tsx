@@ -40,12 +40,12 @@ export default function MapTimeline() {
   const hi = Math.min(MAX_DOM, domCenter + HALF);
 
   return (
-    <div className="absolute bottom-16 left-1/2 z-10 hidden w-[28rem] max-w-[80vw] -translate-x-1/2 border border-slate-700 bg-slate-900/90 px-3 py-2.5 backdrop-blur-md md:block">
+    <div className="absolute bottom-16 left-1/2 z-10 hidden w-[28rem] max-w-[80vw] -translate-x-1/2 border border-border bg-card/90 px-3 py-2.5 backdrop-blur-md md:block">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Days on market
         </span>
-        <span className="font-mono text-xs text-cyan-300">
+        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-300">
           {lo}–{hi} days
         </span>
         <button
@@ -55,7 +55,7 @@ export default function MapTimeline() {
             setTimelineActive(false);
           }}
           aria-label="Close timeline"
-          className="text-slate-500 hover:text-slate-200"
+          className="text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
