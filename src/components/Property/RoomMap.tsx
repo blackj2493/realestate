@@ -559,7 +559,7 @@ function FilterPill({
       className={cn(
         "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
         active
-          ? "border-slate-500 bg-muted text-foreground"
+          ? "border-border bg-muted text-foreground"
           : "border-border text-muted-foreground hover:text-foreground"
       )}
     >

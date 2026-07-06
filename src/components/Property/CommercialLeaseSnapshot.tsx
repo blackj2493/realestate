@@ -30,9 +30,9 @@ interface CommercialLeaseSnapshotProps extends CommercialLeaseInput {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-slate-800/50 rounded p-2">
-      <span className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</span>
-      <p className="text-sm font-bold font-mono text-slate-200">{value}</p>
+    <div className="bg-muted/50 rounded p-2">
+      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
+      <p className="text-sm font-bold font-mono text-foreground">{value}</p>
     </div>
   );
 }
@@ -63,11 +63,11 @@ export default function CommercialLeaseSnapshot({
           : "asking rent as quoted by the listing";
 
   return (
-    <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div className={cn("bg-card/50 rounded-lg border border-border p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Building2 className="h-4 w-4 text-sky-400" />
-        <span className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+        <Building2 className="h-4 w-4 text-sky-700 dark:text-sky-400" />
+        <span className="text-sm font-semibold text-foreground uppercase tracking-wider">
           Lease Economics
         </span>
       </div>
@@ -75,12 +75,12 @@ export default function CommercialLeaseSnapshot({
       {/* Hero: the quoted rate */}
       <div className="rounded-lg p-3 mb-4 border bg-sky-900/20 border-sky-800/50">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-sky-400">
+          <span className="text-xs uppercase tracking-wider text-sky-700 dark:text-sky-400">
             {leased ? "Leased Rate" : "Asking Rate"}
           </span>
-          <span className="text-2xl font-bold font-mono text-sky-300">{heroValue}</span>
+          <span className="text-2xl font-bold font-mono text-sky-700 dark:text-sky-300">{heroValue}</span>
         </div>
-        <span className="text-[10px] text-slate-500">{heroCaption}</span>
+        <span className="text-[10px] text-muted-foreground">{heroCaption}</span>
       </div>
 
       {/* Derived economics — each cell self-hides ("—") when the basis can't support it */}
@@ -108,12 +108,12 @@ export default function CommercialLeaseSnapshot({
       {/* Included in rent */}
       {s.rentIncludes.length > 0 && (
         <div className="mb-4">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider">Included in Rent</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Included in Rent</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {s.rentIncludes.map((item) => (
               <span
                 key={item}
-                className="rounded bg-slate-800/60 px-2 py-0.5 text-[11px] text-slate-300"
+                className="rounded bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground"
               >
                 {item}
               </span>
@@ -122,7 +122,7 @@ export default function CommercialLeaseSnapshot({
         </div>
       )}
 
-      <p className="text-[10px] text-slate-600 leading-relaxed">
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
         Commercial lease terms (net vs. gross, TMI treatment, escalations) come from the
         listing as entered by the brokerage — confirm the rent basis and additional costs
         with the listing brokerage before comparing.

@@ -28,11 +28,11 @@ import type { RentalGlance as RentalGlanceData } from "@/lib/property/rentalSnap
 
 function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
-      <div className="mt-0.5 shrink-0 text-sky-400">{icon}</div>
+    <div className="flex items-start gap-2.5 rounded-lg border border-border bg-card/50 p-3">
+      <div className="mt-0.5 shrink-0 text-sky-700 dark:text-sky-400">{icon}</div>
       <div className="min-w-0">
-        <span className="block text-xs uppercase tracking-wider text-slate-500">{label}</span>
-        <span className="block truncate text-base font-semibold text-slate-200" title={value}>{value}</span>
+        <span className="block text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="block truncate text-base font-semibold text-foreground" title={value}>{value}</span>
       </div>
     </div>
   );
@@ -55,7 +55,7 @@ export default function RentalGlance({ glance }: { glance: RentalGlanceData }) {
 
   return (
     <div className="mb-6">
-      <h3 className="mb-2.5 text-sm font-semibold uppercase tracking-wider text-slate-200">Rental at a Glance</h3>
+      <h3 className="mb-2.5 text-sm font-semibold uppercase tracking-wider text-foreground">Rental at a Glance</h3>
       {tiles.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           {tiles.map((t) => (
@@ -66,14 +66,14 @@ export default function RentalGlance({ glance }: { glance: RentalGlanceData }) {
 
       {/* What a tenant needs to apply — the listing's stated screening requirements. */}
       {hasApply && (
-        <div className="mt-2.5 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
-          <span className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
-            <ClipboardCheck className="h-4 w-4 text-sky-400" />
+        <div className="mt-2.5 rounded-lg border border-border bg-card/50 p-3">
+          <span className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <ClipboardCheck className="h-4 w-4 text-sky-700 dark:text-sky-400" />
             To Apply, Be Ready With
           </span>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {glance.applyRequirements.map((r) => (
-              <span key={r} className="rounded bg-slate-800 px-2 py-0.5 text-sm font-medium text-slate-200">
+              <span key={r} className="rounded bg-muted px-2 py-0.5 text-sm font-medium text-foreground">
                 {r}
               </span>
             ))}

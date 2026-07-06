@@ -47,9 +47,9 @@ interface Props {
 }
 
 const TIER_BADGE: Record<MatchTier, { label: string; cls: string } | null> = {
-  close: { label: "Close comparables", cls: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
-  partial: { label: "Few exact matches", cls: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
-  sparse: { label: "Limited activity", cls: "text-slate-400 bg-slate-700/30 border-slate-700" },
+  close: { label: "Close comparables", cls: "text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
+  partial: { label: "Few exact matches", cls: "text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/20" },
+  sparse: { label: "Limited activity", cls: "text-muted-foreground bg-muted/30 border-border" },
   none: null,
 };
 
@@ -72,7 +72,7 @@ function Row({ title, children, badge, action }: {
   return (
     <div className="mb-6">
       <div className="mb-3 flex items-center gap-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">{title}</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">{title}</h3>
         <Badge tier={badge} />
         <span className="ml-auto">{action}</span>
       </div>
@@ -123,10 +123,10 @@ export default function SimilarProperties(props: Props) {
   if (loading) {
     return (
       <section className="mt-8">
-        <div className="mb-3 h-4 w-48 rounded bg-slate-800" />
+        <div className="mb-3 h-4 w-48 rounded bg-muted" />
         <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-64 w-[260px] shrink-0 animate-pulse rounded-lg bg-slate-900/60" />
+            <div key={i} className="h-64 w-[260px] shrink-0 animate-pulse rounded-lg bg-card/60" />
           ))}
         </div>
       </section>
@@ -152,14 +152,14 @@ export default function SimilarProperties(props: Props) {
       : null;
   const browseLabel = isLease ? "rentals" : "homes for sale";
   const seeAll = browseHref && cityName ? (
-    <Link href={browseHref} className="text-xs text-cyan-400 hover:text-cyan-300">
+    <Link href={browseHref} className="text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
       See all in {cityName} →
     </Link>
   ) : null;
 
   return (
-    <section className="mt-8 border-t border-slate-800 pt-6">
-      <h2 className="mb-4 text-lg font-bold text-slate-100">Comparable Properties</h2>
+    <section className="mt-8 border-t border-border pt-6">
+      <h2 className="mb-4 text-lg font-bold text-foreground">Comparable Properties</h2>
 
       {/* For Sale (or For Lease — a lease subject comps against lease inventory) */}
       {hasForSale ? (
@@ -169,7 +169,7 @@ export default function SimilarProperties(props: Props) {
           ))}
         </Row>
       ) : (
-        <p className="mb-6 text-sm text-slate-500">No comparable active listings in {areaName} right now.</p>
+        <p className="mb-6 text-sm text-muted-foreground">No comparable active listings in {areaName} right now.</p>
       )}
 
       {/* Recently Sold (or Recently Leased — lease subjects comp against closed leases) */}
@@ -179,7 +179,7 @@ export default function SimilarProperties(props: Props) {
           badge={data.soldLocked ? "none" : data.matchQuality.sold}
           action={
             data.soldLocked ? (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {data.soldCount} {isLease ? "leased" : "sold"} · sign in to view
               </span>
             ) : (
@@ -201,7 +201,7 @@ export default function SimilarProperties(props: Props) {
       )}
 
       {data.matchQuality.forSale === "sparse" && (
-        <p className="text-xs text-slate-500">Limited comparable activity in {areaName}.</p>
+        <p className="text-xs text-muted-foreground">Limited comparable activity in {areaName}.</p>
       )}
 
       {/* Buyer-facing next step — a prominent path to more inventory that lands on the
@@ -210,7 +210,7 @@ export default function SimilarProperties(props: Props) {
         <div className="mt-4 flex justify-center">
           <Link
             href={browseHref}
-            className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/60 px-5 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-cyan-200"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-200"
           >
             Browse all {browseLabel} in {cityName}
             <ArrowRight className="h-4 w-4" />

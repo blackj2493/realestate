@@ -36,12 +36,12 @@ export default function ZoningCard({
   const label = desc?.trim();
 
   return (
-    <div className={cn("rounded-lg border border-slate-800 bg-slate-900/50 p-4", className)}>
+    <div className={cn("rounded-lg border border-border bg-card/50 p-4", className)}>
       {/* Header — the "Municipal open data" tag marks this as NOT MLS data. */}
       <div className="mb-3 flex items-center gap-2">
-        <Landmark className="h-4 w-4 text-amber-400" />
-        <span className="text-sm font-semibold uppercase tracking-wider text-slate-200">Zoning</span>
-        <span className="ml-auto rounded bg-slate-800/70 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-slate-400">
+        <Landmark className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+        <span className="text-sm font-semibold uppercase tracking-wider text-foreground">Zoning</span>
+        <span className="ml-auto rounded bg-muted/70 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
           Municipal open data
         </span>
       </div>
@@ -49,20 +49,20 @@ export default function ZoningCard({
       {/* Zone code (hero) + plain-language name. */}
       <div className="mb-3 rounded-lg border border-amber-800/40 bg-amber-900/15 p-3">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-mono text-2xl font-bold text-amber-300">{zone}</span>
-          {label && <span className="text-right text-xs leading-tight text-slate-300">{label}</span>}
+          <span className="font-mono text-2xl font-bold text-amber-700 dark:text-amber-300">{zone}</span>
+          {label && <span className="text-right text-xs leading-tight text-muted-foreground">{label}</span>}
         </div>
       </div>
 
       {/* Provenance. */}
       {src && (
-        <p className="text-[11px] text-slate-400">
-          Source: <span className="text-slate-300">{zoningLabel(src)}</span>
+        <p className="text-[11px] text-muted-foreground">
+          Source: <span className="text-muted-foreground">{zoningLabel(src)}</span>
         </p>
       )}
 
       {/* Disclaimer + licence attribution (required). */}
-      <p className="mt-2 text-[10px] leading-relaxed text-slate-600">
+      <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
         {ZONING_DISCLAIMER}
         {src ? ` ${src.attribution}` : ""}
       </p>

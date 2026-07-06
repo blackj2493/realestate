@@ -180,14 +180,14 @@ export default function EstimatedSaleCard({
                 {/* comparable-value range segment (the AVM band) — secondary context */}
                 {hasComp && loPos !== null && hiPos !== null && (
                   <div
-                    className="absolute top-4 h-1.5 rounded-full bg-slate-600"
+                    className="absolute top-4 h-1.5 rounded-full bg-slate-400 dark:bg-slate-600"
                     style={{ left: `${loPos}%`, width: `${Math.max(0, hiPos - loPos)}%` }}
                     title="Comparable value range (independent of ask)"
                   />
                 )}
                 {midPos !== null && (
                   <div
-                    className="absolute top-[12px] h-3 w-0.5 -translate-x-1/2 bg-slate-400"
+                    className="absolute top-[12px] h-3 w-0.5 -translate-x-1/2 bg-slate-500 dark:bg-slate-400"
                     style={{ left: `${midPos}%` }}
                     title="Comparable value (mid)"
                   />

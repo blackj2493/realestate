@@ -267,7 +267,7 @@ export default function DealScoreCard({
         {/* Score ring */}
         <div className="relative h-[88px] w-[88px] shrink-0">
           <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-            <circle cx="40" cy="40" r={R} fill="none" strokeWidth="9" className="text-slate-200 dark:text-slate-800" stroke="currentColor" />
+            <circle cx="40" cy="40" r={R} fill="none" strokeWidth="9" className="text-foreground dark:text-slate-800" stroke="currentColor" />
             <circle
               cx="40"
               cy="40"

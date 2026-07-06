@@ -401,7 +401,7 @@ export default async function PropertyPage({
 
   if (!detail) {
     return (
-      <main className="dark min-h-app bg-slate-950">
+      <main className="min-h-app bg-background">
         <PropertyNotFound id={id} />
       </main>
     );
@@ -525,12 +525,7 @@ export default async function PropertyPage({
   ];
 
   return (
-    // Force dark: the listing detail is a dark-designed "terminal" surface that never got a
-    // light-mode pass — its shell is hardcoded slate while some child cards use theme tokens,
-    // so under the global light theme it renders a broken dark-shell/white-card mix. Scoping
-    // to `dark` makes the token-based children resolve to dark too, restoring the coherent
-    // original design regardless of the global toggle. (Proper light pass = separate task.)
-    <main className="dark min-h-app bg-slate-950 text-slate-200">
+    <main className="min-h-app bg-background text-foreground">
       {jsonLd && (
         <script
           type="application/ld+json"
@@ -549,14 +544,14 @@ export default async function PropertyPage({
       <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
-        <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
-          <Link href="/properties" className="text-cyan-400 transition-colors hover:text-cyan-300">
+        <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+          <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
             Command Center
           </Link>
           {cityHref && p.City && (
             <>
               <span aria-hidden>/</span>
-              <Link href={cityHref} className="text-cyan-400 transition-colors hover:text-cyan-300">
+              <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
                 {isCommercial ? `Commercial properties in ${p.City}` : `Homes for sale in ${p.City}`}
               </Link>
             </>
@@ -578,7 +573,7 @@ export default async function PropertyPage({
                 </div>
               )}
               <div className="mb-2 flex items-start justify-between gap-3">
-                <h1 className="text-2xl font-bold text-slate-100">{address}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{address}</h1>
                 {/* Prominent save — top of the detail so it's reachable without
                     scrolling past the entire financial workup (mirrors the dashboard). */}
                 <WatchButton
@@ -596,21 +591,21 @@ export default async function PropertyPage({
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {status.kind === "sold" ? (
                   <>
-                    <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-rose-400">
+                    <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-rose-700 dark:text-rose-400">
                       {status.label}
                       {soldDate ? ` ${fmtDate(soldDate)}` : ""}
                     </span>
                     {soldPrice ? (
                       <>
-                        <span className="font-mono text-3xl font-bold text-emerald-400">
+                        <span className="font-mono text-3xl font-bold text-emerald-700 dark:text-emerald-400">
                           {formatPrice(soldPrice)}
                         </span>
                         {price > 0 && (
                           <>
-                            <span className="font-mono text-lg text-slate-500 line-through">
+                            <span className="font-mono text-lg text-muted-foreground line-through">
                               {formatPrice(price)}
                             </span>
-                            <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-300">
+                            <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
                               {((soldPrice / price) * 100).toFixed(1)}% of ask
                             </span>
                           </>
@@ -618,13 +613,13 @@ export default async function PropertyPage({
                       </>
                     ) : (
                       <>
-                        <span className="font-mono text-3xl font-bold text-slate-400">
+                        <span className="font-mono text-3xl font-bold text-muted-foreground">
                           {formatPrice(price)}
                         </span>
                         {hasSoldPrice && (
                           <Link
                             href="/login"
-                            className="rounded border border-slate-700 px-2 py-0.5 text-xs text-cyan-300 hover:bg-slate-800"
+                            className="rounded border border-border px-2 py-0.5 text-xs text-cyan-700 dark:text-cyan-300 hover:bg-muted"
                           >
                             Sign in for the sold price
                           </Link>
@@ -634,15 +629,15 @@ export default async function PropertyPage({
                   </>
                 ) : status.kind === "delisted" ? (
                   <>
-                    <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-400">
+                    <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-700 dark:text-amber-400">
                       OFF MARKET
                     </span>
-                    <span className="font-mono text-3xl font-bold text-slate-400">
+                    <span className="font-mono text-3xl font-bold text-muted-foreground">
                       {formatPrice(price)}
                     </span>
                   </>
                 ) : (
-                  <span className="font-mono text-3xl font-bold text-emerald-400">
+                  <span className="font-mono text-3xl font-bold text-emerald-700 dark:text-emerald-400">
                     {formatPrice(price)}
                     {/* Commercial lease quotes carry a basis ("Per Sq Ft", "Month") —
                         a bare "$22" headline would read as a sale price. Verbatim unit. */}
@@ -653,12 +648,12 @@ export default async function PropertyPage({
                     )}
                   </span>
                 )}
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-muted-foreground">
                   {p.City}
                   {p.PropertySubType ? `, ${p.PropertySubType}` : ""}
                 </span>
                 {isActiveListing && (
-                  <span className="text-sm font-semibold text-slate-400">
+                  <span className="text-sm font-semibold text-muted-foreground">
                     Listed {dom} {dom === 1 ? "day" : "days"} ago
                   </span>
                 )}
@@ -672,8 +667,8 @@ export default async function PropertyPage({
                     className={cn(
                       "inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-xs font-bold tracking-wide",
                       trueDom >= 90
-                        ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
-                        : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                        : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                     )}
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -681,7 +676,7 @@ export default async function PropertyPage({
                   </span>
                 )}
                 {status.kind === "sold" && (
-                  <span className="text-sm font-semibold text-slate-400">
+                  <span className="text-sm font-semibold text-muted-foreground">
                     Sold after {dom} {dom === 1 ? "day" : "days"} on market
                   </span>
                 )}
@@ -693,7 +688,7 @@ export default async function PropertyPage({
                 )}
               </div>
               {status.kind === "delisted" && (
-                <p className="mt-1 text-sm text-amber-300/80">
+                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
                   {status.mlsStatus
                     ? [
                         `${status.mlsStatus}${status.delistedDate ? ` ${fmtDate(status.delistedDate)}` : ""}`,
@@ -706,8 +701,8 @@ export default async function PropertyPage({
                 </p>
               )}
               {p.ListOfficeName && (
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Building2 className="h-4 w-4 text-slate-500" />
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
                   Listed by {p.ListOfficeName}
                 </p>
               )}
@@ -734,7 +729,7 @@ export default async function PropertyPage({
                   label={buildingAreaUnitLabel(p.BuildingAreaUnits)}
                 />
                 <SpecCell
-                  icon={<Building2 className="h-5 w-5 text-emerald-400" />}
+                  icon={<Building2 className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />}
                   value={p.PropertySubType || "Commercial"}
                   label="Type"
                 />
@@ -742,7 +737,7 @@ export default async function PropertyPage({
                     Zoning → municipal harvest → PropertyUse (reliably filled) → N/A,
                     relabelling itself to match what it's actually showing. */}
                 <SpecCell
-                  icon={<FileText className="h-5 w-5 text-cyan-400" />}
+                  icon={<FileText className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />}
                   value={
                     p.Zoning?.trim() ||
                     p.zoning_designation?.trim() ||
@@ -757,12 +752,12 @@ export default async function PropertyPage({
                         : "Zoning"
                   }
                 />
-                <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
+                <SpecCell icon={<Car className="h-5 w-5 text-amber-700 dark:text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
               </div>
             ) : (
             <div className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-5">
-              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
-              <SpecCell icon={<Bath className="h-5 w-5 text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
+              <SpecCell icon={<Bed className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />} value={bedsLabel(p) ?? (p.BedroomsTotal ?? 0)} label="Beds" />
+              <SpecCell icon={<Bath className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />} value={p.BathroomsTotalInteger ?? 0} label="Baths" />
               <SpecCell
                 icon={<Square className="h-5 w-5 text-purple-400" />}
                 value={
@@ -774,10 +769,10 @@ export default async function PropertyPage({
                 }
                 label="Sqft"
               />
-              <SpecCell icon={<Car className="h-5 w-5 text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
+              <SpecCell icon={<Car className="h-5 w-5 text-amber-700 dark:text-amber-400" />} value={p.ParkingTotal ?? p.CoveredSpaces ?? 0} label="Parking" />
               {/* Basement — promoted from the data sheet: walk-out/sep-entrance/apartment is the
                   rental-suite signal the investor personas key on. Raw TRREB value(s), "None" when empty. */}
-              <SpecCell icon={<Layers className="h-5 w-5 text-indigo-400" />} value={basementLabel(p)} label="Basement" />
+              <SpecCell icon={<Layers className="h-5 w-5 text-indigo-700 dark:text-indigo-400" />} value={basementLabel(p)} label="Basement" />
             </div>
             )}
 
@@ -894,8 +889,8 @@ export default async function PropertyPage({
                   property taxes nor the condo fee, so those rows drop; "True DOM" reframes as
                   how long the unit has been available. Commercial leases keep the TMI/tax row
                   — it's the tenant's cost there. */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-200">
+              <div className="rounded-lg border border-border bg-card/50 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground">
                   {isLease ? "Rental Summary" : "Asset Summary"}
                 </h3>
                 <div className="space-y-2 text-xs">
@@ -903,7 +898,7 @@ export default async function PropertyPage({
                     <SummaryRow
                       label={status.kind === "sold" && status.label === "LEASED" ? "Leased Price" : "Sold Price"}
                       value={formatPrice(soldPrice)}
-                      valueClass="text-rose-400"
+                      valueClass="text-rose-700 dark:text-rose-400"
                     />
                   )}
                   <SummaryRow
@@ -917,7 +912,7 @@ export default async function PropertyPage({
                         : "List Price"
                     }
                     value={formatPrice(price)}
-                    valueClass={isActiveListing ? "text-emerald-400" : "text-slate-400"}
+                    valueClass={isActiveListing ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
                   />
                   {(!isLease || isCommercial) && (
                     <>
@@ -939,7 +934,7 @@ export default async function PropertyPage({
                   <SummaryRow
                     label={isLease ? "Days Available" : "True DOM"}
                     value={`${trueDom} days`}
-                    valueClass={trueDom > 45 ? "text-emerald-400" : trueDom >= 14 ? "text-amber-400" : "text-slate-400"}
+                    valueClass={trueDom > 45 ? "text-emerald-700 dark:text-emerald-400" : trueDom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}
                   />
                 </div>
               </div>
@@ -997,11 +992,11 @@ export default async function PropertyPage({
           {/* ── LEFT-REST: deep detail. Desktop col 1 / row 2; renders THIRD on mobile (after the cockpit). ── */}
           <div className="lg:col-start-1 lg:row-start-2">
             {/* Remarks (the listing's own description) */}
-            <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-400" />}>
-              <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+            <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />}>
+              <div className="rounded-lg border border-border bg-card/30 p-4">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
-                  className="text-sm leading-relaxed text-slate-300"
+                  className="text-sm leading-relaxed text-muted-foreground"
                 />
               </div>
             </Section>
@@ -1052,12 +1047,12 @@ export default async function PropertyPage({
           <input type="checkbox" id="history-toggle" defaultChecked className="peer sr-only" tabIndex={-1} aria-hidden="true" />
           <label
             htmlFor="history-toggle"
-            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-slate-800 py-3 peer-checked:[&_svg]:rotate-180 md:hidden"
+            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-border py-3 peer-checked:[&_svg]:rotate-180 md:hidden"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-100">
+            <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
               Property History
             </span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
           </label>
           <div className="hidden peer-checked:block md:block">
           {isAuthed && view.campaignHistory.events.length > 0 ? (
@@ -1150,10 +1145,10 @@ function buildingAreaUnitLabel(units?: string): string {
 
 function SpecCell({ icon, value, label }: { icon: React.ReactNode; value: React.ReactNode; label: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-center">
+    <div className="rounded-lg border border-border bg-card/50 p-3 text-center">
       <div className="mx-auto mb-1 flex justify-center">{icon}</div>
-      <span className="block font-mono text-lg font-bold text-slate-200">{value}</span>
-      <span className="block text-[10px] uppercase text-slate-500">{label}</span>
+      <span className="block font-mono text-lg font-bold text-foreground">{value}</span>
+      <span className="block text-[10px] uppercase text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -1169,7 +1164,7 @@ function Section({
 }) {
   return (
     <div className="mb-6">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
         {icon}
         {title}
       </h3>
@@ -1181,7 +1176,7 @@ function Section({
 function SummaryRow({
   label,
   value,
-  valueClass = "text-slate-300",
+  valueClass = "text-muted-foreground",
 }: {
   label: string;
   value: string;
@@ -1189,7 +1184,7 @@ function SummaryRow({
 }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-500">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <span className={cn("font-mono", valueClass)}>{value}</span>
     </div>
   );

@@ -24,17 +24,17 @@ export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; 
     return (
       <Link
         href="/login"
-        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-slate-800 border-l-rose-500/40 bg-slate-900/50"
+        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50"
       >
-        <div className="relative aspect-[4/3] bg-slate-800/60">
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400">
+        <div className="relative aspect-[4/3] bg-muted/60">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
             <Lock className="h-5 w-5" />
             <span className="text-xs">Sign in for {leased ? "leased" : "sold"} price</span>
           </div>
         </div>
         <div className="space-y-1 p-3">
-          <div className="h-5 w-24 rounded bg-slate-800" />
-          <div className="h-3 w-32 rounded bg-slate-800/70" />
+          <div className="h-5 w-24 rounded bg-muted" />
+          <div className="h-3 w-32 rounded bg-muted/70" />
         </div>
       </Link>
     );
@@ -50,7 +50,7 @@ export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; 
   return (
     <Link
       href={`/properties/${card.id}`}
-      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-slate-800 border-l-rose-500/40 bg-slate-900/50 transition-colors hover:border-slate-700 hover:border-l-rose-400"
+      className="group block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50 transition-colors hover:border-border hover:border-l-rose-400"
     >
       <div className="relative aspect-[4/3]">
         <ListingThumbnail
@@ -66,17 +66,17 @@ export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; 
       </div>
       <div className="p-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-lg font-bold text-emerald-400">
+          <span className="font-mono text-lg font-bold text-emerald-700 dark:text-emerald-400">
             {formatPrice(card.closePrice)}
           </span>
           {card.pctOfAsk != null && (
-            <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               {card.pctOfAsk.toFixed(0)}% of ask
             </span>
           )}
         </div>
-        <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-200">{card.address}</p>
-        <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+        <p className="mt-1 line-clamp-1 text-sm font-medium text-foreground">{card.address}</p>
+        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
           {beds && (
             <span className="flex items-center gap-1">
               <Bed className="h-3 w-3" />
@@ -92,8 +92,8 @@ export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; 
         </div>
         <DeltaChips deltas={card.deltas} className="mt-2" />
         {/* Brokerage — same text size as the details above (TRREB §6.3(c)). */}
-        <p className="mt-2 text-xs text-slate-500">Listed by {card.brokerage || "Unknown"}</p>
-        <p className="mt-1 text-[11px] text-cyan-300/80">{card.why}</p>
+        <p className="mt-2 text-xs text-muted-foreground">Listed by {card.brokerage || "Unknown"}</p>
+        <p className="mt-1 text-[11px] text-cyan-700 dark:text-cyan-300/80">{card.why}</p>
       </div>
     </Link>
   );

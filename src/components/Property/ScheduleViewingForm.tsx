@@ -179,7 +179,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           autoComplete="name"
           autoCapitalize="words"
           enterKeyHint="next"
-          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
@@ -200,7 +200,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           autoComplete="email"
           autoCorrect="off"
           enterKeyHint="next"
-          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
@@ -219,7 +219,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           inputMode="tel"
           autoComplete="tel"
           enterKeyHint="next"
-          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 
@@ -258,7 +258,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           onChange={(e) => setMessage(e.target.value)}
           placeholder={def.placeholder}
           rows={3}
-          className="w-full resize-none rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+          className="w-full resize-none rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
         />
       </div>
 

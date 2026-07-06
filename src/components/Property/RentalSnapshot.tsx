@@ -31,10 +31,10 @@ interface RentalSnapshotProps extends RentalSnapshotInput {
 
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="bg-slate-800/50 rounded p-2">
-      <span className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</span>
-      <p className="text-sm font-bold font-mono text-slate-200">{value}</p>
-      {hint && <span className="text-[9px] text-slate-500">{hint}</span>}
+    <div className="bg-muted/50 rounded p-2">
+      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
+      <p className="text-sm font-bold font-mono text-foreground">{value}</p>
+      {hint && <span className="text-[9px] text-muted-foreground">{hint}</span>}
     </div>
   );
 }
@@ -54,11 +54,11 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
   const rentSqft = rentPerSqftDisplay(s);
 
   return (
-    <div className={cn("bg-slate-900/50 rounded-lg border border-slate-800 p-4", className)}>
+    <div className={cn("bg-card/50 rounded-lg border border-border p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <KeyRound className="h-4 w-4 text-sky-400" />
-        <span className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+        <KeyRound className="h-4 w-4 text-sky-700 dark:text-sky-400" />
+        <span className="text-sm font-semibold text-foreground uppercase tracking-wider">
           Rental Snapshot
         </span>
       </div>
@@ -66,14 +66,14 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
       {/* Hero: monthly rent */}
       <div className="rounded-lg p-3 mb-4 border bg-sky-900/20 border-sky-800/50">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-sky-400">
+          <span className="text-xs uppercase tracking-wider text-sky-700 dark:text-sky-400">
             {leased ? "Leased Rent" : "Monthly Rent"}
           </span>
-          <span className="text-2xl font-bold font-mono text-sky-300">
+          <span className="text-2xl font-bold font-mono text-sky-700 dark:text-sky-300">
             {formatPrice(s.monthlyRent)}
           </span>
         </div>
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] text-muted-foreground">
           {leased ? "achieved lease rate" : "asking rent — entire listing"}
         </span>
       </div>
@@ -93,12 +93,12 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
       {/* Included in rent */}
       {s.rentIncludes.length > 0 && (
         <div className="mb-3">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider">Included in Rent</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Included in Rent</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {s.rentIncludes.map((item) => (
               <span
                 key={item}
-                className="rounded bg-emerald-900/20 px-2 py-0.5 text-[11px] text-emerald-300"
+                className="rounded bg-emerald-900/20 px-2 py-0.5 text-[11px] text-emerald-700 dark:text-emerald-300"
               >
                 {item}
               </span>
@@ -110,25 +110,25 @@ export default function RentalSnapshot({ leased = false, className, ...input }: 
       {/* Not included — core utilities the tenant likely pays on top of rent */}
       {s.utilitiesExtra.length > 0 && (
         <div className="mb-3">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider">You Likely Pay On Top</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">You Likely Pay On Top</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {s.utilitiesExtra.map((item) => (
               <span
                 key={item}
-                className="rounded bg-amber-900/20 px-2 py-0.5 text-[11px] text-amber-300"
+                className="rounded bg-amber-900/20 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
               >
                 {item}
               </span>
             ))}
           </div>
-          <span className="mt-1 block text-[9px] text-slate-500">
+          <span className="mt-1 block text-[9px] text-muted-foreground">
             Based on what the listing says is included — confirm with the landlord.
           </span>
         </div>
       )}
 
       {/* Footnote: annualized rent + the investor rent-comp metric, demoted */}
-      <p className="text-[10px] text-slate-500 leading-relaxed">
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
         Annualized {formatPrice(s.annualRent)}/yr{rentSqft !== "—" ? ` · ${rentSqft}/sqft` : ""}.
         {!leased && " Move-in and income figures are typical guidelines, not listing terms."}
       </p>

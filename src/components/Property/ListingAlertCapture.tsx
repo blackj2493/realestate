@@ -96,13 +96,13 @@ export default function ListingAlertCapture({
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4" role="status">
         <div className="flex items-start gap-2.5">
           <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
-            <Check className="h-3.5 w-3.5 text-emerald-300" />
+            <Check className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-slate-100">You&apos;re all set</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
+            <p className="text-sm font-semibold text-foreground">You&apos;re all set</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               {c.placeholderDone} We sent a confirmation to{" "}
-              <span className="text-slate-300">{email.trim()}</span>. Unsubscribe anytime.
+              <span className="text-muted-foreground">{email.trim()}</span>. Unsubscribe anytime.
             </p>
           </div>
         </div>
@@ -111,12 +111,12 @@ export default function ListingAlertCapture({
   }
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-        <Bell className="h-4 w-4 text-cyan-300" />
+    <div className="rounded-lg border border-border bg-card/50 p-4">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Bell className="h-4 w-4 text-cyan-700 dark:text-cyan-300" />
         {c.title}
       </h3>
-      <p className="mt-1 text-xs leading-relaxed text-slate-400">{c.sub}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{c.sub}</p>
       {/* noValidate: our stricter EMAIL_RE + inline message is the single source of truth,
           so invalid input shows on-brand copy instead of a browser-native popup. */}
       <form onSubmit={submit} noValidate className="mt-3 flex gap-2">
@@ -133,7 +133,7 @@ export default function ListingAlertCapture({
           placeholder="you@email.com"
           aria-label="Email address for listing alerts"
           aria-invalid={state === "error"}
-          className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-cyan-500/60 focus:outline-none"
+          className="min-w-0 flex-1 rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-cyan-500/60 focus:outline-none"
         />
         <button
           type="submit"
@@ -144,11 +144,11 @@ export default function ListingAlertCapture({
         </button>
       </form>
       {error && (
-        <p className="mt-1.5 text-xs text-rose-400" role="alert">
+        <p className="mt-1.5 text-xs text-rose-700 dark:text-rose-400" role="alert">
           {error}
         </p>
       )}
-      <p className="mt-2 text-[10px] leading-snug text-slate-600">
+      <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
         One email when something changes. No spam, unsubscribe anytime.
       </p>
     </div>
