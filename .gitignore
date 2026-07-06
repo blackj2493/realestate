@@ -67,5 +67,7 @@ scripts/admin/.backfill-*-cursor.json
 /avm-*.json
 .qa-run/
 
-# QA smoke-audit scratch (page snapshots + smoke logs — regenerated, not source)
-audit/
+# QA smoke-audit scratch (page snapshots + smoke logs — regenerated, not source).
+# Anchored to the repo root so it does NOT also swallow src/lib/audit/ (VOW access-log
+# source), which slipped uncommitted and broke the build — see hotfix.
+/audit/
