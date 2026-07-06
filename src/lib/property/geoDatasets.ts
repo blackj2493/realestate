@@ -254,6 +254,38 @@ export const GEO_DATASETS: GeoDataset[] = [
     },
   },
   {
+    // Toronto-first (docs/geo-data-sources.md coverage note): HCD POLYGONS only —
+    // per-property register points would misattribute at our postal-block coordinate
+    // precision, districts are safe. The where-filter keeps "Under Study" areas out
+    // so the flag never overstates; the TRREB SpecialDesignation payload flag still
+    // covers agent-disclosed designations everywhere else.
+    kind: "heritage_district",
+    shortLabel: "heritage districts (Toronto)",
+    family: "polygon",
+    predicate: { type: "intersect" },
+    enabled: true,
+    autoLoad: true,
+    license: "Open Government Licence – Toronto",
+    sources: [
+      {
+        sourceKey: "toronto_hcd",
+        name: "City of Toronto — Heritage Conservation Districts (City Planning)",
+        endpoint:
+          "https://gis.toronto.ca/arcgis/rest/services/cot_geospatial11/MapServer/40",
+        where: "DESIGNATION_TYPE IN ('Designated District','Under Appeal')",
+        simplifyDeg: 0.0001,
+      },
+    ],
+    flag: {
+      id: "heritage_district",
+      kind: "warn",
+      severity: 48,
+      source: "City of Toronto — Heritage Conservation Districts",
+      ask: "HCD designation restricts exterior alterations and demolition — review the district plan (and any appeal status) before planning changes.",
+      title: () => "Within a Toronto Heritage Conservation District",
+    },
+  },
+  {
     kind: "hydro",
     shortLabel: "hydro corridors",
     family: "line",
