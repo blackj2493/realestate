@@ -7,6 +7,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { NAV_ITEMS, isActive } from "./navItems";
 
 /**
@@ -73,6 +74,16 @@ export default function MobileNav({ className }: MobileNavProps) {
               );
             })}
           </nav>
+
+          {/* Theme switch lives here on phones — the header hides its toggle below md
+              so the right cluster fits a 360-390px viewport (it was clipping the
+              hamburger off-screen). */}
+          <div className="mt-auto border-t border-border px-4 py-3">
+            <ThemeToggle
+              showLabel
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+            />
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
