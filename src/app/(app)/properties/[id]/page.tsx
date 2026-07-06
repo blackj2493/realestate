@@ -401,7 +401,7 @@ export default async function PropertyPage({
 
   if (!detail) {
     return (
-      <main className="min-h-app bg-slate-950">
+      <main className="dark min-h-app bg-slate-950">
         <PropertyNotFound id={id} />
       </main>
     );
@@ -525,7 +525,12 @@ export default async function PropertyPage({
   ];
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    // Force dark: the listing detail is a dark-designed "terminal" surface that never got a
+    // light-mode pass — its shell is hardcoded slate while some child cards use theme tokens,
+    // so under the global light theme it renders a broken dark-shell/white-card mix. Scoping
+    // to `dark` makes the token-based children resolve to dark too, restoring the coherent
+    // original design regardless of the global toggle. (Proper light pass = separate task.)
+    <main className="dark min-h-app bg-slate-950 text-slate-200">
       {jsonLd && (
         <script
           type="application/ld+json"

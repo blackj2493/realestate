@@ -159,12 +159,15 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
       {/* Backdrop */}
       <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} aria-hidden="true" />
 
-      {/* Drawer */}
+      {/* Drawer — force dark: this quick-look is a dark-designed surface with a hardcoded
+          slate shell but token-based child cards, so under the global light theme it renders a
+          broken dark/white mix. Scoping to `dark` makes the token children resolve dark too,
+          restoring the coherent original look regardless of the toggle. (Light pass = separate.) */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Property quick look"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-slate-800 bg-slate-950 shadow-2xl animate-in slide-in-from-right duration-300"
+        className="dark fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-slate-800 bg-slate-950 shadow-2xl animate-in slide-in-from-right duration-300"
       >
         {/* Header */}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-800 px-4">
