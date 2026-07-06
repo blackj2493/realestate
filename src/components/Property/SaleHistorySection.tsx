@@ -70,7 +70,10 @@ export default function SaleHistorySection({
     return (
       <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
         {Title}
-        <div className="relative">
+        {/* min-h floors the wrapper to the overlay height so a single-sale placeholder
+            (Math.min(saleCount, 5) → 1 row) can't collapse under the absolute sign-in
+            overlay and spill onto the caption below — same fix as CampaignHistorySection. */}
+        <div className="relative min-h-[7rem]">
           <table className="w-full text-sm" aria-hidden="true">
             <thead>
               <HeaderRow />

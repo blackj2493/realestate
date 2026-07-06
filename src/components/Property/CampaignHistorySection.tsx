@@ -84,7 +84,10 @@ export default function CampaignHistorySection({
     return (
       <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
         {Title}
-        <div className="relative">
+        {/* min-h floors the wrapper to the overlay's height: the blurred skeleton is only
+            `n = min(campaignCount, 6)` rows, so a "Listed 1×" property yields a single row and
+            the absolute overlay would otherwise spill onto the TRREB caption below (mobile bug). */}
+        <div className="relative min-h-[7rem]">
           <div className="select-none space-y-2 blur-sm" aria-hidden="true">
             {Array.from({ length: n }).map((_, i) => (
               <div key={i} className="flex justify-between font-mono text-xs text-muted-foreground">
