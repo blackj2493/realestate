@@ -118,7 +118,7 @@ function livingAreaRangeToInt(v: unknown): number | null {
  * - 'New', 'Active', 'Price Change', 'Extension' → { status: "ACTIVE", isSold: false }
  * - 'Closed', 'Sold', 'Closed Sale' → { status: "CLOSED", isSold: true }
  */
-function isSoldListing(raw: any): boolean {
+export function isSoldListing(raw: any): boolean {
   const standardStatus = (raw.StandardStatus || '').toLowerCase().trim();
   const mlStatus = (raw.MlsStatus || '').toLowerCase().trim();
   
@@ -167,7 +167,7 @@ function normalizeListingStatus(raw: any): { status: 'ACTIVE' | 'CLOSED' | 'UNKN
 /**
  * Extracts sold listing data from a raw listing for raw_vow_sold table.
  */
-function extractSoldListingData(raw: any): SoldListingRecord | null {
+export function extractSoldListingData(raw: any): SoldListingRecord | null {
   try {
     // isSoldListing reads raw.StandardStatus / raw.MlsStatus — it must receive the
     // raw listing OBJECT, not an extracted status string. Passing a string made it
@@ -233,7 +233,7 @@ function extractSoldListingData(raw: any): SoldListingRecord | null {
  * Upserts sold listings to raw_vow_sold table.
  * Uses ON CONFLICT (listing_key) DO UPDATE to avoid duplicates.
  */
-async function upsertSoldListings(
+export async function upsertSoldListings(
   supabase: any,
   soldRecords: SoldListingRecord[]
 ): Promise<{ inserted: number; failed: number; errors: string[] }> {
@@ -1100,8 +1100,22 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     
     // Convert timestamp to date string for PurchaseContractDate cutoff (YYYY-MM-DD).
     // PurchaseContractDate is a Date string, not a full ISO timestamp.
-    const lastSyncDate = state.lastSyncTimestamp.split('T')[0] || state.lastSyncTimestamp.substring(0, 10);
-    console.log(`   📅 Using lastSyncDate: ${lastSyncDate} (PurchaseContractDate cutoff)`);
+    const watermarkDate = state.lastSyncTimestamp.split('T')[0] || state.lastSyncTimestamp.substring(0, 10);
+    // LOOKBACK MARGIN — a firm sale enters the VOW feed DAYS after its PurchaseContractDate
+    // (data-entry lag), and a terminate-then-relist resell closes under a NEW MLS# whose sold
+    // PCD can already sit behind the advancing watermark. Query B sorts PCD desc and stops at
+    // the first PCD < cutoff, so those late-arriving solds were skipped forever (e.g. 363 Maria
+    // Antonia N13410488 — sold Jun 15, never reached raw_vow_sold). Widen the cutoff so each
+    // nightly run re-scans a trailing window and re-captures them; raw_vow_sold upserts are
+    // idempotent (onConflict listing_key), so re-scanning is side-effect-free and also gives a
+    // transient per-row upsert failure several nightly retries. Tune via SOLD_SYNC_LOOKBACK_DAYS.
+    // The vault→sold reconciler (scripts/admin/reconcile-sold-from-vault.ts) is the completeness
+    // backstop for lags longer than this margin.
+    const lookbackDays = Number(process.env.SOLD_SYNC_LOOKBACK_DAYS) || 7;
+    const lastSyncDate = new Date(new Date(watermarkDate).getTime() - lookbackDays * 86_400_000)
+      .toISOString()
+      .split('T')[0];
+    console.log(`   📅 Sold cutoff: ${lastSyncDate} (watermark ${watermarkDate} − ${lookbackDays}d lookback)`);
     
     let soldSkip = 0;
     let soldHasMore = true;
