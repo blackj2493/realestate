@@ -1,4 +1,4 @@
-name: Property Estimates Recompute (Twice-Weekly)
+name: Twice-Weekly Recompute + Sold Reconcile
 
 # Full-table AVM recompute of property_estimates, re-basing EVERY active listing
 # against the latest market anchors. The daily sync only refreshes estimates for
@@ -70,11 +70,45 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-property-estimates.ts --apply --shard "${{ matrix.shard }}"
 
+  # ── Sold-reconcile backstop ──────────────────────────────────────────────────
+  # Completeness net for the daily sold sync (ingester Query B), which sorts by
+  # PurchaseContractDate desc and stops at the first PCD < watermark — so a firm sale
+  # that enters the VOW feed days after its agreement date (data-entry lag, or a
+  # terminate-then-relist resell under a new MLS#) sits behind the advancing watermark and
+  # is skipped. Query A's ModificationTimestamp cursor still captures it into the `listings`
+  # vault as Closed, so this re-derives any SALE the vault has but sold_listings is missing
+  # (see scripts/admin/reconcile-sold-from-vault.ts + the vault fallback in the watchlist
+  # dispositions route). A 14-day window comfortably overlaps the Sun/Wed cadence so every
+  # fresh miss is caught; idempotent upserts make the overlap free. Sales-only — leases and
+  # the historical backlog are handled separately (a one-time --full sweep). Reads the
+  # listings vault (cheap JSONB projections), writes raw_vow_sold + sold_listings.
+  reconcile-sold:
+    name: Reconcile missing sold from vault
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Reconcile sold_listings from the vault (last 14d)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # sync.ts (imported transitively by the reconciler) builds a Typesense admin
+          # client at module load and hard-throws without this key.
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/reconcile-sold-from-vault.ts --scan --apply --since-days=14
+
   # ── Failure notifier ────────────────────────────────────────────────────────
   # Fires when ANY recompute shard fails. Opens (or comments on the existing open)
   # 'recompute-failure' issue, which emails the repo owner — no extra secrets.
   notify-failure:
-    needs: recompute
+    needs: [recompute, reconcile-sold]
     if: failure()
     runs-on: ubuntu-latest
     steps:
@@ -85,7 +119,7 @@ jobs:
             const label = 'recompute-failure';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const body = [
-              `🔴 **${context.workflow}** failed (one or more shards).`,
+              `🔴 **${context.workflow}** failed (estimates recompute and/or sold reconcile).`,
               ``,
               `- Run: ${runUrl}`,
               `- Commit: \`${context.sha.slice(0, 7)}\``,
