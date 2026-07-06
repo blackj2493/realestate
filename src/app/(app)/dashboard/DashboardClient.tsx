@@ -162,7 +162,7 @@ export default function DashboardClient() {
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="terminal-font inline-flex min-h-[44px] items-center gap-1.5 border border-slate-700 bg-slate-900/40 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
+            className="terminal-font inline-flex min-h-[44px] items-center gap-1.5 border border-border bg-card px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-600/60 hover:text-foreground dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-slate-200"
           >
             <Plus className="h-3.5 w-3.5" />
             Add areas
