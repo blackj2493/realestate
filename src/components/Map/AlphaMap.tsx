@@ -97,6 +97,7 @@ export default function AlphaMap({
   const setHoveredId = useCommandCenterStore((s) => s.setHoveredId);
   const selectedIds = useCommandCenterStore((s) => s.selectedIds);
   const isSelectMode = useCommandCenterStore((s) => s.isSelectMode);
+  const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
   const toggleSelected = useCommandCenterStore((s) => s.toggleSelected);
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
@@ -985,10 +986,22 @@ export default function AlphaMap({
         </div>
       )}
 
-      {/* Select-mode hint — centered toast so it clears the left rail/drawer. */}
+      {/* Select-mode hint — centered toast so it clears the left rail/drawer. The toast
+          text stays pass-through (pointer-events-none) but carries an always-reachable Done
+          button, so a user can exit "tap to add" straight from the map without hunting for
+          the toggle in the Compare drawer (which is often closed — the stuck-in-select-mode bug). */}
       {isSelectMode && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md">
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-2.5 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md">
           <p className="font-mono text-xs text-cyan-200">Tap properties to add to your selection</p>
+          <button
+            type="button"
+            onClick={() => setSelectMode(false)}
+            aria-label="Done adding — exit selection mode"
+            className="pointer-events-auto inline-flex items-center gap-1 border-l border-cyan-500/30 pl-2.5 font-mono text-xs font-medium text-cyan-100 transition-colors hover:text-white"
+          >
+            <X className="h-3.5 w-3.5" />
+            Done
+          </button>
         </div>
       )}
 

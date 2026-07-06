@@ -7,6 +7,7 @@ const reset = () =>
     selectedIds: new Set<string>(),
     selectionLimitHit: false,
     showSelectedOnly: false,
+    isSelectMode: false,
   });
 
 describe("commandCenterStore — Compare selection cap", () => {
@@ -44,5 +45,30 @@ describe("commandCenterStore — Compare selection cap", () => {
     get().clearSelected();
     expect(get().selectedIds.size).toBe(0);
     expect(get().selectionLimitHit).toBe(false);
+  });
+
+  it("removing the LAST selection exits tap-to-add (stuck-in-select-mode bug)", () => {
+    get().setSelectMode(true);
+    get().toggleSelected("A");
+    get().toggleSelected("B");
+    get().toggleSelected("A"); // still one left → mode stays on
+    expect(get().isSelectMode).toBe(true);
+    get().toggleSelected("B"); // now empty → mode exits
+    expect(get().selectedIds.size).toBe(0);
+    expect(get().isSelectMode).toBe(false);
+  });
+
+  it("clearSelected also exits tap-to-add", () => {
+    get().setSelectMode(true);
+    get().toggleSelected("A");
+    get().clearSelected();
+    expect(get().isSelectMode).toBe(false);
+  });
+
+  it("adding to an empty basket while in select mode keeps the mode on", () => {
+    get().setSelectMode(true);
+    get().toggleSelected("A"); // 0 → 1 is an ADD, not a removal
+    expect(get().isSelectMode).toBe(true);
+    expect(get().selectedIds.has("A")).toBe(true);
   });
 });

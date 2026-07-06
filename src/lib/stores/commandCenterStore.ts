@@ -405,11 +405,14 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       const next = new Set(state.selectedIds);
       if (next.has(id)) {
         next.delete(id);
-        // Leaving zero selected exits the isolated view so the user isn't stranded.
+        // Leaving zero selected exits the isolated view AND tap-to-add so the user isn't
+        // stranded in select mode with an empty basket (they can re-enable from the drawer).
+        const emptied = next.size === 0;
         return {
           selectedIds: next,
           selectionLimitHit: false,
-          showSelectedOnly: next.size === 0 ? false : state.showSelectedOnly,
+          showSelectedOnly: emptied ? false : state.showSelectedOnly,
+          isSelectMode: emptied ? false : state.isSelectMode,
         };
       }
       // Cap the basket at MAX_SELECTED: block the add and flag it so the UI can
@@ -421,7 +424,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       return { selectedIds: next, selectionLimitHit: false };
     }),
   clearSelected: () =>
-    set({ selectedIds: new Set<string>(), showSelectedOnly: false, selectionLimitHit: false }),
+    set({ selectedIds: new Set<string>(), showSelectedOnly: false, selectionLimitHit: false, isSelectMode: false }),
   isSelectMode: false,
   setSelectMode: (on) => set({ isSelectMode: on }),
   showSelectedOnly: false,
