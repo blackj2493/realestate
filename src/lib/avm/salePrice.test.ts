@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { resolveSalePrice, RATIO_HIGH_CONFIDENCE_N, SALE_BAND_HALF_WIDTH } from "./salePrice";
+import {
+  resolveSalePrice,
+  RATIO_HIGH_CONFIDENCE_N,
+  SALE_BAND_HALF_WIDTH,
+  isThresholdPrice,
+  COMPETITIVE_OVER_ASK_RATE,
+} from "./salePrice";
 import { computeExpectedSale, type CloseListRatio } from "./expectedSale";
 import type { AVMResult } from "./types";
 
@@ -123,5 +129,81 @@ describe("resolveSalePrice", () => {
         estimate: avm({ estimatedValue: 0, anchorPrice: 0 }),
       })
     ).toBeNull();
+  });
+});
+
+describe("isThresholdPrice", () => {
+  it("flags the top $5k of a $100k band ($x95,000–$x99,999)", () => {
+    expect(isThresholdPrice(999_000)).toBe(true); // 99,000
+    expect(isThresholdPrice(1_299_000)).toBe(true);
+    expect(isThresholdPrice(995_000)).toBe(true); // 95,000 (edge, inclusive)
+    expect(isThresholdPrice(899_900)).toBe(true);
+  });
+  it("rejects round / mid-band prices", () => {
+    expect(isThresholdPrice(1_000_000)).toBe(false); // 0
+    expect(isThresholdPrice(1_250_000)).toBe(false); // 50,000
+    expect(isThresholdPrice(1_094_999)).toBe(false); // 94,999 (just below the cutoff)
+    expect(isThresholdPrice(0)).toBe(false);
+  });
+});
+
+describe("resolveSalePrice · competitive (priced-to-compete) detection", () => {
+  // A deliberately under-listed home: threshold ask well below the comp band.
+  const es = (list: number, r = 0.98) => computeExpectedSale(list, ratio({ ratio: r }))!;
+  const underComps = avm({ estimatedValue: 1_258_000, lowBand: 1_180_000, highBand: 1_340_000 });
+
+  it("fires when the ask is threshold-shaped AND sits below comps", () => {
+    const list = 999_000;
+    const r = resolveSalePrice({ listPrice: list, isActive: true, expectedSale: es(list), estimate: underComps })!;
+    expect(r.competitive).not.toBeNull();
+    expect(r.competitive!.rangeLow).toBe(list); // floor = the ask
+    expect(r.competitive!.rangeHigh).toBe(1_180_000); // comp low (it clears the ask)
+    expect(r.competitive!.overAskRate).toBe(COMPETITIVE_OVER_ASK_RATE);
+    expect(r.competitive!.belowCompsPct).toBeCloseTo((1_258_000 - list) / 1_258_000, 6);
+    // The headline number is UNCHANGED — the treatment is presentation-only.
+    expect(r.source).toBe("expected-sale");
+    expect(r.value).toBe(es(list).expectedPrice);
+  });
+
+  it("does NOT fire when the price is not threshold-shaped", () => {
+    const list = 1_250_000; // mid-band
+    const r = resolveSalePrice({ listPrice: list, isActive: true, expectedSale: es(list), estimate: underComps })!;
+    expect(r.competitive).toBeNull();
+  });
+
+  it("does NOT fire when comps don't clear the ask by the margin", () => {
+    const list = 999_000;
+    const barelyOver = avm({ estimatedValue: 1_020_000, lowBand: 960_000, highBand: 1_080_000 }); // +2.1% only
+    const r = resolveSalePrice({ listPrice: list, isActive: true, expectedSale: es(list), estimate: barelyOver })!;
+    expect(r.competitive).toBeNull();
+  });
+
+  it("does NOT fire on a LOW-confidence (noisy) comp band", () => {
+    const list = 999_000;
+    const r = resolveSalePrice({
+      listPrice: list,
+      isActive: true,
+      expectedSale: es(list),
+      estimate: avm({ estimatedValue: 1_258_000, lowBand: 1_180_000, highBand: 1_340_000, confidence: "LOW" }),
+    })!;
+    expect(r.competitive).toBeNull();
+  });
+
+  it("uses the comp mid as the range ceiling when the comp low is still below the ask", () => {
+    const list = 999_000;
+    const r = resolveSalePrice({
+      listPrice: list,
+      isActive: true,
+      expectedSale: es(list),
+      estimate: avm({ estimatedValue: 1_100_000, lowBand: 980_000, highBand: 1_220_000 }),
+    })!;
+    expect(r.competitive!.rangeHigh).toBe(1_100_000); // comp low (980k) ≤ ask → fall back to mid
+  });
+
+  it("never fires on the AVM-fallback path (no live list-anchor)", () => {
+    const list = 999_000;
+    const r = resolveSalePrice({ listPrice: list, isActive: false, expectedSale: null, estimate: underComps })!;
+    expect(r.source).toBe("avm");
+    expect(r.competitive).toBeNull();
   });
 });
