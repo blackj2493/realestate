@@ -33,6 +33,7 @@ entry. All endpoints below were liveness-verified (feature counts shown).
 | `orm` | LIO `LIO_Open06/MapServer/29` | 1 | polygon / inside | OGL–Ontario |
 | `niagara` | LIO `LIO_Open06/MapServer/25` | 12 | polygon / inside | OGL–Ontario |
 | `hydro` | LIO `LIO_Open05/MapServer/11` where `CLASS_SUBTYPE_NUM IN (1114,1340)` | 3,451 | line / within 150 m | OGL–Ontario |
+| `heritage_district` | City of Toronto `cot_geospatial11/MapServer/40` where `DESIGNATION_TYPE IN ('Designated District','Under Appeal')` | 30 (of 32; 2 "Under Study" excluded) | polygon / inside | OGL–Toronto |
 | `rsc` | Ontario ESR `Access_Environment/…/MapServer/6` | 11,814 | point / within 75 m | ⚠️ see note |
 
 ⚠️ **RSC license caveat.** The Record-of-Site-Condition data is served from a government
@@ -44,6 +45,16 @@ entry in `geoDatasets.ts`.
 The 905 conservation authorities publish only their broader **regulation limit** (floodplain
 + valley/wetland/erosion hazards), so we label those honestly as a *conservation-regulated
 area* (development-permit fact), not a floodplain.
+
+ℹ️ **`heritage_district` scope (Toronto-first, verified 2026-07-06).** HCD **polygons only**
+— the per-property Heritage Register (point layer 56 on the same service) would misattribute
+at our postal-block coordinate precision, so it stays out. Districts under study are
+where-filtered out so the flag never overstates; "Under Appeal" (designation bylaw in force
+pending appeal) is included, and the flag's `ask` tells the buyer to check appeal status.
+Liveness-verified: `esriGeometryPolygon`, 32 features (30 after filter), Query capability on,
+fields `DISTRICT_NAME` / `DESIGNATION_TYPE` / `DESIGNATION_DATE` / `DESIGNATION_BY_LAW`.
+Agent-disclosed designations elsewhere still surface via the TRREB `SpecialDesignation`
+payload flag (diligence.ts).
 
 ### Active — file-based (ship as shapefile/GTFS, not ArcGIS-queryable)
 
@@ -91,9 +102,12 @@ npx tsx scripts/worker/enrichGeoFlags.ts
   conservation flag until licensed.
 - Fringe authorities **NVCA** (Collingwood/Shelburne) and **GRCA** (Port Hope/east Clarington)
   have data but unconfirmed open licenses — excluded.
-- **Zoning** and **heritage** flags were evaluated and deferred: solid only in Toronto +
-  a few municipalities (Hamilton/Oakville), patchy across the 905 — better as Toronto-first
-  features than region-wide flags.
+- **Zoning** flags were evaluated and deferred: solid only in Toronto + a few
+  municipalities (Hamilton/Oakville), patchy across the 905 — better as a Toronto-first
+  feature than a region-wide flag.
+- **Heritage** shipped Toronto-first as `heritage_district` (HCD polygons, table above).
+  Hamilton/Oakville district layers are the natural next additions; per-property register
+  points remain excluded at postal-block precision.
 
 ## Runbook
 

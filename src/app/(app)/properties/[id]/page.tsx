@@ -12,6 +12,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
@@ -58,6 +59,7 @@ import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
+import { LENS_COOKIE } from "@/lib/personas/lensPersistence";
 import WatchButton from "@/components/watchlist/WatchButton";
 import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
@@ -394,10 +396,15 @@ export default async function PropertyPage({
   searchParams: Promise<{ lens?: string }>;
 }) {
   const { id } = await params;
-  // Persona lens carried from the terminal (?lens=) so the Deal Score + The Read
-  // open on the lens the user was browsing in; falls back to the Homebuyer view.
+  // Persona lens: ?lens= (carried from the terminal) wins, else the pp_lens cookie a
+  // previous chip click persisted (see lensPersistence.ts), else the Homebuyer default.
+  // The page is already force-dynamic (VOW gating), so reading cookies costs nothing.
   const { lens: lensParam } = await searchParams;
-  const lens = resolvePersona("detail", { url: lensParam });
+  const cookieStore = await cookies();
+  const lens = resolvePersona("detail", {
+    url: lensParam,
+    persisted: cookieStore.get(LENS_COOKIE)?.value,
+  });
   const detail = await getListingDetailCached(id).catch(() => null);
 
   if (!detail) {
@@ -795,11 +802,12 @@ export default async function PropertyPage({
                 Persona theses are residential (Homebuyer/Cashflow/Flipper/Builder) — off for
                 commercial, and off on leases (buyer/investor framing). */}
             {isActiveListing && !isCommercial && !isLease && (
-              <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} />
+              <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} listingId={id} />
             )}
 
-            {/* Things to Know — interpretive diligence flags surfaced beside the verdict (loss-aversion) */}
-            <ThingsToKnowCard flags={diligenceFlags} />
+            {/* Things to Know — interpretive diligence flags surfaced beside the verdict
+                (loss-aversion). geoChecked gates the "checked & clear" claim (054). */}
+            <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
 
             {/* Zoning — municipal open data (NOT MLS), its own attributed card. Renders
                 nothing until zoning is harvested/backfilled for this listing. */}

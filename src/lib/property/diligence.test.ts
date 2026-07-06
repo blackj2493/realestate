@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildDiligenceFlags, type DiligenceFlag } from "./diligence";
+import { buildDiligenceFlags, formatDiligenceQuestions, type DiligenceFlag } from "./diligence";
 
 describe("buildDiligenceFlags", () => {
   it("surfaces easements, rented equipment and waterfront as warnings", () => {
@@ -44,6 +44,50 @@ describe("buildDiligenceFlags", () => {
   it("is deterministic", () => {
     const p = { Disclosures: ["Easement"], KitchensBelowGrade: 1, DirectionFaces: "North" };
     expect(buildDiligenceFlags(p)).toEqual(buildDiligenceFlags(p));
+  });
+
+  it("preserves external provenance fields (asOf) through the merge", () => {
+    const ext: DiligenceFlag[] = [
+      { id: "flood", kind: "warn", severity: 70, title: "Flood", source: "TRCA", asOf: "2026-05-14" },
+    ];
+    const flags = buildDiligenceFlags({}, ext);
+    expect(flags[0].asOf).toBe("2026-05-14");
+  });
+});
+
+describe("formatDiligenceQuestions", () => {
+  const FLAGS: DiligenceFlag[] = [
+    {
+      id: "easements",
+      kind: "warn",
+      severity: 55,
+      title: "Title carries easements or restrictions: Easement",
+      source: "TRREB disclosure",
+      ask: "Have your lawyer review the specifics before you firm up.",
+    },
+    { id: "suite", kind: "info", severity: 28, title: "Existing second-unit / suite", source: "Derived from feed" },
+    {
+      id: "flood",
+      kind: "warn",
+      severity: 70,
+      title: "Within a regulated floodplain",
+      source: "TRCA floodplain mapping",
+      ask: "Confirm flood insurance availability.",
+    },
+  ];
+
+  it("numbers only the flags that carry an ask, with title + source attribution", () => {
+    const text = formatDiligenceQuestions(FLAGS, "123 Main St, Toronto");
+    expect(text).toContain("Due-diligence questions — 123 Main St, Toronto");
+    expect(text).toContain("1. Have your lawyer review the specifics before you firm up.");
+    expect(text).toContain("(Within a regulated floodplain — TRCA floodplain mapping)");
+    expect(text).toContain("2. Confirm flood insurance availability.");
+    // ask-less flags contribute nothing
+    expect(text).not.toContain("second-unit");
+  });
+
+  it("is deterministic", () => {
+    expect(formatDiligenceQuestions(FLAGS, "x")).toEqual(formatDiligenceQuestions(FLAGS, "x"));
   });
 });
 

@@ -153,6 +153,15 @@ async function main() {
   );
   await client.query("ANALYZE geo_features");
 
+  // Provenance: stamp each geo flag with its dataset's retrieval date so the card can
+  // render "as of <month year>". MAX() because multi-source datasets (e.g.
+  // conservation_regulated) may have been retrieved on different days.
+  const { rows: srcRows } = await client.query<{ kind: string | null; retrieved_on: string | null }>(
+    "SELECT kind, MAX(retrieved_on)::text AS retrieved_on FROM geo_sources GROUP BY kind",
+  );
+  const sourceDates: Record<string, string> = {};
+  for (const r of srcRows) if (r.kind && r.retrieved_on) sourceDates[r.kind] = r.retrieved_on;
+
   const cols = spatialColumns();
   const flagCounts: Record<string, number> = {};
   let scanned = 0;
@@ -188,14 +197,18 @@ async function main() {
       const lats: number[] = [];
       const upKeys: string[] = [];
       const upFlags: string[] = [];
+      const upChecked: boolean[] = [];
       for (const r of rows) {
         const coord = preciseCoord(bestPostal(r.postal_code, r.address));
         if (!coord) {
           // No trustworthy coord (missing / FSA-only / corrupt row). Write an empty
           // row so any PRIOR flags are CLEARED — otherwise a listing whose coord
           // becomes rejected on a later run keeps stale flags at the wrong location.
+          // checked=false: [] here means "couldn't check", NOT "checked & clear" —
+          // the card must not claim a check that never ran.
           upKeys.push(r.listing_key);
           upFlags.push("[]");
+          upChecked.push(false);
           continue;
         }
         keys.push(r.listing_key);
@@ -217,21 +230,25 @@ async function main() {
           [keys, lngs, lats],
         );
         for (const row of spatial.rows) {
-          const flags = geoFlagsFor(rowToSignals(row));
+          // Stamp provenance (asOf = geo_sources.retrieved_on; flag id === dataset kind).
+          const flags = geoFlagsFor(rowToSignals(row)).map((f) =>
+            sourceDates[f.id] ? { ...f, asOf: sourceDates[f.id] } : f,
+          );
           for (const f of flags) flagCounts[f.id] = (flagCounts[f.id] ?? 0) + 1;
           upKeys.push(row.listing_key as string);
           upFlags.push(JSON.stringify(flags));
+          upChecked.push(true);
         }
       }
 
       if (!DRY_RUN && upKeys.length) {
         const up = await client.query(
-          `INSERT INTO listing_geo_flags (listing_key, flags, computed_at)
-           SELECT k, f::jsonb, now()
-           FROM unnest($1::text[], $2::text[]) AS t(k, f)
+          `INSERT INTO listing_geo_flags (listing_key, flags, checked, computed_at)
+           SELECT k, f::jsonb, c, now()
+           FROM unnest($1::text[], $2::text[], $3::boolean[]) AS t(k, f, c)
            ON CONFLICT (listing_key) DO UPDATE
-             SET flags = EXCLUDED.flags, computed_at = EXCLUDED.computed_at`,
-          [upKeys, upFlags],
+             SET flags = EXCLUDED.flags, checked = EXCLUDED.checked, computed_at = EXCLUDED.computed_at`,
+          [upKeys, upFlags, upChecked],
         );
         written += up.rowCount ?? 0;
       }

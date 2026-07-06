@@ -30,6 +30,23 @@ export interface DiligenceFlag {
   source: string;
   /** Optional "worth asking" prompt. */
   ask?: string;
+  /**
+   * Source-data retrieval date (ISO yyyy-mm-dd) — provenance for geo flags, stamped
+   * by enrichGeoFlags.ts from geo_sources.retrieved_on. Absent on payload flags
+   * (they are as-of the listing itself).
+   */
+  asOf?: string;
+}
+
+/**
+ * The card's "worth asking" prompts as a copy-pasteable question sheet for a showing,
+ * an agent, or a lawyer (CopyQuestionsButton). Pure and deterministic — only flags
+ * carrying an `ask` contribute, in the card's own (already-sorted) order.
+ */
+export function formatDiligenceQuestions(flags: DiligenceFlag[], address: string): string {
+  const asks = flags.filter((f) => f.ask);
+  const lines = asks.map((f, i) => `${i + 1}. ${f.ask}  (${f.title} — ${f.source})`);
+  return [`Due-diligence questions — ${address}`, "", ...lines].join("\n");
 }
 
 // ── null-safe readers (CLAUDE.md §6: expect nulls, wrong types, empty arrays) ──

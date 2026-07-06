@@ -12,6 +12,19 @@ import type { DiligenceFlag } from "@/lib/property/diligence";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import { shouldRender as hasValueAdd } from "@/components/Property/forceAppreciationView";
 
+/** A clickable "show me the evidence" chip: jumps to the on-page card that proves a clause. */
+export interface EvidenceLink {
+  label: string;
+  /** CSS selector for the evidence (section id or data-tour anchor on the listing page). */
+  target: string;
+}
+
+export interface TheReadLinks {
+  thesisByPersona: Record<PersonaType, EvidenceLink[]>;
+  catch_: EvidenceLink[];
+  price: EvidenceLink[];
+}
+
 export interface TheRead {
   tier: "full" | "lite";
   thesisByPersona: Record<PersonaType, string>;
@@ -19,7 +32,25 @@ export interface TheRead {
   priceRead: string;
   grade: string | null;
   score: number | null;
+  links: TheReadLinks;
 }
+
+/**
+ * Evidence targets — every clause The Read makes is derived from a card lower on the
+ * page; these selectors point each claim at its proof. data-tour anchors only exist
+ * when the card actually renders (tier/status), so the card's click handler falls
+ * back to #financials when a selector misses.
+ */
+const LINKS = {
+  sandbox: { label: "Open the sandbox", target: '[data-tour="listing-underwriting"]' },
+  dealScore: { label: "Deal Score breakdown", target: '[data-tour="listing-deal-score"]' },
+  valueAdd: { label: "Reno-upside model", target: '[data-tour="listing-force-appreciation"]' },
+  condoFees: { label: "Fee stability", target: '[data-tour="listing-condo-stability"]' },
+  things: { label: "Things to Know", target: '[data-tour="listing-things-to-know"]' },
+  history: { label: "Price & DOM history", target: "#history" },
+  estimate: { label: "Price analysis", target: "#financials" },
+  details: { label: "Full details", target: "#details" },
+} as const satisfies Record<string, EvidenceLink>;
 
 const num = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -105,8 +136,52 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     });
   }
 
+  // Evidence links per thesis — same branch conditions as the copy above, so every
+  // clause points at the card that proves it.
+  const thesisLinksByPersona: Record<PersonaType, EvidenceLink[]> = {
+    smart: suite
+      ? [LINKS.sandbox]
+      : overUnderPct !== null && overUnderPct < -1
+        ? [LINKS.estimate]
+        : [LINKS.details],
+    cashflow:
+      (income && capRatePct !== null) || suite
+        ? [LINKS.sandbox]
+        : !income
+          ? []
+          : netUpside > 0
+            ? [LINKS.valueAdd, LINKS.sandbox]
+            : [LINKS.sandbox],
+    flippers: netUpside > 0 ? [LINKS.history, LINKS.valueAdd] : [LINKS.history],
+    builders: [LINKS.details],
+  };
+
   // ── PRICE READ ── lead with the ONE number (Estimated Sale Price); the AVM appears only
   // as a relative "vs comparable sales" deal note, never as a competing dollar estimate.
+  // Prior sale (VOW-gated upstream — anon reads nulls): anchor the ask against what the
+  // property last traded at. Clock runs off synced_at so identical inputs stay identical.
+  let saleNote = "";
+  const lastClose = view.saleHistory?.lastClosePrice ?? null;
+  const lastCloseDate = view.saleHistory?.lastCloseDate ?? null;
+  if (tier === "full" && lastClose != null && lastClose > 0 && lastCloseDate && listPrice > 0) {
+    const closeMs = new Date(lastCloseDate).getTime();
+    const nowMs = view.synced_at ? new Date(view.synced_at).getTime() : Date.now();
+    if (Number.isFinite(closeMs) && nowMs > closeMs) {
+      const years = (nowMs - closeMs) / (365.25 * 86_400_000);
+      const yr = new Date(lastCloseDate).getUTCFullYear();
+      if (years >= 1) {
+        const annualPct = (Math.pow(listPrice / lastClose, 1 / years) - 1) * 100;
+        // Sanity band: a nonsense annualization (bad date, assignment flip) says nothing useful.
+        if (Math.abs(annualPct) <= 99) {
+          saleNote = ` Last traded at ${money(lastClose)} in ${yr} — ask implies ${signedPct(annualPct)}/yr since.`;
+        }
+      } else {
+        const totalPct = ((listPrice - lastClose) / lastClose) * 100;
+        saleNote = ` Last traded at ${money(lastClose)} in ${yr} — ask is ${signedPct(totalPct)} on that sale.`;
+      }
+    }
+  }
+
   let priceRead: string;
   if (tier === "full") {
     const c =
@@ -117,10 +192,10 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     if (exp) {
       const gap =
         overUnderPct !== null ? ` Ask runs ${signedPct(overUnderPct)} vs comparable sales.` : ``;
-      priceRead = `Asking ${money(listPrice)} — likely closes near ${money(exp.expectedPrice)} (${pct1(exp.ratio * 100)} of ask).${gap}${c}`;
+      priceRead = `Asking ${money(listPrice)} — likely closes near ${money(exp.expectedPrice)} (${pct1(exp.ratio * 100)} of ask).${gap}${c}${saleNote}`;
     } else {
       // No trustworthy ratio → the AVM IS the single number (the card's fallback).
-      priceRead = `Asking ${money(listPrice)} — comparable sales value it near ${money(est as number)}${overUnderPct !== null ? ` (${signedPct(overUnderPct)})` : ``}.${c}`;
+      priceRead = `Asking ${money(listPrice)} — comparable sales value it near ${money(est as number)}${overUnderPct !== null ? ` (${signedPct(overUnderPct)})` : ``}.${c}${saleNote}`;
     }
   } else {
     const a = `Asking ${money(listPrice)}.`;
@@ -134,26 +209,45 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   }
 
   // ── THE CATCH — negatives ledger (top 3 by severity) ──
-  const negs: Array<{ sev: number; text: string }> = [];
+  const negs: Array<{ sev: number; text: string; link?: EvidenceLink }> = [];
   // Reuse Deal Score's own buyer-unfavorable pillars (yield/upside excluded — their detail
   // isn't negatively worded). detail is already deterministic & human-readable.
   for (const c of view.dealScore.components) {
     if (c.direction === "down" && c.key !== "yield" && c.key !== "upside")
-      negs.push({ sev: 62 - c.points, text: c.detail.toLowerCase() });
+      negs.push({ sev: 62 - c.points, text: c.detail.toLowerCase(), link: LINKS.dealScore });
   }
   if (view.campaignHistory.campaignCount > 1 && trueDom != null) {
     negs.push({
       sev: 58,
       text: `relisted ${view.campaignHistory.campaignCount}× — true time on market is ${trueDom}d, not the ${rawDom ?? "fresh"}d the MLS shows`,
+      link: LINKS.history,
     });
   }
   if (income && capRatePct !== null && capRatePct < 4) {
-    negs.push({ sev: 44, text: `a ${pct1(capRatePct)} cap as-is is thin for cashflow` });
+    negs.push({ sev: 44, text: `a ${pct1(capRatePct)} cap as-is is thin for cashflow`, link: LINKS.sandbox });
+  }
+  // Condo fee stability (public cohort data — not gated, so this shows for anon too,
+  // same as CondoFeeStabilityCard). Above-median carry and a rising building trend are
+  // both buyer-unfavorable in exactly the sense the catch ledger ranks.
+  const fee = view.feeStability;
+  if (fee?.available && fee.area && fee.area.position === "above") {
+    negs.push({
+      sev: 40,
+      text: `maintenance fees run ${Math.abs(fee.area.pctVsMedian).toFixed(0)}% above the area median`,
+      link: LINKS.condoFees,
+    });
+  }
+  if (fee?.available && fee.trend && (fee.trend.band === "Rising" || fee.trend.band === "Steep")) {
+    negs.push({
+      sev: 45,
+      text: `building fees rose ${fee.trend.pctChange24mo.toFixed(1)}% over 24 mo (${fee.trend.band.toLowerCase()} trend)`,
+      link: LINKS.condoFees,
+    });
   }
   // Things-to-Know diligence flags (payload-derived v1 + geo-joined v2) fold their
   // buyer-unfavorable items into the catch, ranked on the same severity scale.
   for (const fl of flags) {
-    if (fl.kind === "warn") negs.push({ sev: fl.severity, text: fl.title.toLowerCase() });
+    if (fl.kind === "warn") negs.push({ sev: fl.severity, text: fl.title.toLowerCase(), link: LINKS.things });
   }
 
   const seen = new Set<string>();
@@ -170,6 +264,15 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     ? `${cap1(joinClauses(top.map((x) => x.text)))}.`
     : `Nothing major flags on the data we track — verify condition and status in person.`;
 
+  // Evidence for exactly the clauses that made the cut, deduped by target.
+  const catchLinks: EvidenceLink[] = [];
+  for (const n of top) {
+    if (n.link && !catchLinks.some((l) => l.target === n.link!.target)) catchLinks.push(n.link);
+  }
+
+  const priceLinks: EvidenceLink[] =
+    tier === "full" ? [LINKS.estimate, ...(drop > 0 || saleNote ? [LINKS.history] : [])] : [];
+
   return {
     tier,
     thesisByPersona,
@@ -177,5 +280,6 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     priceRead,
     grade: view.dealScore.grade,
     score: view.dealScore.score,
+    links: { thesisByPersona: thesisLinksByPersona, catch_: catchLinks, price: priceLinks },
   };
 }

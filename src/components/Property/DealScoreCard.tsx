@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, TrendingUp, TrendingDown, Minus, Gauge, Target } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/lib/dealScore/computeDealScore";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import InfoDot from "@/components/ui/InfoDot";
+import { onLensChanged, persistLens } from "@/lib/personas/lensPersistence";
 
 /**
  * Deal Score UI — the flagship "is this a good deal — for ME?" signal.
@@ -170,6 +171,13 @@ export default function DealScoreCard({
         : scoredPersonas[0];
   const [persona, setPersona] = useState<DealPersona | undefined>(defaultPersona);
 
+  // Follow lens changes made in TheReadCard (persistLens broadcasts; write-through is
+  // symmetric). A lens this listing didn't score keeps the current selection.
+  useEffect(
+    () => onLensChanged((p) => setPersona((cur) => (scoredPersonas.includes(p) ? p : cur))),
+    [scoredPersonas]
+  );
+
   if (locked) {
     return (
       <div className="rounded-lg border border-border bg-card p-4">
@@ -248,7 +256,10 @@ export default function DealScoreCard({
                 type="button"
                 role="radio"
                 aria-checked={on}
-                onClick={() => setPersona(p)}
+                onClick={() => {
+                  setPersona(p);
+                  persistLens(p);
+                }}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
                   on ? cn(ps.bg, ps.border, ps.text) : "border-border bg-card/40 text-muted-foreground hover:bg-muted/60"

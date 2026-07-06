@@ -21,6 +21,19 @@ describe("geoFlagsFor — intersect (polygon) flags", () => {
     expect(flags.map((f) => f.id).sort()).toEqual(["conservation_regulated", "wetland"]);
   });
 
+  it("flags a Toronto Heritage Conservation District", () => {
+    const flags = geoFlagsFor({ inside: { heritage_district: true } });
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toMatchObject({
+      id: "heritage_district",
+      kind: "warn",
+      severity: 48,
+      title: "Within a Toronto Heritage Conservation District",
+      source: "City of Toronto — Heritage Conservation Districts",
+    });
+    expect(flags[0].ask).toMatch(/district plan/i);
+  });
+
   it("emits nothing when not inside, or for non-true values", () => {
     expect(geoFlagsFor({ inside: { flood: false } })).toEqual([]);
     expect(geoFlagsFor({ inside: { flood: null } })).toEqual([]);
