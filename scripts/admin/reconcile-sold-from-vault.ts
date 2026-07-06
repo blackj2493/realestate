@@ -24,15 +24,18 @@
  * Usage:
  *   npx tsx scripts/admin/reconcile-sold-from-vault.ts N13410488 [N... ]        # targeted keys
  *   npx tsx scripts/admin/reconcile-sold-from-vault.ts --scan [--apply] \
- *       [--since-days=14 | --updated-since=ISO] [--max-pages=200]
+ *       [--include-leases] [--since-days=14 | --updated-since=ISO] [--max-pages=200]
  *
  * Scan mode pages the vault by primary key (cheap JSONB scalar projections — it never
- * streams the ~50KB full_payload during the sweep) and reconciles every Closed/Sold row
+ * streams the ~50KB full_payload during the sweep) and reconciles every closed transaction
  * within the 180-day PurchaseContractDate window that is MISSING from sold_listings.
+ *   • SALES only by default. --include-leases also backfills closed LEASES (DealType=leased)
+ *     — they power sold_listings lease comps (similarListings.ts) but NOT the rent AVM
+ *     (rental_market_index uses active asking rents), so backfilling them is isolated.
  *   • --since-days / --updated-since bounds the sweep to recently-synced rows (the cheap,
  *     schedulable backstop — a window ≥ the schedule gap catches every fresh miss).
  *   • omit both for a FULL-table sweep (heavier server IO; use for a one-time backlog pass).
- * Add --apply to write (dry-run by default). Targeted-key mode always writes.
+ * Add --apply to write (dry-run by default). Targeted-key mode always writes (sale or lease).
  */
 
 import 'dotenv/config';
@@ -56,28 +59,37 @@ const VAULT_PAGE = 1000;
 type Raw = Record<string, any>;
 
 /**
- * A genuine closed SALE — what this reconciler targets. Deliberately SALES-only:
- *  - excludes terminated / expired / suspended (the delistedIndexer owns those, and
- *    isSoldListing over-broadly lumps them in as "closed" — harmless for Query B, which
- *    only fetches Closed/Sold, but this reconciler reads the WHOLE vault, so we must guard;
- *    without it a terminated row would be re-indexed AS a sale, deriveDealType default → sold);
- *  - excludes closed LEASES (deriveDealType → 'leased'). Leases belong in sold_listings for
- *    lease comps but are a far larger, separate under-capture (see the rental index) —
- *    reconciling them wholesale is out of scope here.
+ * The qualifying transaction dealType for the sold path, or null to skip. Always excludes
+ * terminated / expired / suspended (owned by the delistedIndexer; isSoldListing over-broadly
+ * lumps them in as "closed" — harmless for Query B, which only fetches Closed/Sold, but this
+ * reconciler reads the WHOLE vault, so we must guard, or a terminated row would be re-indexed
+ * AS a sale since deriveDealType defaults unknown → sold).
+ *
+ * Leases (deriveDealType → 'leased') are included ONLY when includeLeases is set. Leased docs
+ * populate the sold_listings lease comps (similarListings.ts DealType:=leased) but NOT the rent
+ * AVM (rental_market_index is built from ACTIVE asking rents), so backfilling them is isolated.
  */
-function isRealSale(
+function qualifyingSale(
   ms: string | null | undefined,
   ss: string | null | undefined,
-  tt: string | null | undefined
-): boolean {
-  if (deriveDelistedDealType(ms) || deriveDelistedDealType(ss)) return false;
-  if (!isSoldListing({ MlsStatus: ms, StandardStatus: ss })) return false;
-  return deriveDealType(ms ?? null, tt ?? null) === 'sold';
+  tt: string | null | undefined,
+  includeLeases: boolean
+): 'sold' | 'leased' | null {
+  if (deriveDelistedDealType(ms) || deriveDelistedDealType(ss)) return null;
+  if (!isSoldListing({ MlsStatus: ms, StandardStatus: ss })) return null;
+  const dt = deriveDealType(ms ?? null, tt ?? null); // 'sold' | 'leased'
+  if (dt === 'leased' && !includeLeases) return null;
+  return dt;
 }
 
-/** Re-derive raw_vow_sold + sold_listings for one vault payload. Returns the outcome. */
-async function reconcileOne(raw: Raw): Promise<'indexed' | 'not-sold' | 'no-date' | 'failed'> {
-  if (!isRealSale(raw.MlsStatus, raw.StandardStatus, raw.TransactionType)) return 'not-sold';
+/** Re-derive raw_vow_sold + sold_listings for one vault payload. Returns the outcome
+ *  ('sold'/'leased' on success so callers can tally by kind). */
+async function reconcileOne(
+  raw: Raw,
+  includeLeases: boolean
+): Promise<'sold' | 'leased' | 'not-sold' | 'no-date' | 'failed'> {
+  const dt = qualifyingSale(raw.MlsStatus, raw.StandardStatus, raw.TransactionType, includeLeases);
+  if (!dt) return 'not-sold';
   const rec = extractSoldListingData(raw);
   if (!rec || !rec.listing_key) return 'not-sold';
 
@@ -99,7 +111,7 @@ async function reconcileOne(raw: Raw): Promise<'indexed' | 'not-sold' | 'no-date
   const { failed } = await importSoldBatch(getSoldAdminClient(), [doc]);
   if (failed > 0) return 'failed';
   console.log(`   ✅ ${rec.listing_key} → sold_listings (${doc.DealType}, ${new Date(doc.PurchaseContractDate).toISOString().slice(0, 10)})`);
-  return 'indexed';
+  return dt; // 'sold' | 'leased' (narrowed by qualifyingSale above)
 }
 
 /** Which of these keys already exist in sold_listings (so scan can skip them). */
@@ -138,16 +150,17 @@ async function reconcileKeys(keys: string[]): Promise<void> {
       tally['not-in-vault'] = (tally['not-in-vault'] ?? 0) + 1;
       continue;
     }
-    const outcome = await reconcileOne(raw);
-    if (outcome !== 'indexed') console.log(`   • ${key}: ${outcome}`);
+    // Targeted keys are an explicit request, so reconcile whatever they are (sale or lease).
+    const outcome = await reconcileOne(raw, true);
+    if (outcome !== 'sold' && outcome !== 'leased') console.log(`   • ${key}: ${outcome}`);
     tally[outcome] = (tally[outcome] ?? 0) + 1;
   }
   console.log(`\n📊 Done: ${JSON.stringify(tally)}`);
 }
 
-async function scan(opts: { updatedSince: string | null; maxPages: number; apply: boolean }): Promise<void> {
-  const { updatedSince, maxPages, apply } = opts;
-  console.log(`\n🔍 Scanning the vault for Closed/Sold rows (last 180d PCD) missing from sold_listings`);
+async function scan(opts: { updatedSince: string | null; maxPages: number; apply: boolean; includeLeases: boolean }): Promise<void> {
+  const { updatedSince, maxPages, apply, includeLeases } = opts;
+  console.log(`\n🔍 Scanning the vault for closed ${includeLeases ? 'SALES + LEASES' : 'SALES'} (last 180d PCD) missing from sold_listings`);
   console.log(`   window: ${updatedSince ? `updated_at ≥ ${updatedSince}` : 'FULL TABLE'} · ${apply ? 'APPLY (writing)' : 'DRY-RUN'} · maxPages: ${maxPages}\n`);
   const supabase = getServiceRoleClient();
   const cutoffMs = windowCutoffMs();
@@ -174,10 +187,10 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
     if (rows.length === 0) break;
     lastKey = rows[rows.length - 1].listing_key;
 
-    // In-window closed SALES on this page (from the cheap projection).
+    // In-window closed transactions on this page (from the cheap projection).
     const candidates: string[] = [];
     for (const row of rows) {
-      if (!isRealSale(row.ms, row.ss, row.tt)) continue;
+      if (!qualifyingSale(row.ms, row.ss, row.tt, includeLeases)) continue;
       const pcd = row.pcd ? new Date(row.pcd).getTime() : NaN;
       if (!Number.isFinite(pcd) || pcd < cutoffMs) continue;
       candidates.push(row.listing_key);
@@ -188,7 +201,7 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
     const have = await existingSoldKeys(candidates);
     const missing = candidates.filter((k) => !have.has(k));
     if (missing.length) {
-      console.log(`   📄 page ${page + 1}: ${candidates.length} in-window sold, ${missing.length} missing from sold_listings`);
+      console.log(`   📄 page ${page + 1}: ${candidates.length} in-window, ${missing.length} missing from sold_listings`);
       tally['missing'] = (tally['missing'] ?? 0) + missing.length;
       if (apply) {
         // Now (and only now) pull the full payload for the missing rows to reconcile.
@@ -200,7 +213,7 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
         for (const row of (full ?? []) as Array<{ listing_key: string; full_payload: Raw }>) {
           const raw = { ...(row.full_payload ?? {}) };
           if (!raw.ListingKey) raw.ListingKey = row.listing_key;
-          const outcome = await reconcileOne(raw);
+          const outcome = await reconcileOne(raw, includeLeases);
           tally[outcome] = (tally[outcome] ?? 0) + 1;
         }
       } else {
@@ -211,7 +224,7 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
     if (rows.length < VAULT_PAGE) break;
   }
 
-  console.log(`\n📊 Scan complete: pages=${page}, in-window sold seen=${candidatesTotal}, ${JSON.stringify(tally)}`);
+  console.log(`\n📊 Scan complete: pages=${page}, in-window seen=${candidatesTotal}, ${JSON.stringify(tally)}`);
   if (!apply && (tally['missing'] ?? 0) > 0) console.log(`   Re-run with --apply to write the ${tally['missing']} missing record(s).`);
 }
 
@@ -232,12 +245,17 @@ async function main() {
     if (!updatedSince && Number.isFinite(sinceDays) && sinceDays > 0) {
       updatedSince = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
     }
-    await scan({ updatedSince, maxPages, apply: args.includes('--apply') });
+    await scan({
+      updatedSince,
+      maxPages,
+      apply: args.includes('--apply'),
+      includeLeases: args.includes('--include-leases'),
+    });
     return;
   }
   const keys = args.filter((a) => /^[A-Za-z]\d{5,10}$/.test(a));
   if (keys.length === 0) {
-    console.error('Usage: reconcile-sold-from-vault.ts <listingKey...> | --scan [--max-pages=N] [--apply]');
+    console.error('Usage: reconcile-sold-from-vault.ts <listingKey...> | --scan [--apply] [--include-leases] [--since-days=N | --updated-since=ISO] [--max-pages=N]');
     process.exit(1);
   }
   await reconcileKeys(keys);

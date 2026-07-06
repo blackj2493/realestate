@@ -78,12 +78,20 @@ jobs:
   # is skipped. Query A's ModificationTimestamp cursor still captures it into the `listings`
   # vault as Closed, so this re-derives any SALE the vault has but sold_listings is missing
   # (see scripts/admin/reconcile-sold-from-vault.ts + the vault fallback in the watchlist
-  # dispositions route). A 14-day window comfortably overlaps the Sun/Wed cadence so every
-  # fresh miss is caught; idempotent upserts make the overlap free. Sales-only — leases and
-  # the historical backlog are handled separately (a one-time --full sweep). Reads the
-  # listings vault (cheap JSONB projections), writes raw_vow_sold + sold_listings.
+  # dispositions route). Sales-only — leases (opt-in --include-leases) are a separate,
+  # larger backfill. Idempotent (existence-checked, upsert-keyed), so re-scanning is free.
+  #
+  # FULL sweep (not an updated_at window): the vault has no index on updated_at, so a
+  # windowed scan degrades to a full index scan whenever the window is sparse (e.g. the
+  # daily sync is a day behind) and trips statement_timeout. A full sweep pages by the
+  # PRIMARY KEY — each page is a bounded, fast range read — and reliably completes; the
+  # per-page JSONB projections stay cheap (no full_payload streamed). needs:recompute +
+  # if:always() serialize it AFTER the estimates matrix so the two don't contend for
+  # Supabase IO (and a recompute shard failure doesn't skip it).
   reconcile-sold:
     name: Reconcile missing sold from vault
+    needs: recompute
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -95,14 +103,14 @@ jobs:
           node-version: '22'
       - name: Install Dependencies
         run: npm ci
-      - name: Reconcile sold_listings from the vault (last 14d)
+      - name: Reconcile sold_listings from the vault (full sweep)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # sync.ts (imported transitively by the reconciler) builds a Typesense admin
           # client at module load and hard-throws without this key.
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
-        run: npx tsx scripts/admin/reconcile-sold-from-vault.ts --scan --apply --since-days=14
+        run: npx tsx scripts/admin/reconcile-sold-from-vault.ts --scan --apply
 
   # ── Failure notifier ────────────────────────────────────────────────────────
   # Fires when ANY recompute shard fails. Opens (or comments on the existing open)
