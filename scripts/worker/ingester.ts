@@ -496,47 +496,43 @@ export async function fetchActiveListingsBatch(
  * Fetches a batch of SOLD/CLOSED listings (max 100) from RESO Web API.
  * Query B of the Dual-Query architecture.
  *
- * Selection is status-only at the API ($filter); freshness is governed by
- * $orderby=PurchaseContractDate desc + client-side pruning against lastSyncDate.
+ * Delta selection is by ModificationTimestamp — the SAME monotonic cursor Query A (active)
+ * and Query C (de-listed) use — so a sale is captured by WHEN IT LAST CHANGED in the feed,
+ * not by its (often-lagging, non-monotonic) PurchaseContractDate. This replaced the old
+ * status-only filter + `$orderby=PurchaseContractDate desc` + client-side prune, which
+ * stopped at the first PCD < watermark and dropped every late-arriving / relisted-then-sold
+ * sale (~25% of sales — the watermark bug).
  *
  * @param skip - Number of records to skip (for manual pagination)
- * @param lastSyncDate - Date string (YYYY-MM-DD); client-side cutoff on PurchaseContractDate
+ * @param lastSyncTimestamp - ISO timestamp; ModificationTimestamp delta lower bound
  * @returns Listings batch with pagination info
  */
 export async function fetchSoldListingsBatch(
   skip: number = 0,
-  lastSyncDate?: string
+  lastSyncTimestamp?: string
 ): Promise<ListingsBatch> {
   const token = VOW_TOKEN; // VOW feed only
-  
+
   if (!token) {
     throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
   }
-  
-  if (!lastSyncDate) {
-    throw new Error('lastSyncDate must be provided (format: YYYY-MM-DD)');
+
+  if (!lastSyncTimestamp) {
+    throw new Error('lastSyncTimestamp must be provided');
   }
 
-  // Query B (Sold Sync): StandardStatus eq 'Closed' OR MlsStatus eq 'Sold'
-  // Routes to: raw_vow_sold (AVM anchor) + Typesense (is_sold: true)
-  //
-  // IMPORTANT: Date fields (CloseDate, PurchaseContractDate) are NOT filterable in
-  // $filter on this board's RESO API ("Field not allowed in filter"). Filter is
-  // status-only; date-based selection happens via $orderby + client-side pruning.
-  //
-  // Why PurchaseContractDate desc (not CloseDate desc):
-  //   PurchaseContractDate = when buyer/seller agreed on price (the AVM event).
-  //   CloseDate = when title transfers (30-90 days later, stale price signal).
-  //   Sorting by PurchaseContractDate puts the freshest firm deals at the top so
-  //   the client-side prune cutoff (sync_state.last_sync_timestamp) tracks the
-  //   real transaction date, not a lagging closing date.
+  // Query B (Sold Sync): (StandardStatus eq 'Closed' or MlsStatus eq 'Sold') modified since
+  // the cursor. ModificationTimestamp IS filterable here (Query A/C rely on it); a status-OR
+  // AND ModificationTimestamp is accepted (Query C uses the same shape). Routes to:
+  // raw_vow_sold (AVM anchor) + Typesense sold_listings.
   const statusFilter = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`;
-  const combinedFilter = statusFilter;
+  const modFilter = `ModificationTimestamp gt ${lastSyncTimestamp}`;
+  const combinedFilter = `${statusFilter} and (${modFilter})`;
 
-  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$orderby=PurchaseContractDate%20desc&$top=100&$skip=${skip}&$count=true`;
+  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$top=100&$skip=${skip}&$count=true`;
 
   console.log(`   🔍 Query B (Sold): ${url.substring(0, 80)}...`);
-  console.log(`   → PurchaseContractDate cutoff: ${lastSyncDate} (skip: ${skip})`);
+  console.log(`   → Delta query from: ${lastSyncTimestamp} (skip: ${skip})`);
   
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
@@ -961,8 +957,8 @@ async function reconcileMissingSoldMedia(
  *   Routes to: Typesense listings table (via sync.ts)
  * 
  * Query B (Sold Sync):
- *   $filter=(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')   (status-only — dates not filterable)
- *   $orderby=PurchaseContractDate desc + client-side prune at [lastSyncDate]
+ *   $filter=(StandardStatus eq 'Closed' or MlsStatus eq 'Sold') and ModificationTimestamp gt [lastSyncTimestamp]
+ *   Same monotonic cursor as Query A/C (no PurchaseContractDate early-stop — that dropped late sales)
  *   Routes to: raw_vow_sold (AVM anchor) + Typesense (is_sold: true) via sync.ts
  * 
  * Algorithm:
@@ -1093,37 +1089,30 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     result.reconciledMedia = recon.recovered;
     console.log(`\n✅ Query A2 Complete: recovered media on ${recon.recovered}/${recon.scanned} recent empty-media listings`);
 
-    // ─── Query B: Sold Sync (via PurchaseContractDate) ───────────────────────
+    // ─── Query B: Sold Sync (via ModificationTimestamp — mirrors Query A/C) ──
     console.log('\n════════════════════════════════════════════════');
     console.log('  QUERY B: Sold Listings Sync');
     console.log('════════════════════════════════════════════════\n');
-    
-    // Convert timestamp to date string for PurchaseContractDate cutoff (YYYY-MM-DD).
-    // PurchaseContractDate is a Date string, not a full ISO timestamp.
-    const watermarkDate = state.lastSyncTimestamp.split('T')[0] || state.lastSyncTimestamp.substring(0, 10);
-    // LOOKBACK MARGIN — a firm sale enters the VOW feed DAYS after its PurchaseContractDate
-    // (data-entry lag), and a terminate-then-relist resell closes under a NEW MLS# whose sold
-    // PCD can already sit behind the advancing watermark. Query B sorts PCD desc and stops at
-    // the first PCD < cutoff, so those late-arriving solds were skipped forever (e.g. 363 Maria
-    // Antonia N13410488 — sold Jun 15, never reached raw_vow_sold). Widen the cutoff so each
-    // nightly run re-scans a trailing window and re-captures them; raw_vow_sold upserts are
-    // idempotent (onConflict listing_key), so re-scanning is side-effect-free and also gives a
-    // transient per-row upsert failure several nightly retries. Tune via SOLD_SYNC_LOOKBACK_DAYS.
-    // The vault→sold reconciler (scripts/admin/reconcile-sold-from-vault.ts) is the completeness
-    // backstop for lags longer than this margin.
-    const lookbackDays = Number(process.env.SOLD_SYNC_LOOKBACK_DAYS) || 7;
-    const lastSyncDate = new Date(new Date(watermarkDate).getTime() - lookbackDays * 86_400_000)
-      .toISOString()
-      .split('T')[0];
-    console.log(`   📅 Sold cutoff: ${lastSyncDate} (watermark ${watermarkDate} − ${lookbackDays}d lookback)`);
-    
+
+    // Query B deltas from the SAME ModificationTimestamp cursor as Query A
+    // (state.lastSyncTimestamp): every closed/sold record CHANGED since the last successful
+    // sync. A firm sale enters the feed days after its PurchaseContractDate (data-entry lag, or
+    // a terminate-then-relist resell under a new MLS#), but its ModificationTimestamp is recent,
+    // so this catches it — unlike the old `$orderby=PurchaseContractDate desc` + client-side PCD
+    // prune, which stopped at the first PCD < watermark and silently dropped ~25% of sales (the
+    // watermark bug; the 363 Maria Antonia case, and 6,800 recovered by
+    // scripts/admin/reconcile-sold-from-vault.ts). The reconciler stays as a twice-weekly net.
+    // Query C (de-listed) already uses this exact cursor on the same VOW feed, proving it out.
+    // Cursor advances to `now` only on full success (shared finalize below with Query A).
+    console.log(`   📅 Sold delta from: ${state.lastSyncTimestamp} (ModificationTimestamp cursor)`);
+
     let soldSkip = 0;
     let soldHasMore = true;
     const supabaseClient = getServiceRoleClient();
     
     do {
       console.log(`\n📄 Sold Page ${result.soldPages + 1} (Skip: ${soldSkip}):`);
-      const batch = await fetchSoldListingsBatch(soldSkip, lastSyncDate);
+      const batch = await fetchSoldListingsBatch(soldSkip, state.lastSyncTimestamp);
       
       if (batch.listings.length === 0) {
         console.log('   ℹ️  No sold listings found in this batch');
@@ -1195,38 +1184,17 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
         }
       }
       
-      // ─── Client-Side Pruning (PurchaseContractDate guard) ──────────────────
-      // Date fields cannot be used in $filter (board rejects them), so we rely on
-      // server-side sorting ($orderby=PurchaseContractDate desc) + client-side
-      // pruning. Once we hit a PurchaseContractDate older than our cutoff, every
-      // subsequent record is older too (sorted desc) and we can stop paginating.
-      const cutoffDate = new Date(lastSyncDate);
-      let hitOldCutoff = false;
-
-      for (const listing of batch.listings) {
-        const contractDate = listing.PurchaseContractDate;
-        if (contractDate) {
-          const listingDate = new Date(contractDate);
-          if (listingDate < cutoffDate) {
-            console.log(`   🛑 Client-side pruning: Found PurchaseContractDate ${contractDate} older than cutoff ${lastSyncDate}`);
-            console.log(`   🛑 Aborting pagination - all subsequent listings will be older (sorted desc)`);
-            hitOldCutoff = true;
-            break;
-          }
-        }
-      }
-      // ────────────────────────────────────────────────────────────────────────
-      
       // Update counters
       result.soldRecords += batch.listings.length;
       result.soldPages++;
       soldSkip += batch.listings.length;
-      
-      // nextLink is the authoritative "more pages" signal; the ===100 heuristic stays
-      // as a fallback for endpoints that omit nextLink (the /Media endpoint does — see
-      // memory media-reconciliation-gap). Resolves audit MEDIUM-7.
-      // BUT also check if we hit the old cutoff date.
-      soldHasMore = !hitOldCutoff && (batch.nextLink != null || batch.listings.length === 100);
+
+      // Page until the delta is exhausted — same termination as Query A. No
+      // PurchaseContractDate early-stop: the ModificationTimestamp filter already bounds the
+      // set to records changed since the cursor, so every page is in-scope and none may be
+      // skipped. nextLink is the authoritative "more pages" signal; the ===100 heuristic
+      // stays as a fallback for endpoints that omit nextLink (audit MEDIUM-7).
+      soldHasMore = batch.nextLink != null || batch.listings.length === 100;
       
       console.log(`   📊 Running totals: ${result.soldRecords} sold records, ${result.soldPages} pages`);
       
