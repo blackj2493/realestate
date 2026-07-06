@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChartTheme } from "@/lib/theme/useChartTheme";
 import {
@@ -449,7 +450,11 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         <p className="mt-8 text-center text-[11px] leading-relaxed text-muted-foreground">
           Market data is deemed reliable but is not guaranteed accurate. Information is provided
           exclusively for consumers&apos; personal, non-commercial use and may only be used by
-          consumers that have a bona fide interest in the purchase, sale, or lease of real estate.
+          consumers that have a bona fide interest in the purchase, sale, or lease of real estate.{" "}
+          <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+            Operated under licence
+          </Link>
+          .
         </p>
 
         {/* Spacer so the fixed mobile CTA never covers the notice above. */}

@@ -107,7 +107,8 @@ export default function MapComparePanel() {
                     <p className="font-mono text-xs text-cyan-700 dark:text-cyan-400">
                       {d.ListPrice ? `$${d.ListPrice.toLocaleString()}` : "—"}
                     </p>
-                    {d.ListOfficeName && <p className="truncate text-[10px] text-muted-foreground">{d.ListOfficeName}</p>}
+                    {/* TRREB §6.3(c): brokerage on every listing; fall back to a placeholder when absent. */}
+                    <p className="truncate text-[10px] text-muted-foreground">{d.ListOfficeName || "Brokerage unavailable"}</p>
                   </div>
                   <button
                     type="button"

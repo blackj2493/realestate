@@ -25,6 +25,7 @@ import {
 import QuickLookPanel from "@/components/CommandCenter/QuickLookPanel";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useOpenListing } from "@/hooks/useOpenListing";
@@ -455,6 +456,15 @@ function CommandCenterContent() {
             <div className="pointer-events-auto absolute right-3 top-3 z-30">
               <SaveBubbleButton />
             </div>
+          </div>
+          {/* Mobile map view has no ledger footer — surface the §6.3(i)/(k) reliability +
+              bona-fide notice here so the terminal's DEFAULT mobile view still carries it
+              (desktop and the mobile list view use the ledger-footer notice). */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-2 pt-1 md:hidden">
+            <ListingComplianceNotice
+              compact
+              className="pointer-events-auto mx-auto max-w-md rounded-b-md bg-slate-900/85 px-3 py-1 text-center text-slate-300 backdrop-blur"
+            />
           </div>
           {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>

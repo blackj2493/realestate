@@ -8,8 +8,14 @@ import {
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
-// Refresh daily (matches the ETL cadence). Compliance: the `listings` table is the
-// active IDX feed only — sold/VOW records live in raw_vow_sold and are never emitted.
+// Refresh daily (matches the ETL cadence). NOTE: `listings` is NOT active-only — Query B
+// upserts Closed (sold) payloads here, and Terminated/Expired/Suspended rows stay
+// frozen-Active — so this sitemap DOES emit their /properties/{key} URLs. That is safe:
+// the listing page resolves the TRUE status and sets robots:noindex for every non-active
+// listing (see properties/[id] generateMetadata), so sold/off-market pages are
+// discoverable but never indexed, and all VOW numbers (close price, sold DOM) are gated
+// at render. If you ever need to stop emitting them entirely, filter here by resolved
+// status (anti-join raw_vow_delisted for the frozen-Active terminated rows).
 export const revalidate = 86400;
 
 const PAGE = 1000; // PostgREST hard-caps a single response at 1000 rows — must paginate

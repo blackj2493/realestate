@@ -51,13 +51,18 @@ const KIND_COLOR: Record<StatusAlertKind, string> = {
 };
 
 function statusLine(s: NonNullable<ListingAlertChange["status"]>): string {
+  // ANON audience: show only the neutral status KIND (SOLD / OFF MARKET), never the
+  // specific VOW de-list reason (Terminated / Expired / Suspended) nor any close price.
+  // The specific reason is VOW Listing Information and is gated to signed-in consumers —
+  // mirroring the dashboard dispositions gate. Note we deliberately DON'T interpolate
+  // s.detail here (that was the leak: "Listing terminated …" reaching non-consumers).
   switch (s.kind) {
     case "sold":
       return "Sign in to see the closing price";
     case "off-market":
-      return `Listing ${s.detail ? s.detail.toLowerCase() : "removed"} — a relist often signals a motivated seller`;
+      return "No longer on the active market — a relist often signals a motivated seller";
     case "back-on-market":
-      return "Back on the market — the previous campaign ended without a sale";
+      return "Back on the market — sign in to see the full listing history";
     case "sold-conditional":
       return "Offer accepted with conditions — it can still fall through";
     default:
@@ -86,8 +91,10 @@ function subjectFor(changes: ListingAlertChange[]): string {
   return parts.join(" · ") || `${changes.length} updates on homes you're watching`;
 }
 
+// TRREB §6.3(c): brokerage on EVERY listing row. Always render; when the feed omitted
+// ListOfficeName, show the same "Brokerage unavailable" placeholder the cards use.
 const brokerageLine = (b: string | null) =>
-  b ? `<div style="color:#64748b;font-size:12px;margin-top:2px;">${esc(b)}</div>` : "";
+  `<div style="color:#64748b;font-size:12px;margin-top:2px;">${esc(b || "Brokerage unavailable")}</div>`;
 
 function rowHtml(c: ListingAlertChange): string {
   const badge = c.status

@@ -23,7 +23,8 @@ import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getConsumer } from "@/lib/auth/requireConsumer";
+import { logVowAccess } from "@/lib/audit/vowAccessLog";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
@@ -414,7 +415,13 @@ export default async function PropertyPage({
   // data exists, so we never tease an empty card.
   // Synthetic PPDEMO fixtures render ungated (their "VOW" numbers are fabricated —
   // see src/lib/demo/demoListing.ts); impossible outside DEMO_FIXTURES=1 dev runs.
-  const isAuthed = isDemoListingKey(id) || !!(await getCurrentUser());
+  // VOW gate is CONSUMER-level (signed in AND accepted the VOW Terms), not mere login —
+  // matches every other VOW surface (APIs, /address, dashboard). A logged-in user who has
+  // not accepted the Terms sees the same teaser as anon until they do.
+  const { user: consumer, isConsumer } = await getConsumer();
+  const isAuthed = isDemoListingKey(id) || isConsumer;
+  // VOW §5.4: record the consumer's access to this listing's VOW data (never demo fixtures).
+  if (isConsumer && consumer) await logVowAccess(consumer.id, `listing:${id}`);
   const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
   const hasValueAdd = hasValueAddData(detail.valueAdd);
   const hasDealScore = detail.dealScore.score !== null;
@@ -675,7 +682,11 @@ export default async function PropertyPage({
                     True DOM {trueDom}d
                   </span>
                 )}
-                {status.kind === "sold" && (
+                {/* Days-on-market for a SOLD listing is VOW-derived (how long the closed
+                    campaign ran), so gate it behind auth — anon sees the SOLD badge but not
+                    the sold DOM. Inherits the stronger consumer gate once isAuthed moves to
+                    getConsumer(). */}
+                {status.kind === "sold" && isAuthed && (
                   <span className="text-sm font-semibold text-muted-foreground">
                     Sold after {dom} {dom === 1 ? "day" : "days"} on market
                   </span>

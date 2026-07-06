@@ -470,8 +470,8 @@ export default function UnderwritingSandbox({
 
       {/* Disclaimer */}
       <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
-        Based on your assumptions and estimates, not financial advice. Rent and operating
-        figures are starting points — adjust to your underwriting.
+        PureProperty estimates from your assumptions — not MLS listing data, and not financial
+        advice. Rent and operating figures are starting points — adjust to your underwriting.
       </p>
     </div>
   );

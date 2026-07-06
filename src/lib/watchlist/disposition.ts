@@ -33,13 +33,19 @@ export interface RelistTarget {
   newPrice: number | null;
   /** New listing's address (IDX, public). */
   newAddress: string | null;
+  /** New listing's brokerage (ListOfficeName, IDX/public) — TRREB §6.3(c). */
+  brokerage?: string | null;
 }
 
+// `brokerage` (ListOfficeName) rides on every variant so the dashboard can satisfy TRREB
+// §6.3(c) on off-market cards (no live active doc). It is the listing office name, NOT a
+// VOW number, so it is display-safe; the route populates it from the relist active doc or
+// the sold_listings record.
 export type Disposition =
-  | { kind: "sold" }
-  | { kind: "leased" }
+  | { kind: "sold"; brokerage?: string | null }
+  | { kind: "leased"; brokerage?: string | null }
   | ({ kind: "relisted" } & RelistTarget)
-  | { kind: "off-market"; reason: OffMarketReason };
+  | { kind: "off-market"; reason: OffMarketReason; brokerage?: string | null };
 
 /** The exact disposition value stored in sold_listings (or null when not found there). */
 export type SoldDealType = "sold" | "leased" | DelistedDealType | null;

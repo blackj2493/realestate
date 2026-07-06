@@ -146,7 +146,9 @@ export default function WatchlistSection() {
           const relist = change.disposition?.kind === "relisted" ? change.disposition : null;
           const linkKey = relist?.newKey ?? item.listing_key;
           const price = relist?.newPrice ?? change.current?.ListPrice ?? item.list_price;
-          const brokerage = change.current?.ListOfficeName;
+          // Live active doc for active cards; for off-market cards the real brokerage is
+          // hydrated from the disposition (sold_listings / relist active doc, server-side).
+          const brokerage = change.current?.ListOfficeName ?? change.disposition?.brokerage ?? null;
           return (
             <div
               key={item.listing_key}
@@ -174,13 +176,12 @@ export default function WatchlistSection() {
                     </p>
                   )}
                   {/* Listing brokerage (ListOfficeName) — TRREB §6.3(c) mandates the
-                      brokerage on EVERY listing shown, including saved/watchlist cards,
-                      at the same size/weight as other detail lines (no visual de-emphasis).
-                      Re-hydrated live from Typesense via change.current; rendered
-                      conditionally so off-market cards (no live doc) never break. */}
-                  {brokerage && (
-                    <p className="truncate text-xs text-foreground">{brokerage}</p>
-                  )}
+                      brokerage on EVERY listing shown, including saved/watchlist cards, at
+                      the same size/weight as other detail lines. Active cards use the live
+                      doc; off-market cards hydrate the real brokerage from the disposition;
+                      a "Brokerage unavailable" placeholder is the last-resort fallback so
+                      the attribution line is never simply omitted. */}
+                  <p className="truncate text-xs text-foreground">{brokerage || "Brokerage unavailable"}</p>
                 </div>
               </Link>
             </div>

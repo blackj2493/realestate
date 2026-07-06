@@ -44,10 +44,11 @@ export default function ActionFeedItem({ item }: { item: FeedItem }) {
           <span className="truncate text-xs text-foreground">{item.headline}</span>
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.address}</p>
+        {/* TRREB §6.3(c): brokerage on every listing; placeholder when the feed omitted it. */}
         <p className="truncate text-[10px] text-muted-foreground">
           {item.city ? <span className="uppercase tracking-wide">{item.city}</span> : null}
-          {item.city && item.brokerage ? " · " : null}
-          {item.brokerage}
+          {item.city ? " · " : null}
+          {item.brokerage || "Brokerage unavailable"}
         </p>
       </div>
 

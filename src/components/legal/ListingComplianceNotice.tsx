@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,7 +14,27 @@ import { cn } from "@/lib/utils";
  * next to estimate cards). Keep this notice unconditional so a listing with no AVM
  * output still satisfies §6.3(i)/(k).
  */
-export default function ListingComplianceNotice({ className }: { className?: string }) {
+export default function ListingComplianceNotice({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
+  // Compact single-line variant for dense surfaces (the terminal ledger footer), where the
+  // bordered card is too heavy. Same §6.3(i)/(k) obligations + operator link, condensed.
+  if (compact) {
+    return (
+      <p className={cn("text-[9px] leading-tight text-muted-foreground", className)}>
+        Listing information is deemed reliable but not guaranteed accurate by PROPTX; for consumers
+        with a bona fide interest only, not for any commercial purpose.{" "}
+        <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+          Operated under licence
+        </Link>
+        .
+      </p>
+    );
+  }
   return (
     <div
       className={cn(
@@ -26,6 +47,11 @@ export default function ListingComplianceNotice({ className }: { className?: str
         The information provided herein must only be used by consumers that have a bona fide
         interest in the purchase, sale, or lease of real estate and may not be used for any
         commercial purpose or any other purpose.
+      </p>
+      <p>
+        <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+          Operated under licence
+        </Link>
       </p>
     </div>
   );

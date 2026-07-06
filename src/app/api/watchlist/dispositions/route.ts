@@ -85,8 +85,8 @@ function normalizeDealType(v: unknown): SoldDealType {
 /** Read the exact disposition + address for each key from `sold_listings`. */
 async function fetchSoldMap(
   keys: string[]
-): Promise<Map<string, { dealType: SoldDealType; address: string | null }>> {
-  const map = new Map<string, { dealType: SoldDealType; address: string | null }>();
+): Promise<Map<string, { dealType: SoldDealType; address: string | null; brokerage: string | null }>> {
+  const map = new Map<string, { dealType: SoldDealType; address: string | null; brokerage: string | null }>();
   if (!keys.length) return map;
   const res = await getAdminClient()
     .collections(SOLD_LISTINGS_COLLECTION)
@@ -95,12 +95,18 @@ async function fetchSoldMap(
       q: "*",
       query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
       filter_by: `id:[${keys.join(",")}]`,
-      include_fields: "id,DealType,UnparsedAddress",
+      // ListOfficeName is the listing brokerage (TRREB §6.3(c)), NOT a VOW number — safe to
+      // return so off-market watchlist cards can show attribution.
+      include_fields: "id,DealType,UnparsedAddress,ListOfficeName",
       per_page: Math.min(keys.length, 250),
     });
   for (const h of res.hits ?? []) {
-    const d = h.document as { id: string; DealType?: unknown; UnparsedAddress?: string };
-    map.set(d.id, { dealType: normalizeDealType(d.DealType), address: d.UnparsedAddress ?? null });
+    const d = h.document as { id: string; DealType?: unknown; UnparsedAddress?: string; ListOfficeName?: string };
+    map.set(d.id, {
+      dealType: normalizeDealType(d.DealType),
+      address: d.UnparsedAddress ?? null,
+      brokerage: d.ListOfficeName ?? null,
+    });
   }
   return map;
 }
@@ -196,6 +202,7 @@ interface ActiveHit {
   PostalCode?: string;
   ListPrice?: number;
   EntryTimestamp?: number;
+  ListOfficeName?: string;
 }
 
 /** Parse an active doc's address, backfilling the postal from its PostalCode field. */
@@ -223,7 +230,7 @@ async function fetchRelists(
     collection: "properties",
     q: `${c.parsed.streetNumber} ${c.parsed.streetName}`.trim() || "*",
     query_by: "UnparsedAddress",
-    include_fields: "id,UnparsedAddress,PostalCode,ListPrice,EntryTimestamp",
+    include_fields: "id,UnparsedAddress,PostalCode,ListPrice,EntryTimestamp,ListOfficeName",
     per_page: RELIST_CANDIDATES_PER_ADDRESS,
   }));
 
@@ -253,6 +260,7 @@ async function fetchRelists(
         newKey: best.doc.id,
         newPrice: typeof best.doc.ListPrice === "number" ? best.doc.ListPrice : null,
         newAddress: best.doc.UnparsedAddress ?? null,
+        brokerage: best.doc.ListOfficeName ?? null,
       });
     }
   });
@@ -263,7 +271,9 @@ async function fetchRelists(
 /** Strip the VOW-gated specific de-list reason for non-consumers (gateListingStatus parity). */
 function gate(disp: Disposition, isConsumer: boolean): Disposition {
   if (isConsumer) return disp;
-  if (disp.kind === "off-market" && disp.reason !== "gone") return { kind: "off-market", reason: "gone" };
+  // Collapse the specific VOW de-list reason for non-consumers, but keep the (public) brokerage.
+  if (disp.kind === "off-market" && disp.reason !== "gone")
+    return { kind: "off-market", reason: "gone", brokerage: disp.brokerage };
   return disp;
 }
 
@@ -327,7 +337,12 @@ export async function POST(req: NextRequest) {
         soldDealType: dealTypeFor(key),
         relist: relistMap.get(key) ?? null,
       });
-      dispositions[key] = gate(disp, isConsumer);
+      // TRREB §6.3(c): attach the listing brokerage (public office name, not a VOW number) so
+      // off-market cards can show attribution. Relist → the new active doc's office; otherwise
+      // the sold_listings record's office.
+      const brokerage =
+        disp.kind === "relisted" ? disp.brokerage ?? null : soldMap.get(key)?.brokerage ?? null;
+      dispositions[key] = gate({ ...disp, brokerage }, isConsumer);
     }
 
     return NextResponse.json({ dispositions });

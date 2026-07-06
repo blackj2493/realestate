@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getConsumer } from "@/lib/auth/requireConsumer";
+import { logVowAccess } from "@/lib/audit/vowAccessLog";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +28,13 @@ export async function GET(
     }
 
     // VOW gating: strip sold prices/dates AND VOW-derived metrics (AVM, Deal Score,
-    // stitched True DOM) for anonymous users; the terminal renders blurred teasers.
+    // stitched True DOM) for non-consumers; the terminal renders blurred teasers.
     // has* flags (from the ungated detail) tell the client where real data exists.
-    const user = await getCurrentUser();
-    const isAuthed = !!user;
+    // CONSUMER-level gate (signed in AND accepted VOW Terms), not mere login — parity with
+    // the server page and every other VOW surface.
+    const { user, isConsumer } = await getConsumer();
+    const isAuthed = isConsumer;
+    if (isConsumer && user) await logVowAccess(user.id, `listing:${listingKey}`);
     const hasEstimate = (detail.estimate?.estimatedValue ?? 0) > 0;
     const hasExpectedSale = (detail.expectedSale?.expectedPrice ?? 0) > 0;
     const hasDealScore = detail.dealScore.score !== null;

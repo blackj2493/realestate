@@ -63,7 +63,7 @@ export default function ListingCompare() {
               </span>
             </div>
             <div className="mt-2.5 text-[14px] font-semibold">14 Maple Ave, Toronto, ON</div>
-            <div className="mt-0.5 text-[12px] text-muted-foreground">Detached · MLS® C12639568</div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">Detached · North York</div>
             <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-green-700">
               <span className="h-[7px] w-[7px] rounded-full bg-green-500" />
               Just listed · 5 days on market
@@ -109,7 +109,7 @@ export default function ListingCompare() {
             <div className="absolute inset-x-3 bottom-2 z-[2]">
               <span className="block text-[14px] font-bold text-white">14 Maple Ave, Toronto</span>
               <span className="terminal-font mt-px block text-[9px] tracking-[0.05em] text-[#aebccb]">
-                DETACHED · MLS C12639568 · listed 5d ago
+                DETACHED · NORTH YORK · listed 5d ago
               </span>
             </div>
           </div>

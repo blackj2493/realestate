@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
@@ -289,7 +290,11 @@ export default function MarketActivityPanel({
       {/* TRREB §6.3(i)/(k): reliability + bona-fide-interest notice, local to the sold rows. */}
       <p className="text-[10px] leading-snug text-muted-foreground md:col-span-2">
         Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for
-        consumers with a bona fide interest only, not for any commercial purpose.
+        consumers with a bona fide interest only, not for any commercial purpose.{" "}
+        <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+          Operated under licence
+        </Link>
+        .
       </p>
     </div>
   );

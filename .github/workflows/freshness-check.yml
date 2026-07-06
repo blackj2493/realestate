@@ -1,0 +1,45 @@
+name: Data Freshness Check
+
+# Operator heartbeat for TRREB §6.3(h) (feed data refreshed at least every 24h).
+# DELIBERATELY SEPARATE from daily-sync.yml: if the sync workflow stops firing entirely,
+# a step inside it could never warn you. This independent cron reads the DATA's age from
+# sync_state and alerts (email + red run) when it crosses the staleness threshold — so you
+# find out whether the sync FAILED, ran PARTIALLY, or never RAN at all.
+#
+# Runs every 6 hours → staleness is caught within ~6h of crossing 24h. The nightly sync is
+# 03:00 UTC (finishes by ~08:00), so a healthy cursor is always < ~25h old.
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Data Freshness
+        # Exits non-zero when stale → this run goes red (GitHub notifies the repo owner),
+        # AND the script emails SYNC_ALERT_EMAIL. Read-only on sync_state.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Optional — set these to receive the email alert (the red run fires regardless):
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/freshnessCheck.ts

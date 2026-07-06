@@ -68,8 +68,10 @@ function statusLine(s: StatusChangeAlert): string {
   return "Removed from the active feed";
 }
 
+// TRREB §6.3(c): brokerage on EVERY listing row. Always render the line; when the feed
+// omitted ListOfficeName, show the same "Brokerage unavailable" placeholder the cards use.
 const brokerageLine = (b: string | null) =>
-  b ? `<div style="color:#64748b;font-size:12px;margin-top:2px;">${b}</div>` : "";
+  `<div style="color:#64748b;font-size:12px;margin-top:2px;">${b || "Brokerage unavailable"}</div>`;
 
 function subjectFor(p: DigestPayload): string {
   const parts: string[] = [];

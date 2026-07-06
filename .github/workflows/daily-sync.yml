@@ -202,6 +202,17 @@ jobs:
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: npx tsx scripts/worker/revalidateListings.ts
 
+      # Retention pruning for the VOW consumer-access audit trail (migration 053 / §5.4).
+      # Additive + continue-on-error: a prune failure must never affect the sync. Idempotent
+      # (deletes rows older than the retention window; most days delete nothing).
+      - name: Prune VOW Access Log
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/worker/pruneVowAccessLog.ts
+
   # ── Failure notifier ────────────────────────────────────────────────────────
   # Fires ONLY when run-ingester fails — i.e. the core sync step exits non-zero
   # (ingester.ts now exits 1 on a failed sync) or hits its timeout. The additive

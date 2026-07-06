@@ -124,7 +124,10 @@ export default function LegalDocument({
       {/* Task 5: footer — text-xs text-muted-foreground + pb-safe */}
       {/* Task 6 (min-h-app) is applied to the root div above */}
       <footer className="border-t border-border pb-safe pt-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} PureProperty.ca · Powered by PROPTX MLS®
+        © {new Date().getFullYear()} PureProperty.ca · Powered by PROPTX MLS® ·{" "}
+        <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+          Operated under licence
+        </Link>
       </footer>
     </div>
   );

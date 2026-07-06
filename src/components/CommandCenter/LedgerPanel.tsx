@@ -9,6 +9,7 @@ import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown, ChevronsUpDo
 import { cn } from "@/lib/utils";
 import { SEARCH_BRAND } from "@/lib/brand";
 import LedgerRow from "./LedgerRow";
+import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
@@ -261,11 +262,9 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         )}
       </div>
 
-      {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) && (
-        <p className="border-t border-border bg-card px-3 py-1.5 text-[9px] leading-tight text-muted-foreground">
-          Sold/leased/de-listed data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for consumers with a bona fide interest only, not for any commercial purpose.
-        </p>
-      )}
+      {/* TRREB §6.3(i)/(k): reliability + bona-fide notice — PERSISTENT on the terminal (the
+          primary IDX display surface), not only when a sold/leased/de-listed VOW layer is on. */}
+      <ListingComplianceNotice compact className="shrink-0 border-t border-border bg-card px-3 py-1.5" />
 
       {/* Footer */}
       <div className="shrink-0 border-t border-border bg-card px-3 py-2">

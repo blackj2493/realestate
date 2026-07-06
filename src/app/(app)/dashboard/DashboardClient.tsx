@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import {
@@ -255,7 +256,11 @@ export default function DashboardClient() {
           Data is deemed reliable but is not guaranteed accurate by PROPTX. Information herein
           must only be used by consumers that have a bona fide interest in the purchase, sale, or
           lease of real estate and may not be used for any commercial purpose. Powered by PROPTX
-          MLS®.
+          MLS®.{" "}
+          <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+            Operated under licence
+          </Link>
+          .
         </p>
       </main>
     </div>

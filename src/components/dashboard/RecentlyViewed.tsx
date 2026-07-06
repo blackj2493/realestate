@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { getRecentlyViewed, type RecentListing } from "@/lib/dashboard/recentlyViewed";
+import { searchListings } from "@/lib/typesense/client";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ShowMoreButton from "./ShowMoreButton";
 
 const LIMIT = 5;
+// TRREB listing-key shape (board letter + 5–10 digits) — a valid Typesense id to backfill.
+const KEY_RE = /^[A-Za-z]\d{5,10}$/;
 
 function Thumb({ item }: { item: RecentListing }) {
   return (
@@ -25,7 +28,34 @@ export default function RecentlyViewed() {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    setItems(getRecentlyViewed());
+    const loaded = getRecentlyViewed();
+    setItems(loaded);
+
+    // Backfill brokerage (TRREB §6.3(c)) for legacy snapshots saved before the field
+    // shipped — one Typesense round-trip for the active listings among the missing keys.
+    const missing = loaded.filter((i) => !i.brokerage && KEY_RE.test(i.id)).map((i) => i.id);
+    if (missing.length === 0) return;
+    let alive = true;
+    searchListings({
+      query: "*",
+      rawFilterBy: `id:[${missing.join(",")}]`,
+      perPage: Math.min(missing.length, 100), // §6.3(b) display cap
+    })
+      .then((res) => {
+        if (!alive) return;
+        const office: Record<string, string> = {};
+        for (const d of res.listings) if (d.ListOfficeName) office[d.id] = d.ListOfficeName;
+        if (Object.keys(office).length === 0) return;
+        setItems((prev) =>
+          prev.map((i) => (i.brokerage || !office[i.id] ? i : { ...i, brokerage: office[i.id] }))
+        );
+      })
+      .catch(() => {
+        /* keep the placeholder fallback on failure */
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (items.length === 0) return null;
@@ -60,12 +90,11 @@ export default function RecentlyViewed() {
                 </p>
               )}
               {/* Listing brokerage (ListOfficeName) — TRREB §6.3(c) mandates the
-                  brokerage on EVERY listing shown, including recently-viewed
-                  cards, at the same weight as sibling detail lines. Conditional:
-                  snapshots saved before this field shipped omit it. */}
-              {item.brokerage && (
-                <p className="truncate text-xs text-foreground">{item.brokerage}</p>
-              )}
+                  brokerage on EVERY listing shown, including recently-viewed cards, at the
+                  same weight as sibling detail lines. New snapshots capture it; legacy ones
+                  are backfilled from Typesense above, with a placeholder as the last resort
+                  so the attribution line is never simply omitted. */}
+              <p className="truncate text-xs text-foreground">{item.brokerage || "Brokerage unavailable"}</p>
             </div>
           </Link>
         ))}

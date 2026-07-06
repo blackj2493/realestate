@@ -80,6 +80,13 @@ export default function HomePage() {
           <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers
           </p>
+          {/* TRESA / VOW §6.3(e): brokerage-identity disclosure, kept low-key as a link. */}
+          <Link
+            href="/operated-by"
+            className="terminal-font mt-2 text-[10px] uppercase tracking-[0.22em] text-muted-foreground underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+          >
+            Operated under licence
+          </Link>
         </main>
       </div>
     </div>
