@@ -805,8 +805,9 @@ export default async function PropertyPage({
               <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} listingId={id} />
             )}
 
-            {/* Things to Know — interpretive diligence flags surfaced beside the verdict (loss-aversion) */}
-            <ThingsToKnowCard flags={diligenceFlags} />
+            {/* Things to Know — interpretive diligence flags surfaced beside the verdict
+                (loss-aversion). geoChecked gates the "checked & clear" claim (054). */}
+            <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
 
             {/* Zoning — municipal open data (NOT MLS), its own attributed card. Renders
                 nothing until zoning is harvested/backfilled for this listing. */}

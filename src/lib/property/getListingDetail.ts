@@ -148,10 +148,13 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     status: gateListingStatus(detail.status, false),
     soldAccuracy: null,
     capRatePct: null,
-    // geoFlags are PUBLIC-records facts (flood/rail/traffic), NOT TRREB VOW data —
-    // intentionally NOT nulled: {...detail} passes them through for anon users too
-    // (Phase 2 plan §2/§4.1). Do not "fix" this by gating them.
+    // geoFlags (+ geoChecked/geoCheckedAt) are PUBLIC-records facts (flood/rail/
+    // traffic), NOT TRREB VOW data — intentionally NOT nulled: {...detail} passes
+    // them through for anon users too (Phase 2 plan §2/§4.1). Do not "fix" this by
+    // gating them.
     geoFlags: detail.geoFlags,
+    geoChecked: detail.geoChecked,
+    geoCheckedAt: detail.geoCheckedAt,
   };
 }
 
@@ -184,6 +187,15 @@ export interface ListingDetail {
    * VOW-gated; best-effort, [] on miss/error.
    */
   geoFlags: DiligenceFlag[];
+  /**
+   * True when the geo enrichment actually ran this listing against a trustworthy
+   * block-level coord. Disambiguates empty geoFlags: [] + checked=true is "checked
+   * & clear" (the card may say so); [] + checked=false is "couldn't check" (say
+   * nothing). Public data → not VOW-gated.
+   */
+  geoChecked: boolean;
+  /** When the geo check last ran (listing_geo_flags.computed_at). */
+  geoCheckedAt: string | null;
   /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
   rooms: RoomData[];
 }
@@ -613,17 +625,23 @@ export const getListingDetail = cache(
     // enrichGeoFlags.ts; we never run a spatial query at request time (§5 Disk-IO).
     // PUBLIC-records data (flood/rail/traffic) → NOT VOW-gated (see gateVowDerived).
     let geoFlags: DiligenceFlag[] = [];
+    let geoChecked = false;
+    let geoCheckedAt: string | null = null;
     try {
       const { data: gRow } = await withTimeout(
         supabase
           .from("listing_geo_flags")
-          .select("flags")
+          .select("flags, checked, computed_at")
           .eq("listing_key", listingKey)
           .maybeSingle(),
         4000,
         "Geo flags"
       );
-      if (gRow) geoFlags = asDiligenceFlags(gRow.flags);
+      if (gRow) {
+        geoFlags = asDiligenceFlags(gRow.flags);
+        geoChecked = gRow.checked === true;
+        geoCheckedAt = typeof gRow.computed_at === "string" ? gRow.computed_at : null;
+      }
     } catch (geoErr) {
       console.error(`[getListingDetail] Geo flags failed for ${listingKey}:`, geoErr);
     }
@@ -647,6 +665,8 @@ export const getListingDetail = cache(
       soldAccuracy,
       capRatePct: realCapRate,
       geoFlags,
+      geoChecked,
+      geoCheckedAt,
       rooms,
     };
   }

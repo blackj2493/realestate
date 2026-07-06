@@ -58,6 +58,8 @@ export interface GeoDataset {
   kind: string;
   family: GeoGeometryFamily;
   predicate: GeoPredicate;
+  /** Human-short noun for the card's "checked & clear" list (ThingsToKnowCard). */
+  shortLabel: string;
   /** Off → loader/enrichment skip it (e.g. traffic: no reliable region-wide data). */
   enabled: boolean;
   /** True when every source has an ArcGIS endpoint and `--all` can auto-load it.
@@ -75,6 +77,7 @@ const CA_ODL = "Conservation Authority Open Data Licence v1.0";
 export const GEO_DATASETS: GeoDataset[] = [
   {
     kind: "flood",
+    shortLabel: "floodplain",
     family: "polygon",
     predicate: { type: "intersect" },
     enabled: true,
@@ -103,6 +106,7 @@ export const GEO_DATASETS: GeoDataset[] = [
     // (floodplain + valley/wetland/erosion hazards), not a flood-only line — so we
     // label it honestly as a conservation-regulated area rather than "floodplain".
     kind: "conservation_regulated",
+    shortLabel: "conservation-regulated areas",
     family: "polygon",
     predicate: { type: "intersect" },
     enabled: true,
@@ -140,6 +144,7 @@ export const GEO_DATASETS: GeoDataset[] = [
   },
   {
     kind: "wetland",
+    shortLabel: "provincially significant wetlands",
     family: "polygon",
     predicate: { type: "intersect" },
     enabled: true,
@@ -166,6 +171,7 @@ export const GEO_DATASETS: GeoDataset[] = [
   },
   {
     kind: "greenbelt",
+    shortLabel: "the Greenbelt",
     family: "polygon",
     predicate: { type: "intersect" },
     enabled: true,
@@ -197,6 +203,7 @@ export const GEO_DATASETS: GeoDataset[] = [
   },
   {
     kind: "orm",
+    shortLabel: "the Oak Ridges Moraine",
     family: "polygon",
     predicate: { type: "intersect" },
     enabled: true,
@@ -222,6 +229,7 @@ export const GEO_DATASETS: GeoDataset[] = [
   },
   {
     kind: "niagara",
+    shortLabel: "the Niagara Escarpment",
     family: "polygon",
     predicate: { type: "intersect" },
     enabled: true,
@@ -247,6 +255,7 @@ export const GEO_DATASETS: GeoDataset[] = [
   },
   {
     kind: "hydro",
+    shortLabel: "hydro corridors",
     family: "line",
     predicate: { type: "distance", meters: 150 },
     enabled: true,
@@ -272,6 +281,7 @@ export const GEO_DATASETS: GeoDataset[] = [
   },
   {
     kind: "rsc",
+    shortLabel: "environmental site records",
     family: "point",
     predicate: { type: "distance", meters: 75 },
     // DISABLED pending written MECP license confirmation (verified 2026-06-14: no
@@ -303,6 +313,7 @@ export const GEO_DATASETS: GeoDataset[] = [
     // File-based: ORWN ships as a shapefile/FGDB. Convert once to GeoJSON, then
     //   npx tsx scripts/worker/loadGeoData.ts --dataset rail --file data/orwn_track.geojson --srid 4269
     kind: "rail",
+    shortLabel: "rail corridors",
     family: "line",
     predicate: { type: "distance", meters: 150 },
     enabled: true,
@@ -329,6 +340,7 @@ export const GEO_DATASETS: GeoDataset[] = [
     // File-based UPSIDE flag: GO rail + TTC subway station points. Convert the GO
     // shapefile / GTFS stops to GeoJSON, then load via --file.
     kind: "transit",
+    shortLabel: "GO/subway proximity",
     family: "point",
     predicate: { type: "distance", meters: 1500 },
     enabled: true,
@@ -354,6 +366,7 @@ export const GEO_DATASETS: GeoDataset[] = [
     // Deferred: no reliable region-wide open AADT (City of Toronto is single-day TMC,
     // York/Halton are paywalled). Kept here as documentation; off so it never loads.
     kind: "traffic",
+    shortLabel: "busy-road exposure",
     family: "point",
     predicate: { type: "distance", meters: 120 },
     enabled: false,
