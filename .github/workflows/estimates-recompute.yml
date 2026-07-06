@@ -70,16 +70,15 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-property-estimates.ts --apply --shard "${{ matrix.shard }}"
 
-  # ── Sold-reconcile backstop ──────────────────────────────────────────────────
-  # Completeness net for the daily sold sync (ingester Query B), which sorts by
-  # PurchaseContractDate desc and stops at the first PCD < watermark — so a firm sale
-  # that enters the VOW feed days after its agreement date (data-entry lag, or a
-  # terminate-then-relist resell under a new MLS#) sits behind the advancing watermark and
-  # is skipped. Query A's ModificationTimestamp cursor still captures it into the `listings`
-  # vault as Closed, so this re-derives any SALE the vault has but sold_listings is missing
-  # (see scripts/admin/reconcile-sold-from-vault.ts + the vault fallback in the watchlist
-  # dispositions route). Sales-only — leases (opt-in --include-leases) are a separate,
-  # larger backfill. Idempotent (existence-checked, upsert-keyed), so re-scanning is free.
+  # ── Sold/leased-reconcile backstop ───────────────────────────────────────────
+  # Belt-and-suspenders completeness net for the daily sold/leased sync. Query B now uses a
+  # ModificationTimestamp cursor (like Query A/C), so it no longer drops late-arriving or
+  # relisted-then-sold records at the source — but this still re-derives, from the `listings`
+  # vault, any SALE or LEASE the vault has that sold_listings is missing (a transient per-row
+  # write failure, or a historical gap). See scripts/admin/reconcile-sold-from-vault.ts + the
+  # vault fallback in the watchlist dispositions route. --include-leases covers both kinds
+  # (leases power sold_listings lease comps via similarListings.ts but NOT the rent AVM, which
+  # uses active asking rents). Idempotent (existence-checked, upsert-keyed), so re-scanning is free.
   #
   # FULL sweep (not an updated_at window): the vault has no index on updated_at, so a
   # windowed scan degrades to a full index scan whenever the window is sparse (e.g. the
@@ -110,7 +109,7 @@ jobs:
           # sync.ts (imported transitively by the reconciler) builds a Typesense admin
           # client at module load and hard-throws without this key.
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
-        run: npx tsx scripts/admin/reconcile-sold-from-vault.ts --scan --apply
+        run: npx tsx scripts/admin/reconcile-sold-from-vault.ts --scan --apply --include-leases
 
   # ── Failure notifier ────────────────────────────────────────────────────────
   # Fires when ANY recompute shard fails. Opens (or comments on the existing open)
