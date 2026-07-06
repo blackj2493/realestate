@@ -16,13 +16,14 @@ import LocationSearch from "@/components/CommandCenter/LocationSearch";
  * the dashboard stayed empty — see PostHog). "Done" just collapses this setup card; the
  * areas are already live.
  */
-// One-tap markets. Every entry must map to real inventory via areaFilter (see
-// CITY_GROUPS in @/lib/dashboard/area). "Ottawa" was removed: TRREB files its ~1,200
-// Ottawa listings under fragmented area names ("Ottawa Centre", "Orleans - …") that
-// don't roll up to a single "Ottawa" City value, so a bare "Ottawa" quick-pick loaded an
-// empty dashboard. Ottawa areas remain fully addable via the search box above.
+// One-tap markets. Every entry must map to real inventory via areaFilter (see CITY_GROUPS
+// in @/lib/dashboard/area). "Toronto" and "Ottawa" are GROUPS — TRREB has no single City
+// value for them (Toronto = ~36 district codes; Ottawa = ~51 OREB area names), so areaFilter
+// expands them to a city-wide section. A user wanting a smaller slice (e.g. just Orleans or
+// Kanata) adds that area via the search box, which gets its own focused section.
 const QUICK_PICKS = [
   "Toronto",
+  "Ottawa",
   "Mississauga",
   "Brampton",
   "Vaughan",
