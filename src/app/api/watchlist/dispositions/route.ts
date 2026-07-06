@@ -28,10 +28,13 @@ import { NextRequest, NextResponse } from "next/server";
 import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION } from "@/lib/typesense/soldListingsSchema";
 import { getConsumer } from "@/lib/auth/requireConsumer";
+import { getServiceRoleClient } from "@/lib/supabase/client";
 import {
   addressesMatch,
   classifyDisposition,
   parseAddress,
+  resolveDealType,
+  vaultTransaction,
   type Disposition,
   type RelistTarget,
   type SoldDealType,
@@ -134,16 +137,56 @@ async function fetchSoldByAddress(
   }> = res?.results ?? [];
 
   usable.forEach((c, i) => {
-    let best: { dealType: SoldDealType; date: number } | null = null;
+    // Prefer a real transaction (sold/leased) over any de-list at the same address, and
+    // only then the most recent — so a terminated DUPLICATE campaign dated after the sale
+    // can't mask it. Within the same class, newest wins.
+    let best: { dealType: SoldDealType; date: number; isTxn: boolean } | null = null;
     for (const h of results[i]?.hits ?? []) {
       const d = h.document;
       if (!addressesMatch(c.parsed, parseAddress(d.UnparsedAddress))) continue;
+      const dealType = normalizeDealType(d.DealType);
+      const isTxn = dealType === "sold" || dealType === "leased";
       const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
-      if (!best || date > best.date) best = { dealType: normalizeDealType(d.DealType), date };
+      if (
+        !best ||
+        (isTxn && !best.isTxn) ||
+        (isTxn === best.isTxn && date > best.date)
+      ) {
+        best = { dealType, date, isTxn };
+      }
     }
     if (best) out.set(c.key, best.dealType);
   });
 
+  return out;
+}
+
+/**
+ * Read each saved key's OWN status from the Supabase `listings` vault
+ * (full_payload->>MlsStatus) and keep only confirmed sales/leases. This is the same
+ * authoritative source the detail page and the nightly alert worker (scripts/worker/
+ * alerts.ts) consult, and it closes the gap where a sold campaign never reached the
+ * Typesense sold_listings collection (terminate-then-relist-then-sold: the sale lives
+ * only in the vault, under the NEW MLS# the user actually saved). Server-side + service
+ * role; only the disposition KIND ("sold"/"leased") crosses to the client — no VOW
+ * numbers — so this stays compliant with gateListingStatus (same as sold_listings).
+ */
+async function fetchVaultDeals(keys: string[]): Promise<Map<string, "sold" | "leased">> {
+  const out = new Map<string, "sold" | "leased">();
+  if (!keys.length) return out;
+  try {
+    const { data } = await getServiceRoleClient()
+      .from("listings")
+      .select("listing_key, status:full_payload->>MlsStatus")
+      .in("listing_key", keys);
+    for (const row of (data ?? []) as Array<{ listing_key: string; status: string | null }>) {
+      const txn = vaultTransaction(row.status);
+      if (txn) out.set(row.listing_key, txn);
+    }
+  } catch (e) {
+    // Best-effort fallback — never fail the route (or the dashboard) over the vault read.
+    console.error("[watchlist/dispositions] vault", e instanceof Error ? e.message : e);
+  }
   return out;
 }
 
@@ -241,15 +284,30 @@ export async function POST(req: NextRequest) {
     if (items.size === 0) return NextResponse.json({ dispositions: {} });
 
     const keys = [...items.keys()];
-    const soldMap = await fetchSoldMap(keys);
+    const [soldMap, vaultMap] = await Promise.all([
+      fetchSoldMap(keys),
+      fetchVaultDeals(keys),
+    ]);
 
-    // Keys with no exact-id sold record → try to recover the disposition by address
-    // (the sale/de-list often lives under a different MLS# than the one you saved).
+    // Recover a disposition by ADDRESS for any key not already CONFIRMED as a sale/lease
+    // by its exact sold_listings record. This now also runs for keys recorded as a de-list
+    // (terminated/expired/suspended) so a sale that closed under a different MLS# at the
+    // same address can override that stale de-list. Prefer the authoritative sold_listings
+    // address, else the saved address.
     const addrSoldMap = await fetchSoldByAddress(
-      keys.filter((k) => !soldMap.has(k)).map((k) => ({ key: k, address: items.get(k)!.address }))
+      keys
+        .filter((k) => {
+          const exact = soldMap.get(k)?.dealType;
+          return exact !== "sold" && exact !== "leased";
+        })
+        .map((k) => ({ key: k, address: soldMap.get(k)?.address ?? items.get(k)!.address }))
     );
     const dealTypeFor = (key: string): SoldDealType =>
-      soldMap.get(key)?.dealType ?? addrSoldMap.get(key) ?? null;
+      resolveDealType({
+        exact: soldMap.get(key)?.dealType ?? null,
+        vault: vaultMap.get(key) ?? null,
+        addr: addrSoldMap.get(key) ?? null,
+      });
 
     // Only listings that did NOT confirm a sale/lease can be a relist; resolve those.
     const relistCandidates: Array<{ key: string; address: string | null }> = [];

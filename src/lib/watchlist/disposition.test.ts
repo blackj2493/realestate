@@ -3,7 +3,9 @@ import {
   addressesMatch,
   classifyDisposition,
   parseAddress,
+  resolveDealType,
   streetNamesMatch,
+  vaultTransaction,
   type RelistTarget,
 } from "./disposition";
 
@@ -112,5 +114,46 @@ describe("classifyDisposition", () => {
       kind: "off-market",
       reason: "gone",
     });
+  });
+});
+
+describe("vaultTransaction", () => {
+  it("maps a firm closed sale/lease from the raw MlsStatus", () => {
+    expect(vaultTransaction("Sold")).toBe("sold");
+    expect(vaultTransaction("Closed Sale")).toBe("sold");
+    expect(vaultTransaction("Leased")).toBe("leased");
+  });
+
+  it("does NOT treat a Sold Conditional as a firm disposition", () => {
+    expect(vaultTransaction("Sold Conditional")).toBeNull();
+  });
+
+  it("returns null for de-lists and live statuses", () => {
+    for (const s of ["Terminated", "Expired", "Suspended", "New", "Active", "Price Change", "", null, undefined]) {
+      expect(vaultTransaction(s)).toBeNull();
+    }
+  });
+});
+
+describe("resolveDealType", () => {
+  it("an exact sold_listings sale/lease is final", () => {
+    expect(resolveDealType({ exact: "sold", vault: null, addr: "terminated" })).toBe("sold");
+    expect(resolveDealType({ exact: "leased", vault: null, addr: null })).toBe("leased");
+  });
+
+  it("the saved key's own vault sale beats a terminated predecessor at the address (363 Maria Antonia)", () => {
+    // Saved the sold relist (not in sold_listings); the only address record is its
+    // terminated predecessor. Vault says Sold → Sold wins.
+    expect(resolveDealType({ exact: null, vault: "sold", addr: "terminated" })).toBe("sold");
+  });
+
+  it("an address-recovered sale beats a de-list when there is no exact/vault signal", () => {
+    expect(resolveDealType({ exact: null, vault: null, addr: "sold" })).toBe("sold");
+  });
+
+  it("surfaces the de-list reason only when no transaction is found anywhere", () => {
+    expect(resolveDealType({ exact: "terminated", vault: null, addr: null })).toBe("terminated");
+    expect(resolveDealType({ exact: null, vault: null, addr: "expired" })).toBe("expired");
+    expect(resolveDealType({ exact: null, vault: null, addr: null })).toBeNull();
   });
 });
