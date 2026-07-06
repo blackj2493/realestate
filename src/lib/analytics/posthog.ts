@@ -46,6 +46,10 @@ export type AnalyticsEvents = {
     field: 'down_payment' | 'mortgage_rate' | 'amortization' | string;
   };
 
+  // The Read — synthesized-verdict interactions (persona lens + "show me the evidence").
+  'read_persona_switched': { listingId: string; persona: string };
+  'read_evidence_clicked': { listingId: string; target: string };
+
   // Watchlist / accounts.
   'watchlist_added': { listingId: string };
   'watchlist_removed': { listingId: string };
