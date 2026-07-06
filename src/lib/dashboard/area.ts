@@ -17,6 +17,7 @@
  */
 
 import type { Bubble } from "@/lib/bubbles/serialize";
+import { OTTAWA_AREAS } from "./ottawaAreas";
 
 export type Area =
   | { kind: "region"; name: string }
@@ -40,14 +41,17 @@ export type Area =
     };
 
 /**
- * District-split parent cities. TRREB stores Toronto as ~36 district codes
- * ("Toronto C01" … "Toronto W10") and London as directional names ("London South"),
- * so an exact City:=`Toronto` match hits almost nothing (1 stray listing) and its
- * dashboard section renders empty. A region set to the PARENT name expands to the
- * whole district set below (ranges verified against the live City facet 2026-07-04).
- * Single-value cities (Mississauga, Brampton, …) aren't listed → no expansion. The
- * city-hub tree resolves the same groups DYNAMICALLY (citiesForHubSlug, async); this
- * is the synchronous counterpart the dashboard's sync filter builder needs.
+ * Grouped parent cities that TRREB does NOT store as a single City value, so an exact
+ * City:=`Name` match hits ~nothing and the dashboard section renders empty. A region set
+ * to the PARENT name expands to the whole group below:
+ *   • Toronto — ~36 district codes ("Toronto C01" … "Toronto W10").
+ *   • London  — directional names ("London South", …).
+ *   • Ottawa  — ~51 OREB-style area names (Kanata, Barrhaven, Orleans, …); see ottawaAreas.
+ * Ranges/lists verified against the live City facet. Single-value cities (Mississauga,
+ * Brampton, …) aren't listed → no expansion. The city-hub tree resolves district-split
+ * cities DYNAMICALLY (citiesForHubSlug, async); this is the synchronous counterpart the
+ * dashboard's sync filter builder needs. A single sub-area (e.g. "Orleans - Cumberland and
+ * Area") added on its own is NOT a key here → exact match → its own focused section.
  */
 function torontoDistricts(): string[] {
   const out = ["Toronto"];
@@ -58,22 +62,25 @@ function torontoDistricts(): string[] {
 const CITY_GROUPS: Record<string, string[]> = {
   Toronto: torontoDistricts(),
   London: ["London", "London North", "London South", "London East", "London West"],
+  Ottawa: OTTAWA_AREAS,
 };
 
 /**
  * Typesense filter fragment to AND-join into rawFilterBy. Backtick-quoted
  * string values so names with spaces / hyphens parse safely; backticks inside
  * the value are stripped (defensive, no legitimate City/CityRegion/schoolKey
- * contains one). District-split parents (Toronto/London) expand to their whole
- * City-group so the dashboard scopes the full city, not a single stray listing.
+ * contains one). Grouped parents (Toronto/London/Ottawa) expand to their whole City-group
+ * so the dashboard scopes the full city, not a single stray listing.
  */
 export function areaFilter(area: Area): string {
   if (area.kind === "region") {
     const safe = area.name.replace(/`/g, "");
     const group = CITY_GROUPS[safe];
     if (group) {
-      const cityOrs = group.map((c) => `City:=\`${c}\``).join(" || ");
-      return `(${cityOrs} || CityRegion:=\`${safe}\`)`;
+      // IN form (City:=[`a`, `b`, …]) is ONE Typesense filter operation. The OR form (one
+      // op per member + per ||) blows the 100-op `filter_by` ceiling for large groups
+      // (Ottawa = 51 areas). Group members are City values, so no CityRegion clause needed.
+      return `City:=[${group.map((c) => `\`${c}\``).join(", ")}]`;
     }
     return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
   }
