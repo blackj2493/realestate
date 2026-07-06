@@ -1,4 +1,25 @@
-# Railway Cron Setup — Daily Sync & Estimates Recompute
+# Railway Cron Setup — Daily Sync & Estimates Recompute  ⚠️ DEPRECATED — DO NOT USE
+
+> **DEPRECATED 2026-07-06. The ETL runs on GitHub Actions, NOT Railway.**
+>
+> The Railway migration described in this doc was never completed and is abandoned. The
+> "premature close" failures below were NOT a GitHub-egress problem — they were a
+> `cross-fetch`/node-fetch bug, fixed at the root with native fetch (PR #48,
+> `src/lib/supabase/client.ts`). No alternate host is needed. Both schedules run on
+> GitHub Actions on `main`: daily `0 3 * * *` (`daily-sync.yml`) and estimates recompute
+> `0 7 * * 0,3` (`estimates-recompute.yml`).
+>
+> **DO NOT create (or keep) the Railway services described below.** A Railway service that
+> tracks `main` re-deploys on every push and re-runs a failing `npm run sync:daily`, which
+> stamps `sync_state.status='failed'` over the healthy GitHub run and fires false
+> "data is stale" alerts (`freshness-check.yml`). If those alerts appear, delete the
+> leftover Railway sync services (e.g. `realestate`, `keen-emotion`) in the dashboard —
+> GitHub Actions must be the ONLY scheduler (no double-sync). Diagnose with
+> `scripts/admin/_checkSyncState.ts`.
+>
+> Everything below is retained for historical context only.
+
+---
 
 The ETL pipeline runs on **Railway cron**, not GitHub Actions. GitHub Actions' egress
 to Supabase began truncating REST responses (`premature close`) — Supabase logged `200`s
