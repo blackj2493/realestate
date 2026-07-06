@@ -91,7 +91,10 @@ export default function AppHeader({
             cluster. Inline on md+, drawer below (see MobileNav). */}
         {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
 
-        <div className="flex shrink-0 items-center gap-3">
+        {/* Phone width budget (360-390px): tighter gap below md, theme toggle lives in
+            the MobileNav drawer, and AccountButton collapses to its icon — otherwise
+            the cluster overflows the row and clips the hamburger off-screen. */}
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
           {right}
           {/* Mobile/tablet search trigger — the inline search is hidden below lg,
               so this icon is the only way to search there (fixes /analytics et al). */}
@@ -105,7 +108,7 @@ export default function AppHeader({
               <Search className="h-5 w-5" />
             </button>
           )}
-          <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
+          <ThemeToggle className="hidden h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex" />
           <WatchlistAlertsBell />
           <AccountButton />
           {variant === "app" && <MobileNav className="md:hidden" />}

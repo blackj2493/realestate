@@ -107,9 +107,12 @@ export default function MapStatusHUD({
   }
 
   // ── Static legend (persona / School default) ───────────────────────────────
+  // pointer-events-none: nothing here is interactive, and on phones this panel sits
+  // top-left over the map (up to 80vw wide) — a tappable legend was swallowing pin
+  // taps beneath it. The interactive variant above keeps pointer events (band buttons).
   const range = mapMode === "heatmap" ? ALPHA_GLOW_RANGE : colorConfig.range;
   return (
-    <div className="absolute left-2 top-16 z-10 max-w-[80vw] border border-border bg-card/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
+    <div className="pointer-events-none absolute left-2 top-16 z-10 max-w-[80vw] border border-border bg-card/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
       <div className="flex items-center gap-2">
         <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Color</span>
         <span className="text-[11px] text-muted-foreground">{colorConfig.legendLow}</span>

@@ -4,9 +4,9 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import DeckGL from "@deck.gl/react";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer, PathLayer } from "@deck.gl/layers";
-import { Map, NavigationControl, Layer as MapboxLayer } from "react-map-gl/mapbox";
+import { Map, Layer as MapboxLayer } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
-import { Layers, MapPin, X, Landmark } from "lucide-react";
+import { Layers, MapPin, Minus, Plus, X, Landmark } from "lucide-react";
 import Supercluster from "supercluster";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -304,6 +304,25 @@ export default function AlphaMap({
       transitionInterpolator: new FlyToInterpolator(),
     }));
   }, [commuteRing, markProgrammatic]);
+
+  // Zoom buttons — drives the shared viewState directly. The Mapbox
+  // NavigationControl we previously rendered inside <Map> sat UNDER deck.gl's
+  // transparent event surface: visible, but no click/tap ever reached it. The
+  // replacement is an HTML overlay (below) that sits ABOVE the deck canvas.
+  const zoomBy = useCallback(
+    (delta: number) => {
+      setViewState((vs) => ({
+        ...vs,
+        zoom: Math.max(3, Math.min(MAP_MAX_ZOOM, vs.zoom + delta)),
+        transitionDuration: 250,
+        transitionInterpolator: new FlyToInterpolator(),
+      }));
+      // User-intent zoom — re-query the new viewport once the transition settles
+      // (mirrors expandCluster; deliberately NOT markProgrammatic, which suppresses it).
+      setTimeout(() => computeAndReportBounds(), 400);
+    },
+    [computeAndReportBounds]
+  );
 
   // Search V2: imperative fly-to from the search bar. Re-runs on every nonce bump
   // (re-selecting the same place re-flies). Flagged programmatic so the settle
@@ -867,7 +886,6 @@ export default function AlphaMap({
         getCursor={({ isHovering }) => (isDrawing ? "crosshair" : isHovering ? "pointer" : "grab")}
       >
         <Map mapboxAccessToken={mapboxToken} mapStyle="mapbox://styles/mapbox/dark-v11" reuseMaps attributionControl={false}>
-          <NavigationControl position="top-right" />
           {/* 3D building extrusions — only in Explore mode, so the value-columns
               read against a real cityscape (dark massing + faint cyan rim). */}
           {mapMode === "3d" && (
@@ -888,6 +906,28 @@ export default function AlphaMap({
           )}
         </Map>
       </DeckGL>
+
+      {/* Zoom buttons — HTML overlay above deck's event surface (see zoomBy). On
+          phones top-14 clears the compliance strip; desktop keeps the classic
+          top-right spot. */}
+      <div className="absolute right-2.5 top-14 z-20 flex flex-col overflow-hidden rounded-md border border-border bg-card/90 shadow-lg backdrop-blur-sm md:top-2.5">
+        <button
+          type="button"
+          aria-label="Zoom in"
+          onClick={() => zoomBy(1)}
+          className="flex h-9 w-9 items-center justify-center text-foreground transition-colors hover:bg-muted active:bg-muted"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Zoom out"
+          onClick={() => zoomBy(-1)}
+          className="flex h-9 w-9 items-center justify-center border-t border-border text-foreground transition-colors hover:bg-muted active:bg-muted"
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+      </div>
 
       {popup && (
         <ListingMapPopup

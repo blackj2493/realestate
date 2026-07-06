@@ -23,12 +23,15 @@ export default function ListingComplianceNotice({
 }) {
   // Compact single-line variant for dense surfaces (the terminal ledger footer), where the
   // bordered card is too heavy. Same §6.3(i)/(k) obligations + operator link, condensed.
+  // The link is pointer-events-auto explicitly so a caller may render the notice
+  // pointer-events-none as a pass-through overlay (the mobile map does — a tappable
+  // strip here was eating pin taps and the zoom control) while keeping the link live.
   if (compact) {
     return (
       <p className={cn("text-[9px] leading-tight text-muted-foreground", className)}>
         Listing information is deemed reliable but not guaranteed accurate by PROPTX; for consumers
         with a bona fide interest only, not for any commercial purpose.{" "}
-        <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
+        <Link href="/operated-by" className="pointer-events-auto underline underline-offset-2 hover:text-foreground">
           Operated under licence
         </Link>
         .
