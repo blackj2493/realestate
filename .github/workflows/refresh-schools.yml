@@ -34,8 +34,9 @@ jobs:
   refresh-schools:
     runs-on: ubuntu-latest
     env:
-      # Shared capture file: every step tees stdout here so the notifier can quote a summary.
-      SUMMARY_FILE: ${{ runner.temp }}/schools-run.log
+      # Shared capture file (workspace-relative — the `runner.*` context is NOT available in
+      # job-level env). Every step tees stdout here so the notifier can quote a run summary.
+      SUMMARY_FILE: schools-run.log
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
