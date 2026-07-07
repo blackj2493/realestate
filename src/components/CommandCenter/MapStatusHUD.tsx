@@ -19,13 +19,24 @@ import { bandRange, type MapMetricDef } from "@/lib/personas/mapMetrics";
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 
-function CountLine({ count, total, commuteActive }: { count: number; total: number; commuteActive: boolean }) {
+function CountLine({
+  count,
+  total,
+  commuteActive,
+  className = "mt-1.5",
+}: {
+  count: number;
+  total: number;
+  commuteActive: boolean;
+  className?: string;
+}) {
   const capped = total > count;
   return (
-    <div className="mt-1.5 font-mono text-xs text-foreground">
+    <div className={cn("font-mono text-xs text-foreground", className)}>
       <span className="font-semibold text-cyan-700 dark:text-cyan-400">{count}</span>
       {capped ? ` of ${total.toLocaleString()}` : ""} in {commuteActive ? "commute zone" : "view"}
-      {capped && <span className="ml-1.5 text-muted-foreground">· zoom in to see all</span>}
+      {/* The zoom hint is desktop-only — on phones the legend is a single slim line. */}
+      {capped && <span className="ml-1.5 hidden text-muted-foreground md:inline">· zoom in to see all</span>}
     </div>
   );
 }
@@ -58,7 +69,10 @@ export default function MapStatusHUD({
       setColorBand(activeIdx === i ? null : { metricId: metricDef.id, index: i });
 
     return (
-      <div className="absolute left-2 top-16 z-10 max-w-[80vw] border border-border bg-card/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
+      // Phones: top-left corner (the mode pill moved to the collapsed top-right
+      // button), tighter padding. Stays stacked — the band buttons are tappable
+      // filters, so this variant earns its two rows.
+      <div className="absolute left-2 top-2.5 z-10 max-w-[calc(100vw-64px)] border border-border bg-card/90 px-2 py-1.5 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)] md:px-3 md:py-2">
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Color</span>
           <span className="text-[11px] font-medium text-foreground">{metricDef.label}</span>
@@ -108,21 +122,26 @@ export default function MapStatusHUD({
 
   // ── Static legend (persona / School default) ───────────────────────────────
   // pointer-events-none: nothing here is interactive, and on phones this panel sits
-  // top-left over the map (up to 80vw wide) — a tappable legend was swallowing pin
-  // taps beneath it. The interactive variant above keeps pointer events (band buttons).
+  // top-left over the map — a tappable legend was swallowing pin taps beneath it.
+  // The interactive variant above keeps pointer events (band buttons).
+  // Phones: ONE slim row at the top-left corner (the mode pill that used to sit
+  // there is now the collapsed top-right button); desktop keeps the stacked
+  // bottom-left panel unchanged.
   const range = mapMode === "heatmap" ? ALPHA_GLOW_RANGE : colorConfig.range;
   return (
-    <div className="pointer-events-none absolute left-2 top-16 z-10 max-w-[80vw] border border-border bg-card/90 px-3 py-2 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:max-w-[calc(100vw-1rem)]">
+    <div className="pointer-events-none absolute left-2 top-2.5 z-10 flex max-w-[calc(100vw-64px)] items-center gap-2 border border-border bg-card/90 px-2 py-1 backdrop-blur-md md:bottom-4 md:left-16 md:top-auto md:block md:max-w-[calc(100vw-1rem)] md:px-3 md:py-2">
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Color</span>
+        <span className="hidden text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:inline">
+          Color
+        </span>
         <span className="text-[11px] text-muted-foreground">{colorConfig.legendLow}</span>
         <div
-          className="h-1.5 w-24 rounded-full"
+          className="h-1.5 w-14 rounded-full md:w-24"
           style={{ background: `linear-gradient(to right, ${rgb(range[0])}, ${rgb(range[range.length - 1])})` }}
         />
         <span className="text-[11px] text-foreground">{colorConfig.legendHigh}</span>
       </div>
-      <CountLine count={count} total={total} commuteActive={commuteActive} />
+      <CountLine count={count} total={total} commuteActive={commuteActive} className="mt-0 md:mt-1.5" />
     </div>
   );
 }

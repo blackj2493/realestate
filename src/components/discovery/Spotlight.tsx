@@ -53,7 +53,17 @@ function useTargetBox(selector: string | undefined, stepKey: string): Box | null
     };
 
     const tick = () => {
-      el = document.querySelector<HTMLElement>(selector);
+      // Responsive anchors can exist twice (e.g. MapModeDock's phone + desktop
+      // variants share one data-tour) — spotlight the one that's actually
+      // rendered at this breakpoint, not just the first in DOM order.
+      const matches = Array.from(document.querySelectorAll<HTMLElement>(selector));
+      el =
+        matches.find((m) => {
+          const r = m.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        }) ??
+        matches[0] ??
+        null;
       if (el) {
         if (!scrolled) {
           scrolled = true;
