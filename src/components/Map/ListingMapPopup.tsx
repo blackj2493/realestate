@@ -17,6 +17,7 @@
 
 "use client";
 
+import { useEffect, useRef } from "react";
 import { X, Crosshair } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -108,6 +109,24 @@ export default function ListingMapPopup({
 }) {
   // Hooks must run before any early return.
   const isMobile = useIsMobile(767);
+
+  // Ghost-click shield. On touch, the browser fires a synthesized "click" right
+  // after touchend — and this popup renders under the user's finger BEFORE that
+  // click lands, so the ghost was instantly activating whatever it hit (a card →
+  // navigate, the ✕ → close). Real-device symptom: "tapping a pin does nothing /
+  // jumps to a random listing". Swallow every click for the first 400ms after the
+  // popup opens or its content changes; real user interactions come later.
+  const openedAt = useRef(0);
+  useEffect(() => {
+    openedAt.current = performance.now();
+  }, [listings]);
+  const shieldGhostClick = (e: React.MouseEvent) => {
+    if (performance.now() - openedAt.current < 400) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   if (!listings.length) return null;
 
   const inner = (
@@ -149,6 +168,7 @@ export default function ListingMapPopup({
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 4rem)", maxHeight: "min(58vh, 27.5rem)" }}
         role="dialog"
         aria-label={`${listings.length} listing${listings.length === 1 ? "" : "s"} at this location`}
+        onClickCapture={shieldGhostClick}
       >
         {inner}
       </div>
@@ -168,6 +188,7 @@ export default function ListingMapPopup({
     <div
       className="pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-md border border-border bg-card shadow-2xl shadow-black/60"
       style={{ left, top, width: POPUP_W, maxHeight: POPUP_MAX_H }}
+      onClickCapture={shieldGhostClick}
     >
       {inner}
     </div>
