@@ -1,0 +1,77 @@
+name: Refresh School Scores
+
+# Keeps the school-score / nearest-rated-school fields on EVERY listing fresh.
+#
+# WHY THIS EXISTS: school fields are computed once, at ingest, from data/ontario-schools.json
+# (EQAO scores + coordinates). Listings ingested before the dataset existed — or before the
+# latest EQAO release — keep stale/zero scores forever, because nothing recomputes them. This
+# job rebuilds the dataset from the Ontario SIF source and RE-PROPAGATES it across all
+# Typesense docs, so existing listings pick up the current scores.
+#
+# CADENCE: quarterly (1st of Jan/Apr/Jul/Oct, 08:00 UTC — after the 03:00 daily sync window).
+# EQAO releases at most ~1×/year, so quarterly is ample; the value is completeness of
+# propagation, not sub-quarter freshness. Trigger manually anytime via the Actions tab.
+#
+# SOURCE-VINTAGE CAVEAT: build-schools-dataset.ts currently points at a FIXED SIF file URL, so
+# a rebuild re-pulls that same vintage. When Ontario publishes a newer preliminary release,
+# bump SOURCE_URL in that script (and commit the regenerated data/ontario-schools.json) — the
+# next run then propagates the newer scores automatically. (Follow-up: CKAN auto-discovery.)
+on:
+  schedule:
+    - cron: '0 8 1 1,4,7,10 *'
+  workflow_dispatch:
+
+# Least privilege: we only read the repo; all writes are to external services (Typesense/Resend).
+permissions:
+  contents: read
+
+# Never let two refreshes overlap (a second push/dispatch cancels the older run).
+concurrency:
+  group: refresh-schools
+  cancel-in-progress: false
+
+jobs:
+  refresh-schools:
+    runs-on: ubuntu-latest
+    env:
+      # Shared capture file (workspace-relative — the `runner.*` context is NOT available in
+      # job-level env). Every step tees stdout here so the notifier can quote a run summary.
+      SUMMARY_FILE: schools-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Rebuild data/ontario-schools.json from the Ontario SIF source (OGL-Ontario). No cache
+      # exists on a fresh runner, so this always downloads the current source file. No secrets.
+      - name: Rebuild Ontario schools dataset
+        run: npx tsx scripts/admin/build-schools-dataset.ts --refresh 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Re-propagate nearest-rated-school scores onto EVERY Typesense doc (reads the freshly
+      # built JSON + Typesense only — no Supabase, per the IO-budget rule). Idempotent: patches
+      # the same fields with `action:'update'`, so re-running is safe.
+      - name: Backfill school fields into Typesense
+        env:
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/backfill-school-fields.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Tell the operator it ran — on success (with a summary) AND on failure. `if: always()`
+      # so it fires even when a step above failed; `job.status` carries success/failure.
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Schools Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
