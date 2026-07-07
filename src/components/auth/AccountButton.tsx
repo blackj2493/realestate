@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 
 /**
@@ -23,17 +23,13 @@ export default function AccountButton() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Below md the label collapses to the icon alone — part of the phone width
-  // budget that keeps the header's right cluster (and the hamburger) on-screen.
   if (!email) {
     return (
       <Link
         href="/login"
-        aria-label="Sign in"
-        title="Sign in"
-        className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-border px-2.5 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-slate-500 md:px-3"
+        className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-border px-3 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-slate-500"
       >
-        <LogIn className="h-3.5 w-3.5" /> <span className="hidden md:inline">Sign in</span>
+        <LogIn className="h-3.5 w-3.5" /> Sign in
       </Link>
     );
   }
@@ -48,11 +44,9 @@ export default function AccountButton() {
       </span>
       <button
         type="submit"
-        aria-label="Sign out"
-        title="Sign out"
-        className="terminal-font inline-flex items-center gap-1.5 border border-border px-2.5 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-slate-500 md:px-3"
+        className="terminal-font border border-border px-3 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-slate-500"
       >
-        <LogOut className="h-3.5 w-3.5 md:hidden" /> <span className="hidden md:inline">Sign out</span>
+        Sign out
       </button>
     </form>
   );
