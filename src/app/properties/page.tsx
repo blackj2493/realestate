@@ -424,52 +424,51 @@ function CommandCenterContent() {
             scope so it stays dark-on-dark, but AlphaMap's listing popups + hover
             tooltips sit OUTSIDE that scope, so they follow the theme — light content
             cards over the dark map. */}
-        <div className={cn("relative min-w-0 flex-1 bg-slate-950 md:block", mobileView === "map" ? "block" : "hidden")}>
-          <AlphaMap
-            properties={displayed}
-            colorConfig={mapColorConfig}
-            heatAggregation={heatAggregation}
-            onSelectProperty={openListing}
-            currentSearchQuery={`${activePersona}:${location}`}
-            className="h-full w-full"
-          />
-          {/* Instrument Deck — dark control surface layered over the dark map. The
-              `dark` scope (display:contents = no layout box) keeps the rail / drawer /
-              mode-dock / HUD dark-styled even when the terminal is in light mode. */}
-          <div className="dark" style={{ display: "contents" }}>
-            <MapControlRail />
-            <MapDrawer />
-            <MapModeDock />
-            <MapTimeline />
-            <MapStatusHUD
-              count={displayed.length}
-              total={totalCount}
+        <div className={cn("min-w-0 flex-1 flex-col bg-slate-950 md:flex", mobileView === "map" ? "flex" : "hidden")}>
+          {/* Mobile map view has no ledger footer — the §6.3(i)/(k) reliability +
+              bona-fide notice gets its OWN in-flow row above the map so the terminal's
+              DEFAULT mobile view still carries it WITHOUT overlaying any map control
+              (as an overlay it visually blocked the top of the map; do NOT remove it —
+              compliance audit findings R9/R11, feed-revocation risk). Desktop and the
+              mobile list view use the ledger-footer notice. */}
+          <div className="shrink-0 border-b border-slate-800 bg-slate-900 px-3 py-1 md:hidden">
+            <ListingComplianceNotice compact className="mx-auto max-w-md text-center text-slate-300" />
+          </div>
+          <div className="relative min-h-0 flex-1">
+            <AlphaMap
+              properties={displayed}
               colorConfig={mapColorConfig}
-              metricDef={activeMetric}
-              commuteActive={commute.enabled}
+              heatAggregation={heatAggregation}
+              onSelectProperty={openListing}
+              currentSearchQuery={`${activePersona}:${location}`}
+              className="h-full w-full"
             />
-            {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
-                which are otherwise desktop-only via MapControlRail/MapDrawer. */}
-            <MobileMapTools />
-            {/* Save the current custom area as a Market Bubble. Self-hides when no
-                draw / commute / school filter is active. */}
-            <div className="pointer-events-auto absolute right-3 top-3 z-30">
-              <SaveBubbleButton />
+            {/* Instrument Deck — dark control surface layered over the dark map. The
+                `dark` scope (display:contents = no layout box) keeps the rail / drawer /
+                mode-dock / HUD dark-styled even when the terminal is in light mode. */}
+            <div className="dark" style={{ display: "contents" }}>
+              <MapControlRail />
+              <MapDrawer />
+              <MapModeDock />
+              <MapTimeline />
+              <MapStatusHUD
+                count={displayed.length}
+                total={totalCount}
+                colorConfig={mapColorConfig}
+                metricDef={activeMetric}
+                commuteActive={commute.enabled}
+              />
+              {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
+                  which are otherwise desktop-only via MapControlRail/MapDrawer. */}
+              <MobileMapTools />
+              {/* Save the current custom area as a Market Bubble. Self-hides when no
+                  draw / commute / school filter is active. */}
+              <div className="pointer-events-auto absolute right-3 top-3 z-30">
+                <SaveBubbleButton />
+              </div>
             </div>
+            {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
           </div>
-          {/* Mobile map view has no ledger footer — surface the §6.3(i)/(k) reliability +
-              bona-fide notice here so the terminal's DEFAULT mobile view still carries it
-              (desktop and the mobile list view use the ledger-footer notice).
-              pointer-events-none: the strip spans the full phone width, and a tappable
-              notice was swallowing pin taps AND the +/- zoom control under it — only the
-              "Operated under licence" link stays interactive (auto inside the component). */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-2 pt-1 md:hidden">
-            <ListingComplianceNotice
-              compact
-              className="pointer-events-none mx-auto max-w-md rounded-b-md bg-slate-900/85 px-3 py-1 text-center text-slate-300 backdrop-blur"
-            />
-          </div>
-          {showSoldLock && <VowGateOverlay message={soldLockMsg} />}
         </div>
 
         {/* Drag handle — resize the ledger (desktop only) */}

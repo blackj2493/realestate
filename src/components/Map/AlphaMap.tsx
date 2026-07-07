@@ -907,10 +907,8 @@ export default function AlphaMap({
         </Map>
       </DeckGL>
 
-      {/* Zoom buttons — HTML overlay above deck's event surface (see zoomBy). On
-          phones top-14 clears the compliance strip; desktop keeps the classic
-          top-right spot. */}
-      <div className="absolute right-2.5 top-14 z-20 flex flex-col overflow-hidden rounded-md border border-border bg-card/90 shadow-lg backdrop-blur-sm md:top-2.5">
+      {/* Zoom buttons — HTML overlay above deck's event surface (see zoomBy). */}
+      <div className="absolute right-2.5 top-2.5 z-20 flex flex-col overflow-hidden rounded-md border border-border bg-card/90 shadow-lg backdrop-blur-sm">
         <button
           type="button"
           aria-label="Zoom in"

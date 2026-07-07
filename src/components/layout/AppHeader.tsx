@@ -71,10 +71,11 @@ export default function AppHeader({
     <header className="dt-header dark sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
-          {/* Smaller wordmark on phones so the logo + right cluster fit a 390px
-              viewport without forcing the layout wider (which clips the nav button). */}
+          {/* Compact mark on phones — the full ~150px wordmark is what kept blowing
+              the 360-390px budget; the chevron+PURE mark frees ~100px so every
+              right-cluster control (incl. the theme toggle) fits at full size. */}
           <span className="md:hidden">
-            <Logo size="sm" theme={logoTheme} />
+            <Logo size="sm" theme={logoTheme} compact />
           </span>
           <span className="hidden md:inline-flex">
             <Logo size="md" theme={logoTheme} />
@@ -91,9 +92,9 @@ export default function AppHeader({
             cluster. Inline on md+, drawer below (see MobileNav). */}
         {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
 
-        {/* Phone width budget (360-390px): tighter gap below md, theme toggle lives in
-            the MobileNav drawer, and AccountButton collapses to its icon — otherwise
-            the cluster overflows the row and clips the hamburger off-screen. */}
+        {/* Phone width budget (360-390px): compact logo + tighter gap below md keep
+            the full control set (incl. the theme toggle) on-screen — the cluster
+            previously overflowed the row and clipped the hamburger off-screen. */}
         <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
           {right}
           {/* Mobile/tablet search trigger — the inline search is hidden below lg,
@@ -108,7 +109,7 @@ export default function AppHeader({
               <Search className="h-5 w-5" />
             </button>
           )}
-          <ThemeToggle className="hidden h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex" />
+          <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
           <WatchlistAlertsBell />
           <AccountButton />
           {variant === "app" && <MobileNav className="md:hidden" />}

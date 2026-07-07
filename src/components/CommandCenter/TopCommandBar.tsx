@@ -70,7 +70,15 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
             className="flex shrink-0 items-center px-3 py-1.5"
             aria-label="PureProperty.ca home"
           >
-            <Logo size="md" theme="dark" />
+            {/* Compact mark on phones — the full wordmark collided with the
+                right cluster's search trigger at 360-390px (same budget fix as
+                AppHeader). */}
+            <span className="sm:hidden">
+              <Logo size="md" theme="dark" compact />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <Logo size="md" theme="dark" />
+            </span>
           </Link>
 
           {/* Location search is hidden on mobile to make room for the persona. */}

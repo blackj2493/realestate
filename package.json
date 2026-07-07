@@ -14,7 +14,8 @@
     "sync:daily": "tsx scripts/worker/dailySync.ts",
     "sync:recompute": "tsx scripts/admin/refresh-property-estimates.ts --apply",
     "demo:record": "tsx scripts/demos/record.ts",
-    "demo:fixture": "tsx scripts/demos/make-fixture.ts"
+    "demo:fixture": "tsx scripts/demos/make-fixture.ts",
+    "smoke:mobile": "tsx scripts/admin/mobileSmoke.ts"
   },
   "dependencies": {
     "@deck.gl/aggregation-layers": "^9.3.2",

@@ -6,6 +6,9 @@ type LogoTheme = "dark" | "light";
 interface LogoProps {
   size?: LogoSize; // default 'md'
   theme?: LogoTheme; // default 'dark'
+  /** Chevron + "PURE" only — the phone-header mark. The full wordmark is ~150px,
+   *  which is what kept blowing the 360-390px header budget and clipping controls. */
+  compact?: boolean;
   className?: string;
   onClick?: () => void;
   ariaLabel?: string; // default 'PureProperty.ca home'
@@ -22,6 +25,7 @@ const SIZE_MAP = {
 export const Logo: React.FC<LogoProps> = ({
   size = "md",
   theme = "dark",
+  compact = false,
   className = "",
   onClick,
   ariaLabel = "PureProperty.ca home",
@@ -79,8 +83,12 @@ export const Logo: React.FC<LogoProps> = ({
       </svg>
       <span style={{ fontSize: `${s.fontSize}px`, fontWeight: 700, color: primary, letterSpacing: 0 }}>
         PURE
-        <span style={{ fontWeight: 400, color: secondary }}>PROPERTY</span>
-        <span style={{ fontWeight: 400, color: tertiary }}>.ca</span>
+        {!compact && (
+          <>
+            <span style={{ fontWeight: 400, color: secondary }}>PROPERTY</span>
+            <span style={{ fontWeight: 400, color: tertiary }}>.ca</span>
+          </>
+        )}
       </span>
     </span>
   );
