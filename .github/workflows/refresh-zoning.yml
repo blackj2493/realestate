@@ -1,0 +1,75 @@
+name: Refresh Zoning
+
+# Keeps zoning fresh on two surfaces, both fed by the COMMITTED municipal geojsons in
+# scripts/admin/ (Toronto + Simcoe/Frontenac townships + commercial-clear cities):
+#
+#   1. MAP OVERLAY — load-zoning.ts reloads every committed zoning geojson into geo_features
+#      (kind='zoning'), which the map reads via the zoning_in_bbox() RPC. Idempotent per
+#      source; stamps geo_sources.retrieved_on. Picks up any newly-committed municipality.
+#   2. PER-LISTING FIELD — backfill-zoning.ts stamps zoning_designation on TORONTO listings by
+#      point-in-polygon. Zoning is NOT assigned at ingest, so new Toronto listings have no
+#      zoning until this runs — that's the main freshness win here.
+#
+# CADENCE: monthly (20th, 06:00 UTC). Zoning by-laws change rarely, but new Toronto listings
+# arrive continuously, so the per-listing backfill wants a monthly cadence for coverage.
+#
+# SOURCE-REFRESH CAVEAT: the committed geojsons come from the harvest-*-zoning scripts, which
+# hit municipal portals (some suppress geometry / are flaky) — NOT CI-safe. So this job
+# re-propagates the committed geojsons; re-harvest + commit locally when a municipality
+# updates its by-law, and the next run picks it up.
+on:
+  schedule:
+    - cron: '0 6 20 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-zoning
+  cancel-in-progress: false
+
+jobs:
+  refresh-zoning:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: zoning-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Reload every committed municipal zoning geojson into the geo_features overlay
+      # (idempotent per source). Raw pg → Session-pooler DATABASE_URL (CLAUDE.md §12).
+      - name: Reload municipal zoning overlay
+        timeout-minutes: 30
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/load-zoning.ts 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Stamp zoning_designation on Toronto listings (point-in-polygon vs the committed
+      # Toronto geojson). Reads Typesense + the committed file only — no Supabase. Idempotent.
+      - name: Backfill Toronto listing zoning field
+        timeout-minutes: 25
+        env:
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/backfill-zoning.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Zoning Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
