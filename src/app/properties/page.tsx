@@ -25,7 +25,6 @@ import {
 import QuickLookPanel from "@/components/CommandCenter/QuickLookPanel";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
-import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useOpenListing } from "@/hooks/useOpenListing";
@@ -425,15 +424,12 @@ function CommandCenterContent() {
             tooltips sit OUTSIDE that scope, so they follow the theme — light content
             cards over the dark map. */}
         <div className={cn("min-w-0 flex-1 flex-col bg-slate-950 md:flex", mobileView === "map" ? "flex" : "hidden")}>
-          {/* Mobile map view has no ledger footer — the §6.3(i)/(k) reliability +
-              bona-fide notice gets its OWN in-flow row above the map so the terminal's
-              DEFAULT mobile view still carries it WITHOUT overlaying any map control
-              (as an overlay it visually blocked the top of the map; do NOT remove it —
-              compliance audit findings R9/R11, feed-revocation risk). Desktop and the
-              mobile list view use the ledger-footer notice. */}
-          <div className="shrink-0 border-b border-slate-800 bg-slate-900 px-3 py-1 md:hidden">
-            <ListingComplianceNotice compact className="mx-auto max-w-md text-center text-slate-300" />
-          </div>
+          {/* The §6.3(i)/(k) reliability + bona-fide notice is NOT shown on the
+              mobile MAP view (owner decision 2026-07-06 — it crowded the map UI).
+              It still renders on this page via the LedgerPanel footer (desktop
+              always; phones in list view). Compliance audit R9/R11 flagged this
+              notice as mandatory on IDX pages — do not remove that ledger-footer
+              instance too. */}
           <div className="relative min-h-0 flex-1">
             <AlphaMap
               properties={displayed}

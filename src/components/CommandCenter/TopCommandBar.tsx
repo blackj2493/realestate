@@ -67,14 +67,14 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/"
-            className="flex shrink-0 items-center px-3 py-1.5"
+            className="flex shrink-0 items-center py-1.5 sm:px-3"
             aria-label="PureProperty.ca home"
           >
-            {/* Compact mark on phones — the full wordmark collided with the
-                right cluster's search trigger at 360-390px (same budget fix as
-                AppHeader). */}
+            {/* FULL wordmark on every width (brand requirement — never truncate
+                to "PURE"). Phones use the smaller `sm` scale plus the tighter
+                paddings/gaps in this row to fit 360-390px. */}
             <span className="sm:hidden">
-              <Logo size="md" theme="dark" compact />
+              <Logo size="sm" theme="dark" />
             </span>
             <span className="hidden sm:inline-flex">
               <Logo size="md" theme="dark" />
@@ -102,8 +102,9 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           )}
         </div>
 
-        {/* Right: cross-section nav (same NAV_ITEMS as the AppHeader) + alerts. */}
-        <div className="flex items-center justify-end gap-3">
+        {/* Right: cross-section nav (same NAV_ITEMS as the AppHeader) + alerts.
+            gap-2 below sm is part of the 360px budget for the full wordmark. */}
+        <div className="flex items-center justify-end gap-2 sm:gap-3">
           {/* Mobile-only search trigger — the inline LocationSearch is hidden
               below sm, so this is the only way to search on phones. 44px tap
               target, dark terminal styling. */}

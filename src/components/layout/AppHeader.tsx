@@ -71,11 +71,12 @@ export default function AppHeader({
     <header className="dt-header dark sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
-          {/* Compact mark on phones — the full ~150px wordmark is what kept blowing
-              the 360-390px budget; the chevron+PURE mark frees ~100px so every
-              right-cluster control (incl. the theme toggle) fits at full size. */}
+          {/* FULL wordmark on every width (brand requirement — never truncate to
+              "PURE"). Phones get the smaller `sm` scale, and the account button
+              moves into the MobileNav drawer below md, which together keep the
+              row inside the 360-390px budget. */}
           <span className="md:hidden">
-            <Logo size="sm" theme={logoTheme} compact />
+            <Logo size="sm" theme={logoTheme} />
           </span>
           <span className="hidden md:inline-flex">
             <Logo size="md" theme={logoTheme} />
@@ -92,9 +93,10 @@ export default function AppHeader({
             cluster. Inline on md+, drawer below (see MobileNav). */}
         {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
 
-        {/* Phone width budget (360-390px): compact logo + tighter gap below md keep
-            the full control set (incl. the theme toggle) on-screen — the cluster
-            previously overflowed the row and clipped the hamburger off-screen. */}
+        {/* Phone width budget (360-390px): smaller full wordmark + tighter gap +
+            account button relocated to the drawer keep the control set (incl. the
+            theme toggle) on-screen — the cluster previously overflowed the row
+            and clipped the hamburger off-screen. */}
         <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
           {right}
           {/* Mobile/tablet search trigger — the inline search is hidden below lg,
@@ -111,7 +113,13 @@ export default function AppHeader({
           )}
           <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
           <WatchlistAlertsBell />
-          <AccountButton />
+          {/* Sign in/out is the widest control (~90px) — on app pages below md it
+              lives in the MobileNav drawer instead, so the full wordmark fits at
+              360px. Marketing pages have no drawer, so it stays inline there
+              (they also have no search icon/burger, so the row still fits). */}
+          <div className={variant === "app" ? "hidden md:flex" : "flex"}>
+            <AccountButton />
+          </div>
           {variant === "app" && <MobileNav className="md:hidden" />}
         </div>
       </div>

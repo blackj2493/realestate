@@ -116,7 +116,11 @@ export function Popover({ trigger, children, className, align = "left" }: Popove
               left: coords.left,
             }}
             className={cn(
-              "z-[100] border border-slate-700 bg-slate-900 p-3 shadow-xl",
+              // Theme-aware: the panel portals to <body>, so it escapes any local
+              // `dark` scope (e.g. the terminal's instrument deck) and must style
+              // both themes itself. Light gets the Daylight card; dark keeps the
+              // original slate panel byte-identical via the dark: overrides.
+              "z-[100] border border-border bg-card p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900",
               className
             )}
           >

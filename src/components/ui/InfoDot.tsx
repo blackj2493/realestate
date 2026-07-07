@@ -40,7 +40,7 @@ export default function InfoDot({
           // that WRAPS this trigger, so the click must be allowed to bubble up to it.
           // (None of the ⓘ host elements are themselves clickable, so bubbling on is safe.)
           className={cn(
-            "inline-flex items-center justify-center text-slate-500 transition-colors hover:text-slate-200 focus:text-slate-200 focus:outline-none",
+            "inline-flex items-center justify-center text-slate-500 transition-colors hover:text-slate-700 focus:text-slate-700 focus:outline-none dark:hover:text-slate-200 dark:focus:text-slate-200",
             className
           )}
         >
@@ -48,11 +48,15 @@ export default function InfoDot({
         </button>
       }
     >
+      {/* Theme-aware: the shared Popover panel is light in light mode, dark in
+          dark mode — the copy needs both palettes (dark: keeps the original). */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-slate-100">{entry.term}</p>
-        <p className="text-xs leading-snug text-slate-300">{entry.short}</p>
+        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{entry.term}</p>
+        <p className="text-xs leading-snug text-slate-700 dark:text-slate-300">{entry.short}</p>
         {entry.formula && (
-          <p className="font-mono text-[11px] leading-snug text-cyan-300/90">{entry.formula}</p>
+          <p className="font-mono text-[11px] leading-snug text-cyan-700 dark:text-cyan-300/90">
+            {entry.formula}
+          </p>
         )}
         {entry.context && (
           <p className="text-[11px] leading-snug text-slate-500">{entry.context}</p>
