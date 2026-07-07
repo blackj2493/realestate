@@ -1,0 +1,81 @@
+name: Refresh Geo Reference Layers
+
+# Keeps the "Things to Know" GEO flags (flood, conservation, wetland, greenbelt, Oak Ridges
+# Moraine, Niagara Escarpment, Toronto heritage districts, hydro corridors) fresh on EVERY
+# listing — along both staleness axes the nightly delta can't cover:
+#
+#   1. REFERENCE GEOMETRY drifts (conservation/wetland ~quarterly, others ad-hoc). The nightly
+#      sync only re-enriches listings, never re-downloads the source polygons. Step 1 reloads
+#      them from their open-data portals (idempotent DELETE+reinsert per source, stamps
+#      geo_sources.retrieved_on — which becomes the card's "as of <date>").
+#   2. PER-LISTING PROPAGATION: the nightly delta only re-enriches listings synced in the last
+#      ~25h, so a listing that never re-syncs keeps flags computed against OLD geometry. Step 2
+#      runs a FULL sweep (no --since) so every listing is re-evaluated against the fresh layers.
+#
+# CADENCE: monthly (15th, 06:00 UTC — clear of the 03:00 daily sync). Reference layers change
+# slowly, so monthly is ample; the value is completeness of propagation. Trigger manually
+# anytime from the Actions tab.
+#
+# NOTE: `--all` refreshes only the auto-loadable ArcGIS datasets. The file-based rail/transit
+# layers (their GeoJSON isn't committed) are skipped and their existing rows are left intact —
+# reload those manually with `loadGeoData.ts --dataset rail --file <geojson>` when they change.
+# If one external portal is down the whole run fails (you'll be notified) and the geo flags stay
+# on last month's geometry until a re-run — the nightly delta keeps churning listings current.
+on:
+  schedule:
+    - cron: '0 6 15 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-geo
+  cancel-in-progress: false
+
+jobs:
+  refresh-geo:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: geo-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Step 1 — reload the reference polygons/lines from their open-data portals into
+      # geo_features (idempotent per source; stamps retrieved_on). Raw pg → Session-pooler
+      # DATABASE_URL (CLAUDE.md §12), not the REST creds. Exits non-zero if any source failed.
+      - name: Refresh geo reference layers
+        timeout-minutes: 45
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/loadGeoData.ts --all 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Step 2 — re-evaluate EVERY listing against the freshly loaded geometry and upsert its
+      # listing_geo_flags (idempotent). Rebuilds the GIST index + ANALYZE first, then sweeps all
+      # listings in batches of 1000. Runs only if Step 1 succeeded (stale geometry → skip sweep).
+      - name: Re-enrich all listings (full geo-flags sweep)
+        timeout-minutes: 90
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/enrichGeoFlags.ts 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Geo Reference Layers Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
