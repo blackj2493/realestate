@@ -35,9 +35,11 @@ export default function PersonaMenuList({
             onClick={() => onSelect(p.id)}
             className={cn(
               "flex items-center justify-between gap-2 px-2 py-1.5 text-left text-xs transition-colors",
+              // Light mode uses the solid Daylight gold (amber-300 is illegible on
+              // the light popover card); dark keeps the original amber glass tones.
               selected
-                ? "text-amber-300"
-                : "text-foreground hover:bg-amber-400/10 hover:text-amber-200"
+                ? "text-[color:var(--dt-gold)] dark:text-amber-300"
+                : "text-foreground hover:bg-amber-400/10 hover:text-[color:var(--dt-gold)] dark:hover:text-amber-200"
             )}
           >
             <span className="flex items-center gap-2">
