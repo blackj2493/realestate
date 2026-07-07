@@ -1,0 +1,60 @@
+name: Refresh Rental Market Index
+
+# Rebuilds rental_market_index (tiered avg / p10 asking-rent cohorts) from the ACTIVE
+# for-lease inventory. Powers rent estimates / rent comps on listing pages.
+#
+# WHY THIS EXISTS: this table was previously populated MANUALLY (no schedule), so the rent
+# cohorts drifted from the live for-lease market between ad-hoc runs. Unlike the other frozen
+# datasets this one is derived from CURRENT asking rents, so it wants a short cadence.
+#
+# CADENCE: weekly (Mondays 05:00 UTC — after the 03:00 daily sync has refreshed the active
+# inventory). Cohort averages are stable week to week, so weekly keeps them current without
+# churn. Trigger manually anytime from the Actions tab.
+#
+# NOTE: the script TRUNCATEs + repopulates rental_market_index (brief inconsistency window on
+# this rarely-read table). DATABASE_URL only (raw pg, Session pooler — CLAUDE.md §12).
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-rental-index
+  cancel-in-progress: false
+
+jobs:
+  refresh-rental-index:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: rental-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Rebuild rental market index
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/refreshRentalMarketIndex.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Rental Market Index Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
