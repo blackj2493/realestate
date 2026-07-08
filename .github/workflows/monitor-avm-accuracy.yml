@@ -1,0 +1,74 @@
+name: Monitor AVM Accuracy
+
+# Phase 1 of the AVM freshness safeguard: a scheduled ACCURACY MONITOR + drift alert.
+#
+# There is no in-repo AVM trainer — the coefficient matrices (avm_multiplier_matrix) are
+# trained offline. So we can't auto-retrain here; instead we watch whether the DEPLOYED model
+# is still accurate, and shout when it drifts. avm-backtest.ts replays the LIVE AVM against
+# held-out sold sales (leakage-safe) and reports out-of-time |%err|; avmDriftCheck.ts turns the
+# median into a pass/fail gate. Read-only on the database.
+#
+# BEHAVIOUR:
+#   - Every run emails the accuracy (median/mean |%err|, hit ±10/±20%, band coverage).
+#   - If median |%err| > AVM_MAX_MEDIAN_PCT (14%; measured baseline ~11-12%, so ~2pt headroom
+#     avoids false alarms on normal variance), the drift step exits non-zero → the run goes RED
+#     and the notifier sends a FAILED "retrain due" alert.
+#
+# CADENCE: monthly (3rd, 09:00 UTC). Coefficients drift slowly; monthly catches it early.
+# (Phase 2 — the champion/challenger trainer that auto-promotes a fresher matrix when it beats
+# the champion on this same backtest — lands in a separate workflow.)
+on:
+  schedule:
+    - cron: '0 9 3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitor-avm-accuracy
+  cancel-in-progress: false
+
+jobs:
+  monitor-avm-accuracy:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: avm-monitor-run.log
+      AVM_MAX_MEDIAN_PCT: '0.14'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Replay the live AVM against held-out sold sales (leakage-safe, read-only). Bounded by
+      # --limit so the monthly run stays fast; the pool stream itself is IO-paced.
+      - name: Backtest live AVM vs held-out sales
+        timeout-minutes: 45
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/avm-backtest.ts --limit 6000 --eval-months 6 --out avm-backtest.json 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Gate on the headline median |%err|. Exits non-zero (→ red run → FAILED alert) when the
+      # model has drifted past the threshold; otherwise prints the accuracy for the email.
+      - name: Assess accuracy drift
+        run: npx tsx scripts/worker/avmDriftCheck.ts avm-backtest.json 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: AVM Accuracy Monitor
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
