@@ -16,6 +16,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cityRegionLookupCandidates } from './normalizeType';
 
+// Champion/challenger: live reads the champion; offline backtests set AVM_AUDIT_TABLE to score
+// the challenger in staging. Allowlisted so production can never repoint at arbitrary data.
+const AUDIT_TABLE =
+  process.env.AVM_AUDIT_TABLE === 'avm_audit_report_staging'
+    ? 'avm_audit_report_staging'
+    : 'avm_audit_report';
+
 export interface AuditInfo {
   r2: number | null;
   basePrice: number | null;
@@ -33,7 +40,7 @@ export async function fetchAuditInfo(
   const typeKey = propertySubType.toLowerCase().trim();
 
   const { data, error } = await supabase
-    .from('avm_audit_report')
+    .from(AUDIT_TABLE)
     .select('city_region, model_accuracy_score, base_price, total_sales_analyzed')
     .in('city_region', candidates)
     .ilike('property_sub_type', typeKey)

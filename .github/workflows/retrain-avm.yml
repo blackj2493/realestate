@@ -1,0 +1,96 @@
+name: Retrain AVM (champion/challenger)
+
+# Phase 2 of the AVM freshness loop: retrain the coefficient matrices from fresh sold comps,
+# score the CHALLENGER against the live CHAMPION on the leakage-safe out-of-time backtest, and
+# promote ONLY if it wins. This is what makes the AVM self-sustaining AND monotonically accurate
+# — a worse challenger can never reach production because it fails the gate.
+#
+# STEPS: train challenger -> staging  ·  backtest champion (live)  ·  backtest challenger
+# (staging via AVM_*_TABLE)  ·  promotion gate compares median |%err| + coverage.
+#
+# SAFETY / SELF-SUSTAINING: scheduled runs are COMPARE-ONLY — they email "champion X% vs
+# challenger Y%" and touch nothing. To let the loop auto-promote when the challenger wins, either
+# dispatch manually with promote=true, or (once you trust it) change the compare step to always
+# pass --apply. Rollback is always available: re-ingest the committed champion CSVs via
+# scripts/worker/avm/ingest-matrices.ts.
+#
+# CADENCE: monthly (6th, 08:00 UTC). The trainer reads 36 months of raw_vow_sold, so a fresh
+# month meaningfully updates the fit.
+on:
+  schedule:
+    - cron: '0 8 6 * *'
+  workflow_dispatch:
+    inputs:
+      promote:
+        description: 'Promote the challenger to production if it beats the champion'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retrain-avm
+  cancel-in-progress: false
+
+jobs:
+  retrain-avm:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: retrain-avm-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # 1) Fit a fresh challenger from recent sold comps → staging (never touches live).
+      - name: Train challenger → staging
+        timeout-minutes: 30
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/avm/trainMatrices.ts --apply --window-months 36 --min-samples 40 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # 2) Backtest the CHAMPION (live tables — no AVM_*_TABLE env).
+      - name: Backtest champion
+        timeout-minutes: 45
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/avm-backtest.ts --limit 4000 --eval-months 6 --out champion.json 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # 3) Backtest the CHALLENGER (staging via the allowlisted env — whole pipeline scores it).
+      - name: Backtest challenger
+        timeout-minutes: 45
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AVM_MATRIX_TABLE: avm_multiplier_matrix_staging
+          AVM_AUDIT_TABLE: avm_audit_report_staging
+        run: npx tsx scripts/admin/avm-backtest.ts --limit 4000 --eval-months 6 --out challenger.json 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # 4) Gate: promote staging → live ONLY if the challenger wins. Scheduled = compare-only
+      #    (PROMOTE empty); a manual dispatch with promote=true passes --apply.
+      - name: Compare + promotion gate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PROMOTE: ${{ (github.event_name == 'workflow_dispatch' && inputs.promote) && '--apply' || '' }}
+        run: npx tsx scripts/worker/avm/promoteChallenger.ts champion.json challenger.json $PROMOTE 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: AVM Retrain (champion/challenger)
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts

@@ -227,7 +227,9 @@ async function loadMatricesForSnapshot(): Promise<Map<string, Matrix>> {
   let cursor = 0;
   for (;;) {
     const { data, error } = await sb
-      .from('avm_multiplier_matrix')
+      // Champion/challenger: same allowlist as matrixService so the whole backtest pipeline
+      // (subject routing via resolveModel AND this trend/offset snapshot) scores one model.
+      .from(process.env.AVM_MATRIX_TABLE === 'avm_multiplier_matrix_staging' ? 'avm_multiplier_matrix_staging' : 'avm_multiplier_matrix')
       .select('id, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
       .gt('id', cursor)
       .order('id', { ascending: true })
