@@ -10,6 +10,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cityRegionLookupCandidates } from './normalizeType';
 
+// Champion/challenger: the live path reads the CHAMPION table. Offline backtests/trainers set
+// AVM_MATRIX_TABLE to score/write the CHALLENGER in staging. Allowlisted to the two known
+// tables so a stray env var in production can never repoint the live estimate at arbitrary data.
+const MATRIX_TABLE =
+  process.env.AVM_MATRIX_TABLE === 'avm_multiplier_matrix_staging'
+    ? 'avm_multiplier_matrix_staging'
+    : 'avm_multiplier_matrix';
+
 export interface CoefficientRow {
   featureName: string;
   beta: number;
@@ -27,7 +35,7 @@ export async function fetchCoefficients(
   const typeKey = propertySubType.toLowerCase().trim();
 
   const { data, error } = await supabase
-    .from('avm_multiplier_matrix')
+    .from(MATRIX_TABLE)
     .select('city_region, feature_name, beta, feat_mean, feat_std')
     .in('city_region', candidates)
     .ilike('property_sub_type', typeKey);
