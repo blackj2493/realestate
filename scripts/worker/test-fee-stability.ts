@@ -17,6 +17,7 @@ import {
   classifyAreaPosition,
   classifyTrend,
   trendConfidence,
+  annualFeeTrendPct,
   assembleCorpStats,
   buildFeeStabilityResult,
   type AreaStats,
@@ -91,12 +92,12 @@ console.log('\nclassifyAreaPosition:');
 eq(
   'below p25',
   classifyAreaPosition(0.5, { medianPsf: 0.8, p25Psf: 0.6, p75Psf: 1.0 }),
-  { position: 'below', pctVsMedian: -38 }
+  { position: 'below', pctVsMedian: -37.5 } // 0.5 is exactly 37.5% below 0.8 (2-decimal)
 );
 eq(
   'typical',
   classifyAreaPosition(0.75, { medianPsf: 0.8, p25Psf: 0.6, p75Psf: 1.0 }),
-  { position: 'typical', pctVsMedian: -6 }
+  { position: 'typical', pctVsMedian: -6.25 }
 );
 eq(
   'above p75',
@@ -104,14 +105,33 @@ eq(
   { position: 'above', pctVsMedian: 50 }
 );
 
-console.log('\nclassifyTrend (baseline 6% / 24mo):');
-eq('negative → Stable', classifyTrend(-3), 'Stable');
-eq('at baseline → Stable', classifyTrend(6), 'Stable');
-eq('moderate', classifyTrend(10), 'Moderate');
-eq('moderate upper', classifyTrend(12), 'Moderate');
-eq('rising', classifyTrend(15), 'Rising');
-eq('rising upper', classifyTrend(20), 'Rising');
-eq('steep', classifyTrend(25), 'Steep');
+console.log('\nclassifyTrend (annualized %/yr, baseline ~3%/yr):');
+eq('negative → Stable', classifyTrend(-5), 'Stable');
+eq('at baseline → Stable', classifyTrend(3), 'Stable');
+eq('moderate', classifyTrend(5), 'Moderate');
+eq('moderate upper', classifyTrend(6), 'Moderate');
+eq('rising', classifyTrend(8), 'Rising');
+eq('rising upper', classifyTrend(10), 'Rising');
+eq('steep', classifyTrend(15), 'Steep');
+
+console.log('\nannualFeeTrendPct (robust log-slope + shrinkage):');
+// Flat fees over a full year → raw slope 0, shrunk toward baseline: (1 − 6/(6+12))·2.5 = 1.6667.
+const flat = [2024.0, 2024.2, 2024.4, 2024.6, 2024.8, 2025.0].map((t) => ({ t, psf: 0.8 }));
+eq('flat fees → baseline-shrunk', annualFeeTrendPct(flat), 1.6667);
+// Too few sales (n=5) → null.
+eq('too few sales → null', annualFeeTrendPct(flat.slice(0, 5)), null);
+// Enough sales but no time span → null.
+eq('no span → null', annualFeeTrendPct([2024, 2024, 2024, 2024, 2024, 2024].map((t) => ({ t, psf: 0.8 }))), null);
+// All below the trend floor → filtered out → too few → null (garbage can't drive a trend).
+eq('below floor → null', annualFeeTrendPct(flat.map((s) => ({ ...s, psf: 0.2 }))), null);
+// A genuine ~2%/mo-ish rise → positive, above baseline, but shrinkage keeps it sane (not Steep).
+const rising = [
+  { t: 2024.0, psf: 0.7 }, { t: 2024.2, psf: 0.72 }, { t: 2024.4, psf: 0.74 },
+  { t: 2024.6, psf: 0.76 }, { t: 2024.8, psf: 0.78 }, { t: 2025.0, psf: 0.8 },
+];
+const risingPct = annualFeeTrendPct(rising);
+eq('rising: positive & bounded', risingPct != null && risingPct > 3 && risingPct <= 10, true);
+eq('rising: not Steep after shrink', classifyTrend(risingPct ?? 99) !== 'Steep', true);
 
 console.log('\ntrendConfidence:');
 eq('HIGH', trendConfidence(16, 4), 'HIGH');
@@ -120,15 +140,18 @@ eq('LOW (few periods)', trendConfidence(16, 2), 'LOW');
 eq('LOW (few samples)', trendConfidence(7, 3), 'LOW');
 
 console.log('\nassembleCorpStats:');
-// Singleton buckets must be dropped so one luxury sale can't fake a trend
-// (real case from the dry-run: corp 2977 → fake +147% off a single $2.16/sqft sale).
+// Singleton buckets are dropped so one luxury sale can't anchor a period; with only
+// one qualifying bucket left the whole trend is suppressed (benchmark-only).
 eq(
   'singleton outlier → null',
   assembleCorpStats(
     [
-      ['2024-H2', [0.8733]],
-      ['2025-H1', [0.8744, 0.87, 0.88, 0.86, 0.89, 0.87, 0.88, 0.87]],
-      ['2025-H2', [2.1575]],
+      { date: '2024-09-01', psf: 0.8733 },
+      { date: '2025-01-15', psf: 0.8744 }, { date: '2025-02-01', psf: 0.87 },
+      { date: '2025-03-01', psf: 0.88 }, { date: '2025-03-15', psf: 0.86 },
+      { date: '2025-04-01', psf: 0.89 }, { date: '2025-05-01', psf: 0.87 },
+      { date: '2025-05-15', psf: 0.88 }, { date: '2025-06-01', psf: 0.87 },
+      { date: '2025-09-01', psf: 2.1575 },
     ],
     false
   ),
@@ -138,9 +161,9 @@ eq(
   'too few total → null',
   assembleCorpStats(
     [
-      ['2023-H1', [0.7, 0.71]],
-      ['2023-H2', [0.72, 0.73]],
-      ['2024-H1', [0.74, 0.75]],
+      { date: '2023-02-01', psf: 0.7 }, { date: '2023-03-01', psf: 0.71 },
+      { date: '2023-08-01', psf: 0.72 }, { date: '2023-09-01', psf: 0.73 },
+      { date: '2024-02-01', psf: 0.74 }, { date: '2024-03-01', psf: 0.75 },
     ],
     false
   ),
@@ -148,15 +171,16 @@ eq(
 );
 const healthy = assembleCorpStats(
   [
-    ['2023-H1', [0.7, 0.71, 0.72]],
-    ['2023-H2', [0.74, 0.75, 0.76]],
-    ['2024-H1', [0.79, 0.8, 0.81]],
+    { date: '2023-02-01', psf: 0.7 }, { date: '2023-03-01', psf: 0.71 }, { date: '2023-05-01', psf: 0.72 },
+    { date: '2023-08-01', psf: 0.74 }, { date: '2023-09-01', psf: 0.75 }, { date: '2023-11-01', psf: 0.76 },
+    { date: '2024-02-01', psf: 0.79 }, { date: '2024-03-01', psf: 0.8 }, { date: '2024-05-01', psf: 0.81 },
   ],
   false
 );
 eq('healthy: buckets', healthy?.buckets.length, 3);
 eq('healthy: sampleCount', healthy?.sampleCount, 9);
-eq('healthy: band', classifyTrend(healthy ? healthy.pctChange24mo : 0), 'Rising');
+eq('healthy: annual positive & bounded', !!healthy && healthy.annualPct > 0 && healthy.annualPct <= 40, true);
+eq('healthy: not Steep after shrink', classifyTrend(healthy ? healthy.annualPct : 99) !== 'Steep', true);
 
 console.log('\nbuildFeeStabilityResult:');
 const area: AreaStats = {
@@ -172,7 +196,7 @@ const corp: CorpStats = {
     { period: '2023-H2', medianPsf: 0.75, n: 5 },
     { period: '2024-H1', medianPsf: 0.8, n: 3 },
   ],
-  pctChange24mo: 15,
+  annualPct: 8, // %/yr → Rising band (>6, ≤10)
   sampleCount: 12,
   inclusionsMixed: false,
 };

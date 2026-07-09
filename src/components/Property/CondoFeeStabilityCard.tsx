@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BASELINE_INFLATION_24MO } from "@/lib/condo/feeStability";
+import { BASELINE_INFLATION_ANNUAL } from "@/lib/condo/feeStability";
 import type {
   FeeStabilityResult,
   TrendBand,
@@ -81,8 +81,7 @@ export default function CondoFeeStabilityCard({
             <div className="pt-3 border-t space-y-2">
               <div className="flex items-center justify-between">
                 <p className={`text-sm font-semibold ${TREND_STYLES[trend.band].text}`}>
-                  {trend.pctChange24mo >= 0 ? "↑" : "↓"} {Math.abs(trend.pctChange24mo).toFixed(2)}% over{" "}
-                  {trend.buckets.length >= 2 ? "24 mo" : "the period"} · {trend.band}
+                  {trend.annualPct >= 0 ? "↑" : "↓"} {Math.abs(trend.annualPct).toFixed(1)}%/yr · {trend.band}
                 </p>
                 <span
                   title={`${trend.confidence} confidence — based on ${trend.sampleCount} sold units across ${trend.buckets.length} half-year periods`}
@@ -93,10 +92,10 @@ export default function CondoFeeStabilityCard({
               </div>
               <TrendLineChart buckets={trend.buckets} />
               <p className="text-xs text-muted-foreground">
-                This building&apos;s median fee/sqft {trend.pctChange24mo >= 0 ? "rose" : "fell"}{" "}
-                {Math.abs(trend.pctChange24mo).toFixed(2)}% over the window —{" "}
+                Across recent sales, this building&apos;s fee/sqft has {trend.annualPct >= 0 ? "risen" : "fallen"}{" "}
+                about {Math.abs(trend.annualPct).toFixed(1)}%/yr —{" "}
                 <span className={TREND_STYLES[trend.band].text}>{trend.band}</span> vs the
-                {" "}~{BASELINE_INFLATION_24MO}% expected from inflation alone. Confidence reflects the{" "}
+                {" "}~{BASELINE_INFLATION_ANNUAL}%/yr expected from inflation alone. Confidence reflects the{" "}
                 {trend.sampleCount} sold units across {trend.buckets.length} half-years.
               </p>
             </div>

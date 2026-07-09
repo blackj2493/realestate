@@ -34,9 +34,32 @@ export const MIN_BUCKET_N = 2;
 // Trailing observation window for both cohorts.
 export const WINDOW_MONTHS = 24;
 
-// ~3%/yr compounded over 24mo ≈ 6.09%. Fees naturally rise with inflation, so the
-// trend is classified RELATIVE to this baseline, not zero.
-export const BASELINE_INFLATION_24MO = 6;
+// ── Trend estimator (annualized) ─────────────────────────────────────────────
+// The building trend is an ANNUALIZED %/yr growth of median fee/sqft, fit as a
+// weighted log-slope over in-window sales and shrunk toward the baseline when the
+// sample is thin. Validated against SAME-UNIT repeat sales (2026-07): vs the old
+// first→last endpoint ratio this cut the median per-building error ~2× and the
+// "impossible >25%/yr" rate from 19% to <1%. The old ratio blew up whenever the
+// oldest half-year bucket was a small/low outlier — a ratio is unbounded above but
+// floored at −100%, so identical noise produced giant fake INCREASES.
+
+// ~2–3%/yr is real Ontario condo-fee inflation (repeat-sale truth median ≈ 2.2%/yr).
+// Trends are classified RELATIVE to this baseline, not zero.
+export const BASELINE_INFLATION_ANNUAL = 3;
+
+// The trend uses a STRICTER fee/sqft floor than the area benchmark: near-floor
+// values ($0.05–0.35) are almost always data errors, and as slope inputs they
+// dominate the fit. The area median is outlier-resistant so it keeps PSF_MIN.
+export const TREND_PSF_MIN = 0.35;
+// A slope needs real support: enough sales, spread over enough time.
+export const TREND_MIN_SALES = 6;
+export const TREND_MIN_SPAN_YEARS = 0.75;
+// Shrink the raw slope toward the baseline: weight = n/(n+K). Thin buildings lean
+// on the baseline; dense ones trust their own slope. This kills the noisy tail.
+export const TREND_BASELINE_ANNUAL_PCT = 2.5;
+export const TREND_SHRINK_K = 12;
+// Nothing real moves faster than this; also the display / transition safety clamp.
+export const TREND_MAX_ANNUAL_PCT = 40;
 
 // fee/sqft sanity bounds ($/sqft/month). Outside → treated as a data-entry error
 // and excluded. Typical Ontario condo fees run ~$0.40–$1.20/sqft; luxury/amenity
@@ -98,9 +121,16 @@ export interface AreaStats {
 
 export interface CorpStats {
   buckets: TrendBucket[];
-  pctChange24mo: number;
+  /** Annualized %/yr change of the building's median fee/sqft (robust log-slope). */
+  annualPct: number;
   sampleCount: number;
   inclusionsMixed: boolean;
+}
+
+/** One sold observation feeding the corp trend (exact date + its fee/sqft). */
+export interface CorpSaleInput {
+  date: string | number | Date;
+  psf: number;
 }
 
 export interface FeeStabilityResult {
@@ -121,7 +151,8 @@ export interface FeeStabilityResult {
     | null
     | {
         band: TrendBand;
-        pctChange24mo: number;
+        /** Annualized %/yr change of the building's median fee/sqft. */
+        annualPct: number;
         buckets: TrendBucket[];
         confidence: Confidence;
         sampleCount: number;
@@ -265,11 +296,11 @@ export function classifyAreaPosition(
   return { position, pctVsMedian };
 }
 
-export function classifyTrend(pctChange24mo: number): TrendBand {
-  if (pctChange24mo <= BASELINE_INFLATION_24MO) return 'Stable';
-  if (pctChange24mo <= 12) return 'Moderate';
-  if (pctChange24mo <= 20) return 'Rising';
-  return 'Steep';
+export function classifyTrend(annualPct: number): TrendBand {
+  if (annualPct <= BASELINE_INFLATION_ANNUAL) return 'Stable'; // ≤ ~3%/yr (at/below inflation, or falling)
+  if (annualPct <= 6) return 'Moderate';                       // above inflation but not alarming
+  if (annualPct <= 10) return 'Rising';
+  return 'Steep';                                              // >10%/yr — genuinely aggressive
 }
 
 export function trendConfidence(sampleCount: number, periods: number): Confidence {
@@ -280,21 +311,96 @@ export function trendConfidence(sampleCount: number, periods: number): Confidenc
 
 const round4 = (n: number) => Math.round(n * 10000) / 10000;
 
+/** Fractional calendar year for a date, e.g. 2024-07-02 ≈ 2024.5. */
+function decimalYear(d: Date): number {
+  const y = d.getUTCFullYear();
+  const start = Date.UTC(y, 0, 1);
+  const next = Date.UTC(y + 1, 0, 1);
+  return y + (d.getTime() - start) / (next - start);
+}
+
 /**
- * Assemble a building's fee/sqft trend from per-period observations, or return null
- * when too sparse/noisy to be trustworthy. Drops low-n buckets (MIN_BUCKET_N) so a
- * single sale can't anchor a period, then requires MIN_CORP_PERIODS qualifying
- * buckets and MIN_CORP_SAMPLE total. pctChange24mo is taken across the qualifying
- * endpoints. Shared by the aggregation job and tests.
+ * Annualized %/yr growth of fee/sqft from a WEIGHTED LOG-SLOPE over the sales,
+ * shrunk toward the baseline when the sample is thin, then clamped. Returns null
+ * when there aren't enough sales / time span to fit a slope.
+ *
+ * Why a log-slope, not first→last: it uses every sale (not just two noisy
+ * endpoints), can't blow up on a tiny denominator, and is symmetric in %-space so
+ * equal up/down moves are treated equally (the old ratio was floored at −100% but
+ * unbounded above → systematic fake increases). Shrinkage (weight = n/(n+K)) pulls
+ * thin, noisy buildings toward the ~2.5%/yr baseline. Deterministic; pure.
+ */
+export function annualFeeTrendPct(sales: { t: number; psf: number }[]): number | null {
+  const pts = sales.filter((s) => s.psf >= TREND_PSF_MIN);
+  if (pts.length < TREND_MIN_SALES) return null;
+  let tmin = Infinity;
+  let tmax = -Infinity;
+  for (const p of pts) {
+    if (p.t < tmin) tmin = p.t;
+    if (p.t > tmax) tmax = p.t;
+  }
+  if (tmax - tmin < TREND_MIN_SPAN_YEARS) return null;
+
+  const n = pts.length;
+  let mt = 0;
+  let my = 0;
+  for (const p of pts) {
+    mt += p.t;
+    my += Math.log(p.psf);
+  }
+  mt /= n;
+  my /= n;
+  let sxx = 0;
+  let sxy = 0;
+  for (const p of pts) {
+    const dt = p.t - mt;
+    sxx += dt * dt;
+    sxy += dt * (Math.log(p.psf) - my);
+  }
+  if (sxx <= 0) return null;
+
+  const slope = sxy / sxx; // d ln(fee/sqft) / year
+  let annual = (Math.exp(slope) - 1) * 100; // continuous → annual growth, %
+  const w = n / (n + TREND_SHRINK_K); // shrink toward baseline when thin
+  annual = w * annual + (1 - w) * TREND_BASELINE_ANNUAL_PCT;
+  return round4(Math.max(-TREND_MAX_ANNUAL_PCT, Math.min(TREND_MAX_ANNUAL_PCT, annual)));
+}
+
+/**
+ * Assemble a building's fee/sqft trend from its in-window sold observations, or
+ * return null when too sparse/noisy to be trustworthy.
+ *
+ * Two independent pieces:
+ *   • Chart buckets — half-year medians (low-n buckets dropped via MIN_BUCKET_N so
+ *     a single sale can't anchor a period); gated on MIN_CORP_PERIODS + MIN_CORP_SAMPLE.
+ *   • annualPct — a robust annualized log-slope over the raw sales (annualFeeTrendPct),
+ *     NOT the endpoint ratio. This is the headline number the card shows.
+ *
+ * Shared by the aggregation job and tests. Deterministic; pure.
  */
 export function assembleCorpStats(
-  byPeriod: Map<string, number[]> | [string, number[]][],
+  sales: CorpSaleInput[],
   inclusionsMixed: boolean
 ): CorpStats | null {
-  const entries = (Array.isArray(byPeriod) ? byPeriod : [...byPeriod.entries()])
+  const parsed = sales
+    .map((s) => {
+      const d = s.date instanceof Date ? s.date : new Date(s.date as string);
+      if (Number.isNaN(d.getTime())) return null;
+      const period = halfYearPeriod(d.toISOString());
+      return period ? { t: decimalYear(d), psf: s.psf, period } : null;
+    })
+    .filter((x): x is { t: number; psf: number; period: string } => x !== null);
+
+  // ── Chart buckets (half-year medians, low-n dropped, lexically sorted) ──
+  const byPeriod = new Map<string, number[]>();
+  for (const p of parsed) {
+    const arr = byPeriod.get(p.period) || [];
+    arr.push(p.psf);
+    byPeriod.set(p.period, arr);
+  }
+  const entries = [...byPeriod.entries()]
     .filter(([, vals]) => vals.length >= MIN_BUCKET_N)
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)); // "YYYY-Hn" sorts lexically
-
   if (entries.length < MIN_CORP_PERIODS) return null;
 
   const buckets: TrendBucket[] = entries.map(([period, vals]) => ({
@@ -305,11 +411,11 @@ export function assembleCorpStats(
   const sampleCount = buckets.reduce((s, b) => s + b.n, 0);
   if (sampleCount < MIN_CORP_SAMPLE) return null;
 
-  const first = buckets[0].medianPsf;
-  const last = buckets[buckets.length - 1].medianPsf;
-  const pctChange24mo = first > 0 ? round4(((last - first) / first) * 100) : 0;
+  // ── Robust annualized trend (independent of the chart bucketing) ──
+  const annualPct = annualFeeTrendPct(parsed);
+  if (annualPct === null) return null;
 
-  return { buckets, pctChange24mo, sampleCount, inclusionsMixed };
+  return { buckets, annualPct, sampleCount, inclusionsMixed };
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -341,16 +447,20 @@ export function buildFeeStabilityResult(args: {
   const { position, pctVsMedian } = classifyAreaPosition(unitFeePsf, area);
 
   // Corp trend — benchmark-only when the building is too sparse (no corp row or
-  // below thresholds) → trend stays null.
+  // below thresholds) → trend stays null. The |annualPct| ≤ MAX guard also
+  // suppresses any stale/absurd stored value (e.g. a pre-rework 24mo-cumulative
+  // number) so the transition can never surface an impossible "%/yr".
   let trend: FeeStabilityResult['trend'] = null;
   if (
     corp &&
     corp.sampleCount >= MIN_CORP_SAMPLE &&
-    corp.buckets.length >= MIN_CORP_PERIODS
+    corp.buckets.length >= MIN_CORP_PERIODS &&
+    Number.isFinite(corp.annualPct) &&
+    Math.abs(corp.annualPct) <= TREND_MAX_ANNUAL_PCT
   ) {
     trend = {
-      band: classifyTrend(corp.pctChange24mo),
-      pctChange24mo: corp.pctChange24mo,
+      band: classifyTrend(corp.annualPct),
+      annualPct: corp.annualPct,
       buckets: corp.buckets,
       confidence: trendConfidence(corp.sampleCount, corp.buckets.length),
       sampleCount: corp.sampleCount,
