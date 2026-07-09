@@ -430,7 +430,9 @@ export const getListingDetail = cache(
         const corp: CorpStats | null = corpRow
           ? {
               buckets: (corpRow.trend_buckets as TrendBucket[]) ?? [],
-              pctChange24mo: Number(corpRow.pct_change_24mo),
+              // The pct_change_24mo column stores an ANNUALIZED %/yr rate since the
+              // 2026-07 trend rework (column name kept to avoid a migration).
+              annualPct: Number(corpRow.pct_change_24mo),
               sampleCount: Number(corpRow.sample_count),
               inclusionsMixed: corpRow.inclusions_mixed === true,
             }

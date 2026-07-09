@@ -130,7 +130,7 @@ describe("buildTheRead", () => {
           },
           trend: {
             band: "Rising",
-            pctChange24mo: 9.6,
+            annualPct: 9.6,
             buckets: [],
             confidence: "HIGH",
             sampleCount: 40,
@@ -138,7 +138,7 @@ describe("buildTheRead", () => {
         },
       } as unknown as Partial<ListingDetail>),
     );
-    expect(r.catch_).toMatch(/building fees rose 9\.6% over 24 mo \(rising trend\)/);
+    expect(r.catch_).toMatch(/building fees rising ~9\.6%\/yr \(rising trend\)/);
     expect(r.catch_).toMatch(/maintenance fees run 19% above the area median/);
   });
 

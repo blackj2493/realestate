@@ -240,7 +240,7 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   if (fee?.available && fee.trend && (fee.trend.band === "Rising" || fee.trend.band === "Steep")) {
     negs.push({
       sev: 45,
-      text: `building fees rose ${fee.trend.pctChange24mo.toFixed(1)}% over 24 mo (${fee.trend.band.toLowerCase()} trend)`,
+      text: `building fees rising ~${fee.trend.annualPct.toFixed(1)}%/yr (${fee.trend.band.toLowerCase()} trend)`,
       link: LINKS.condoFees,
     });
   }

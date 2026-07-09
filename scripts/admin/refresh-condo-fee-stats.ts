@@ -33,7 +33,6 @@ import {
   bundlesUtilities,
   median,
   quantile,
-  halfYearPeriod,
   assembleCorpStats,
   MIN_AREA_SAMPLE,
   MIN_CORP_SAMPLE,
@@ -105,7 +104,10 @@ interface AreaAcc {
 }
 interface CorpAcc {
   corp: string;
-  byPeriod: Map<string, number[]>;
+  // Raw in-window sold observations (exact date + fee/sqft). The robust log-slope
+  // trend needs per-sale time points, so we no longer pre-bucket here — assembleCorpStats
+  // does the half-year bucketing (for the chart) and the slope fit (for the headline).
+  sales: { date: string; psf: number }[];
   total: number;
   bundled: number;
   nonBundled: number;
@@ -244,20 +246,15 @@ async function main() {
       const corpKey = r.corp === null || r.corp === undefined ? '' : String(r.corp).trim();
       if (corpKey && corpKey !== '0') {
         condosWithCorp++;
-        const period = halfYearPeriod(dateStr);
-        if (period) {
-          let c = corpMap.get(corpKey);
-          if (!c) {
-            c = { corp: corpKey, byPeriod: new Map(), total: 0, bundled: 0, nonBundled: 0 };
-            corpMap.set(corpKey, c);
-          }
-          const bucket = c.byPeriod.get(period) || [];
-          bucket.push(psf);
-          c.byPeriod.set(period, bucket);
-          c.total++;
-          if (bundled) c.bundled++;
-          else c.nonBundled++;
+        let c = corpMap.get(corpKey);
+        if (!c) {
+          c = { corp: corpKey, sales: [], total: 0, bundled: 0, nonBundled: 0 };
+          corpMap.set(corpKey, c);
         }
+        c.sales.push({ date: dateStr, psf });
+        c.total++;
+        if (bundled) c.bundled++;
+        else c.nonBundled++;
       }
     }
 
@@ -311,8 +308,9 @@ async function main() {
 
   let corpQualified = 0;
   for (const c of corpMap.values()) {
-    // Shared assembler drops low-n buckets and gates on periods/sample (see lib).
-    const stats = assembleCorpStats(c.byPeriod, c.bundled > 0 && c.nonBundled > 0);
+    // Shared assembler builds the chart buckets AND the robust annualized log-slope
+    // (drops low-n buckets, gates on periods/sample/span — see lib).
+    const stats = assembleCorpStats(c.sales, c.bundled > 0 && c.nonBundled > 0);
     if (!stats) continue;
     corpQualified++;
     upserts.push({
@@ -323,7 +321,10 @@ async function main() {
       p25_fee_psf: null,
       p75_fee_psf: null,
       trend_buckets: stats.buckets,
-      pct_change_24mo: stats.pctChange24mo,
+      // NOTE: the pct_change_24mo COLUMN now stores an ANNUALIZED %/yr rate
+      // (repurposed 2026-07 in the trend rework — see feeStability.ts). The physical
+      // column name is kept to avoid a migration; getListingDetail reads it as annualPct.
+      pct_change_24mo: stats.annualPct,
       inclusions_mixed: stats.inclusionsMixed,
       sample_count: stats.sampleCount,
       window_months: WINDOW_MONTHS,
@@ -359,7 +360,7 @@ async function main() {
     console.log('\nSample corp trends:');
     corpSamples.forEach((u) =>
       console.log(
-        `   corp ${u.cohort_key}  Δ${u.pct_change_24mo}%/24mo  n=${u.sample_count}  ` +
+        `   corp ${u.cohort_key}  ${u.pct_change_24mo}%/yr  n=${u.sample_count}  ` +
           u.trend_buckets.map((b) => `${b.period}:$${b.medianPsf}(${b.n})`).join(' ')
       )
     );
