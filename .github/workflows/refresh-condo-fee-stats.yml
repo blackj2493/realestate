@@ -1,0 +1,64 @@
+name: Refresh Condo Fee Stats
+
+# Rebuilds condo_fee_stats (area fee/sqft distributions + per-building annualized fee
+# trend) from raw_vow_sold. Powers the listing-page "Condo Fee Stability" card and the
+# Read/Things-to-Know fee catch. raw_vow_sold is read-only (CLAUDE.md §12); this writes
+# the SEPARATE condo_fee_stats table (chunked upserts).
+#
+# WHY THIS EXISTS: this table was populated MANUALLY (no schedule), so the cohorts drifted
+# from the live sold market between ad-hoc runs. The trend rework (PR #93) made per-building
+# trends a robust annualized log-slope; keeping them current wants a short cadence.
+#
+# CADENCE: weekly (Mondays 06:00 UTC — after the 03:00 daily sync and the 05:00 rental job
+# have run). Cohorts move slowly week to week, so weekly keeps them fresh without churn.
+# Trigger manually anytime from the Actions tab.
+#
+# Uses the Supabase service client (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY),
+# not raw pg — matches scripts/admin/refresh-condo-fee-stats.ts. --apply overwrites the table.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-condo-fee-stats
+  cancel-in-progress: false
+
+jobs:
+  refresh-condo-fee-stats:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: condo-fee-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Refresh condo_fee_stats
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-condo-fee-stats.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Condo Fee Stats Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
