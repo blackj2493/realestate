@@ -8,11 +8,11 @@ name: Retrain AVM (champion/challenger)
 # STEPS: train challenger -> staging  ·  backtest champion (live)  ·  backtest challenger
 # (staging via AVM_*_TABLE)  ·  promotion gate compares median |%err| + coverage.
 #
-# SAFETY / SELF-SUSTAINING: scheduled runs are COMPARE-ONLY — they email "champion X% vs
-# challenger Y%" and touch nothing. To let the loop auto-promote when the challenger wins, either
-# dispatch manually with promote=true, or (once you trust it) change the compare step to always
-# pass --apply. Rollback is always available: re-ingest the committed champion CSVs via
-# scripts/worker/avm/ingest-matrices.ts.
+# SELF-SUSTAINING (auto-promote ON): scheduled runs train a fresh challenger, backtest it vs the
+# live champion, and — if it clears the gate (accuracy does not regress AND coverage holds) —
+# PROMOTE it to production automatically. A worse challenger can never be promoted. For a dry
+# run, dispatch manually with compare_only=true (compares + emails, promotes nothing). Rollback:
+# re-ingest the committed champion CSVs via scripts/worker/avm/ingest-matrices.ts.
 #
 # CADENCE: monthly (6th, 08:00 UTC). The trainer reads 36 months of raw_vow_sold, so a fresh
 # month meaningfully updates the fit.
@@ -21,8 +21,8 @@ on:
     - cron: '0 8 6 * *'
   workflow_dispatch:
     inputs:
-      promote:
-        description: 'Promote the challenger to production if it beats the champion'
+      compare_only:
+        description: 'Dry run — compare champion vs challenger and email, but do NOT promote'
         type: boolean
         default: false
 
@@ -75,13 +75,17 @@ jobs:
           AVM_AUDIT_TABLE: avm_audit_report_staging
         run: npx tsx scripts/admin/avm-backtest.ts --limit 4000 --eval-months 6 --out challenger.json 2>&1 | tee -a "$SUMMARY_FILE"
 
-      # 4) Gate: promote staging → live ONLY if the challenger wins. Scheduled = compare-only
-      #    (PROMOTE empty); a manual dispatch with promote=true passes --apply.
+      # 4) Gate: promote staging → live ONLY if the challenger wins (promoteChallenger enforces
+      #    accuracy + coverage). AUTO-PROMOTE is ON by default, so scheduled runs promote a winner;
+      #    a manual dispatch with compare_only=true does a dry run (no promotion).
       - name: Compare + promotion gate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PROMOTE: ${{ (github.event_name == 'workflow_dispatch' && inputs.promote) && '--apply' || '' }}
-        run: npx tsx scripts/worker/avm/promoteChallenger.ts champion.json challenger.json $PROMOTE 2>&1 | tee -a "$SUMMARY_FILE"
+          COMPARE_ONLY: ${{ inputs.compare_only }}
+        run: |
+          FLAG="--apply"
+          if [ "$COMPARE_ONLY" = "true" ]; then FLAG=""; fi
+          npx tsx scripts/worker/avm/promoteChallenger.ts champion.json challenger.json $FLAG 2>&1 | tee -a "$SUMMARY_FILE"
 
       - name: Notify operator
         if: always()
