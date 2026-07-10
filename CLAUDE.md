@@ -14,6 +14,8 @@ The differentiated data features are a **USP / customer-acquisition wedge**, not
 - **Target Audience:** High-intent, ready-to-transact buyers, sellers, and investors — analytical retail investors, flippers, homebuyers, and developers. These are people likely to *do a deal*, which is exactly what a lead is worth. We attract them with depth; we do not turn anyone away.
 - **The USP (why users pick us over incumbents):** Real estate is a mathematical instrument. We expose institutional-grade "shadow data" (True DOM, Capital Burn Rate, Suite Potential) that consumer brokerages obscure. This unique data is the reason a high-intent user leaves Realtor.ca for us — and once they are here and signed in, they are a lead.
 
+*How we actually take those users from Realtor.ca and HouseSigma — the beachhead, channels, and build order — is specified in §13. Read it before building anything whose job is acquisition (SEO pages, overlays, shareable reports, signup flows).*
+
 ---
 
 ## 2. User Personas & Feature Mapping
@@ -142,3 +144,41 @@ Read these on demand (do NOT assume field names from memory — the feeds are ca
   - `DIRECT_DB_URL` = the **direct** host `db.<ref>.supabase.co:5432`. It is **IPv6-only** and does **not** resolve from local dev / CI here — it fails with `getaddrinfo ENOENT`. Having it defined is NOT enough; it cannot be used to run scripts from this environment. (It does contain the password + project ref, but the pooler host/region is NOT derivable from it.)
   - To actually run these scripts, set **`DATABASE_URL` to the Supabase Session pooler string** (Dashboard → Settings → Database → Connection string → **Session pooler**, port **5432** — *not* the Transaction pooler on 6543; our scripts use a session-level `SET statement_timeout` and run DDL, which transaction mode drops). The pooler is IPv4-reachable. Put it in `.env.local` (never commit it).
   - **SQL editor caveat:** instant DDL (ADD COLUMN, CREATE FUNCTION) is fine to paste into the Supabase SQL editor, but heavy ops — full-table `UPDATE`s and partial indexes whose predicate detoasts `full_payload` JSONB across ~112k rows — exceed the editor's gateway timeout ("upstream timeout"). Those belong in a pooler-connected script that runs `SET statement_timeout TO '0'` and batches by id cursor (pattern: migration `020_region_aggregates.sql` = slim DDL; `scripts/admin/backfill020.ts` = batched backfill + index builds).
+
+---
+
+## 13. Customer Acquisition & Go-To-Market (how we take users from Realtor.ca & HouseSigma)
+This section operationalizes §1: it is the plan for *attracting and converting* high-intent transactors into captured leads. Every acquisition-facing feature (SEO pages, the overlay, shareable reports, signup flows) must serve the beachhead, message, and capture rules below.
+
+### The beachhead: the "house hacker" (dominate this ONE wedge before expanding)
+The single segment we own first is the **intersection of the Cashflow Investor and Smart Homebuyer personas** — an owner-occupier buying a property that *partially pays for itself* (legal or potential basement suite, duplex conversion).
+- **One message:** *"Buy a home that pays for itself."*
+- **One feature set:** Suite Potential + Carrying Cost + Cap Rate (already mapped to those personas in §2).
+- **Why it wins:** neither Realtor.ca nor HouseSigma tells a buyer *"this house has a rentable suite that covers ~40% of your mortgage."* In the current GTA affordability crunch this wedge has both the **volume** of homebuyers and the **analytical depth** of investors.
+- **Discipline (Crossing the Chasm):** do NOT dilute into a fourth-best-for-everyone portal. One wedge, one message, total dominance — *then* expand outward to pure cashflow investors and flippers. Expansion is earned, not simultaneous.
+
+### Monetization posture: the "King" path (brokerage targeted within ~12 months)
+Because the brokerage is near-term, we optimize for **owning the customer relationship now**.
+- Every lead is captured, qualified, and nurtured **under our brand, in our product**.
+- **Lead-sales to partner agents are OVERFLOW-ONLY** — we sell what we cannot yet serve, never the core pipe. Do not architect the funnel around feeding other brokerages (Founder's Dilemmas "Rich vs. King": we are deliberately choosing King; easy lead-sale cash must not quietly re-point the funnel at competitors we intend to displace).
+- Factor RECO brokerage licensing / agent recruiting into planning **now**, not at the end.
+
+### Why head-on fails, and where we intercept
+Realtor.ca owns *"what's for sale"* (discovery + SEO). HouseSigma owns *"what did it sell for"* (the analysis moment). We out-broad neither and out-brand neither — we **skim high-intent transactors off the top of their funnels** with the 10x-metric wedge, intercepting at the point of intent:
+
+| # | Channel | What we build | How it captures the lead |
+| :-- | :-- | :-- | :-- |
+| 1 | **Programmatic SEO** (highest ROI, compounding) | Auto-generated pages for queries the incumbents ignore: *"homes with income suites in [area]", "best cash-flow neighbourhoods [city]", "[address] true days on market"* — one page per neighbourhood × metric, fed from our data. | Organic Google traffic → soft wall → account required to see full shadow data (VOW-compliant, §4). |
+| 2 | **Parasitic overlay** (most direct steal) | Browser extension injecting our shadow metrics (Suite Potential, True DOM, Cap Rate) directly onto Realtor.ca & HouseSigma listing pages. | Meets their users on their own site at the moment of analysis; CTA pulls them into our account. |
+| 3 | **Community land-grab** | Presence + weekly data drops in r/TorontoRealEstate, r/canadahousing, BiggerPockets Canada, REIN, local first-time-buyer / REI groups. | Become the default tool; deep-link back to gated reports. |
+| 4 | **Data-as-marketing loop** | Shareable, PR-worthy reports: *"10 Toronto homes that pay for themselves this week", "neighbourhoods cutting prices fastest".* | Backlinks (feed channel 1's SEO) + press (brand); each share is a top-of-funnel magnet. |
+
+**Paid ads are a poor early fit** — we'd bid real-estate keywords against portals with far deeper pockets, and spend stops the moment we stop paying. Channels 1, 2, and 4 compound; prioritize them.
+
+### Build order (phased)
+- **P1 — Prove the wedge converts:** programmatic SEO pages for the house-hacker query set + seed one community channel. Instrument signup → intent capture end-to-end.
+- **P2 — Tap incumbent traffic directly:** ship the overlay extension.
+- **P3 — Monetize overflow:** turn on lead-sales for high-intent users we cannot yet serve.
+- **P4 — Convert to brokerage:** stand up the brokerage on the captured, branded funnel; route the best leads to our own agents.
+
+**Non-negotiable:** every channel must terminate in a **captured, intent-qualified lead under our brand** (§1, §3A). A channel that drives traffic but not captured, contactable leads is not done.
