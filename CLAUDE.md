@@ -1,10 +1,18 @@
 This file governs all AI coding agent behavior Claude operating within the PureProperty.ca repository.
 
 ## 1. Core Mission & Strategy
-PureProperty.ca is not a consumer portal; it is the "Bloomberg Terminal for Canadian Real Estate."
-- **The Ultimate Goal:** Overtake HouseSigma in utility and capture traffic volume comparable to Realtor.ca by serving the top 1% of high-intent users.
-- **Target Audience:** High-intent, analytical retail investors, developers, and boutique wholesalers. We actively filter out casual window-shoppers.
-- **Positioning:** Real estate is a mathematical instrument. We provide institutional-grade "shadow data" (True DOM, Capital Burn Rate, Suite Potential) that consumer brokerages actively obscure to protect the industry.
+PureProperty.ca presents as the "Bloomberg Terminal for Canadian Real Estate" — but the terminal is the **hook, not the product**. The product is a **transaction lead**, and the platform is a lead-generation engine dressed as an analytics terminal.
+
+### How We Make Money (read this before making any strategic trade-off)
+The differentiated data features are a **USP / customer-acquisition wedge**, not a revenue source. We never charge users for data. Revenue comes from the high-intent buyers and sellers the data attracts:
+1. **Now — Lead monetization:** Sell qualified buyer/seller leads to partner agents, or work the leads we generate ourselves. Every high-intent user captured is the unit of value.
+2. **Endgame — Own brokerage:** Stand up our own brokerage and earn a **commission split from our own realtors** on transactions our platform sources. The lead funnel built today becomes the brokerage's deal flow tomorrow.
+
+**Strategic consequence:** Because the asset is *captured, high-intent, contactable users who are likely to transact*, every product decision optimizes for **attracting and converting** those users — never for filtering them out. Volume of qualified leads > exclusivity.
+
+- **The Ultimate Goal:** Become the acquisition front-end for a brokerage. Use institutional-grade "shadow data" to out-differentiate HouseSigma and Realtor.ca, pull high-intent transactors off those portals, capture them as accounts, and convert them into leads (and eventually brokerage clients).
+- **Target Audience:** High-intent, ready-to-transact buyers, sellers, and investors — analytical retail investors, flippers, homebuyers, and developers. These are people likely to *do a deal*, which is exactly what a lead is worth. We attract them with depth; we do not turn anyone away.
+- **The USP (why users pick us over incumbents):** Real estate is a mathematical instrument. We expose institutional-grade "shadow data" (True DOM, Capital Burn Rate, Suite Potential) that consumer brokerages obscure. This unique data is the reason a high-intent user leaves Realtor.ca for us — and once they are here and signed in, they are a lead.
 
 ---
 
@@ -23,9 +31,10 @@ UI elements, state stores, and derived metric engines must be built specifically
 ## 3. App Structure & Core Pages
 The application architecture is strictly partitioned into three critical phases.
 
-### A. Onboarding ("The Velvet Rope")
-- **Objective:** Fulfill VOW compliance (which requires an account to view sold data) while generating psychological exclusivity.
-- **Design:** A high-friction, 3-step "Application for Terminal Access." Do not use a generic 1-click Google login on the public landing page. Use the onboarding flow to capture investor intent (e.g., "What is your primary investment strategy?").
+### A. Onboarding (Lead Capture, framed as "Terminal Access")
+- **Objective:** This is the **lead-capture funnel** — its entire job is to turn an anonymous visitor into a contactable, qualified lead. It doubles as VOW compliance (an account is required to view sold data), so the account wall is a feature, not a tax: every signup is a lead.
+- **Design principle — friction only where it *qualifies*, never where it *deters*.** Signup itself must be low-friction (magic link, one screen) so we lose as few high-intent users as possible. The "exclusivity" framing is *marketing tone*, not literal gatekeeping — never add steps whose only effect is to turn qualified transactors away.
+- **Qualify while you capture:** Use the onboarding flow to collect lead-scoring signals — buy vs. sell vs. invest intent, timeline to transact, target market, financing status ("What is your primary investment strategy?"). This intent data is what makes a lead sellable now and routable to our brokerage later. Prefer this over a bare 1-click Google login, which captures a user but no intent.
 
 ### B. The Terminal Page (Command Center)
 This is the primary interface and the core engine of the platform.
@@ -97,7 +106,9 @@ Use Sonnet for standard components debugging, code review, API transformers
 Use Opus for: Architecture decisions, data model design, complex refactors
 
 ## 10: Non negotiable quality bar
-Every feature must be measurably better than housesigma or realtor.ca on at least one dimension; more data visible, cleaner to scan, or exposing insight they don't have. If a component is just equivalent, it is not worth shipping.
+Every feature must be measurably better than housesigma or realtor.ca on at least one dimension; more data visible, cleaner to scan, or exposing insight they don't have. If a component is just equivalent, it is not worth shipping. This differentiation is the **USP** — the reason a high-intent user switches to us. It is a means to the business end, not the end itself.
+
+**Second, complementary bar — lead conversion.** Because the business is lead generation → brokerage (§1), a feature that is analytically brilliant but captures or converts no leads is only half-built. For every significant feature, be able to answer: *does this attract a high-intent transactor, deepen their engagement, or move them toward becoming a captured/contactable lead?* Depth that keeps users on-platform and signed in is depth that produces leads. Never trade away lead capture for the sake of "exclusivity" or minimalism.
 
 ## 11.
 This project integrates two TRREB data feeds. Before writing any code that reads, displays, or transforms listing data, consult the relevant docs below.
