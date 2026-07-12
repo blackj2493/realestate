@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail, Loader2, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
+import { postSignInPath } from "@/lib/auth/postSignInPath";
 
 /**
  * Passwordless sign-in via a one-time email code (Supabase OTP; length is set by
@@ -74,7 +75,9 @@ export default function MagicLinkForm({
       return;
     }
     // Full navigation so middleware + server components pick up the new session cookie.
-    window.location.assign(next.startsWith("/") ? next : "/dashboard");
+    // Route through /welcome so first-time users accept the VOW Terms before landing
+    // on `next` (idempotent — accepted users pass straight through). See postSignInPath.
+    window.location.assign(postSignInPath(next));
   };
 
   if (step === "code") {
