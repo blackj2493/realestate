@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Fingerprint, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
+import { postSignInPath } from "@/lib/auth/postSignInPath";
 
 /**
  * One-click sign-in options shown above the email-code fallback on /login:
@@ -58,7 +59,9 @@ export default function SocialAuthButtons({
     try {
       const { error: err } = await createClient().auth.signInWithPasskey();
       if (err) throw err;
-      window.location.assign(safeNext);
+      // Route through /welcome so first-time users accept the VOW Terms before landing
+      // on `next` (idempotent — accepted users pass straight through). See postSignInPath.
+      window.location.assign(postSignInPath(safeNext));
     } catch (e: unknown) {
       setBusy(null);
       // User dismissed the OS prompt — stay quiet rather than scolding them.

@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { postSignInPath } from '@/lib/auth/postSignInPath';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -16,9 +17,10 @@ export async function GET(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // Open-redirect guard: only relative, single-slash paths (reject protocol-relative `//host`).
-      const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
-      return NextResponse.redirect(`${origin}${safeNext}`);
+      // Route through /welcome so first-time users accept the VOW Terms before landing
+      // on `next` (idempotent — accepted users pass straight through). postSignInPath
+      // also applies the open-redirect guard (relative, single-slash paths only).
+      return NextResponse.redirect(`${origin}${postSignInPath(next)}`);
     }
   }
 
