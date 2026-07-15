@@ -10,7 +10,7 @@ import {
   type DealScoreComponent,
   type DealPersona,
 } from "@/lib/dealScore/computeDealScore";
-import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 import InfoDot from "@/components/ui/InfoDot";
 import { onLensChanged, persistLens } from "@/lib/personas/lensPersistence";
 
@@ -179,26 +179,101 @@ export default function DealScoreCard({
   );
 
   if (locked) {
+    // Concept B — "redacted frame": show THIS home's real card shell (the four lenses
+    // and the exact signals we score) with only the number, grade and offer band
+    // hidden. The ring is a NON-proportional dashed placeholder, so it can never leak
+    // good-vs-bad. Nothing here reads a gated field — anon receives EMPTY_DEAL_SCORE,
+    // so the frame is entirely static and no VOW value can escape (see gateVowDerived).
+    const SIGNALS = [
+      "Price vs comparable sales",
+      "Days-on-market pace",
+      "Rent coverage & carry",
+      "Renovation / value-add upside",
+    ];
     return (
-      <div className="rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-          <Gauge className="h-4 w-4 text-muted-foreground" />
-          Deal Score
+      <div className="rounded-lg border border-cyan-500/40 bg-card p-4">
+        <h3 className="mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+          <span className="flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-muted-foreground" />
+            Deal Score
+          </span>
+          <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-muted-foreground">
+            this home
+          </span>
         </h3>
-        <div className="relative min-h-[8rem]">
-          <div className="flex items-center gap-4 blur-sm select-none" aria-hidden="true">
-            <div className="h-[88px] w-[88px] shrink-0 rounded-full border-[7px] border-border" />
-            <div className="space-y-2">
-              <div className="h-3 w-32 rounded bg-muted/50" />
-              <div className="h-3 w-20 rounded bg-muted/40" />
+
+        {/* Lens switcher — the same home, scored for each investor type (grades hidden). */}
+        <div className="mb-3 flex flex-wrap gap-1.5" aria-hidden="true">
+          {PERSONA_ORDER.map((p) => (
+            <span
+              key={p}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-2 py-1 text-[11px] font-medium text-muted-foreground"
+            >
+              {PERSONA_LABEL[p]}
+              <Redact className="h-2.5 w-2.5 rounded-sm" />
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Placeholder ring — non-proportional dashed arc, redacted centre. */}
+          <div className="relative h-[88px] w-[88px] shrink-0" aria-hidden="true">
+            <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
+              <circle cx="40" cy="40" r="34" fill="none" strokeWidth="9" className="text-muted" stroke="currentColor" />
+              <circle
+                cx="40"
+                cy="40"
+                r="34"
+                fill="none"
+                strokeWidth="9"
+                strokeLinecap="round"
+                strokeDasharray="3 11"
+                className="text-cyan-500/50"
+                stroke="currentColor"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Redact className="h-7 w-9" />
             </div>
           </div>
-          <VowGateOverlay
-            headline="See this home's Deal Score"
-            message="We grade every listing A–F for your investing style — scored against recent comparable sales, with a suggested offer range."
-            ctaLabel="See it free →"
-          />
+
+          <div className="min-w-0">
+            <p className="text-sm font-medium leading-snug text-foreground">
+              We grade this home A–F for your buying style.
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Homebuyer and investor lenses score it differently — switch after you sign in.
+            </p>
+          </div>
         </div>
+
+        {/* What we scored — real signal names, values hidden: the curiosity gap. */}
+        <div className="mt-4 space-y-2.5">
+          {SIGNALS.map((label) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="flex-1 text-[12px] text-foreground">{label}</span>
+              <Redact className="h-3 w-8" />
+            </div>
+          ))}
+        </div>
+
+        {/* Suggested offer band — redacted. */}
+        <div className="mt-3 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-3 py-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+            <Target className="h-3.5 w-3.5" />
+            Suggested move
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
+            Offer
+            <Redact className="h-4 w-14" />–
+            <Redact className="h-4 w-14" />
+          </p>
+        </div>
+
+        <UnlockCta
+          label="Reveal this home's score — free"
+          note="No card · about 20 seconds. PureProperty Deal Score is our deterministic metric, not an MLS/TRREB figure."
+        />
       </div>
     );
   }

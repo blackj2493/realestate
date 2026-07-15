@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { AVMResult, AnchorBasis } from "@/lib/avm/types";
-import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 interface ListingEstimateCardProps {
   estimate: AVMResult | null;
@@ -42,7 +42,7 @@ export default function ListingEstimateCard({
 }: ListingEstimateCardProps) {
   if (locked) {
     return (
-      <Card>
+      <Card className="border-cyan-500/40">
         <CardHeader>
           <CardTitle>Estimated Value</CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -50,18 +50,22 @@ export default function ListingEstimateCard({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="relative min-h-[8rem]">
-            <div className="space-y-2 blur-sm select-none" aria-hidden="true">
-              <p className="text-3xl font-bold text-primary">$0,000,000</p>
-              <p className="text-xs font-mono text-muted-foreground">Range $000K – $000K</p>
-              <p className="text-sm font-medium text-muted-foreground">↓ $00,000 below ask</p>
+          <div className="space-y-4">
+            <div>
+              <Redact className="h-8 w-40" />
+              <p className="mt-2 flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                Range <Redact className="h-3.5 w-16" /> – <Redact className="h-3.5 w-16" />
+              </p>
             </div>
-            <VowGateOverlay
-              headline="See this home's estimated value"
-              message={`What recent comparable sales${
+            <div className="flex items-center justify-between border-t pt-3">
+              <span className="text-[11px] font-medium text-muted-foreground">How sure we are</span>
+              <Redact className="h-4 w-24" />
+            </div>
+            <UnlockCta
+              label="See this home's value — free"
+              note={`What recent comparable sales${
                 cityRegion ? ` in ${cityRegion}` : city ? ` in ${city}` : ""
-              } suggest it's worth, with a confidence range.`}
-              ctaLabel="See it free →"
+              } suggest it's worth — our estimate, not an MLS or TRREB figure.`}
             />
           </div>
         </CardContent>

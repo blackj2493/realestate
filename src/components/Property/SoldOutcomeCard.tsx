@@ -14,7 +14,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { SoldAccuracy } from "@/lib/property/listingStatus";
-import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 /** ≤3% |diff| → bragging tone; above → neutral. */
 const BRAG_THRESHOLD_PCT = 3;
@@ -38,22 +38,37 @@ export default function SoldOutcomeCard({
 }) {
   if (locked) {
     return (
-      <Card>
+      <Card className="border-cyan-500/40">
         <CardHeader>
           <CardTitle>Our Call vs. The Sale</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            This home has closed — see the sold price and how close our pre-sale call came.
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="relative min-h-[7.5rem]">
-            <div className="space-y-2 blur-sm select-none" aria-hidden="true">
-              <p className="text-3xl font-bold text-primary">Within 0.0%</p>
-              <p className="text-sm text-muted-foreground">
-                We expected $0,000,000 — it sold for $0,000,000.
-              </p>
+          <div className="space-y-3">
+            <div className="flex items-end gap-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  We expected
+                </p>
+                <Redact className="mt-1.5 h-6 w-28" />
+              </div>
+              <span className="pb-1 text-xs text-muted-foreground">vs</span>
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  It sold for
+                </p>
+                <Redact className="mt-1.5 h-6 w-28" />
+              </div>
             </div>
-            <VowGateOverlay
-              headline="See what it sold for"
-              message="This home has closed. Unlock the sold price and see how close our pre-sale estimate came."
-              ctaLabel="See the sold price →"
+            <div className="flex items-center gap-2 border-t pt-3">
+              <span className="text-xs text-muted-foreground">Our accuracy</span>
+              <Redact className="h-4 w-16" />
+            </div>
+            <UnlockCta
+              label="See the sold price — free"
+              note="Deterministic estimate — not an MLS or TRREB figure."
             />
           </div>
         </CardContent>

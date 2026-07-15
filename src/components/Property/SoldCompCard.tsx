@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { DeltaChips } from "@/components/Property/DeltaChips";
+import { Redact } from "@/components/Property/teaserPrimitives";
 import type { SimilarSoldCard } from "@/app/api/properties/[id]/similar/route";
 
 function fmtSoldDate(iso: string | null): string {
@@ -27,14 +28,17 @@ export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; 
         className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50"
       >
         <div className="relative aspect-[4/3] bg-muted/60">
+          <span className="absolute left-2 top-2 rounded bg-rose-500/90 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-white">
+            {leased ? "LEASED" : "SOLD"}
+          </span>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
             <Lock className="h-5 w-5" />
             <span className="text-xs">Sign in for {leased ? "leased" : "sold"} price</span>
           </div>
         </div>
-        <div className="space-y-1 p-3">
-          <div className="h-5 w-24 rounded bg-muted" />
-          <div className="h-3 w-32 rounded bg-muted/70" />
+        <div className="space-y-2 p-3">
+          <Redact className="h-5 w-24" />
+          <Redact className="h-3 w-32" />
         </div>
       </Link>
     );

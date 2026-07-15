@@ -1088,6 +1088,7 @@ export default async function PropertyPage({
               priceDrop={view.priceTimeline.totalPriceDrop}
               dom={trueDom}
               saleMarkers={saleMarkers}
+              locked={!isAuthed}
             />
           )}
           {saleHistory.saleCount > 0 ? (

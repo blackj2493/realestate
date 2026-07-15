@@ -7,11 +7,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { History, Lock } from "lucide-react";
+import { History } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import type { CampaignHistoryView } from "@/lib/campaignHistory/view";
 import { buildEventRows, type TimelineRow, type TimelineEventKind } from "@/lib/campaignHistory/timeline";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);
@@ -80,34 +80,41 @@ export default function CampaignHistorySection({
   }
 
   if (!isAuthed) {
-    const n = Math.min(campaignCount, 6);
+    // Redacted frame: the real table shape (Date · Event · Price · Δ%) with values
+    // withheld — matches the rest of the anon page's unlock language. The surviving
+    // campaignCount/firstSeenDate teaser rides in the CTA note.
+    const n = Math.min(campaignCount, 5);
     return (
-      <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
+      <div className={cn("rounded-lg border border-cyan-500/40 bg-card p-4", className)}>
         {Title}
-        {/* min-h floors the wrapper to the overlay's height: the blurred skeleton is only
-            `n = min(campaignCount, 6)` rows, so a "Listed 1×" property yields a single row and
-            the absolute overlay would otherwise spill onto the TRREB caption below (mobile bug). */}
-        <div className="relative min-h-[7rem]">
-          <div className="select-none space-y-2 blur-sm" aria-hidden="true">
-            {Array.from({ length: n }).map((_, i) => (
-              <div key={i} className="flex justify-between font-mono text-xs text-muted-foreground">
-                <span>2025 ··· ··</span><span>Listed ····</span><span>$•,•••,•••</span>
-              </div>
-            ))}
-          </div>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-background/50 backdrop-blur-[1px]">
-            <Lock className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />
-            <p className="text-xs text-foreground">
-              Listed {campaignCount}× {firstSeenDate ? `since ${new Date(firstSeenDate).getFullYear()}` : ""}
-            </p>
-            <Link href="/login" className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:text-cyan-300 transition-colors hover:bg-cyan-500/20">
-              Sign in to view the full history
-            </Link>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+                <th className="py-2 text-left font-medium">Date</th>
+                <th className="py-2 text-left font-medium">Event</th>
+                <th className="py-2 text-right font-medium">Price</th>
+                <th className="py-2 text-right font-medium">Δ%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: n }).map((_, i) => (
+                <tr key={i} className="border-b border-border/50">
+                  <td className="py-2 text-left"><Redact className="h-3 w-20" /></td>
+                  <td className="py-2 text-left"><Redact className="h-3 w-16" /></td>
+                  <td className="py-2 text-right"><Redact className="h-3 w-16" /></td>
+                  <td className="py-2 text-right"><Redact className="h-3 w-8" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
-          Listing history via TRREB VOW — viewable to signed-in users for personal, non-commercial use.
-        </p>
+        <UnlockCta
+          label="Sign in to view the full history — free"
+          note={`Listed ${campaignCount}×${
+            firstSeenDate ? ` since ${new Date(firstSeenDate).getFullYear()}` : ""
+          } · Listing history via TRREB VOW, for personal, non-commercial use.`}
+        />
       </div>
     );
   }

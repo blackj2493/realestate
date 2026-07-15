@@ -340,6 +340,43 @@ table,
   animation: pulse-slow 2s ease-in-out infinite;
 }
 
+/* Redacted-value skeleton for VOW teaser cards (see components/Property/teaserPrimitives).
+   Built from the design tokens so it reads clearly on BOTH grounds — the old
+   `bg-muted` was slate-100 in light, which washed out to nothing on white cards.
+   Base = border tone (visible on card), sweeping highlight = a stronger slate. */
+@keyframes redact-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+.redact-skeleton {
+  background-image: linear-gradient(
+    100deg,
+    hsl(var(--border)) 26%,
+    hsl(var(--muted-foreground) / 0.32) 50%,
+    hsl(var(--border)) 74%
+  );
+  background-size: 220% 100%;
+  animation: redact-shimmer 2.2s linear infinite;
+}
+.dark .redact-skeleton {
+  /* On the dark card, lift the base off `--border` (slate-800 ≈ the card) so blocks
+     don't disappear; the highlight is a lighter slate sweep. */
+  background-image: linear-gradient(
+    100deg,
+    hsl(215 25% 27%) 26%,
+    hsl(215 20% 40%) 50%,
+    hsl(215 25% 27%) 74%
+  );
+  background-size: 220% 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .redact-skeleton {
+    animation: none;
+    background-position: 0 0;
+  }
+}
+
 /* Scan line effect */
 .scan-line {
   position: relative;

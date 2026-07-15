@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { ValueAddReport } from "@/lib/avm/valueAdd/types";
 import { shouldRender, buildView, type LedgerRow } from "./forceAppreciationView";
-import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 const SCORE_LEGEND =
   "Upside = how much equity you could unlock by renovating, as an index relative to this home's value (before cost).";
@@ -41,28 +41,42 @@ export default function ForceAppreciationCard({
   locked?: boolean;
 }) {
   if (locked) {
+    // Redacted ledger: the renovation MOVES we model are generic (not this home's
+    // numbers), so showing them advertises the engine's depth without leaking value.
+    const MOVES = ["Kitchen refresh", "Bathroom reno", "Finished basement", "Curb appeal"];
     return (
-      <Card data-tour="listing-force-appreciation">
+      <Card data-tour="listing-force-appreciation" className="border-cyan-500/40">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Renovation Upside</CardTitle>
+          <span className="flex items-center gap-1.5 rounded border border-border bg-muted/60 px-2 py-0.5 font-mono text-xs font-bold text-muted-foreground">
+            Upside <Redact className="h-3 w-8" />
+          </span>
         </CardHeader>
-        <CardContent>
-          <div className="relative min-h-[8rem]">
-            <div className="space-y-2 blur-sm select-none" aria-hidden="true">
-              <p className="text-sm">
-                <span className="text-muted-foreground">up to </span>
-                <span className="font-semibold text-emerald-700 dark:text-emerald-400">$000,000</span>
-                <span className="text-muted-foreground"> unlockable · ~$000,000 net after cost</span>
-              </p>
-              <div className="h-3 w-full rounded bg-muted/40" />
-              <div className="h-3 w-2/3 rounded bg-muted/40" />
-            </div>
-            <VowGateOverlay
-              headline="See the renovation upside"
-              message="Which renovations actually pay back here — the added value, the cost, and the ROI — from our Value-Add engine."
-              ctaLabel="See it free →"
-            />
+        <CardContent className="space-y-3">
+          <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+            up to <Redact className="h-4 w-20" /> unlockable · ~<Redact className="h-4 w-20" /> net after cost
+          </p>
+          <div className="space-y-1.5">
+            <ColumnHeader />
+            {MOVES.map((label) => (
+              <div key={label} className={`${COLS} text-xs`}>
+                <span className="leading-tight text-foreground">{label}</span>
+                <span className="text-right">
+                  <Redact className="h-3 w-12" />
+                </span>
+                <span className="text-right">
+                  <Redact className="h-3 w-12" />
+                </span>
+                <span className="w-10 text-right">
+                  <Redact className="h-3 w-8" />
+                </span>
+              </div>
+            ))}
           </div>
+          <UnlockCta
+            label="See the renovation upside — free"
+            note="Which renovations pay back here — added value, cost and ROI, from our Value-Add engine."
+          />
         </CardContent>
       </Card>
     );
