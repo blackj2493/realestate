@@ -15,6 +15,7 @@ import type { BoardDef } from './boards';
 import type { BasementFilter, MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
+import { aboveGradeBedsClause, exactAboveGradeBedsClause } from '@/lib/filters/filterRegistry';
 
 /**
  * Region-only filter — kept for any caller that still passes a raw string
@@ -187,7 +188,13 @@ export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
     areaFilter(area),
     transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
-    lens.minBeds > 0 ? `BedroomsTotal:${lens.bedsExact ? '=' : '>='}${lens.minBeds}` : undefined,
+    // Beds: above-grade with a total fallback — identical semantics to the For Sale
+    // filter (filterRegistry) and the sold lens (soldFilter). "4 beds" means 4 ABOVE
+    // grade, so a "2+2" basement home no longer surfaces under it, keeping the active
+    // scope consistent with the sold scope and the card's bedsLabel split.
+    lens.minBeds > 0
+      ? (lens.bedsExact ? exactAboveGradeBedsClause(lens.minBeds) : aboveGradeBedsClause(lens.minBeds))
+      : undefined,
     lens.minBaths > 0 ? `BathroomsTotalInteger:${lens.bathsExact ? '=' : '>='}${lens.minBaths}` : undefined,
     lens.minGarage > 0 ? `ParkingTotal:${lens.garageExact ? '=' : '>='}${lens.minGarage}` : undefined,
     basementClause(lens.basement),

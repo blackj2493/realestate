@@ -10,6 +10,7 @@
 import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
+import { aboveGradeBedsClause } from '@/lib/filters/filterRegistry';
 import { toSimpleRing } from '@/lib/geo/simplifyRing';
 
 // Typesense configuration.
@@ -386,9 +387,11 @@ export async function searchListings(
     filterParts.push(`ListPrice:<=${maxVal}`);
   }
   
-  // Bedroom filter
+  // Bedroom filter — above-grade with a total fallback (see aboveGradeBedsClause),
+  // matching the For Sale search, the dashboard scope and the sold lens so "3 beds"
+  // means 3 ABOVE grade and a "1+2" basement home doesn't surface under it.
   if (filters.minBedrooms !== undefined) {
-    filterParts.push(`BedroomsTotal:>=${filters.minBedrooms}`);
+    filterParts.push(aboveGradeBedsClause(filters.minBedrooms));
   }
   
   // Bathroom filter
