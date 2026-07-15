@@ -10,10 +10,10 @@
 
 "use client";
 
-import Link from "next/link";
-import { History, Lock } from "lucide-react";
+import { History } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import type { SaleHistory } from "@/lib/property/getListingDetail";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -64,48 +64,35 @@ export default function SaleHistorySection({
     );
   }
 
-  // ── Anonymous: blurred placeholder rows + sign-in CTA ────────────────────────
+  // ── Anonymous: redacted ledger + unlock CTA ──────────────────────────────────
   if (!isAuthed) {
-    const placeholders = Array.from({ length: Math.min(saleHistory.saleCount, 5) });
+    const n = Math.min(saleHistory.saleCount, 5);
     return (
-      <div className={cn("rounded-lg border border-border bg-card p-4", className)}>
+      <div className={cn("rounded-lg border border-cyan-500/40 bg-card p-4", className)}>
         {Title}
-        {/* min-h floors the wrapper to the overlay height so a single-sale placeholder
-            (Math.min(saleCount, 5) → 1 row) can't collapse under the absolute sign-in
-            overlay and spill onto the caption below — same fix as CampaignHistorySection. */}
-        <div className="relative min-h-[7rem]">
-          <table className="w-full text-sm" aria-hidden="true">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
             <thead>
               <HeaderRow />
             </thead>
-            <tbody className="select-none blur-sm">
-              {placeholders.map((_, i) => (
-                <tr key={i} className="border-b border-border/40 font-mono text-xs text-muted-foreground">
-                  <td className="py-2 text-left">2023 ··· ··</td>
-                  <td className="py-2 text-right">$•,•••,•••</td>
-                  <td className="py-2 text-right">$•,•••,•••</td>
-                  <td className="py-2 text-right">····</td>
+            <tbody>
+              {Array.from({ length: n }).map((_, i) => (
+                <tr key={i} className="border-b border-border/50">
+                  <td className="py-2 text-left"><Redact className="h-3 w-20" /></td>
+                  <td className="py-2 text-right"><Redact className="h-3 w-16" /></td>
+                  <td className="py-2 text-right"><Redact className="h-3 w-16" /></td>
+                  <td className="py-2 text-right"><Redact className="h-3 w-10" /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-background/50 backdrop-blur-[1px]">
-            <Lock className="h-5 w-5 text-primary" />
-            <p className="text-xs text-foreground">
-              {saleHistory.saleCount} prior sale{saleHistory.saleCount > 1 ? "s" : ""} on record
-            </p>
-            <Link
-              href="/login"
-              className="rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
-            >
-              Sign in to view sold prices
-            </Link>
-          </div>
         </div>
-        <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
-          Sold data via TRREB VOW — viewable to signed-in users for personal, non-commercial use.
-        </p>
+        <UnlockCta
+          label="Sign in to view sold prices — free"
+          note={`${saleHistory.saleCount} prior sale${
+            saleHistory.saleCount > 1 ? "s" : ""
+          } on record · Sold data via TRREB VOW, for personal, non-commercial use.`}
+        />
       </div>
     );
   }

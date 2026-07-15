@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { axisPosition, lineupDomain } from "@/lib/avm/expectedSale";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
-import VowGateOverlay from "@/components/auth/VowGateOverlay";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 interface EstimatedSaleCardProps {
   salePrice: SalePriceEstimate | null;
@@ -44,27 +44,43 @@ export default function EstimatedSaleCard({
   locked,
 }: EstimatedSaleCardProps) {
   if (locked) {
+    // Redacted frame: the ask is PUBLIC (IDX list price), so we show it to ground the
+    // card in THIS home; the estimate, range and confidence are withheld until sign-in.
     return (
-      <Card>
+      <Card className="border-cyan-500/40">
         <CardHeader>
           <CardTitle>Estimated Sale Price</CardTitle>
           <p className="text-xs text-muted-foreground">What this home is likely to close at.</p>
         </CardHeader>
         <CardContent>
-          <div className="relative min-h-[8.5rem]">
-            <div className="space-y-2 blur-sm select-none" aria-hidden="true">
-              <p className="text-3xl font-bold text-primary">$0,000,000</p>
-              <p className="text-xs font-mono text-muted-foreground">Likely range $000K – $000K</p>
-              <p className="text-sm font-medium text-muted-foreground">≈ $00,000 below ask</p>
+          <div className="space-y-4">
+            <div>
+              <Redact className="h-9 w-44" />
+              <p className="mt-2 flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                Likely range <Redact className="h-3.5 w-16" /> – <Redact className="h-3.5 w-16" />
+              </p>
             </div>
-            <VowGateOverlay
-              headline="See what this home should sell for"
-              message={`Our estimate of the likely closing price and range for this ${
-                propertySubType ?? "home"
-              }${city ? ` in ${city}` : ""}${
-                listPrice > 0 ? `, and how it stacks up against the ${formatPrice(listPrice)} ask` : ""
-              }.`}
-              ctaLabel="See it free →"
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground">How sure we are</span>
+              <Redact className="h-4 w-24" />
+            </div>
+            <ul className="space-y-1.5 border-t pt-3 text-[11px]">
+              {listPrice > 0 && (
+                <li className="flex items-center justify-between">
+                  <span className="text-amber-700 dark:text-amber-400">▲ Asking</span>
+                  <span className="font-mono text-foreground">{formatPrice(listPrice)}</span>
+                </li>
+              )}
+              <li className="flex items-center justify-between">
+                <span className="text-emerald-700 dark:text-emerald-400">◆ Estimated sale</span>
+                <Redact className="h-3.5 w-20" />
+              </li>
+            </ul>
+            <UnlockCta
+              label="See what it should sell for — free"
+              note={`Our estimate of the likely closing price${
+                city ? ` for this ${propertySubType ?? "home"} in ${city}` : ""
+              } — not an MLS or TRREB figure.`}
             />
           </div>
         </CardContent>

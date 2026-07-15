@@ -21,9 +21,10 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { TrendingDown, Calendar, History } from 'lucide-react';
+import { TrendingDown, Calendar, History, Lock } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { useChartTheme } from '@/lib/theme/useChartTheme';
+import { Redact, UnlockCta } from '@/components/Property/teaserPrimitives';
 
 /** A recorded prior sale (already VOW-gated upstream): close price at a sale date. */
 export interface SaleMarker {
@@ -44,6 +45,13 @@ interface DOMTimelineChartProps {
   dom: number;
   /** Prior SOLD prices for this property (authed only). When present, drives the price-history mode. */
   saleMarkers?: SaleMarker[];
+  /**
+   * Anonymous view. list-price movement (originalPrice/priceDrop) and prior sales are
+   * stripped upstream for anon, so the real timeline is UNKNOWABLE here — rather than
+   * assert a misleading "no recorded price changes", render a locked teaser inviting
+   * sign-in. Never leaks direction: the chart shell carries no data line.
+   */
+  locked?: boolean;
   className?: string;
 }
 
@@ -104,6 +112,7 @@ export default function DOMTimelineChart({
   originalPrice,
   dom,
   saleMarkers,
+  locked,
   className,
 }: DOMTimelineChartProps) {
   const c = useChartTheme();
@@ -174,6 +183,47 @@ export default function DOMTimelineChart({
             </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // ── Locked (anonymous): the timeline data is stripped upstream, so we can't know
+  // whether the price moved — tease the feature instead of asserting "no change".
+  // The chart shell carries NO data line, so nothing about direction is implied. ──
+  if (locked) {
+    return (
+      <div className={cn("rounded-lg border border-cyan-500/40 bg-card p-4", className)}>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+              Price Timeline
+            </span>
+          </div>
+          {dom > 0 && <span className="text-xs text-muted-foreground">{dom} days on market</span>}
+        </div>
+
+        {/* Locked chart shell: faint gridlines + redacted axis ticks, no data line. */}
+        <div className="relative h-32 w-full overflow-hidden rounded-md border border-border bg-muted/40">
+          <div className="pointer-events-none absolute inset-x-3 top-1/4 border-t border-dashed border-muted-foreground/20" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-x-3 top-1/2 border-t border-dashed border-muted-foreground/20" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-x-3 top-3/4 border-t border-dashed border-muted-foreground/20" aria-hidden="true" />
+          <div className="absolute left-2 top-0 flex h-full flex-col justify-around py-2" aria-hidden="true">
+            <Redact className="h-2 w-6" />
+            <Redact className="h-2 w-6" />
+            <Redact className="h-2 w-6" />
+          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+            <Lock className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />
+            <p className="text-xs font-medium text-foreground">See how the asking price moved</p>
+            <p className="text-[11px] text-muted-foreground">Every list-price change, dated across the campaign</p>
+          </div>
+        </div>
+
+        <UnlockCta
+          label="Unlock the price timeline — free"
+          note="List-price movement and any prior sales — for signed-in, personal use."
+        />
       </div>
     );
   }
