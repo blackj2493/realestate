@@ -235,7 +235,7 @@ export function PropertyCard({
 
           {/* Right Side Badges */}
           <div className="absolute top-3 right-3 flex flex-col gap-2">
-            {/* DoM Badge (bottom-right) - if > 45 days show, if > 90 show STALE */}
+            {/* DoM Badge (bottom-right) - amber if feed DoM > 45; STALE if isStale (TrueDom > 60) */}
             {property.isStale ? (
               <span className="px-2 py-1 text-xs font-mono font-semibold text-rose-400 bg-rose-400/10 border border-rose-400/20 rounded-md">
                 STALE: {property.daysOnMarket || 0}d

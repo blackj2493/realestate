@@ -458,7 +458,7 @@ export interface TypesensePropertyDocument {
   TrueDom: number;
   /** $ delta from first listing in chain to current list price */
   TotalPriceDrop: number;
-  /** True if TrueDom > 90 days - stale inventory indicator */
+  /** True if TrueDom > 60 days - stale inventory indicator (STALE_THRESHOLD_DAYS) */
   IsStale: boolean;
   
   // ─── ADU/Suite Potential (Phase 2) ──────────────────────────────────────

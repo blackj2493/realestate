@@ -310,7 +310,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           <KpiCard
             label="Active Listings"
             value={score.activeCount != null ? score.activeCount.toLocaleString() : "—"}
-            sub={score.stalePct != null ? `${score.stalePct.toFixed(0)}% stale (90d+ DOM)` : undefined}
+            sub={score.stalePct != null ? `${score.stalePct.toFixed(0)}% stale (60d+ DOM)` : undefined}
             loading={loading}
           />
           <KpiCard

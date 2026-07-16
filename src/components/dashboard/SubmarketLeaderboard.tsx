@@ -29,7 +29,7 @@ type RankKey = "yield" | "leverage" | "inventory";
 
 const RANK_OPTIONS: { key: RankKey; label: string; hint: string; field: keyof LeaderboardRow }[] = [
   { key: "yield", label: "Yield", hint: "median cap rate", field: "medianCapRate" },
-  { key: "leverage", label: "Buyer leverage", hint: "% stale (90d+ True DOM)", field: "stalePct" },
+  { key: "leverage", label: "Buyer leverage", hint: "% stale (60d+ True DOM)", field: "stalePct" },
   { key: "inventory", label: "Inventory", hint: "active listings", field: "activeCount" },
 ];
 
@@ -142,7 +142,7 @@ export default function SubmarketLeaderboard() {
                   </Link>
                   <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">
                     <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
-                    <span title="% stale (90d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
+                    <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
                     <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
                   </div>
                   {/* Daylight yield bar (light only) — magnitude at a glance. */}
@@ -163,7 +163,7 @@ export default function SubmarketLeaderboard() {
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Full-population aggregates over current active inventory (no 100-row sampling). Median cap requires ≥5 priced
-          active listings; “stale” = 90d+ True DOM. Deterministic, no AI (§4).
+          active listings; “stale” = 60d+ True DOM. Deterministic, no AI (§4).
         </p>
       </section>
     </div>

@@ -184,7 +184,7 @@ export const COMPARE_METRICS: CompareMetric[] = [
     get: (c) => priceDropPct(c.listing), format: (v) => `${v}%`, winner: "high",
     glossaryKey: "priceDrop" },
   { key: "stale", label: "Stale", group: "distressTiming", cellKind: "text", gated: true,
-    getText: (c) => (c.listing.IsStale ? "Stale (>90d)" : "Fresh") },
+    getText: (c) => (c.listing.IsStale ? "Stale (>60d)" : "Fresh") },
 
   // Suite & Density
   { key: "suite", label: "Suite", group: "suiteDensity", cellKind: "text",
