@@ -1,0 +1,94 @@
+name: Refresh Development-Activity Flags
+
+# Keeps the "Things to Know" dev_application flag fresh across all 7 launch-set cities.
+# Development applications change independently of listings (a new rezoning appears next to a
+# listing that hasn't re-synced), and the source data updates ~daily — so a WEEKLY reload +
+# full re-enrich keeps the flag (and its "as of" date) current on every listing, which the
+# monthly refresh-geo and the nightly listing-delta don't cover for dev_application.
+#
+# Two sources are FILE-BASED (no stable/tabular endpoint), so `--all`/the endpoint loop skips
+# them and they get their own harvest → --file steps:
+#   • Toronto  — CKAN dump, MTM zone 10 NAD27 → --srid 2019
+#   • Mississauga — service renamed monthly; the harvester resolves the current one via a
+#     stable web-map item.
+#
+# ANNUAL MAINTENANCE: bump the FILE_YEAR / DATE_* / DATE_SUBMITTED "2024" cutoffs in
+# geoDatasets.ts (Hamilton/Ottawa/Waterloo/York/Brampton `where`) and in the two harvesters
+# so the flag keeps tracking the *recent* pipeline rather than a growing archive.
+#
+# CADENCE: weekly (Mondays 06:00 UTC — clear of the 03:00 daily sync). Trigger manually anytime.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-dev-activity
+  cancel-in-progress: false
+
+jobs:
+  refresh-dev-activity:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: dev-activity-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # 1 — ArcGIS sources (Hamilton/Ottawa/Waterloo point; York/Brampton polygon→point).
+      #     The endpoint loop skips the file-based Toronto/Mississauga sources.
+      - name: Load ArcGIS dev-application sources
+        timeout-minutes: 30
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/loadGeoData.ts --dataset dev_application 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # 2 — Toronto (CKAN JSON dump → GeoJSON; MTM zone 10 NAD27 → --srid 2019).
+      - name: Harvest + load Toronto
+        timeout-minutes: 15
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node scripts/admin/harvest-toronto-dev-apps.mjs 2>&1 | tee -a "$SUMMARY_FILE"
+          npx tsx scripts/worker/loadGeoData.ts --dataset dev_application \
+            --file scripts/admin/dev-apps-toronto.geojson --srid 2019 --source-key toronto_dev_apps 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # 3 — Mississauga (resolve current service via stable web-map item → GeoJSON).
+      - name: Harvest + load Mississauga
+        timeout-minutes: 15
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node scripts/admin/harvest-mississauga-dev-apps.mjs 2>&1 | tee -a "$SUMMARY_FILE"
+          npx tsx scripts/worker/loadGeoData.ts --dataset dev_application \
+            --file scripts/admin/dev-apps-mississauga.geojson --source-key mississauga_dev_apps 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # 4 — Re-evaluate EVERY listing against the freshly loaded geometry (idempotent upserts).
+      - name: Re-enrich all listings (full geo-flags sweep)
+        timeout-minutes: 90
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/enrichGeoFlags.ts 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Development-Activity Flags Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts

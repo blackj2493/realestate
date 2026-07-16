@@ -54,8 +54,11 @@ const GEOM_TYPES: Record<GeoDataset["family"], Set<string>> = {
 };
 
 /** Postgres expression that normalizes a GeoJSON string `g` (in $3 srid) → 4326. */
-function geomExpr(family: GeoDataset["family"]): string {
+function geomExpr(family: GeoDataset["family"], toPoint?: boolean): string {
   const xf = "ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(g), $3::int), 4326)";
+  // toPoint: collapse an incoming POLYGON source to a representative interior point so it can
+  // live in a `point` dataset (e.g. York Region / Brampton dev-application footprints).
+  if (toPoint) return `ST_PointOnSurface(ST_CollectionExtract(ST_MakeValid(${xf}), 3))`;
   if (family === "point") return xf;
   const dim = family === "polygon" ? 3 : 2; // CollectionExtract: 3=polygon, 2=line
   return `ST_Multi(ST_CollectionExtract(ST_MakeValid(${xf}), ${dim}))`;
@@ -110,13 +113,21 @@ async function loadSource(
   srid: number,
   retrievedOn: string,
 ): Promise<number> {
-  const allow = GEOM_TYPES[ds.family];
+  const allow = source.toPoint ? GEOM_TYPES.polygon : GEOM_TYPES[ds.family];
   const geoms: string[] = [];
   const attrs: string[] = [];
   for (const f of features) {
     if (!f.geometry || !allow.has(f.geometry.type)) continue;
     geoms.push(JSON.stringify(f.geometry));
-    attrs.push(JSON.stringify(f.properties ?? {}));
+    // A per-source distance override rides along in attrs so enrichGeoFlags can match within
+    // a tighter radius for dense sources (e.g. Toronto). See GeoDatasetSource.matchRadiusM.
+    attrs.push(
+      JSON.stringify(
+        source.matchRadiusM
+          ? { ...(f.properties ?? {}), _match_radius_m: source.matchRadiusM }
+          : (f.properties ?? {}),
+      ),
+    );
   }
   console.log(`     ${geoms.length} ${ds.family} features (of ${features.length})`);
   if (geoms.length === 0) throw new Error(`no ${ds.family} features for ${source.sourceKey} — aborting`);
@@ -132,7 +143,7 @@ async function loadSource(
       const aChunk = attrs.slice(i, i + INSERT_CHUNK);
       const r = await client.query(
         `INSERT INTO geo_features (kind, source_key, attrs, geom)
-         SELECT $1, $2, a::jsonb, ${geomExpr(ds.family)}
+         SELECT $1, $2, a::jsonb, ${geomExpr(ds.family, source.toPoint)}
          FROM unnest($4::text[], $5::text[]) AS t(g, a)
          WHERE g IS NOT NULL`,
         [ds.kind, source.sourceKey, srid, gChunk, aChunk],
@@ -147,7 +158,7 @@ async function loadSource(
          SET kind = EXCLUDED.kind, name = EXCLUDED.name, url = EXCLUDED.url,
              license = EXCLUDED.license, feature_count = EXCLUDED.feature_count,
              retrieved_on = EXCLUDED.retrieved_on`,
-      [source.sourceKey, ds.kind, source.name, source.endpoint ?? null, ds.license, inserted, retrievedOn],
+      [source.sourceKey, ds.kind, source.name, source.endpoint ?? null, source.license ?? ds.license, inserted, retrievedOn],
     );
     await client.query("COMMIT");
     console.log(`     ✅ ${source.sourceKey}: ${inserted} rows`);

@@ -18,6 +18,8 @@ data/transit_stations.geojson
 # Reproduce via scripts/admin/harvest-*-zoning.mjs; the live overlay reads PostGIS
 # (loaded by scripts/admin/load-zoning.ts). Never commit the raw/large data.
 scripts/admin/zoning-*.geojson
+# dev_application harvest output — reproduce via scripts/admin/harvest-toronto-dev-apps.mjs
+scripts/admin/dev-apps-*.geojson
 
 # Production build
 build/
