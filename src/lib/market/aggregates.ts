@@ -349,3 +349,160 @@ export function getPriceCutsCached(region: string, typeKeys: string[], scope: Sc
     { revalidate: 86400 }
   )();
 }
+
+// small numeric coercion shared by the Phase-2 computes (SQL NULL must stay null).
+const num = (v: unknown): number | null => {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+// ── Sold dynamics (sold side, Phase-2 — migration 061) ───────────────────────────────
+// Time-to-sell + original-ask→sold gap + $/sqft dispersion, one trailing-12mo pass.
+
+export interface SoldDynamics {
+  soldCount: number;
+  medianDom: number | null;
+  p25Dom: number | null;
+  p75Dom: number | null;
+  medianPpsf: number | null;
+  p25Ppsf: number | null;
+  p75Ppsf: number | null;
+  ppsfSample: number;
+  /** median % (close − original ask)/original ask; negative = sold under original ask */
+  askGapMedian: number | null;
+  askGapSample: number;
+  /** share (0..1) that sold strictly below their ORIGINAL ask */
+  underAskShare: number | null;
+}
+
+export const EMPTY_SOLD_DYNAMICS: SoldDynamics = {
+  soldCount: 0, medianDom: null, p25Dom: null, p75Dom: null,
+  medianPpsf: null, p25Ppsf: null, p75Ppsf: null, ppsfSample: 0,
+  askGapMedian: null, askGapSample: 0, underAskShare: null,
+};
+
+async function computeSoldDynamics(region: string, typeKeys: string[], scope: Scope): Promise<SoldDynamics> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_sold_dynamics", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_min_beds: scope.minBeds,
+    p_min_baths: scope.minBaths,
+    p_min_parking: scope.minParking,
+    p_min_frontage: scope.minFrontage,
+    p_months: MONTHS / 2, // 12-month trailing window for stable medians
+    p_basement: scope.basement,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_SOLD_DYNAMICS;
+  return {
+    soldCount: num(row.sold_count) ?? 0,
+    medianDom: num(row.median_dom),
+    p25Dom: num(row.p25_dom),
+    p75Dom: num(row.p75_dom),
+    medianPpsf: num(row.median_ppsf),
+    p25Ppsf: num(row.p25_ppsf),
+    p75Ppsf: num(row.p75_ppsf),
+    ppsfSample: num(row.ppsf_sample) ?? 0,
+    askGapMedian: num(row.ask_gap_median),
+    askGapSample: num(row.ask_gap_sample) ?? 0,
+    underAskShare: num(row.under_ask_share),
+  };
+}
+
+/** Cached sold dynamics for a scope. Caller must pass the VOW gate first. */
+export function getSoldDynamicsCached(region: string, typeKeys: string[], scope: Scope): Promise<SoldDynamics> {
+  const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
+  return unstable_cache(
+    () => computeSoldDynamics(region, typeKeys, scope),
+    ["market-sold-dynamics", "v1", region.toLowerCase(), k], // v1 = migration 061
+    { revalidate: 86400 }
+  )();
+}
+
+// ── Rental yield (Phase-2 — migration 062) ───────────────────────────────────────────
+// Per-bedroom typical rent (rental_market_index) + gross yield vs 12mo median sold price.
+
+export interface RentalYieldRow {
+  beds: number;
+  typicalRent: number | null;
+  rentSample: number;
+  medianPrice: number | null;
+  priceSample: number;
+  grossYieldPct: number | null;
+}
+export interface RentalYield {
+  rows: RentalYieldRow[];
+}
+export const EMPTY_RENTAL: RentalYield = { rows: [] };
+
+async function computeRentalYield(region: string, typeKeys: string[]): Promise<RentalYield> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_rental_yield", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+  });
+  if (error) throw new Error(error.message);
+  const rows = (Array.isArray(data) ? data : []).map((r) => ({
+    beds: num(r.beds) ?? 0,
+    typicalRent: num(r.typical_rent),
+    rentSample: num(r.rent_sample) ?? 0,
+    medianPrice: num(r.median_price),
+    priceSample: num(r.price_sample) ?? 0,
+    grossYieldPct: num(r.gross_yield_pct),
+  }));
+  return { rows };
+}
+
+/** Cached rental yield for a region + type scope. Caller must pass the VOW gate first. */
+export function getRentalYieldCached(region: string, typeKeys: string[]): Promise<RentalYield> {
+  return unstable_cache(
+    () => computeRentalYield(region, typeKeys),
+    ["market-rental-yield", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 062
+    { revalidate: 86400 }
+  )();
+}
+
+// ── AVM reliability (Phase-2 — migration 062) ────────────────────────────────────────
+
+export interface AvmReliability {
+  cohortCount: number;
+  salesAnalyzed: number;
+  wavgR2: number | null;     // 0..1
+  wavgMaePct: number | null; // sales-weighted mean abs error, %
+}
+export const EMPTY_AVM: AvmReliability = {
+  cohortCount: 0, salesAnalyzed: 0, wavgR2: null, wavgMaePct: null,
+};
+
+async function computeAvmReliability(region: string, typeKeys: string[]): Promise<AvmReliability> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_avm_reliability", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_AVM;
+  return {
+    cohortCount: num(row.cohort_count) ?? 0,
+    salesAnalyzed: num(row.sales_analyzed) ?? 0,
+    wavgR2: num(row.wavg_r2),
+    wavgMaePct: num(row.wavg_mae_pct),
+  };
+}
+
+/** Cached AVM reliability for a region + type scope. Caller must pass the VOW gate first. */
+export function getAvmReliabilityCached(region: string, typeKeys: string[]): Promise<AvmReliability> {
+  return unstable_cache(
+    () => computeAvmReliability(region, typeKeys),
+    ["market-avm-reliability", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 062
+    { revalidate: 86400 }
+  )();
+}

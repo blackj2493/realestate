@@ -68,6 +68,57 @@ export interface PriceCutsResp {
   error?: string;
 }
 
+/** Sold-side dynamics (from /api/market/sold-dynamics — migration 061 RPC). */
+export interface SoldDynamicsData {
+  soldCount: number;
+  medianDom: number | null;
+  p25Dom: number | null;
+  p75Dom: number | null;
+  medianPpsf: number | null;
+  p25Ppsf: number | null;
+  p75Ppsf: number | null;
+  ppsfSample: number;
+  askGapMedian: number | null; // % (close − original ask)/original ask; negative = under ask
+  askGapSample: number;
+  underAskShare: number | null; // 0..1
+}
+export interface SoldDynamicsResp {
+  region: string;
+  dynamics: SoldDynamicsData;
+  locked?: boolean;
+  error?: string;
+}
+
+/** Rent & gross yield by bedroom (from /api/market/rental-yield — migration 062 RPC). */
+export interface RentalYieldRowData {
+  beds: number;
+  typicalRent: number | null;
+  rentSample: number;
+  medianPrice: number | null;
+  priceSample: number;
+  grossYieldPct: number | null;
+}
+export interface RentalYieldResp {
+  region: string;
+  rental: { rows: RentalYieldRowData[] };
+  locked?: boolean;
+  error?: string;
+}
+
+/** AVM estimate confidence (from /api/market/avm-reliability — migration 062 RPC). */
+export interface AvmReliabilityData {
+  cohortCount: number;
+  salesAnalyzed: number;
+  wavgR2: number | null;
+  wavgMaePct: number | null;
+}
+export interface AvmReliabilityResp {
+  region: string;
+  avm: AvmReliabilityData;
+  locked?: boolean;
+  error?: string;
+}
+
 /** Server-prefetched initial scope + payloads (from analytics/page.tsx). */
 export interface AnalyticsInitial {
   region: string;
@@ -76,6 +127,9 @@ export interface AnalyticsInitial {
   stats: RegionStatsResp | null;
   dom: DomDistResp | null;
   cuts: PriceCutsResp | null;
+  dynamics: SoldDynamicsResp | null;
+  rental: RentalYieldResp | null;
+  avm: AvmReliabilityResp | null;
 }
 
 const makeScopeKey = (region: string, typeKeys: string[]) =>
@@ -453,6 +507,323 @@ function AbsorptionPanel({
   );
 }
 
+// ── Market momentum (derived — no fetch; from the monthly sold-trend points) ──────────
+interface MomentumPt { medianPrice?: number | null; sales?: number | null; soldToList?: number | null }
+interface Momentum {
+  pricePct: number | null;
+  salesPct: number | null;
+  s2lDeltaPp: number | null;
+  label: "Heating up" | "Cooling" | "Steady" | null;
+}
+function computeMomentum(points: MomentumPt[]): Momentum {
+  const settled = points.slice(0, -1); // drop the current, still-accruing month
+  const avg = (arr: MomentumPt[], key: keyof MomentumPt) => {
+    const vals = arr
+      .map((p) => p[key])
+      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  };
+  if (settled.length < 6) return { pricePct: null, salesPct: null, s2lDeltaPp: null, label: null };
+  const recent = settled.slice(-3);
+  const prior = settled.slice(-6, -3);
+  const rP = avg(recent, "medianPrice"), pP = avg(prior, "medianPrice");
+  const rS = avg(recent, "sales"), pS = avg(prior, "sales");
+  const rL = avg(recent, "soldToList"), pL = avg(prior, "soldToList");
+  const pricePct = rP != null && pP != null && pP > 0 ? ((rP - pP) / pP) * 100 : null;
+  const salesPct = rS != null && pS != null && pS > 0 ? ((rS - pS) / pS) * 100 : null;
+  const s2lDeltaPp = rL != null && pL != null ? rL - pL : null;
+  let label: Momentum["label"] = null;
+  if (pricePct != null || s2lDeltaPp != null) {
+    const up = (pricePct ?? 0) > 1 || (s2lDeltaPp ?? 0) > 0.5;
+    const down = (pricePct ?? 0) < -1 || (s2lDeltaPp ?? 0) < -0.5;
+    label = up && !down ? "Heating up" : down && !up ? "Cooling" : "Steady";
+  }
+  return { pricePct, salesPct, s2lDeltaPp, label };
+}
+
+function MomentumStat({ label, value, unit }: { label: string; value: number | null; unit: string }) {
+  const has = value != null;
+  const up = (value ?? 0) >= 0;
+  return (
+    <div>
+      <p className="terminal-font text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <div
+        className={`mt-1 font-mono text-2xl font-bold ${
+          !has ? "text-muted-foreground" : up ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
+        }`}
+      >
+        {has ? `${up ? "▲" : "▼"} ${Math.abs(value!).toFixed(1)}${unit}` : "—"}
+      </div>
+    </div>
+  );
+}
+
+/** Phase-2 "Market Momentum" — 3-mo vs prior-3-mo deltas, derived from the trend points. */
+function MomentumPanel({ points, loading }: { points: MomentumPt[]; loading: boolean }) {
+  const m = useMemo(() => computeMomentum(points), [points]);
+  const chip =
+    m.label === "Heating up"
+      ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/40"
+      : m.label === "Cooling"
+        ? "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/40"
+        : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40";
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Market Momentum
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">last 3 months vs the prior 3 — is this market accelerating?</span>
+        {!loading && m.label && (
+          <span className={`terminal-font ml-auto border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${chip}`}>
+            {m.label}
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-14 w-full animate-pulse bg-muted/40" />
+      ) : m.pricePct == null && m.salesPct == null && m.s2lDeltaPp == null ? (
+        <p className="mt-4 text-xs text-muted-foreground">Not enough monthly history for this scope</p>
+      ) : (
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <MomentumStat label="Median price" value={m.pricePct} unit="%" />
+          <MomentumStat label="Sales pace" value={m.salesPct} unit="%" />
+          <MomentumStat label="Sold-to-list" value={m.s2lDeltaPp} unit="pp" />
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · 3-mo vs prior 3-mo averages · current partial month excluded
+      </p>
+    </div>
+  );
+}
+
+/** Compact p25–median–p75 range bar for the sold-dynamics blocks. */
+function RangeBar({ p25, median, p75, lo, hi }: { p25: number | null; median: number | null; p75: number | null; lo: number; hi: number }) {
+  if (p25 == null || p75 == null || hi <= lo) return null;
+  const at = (v: number) => `${Math.min(100, Math.max(0, ((v - lo) / (hi - lo)) * 100))}%`;
+  return (
+    <div className="relative mt-3 h-5">
+      <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+      <div
+        className="absolute top-1/2 h-3 -translate-y-1/2 rounded-sm border border-cyan-600/70 bg-cyan-500/15 dark:border-cyan-400/50"
+        style={{ left: at(p25), right: `calc(100% - ${at(p75)})` }}
+      />
+      {median != null && (
+        <div
+          className="absolute top-1/2 h-5 w-[2px] -translate-x-1/2 -translate-y-1/2 rounded-sm bg-cyan-600 dark:bg-cyan-300"
+          style={{ left: at(median) }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Phase-2 "Sold-Side Dynamics" — time-to-sell + original-ask gap + $/sqft dispersion. */
+function SoldDynamicsPanel({ d, loading }: { d: SoldDynamicsData | null; loading: boolean }) {
+  const sold = d?.soldCount ?? 0;
+  const gap = d?.askGapMedian ?? null;
+  const under = d?.underAskShare ?? null;
+  const domHi = Math.max(60, Math.ceil((((d?.p75Dom ?? 60) * 1.25) || 60) / 15) * 15);
+  const ppsfLo = d?.p25Ppsf != null ? Math.floor((d.p25Ppsf * 0.85) / 10) * 10 : 0;
+  const ppsfHi = d?.p75Ppsf != null ? Math.ceil((d.p75Ppsf * 1.15) / 10) * 10 : 0;
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Sold-Side Dynamics
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">how the market actually clears — trailing 12 months</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-28 w-full animate-pulse bg-muted/40" />
+      ) : sold === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">No recent sold data for this scope</p>
+      ) : (
+        <div className="mt-4 grid gap-6 md:grid-cols-3">
+          {/* time-to-sell */}
+          <div className="md:border-r md:border-border md:pr-6">
+            <div className="font-mono text-4xl font-bold leading-none text-cyan-700 dark:text-cyan-300">
+              {d!.medianDom ?? "—"}
+              <span className="ml-1 text-lg text-muted-foreground">d</span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">median days to sell</p>
+            <RangeBar p25={d!.p25Dom} median={d!.medianDom} p75={d!.p75Dom} lo={0} hi={domHi} />
+            <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+              half sell in {d!.p25Dom ?? "—"}–{d!.p75Dom ?? "—"} days
+            </p>
+          </div>
+
+          {/* sold vs original ask */}
+          <div className="md:border-r md:border-border md:pr-6">
+            <div
+              className={`font-mono text-4xl font-bold leading-none ${
+                gap == null ? "text-muted-foreground" : gap < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"
+              }`}
+            >
+              {gap == null ? "—" : `${gap > 0 ? "+" : ""}${gap.toFixed(1)}%`}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">median sold vs original ask</p>
+            <div className="mt-3 h-3 w-full overflow-hidden rounded-sm bg-muted/50">
+              <div
+                className="h-full rounded-sm bg-rose-500/70"
+                style={{ width: `${under != null ? Math.round(under * 100) : 0}%` }}
+              />
+            </div>
+            <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+              {under != null ? `${Math.round(under * 100)}% sold below their first ask` : "—"}
+            </p>
+          </div>
+
+          {/* $/sqft dispersion */}
+          <div>
+            <div className="font-mono text-4xl font-bold leading-none text-foreground">
+              {d!.medianPpsf != null ? `$${d!.medianPpsf}` : "—"}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">median sold $/sqft</p>
+            <RangeBar p25={d!.p25Ppsf} median={d!.medianPpsf} p75={d!.p75Ppsf} lo={ppsfLo} hi={ppsfHi} />
+            <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+              middle 50%: ${d!.p25Ppsf ?? "—"}–${d!.p75Ppsf ?? "—"}/sqft
+            </p>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · {sold.toLocaleString()} sold · board DaysOnMarket · OriginalListPrice · close $psf
+      </p>
+    </div>
+  );
+}
+
+/** Phase-2 "Rent & Gross Yield" — per-bedroom typical rent + gross yield bars. */
+function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loading: boolean }) {
+  const withYield = rows.filter((r) => r.grossYieldPct != null);
+  const maxYield = Math.max(6, ...withYield.map((r) => r.grossYieldPct ?? 0));
+  const fmtRent = (v: number | null) => (v == null ? "—" : `$${Math.round(v).toLocaleString()}`);
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Rent &amp; Gross Yield
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">typical monthly rent &amp; gross yield by home size</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-32 w-full animate-pulse bg-muted/40" />
+      ) : rows.length === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">No rental index coverage for this scope</p>
+      ) : (
+        <div className="mt-4">
+          <div className="grid grid-cols-[3rem_1fr_1fr_2fr] gap-x-3 border-b border-border pb-2 terminal-font text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <span>Beds</span>
+            <span className="text-right">Rent / mo</span>
+            <span className="text-right">Med. price</span>
+            <span className="pl-3">Gross yield</span>
+          </div>
+          {rows.map((r) => {
+            const y = r.grossYieldPct;
+            return (
+              <div key={r.beds} className="grid grid-cols-[3rem_1fr_1fr_2fr] items-center gap-x-3 border-b border-border/60 py-2 text-xs">
+                <span className="font-mono font-bold text-foreground">{r.beds}BR</span>
+                <span className="text-right font-mono text-foreground">{fmtRent(r.typicalRent)}</span>
+                <span className="text-right font-mono text-muted-foreground">
+                  {r.medianPrice != null ? fmtPrice(r.medianPrice) : "—"}
+                </span>
+                <div className="flex items-center gap-2 pl-3">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-sm bg-muted/50">
+                    {y != null && (
+                      <div className="h-full rounded-sm bg-cyan-600 dark:bg-cyan-400" style={{ width: `${Math.min(100, (y / maxYield) * 100)}%` }} />
+                    )}
+                  </div>
+                  <span className="w-12 shrink-0 text-right font-mono font-semibold text-cyan-700 dark:text-cyan-300">
+                    {y != null ? `${y.toFixed(1)}%` : "—"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · rental index rent × 12 ÷ 12-month median sold price · yields are approximate
+      </p>
+    </div>
+  );
+}
+
+/** Phase-2 "Estimate Confidence" — sales-weighted AVM MAE headline + R² fit bar. */
+function AvmConfidencePanel({ avm, loading }: { avm: AvmReliabilityData | null; loading: boolean }) {
+  const mae = avm?.wavgMaePct ?? null;
+  const r2 = avm?.wavgR2 ?? null;
+  const sales = avm?.salesAnalyzed ?? 0;
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Estimate Confidence
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">how close our AVM lands in this area — we show our work</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-24 w-full animate-pulse bg-muted/40" />
+      ) : sales === 0 || mae == null ? (
+        <p className="mt-4 text-xs text-muted-foreground">Not enough model coverage for this area</p>
+      ) : (
+        <div className="mt-4 grid gap-6 sm:grid-cols-[1fr_1.4fr]">
+          <div className="sm:border-r sm:border-border sm:pr-6">
+            <div className="font-mono text-4xl font-bold leading-none text-cyan-700 dark:text-cyan-300">
+              ±{mae.toFixed(1)}%
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              typical estimate lands within <span className="font-mono text-foreground">±{mae.toFixed(1)}%</span> of the eventual sale price
+            </p>
+          </div>
+          <div className="self-center">
+            <div className="flex items-baseline justify-between text-[11px]">
+              <span className="terminal-font font-bold uppercase tracking-wider text-muted-foreground">Model fit (R²)</span>
+              <span className="font-mono font-semibold text-foreground">{r2 != null ? r2.toFixed(2) : "—"}</span>
+            </div>
+            <div className="mt-2 h-3 w-full overflow-hidden rounded-sm bg-muted/50">
+              <div
+                className="h-full rounded-sm bg-gradient-to-r from-cyan-500 to-emerald-500"
+                style={{ width: `${r2 != null ? Math.round(Math.min(1, Math.max(0, r2)) * 100) : 0}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {r2 != null
+                ? `R² explains ${Math.round(r2 * 100)}% of price variance across ${sales.toLocaleString()} recent sales`
+                : `${sales.toLocaleString()} recent sales`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · avm_audit_report · sales-weighted across {(avm?.cohortCount ?? 0).toLocaleString()} cohorts
+      </p>
+    </div>
+  );
+}
+
 export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
   const chart = useChartTheme();
   const router = useRouter();
@@ -480,6 +851,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
     stats: RegionStatsResp | null;
     dom: DomDistResp | null;
     cuts: PriceCutsResp | null;
+    dynamics: SoldDynamicsResp | null;
+    rental: RentalYieldResp | null;
+    avm: AvmReliabilityResp | null;
     error: boolean;
   } | null>(() =>
     initial
@@ -489,6 +863,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           stats: initial.stats,
           dom: initial.dom,
           cuts: initial.cuts,
+          dynamics: initial.dynamics,
+          rental: initial.rental,
+          avm: initial.avm,
           error: initial.trend == null && initial.stats == null,
         }
       : null
@@ -519,8 +896,11 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
       fetch(`/api/market/region-stats?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/dom-distribution?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/price-cuts?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/sold-dynamics?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/rental-yield?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/avm-reliability?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([tr, st, dm, ct]) => {
+      .then(([tr, st, dm, ct, dy, re, av]) => {
         if (!alive) return;
         setResult({
           key: scopeKey,
@@ -528,12 +908,15 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           stats: st as RegionStatsResp | null,
           dom: dm as DomDistResp | null,
           cuts: ct as PriceCutsResp | null,
+          dynamics: dy as SoldDynamicsResp | null,
+          rental: re as RentalYieldResp | null,
+          avm: av as AvmReliabilityResp | null,
           error: tr == null && st == null,
         });
       })
       .catch(() => {
         if (!alive) return;
-        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, error: true });
+        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, dynamics: null, rental: null, avm: null, error: true });
       });
     return () => {
       alive = false;
@@ -548,6 +931,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const stats = !loading ? result?.stats ?? null : null;
   const dom = !loading ? result?.dom?.dom ?? null : null;
   const cuts = !loading ? result?.cuts?.cuts ?? null : null;
+  const dynamics = !loading ? result?.dynamics?.dynamics ?? null : null;
+  const rental = !loading ? result?.rental?.rental?.rows ?? [] : [];
+  const avm = !loading ? result?.avm?.avm ?? null : null;
 
   const score = useMemo(() => assembleRegionScore(region, trend, stats), [region, trend, stats]);
   const points = trend?.points ?? [];
@@ -684,6 +1070,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           />
         </div>
 
+        {/* Phase-2: Market momentum (derived from the trend points — no extra fetch) */}
+        <MomentumPanel points={points} loading={loading} />
+
         {/* Tier-1: True Days on Market (relist-stitched median + aging + 60d stale + hidden gap) */}
         <TrueDomPanel dom={dom} loading={loading} />
 
@@ -799,6 +1188,15 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             )}
           </div>
         </div>
+
+        {/* Phase-2: Sold-side dynamics — time-to-sell + original-ask gap + $/sqft dispersion */}
+        <SoldDynamicsPanel d={dynamics} loading={loading} />
+
+        {/* Phase-2: Rent & gross yield by bedroom (dormant rental_market_index, now surfaced) */}
+        <RentalYieldPanel rows={rental} loading={loading} />
+
+        {/* Phase-2: AVM estimate confidence — sales-weighted R²/MAE for the area */}
+        <AvmConfidencePanel avm={avm} loading={loading} />
 
         {/* Investor extras HouseSigma doesn't show: cap-rate aggregates for the active set */}
         {(score.medianCapRate != null || score.topCapRate != null) && (

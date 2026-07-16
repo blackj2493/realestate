@@ -15,7 +15,16 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
 import { parseTypeKeys } from "@/lib/dashboard/propertyTypes";
-import { getTrendCached, getStatsCached, getDomDistCached, getPriceCutsCached, ZERO_SCOPE } from "@/lib/market/aggregates";
+import {
+  getTrendCached,
+  getStatsCached,
+  getDomDistCached,
+  getPriceCutsCached,
+  getSoldDynamicsCached,
+  getRentalYieldCached,
+  getAvmReliabilityCached,
+  ZERO_SCOPE,
+} from "@/lib/market/aggregates";
 import AnalyticsClient, { type AnalyticsInitial } from "./AnalyticsClient";
 import SubmarketLeaderboard from "@/components/dashboard/SubmarketLeaderboard";
 
@@ -54,17 +63,23 @@ export default async function AnalyticsPage({
   // unavailable (e.g. migration 040 not yet applied), fall back to a client fetch.
   let initial: AnalyticsInitial | undefined;
   if (REGION_RE.test(region)) {
-    const [trendR, statsR, domR, cutsR] = await Promise.allSettled([
+    const [trendR, statsR, domR, cutsR, dynR, rentR, avmR] = await Promise.allSettled([
       getTrendCached(region, typeKeys, ZERO_SCOPE),
       getStatsCached(region, typeKeys, ZERO_SCOPE),
       getDomDistCached(region, typeKeys, ZERO_SCOPE),
       getPriceCutsCached(region, typeKeys, ZERO_SCOPE),
+      getSoldDynamicsCached(region, typeKeys, ZERO_SCOPE),
+      getRentalYieldCached(region, typeKeys),
+      getAvmReliabilityCached(region, typeKeys),
     ]);
     const trend = trendR.status === "fulfilled" ? trendR.value : null;
     const stats = statsR.status === "fulfilled" ? statsR.value : null;
     const dom = domR.status === "fulfilled" ? domR.value : null;
     const cuts = cutsR.status === "fulfilled" ? cutsR.value : null;
-    if (trend || stats || dom || cuts) {
+    const dynamics = dynR.status === "fulfilled" ? dynR.value : null;
+    const rental = rentR.status === "fulfilled" ? rentR.value : null;
+    const avm = avmR.status === "fulfilled" ? avmR.value : null;
+    if (trend || stats || dom || cuts || dynamics || rental || avm) {
       initial = {
         region,
         typeKeys,
@@ -72,6 +87,9 @@ export default async function AnalyticsPage({
         stats: stats ? { region, stats } : null,
         dom: dom ? { region, dom } : null,
         cuts: cuts ? { region, cuts } : null,
+        dynamics: dynamics ? { region, dynamics } : null,
+        rental: rental ? { region, rental } : null,
+        avm: avm ? { region, avm } : null,
       };
     }
   }
