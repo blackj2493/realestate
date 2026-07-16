@@ -49,6 +49,7 @@ export interface TrendPoint {
   medianPrice: number;
   medianPpsf: number | null;
   sales: number;
+  soldToList?: number | null; // per-month sold-to-list % (migration 059)
 }
 
 export interface TrendSummary {
@@ -224,6 +225,8 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
 export interface DomDist {
   activeCount: number;
   medianTrueDom: number | null;
+  /** median naive DOM (days since OriginalEntryTimestamp — resets on relist). Hidden-gap contrast. */
+  medianNaiveDom: number | null;
   p25: number | null;
   p75: number | null;
   /** share of active with true_dom >= 61 (60d+ stale line), 0..1 */
@@ -232,7 +235,7 @@ export interface DomDist {
 }
 
 export const EMPTY_DOM: DomDist = {
-  activeCount: 0, medianTrueDom: null, p25: null, p75: null, stalePct: null,
+  activeCount: 0, medianTrueDom: null, medianNaiveDom: null, p25: null, p75: null, stalePct: null,
   buckets: { d0_14: 0, d15_30: 0, d31_60: 0, d61_90: 0, d90plus: 0 },
 };
 
@@ -270,6 +273,7 @@ async function computeDomDist(region: string, typeKeys: string[], scope: Scope):
   return {
     activeCount: active,
     medianTrueDom: num(row.median_true_dom),
+    medianNaiveDom: num(row.median_naive_dom),
     p25: num(row.p25_true_dom),
     p75: num(row.p75_true_dom),
     stalePct: active > 0 ? (buckets.d61_90 + buckets.d90plus) / active : null,
@@ -282,7 +286,66 @@ export function getDomDistCached(region: string, typeKeys: string[], scope: Scop
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeDomDist(region, typeKeys, scope),
-    ["market-dom-dist", "v1", region.toLowerCase(), k], // v1 = migration 056 (region_dom_distribution)
+    ["market-dom-dist", "v2", region.toLowerCase(), k], // v2 = migration 057 (+ median_naive_dom)
+    { revalidate: 86400 }
+  )();
+}
+
+// ── Price-cut pressure (active side, Tier-1 B) ───────────────────────────────────────
+
+export interface PriceCuts {
+  activeCount: number;
+  cutCount: number;
+  /** share of active with a price cut, 0..1 */
+  cutShare: number | null;
+  medianCutAmt: number | null; // median $ reduction among cut listings
+  medianCutPct: number | null; // median % reduction among cut listings
+}
+
+export const EMPTY_CUTS: PriceCuts = {
+  activeCount: 0, cutCount: 0, cutShare: null, medianCutAmt: null, medianCutPct: null,
+};
+
+async function computePriceCuts(region: string, typeKeys: string[], scope: Scope): Promise<PriceCuts> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_price_cuts", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_min_beds: scope.minBeds,
+    p_min_baths: scope.minBaths,
+    p_min_parking: scope.minParking,
+    p_min_frontage: scope.minFrontage,
+    p_basement: scope.basement,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_CUTS;
+
+  const num = (v: unknown): number | null => {
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const active = num(row.active_count) ?? 0;
+  const cuts = num(row.cut_count) ?? 0;
+  return {
+    activeCount: active,
+    cutCount: cuts,
+    cutShare: active > 0 ? cuts / active : null,
+    medianCutAmt: num(row.median_cut_amt),
+    medianCutPct: num(row.median_cut_pct),
+  };
+}
+
+/** Cached price-cut pressure for a scope. Caller must pass the VOW gate first. */
+export function getPriceCutsCached(region: string, typeKeys: string[], scope: Scope): Promise<PriceCuts> {
+  const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
+  return unstable_cache(
+    () => computePriceCuts(region, typeKeys, scope),
+    ["market-price-cuts", "v1", region.toLowerCase(), k], // v1 = migration 058 (region_price_cuts)
     { revalidate: 86400 }
   )();
 }

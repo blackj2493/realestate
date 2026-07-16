@@ -15,7 +15,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
 import { parseTypeKeys } from "@/lib/dashboard/propertyTypes";
-import { getTrendCached, getStatsCached, getDomDistCached, ZERO_SCOPE } from "@/lib/market/aggregates";
+import { getTrendCached, getStatsCached, getDomDistCached, getPriceCutsCached, ZERO_SCOPE } from "@/lib/market/aggregates";
 import AnalyticsClient, { type AnalyticsInitial } from "./AnalyticsClient";
 import SubmarketLeaderboard from "@/components/dashboard/SubmarketLeaderboard";
 
@@ -54,21 +54,24 @@ export default async function AnalyticsPage({
   // unavailable (e.g. migration 040 not yet applied), fall back to a client fetch.
   let initial: AnalyticsInitial | undefined;
   if (REGION_RE.test(region)) {
-    const [trendR, statsR, domR] = await Promise.allSettled([
+    const [trendR, statsR, domR, cutsR] = await Promise.allSettled([
       getTrendCached(region, typeKeys, ZERO_SCOPE),
       getStatsCached(region, typeKeys, ZERO_SCOPE),
       getDomDistCached(region, typeKeys, ZERO_SCOPE),
+      getPriceCutsCached(region, typeKeys, ZERO_SCOPE),
     ]);
     const trend = trendR.status === "fulfilled" ? trendR.value : null;
     const stats = statsR.status === "fulfilled" ? statsR.value : null;
     const dom = domR.status === "fulfilled" ? domR.value : null;
-    if (trend || stats || dom) {
+    const cuts = cutsR.status === "fulfilled" ? cutsR.value : null;
+    if (trend || stats || dom || cuts) {
       initial = {
         region,
         typeKeys,
         trend: trend ? { region, points: trend.points, summary: trend.summary } : null,
         stats: stats ? { region, stats } : null,
         dom: dom ? { region, dom } : null,
+        cuts: cuts ? { region, cuts } : null,
       };
     }
   }

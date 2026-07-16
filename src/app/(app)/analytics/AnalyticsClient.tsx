@@ -40,6 +40,7 @@ const DEFAULT_REGION = "Brampton";
 export interface DomDistData {
   activeCount: number;
   medianTrueDom: number | null;
+  medianNaiveDom: number | null; // days since OriginalEntryTimestamp (resets on relist)
   p25: number | null;
   p75: number | null;
   stalePct: number | null; // 0..1, share with true_dom >= 61 (60d+ stale line)
@@ -52,6 +53,21 @@ export interface DomDistResp {
   error?: string;
 }
 
+/** Price-cut pressure response (from /api/market/price-cuts — migration 058 RPC). */
+export interface PriceCutsData {
+  activeCount: number;
+  cutCount: number;
+  cutShare: number | null; // 0..1
+  medianCutAmt: number | null; // median $ reduction among cut listings
+  medianCutPct: number | null; // median % reduction among cut listings
+}
+export interface PriceCutsResp {
+  region: string;
+  cuts: PriceCutsData;
+  locked?: boolean;
+  error?: string;
+}
+
 /** Server-prefetched initial scope + payloads (from analytics/page.tsx). */
 export interface AnalyticsInitial {
   region: string;
@@ -59,17 +75,19 @@ export interface AnalyticsInitial {
   trend: PriceTrendResp | null;
   stats: RegionStatsResp | null;
   dom: DomDistResp | null;
+  cuts: PriceCutsResp | null;
 }
 
 const makeScopeKey = (region: string, typeKeys: string[]) =>
   `${region}|${[...typeKeys].sort().join(",")}`;
 
-type Metric = "price" | "ppsf" | "sales";
+type Metric = "price" | "ppsf" | "sales" | "s2l";
 
 const METRIC_TABS: [Metric, string][] = [
   ["price", "Median Price"],
   ["ppsf", "$ / Sqft"],
   ["sales", "Sales Volume"],
+  ["s2l", "Sold / List"],
 ];
 
 function shortMonth(key: string): string {
@@ -145,6 +163,9 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
   const b = dom?.buckets;
   const pct = (n: number) => (active > 0 ? (n / active) * 100 : 0);
   const staleLineLeft = b ? pct(b.d0_14 + b.d15_30 + b.d31_60) : 0;
+  const mt = dom?.medianTrueDom ?? null;
+  const mn = dom?.medianNaiveDom ?? null;
+  const gapMult = mt != null && mn != null && mn > 0 ? mt / mn : null;
   return (
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -173,6 +194,24 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
               median true DoM ·{" "}
               <span className="font-mono">p25 {dom!.p25 ?? "—"} · p75 {dom!.p75 ?? "—"}</span>
             </p>
+            {/* Self-suppressing: only shown where TRUE DoM genuinely exceeds the naive/feed
+                median (>=1.15x). Where the true_dom=0 coverage gap inverts the medians, the
+                block simply doesn't render — never a false "N× longer" claim. */}
+            {mn != null && gapMult != null && gapMult >= 1.15 && (
+              <div className="mt-3 rounded-sm border border-border bg-background/40 px-2.5 py-2">
+                <div className="terminal-font text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Hidden DoM gap
+                </div>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                  <span className="text-muted-foreground">MLS # shows</span>
+                  <span className="font-mono font-semibold text-foreground">{mn}d</span>
+                  <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">· {gapMult.toFixed(1)}× longer</span>
+                </div>
+                <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
+                  the feed number resets on every relist
+                </p>
+              </div>
+            )}
           </div>
 
           {/* aging curve */}
@@ -216,6 +255,68 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
   );
 }
 
+/** Tier-1 "Price-cut pressure" panel — share of active reduced + median $ / % cut depth. */
+function PriceCutPanel({ cuts, loading }: { cuts: PriceCutsData | null; loading: boolean }) {
+  const active = cuts?.activeCount ?? 0;
+  const share = cuts?.cutShare ?? null;
+  const sharePct = share != null ? Math.round(share * 100) : 0;
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Price-Cut Pressure
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">active listings that have reduced their ask</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-16 w-full animate-pulse bg-muted/40" />
+      ) : active === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">No active inventory for this scope</p>
+      ) : (
+        <div className="mt-4 grid gap-6 sm:grid-cols-[1.3fr_1fr]">
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-4xl font-bold text-foreground">
+                {share != null ? `${sharePct}%` : "—"}
+              </span>
+              <span className="text-xs text-muted-foreground">of active listings have cut their price</span>
+            </div>
+            <div className="mt-3 h-3 w-full overflow-hidden rounded-sm bg-muted/50">
+              <div
+                className="h-full rounded-sm bg-gradient-to-r from-cyan-500 to-rose-500"
+                style={{ width: `${sharePct}%` }}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 self-center">
+            <div>
+              <div className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+                {cuts!.medianCutPct != null ? `−${cuts!.medianCutPct.toFixed(1)}%` : "—"}
+              </div>
+              <div className="text-[11px] text-muted-foreground">median cut depth</div>
+            </div>
+            <div>
+              <div className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+                {cuts!.medianCutAmt != null ? `−${fmtPrice(cuts!.medianCutAmt)}` : "—"}
+              </div>
+              <div className="text-[11px] text-muted-foreground">median $ reduction</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · relist-stitched TotalPriceDrop · {(cuts?.cutCount ?? 0).toLocaleString()} of{" "}
+        {active.toLocaleString()} active reduced
+      </p>
+    </div>
+  );
+}
+
 export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
   const chart = useChartTheme();
   const router = useRouter();
@@ -242,6 +343,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
     trend: PriceTrendResp | null;
     stats: RegionStatsResp | null;
     dom: DomDistResp | null;
+    cuts: PriceCutsResp | null;
     error: boolean;
   } | null>(() =>
     initial
@@ -250,6 +352,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           trend: initial.trend,
           stats: initial.stats,
           dom: initial.dom,
+          cuts: initial.cuts,
           error: initial.trend == null && initial.stats == null,
         }
       : null
@@ -279,20 +382,22 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
       fetch(`/api/market/price-trend?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/region-stats?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/dom-distribution?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/price-cuts?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([tr, st, dm]) => {
+      .then(([tr, st, dm, ct]) => {
         if (!alive) return;
         setResult({
           key: scopeKey,
           trend: tr as PriceTrendResp | null,
           stats: st as RegionStatsResp | null,
           dom: dm as DomDistResp | null,
+          cuts: ct as PriceCutsResp | null,
           error: tr == null && st == null,
         });
       })
       .catch(() => {
         if (!alive) return;
-        setResult({ key: scopeKey, trend: null, stats: null, dom: null, error: true });
+        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, error: true });
       });
     return () => {
       alive = false;
@@ -306,6 +411,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const trend = !loading ? result?.trend ?? null : null;
   const stats = !loading ? result?.stats ?? null : null;
   const dom = !loading ? result?.dom?.dom ?? null : null;
+  const cuts = !loading ? result?.cuts?.cuts ?? null : null;
 
   const score = useMemo(() => assembleRegionScore(region, trend, stats), [region, trend, stats]);
   const points = trend?.points ?? [];
@@ -316,8 +422,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
 
   const temp = score.temperature ? TEMP_STYLE[score.temperature] : null;
   const isSales = metric === "sales";
-  const lineKey = metric === "ppsf" ? "medianPpsf" : "medianPrice";
-  const lineFmt = metric === "ppsf" ? (v: number) => `$${Math.round(v)}` : fmtPrice;
+  const lineKey = metric === "ppsf" ? "medianPpsf" : metric === "s2l" ? "soldToList" : "medianPrice";
+  const lineFmt =
+    metric === "ppsf"
+      ? (v: number) => `$${Math.round(v)}`
+      : metric === "s2l"
+        ? (v: number) => `${Math.round(v)}%`
+        : fmtPrice;
 
   return (
     <div className="min-h-app bg-background text-foreground">
@@ -437,8 +548,11 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           />
         </div>
 
-        {/* Tier-1: True Days on Market (relist-stitched median + aging + 60d stale) */}
+        {/* Tier-1: True Days on Market (relist-stitched median + aging + 60d stale + hidden gap) */}
         <TrueDomPanel dom={dom} loading={loading} />
+
+        {/* Tier-1 B: Price-cut pressure */}
+        <PriceCutPanel cuts={cuts} loading={loading} />
 
         {/* Trend chart */}
         <div className="mt-5 border border-border bg-card/40">
@@ -517,11 +631,11 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
                     labelFormatter={shortMonth}
                     formatter={(value, name) => {
                       if (name === "sales") return [Number(value).toLocaleString(), "Sales"];
-                      if (value == null) return ["—", metric === "ppsf" ? "Median $/sqft" : "Median price"];
-                      return [
-                        fmtFull(Number(value)),
-                        metric === "ppsf" ? "Median $/sqft" : "Median price",
-                      ];
+                      const label =
+                        metric === "ppsf" ? "Median $/sqft" : metric === "s2l" ? "Sold-to-list" : "Median price";
+                      if (value == null) return ["—", label];
+                      if (metric === "s2l") return [`${Number(value).toFixed(1)}%`, label];
+                      return [fmtFull(Number(value)), label];
                     }}
                   />
                   <Bar yAxisId="right" dataKey="sales" fill={isSales ? chart.barAccent : chart.bar} radius={[2, 2, 0, 0]} />
