@@ -215,7 +215,7 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
     // v7 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v6);
     // v6 = basement filter (043); v5 = Toronto district roll-up (042); v4 = parking (027).
     // Bumped so stale empty Ottawa entries (and any v6 entry) are not served post-migration.
-    ["market-region-stats", "v7", region.toLowerCase(), k],
+    ["market-region-stats", "v8", region.toLowerCase(), k], // v8 = migration 060 (naive-floored stale_count)
     { revalidate: 86400 }
   )();
 }
@@ -286,7 +286,7 @@ export function getDomDistCached(region: string, typeKeys: string[], scope: Scop
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeDomDist(region, typeKeys, scope),
-    ["market-dom-dist", "v2", region.toLowerCase(), k], // v2 = migration 057 (+ median_naive_dom)
+    ["market-dom-dist", "v3", region.toLowerCase(), k], // v3 = migration 060 (naive-age floor)
     { revalidate: 86400 }
   )();
 }

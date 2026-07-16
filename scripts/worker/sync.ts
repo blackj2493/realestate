@@ -20,6 +20,7 @@ import { transformListing, TransformResult } from './transformer';
 import Typesense, { Client } from 'typesense';
 import {
   generatePropertyHash,
+  STALE_THRESHOLD_DAYS,
 } from '@/lib/typesense/TemporalDistressEngine';
 import { refreshCampaignHistoryForListing } from '@/lib/campaignHistory/store';
 import { normalizeCampaign, type RawVowCampaign } from '@/lib/campaignHistory/normalize';
@@ -167,6 +168,18 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
         }
       } catch (e) {
         console.warn(`[sync] campaign-history refresh failed for ${listingKey}:`, (e as Error)?.message ?? e);
+      }
+      // Naive-age floor: a property's cumulative True DOM is AT LEAST its current
+      // listing's age (days since OriginalEntryTimestamp). Without this, listings the
+      // best-effort campaign refresh missed default true_dom=0 and understate both the
+      // True-DoM median and % stale (a 90-day listing wrongly reads is_stale=false).
+      const oetMs = Date.parse(String(raw['OriginalEntryTimestamp'] ?? ''));
+      if (Number.isFinite(oetMs)) {
+        const naiveAge = Math.max(0, Math.floor((nowMs - oetMs) / 86_400_000));
+        if (naiveAge > true_dom) {
+          true_dom = naiveAge;
+          is_stale = true_dom > STALE_THRESHOLD_DAYS;
+        }
       }
     }
     raw['property_hash'] = propertyHash;

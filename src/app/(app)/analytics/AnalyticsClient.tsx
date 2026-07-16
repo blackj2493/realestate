@@ -157,7 +157,7 @@ const AGE = [
   { key: "d90plus", label: "90d+",  cls: "bg-cyan-700 dark:bg-cyan-300" },
 ] as const;
 
-/** Tier-1 "True Days on Market" panel — median hero + p25/p75 + aging curve + 60d stale share. */
+/** Tier-1 "True Days on Market" panel — median hero + IQR distribution + hidden gap + aging + 60d stale. */
 function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: boolean }) {
   const active = dom?.activeCount ?? 0;
   const b = dom?.buckets;
@@ -166,6 +166,11 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
   const mt = dom?.medianTrueDom ?? null;
   const mn = dom?.medianNaiveDom ?? null;
   const gapMult = mt != null && mn != null && mn > 0 ? mt / mn : null;
+  const p25 = dom?.p25 ?? 0;
+  const p75 = dom?.p75 ?? 0;
+  const scaleMax = Math.max(90, Math.ceil(((p75 || 60) * 1.25) / 30) * 30);
+  const at = (v: number) => `${Math.min(100, Math.max(0, (v / scaleMax) * 100))}%`;
+
   return (
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -179,43 +184,86 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
       </div>
 
       {loading ? (
-        <div className="mt-4 h-24 w-full animate-pulse bg-muted/40" />
+        <div className="mt-4 h-40 w-full animate-pulse bg-muted/40" />
       ) : active === 0 ? (
         <p className="mt-4 text-xs text-muted-foreground">No active inventory for this scope</p>
       ) : (
-        <div className="mt-4 grid gap-6 md:grid-cols-[minmax(150px,0.7fr)_1.7fr]">
-          {/* hero median */}
-          <div>
-            <div className="font-mono text-5xl font-bold leading-none text-cyan-700 dark:text-cyan-300">
-              {dom!.medianTrueDom ?? "—"}
-              <span className="ml-1 text-xl text-muted-foreground">d</span>
+        <>
+          <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(130px,0.75fr)_1.5fr_minmax(150px,0.9fr)]">
+            {/* hero median */}
+            <div className="self-center">
+              <div className="font-mono text-5xl font-bold leading-none text-cyan-700 dark:text-cyan-300">
+                {mt ?? "—"}
+                <span className="ml-1 text-xl text-muted-foreground">d</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">median true days on market</p>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              median true DoM ·{" "}
-              <span className="font-mono">p25 {dom!.p25 ?? "—"} · p75 {dom!.p75 ?? "—"}</span>
-            </p>
-            {/* Self-suppressing: only shown where TRUE DoM genuinely exceeds the naive/feed
-                median (>=1.15x). Where the true_dom=0 coverage gap inverts the medians, the
-                block simply doesn't render — never a false "N× longer" claim. */}
-            {mn != null && gapMult != null && gapMult >= 1.15 && (
-              <div className="mt-3 rounded-sm border border-border bg-background/40 px-2.5 py-2">
+
+            {/* IQR distribution bar */}
+            <div className="self-center">
+              <div className="mb-2 flex justify-between font-mono text-[10px] text-muted-foreground">
+                <span>0d</span>
+                <span className="text-muted-foreground/80">middle 50% of active inventory</span>
+                <span>{scaleMax}d+</span>
+              </div>
+              <div className="relative h-12">
+                <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+                <div
+                  className="absolute top-1/2 h-5 -translate-y-1/2 rounded-sm border border-cyan-600/70 bg-cyan-500/15 dark:border-cyan-400/50"
+                  style={{ left: at(p25), right: `calc(100% - ${at(p75)})` }}
+                />
+                <div
+                  className="absolute top-1/2 h-8 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-sm bg-cyan-600 dark:bg-cyan-300"
+                  style={{ left: at(mt ?? 0) }}
+                />
+                <span className="absolute top-0 -translate-x-1/2 font-mono text-[10px] text-muted-foreground" style={{ left: at(p25) }}>{p25}</span>
+                <span className="absolute top-0 -translate-x-1/2 font-mono text-[10px] font-bold text-cyan-700 dark:text-cyan-300" style={{ left: at(mt ?? 0) }}>{mt}</span>
+                <span className="absolute top-0 -translate-x-1/2 font-mono text-[10px] text-muted-foreground" style={{ left: at(p75) }}>{p75}</span>
+                <span className="absolute bottom-0 -translate-x-1/2 text-[9px] text-muted-foreground" style={{ left: at(p25) }}>p25</span>
+                <span className="absolute bottom-0 -translate-x-1/2 text-[9px] font-semibold text-cyan-700 dark:text-cyan-300" style={{ left: at(mt ?? 0) }}>median</span>
+                <span className="absolute bottom-0 -translate-x-1/2 text-[9px] text-muted-foreground" style={{ left: at(p75) }}>p75</span>
+              </div>
+            </div>
+
+            {/* hidden DoM gap — self-gated dual bars */}
+            {mn != null && gapMult != null && gapMult >= 1.15 ? (
+              <div className="self-center rounded-sm border border-border bg-background/40 px-3 py-2.5">
                 <div className="terminal-font text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Hidden DoM gap
                 </div>
-                <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                  <span className="text-muted-foreground">MLS # shows</span>
-                  <span className="font-mono font-semibold text-foreground">{mn}d</span>
-                  <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">· {gapMult.toFixed(1)}× longer</span>
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="w-9 shrink-0 text-muted-foreground">True</span>
+                    <span className="h-2.5 rounded-r-sm bg-cyan-600 dark:bg-cyan-400" style={{ width: "100%" }} />
+                    <span className="shrink-0 font-mono font-semibold text-foreground">{mt}d</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="w-9 shrink-0 text-muted-foreground">MLS #</span>
+                    <span
+                      className="h-2.5 rounded-r-sm bg-muted-foreground/40"
+                      style={{ width: `${Math.max(4, (mn / (mt || 1)) * 100)}%` }}
+                    />
+                    <span className="shrink-0 font-mono font-semibold text-foreground">{mn}d</span>
+                  </div>
                 </div>
-                <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
-                  the feed number resets on every relist
+                <p className="mt-2 font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-300">
+                  {gapMult.toFixed(1)}× longer than the feed shows
                 </p>
               </div>
-            )}
+            ) : mn != null ? (
+              <div className="self-center rounded-sm border border-border bg-background/40 px-3 py-2.5 text-[11px] text-muted-foreground">
+                <div className="terminal-font text-[10px] font-bold uppercase tracking-wider">Feed DoM</div>
+                <div className="mt-1.5 font-mono text-foreground">MLS # median {mn}d</div>
+                <p className="mt-1 leading-tight">near parity with true DoM here — few relists in this scope</p>
+              </div>
+            ) : null}
           </div>
 
           {/* aging curve */}
-          <div>
+          <div className="mt-7">
+            <div className="terminal-font mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Inventory aging · share of active by true DoM
+            </div>
             <div className="relative">
               <div className="flex h-8 gap-[2px] overflow-hidden rounded-sm">
                 {AGE.map((a) => {
@@ -226,30 +274,39 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
                 })}
               </div>
               {staleLineLeft > 1 && staleLineLeft < 99 && (
-                <div
-                  className="absolute -top-1 w-0 border-l-2 border-dashed border-rose-500"
-                  style={{ left: `${staleLineLeft}%`, bottom: "-14px" }}
-                >
+                <div className="absolute -top-1 w-0 border-l-2 border-dashed border-rose-500" style={{ left: `${staleLineLeft}%`, bottom: "-16px" }}>
                   <span className="absolute -top-3 left-1 whitespace-nowrap bg-card px-1 text-[9px] font-bold text-rose-600 dark:text-rose-400">
                     60d stale
                   </span>
                 </div>
               )}
             </div>
-            <div className="mt-6 flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
-                {dom!.stalePct != null ? `${Math.round(dom!.stalePct * 100)}%` : "—"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                stale — past the 60d+ line; inventory the seller can’t move
-              </span>
+            <div className="mt-7 flex flex-wrap gap-x-4 gap-y-1">
+              {AGE.map((a) => (
+                <span key={a.key} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-[2px] ${a.cls}`} />
+                  <span className="font-mono">
+                    {a.label} · {Math.round(pct(b![a.key]))}%
+                  </span>
+                </span>
+              ))}
             </div>
           </div>
-        </div>
+
+          {/* stale callout */}
+          <div className="mt-4 flex items-baseline gap-2 border-t border-border pt-3">
+            <span className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+              {dom!.stalePct != null ? `${Math.round(dom!.stalePct * 100)}%` : "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              stale — past the 60d+ line; inventory the seller can’t move
+            </span>
+          </div>
+        </>
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · relist-stitched TrueDom · median across {active.toLocaleString()} active listings
+        source · relist-stitched TrueDom · across {active.toLocaleString()} active listings
       </p>
     </div>
   );
@@ -312,6 +369,85 @@ function PriceCutPanel({ cuts, loading }: { cuts: PriceCutsData | null; loading:
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
         source · relist-stitched TotalPriceDrop · {(cuts?.cutCount ?? 0).toLocaleString()} of{" "}
         {active.toLocaleString()} active reduced
+      </p>
+    </div>
+  );
+}
+
+/** Tier-1 "Absorption & sell-through" panel — donut + sold velocity, derived from months-of-supply. */
+function AbsorptionPanel({
+  monthsSupply,
+  monthlyVelocity,
+  loading,
+}: {
+  monthsSupply: number | null;
+  monthlyVelocity: number | null;
+  loading: boolean;
+}) {
+  const absorption = monthsSupply != null && monthsSupply > 0 ? 1 / monthsSupply : null;
+  const absPct = absorption != null ? Math.round(absorption * 100) : null;
+  const C = 2 * Math.PI * 50; // r=50 circumference
+  const dash = C * (1 - (absorption != null ? Math.min(1, absorption) : 0));
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Absorption &amp; Sell-Through
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">how fast this market clears its inventory</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-28 w-full animate-pulse bg-muted/40" />
+      ) : absorption == null ? (
+        <p className="mt-4 text-xs text-muted-foreground">Not enough sold data for this scope</p>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          <div className="relative h-28 w-28 shrink-0">
+            <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
+              <circle cx="60" cy="60" r="50" fill="none" strokeWidth="12" className="stroke-muted/30" />
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                fill="none"
+                strokeWidth="12"
+                strokeLinecap="round"
+                className="stroke-cyan-600 dark:stroke-cyan-400"
+                strokeDasharray={C}
+                strokeDashoffset={dash}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-mono text-2xl font-bold text-cyan-700 dark:text-cyan-300">{absPct}%</span>
+              <span className="text-[10px] text-muted-foreground">per month</span>
+            </div>
+          </div>
+          <div className="min-w-[180px] flex-1 space-y-2 text-xs">
+            <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+              <span className="text-muted-foreground">Sold / month</span>
+              <span className="font-mono text-base font-semibold text-foreground">
+                {monthlyVelocity != null ? Math.round(monthlyVelocity).toLocaleString() : "—"}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+              <span className="text-muted-foreground">Months to clear</span>
+              <span className="font-mono text-base font-semibold text-foreground">{monthsSupply!.toFixed(1)}</span>
+            </div>
+            <p className="pt-1 text-muted-foreground">
+              At the current sold pace, this market absorbs{" "}
+              <span className="font-mono text-foreground">{absPct}%</span> of its active inventory each month —
+              clearing the pool in <span className="font-mono text-foreground">{monthsSupply!.toFixed(1)}</span> months.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · active inventory ÷ 6-month settled sold velocity
       </p>
     </div>
   );
@@ -554,6 +690,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         {/* Tier-1 B: Price-cut pressure */}
         <PriceCutPanel cuts={cuts} loading={loading} />
 
+        {/* Tier-1 C: Absorption & sell-through (derived from months-of-supply) */}
+        <AbsorptionPanel
+          monthsSupply={score.monthsOfSupply}
+          monthlyVelocity={trend?.summary.monthlyVelocity ?? null}
+          loading={loading}
+        />
+
         {/* Trend chart */}
         <div className="mt-5 border border-border bg-card/40">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
@@ -668,6 +811,21 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             <KpiCard
               label="Top Cap Rate (Active)"
               value={score.topCapRate != null ? `${score.topCapRate.toFixed(2)}%` : "—"}
+              loading={loading}
+            />
+            <KpiCard
+              label="Avg Cap Rate (Active)"
+              value={stats?.stats?.avgCapRate != null ? `${stats.stats.avgCapRate.toFixed(2)}%` : "—"}
+              loading={loading}
+            />
+            <KpiCard
+              label="List-Price Coverage"
+              value={
+                trend?.summary.listPriceCoverage != null
+                  ? `${Math.round(trend.summary.listPriceCoverage * 100)}%`
+                  : "—"
+              }
+              sub="of sold have a comparable list price"
               loading={loading}
             />
           </div>
