@@ -218,3 +218,71 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
     { revalidate: 86400 }
   )();
 }
+
+// ── True-DoM distribution (active side, Tier-1 panel) ────────────────────────────────
+
+export interface DomDist {
+  activeCount: number;
+  medianTrueDom: number | null;
+  p25: number | null;
+  p75: number | null;
+  /** share of active with true_dom >= 61 (60d+ stale line), 0..1 */
+  stalePct: number | null;
+  buckets: { d0_14: number; d15_30: number; d31_60: number; d61_90: number; d90plus: number };
+}
+
+export const EMPTY_DOM: DomDist = {
+  activeCount: 0, medianTrueDom: null, p25: null, p75: null, stalePct: null,
+  buckets: { d0_14: 0, d15_30: 0, d31_60: 0, d61_90: 0, d90plus: 0 },
+};
+
+async function computeDomDist(region: string, typeKeys: string[], scope: Scope): Promise<DomDist> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_dom_distribution", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_min_beds: scope.minBeds,
+    p_min_baths: scope.minBaths,
+    p_min_parking: scope.minParking,
+    p_min_frontage: scope.minFrontage,
+    p_basement: scope.basement,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_DOM;
+
+  const num = (v: unknown): number | null => {
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const active = num(row.active_count) ?? 0;
+  const buckets = {
+    d0_14: num(row.dom_0_14) ?? 0,
+    d15_30: num(row.dom_15_30) ?? 0,
+    d31_60: num(row.dom_31_60) ?? 0,
+    d61_90: num(row.dom_61_90) ?? 0,
+    d90plus: num(row.dom_90_plus) ?? 0,
+  };
+  return {
+    activeCount: active,
+    medianTrueDom: num(row.median_true_dom),
+    p25: num(row.p25_true_dom),
+    p75: num(row.p75_true_dom),
+    stalePct: active > 0 ? (buckets.d61_90 + buckets.d90plus) / active : null,
+    buckets,
+  };
+}
+
+/** Cached True-DoM distribution for a scope. Caller must pass the VOW gate first. */
+export function getDomDistCached(region: string, typeKeys: string[], scope: Scope): Promise<DomDist> {
+  const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
+  return unstable_cache(
+    () => computeDomDist(region, typeKeys, scope),
+    ["market-dom-dist", "v1", region.toLowerCase(), k], // v1 = migration 056 (region_dom_distribution)
+    { revalidate: 86400 }
+  )();
+}

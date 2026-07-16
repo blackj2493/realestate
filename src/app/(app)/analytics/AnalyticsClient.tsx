@@ -36,12 +36,29 @@ import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 
 const DEFAULT_REGION = "Brampton";
 
+/** True-DoM distribution (from /api/market/dom-distribution — migration 056 RPC). */
+export interface DomDistData {
+  activeCount: number;
+  medianTrueDom: number | null;
+  p25: number | null;
+  p75: number | null;
+  stalePct: number | null; // 0..1, share with true_dom >= 61 (60d+ stale line)
+  buckets: { d0_14: number; d15_30: number; d31_60: number; d61_90: number; d90plus: number };
+}
+export interface DomDistResp {
+  region: string;
+  dom: DomDistData;
+  locked?: boolean;
+  error?: string;
+}
+
 /** Server-prefetched initial scope + payloads (from analytics/page.tsx). */
 export interface AnalyticsInitial {
   region: string;
   typeKeys: string[];
   trend: PriceTrendResp | null;
   stats: RegionStatsResp | null;
+  dom: DomDistResp | null;
 }
 
 const makeScopeKey = (region: string, typeKeys: string[]) =>
@@ -111,6 +128,94 @@ function KpiCard({ label, value, sub, loading }: KpiProps) {
   );
 }
 
+// True-DoM aging buckets — sequential cyan ramp, monotonic lightness in BOTH themes
+// (light: fresh→light, older→dark · dark: inverted) so "older" always reads as the
+// stronger step. The 60d stale line is drawn separately (rose).
+const AGE = [
+  { key: "d0_14",  label: "0–14d",  cls: "bg-cyan-200 dark:bg-cyan-900" },
+  { key: "d15_30", label: "15–30d", cls: "bg-cyan-400 dark:bg-cyan-700" },
+  { key: "d31_60", label: "31–60d", cls: "bg-cyan-500 dark:bg-cyan-600" },
+  { key: "d61_90", label: "61–90d", cls: "bg-cyan-600 dark:bg-cyan-500" },
+  { key: "d90plus", label: "90d+",  cls: "bg-cyan-700 dark:bg-cyan-300" },
+] as const;
+
+/** Tier-1 "True Days on Market" panel — median hero + p25/p75 + aging curve + 60d stale share. */
+function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: boolean }) {
+  const active = dom?.activeCount ?? 0;
+  const b = dom?.buckets;
+  const pct = (n: number) => (active > 0 ? (n / active) * 100 : 0);
+  const staleLineLeft = b ? pct(b.d0_14 + b.d15_30 + b.d31_60) : 0;
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          True Days on Market
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">relist-aware · stitches terminate→relist chains</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-24 w-full animate-pulse bg-muted/40" />
+      ) : active === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">No active inventory for this scope</p>
+      ) : (
+        <div className="mt-4 grid gap-6 md:grid-cols-[minmax(150px,0.7fr)_1.7fr]">
+          {/* hero median */}
+          <div>
+            <div className="font-mono text-5xl font-bold leading-none text-cyan-700 dark:text-cyan-300">
+              {dom!.medianTrueDom ?? "—"}
+              <span className="ml-1 text-xl text-muted-foreground">d</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              median true DoM ·{" "}
+              <span className="font-mono">p25 {dom!.p25 ?? "—"} · p75 {dom!.p75 ?? "—"}</span>
+            </p>
+          </div>
+
+          {/* aging curve */}
+          <div>
+            <div className="relative">
+              <div className="flex h-8 gap-[2px] overflow-hidden rounded-sm">
+                {AGE.map((a) => {
+                  const w = pct(b![a.key]);
+                  return w > 0 ? (
+                    <div key={a.key} className={a.cls} style={{ width: `${w}%` }} title={`${a.label} · ${Math.round(w)}%`} />
+                  ) : null;
+                })}
+              </div>
+              {staleLineLeft > 1 && staleLineLeft < 99 && (
+                <div
+                  className="absolute -top-1 w-0 border-l-2 border-dashed border-rose-500"
+                  style={{ left: `${staleLineLeft}%`, bottom: "-14px" }}
+                >
+                  <span className="absolute -top-3 left-1 whitespace-nowrap bg-card px-1 text-[9px] font-bold text-rose-600 dark:text-rose-400">
+                    60d stale
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex items-baseline gap-2">
+              <span className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+                {dom!.stalePct != null ? `${Math.round(dom!.stalePct * 100)}%` : "—"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                stale — past the 60d+ line; inventory the seller can’t move
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · relist-stitched TrueDom · median across {active.toLocaleString()} active listings
+      </p>
+    </div>
+  );
+}
+
 export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
   const chart = useChartTheme();
   const router = useRouter();
@@ -136,6 +241,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
     key: string;
     trend: PriceTrendResp | null;
     stats: RegionStatsResp | null;
+    dom: DomDistResp | null;
     error: boolean;
   } | null>(() =>
     initial
@@ -143,6 +249,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           key: makeScopeKey(initial.region, initial.typeKeys),
           trend: initial.trend,
           stats: initial.stats,
+          dom: initial.dom,
           error: initial.trend == null && initial.stats == null,
         }
       : null
@@ -171,19 +278,21 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
     Promise.all([
       fetch(`/api/market/price-trend?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/region-stats?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/dom-distribution?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([tr, st]) => {
+      .then(([tr, st, dm]) => {
         if (!alive) return;
         setResult({
           key: scopeKey,
           trend: tr as PriceTrendResp | null,
           stats: st as RegionStatsResp | null,
+          dom: dm as DomDistResp | null,
           error: tr == null && st == null,
         });
       })
       .catch(() => {
         if (!alive) return;
-        setResult({ key: scopeKey, trend: null, stats: null, error: true });
+        setResult({ key: scopeKey, trend: null, stats: null, dom: null, error: true });
       });
     return () => {
       alive = false;
@@ -196,6 +305,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const error = !loading && !!result?.error;
   const trend = !loading ? result?.trend ?? null : null;
   const stats = !loading ? result?.stats ?? null : null;
+  const dom = !loading ? result?.dom?.dom ?? null : null;
 
   const score = useMemo(() => assembleRegionScore(region, trend, stats), [region, trend, stats]);
   const points = trend?.points ?? [];
@@ -326,6 +436,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             loading={loading}
           />
         </div>
+
+        {/* Tier-1: True Days on Market (relist-stitched median + aging + 60d stale) */}
+        <TrueDomPanel dom={dom} loading={loading} />
 
         {/* Trend chart */}
         <div className="mt-5 border border-border bg-card/40">
