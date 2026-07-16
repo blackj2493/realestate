@@ -58,6 +58,18 @@ describe("geoFlagsFor — distance (line/point) flags", () => {
     expect(flags[0].ask).toBeUndefined();
   });
 
+  it("treats dev_application as an info (context) flag with no diligence question", () => {
+    const flags = geoFlagsFor({ distanceM: { dev_application: 180 } });
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toMatchObject({ id: "dev_application", kind: "info", severity: 26 });
+    expect(flags[0].title).toBe("Major development application filed ~180 m away");
+    expect(flags[0].ask).toBeUndefined();
+  });
+
+  it("does not flag a dev_application beyond its 300 m threshold", () => {
+    expect(geoFlagsFor({ distanceM: { dev_application: 301 } })).toEqual([]);
+  });
+
   it("does not flag beyond the threshold, or for null/NaN", () => {
     expect(geoFlagsFor({ distanceM: { hydro: 9999 } })).toEqual([]); // > 150 m
     expect(geoFlagsFor({ distanceM: { rail: null } })).toEqual([]);

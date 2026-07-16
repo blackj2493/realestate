@@ -35,12 +35,27 @@ export interface GeoDatasetSource {
   endpoint?: string;
   /** Server-side attribute filter (ArcGIS `where`). */
   where?: string;
+  /** Per-source open-data licence NAME (→ geo_sources.license). Falls back to the
+   *  dataset-level `license` when omitted. Set on multi-city datasets whose sources carry
+   *  different licences (e.g. dev_application: Hamilton OGL vs Ottawa OGL vs Waterloo). */
+  license?: string;
   /** Simplify tolerance in degrees (ArcGIS maxAllowableOffset) — keeps huge polygons
    *  under the 10 MB transfer cap; ~0.0001° ≈ 11 m, well within our postal-block precision. */
   simplifyDeg?: number;
   /** Source SRID. We always request outSR=4326, so this is 4326 for ArcGIS pulls;
    *  override for a pre-projected --file. */
   srid?: number;
+  /** Per-source proximity radius (metres) for a `distance` predicate — overrides the
+   *  dataset-level `predicate.meters` for THIS source only. Stamped onto each feature's
+   *  attrs (`_match_radius_m`) at load; enrichGeoFlags matches within it. Use when one
+   *  source needs a tighter radius than the rest (e.g. dense Toronto vs the other cities).
+   *  `predicate.meters` must stay >= the largest per-source radius (it's the geoFlagsFor
+   *  re-guard ceiling). */
+  matchRadiusM?: number;
+  /** For a POLYGON source loaded into a `point` dataset: collapse each polygon to a
+   *  representative interior point (ST_PointOnSurface) at load, so e.g. York Region /
+   *  Brampton development-application FOOTPRINTS become points for the distance predicate. */
+  toPoint?: boolean;
 }
 
 export interface GeoFlagSpec {
@@ -392,6 +407,153 @@ export const GEO_DATASETS: GeoDataset[] = [
       severity: 24,
       source: "GO Transit / TTC",
       title: (m) => `${Math.round(m)} m to a GO/subway station`,
+    },
+  },
+  {
+    // Nearby DEVELOPMENT-APPLICATION activity — an INFO/context flag: a recent, major
+    // rezoning, Official Plan amendment, subdivision or condo application within ~300 m
+    // signals coming neighbourhood change (density, views, construction). Municipal open
+    // data (NOT MLS/VOW), so it's not VOW-gated. Distance predicate = nearest material
+    // application within the radius (the transit pattern); "info" so it's excluded from
+    // the card's "checked & clear" hazard list.
+    //
+    // MULTI-SOURCE, like conservation_regulated: each city is one entry in sources[] with
+    // its OWN `license` (→ geo_sources per source) and materiality `where`. flag.source is
+    // a GENERIC label ("Municipal development applications") because a listing's flag comes
+    // from whichever city's application is nearest — the enrich takes MIN(distance) across
+    // all sources and doesn't track which one, exactly like conservation_regulated. That is
+    // the app's established attribution pattern for a multi-source geo flag.
+    //
+    // ⚠️ PHASE 2 — DO NOT FORGET (explicit user directive, 2026-07-15): add a COMPANION
+    // building-permit flag (kind: "major_construction") from municipal BUILDING PERMITS,
+    // filtered HARD to material work only (new-build / high construction value / multi-
+    // unit). Raw permits fire on nearly every block and would drown the card — that's why
+    // permits are deliberately NOT in v1. See memory: dev-permit-data-availability.
+    //
+    // TORONTO is added as a FILE-BASED source (toronto_dev_apps below): its CKAN datastore
+    // SQL API is disabled and its X/Y are MTM zone 10 NAD27 (EPSG:2019), so it's harvested to
+    // GeoJSON and loaded with --srid 2019 (--all / endpoint loads skip it — see its comment).
+    //
+    // All launch-set cities are now wired: Hamilton/Ottawa/Waterloo (ArcGIS point), Toronto &
+    // Mississauga (FILE-BASED harvesters — no stable/tabular endpoint), York Region & Brampton
+    // (POLYGON → toPoint via the loader's ST_PointOnSurface option). Radius = 300 m default (the
+    // floor given postal-block listing coords), overridden per-source where a city is denser
+    // (Toronto/Mississauga → matchRadiusM). Two sources are file-based, so a full refresh is:
+    //   loadGeoData --dataset dev_application            # ArcGIS: Hamilton/Ottawa/Waterloo/York/Brampton
+    //   node harvest-toronto-dev-apps.mjs && loadGeoData … --file … --source-key toronto_dev_apps
+    //   node harvest-mississauga-dev-apps.mjs && loadGeoData … --file … --source-key mississauga_dev_apps
+    kind: "dev_application",
+    shortLabel: "nearby development applications",
+    family: "point",
+    predicate: { type: "distance", meters: 300 },
+    enabled: true,
+    autoLoad: true,
+    // Fallback only — every source below carries its own `license` (cities differ).
+    license: "Municipal open data (per-source — see geo_sources)",
+    sources: [
+      {
+        sourceKey: "hamilton_dev_apps",
+        name: "City of Hamilton — Development Applications (recent, high-impact)",
+        license: "City of Hamilton Open Data Licence",
+        // Materiality filter, CALIBRATED 2026-07-15 against live Hamilton listings: the raw
+        // 10-year feed fires on ~73% of listings (wallpaper). So keep only the high-impact
+        // land-use changes — dropping the dominant Site Plan bucket (1,479 of 2,529) — and
+        // restrict to the active pipeline (FILE_YEAR >= 2024). Result: ~16% of Hamilton
+        // listings flagged. BUMP the year cutoff annually (or switch to a rolling window
+        // once this generalizes to more cities).
+        endpoint:
+          "https://services.arcgis.com/rYz782eMbySr2srL/arcgis/rest/services/Development_Applications/FeatureServer/2",
+        where:
+          "FILE_TYPE IN ('Official Plan Amendment','Zoning Amendment','Subdivision','Condominium') AND FILE_YEAR >= 2024",
+      },
+      {
+        sourceKey: "ottawa_dev_apps",
+        name: "City of Ottawa — Development Applications",
+        license: "Open Government Licence – City of Ottawa",
+        // High-impact types only (drop Demolition Control / Ontario Heritage Act) + active
+        // pipeline. NOTE APPLICATION_TYPE_EN is padded to 25 chars → match with LIKE, not '='.
+        endpoint:
+          "https://maps.ottawa.ca/arcgis/rest/services/Development_Applications/MapServer/0",
+        where:
+          "(APPLICATION_TYPE_EN LIKE 'Official Plan Amendment%' OR APPLICATION_TYPE_EN LIKE 'Zoning By-law Amendment%' OR APPLICATION_TYPE_EN LIKE 'Plan of Subdivision%' OR APPLICATION_TYPE_EN LIKE 'Plan of Condominium%') AND APPLICATION_DATE >= DATE '2024-01-01'",
+      },
+      {
+        sourceKey: "waterloo_dev_apps",
+        name: "City of Waterloo — Major Development Files",
+        license: "City of Waterloo Open Data Licence",
+        // "Major Development Files" is already scoped to OPA/ZBA/subdivision/condo, so no
+        // type filter is needed; keep the active pipeline (created in the last ~2 yrs).
+        endpoint:
+          "https://services.arcgis.com/ZpeBVw5o1kjit7LT/arcgis/rest/services/MajorDevelopmentFiles/FeatureServer/0",
+        where: "CREATE_DATE >= DATE '2024-01-01'",
+      },
+      {
+        sourceKey: "toronto_dev_apps",
+        name: "City of Toronto — Development Applications (recent, high-impact)",
+        license: "Open Government Licence – Toronto",
+        // FILE-BASED (no ArcGIS endpoint): Toronto's CKAN datastore SQL API is disabled and
+        // X/Y are MTM zone 10 NAD27, so harvest → GeoJSON, then load with --srid 2019:
+        //   node scripts/admin/harvest-toronto-dev-apps.mjs
+        //   npx tsx scripts/worker/loadGeoData.ts --dataset dev_application \
+        //     --file scripts/admin/dev-apps-toronto.geojson --srid 2019 --source-key toronto_dev_apps
+        // (--all and the endpoint loop SKIP this source — it must be loaded via --file.)
+        srid: 2019,
+        // Toronto is far denser: at the shared 300 m radius it fires on ~49% of listings
+        // (wallpaper). Calibrated 2026-07-16 → a 150 m radius lands ~26% (a real minority),
+        // matching the other cities' discriminating band at 300 m. Building-specific condo
+        // postals keep 150 m reliable downtown.
+        matchRadiusM: 150,
+      },
+      {
+        sourceKey: "york_dev_apps",
+        name: "York Region — Development Applications (recent, high-impact)",
+        license: "York Region Open Data Licence",
+        // POLYGON footprints → toPoint. One regional layer covers all 9 York municipalities
+        // (Markham/Vaughan/Richmond Hill/Aurora/Newmarket/…). Keep high-impact APPL_TYPE
+        // (OPA/Zoning/Subdivision/Condominium; drop Site Plan/Consent/Minor Variance) + the
+        // active pipeline (DATE_RECVD >= 2024).
+        endpoint:
+          "https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/DevelopmentApplicationStatusAndTeams/MapServer/0",
+        where:
+          "APPL_TYPE IN ('Local Official Plan Amendment','Regional Official Plan Amendment','Zoning By-law Amendment','Draft Plan of Subdivision','Registered Plan of Subdivision','Draft Plan of Condominium','Registered Plan of Condominium','Draft Vacant Land Plan of Condominium') AND DATE_RECVD >= DATE '2024-01-01'",
+        simplifyDeg: 0.0002,
+        toPoint: true,
+      },
+      {
+        sourceKey: "brampton_dev_apps",
+        name: "City of Brampton — OPA / Rezoning / Subdivision applications",
+        license: "Creative Commons Attribution 4.0 International (CC BY 4.0) — City of Brampton",
+        // POLYGON footprints → toPoint. Layer 9 "OPA ZBA Subdivision" is already the material
+        // set (Official Plan Amendment + Zoning By-law Amendment + Subdivision); keep the
+        // active pipeline (DATE_RECEIVED >= 2024). CC BY requires crediting "City of Brampton".
+        endpoint:
+          "https://services3.arcgis.com/rl7ACuZkiFsmDA2g/arcgis/rest/services/Planning_Land_Use_Development/FeatureServer/9",
+        where: "DATE_RECEIVED >= DATE '2024-01-01'",
+        simplifyDeg: 0.0002,
+        toPoint: true,
+      },
+      {
+        sourceKey: "mississauga_dev_apps",
+        name: "City of Mississauga — Development Applications (recent, high-impact)",
+        license: "City of Mississauga Terms of Use",
+        // FILE-BASED: Mississauga has NO stable endpoint — its feature service is renamed
+        // monthly (DevApps_June_2026_WFL1, …). The harvester resolves the CURRENT service via
+        // the stable "Active Development Applications" web-map item, pulls the material point
+        // layers (Approved/Rezoning/Subdivision/Condominium; drops Site Plan) → GeoJSON:
+        //   node scripts/admin/harvest-mississauga-dev-apps.mjs
+        //   npx tsx scripts/worker/loadGeoData.ts --dataset dev_application \
+        //     --file scripts/admin/dev-apps-mississauga.geojson --source-key mississauga_dev_apps
+        // (--all and the endpoint loop SKIP this source — load it via --file.)
+      },
+    ],
+    flag: {
+      id: "dev_application",
+      kind: "info",
+      severity: 26,
+      // Generic (multi-source): the nearest match may be any of the cities above. Each
+      // source's licence is recorded in geo_sources; see the multi-source note above.
+      source: "Municipal development applications (open data)",
+      title: (m) => `Major development application filed ~${Math.round(m)} m away`,
     },
   },
   {

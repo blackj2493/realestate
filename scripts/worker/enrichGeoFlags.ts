@@ -93,10 +93,13 @@ function spatialColumns(): string {
                 AND ST_Intersects(f.geom, p.geom)) AS in_${ds.kind}`;
     }
     const m = ds.predicate.meters;
+    // A feature may carry a tighter per-source radius (attrs._match_radius_m, e.g. dense
+    // Toronto); match within it, falling back to the dataset's predicate.meters.
     return `(SELECT MIN(ST_Distance(f.geom::geography, p.geom::geography))
                FROM geo_features f
               WHERE f.kind='${ds.kind}'
-                AND ST_DWithin(f.geom::geography, p.geom::geography, ${m})) AS m_${ds.kind}`;
+                AND ST_DWithin(f.geom::geography, p.geom::geography,
+                    COALESCE((f.attrs->>'_match_radius_m')::float8, ${m}))) AS m_${ds.kind}`;
   }).join(",\n         ");
 }
 
