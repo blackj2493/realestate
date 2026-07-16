@@ -19,11 +19,19 @@ So our copy must not sound like real estate marketing at all. It should read lik
 Stripe status email. Every word either reinforces *"this is institutional-grade and
 I'm now an insider"* or it breaks the spell. There is no neutral copy.
 
+**Ultimate business goal:** PureProperty is a **brokerage lead-generation engine**. The
+data terminal is the top of the funnel; the revenue is real estate commission once the
+brokerage is live. Every communication decision is judged against *"does this move a
+high-intent person toward transacting with us?"* — see §10 for the phased plan.
+
 **Decisions locked with the founder (2026-07-16):**
-- **Edge:** Overtly contrarian. We name the fact that the industry and consumer portals
-  obscure data, and we position ourselves against it. (Guardrails in §7.)
+- **Edge:** Overtly contrarian, **re-aimed**. We attack *the old way / the industry
+  status quo / the typical agent who buries the numbers* — never the category of agents
+  as a whole, because we intend to *be* the agent. PureProperty is positioned as the
+  exception that fixes it. (Guardrails in §7; phased wording in §10.)
 - **Sender:** Split. Automated alerts/digests are machine-sent and unsigned. Personal
-  follow-ups (lead replies) come from a **named human**.
+  follow-ups come from a human identity — **phased**: a research-desk identity now
+  (pre-brokerage), a named licensed agent once the brokerage is registered (§3, §10).
 
 ---
 
@@ -37,7 +45,7 @@ Five pillars. Voice is *who we are*; it does not flex by context.
 | **Numerate** | Lead with the number. The data is the sentence; prose is the caption. | Adjectives doing a number's job ("great deal", "huge drop") |
 | **Precise** | Exact figures, exact terms, exact timestamps. Never round when you can be specific. | Vague hedges ("recently", "several", "around") |
 | **Understated-confident** | The data flexes; we don't. No hype — hype reads as *retail*. | Exclamation marks, urgency theater, "Don't miss out!" |
-| **Contrarian** | We're on the user's side against an industry that hides the numbers. State it plainly. | Ranting, conspiracy-blog energy, or disparaging a *specific* brokerage (see §7) |
+| **Contrarian (re-aimed)** | We're on the user's side against *the old way* — the industry status quo and the typical agent who buries the numbers. We are the fix. | Attacking agents *as a category* (we're becoming one), ranting, or disparaging a *specific* brokerage (§7) |
 
 ### Who is talking?
 
@@ -66,19 +74,30 @@ relationship forms (welcome, lead follow-up). Hold the voice — flex the warmth
 
 ---
 
-## 3. Sender identity (locked: split model)
+## 3. Sender identity (split model, phased)
 
 - **Automated mail** (digests, alerts, confirmations, operational): from
   **`PureProperty Alerts <support@pureproperty.ca>`**. **No personal signature.**
   Nobody wants a nightly "personal note" from a human. These end with the machine
   footer, not a name.
 - **Personal follow-up** (a reply to a lead who raised their hand on a specific
-  property): from a **named human** — e.g. `Jag at PureProperty <jag@pureproperty.ca>`,
-  `replyTo` set to that human. Signed with a first name. This is the *only* place a
-  name appears, which is exactly what makes it feel personal.
+  property): from a human identity, `replyTo` set to a monitored inbox. **The name is
+  phased** because the founder is currently registered with another brokerage and
+  PureProperty is not yet a registered brokerage:
+  - **Phase 1 (now, pre-brokerage):** sign as a **research-desk identity** — e.g.
+    `— The PureProperty Research Desk` — or the founder's **real first name only, with
+    no title and no "Realty/Brokerage" suffix**. Do **not** invent a fake licensed
+    persona, and do **not** claim agent/representation status. The follow-up delivers
+    *data and insight* (True DOM, price history, Capital Burn Rate), not an offer to
+    represent the buyer. This keeps us honest and compliant while registered elsewhere.
+  - **Phase 2 (brokerage live):** switch to a **real, RECO-registered person** — full
+    name + credential, e.g. `— Jagdeep [Last], Broker of Record, PureProperty Realty`.
+    Representation offers activate here. In Ontario, client-facing real estate comms
+    must name a real registered individual and the brokerage — never a mascot.
 
-Rationale: users subconsciously sort machine-mail from human-mail. Honoring that split
-makes the human touch land harder because it's rare.
+Rationale: users subconsciously sort machine-mail from human-mail; honoring that split
+makes the human touch land harder. The phasing keeps Phase-1 comms in a research frame
+(legal today) and upgrades to a licensed, named agent the moment it's permitted.
 
 ---
 
@@ -147,29 +166,35 @@ Real strings from the codebase, with on-voice rewrites.
 - Verdict: subject is fine. Body's *"only hear from us when something changes"* is a
   strong trust signal — **keep it**. But the copy is too tame for a contrarian brand,
   and it signs with the brand (should be machine-footer, per §3).
-- ✅ **On-voice rewrite (body):**
+- ✅ **On-voice rewrite (body, re-aimed contrarian):**
   > Tracking **{address}**. You'll get price cuts and status changes the day they
-  > happen — the moves brokerages don't surface until it's too late to matter. Nothing
-  > else.
+  > happen — the moves the old way leaves you to find out about too late. Nothing else.
   >
   > *(footer, not a signature)* Machine-sent by PureProperty Alerts. Unsubscribe anytime.
 
 ### Lead follow-up — currently MISSING (only the operator is emailed)
 `src/app/api/viewing-requests/route.ts` notifies the operator but sends the lead
-**nothing**. This is the single highest-warmth touchpoint and it doesn't exist.
-- ✅ **On-voice (named human, 60% warmth):**
-  > Got your request on **{address}** — I'll come back to you personally within a few
-  > hours with the shadow numbers on this one: True DOM, full price history, and the
-  > Capital Burn Rate a listing agent won't volunteer.
+**nothing**. This is the single highest-warmth touchpoint and it doesn't exist. It is
+also the **top of the brokerage funnel** — speed-to-lead here decides conversion (§10).
+- ✅ **Phase 1 (now — research framing, no representation claim, 60% warmth):**
+  > Got your request on **{address}** — I'll come back to you personally, fast, with the
+  > shadow numbers on this one: True DOM, full price history, and the Capital Burn Rate
+  > the old way leaves off the listing. That's the read most buyers never get.
   >
-  > — Jag, PureProperty
+  > — The PureProperty Research Desk
+- ✅ **Phase 2 (brokerage live — representation activates):**
+  > …happy to walk you through it and, if it's a fit, represent you on the offer.
+  >
+  > — Jagdeep [Last], PureProperty Realty
+- ⚡ **Auto-send within seconds** of submission (machine), then a real human follow-up
+  fast. See §10 — this is Tier-0.
 
 ### Welcome email — currently MISSING
 The trap is *"Welcome to PureProperty! We're so excited…"*. On-voice opens on utility
 and the contrarian hook:
 - ✅
-  > You're in. The terminal shows three numbers the industry works to keep off your
-  > screen: **True DOM** (how long a property has *really* been for sale, across every
+  > You're in. The terminal shows three numbers the old way keeps off your screen:
+  > **True DOM** (how long a property has *really* been for sale, across every
   > relisting), **Capital Burn Rate** (what it costs to hold), and **Suite Potential**
   > (hidden basement-unit upside). Save your first **market bubble** to start getting
   > them nightly →
@@ -191,14 +216,22 @@ and the contrarian hook:
 Overtly contrarian is the chosen edge — but it has hard limits, because we operate
 under TRREB IDX/VOW agreements and Canadian anti-spam law.
 
-**Aim the contrarian energy at the *system*, never at a person or a named party:**
-- ✅ Fair game: "the industry," "consumer portals," "the data brokerages don't surface,"
-  "shadow numbers," "what a listing agent won't volunteer."
+**Aim the contrarian energy at the *system / the old way*, never at agents as a
+category (we're becoming one) and never at a named party:**
+- ✅ Fair game: "the old way," "the industry status quo," "the typical agent who buries
+  the numbers," "the data most buyers never get," "shadow numbers."
+- ❌ Off-limits: attacking **agents as a whole** ("agents lie," "your agent is ripping
+  you off"). We are about to *be* the agent — never train leads to distrust the role we
+  want them to hire. Attack the *old way*; be the *new way*.
 - ❌ Off-limits: disparaging a **specific brokerage** — especially the one on the
   listing, whose name we are *required* to display respectfully and at equal weight
   (TRREB §6.3(c), CLAUDE.md §4). Never pair the brokerage line with a jab.
 - ❌ Off-limits: naming a competitor (HouseSigma, Realtor.ca) disparagingly in
   user-facing copy. Imply the contrast; don't start a fight we can be sued over.
+- ⚠️ **Phase 1 only:** while the founder is registered with another brokerage and
+  PureProperty is not yet a registered brokerage, user-facing copy must **not solicit a
+  real estate trade or claim representation** under the PureProperty name. Keep the
+  frame on *data/research/insight*. Representation language unlocks in Phase 2 (§10).
 
 **Compliance is not negotiable and outranks voice:**
 - Sold/closing prices **never** appear in email — the tease links to the gated page.
@@ -229,12 +262,60 @@ Plus two guardrail checks for the contrarian edge:
 
 ---
 
-## 9. Where this gets applied first (Tier-1 fixes, in this voice)
+## 9. Where this gets applied first (in this voice)
 
-1. Ship or stop promising the anonymous `similar` (new-listing) alert — right now the
-   confirmation promises an email that's never sent.
-2. Add unsubscribe + `List-Unsubscribe` to the registered-user digest (§7 CASL).
-3. Add the **lead follow-up** auto-acknowledgement (§6) — named human, the shadow-data promise.
-4. Add the **welcome** email (§6) — the biggest activation lever, currently absent.
+- **Tier 0 — brokerage funnel (highest ROI, see §10):** instant lead-follow-up
+  auto-response (speed-to-lead) + a monitored inbox with a fast human reply.
+- **Tier 1 — fix active liabilities:**
+  1. Ship or stop promising the anonymous `similar` (new-listing) alert — the
+     confirmation currently promises an email that's never sent.
+  2. Add unsubscribe + `List-Unsubscribe` to the registered-user digest (§7 CASL).
+  3. Add the **welcome** email (§6) — the biggest activation lever, currently absent.
+  4. Re-capture 2–3 qualification questions at onboarding (buyer/seller, timeline,
+     financing) so leads can be scored and routed (§10).
 
 All copy above is the reference implementation for these.
+
+---
+
+## 10. Brokerage lead-gen alignment (the funnel this voice serves)
+
+The terminal is the top of a funnel whose bottom is a real estate commission. The voice
+above is calibrated to *earn trust through competence*; this section is the funnel it
+feeds. **Phased**, because the brokerage isn't live yet.
+
+### The four lanes a brokerage funnel needs (current state)
+
+1. **Capture** — ✅ mostly built. The velvet rope (VOW account for sold data) is a lead
+   magnet; listing email-capture and viewing requests capture intent. Keep.
+2. **Speed-to-lead** — ❌ broken. Viewing requests email a personal inbox with no
+   auto-reply to the lead, no SLA, no routing. In real estate, replying in ~5 min vs
+   ~30 min can 4–10× conversion. **This is Tier-0.** Fix: instant machine
+   auto-acknowledgement (§6 Phase-1 copy) + a monitored inbox with a fast human reply.
+3. **Nurture** — ❌ missing. Real estate consideration cycles run 3–12 months; today all
+   comms are event-driven (price changed → email). Add a light nurture lane that keeps
+   PureProperty top-of-mind as a *research brand* now, ready to convert at launch.
+4. **Qualify / route** — ❌ missing. Onboarding profiling was collapsed. Re-add 2–3
+   questions (buyer vs seller, timeline, pre-approved?) to score leads and, in Phase 2,
+   route them to the right agent.
+
+### Two phases
+
+- **Phase 1 — now (registered elsewhere, no PureProperty brokerage):**
+  - Frame everything as **data / research / insight**. No representation claims, no
+    soliciting trades under the PureProperty name (§7).
+  - Sender for human follow-ups = **research-desk identity or real first name, no title**
+    (§3).
+  - Goal: **capture + nurture** a high-intent audience under the research brand.
+- **Phase 2 — brokerage live:**
+  - Representation language unlocks. Contrarian framing upgrades to *"most agents bury
+    this — **ours lead with it**."*
+  - Sender = **named, RECO-registered agent + credential** (§3).
+  - Goal: **convert** the nurtured audience into clients; route by qualification.
+
+### Audience note
+
+The "filter out casual window-shoppers" rule is right for the *data product* but leaves
+brokerage volume on the table — a casual GTA homebuyer today is a commission in six
+months. Keep the velvet rope on the *data depth*, but **capture and nurture everyone**;
+don't reject a lead you could have warmed up.
