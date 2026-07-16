@@ -84,10 +84,10 @@ relationship forms (welcome, lead follow-up). Hold the voice — flex the warmth
   property): from a human identity, `replyTo` set to a monitored inbox. **The name is
   phased** because the founder is currently registered with another brokerage and
   PureProperty is not yet a registered brokerage:
-  - **Phase 1 (now, pre-brokerage):** sign as a **research-desk identity** — e.g.
-    `— The PureProperty Research Desk` — or the founder's **real first name only, with
-    no title and no "Realty/Brokerage" suffix**. Do **not** invent a fake licensed
-    persona, and do **not** claim agent/representation status. The follow-up delivers
+  - **Phase 1 (now, pre-brokerage):** sign as **`— Tanmay, PureProperty`** — a real
+    first name, **no title, no "Realty/Brokerage" suffix**. (Whoever signs as Tanmay
+    must be the real person who actually reads and replies to these leads — the name is
+    not a mascot.) Do **not** claim agent/representation status. The follow-up delivers
     *data and insight* (True DOM, price history, Capital Burn Rate), not an offer to
     represent the buyer. This keeps us honest and compliant while registered elsewhere.
   - **Phase 2 (brokerage live):** switch to a **real, RECO-registered person** — full
@@ -181,7 +181,7 @@ also the **top of the brokerage funnel** — speed-to-lead here decides conversi
   > shadow numbers on this one: True DOM, full price history, and the Capital Burn Rate
   > the old way leaves off the listing. That's the read most buyers never get.
   >
-  > — The PureProperty Research Desk
+  > — Tanmay, PureProperty
 - ✅ **Phase 2 (brokerage live — representation activates):**
   > …happy to walk you through it and, if it's a fit, represent you on the offer.
   >
