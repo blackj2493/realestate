@@ -224,8 +224,11 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       suite_status: p.suite_status,
       suite_score: p.suite_score,
       suite_flags: p.suite_flags,
-      // Flat true DOM columns (migration 005)
-      is_stale: p.is_stale,
+      // Flat true DOM columns (migration 005). is_stale MUST come from the
+      // campaign-stitched metrics (same source as Typesense TrueDom below), NOT
+      // the transformer's pre-stitch basicDOM placeholder (p.is_stale) — the region
+      // RPC reads this column, and the placeholder undercounts stale ~12x (2% vs ~24%).
+      is_stale: metrics?.is_stale ?? p.is_stale,
       campaign_block_id: p.campaign_block_id,
       dead_days: p.dead_days,
     };
