@@ -43,7 +43,7 @@ export function footer(opts: {
   if (opts.manageUrl) links.push(`<a href="${opts.manageUrl}" style="color:#64748b;">Manage alerts</a>`);
   if (opts.unsubscribeUrl) links.push(`<a href="${opts.unsubscribeUrl}" style="color:#64748b;">Unsubscribe</a>`);
   const linkLine = links.length ? " " + links.join(" &middot; ") + "." : "";
-  const mls = opts.mls === false ? "" : "Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS&reg;.<br>";
+  const mls = opts.mls === false ? "" : "Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS®.<br>";
   return `<p style="color:#64748b;font-size:11px;margin-top:26px;line-height:1.6;border-top:1px solid #f1f5f9;padding-top:16px;">
       ${opts.intro}${linkLine}<br>
       ${mls}PureProperty &middot; ${MAIL_ADDRESS}
