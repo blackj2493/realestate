@@ -38,10 +38,11 @@ import {
 } from '@/lib/alerts/digest';
 import { renderListingAlertEmail, type ListingAlertChange } from '@/lib/alerts/listingAlertEmail';
 import { unsubscribeUrl } from '@/lib/alerts/unsubscribe';
+import { SENDERS } from '@/lib/alerts/senders';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
-const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
+const FROM = SENDERS.alerts.from;
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
 /** Same rental-noise floor as bubble stats (src/lib/bubbles/stats.ts). */
 const SALES_FLOOR = 'ListPrice:>=100000';

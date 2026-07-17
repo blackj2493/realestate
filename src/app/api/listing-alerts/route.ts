@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
+import { SENDERS } from "@/lib/alerts/senders";
 
 export const dynamic = "force-dynamic";
 
@@ -85,11 +86,11 @@ export async function POST(req: NextRequest) {
     try {
       if (process.env.RESEND_API_KEY) {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const from = process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca";
         const where = address || (city ? `homes in ${city}` : "this home");
         const copy = KIND_COPY[kind];
         await resend.emails.send({
-          from,
+          from: SENDERS.confirmation.from,
+          replyTo: SENDERS.confirmation.replyTo,
           to: email,
           subject: `You're set — ${copy.label} for ${address || city || listingKey}`,
           text: [
