@@ -557,6 +557,61 @@ export const GEO_DATASETS: GeoDataset[] = [
     },
   },
   {
+    // Nearby MAJOR CONSTRUCTION — the companion to dev_application (the explicit Phase-2
+    // follow-up). Where dev_application flags a PROPOSED planning change, this flags an
+    // ISSUED building permit for MATERIAL work — a new build, demolition, or big addition —
+    // i.e. imminent/active construction: noise, dust, changed views/traffic next door.
+    //
+    // Municipal open data (NOT MLS/VOW) → not VOW-gated. INFO flag (like dev_application):
+    // permits are loaded for only SOME cities, so a `warn` would falsely tell every listing in
+    // an unloaded city "no construction nearby (clear)". Keep it info until coverage is
+    // comprehensive, then revisit warn.
+    //
+    // MATERIALITY (the hard part — raw permits fire on ~every block): drop the ~84% that are
+    // plumbing / mechanical / interior / pool / deck / garage / sign noise; keep structure-level
+    // work (new build / demolition / foundation) automatically, PLUS additions ONLY when they
+    // carry a materiality signal (construction value or units added), PLUS any multi-unit
+    // creation. The filter is a per-source ArcGIS `where` because each city's work-code
+    // vocabulary differs. Calibrated on Waterloo (33,208 permits → 660 recent-material):
+    // fire-rate 14% @100m / 25% @150m / 40% @200m → RADIUS 150 m. Permits are far DENSER than
+    // development applications, so dev_application's 300 m wallpapers here (61%). BUMP the
+    // ISSUE_YEAR / date cutoffs annually.
+    //
+    // Expansion = append sources[] per city (Mississauga / Brampton / Kitchener are ArcGIS point
+    // feeds with a value field, loadable directly like Waterloo; Toronto redacts construction
+    // value AND is address-only → it needs a geocoding harvester, so it comes last).
+    kind: "major_construction",
+    shortLabel: "nearby major construction",
+    family: "point",
+    predicate: { type: "distance", meters: 300 }, // index superset; per-source matchRadiusM tightens
+    enabled: true,
+    autoLoad: true,
+    license: "Municipal open data (per-source — see geo_sources)",
+    sources: [
+      {
+        sourceKey: "waterloo_permits",
+        name: "City of Waterloo — Major building permits (new build / demolition / major addition)",
+        license: "City of Waterloo Open Data Licence",
+        endpoint:
+          "https://services.arcgis.com/ZpeBVw5o1kjit7LT/arcgis/rest/services/City_of_Waterloo_Building_Permits/FeatureServer/0",
+        // Structure-level work (new / demolition / foundation on a BUILDING permit) is auto-
+        // material; additions only with construction value >= $500k or >= 2 units; any >= 3-unit
+        // creation. Recent (ISSUE_YEAR >= 2024) only. Reproduces the calibrated JS filter (660).
+        where:
+          "ISSUE_YEAR >= '2024' AND ( (WORKDESC IN ('New','Demolition','FoundationOnly') AND PERMITDESC LIKE '%Building%') OR (WORKDESC IN ('Addition','ResidentialAddition','NonResidentialAddition') AND (CONTRVALUE >= 500000 OR UNITS >= 2)) OR UNITS >= 3 )",
+        matchRadiusM: 150,
+      },
+    ],
+    flag: {
+      id: "major_construction",
+      kind: "info",
+      severity: 30,
+      source: "Municipal building permits (open data)",
+      ask: "Active construction nearby can mean noise, dust and changed views or traffic — check the project's scope and timeline.",
+      title: (m) => `Recent major construction permit issued ~${Math.round(m)} m away`,
+    },
+  },
+  {
     // Deferred: no reliable region-wide open AADT (City of Toronto is single-day TMC,
     // York/Halton are paywalled). Kept here as documentation; off so it never loads.
     kind: "traffic",
