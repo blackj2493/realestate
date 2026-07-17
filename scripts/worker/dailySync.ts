@@ -40,6 +40,8 @@ const STEPS: Step[] = [
   // Precompute base-scope market aggregates into market_summary so the leaderboard/scorecard
   // never run the slow region_*_aggregates RPCs on the request path (migration 048).
   { name: 'Refresh market summary', args: ['scripts/admin/refresh-market-summary.ts', '--apply'], maxMinutes: 30 },
+  // Multi-cut price ledger — diff fresh list prices vs last-known, append price_events (migration 069).
+  { name: 'Capture price events', args: ['scripts/admin/capture-price-events.ts', '--apply'], maxMinutes: 20 },
   { name: 'Refresh property sale history', args: ['scripts/admin/refresh-property-sale-history.ts', '--apply'], maxMinutes: 20 },
   { name: 'Refresh AVM sqft calibration', args: ['scripts/admin/refresh-sqft-calibration.ts', '--apply'], maxMinutes: 20 },
   { name: 'Refresh AVM trend + offset', args: ['scripts/admin/refresh-avm-trend-offset.ts', '--apply'], maxMinutes: 15 },

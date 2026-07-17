@@ -26,6 +26,7 @@ import {
   getInventoryHistoryCached,
   getSeasonalityCached,
   getListingOutcomesCached,
+  getPriceLedgerCached,
   ZERO_SCOPE,
 } from "@/lib/market/aggregates";
 import AnalyticsClient, { type AnalyticsInitial } from "./AnalyticsClient";
@@ -66,7 +67,7 @@ export default async function AnalyticsPage({
   // unavailable (e.g. migration 040 not yet applied), fall back to a client fetch.
   let initial: AnalyticsInitial | undefined;
   if (REGION_RE.test(region)) {
-    const [trendR, statsR, domR, cutsR, dynR, rentR, avmR, invR, seasR, outcR] = await Promise.allSettled([
+    const [trendR, statsR, domR, cutsR, dynR, rentR, avmR, invR, seasR, outcR, ledgR] = await Promise.allSettled([
       getTrendCached(region, typeKeys, ZERO_SCOPE),
       getStatsCached(region, typeKeys, ZERO_SCOPE),
       getDomDistCached(region, typeKeys, ZERO_SCOPE),
@@ -77,6 +78,7 @@ export default async function AnalyticsPage({
       getInventoryHistoryCached(region),
       getSeasonalityCached(region, typeKeys),
       getListingOutcomesCached(region, typeKeys),
+      getPriceLedgerCached(region),
     ]);
     const trend = trendR.status === "fulfilled" ? trendR.value : null;
     const stats = statsR.status === "fulfilled" ? statsR.value : null;
@@ -88,7 +90,8 @@ export default async function AnalyticsPage({
     const inventory = invR.status === "fulfilled" ? invR.value : null;
     const seasonality = seasR.status === "fulfilled" ? seasR.value : null;
     const outcomes = outcR.status === "fulfilled" ? outcR.value : null;
-    if (trend || stats || dom || cuts || dynamics || rental || avm || inventory || seasonality || outcomes) {
+    const ledger = ledgR.status === "fulfilled" ? ledgR.value : null;
+    if (trend || stats || dom || cuts || dynamics || rental || avm || inventory || seasonality || outcomes || ledger) {
       initial = {
         region,
         typeKeys,
@@ -102,6 +105,7 @@ export default async function AnalyticsPage({
         inventory: inventory ? { region, inventory } : null,
         seasonality: seasonality ? { region, seasonality } : null,
         outcomes: outcomes ? { region, outcomes } : null,
+        ledger: ledger ? { region, ledger } : null,
       };
     }
   }

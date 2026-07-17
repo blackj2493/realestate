@@ -247,6 +247,19 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       is_stale: metrics?.is_stale ?? p.is_stale,
       campaign_block_id: p.campaign_block_id,
       dead_days: p.dead_days,
+      // Flat status + entry timestamp (migration 067) so region_active_aggregates /
+      // region_dom_distribution skip the per-row full_payload detoast that was timing
+      // Toronto out (>60s). Same lowercased coalesced status the RPC status-filter uses;
+      // the RPC COALESCEs to full_payload only when these are NULL (null-safe).
+      original_entry_timestamp: (() => {
+        const ms = Date.parse(String((p.full_payload as any)?.OriginalEntryTimestamp ?? ''));
+        return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+      })(),
+      standard_status: (() => {
+        const fp = p.full_payload as any;
+        const s = fp?.Status ?? fp?.MlsStatus ?? fp?.StandardStatus ?? '';
+        return s ? String(s).toLowerCase() : null;
+      })(),
     };
   });
   

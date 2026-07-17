@@ -633,3 +633,41 @@ export function getListingOutcomesCached(region: string, typeKeys: string[]): Pr
     { revalidate: 86400 }
   )();
 }
+
+// ── Price-cut ledger (Phase-3 — migrations 069/070) ──────────────────────────────────
+// Recent multi-cut activity from price_events (prospective; accrues nightly).
+
+export interface PriceLedger {
+  cutEvents: number;
+  cutProperties: number;
+  medianCutPct: number | null;
+  medianCutAmt: number | null;
+  multiCutProperties: number;
+}
+export const EMPTY_LEDGER: PriceLedger = {
+  cutEvents: 0, cutProperties: 0, medianCutPct: null, medianCutAmt: null, multiCutProperties: 0,
+};
+
+async function computePriceLedger(region: string): Promise<PriceLedger> {
+  const sb = getServiceRoleClient();
+  const { data, error } = await sb.rpc("region_price_events_summary", { p_region: region, p_months: 3 });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_LEDGER;
+  return {
+    cutEvents: num(row.cut_events) ?? 0,
+    cutProperties: num(row.cut_properties) ?? 0,
+    medianCutPct: num(row.median_cut_pct),
+    medianCutAmt: num(row.median_cut_amt),
+    multiCutProperties: num(row.multi_cut_properties) ?? 0,
+  };
+}
+
+/** Cached price-cut ledger summary for a market. Caller must pass the VOW gate first. */
+export function getPriceLedgerCached(region: string): Promise<PriceLedger> {
+  return unstable_cache(
+    () => computePriceLedger(region),
+    ["market-price-ledger", "v1", region.toLowerCase()], // v1 = migrations 069/070
+    { revalidate: 86400 }
+  )();
+}

@@ -162,6 +162,21 @@ export interface ListingOutcomesResp {
   error?: string;
 }
 
+/** Multi-cut price-ledger activity (from /api/market/price-ledger — migrations 069/070). */
+export interface PriceLedgerData {
+  cutEvents: number;
+  cutProperties: number;
+  medianCutPct: number | null;
+  medianCutAmt: number | null;
+  multiCutProperties: number;
+}
+export interface PriceLedgerResp {
+  region: string;
+  ledger: PriceLedgerData;
+  locked?: boolean;
+  error?: string;
+}
+
 /** Server-prefetched initial scope + payloads (from analytics/page.tsx). */
 export interface AnalyticsInitial {
   region: string;
@@ -176,6 +191,7 @@ export interface AnalyticsInitial {
   inventory: InventoryHistoryResp | null;
   seasonality: SeasonalityResp | null;
   outcomes: ListingOutcomesResp | null;
+  ledger: PriceLedgerResp | null;
 }
 
 const makeScopeKey = (region: string, typeKeys: string[]) =>
@@ -1077,6 +1093,57 @@ function SeasonalityPanel({ months, loading }: { months: SeasonMonthData[]; load
   );
 }
 
+/** Phase-3 "Price-Cut Activity" — recent multi-cut ledger (accrues nightly). */
+function PriceLedgerPanel({ l, loading }: { l: PriceLedgerData | null; loading: boolean }) {
+  const events = l?.cutEvents ?? 0;
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Price-Cut Activity
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">every reduction tracked — last 3 months</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-16 w-full animate-pulse bg-muted/40" />
+      ) : events === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Price-cut tracking just started — activity appears here as sellers adjust their asking prices.
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div>
+            <div className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">{events.toLocaleString()}</div>
+            <div className="text-[11px] text-muted-foreground">price cuts</div>
+          </div>
+          <div>
+            <div className="font-mono text-2xl font-bold text-foreground">{(l?.cutProperties ?? 0).toLocaleString()}</div>
+            <div className="text-[11px] text-muted-foreground">properties</div>
+          </div>
+          <div>
+            <div className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+              {l?.medianCutPct != null ? `−${l.medianCutPct.toFixed(1)}%` : "—"}
+            </div>
+            <div className="text-[11px] text-muted-foreground">median cut</div>
+          </div>
+          <div>
+            <div className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400">{(l?.multiCutProperties ?? 0).toLocaleString()}</div>
+            <div className="text-[11px] text-muted-foreground">cut 2+ times</div>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · price_events ledger · nightly capture · complements the net price-cut pressure above
+      </p>
+    </div>
+  );
+}
+
 /** Phase-2 "Sell-Through" — share of market exits that actually sold vs withdrew. */
 function SellThroughPanel({ o, loading }: { o: ListingOutcomesData | null; loading: boolean }) {
   const total = (o?.soldCount ?? 0) + (o?.failedCount ?? 0);
@@ -1174,6 +1241,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
     inventory: InventoryHistoryResp | null;
     seasonality: SeasonalityResp | null;
     outcomes: ListingOutcomesResp | null;
+    ledger: PriceLedgerResp | null;
     error: boolean;
   } | null>(() =>
     initial
@@ -1189,6 +1257,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           inventory: initial.inventory,
           seasonality: initial.seasonality,
           outcomes: initial.outcomes,
+          ledger: initial.ledger,
           error: initial.trend == null && initial.stats == null,
         }
       : null
@@ -1225,8 +1294,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
       fetch(`/api/market/inventory-history?region=${q}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/seasonality?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/listing-outcomes?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/price-ledger?region=${q}`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([tr, st, dm, ct, dy, re, av, iv, se, oc]) => {
+      .then(([tr, st, dm, ct, dy, re, av, iv, se, oc, pl]) => {
         if (!alive) return;
         setResult({
           key: scopeKey,
@@ -1240,12 +1310,13 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           inventory: iv as InventoryHistoryResp | null,
           seasonality: se as SeasonalityResp | null,
           outcomes: oc as ListingOutcomesResp | null,
+          ledger: pl as PriceLedgerResp | null,
           error: tr == null && st == null,
         });
       })
       .catch(() => {
         if (!alive) return;
-        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, dynamics: null, rental: null, avm: null, inventory: null, seasonality: null, outcomes: null, error: true });
+        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, dynamics: null, rental: null, avm: null, inventory: null, seasonality: null, outcomes: null, ledger: null, error: true });
       });
     return () => {
       alive = false;
@@ -1266,6 +1337,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const inventory = !loading ? result?.inventory?.inventory?.points ?? [] : [];
   const seasonality = !loading ? result?.seasonality?.seasonality?.months ?? [] : [];
   const outcomes = !loading ? result?.outcomes?.outcomes ?? null : null;
+  const ledger = !loading ? result?.ledger?.ledger ?? null : null;
 
   const score = useMemo(() => assembleRegionScore(region, trend, stats), [region, trend, stats]);
   const points = trend?.points ?? [];
@@ -1413,6 +1485,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
 
         {/* Tier-1 B: Price-cut pressure */}
         <PriceCutPanel cuts={cuts} loading={loading} />
+
+        {/* Phase-3: Multi-cut price ledger (every reduction, accrues nightly) */}
+        <PriceLedgerPanel l={ledger} loading={loading} />
 
         {/* Tier-1 C: Absorption & sell-through (derived from months-of-supply) */}
         <AbsorptionPanel
