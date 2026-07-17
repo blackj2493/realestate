@@ -12,6 +12,7 @@
  */
 
 import type { StatusAlertKind } from "./transitions";
+import { shell, footer } from "./emailShell";
 
 export interface ListingAlertChange {
   listing_key: string;
@@ -129,18 +130,16 @@ export function renderListingAlertEmail(
   const { changes, unsubscribeUrl } = input;
   const subject = subjectFor(changes);
 
-  const html = `<!doctype html><html><body style="margin:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-    <div style="max-width:560px;margin:0 auto;padding:24px;">
+  const preheader = changes.length === 1 ? `${summarize(changes[0])} — sign in for the full history` : subject;
+  const body = `
       <h1 style="font-size:18px;color:#0f172a;margin:0 0 4px;">Updates on homes you're watching</h1>
       <p style="color:#64748b;font-size:13px;margin:0;">${esc(subject)}</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:16px;">${changes.map(rowHtml).join("")}</table>
-      <p style="color:#94a3b8;font-size:11px;margin-top:24px;line-height:1.5;">
-        You're getting this because you asked PureProperty.ca to alert you about ${changes.length === 1 ? "this home" : "these homes"}.
-        <a href="${unsubscribeUrl}" style="color:#94a3b8;">Unsubscribe</a>.
-        Data is deemed reliable but is not guaranteed accurate. Powered by PROPTX MLS®.
-      </p>
-    </div>
-  </body></html>`;
+      <table style="width:100%;border-collapse:collapse;margin-top:14px;">${changes.map(rowHtml).join("")}</table>
+      ${footer({
+        intro: `You're getting this because you asked PureProperty.ca to alert you about ${changes.length === 1 ? "this home" : "these homes"}.`,
+        unsubscribeUrl,
+      })}`;
+  const html = shell({ preheader, headerLabel: "LISTING ALERT", body });
 
   const text =
     changes

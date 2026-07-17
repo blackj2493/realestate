@@ -12,6 +12,7 @@
 
 import type { StatusAlertKind } from "./transitions";
 import type { BubbleSection } from "./bubbleDigest";
+import { shell, footer, button, MONO } from "./emailShell";
 
 export interface DropAlert {
   listing_key: string;
@@ -184,25 +185,19 @@ export function renderAlertsDigest(p: DigestPayload): { subject: string; html: s
     ? sectionHeader("New in your areas") + p.bubbles.map(bubbleSectionHtml).join("")
     : "";
 
-  const html = `<!doctype html><html><body style="margin:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-    <div style="max-width:560px;margin:0 auto;padding:24px;">
+  const preheader = "Every move on your watchlist — with the read behind each one.";
+  const body = `
       <h1 style="font-size:18px;color:#0f172a;margin:0 0 4px;">Your watchlist &amp; market alerts</h1>
-      <p style="color:#64748b;font-size:13px;margin:0;">${subject}</p>
+      <p style="font-family:${MONO};color:#475569;font-size:13px;margin:0;">${subject}</p>
       ${statusSection}
       ${dropsSection}
       ${bubblesSection}
-      <a href="${SITE}/dashboard"
-         style="display:inline-block;margin-top:20px;background:#0891b2;color:#fff;text-decoration:none;
-                padding:10px 16px;border-radius:6px;font-size:13px;font-weight:600;">
-        Open your dashboard
-      </a>
-      <p style="color:#94a3b8;font-size:11px;margin-top:24px;line-height:1.5;">
-        You're receiving this because you saved these properties or areas on PureProperty.ca.
-        <a href="${SITE}/dashboard" style="color:#94a3b8;">Manage alerts</a>.
-        Data is deemed reliable but is not guaranteed accurate. Powered by PROPTX MLS®.
-      </p>
-    </div>
-  </body></html>`;
+      <div style="margin-top:20px;">${button("Open your dashboard &rarr;", `${SITE}/dashboard`)}</div>
+      ${footer({
+        intro: "You're receiving this because you saved these properties or areas on PureProperty.ca.",
+        manageUrl: `${SITE}/dashboard`,
+      })}`;
+  const html = shell({ preheader, headerLabel: "NIGHTLY BRIEF", body });
 
   const textParts: string[] = [];
   if (p.statusChanges.length) {

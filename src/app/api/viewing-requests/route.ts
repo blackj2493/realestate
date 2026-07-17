@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
+import { sendLeadFollowUp } from "@/lib/alerts/leadFollowUpEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,15 @@ export async function POST(req: NextRequest) {
       }
     } catch (mailErr) {
       console.error("[viewing-requests] notification email failed (lead saved):", mailErr);
+    }
+
+    // Tier-0 speed-to-lead: instant auto-acknowledgement TO the lead (best-effort; a
+    // follow-up failure must never fail the capture). This is the reply the lead used to
+    // never get. `message` intentionally omitted from the reply — it's their own words.
+    try {
+      await sendLeadFollowUp({ name, address, listingKey, email });
+    } catch (fuErr) {
+      console.error("[viewing-requests] lead follow-up failed (lead saved):", fuErr);
     }
 
     return NextResponse.json({ success: true });

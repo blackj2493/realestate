@@ -3,6 +3,9 @@ import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { SENDERS } from "@/lib/alerts/senders";
+import { renderConfirmationEmail } from "@/lib/alerts/confirmationEmail";
+import { unsubscribeUrl } from "@/lib/alerts/unsubscribe";
+import { SITE } from "@/lib/alerts/emailShell";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +38,12 @@ const KIND_COPY: Record<string, { label: string; line: (where: string) => string
     label: "New-listing alerts",
     line: (where) => `We'll email you when homes like ${where} hit the market.`,
   },
+};
+
+const WATCHING_FOR: Record<string, string> = {
+  price_status: "price · status",
+  relist: "relist",
+  similar: "new listings",
 };
 
 function bad(error: string) {
@@ -86,20 +95,26 @@ export async function POST(req: NextRequest) {
     try {
       if (process.env.RESEND_API_KEY) {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const where = address || (city ? `homes in ${city}` : "this home");
         const copy = KIND_COPY[kind];
+        const { subject, html, text } = renderConfirmationEmail({
+          email,
+          address,
+          city,
+          listingKey,
+          kindLabel: copy.label,
+          watchingFor: WATCHING_FOR[kind] || "changes",
+        });
         await resend.emails.send({
           from: SENDERS.confirmation.from,
           replyTo: SENDERS.confirmation.replyTo,
           to: email,
-          subject: `You're set — ${copy.label} for ${address || city || listingKey}`,
-          text: [
-            copy.line(where),
-            "",
-            "You'll only hear from us when something actually changes. Unsubscribe anytime from any alert email.",
-            "",
-            "— PureProperty.ca",
-          ].join("\n"),
+          subject,
+          html,
+          text,
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl(email, SITE)}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
         });
       }
     } catch (mailErr) {
