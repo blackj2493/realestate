@@ -211,6 +211,14 @@ export function assembleRegionScore(
   const soldToListPct = trend?.summary.soldToListPct ?? null;
   const capSample = stats?.stats.capSample ?? 0;
 
+  // Thin sold sample ⇒ the median/$sqft/YoY/months-supply are composition noise (e.g. 2 homes
+  // drove a fake "+23% YoY"). Suppress the sold-side PRICE metrics below a recent-sales floor —
+  // the same ≥10 bar the RPC uses for sold-to-list. Active-side metrics (True DoM, active count,
+  // % stale, cap, sell-through) are real counts / independently guarded, so they stay.
+  const sales90 = trend?.summary.sales90 ?? 0;
+  const soldThin = sales90 < 10;
+  const gatedMonthsOfSupply = soldThin ? null : monthsOfSupply;
+
   const staleCount = stats?.stats.staleCount ?? 0;
   const stalePct =
     activeCount && activeCount > 0 ? Math.round((staleCount / activeCount) * 1000) / 10 : null;
@@ -231,13 +239,13 @@ export function assembleRegionScore(
     region,
     // Either endpoint returning `locked` (anonymous) locks the whole row.
     locked: !!(trend?.locked || stats?.locked),
-    medianPrice: latest?.medianPrice ?? null,
-    priceSeries: points.slice(-12).map((p) => ({ month: p.month, v: p.medianPrice })),
-    yoyPct: smoothedYoY(points, "medianPrice"),
-    medianPpsf: latestPpsf,
-    ppsfYoyPct: smoothedYoY(points, "medianPpsf"),
+    medianPrice: soldThin ? null : latest?.medianPrice ?? null,
+    priceSeries: soldThin ? [] : points.slice(-12).map((p) => ({ month: p.month, v: p.medianPrice })),
+    yoyPct: soldThin ? null : smoothedYoY(points, "medianPrice"),
+    medianPpsf: soldThin ? null : latestPpsf,
+    ppsfYoyPct: soldThin ? null : smoothedYoY(points, "medianPpsf"),
     activeCount,
-    monthsOfSupply,
+    monthsOfSupply: gatedMonthsOfSupply,
     soldToListPct,
     pctOverAsking: trend?.summary.pctOverAsking ?? null,
     // Median over a tiny sample is noise — require ≥5 priced active listings.
@@ -246,6 +254,6 @@ export function assembleRegionScore(
     stalePct,
     trueDom,
     sellThroughPct,
-    temperature: temperatureOf(monthsOfSupply, soldToListPct),
+    temperature: temperatureOf(gatedMonthsOfSupply, soldToListPct),
   };
 }

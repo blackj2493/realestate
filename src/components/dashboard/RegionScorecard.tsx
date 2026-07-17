@@ -271,8 +271,9 @@ export default function RegionScorecard({
         Active metrics (True DoM, cap rate, active count, % stale) are full-population over current active
         inventory, deduped by property. Median price, $/sqft, Sold/List & months of supply are from sold
         records (recent months lag). Sell-Thru = share of listings that sold vs withdrew, last 12 months.
-        Sold/List shown only where list-price coverage ≥ 50%; median cap requires ≥ 5 priced active listings;
-        True DoM ≥ 10 active, Sell-Thru ≥ 30 resolved listings.
+        Median price, $/sqft, YoY &amp; months of supply need ≥ 10 recent sales (thinner samples are
+        composition noise, not a trend). Sold/List needs list-price coverage ≥ 50%; median cap ≥ 5 priced
+        active; True DoM ≥ 10 active; Sell-Thru ≥ 30 resolved listings.
       </p>
     </section>
   );
