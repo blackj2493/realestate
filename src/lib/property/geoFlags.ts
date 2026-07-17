@@ -53,3 +53,36 @@ export function geoFlagsFor(sig: GeoSignals): DiligenceFlag[] {
 
   return out;
 }
+
+/**
+ * Merge ONE dataset's freshly-recomputed flag into a listing's existing geo-flag array,
+ * leaving every OTHER dataset's flag untouched, and re-emit the whole array in registry
+ * order — byte-identical to a full geoFlagsFor() recompute in which only `kind`'s geometry
+ * changed. `newFlag` is the recomputed flag (already asOf-stamped) when the listing now
+ * matches, or null to CLEAR it. This is what lets the single-dataset targeted refresh
+ * (enrichGeoFlags --dataset) update just e.g. dev_application weekly without re-running the
+ * other 10 predicates (which would need the full-payload re-scan the weekly job must avoid).
+ *
+ * Any stored flag whose id is no longer an ACTIVE dataset is dropped — the same outcome a
+ * full recompute produces once a dataset is disabled.
+ */
+export function mergeDatasetFlag(
+  existing: DiligenceFlag[],
+  kind: string,
+  newFlag: DiligenceFlag | null,
+): DiligenceFlag[] {
+  const byId = new Map<string, DiligenceFlag>();
+  for (const f of existing) if (f && f.id !== kind) byId.set(f.id, f);
+
+  const out: DiligenceFlag[] = [];
+  for (const ds of ACTIVE_DATASETS) {
+    const id = ds.flag.id;
+    if (id === kind) {
+      if (newFlag) out.push(newFlag);
+    } else {
+      const f = byId.get(id);
+      if (f) out.push(f);
+    }
+  }
+  return out;
+}

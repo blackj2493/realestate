@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { geoFlagsFor } from "./geoFlags";
-import { ACTIVE_DATASETS, GEO_DATASETS } from "./geoDatasets";
+import { geoFlagsFor, mergeDatasetFlag } from "./geoFlags";
+import { ACTIVE_DATASETS, GEO_DATASETS, buildGeoFlag } from "./geoDatasets";
 
 describe("geoFlagsFor — intersect (polygon) flags", () => {
   it("flags a listing inside a regulated floodplain", () => {
@@ -108,5 +108,52 @@ describe("geoFlagsFor — registry integrity", () => {
   it("rsc is registered but disabled (license pending MECP)", () => {
     expect(GEO_DATASETS.find((d) => d.kind === "rsc")?.enabled).toBe(false);
     expect(geoFlagsFor({ distanceM: { rsc: 10 } })).toEqual([]);
+  });
+});
+
+describe("mergeDatasetFlag — single-dataset targeted refresh (enrichGeoFlags --dataset)", () => {
+  const devDs = ACTIVE_DATASETS.find((d) => d.kind === "dev_application")!;
+
+  it("is byte-identical to a full recompute when it ADDS the flag", () => {
+    // Listing already flagged flood + greenbelt + hydro; now a dev application is filed 120 m away.
+    const existing = geoFlagsFor({ inside: { flood: true, greenbelt: true }, distanceM: { hydro: 40 } });
+    const merged = mergeDatasetFlag(existing, "dev_application", buildGeoFlag(devDs, 120));
+    const fullRecompute = geoFlagsFor({
+      inside: { flood: true, greenbelt: true },
+      distanceM: { hydro: 40, dev_application: 120 },
+    });
+    expect(merged).toEqual(fullRecompute);
+    // dev_application is the last active dataset → always appended last, never mid-array.
+    expect(merged[merged.length - 1].id).toBe("dev_application");
+  });
+
+  it("CLEARS the flag (newFlag = null) and leaves the other flags untouched + in order", () => {
+    const existing = geoFlagsFor({
+      inside: { flood: true, greenbelt: true },
+      distanceM: { hydro: 40, dev_application: 120 },
+    });
+    const merged = mergeDatasetFlag(existing, "dev_application", null);
+    const fullRecompute = geoFlagsFor({ inside: { flood: true, greenbelt: true }, distanceM: { hydro: 40 } });
+    expect(merged).toEqual(fullRecompute);
+    expect(merged.some((f) => f.id === "dev_application")).toBe(false);
+  });
+
+  it("REPLACES an existing flag's distance without disturbing the others", () => {
+    const existing = geoFlagsFor({ inside: { flood: true }, distanceM: { dev_application: 250 } });
+    const merged = mergeDatasetFlag(existing, "dev_application", buildGeoFlag(devDs, 90));
+    expect(merged).toEqual(geoFlagsFor({ inside: { flood: true }, distanceM: { dev_application: 90 } }));
+    expect(merged.find((f) => f.id === "dev_application")?.title).toBe(
+      "Major development application filed ~90 m away",
+    );
+  });
+
+  it("preserves the asOf provenance stamped on the recomputed flag", () => {
+    const stamped = { ...buildGeoFlag(devDs, 100), asOf: "2026-07-16" };
+    const merged = mergeDatasetFlag([], "dev_application", stamped);
+    expect(merged).toEqual([stamped]);
+  });
+
+  it("no-ops to an empty array when clearing a listing that had no flags", () => {
+    expect(mergeDatasetFlag([], "dev_application", null)).toEqual([]);
   });
 });
