@@ -506,3 +506,130 @@ export function getAvmReliabilityCached(region: string, typeKeys: string[]): Pro
     { revalidate: 86400 }
   )();
 }
+
+// ── Inventory time-series (Phase-2 — migration 064) ──────────────────────────────────
+// Daily active-inventory snapshots appended by refresh-market-summary.ts. Only the
+// ~15 curated leaderboard markets have history (base scope, no type/beds lens).
+
+export interface InventoryPoint {
+  date: string; // YYYY-MM-DD
+  activeCount: number | null;
+  stalePct: number | null; // 0..1
+  medianCapRate: number | null;
+}
+export interface InventoryHistory {
+  points: InventoryPoint[];
+}
+export const EMPTY_INVENTORY: InventoryHistory = { points: [] };
+
+async function computeInventoryHistory(region: string): Promise<InventoryHistory> {
+  const sb = getServiceRoleClient();
+  const { data, error } = await sb
+    .from("market_summary_history")
+    .select("snapshot_date, active_count, stale_count, cap_sample, median_cap_rate")
+    .ilike("region", region) // exact (no wildcards) case-insensitive match on the curated name
+    .order("snapshot_date", { ascending: true });
+  if (error) throw new Error(error.message);
+  const points: InventoryPoint[] = (data ?? []).map((r) => {
+    const active = num(r.active_count);
+    const stale = num(r.stale_count);
+    return {
+      date: String(r.snapshot_date).slice(0, 10),
+      activeCount: active,
+      stalePct: active && active > 0 && stale != null ? stale / active : null,
+      medianCapRate: (num(r.cap_sample) ?? 0) >= 5 ? num(r.median_cap_rate) : null,
+    };
+  });
+  return { points };
+}
+
+/** Cached inventory history for a curated market. Caller must pass the VOW gate first. */
+export function getInventoryHistoryCached(region: string): Promise<InventoryHistory> {
+  return unstable_cache(
+    () => computeInventoryHistory(region),
+    ["market-inventory-history", "v1", region.toLowerCase()], // v1 = migration 064
+    { revalidate: 86400 }
+  )();
+}
+
+// ── Seasonality (Phase-2 — migration 065) ────────────────────────────────────────────
+
+export interface SeasonMonth {
+  month: number; // 1..12
+  sales: number;
+  priceIndexPct: number | null; // median sale ÷ year-median − 1, %
+  soldToList: number | null;
+}
+export interface Seasonality {
+  months: SeasonMonth[];
+}
+export const EMPTY_SEASONALITY: Seasonality = { months: [] };
+
+async function computeSeasonality(region: string, typeKeys: string[]): Promise<Seasonality> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_seasonality", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+  });
+  if (error) throw new Error(error.message);
+  const months = (Array.isArray(data) ? data : []).map((r) => ({
+    month: num(r.month_num) ?? 0,
+    sales: num(r.sales) ?? 0,
+    priceIndexPct: num(r.price_index_pct),
+    soldToList: num(r.sold_to_list),
+  }));
+  return { months };
+}
+
+/** Cached seasonality for a region + type scope. Caller must pass the VOW gate first. */
+export function getSeasonalityCached(region: string, typeKeys: string[]): Promise<Seasonality> {
+  return unstable_cache(
+    () => computeSeasonality(region, typeKeys),
+    ["market-seasonality", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 065
+    { revalidate: 86400 }
+  )();
+}
+
+// ── Listing outcomes / sell-through (Phase-2 — migration 066) ────────────────────────
+
+export interface ListingOutcomes {
+  windowMonths: number;
+  soldCount: number;
+  failedCount: number;
+  /** share (0..1) of market exits that de-listed without a recorded sale */
+  failureRate: number | null;
+  medianFailedDom: number | null;
+}
+export const EMPTY_OUTCOMES: ListingOutcomes = {
+  windowMonths: 12, soldCount: 0, failedCount: 0, failureRate: null, medianFailedDom: null,
+};
+
+async function computeListingOutcomes(region: string, typeKeys: string[]): Promise<ListingOutcomes> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_listing_outcomes", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_months: MONTHS / 2, // 12-month trailing window
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return EMPTY_OUTCOMES;
+  return {
+    windowMonths: num(row.window_months) ?? 12,
+    soldCount: num(row.sold_count) ?? 0,
+    failedCount: num(row.failed_count) ?? 0,
+    failureRate: num(row.failure_rate),
+    medianFailedDom: num(row.median_failed_dom),
+  };
+}
+
+/** Cached listing outcomes for a region + type scope. Caller must pass the VOW gate first. */
+export function getListingOutcomesCached(region: string, typeKeys: string[]): Promise<ListingOutcomes> {
+  return unstable_cache(
+    () => computeListingOutcomes(region, typeKeys),
+    ["market-listing-outcomes", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 066
+    { revalidate: 86400 }
+  )();
+}

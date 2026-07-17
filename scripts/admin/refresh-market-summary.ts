@@ -142,6 +142,28 @@ async function main() {
     return;
   }
   console.log(`   ✅ market_summary refreshed (${rows.length} markets).`);
+
+  // Append today's snapshot to the history table (inventory time-series, migration 064).
+  // Same rows, stamped with the run date; PK (region, snapshot_date) makes a same-day
+  // re-run idempotent. Only the markets that recomputed this run are appended (never
+  // fabricate a point for a failed/skipped market). Non-fatal — a history-append failure
+  // must not fail the leaderboard refresh.
+  const snapshotDate = new Date().toISOString().slice(0, 10); // UTC date
+  const histRows = rows.map((r) => ({
+    region: r.region,
+    snapshot_date: snapshotDate,
+    active_count: r.active_count,
+    stale_count: r.stale_count,
+    cap_sample: r.cap_sample,
+    median_cap_rate: r.median_cap_rate,
+    computed_at: r.computed_at,
+  }));
+  const { error: histErr } = await sb
+    .from('market_summary_history')
+    .upsert(histRows, { onConflict: 'region,snapshot_date' });
+  if (histErr) console.warn(`   ⚠️  market_summary_history append failed (non-fatal): ${histErr.message}`);
+  else console.log(`   ✅ appended ${histRows.length} rows to market_summary_history (${snapshotDate}).`);
+
   if (failures.length > 0) process.exitCode = 1; // surface partial failure to the orchestrator
 }
 

@@ -119,6 +119,49 @@ export interface AvmReliabilityResp {
   error?: string;
 }
 
+/** Daily active-inventory snapshots (from /api/market/inventory-history — migration 064). */
+export interface InventoryPointData {
+  date: string; // YYYY-MM-DD
+  activeCount: number | null;
+  stalePct: number | null; // 0..1
+  medianCapRate: number | null;
+}
+export interface InventoryHistoryResp {
+  region: string;
+  inventory: { points: InventoryPointData[] };
+  locked?: boolean;
+  error?: string;
+}
+
+/** Monthly seasonality (from /api/market/seasonality — migration 065 RPC). */
+export interface SeasonMonthData {
+  month: number; // 1..12
+  sales: number;
+  priceIndexPct: number | null;
+  soldToList: number | null;
+}
+export interface SeasonalityResp {
+  region: string;
+  seasonality: { months: SeasonMonthData[] };
+  locked?: boolean;
+  error?: string;
+}
+
+/** Sell-through / withdrawal outcomes (from /api/market/listing-outcomes — migration 066). */
+export interface ListingOutcomesData {
+  windowMonths: number;
+  soldCount: number;
+  failedCount: number;
+  failureRate: number | null; // 0..1
+  medianFailedDom: number | null;
+}
+export interface ListingOutcomesResp {
+  region: string;
+  outcomes: ListingOutcomesData;
+  locked?: boolean;
+  error?: string;
+}
+
 /** Server-prefetched initial scope + payloads (from analytics/page.tsx). */
 export interface AnalyticsInitial {
   region: string;
@@ -130,6 +173,9 @@ export interface AnalyticsInitial {
   dynamics: SoldDynamicsResp | null;
   rental: RentalYieldResp | null;
   avm: AvmReliabilityResp | null;
+  inventory: InventoryHistoryResp | null;
+  seasonality: SeasonalityResp | null;
+  outcomes: ListingOutcomesResp | null;
 }
 
 const makeScopeKey = (region: string, typeKeys: string[]) =>
@@ -824,6 +870,277 @@ function AvmConfidencePanel({ avm, loading }: { avm: AvmReliabilityData | null; 
   );
 }
 
+/** Single-series sparkline (no axis, so no dual-axis violation). */
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const n = values.length;
+  const pts = values
+    .map((v, i) => `${((i / (n - 1)) * 100).toFixed(2)},${(28 - ((v - min) / span) * 26).toFixed(2)}`)
+    .join(" ");
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="h-14 w-full">
+      <polyline points={pts} fill="none" className="stroke-cyan-600 dark:stroke-cyan-400" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+function DeltaChip({ value, unit, invertColor = false }: { value: number | null; unit: string; invertColor?: boolean }) {
+  if (value == null) return null;
+  const up = value >= 0;
+  const good = invertColor ? !up : up; // for stale%, up is bad
+  return (
+    <span className={`ml-2 font-mono text-[11px] font-bold ${good ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"}`}>
+      {up ? "▲" : "▼"} {Math.abs(value).toFixed(unit === "%" ? 1 : 0)}{unit}
+    </span>
+  );
+}
+
+/** Phase-2 "Inventory Trend" — daily active-inventory snapshots (accrues over time). */
+function InventoryHistoryPanel({ points, loading }: { points: InventoryPointData[]; loading: boolean }) {
+  const clean = points.filter((p) => p.activeCount != null);
+  const n = clean.length;
+  const last = n ? clean[n - 1] : null;
+  const first = n ? clean[0] : null;
+  const activeVals = clean.map((p) => p.activeCount as number);
+  const activeDelta =
+    n > 1 && first?.activeCount ? ((last!.activeCount! - first.activeCount) / first.activeCount) * 100 : null;
+  const staleDelta =
+    n > 1 && first?.stalePct != null && last?.stalePct != null ? (last.stalePct - first.stalePct) * 100 : null;
+
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Inventory Trend
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">active listings &amp; stale share, snapshotted daily</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-24 w-full animate-pulse bg-muted/40" />
+      ) : n === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">Inventory history isn’t tracked for this area yet — available for the main GTA markets.</p>
+      ) : (
+        <div className="mt-4 grid gap-6 sm:grid-cols-[1fr_1.4fr]">
+          <div className="grid grid-cols-2 gap-4 self-center sm:grid-cols-1">
+            <div>
+              <div className="flex items-baseline">
+                <span className="font-mono text-3xl font-bold text-foreground">
+                  {last!.activeCount!.toLocaleString()}
+                </span>
+                <DeltaChip value={activeDelta} unit="%" />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">active listings</p>
+            </div>
+            <div>
+              <div className="flex items-baseline">
+                <span className="font-mono text-3xl font-bold text-rose-600 dark:text-rose-400">
+                  {last!.stalePct != null ? `${Math.round(last!.stalePct * 100)}%` : "—"}
+                </span>
+                <DeltaChip value={staleDelta} unit="pp" invertColor />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">stale (60d+)</p>
+            </div>
+          </div>
+          <div className="self-center">
+            {n >= 2 ? (
+              <>
+                <div className="mb-1 flex justify-between font-mono text-[10px] text-muted-foreground">
+                  <span>{first!.date}</span>
+                  <span>active listings</span>
+                  <span>{last!.date}</span>
+                </div>
+                <Sparkline values={activeVals} />
+              </>
+            ) : (
+              <div className="rounded-sm border border-dashed border-border px-3 py-4 text-center text-[11px] text-muted-foreground">
+                First snapshot captured <span className="font-mono text-foreground">{first!.date}</span>.
+                <br />The trend line fills in as daily snapshots accrue.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · {n} daily snapshot{n === 1 ? "" : "s"} · appended by the nightly market refresh
+      </p>
+    </div>
+  );
+}
+
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Phase-2 "Seasonality" — diverging price-index bars (sell-favorable up / buy-favorable down). */
+function SeasonalityPanel({ months, loading }: { months: SeasonMonthData[]; loading: boolean }) {
+  const withIdx = months.filter((m) => m.priceIndexPct != null);
+  const maxAbs = Math.max(2, ...withIdx.map((m) => Math.abs(m.priceIndexPct!)));
+  const bestSell = withIdx.length ? withIdx.reduce((a, b) => (b.priceIndexPct! > a.priceIndexPct! ? b : a)) : null;
+  const bestBuy = withIdx.length ? withIdx.reduce((a, b) => (b.priceIndexPct! < a.priceIndexPct! ? b : a)) : null;
+  const byMonth = new Map(months.map((m) => [m.month, m]));
+  const label = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
+
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Seasonality
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">when to buy vs sell — 5-year sold pattern, year-normalized</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-32 w-full animate-pulse bg-muted/40" />
+      ) : withIdx.length === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">Not enough sold history for a seasonal pattern</p>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="rounded-sm border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+              <div className="terminal-font text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Best month to sell</div>
+              <div className="mt-1 font-mono text-lg font-bold text-foreground">
+                {bestSell ? MONTH_ABBR[bestSell.month - 1] : "—"}
+                {bestSell?.priceIndexPct != null && (
+                  <span className="ml-2 text-sm text-emerald-700 dark:text-emerald-400">{label(bestSell.priceIndexPct)}</span>
+                )}
+              </div>
+              <div className="text-[11px] text-muted-foreground">vs the year’s median</div>
+            </div>
+            <div className="rounded-sm border border-sky-500/30 bg-sky-500/5 px-3 py-2">
+              <div className="terminal-font text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">Best month to buy</div>
+              <div className="mt-1 font-mono text-lg font-bold text-foreground">
+                {bestBuy ? MONTH_ABBR[bestBuy.month - 1] : "—"}
+                {bestBuy?.priceIndexPct != null && (
+                  <span className="ml-2 text-sm text-sky-700 dark:text-sky-400">{label(bestBuy.priceIndexPct)}</span>
+                )}
+              </div>
+              <div className="text-[11px] text-muted-foreground">vs the year’s median</div>
+            </div>
+          </div>
+
+          {/* diverging bars: above midline = sold above year-median (sell), below = under (buy) */}
+          <div className="mt-6">
+            <div className="relative flex h-28 items-stretch gap-1">
+              <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((mn) => {
+                const m = byMonth.get(mn);
+                const v = m?.priceIndexPct ?? null;
+                const pos = (v ?? 0) >= 0;
+                const isSell = bestSell && m?.month === bestSell.month;
+                const isBuy = bestBuy && m?.month === bestBuy.month;
+                const cls = pos
+                  ? isSell ? "bg-emerald-600 dark:bg-emerald-400" : "bg-emerald-500/60"
+                  : isBuy ? "bg-sky-600 dark:bg-sky-400" : "bg-sky-500/60";
+                const h = v != null ? `${(Math.abs(v) / maxAbs) * 46}%` : "0%";
+                const title = m
+                  ? `${MONTH_ABBR[mn - 1]} · ${v != null ? label(v) : "—"} vs year-median · ${m.sales.toLocaleString()} sales${m.soldToList != null ? ` · ${m.soldToList}% s2l` : ""}`
+                  : MONTH_ABBR[mn - 1];
+                return (
+                  <div key={mn} className="relative flex-1" title={title}>
+                    {v != null && (
+                      <div
+                        className={`absolute left-1/2 w-2.5 -translate-x-1/2 rounded-sm ${cls}`}
+                        style={pos ? { bottom: "50%", height: h } : { top: "50%", height: h }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-1 flex gap-1">
+              {MONTH_ABBR.map((mo, i) => (
+                <span key={i} className="flex-1 text-center font-mono text-[9px] text-muted-foreground">{mo[0]}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-emerald-500/60" /> sold above year-median (seller-favorable)</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-sky-500/60" /> sold below (buyer-favorable)</span>
+          </div>
+        </>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · 5-year raw_vow_sold · each sale indexed to its own year’s median
+      </p>
+    </div>
+  );
+}
+
+/** Phase-2 "Sell-Through" — share of market exits that actually sold vs withdrew. */
+function SellThroughPanel({ o, loading }: { o: ListingOutcomesData | null; loading: boolean }) {
+  const total = (o?.soldCount ?? 0) + (o?.failedCount ?? 0);
+  const sellThrough = o?.failureRate != null ? 1 - o.failureRate : total > 0 ? (o?.soldCount ?? 0) / total : null;
+  const soldPct = total > 0 ? ((o?.soldCount ?? 0) / total) * 100 : 0;
+  return (
+    <div className="mt-5 border border-border bg-card/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+          Sell-Through
+        </h2>
+        <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+          New
+        </span>
+        <span className="text-[11px] text-muted-foreground">of listings that came off the market, how many actually sold — 12 months</span>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 h-20 w-full animate-pulse bg-muted/40" />
+      ) : total === 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">No listing-outcome data for this scope</p>
+      ) : (
+        <div className="mt-4 grid gap-6 sm:grid-cols-[1fr_1.3fr]">
+          <div className="self-center">
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-4xl font-bold text-cyan-700 dark:text-cyan-300">
+                {sellThrough != null ? `${Math.round(sellThrough * 100)}%` : "—"}
+              </span>
+              <span className="text-xs text-muted-foreground">sold</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              the other {sellThrough != null ? Math.round((1 - sellThrough) * 100) : "—"}% withdrew without a recorded sale
+            </p>
+          </div>
+          <div className="self-center">
+            <div className="flex h-4 w-full overflow-hidden rounded-sm">
+              <div className="h-full bg-cyan-600 dark:bg-cyan-500" style={{ width: `${soldPct}%` }} title={`Sold · ${(o?.soldCount ?? 0).toLocaleString()}`} />
+              <div className="ml-[2px] h-full flex-1 bg-rose-500/70" title={`Withdrawn · ${(o?.failedCount ?? 0).toLocaleString()}`} />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <div className="font-mono text-base font-semibold text-cyan-700 dark:text-cyan-300">{(o?.soldCount ?? 0).toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">sold</div>
+              </div>
+              <div>
+                <div className="font-mono text-base font-semibold text-rose-600 dark:text-rose-400">{(o?.failedCount ?? 0).toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">withdrawn</div>
+              </div>
+              <div>
+                <div className="font-mono text-base font-semibold text-foreground">{o?.medianFailedDom != null ? `${o.medianFailedDom}d` : "—"}</div>
+                <div className="text-[11px] text-muted-foreground">median before giving up</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        source · distinct properties · relist→sold counts as a sale · de-listed (term/expired) without a sale = withdrawn
+      </p>
+    </div>
+  );
+}
+
 export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitial }) {
   const chart = useChartTheme();
   const router = useRouter();
@@ -854,6 +1171,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
     dynamics: SoldDynamicsResp | null;
     rental: RentalYieldResp | null;
     avm: AvmReliabilityResp | null;
+    inventory: InventoryHistoryResp | null;
+    seasonality: SeasonalityResp | null;
+    outcomes: ListingOutcomesResp | null;
     error: boolean;
   } | null>(() =>
     initial
@@ -866,6 +1186,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           dynamics: initial.dynamics,
           rental: initial.rental,
           avm: initial.avm,
+          inventory: initial.inventory,
+          seasonality: initial.seasonality,
+          outcomes: initial.outcomes,
           error: initial.trend == null && initial.stats == null,
         }
       : null
@@ -899,8 +1222,11 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
       fetch(`/api/market/sold-dynamics?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/rental-yield?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/market/avm-reliability?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/inventory-history?region=${q}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/seasonality?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/market/listing-outcomes?region=${q}${t}`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([tr, st, dm, ct, dy, re, av]) => {
+      .then(([tr, st, dm, ct, dy, re, av, iv, se, oc]) => {
         if (!alive) return;
         setResult({
           key: scopeKey,
@@ -911,12 +1237,15 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           dynamics: dy as SoldDynamicsResp | null,
           rental: re as RentalYieldResp | null,
           avm: av as AvmReliabilityResp | null,
+          inventory: iv as InventoryHistoryResp | null,
+          seasonality: se as SeasonalityResp | null,
+          outcomes: oc as ListingOutcomesResp | null,
           error: tr == null && st == null,
         });
       })
       .catch(() => {
         if (!alive) return;
-        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, dynamics: null, rental: null, avm: null, error: true });
+        setResult({ key: scopeKey, trend: null, stats: null, dom: null, cuts: null, dynamics: null, rental: null, avm: null, inventory: null, seasonality: null, outcomes: null, error: true });
       });
     return () => {
       alive = false;
@@ -934,6 +1263,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const dynamics = !loading ? result?.dynamics?.dynamics ?? null : null;
   const rental = !loading ? result?.rental?.rental?.rows ?? [] : [];
   const avm = !loading ? result?.avm?.avm ?? null : null;
+  const inventory = !loading ? result?.inventory?.inventory?.points ?? [] : [];
+  const seasonality = !loading ? result?.seasonality?.seasonality?.months ?? [] : [];
+  const outcomes = !loading ? result?.outcomes?.outcomes ?? null : null;
 
   const score = useMemo(() => assembleRegionScore(region, trend, stats), [region, trend, stats]);
   const points = trend?.points ?? [];
@@ -1073,6 +1405,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         {/* Phase-2: Market momentum (derived from the trend points — no extra fetch) */}
         <MomentumPanel points={points} loading={loading} />
 
+        {/* Phase-2: Inventory trend (daily active-inventory snapshots — accrues over time) */}
+        <InventoryHistoryPanel points={inventory} loading={loading} />
+
         {/* Tier-1: True Days on Market (relist-stitched median + aging + 60d stale + hidden gap) */}
         <TrueDomPanel dom={dom} loading={loading} />
 
@@ -1085,6 +1420,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           monthlyVelocity={trend?.summary.monthlyVelocity ?? null}
           loading={loading}
         />
+
+        {/* Phase-2: Sell-through / withdrawal rate (sold vs de-listed, address-deduped) */}
+        <SellThroughPanel o={outcomes} loading={loading} />
 
         {/* Trend chart */}
         <div className="mt-5 border border-border bg-card/40">
@@ -1188,6 +1526,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             )}
           </div>
         </div>
+
+        {/* Phase-2: Seasonality — best month to buy/sell (5-yr sold pattern) */}
+        <SeasonalityPanel months={seasonality} loading={loading} />
 
         {/* Phase-2: Sold-side dynamics — time-to-sell + original-ask gap + $/sqft dispersion */}
         <SoldDynamicsPanel d={dynamics} loading={loading} />
