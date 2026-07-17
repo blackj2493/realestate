@@ -629,7 +629,7 @@ async function computeListingOutcomes(region: string, typeKeys: string[]): Promi
 export function getListingOutcomesCached(region: string, typeKeys: string[]): Promise<ListingOutcomes> {
   return unstable_cache(
     () => computeListingOutcomes(region, typeKeys),
-    ["market-listing-outcomes", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 066
+    ["market-listing-outcomes", "v2", region.toLowerCase(), typeKey(typeKeys)], // v2 = migration 072 (sale-only + exclude active)
     { revalidate: 86400 }
   )();
 }

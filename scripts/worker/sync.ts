@@ -260,6 +260,12 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
         const s = fp?.Status ?? fp?.MlsStatus ?? fp?.StandardStatus ?? '';
         return s ? String(s).toLowerCase() : null;
       })(),
+      // Flat normalized address (migration 071) so region_listing_outcomes can exclude
+      // currently-active (relisted) addresses without a full_payload detoast. '' when absent.
+      norm_address: (() => {
+        const a = (p.full_payload as any)?.UnparsedAddress;
+        return a ? String(a).trim().toLowerCase() : '';
+      })(),
     };
   });
   

@@ -1202,7 +1202,7 @@ function SellThroughPanel({ o, loading }: { o: ListingOutcomesData | null; loadi
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · distinct properties · relist→sold counts as a sale · de-listed (term/expired) without a sale = withdrawn
+        source · distinct SALE properties · withdrawn = left the market unsold &amp; not currently relisted · leases + active relists excluded
       </p>
     </div>
   );
