@@ -15,6 +15,7 @@
  */
 import { Resend } from "resend";
 import { SENDERS } from "./senders";
+import { marketingUnsubscribeUrl } from "./unsubscribe";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const MAIL_ADDRESS = "268 America Ave, Vaughan, ON L6A 3G7";
@@ -53,7 +54,10 @@ function finding(label: string, value: string, accentBar: string): string {
   </td>`;
 }
 
-export function renderWelcomeEmail(): { subject: string; html: string; text: string } {
+export function renderWelcomeEmail(recipientEmail?: string): { subject: string; html: string; text: string } {
+  // Personalised one-click unsubscribe (CASL). Falls back to the dashboard for previews
+  // without a recipient; a real send always passes the address.
+  const unsubUrl = recipientEmail ? marketingUnsubscribeUrl(recipientEmail, SITE) : `${SITE}/dashboard`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"></head>
 <body style="margin:0;background:#eef2f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${PREHEADER}</div>
@@ -159,7 +163,7 @@ export function renderWelcomeEmail(): { subject: string; html: string; text: str
 
         <!-- footer -->
         <p style="color:#64748b;font-size:11px;margin-top:26px;line-height:1.6;border-top:1px solid #f1f5f9;padding-top:16px;">
-          You created a PureProperty.ca account. <a href="${SITE}/dashboard" style="color:#64748b;">Manage alerts</a> &middot; <a href="${SITE}/unsubscribe" style="color:#64748b;">Unsubscribe</a>.<br>
+          You created a PureProperty.ca account. <a href="${SITE}/dashboard" style="color:#64748b;">Manage alerts</a> &middot; <a href="${unsubUrl}" style="color:#64748b;">Unsubscribe</a>.<br>
           Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS&reg;.<br>
           PureProperty &middot; ${MAIL_ADDRESS}
         </p>
@@ -184,7 +188,7 @@ export function renderWelcomeEmail(): { subject: string; html: string; text: str
     "",
     "— The PureProperty terminal",
     "",
-    `Manage alerts: ${SITE}/dashboard | Unsubscribe: ${SITE}/unsubscribe`,
+    `Manage alerts: ${SITE}/dashboard | Unsubscribe: ${unsubUrl}`,
     "Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS.",
     `PureProperty · ${MAIL_ADDRESS}`,
   ].join("\n");
@@ -198,7 +202,7 @@ export function renderWelcomeEmail(): { subject: string; html: string; text: str
  */
 export async function sendWelcomeEmail(to: string): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
-  const { subject, html, text } = renderWelcomeEmail();
+  const { subject, html, text } = renderWelcomeEmail(to);
   const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: SENDERS.welcome.from,
@@ -207,5 +211,10 @@ export async function sendWelcomeEmail(to: string): Promise<void> {
     subject,
     html,
     text,
+    headers: {
+      // RFC 8058 one-click unsubscribe (required by Gmail/Yahoo bulk rules).
+      "List-Unsubscribe": `<${marketingUnsubscribeUrl(to, SITE)}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
   });
 }

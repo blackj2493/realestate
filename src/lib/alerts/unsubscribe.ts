@@ -39,3 +39,16 @@ export function unsubscribeUrl(email: string, siteUrl: string): string {
   const s = encodeURIComponent(signUnsubscribe(email));
   return `${base}/api/listing-alerts/unsubscribe?e=${e}&s=${s}`;
 }
+
+/**
+ * Absolute one-click marketing unsubscribe URL for REGISTERED-user promotional/nurture
+ * mail (the welcome, and future nurture). Same HMAC scheme as the anonymous link, but
+ * resolves to /api/email/unsubscribe, which sets profiles.marketing_opt_out. Used both in
+ * the footer link and the List-Unsubscribe header.
+ */
+export function marketingUnsubscribeUrl(email: string, siteUrl: string): string {
+  const base = (siteUrl || "https://www.pureproperty.ca").replace(/\/$/, "");
+  const e = encodeURIComponent(normEmail(email));
+  const s = encodeURIComponent(signUnsubscribe(email));
+  return `${base}/api/email/unsubscribe?e=${e}&s=${s}`;
+}
