@@ -74,12 +74,19 @@ jobs:
           npx tsx scripts/worker/loadGeoData.ts --dataset dev_application \
             --file scripts/admin/dev-apps-mississauga.geojson --source-key mississauga_dev_apps 2>&1 | tee -a "$SUMMARY_FILE"
 
-      # 4 — Re-evaluate EVERY listing against the freshly loaded geometry (idempotent upserts).
-      - name: Re-enrich all listings (full geo-flags sweep)
-        timeout-minutes: 90
+      # 4 — Recompute ONLY the dev_application flag, against ONLY the listings near a (freshly
+      #     loaded) application — a set-based spatial join keyed on the cached listing point
+      #     (listing_geo_flags.geom, migration 063), merged into each row so the other 10 flags
+      #     are left untouched. This never re-reads listings.full_payload or re-runs the other
+      #     predicates, so it finishes in ~1–2 min over a few thousand candidates instead of the
+      #     ~50-min / 211k-listing full sweep that depleted the Disk-IO budget and timed out.
+      #     REQUIRES the one-time geom bootstrap to have run once (enrichGeoFlags --geom-only);
+      #     the nightly delta + monthly full sweep keep geom fresh thereafter.
+      - name: Refresh the dev_application flag (targeted, geom-keyed)
+        timeout-minutes: 20
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx scripts/worker/enrichGeoFlags.ts 2>&1 | tee -a "$SUMMARY_FILE"
+        run: npx tsx scripts/worker/enrichGeoFlags.ts --dataset dev_application 2>&1 | tee -a "$SUMMARY_FILE"
 
       - name: Notify operator
         if: always()
