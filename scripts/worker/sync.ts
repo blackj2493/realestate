@@ -266,6 +266,9 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
         const a = (p.full_payload as any)?.UnparsedAddress;
         return a ? String(a).trim().toLowerCase() : '';
       })(),
+      // Flat relist-stitched price drop (migration 074) so region_price_cuts skips the
+      // full_payload detoast (Toronto was ~32s). Same source as the full_payload write above.
+      total_price_drop: metrics?.total_price_drop ?? 0,
     };
   });
   

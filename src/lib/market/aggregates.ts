@@ -215,7 +215,7 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
     // v7 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v6);
     // v6 = basement filter (043); v5 = Toronto district roll-up (042); v4 = parking (027).
     // Bumped so stale empty Ottawa entries (and any v6 entry) are not served post-migration.
-    ["market-region-stats", "v8", region.toLowerCase(), k], // v8 = migration 060 (naive-floored stale_count)
+    ["market-region-stats", "v9", region.toLowerCase(), k], // v9 = migration 073 (relist-ghost dedup)
     { revalidate: 86400 }
   )();
 }
@@ -286,7 +286,7 @@ export function getDomDistCached(region: string, typeKeys: string[], scope: Scop
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeDomDist(region, typeKeys, scope),
-    ["market-dom-dist", "v3", region.toLowerCase(), k], // v3 = migration 060 (naive-age floor)
+    ["market-dom-dist", "v4", region.toLowerCase(), k], // v4 = migration 073 (relist-ghost dedup)
     { revalidate: 86400 }
   )();
 }
@@ -345,7 +345,7 @@ export function getPriceCutsCached(region: string, typeKeys: string[], scope: Sc
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computePriceCuts(region, typeKeys, scope),
-    ["market-price-cuts", "v1", region.toLowerCase(), k], // v1 = migration 058 (region_price_cuts)
+    ["market-price-cuts", "v2", region.toLowerCase(), k], // v2 = migrations 073/075 (dedup + flat + band)
     { revalidate: 86400 }
   )();
 }
