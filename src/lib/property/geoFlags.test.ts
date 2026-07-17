@@ -70,6 +70,18 @@ describe("geoFlagsFor — distance (line/point) flags", () => {
     expect(geoFlagsFor({ distanceM: { dev_application: 301 } })).toEqual([]);
   });
 
+  it("treats major_construction as an info flag with a diligence question", () => {
+    const flags = geoFlagsFor({ distanceM: { major_construction: 120 } });
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toMatchObject({ id: "major_construction", kind: "info", severity: 30 });
+    expect(flags[0].title).toBe("Recent major construction permit issued ~120 m away");
+    expect(flags[0].ask).toBeTruthy();
+  });
+
+  it("does not flag major_construction beyond its 300 m guard ceiling", () => {
+    expect(geoFlagsFor({ distanceM: { major_construction: 301 } })).toEqual([]);
+  });
+
   it("does not flag beyond the threshold, or for null/NaN", () => {
     expect(geoFlagsFor({ distanceM: { hydro: 9999 } })).toEqual([]); // > 150 m
     expect(geoFlagsFor({ distanceM: { rail: null } })).toEqual([]);

@@ -1,5 +1,9 @@
-name: Refresh Development-Activity Flags
+name: Refresh Development & Construction Activity Flags
 
+# Keeps two "Things to Know" flags fresh: dev_application (proposed planning changes) and
+# major_construction (issued building permits). Both update ~daily and change independently of
+# listings, so a WEEKLY reload + targeted geom-keyed re-enrich keeps them current.
+#
 # Keeps the "Things to Know" dev_application flag fresh across all 7 launch-set cities.
 # Development applications change independently of listings (a new rezoning appears next to a
 # listing that hasn't re-synced), and the source data updates ~daily — so a WEEKLY reload +
@@ -88,10 +92,27 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/worker/enrichGeoFlags.ts --dataset dev_application 2>&1 | tee -a "$SUMMARY_FILE"
 
+      # 5 — MAJOR CONSTRUCTION (issued building permits). ArcGIS point sources with a materiality
+      #     `where` (Waterloo now; more cities appended in geoDatasets.ts sources[]). Then the SAME
+      #     targeted geom-keyed refresh as dev_application — recompute only major_construction over
+      #     only the listings near a permit, merged in. ANNUAL: bump the ISSUE_YEAR/date cutoffs in
+      #     each source's `where`.
+      - name: Load major-construction (building-permit) sources
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/loadGeoData.ts --dataset major_construction 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Refresh the major_construction flag (targeted, geom-keyed)
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/worker/enrichGeoFlags.ts --dataset major_construction 2>&1 | tee -a "$SUMMARY_FILE"
+
       - name: Notify operator
         if: always()
         env:
-          JOB_NAME: Development-Activity Flags Refresh
+          JOB_NAME: Development & Construction Activity Flags Refresh
           JOB_STATUS: ${{ job.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
