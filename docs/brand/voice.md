@@ -319,3 +319,156 @@ The "filter out casual window-shoppers" rule is right for the *data product* but
 brokerage volume on the table — a casual GTA homebuyer today is a commission in six
 months. Keep the velvet rope on the *data depth*, but **capture and nurture everyone**;
 don't reject a lead you could have warmed up.
+
+---
+
+## 11. Email visual system (locked)
+
+Email is **not** a webpage: no reliable web fonts, images blocked by default (~40% of
+opens), Outlook renders with Word's engine, 60%+ of opens are mobile, and half the
+audience is in dark mode. The look is *engineered*, not styled. Mockup of record:
+`docs/brand/email-mockup.html` (v3).
+
+### 11.1 Two visual modes — intensity is inversely proportional to intimacy
+
+- **Mode A — "Terminal readout"** (digests, alerts, welcome, confirmation): full system —
+  brand navy header bar, sections, **property cards**, monospace numbers, CTA, footer.
+- **Mode B — "Plain note"** (Tanmay's lead follow-up): near-plaintext. Small light logo,
+  a short paragraph, `— Tanmay, PureProperty`, one plain unsubscribe line. **No header
+  bar, no photo, no button, no chips.** If a "personal" email looks designed, it reads as
+  a bot and stops converting. This minimalism is deliberate.
+
+### 11.2 Logo lockup (rebuilt as LIVE TEXT, never an image)
+
+The mark is `‹ ` + **PURE** (700) + `PROPERTY` + `.ca`, matching `public/logo.svg` /
+`src/components/Logo.tsx`. Because it is text + a simple polyline chevron, we **rebuild it
+in HTML** rather than embedding a PNG — an image logo disappears for the ~40% of opens
+that block images; a text logo always renders, stays crisp on retina, and adapts to dark
+mode. Drop the exact `<polyline>` chevron in via inline SVG where supported, with a `‹`
+glyph (`&#10094;`) fallback.
+- **On dark navy header:** chevron + `PURE` = `#FFFFFF`, `PROPERTY` = `#8FA4B8`,
+  `.ca` = `#6B7E92`.
+- **On white (Mode B):** chevron + `PURE` = `#0A1828`, `PROPERTY` = `#4A6378`,
+  `.ca` = `#6B7E92`.
+- The wordmark is **sans-serif** (brand type). Do NOT set it in the monospace face —
+  monospace is reserved for *data* (§11.4).
+
+### 11.3 Design tokens
+
+**Layout:** 600px max content, fluid to 100% on mobile. Table layout, all CSS inline.
+No flexbox/grid/background-image (Outlook). Page canvas `#F8FAFC`, card `#FFFFFF`.
+
+**Color:**
+
+| Token | Hex | Use |
+| :--- | :--- | :--- |
+| navy (brand) | `#0A1828` | header bar background, dark logo ink |
+| ink | `#0F172A` | primary text |
+| ink-2 | `#334155` | section headers |
+| secondary | `#475569` | detail lines (city · brokerage), subject line — **AA on white** |
+| muted | `#64748B` | chip labels, footer, struck-out old price |
+| line | `#E2E8F0` | borders, chip outlines |
+| accent | `#0891B2` | CTA buttons, links, the 2px header rule |
+| positive | `#0F766E` | price-down (good for buyer), new price, "Likely" |
+| negative | `#DC2626` | SOLD badge, delta emphasis |
+| warn | `#D97706` | sold-conditional |
+
+> Contrast rule: body/detail text is `#475569` or darker on white. `#94A3B8` is retired
+> for body copy (fails AA); it survives only in Mode B's de-emphasized unsubscribe line.
+
+**Type scale:** H1 18px · section headers 12–13px UPPERCASE `.10em` · body 14–15px ·
+meta 12px · footer 11px.
+
+### 11.4 The signature — monospace numbers
+
+Every price, delta, True DOM, Cap Rate, Gross Yield, and Capital Burn Rate is set in
+`ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace`. This one rule is
+what makes an email *feel* like a terminal instead of a flyer. Prose stays sans-serif;
+**numbers are always mono.**
+
+### 11.5 Property card (Mode A only)
+
+Photo-led for engagement, data-backed for trust — the fusion is the differentiation
+(§10 quality bar): the portal shows a photo; we show the photo **plus** the shadow data.
+- Card: `1px #E2E8F0` border, radius 8px, overflow hidden.
+- **Header photo ~184px**, `object-fit:cover`, `alt = address`, `#E2E8F0` fallback fill.
+  Feed image field (confirm at build). Status badge (`PRICE ↓`, `NEW`, `SOLD`) sits in
+  the body, **not overlaid** on the image (Outlook can't position reliably).
+- Body: address (700), then `city · brokerage` (`#475569`, §4 brokerage always shown),
+  then the **mono price/delta ticker**, then a row of **metric chips**
+  (`[LABEL] / mono value`, e.g. `TRUE DOM · 62 days`, `CAP RATE · 4.1%`,
+  `CAPITAL BURN · $4,200/mo`).
+- **Images-off is a first-class state:** the card must be complete and attractive with no
+  image — address + price + chips carry it. The photo is an enhancement, never
+  load-bearing. One modest image per card; never image-only.
+- **Compliance gate:** before rendering real feed photos, verify image-display +
+  attribution rules in `.claude/docs/legal/idx-agreement.pdf` / `vow-agreement.pdf` and
+  confirm the payload image field. Brokerage attribution stays on every card regardless.
+- **Validate the lift:** photos are believed to raise engagement — A/B the digest with vs.
+  without card photos and watch click-through before treating it as permanent (§10).
+
+### 11.6 Default theme: LIGHT (canonical), dark-*aware*
+
+Light is the default and the design/QA target — for deliverability, because property
+photos read best on white, and because a clean light "research note" reads more credible
+to a cold lead than a dark app UI. The dark navy header bar carries the terminal identity
+without betting the email on a dark background. Set
+`<meta name="color-scheme" content="light dark">` and rely on borders + semantic colors
+that survive auto-inversion. We do **not** author a separate dark send.
+
+### 11.7 Deliverability — photos don't spam you, a weak domain does
+
+1. **Authenticate `pureproperty.ca`: SPF + DKIM + DMARC** (start DMARC `p=none` →
+   `quarantine`). This is ~80% of deliverability. Gmail/Yahoo bulk rules require it.
+2. **Send from a subdomain** (`send.` / `mail.pureproperty.ca`) to isolate alert-volume
+   reputation from the root domain.
+3. **One-click `List-Unsubscribe` (RFC 8058)** on every bulk email — required by
+   Gmail/Yahoo; also a Tier-1 fix (the registered digest lacks it).
+4. **Physical mailing address + sender identity in the footer** (CASL). Replace the
+   `[mailing address]` placeholder before sending.
+5. **Healthy text-to-image ratio** — never image-only. Host images on HTTPS with real
+   `width`/`height` + alt text, compressed.
+6. **Multipart** — always include the plaintext part (renderers already emit `text`).
+7. **List hygiene** — opted-in only, suppress hard bounces, honor unsubscribes instantly,
+   sunset non-openers after ~4–6 months. Keep complaint rate < 0.1%.
+8. **Warm up + monitor** — ramp volume gradually, steady cadence, watch Google Postmaster
+   Tools + Resend analytics.
+
+### 11.8 Sender name & subject (fixes the "Support" display)
+
+Root cause of "Support": a bare `from` address with **no display name** — Gmail falls
+back to the mailbox. Always set a display name, and keep it **consistent** so recipients
+recognize it.
+
+| Email | From name | Address | Reply-to |
+| :--- | :--- | :--- | :--- |
+| Nightly digest / alerts | **PureProperty Alerts** | `alerts@pureproperty.ca` | unmonitored ok |
+| Signup confirmation | **PureProperty Alerts** | `alerts@` | `support@` |
+| Welcome | **Tanmay at PureProperty** | `tanmay@` | `tanmay@` (monitored) |
+| Lead follow-up | **Tanmay at PureProperty** | `tanmay@` | `tanmay@` (monitored) |
+
+> Requires `alerts@` and `tanmay@` verified in Resend on the sending domain. Env today
+> only has `support@pureproperty.ca` + a personal Gmail for leads — see §12 wiring.
+
+**Subject lines** — ticker/fact-first; no ALL-CAPS, no `!`, no spam-trigger words. Every
+email also sets a **hidden preheader** (inbox preview) — currently missing from all
+renderers.
+
+| Email | Subject | Preheader |
+| :--- | :--- | :--- |
+| Digest | `2 sold · 1 price drop · 5 new listings` | the moves the old way surfaces too late |
+| Single price alert | `$50,000 price drop — 12 King St W` | Sign in for the full history |
+| Confirmation | `Tracking 12 King St W — price & status alerts on` | You'll only hear from us when it changes |
+| Welcome | `You're in — the 3 numbers the old way hides` | True DOM, Capital Burn, Suite Potential |
+| Lead follow-up | `Re: your request on 12 King St W` | the shadow numbers are on the way |
+
+`Re:` on the follow-up reads as a personal reply (it is one) → higher opens, fits Mode B.
+
+### 11.9 Implementation note
+
+Do **not** keep hand-building these as separate HTML strings (the current renderers are
+already drifting). Extract one shared `src/lib/alerts/emailShell.ts` — logo lockup,
+navy header bar, footer (address + unsubscribe), tokens, preheader helper, button, chip,
+and **property-card** components — and refactor `digest.ts`, `listingAlertEmail.ts`, the
+confirmation, the new welcome, and the Tanmay follow-up to compose it. The design then
+lives in code, and every future email inherits it.

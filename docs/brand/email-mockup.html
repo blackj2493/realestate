@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>PureProperty — Email Design Lock v3</title>
+<style>
+  body { margin:0; background:#eef2f6; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#0f172a; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:680px; margin:0 auto; padding:26px 16px 70px; }
+  .lede { color:#334155; font-size:13px; line-height:1.6; margin:0 0 8px; }
+  .lede b { color:#0f172a; }
+  .divider { display:flex; align-items:center; gap:12px; margin:40px 0 14px; }
+  .divider::before,.divider::after{ content:""; flex:1; height:1px; background:#cbd5e1; }
+  .tag { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#fff; background:#0a1828; padding:4px 10px; border-radius:4px; white-space:nowrap; }
+  .tag.human { background:#0f766e; }
+  .sub { text-align:center; color:#475569; font-size:12px; margin:0 0 12px; }
+  .mail { max-width:600px; margin:0 auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 6px 24px rgba(15,23,42,.10); border:1px solid #e2e8f0; }
+  .pre { font-size:11px; color:#64748b; padding:6px 24px 0; }
+  .mono { font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace; }
+  .photo { height:184px; position:relative; background:#e2e8f0; }
+  .photo .ph1 { background:linear-gradient(150deg,#334e68 0%,#486581 42%,#7b9bb8 100%); }
+  .photo .ph2 { background:linear-gradient(150deg,#3b3352 0%,#5a4b74 45%,#9585ad 100%); }
+  .photo > div { position:absolute; inset:0; }
+  .photo .glass { position:absolute; left:0; right:0; bottom:0; height:52%; background:linear-gradient(180deg,rgba(15,23,42,0),rgba(10,24,40,.42)); }
+  .photo .slot { position:absolute; left:12px; bottom:10px; font-family:ui-monospace,monospace; font-size:9px; letter-spacing:.14em; color:rgba(255,255,255,.8); }
+  .photo .badge { position:absolute; left:12px; top:12px; font-size:10px; font-weight:700; letter-spacing:.06em; color:#fff; padding:3px 7px; border-radius:3px; }
+  /* brand lockup — live text, renders images-off */
+  .chev { font-weight:400; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="lede"><b>Email design lock — v3.</b> Real logo lockup (live text, renders with images off), darker body text for contrast, brand navy header. Two modes below — Mode A cards, Mode B plain note.</p>
+
+  <!-- ============================= MODE A ============================= -->
+  <div class="divider"><span class="tag">Mode A · Automated · Terminal readout</span></div>
+  <p class="sub">Nightly digest — property cards (photo + shadow data).</p>
+
+  <div class="mail">
+    <div class="pre">2 sold · 1 price drop · 5 new — the moves the old way surfaces too late.</div>
+
+    <!-- brand navy terminal bar with the REAL logo lockup rebuilt as live text -->
+    <table role="presentation" width="100%" style="border-collapse:collapse;background:#0a1828;">
+      <tr>
+        <td style="padding:14px 24px;">
+          <span style="font-size:17px;font-weight:700;color:#ffffff;letter-spacing:0;">
+            <span class="chev" style="color:#ffffff;margin-right:8px;font-size:16px;">&#10094;</span>PURE<span style="font-weight:400;color:#8fa4b8;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span>
+          </span>
+        </td>
+        <td align="right" style="padding:14px 24px;"><span class="mono" style="color:#7b8da0;font-size:10px;letter-spacing:.14em;">NIGHTLY BRIEF · 2026-07-16</span></td>
+      </tr>
+      <tr><td colspan="2" style="height:2px;background:#0891b2;line-height:2px;">&nbsp;</td></tr>
+    </table>
+
+    <div style="padding:22px 24px 26px;">
+      <h1 style="font-size:18px;color:#0f172a;margin:0 0 4px;">Your watchlist &amp; market alerts</h1>
+      <p class="mono" style="color:#475569;font-size:13px;margin:0;">2 sold · 1 price drop · 5 new listings</p>
+
+      <h2 style="font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.10em;margin:24px 0 10px;">Price drops</h2>
+
+      <!-- CARD 1 -->
+      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+        <div class="photo">
+          <div class="ph1"></div><div class="glass"></div>
+          <span class="badge" style="background:#0f766e;">PRICE ↓ 4.2%</span>
+          <span class="slot">▮ LISTING PHOTO</span>
+        </div>
+        <div style="padding:14px 16px 16px;">
+          <a href="#" style="color:#0f172a;text-decoration:none;font-weight:700;font-size:16px;">12 King St W, Ph 3</a>
+          <div style="color:#475569;font-size:12px;margin-top:3px;">Toronto C01 · PSR Brokerage</div>
+          <div class="mono" style="margin-top:8px;font-size:14px;">
+            <span style="color:#64748b;text-decoration:line-through;">$1,199,000</span> &nbsp;→&nbsp;
+            <span style="color:#0f766e;font-weight:700;">$1,149,000</span>
+            <span style="color:#dc2626;font-weight:600;">&nbsp;(−$50,000)</span>
+          </div>
+          <table role="presentation" style="border-collapse:separate;border-spacing:6px 0;margin:11px 0 0 -6px;"><tr>
+            <td style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;"><div style="color:#64748b;font-size:9px;letter-spacing:.08em;text-transform:uppercase;">True DOM</div><div class="mono" style="color:#0f172a;font-size:13px;font-weight:600;">62 days</div></td>
+            <td style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;"><div style="color:#64748b;font-size:9px;letter-spacing:.08em;text-transform:uppercase;">Cap Rate</div><div class="mono" style="color:#0f172a;font-size:13px;font-weight:600;">4.1%</div></td>
+            <td style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;"><div style="color:#64748b;font-size:9px;letter-spacing:.08em;text-transform:uppercase;">Capital Burn</div><div class="mono" style="color:#0f172a;font-size:13px;font-weight:600;">$4,200/mo</div></td>
+          </tr></table>
+        </div>
+      </div>
+
+      <h2 style="font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.10em;margin:24px 0 10px;">New in your areas — Leslieville</h2>
+
+      <!-- CARD 2 -->
+      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:6px;">
+        <div class="photo">
+          <div class="ph2"></div><div class="glass"></div>
+          <span class="badge" style="background:#0891b2;">NEW</span>
+          <span class="slot">▮ LISTING PHOTO</span>
+        </div>
+        <div style="padding:14px 16px 16px;">
+          <a href="#" style="color:#0f172a;text-decoration:none;font-weight:700;font-size:16px;">33 Rushbrooke Ave</a>
+          <div style="color:#475569;font-size:12px;margin-top:3px;">Toronto E01 · Bosley Real Estate Ltd.</div>
+          <div class="mono" style="margin-top:8px;font-size:14px;color:#0f172a;"><strong>$1,089,000</strong> · 3 bd · 2 ba</div>
+          <table role="presentation" style="border-collapse:separate;border-spacing:6px 0;margin:11px 0 0 -6px;"><tr>
+            <td style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;"><div style="color:#64748b;font-size:9px;letter-spacing:.08em;text-transform:uppercase;">Suite Potential</div><div class="mono" style="color:#0f766e;font-size:13px;font-weight:600;">Likely</div></td>
+            <td style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;"><div style="color:#64748b;font-size:9px;letter-spacing:.08em;text-transform:uppercase;">Gross Yield</div><div class="mono" style="color:#0f172a;font-size:13px;font-weight:600;">4.6%</div></td>
+          </tr></table>
+        </div>
+      </div>
+
+      <a href="#" style="display:inline-block;margin-top:20px;background:#0891b2;color:#fff;text-decoration:none;padding:11px 18px;border-radius:6px;font-size:13px;font-weight:600;">Open your dashboard →</a>
+
+      <p style="color:#64748b;font-size:11px;margin-top:24px;line-height:1.6;border-top:1px solid #f1f5f9;padding-top:16px;">
+        You saved these on PureProperty.ca. <a href="#" style="color:#64748b;">Manage alerts</a> · <a href="#" style="color:#64748b;">Unsubscribe</a>.<br>
+        Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS®.<br>
+        PureProperty · [mailing address] · Toronto, ON
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================= MODE B ============================= -->
+  <div class="divider"><span class="tag human">Mode B · Human · Plain note</span></div>
+  <p class="sub">Tanmay's instant lead follow-up — near-plaintext, small light logo, no photo/button.</p>
+
+  <div class="mail">
+    <div class="pre">Got your request on 12 King St W — the shadow numbers are on the way.</div>
+    <div style="padding:30px 28px 24px;">
+      <div style="font-size:13px;font-weight:700;color:#0a1828;margin:0 0 20px;">
+        <span style="font-weight:400;margin-right:6px;">&#10094;</span>PURE<span style="font-weight:400;color:#4a6378;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span>
+      </div>
+      <p style="font-size:15px;line-height:1.65;margin:0 0 14px;">Hi Priya,</p>
+      <p style="font-size:15px;line-height:1.65;margin:0 0 14px;">Got your request on <b>12 King St W, Ph 3</b> — I'll come back to you personally, fast, with the shadow numbers on this one: True DOM, the full price history, and the Capital Burn Rate the old way leaves off the listing. That's the read most buyers never get.</p>
+      <p style="font-size:15px;line-height:1.65;margin:0 0 22px;">Anything specific you want me to dig into first?</p>
+      <p style="font-size:15px;line-height:1.65;margin:0;">— Tanmay, PureProperty</p>
+      <p style="color:#94a3b8;font-size:11px;margin-top:30px;line-height:1.6;">You asked us about this property on PureProperty.ca. <a href="#" style="color:#94a3b8;">Not interested — stop these</a>.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
