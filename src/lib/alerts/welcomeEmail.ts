@@ -72,7 +72,7 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
 
         <!-- heatmap hero (hosted PNG of the AlphaMap hex heatmap) -->
         ${eyebrow("The map &middot; the terminal view")}
-        <img src="${SITE}/email-assets/welcome/map.png" width="524" alt="Neighbourhood heat map — yield and days-on-market by block, with two hot clusters" style="display:block;width:100%;max-width:524px;height:auto;border:0;border-radius:8px;margin:8px 0 6px;">
+        <img src="${SITE}/email-assets/welcome/map.png?v=2" width="524" alt="Toronto market heat map — yield and days-on-market by block, hot clusters highlighted" style="display:block;width:100%;max-width:524px;height:auto;border:0;border-radius:8px;margin:8px 0 6px;">
         ${fbody(`Your market, x-rayed block by block — yield, days-on-market and price compression. ${link("Open the map", `${SITE}/terminal`)}`)}
 
         <!-- 1 · Estimated Sale Price -->
