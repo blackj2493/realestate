@@ -577,9 +577,12 @@ export const GEO_DATASETS: GeoDataset[] = [
     // development applications, so dev_application's 300 m wallpapers here (61%). BUMP the
     // ISSUE_YEAR / date cutoffs annually.
     //
-    // Expansion = append sources[] per city (Mississauga / Brampton / Kitchener are ArcGIS point
-    // feeds with a value field, loadable directly like Waterloo; Toronto redacts construction
-    // value AND is address-only → it needs a geocoding harvester, so it comes last).
+    // Cities live: Waterloo + Mississauga + Kitchener (direct ArcGIS point loads, per-city `where`)
+    // + Toronto (FILE-BASED: harvest-toronto-permits.mjs geocodes via Address Points — no coords &
+    // redacted value in the source). NOTE Brampton's only open permit feed (Building_Permits_DEV) is
+    // FROZEN at 2018 — skip until a current feed appears. Markham/Vaughan/Richmond Hill (big York
+    // markets) publish NO open permits (York Region exposes dev applications only). Next candidates:
+    // Oakville / Burlington / Barrie / Caledon (open ArcGIS permit feeds). Expand by appending sources[].
     kind: "major_construction",
     shortLabel: "nearby major construction",
     family: "point",
@@ -600,6 +603,49 @@ export const GEO_DATASETS: GeoDataset[] = [
         where:
           "ISSUE_YEAR >= '2024' AND ( (WORKDESC IN ('New','Demolition','FoundationOnly') AND PERMITDESC LIKE '%Building%') OR (WORKDESC IN ('Addition','ResidentialAddition','NonResidentialAddition') AND (CONTRVALUE >= 500000 OR UNITS >= 2)) OR UNITS >= 3 )",
         matchRadiusM: 150,
+      },
+      {
+        sourceKey: "mississauga_permits",
+        name: "City of Mississauga — Major building permits (new build / demolition / major addition)",
+        license: "City of Mississauga Terms of Use", // revocable-at-will — legal watch-item
+        endpoint:
+          "https://services6.arcgis.com/hM5ymMLbxIyWTjn2/arcgis/rest/services/Issued_Building_Permits/FeatureServer/0",
+        // SCOPE new/demolition auto-material; additions only with EST_CON_VALUE >= $500k or
+        // RES_UNITS >= 2; any >= 3-unit; the DEMO flag. Recent + non-revoked. Fire-rate 11.6%
+        // @150m (calibrated 2026-07-17 over 15.8k Mississauga listings).
+        where:
+          "ISSUE_DATE >= DATE '2024-01-01' AND STATUS <> 'REVOKED' AND ( SCOPE IN ('NEW BUILDING','DEMOLITION') OR (SCOPE IN ('ADDITION AND ALTERATION','ADDITION TO EXISTING BLDG') AND (EST_CON_VALUE >= 500000 OR RES_UNITS >= 2)) OR RES_UNITS >= 3 OR DEMO = 'Y' )",
+        matchRadiusM: 150,
+      },
+      {
+        sourceKey: "kitchener_permits",
+        name: "City of Kitchener — Major building permits (multi / commercial / industrial / demolition + large custom homes)",
+        license: "City of Kitchener Open Data Licence",
+        // Kitchener is permit-DENSE — routine new-house permits wallpaper (unfiltered fire-rate
+        // 60%+). So keep multi-res / commercial / industrial / ICI / demolition automatically,
+        // plus single-family houses ONLY when CONSTRUCTION_VALUE >= $1M (a big custom build, not
+        // routine). Recent only. Fire-rate 25% @150m (calibrated 2026-07-17).
+        endpoint:
+          "https://services1.arcgis.com/qAo1OsXi67t7XgmS/arcgis/rest/services/Building_Permits/FeatureServer/0",
+        where:
+          "ISSUE_YEAR >= 2024 AND ( PERMIT_TYPE IN ('Residential Building (Multi)','Commercial Building','Industrial Building','Industrial/Commercial/Institutional Building Permit','Residential Demolition','Non-Residential Demolition') OR (PERMIT_TYPE IN ('Residential Building (House)','Residential Building Permit') AND CONSTRUCTION_VALUE >= 1000000) )",
+        matchRadiusM: 150,
+      },
+      {
+        sourceKey: "toronto_permits",
+        name: "City of Toronto — Major building permits (new build / demolition / major addition)",
+        license: "Open Government Licence – Toronto",
+        // FILE-BASED (no ArcGIS endpoint): Toronto's permit feed has NO coordinates and REDACTS
+        // construction value. The harvester geocodes each permit by an exact address join against
+        // Toronto Address Points (~97% match) → GeoJSON (EPSG:4326); materiality is type + dwelling
+        // units + gross floor area (no $value). Load via --file (the endpoint loop skips it):
+        //   node scripts/admin/harvest-toronto-permits.mjs
+        //   npx tsx scripts/worker/loadGeoData.ts --dataset major_construction \
+        //     --file scripts/admin/permits-toronto.geojson --srid 4326 --source-key toronto_permits
+        // Toronto is the DENSEST market: 150 m wallpapers (37%), so matchRadiusM 100 → ~22%
+        // (calibrated 2026-07-17 over 56.8k Toronto listings; 6,073 material permits).
+        srid: 4326,
+        matchRadiusM: 100,
       },
     ],
     flag: {

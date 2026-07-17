@@ -103,6 +103,18 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/worker/loadGeoData.ts --dataset major_construction 2>&1 | tee -a "$SUMMARY_FILE"
 
+      # 5b — Toronto (FILE-BASED: its permit feed has no coordinates + redacts construction value,
+      #      so the harvester geocodes via Toronto Address Points → GeoJSON EPSG:4326). The ArcGIS
+      #      loop above skips it, so it gets its own harvest → --file step.
+      - name: Harvest + load Toronto building permits
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node scripts/admin/harvest-toronto-permits.mjs 2>&1 | tee -a "$SUMMARY_FILE"
+          npx tsx scripts/worker/loadGeoData.ts --dataset major_construction \
+            --file scripts/admin/permits-toronto.geojson --srid 4326 --source-key toronto_permits 2>&1 | tee -a "$SUMMARY_FILE"
+
       - name: Refresh the major_construction flag (targeted, geom-keyed)
         timeout-minutes: 20
         env:
