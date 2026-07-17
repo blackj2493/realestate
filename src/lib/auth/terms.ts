@@ -53,11 +53,27 @@ export async function hasAcceptedTerms(userId: string): Promise<boolean> {
  * Record the current user's acceptance of the current Terms version. Writes via the
  * user-bound server client so the owner-only RLS policy authorizes the update.
  */
-export async function recordTermsAcceptance(): Promise<{ ok: boolean; error?: string }> {
+export async function recordTermsAcceptance(): Promise<{
+  ok: boolean;
+  error?: string;
+  /** True only on a user's first-ever acceptance (a re-accept after a Terms version
+   *  bump already has a non-null timestamp) — lets callers fire a welcome once. */
+  firstAcceptance?: boolean;
+  email?: string;
+}> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "unauthenticated" };
 
   const sb = await createSupabaseServerClient();
+  // Read prior state before writing so we can tell a brand-new consumer (never accepted)
+  // apart from a re-acceptance. Best-effort: a read miss just suppresses the welcome.
+  const { data: prior } = await sb
+    .from("profiles")
+    .select("terms_accepted_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  const firstAcceptance = !prior?.terms_accepted_at;
+
   const now = new Date().toISOString();
   const { error } = await sb
     .from("profiles")
@@ -70,5 +86,5 @@ export async function recordTermsAcceptance(): Promise<{ ok: boolean; error?: st
     .eq("id", user.id);
 
   if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return { ok: true, firstAcceptance, email: user.email ?? undefined };
 }

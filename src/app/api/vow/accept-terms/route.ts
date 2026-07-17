@@ -8,6 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { recordTermsAcceptance } from "@/lib/auth/terms";
+import { sendWelcomeEmail } from "@/lib/alerts/welcomeEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +30,16 @@ export async function POST(request: Request) {
     const status = result.error === "unauthenticated" ? 401 : 500;
     return NextResponse.json({ ok: false, error: result.error }, { status });
   }
+
+  // First-ever acceptance = a newly activated consumer → welcome email. Best-effort:
+  // a mail failure must never fail the Terms acceptance the user just made.
+  if (result.firstAcceptance && result.email) {
+    try {
+      await sendWelcomeEmail(result.email);
+    } catch (e) {
+      console.error("[accept-terms] welcome email failed (acceptance recorded):", e);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
