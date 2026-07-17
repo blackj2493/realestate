@@ -20,6 +20,8 @@ data/transit_stations.geojson
 scripts/admin/zoning-*.geojson
 # dev_application harvest output — reproduce via scripts/admin/harvest-toronto-dev-apps.mjs
 scripts/admin/dev-apps-*.geojson
+# major_construction harvest output — reproduce via scripts/admin/harvest-toronto-permits.mjs
+scripts/admin/permits-*.geojson
 
 # Production build
 build/
