@@ -36,16 +36,6 @@ const fbody = (t: string) => `<p style="font-size:13.5px;line-height:1.55;color:
 const link = (label: string, href: string) =>
   `<a href="${href}" style="color:#0e7490;text-decoration:none;font-weight:600;font-size:13px;">${label} &rarr;</a>`;
 
-/** ALPHA_GLOW heat cells (email-safe: a table of bgcolor cells). */
-function heatRow(colors: string[]): string {
-  return `<tr>${colors.map((c) => `<td style="background:${c};height:22px;border-radius:3px;">&nbsp;</td>`).join("")}</tr>`;
-}
-const HEAT = [
-  ["#083344", "#0c6e8a", "#0da5c4", "#22d3ee", "#3882f6", "#0da5c4", "#0c6e8a", "#083344", "#0c6e8a", "#0da5c4"],
-  ["#0c6e8a", "#0da5c4", "#22d3ee", "#3882f6", "#636ef7", "#3882f6", "#22d3ee", "#0da5c4", "#083344", "#0c6e8a"],
-  ["#083344", "#0c6e8a", "#0da5c4", "#22d3ee", "#3882f6", "#636ef7", "#3882f6", "#22d3ee", "#0da5c4", "#0c6e8a"],
-];
-
 /** A "first layer" finding tile (concrete per-listing fact, valence-coloured). */
 function finding(label: string, value: string, accentBar: string): string {
   return `<td width="50%" valign="top" style="padding:0 8px 14px 0;border-left:2px solid ${accentBar};padding-left:11px;">
@@ -59,27 +49,30 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
   // without a recipient; a real send always passes the address.
   const unsubUrl = recipientEmail ? marketingUnsubscribeUrl(recipientEmail, SITE) : `${SITE}/dashboard`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"></head>
-<body style="margin:0;background:#eef2f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#eef2f6;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${PREHEADER}</div>
-  <div style="max-width:600px;margin:0 auto;padding:16px;">
-    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#eef2f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+    <tr><td align="center" style="padding:16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+        <tr><td style="padding:0;">
 
-      <!-- header -->
-      <table role="presentation" width="100%" style="border-collapse:collapse;background:#0a1828;">
+          <!-- header -->
+          <table role="presentation" width="100%" style="border-collapse:collapse;background:#0a1828;">
         <tr>
           <td style="padding:14px 24px;"><span style="font-size:17px;font-weight:700;color:#ffffff;"><span style="font-weight:400;margin-right:8px;">&#10094;</span>PURE<span style="font-weight:400;color:#8fa4b8;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span></span></td>
           <td align="right" style="padding:14px 24px;"><span style="font-family:${MONO};color:#67e8f9;font-size:10px;letter-spacing:.14em;">ACCESS &middot; GRANTED</span></td>
         </tr>
         <tr><td colspan="2" style="height:2px;background:#0891b2;line-height:2px;">&nbsp;</td></tr>
-      </table>
+          </table>
+        </td></tr>
 
-      <div style="padding:24px 24px 28px;">
+        <tr><td style="padding:24px 24px 28px;">
         <h1 style="font-size:20px;color:#0f172a;margin:0 0 10px;">You're in.</h1>
         <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 22px;">Every home on PureProperty now carries the read most buyers never get — what it's really worth, what you could make it worth, and how long it's really been for sale. Here's where to start.</p>
 
-        <!-- heatmap hero -->
+        <!-- heatmap hero (hosted PNG of the AlphaMap hex heatmap) -->
         ${eyebrow("The map &middot; the terminal view")}
-        <table role="presentation" width="100%" style="border-collapse:separate;border-spacing:3px;margin:8px 0 6px;">${HEAT.map(heatRow).join("")}</table>
+        <img src="${SITE}/email-assets/welcome/map.png" width="524" alt="Neighbourhood heat map — yield and days-on-market by block, with two hot clusters" style="display:block;width:100%;max-width:524px;height:auto;border:0;border-radius:8px;margin:8px 0 6px;">
         ${fbody(`Your market, x-rayed block by block — yield, days-on-market and price compression. ${link("Open the map", `${SITE}/terminal`)}`)}
 
         <!-- 1 · Estimated Sale Price -->
@@ -167,9 +160,10 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
           Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS&reg;.<br>
           PureProperty &middot; ${MAIL_ADDRESS}
         </p>
-      </div>
-    </div>
-  </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body></html>`;
 
   const text = [
