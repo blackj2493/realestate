@@ -63,9 +63,9 @@ export function ModuleHead({
           </span>
         )}
       </div>
-      {/* light: measured tick-rule · dark: plain hairline (matches current heads) */}
-      <div className="dt-rule dt-light mt-1.5" aria-hidden />
-      <div className="mt-2 hidden h-px w-full bg-border dark:block" aria-hidden />
+      {/* plain hairline under the head in both modes (light previously used a
+          graticule tick-rule; removed as too busy). Dark is unchanged. */}
+      <div className="mt-2 h-px w-full bg-border" aria-hidden />
     </div>
   );
 }
