@@ -37,7 +37,7 @@ import {
   type StatusChangeAlert,
 } from '@/lib/alerts/digest';
 import { renderListingAlertEmail, type ListingAlertChange } from '@/lib/alerts/listingAlertEmail';
-import { unsubscribeUrl } from '@/lib/alerts/unsubscribe';
+import { unsubscribeUrl, marketingUnsubscribeUrl } from '@/lib/alerts/unsubscribe';
 import { SENDERS } from '@/lib/alerts/senders';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
@@ -530,9 +530,15 @@ async function main() {
 
   // One profile lookup per user, reused for sending and baseline gating.
   const emails = new Map<string, string | null>();
+  const optedOut = new Map<string, boolean>();
   for (const userId of userIds) {
-    const { data: profile } = await supabase.from('profiles').select('email').eq('id', userId).single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, marketing_opt_out')
+      .eq('id', userId)
+      .single();
     emails.set(userId, (profile?.email as string | undefined) ?? null);
+    optedOut.set(userId, (profile as { marketing_opt_out?: boolean } | null)?.marketing_opt_out === true);
   }
 
   const sentUsers = new Set<string>();
@@ -547,10 +553,24 @@ async function main() {
 
     const email = emails.get(userId);
     if (!email) continue;
+    // One-click unsubscribe (marketing_opt_out): skip the send but still advance baselines
+    // (add to sentUsers below) so a resubscribe never dumps a backlog of missed changes.
+    if (optedOut.get(userId)) {
+      sentUsers.add(userId);
+      continue;
+    }
 
-    const { subject, html, text } = renderAlertsDigest(payload);
+    const uUrl = marketingUnsubscribeUrl(email, SITE);
+    const { subject, html, text } = renderAlertsDigest(payload, uUrl);
     try {
-      await resend.emails.send({ from: FROM, to: email, subject, html, text });
+      await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject,
+        html,
+        text,
+        headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+      });
       sentUsers.add(userId);
       emailed++;
     } catch (e) {

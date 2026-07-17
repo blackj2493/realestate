@@ -170,7 +170,10 @@ function bubbleSectionHtml(b: BubbleSection): string {
   return `${title}<table style="width:100%;border-collapse:collapse;">${rows}</table>${overflow}`;
 }
 
-export function renderAlertsDigest(p: DigestPayload): { subject: string; html: string; text: string } {
+export function renderAlertsDigest(
+  p: DigestPayload,
+  unsubscribeUrl?: string
+): { subject: string; html: string; text: string } {
   const subject = subjectFor(p);
 
   const statusSection = p.statusChanges.length
@@ -196,6 +199,7 @@ export function renderAlertsDigest(p: DigestPayload): { subject: string; html: s
       ${footer({
         intro: "You're receiving this because you saved these properties or areas on PureProperty.ca.",
         manageUrl: `${SITE}/dashboard`,
+        unsubscribeUrl,
       })}`;
   const html = shell({ preheader, headerLabel: "NIGHTLY BRIEF", body });
 
@@ -240,7 +244,10 @@ export function renderAlertsDigest(p: DigestPayload): { subject: string; html: s
           .join("\n")
     );
   }
-  const text = textParts.join("\n\n") + `\n\nOpen your dashboard: ${SITE}/dashboard`;
+  const text =
+    textParts.join("\n\n") +
+    `\n\nOpen your dashboard: ${SITE}/dashboard` +
+    (unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}` : "");
 
   return { subject, html, text };
 }
