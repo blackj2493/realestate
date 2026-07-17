@@ -124,11 +124,31 @@ describe("assembleRegionScore", () => {
         pt("2026-04", 850_000, 590, 25),
         pt("2026-05", 870_000, null, 22), // ppsf gap in the latest month
       ],
+      // ≥10 recent sales so the thin-sample guard doesn't suppress the medians.
+      summary: { soldToListPct: null, pctOverAsking: null, listPriceCoverage: 0, sales90: 67, monthlyVelocity: null },
     });
     const s = assembleRegionScore("T", trend, null);
     expect(s.medianPrice).toBe(870_000);
     expect(s.medianPpsf).toBe(590);
     expect(s.priceSeries.map((p) => p.month)).toEqual(["2026-03", "2026-04", "2026-05"]);
+  });
+
+  it("suppresses sold-side price metrics below the 10-sale floor (thin-sample noise)", () => {
+    // A niche filter: single-digit sales/90d ⇒ monthly medians are 1-2 homes = composition noise.
+    const trend = trendResp({
+      points: [
+        pt("2026-04", 1_600_000, 800, 1),
+        pt("2026-05", 1_130_000, 600, 2),
+      ],
+      summary: { soldToListPct: null, pctOverAsking: null, listPriceCoverage: 1, sales90: 5, monthlyVelocity: 1.5 },
+    });
+    const s = assembleRegionScore("T", trend, statsResp({ activeCount: 11 }));
+    expect(s.medianPrice).toBeNull();
+    expect(s.medianPpsf).toBeNull();
+    expect(s.yoyPct).toBeNull();
+    expect(s.monthsOfSupply).toBeNull();
+    expect(s.priceSeries).toEqual([]);
+    expect(s.activeCount).toBe(11); // active-side metric unaffected by the sold-sample guard
   });
 });
 
