@@ -581,8 +581,10 @@ export const GEO_DATASETS: GeoDataset[] = [
     // + Toronto (FILE-BASED: harvest-toronto-permits.mjs geocodes via Address Points — no coords &
     // redacted value in the source). NOTE Brampton's only open permit feed (Building_Permits_DEV) is
     // FROZEN at 2018 — skip until a current feed appears. Markham/Vaughan/Richmond Hill (big York
-    // markets) publish NO open permits (York Region exposes dev applications only). Next candidates:
-    // Oakville / Burlington / Barrie / Caledon (open ArcGIS permit feeds). Expand by appending sources[].
+    // markets) publish NO open permits (York Region exposes dev applications only). Also LIVE:
+    // Oakville + Burlington (Halton). SKIPPED: Barrie (all permits dumped in one generic type bucket
+    // → no identifiable material set) + Caledon (rural/dispersed ~4% fire-rate + flaky proxied
+    // endpoint). Expand by appending sources[].
     kind: "major_construction",
     shortLabel: "nearby major construction",
     family: "point",
@@ -646,6 +648,31 @@ export const GEO_DATASETS: GeoDataset[] = [
         // (calibrated 2026-07-17 over 56.8k Toronto listings; 6,073 material permits).
         srid: 4326,
         matchRadiusM: 100,
+      },
+      {
+        sourceKey: "oakville_permits",
+        name: "Town of Oakville — Major building permits (new build / demolition / major addition)",
+        license: "Town of Oakville Open Data Licence",
+        // Rich source (Construction_Value + Dwelling_Units_Created + GFA). Worktype new/demolition
+        // auto (minus Deck / Other Secondary Structure Subtypes); additions only with value >= $500k
+        // or a unit; any >= 2-unit. Recent. Fire-rate 26.5% @150m (calibrated 2026-07-17).
+        endpoint:
+          "https://services5.arcgis.com/QJebCdoMf4PF8fJP/arcgis/rest/services/Building_Permits/FeatureServer/0",
+        where:
+          "ISSUEDATE >= DATE '2024-01-01' AND Subtype NOT IN ('Deck','Other Secondary Structure') AND ( Worktype IN ('New Const.','New Construction','Demolition') OR Dwelling_Units_Created >= 2 OR (Worktype IN ('Addition','Addition to an existing building') AND (Construction_Value >= 500000 OR Dwelling_Units_Created >= 1)) )",
+        matchRadiusM: 150,
+      },
+      {
+        sourceKey: "burlington_permits",
+        name: "City of Burlington — Major building permits (new build / demolition / major addition)",
+        license: "City of Burlington Open Data Licence", // revocable + indemnity/flow-through — watch-item
+        // WORKDESC new/addition with CONSTRUCTVALUE >= $300k (drops the $20k decks/small work),
+        // demolitions, any >= 2-unit. Recent. Fire-rate 13.4% @150m (calibrated 2026-07-17).
+        endpoint:
+          "https://mapping.burlington.ca/arcgisweb/rest/services/COB/Permits/MapServer/1",
+        where:
+          "ISSUEDATE >= DATE '2024-01-01' AND ( WORKDESC = 'Demolition -Building' OR RESUNITS >= 2 OR (WORKDESC IN ('New','Addition') AND CONSTRUCTVALUE >= 300000) )",
+        matchRadiusM: 150,
       },
     ],
     flag: {
