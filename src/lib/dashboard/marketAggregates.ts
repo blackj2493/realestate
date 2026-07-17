@@ -27,7 +27,23 @@ export interface RegionScore {
   medianCapRate: number | null;
   topCapRate: number | null;
   stalePct: number | null;
+  /** median relist-stitched True Days on Market (region_dom_distribution). null on thin inventory. */
+  trueDom: number | null;
+  /** % of resolved SALE listings that sold, 12mo (region_listing_outcomes). null on thin sample. */
+  sellThroughPct: number | null;
   temperature: "hot" | "balanced" | "cold" | null;
+}
+
+/** Minimal shapes of the two extra scorecard endpoints (full types live in aggregates.ts). */
+export interface DomDistResp {
+  region: string;
+  dom: { activeCount: number; medianTrueDom: number | null };
+  locked?: boolean;
+}
+export interface ListingOutcomesResp {
+  region: string;
+  outcomes: { soldCount: number; failedCount: number; failureRate: number | null };
+  locked?: boolean;
 }
 
 export interface TrendPoint {
@@ -152,15 +168,20 @@ export async function fetchRegionScore(
     (minParking ? `&minParking=${minParking}` : "") +
     (minFrontage ? `&minFrontage=${minFrontage}` : "") +
     (basement ? `&basement=${basement}` : "");
-  const [trendR, statsR] = await Promise.allSettled([
+  const [trendR, statsR, domR, outcomesR] = await Promise.allSettled([
     getJson<PriceTrendResp>(`/api/market/price-trend?region=${q}${s}`),
     getJson<RegionStatsResp>(`/api/market/region-stats?region=${q}${s}`),
+    getJson<DomDistResp>(`/api/market/dom-distribution?region=${q}${s}`),
+    // Sell-through is a market-level outcome (types honoured, numeric floors ignored server-side).
+    getJson<ListingOutcomesResp>(`/api/market/listing-outcomes?region=${q}${t}`),
   ]);
 
   const trend = trendR.status === "fulfilled" ? trendR.value : null;
   const stats = statsR.status === "fulfilled" ? statsR.value : null;
+  const dom = domR.status === "fulfilled" ? domR.value : null;
+  const outcomes = outcomesR.status === "fulfilled" ? outcomesR.value : null;
 
-  return assembleRegionScore(region, trend, stats);
+  return assembleRegionScore(region, trend, stats, dom, outcomes);
 }
 
 /**
@@ -172,7 +193,9 @@ export async function fetchRegionScore(
 export function assembleRegionScore(
   region: string,
   trend: PriceTrendResp | null,
-  stats: RegionStatsResp | null
+  stats: RegionStatsResp | null,
+  dom: DomDistResp | null = null,
+  outcomes: ListingOutcomesResp | null = null
 ): RegionScore {
   const points = trend?.points ?? [];
   const latest = points.length ? points[points.length - 1] : null;
@@ -192,6 +215,18 @@ export function assembleRegionScore(
   const stalePct =
     activeCount && activeCount > 0 ? Math.round((staleCount / activeCount) * 1000) / 10 : null;
 
+  // True DoM: median over active inventory — noise on a tiny pool, so require ≥10 active.
+  const domActive = dom?.dom.activeCount ?? 0;
+  const trueDom = domActive >= 10 ? dom?.dom.medianTrueDom ?? null : null;
+
+  // Sell-through: sold ÷ (sold + withdrawn) over 12mo; require a ≥30 resolved-listing sample.
+  const sold = outcomes?.outcomes.soldCount ?? 0;
+  const failed = outcomes?.outcomes.failedCount ?? 0;
+  const sellSample = sold + failed;
+  const failureRate = outcomes?.outcomes.failureRate ?? null;
+  const sellThroughPct =
+    sellSample >= 30 && failureRate != null ? Math.round((1 - failureRate) * 100) : null;
+
   return {
     region,
     // Either endpoint returning `locked` (anonymous) locks the whole row.
@@ -209,6 +244,8 @@ export function assembleRegionScore(
     medianCapRate: capSample >= 5 ? stats?.stats.medianCapRate ?? null : null,
     topCapRate: stats?.stats.topCapRate ?? null,
     stalePct,
+    trueDom,
+    sellThroughPct,
     temperature: temperatureOf(monthsOfSupply, soldToListPct),
   };
 }

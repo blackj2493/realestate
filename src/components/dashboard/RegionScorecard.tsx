@@ -30,14 +30,14 @@ type SortKey =
   | "medianPpsf"
   | "activeCount"
   | "monthsOfSupply"
+  | "trueDom"
   | "soldToListPct"
+  | "sellThroughPct"
   | "medianCapRate"
-  | "topCapRate"
-  | "stalePct"
   | "temperature";
 
 const GRID =
-  "grid-cols-[minmax(130px,1.5fr)_minmax(150px,1.4fr)_minmax(96px,1fr)_minmax(72px,0.8fr)_minmax(92px,0.9fr)_minmax(86px,0.9fr)_minmax(84px,0.9fr)_minmax(80px,0.9fr)_minmax(74px,0.8fr)_minmax(78px,0.8fr)]";
+  "grid-cols-[minmax(130px,1.5fr)_minmax(150px,1.4fr)_minmax(84px,0.9fr)_minmax(72px,0.8fr)_minmax(90px,0.9fr)_minmax(96px,1fr)_minmax(84px,0.9fr)_minmax(96px,1fr)_minmax(80px,0.9fr)_minmax(78px,0.8fr)]";
 
 const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "region", label: "Region", align: "left" },
@@ -45,10 +45,10 @@ const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "medianPpsf", label: "$/Sqft", align: "right" },
   { key: "activeCount", label: "Active", align: "right" },
   { key: "monthsOfSupply", label: "Mo. Supply", align: "right" },
+  { key: "trueDom", label: "True DoM", align: "right" },
   { key: "soldToListPct", label: "Sold/List", align: "right" },
+  { key: "sellThroughPct", label: "Sell-Thru", align: "right" },
   { key: "medianCapRate", label: "Med Cap", align: "right" },
-  { key: "topCapRate", label: "Top Cap", align: "right" },
-  { key: "stalePct", label: "% Stale", align: "right" },
   { key: "temperature", label: "Temp", align: "right" },
 ];
 
@@ -241,10 +241,18 @@ export default function RegionScorecard({
 
                   <Cell>{orDash(s.activeCount, (n) => n.toLocaleString())}</Cell>
                   <Cell>{orDash(s.monthsOfSupply, (n) => n.toFixed(1))}</Cell>
+
+                  {/* True DoM (primary market-pace metric) + % stale, its derivative, folded in */}
+                  <div className="flex flex-col items-end gap-0.5 px-2 py-2">
+                    <span className="terminal-font text-[13px] text-foreground">{orDash(s.trueDom, (n) => `${n}d`)}</span>
+                    {s.stalePct != null && (
+                      <span className="terminal-font text-[10px] text-muted-foreground">{s.stalePct.toFixed(0)}% stale</span>
+                    )}
+                  </div>
+
                   <Cell>{orDash(s.soldToListPct, (n) => `${n.toFixed(1)}%`)}</Cell>
+                  <Cell>{orDash(s.sellThroughPct, (n) => `${Math.round(n)}%`)}</Cell>
                   <Cell>{orDash(s.medianCapRate, (n) => `${n.toFixed(1)}%`)}</Cell>
-                  <Cell>{orDash(s.topCapRate, (n) => `${n.toFixed(1)}%`)}</Cell>
-                  <Cell>{orDash(s.stalePct, (n) => `${n.toFixed(0)}%`)}</Cell>
 
                   {/* Temperature */}
                   <div className="flex justify-end px-2 py-3">
@@ -260,9 +268,11 @@ export default function RegionScorecard({
         {filterParts.length > 0 && (
           <span className="text-muted-foreground">Filtered to {filterParts.join(", ")}. </span>
         )}
-        Active metrics (cap rate, active count, % stale) are full-population over current active inventory.
-        Median price, $/sqft, Sold/List & months of supply are from sold records (recent months lag).
-        Sold/List shown only where list-price coverage ≥ 50%. Median cap requires ≥ 5 priced active listings.
+        Active metrics (True DoM, cap rate, active count, % stale) are full-population over current active
+        inventory, deduped by property. Median price, $/sqft, Sold/List & months of supply are from sold
+        records (recent months lag). Sell-Thru = share of listings that sold vs withdrew, last 12 months.
+        Sold/List shown only where list-price coverage ≥ 50%; median cap requires ≥ 5 priced active listings;
+        True DoM ≥ 10 active, Sell-Thru ≥ 30 resolved listings.
       </p>
     </section>
   );
@@ -289,6 +299,8 @@ function emptyScore(region: string): RegionScore {
     medianCapRate: null,
     topCapRate: null,
     stalePct: null,
+    trueDom: null,
+    sellThroughPct: null,
     temperature: null,
   };
 }
