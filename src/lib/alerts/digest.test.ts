@@ -93,6 +93,33 @@ describe("renderAlertsDigest", () => {
     expect(html).toContain("Huge Area");
   });
 
+  it("renders a listing thumbnail for drops and bubbles when a photo URL is present", () => {
+    const dropWithPhoto = { ...baseDrop, thumb: "https://media.proptx.ca/drop-medium.jpg" };
+    const sectionWithPhoto = {
+      ...baseSection,
+      listings: [{ ...baseSection.listings[0], thumb: "https://media.proptx.ca/bubble-medium.jpg" }],
+    };
+    const { html } = renderAlertsDigest(
+      payload({ drops: [dropWithPhoto], bubbles: [sectionWithPhoto] })
+    );
+    expect(html).toContain('src="https://media.proptx.ca/drop-medium.jpg"');
+    expect(html).toContain('src="https://media.proptx.ca/bubble-medium.jpg"');
+  });
+
+  it("falls back to a placeholder box (no <img>) when a listing has no photo", () => {
+    // baseDrop.thumb is null and baseSection listings carry no thumb.
+    const { html } = renderAlertsDigest(payload({ drops: [baseDrop], bubbles: [baseSection] }));
+    expect(html).not.toContain("<img"); // status/drops/bubbles here have no photo → placeholder only
+  });
+
+  it("ignores a non-http thumb value rather than emitting a broken image", () => {
+    const { html } = renderAlertsDigest(
+      payload({ drops: [{ ...baseDrop, thumb: "javascript:alert(1)" }] })
+    );
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("<img");
+  });
+
   it("omits empty sections entirely", () => {
     const { html } = renderAlertsDigest(payload({ drops: [baseDrop] }));
     expect(html).not.toContain("New in your areas");

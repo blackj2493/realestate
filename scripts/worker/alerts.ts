@@ -488,7 +488,7 @@ async function main() {
           sort_by: 'EntryTimestamp:desc',
           per_page: MAX_BUBBLE_FETCH,
           include_fields:
-            'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp',
+            'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl',
         });
 
         const matches: NewListingAlert[] = (res.hits ?? []).map((h) => {
@@ -502,6 +502,9 @@ async function main() {
             beds: num(d.BedroomsTotal),
             baths: num(d.BathroomsTotalInteger),
             brokerage: (d.ListOfficeName as string) || null,
+            // Same precedence the app cards use (thumbnailUrl || primaryImageUrl); only
+            // primaryImageUrl is in the properties schema, so thumbnailUrl is just a guard.
+            thumb: (d.thumbnailUrl as string) || (d.primaryImageUrl as string) || null,
             entryMs: Number(d.EntryTimestamp) || 0,
           };
         });

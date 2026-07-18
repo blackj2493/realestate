@@ -12,6 +12,8 @@ export interface NewListingAlert {
   beds: number | null;
   baths: number | null;
   brokerage: string | null;
+  /** Listing thumbnail (PropTx MediaURL) for the email row; null when the feed has no photo. */
+  thumb?: string | null;
   /** EntryTimestamp (unix ms) — used only for newest-first ordering. */
   entryMs: number;
 }
