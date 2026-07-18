@@ -217,9 +217,9 @@ jobs:
   # Fires ONLY when run-ingester fails — i.e. the core sync step exits non-zero
   # (ingester.ts now exits 1 on a failed sync) or hits its timeout. The additive
   # refresh steps are continue-on-error, so they never trip this; this alerts on a
-  # REAL sync failure only. Opens a GitHub issue (which emails the repo owner — zero
-  # extra secrets); to avoid daily spam it comments on the existing open issue instead
-  # of creating a new one when a 'sync-failure' issue is already open.
+  # REAL sync failure only. Two channels: a GitHub issue (comment-not-spam dedupe)
+  # AND a direct Resend email to SYNC_ALERT_EMAIL — issue notifications are easy
+  # to miss, and the operator asked to ALWAYS know when the nightly run fails.
   notify-failure:
     needs: run-ingester
     if: failure()
@@ -256,3 +256,30 @@ jobs:
                 title: `🔴 Daily sync failed`, body, labels: [label],
               });
             }
+
+      # Direct email as well — the same Resend sender the freshness jobs use
+      # (notifyRun.ts convention), but dependency-free: this job has no checkout /
+      # npm ci, so a plain curl keeps it instant. No-ops cleanly if secrets are unset;
+      # never fails the job (the red run already stands on its own).
+      - name: Email failure alert
+        if: always()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ] || [ -z "$SYNC_ALERT_EMAIL" ]; then
+            echo "(no email sent — set RESEND_API_KEY + SYNC_ALERT_EMAIL secrets)"; exit 0
+          fi
+          FROM="${ALERTS_FROM_EMAIL:-PureProperty Alerts <support@pureproperty.ca>}"
+          jq -n --arg from "$FROM" --arg to "$SYNC_ALERT_EMAIL" \
+                --arg subject "❌ PureProperty · Daily sync FAILED" \
+                --arg html "<p>🔴 The <b>daily sync</b> failed — the core ingester exited non-zero or timed out.</p><p><a href=\"${RUN_URL}\">View the run</a>. The sync cursors are preserved on failure, so the next run re-attempts the same window.</p>" \
+                '{from: $from, to: $to, subject: $subject, html: $html}' \
+            | curl -sS -X POST https://api.resend.com/emails \
+                -H "Authorization: Bearer $RESEND_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d @- \
+            && echo "" && echo "📧 Emailed $SYNC_ALERT_EMAIL" \
+            || echo "email send failed (non-fatal)"

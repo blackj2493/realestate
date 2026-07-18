@@ -492,78 +492,219 @@ export async function fetchActiveListingsBatch(
   return { listings, nextLink, totalCount };
 }
 
-/**
- * Fetches a batch of SOLD/CLOSED listings (max 100) from RESO Web API.
- * Query B of the Dual-Query architecture.
- *
- * Delta selection is by ModificationTimestamp — the SAME monotonic cursor Query A (active)
- * and Query C (de-listed) use — so a sale is captured by WHEN IT LAST CHANGED in the feed,
- * not by its (often-lagging, non-monotonic) PurchaseContractDate. This replaced the old
- * status-only filter + `$orderby=PurchaseContractDate desc` + client-side prune, which
- * stopped at the first PCD < watermark and dropped every late-arriving / relisted-then-sold
- * sale (~25% of sales — the watermark bug).
- *
- * @param skip - Number of records to skip (for manual pagination)
- * @param lastSyncTimestamp - ISO timestamp; ModificationTimestamp delta lower bound
- * @returns Listings batch with pagination info
- */
-export async function fetchSoldListingsBatch(
-  skip: number = 0,
-  lastSyncTimestamp?: string
-): Promise<ListingsBatch> {
-  const token = VOW_TOKEN; // VOW feed only
+// ─── Query B (Sold Sync): cursor-advance pagination ──────────────────────────
+// Query B previously deep-$skip-paginated `ModificationTimestamp gt masterCursor`
+// with no $orderby, then the master cursor jumped to end-of-run `now`. Over a
+// multi-hour catch-up the unordered result set MUTATES under the crawl (records
+// modified mid-run shift across page boundaries), so records could skip past the
+// pagination — and the cursor jump made every such miss PERMANENT (the 6 Alexie
+// Way class: 26k closed listings still indexed For Sale, found 2026-07-17).
+// Reworked to mirror Query C (delistedIndexer.ts), the proven drift-proof shape:
+//   - $orderby=ModificationTimestamp asc, cursor advances per persisted page —
+//     a record modified during the run simply reappears LATER in the walk;
+//   - boundary-second drain via `eq` + $skip (second-precision feed, bulk status
+//     changes can exceed 100 records/second);
+//   - OWN sync_state row (id='sold'), seeded from the master cursor on first
+//     run: a Query B failure never moves the master cursor and vice versa, and
+//     the cursor only ever advances past fully-persisted pages.
 
-  if (!token) {
-    throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
+const SOLD_CURSOR_ROW_ID = 'sold';
+const SOLD_STATUS_FILTER = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`;
+/** Nightly page cap: ~1.2k sold+leased/day needs ~12 pages; 150 gives multi-day
+ *  catch-up slack (15k records). A capped run reports caughtUp=false and resumes
+ *  from its own cursor next night — nothing is lost. */
+const SOLD_DELTA_MAX_PAGES = 150;
+
+export async function readSoldCursor(defaultIso: string): Promise<string> {
+  const supabase = getServiceRoleClient();
+  const { data, error } = await supabase
+    .from('sync_state')
+    .select('last_sync_timestamp')
+    .eq('id', SOLD_CURSOR_ROW_ID)
+    .maybeSingle();
+  if (error) throw new Error(`read sold cursor: ${error.message}`);
+  if (!data) {
+    const { error: insErr } = await supabase
+      .from('sync_state')
+      .insert({ id: SOLD_CURSOR_ROW_ID, last_sync_timestamp: defaultIso, status: 'idle' });
+    if (insErr) throw new Error(`init sold cursor: ${insErr.message}`);
+    return defaultIso;
   }
+  return data.last_sync_timestamp;
+}
 
-  if (!lastSyncTimestamp) {
-    throw new Error('lastSyncTimestamp must be provided');
-  }
+export async function updateSoldCursor(
+  timestamp: string,
+  status: 'running' | 'completed' | 'failed'
+): Promise<void> {
+  const supabase = getServiceRoleClient();
+  const { error } = await supabase
+    .from('sync_state')
+    .update({ last_sync_timestamp: timestamp, status, updated_at: new Date().toISOString() })
+    .eq('id', SOLD_CURSOR_ROW_ID);
+  if (error) throw new Error(`update sold cursor: ${error.message}`);
+}
 
-  // Query B (Sold Sync): (StandardStatus eq 'Closed' or MlsStatus eq 'Sold') modified since
-  // the cursor. ModificationTimestamp IS filterable here (Query A/C rely on it); a status-OR
-  // AND ModificationTimestamp is accepted (Query C uses the same shape). Routes to:
-  // raw_vow_sold (AVM anchor) + Typesense sold_listings.
-  const statusFilter = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`;
-  const modFilter = `ModificationTimestamp gt ${lastSyncTimestamp}`;
-  const combinedFilter = `${statusFilter} and (${modFilter})`;
-
-  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(combinedFilter)}&$top=100&$skip=${skip}&$count=true`;
-
-  console.log(`   🔍 Query B (Sold): ${url.substring(0, 80)}...`);
-  console.log(`   → Delta query from: ${lastSyncTimestamp} (skip: ${skip})`);
-  
+/** One ordered sold page (VOW). Single $orderby only — AMPRE rejects compound
+ *  $orderby (error 1109, probe-verified 2026-06-10); $skip is used ONLY inside
+ *  the bounded boundary-second drain, never for deep pagination. */
+async function fetchSoldPage(filter: string, skip = 0): Promise<any[]> {
+  const token = VOW_TOKEN;
+  if (!token) throw new Error('PROPTX_VOW_TOKEN environment variable is not set');
+  const url =
+    `${API_BASE_URL}/Property?$filter=${encodeURIComponent(filter)}` +
+    `&$orderby=${encodeURIComponent('ModificationTimestamp asc')}&$top=100` +
+    (skip > 0 ? `&$skip=${skip}` : '');
   const result = await fetchWithRetry<any>(url, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    }
+    headers: { 'Authorization': `Bearer ${token}` },
   });
-  
   if (!result.success || !result.data) {
     throw new Error(`Query B fetch failed: ${result.error}`);
   }
-  
-  const data = result.data;
+  return result.data.value ?? [];
+}
 
-  // Extract listings and nextLink
-  const listings: any[] = data.value || [];
-  const nextLink: string | null = data['@odata.nextLink'] || null;
-  const totalCount: number | undefined = data['@odata.count'];
+export interface SoldSyncResult {
+  records: number;
+  pages: number;
+  caughtUp: boolean;
+  errors: string[];
+}
 
-  console.log(`   ✅ Query B batch received: ${listings.length} listings${nextLink ? ' (more pages)' : ''}`);
-  if (totalCount !== undefined) {
-    console.log(`   📊 Total matching: ${totalCount}`);
-  }
-  
-  // Log sample of statuses received
-  if (listings.length > 0) {
+/**
+ * Catch up sold/closed listings from the 'sold' cursor, up to maxPages.
+ * Each persisted page routes through the standard pipeline: media enrichment →
+ * processBatch({isSold}) (vault refresh + stale For-Sale doc delete) →
+ * raw_vow_sold upsert (AVM anchor) → sold_listings Typesense import.
+ * The cursor only advances after a page fully persists (upserts make re-runs safe).
+ */
+export async function runSoldSync(
+  defaultIso: string,
+  maxPages = SOLD_DELTA_MAX_PAGES
+): Promise<SoldSyncResult> {
+  let cursor = await readSoldCursor(defaultIso);
+  console.log(`   📖 Sold cursor: ${cursor}`);
+  await updateSoldCursor(cursor, 'running');
+  const supabaseClient = getServiceRoleClient();
+  const result: SoldSyncResult = { records: 0, pages: 0, caughtUp: false, errors: [] };
+
+  /** Persist one page — the exact per-page body the $skip loop used to run. */
+  const persistSoldPage = async (listings: any[]): Promise<void> => {
     const statuses = [...new Set(listings.map(l => l.StandardStatus || l.MlsStatus || l.Status))];
     console.log(`   📋 Statuses in batch: ${statuses.join(', ')}`);
+
+    // Media (VOW feed — sold listings are not on IDX). Best-effort.
+    const soldMediaAttached = await enrichListingsWithMedia(listings, VOW_TOKEN);
+    console.log(`   🖼️  Media attached to ${soldMediaAttached}/${listings.length} listings`);
+    const preservedSold = await preserveExistingMedia(
+      listings,
+      supabaseClient,
+      'raw_vow_sold',
+      'raw_payload'
+    );
+    if (preservedSold > 0) {
+      console.log(`   🛡️  Preserved existing sold media on ${preservedSold} listings`);
+    }
+
+    // Vault refresh + stale For-Sale doc delete (collectStaleSearchDocIds path).
+    const syncResult = await processBatch(listings, { isSold: true });
+    if (!syncResult.success) {
+      result.errors.push(...syncResult.supabase.errors, ...syncResult.typesense.errors);
+    }
+
+    // raw_vow_sold (AVM anchor) + lean sold_listings docs in the same pass.
+    const soldRecords: SoldListingRecord[] = [];
+    const soldDocs: SoldListingDocument[] = [];
+    for (const rawListing of listings) {
+      const soldData = extractSoldListingData(rawListing);
+      if (soldData) {
+        soldRecords.push(soldData);
+        const doc = toSoldDocument(
+          { ...soldData, mls_status: rawListing.MlsStatus ?? null, transaction_type: rawListing.TransactionType ?? null },
+          rawListing.ListOfficeName ?? null,
+          { media: (rawListing as any).media, images: (rawListing as any).images }
+        );
+        if (doc) soldDocs.push(doc);
+      }
+    }
+    if (soldRecords.length > 0) {
+      const upsertResult = await upsertSoldListings(supabaseClient, soldRecords);
+      console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
+      if (upsertResult.failed > 0) result.errors.push(...upsertResult.errors);
+    }
+    if (soldDocs.length > 0) {
+      try {
+        const { success, failed } = await importSoldBatch(getSoldAdminClient(), soldDocs);
+        console.log(`   🔎 sold_listings indexed: ${success} ok, ${failed} failed`);
+      } catch (err: any) {
+        console.warn(`   ⚠️  sold_listings indexing failed (non-fatal): ${err.message}`);
+      }
+    }
+  };
+
+  try {
+    while (result.pages < maxPages) {
+      const listings = await fetchSoldPage(
+        `${SOLD_STATUS_FILTER} and ModificationTimestamp gt ${cursor}`
+      );
+      if (listings.length === 0) {
+        result.caughtUp = true;
+        break;
+      }
+      await persistSoldPage(listings);
+      result.records += listings.length;
+      result.pages++;
+
+      const lastTs = listings[listings.length - 1]?.ModificationTimestamp;
+      if (!lastTs) {
+        console.warn('   ⚠️  Page has no ModificationTimestamp on its last record — stopping.');
+        result.caughtUp = listings.length < 100;
+        break;
+      }
+      console.log(`   📄 Sold page ${result.pages}: +${listings.length} (cursor → ${lastTs})`);
+
+      if (listings.length < 100) {
+        // Short page = feed exhausted; the boundary second arrived complete.
+        cursor = lastTs;
+        result.caughtUp = true;
+        break;
+      }
+
+      // Full page: drain the boundary second fully via `eq` + $skip before the
+      // cursor advances past it (overlap with rows above is idempotent).
+      let drainComplete = false;
+      const eqFilter = `${SOLD_STATUS_FILTER} and ModificationTimestamp eq ${lastTs}`;
+      for (let skip = 0; result.pages < maxPages; skip += 100) {
+        await sleep(PAGE_DELAY_MS);
+        const drain = await fetchSoldPage(eqFilter, skip);
+        if (drain.length > 0) {
+          await persistSoldPage(drain);
+          result.records += drain.length;
+          result.pages++;
+          console.log(`   📄 Sold drain: +${drain.length} @ ${lastTs} (skip ${skip})`);
+        }
+        if (drain.length < 100) {
+          drainComplete = true;
+          break;
+        }
+      }
+      if (!drainComplete) {
+        // Page cap hit mid-drain — leave the cursor BEFORE lastTs so the next
+        // run re-fetches and re-drains that second (idempotent), never skips it.
+        break;
+      }
+      cursor = lastTs;
+      await sleep(PAGE_DELAY_MS);
+    }
+    await updateSoldCursor(cursor, 'completed');
+  } catch (err: any) {
+    console.error(`   ❌ Sold sync failed: ${err?.message || err}`);
+    // Cursor intentionally NOT advanced past the last fully-persisted page.
+    await updateSoldCursor(cursor, 'failed').catch(() => {});
+    throw err;
   }
-  
-  return { listings, nextLink, totalCount };
+  return result;
 }
 
 // ============================================================================
@@ -1094,117 +1235,30 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     console.log('  QUERY B: Sold Listings Sync');
     console.log('════════════════════════════════════════════════\n');
 
-    // Query B deltas from the SAME ModificationTimestamp cursor as Query A
-    // (state.lastSyncTimestamp): every closed/sold record CHANGED since the last successful
-    // sync. A firm sale enters the feed days after its PurchaseContractDate (data-entry lag, or
-    // a terminate-then-relist resell under a new MLS#), but its ModificationTimestamp is recent,
-    // so this catches it — unlike the old `$orderby=PurchaseContractDate desc` + client-side PCD
-    // prune, which stopped at the first PCD < watermark and silently dropped ~25% of sales (the
-    // watermark bug; the 363 Maria Antonia case, and 6,800 recovered by
-    // scripts/admin/reconcile-sold-from-vault.ts). The reconciler stays as a twice-weekly net.
-    // Query C (de-listed) already uses this exact cursor on the same VOW feed, proving it out.
-    // Cursor advances to `now` only on full success (shared finalize below with Query A).
-    console.log(`   📅 Sold delta from: ${state.lastSyncTimestamp} (ModificationTimestamp cursor)`);
-
-    let soldSkip = 0;
-    let soldHasMore = true;
-    const supabaseClient = getServiceRoleClient();
-    
-    do {
-      console.log(`\n📄 Sold Page ${result.soldPages + 1} (Skip: ${soldSkip}):`);
-      const batch = await fetchSoldListingsBatch(soldSkip, state.lastSyncTimestamp);
-      
-      if (batch.listings.length === 0) {
-        console.log('   ℹ️  No sold listings found in this batch');
-        break;
-      }
-      
-      // Log sample statuses
-      const statuses = [...new Set(batch.listings.map(l => l.StandardStatus || l.MlsStatus || l.Status))];
-      console.log(`   📋 Statuses in batch: ${statuses.join(', ')}`);
-
-      // Enrich sold batch with media (uses VOW token since sold listings are only
-      // accessible via the VOW feed). Same best-effort pattern as the active path.
-      console.log('   🖼️  Enriching sold batch with media...');
-      const soldMediaAttached = await enrichListingsWithMedia(batch.listings, VOW_TOKEN);
-      console.log(`   🖼️  Media attached to ${soldMediaAttached}/${batch.listings.length} listings`);
-
-      // Same clobber protection as active path, against `raw_vow_sold.raw_payload`.
-      const preservedSold = await preserveExistingMedia(
-        batch.listings,
-        supabaseClient,
-        'raw_vow_sold',
-        'raw_payload'
+    // Query B runs on its OWN cursor row (sync_state id='sold'), seeded from the
+    // master cursor on first run, with ordered per-page cursor-advance pagination
+    // (see runSoldSync above — the drift-proof Query C shape). A Query B failure
+    // no longer aborts the whole sync: its own cursor already protects the sold
+    // window, so we record the error (CLI exits 1 → failure notifier fires) and
+    // let A's finalize proceed.
+    try {
+      const soldRes = await runSoldSync(state.lastSyncTimestamp);
+      result.soldRecords = soldRes.records;
+      result.soldPages = soldRes.pages;
+      result.errors.push(...soldRes.errors);
+      console.log(
+        `\n✅ Query B Complete: ${soldRes.records} sold records, ${soldRes.pages} pages, caughtUp=${soldRes.caughtUp}`
       );
-      if (preservedSold > 0) {
-        console.log(`   🛡️  Preserved existing sold media on ${preservedSold} listings`);
+      if (!soldRes.caughtUp) {
+        console.warn(
+          '   ⚠️  Sold page cap hit — run did NOT catch up; resumes from the sold cursor next run.'
+        );
       }
-
-      // Process batch through ETL pipeline (sync.ts) with is_sold flag
-      console.log('   🔄 Processing sold batch through ETL pipeline...');
-      const syncResult = await processBatch(batch.listings, { isSold: true });
-      
-      if (!syncResult.success) {
-        result.errors.push(...syncResult.supabase.errors);
-        result.errors.push(...syncResult.typesense.errors);
-      }
-      
-      // Extract sold data for raw_vow_sold (AVM anchor table). In the same pass,
-      // build lean docs for the bounded `sold_listings` Typesense collection —
-      // ListOfficeName comes straight off the in-memory raw JSON (no JSONB detoast).
-      const soldRecords: SoldListingRecord[] = [];
-      const soldDocs: SoldListingDocument[] = [];
-      for (const rawListing of batch.listings) {
-        const soldData = extractSoldListingData(rawListing);
-        if (soldData) {
-          soldRecords.push(soldData);
-          const doc = toSoldDocument(
-            { ...soldData, mls_status: rawListing.MlsStatus ?? null, transaction_type: rawListing.TransactionType ?? null },
-            rawListing.ListOfficeName ?? null,
-            { media: (rawListing as any).media, images: (rawListing as any).images }
-          );
-          if (doc) soldDocs.push(doc);
-        }
-      }
-
-      if (soldRecords.length > 0) {
-        console.log(`   🏠 Found ${soldRecords.length} sold/closed listings for raw_vow_sold`);
-        const upsertResult = await upsertSoldListings(supabaseClient, soldRecords);
-        console.log(`   📊 raw_vow_sold upsert result: ${JSON.stringify(upsertResult)}`);
-      }
-
-      // Index the same batch into Typesense `sold_listings` (non-fatal on error —
-      // raw_vow_sold remains the source of truth and the backfill can rebuild it).
-      if (soldDocs.length > 0) {
-        try {
-          const { success, failed } = await importSoldBatch(getSoldAdminClient(), soldDocs);
-          console.log(`   🔎 sold_listings indexed: ${success} ok, ${failed} failed`);
-        } catch (err: any) {
-          console.warn(`   ⚠️  sold_listings indexing failed (non-fatal): ${err.message}`);
-        }
-      }
-      
-      // Update counters
-      result.soldRecords += batch.listings.length;
-      result.soldPages++;
-      soldSkip += batch.listings.length;
-
-      // Page until the delta is exhausted — same termination as Query A. No
-      // PurchaseContractDate early-stop: the ModificationTimestamp filter already bounds the
-      // set to records changed since the cursor, so every page is in-scope and none may be
-      // skipped. nextLink is the authoritative "more pages" signal; the ===100 heuristic
-      // stays as a fallback for endpoints that omit nextLink (audit MEDIUM-7).
-      soldHasMore = batch.nextLink != null || batch.listings.length === 100;
-      
-      console.log(`   📊 Running totals: ${result.soldRecords} sold records, ${result.soldPages} pages`);
-      
-      // Rate limit delay
-      console.log(`   ⏳ Rate limiting: sleeping ${PAGE_DELAY_MS}ms...`);
-      await sleep(PAGE_DELAY_MS);
-      
-    } while (soldHasMore);
-    
-    console.log(`\n✅ Query B Complete: ${result.soldRecords} sold records, ${result.soldPages} pages`);
+    } catch (err: any) {
+      console.error(`\n❌ Query B failed: ${err?.message || err}`);
+      result.success = false;
+      result.errors.push(`sold sync: ${err?.message || err}`);
+    }
 
     // Keep the bounded sold_listings collection within its rolling window (non-fatal).
     try {
