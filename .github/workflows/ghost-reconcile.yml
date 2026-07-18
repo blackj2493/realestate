@@ -1,0 +1,72 @@
+name: Weekly Ghost Reconcile
+
+# Full-inventory reconciliation ("Query D") of the Typesense `properties` (For Sale)
+# index against the feed's CURRENT Active snapshot — the safety net for listings that
+# left Active but whose sold/de-listed record was missed by every delta net (Query B/C
+# cursor misses, outage windows, $skip drift during catch-ups). Each ghost is verified
+# per-key against the VOW feed, then routed through the standard ingest paths:
+# Closed → sold repair (vault + raw_vow_sold + sold_listings + stale doc delete);
+# Terminated/Withdrawn/absent → cleared from the For-Sale index; Active/conditionals kept.
+#
+# WHY THIS EXISTS: the 2026-07-17 audit found 26,377 closed listings (Apr–Jul mod dates)
+# still indexed as For Sale — 26,054 of them absent from raw_vow_sold — after the July 2–5
+# Query B outage + July 6 $skip-drift catch-up (the 6 Alexie Way incident). Delta cursors
+# can never re-see a record they already passed; only a full-inventory diff can.
+#
+# CADENCE: weekly (Sundays 08:00 UTC — after the daily sync finishes). Normal runs find a
+# few hundred ghosts (~30-45 min). The notify email reports the ghost count — a SPIKE is
+# the early warning that an upstream net (Query B/C) regressed again.
+on:
+  schedule:
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghost-reconcile
+  cancel-in-progress: false
+
+jobs:
+  ghost-reconcile:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: ghost-reconcile-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Reconcile ghost actives
+        # Generous cap: the Active snapshot + per-key VOW verification dominate the
+        # normal ~30-45 min run; a large regression (thousands of sold repairs at
+        # ~30s/100) can legitimately need hours. Timing out leaves the work resumable
+        # (idempotent upserts + per-chunk doc deletes) — the next weekly run finishes.
+        timeout-minutes: 240
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/worker/ghostReconcile.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Weekly Ghost Reconcile
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
