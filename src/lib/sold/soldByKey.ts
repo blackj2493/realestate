@@ -14,6 +14,7 @@
  */
 import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typesense/soldListingsSchema";
+import { parseAddress, addressesMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -79,6 +80,52 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
     };
   } catch (err) {
     console.error(`[soldByKey] public fetch failed for "${key}":`, err);
+    return null;
+  }
+}
+
+/**
+ * PUBLIC-safe sold lookup by ADDRESS — for key-less /address slugs (a visitor typed an
+ * address; we don't know its ListingKey). Same structural gate as getSoldPublicByKey:
+ * include_fields restricts the anonymous path to address/geo (+ PurchaseContractDate,
+ * fetched ONLY to pick the most recent campaign server-side — it is not returned).
+ * Matching mirrors the watchlist dispositions route: free-text UnparsedAddress query,
+ * then addressesMatch (civic number + postal-or-city/street) so a neighbour never bleeds in.
+ */
+export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<SoldPublic | null> {
+  if (!parsed.streetNumber || !parsed.streetName) return null;
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: `${parsed.streetNumber} ${parsed.streetName}`.trim(),
+        query_by: "UnparsedAddress",
+        include_fields: `${PUBLIC_FIELDS},PurchaseContractDate`,
+        per_page: 25,
+      });
+    let best: { d: Partial<SoldListingDocument>; date: number } | null = null;
+    for (const h of res.hits ?? []) {
+      const d = h.document as Partial<SoldListingDocument>;
+      if (!d.id || !addressesMatch(parsed, parseAddress(d.UnparsedAddress ?? ""))) continue;
+      const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
+      if (!best || date > best.date) best = { d, date };
+    }
+    if (!best) return null;
+    const d = best.d;
+    const loc =
+      Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
+        ? ([d.location[0], d.location[1]] as [number, number])
+        : null;
+    return {
+      id: d.id!,
+      address: d.UnparsedAddress ?? "",
+      city: d.City ?? "",
+      cityRegion: d.CityRegion ?? "",
+      location: loc,
+    };
+  } catch (err) {
+    console.error(`[soldByKey] address lookup failed:`, err);
     return null;
   }
 }

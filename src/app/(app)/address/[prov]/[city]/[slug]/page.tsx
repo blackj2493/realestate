@@ -20,10 +20,12 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
 import { getSoldPublicByKey, getSoldGatedByKey, type SoldPublic } from "@/lib/sold/soldByKey";
+import { resolveAddressSlug } from "@/lib/address/resolveProfile";
+import AddressProfileView from "@/components/address/AddressProfileView";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { assignSchools } from "@/lib/schools/nearestSchools";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
@@ -60,7 +62,23 @@ export async function generateMetadata({
   const { prov, city, slug } = await params;
   const key = extractListingKey(slug);
   const pub = key ? await getSoldPublicByKey(key) : null;
-  if (!pub) return { title: "Property not found | PureProperty", robots: { index: false, follow: false } };
+  if (!pub) {
+    // Key-less slug → the profile ladder (ADDRESS_PROFILES_PLAN P1). Profiles are
+    // noindex for v1 (unbounded URL space); redirect kinds get placeholder metadata.
+    const resolved = key ? null : await resolveAddressSlug(city, slug);
+    if (resolved?.kind === "profile") {
+      const p = resolved.profile;
+      const canonical = `${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`;
+      return {
+        metadataBase: new URL(SITE_URL),
+        title: `${p.address} | PureProperty`,
+        description: `${p.address}${p.city ? `, ${p.city}` : ""} — homes for sale nearby, neighbourhood schools and walkability. Track this address free on PureProperty.`,
+        alternates: { canonical },
+        robots: { index: false, follow: true },
+      };
+    }
+    return { title: "Property not found | PureProperty", robots: { index: false, follow: false } };
+  }
 
   const canonical = `${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`;
   const cityName = pub.city || deslugCity(city);
@@ -122,7 +140,25 @@ export default async function AddressPage({
   const { prov, city, slug } = await params;
   const key = extractListingKey(slug);
   const pub: SoldPublic | null = key ? await getSoldPublicByKey(key) : null;
-  if (!pub) notFound();
+  if (!pub) {
+    // Key-less slug: resolve instead of 404 (ADDRESS_PROFILES_PLAN P1).
+    //  active → the listing page beats any profile; sold → canonical keyed gated page;
+    //  geocoded/postal profile → render; nothing → notFound.
+    const resolved = key ? null : await resolveAddressSlug(city, slug);
+    if (resolved?.kind === "active") redirect(`/properties/${resolved.id}`);
+    if (resolved?.kind === "sold") redirect(`/address/${prov.toLowerCase()}/${city}/${resolved.slug}`);
+    if (resolved?.kind === "profile") {
+      return (
+        <AddressProfileView
+          profile={resolved.profile}
+          provSlug={prov}
+          citySlug={city}
+          canonical={`${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`}
+        />
+      );
+    }
+    notFound();
+  }
 
   // Server-side auth decision. The VOW fetch is gated behind this.
   const { isConsumer } = await getConsumer();
