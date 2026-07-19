@@ -973,10 +973,16 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     location: geo.location,
     isDistressed: metrics.isDistressed,
     hasSecondarySuitePotential: suiteAnalysis.suiteStatus !== 'NONE',
-    // Timestamp for fast sorting by entry date
-    EntryTimestamp: raw.OriginalEntryTimestamp 
-      ? new Date(raw.OriginalEntryTimestamp).getTime() 
-      : Date.now(),
+    // Timestamp for fast sorting by entry date. Fallback chain matters: the old
+    // Date.now() fallback re-stamped a no-OriginalEntryTimestamp listing as brand-new on
+    // EVERY re-sync, making it reappear forever in "new listing" queries and the nightly
+    // bubble alerts. ListingContractDate is the honest proxy; 0 (= unknown, sorts last,
+    // excluded from every "new since X" window) beats a fabricated freshness.
+    EntryTimestamp: raw.OriginalEntryTimestamp
+      ? new Date(raw.OriginalEntryTimestamp).getTime()
+      : raw.ListingContractDate
+        ? new Date(raw.ListingContractDate).getTime()
+        : 0,
     // True Carry Cost fields
     MonthlyCarryCost: carryCost.trueCarryCost,
     MonthlyMortgage: carryCost.monthlyMortgage,

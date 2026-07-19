@@ -28,6 +28,7 @@ import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles"
 import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
+import CityAlertBell from "@/components/dashboard/CityAlertBell";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
@@ -205,7 +206,10 @@ export default function DashboardClient() {
           config.regions.map((loc) => {
             const area = regionArea(loc);
             return (
-              <RegionDrilldown key={loc} title={loc}>
+              // The bell mirrors the per-bubble alert toggle: city sections are
+              // localStorage-only, so it materializes an area_type 'city' bubble row
+              // the nightly worker can deliver against (see CityAlertBell).
+              <RegionDrilldown key={loc} title={loc} actions={<CityAlertBell city={loc} />}>
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (

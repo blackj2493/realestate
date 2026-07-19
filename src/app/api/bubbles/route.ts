@@ -22,7 +22,7 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-const AREA_TYPES: readonly BubbleAreaType[] = ["draw", "commute", "school"];
+const AREA_TYPES: readonly BubbleAreaType[] = ["draw", "commute", "school", "city"];
 
 function isLatLngArray(v: unknown): v is [number, number][] {
   return (
@@ -49,14 +49,27 @@ function validatePayload(body: unknown):
 
   const area_type = b.area_type as BubbleAreaType | undefined;
   if (!area_type || !AREA_TYPES.includes(area_type))
-    return { ok: false, error: "area_type must be draw|commute|school" };
-
-  if (!isLatLngArray(b.polygon))
-    return { ok: false, error: "polygon must be [[lat,lng],...] with ≥3 points" };
+    return { ok: false, error: "area_type must be draw|commute|school|city" };
 
   const source = b.source as BubbleSource | undefined;
   if (!source || typeof source !== "object")
     return { ok: false, error: "source required" };
+
+  // City alert rows (migration 083) carry no polygon — the worker scopes them by the
+  // source.city string (CITY_GROUPS expansion), same as the dashboard city sections.
+  if (area_type === "city") {
+    const city =
+      source.kind === "city" && typeof source.city === "string" ? source.city.trim() : "";
+    if (!city || city.length > 80)
+      return { ok: false, error: "source.city required for area_type city" };
+    return {
+      ok: true,
+      payload: { name, area_type, polygon: [], source: { kind: "city", city }, filters: null },
+    };
+  }
+
+  if (!isLatLngArray(b.polygon))
+    return { ok: false, error: "polygon must be [[lat,lng],...] with ≥3 points" };
 
   // We don't deeply validate filters — it's a passthrough JSONB blob owned by
   // the client. RLS plus the schema constraints are sufficient guardrails.

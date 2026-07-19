@@ -25,6 +25,7 @@ export interface DropAlert {
 }
 
 export interface StatusChangeAlert {
+  /** For kind 'relisted' this is the NEW active MLS key — the row links to the live listing. */
   listing_key: string;
   address: string;
   city: string | null;
@@ -33,6 +34,8 @@ export interface StatusChangeAlert {
   brokerage: string | null;
   /** Listing thumbnail for the email row; null when no photo. The sold PRICE stays gated. */
   thumb?: string | null;
+  /** kind 'relisted' only: the new campaign's ask (IDX/public — display-safe). */
+  newPrice?: number | null;
 }
 
 export interface DigestPayload {
@@ -72,6 +75,7 @@ const KIND_LABEL: Record<StatusAlertKind, string> = {
   "off-market": "OFF MARKET",
   "back-on-market": "BACK ON MARKET",
   gone: "NO LONGER ACTIVE",
+  relisted: "RELISTED",
 };
 
 const KIND_COLOR: Record<StatusAlertKind, string> = {
@@ -80,6 +84,7 @@ const KIND_COLOR: Record<StatusAlertKind, string> = {
   "off-market": "#64748b",
   "back-on-market": "#0f766e",
   gone: "#64748b",
+  relisted: "#0f766e",
 };
 
 function statusLine(s: StatusChangeAlert): string {
@@ -88,8 +93,20 @@ function statusLine(s: StatusChangeAlert): string {
     return `Listing ${s.detail ? s.detail.toLowerCase() : "removed"} — a relist often signals a motivated seller`;
   if (s.kind === "back-on-market") return "Relisted — previous campaign ended without a sale";
   if (s.kind === "sold-conditional") return "Offer accepted with conditions — can still fall through";
+  if (s.kind === "relisted")
+    return `Back on the market under a new MLS#${s.newPrice != null ? ` — now asking ${money(s.newPrice)}` : ""}`;
   return "Removed from the active feed";
 }
+
+// Bounded sections (audit: a 500-listing watchlist must not produce a 500-row email).
+// Bubbles already cap at 6 via bubbleDigest; these cap the two watchlist sections.
+export const STATUS_EMAIL_ROW_CAP = 20;
+export const DROP_EMAIL_ROW_CAP = 20;
+
+const overflowLine = (n: number) =>
+  `<div style="font-size:12px;margin-top:6px;">
+     <a href="${SITE}/dashboard" style="color:#0891b2;text-decoration:none;font-weight:600;">+${n} more on your dashboard →</a>
+   </div>`;
 
 // TRREB §6.3(c): brokerage on EVERY listing row. Always render the line; when the feed
 // omitted ListOfficeName, show the same "Brokerage unavailable" placeholder the cards use.
@@ -99,8 +116,10 @@ const brokerageLine = (b: string | null) =>
 function subjectFor(p: DigestPayload): string {
   const parts: string[] = [];
   const sold = p.statusChanges.filter((s) => s.kind === "sold").length;
-  const otherStatus = p.statusChanges.length - sold;
+  const relisted = p.statusChanges.filter((s) => s.kind === "relisted").length;
+  const otherStatus = p.statusChanges.length - sold - relisted;
   if (sold) parts.push(`${sold} sold`);
+  if (relisted) parts.push(`${relisted} relisted`);
   if (otherStatus) parts.push(`${otherStatus} status change${otherStatus === 1 ? "" : "s"}`);
   if (p.drops.length) parts.push(`${p.drops.length} price drop${p.drops.length === 1 ? "" : "s"}`);
   const newCount = p.bubbles.reduce((n, b) => n + b.total, 0);
@@ -204,13 +223,19 @@ export function renderAlertsDigest(
 ): { subject: string; html: string; text: string } {
   const subject = subjectFor(p);
 
-  const statusSection = p.statusChanges.length
+  const statusShown = p.statusChanges.slice(0, STATUS_EMAIL_ROW_CAP);
+  const dropsShown = p.drops.slice(0, DROP_EMAIL_ROW_CAP);
+  const statusSection = statusShown.length
     ? sectionHeader("Status changes") +
-      `<table style="width:100%;border-collapse:collapse;">${statusRowsHtml(p.statusChanges)}</table>`
+      `<table style="width:100%;border-collapse:collapse;">${statusRowsHtml(statusShown)}</table>` +
+      (p.statusChanges.length > statusShown.length
+        ? overflowLine(p.statusChanges.length - statusShown.length)
+        : "")
     : "";
-  const dropsSection = p.drops.length
+  const dropsSection = dropsShown.length
     ? sectionHeader("Price drops") +
-      `<table style="width:100%;border-collapse:collapse;">${dropRowsHtml(p.drops)}</table>`
+      `<table style="width:100%;border-collapse:collapse;">${dropRowsHtml(dropsShown)}</table>` +
+      (p.drops.length > dropsShown.length ? overflowLine(p.drops.length - dropsShown.length) : "")
     : "";
   const bubblesSection = p.bubbles.length
     ? sectionHeader("New in your areas") + p.bubbles.map(bubbleSectionHtml).join("")
@@ -232,26 +257,30 @@ export function renderAlertsDigest(
   const html = shell({ preheader, headerLabel: "NIGHTLY BRIEF", body });
 
   const textParts: string[] = [];
-  if (p.statusChanges.length) {
+  if (statusShown.length) {
+    const more = p.statusChanges.length - statusShown.length;
     textParts.push(
       "Status changes:\n" +
-        p.statusChanges
+        statusShown
           .map((s) => {
             const tail = s.kind === "sold" ? "Sign in to see the closing price" : statusLine(s);
             return `• [${KIND_LABEL[s.kind]}] ${s.address}${s.brokerage ? ` — ${s.brokerage}` : ""}\n  ${tail}: ${listingUrl(s.listing_key)}`;
           })
-          .join("\n")
+          .join("\n") +
+        (more > 0 ? `\n• +${more} more on your dashboard` : "")
     );
   }
-  if (p.drops.length) {
+  if (dropsShown.length) {
+    const more = p.drops.length - dropsShown.length;
     textParts.push(
       "Price drops:\n" +
-        p.drops
+        dropsShown
           .map(
             (d) =>
               `• ${d.address}${d.brokerage ? ` — ${d.brokerage}` : ""} — ${money(d.oldPrice)} -> ${money(d.newPrice)} (-${money(d.oldPrice - d.newPrice)})\n  ${listingUrl(d.listing_key)}`
           )
-          .join("\n")
+          .join("\n") +
+        (more > 0 ? `\n• +${more} more on your dashboard` : "")
     );
   }
   if (p.bubbles.length) {

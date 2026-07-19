@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { classifyStatusChange, isTerminalStatus, resolvedBaseline } from "./transitions";
+import {
+  classifyStatusChange,
+  isRelistScanBaseline,
+  isTerminalStatus,
+  resolvedBaseline,
+} from "./transitions";
 
 describe("isTerminalStatus", () => {
   it("matches the feed's terminal spellings case/space-insensitively", () => {
@@ -91,6 +96,26 @@ describe("classifyStatusChange — doc vanished from the active index", () => {
       classifyStatusChange({ prev: "Unavailable", current: null, soldHit: false, fallbackStatus: null })
     ).toBeNull();
   });
+
+  it("treats the synthetic Relisted baseline as resolved (no off-market re-fire)", () => {
+    expect(
+      classifyStatusChange({ prev: "Relisted", current: null, soldHit: false, fallbackStatus: "Terminated" })
+    ).toBeNull();
+  });
+});
+
+describe("isRelistScanBaseline", () => {
+  it("scans only campaigns that died without a transaction", () => {
+    for (const s of ["Terminated", "expired", " Suspended", "Unavailable"]) {
+      expect(isRelistScanBaseline(s)).toBe(true);
+    }
+  });
+
+  it("never scans transactions, resolved relists, or live statuses", () => {
+    for (const s of ["Sold", "Leased", "Closed", "Relisted", "New", "Active", null]) {
+      expect(isRelistScanBaseline(s)).toBe(false);
+    }
+  });
 });
 
 describe("resolvedBaseline", () => {
@@ -98,6 +123,7 @@ describe("resolvedBaseline", () => {
     expect(resolvedBaseline({ kind: "sold" })).toBe("Sold");
     expect(resolvedBaseline({ kind: "off-market", detail: "Expired" })).toBe("Expired");
     expect(resolvedBaseline({ kind: "gone" })).toBe("Unavailable");
+    expect(resolvedBaseline({ kind: "relisted" })).toBe("Relisted");
     // in-index events persist the live status, not a synthetic one
     expect(resolvedBaseline({ kind: "sold-conditional" })).toBeNull();
     expect(resolvedBaseline({ kind: "back-on-market" })).toBeNull();

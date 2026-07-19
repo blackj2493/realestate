@@ -46,13 +46,17 @@ export default function BubbleSections({ lens, enabledBoards }: Props) {
     void init();
   }, [init]);
 
-  // Sort newest first — matches /api/bubbles GET order.
+  // Sort newest first — matches /api/bubbles GET order. City rows (area_type 'city',
+  // migration 083) are alert-carriers for the plain city sections below the bubbles —
+  // rendering them here would duplicate those sections, so they're filtered out.
   const bubbles = useMemo(
     () =>
-      Object.values(items).sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ),
+      Object.values(items)
+        .filter((b) => b.area_type !== "city")
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
     [items]
   );
 
