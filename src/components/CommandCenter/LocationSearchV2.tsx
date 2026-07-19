@@ -554,7 +554,9 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           </span>
                         )}
                         {/* Geocoded address (no listing anywhere) → its address-profile page
-                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action. */}
+                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action.
+                            Always visible (not hover-gated): this chip is the only touch-
+                            reachable path to the profile from the terminal. */}
                         {item.category === "geo" && addressProfileHref(item.label) && (
                           <span
                             role="button"
@@ -564,7 +566,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                               const href = addressProfileHref(item.label);
                               if (href) router.push(href);
                             }}
-                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
+                            className="flex shrink-0 items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 transition-colors hover:border-cyan-400 hover:text-cyan-200 dark:text-cyan-300"
                           >
                             <Home className="h-2.5 w-2.5" />
                             Profile

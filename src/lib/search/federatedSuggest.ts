@@ -12,12 +12,28 @@
  */
 
 import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client";
+import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { geocodeAddress } from "./geocodeClient";
 import type { SuggestGroup, SuggestItem } from "./types";
 
 const SALES_FLOOR = "ListPrice:>=100000";
 const MLS_RE = /^[A-Za-z]\d{6,9}$/;
 const hasStreetNumber = (q: string) => /\d/.test(q);
+
+/**
+ * Whether an address suggestion GENUINELY matches the typed query — same civic number
+ * AND the typed street-name tokens appear in the suggestion's street. Typesense is
+ * typo-tolerant on purpose ("758 cappamore" happily returns "758 Coldstream" /
+ * "758 Dovercourt"), and those fuzzy lookalikes used to suppress the geocode fallback —
+ * so a real off-market address never surfaced at all. Fuzzy rows stay useful as
+ * suggestions; they just must not swallow the typed address.
+ */
+export function matchesTypedAddress(query: string, suggestionAddress: string): boolean {
+  const typed = parseAddress(query);
+  if (!typed.streetNumber || typed.streetName.length < 3) return false;
+  const cand = parseAddress(suggestionAddress);
+  return typed.streetNumber === cand.streetNumber && streetNamesMatch(typed.streetName, cand.streetName);
+}
 
 const TITLE: Record<string, string> = {
   mls: "MLS#",
@@ -163,27 +179,31 @@ export async function federatedSuggest(
     }
   }
 
-  // 3) Geo fallback — typed address with no active listing still flies the map.
-  //    Only when it really looks like a street address (number + a name word), to
-  //    avoid an extra round-trip on every digit typed.
-  if (!structured && addresses.length === 0 && /\d+\s+\w/.test(q)) {
+  // 3) Geo fallback — typed address with no matching active listing still resolves.
+  //    Fires when it looks like a street address (number + a name word) AND no returned
+  //    suggestion GENUINELY matches what was typed — typo-tolerant fuzzy hits
+  //    ("758 Coldstream" for "758 cappamore") must not suppress the real address.
+  const typedAddressCovered = addresses.some((a) => matchesTypedAddress(q, a.label));
+  if (!structured && !typedAddressCovered && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
     const hit = await geocodeAddress(q, signal);
     if (hit) {
       geo.push({
         id: `geo:${hit.lat},${hit.lng}`,
         category: "geo",
         label: hit.label,
-        sublabel: "Drop a pin & explore the area",
+        sublabel: "Not on the market — view the address profile, or drop a pin",
         geo: { lat: hit.lat, lng: hit.lng, zoom: 16 },
         provenance: "geocoded",
       });
     }
   }
 
+  // The typed-but-unlisted address is the user's stated intent — it outranks fuzzy
+  // lookalikes, so the geo row renders ABOVE the address group.
   const order: Array<[SuggestItem[], SuggestGroup["category"]]> = [
     [mls, "mls"],
-    [addresses.slice(0, 5), "address"],
     [geo, "geo"],
+    [addresses.slice(0, 5), "address"],
     [communities.slice(0, 6), "community"],
   ];
   return order
