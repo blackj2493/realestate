@@ -36,6 +36,9 @@ const AREA_META: Record<
   draw: { label: "Drawn area", icon: MapPin, tagline: "Custom polygon you sketched on the map" },
   commute: { label: "Commute zone", icon: Compass, tagline: "Within your selected travel time" },
   school: { label: "School area", icon: GraduationCap, tagline: "Properties near your chosen school" },
+  // City alert rows are created by the dashboard bell (CityAlertBell), never this dialog;
+  // entry exists only to satisfy the Record type.
+  city: { label: "City", icon: MapPin, tagline: "Whole-city new-listing alerts" },
 };
 
 export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props) {

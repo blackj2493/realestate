@@ -27,6 +27,7 @@
 import Typesense, { Client } from "typesense";
 import type { Bubble } from "./serialize";
 import { CAP_RATE_BAND } from "@/lib/metrics/sanityBand";
+import { areaFilter } from "@/lib/dashboard/area";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -93,6 +94,11 @@ export function buildAreaClause(
   if (bubble.area_type === "school" && bubble.source.kind === "school") {
     // Backticks because school ids contain hyphens/colons.
     return `NearbySchools:=\`${bubble.source.schoolKey}\``;
+  }
+  if (bubble.area_type === "city" && bubble.source.kind === "city") {
+    // City alert rows (migration 083) carry no polygon — scope exactly like the
+    // dashboard city sections, incl. the Toronto/London/Ottawa CITY_GROUPS expansion.
+    return bubble.source.city ? areaFilter({ kind: "region", name: bubble.source.city }) : null;
   }
   // draw / commute — polygon ring in [lat, lng] order, flattened.
   if (!bubble.polygon || bubble.polygon.length < 3) return null;

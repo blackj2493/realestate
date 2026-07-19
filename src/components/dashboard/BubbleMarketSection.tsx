@@ -56,6 +56,8 @@ const AREA_ICON: Record<Bubble["area_type"], typeof MapPin> = {
   draw: MapPin,
   commute: Compass,
   school: GraduationCap,
+  // City alert rows are filtered out of BubbleSections; entry satisfies the Record type.
+  city: MapPin,
 };
 
 function tagline(b: Bubble): string {

@@ -27,7 +27,7 @@ import type {
   TerminalFilterState,
 } from "@/lib/personas/personaConfig";
 
-export type BubbleAreaType = "draw" | "commute" | "school";
+export type BubbleAreaType = "draw" | "commute" | "school" | "city";
 
 /** Subset of commandCenterStore that we persist as the bubble's "filters" blob. */
 export interface BubbleFiltersSnapshot {
@@ -58,18 +58,27 @@ export interface BubbleSourceSchool {
   radiusKm: number; // 2.5 today — kept explicit for future tuning
 }
 
+/** City alert row (migration 083): no polygon; the worker scopes via CITY_GROUPS. */
+export interface BubbleSourceCity {
+  /** Dashboard region string — a TRREB City or grouped parent (Toronto/London/Ottawa). */
+  city: string;
+}
+
 export type BubbleSource =
   | ({ kind: "draw" } & BubbleSourceDraw)
   | ({ kind: "commute" } & BubbleSourceCommute)
-  | ({ kind: "school" } & BubbleSourceSchool);
+  | ({ kind: "school" } & BubbleSourceSchool)
+  | ({ kind: "city" } & BubbleSourceCity);
 
 /** Wire-format payload sent to POST /api/bubbles. */
 export interface BubblePayload {
   name: string;
   area_type: BubbleAreaType;
-  polygon: [number, number][]; // [lat, lng]
+  /** [lat, lng]; empty for area_type 'city' (alert-carrier rows have no polygon). */
+  polygon: [number, number][];
   source: BubbleSource;
-  filters: BubbleFiltersSnapshot;
+  /** null for city alert rows — they're created from the dashboard, not the terminal. */
+  filters: BubbleFiltersSnapshot | null;
 }
 
 /** As returned by GET /api/bubbles. */
@@ -245,6 +254,7 @@ export function applyBubbleToStore(
   setters: StoreSettersForLoad
 ): void {
   const f = bubble.filters;
+  if (!f) return; // city alert rows carry no filter snapshot and never rehydrate the terminal
   setters.setActivePersona(f.activePersona);
   setters.setFilters(f.filters);
   setters.setLocation(f.location ?? "");

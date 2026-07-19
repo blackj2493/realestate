@@ -25,8 +25,29 @@ export interface ListingAlertChange {
   status?: { kind: StatusAlertKind; detail?: string };
 }
 
+/** One active listing matched by a `similar` subscription (IDX/public facts only). */
+export interface SimilarMatch {
+  listing_key: string;
+  address: string;
+  city: string | null;
+  price: number | null;
+  beds: number | null;
+  baths: number | null;
+  brokerage: string | null;
+}
+
+/** New-inventory matches for one `similar` subscription, grouped under its anchor. */
+export interface SimilarSection {
+  /** The listing the lead asked for "similar homes" to (display anchor). */
+  anchorAddress: string;
+  anchorCity: string | null;
+  matches: SimilarMatch[]; // ≥1
+}
+
 export interface ListingAlertEmailInput {
-  changes: ListingAlertChange[]; // ≥1
+  changes: ListingAlertChange[];
+  /** `similar` subscription matches — either array may be empty, not both. */
+  similar?: SimilarSection[];
   unsubscribeUrl: string;
 }
 
@@ -42,6 +63,7 @@ const KIND_LABEL: Record<StatusAlertKind, string> = {
   "off-market": "OFF MARKET",
   "back-on-market": "BACK ON MARKET",
   gone: "NO LONGER ACTIVE",
+  relisted: "RELISTED",
 };
 const KIND_COLOR: Record<StatusAlertKind, string> = {
   sold: "#dc2626",
@@ -49,6 +71,7 @@ const KIND_COLOR: Record<StatusAlertKind, string> = {
   "off-market": "#64748b",
   "back-on-market": "#0f766e",
   gone: "#64748b",
+  relisted: "#0f766e",
 };
 
 function statusLine(s: NonNullable<ListingAlertChange["status"]>): string {
@@ -63,6 +86,7 @@ function statusLine(s: NonNullable<ListingAlertChange["status"]>): string {
     case "off-market":
       return "No longer on the active market — a relist often signals a motivated seller";
     case "back-on-market":
+    case "relisted":
       return "Back on the market — sign in to see the full listing history";
     case "sold-conditional":
       return "Offer accepted with conditions — it can still fall through";
@@ -78,8 +102,9 @@ function summarize(c: ListingAlertChange): string {
   return "Update";
 }
 
-function subjectFor(changes: ListingAlertChange[]): string {
-  if (changes.length === 1) {
+function subjectFor(changes: ListingAlertChange[], similar: SimilarSection[]): string {
+  const similarCount = similar.reduce((n, s) => n + s.matches.length, 0);
+  if (changes.length === 1 && !similarCount) {
     const c = changes[0];
     const where = c.address || c.city || "a home you're watching";
     return `${summarize(c)} — ${where}`;
@@ -89,7 +114,8 @@ function subjectFor(changes: ListingAlertChange[]): string {
   const parts: string[] = [];
   if (drops) parts.push(`${drops} price drop${drops === 1 ? "" : "s"}`);
   if (status) parts.push(`${status} status change${status === 1 ? "" : "s"}`);
-  return parts.join(" · ") || `${changes.length} updates on homes you're watching`;
+  if (similarCount) parts.push(`${similarCount} similar new listing${similarCount === 1 ? "" : "s"}`);
+  return parts.join(" · ") || "Updates on homes you're watching";
 }
 
 // TRREB §6.3(c): brokerage on EVERY listing row. Always render; when the feed omitted
@@ -124,35 +150,76 @@ function rowHtml(c: ListingAlertChange): string {
     </td></tr>`;
 }
 
+function similarMatchRowHtml(m: SimilarMatch): string {
+  return `
+    <tr><td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
+      <a href="${listingUrl(m.listing_key)}" style="color:#0f172a;text-decoration:none;font-weight:600;font-size:14px;">${esc(m.address || "New listing")}</a>
+      <div style="color:#64748b;font-size:12px;margin-top:2px;">${esc(m.city || "")}</div>
+      ${brokerageLine(m.brokerage)}
+      <div style="margin-top:4px;font-size:13px;color:#0f172a;">
+        ${m.price != null ? `<strong>${money(m.price)}</strong>` : ""}
+        ${m.beds != null ? ` · ${m.beds} bd` : ""}${m.baths != null ? ` · ${m.baths} ba` : ""}
+      </div>
+    </td></tr>`;
+}
+
+function similarSectionHtml(s: SimilarSection): string {
+  return `
+    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">Similar to ${esc(s.anchorAddress)}${s.anchorCity ? `, ${esc(s.anchorCity)}` : ""}</div>
+    <table style="width:100%;border-collapse:collapse;">${s.matches.map(similarMatchRowHtml).join("")}</table>`;
+}
+
 export function renderListingAlertEmail(
   input: ListingAlertEmailInput
 ): { subject: string; html: string; text: string } {
   const { changes, unsubscribeUrl } = input;
-  const subject = subjectFor(changes);
+  const similar = input.similar ?? [];
+  const subject = subjectFor(changes, similar);
 
-  const preheader = changes.length === 1 ? `${summarize(changes[0])} — sign in for the full history` : subject;
+  const preheader =
+    changes.length === 1 && !similar.length
+      ? `${summarize(changes[0])} — sign in for the full history`
+      : subject;
+  const changesTable = changes.length
+    ? `<table style="width:100%;border-collapse:collapse;margin-top:14px;">${changes.map(rowHtml).join("")}</table>`
+    : "";
+  const similarBlock = similar.length
+    ? `<h2 style="font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.10em;margin:24px 0 2px;">New listings like ones you're watching</h2>` +
+      similar.map(similarSectionHtml).join("")
+    : "";
+  const watchedCount = changes.length + similar.length;
   const body = `
       <h1 style="font-size:18px;color:#0f172a;margin:0 0 4px;">Updates on homes you're watching</h1>
       <p style="color:#64748b;font-size:13px;margin:0;">${esc(subject)}</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:14px;">${changes.map(rowHtml).join("")}</table>
+      ${changesTable}
+      ${similarBlock}
       ${footer({
-        intro: `You're getting this because you asked PureProperty.ca to alert you about ${changes.length === 1 ? "this home" : "these homes"}.`,
+        intro: `You're getting this because you asked PureProperty.ca to alert you about ${watchedCount === 1 ? "this home" : "these homes"}.`,
         unsubscribeUrl,
       })}`;
   const html = shell({ preheader, headerLabel: "LISTING ALERT", body });
 
+  const changeLines = changes.map((c) => {
+    const head = c.status ? `[${KIND_LABEL[c.status.kind]}] ` : "";
+    const body = c.drop
+      ? `${money(c.drop.oldPrice)} -> ${money(c.drop.newPrice)} (-${money(c.drop.oldPrice - c.drop.newPrice)})`
+      : c.status
+        ? statusLine(c.status)
+        : "Update";
+    return `• ${head}${c.address || "A home you're watching"}${c.brokerage ? ` — ${c.brokerage}` : ""}\n  ${body}\n  ${listingUrl(c.listing_key)}`;
+  });
+  const similarLines = similar.map(
+    (s) =>
+      `Similar to ${s.anchorAddress}${s.anchorCity ? `, ${s.anchorCity}` : ""}:\n` +
+      s.matches
+        .map(
+          (m) =>
+            `   - ${m.address}${m.price != null ? ` — ${money(m.price)}` : ""}${m.brokerage ? ` — ${m.brokerage}` : ""}\n     ${listingUrl(m.listing_key)}`
+        )
+        .join("\n")
+  );
   const text =
-    changes
-      .map((c) => {
-        const head = c.status ? `[${KIND_LABEL[c.status.kind]}] ` : "";
-        const body = c.drop
-          ? `${money(c.drop.oldPrice)} -> ${money(c.drop.newPrice)} (-${money(c.drop.oldPrice - c.drop.newPrice)})`
-          : c.status
-            ? statusLine(c.status)
-            : "Update";
-        return `• ${head}${c.address || "A home you're watching"}${c.brokerage ? ` — ${c.brokerage}` : ""}\n  ${body}\n  ${listingUrl(c.listing_key)}`;
-      })
-      .join("\n\n") + `\n\nUnsubscribe: ${unsubscribeUrl}`;
+    [...changeLines, ...similarLines].join("\n\n") + `\n\nUnsubscribe: ${unsubscribeUrl}`;
 
   return { subject, html, text };
 }

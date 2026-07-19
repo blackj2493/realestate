@@ -5,9 +5,12 @@ import { verifyUnsubscribe } from "@/lib/alerts/unsubscribe";
 export const dynamic = "force-dynamic";
 
 /**
- * One-click unsubscribe for anonymous listing-alert emails. The link carries the email +
- * an HMAC signature (see @/lib/alerts/unsubscribe) — no login, no lookup token. Flips every
- * `listing_alerts` row for that email to `unsubscribed`. Supports:
+ * One-click unsubscribe for anonymous listing-alert AND address-watch emails. The link
+ * carries the email + an HMAC signature (see @/lib/alerts/unsubscribe) — no login, no
+ * lookup token. Flips every `listing_alerts` AND `address_watches` row for that email to
+ * `unsubscribed` (both audiences share the sender + this URL — the address-watch
+ * confirmation embeds it, so honoring it only for listing_alerts silently kept address
+ * watches live). Supports:
  *   GET  — the human clicks the footer link → HTML confirmation page.
  *   POST — RFC 8058 List-Unsubscribe-Post (mail-client one-click) → 200 JSON.
  */
@@ -27,7 +30,23 @@ async function unsubscribe(email: string, sig: string): Promise<{ ok: boolean; c
       console.error("[listing-alerts/unsubscribe] update failed:", error.message);
       return { ok: false, count: 0 };
     }
-    return { ok: true, count: data?.length ?? 0 };
+    // Same identity, same promise: address watches stop too. Best-effort — the table
+    // may not exist on pre-077 deploys, and a failure here must not undo the success
+    // above (the user still stops getting listing alerts either way).
+    let awCount = 0;
+    try {
+      const { data: aw, error: awError } = await supabase
+        .from("address_watches")
+        .update({ status: "unsubscribed" })
+        .eq("email", e)
+        .eq("status", "active")
+        .select("id");
+      if (awError) console.error("[listing-alerts/unsubscribe] address_watches:", awError.message);
+      else awCount = aw?.length ?? 0;
+    } catch (awErr) {
+      console.error("[listing-alerts/unsubscribe] address_watches:", awErr);
+    }
+    return { ok: true, count: (data?.length ?? 0) + awCount };
   } catch (err) {
     console.error("[listing-alerts/unsubscribe]", err);
     return { ok: false, count: 0 };

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  advanceNotifiedKeys,
   buildBubbleSections,
+  filterFreshMatches,
+  parseNotifiedKeys,
   BUBBLE_EMAIL_ROW_CAP,
   BUBBLE_COLLAPSE_THRESHOLD,
+  NOTIFIED_KEY_RETENTION_MS,
   type BubbleMatches,
   type NewListingAlert,
 } from "./bubbleDigest";
@@ -69,5 +73,30 @@ describe("buildBubbleSections", () => {
       bubble("b2", "Pocket B", [shared]),
     ]);
     expect(sections).toHaveLength(1);
+  });
+});
+
+describe("lookback dedup helpers (notified_keys)", () => {
+  const NOW = 1_752_900_000_000;
+
+  it("parseNotifiedKeys tolerates garbage shapes", () => {
+    expect(parseNotifiedKeys(null)).toEqual([]);
+    expect(parseNotifiedKeys("nope")).toEqual([]);
+    expect(parseNotifiedKeys([{ k: "N1", t: 5 }, { bad: true }, 7])).toEqual([{ k: "N1", t: 5 }]);
+  });
+
+  it("filterFreshMatches drops already-alerted keys", () => {
+    const matches = [listing("N1"), listing("N2")];
+    expect(filterFreshMatches(matches, [{ k: "N1", t: NOW }]).map((m) => m.listing_key)).toEqual(["N2"]);
+  });
+
+  it("advanceNotifiedKeys appends fresh keys and prunes beyond retention", () => {
+    const old = { k: "OLD", t: NOW - NOTIFIED_KEY_RETENTION_MS - 1 };
+    const kept = { k: "KEPT", t: NOW - 1000 };
+    const next = advanceNotifiedKeys([old, kept], ["N1", "KEPT"], NOW);
+    expect(next.map((n) => n.k).sort()).toEqual(["KEPT", "N1"]);
+    expect(next.find((n) => n.k === "N1")?.t).toBe(NOW);
+    // an existing key is not re-stamped (its original alert time stands)
+    expect(next.find((n) => n.k === "KEPT")?.t).toBe(NOW - 1000);
   });
 });

@@ -36,9 +36,9 @@ import {
   resolveDealType,
   vaultTransaction,
   type Disposition,
-  type RelistTarget,
   type SoldDealType,
 } from "@/lib/watchlist/disposition";
+import { findRelists } from "@/lib/watchlist/relistLookup";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,6 @@ const TYPESENSE_PORT = 443;
 const KEY_RE = /^[A-Za-z]\d{5,10}$/;
 // Off-market sets are small; bound the work so a malformed payload can't fan out.
 const MAX_ITEMS = 60;
-const RELIST_CANDIDATES_PER_ADDRESS = 25;
 
 let adminClient: Client | null = null;
 
@@ -196,77 +195,8 @@ async function fetchVaultDeals(keys: string[]): Promise<Map<string, "sold" | "le
   return out;
 }
 
-interface ActiveHit {
-  id: string;
-  UnparsedAddress?: string;
-  PostalCode?: string;
-  ListPrice?: number;
-  EntryTimestamp?: number;
-  ListOfficeName?: string;
-}
-
-/** Parse an active doc's address, backfilling the postal from its PostalCode field. */
-function parseActive(doc: ActiveHit) {
-  const p = parseAddress(doc.UnparsedAddress);
-  if (!p.postal && doc.PostalCode) p.postal = String(doc.PostalCode).replace(/\s+/g, "").toUpperCase();
-  return p;
-}
-
-/**
- * Find the live relist for each candidate address in ONE multi_search round-trip.
- * Returns a map keyed by listing_key → the best-matching active listing (≠ the saved
- * key), preferring an exact postal match, then the most recently listed.
- */
-async function fetchRelists(
-  candidates: Array<{ key: string; address: string | null }>
-): Promise<Map<string, RelistTarget>> {
-  const out = new Map<string, RelistTarget>();
-  const usable = candidates
-    .map((c) => ({ ...c, parsed: parseAddress(c.address) }))
-    .filter((c) => c.parsed.streetNumber); // a civic number is the minimum to match on
-  if (!usable.length) return out;
-
-  const searches = usable.map((c) => ({
-    collection: "properties",
-    q: `${c.parsed.streetNumber} ${c.parsed.streetName}`.trim() || "*",
-    query_by: "UnparsedAddress",
-    include_fields: "id,UnparsedAddress,PostalCode,ListPrice,EntryTimestamp,ListOfficeName",
-    per_page: RELIST_CANDIDATES_PER_ADDRESS,
-  }));
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const res: any = await getAdminClient().multiSearch.perform({ searches } as any);
-  const results: Array<{ hits?: Array<{ document: ActiveHit }> }> = res?.results ?? [];
-
-  usable.forEach((c, i) => {
-    const hits = results[i]?.hits ?? [];
-    let best: { doc: ActiveHit; exact: boolean } | null = null;
-    for (const h of hits) {
-      const doc = h.document;
-      if (!doc?.id || doc.id === c.key) continue; // never match the dead key back to itself
-      const cand = parseActive(doc);
-      if (!addressesMatch(c.parsed, cand)) continue;
-      const exact = !!c.parsed.postal && c.parsed.postal === cand.postal;
-      if (
-        !best ||
-        (exact && !best.exact) ||
-        (exact === best.exact && (doc.EntryTimestamp ?? 0) > (best.doc.EntryTimestamp ?? 0))
-      ) {
-        best = { doc, exact };
-      }
-    }
-    if (best) {
-      out.set(c.key, {
-        newKey: best.doc.id,
-        newPrice: typeof best.doc.ListPrice === "number" ? best.doc.ListPrice : null,
-        newAddress: best.doc.UnparsedAddress ?? null,
-        brokerage: best.doc.ListOfficeName ?? null,
-      });
-    }
-  });
-
-  return out;
-}
+// Relist detection now lives in @/lib/watchlist/relistLookup (findRelists) so the
+// nightly alerts worker and this route share ONE matcher and can't drift apart.
 
 /** Strip the VOW-gated specific de-list reason for non-consumers (gateListingStatus parity). */
 function gate(disp: Disposition, isConsumer: boolean): Disposition {
@@ -327,7 +257,7 @@ export async function POST(req: NextRequest) {
       // Prefer the authoritative sold_listings address, else the saved address.
       relistCandidates.push({ key, address: soldMap.get(key)?.address ?? items.get(key)!.address });
     }
-    const relistMap = await fetchRelists(relistCandidates);
+    const relistMap = await findRelists(getAdminClient(), relistCandidates);
 
     const { isConsumer } = await getConsumer();
 

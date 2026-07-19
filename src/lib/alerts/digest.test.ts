@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { renderAlertsDigest, type DigestPayload } from "./digest";
+import {
+  renderAlertsDigest,
+  DROP_EMAIL_ROW_CAP,
+  STATUS_EMAIL_ROW_CAP,
+  type DigestPayload,
+} from "./digest";
 
 const baseDrop = {
   listing_key: "W100",
@@ -176,5 +181,60 @@ describe("renderAlertsDigest — drop-row edge cases", () => {
   it("text fallback ends with the dashboard link", () => {
     const { text } = renderAlertsDigest(payload({ drops: [baseDrop] }));
     expect(text).toContain("Open your dashboard: https://www.pureproperty.ca/dashboard");
+  });
+});
+
+describe("renderAlertsDigest — relisted rows", () => {
+  const relisted = {
+    listing_key: "N9NEW",
+    address: "127 Via Toscana N/A",
+    city: "Vaughan",
+    kind: "relisted" as const,
+    brokerage: "RELIST REALTY",
+    newPrice: 1_679_900,
+  };
+
+  it("subject counts relists separately", () => {
+    const { subject } = renderAlertsDigest(payload({ statusChanges: [relisted] }));
+    expect(subject).toBe("1 relisted");
+  });
+
+  it("row links to the NEW key and shows the new (public IDX) ask", () => {
+    const { html, text } = renderAlertsDigest(payload({ statusChanges: [relisted] }));
+    expect(html).toContain("RELISTED");
+    expect(html).toContain("/properties/N9NEW");
+    expect(html).toContain("new MLS#");
+    expect(html).toContain("$1,679,900");
+    expect(text).toContain("$1,679,900");
+  });
+
+  it("omits the ask when the new campaign has no usable price", () => {
+    const { html } = renderAlertsDigest(payload({ statusChanges: [{ ...relisted, newPrice: null }] }));
+    expect(html).toContain("new MLS#");
+    expect(html).not.toContain("now asking");
+  });
+});
+
+describe("renderAlertsDigest — section row caps", () => {
+  it("caps status and drop sections with an overflow line", () => {
+    const drops = Array.from({ length: DROP_EMAIL_ROW_CAP + 5 }, (_, i) => ({
+      ...baseDrop,
+      listing_key: `D${i}`,
+      address: `${i} Drop Ave`,
+    }));
+    const statuses = Array.from({ length: STATUS_EMAIL_ROW_CAP + 3 }, (_, i) => ({
+      ...baseStatus,
+      listing_key: `S${i}`,
+      address: `${i} Sold Cres`,
+    }));
+    const { html, text, subject } = renderAlertsDigest(payload({ drops, statusChanges: statuses }));
+    // subject still reflects true counts
+    expect(subject).toContain(`${STATUS_EMAIL_ROW_CAP + 3} sold`);
+    expect(subject).toContain(`${DROP_EMAIL_ROW_CAP + 5} price drops`);
+    // rendered rows are capped; the surplus surfaces as a dashboard link
+    expect(html).toContain("+5 more on your dashboard");
+    expect(html).toContain("+3 more on your dashboard");
+    expect(html).not.toContain(`${DROP_EMAIL_ROW_CAP} Drop Ave`); // first over-cap row not rendered
+    expect(text).toContain("+5 more on your dashboard");
   });
 });
