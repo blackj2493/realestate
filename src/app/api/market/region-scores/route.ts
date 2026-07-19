@@ -22,6 +22,7 @@ import {
   getStatsCached,
   getDomDistCached,
   getListingOutcomesCached,
+  getRegionMetricsCached,
   EMPTY_SUMMARY,
   EMPTY_STATS,
   type Scope,
@@ -74,23 +75,44 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // The base view (no type/scope filters) can be served from the nightly precompute (081) —
+  // a point lookup that also skips the residual slow RPCs (listing-outcomes for big regions).
+  // Any custom type/scope filter, or a precompute miss/stale, computes live.
+  const isBaseView =
+    typeKeys.length === 0 &&
+    scope.minBeds === 0 &&
+    scope.minBaths === 0 &&
+    scope.minParking === 0 &&
+    scope.minFrontage === 0 &&
+    scope.basement === "any";
+
+  const liveScore = async (region: string): Promise<RegionScore> => {
+    const [trendR, statsR, domR, outcomesR] = await Promise.allSettled([
+      getTrendCached(region, typeKeys, scope),
+      getStatsCached(region, typeKeys, scope),
+      getDomDistCached(region, typeKeys, scope),
+      // Sell-through is market-level: types honoured, numeric floors ignored server-side.
+      getListingOutcomesCached(region, typeKeys),
+    ]);
+    const trend =
+      trendR.status === "fulfilled"
+        ? { region, points: trendR.value.points, summary: trendR.value.summary }
+        : null;
+    const stats = statsR.status === "fulfilled" ? { region, stats: statsR.value } : null;
+    const dom = domR.status === "fulfilled" ? { region, dom: domR.value } : null;
+    const outcomes = outcomesR.status === "fulfilled" ? { region, outcomes: outcomesR.value } : null;
+    return assembleRegionScore(region, trend, stats, dom, outcomes);
+  };
+
   const scores: RegionScore[] = await Promise.all(
     regions.map(async (region) => {
-      const [trendR, statsR, domR, outcomesR] = await Promise.allSettled([
-        getTrendCached(region, typeKeys, scope),
-        getStatsCached(region, typeKeys, scope),
-        getDomDistCached(region, typeKeys, scope),
-        // Sell-through is market-level: types honoured, numeric floors ignored server-side.
-        getListingOutcomesCached(region, typeKeys),
-      ]);
-      const trend =
-        trendR.status === "fulfilled"
-          ? { region, points: trendR.value.points, summary: trendR.value.summary }
-          : null;
-      const stats = statsR.status === "fulfilled" ? { region, stats: statsR.value } : null;
-      const dom = domR.status === "fulfilled" ? { region, dom: domR.value } : null;
-      const outcomes = outcomesR.status === "fulfilled" ? { region, outcomes: outcomesR.value } : null;
-      return assembleRegionScore(region, trend, stats, dom, outcomes);
+      if (isBaseView) {
+        const pc = await getRegionMetricsCached(region);
+        // The stored AnalyticsInitial already holds trend/stats/dom/outcomes as the exact
+        // *Resp shapes assembleRegionScore expects.
+        if (pc) return assembleRegionScore(region, pc.trend, pc.stats, pc.dom, pc.outcomes);
+      }
+      return liveScore(region);
     })
   );
 
