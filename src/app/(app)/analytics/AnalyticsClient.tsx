@@ -1146,9 +1146,21 @@ function PriceLedgerPanel({ l, loading }: { l: PriceLedgerData | null; loading: 
 
 /** Phase-2 "Sell-Through" — share of market exits that actually sold vs withdrew. */
 function SellThroughPanel({ o, loading }: { o: ListingOutcomesData | null; loading: boolean }) {
-  const total = (o?.soldCount ?? 0) + (o?.failedCount ?? 0);
-  const sellThrough = o?.failureRate != null ? 1 - o.failureRate : total > 0 ? (o?.soldCount ?? 0) / total : null;
-  const soldPct = total > 0 ? ((o?.soldCount ?? 0) / total) * 100 : 0;
+  const soldC = o?.soldCount ?? 0;
+  const failedC = o?.failedCount ?? 0;
+  const total = soldC + failedC;
+  // failed===0 with real sold volume ⇒ the delisted feed doesn't cover this region (e.g. Ottawa,
+  // matched via CountyOrParish, which raw_vow_delisted lacks). Don't fall back to sold/total —
+  // that renders a fake 100%. Show N/A instead.
+  const noCoverage = soldC > 0 && failedC === 0;
+  const sellThrough = noCoverage
+    ? null
+    : o?.failureRate != null
+      ? 1 - o.failureRate
+      : total > 0
+        ? soldC / total
+        : null;
+  const soldPct = total > 0 ? (soldC / total) * 100 : 0;
   return (
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -1165,6 +1177,11 @@ function SellThroughPanel({ o, loading }: { o: ListingOutcomesData | null; loadi
         <div className="mt-4 h-20 w-full animate-pulse bg-muted/40" />
       ) : total === 0 ? (
         <p className="mt-4 text-xs text-muted-foreground">No listing-outcome data for this scope</p>
+      ) : noCoverage ? (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Not available for this region yet — the withdrawn/de-listed feed doesn&apos;t cover it, so a
+          sold-vs-withdrawn rate can&apos;t be computed ({soldC.toLocaleString()} sales tracked over 12 months).
+        </p>
       ) : (
         <div className="mt-4 grid gap-6 sm:grid-cols-[1fr_1.3fr]">
           <div className="self-center">
@@ -1421,7 +1438,16 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
           <KpiCard
             label="Median Sold Price"
             value={score.medianPrice != null ? fmtPrice(score.medianPrice) : "—"}
-            sub={<YoYBadge pct={score.yoyPct} />}
+            sub={
+              <span className="inline-flex flex-wrap items-center gap-x-1.5">
+                <YoYBadge pct={score.yoyPct} />
+                {score.avgPrice != null && (
+                  <span className="whitespace-nowrap" title="Mean sale price — the figure TRREB/CREA headline (runs above the median)">
+                    avg {fmtPrice(score.avgPrice)}
+                  </span>
+                )}
+              </span>
+            }
             loading={loading}
           />
           <KpiCard
@@ -1473,6 +1499,12 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             loading={loading}
           />
         </div>
+
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          Figures are computed from the VOW (Virtual Office Website) data feed, a subset of the full
+          MLS® — sale <span className="whitespace-nowrap">counts</span> run modestly below board
+          totals, so read counts as directional. Prices, ratios and days-on-market are unaffected.
+        </p>
 
         {/* Phase-2: Market momentum (derived from the trend points — no extra fetch) */}
         <MomentumPanel points={points} loading={loading} />

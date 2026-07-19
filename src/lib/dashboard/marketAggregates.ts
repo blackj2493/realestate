@@ -16,6 +16,9 @@ export interface RegionScore {
   /** VOW gate: anon received a `locked` shape from the endpoints — render a sign-in overlay. */
   locked?: boolean;
   medianPrice: number | null;
+  /** latest-month MEAN sold price (migration 082) — shown beside the median so it lines up with
+   *  TRREB/CREA, which headline the average (~29% above median in the condo-heavy 416). */
+  avgPrice: number | null;
   priceSeries: { month: string; v: number }[]; // months present in the trailing ~12 (sparkline)
   yoyPct: number | null;
   medianPpsf: number | null;
@@ -49,6 +52,8 @@ export interface ListingOutcomesResp {
 export interface TrendPoint {
   month: string;
   medianPrice: number;
+  /** mean sold price for the month (migration 082) — board-comparable average. */
+  avgPrice?: number | null;
   medianPpsf: number | null;
   sales: number;
 }
@@ -117,13 +122,24 @@ export function smoothedYoY(points: TrendPoint[], key: "medianPrice" | "medianPp
   return Math.round(((mean(recentVals) / prior - 1) * 100) * 10) / 10;
 }
 
+/**
+ * Market temperature (Seller's / Balanced / Buyer's). SP/LP is the PRIMARY signal because we
+ * validated it against the boards (Toronto 99.4% vs TRREB 99%, Ottawa 98.5% == OREB) — it's
+ * immune to both our active-pool ghost inflation and the VOW sales undercount. Months-of-supply
+ * is a supporting signal only: our MoS still runs a bit high (VOW captures ~15% fewer sales than
+ * the full MLS), so we do NOT let inventory alone flip a market to "cold". The old rule
+ * (`MoS > 4 ⇒ cold`) mislabeled the balanced 2026 GTA — TRREB's own 4.7-month market is
+ * "balanced", not "buyer's".
+ */
 export function temperatureOf(
   monthsOfSupply: number | null,
   soldToListPct: number | null
 ): RegionScore["temperature"] {
   if (monthsOfSupply == null || soldToListPct == null) return null;
-  if (monthsOfSupply < 2 && soldToListPct >= 100) return "hot";
-  if (monthsOfSupply > 4 || soldToListPct < 97) return "cold";
+  // Seller's: selling over ask (bidding), or at-ask with genuinely tight supply.
+  if (soldToListPct >= 101 || (soldToListPct >= 100 && monthsOfSupply < 4)) return "hot";
+  // Buyer's: clear discounting below ask, or heavy oversupply with soft-ish pricing.
+  if (soldToListPct < 97 || (monthsOfSupply > 8 && soldToListPct < 99)) return "cold";
   return "balanced";
 }
 
@@ -264,18 +280,21 @@ export function assembleRegionScore(
   const trueDom = domActive >= 10 ? dom?.dom.medianTrueDom ?? null : null;
 
   // Sell-through: sold ÷ (sold + withdrawn) over 12mo; require a ≥30 resolved-listing sample.
+  // failed === 0 with real sold volume means the delisted feed doesn't cover this region
+  // (e.g. Ottawa — CountyOrParish match, which raw_vow_delisted lacks) → N/A, never a fake 100%.
   const sold = outcomes?.outcomes.soldCount ?? 0;
   const failed = outcomes?.outcomes.failedCount ?? 0;
   const sellSample = sold + failed;
   const failureRate = outcomes?.outcomes.failureRate ?? null;
   const sellThroughPct =
-    sellSample >= 30 && failureRate != null ? Math.round((1 - failureRate) * 100) : null;
+    sellSample >= 30 && failed > 0 && failureRate != null ? Math.round((1 - failureRate) * 100) : null;
 
   return {
     region,
     // Either endpoint returning `locked` (anonymous) locks the whole row.
     locked: !!(trend?.locked || stats?.locked),
     medianPrice: soldThin ? null : latest?.medianPrice ?? null,
+    avgPrice: soldThin ? null : latest?.avgPrice ?? null,
     priceSeries: soldThin ? [] : points.slice(-12).map((p) => ({ month: p.month, v: p.medianPrice })),
     yoyPct: soldThin ? null : smoothedYoY(points, "medianPrice"),
     medianPpsf: soldThin ? null : latestPpsf,

@@ -49,11 +49,16 @@ describe("temperatureOf", () => {
     expect(temperatureOf(2, null)).toBeNull();
   });
 
-  it("classifies hot / balanced / cold", () => {
-    expect(temperatureOf(1.5, 101)).toBe("hot");
+  it("classifies hot / balanced / cold (SP/LP-primary, MoS supporting)", () => {
+    expect(temperatureOf(1.5, 101)).toBe("hot"); // over ask + tight
+    expect(temperatureOf(3.5, 100)).toBe("hot"); // at ask + tight supply (<4mo)
     expect(temperatureOf(3, 98)).toBe("balanced");
-    expect(temperatureOf(5, 99)).toBe("cold"); // high supply
-    expect(temperatureOf(2.5, 95)).toBe("cold"); // weak sold-to-list
+    // Healthy SP/LP must NOT be flagged cold on inventory alone — the old `MoS>4 ⇒ cold`
+    // rule mislabeled the balanced 2026 GTA (TRREB's own 4.7-month market is "balanced").
+    expect(temperatureOf(5, 99)).toBe("balanced");
+    expect(temperatureOf(7, 99.4)).toBe("balanced"); // Toronto-like: high MoS, 99%+ SP/LP
+    expect(temperatureOf(2.5, 95)).toBe("cold"); // clear discounting below ask
+    expect(temperatureOf(9, 98)).toBe("cold"); // heavy oversupply + soft pricing
   });
 });
 
@@ -149,6 +154,31 @@ describe("assembleRegionScore", () => {
     expect(s.monthsOfSupply).toBeNull();
     expect(s.priceSeries).toEqual([]);
     expect(s.activeCount).toBe(11); // active-side metric unaffected by the sold-sample guard
+  });
+
+  it("surfaces the latest-month average price beside the median", () => {
+    const trend = trendResp({
+      points: [{ ...pt("2026-05", 800_000, 600, 40), avgPrice: 1_050_000 }],
+      summary: { soldToListPct: 99, pctOverAsking: 20, listPriceCoverage: 1, sales90: 90, monthlyVelocity: 30 },
+    });
+    const s = assembleRegionScore("T", trend, statsResp({ activeCount: 90 }));
+    expect(s.medianPrice).toBe(800_000);
+    expect(s.avgPrice).toBe(1_050_000);
+  });
+
+  it("shows sell-through N/A when the delisted feed can't match the region (failed=0, e.g. Ottawa)", () => {
+    const trend = trendResp({
+      summary: { soldToListPct: 99, pctOverAsking: null, listPriceCoverage: 1, sales90: 90, monthlyVelocity: 30 },
+    });
+    const outcomes = { region: "T", outcomes: { soldCount: 5000, failedCount: 0, failureRate: null } };
+    const s = assembleRegionScore("T", trend, statsResp(), null, outcomes);
+    expect(s.sellThroughPct).toBeNull();
+  });
+
+  it("computes sell-through from the failure rate when the feed covers the region", () => {
+    const outcomes = { region: "T", outcomes: { soldCount: 700, failedCount: 300, failureRate: 0.3 } };
+    const s = assembleRegionScore("T", trendResp(), statsResp(), null, outcomes);
+    expect(s.sellThroughPct).toBe(70);
   });
 });
 
