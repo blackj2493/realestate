@@ -15,6 +15,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import { syncChips } from "@/lib/search/chipApply";
 import { rankListings, type RankBadge } from "@/lib/search/personaRank";
 import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
+import { addressProfileHref } from "@/lib/search/searchTarget";
 import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
 import { recordParse, parseMissRate } from "@/lib/search/parseMetrics";
 import type { SuggestGroup, SuggestItem, ParsedQuery } from "@/lib/search/types";
@@ -65,6 +67,7 @@ function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
 }
 
 export default function LocationSearchV2({ className, placeholder: placeholderProp }: Props) {
+  const router = useRouter();
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
   const searchVisibleArea = useCommandCenterStore((s) => s.searchVisibleArea);
@@ -548,6 +551,23 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           >
                             <Crosshair className="h-2.5 w-2.5" />
                             Comparable sales
+                          </span>
+                        )}
+                        {/* Geocoded address (no listing anywhere) → its address-profile page
+                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action. */}
+                        {item.category === "geo" && addressProfileHref(item.label) && (
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const href = addressProfileHref(item.label);
+                              if (href) router.push(href);
+                            }}
+                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
+                          >
+                            <Home className="h-2.5 w-2.5" />
+                            Profile
                           </span>
                         )}
                         {item.provenance && item.category !== "sold" && item.category !== "community" && (

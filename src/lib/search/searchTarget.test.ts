@@ -4,6 +4,7 @@ import {
   resolveSuggestionTarget,
   resolveTextTarget,
   targetToHref,
+  addressProfileHref,
 } from './searchTarget';
 
 // Minimal ListingDocument stand-in — only `id` matters to these functions.
@@ -59,5 +60,36 @@ describe('targetToHref', () => {
     expect(targetToHref({ action: 'set-location', label: 'St. Catharines' })).toBe(
       '/properties?city=St.%20Catharines',
     );
+  });
+
+  it('diverts an address-shaped location target to the address-profile route', () => {
+    expect(targetToHref({ action: 'set-location', label: '142 Maplewood Ave, Hamilton' })).toBe(
+      '/address/on/hamilton/142-maplewood-ave',
+    );
+  });
+});
+
+describe('addressProfileHref (ADDRESS_PROFILES_PLAN P4)', () => {
+  it('routes an address with a city', () => {
+    expect(addressProfileHref('142 Maplewood Ave, Hamilton')).toBe('/address/on/hamilton/142-maplewood-ave');
+  });
+
+  it('routes a city-less address under the ontario segment', () => {
+    expect(addressProfileHref('10 King St')).toBe('/address/on/ontario/10-king-st');
+  });
+
+  it('strips a postal code from the city segment', () => {
+    expect(addressProfileHref('142 Maplewood Ave, Hamilton L8M 2C7')).toBe(
+      '/address/on/hamilton/142-maplewood-ave',
+    );
+  });
+
+  it('returns null for a plain place (no civic number)', () => {
+    expect(addressProfileHref('Toronto')).toBeNull();
+    expect(addressProfileHref('Richmond Hill')).toBeNull();
+  });
+
+  it('returns null for a bare number', () => {
+    expect(addressProfileHref('142')).toBeNull();
   });
 });

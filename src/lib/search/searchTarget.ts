@@ -6,6 +6,8 @@
  */
 
 import type { SearchSuggestion } from '@/lib/typesense/client';
+import { parseAddress } from '@/lib/watchlist/disposition';
+import { slugify } from '@/lib/listings/listingPath';
 
 export type SearchTarget =
   | { action: 'open-listing'; listing: NonNullable<SearchSuggestion['listing']> }
@@ -24,9 +26,24 @@ export function resolveTextTarget(text: string): SearchTarget {
   return { action: 'set-location', label: text.trim() };
 }
 
-/** navigate-mode only: turn a target into a route into the terminal / listing. */
+/**
+ * Address-shaped text ("142 maplewood ave, hamilton") → its address-profile URL, else
+ * null. The profile route runs the full resolution ladder (active → sold → geocode), so
+ * sending an address there is always at least as good as a city search — a live listing
+ * redirects to its listing page (ADDRESS_PROFILES_PLAN P4).
+ */
+export function addressProfileHref(label: string): string | null {
+  const parsed = parseAddress(label);
+  if (!parsed.streetNumber || !parsed.streetName) return null;
+  const parts = label.split(',').map((p) => p.trim()).filter(Boolean);
+  const streetSlug = slugify(parts[0] ?? '');
+  if (!streetSlug) return null;
+  const citySlug = slugify(parts[1]?.replace(/\b[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d\b/g, '').trim() ?? '') || 'ontario';
+  return `/address/on/${citySlug}/${streetSlug}`;
+}
+
+/** navigate-mode only: turn a target into a route into the terminal / listing / profile. */
 export function targetToHref(t: SearchTarget): string {
-  return t.action === 'open-listing'
-    ? `/properties/${t.listing.id}`
-    : `/properties?city=${encodeURIComponent(t.label)}`;
+  if (t.action === 'open-listing') return `/properties/${t.listing.id}`;
+  return addressProfileHref(t.label) ?? `/properties?city=${encodeURIComponent(t.label)}`;
 }
