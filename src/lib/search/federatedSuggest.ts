@@ -37,7 +37,9 @@ export function matchesTypedAddress(query: string, suggestionAddress: string): b
 
 const TITLE: Record<string, string> = {
   mls: "MLS#",
-  address: "Addresses",
+  // The address group holds LIVE listings — name it by what it is, not its lookup key
+  // ("Addresses" next to the geo group's "Address" read as duplicates).
+  address: "For sale",
   sold: "Recent solds · nearby",
   community: "Communities",
   school: "Schools",
