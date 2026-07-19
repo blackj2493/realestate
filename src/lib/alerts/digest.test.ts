@@ -68,6 +68,14 @@ describe("renderAlertsDigest", () => {
     expect(text.toLowerCase()).toContain("sign in to see the closing price");
   });
 
+  it("sold row shows the listing photo but still gates the price (photo public, price behind login)", () => {
+    const soldWithPhoto = { ...baseStatus, thumb: "https://media.proptx.ca/sold-medium.jpg" };
+    const { html } = renderAlertsDigest(payload({ statusChanges: [soldWithPhoto] }));
+    expect(html).toContain('src="https://media.proptx.ca/sold-medium.jpg"'); // photo renders
+    expect(html.toLowerCase()).toContain("sign in to see the closing price"); // price stays gated
+    expect(html).not.toContain("$"); // still no price in the email body
+  });
+
   it("every listing row carries its brokerage (§4)", () => {
     const { html } = renderAlertsDigest(
       payload({ drops: [baseDrop], statusChanges: [baseStatus], bubbles: [baseSection] })

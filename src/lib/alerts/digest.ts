@@ -31,6 +31,8 @@ export interface StatusChangeAlert {
   kind: StatusAlertKind;
   detail?: string;
   brokerage: string | null;
+  /** Listing thumbnail for the email row; null when no photo. The sold PRICE stays gated. */
+  thumb?: string | null;
 }
 
 export interface DigestPayload {
@@ -46,11 +48,13 @@ const listingUrl = (key: string) => `${SITE}/properties/${encodeURIComponent(key
 
 const isHttpUrl = (u: string | null | undefined): u is string => !!u && /^https?:\/\//i.test(u);
 
-// Left-hand listing thumbnail for an active-listing row (price drops + new-in-area).
-// MLS marketing media (PropTx MediaURL) is a public, hotlinkable HTTPS URL, so image-
-// proxying clients (Gmail) load it. alt="" + a gray fill means a blocked or missing photo
-// degrades to a clean placeholder box, not a broken-image icon — the address sits in the
-// adjacent cell either way. Sold/off-market rows deliberately stay a text-only tease.
+// Left-hand listing thumbnail for any listing row (price drops, new-in-area, and status
+// changes incl. sold). The PHOTO is public MLS marketing media (PropTx MediaURL) —
+// pre-watermarked with the brokerage per TRREB §6.3(f) — so it can appear in an
+// unauthenticated email; only the sold PRICE stays gated behind the "sign in" tease.
+// MediaURL is a hotlinkable HTTPS URL, so image-proxying clients (Gmail) load it. alt=""
+// + a gray fill means a blocked or missing photo degrades to a clean placeholder box,
+// not a broken-image icon — the address sits in the adjacent cell either way.
 function thumbCell(listingKey: string, thumb: string | null | undefined): string {
   const box =
     "display:block;width:84px;height:63px;border-radius:6px;border:0;background:#eef2f6;object-fit:cover;";
@@ -111,7 +115,9 @@ function statusRowsHtml(items: StatusChangeAlert[]): string {
   return items
     .map(
       (s) => `
-      <tr><td style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
+      <tr>
+        ${thumbCell(s.listing_key, s.thumb)}
+        <td valign="top" style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
         <span style="display:inline-block;background:${KIND_COLOR[s.kind]};color:#fff;font-size:10px;font-weight:700;
                      letter-spacing:.06em;padding:2px 6px;border-radius:3px;vertical-align:middle;">${KIND_LABEL[s.kind]}</span>
         <a href="${listingUrl(s.listing_key)}" style="color:#0f172a;text-decoration:none;font-weight:600;font-size:15px;margin-left:8px;">

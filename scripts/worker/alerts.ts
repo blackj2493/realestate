@@ -403,6 +403,10 @@ async function main() {
         kind: event.kind,
         detail: event.detail,
         brokerage: cur?.brokerage ?? null,
+        // Saved-at thumbnail first (survives the listing leaving the active index once
+        // sold/off-market), else the fresh active-index photo. Photo is public; the sold
+        // price stays gated. Same precedence the drop rows use.
+        thumb: w.thumb || cur?.thumb || null,
       });
       statusByUser.set(w.user_id, list);
       rowPatches.push({
