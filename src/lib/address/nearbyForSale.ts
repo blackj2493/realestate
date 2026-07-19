@@ -42,18 +42,39 @@ export interface AskingHistogram {
   buckets: number[];
 }
 
+/** Per-property-type slice of the live inventory (count + median asking). */
+export interface TypeSlice {
+  label: string;
+  count: number;
+  medianAsking: number | null;
+}
+
+/** Momentum signals — ALL derived from the active IDX feed (campaign price cuts,
+ *  listing age, entry date). Sold-side momentum stays behind the consumer gate. */
+export interface MomentumStats {
+  /** Actives whose campaign has at least one price cut. */
+  cutCount: number;
+  cutShare: number;
+  medianCut: number | null;
+  /** Listed within the last 7 days. */
+  newThisWeek: number;
+  /** Sitting 30+ days (this campaign's age — not stitched True DOM, which is gated). */
+  sitting30: number;
+}
+
 export interface NearbyForSale {
   listings: NearbyListing[];
   totalFound: number;
   radiusKm: number;
   stats: NearbyAskingStats;
   histogram: AskingHistogram | null;
-  /** "Detached ×18, Townhouse ×12, …" — top property types among the fetched actives. */
-  typeMix: Array<{ label: string; count: number }>;
+  /** Property-type breakdown of the fetched actives, largest first. */
+  typeMix: TypeSlice[];
+  momentum: MomentumStats;
 }
 
 const FIELDS =
-  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM";
+  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp";
 
 function median(xs: number[]): number | null {
   if (!xs.length) return null;
@@ -106,7 +127,11 @@ export async function getNearbyForSale(
     const prices: number[] = [];
     const psfs: number[] = [];
     const doms: number[] = [];
-    const typeCounts = new Map<string, number>();
+    const cuts: number[] = [];
+    const typePrices = new Map<string, number[]>();
+    let newThisWeek = 0;
+    let sitting30 = 0;
+    const weekAgoMs = Date.now() - 7 * 86_400_000;
     for (const { d } of docs) {
       const price = typeof d.ListPrice === "number" ? d.ListPrice : 0;
       if (price > 0) prices.push(price);
@@ -114,8 +139,20 @@ export async function getNearbyForSale(
       if (price > 0 && sqft >= 200) psfs.push(price / sqft);
       const dom = typeof d.calculatedDOM === "number" ? d.calculatedDOM : -1;
       if (dom >= 0) doms.push(dom);
+      if (dom >= 30) sitting30++;
+      const drop = typeof d.TotalPriceDrop === "number" ? d.TotalPriceDrop : 0;
+      if (drop > 0) cuts.push(drop);
+      const entry = typeof d.EntryTimestamp === "number" ? d.EntryTimestamp : 0;
+      // EntryTimestamp is epoch ms; tolerate a seconds-scale value defensively.
+      const entryMs = entry > 1e12 ? entry : entry * 1000;
+      if (entryMs >= weekAgoMs) newThisWeek++;
       const t = typeof d.PropertySubType === "string" ? d.PropertySubType.trim() : "";
-      if (t) typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1);
+      if (t) {
+        const arr = typePrices.get(t) ?? [];
+        if (price > 0) arr.push(price);
+        else arr.push(0); // keep the count even when the price is unusable
+        typePrices.set(t, arr);
+      }
     }
 
     // Price histogram: 8 equal-width buckets, percentile-clipped against outliers.
@@ -145,10 +182,21 @@ export async function getNearbyForSale(
         medianDaysListed: median(doms),
       },
       histogram,
-      typeMix: [...typeCounts.entries()]
-        .map(([label, count]) => ({ label, count }))
+      typeMix: [...typePrices.entries()]
+        .map(([label, ps]) => ({
+          label,
+          count: ps.length,
+          medianAsking: median(ps.filter((p) => p > 0)),
+        }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 4),
+        .slice(0, 5),
+      momentum: {
+        cutCount: cuts.length,
+        cutShare: docs.length ? cuts.length / docs.length : 0,
+        medianCut: median(cuts),
+        newThisWeek,
+        sitting30,
+      },
     };
   } catch (err) {
     console.error("[nearbyForSale] search failed:", err);

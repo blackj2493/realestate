@@ -264,49 +264,78 @@ export default async function AddressProfileView({
               This home isn&apos;t on the market — {nearby.totalFound === 1 ? "one neighbour is" : `${nearby.totalFound} neighbours within ${nearby.radiusKm} km are`}. Live asking-side numbers below; sold-side numbers are free with an account.
             </p>
 
-            {/* Stat tiles — IDX asking data + the two gated breadcrumbs. */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {/* Stat tiles — IDX asking + momentum data, plus the gated breadcrumbs.
+                "Price cuts" / listing-age come from the ACTIVE feed (permissible for
+                anon per the compliance audit); days-to-SELL needs sold data → locked. */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <StatTile label="For sale now" value={String(nearby.totalFound)} sub={`within ${nearby.radiusKm} km`} />
-              {medianAsking !== null && <StatTile label="Median asking" value={fmtK(medianAsking)} sub={fmtPrice(medianAsking)} />}
-              {stats?.medianPsf != null && <StatTile label="Asking $/sqft" value={`$${Math.round(stats.medianPsf)}`} sub="where size is listed" />}
+              {medianAsking !== null && <StatTile label="Median asking" value={fmtK(medianAsking)} sub="live listings" />}
+              <StatTile
+                label="Price cuts"
+                value={`${nearby.momentum.cutCount} · ${Math.round(nearby.momentum.cutShare * 100)}%`}
+                sub={nearby.momentum.medianCut !== null ? `median cut ${fmtK(nearby.momentum.medianCut)}` : "of live listings"}
+              />
+              <StatTile label="New this week" value={String(nearby.momentum.newThisWeek)} sub="listed in the last 7 days" />
               {stats?.medianDaysListed != null && (
                 <StatTile label="Days listed" value={String(Math.round(stats.medianDaysListed))} sub="median, live listings" />
               )}
+              <StatTile label="Sitting 30+ days" value={String(nearby.momentum.sitting30)} sub="of live listings" />
+              {stats?.medianPsf != null && <StatTile label="Asking $/sqft" value={`$${Math.round(stats.medianPsf)}`} sub="where size is listed" />}
               <LockedTile label="Median sold price" />
-              <LockedTile label="Sold days-on-market" />
+              <LockedTile label="Days to sell" />
             </div>
 
-            {/* Asking-price distribution + type mix — one glance at the local market. */}
+            {/* Asking-price distribution + by-type breakdown — one glance at the market. */}
             {nearby.histogram && (
-              <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="rounded-lg border border-border bg-card/40 p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Asking prices within {nearby.radiusKm} km
                   </p>
-                  {nearby.typeMix.length > 0 && (
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                      {nearby.typeMix.map((t) => `${t.label} ×${t.count}`).join(" · ")}
-                    </p>
-                  )}
+                  <div className="mt-3 flex h-24 items-end gap-[3px]" role="img" aria-label={`Distribution of ${nearby.totalFound} asking prices from ${fmtK(nearby.histogram.min)} to ${fmtK(nearby.histogram.max)}`}>
+                    {(() => {
+                      const peak = Math.max(...nearby.histogram!.buckets, 1);
+                      return nearby.histogram!.buckets.map((c, i) => (
+                        <div
+                          key={i}
+                          className={`flex-1 rounded-t-sm ${c > 0 ? "bg-emerald-500/75" : "bg-muted"}`}
+                          style={{ height: c > 0 ? `${Math.max(8, (c / peak) * 100)}%` : "2px" }}
+                          title={`${c} listing${c === 1 ? "" : "s"}`}
+                        />
+                      ));
+                    })()}
+                  </div>
+                  <div className="mt-1.5 flex justify-between font-mono text-[10px] text-muted-foreground">
+                    <span>{fmtK(nearby.histogram.min)}</span>
+                    {medianAsking !== null && <span className="text-emerald-700 dark:text-emerald-400">median {fmtK(medianAsking)}</span>}
+                    <span>{fmtK(nearby.histogram.max)}</span>
+                  </div>
                 </div>
-                <div className="mt-3 flex h-20 items-end gap-[3px]" role="img" aria-label={`Distribution of ${nearby.totalFound} asking prices from ${fmtK(nearby.histogram.min)} to ${fmtK(nearby.histogram.max)}`}>
-                  {(() => {
-                    const peak = Math.max(...nearby.histogram!.buckets, 1);
-                    return nearby.histogram!.buckets.map((c, i) => (
-                      <div
-                        key={i}
-                        className={`flex-1 rounded-t-sm ${c > 0 ? "bg-emerald-500/75" : "bg-muted"}`}
-                        style={{ height: c > 0 ? `${Math.max(8, (c / peak) * 100)}%` : "2px" }}
-                        title={`${c} listing${c === 1 ? "" : "s"}`}
-                      />
-                    ));
-                  })()}
-                </div>
-                <div className="mt-1.5 flex justify-between font-mono text-[10px] text-muted-foreground">
-                  <span>{fmtK(nearby.histogram.min)}</span>
-                  {medianAsking !== null && <span className="text-emerald-700 dark:text-emerald-400">median {fmtK(medianAsking)}</span>}
-                  <span>{fmtK(nearby.histogram.max)}</span>
-                </div>
+                {nearby.typeMix.length > 0 && (
+                  <div className="rounded-lg border border-border bg-card/40 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">By property type</p>
+                    <div className="mt-3 space-y-2.5">
+                      {(() => {
+                        const top = Math.max(...nearby.typeMix.map((t) => t.count), 1);
+                        return nearby.typeMix.map((t) => (
+                          <div key={t.label}>
+                            <div className="flex items-baseline justify-between gap-2 text-xs">
+                              <span className="truncate text-foreground">
+                                {t.label} <span className="text-muted-foreground">×{t.count}</span>
+                              </span>
+                              {t.medianAsking !== null && (
+                                <span className="shrink-0 font-mono text-muted-foreground">{fmtK(t.medianAsking)} med</span>
+                              )}
+                            </div>
+                            <div className="mt-1 h-1.5 rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-emerald-500/75" style={{ width: `${(t.count / top) * 100}%` }} />
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
