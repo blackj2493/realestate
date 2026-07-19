@@ -574,7 +574,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         )}
                         {item.provenance && item.category !== "sold" && item.category !== "community" && (
                           <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-muted-foreground sm:group-hover:hidden sm:block">
-                            {item.provenance}
+                            {item.category === "address" ? "for sale" : item.provenance}
                           </span>
                         )}
                       </button>

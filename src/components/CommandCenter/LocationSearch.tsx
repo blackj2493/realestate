@@ -22,6 +22,8 @@ import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
 import { useRouter } from "next/navigation";
 import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
+import { matchesTypedAddress } from "@/lib/search/federatedSuggest";
+import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { chipsToQueryString } from "@/lib/search/chipUrl";
 
@@ -50,6 +52,13 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
   address: "Address",
   mls: "MLS",
 };
+
+/** Row tag that says what the row IS: a with-listing address row is a live For-Sale
+ *  listing; a listing-less address row is the geocoded address-profile fallback. */
+function tagFor(s: SearchSuggestion): string {
+  if (s.kind === "address") return s.listing ? "For sale" : "Profile";
+  return KIND_TAG[s.kind];
+}
 
 export default function LocationSearch({
   className,
@@ -96,6 +105,23 @@ export default function LocationSearch({
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       const results = await suggestSearch(q);
+      // Same-destination guarantee as the terminal bar: an address-shaped query whose
+      // typed address is NOT among the (typo-tolerant) listing matches gets a geocoded
+      // address-profile row on top — fuzzy lookalikes must not swallow the typed
+      // address. Navigate mode only (inplace/onPlace callers expect place labels).
+      if (mode === "navigate" && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
+        const covered = results.some((s) => s.kind === "address" && matchesTypedAddress(q, s.label));
+        if (!covered) {
+          const hit = await geocodeAddress(q);
+          if (hit) {
+            results.unshift({
+              kind: "address",
+              label: hit.label,
+              sublabel: "Not on the market — view the address profile",
+            });
+          }
+        }
+      }
       setSuggestions(results);
       setHighlight(-1);
       setSearching(false);
@@ -104,7 +130,7 @@ export default function LocationSearch({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [value]);
+  }, [value, mode]);
 
   const closeAndBlur = () => {
     setSuggestions([]);
@@ -268,7 +294,7 @@ export default function LocationSearch({
                 )}
               </span>
               <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
-                {KIND_TAG[s.kind]}
+                {tagFor(s)}
               </span>
               {s.count !== undefined && (
                 <span className="w-16 shrink-0 text-right font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
