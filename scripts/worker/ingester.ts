@@ -76,6 +76,11 @@ interface SoldListingRecord {
   tax_annual_amount: number | null;
   association_fee: number | null;
   list_price: number | null;
+  // Flat sold-dynamics fields (migration 080) — mirrored out of raw_payload so
+  // region_sold_dynamics reads them instead of detoasting the JSONB per row.
+  original_list_price: number | null;
+  days_on_market: number | null;
+  listing_contract_date: string | null;
   close_price: number;
   purchase_contract_date: string | null;
   close_date: string | null;
@@ -207,6 +212,16 @@ export function extractSoldListingData(raw: any): SoldListingRecord | null {
       tax_annual_amount: numOrNull(raw.TaxAnnualAmount),
       association_fee: numOrNull(raw.AssociationFee),
       list_price: numOrNull(raw.ListPrice),
+      // Flat sold-dynamics fields (080). OriginalListPrice = the first ask (drives the
+      // ask→sold gap); DaysOnMarket = board time-to-sell; ListingContractDate = on-market
+      // date (DoM fallback). Date is sliced to YYYY-MM-DD and validated so the `date`
+      // column never chokes on a malformed/timestamp value.
+      original_list_price: numOrNull(raw.OriginalListPrice),
+      days_on_market: numOrNull(raw.DaysOnMarket),
+      listing_contract_date:
+        typeof raw.ListingContractDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw.ListingContractDate)
+          ? raw.ListingContractDate.slice(0, 10)
+          : null,
       close_price: numOrNull(raw.ClosePrice) ?? 0,
       // PurchaseContractDate = when the deal was signed (the AVM event date).
       // null when absent — do NOT fabricate it (a wrong date pollutes the anchor).
@@ -278,6 +293,9 @@ export async function upsertSoldListings(
             tax_annual_amount: record.tax_annual_amount,
             association_fee: record.association_fee,
             list_price: record.list_price,
+            original_list_price: record.original_list_price,
+            days_on_market: record.days_on_market,
+            listing_contract_date: record.listing_contract_date,
             close_price: record.close_price,
             purchase_contract_date: record.purchase_contract_date,
             close_date: record.close_date,
