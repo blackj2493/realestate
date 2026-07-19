@@ -287,7 +287,7 @@ export default async function AddressProfileView({
 
             {/* Asking-price distribution + by-type breakdown — one glance at the market. */}
             {nearby.histogram && (
-              <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="rounded-lg border border-border bg-card/40 p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Asking prices within {nearby.radiusKm} km
@@ -313,28 +313,43 @@ export default async function AddressProfileView({
                 </div>
                 {nearby.typeMix.length > 0 && (
                   <div className="rounded-lg border border-border bg-card/40 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">By property type</p>
-                    <div className="mt-3 space-y-2.5">
-                      {(() => {
-                        const top = Math.max(...nearby.typeMix.map((t) => t.count), 1);
-                        return nearby.typeMix.map((t) => (
-                          <div key={t.label}>
-                            <div className="flex items-baseline justify-between gap-2 text-xs">
-                              <span className="truncate text-foreground">
-                                {t.label} <span className="text-muted-foreground">×{t.count}</span>
-                              </span>
-                              {/* A 1-2 sample "median" is noise (a lone $51M land parcel, say). */}
-                              {t.medianAsking !== null && t.count >= 3 && (
-                                <span className="shrink-0 font-mono text-muted-foreground">{fmtK(t.medianAsking)} med</span>
-                              )}
-                            </div>
-                            <div className="mt-1 h-1.5 rounded-full bg-muted">
-                              <div className="h-full rounded-full bg-emerald-500/75" style={{ width: `${(t.count / top) * 100}%` }} />
-                            </div>
+                    {(() => {
+                      const total = nearby.typeMix.reduce((s, t) => s + t.count, 0) || 1;
+                      const cols = "grid grid-cols-[minmax(0,1fr)_minmax(72px,110px)_2.25rem_4rem] items-center gap-x-3";
+                      return (
+                        <>
+                          {/* Aligned header — reads as a table, not a stack of loading bars. */}
+                          <div className={cols}>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">By type</p>
+                            <p className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Share</p>
+                            <p className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">#</p>
+                            <p className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Median</p>
                           </div>
-                        ));
-                      })()}
-                    </div>
+                          <div className="mt-2.5 space-y-2.5">
+                            {nearby.typeMix.map((t) => {
+                              const share = Math.round((t.count / total) * 100);
+                              return (
+                                <div key={t.label} className={cols}>
+                                  <span className="truncate text-sm text-foreground" title={t.label}>{t.label}</span>
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                                      <span className="block h-full rounded-full bg-emerald-500/80" style={{ width: `${Math.max(share, 3)}%` }} />
+                                    </span>
+                                    <span className="w-7 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground">{share}%</span>
+                                  </span>
+                                  <span className="text-right font-mono text-sm tabular-nums text-foreground">{t.count}</span>
+                                  {/* A 1-2 sample "median" is noise (a lone $51M land parcel, say). */}
+                                  <span className="text-right font-mono text-sm tabular-nums text-muted-foreground">
+                                    {t.medianAsking !== null && t.count >= 3 ? fmtK(t.medianAsking) : "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="mt-3 text-[10px] text-muted-foreground">Share of the {total} nearest live listings · median = asking</p>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
