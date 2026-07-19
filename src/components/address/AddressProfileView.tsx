@@ -323,7 +323,8 @@ export default async function AddressProfileView({
                               <span className="truncate text-foreground">
                                 {t.label} <span className="text-muted-foreground">×{t.count}</span>
                               </span>
-                              {t.medianAsking !== null && (
+                              {/* A 1-2 sample "median" is noise (a lone $51M land parcel, say). */}
+                              {t.medianAsking !== null && t.count >= 3 && (
                                 <span className="shrink-0 font-mono text-muted-foreground">{fmtK(t.medianAsking)} med</span>
                               )}
                             </div>
