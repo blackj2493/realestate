@@ -26,14 +26,30 @@ export interface NearbyListing {
   distanceM: number | null;
 }
 
+/** Anonymous-safe market context computed from IDX ACTIVES only (asking prices +
+ *  listing age of live inventory) — never sold/VOW data. */
+export interface NearbyAskingStats {
+  medianAsking: number | null;
+  medianPsf: number | null;
+  medianDaysListed: number | null;
+}
+
 export interface NearbyForSale {
   listings: NearbyListing[];
   totalFound: number;
   radiusKm: number;
+  stats: NearbyAskingStats;
 }
 
 const FIELDS =
-  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName";
+  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM";
+
+function median(xs: number[]): number | null {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = s.length >> 1;
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
 
 export async function getNearbyForSale(
   lat: number,
@@ -41,8 +57,10 @@ export async function getNearbyForSale(
   opts: { radiusKm?: number; limit?: number } = {}
 ): Promise<NearbyForSale | null> {
   const radiusKm = opts.radiusKm ?? 2;
-  const limit = Math.min(opts.limit ?? 3, 12);
+  const limit = Math.min(opts.limit ?? 12, 12);
   try {
+    // Fetch up to the 100 nearest (display cap, CLAUDE.md §4): first `limit` become
+    // carousel cards; asking-price stats are computed over the whole page.
     const res = await getTypesenseClient()
       .collections("properties")
       .documents()
@@ -52,25 +70,50 @@ export async function getNearbyForSale(
         filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`For Sale\` && ListPrice:>=100000`,
         sort_by: `location(${lat}, ${lng}):asc`,
         include_fields: FIELDS,
-        per_page: limit,
+        per_page: 100,
       });
-    const listings: NearbyListing[] = (res.hits ?? []).map((h) => {
-      const d = h.document as Record<string, unknown>;
-      const dist = (h as { geo_distance_meters?: { location?: number } }).geo_distance_meters?.location;
-      return {
-        id: String(d.id ?? ""),
-        address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
-        cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
-        price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
-        beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
-        baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
-        subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
-        imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
-        brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
-        distanceM: typeof dist === "number" ? Math.round(dist) : null,
-      };
-    });
-    return { listings: listings.filter((l) => l.id), totalFound: res.found ?? listings.length, radiusKm };
+    const docs = (res.hits ?? []).map((h) => ({
+      d: h.document as Record<string, unknown>,
+      dist: (h as { geo_distance_meters?: { location?: number } }).geo_distance_meters?.location,
+    }));
+
+    const listings: NearbyListing[] = docs.slice(0, limit).map(({ d, dist }) => ({
+      id: String(d.id ?? ""),
+      address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
+      cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
+      price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
+      beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
+      baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
+      subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
+      imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
+      brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
+      distanceM: typeof dist === "number" ? Math.round(dist) : null,
+    }));
+
+    // Asking stats over ALL fetched actives (IDX only): price always; $/sqft and
+    // days-listed only from listings that carry the field.
+    const prices: number[] = [];
+    const psfs: number[] = [];
+    const doms: number[] = [];
+    for (const { d } of docs) {
+      const price = typeof d.ListPrice === "number" ? d.ListPrice : 0;
+      if (price > 0) prices.push(price);
+      const sqft = typeof d.BuildingAreaTotal === "number" ? d.BuildingAreaTotal : 0;
+      if (price > 0 && sqft >= 200) psfs.push(price / sqft);
+      const dom = typeof d.calculatedDOM === "number" ? d.calculatedDOM : -1;
+      if (dom >= 0) doms.push(dom);
+    }
+
+    return {
+      listings: listings.filter((l) => l.id),
+      totalFound: res.found ?? listings.length,
+      radiusKm,
+      stats: {
+        medianAsking: median(prices),
+        medianPsf: median(psfs),
+        medianDaysListed: median(doms),
+      },
+    };
   } catch (err) {
     console.error("[nearbyForSale] search failed:", err);
     return null;
