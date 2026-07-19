@@ -3,8 +3,10 @@
  * sale nor in our sold window (ADDRESS_PROFILES_PLAN P1). Anonymous-safe BY CONSTRUCTION:
  *
  *  - Nearby ACTIVES lead (IDX — photos/prices/brokerage are public by design; brokerage
- *    shown on every card at the same type size as details, CLAUDE.md §4 + audit R2).
- *  - Schools/walkability + geo "Things to Know" are open data.
+ *    shown on every card at the same type size as details, CLAUDE.md §4 + audit R2),
+ *    with asking-side stats, a price-distribution histogram and the property-type mix —
+ *    all computed from live IDX inventory, never sold/VOW data.
+ *  - Schools (EQAO), daily-life amenities and geo "Things to Know" are open data.
  *  - The sold-history card is STATIC copy (no data fetch → no existence leak); the VOW
  *    consumer gate stays the conversion wall.
  *  - TrackAddressCard captures the email-only lead (rung 1); no account required.
@@ -12,11 +14,21 @@
  * NO VOW field is fetched anywhere on this path.
  */
 import Link from "next/link";
-import { GraduationCap, Footprints, Lock, MapPin, Bell, TriangleAlert, Info } from "lucide-react";
+import {
+  GraduationCap,
+  Footprints,
+  Lock,
+  MapPin,
+  Bell,
+  TriangleAlert,
+  Info,
+  Dumbbell,
+  Check,
+} from "lucide-react";
 import type { AddressProfile } from "@/lib/address/resolveProfile";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
 import { getFlagsNearPoint, CHECKED_LABELS, type AddressFlag } from "@/lib/address/flagsNearPoint";
-import { assignSchools } from "@/lib/schools/nearestSchools";
+import { getNearbySchools, type NearbySchool } from "@/lib/schools/nearbySchoolList";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
 import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
@@ -26,28 +38,49 @@ function fmtPrice(n: number): string {
   return `$${Math.round(n).toLocaleString("en-CA")}`;
 }
 
+/** "$1.2M" / "$729k" — compact labels for the histogram axis. */
+function fmtK(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  return `$${Math.round(n / 1000)}k`;
+}
+
 function fmtDist(m: number | null): string {
   if (m === null) return "";
   return m < 1000 ? `${Math.max(50, Math.round(m / 50) * 50)} m` : `${(m / 1000).toFixed(1)} km`;
 }
 
-/** Same best-effort public context as the keyed sold /address page. */
-function publicContext(loc: [number, number] | null) {
-  if (!loc) return null;
-  try {
-    const s = assignSchools(loc);
-    const a = assignAmenities(loc);
-    const grocery = a.NearestGroceryKm < NO_AMENITY_KM ? a.NearestGroceryKm : null;
-    return {
-      bestElem: s.BestElementaryScore > 0 ? s.BestElementaryScore : null,
-      bestSec: s.BestSecondaryScore > 0 ? s.BestSecondaryScore : null,
-      groceryKm: grocery,
-      groceryName: a.NearestGroceryName || "",
-    };
-  } catch {
-    return null;
-  }
+function fmtKm(km: number): string {
+  return km < 1 ? `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m` : `${km.toFixed(1)} km`;
 }
+
+/* ── stat tiles ─────────────────────────────────────────────────────────── */
+
+function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card/40 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function LockedTile({ label }: { label: string }) {
+  return (
+    <Link
+      href="/login"
+      className="group rounded-lg border border-border bg-card/40 p-4 transition-colors hover:border-cyan-500/40"
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 flex items-center gap-2 text-lg font-bold text-muted-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
+        <Lock className="h-4 w-4" /> Members
+      </p>
+      <p className="mt-0.5 text-xs text-muted-foreground">Free account</p>
+    </Link>
+  );
+}
+
+/* ── listing card ───────────────────────────────────────────────────────── */
 
 function NearbyCard({ l }: { l: NearbyListing }) {
   return (
@@ -79,6 +112,37 @@ function NearbyCard({ l }: { l: NearbyListing }) {
   );
 }
 
+/* ── schools ────────────────────────────────────────────────────────────── */
+
+function scoreClasses(score: number | null): string {
+  if (score === null) return "border-border bg-muted/60 text-muted-foreground";
+  if (score >= 8) return "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
+  if (score >= 6.5) return "border-cyan-500/30 bg-cyan-500/15 text-cyan-700 dark:text-cyan-400";
+  return "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400";
+}
+
+function SchoolRow({ s }: { s: NearbySchool }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-3">
+      <span
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-md border font-mono text-sm font-bold ${scoreClasses(s.score)}`}
+        title={s.score !== null ? `EQAO score ${s.score.toFixed(1)}/10` : "Not yet rated"}
+      >
+        {s.score !== null ? s.score.toFixed(1) : "—"}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">{s.name}</span>
+        <span className="block text-xs capitalize text-muted-foreground">
+          {s.system} · {s.level}
+        </span>
+      </span>
+      <span className="shrink-0 font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(s.distanceKm)}</span>
+    </div>
+  );
+}
+
+/* ── geo flags ──────────────────────────────────────────────────────────── */
+
 function FlagCard({ f }: { f: AddressFlag }) {
   const Icon = f.kind === "warn" ? TriangleAlert : Info;
   return (
@@ -91,6 +155,8 @@ function FlagCard({ f }: { f: AddressFlag }) {
     </div>
   );
 }
+
+/* ── page ───────────────────────────────────────────────────────────────── */
 
 export default async function AddressProfileView({
   profile,
@@ -108,11 +174,25 @@ export default async function AddressProfileView({
     lat !== null && lng !== null ? getNearbyForSale(lat, lng) : Promise.resolve(null),
     lat !== null && lng !== null ? getFlagsNearPoint(lat, lng) : Promise.resolve(null),
   ]);
-  const ctx = publicContext(profile.location);
+  const schools = lat !== null && lng !== null ? getNearbySchools(lat, lng).slice(0, 6) : [];
+  let grocery: { name: string; km: number } | null = null;
+  let rec: { name: string; km: number } | null = null;
+  if (lat !== null && lng !== null) {
+    try {
+      const a = assignAmenities([lat, lng]);
+      if (a.NearestGroceryKm < NO_AMENITY_KM) grocery = { name: a.NearestGroceryName, km: a.NearestGroceryKm };
+      if (a.NearestRecCentreKm < NO_AMENITY_KM) rec = { name: a.NearestRecCentreName, km: a.NearestRecCentreKm };
+    } catch {
+      /* amenity data unavailable — cards simply don't render */
+    }
+  }
 
   const provLabel = provSlug.toUpperCase();
   const hubSlug = cityHubSlug(profile.city) || slugify(profile.city) || citySlug;
   const cityHref = `/property/${provSlug.toLowerCase()}/${hubSlug}`;
+  const areaLabel = profile.cityRegion || profile.city;
+  const stats = nearby?.stats;
+  const medianAsking = stats?.medianAsking ?? null;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -145,7 +225,7 @@ export default async function AddressProfileView({
     <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <div className="mx-auto max-w-[900px] px-4 py-8">
+      <div className="mx-auto max-w-[980px] px-4 py-8">
         <nav className="mb-4 text-sm text-muted-foreground">
           <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
@@ -154,53 +234,84 @@ export default async function AddressProfileView({
           <span className="text-foreground">{profile.address}</span>
         </nav>
 
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{profile.address}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{profile.address}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4" />
-            {[profile.cityRegion, profile.city, provLabel, profile.postal].filter(Boolean).join(", ")}
-            <span className="ml-2 rounded-full border border-border bg-card/40 px-2.5 py-0.5 text-xs font-medium">
+            {[profile.cityRegion, profile.city, provLabel].filter(Boolean).join(", ")}
+            {profile.postal && <span className="font-mono text-xs">{profile.postal}</span>}
+            <span className="rounded-full border border-border bg-card/40 px-2.5 py-0.5 text-xs font-medium">
               Not currently for sale
             </span>
+            {nearby && nearby.totalFound > 0 && (
+              <a
+                href="#for-sale"
+                className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-0.5 text-xs font-medium text-cyan-700 hover:border-cyan-400 dark:text-cyan-400"
+              >
+                {nearby.totalFound} for sale nearby ↓
+              </a>
+            )}
           </p>
         </header>
 
         {/* ── Nearby actives: the hero. IDX = fully public, no gate. ── */}
         {nearby && nearby.listings.length > 0 && (
-          <section className="mb-6">
-            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">For sale right now</h2>
-            <p className="mb-3 text-sm text-muted-foreground">
-              This home isn&apos;t on the market — {nearby.totalFound === 1 ? "this neighbour is" : `these neighbours are (${nearby.totalFound} within ${nearby.radiusKm} km)`}.
+          <section id="for-sale" className="mb-8 scroll-mt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              The market around {profile.address.split(",")[0]}
+            </h2>
+            <p className="mb-4 mt-1 text-sm text-muted-foreground">
+              This home isn&apos;t on the market — {nearby.totalFound === 1 ? "one neighbour is" : `${nearby.totalFound} neighbours within ${nearby.radiusKm} km are`}. Live asking-side numbers below; sold-side numbers are free with an account.
             </p>
 
-            {/* Asking-price context — computed from live IDX actives only (no sold/VOW
-                data); the locked chips are the breadcrumb to the consumer-gated layer. */}
-            <div className="mb-4 flex flex-wrap gap-2 text-sm">
-              {nearby.stats.medianAsking !== null && (
-                <span className="rounded-md border border-border bg-card/40 px-3 py-1.5">
-                  Median asking <strong className="font-bold">{fmtPrice(nearby.stats.medianAsking)}</strong>
-                </span>
+            {/* Stat tiles — IDX asking data + the two gated breadcrumbs. */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <StatTile label="For sale now" value={String(nearby.totalFound)} sub={`within ${nearby.radiusKm} km`} />
+              {medianAsking !== null && <StatTile label="Median asking" value={fmtK(medianAsking)} sub={fmtPrice(medianAsking)} />}
+              {stats?.medianPsf != null && <StatTile label="Asking $/sqft" value={`$${Math.round(stats.medianPsf)}`} sub="where size is listed" />}
+              {stats?.medianDaysListed != null && (
+                <StatTile label="Days listed" value={String(Math.round(stats.medianDaysListed))} sub="median, live listings" />
               )}
-              {nearby.stats.medianPsf !== null && (
-                <span className="rounded-md border border-border bg-card/40 px-3 py-1.5">
-                  Asking <strong className="font-bold">${Math.round(nearby.stats.medianPsf)}</strong>/sqft
-                </span>
-              )}
-              {nearby.stats.medianDaysListed !== null && (
-                <span className="rounded-md border border-border bg-card/40 px-3 py-1.5">
-                  Median <strong className="font-bold">{Math.round(nearby.stats.medianDaysListed)}</strong> days listed
-                </span>
-              )}
-              <Link href="/login" className="flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-3 py-1.5 text-muted-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-400">
-                <Lock className="h-3.5 w-3.5" /> Median sold price
-              </Link>
-              <Link href="/login" className="flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-3 py-1.5 text-muted-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-400">
-                <Lock className="h-3.5 w-3.5" /> Sold days-on-market
-              </Link>
+              <LockedTile label="Median sold price" />
+              <LockedTile label="Sold days-on-market" />
             </div>
 
+            {/* Asking-price distribution + type mix — one glance at the local market. */}
+            {nearby.histogram && (
+              <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Asking prices within {nearby.radiusKm} km
+                  </p>
+                  {nearby.typeMix.length > 0 && (
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      {nearby.typeMix.map((t) => `${t.label} ×${t.count}`).join(" · ")}
+                    </p>
+                  )}
+                </div>
+                <div className="mt-3 flex h-20 items-end gap-[3px]" role="img" aria-label={`Distribution of ${nearby.totalFound} asking prices from ${fmtK(nearby.histogram.min)} to ${fmtK(nearby.histogram.max)}`}>
+                  {(() => {
+                    const peak = Math.max(...nearby.histogram!.buckets, 1);
+                    return nearby.histogram!.buckets.map((c, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 rounded-t-sm ${c > 0 ? "bg-emerald-500/75" : "bg-muted"}`}
+                        style={{ height: c > 0 ? `${Math.max(8, (c / peak) * 100)}%` : "2px" }}
+                        title={`${c} listing${c === 1 ? "" : "s"}`}
+                      />
+                    ));
+                  })()}
+                </div>
+                <div className="mt-1.5 flex justify-between font-mono text-[10px] text-muted-foreground">
+                  <span>{fmtK(nearby.histogram.min)}</span>
+                  {medianAsking !== null && <span className="text-emerald-700 dark:text-emerald-400">median {fmtK(medianAsking)}</span>}
+                  <span>{fmtK(nearby.histogram.max)}</span>
+                </div>
+              </div>
+            )}
+
             {/* Horizontal carousel — CSS scroll-snap, no JS. */}
-            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+            <div className="-mx-1 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
               {nearby.listings.map((l) => (
                 <NearbyCard key={l.id} l={l} />
               ))}
@@ -223,28 +334,46 @@ export default async function AddressProfileView({
           lng={lng}
         />
 
-        {/* ── Sold history: STATIC gated card — no data fetched, nothing leaks. ── */}
-        <section className="mb-6 rounded-lg border border-border bg-card/40 p-5">
-          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Lock className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> Sale &amp; listing history
+        {/* ── Members gate: STATIC copy — no data fetched, nothing leaks. ── */}
+        <section className="mb-8 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.05] p-5">
+          <h2 className="text-base font-bold text-foreground">
+            What did homes in {areaLabel} actually sell for?
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Asking prices are only half the story. Real estate boards require a verified account for the other
+            half — it takes a minute and it&apos;s free:
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real estate boards require a verified account to view sold prices and listing history. Sign in or create a
-            free PureProperty account to see what homes in {profile.cityRegion || profile.city} actually sold for.
-          </p>
-          <Link
-            href="/login"
-            className="mt-3 inline-flex h-10 items-center justify-center rounded-md bg-emerald-500 px-6 text-sm font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400"
-          >
-            Sign in to see sold history
-          </Link>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[
+              `Sold prices & history on this street`,
+              `Median sold price & days-on-market for ${areaLabel}`,
+              `Asking vs sold — who's overpricing, who's dealing`,
+              `Deal Score & true days-on-market on every listing`,
+            ].map((t) => (
+              <li key={t} className="flex items-start gap-2 text-sm text-foreground">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                {t}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              href="/register"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-500 px-6 text-sm font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400"
+            >
+              Create free account
+            </Link>
+            <Link href="/login" className="text-sm text-cyan-700 hover:underline dark:text-cyan-400">
+              Sign in
+            </Link>
+          </div>
         </section>
 
         {/* ── Things to Know: open-data geo flags. A clear result is still information —
             show it (soft wording: dataset COVERAGE varies by municipality, so "no hits"
             must never read as "we verified everything"). null = lookup failed → hide. ── */}
         {flags !== null && (
-          <section className="mb-6">
+          <section className="mb-8">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Things to know nearby</h2>
             {flags.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -267,30 +396,47 @@ export default async function AddressProfileView({
           </section>
         )}
 
-        {/* ── Public neighbourhood context — EQAO schools + Overture walkability. ── */}
-        {ctx && (ctx.bestElem || ctx.bestSec || ctx.groceryKm !== null) && (
-          <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {(ctx.bestElem || ctx.bestSec) && (
-              <div className="rounded-lg border border-border bg-card/40 p-4">
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <GraduationCap className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Nearby schools
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {ctx.bestElem ? `Best elementary ${ctx.bestElem.toFixed(1)}/10` : ""}
-                  {ctx.bestElem && ctx.bestSec ? " · " : ""}
-                  {ctx.bestSec ? `Best secondary ${ctx.bestSec.toFixed(1)}/10` : ""}
-                </p>
+        {/* ── Schools: every rated school within 2.5 km — names, EQAO scores, distance. ── */}
+        {schools.length > 0 && (
+          <section className="mb-8">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                <GraduationCap className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Schools within 2.5 km
+              </h2>
+              <Link href={`/family/${hubSlug}/top-rated-schools`} className="text-xs text-cyan-700 hover:underline dark:text-cyan-400">
+                All top-rated schools in {profile.city} →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {schools.map((s) => (
+                <SchoolRow key={s.id} s={s} />
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">EQAO-based score out of 10 · straight-line distance</p>
+          </section>
+        )}
+
+        {/* ── Daily life: nearest grocery + recreation (Overture open data). ── */}
+        {(grocery || rec) && (
+          <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {grocery && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-4">
+                <Footprints className="h-5 w-5 shrink-0 text-sky-700 dark:text-sky-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">Groceries · {grocery.name}</span>
+                  <span className="block text-xs text-muted-foreground">nearest supermarket</span>
+                </span>
+                <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(grocery.km)}</span>
               </div>
             )}
-            {ctx.groceryKm !== null && (
-              <div className="rounded-lg border border-border bg-card/40 p-4">
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Footprints className="h-4 w-4 text-sky-700 dark:text-sky-400" /> Walkability
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Nearest grocery {ctx.groceryKm < 1 ? `${Math.max(50, Math.round((ctx.groceryKm * 1000) / 50) * 50)} m` : `${ctx.groceryKm.toFixed(1)} km`} away
-                  {ctx.groceryName ? ` (${ctx.groceryName})` : ""}.
-                </p>
+            {rec && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-4">
+                <Dumbbell className="h-5 w-5 shrink-0 text-sky-700 dark:text-sky-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">Recreation · {rec.name}</span>
+                  <span className="block text-xs text-muted-foreground">nearest community/rec centre</span>
+                </span>
+                <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(rec.km)}</span>
               </div>
             )}
           </section>

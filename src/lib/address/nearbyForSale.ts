@@ -34,11 +34,22 @@ export interface NearbyAskingStats {
   medianDaysListed: number | null;
 }
 
+/** Equal-width asking-price buckets over [min, max] (5th–95th percentile when n≥20,
+ *  so one mansion doesn't flatten the histogram). */
+export interface AskingHistogram {
+  min: number;
+  max: number;
+  buckets: number[];
+}
+
 export interface NearbyForSale {
   listings: NearbyListing[];
   totalFound: number;
   radiusKm: number;
   stats: NearbyAskingStats;
+  histogram: AskingHistogram | null;
+  /** "Detached ×18, Townhouse ×12, …" — top property types among the fetched actives. */
+  typeMix: Array<{ label: string; count: number }>;
 }
 
 const FIELDS =
@@ -95,6 +106,7 @@ export async function getNearbyForSale(
     const prices: number[] = [];
     const psfs: number[] = [];
     const doms: number[] = [];
+    const typeCounts = new Map<string, number>();
     for (const { d } of docs) {
       const price = typeof d.ListPrice === "number" ? d.ListPrice : 0;
       if (price > 0) prices.push(price);
@@ -102,6 +114,25 @@ export async function getNearbyForSale(
       if (price > 0 && sqft >= 200) psfs.push(price / sqft);
       const dom = typeof d.calculatedDOM === "number" ? d.calculatedDOM : -1;
       if (dom >= 0) doms.push(dom);
+      const t = typeof d.PropertySubType === "string" ? d.PropertySubType.trim() : "";
+      if (t) typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1);
+    }
+
+    // Price histogram: 8 equal-width buckets, percentile-clipped against outliers.
+    let histogram: AskingHistogram | null = null;
+    if (prices.length >= 8) {
+      const sorted = [...prices].sort((a, b) => a - b);
+      const clip = sorted.length >= 20;
+      const lo = clip ? sorted[Math.floor(sorted.length * 0.05)] : sorted[0];
+      const hi = clip ? sorted[Math.ceil(sorted.length * 0.95) - 1] : sorted[sorted.length - 1];
+      if (hi > lo) {
+        const buckets = new Array(8).fill(0) as number[];
+        for (const p of sorted) {
+          if (p < lo || p > hi) continue;
+          buckets[Math.min(7, Math.floor(((p - lo) / (hi - lo)) * 8))]++;
+        }
+        histogram = { min: lo, max: hi, buckets };
+      }
     }
 
     return {
@@ -113,6 +144,11 @@ export async function getNearbyForSale(
         medianPsf: median(psfs),
         medianDaysListed: median(doms),
       },
+      histogram,
+      typeMix: [...typeCounts.entries()]
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 4),
     };
   } catch (err) {
     console.error("[nearbyForSale] search failed:", err);
