@@ -48,6 +48,8 @@ export const ZERO_SCOPE: Scope = {
 export interface TrendPoint {
   month: string; // YYYY-MM
   medianPrice: number;
+  /** mean sold price for the month (migration 082) — board-comparable; TRREB/CREA headline the average. */
+  avgPrice?: number | null;
   medianPpsf: number | null;
   sales: number;
   soldToList?: number | null; // per-month sold-to-list % (migration 059)
@@ -110,19 +112,21 @@ async function computeTrend(region: string, typeKeys: string[], scope: Scope): P
     sales90: 0,
   };
 
-  // monthlyVelocity: average monthly sales over 6 SETTLED months (i = 2..7 back). We skip
-  // both the current partial month AND the most-recently-completed one, because sales are
-  // keyed by purchase_contract_date, which keeps accruing for weeks after a month ends —
-  // including the latest "complete" month would crater velocity early in the next month.
-  // Kept in Node (depends on "today") and unit-tested via the route. Missing months ⇒ 0.
+  // monthlyVelocity: average monthly sales over the 3 SETTLED months i = 2..4 back. We skip
+  // both the current partial month AND the most-recently-completed one (sales key on
+  // purchase_contract_date, which keeps accruing for weeks after a month ends). A trailing-3
+  // window (not the old trailing-6) stays SEASONALLY MATCHED to the live active snapshot that
+  // months-of-inventory divides: the old 6-month window reached back into the winter trough
+  // while inventory was at a summer high, inflating months-of-supply ~2x vs the boards
+  // (measured 2026-07 vs TRREB). Kept in Node (depends on "today"). Missing months ⇒ 0.
   const salesByMonth = new Map(points.map((p) => [p.month, p.sales]));
   const now = new Date();
   let velSum = 0;
-  for (let i = 2; i <= 7; i++) {
+  for (let i = 2; i <= 4; i++) {
     const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     velSum += salesByMonth.get(monthKey(m)) ?? 0;
   }
-  const monthlyVelocity = velSum > 0 ? velSum / 6 : null;
+  const monthlyVelocity = velSum > 0 ? velSum / 3 : null;
 
   return {
     points,
@@ -203,7 +207,7 @@ export function getTrendCached(region: string, typeKeys: string[], scope: Scope)
     // v12 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v11);
     // v11 = basement filter (043); v10 = Toronto district roll-up (042); v9 = RPC (040).
     // Bumped so stale empty Ottawa entries (and any v11 entry) are not served post-migration.
-    ["market-price-trend", "v12", region.toLowerCase(), k],
+    ["market-price-trend", "v13", region.toLowerCase(), k], // v13 = migration 082 (avgPrice)
     { revalidate: 86400 }
   )();
 }
@@ -216,7 +220,7 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
     // v7 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v6);
     // v6 = basement filter (043); v5 = Toronto district roll-up (042); v4 = parking (027).
     // Bumped so stale empty Ottawa entries (and any v6 entry) are not served post-migration.
-    ["market-region-stats", "v9", region.toLowerCase(), k], // v9 = migration 073 (relist-ghost dedup)
+    ["market-region-stats", "v10", region.toLowerCase(), k], // v10 = migration 082 (last_seen freshness gate)
     { revalidate: 86400 }
   )();
 }
@@ -287,7 +291,7 @@ export function getDomDistCached(region: string, typeKeys: string[], scope: Scop
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeDomDist(region, typeKeys, scope),
-    ["market-dom-dist", "v4", region.toLowerCase(), k], // v4 = migration 073 (relist-ghost dedup)
+    ["market-dom-dist", "v5", region.toLowerCase(), k], // v5 = migration 082 (last_seen freshness gate)
     { revalidate: 86400 }
   )();
 }
@@ -346,7 +350,7 @@ export function getPriceCutsCached(region: string, typeKeys: string[], scope: Sc
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computePriceCuts(region, typeKeys, scope),
-    ["market-price-cuts", "v2", region.toLowerCase(), k], // v2 = migrations 073/075 (dedup + flat + band)
+    ["market-price-cuts", "v3", region.toLowerCase(), k], // v3 = migration 082 (last_seen freshness gate)
     { revalidate: 86400 }
   )();
 }
@@ -617,11 +621,18 @@ async function computeListingOutcomes(region: string, typeKeys: string[]): Promi
   if (error) throw new Error(error.message);
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) return EMPTY_OUTCOMES;
+  const soldCount = num(row.sold_count) ?? 0;
+  const failedCount = num(row.failed_count) ?? 0;
+  // ZERO failed listings over a 12-month window with real sold volume is impossible in this
+  // market — it means the delisted feed (raw_vow_delisted) has no rows matching this region.
+  // Ottawa is the case: it region-matches via CountyOrParish, which the delisted table lacks
+  // (no payload column), so failed=0 → a fake "100% sell-through". Surface null ⇒ N/A, not 100%.
+  const noDelistedCoverage = failedCount === 0 && soldCount > 0;
   return {
     windowMonths: num(row.window_months) ?? 12,
-    soldCount: num(row.sold_count) ?? 0,
-    failedCount: num(row.failed_count) ?? 0,
-    failureRate: num(row.failure_rate),
+    soldCount,
+    failedCount,
+    failureRate: noDelistedCoverage ? null : num(row.failure_rate),
     medianFailedDom: num(row.median_failed_dom),
   };
 }
@@ -630,7 +641,7 @@ async function computeListingOutcomes(region: string, typeKeys: string[]): Promi
 export function getListingOutcomesCached(region: string, typeKeys: string[]): Promise<ListingOutcomes> {
   return unstable_cache(
     () => computeListingOutcomes(region, typeKeys),
-    ["market-listing-outcomes", "v2", region.toLowerCase(), typeKey(typeKeys)], // v2 = migration 072 (sale-only + exclude active)
+    ["market-listing-outcomes", "v3", region.toLowerCase(), typeKey(typeKeys)], // v3 = null failureRate when delisted feed can't match region (Ottawa)
     { revalidate: 86400 }
   )();
 }
@@ -782,7 +793,7 @@ export function getRegionMetricsCached(
       if (!Number.isFinite(ageHours) || ageHours > maxAgeHours) return null;
       return data.payload as AnalyticsInitial;
     },
-    ["region-metrics", "v1", region.toLowerCase()],
+    ["region-metrics", "v2", region.toLowerCase()], // v2 = migration 082 payload shape (avgPrice, freshness, sell-through N/A)
     { revalidate: 3600 }
   )();
 }

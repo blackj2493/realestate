@@ -121,19 +121,19 @@ describe('GET /api/market/price-trend', () => {
     );
   });
 
-  // ── monthlyVelocity is derived in Node from the settled months (2..7 back) ──
-  it('computes monthlyVelocity from the 6 settled months, excluding the latest two', async () => {
+  // ── monthlyVelocity is derived in Node from the 3 settled months (2..4 back) ──
+  // Trailing-3 (migration 082) keeps the sales pace seasonally matched to the live active
+  // snapshot that months-of-inventory divides; the old trailing-6 reached into the winter
+  // trough and ~doubled months-of-supply vs the boards.
+  it('computes monthlyVelocity from the 3 settled months (2..4), excluding the latest two AND months 5+', async () => {
     const points = [
-      // Months 0 and 1 are still accruing — must be EXCLUDED from velocity.
+      // Months 0 and 1 are still accruing — EXCLUDED.
       { month: monthKeyBack(0), medianPrice: 9, medianPpsf: 9, sales: 1000 },
       { month: monthKeyBack(1), medianPrice: 9, medianPpsf: 9, sales: 1000 },
-      // Months 2..7 are settled — averaged. 6 months × 12 sales / 6 = 12.
-      ...[2, 3, 4, 5, 6, 7].map((n) => ({
-        month: monthKeyBack(n),
-        medianPrice: 800000,
-        medianPpsf: 500,
-        sales: 12,
-      })),
+      // Months 2..4 are the settled window — averaged. 3 × 12 / 3 = 12.
+      ...[2, 3, 4].map((n) => ({ month: monthKeyBack(n), medianPrice: 800000, medianPpsf: 500, sales: 12 })),
+      // Months 5..7 are now OUTSIDE the window — must NOT affect velocity.
+      ...[5, 6, 7].map((n) => ({ month: monthKeyBack(n), medianPrice: 800000, medianPpsf: 500, sales: 1000 })),
     ];
     supabaseRpc({
       data: { points, summary: { soldToListPct: null, pctOverAsking: null, listPriceCoverage: 0, sales90: 0 } },
