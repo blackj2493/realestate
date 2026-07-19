@@ -184,6 +184,42 @@ export async function fetchRegionScore(
   return assembleRegionScore(region, trend, stats, dom, outcomes);
 }
 
+/** A fully-null "no data" score (not locked) — the fallback when a region is missing
+ *  from the batch response or a request fails. Mirrors RegionScorecard's local emptyScore. */
+export const emptyRegionScore = (region: string): RegionScore =>
+  assembleRegionScore(region, null, null, null, null);
+
+/**
+ * BATCHED scorecard fetch — one request to /api/market/region-scores for ALL regions,
+ * replacing fetchRegionScore's N×4 fan-out (4 requests per region, each re-running the
+ * VOW gate, throttled to ~6 concurrent by the browser). The server runs the gate once and
+ * all regions' aggregates in parallel. Returns scores in the requested order, filling any
+ * region the server omitted with a null score so the table shape is stable.
+ */
+export async function fetchRegionScores(
+  regions: string[],
+  typeKeys: string[] = [],
+  scope: RegionScoreScope = {}
+): Promise<RegionScore[]> {
+  if (!regions.length) return [];
+  const pos = (v: number | undefined) => (v && v > 0 ? v : 0);
+  const p = new URLSearchParams({ regions: regions.join(",") });
+  if (typeKeys.length) p.set("types", typeKeys.join(","));
+  const minBeds = pos(scope.minBeds);
+  const minBaths = pos(scope.minBaths);
+  const minParking = pos(scope.minParking);
+  const minFrontage = pos(scope.minFrontage);
+  if (minBeds) p.set("minBeds", String(minBeds));
+  if (minBaths) p.set("minBaths", String(minBaths));
+  if (minParking) p.set("minParking", String(minParking));
+  if (minFrontage) p.set("minFrontage", String(minFrontage));
+  if (scope.basement && scope.basement !== "any") p.set("basement", scope.basement);
+
+  const data = await getJson<{ scores: RegionScore[] }>(`/api/market/region-scores?${p.toString()}`);
+  const byRegion = new Map((data?.scores ?? []).map((s) => [s.region, s]));
+  return regions.map((r) => byRegion.get(r) ?? emptyRegionScore(r));
+}
+
 /**
  * Pure assembly of a RegionScore from the two endpoint payloads. Split out of
  * fetchRegionScore so other surfaces (Market Trends page) that already hold the

@@ -6,11 +6,15 @@
  * (CLAUDE.md §3A) — and both endpoints independently return a locked shape for
  * anonymous callers as defense in depth.
  *
- * The default/selected scope is prefetched server-side (the gate has already proven
- * the caller is a consumer) and handed to AnalyticsClient as `initial`, so the
- * above-the-fold KPIs paint immediately instead of waiting on a client round-trip.
+ * The default/selected scope is still prefetched server-side (the gate has already
+ * proven the caller is a consumer) and handed to AnalyticsClient as `initial` — but the
+ * prefetch now lives inside a <Suspense> boundary (AnalyticsData). The shell + the
+ * SubmarketLeaderboard paint immediately and a cold region STREAMS in when its RPCs
+ * resolve, instead of the 11-RPC batch blocking TTFB and freezing the whole navigation
+ * (which made a big market like Toronto take 20s+). Tiers 2/3 make that stream fast.
  */
 
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
@@ -63,8 +67,26 @@ export default async function AnalyticsPage({
   const region = (usp.get("region") || DEFAULT_REGION).trim();
   const typeKeys = parseTypeKeys(usp);
 
-  // Prefetch behind the (already-passed) consumer gate. Best-effort: if either RPC is
-  // unavailable (e.g. migration 040 not yet applied), fall back to a client fetch.
+  return (
+    <>
+      {/* Zoom out: rank every GTA market, then drill into one below. */}
+      <SubmarketLeaderboard />
+      {/* Stream the data-heavy panels so the shell paints instantly and a slow region no
+          longer blocks first byte. Fallback is a skeleton (not AnalyticsClient) so there
+          is no client re-fetch — the seeded client mounts once when the stream resolves. */}
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <AnalyticsData region={region} typeKeys={typeKeys} />
+      </Suspense>
+    </>
+  );
+}
+
+/**
+ * Server component that runs the (already-gated) 11-RPC prefetch and seeds AnalyticsClient.
+ * Isolated under <Suspense> so its await no longer gates the page shell. Best-effort: if an
+ * RPC is unavailable, that panel falls back to a client fetch.
+ */
+async function AnalyticsData({ region, typeKeys }: { region: string; typeKeys: string[] }) {
   let initial: AnalyticsInitial | undefined;
   if (REGION_RE.test(region)) {
     const [trendR, statsR, domR, cutsR, dynR, rentR, avmR, invR, seasR, outcR, ledgR] = await Promise.allSettled([
@@ -110,11 +132,25 @@ export default async function AnalyticsPage({
     }
   }
 
+  return <AnalyticsClient initial={initial} />;
+}
+
+/** Lightweight above-the-fold skeleton shown while AnalyticsData streams. Theme-aware. */
+function AnalyticsSkeleton() {
+  const box = "animate-pulse rounded-lg bg-black/5 dark:bg-white/10";
   return (
-    <>
-      {/* Zoom out: rank every GTA market, then drill into one below. */}
-      <SubmarketLeaderboard />
-      <AnalyticsClient initial={initial} />
-    </>
+    <div className="mx-auto w-full max-w-6xl px-4 py-6" aria-hidden>
+      <div className={`${box} h-8 w-56`} />
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className={`${box} h-20`} />
+        ))}
+      </div>
+      <div className={`${box} mt-4 h-64 w-full`} />
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className={`${box} h-48`} />
+        <div className={`${box} h-48`} />
+      </div>
+    </div>
   );
 }
