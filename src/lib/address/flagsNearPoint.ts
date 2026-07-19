@@ -30,7 +30,9 @@ export interface AddressFlag extends DiligenceFlag {
   distanceM: number;
 }
 
-async function fetchFlags(lat: number, lng: number): Promise<AddressFlag[]> {
+/** null = the lookup itself failed (section should hide — we cannot claim "checked");
+ *  [] = the query ran and found nothing. */
+async function fetchFlags(lat: number, lng: number): Promise<AddressFlag[] | null> {
   try {
     const { data, error } = await getServiceRoleClient().rpc("flags_near_point", {
       in_lat: lat,
@@ -39,7 +41,7 @@ async function fetchFlags(lat: number, lng: number): Promise<AddressFlag[]> {
     });
     if (error || !Array.isArray(data)) {
       if (error) console.error("[flagsNearPoint] rpc failed (section hidden):", error.message);
-      return [];
+      return null;
     }
     // One flag per dataset kind — the nearest feature wins (rows arrive distance-sorted).
     const out = new Map<string, AddressFlag>();
@@ -60,12 +62,12 @@ async function fetchFlags(lat: number, lng: number): Promise<AddressFlag[]> {
     return [...out.values()].sort((a, b) => b.severity - a.severity);
   } catch (err) {
     console.error("[flagsNearPoint]", err);
-    return [];
+    return null;
   }
 }
 
 /** 24h-cached per ~11m grid cell (4-decimal rounding) — repeat views are free. */
-export async function getFlagsNearPoint(lat: number, lng: number): Promise<AddressFlag[]> {
+export async function getFlagsNearPoint(lat: number, lng: number): Promise<AddressFlag[] | null> {
   const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
   const cached = unstable_cache(() => fetchFlags(lat, lng), ["address-flags", key], { revalidate: 86_400 });
   return cached();
