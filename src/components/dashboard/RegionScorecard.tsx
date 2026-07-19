@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
-import { fetchRegionScore, type RegionScore } from "@/lib/dashboard/marketAggregates";
+import { fetchRegionScores, type RegionScore } from "@/lib/dashboard/marketAggregates";
 import type { BasementFilter } from "@/lib/dashboard/config";
 import {
   TEMP,
@@ -90,24 +90,17 @@ export default function RegionScorecard({
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.allSettled(
-      regions.map((r) =>
-        fetchRegionScore(r, propertyTypes, {
-          minBeds,
-          minBaths,
-          minParking: minGarage,
-          minFrontage,
-          basement,
-        })
-      )
-    )
-      .then((results) => {
-        if (!alive) return;
-        setScores(
-          results.map((res, i) =>
-            res.status === "fulfilled" ? res.value : emptyScore(regions[i])
-          )
-        );
+    // One batched request for all regions (server runs the VOW gate once + fans out the
+    // aggregates in parallel), replacing the old N×4 client fetch storm.
+    fetchRegionScores(regions, propertyTypes, {
+      minBeds,
+      minBaths,
+      minParking: minGarage,
+      minFrontage,
+      basement,
+    })
+      .then((next) => {
+        if (alive) setScores(next);
       })
       .finally(() => alive && setLoading(false));
     return () => {
@@ -285,23 +278,3 @@ function Cell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function emptyScore(region: string): RegionScore {
-  return {
-    region,
-    medianPrice: null,
-    priceSeries: [],
-    yoyPct: null,
-    medianPpsf: null,
-    ppsfYoyPct: null,
-    activeCount: null,
-    monthsOfSupply: null,
-    soldToListPct: null,
-    pctOverAsking: null,
-    medianCapRate: null,
-    topCapRate: null,
-    stalePct: null,
-    trueDom: null,
-    sellThroughPct: null,
-    temperature: null,
-  };
-}
