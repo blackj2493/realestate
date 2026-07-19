@@ -31,9 +31,11 @@ import {
   getSeasonalityCached,
   getListingOutcomesCached,
   getPriceLedgerCached,
+  getRegionMetricsCached,
+  assembleAnalyticsInitial,
   ZERO_SCOPE,
 } from "@/lib/market/aggregates";
-import AnalyticsClient, { type AnalyticsInitial } from "./AnalyticsClient";
+import AnalyticsClient from "./AnalyticsClient";
 import SubmarketLeaderboard from "@/components/dashboard/SubmarketLeaderboard";
 
 export const dynamic = "force-dynamic";
@@ -87,50 +89,45 @@ export default async function AnalyticsPage({
  * RPC is unavailable, that panel falls back to a client fetch.
  */
 async function AnalyticsData({ region, typeKeys }: { region: string; typeKeys: string[] }) {
-  let initial: AnalyticsInitial | undefined;
-  if (REGION_RE.test(region)) {
-    const [trendR, statsR, domR, cutsR, dynR, rentR, avmR, invR, seasR, outcR, ledgR] = await Promise.allSettled([
-      getTrendCached(region, typeKeys, ZERO_SCOPE),
-      getStatsCached(region, typeKeys, ZERO_SCOPE),
-      getDomDistCached(region, typeKeys, ZERO_SCOPE),
-      getPriceCutsCached(region, typeKeys, ZERO_SCOPE),
-      getSoldDynamicsCached(region, typeKeys, ZERO_SCOPE),
-      getRentalYieldCached(region, typeKeys),
-      getAvmReliabilityCached(region, typeKeys),
-      getInventoryHistoryCached(region),
-      getSeasonalityCached(region, typeKeys),
-      getListingOutcomesCached(region, typeKeys),
-      getPriceLedgerCached(region),
-    ]);
-    const trend = trendR.status === "fulfilled" ? trendR.value : null;
-    const stats = statsR.status === "fulfilled" ? statsR.value : null;
-    const dom = domR.status === "fulfilled" ? domR.value : null;
-    const cuts = cutsR.status === "fulfilled" ? cutsR.value : null;
-    const dynamics = dynR.status === "fulfilled" ? dynR.value : null;
-    const rental = rentR.status === "fulfilled" ? rentR.value : null;
-    const avm = avmR.status === "fulfilled" ? avmR.value : null;
-    const inventory = invR.status === "fulfilled" ? invR.value : null;
-    const seasonality = seasR.status === "fulfilled" ? seasR.value : null;
-    const outcomes = outcR.status === "fulfilled" ? outcR.value : null;
-    const ledger = ledgR.status === "fulfilled" ? ledgR.value : null;
-    if (trend || stats || dom || cuts || dynamics || rental || avm || inventory || seasonality || outcomes || ledger) {
-      initial = {
-        region,
-        typeKeys,
-        trend: trend ? { region, points: trend.points, summary: trend.summary } : null,
-        stats: stats ? { region, stats } : null,
-        dom: dom ? { region, dom } : null,
-        cuts: cuts ? { region, cuts } : null,
-        dynamics: dynamics ? { region, dynamics } : null,
-        rental: rental ? { region, rental } : null,
-        avm: avm ? { region, avm } : null,
-        inventory: inventory ? { region, inventory } : null,
-        seasonality: seasonality ? { region, seasonality } : null,
-        outcomes: outcomes ? { region, outcomes } : null,
-        ledger: ledger ? { region, ledger } : null,
-      };
-    }
+  if (!REGION_RE.test(region)) return <AnalyticsClient initial={undefined} />;
+
+  // Default (all-types) view → serve the nightly precompute (a single point lookup) when
+  // present and fresh (migration 081). This moves the whole 11-RPC batch — including the
+  // residual slow avm-reliability / listing-outcomes — off the request path entirely.
+  if (typeKeys.length === 0) {
+    const precomputed = await getRegionMetricsCached(region);
+    if (precomputed) return <AnalyticsClient initial={precomputed} />;
   }
+
+  // Live fallback: cached RPCs (a custom type view, or a precompute miss/stale). Shares
+  // assembleAnalyticsInitial with the nightly job so the emitted shape is identical. The
+  // tuple input to allSettled preserves each metric's type through destructuring.
+  const [trendR, statsR, domR, cutsR, dynR, rentR, avmR, invR, seasR, outcR, ledgR] = await Promise.allSettled([
+    getTrendCached(region, typeKeys, ZERO_SCOPE),
+    getStatsCached(region, typeKeys, ZERO_SCOPE),
+    getDomDistCached(region, typeKeys, ZERO_SCOPE),
+    getPriceCutsCached(region, typeKeys, ZERO_SCOPE),
+    getSoldDynamicsCached(region, typeKeys, ZERO_SCOPE),
+    getRentalYieldCached(region, typeKeys),
+    getAvmReliabilityCached(region, typeKeys),
+    getInventoryHistoryCached(region),
+    getSeasonalityCached(region, typeKeys),
+    getListingOutcomesCached(region, typeKeys),
+    getPriceLedgerCached(region),
+  ]);
+  const initial = assembleAnalyticsInitial(region, typeKeys, {
+    trend: trendR.status === "fulfilled" ? trendR.value : null,
+    stats: statsR.status === "fulfilled" ? statsR.value : null,
+    dom: domR.status === "fulfilled" ? domR.value : null,
+    cuts: cutsR.status === "fulfilled" ? cutsR.value : null,
+    dynamics: dynR.status === "fulfilled" ? dynR.value : null,
+    rental: rentR.status === "fulfilled" ? rentR.value : null,
+    avm: avmR.status === "fulfilled" ? avmR.value : null,
+    inventory: invR.status === "fulfilled" ? invR.value : null,
+    seasonality: seasR.status === "fulfilled" ? seasR.value : null,
+    outcomes: outcR.status === "fulfilled" ? outcR.value : null,
+    ledger: ledgR.status === "fulfilled" ? ledgR.value : null,
+  });
 
   return <AnalyticsClient initial={initial} />;
 }

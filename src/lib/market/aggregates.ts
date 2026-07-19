@@ -22,6 +22,7 @@ import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
 import type { BasementFilter } from "@/lib/dashboard/config";
+import type { AnalyticsInitial } from "@/app/(app)/analytics/AnalyticsClient";
 
 const MONTHS = 24;
 
@@ -669,5 +670,119 @@ export function getPriceLedgerCached(region: string): Promise<PriceLedger> {
     () => computePriceLedger(region),
     ["market-price-ledger", "v1", region.toLowerCase()], // v1 = migrations 069/070
     { revalidate: 86400 }
+  )();
+}
+
+// ── AnalyticsInitial assembly + nightly precompute (Tier 3) ──────────────────────────
+// The /analytics prefetch and the region_metrics precompute both need the SAME
+// AnalyticsInitial shape. Share one pure assembler so they can never drift, and expose a
+// raw (uncached) full-payload compute for the nightly job (unstable_cache is unavailable
+// outside a request context).
+
+/** The 11 metric results for a region+scope (each null when its RPC failed / was empty). */
+export interface AnalyticsParts {
+  trend: TrendResult | null;
+  stats: RegionStats | null;
+  dom: DomDist | null;
+  cuts: PriceCuts | null;
+  dynamics: SoldDynamics | null;
+  rental: RentalYield | null;
+  avm: AvmReliability | null;
+  inventory: InventoryHistory | null;
+  seasonality: Seasonality | null;
+  outcomes: ListingOutcomes | null;
+  ledger: PriceLedger | null;
+}
+
+/** Pure: wrap the 11 metric results into the AnalyticsInitial the client consumes.
+ *  Returns undefined when every metric is null (nothing to seed). */
+export function assembleAnalyticsInitial(
+  region: string,
+  typeKeys: string[],
+  p: AnalyticsParts
+): AnalyticsInitial | undefined {
+  const { trend, stats, dom, cuts, dynamics, rental, avm, inventory, seasonality, outcomes, ledger } = p;
+  if (!(trend || stats || dom || cuts || dynamics || rental || avm || inventory || seasonality || outcomes || ledger)) {
+    return undefined;
+  }
+  return {
+    region,
+    typeKeys,
+    trend: trend ? { region, points: trend.points, summary: trend.summary } : null,
+    stats: stats ? { region, stats } : null,
+    dom: dom ? { region, dom } : null,
+    cuts: cuts ? { region, cuts } : null,
+    dynamics: dynamics ? { region, dynamics } : null,
+    rental: rental ? { region, rental } : null,
+    avm: avm ? { region, avm } : null,
+    inventory: inventory ? { region, inventory } : null,
+    seasonality: seasonality ? { region, seasonality } : null,
+    outcomes: outcomes ? { region, outcomes } : null,
+    ledger: ledger ? { region, ledger } : null,
+  };
+}
+
+/** Raw (uncached) full AnalyticsInitial — runs all 11 compute fns in parallel. Used by the
+ *  nightly region_metrics precompute; the request path uses the cached getXCached fns. */
+export async function computeAnalyticsInitial(
+  region: string,
+  typeKeys: string[],
+  scope: Scope
+): Promise<AnalyticsInitial | undefined> {
+  const settled = await Promise.allSettled([
+    computeTrend(region, typeKeys, scope),
+    computeStats(region, typeKeys, scope),
+    computeDomDist(region, typeKeys, scope),
+    computePriceCuts(region, typeKeys, scope),
+    computeSoldDynamics(region, typeKeys, scope),
+    computeRentalYield(region, typeKeys),
+    computeAvmReliability(region, typeKeys),
+    computeInventoryHistory(region),
+    computeSeasonality(region, typeKeys),
+    computeListingOutcomes(region, typeKeys),
+    computePriceLedger(region),
+  ]);
+  const v = <T,>(i: number): T | null =>
+    settled[i].status === "fulfilled" ? (settled[i] as PromiseFulfilledResult<T>).value : null;
+  return assembleAnalyticsInitial(region, typeKeys, {
+    trend: v<TrendResult>(0),
+    stats: v<RegionStats>(1),
+    dom: v<DomDist>(2),
+    cuts: v<PriceCuts>(3),
+    dynamics: v<SoldDynamics>(4),
+    rental: v<RentalYield>(5),
+    avm: v<AvmReliability>(6),
+    inventory: v<InventoryHistory>(7),
+    seasonality: v<Seasonality>(8),
+    outcomes: v<ListingOutcomes>(9),
+    ledger: v<PriceLedger>(10),
+  });
+}
+
+/**
+ * Read the nightly-precomputed base-scope AnalyticsInitial for a region (migration 081).
+ * Returns null on miss or when the snapshot is older than `maxAgeHours` (default 72h — a
+ * few failed nightly runs) so the page falls back to a fresh live compute. Cached 1h so a
+ * burst of loads shares one point lookup. Caller must pass the VOW gate first.
+ */
+export function getRegionMetricsCached(
+  region: string,
+  maxAgeHours = 72
+): Promise<AnalyticsInitial | null> {
+  return unstable_cache(
+    async () => {
+      const sb = getServiceRoleClient();
+      const { data, error } = await sb
+        .from("region_metrics")
+        .select("payload, computed_at")
+        .eq("region", region)
+        .maybeSingle();
+      if (error || !data?.payload || !data.computed_at) return null;
+      const ageHours = (Date.now() - new Date(data.computed_at as string).getTime()) / 3_600_000;
+      if (!Number.isFinite(ageHours) || ageHours > maxAgeHours) return null;
+      return data.payload as AnalyticsInitial;
+    },
+    ["region-metrics", "v1", region.toLowerCase()],
+    { revalidate: 3600 }
   )();
 }
