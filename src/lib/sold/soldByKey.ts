@@ -14,6 +14,7 @@
  */
 import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typesense/soldListingsSchema";
+import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, addressesMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
@@ -43,6 +44,13 @@ export interface SoldPublic {
   cityRegion: string;
   /** [lat, lng] — used server-side for schools/walkability; never rendered as raw coords. */
   location: [number, number] | null;
+  /**
+   * Whether this record has at least one listing photo — an EXISTENCE bit only, derived
+   * server-side from primaryImageUrl. Lets the anon render decide whether to show a locked
+   * "photos — sign up" teaser (never a false promise) WITHOUT ever carrying a photo URL to
+   * the client. The URL itself is a VOW field and is discarded server-side (see below).
+   */
+  hasPhoto: boolean;
 }
 
 // The ONLY fields the anonymous path retrieves. Anything not listed here cannot reach the
@@ -62,7 +70,10 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
         q: "*",
         query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
         filter_by: `id:=${key}`,
-        include_fields: PUBLIC_FIELDS,
+        // primaryImageUrl is fetched ONLY to derive the `hasPhoto` existence bit below; the
+        // URL is discarded and never returned/rendered, so no VOW media reaches the anon path.
+        // Everything actually returned to the caller stays within PUBLIC_FIELDS.
+        include_fields: `${PUBLIC_FIELDS},primaryImageUrl`,
         per_page: 1,
       });
     const d = res.hits?.[0]?.document as Partial<SoldListingDocument> | undefined;
@@ -77,6 +88,7 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
       city: d.City ?? "",
       cityRegion: d.CityRegion ?? "",
       location: loc,
+      hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
     };
   } catch (err) {
     console.error(`[soldByKey] public fetch failed for "${key}":`, err);
@@ -186,5 +198,32 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
   } catch (err) {
     console.error(`[soldByKey] gated fetch failed for "${key}":`, err);
     return null;
+  }
+}
+
+/**
+ * Photo URLs for the AUTHED /address gallery. VOW media — call ONLY inside the
+ * getConsumer()-gated branch (never on the anonymous path).
+ *
+ * The lean `sold_listings` collection stores just ONE `primaryImageUrl` thumbnail (RAM
+ * policy), so for a real gallery we prefer the full `listings.media_urls` array when the
+ * listing still has a row there, and fall back to the single thumbnail otherwise.
+ * Best-effort: returns [] on failure or when the record genuinely has no media.
+ *
+ * @param key             listing key
+ * @param primaryImageUrl the sold doc's thumbnail (already fetched by the caller), used as
+ *                        the single-image fallback when the listings table has no media.
+ */
+export async function getSoldMediaByKey(key: string, primaryImageUrl?: string): Promise<string[]> {
+  const fallback = typeof primaryImageUrl === "string" && primaryImageUrl.length > 0 ? [primaryImageUrl] : [];
+  try {
+    const supabase = getServiceRoleClient();
+    const { data } = await supabase.from("listings").select("media_urls").eq("listing_key", key).maybeSingle();
+    const urls = Array.isArray(data?.media_urls) ? (data!.media_urls as unknown[]) : [];
+    const clean = urls.filter((u): u is string => typeof u === "string" && u.length > 0);
+    return clean.length > 0 ? clean : fallback;
+  } catch (err) {
+    console.error(`[soldByKey] media fetch failed for "${key}":`, err);
+    return fallback;
   }
 }
