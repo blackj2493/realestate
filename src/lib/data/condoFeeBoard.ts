@@ -12,6 +12,7 @@
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { TREND_MAX_ANNUAL_PCT, classifyTrend, type TrendBand } from "@/lib/condo/feeStability";
+import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
 
 export interface CondoAreaRow {
   /** Neighbourhood (TRREB CityRegion). */
@@ -46,6 +47,19 @@ const num = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+/**
+ * TRREB stores Toronto as district codes ("Toronto C02", "Toronto W08") — meaningless
+ * to a public reader. Round-trip through the canonical hub-slug helpers so districts
+ * consolidate to their municipality ("Toronto") using the same rules as the hub tree,
+ * rather than a second private copy of that regex.
+ */
+function displayCity(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const slug = cityHubSlug(trimmed);
+  return slug ? deslugCity(slug) : trimmed;
+}
+
 async function computeCondoFeeBoard(): Promise<CondoFeeBoard> {
   const sb = getServiceRoleClient();
   const { data, error } = await sb
@@ -74,7 +88,7 @@ async function computeCondoFeeBoard(): Promise<CondoFeeBoard> {
 
     rows.push({
       area,
-      city: String(meta.city ?? "").trim(),
+      city: displayCity(String(meta.city ?? "")),
       annualPct,
       p25AnnualPct: num(meta.p25AnnualPct),
       p75AnnualPct: num(meta.p75AnnualPct),
