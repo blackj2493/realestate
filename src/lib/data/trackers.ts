@@ -58,7 +58,7 @@ export const TRACKERS: TrackerDef[] = [
     tagline:
       "How fast homes actually sell in each market — true, relist-adjusted days on market.",
     eyebrow: "Speed of Sale",
-    status: "soon",
+    status: "live",
   },
   {
     slug: "market-temperature",
