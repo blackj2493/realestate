@@ -107,3 +107,8 @@ export function getCondoFeeBoard(): Promise<CondoFeeBoard> {
     revalidate: 21600,
   })();
 }
+
+/** Uncached — for the nightly data-health canary (runs outside a Next request context). */
+export function computeCondoFeeBoardUncached(): Promise<CondoFeeBoard> {
+  return computeCondoFeeBoard();
+}
