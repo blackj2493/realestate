@@ -5,6 +5,7 @@ import {
   neighbourhoodHubsForSitemap,
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
+import { LIVE_TRACKERS } from "@/lib/data/trackers";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -102,6 +103,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/property`, changeFrequency: "daily", priority: 0.9 },
   ];
 
+  // Public /data trackers (hub + each live tracker). Aggregate-statistics pages, emitted
+  // regardless of DB state (like the static routes).
+  const dataRoutes: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/data`, changeFrequency: "daily", priority: 0.8 },
+    ...LIVE_TRACKERS.map((t) => ({
+      url: `${SITE_URL}/data/${t.slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+  ];
+
   const hubRoutes = await cityHubRoutes();
 
   try {
@@ -129,9 +141,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       }));
 
-    return [...staticRoutes, ...hubRoutes, ...listingRoutes];
+    return [...staticRoutes, ...dataRoutes, ...hubRoutes, ...listingRoutes];
   } catch {
-    // Missing env at build / DB unavailable — still emit the static + hub routes.
-    return [...staticRoutes, ...hubRoutes];
+    // Missing env at build / DB unavailable — still emit the static + data + hub routes.
+    return [...staticRoutes, ...dataRoutes, ...hubRoutes];
   }
 }

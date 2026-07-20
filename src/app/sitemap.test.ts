@@ -18,7 +18,12 @@ vi.mock('@/lib/listings/cityHubs', async (importOriginal) => {
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { cityHubsWithInventory, COMMERCIAL_ACTIVE_FILTER } from '@/lib/listings/cityHubs';
+import { LIVE_TRACKERS } from '@/lib/data/trackers';
 import sitemap from './sitemap';
+
+// Non-listing routes always emitted: 3 static (/, /properties, /property) + the /data hub
+// + one route per live tracker. Derived so it stays correct as trackers ship.
+const NON_LISTING = 3 + 1 + LIVE_TRACKERS.length;
 
 /** Chainable stub whose range(from, to) returns a slice of `dataset`,
  *  mimicking PostgREST range pagination (then-only thenable). */
@@ -51,9 +56,9 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
     vi.mocked(getServiceRoleClient).mockReturnValue(stub);
 
     const entries = await sitemap();
-    // 3 static routes (/, /properties, /property) + every listing. Hub routes are []
-    // here: searchListings throws without a Typesense key, caught best-effort.
-    expect(entries.length).toBe(3 + 2500);
+    // static + /data routes + every listing. Hub routes are [] here: searchListings throws
+    // without a Typesense key, caught best-effort.
+    expect(entries.length).toBe(NON_LISTING + 2500);
     // PAGE must be ≤ 1000 (PostgREST hard cap) and the loop must have paged ≥ 3 times
     expect(stub.range).toHaveBeenCalledTimes(3);
     const [f0, t0] = stub.range.mock.calls[0];
@@ -67,8 +72,8 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
     vi.mocked(getServiceRoleClient).mockReturnValue(q as unknown as ReturnType<typeof getServiceRoleClient>);
 
     const entries = await sitemap();
-    // 3 static routes (/, /properties, /property) survive a DB failure.
-    expect(entries.length).toBe(3);
+    // static + /data routes survive a DB failure (listing read is what fails).
+    expect(entries.length).toBe(NON_LISTING);
   });
 
   it('emits /commercial/on/{slug} hubs counted over the commercial population', async () => {
