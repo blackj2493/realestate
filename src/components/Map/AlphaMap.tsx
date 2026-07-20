@@ -991,7 +991,7 @@ export default function AlphaMap({
           className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full border border-amber-500/50 bg-card/95 px-2.5 py-1.5 backdrop-blur-md"
           style={{ left: zoningHover.x, top: zoningHover.y - 10 }}
         >
-          <div className="font-mono text-xs font-semibold text-amber-200">{zoningHover.code}</div>
+          <div className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-200">{zoningHover.code}</div>
           <div className="text-[10px] leading-tight text-foreground">{zoningHover.category}</div>
         </div>
       )}
@@ -1047,7 +1047,7 @@ export default function AlphaMap({
           reports how many recent solds are in view, so a sparse area reads as data, not a
           stray circle. The ✕ removes the pin. */}
       {searchPin && (
-        <div className="pointer-events-auto absolute left-1/2 top-4 z-20 flex max-w-[92%] -translate-x-1/2 items-center gap-2 border border-cyan-500/40 bg-card/95 px-3 py-1.5 font-mono text-xs text-cyan-100 backdrop-blur-md">
+        <div className="pointer-events-auto absolute left-1/2 top-4 z-20 flex max-w-[92%] -translate-x-1/2 items-center gap-2 border border-cyan-500/40 bg-card/95 px-3 py-1.5 font-mono text-xs text-cyan-800 dark:text-cyan-100 backdrop-blur-md">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-300" />
           {searchPin.comps ? (
             <span className="truncate">
@@ -1063,7 +1063,7 @@ export default function AlphaMap({
           <button
             type="button"
             onClick={() => exitComps()}
-            className="ml-1 flex shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-rose-500/50 hover:text-rose-200"
+            className="ml-1 flex shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-rose-500/50 hover:text-rose-600 dark:hover:text-rose-200"
             aria-label={searchPin.comps ? "Exit comparable sales view" : "Clear pin"}
           >
             <X className="h-3 w-3" />
