@@ -49,7 +49,7 @@ export const TRACKERS: TrackerDef[] = [
     tagline:
       "Median and average sold prices, year-over-year, ranked across every GTA and Ottawa market.",
     eyebrow: "Sold-Price Rankings",
-    status: "soon",
+    status: "live",
   },
   {
     slug: "days-on-market",

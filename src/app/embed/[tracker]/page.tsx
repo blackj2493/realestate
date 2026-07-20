@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { PriceCutsBoard } from "@/app/data/price-cuts/PriceCutsBoard";
+import { PriceRankingsBoard } from "@/app/data/price-rankings/PriceRankingsBoard";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -31,6 +32,11 @@ async function renderWidget(slug: string): Promise<ReactNode> {
     const board = await getMarketBoard();
     const rows = board.rows.filter((r) => r.cutShare != null);
     return <PriceCutsBoard rows={rows} embed />;
+  }
+  if (slug === "price-rankings") {
+    const board = await getMarketBoard();
+    const rows = board.rows.filter((r) => r.medianPrice != null);
+    return <PriceRankingsBoard rows={rows} embed />;
   }
   return null;
 }
