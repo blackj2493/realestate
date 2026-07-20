@@ -167,3 +167,12 @@ async function computeBoard(): Promise<MarketBoard> {
 export function getMarketBoard(): Promise<MarketBoard> {
   return unstable_cache(computeBoard, ["data-market-board", "v2"], { revalidate: 3600 })();
 }
+
+/**
+ * Uncached board — for the nightly data-health canary, which runs outside a Next request
+ * (no unstable_cache context) and must see LIVE values, not a cached snapshot. Exported
+ * from here rather than reimplemented so the canary validates exactly what the site renders.
+ */
+export function computeMarketBoardUncached(): Promise<MarketBoard> {
+  return computeBoard();
+}

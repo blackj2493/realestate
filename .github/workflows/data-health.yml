@@ -1,0 +1,49 @@
+name: Data Health Canary
+
+# Catches SILENT derived-metric failures — the ones that produce null/empty instead of an
+# error, render a plausible-looking page with a missing panel, and get frozen into the
+# nightly precompute for days. (Migration 082 unapplied, Toronto price-cuts starving to
+# null, Toronto rental yield returning nothing, Ottawa's fake 100% sell-through, stale
+# condo cohorts — all failed green.)
+#
+# DELIBERATELY SEPARATE from freshness-check.yml: that one watches the FEED cursor
+# (is data arriving?), this one watches the DERIVED metrics (is what we render correct?).
+# Different failure domains — a healthy feed can still produce broken metrics.
+#
+# Runs at 10:00 UTC: the nightly sync starts 03:00 and its region-metrics refresh step
+# finishes by ~08:00, so this reads a settled precompute with ~2h of margin.
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  data-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Derived Metric Health
+        # Exits non-zero on any error-severity finding → red run (GitHub notifies the owner),
+        # AND the script emails SYNC_ALERT_EMAIL. Read-only on every table it inspects.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Optional — set these to receive the email alert (the red run fires regardless):
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/dataHealthCheck.ts
