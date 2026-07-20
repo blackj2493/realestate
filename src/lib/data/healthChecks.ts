@@ -213,6 +213,117 @@ export function checkCondoRows(input: CondoCheckInput): Problem[] {
   return out;
 }
 
+/* ── Drift detection ─────────────────────────────────────────────────────────────────
+   The checks above catch metrics that go null, stale, out-of-range or unapplied. They
+   cannot catch the remaining class: WRONG BUT PLAUSIBLE — a subtly bad formula, a join
+   that silently widens, a filter that stops filtering. Those sit inside every range and
+   look normal in isolation.
+
+   What exposes them is MOVEMENT. region_metrics is recomputed nightly from trailing
+   windows, so a healthy market barely moves overnight; a large single-night jump is a
+   code/data event, not a market event. */
+
+export interface SnapshotEntry {
+  region: string;
+  metric: string;
+  value: number | null;
+}
+
+/** Pseudo-metric recording which month the price figures describe (YYYYMM as a number). */
+export const LATEST_MONTH_KEY = "latestMonthKey";
+
+interface DriftRule {
+  metric: string;
+  label: string;
+  /** Compare absolute difference instead of % change (for metrics that live near 100). */
+  absolute?: boolean;
+  warn: number;
+  error: number;
+  /**
+   * Metric describes the LATEST month, which is legitimately volatile in its first days
+   * (few sales). Compared only when the month has not rolled over.
+   */
+  monthSensitive?: boolean;
+}
+
+/**
+ * Thresholds are deliberately generous: this is a tripwire for structural breakage, not a
+ * market-movement alert. Anything firing here should be investigated as a bug first.
+ */
+export const DRIFT_RULES: DriftRule[] = [
+  { metric: "medianPrice", label: "median sold price", warn: 10, error: 25, monthSensitive: true },
+  { metric: "avgPrice", label: "average sold price", warn: 12, error: 30, monthSensitive: true },
+  { metric: "activeCount", label: "active listings", warn: 12, error: 30 },
+  { metric: "monthsOfSupply", label: "months of supply", warn: 25, error: 50 },
+  { metric: "soldToListPct", label: "sold-to-list %", absolute: true, warn: 2, error: 5 },
+  { metric: "trueDom", label: "true days on market", warn: 20, error: 45 },
+  { metric: "soldMedianDom", label: "median days to sell", warn: 25, error: 50 },
+  { metric: "cutSharePct", label: "% cutting price", absolute: true, warn: 6, error: 15 },
+  { metric: "sellThroughPct", label: "sell-through %", absolute: true, warn: 8, error: 20 },
+];
+
+/** Flatten board rows into snapshot entries (including the month key). */
+export function snapshotFromRows(rows: MarketRow[]): SnapshotEntry[] {
+  const out: SnapshotEntry[] = [];
+  for (const r of rows) {
+    const push = (metric: string, value: number | null) => out.push({ region: r.region, metric, value });
+    push("medianPrice", r.medianPrice);
+    push("avgPrice", r.avgPrice);
+    push("activeCount", r.activeCount);
+    push("monthsOfSupply", r.monthsOfSupply);
+    push("soldToListPct", r.soldToListPct);
+    push("trueDom", r.trueDom);
+    push("soldMedianDom", r.soldMedianDom);
+    push("cutSharePct", r.cutShare == null ? null : Math.round(r.cutShare * 1000) / 10);
+    push("sellThroughPct", r.sellThroughPct);
+    // "2026-06" → 202606, so a month rollover is detectable without a text column.
+    const last = r.priceSeries.length ? r.priceSeries[r.priceSeries.length - 1].month : null;
+    push(LATEST_MONTH_KEY, last ? Number(last.replace("-", "")) : null);
+  }
+  return out;
+}
+
+const keyOf = (e: { region: string; metric: string }) => `${e.region}:${e.metric}`;
+
+/**
+ * Compare last night's snapshot with tonight's. Returns one problem per metric that moved
+ * more than its threshold. A metric that appears or disappears is already covered by the
+ * completeness check, so it is skipped here rather than double-reported.
+ */
+export function checkDrift(prev: SnapshotEntry[], curr: SnapshotEntry[]): Problem[] {
+  const out: Problem[] = [];
+  if (prev.length === 0) return out; // first run — nothing to compare against
+
+  const pv = new Map(prev.map((e) => [keyOf(e), e.value]));
+  const cv = new Map(curr.map((e) => [keyOf(e), e.value]));
+  const regions = Array.from(new Set(curr.map((e) => e.region)));
+
+  for (const region of regions) {
+    const monthChanged =
+      pv.get(`${region}:${LATEST_MONTH_KEY}`) !== cv.get(`${region}:${LATEST_MONTH_KEY}`);
+
+    for (const rule of DRIFT_RULES) {
+      if (rule.monthSensitive && monthChanged) continue; // legitimately volatile — see DRIFT_RULES
+      const before = pv.get(`${region}:${rule.metric}`);
+      const after = cv.get(`${region}:${rule.metric}`);
+      if (before == null || after == null) continue; // null transitions → completeness check
+      if (before === 0) continue; // no meaningful relative change from zero
+
+      const delta = rule.absolute
+        ? Math.abs(after - before)
+        : Math.abs((after - before) / before) * 100;
+      if (delta < rule.warn) continue;
+
+      const unit = rule.absolute ? "pts" : "%";
+      const detail =
+        `${region}: ${rule.label} moved ${delta.toFixed(1)}${unit} overnight ` +
+        `(${before} → ${after}) — nightly recomputes should barely move; investigate as a bug first`;
+      out.push({ severity: delta >= rule.error ? "error" : "warn", check: "drift", detail });
+    }
+  }
+  return out;
+}
+
 /** Repo migration files not recorded as applied — the migration-082 failure mode. */
 export function checkMigrationLedger(files: string[], applied: string[]): Problem[] {
   const out: Problem[] = [];
