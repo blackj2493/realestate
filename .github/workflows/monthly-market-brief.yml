@@ -1,0 +1,65 @@
+name: Monthly Market Brief
+
+# THE NEWSJACK. TRREB/CREA/OREB publish board-wide aggregates on the 3rd business day of
+# each month, and every outlet writes the same region-wide story from the same release that
+# morning. Our edge is the cut they do NOT publish — market-by-market granularity — so a
+# reporter already writing the story gets a quotable number nobody else has.
+#
+# Timing is the whole point: the brief must be in your inbox BEFORE you'd want to pitch, not
+# after the news cycle has moved on. This runs on the 3rd, 4th and 5th at 12:30 UTC
+# (~08:30 ET) so it lands the morning of the release regardless of which weekday the 3rd
+# business day falls on. Re-runs are harmless — it only reads data and emails.
+#
+# The brief itself is generated from the same boards the public /data trackers render, so it
+# can never disagree with the pages a journalist lands on.
+on:
+  schedule:
+    - cron: '30 12 3-5 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Brief
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/admin/monthly-market-brief.ts --out brief.md --digest digest.md
+
+      - name: Upload Brief
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-brief
+          path: brief.md
+          retention-days: 90
+
+      - name: Email Brief
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          JOB_NAME: Monthly Market Brief
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # notifyRun quotes only a file's TAIL, so email the short digest (lead first) and
+          # keep the full brief as the downloadable artifact above.
+          SUMMARY_FILE: digest.md
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
