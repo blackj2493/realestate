@@ -67,7 +67,7 @@ export const TRACKERS: TrackerDef[] = [
     tagline:
       "Buyer's, balanced or seller's market — every GTA and Ottawa city scored at a glance.",
     eyebrow: "Buyer vs Seller Market",
-    status: "soon",
+    status: "live",
   },
   {
     slug: "rent-vs-buy",
