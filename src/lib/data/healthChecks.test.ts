@@ -3,7 +3,11 @@ import {
   checkMarketRows,
   checkCondoRows,
   checkMigrationLedger,
+  checkDrift,
+  snapshotFromRows,
+  LATEST_MONTH_KEY,
   type Problem,
+  type SnapshotEntry,
 } from "@/lib/data/healthChecks";
 import type { MarketRow } from "@/lib/data/marketBoard";
 import type { CondoAreaRow } from "@/lib/data/condoFeeBoard";
@@ -237,6 +241,96 @@ describe("regression: condo corp-key collapse + missing stale-row eviction", () 
       clampViolations: [],
     });
     expect(problems).toEqual([]);
+  });
+});
+
+describe("drift detection — the wrong-but-plausible class", () => {
+  // Every value here sits comfortably inside the range checks, so ONLY drift can catch it.
+  const snap = (over: Record<string, number | null> = {}, region = "Toronto"): SnapshotEntry[] => {
+    const base: Record<string, number | null> = {
+      medianPrice: 830_000,
+      avgPrice: 1_030_946,
+      activeCount: 10_698,
+      monthsOfSupply: 5.2,
+      soldToListPct: 99.4,
+      trueDom: 73,
+      soldMedianDom: 21,
+      cutSharePct: 14.5,
+      sellThroughPct: 55,
+      [LATEST_MONTH_KEY]: 202606,
+      ...over,
+    };
+    return Object.entries(base).map(([metric, value]) => ({ region, metric, value }));
+  };
+
+  it("stays quiet when nothing moved", () => {
+    expect(checkDrift(snap(), snap())).toEqual([]);
+  });
+
+  it("stays quiet on the small night-to-night wobble a healthy recompute produces", () => {
+    expect(checkDrift(snap(), snap({ medianPrice: 833_000, activeCount: 10_750, trueDom: 74 }))).toEqual([]);
+  });
+
+  it("errors when active inventory nearly halves overnight (a join/filter break)", () => {
+    const p = checkDrift(snap(), snap({ activeCount: 5_800 }));
+    const e = p.filter((x) => x.severity === "error");
+    expect(e.length).toBe(1);
+    expect(e[0].check).toBe("drift");
+    expect(e[0].detail).toContain("active listings");
+  });
+
+  it("errors when a plausible-looking median price jumps 25%+ within the same month", () => {
+    const p = checkDrift(snap(), snap({ medianPrice: 1_100_000 }));
+    expect(p.some((x) => x.severity === "error" && x.detail.includes("median sold price"))).toBe(true);
+  });
+
+  it("warns (not errors) on a moderate move", () => {
+    const p = checkDrift(snap(), snap({ trueDom: 90 })); // +23% → warn band
+    expect(p.length).toBe(1);
+    expect(p[0].severity).toBe("warn");
+  });
+
+  it("uses absolute points for ratio metrics like sold-to-list", () => {
+    const p = checkDrift(snap(), snap({ soldToListPct: 105 })); // +5.6 pts → error
+    expect(p.some((x) => x.severity === "error" && x.detail.includes("sold-to-list"))).toBe(true);
+  });
+
+  // The key false-positive guard: at the start of a new month the "latest month" has very
+  // few sales, so its median legitimately swings. Without this the canary would cry wolf
+  // every month-end and be ignored exactly when it matters.
+  it("does NOT flag price swings when the month rolled over", () => {
+    const p = checkDrift(snap(), snap({ medianPrice: 1_200_000, avgPrice: 1_500_000, [LATEST_MONTH_KEY]: 202607 }));
+    expect(p).toEqual([]);
+  });
+
+  it("still flags month-INSENSITIVE metrics across a month rollover", () => {
+    const p = checkDrift(snap(), snap({ activeCount: 5_800, [LATEST_MONTH_KEY]: 202607 }));
+    expect(p.some((x) => x.detail.includes("active listings"))).toBe(true);
+  });
+
+  it("skips null transitions (already covered by the completeness check)", () => {
+    expect(checkDrift(snap(), snap({ medianPrice: null }))).toEqual([]);
+    expect(checkDrift(snap({ medianPrice: null }), snap())).toEqual([]);
+  });
+
+  it("returns nothing on the very first run (no prior snapshot)", () => {
+    expect(checkDrift([], snap())).toEqual([]);
+  });
+
+  it("compares each region independently", () => {
+    const prev = [...snap({}, "Toronto"), ...snap({}, "Ottawa")];
+    const curr = [...snap({}, "Toronto"), ...snap({ activeCount: 2_000 }, "Ottawa")];
+    const p = checkDrift(prev, curr);
+    expect(p.length).toBe(1);
+    expect(p[0].detail).toContain("Ottawa");
+  });
+
+  it("snapshotFromRows captures the month key and scales cut share to points", () => {
+    const entries = snapshotFromRows([healthy("Toronto")]);
+    const find = (m: string) => entries.find((e) => e.metric === m)?.value;
+    expect(find(LATEST_MONTH_KEY)).toBe(202606);
+    expect(find("cutSharePct")).toBeCloseTo(14.5, 1);
+    expect(find("medianPrice")).toBe(830_000);
   });
 });
 

@@ -37,7 +37,10 @@ import {
   checkMarketRows,
   checkCondoRows,
   checkMigrationLedger,
+  checkDrift,
+  snapshotFromRows,
   type Problem,
+  type SnapshotEntry,
 } from '@/lib/data/healthChecks';
 
 const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
@@ -58,6 +61,53 @@ async function checkMarketMetrics(): Promise<void> {
       staleHours: METRICS_STALE_HOURS,
     })
   );
+  await checkMetricDrift(board.rows);
+}
+
+/**
+ * Night-over-night drift — the wrong-but-plausible failure class the range checks cannot
+ * see. Reads the most recent PRIOR day's snapshot, compares, then records tonight's.
+ * Snapshot writing is best-effort: losing history must never fail the run.
+ */
+async function checkMetricDrift(rows: Awaited<ReturnType<typeof computeMarketBoardUncached>>['rows']): Promise<void> {
+  const sb = getServiceRoleClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const current = snapshotFromRows(rows);
+
+  const { data: prevDay, error: dayErr } = await sb
+    .from('metric_snapshots')
+    .select('captured_on')
+    .lt('captured_on', today)
+    .order('captured_on', { ascending: false })
+    .limit(1);
+  if (dayErr) {
+    problems.push({ severity: 'warn', check: 'drift', detail: `snapshot history unavailable (${dayErr.message}) — apply migration 090` });
+  } else if (prevDay?.length) {
+    const on = (prevDay[0] as { captured_on: string }).captured_on;
+    const { data: prevRows } = await sb
+      .from('metric_snapshots')
+      .select('region, metric, value')
+      .eq('captured_on', on);
+    const prev: SnapshotEntry[] = (prevRows ?? []).map((r) => {
+      const row = r as { region: string; metric: string; value: string | number | null };
+      return { region: row.region, metric: row.metric, value: row.value == null ? null : Number(row.value) };
+    });
+    problems.push(...checkDrift(prev, current));
+    console.log(`   drift compared against ${on} (${prev.length} prior values)`);
+  } else {
+    console.log('   drift: no prior snapshot yet — recording the first baseline');
+  }
+
+  // Record tonight (upsert so a same-day re-run overwrites rather than duplicating).
+  const payload = current.map((e) => ({ captured_on: today, region: e.region, metric: e.metric, value: e.value }));
+  const { error: writeErr } = await sb.from('metric_snapshots').upsert(payload, { onConflict: 'captured_on,region,metric' });
+  if (writeErr) {
+    problems.push({ severity: 'warn', check: 'drift', detail: `could not record snapshot: ${writeErr.message}` });
+  }
+
+  // Keep the table bounded — it is a monitoring signal, not an analytics store.
+  const cutoff = new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10);
+  await sb.from('metric_snapshots').delete().lt('captured_on', cutoff);
 }
 
 async function checkCondoFees(): Promise<void> {
