@@ -28,10 +28,13 @@ export interface Problem {
  * entry the moment its cause is fixed; resolved gaps are reported so this list can't rot.
  */
 export const KNOWN_GAPS: Record<string, string> = {
-  "Ottawa:sellThroughPct":
-    "raw_vow_delisted has no CountyOrParish and files Ottawa under OREB area names (Barrhaven, Kanata, …), so region_listing_outcomes matches 0 failed listings. Fix = region_aliases mapping.",
-  "Ottawa:rentalRows":
-    "rental_market_index keys Ottawa by OREB area name rather than a single \"Ottawa\" city key, so region_rental_yield rolls up nothing. Fix = region_aliases mapping.",
+  // Empty by design. Both original entries (Ottawa sell-through and Ottawa rental yield)
+  // were closed by the region_aliases mapping in migration 088 — the canary reported them
+  // as "gap-resolved", which is exactly the signal this list exists to produce.
+  //
+  // Add an entry here ONLY for a gap that is a genuine structural feed limitation, always
+  // with the reason and the fix, e.g.:
+  //   'Region:metric': 'why the feed cannot supply this, and what would fix it',
 };
 
 /** Plausible bounds for each headline metric. Outside ⇒ something is structurally wrong. */

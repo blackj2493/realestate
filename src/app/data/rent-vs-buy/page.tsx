@@ -62,9 +62,7 @@ export default async function RentVsBuyPage() {
             These are <strong>gross</strong> figures — they deliberately ignore mortgage interest, property
             tax, condo fees, insurance and maintenance, so they compare markets on a like-for-like basis
             rather than producing a personalized rent-or-buy verdict. Rents come from the MLS® rental feed and
-            prices from sold data (both comprehensive but not exhaustive). Ottawa is not shown — its rental
-            data is keyed by area rather than city, so it can&apos;t be rolled up cleanly yet. Refreshed
-            nightly.
+            prices from sold data (both comprehensive but not exhaustive). Refreshed nightly.
           </p>
         </>
       }
@@ -82,8 +80,8 @@ export default async function RentVsBuyPage() {
           a: "No — they are gross figures. They exclude mortgage interest, property tax, condo fees, insurance and maintenance. They're for comparing markets, not for deciding your own rent-vs-buy math.",
         },
         {
-          q: "Why isn't Ottawa listed?",
-          a: "Ottawa's rental data is filed under local area names rather than a single 'Ottawa' key, so it can't be aggregated to a city-wide figure cleanly yet. We'd rather omit it than show a misleading partial number.",
+          q: "Which markets are covered?",
+          a: "Toronto and Ottawa plus the GTA municipalities — Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Oakville, Burlington, Milton, Oshawa, Whitby, Ajax, Pickering and Hamilton — for one- to four-bedroom homes.",
         },
       ]}
     >
