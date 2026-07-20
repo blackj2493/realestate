@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useHydrated } from "@/lib/theme/useHydrated";
 
 /**
  * Theme-aware colours for JS-driven charts (recharts et al.) where CSS variables in
@@ -8,10 +9,16 @@ import { useTheme } from "next-themes";
  * flips with the theme; semantic series colours are stable and stay legible on both
  * light and dark plot surfaces. Hand-rolled SSR SVGs should instead use inline
  * `style={{ stroke: "hsl(var(--border))" }}` so they don't need this client hook.
+ *
+ * HYDRATION: because these land in SVG presentation ATTRIBUTES, a theme mismatch is an
+ * attribute mismatch — and React does not patch those. Without the `mounted` guard the
+ * server (resolvedTheme undefined → dark palette) and a light-mode client disagreed, so a
+ * light user's charts kept the server's DARK colours on first paint. Pre-mount we return
+ * the same palette the server produced, then correct once mounted.
  */
 export function useChartTheme() {
   const { resolvedTheme } = useTheme();
-  const light = resolvedTheme === "light";
+  const light = useHydrated() && resolvedTheme === "light";
   return {
     grid: light ? "#e2e8f0" : "#1e293b", // slate-200 / slate-800
     axisLine: light ? "#cbd5e1" : "#334155", // slate-300 / slate-700
