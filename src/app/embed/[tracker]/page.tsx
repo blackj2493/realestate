@@ -8,6 +8,7 @@ import { PriceCutsBoard } from "@/app/data/price-cuts/PriceCutsBoard";
 import { PriceRankingsBoard } from "@/app/data/price-rankings/PriceRankingsBoard";
 import { DaysOnMarketBoard } from "@/app/data/days-on-market/DaysOnMarketBoard";
 import { MarketTemperatureBoard } from "@/app/data/market-temperature/MarketTemperatureBoard";
+import { RentVsBuyBoard } from "@/app/data/rent-vs-buy/RentVsBuyBoard";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -49,6 +50,11 @@ async function renderWidget(slug: string): Promise<ReactNode> {
     const board = await getMarketBoard();
     const rows = board.rows.filter((r) => r.temperature != null);
     return <MarketTemperatureBoard rows={rows} embed />;
+  }
+  if (slug === "rent-vs-buy") {
+    const board = await getMarketBoard();
+    const rows = board.rows.filter((r) => r.rentalRows.length > 0);
+    return <RentVsBuyBoard rows={rows} embed />;
   }
   return null;
 }
