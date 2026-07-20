@@ -62,9 +62,8 @@ export default async function MarketTemperaturePage() {
           <p>
             <strong>Months of supply</strong> is active listings divided by the recent monthly sales pace.{" "}
             <strong>Sell-through</strong> is the share of listings that actually sold (rather than being
-            withdrawn) over the past year. Some markets (e.g. Ottawa) show sell-through as N/A where the
-            withdrawn-listing feed doesn&apos;t cleanly cover them, rather than showing a misleading number.
-            Refreshed nightly.
+            withdrawn) over the past year. Where a market&apos;s withdrawn-listing data cannot be matched
+            reliably we show N/A rather than a misleading number. Refreshed nightly.
           </p>
         </>
       }
@@ -78,8 +77,8 @@ export default async function MarketTemperaturePage() {
           a: "The number of months it would take to sell all the active listings at the current sales pace. Under ~4 months typically favours sellers; over ~8 months favours buyers.",
         },
         {
-          q: "Why is one market's sell-through shown as N/A?",
-          a: "Sell-through needs the withdrawn/de-listed feed to identify listings that didn't sell. For a few areas (notably Ottawa) that feed doesn't map cleanly to the market, so we show N/A rather than a number that would look like a perfect 100%.",
+          q: "What does sell-through measure?",
+          a: "The share of listings that actually sold rather than being withdrawn, over the past twelve months. It counts distinct properties, and excludes homes that were withdrawn and then relisted and are still on the market, so a relist isn't counted as a failure.",
         },
         {
           q: "Which markets are scored?",
