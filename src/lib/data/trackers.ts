@@ -75,7 +75,7 @@ export const TRACKERS: TrackerDef[] = [
     title: "Rent-vs-Buy Tracker",
     tagline: "Gross rental yield and the rent-or-own maths by market and bedroom count.",
     eyebrow: "Rent or Own",
-    status: "soon",
+    status: "live",
   },
 ];
 
