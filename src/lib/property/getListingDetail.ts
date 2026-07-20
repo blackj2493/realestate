@@ -21,6 +21,7 @@ import type { AVMResult } from "@/lib/avm/types";
 import {
   isCondo,
   buildFeeStabilityResult,
+  corpCohortKey,
   type FeeStabilityResult,
   type AreaStats,
   type CorpStats,
@@ -390,9 +391,10 @@ export const getListingDetail = cache(
       if (isCondo(payload)) {
         const cityRegion = String(payload?.["CityRegion"] ?? "").trim();
         const subType = String(payload?.["PropertySubType"] ?? "").trim();
-        const corpRaw = payload?.["CondoCorpNumber"];
-        const corpKey =
-          corpRaw === null || corpRaw === undefined ? "" : String(corpRaw).trim();
+        // Keyed through the shared helper so reads match what refresh-condo-fee-stats
+        // writes: `REGISTRY-NUMBER` (e.g. 'MTCC-539'), since a CondoCorpNumber is only
+        // unique within its registry.
+        const corpKey = corpCohortKey(payload?.["AssociationName"], payload?.["CondoCorpNumber"]);
 
         const [areaRes, corpRes] = await Promise.all([
           cityRegion && subType
@@ -404,7 +406,7 @@ export const getListingDetail = cache(
                 .eq("property_sub_type", subType)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
-          corpKey && corpKey !== "0"
+          corpKey
             ? supabase
                 .from("condo_fee_stats")
                 .select("trend_buckets, pct_change_24mo, sample_count, inclusions_mixed")

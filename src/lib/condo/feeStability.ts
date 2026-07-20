@@ -34,6 +34,10 @@ export const MIN_BUCKET_N = 2;
 // Trailing observation window for both cohorts.
 export const WINDOW_MONTHS = 24;
 
+// An area-level fee-trend cohort needs enough DISTINCT buildings for its median
+// building trend to mean anything (one atypical building shouldn't define an area).
+export const MIN_AREA_TREND_BUILDINGS = 5;
+
 // ── Trend estimator (annualized) ─────────────────────────────────────────────
 // The building trend is an ANNUALIZED %/yr growth of median fee/sqft, fit as a
 // weighted log-slope over in-window sales and shrunk toward the baseline when the
@@ -104,6 +108,18 @@ type Payload = Record<string, unknown> | null | undefined;
 export type AreaPosition = 'below' | 'typical' | 'above';
 export type TrendBand = 'Stable' | 'Moderate' | 'Rising' | 'Steep';
 export type Confidence = 'HIGH' | 'MEDIUM' | 'LOW';
+
+/** Area-level fee-trend cohort (condo_fee_stats cohort_type='area_trend'). */
+export interface AreaTrendStats {
+  /** Median of the member buildings' annualized %/yr trends. */
+  medianAnnualPct: number;
+  p25AnnualPct: number;
+  p75AnnualPct: number;
+  /** Distinct buildings behind the median. */
+  buildingCount: number;
+  /** Sold observations behind those buildings. */
+  sampleCount: number;
+}
 
 export interface TrendBucket {
   period: string; // e.g. "2024-H1", oldest → newest
@@ -416,6 +432,50 @@ export function assembleCorpStats(
   if (annualPct === null) return null;
 
   return { buckets, annualPct, sampleCount, inclusionsMixed };
+}
+
+/**
+ * Canonical cohort key for ONE building.
+ *
+ * A CondoCorpNumber is only unique WITHIN its registry — Metro Toronto CC 539 and
+ * York Region CC 539 are unrelated buildings in different cities. Keying corp cohorts
+ * by the bare number silently merged them, blending unrelated fee histories into one
+ * fictional "building" (which produced impossible trends like +568%/yr). The registry
+ * prefix (AssociationName: TSCC / MTCC / YCC / YRCC / PCC / …) disambiguates them.
+ *
+ * Both the refresh job and the listing page MUST build the key through this helper so
+ * writes and reads never drift. Falls back to the bare number when the registry is
+ * missing, which also preserves lookups for the rare rows lacking AssociationName.
+ * Returns null when there is no usable number.
+ */
+export function corpCohortKey(registry: unknown, corpNumber: unknown): string | null {
+  const num = corpNumber === null || corpNumber === undefined ? '' : String(corpNumber).trim();
+  if (!num || num === '0') return null;
+  const reg = (registry === null || registry === undefined ? '' : String(registry).trim())
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+  return reg ? `${reg}-${num}` : num;
+}
+
+/**
+ * Aggregate member buildings' annualized trends into one area-level cohort.
+ *
+ * Deliberately a MEDIAN of per-building trends (not a pooled slope): every building is
+ * one vote, so a single large or heavily-traded complex can't define its neighbourhood.
+ * Returns null when the area has too few distinct buildings to be meaningful.
+ */
+export function assembleAreaTrend(
+  buildings: { annualPct: number; sampleCount: number }[]
+): AreaTrendStats | null {
+  if (buildings.length < MIN_AREA_TREND_BUILDINGS) return null;
+  const pcts = buildings.map((b) => b.annualPct);
+  return {
+    medianAnnualPct: round4(median(pcts)),
+    p25AnnualPct: round4(quantile(pcts, 0.25)),
+    p75AnnualPct: round4(quantile(pcts, 0.75)),
+    buildingCount: buildings.length,
+    sampleCount: buildings.reduce((s, b) => s + b.sampleCount, 0),
+  };
 }
 
 // ───────────────────────────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ export const TRACKERS: TrackerDef[] = [
     tagline:
       "Where condo maintenance fees are climbing fastest — the annualized trend in fee per square foot.",
     eyebrow: "Condo Fee Inflation",
-    status: "soon",
+    status: "live",
   },
   {
     slug: "price-rankings",

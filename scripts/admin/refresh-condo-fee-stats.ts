@@ -1,11 +1,25 @@
 /**
  * Shadow MLS — Refresh condo_fee_stats from raw_vow_sold.
  *
- * Precomputes the two cohorts the listing-page "Condo Fee Stability" card reads:
- *   • 'area' → fee/sqft distribution (median + p25/p75) per CityRegion + condo sub-type.
- *   • 'corp' → fee/sqft trend (half-year median buckets + 24mo % change) per condo corp.
+ * Precomputes the cohorts the listing-page "Condo Fee Stability" card and the public
+ * /data/condo-fees tracker read:
+ *   • 'area'       → fee/sqft distribution (median + p25/p75) per CityRegion + sub-type.
+ *   • 'corp'       → fee/sqft trend (half-year buckets + annualized %/yr) per BUILDING.
+ *   • 'area_trend' → neighbourhood fee inflation: the MEDIAN of member building trends
+ *                    (one vote per building) + the area's fee/sqft spread. Requires
+ *                    MIN_AREA_TREND_BUILDINGS distinct buildings.
  * Corp rows are only written when the building clears MIN_CORP_SAMPLE / MIN_CORP_PERIODS
  * (sparse buildings → no corp row → benchmark-only at read time, by design).
+ *
+ * COHORT KEYS: corp rows are keyed `REGISTRY-NUMBER` (e.g. 'MTCC-539') via the shared
+ * corpCohortKey(). A CondoCorpNumber is only unique within its registry, so the old
+ * bare-number key merged unrelated buildings in different cities into one fictional
+ * cohort. The listing page builds the same key through the same helper.
+ *
+ * EVICTION: a plain upsert never removes anything, so a cohort that qualified under
+ * superseded logic lingered forever (this is how pre-clamp +568%/yr trends survived
+ * later refreshes). After a clean FULL run, rows untouched by that run are deleted.
+ * Skipped automatically on a --limit/partial run or any upsert failure; --no-evict opts out.
  *
  * Reads raw_vow_sold READ-ONLY (CLAUDE.md §12 — never alter it) and writes the SEPARATE
  * condo_fee_stats table. All logic is deterministic (CLAUDE.md §4) — the shared scoring
@@ -34,9 +48,12 @@ import {
   median,
   quantile,
   assembleCorpStats,
+  assembleAreaTrend,
+  corpCohortKey,
   MIN_AREA_SAMPLE,
   MIN_CORP_SAMPLE,
   MIN_CORP_PERIODS,
+  MIN_AREA_TREND_BUILDINGS,
   WINDOW_MONTHS,
   type TrendBucket,
 } from '@/lib/condo/feeStability';
@@ -49,6 +66,10 @@ import {
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
 const APPLY = process.argv.includes('--apply');
+// Stale cohorts (ones that qualified under superseded logic but no longer qualify)
+// are deleted after a clean full run — see the eviction block in main(). --no-evict
+// keeps them, and eviction is skipped automatically on a partial/limited run.
+const NO_EVICT = process.argv.includes('--no-evict');
 const limitArg = process.argv.find((a) => a.startsWith('--limit'));
 const ROW_LIMIT = limitArg
   ? parseInt(limitArg.includes('=') ? limitArg.split('=')[1] : process.argv[process.argv.indexOf(limitArg) + 1], 10)
@@ -91,6 +112,8 @@ interface SoldRow {
   close_date: string | null;
   purchase_contract_date: string | null;
   corp: number | string | null; // raw_payload->CondoCorpNumber
+  reg: string | null; // raw_payload->AssociationName (condo registry: TSCC/MTCC/YCC/…)
+  city: string | null;
   incl: unknown; // raw_payload->AssociationFeeIncludes
 }
 
@@ -111,10 +134,32 @@ interface CorpAcc {
   total: number;
   bundled: number;
   nonBundled: number;
+  // Where this building sits — tallied because a corp's rows can carry slightly
+  // different spellings; the most frequent value wins (see `dominant`).
+  regions: Map<string, number>;
+  cities: Map<string, number>;
 }
 
 const areaMap = new Map<string, AreaAcc>();
 const corpMap = new Map<string, CorpAcc>();
+
+/** Most frequently seen value in a tally, or '' when empty. */
+function dominant(tally: Map<string, number>): string {
+  let best = '';
+  let bestN = 0;
+  for (const [k, n] of tally) {
+    if (n > bestN) {
+      best = k;
+      bestN = n;
+    }
+  }
+  return best;
+}
+
+function bump(tally: Map<string, number>, key: string): void {
+  if (!key) return;
+  tally.set(key, (tally.get(key) ?? 0) + 1);
+}
 
 /**
  * Reads one keyset page of raw_vow_sold with retry + exponential backoff.
@@ -138,10 +183,13 @@ async function readPage(
   for (;;) {
     const { data, error } = await sb
       .from('raw_vow_sold')
+      // NOTE: raw_payload is already detoasted for the corp/inclusions sub-keys, so
+      // pulling AssociationName + city here costs no additional IO.
       .select(
         'listing_key, association_fee, living_area_range, building_area_total, ' +
-          'property_sub_type, city_region, close_date, purchase_contract_date, ' +
-          'corp:raw_payload->CondoCorpNumber, incl:raw_payload->AssociationFeeIncludes'
+          'property_sub_type, city_region, city, close_date, purchase_contract_date, ' +
+          'corp:raw_payload->CondoCorpNumber, reg:raw_payload->AssociationName, ' +
+          'incl:raw_payload->AssociationFeeIncludes'
       )
       .gt('listing_key', cursor)
       .or(`close_date.gte.${cutoffDate},close_date.is.null`)
@@ -180,6 +228,12 @@ async function main() {
   console.log(`  Window: trailing ${WINDOW_MONTHS} months`);
   console.log('========================================\n');
 
+  // Captured BEFORE any write: every row this run touches ends up with a later
+  // updated_at (DEFAULT now() on insert, trigger on update), so anything still older
+  // than this is a cohort we did not write — the eviction cutoff. Taking it at run
+  // start (rather than at upsert time) is the conservative direction: it can only
+  // spare rows, never over-delete.
+  const runStartedAt = new Date().toISOString();
   const cutoff = windowCutoff();
   const cutoffDate = cutoff.toISOString().slice(0, 10); // YYYY-MM-DD for the close_date filter
   let cursor = '';
@@ -187,6 +241,8 @@ async function main() {
   let condos = 0;
   let withPsf = 0;
   let condosWithCorp = 0;
+  // Only a run that walked the whole table may evict (a --limit or early break must not).
+  let completedFullScan = false;
 
   while (scanned < ROW_LIMIT) {
     const pageSize = Math.min(CHUNK_SIZE, ROW_LIMIT - scanned);
@@ -200,6 +256,7 @@ async function main() {
     }
     if (!data || data.length === 0) {
       console.log('✅ Reached end of table.');
+      completedFullScan = true;
       break;
     }
 
@@ -242,19 +299,31 @@ async function main() {
         else a.nonBundled++;
       }
 
-      // ── Corp cohort (CondoCorpNumber) ──
-      const corpKey = r.corp === null || r.corp === undefined ? '' : String(r.corp).trim();
-      if (corpKey && corpKey !== '0') {
+      // ── Corp cohort (registry + CondoCorpNumber) ──
+      // Keyed through the shared helper: a bare corp number is only unique within its
+      // registry, so 'MTCC-539' (Toronto) and 'YRCC-539' (Markham) must stay distinct.
+      const corpKey = corpCohortKey(r.reg, r.corp);
+      if (corpKey) {
         condosWithCorp++;
         let c = corpMap.get(corpKey);
         if (!c) {
-          c = { corp: corpKey, sales: [], total: 0, bundled: 0, nonBundled: 0 };
+          c = {
+            corp: corpKey,
+            sales: [],
+            total: 0,
+            bundled: 0,
+            nonBundled: 0,
+            regions: new Map(),
+            cities: new Map(),
+          };
           corpMap.set(corpKey, c);
         }
         c.sales.push({ date: dateStr, psf });
         c.total++;
         if (bundled) c.bundled++;
         else c.nonBundled++;
+        bump(c.regions, cityRegion);
+        bump(c.cities, (r.city || '').trim());
       }
     }
 
@@ -263,6 +332,7 @@ async function main() {
 
     if (rows.length < pageSize) {
       console.log('✅ Last page.');
+      completedFullScan = true;
       break;
     }
     await sleep(INTER_CHUNK_DELAY_MS);
@@ -272,7 +342,7 @@ async function main() {
   const round4 = (n: number) => Math.round(n * 10000) / 10000;
 
   type StatsRow = {
-    cohort_type: 'area' | 'corp';
+    cohort_type: 'area' | 'corp' | 'area_trend';
     cohort_key: string;
     property_sub_type: string;
     median_fee_psf: number | null;
@@ -283,6 +353,7 @@ async function main() {
     inclusions_mixed: boolean;
     sample_count: number;
     window_months: number;
+    meta?: Record<string, unknown> | null; // migration 086 — area_trend context
   };
 
   const upserts: StatsRow[] = [];
@@ -306,6 +377,14 @@ async function main() {
     });
   }
 
+  // Neighbourhood fee-inflation accumulator, filled as each building qualifies below.
+  interface AreaTrendAcc {
+    cityRegion: string;
+    cities: Map<string, number>;
+    buildings: { annualPct: number; sampleCount: number }[];
+  }
+  const areaTrendMap = new Map<string, AreaTrendAcc>();
+
   let corpQualified = 0;
   for (const c of corpMap.values()) {
     // Shared assembler builds the chart buckets AND the robust annualized log-slope
@@ -313,6 +392,18 @@ async function main() {
     const stats = assembleCorpStats(c.sales, c.bundled > 0 && c.nonBundled > 0);
     if (!stats) continue;
     corpQualified++;
+
+    // Feed the building's trend into its neighbourhood cohort.
+    const region = dominant(c.regions);
+    if (region) {
+      let at = areaTrendMap.get(region);
+      if (!at) {
+        at = { cityRegion: region, cities: new Map(), buildings: [] };
+        areaTrendMap.set(region, at);
+      }
+      at.buildings.push({ annualPct: stats.annualPct, sampleCount: stats.sampleCount });
+      for (const [city, n] of c.cities) at.cities.set(city, (at.cities.get(city) ?? 0) + n);
+    }
     upserts.push({
       cohort_type: 'corp',
       cohort_key: c.corp,
@@ -331,6 +422,44 @@ async function main() {
     });
   }
 
+  // ── Area fee-trend cohorts (neighbourhood condo-fee inflation) ───────────────
+  // The public /data condo-fee tracker reads these. The headline is a MEDIAN of member
+  // building trends (one vote per building), and the fee/sqft distribution reuses the
+  // psf already pooled for the area cohorts, merged across condo sub-types.
+  const psfByRegion = new Map<string, number[]>();
+  for (const a of areaMap.values()) {
+    const arr = psfByRegion.get(a.cityRegion) ?? [];
+    arr.push(...a.psf);
+    psfByRegion.set(a.cityRegion, arr);
+  }
+
+  let areaTrendQualified = 0;
+  for (const at of areaTrendMap.values()) {
+    const stats = assembleAreaTrend(at.buildings);
+    if (!stats) continue;
+    areaTrendQualified++;
+    const pool = psfByRegion.get(at.cityRegion) ?? [];
+    upserts.push({
+      cohort_type: 'area_trend',
+      cohort_key: at.cityRegion,
+      property_sub_type: 'ALL',
+      median_fee_psf: pool.length ? round4(median(pool)) : null,
+      p25_fee_psf: pool.length ? round4(quantile(pool, 0.25)) : null,
+      p75_fee_psf: pool.length ? round4(quantile(pool, 0.75)) : null,
+      trend_buckets: [],
+      pct_change_24mo: stats.medianAnnualPct, // %/yr, same units as corp rows
+      inclusions_mixed: false,
+      sample_count: stats.sampleCount,
+      window_months: WINDOW_MONTHS,
+      meta: {
+        city: dominant(at.cities),
+        p25AnnualPct: stats.p25AnnualPct,
+        p75AnnualPct: stats.p75AnnualPct,
+        buildingCount: stats.buildingCount,
+      },
+    });
+  }
+
   // ── Summary (this is the "verify-first" diagnostic the plan calls for) ────────
   console.log('\n──────── Summary ────────');
   console.log(`Rows scanned:           ${scanned}`);
@@ -343,6 +472,9 @@ async function main() {
   console.log(`Area cohorts (≥${MIN_AREA_SAMPLE}):    ${areaQualified} / ${areaMap.size} total`);
   console.log(
     `Corp cohorts (≥${MIN_CORP_SAMPLE} & ≥${MIN_CORP_PERIODS}p): ${corpQualified} / ${corpMap.size} total`
+  );
+  console.log(
+    `Area-trend cohorts (≥${MIN_AREA_TREND_BUILDINGS} bldgs): ${areaTrendQualified} / ${areaTrendMap.size} total`
   );
 
   const areaSamples = upserts.filter((u) => u.cohort_type === 'area').slice(0, 5);
@@ -390,6 +522,46 @@ async function main() {
   }
   console.log(`   ✅ condo_fee_stats: ${ok} upserted, ${failed} failed`);
   if (failed > 0) process.exitCode = 1;
+
+  // ── Evict stale cohorts ──────────────────────────────────────────────────────
+  // The upsert alone never removes anything, so a cohort that qualified under
+  // SUPERSEDED logic lingers forever with its old value. That is how pre-clamp trends
+  // (e.g. +568%/yr, written before the 2026-07 trend rework) survived every later
+  // refresh. Anything this run did not touch is by definition no longer qualifying.
+  //
+  // Guarded hard: only after a clean, complete run, so a partial scan or a failed
+  // chunk can never mass-delete good data.
+  const fullRun = completedFullScan && !Number.isFinite(ROW_LIMIT);
+  const canEvict = !NO_EVICT && fullRun && failed === 0 && ok > 0;
+  if (!canEvict) {
+    console.log(
+      `   ⏭️  Eviction skipped (${
+        NO_EVICT ? '--no-evict' : !fullRun ? 'partial/limited scan' : failed > 0 ? 'upsert failures' : 'nothing written'
+      }).`
+    );
+    return;
+  }
+  const { data: evicted, error: evictErr } = await sb
+    .from('condo_fee_stats')
+    .delete()
+    .lt('updated_at', runStartedAt)
+    .in('cohort_type', ['area', 'corp', 'area_trend'])
+    .select('cohort_type');
+  if (evictErr) {
+    console.warn(`   ⚠️  eviction failed: ${evictErr.message}`);
+    process.exitCode = 1;
+  } else {
+    const rows = evicted ?? [];
+    const byType = rows.reduce<Record<string, number>>((acc, r) => {
+      const t = String((r as { cohort_type: string }).cohort_type);
+      acc[t] = (acc[t] ?? 0) + 1;
+      return acc;
+    }, {});
+    console.log(
+      `   🧹 Evicted ${rows.length} stale cohort row(s)` +
+        (rows.length ? ` (${Object.entries(byType).map(([t, n]) => `${t}:${n}`).join(', ')})` : '')
+    );
+  }
 }
 
 main().catch((e) => {
