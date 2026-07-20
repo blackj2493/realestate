@@ -67,6 +67,7 @@ interface Precompute {
   outcomes: AssembleArgs[4];
   cuts?: { cuts?: CutsLite | null } | null;
   rental?: { rental?: { rows?: RentalRow[] } | null } | null;
+  dynamics?: { dynamics?: { medianDom: number | null; p25Dom: number | null; p75Dom: number | null } | null } | null;
 }
 
 export interface MarketRow {
@@ -80,6 +81,10 @@ export interface MarketRow {
   soldToListPct: number | null;
   trueDom: number | null;
   medianNaiveDom: number | null;
+  /** Sold-side days-to-sell (region_sold_dynamics): typical days a sold home was listed. */
+  soldMedianDom: number | null;
+  soldP25Dom: number | null;
+  soldP75Dom: number | null;
   sellThroughPct: number | null;
   stalePct: number | null;
   temperature: RegionScore["temperature"];
@@ -127,6 +132,7 @@ async function computeBoard(): Promise<MarketBoard> {
     );
     const cuts = pc.cuts?.cuts ?? null;
     const domData = pc.dom?.dom ?? null;
+    const dyn = pc.dynamics?.dynamics ?? null;
     rows.push({
       region,
       medianPrice: score.medianPrice,
@@ -138,6 +144,9 @@ async function computeBoard(): Promise<MarketBoard> {
       soldToListPct: score.soldToListPct,
       trueDom: score.trueDom,
       medianNaiveDom: domData?.medianNaiveDom ?? null,
+      soldMedianDom: dyn?.medianDom ?? null,
+      soldP25Dom: dyn?.p25Dom ?? null,
+      soldP75Dom: dyn?.p75Dom ?? null,
       sellThroughPct: score.sellThroughPct,
       stalePct: score.stalePct,
       temperature: score.temperature,
@@ -156,5 +165,5 @@ async function computeBoard(): Promise<MarketBoard> {
 
 /** Cached market board (1h). Aggregate statistics only — safe for public pages. */
 export function getMarketBoard(): Promise<MarketBoard> {
-  return unstable_cache(computeBoard, ["data-market-board", "v1"], { revalidate: 3600 })();
+  return unstable_cache(computeBoard, ["data-market-board", "v2"], { revalidate: 3600 })();
 }
