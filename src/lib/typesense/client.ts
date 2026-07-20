@@ -12,6 +12,7 @@ import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 import { aboveGradeBedsClause } from '@/lib/filters/filterRegistry';
 import { toSimpleRing } from '@/lib/geo/simplifyRing';
+import { reportSearchFailure } from '@/lib/telemetry/searchHealth';
 
 // Typesense configuration.
 // NOTE: the host is intentionally hardcoded (Typesense Cloud) and is NOT read from env.
@@ -535,13 +536,14 @@ export async function searchListings(
     }
   }
 
+  const startedAt = Date.now();
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: any = await client
       .collections('properties')
       .documents()
       .search(searchParams);
-     
+
     // Typesense returns facets as `facet_counts: [{ field_name, counts: [{ value, count }] }]`
     // (NOT `facet_distribution`). Reshape into { field: { value: count } } for the filter palette.
     const facetCountsRaw: Array<{ field_name: string; counts: Array<{ value: string; count: number }> }> =
@@ -569,6 +571,10 @@ export async function searchListings(
       console.error('[Typesense] HTTP Status:', tsError.httpStatus);
       console.error('[Typesense] HTTP Body:', tsError.httpBody);
     }
+    // The browser talks to Typesense Cloud directly, so server logs never see these
+    // failures — beacon them (fire-and-forget, self-limiting, browser-only no-op on
+    // the server) so sustained flakiness can trip the ops alert.
+    reportSearchFailure(error, Date.now() - startedAt, { fn: 'searchListings' });
     throw error;
   }
 }
