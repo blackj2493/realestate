@@ -4,28 +4,40 @@
  * The Zolo/HouseSigma model for sold/off-market properties: the page exists publicly and
  * ranks for the street address, but VOW Listing Information (sold price/date, beds/baths,
  * photos, brokerage) is shown ONLY to a signed-in registered consumer. Anonymous visitors
- * and Googlebot see address + neighbourhood + PUBLIC school/walkability context + a sign-in
- * CTA — and nothing else.
+ * and Googlebot see address + neighbourhood + PUBLIC school/walkability context, the
+ * SOLD/LEASED/OFF-MARKET status KIND (a public signal — the same one /properties already
+ * shows anon; no price/date; audit R24a), plus a REDACTED teaser (the consumer's "Sale
+ * history" card with labels/structure only — every value a placeholder that never carries
+ * data) and a locked photo frame (only when the record actually has media, so "see photos"
+ * is never a false promise). No price and no photo URL is ever fetched or rendered on the
+ * anon path — the teaser just makes the gate legible and pushes the free sign-up.
  *
  * GATE (structural, stricter than Zolo's blur):
  *   - getSoldPublicByKey() uses Typesense include_fields → only address/city/region/geo
- *     ever leave the collection for the public render.
- *   - getConsumer() (server-side) decides; the VOW fetch (getSoldGatedByKey) runs ONLY
- *     inside the isConsumer branch, so VOW fields are never fetched — let alone rendered —
- *     for anonymous users. There is no CSS-blurred data in the page source.
+ *     are returned for the public render. It also fetches primaryImageUrl purely to derive
+ *     a `hasPhoto` existence bit, discarding the URL (see soldByKey.ts) — the bit, not the
+ *     media, reaches the anon UI.
+ *   - getConsumer() (server-side) decides; the VOW fetches (getSoldGatedByKey +
+ *     getSoldMediaByKey, which sources the real gallery) run ONLY inside the isConsumer
+ *     branch, so VOW fields/photos are never fetched — let alone rendered — for anonymous
+ *     users. The anon teaser is pure <Redact> placeholders; no gated value hits the DOM.
  *
- * Compliance: address is public-record; everything else stays behind the VOW login.
+ * Compliance: address is public-record; every value + photo stays behind the VOW login.
  * Deterministic (no LLM, §4). force-dynamic (the render depends on auth).
  */
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { GraduationCap, Footprints, Lock, MapPin } from "lucide-react";
+import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
-import { getSoldPublicByKey, getSoldGatedByKey, type SoldPublic } from "@/lib/sold/soldByKey";
+import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, type SoldPublic } from "@/lib/sold/soldByKey";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
 import AddressProfileView from "@/components/address/AddressProfileView";
+import AreaInsights from "@/components/address/AreaInsights";
+import PropertyGallery from "@/app/(app)/properties/[id]/PropertyGallery";
+import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
+import { Suspense } from "react";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { assignSchools } from "@/lib/schools/nearestSchools";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
@@ -115,20 +127,103 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
     ["Size", d.BuildingAreaTotal ? `${Math.round(d.BuildingAreaTotal).toLocaleString()} sqft` : "—"],
     ["Type", d.PropertySubType || "—"],
   ];
+  // Real gallery for the signed-in consumer — the full listings.media_urls array when the
+  // listing still has a row there, else the sold-store thumbnail. VOW media, fetched ONLY
+  // here (inside the consumer-gated branch) — never on the anonymous path.
+  const media = await getSoldMediaByKey(soldKey, d.primaryImageUrl);
   return (
-    <section className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Sale history</h2>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
-        {rows.map(([k, v]) => (
-          <div key={k}>
-            <dt className="text-xs text-muted-foreground">{k}</dt>
-            <dd className="text-sm font-medium text-foreground">{v}</dd>
+    <div className="mb-6 space-y-4">
+      {media.length > 0 && <PropertyGallery images={media} />}
+      <section className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Sale history</h2>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
+          {rows.map(([k, v]) => (
+            <div key={k}>
+              <dt className="text-xs text-muted-foreground">{k}</dt>
+              <dd className="text-sm font-medium text-foreground">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        {/* TRREB §6.3(c): brokerage shown with the listing details. */}
+        <p className="mt-3 text-sm text-muted-foreground">Listed by {d.ListOfficeName || "Unknown"}</p>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Public transaction-status badge — the status KIND only (no price/date). Shown to anon AND
+ * consumers so /address treats this signal the same way /properties already does for anon
+ * (audit R24a). Rose = closed transaction (sold/leased); amber = off-market (de-list reason
+ * stays gated, exactly as /properties nulls mlsStatus).
+ */
+function StatusBadge({ kind }: { kind: SoldPublic["dealKind"] }) {
+  const label = kind === "sold" ? "SOLD" : kind === "leased" ? "LEASED" : "OFF MARKET";
+  const cls =
+    kind === "offmarket"
+      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+      : "bg-rose-500/15 text-rose-700 dark:text-rose-400";
+  return (
+    <span className={`rounded px-2 py-0.5 font-mono text-sm font-bold tracking-wider ${cls}`}>{label}</span>
+  );
+}
+
+/** Status-aware copy for the price the gate withholds — mirrors the consumer row labels. */
+function priceWordFor(kind: SoldPublic["dealKind"]): string {
+  return kind === "leased" ? "lease price" : kind === "offmarket" ? "last price" : "sale price";
+}
+
+/**
+ * Anonymous locked teaser — the SAME "Sale history" card a consumer sees, but redacted:
+ * labels + structure only, every value a placeholder that never carries VOW data. A locked
+ * photo frame appears ONLY when the record actually has media (hasPhoto), so "see photos"
+ * is never a false promise. The status KIND (via the header badge) is public; the price is
+ * not. This reveals no value or photo URL — it just makes the gate legible and pushes sign-up.
+ */
+const REDACTED_ROWS = ["Price", "Date", "Beds", "Baths", "Size", "Type"];
+
+function AnonLocked({ hasPhoto, dealKind }: { hasPhoto: boolean; dealKind: SoldPublic["dealKind"] }) {
+  const statusLine =
+    dealKind === "sold" ? "This home has sold." : dealKind === "leased" ? "This home has been leased." : "This home is off-market.";
+  const priceWord = priceWordFor(dealKind);
+  return (
+    <div className="mb-6 space-y-4">
+      {hasPhoto && (
+        <div className="relative h-[220px] overflow-hidden rounded-lg border border-border sm:h-[300px]">
+          {/* Blurred frame stands in for the hero — a placeholder, no image URL is present. */}
+          <div className="redact-skeleton absolute inset-0" aria-hidden="true" />
+          <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px]">
+            <span className="flex items-center gap-2 rounded-full border border-border bg-card/85 px-3 py-1.5 text-sm font-medium text-foreground">
+              <Images className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> Photos locked
+            </span>
           </div>
-        ))}
-      </dl>
-      {/* TRREB §6.3(c): brokerage shown with the listing details. */}
-      <p className="mt-3 text-sm text-muted-foreground">Listed by {d.ListOfficeName || "Unknown"}</p>
-    </section>
+        </div>
+      )}
+
+      <section className="rounded-lg border border-border bg-card/40 p-5">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
+          <Lock className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> Sale history
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {statusLine} Real estate boards require a free verified account to view its {priceWord}, history
+          {hasPhoto ? " and photos" : ""}.
+        </p>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+          {REDACTED_ROWS.map((label) => (
+            <div key={label}>
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd>
+                <Redact className="mt-0.5 h-4 w-16" />
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <UnlockCta
+          label={hasPhoto ? `Sign up free to see the ${priceWord} & photos` : `Sign up free to see the ${priceWord}`}
+          note="Sold data via TRREB VOW — for personal, non-commercial use."
+        />
+      </section>
+    </div>
   );
 }
 
@@ -205,31 +300,39 @@ export default async function AddressPage({
 
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{pub.address}</h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <StatusBadge kind={pub.dealKind} />
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
+            </p>
+          </div>
         </header>
 
         {isConsumer ? (
-          /* Signed-in consumer → VOW Listing Information. */
+          /* Signed-in consumer → VOW Listing Information + real gallery. */
           <GatedSection soldKey={pub.id} />
         ) : (
-          /* Anonymous → sign-in CTA. No VOW data is fetched or rendered. */
-          <section className="mb-6 rounded-lg border border-border bg-card/40 p-5">
-            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Lock className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> This home isn&apos;t currently listed for sale.
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Real estate boards require a verified account to view sale history and listing details. Sign in or create a free PureProperty account to see this property&apos;s record.
-            </p>
-            <Link
-              href="/login"
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-md bg-emerald-500 px-6 text-sm font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400"
-            >
-              Sign in to see sale history
-            </Link>
-          </section>
+          /* Anonymous → locked teaser (structure only, no VOW values) + free sign-up push.
+             No price and no photo URL is fetched or rendered on this path. */
+          <AnonLocked hasPhoto={pub.hasPhoto} dealKind={pub.dealKind} />
+        )}
+
+        {/* Area insights — local market snapshot + nearby homes for sale/rent, so a visitor
+            who hit an off-market home has somewhere to continue. Streamed (its Typesense +
+            region-metrics fetches never block the address/sale-history above). Needs geo. */}
+        {pub.location && (
+          <Suspense fallback={null}>
+            <AreaInsights
+              lat={pub.location[0]}
+              lng={pub.location[1]}
+              city={pub.city}
+              cityName={cityName}
+              cityRegion={pub.cityRegion || null}
+              cityHref={cityHref}
+              isConsumer={isConsumer}
+            />
+          </Suspense>
         )}
 
         {/* PUBLIC neighbourhood context — EQAO schools + Overture walkability. Never VOW. */}

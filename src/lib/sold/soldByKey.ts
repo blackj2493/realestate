@@ -14,6 +14,7 @@
  */
 import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typesense/soldListingsSchema";
+import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, addressesMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
@@ -43,11 +44,41 @@ export interface SoldPublic {
   cityRegion: string;
   /** [lat, lng] — used server-side for schools/walkability; never rendered as raw coords. */
   location: [number, number] | null;
+  /**
+   * Whether this record has at least one listing photo — an EXISTENCE bit only, derived
+   * server-side from primaryImageUrl. Lets the anon render decide whether to show a locked
+   * "photos — sign up" teaser (never a false promise) WITHOUT ever carrying a photo URL to
+   * the client. The URL itself is a VOW field and is discarded server-side (see below).
+   */
+  hasPhoto: boolean;
+  /**
+   * Transaction status KIND (not the price/date) — the one public signal on the sold record.
+   * Maps DealType: sold→'sold', leased→'leased', terminated/expired/suspended→'offmarket'
+   * (missing DealType = legacy sold doc → 'sold', mirroring getSoldGatedByKey's isSold).
+   * Powers the SOLD / LEASED / OFF-MARKET badge, shown to anon AND consumers so both routes
+   * treat the status kind the same way /properties already does (audit R24a). No price/date.
+   */
+  dealKind: "sold" | "leased" | "offmarket";
 }
 
 // The ONLY fields the anonymous path retrieves. Anything not listed here cannot reach the
 // public render because Typesense doesn't return it.
 const PUBLIC_FIELDS = "id,UnparsedAddress,City,CityRegion,location";
+
+// Extra fields fetched ONLY to derive the public status KIND + photo-existence bit; neither
+// the primaryImageUrl nor any price/date is returned. Appended to PUBLIC_FIELDS by the two
+// SoldPublic fetchers so they stay in lock-step.
+const PUBLIC_STATUS_FIELDS = `${PUBLIC_FIELDS},primaryImageUrl,DealType`;
+
+/**
+ * Public status KIND from the raw DealType — no price/date. Missing DealType = legacy sold
+ * doc → 'sold' (mirrors getSoldGatedByKey's isSold rule); de-listed rows always carry
+ * terminated/expired/suspended → collapse to 'offmarket' (the de-list REASON stays gated,
+ * exactly as /properties nulls mlsStatus for anon).
+ */
+function deriveDealKind(dealType?: string): SoldPublic["dealKind"] {
+  return !dealType || dealType === "sold" ? "sold" : dealType === "leased" ? "leased" : "offmarket";
+}
 
 /**
  * Address + geo for a sold/off-market listing key, or null if there's no such sold record
@@ -62,7 +93,10 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
         q: "*",
         query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
         filter_by: `id:=${key}`,
-        include_fields: PUBLIC_FIELDS,
+        // primaryImageUrl + DealType are fetched ONLY to derive the hasPhoto/dealKind bits
+        // below; the URL and any price/date are discarded — nothing beyond PUBLIC_FIELDS is
+        // returned, so no VOW value reaches the anon path.
+        include_fields: PUBLIC_STATUS_FIELDS,
         per_page: 1,
       });
     const d = res.hits?.[0]?.document as Partial<SoldListingDocument> | undefined;
@@ -77,6 +111,8 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
       city: d.City ?? "",
       cityRegion: d.CityRegion ?? "",
       location: loc,
+      hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
+      dealKind: deriveDealKind(d.DealType),
     };
   } catch (err) {
     console.error(`[soldByKey] public fetch failed for "${key}":`, err);
@@ -101,7 +137,7 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
       .search({
         q: `${parsed.streetNumber} ${parsed.streetName}`.trim(),
         query_by: "UnparsedAddress",
-        include_fields: `${PUBLIC_FIELDS},PurchaseContractDate`,
+        include_fields: `${PUBLIC_STATUS_FIELDS},PurchaseContractDate`,
         per_page: 25,
       });
     let best: { d: Partial<SoldListingDocument>; date: number } | null = null;
@@ -123,6 +159,8 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
       city: d.City ?? "",
       cityRegion: d.CityRegion ?? "",
       location: loc,
+      hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
+      dealKind: deriveDealKind(d.DealType),
     };
   } catch (err) {
     console.error(`[soldByKey] address lookup failed:`, err);
@@ -186,5 +224,32 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
   } catch (err) {
     console.error(`[soldByKey] gated fetch failed for "${key}":`, err);
     return null;
+  }
+}
+
+/**
+ * Photo URLs for the AUTHED /address gallery. VOW media — call ONLY inside the
+ * getConsumer()-gated branch (never on the anonymous path).
+ *
+ * The lean `sold_listings` collection stores just ONE `primaryImageUrl` thumbnail (RAM
+ * policy), so for a real gallery we prefer the full `listings.media_urls` array when the
+ * listing still has a row there, and fall back to the single thumbnail otherwise.
+ * Best-effort: returns [] on failure or when the record genuinely has no media.
+ *
+ * @param key             listing key
+ * @param primaryImageUrl the sold doc's thumbnail (already fetched by the caller), used as
+ *                        the single-image fallback when the listings table has no media.
+ */
+export async function getSoldMediaByKey(key: string, primaryImageUrl?: string): Promise<string[]> {
+  const fallback = typeof primaryImageUrl === "string" && primaryImageUrl.length > 0 ? [primaryImageUrl] : [];
+  try {
+    const supabase = getServiceRoleClient();
+    const { data } = await supabase.from("listings").select("media_urls").eq("listing_key", key).maybeSingle();
+    const urls = Array.isArray(data?.media_urls) ? (data!.media_urls as unknown[]) : [];
+    const clean = urls.filter((u): u is string => typeof u === "string" && u.length > 0);
+    return clean.length > 0 ? clean : fallback;
+  } catch (err) {
+    console.error(`[soldByKey] media fetch failed for "${key}":`, err);
+    return fallback;
   }
 }
