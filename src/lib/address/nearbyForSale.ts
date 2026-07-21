@@ -104,7 +104,9 @@ export async function getNearbyForSale(
       .search({
         q: "*",
         query_by: "City",
-        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`${txnType}\` && ListPrice:>=${priceFloor}`,
+        // Exclude commercial so the "homes for sale/rent" rows are actually homes (mirrors the
+        // city hubs' ACTIVE_FILTER — otherwise "Sale Of Business"/"Store-Office" bleed in).
+        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`${txnType}\` && ListPrice:>=${priceFloor} && PropertyType:!=Commercial`,
         sort_by: `location(${lat}, ${lng}):asc`,
         include_fields: FIELDS,
         per_page: 100,
