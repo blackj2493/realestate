@@ -27,7 +27,8 @@ import { shouldRender as hasValueAddData } from "@/components/Property/forceAppr
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { logVowAccess } from "@/lib/audit/vowAccessLog";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
-import UnderwritingSandbox from "@/components/Property/UnderwritingSandbox";
+import ListingCalculator from "@/components/Property/ListingCalculator";
+import { getCurrentMortgageRate } from "@/lib/finance/getMortgageRate";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
 import RentalGlance from "@/components/Property/RentalGlance";
 import CommercialLeaseSnapshot from "@/components/Property/CommercialLeaseSnapshot";
@@ -500,6 +501,18 @@ export default async function PropertyPage({
   // leases only; commercial leases get the basis-aware CommercialLeaseSnapshot instead.
   const rentalGlance = isLease && !isCommercial ? buildRentalGlance(view.full_payload) : null;
   const jsonLd = buildJsonLd(id, detail);
+  // Calculator geography + rate seed. TRREB encodes the City of Toronto as
+  // district codes ("Toronto C01".."W10"), all prefixed "Toronto", so a
+  // word-boundary prefix flags the MLTT-levying municipality; LTT itself is an
+  // Ontario concept, so cash-to-close only surfaces for ON.
+  const provinceCode = (p.StateOrProvince || "ON").trim().toUpperCase();
+  const isOntario = provinceCode === "ON" || provinceCode === "ONTARIO";
+  const isToronto = /^toronto\b/i.test(p.City ?? "");
+  // Live 5-yr-fixed seed (Bank-of-Canada refreshed nightly job; cached, fallback-safe).
+  const mortgageRate = await getCurrentMortgageRate();
+  // Which lens opens first: investor personas → the underwrite; the Homebuyer
+  // default (and non-income parcels) → the buyer view.
+  const calcDefaultLens: "buyer" | "investor" = incomeApplicable && lens !== "smart" ? "investor" : "buyer";
 
   // Suite-potential / school-zone / surplus-parking badges are dwelling-investor
   // signals — an office isn't an "income suite" — so commercial shows none, matching
@@ -988,13 +1001,18 @@ export default async function PropertyPage({
                 />
                 )
               ) : (
-                <UnderwritingSandbox
+                <ListingCalculator
                   listingId={id}
                   listPrice={soldPrice ?? price}
                   annualTaxes={p.TaxAnnualAmount || 0}
                   monthlyFees={p.AssociationFee || 0}
                   hasSuitePotential={hasSuitePotential}
                   incomeApplicable={incomeApplicable}
+                  isToronto={isToronto}
+                  isOntario={isOntario}
+                  initialRatePct={mortgageRate.ratePct}
+                  rateAsOf={mortgageRate.asOf}
+                  defaultLens={calcDefaultLens}
                 />
               )}
 

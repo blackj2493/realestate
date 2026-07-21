@@ -36,6 +36,7 @@ import {
   type UnderwritingAssumptions,
 } from "@/lib/underwriting/computeUnderwriting";
 import { useScenariosStore, type Scenario } from "@/lib/underwriting/useScenarios";
+import type { SharedDealInputs } from "@/lib/finance/dealInputs";
 
 const EMPTY: Scenario[] = [];
 
@@ -51,6 +52,13 @@ interface UnderwritingSandboxProps {
    * be a fabrication; the sandbox then shows carrying cost only. (Audit C2.)
    */
   incomeApplicable?: boolean;
+  /**
+   * When provided, down payment / rate / amortization are CONTROLLED by the
+   * parent shell so a buyer↔investor lens toggle keeps them in sync. Omit for
+   * standalone use (state stays fully internal — the original behaviour).
+   */
+  controlledShared?: SharedDealInputs;
+  onSharedChange?: (next: SharedDealInputs) => void;
   className?: string;
 }
 
@@ -97,17 +105,28 @@ export default function UnderwritingSandbox({
   monthlyFees,
   hasSuitePotential = false,
   incomeApplicable = true,
+  controlledShared,
+  onSharedChange,
   className,
 }: UnderwritingSandboxProps) {
-  const [a, setA] = useState<UnderwritingAssumptions>(() =>
+  const [internalA, setInternalA] = useState<UnderwritingAssumptions>(() =>
     seedAssumptions({ listPrice, annualTaxes, monthlyFees, hasSuitePotential })
   );
   const [advanced, setAdvanced] = useState(false);
   const [scenarioName, setScenarioName] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
 
-  const set = <K extends keyof UnderwritingAssumptions>(key: K, val: UnderwritingAssumptions[K]) =>
-    setA((prev) => ({ ...prev, [key]: val }));
+  // When the shell controls the shared trio, overlay it so a lens toggle keeps
+  // down/rate/amort in sync; everything else stays local to the sandbox.
+  const a = controlledShared ? { ...internalA, ...controlledShared } : internalA;
+
+  const set = <K extends keyof UnderwritingAssumptions>(key: K, val: UnderwritingAssumptions[K]) => {
+    if (controlledShared && (key === "downPaymentPct" || key === "interestRatePct" || key === "amortYears")) {
+      onSharedChange?.({ ...controlledShared, [key]: val as number });
+    } else {
+      setInternalA((prev) => ({ ...prev, [key]: val }));
+    }
+  };
 
   const result = useMemo(() => computeUnderwriting(a), [a]);
 
@@ -437,7 +456,15 @@ export default function UnderwritingSandbox({
               >
                 <button
                   type="button"
-                  onClick={() => setA(s.assumptions)}
+                  onClick={() => {
+                    setInternalA(s.assumptions);
+                    if (controlledShared)
+                      onSharedChange?.({
+                        downPaymentPct: s.assumptions.downPaymentPct,
+                        interestRatePct: s.assumptions.interestRatePct,
+                        amortYears: s.assumptions.amortYears,
+                      });
+                  }}
                   className="flex-1 min-w-0 text-left group"
                   title="Load this scenario"
                 >

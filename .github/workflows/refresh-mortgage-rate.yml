@@ -1,0 +1,60 @@
+name: Refresh Mortgage Rate
+
+# Refreshes market_rates.five_year_fixed — the mortgage-rate SEED the listing
+# calculator opens on — from the Bank of Canada Valet API (free, keyless). The
+# script trues the posted 5-yr rate down to a typical street rate, sanity-bounds
+# it, and upserts one row. Read by src/lib/finance/getMortgageRate.ts (24h cache
+# + hardcoded fallback), so a skipped/failed run degrades gracefully.
+#
+# CADENCE: monthly (1st, 11:00 UTC). A seed only needs to stay in the ballpark;
+# rates don't move fast enough to justify more. Trigger manually anytime.
+#
+# NOTE (new-workflow gotcha): scheduled triggers only start once this file is on
+# the DEFAULT branch. Until then, use the "Run workflow" button (workflow_dispatch).
+on:
+  schedule:
+    - cron: '0 11 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-mortgage-rate
+  cancel-in-progress: false
+
+jobs:
+  refresh-mortgage-rate:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: mortgage-rate-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Refresh mortgage rate
+        timeout-minutes: 5
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-mortgage-rate.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Mortgage Rate Refresh
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
