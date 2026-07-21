@@ -34,8 +34,10 @@ import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listi
 import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, type SoldPublic } from "@/lib/sold/soldByKey";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
 import AddressProfileView from "@/components/address/AddressProfileView";
+import AreaInsights from "@/components/address/AreaInsights";
 import PropertyGallery from "@/app/(app)/properties/[id]/PropertyGallery";
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
+import { Suspense } from "react";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { assignSchools } from "@/lib/schools/nearestSchools";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
@@ -314,6 +316,23 @@ export default async function AddressPage({
           /* Anonymous → locked teaser (structure only, no VOW values) + free sign-up push.
              No price and no photo URL is fetched or rendered on this path. */
           <AnonLocked hasPhoto={pub.hasPhoto} dealKind={pub.dealKind} />
+        )}
+
+        {/* Area insights — local market snapshot + nearby homes for sale/rent, so a visitor
+            who hit an off-market home has somewhere to continue. Streamed (its Typesense +
+            region-metrics fetches never block the address/sale-history above). Needs geo. */}
+        {pub.location && (
+          <Suspense fallback={null}>
+            <AreaInsights
+              lat={pub.location[0]}
+              lng={pub.location[1]}
+              city={pub.city}
+              cityName={cityName}
+              cityRegion={pub.cityRegion || null}
+              cityHref={cityHref}
+              isConsumer={isConsumer}
+            />
+          </Suspense>
         )}
 
         {/* PUBLIC neighbourhood context — EQAO schools + Overture walkability. Never VOW. */}

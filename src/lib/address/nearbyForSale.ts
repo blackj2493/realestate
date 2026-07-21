@@ -86,10 +86,15 @@ function median(xs: number[]): number | null {
 export async function getNearbyForSale(
   lat: number,
   lng: number,
-  opts: { radiusKm?: number; limit?: number } = {}
+  opts: { radiusKm?: number; limit?: number; transactionType?: "sale" | "lease" } = {}
 ): Promise<NearbyForSale | null> {
   const radiusKm = opts.radiusKm ?? 2;
   const limit = Math.min(opts.limit ?? 12, 12);
+  // Default is FOR SALE (the profile hero). Lease rents sit far below the sale floor, so the
+  // $100k sanity floor would drop nearly every rental — use a small floor for lease instead.
+  const isLease = opts.transactionType === "lease";
+  const txnType = isLease ? "For Lease" : "For Sale";
+  const priceFloor = isLease ? 500 : 100000;
   try {
     // Fetch up to the 100 nearest (display cap, CLAUDE.md §4): first `limit` become
     // carousel cards; asking-price stats are computed over the whole page.
@@ -99,7 +104,7 @@ export async function getNearbyForSale(
       .search({
         q: "*",
         query_by: "City",
-        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`For Sale\` && ListPrice:>=100000`,
+        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`${txnType}\` && ListPrice:>=${priceFloor}`,
         sort_by: `location(${lat}, ${lng}):asc`,
         include_fields: FIELDS,
         per_page: 100,
