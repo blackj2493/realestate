@@ -65,6 +65,21 @@ export interface SoldPublic {
 // public render because Typesense doesn't return it.
 const PUBLIC_FIELDS = "id,UnparsedAddress,City,CityRegion,location";
 
+// Extra fields fetched ONLY to derive the public status KIND + photo-existence bit; neither
+// the primaryImageUrl nor any price/date is returned. Appended to PUBLIC_FIELDS by the two
+// SoldPublic fetchers so they stay in lock-step.
+const PUBLIC_STATUS_FIELDS = `${PUBLIC_FIELDS},primaryImageUrl,DealType`;
+
+/**
+ * Public status KIND from the raw DealType — no price/date. Missing DealType = legacy sold
+ * doc → 'sold' (mirrors getSoldGatedByKey's isSold rule); de-listed rows always carry
+ * terminated/expired/suspended → collapse to 'offmarket' (the de-list REASON stays gated,
+ * exactly as /properties nulls mlsStatus for anon).
+ */
+function deriveDealKind(dealType?: string): SoldPublic["dealKind"] {
+  return !dealType || dealType === "sold" ? "sold" : dealType === "leased" ? "leased" : "offmarket";
+}
+
 /**
  * Address + geo for a sold/off-market listing key, or null if there's no such sold record
  * (e.g. the key is an active listing, or unknown). VOW fields are not requested.
@@ -78,11 +93,10 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
         q: "*",
         query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
         filter_by: `id:=${key}`,
-        // primaryImageUrl is fetched ONLY to derive the `hasPhoto` existence bit below; the
-        // URL is discarded and never returned/rendered, so no VOW media reaches the anon path.
-        // DealType yields the public status KIND (sold/leased/offmarket) — no price/date.
-        // Everything else returned stays within PUBLIC_FIELDS.
-        include_fields: `${PUBLIC_FIELDS},primaryImageUrl,DealType`,
+        // primaryImageUrl + DealType are fetched ONLY to derive the hasPhoto/dealKind bits
+        // below; the URL and any price/date are discarded — nothing beyond PUBLIC_FIELDS is
+        // returned, so no VOW value reaches the anon path.
+        include_fields: PUBLIC_STATUS_FIELDS,
         per_page: 1,
       });
     const d = res.hits?.[0]?.document as Partial<SoldListingDocument> | undefined;
@@ -91,11 +105,6 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
         ? ([d.location[0], d.location[1]] as [number, number])
         : null;
-    // Missing DealType = legacy sold doc → 'sold' (mirrors getSoldGatedByKey's isSold rule).
-    // De-listed rows always carry terminated/expired/suspended → collapse to 'offmarket'
-    // (the de-list REASON stays gated, exactly as /properties nulls mlsStatus for anon).
-    const dealKind: SoldPublic["dealKind"] =
-      !d.DealType || d.DealType === "sold" ? "sold" : d.DealType === "leased" ? "leased" : "offmarket";
     return {
       id: d.id,
       address: d.UnparsedAddress ?? "",
@@ -103,7 +112,7 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
       cityRegion: d.CityRegion ?? "",
       location: loc,
       hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
-      dealKind,
+      dealKind: deriveDealKind(d.DealType),
     };
   } catch (err) {
     console.error(`[soldByKey] public fetch failed for "${key}":`, err);
@@ -128,7 +137,7 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
       .search({
         q: `${parsed.streetNumber} ${parsed.streetName}`.trim(),
         query_by: "UnparsedAddress",
-        include_fields: `${PUBLIC_FIELDS},PurchaseContractDate`,
+        include_fields: `${PUBLIC_STATUS_FIELDS},PurchaseContractDate`,
         per_page: 25,
       });
     let best: { d: Partial<SoldListingDocument>; date: number } | null = null;
@@ -150,6 +159,8 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
       city: d.City ?? "",
       cityRegion: d.CityRegion ?? "",
       location: loc,
+      hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
+      dealKind: deriveDealKind(d.DealType),
     };
   } catch (err) {
     console.error(`[soldByKey] address lookup failed:`, err);
