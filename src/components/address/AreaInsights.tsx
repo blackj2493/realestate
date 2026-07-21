@@ -185,7 +185,10 @@ export default async function AreaInsights({
       {isConsumer ? (
         (soldTiles.length > 0 || metrics) && (
           <section>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-foreground">Sold market — {cityName}</h3>
+            {/* Sold metrics come from the municipality-level region_metrics precompute, so
+                label them with the municipality (munKey), NOT the district in cityName —
+                e.g. a C01 address shows Toronto-wide sold numbers, not "Toronto C01". */}
+            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-foreground">Sold market — {munKey}</h3>
             {soldTiles.length > 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {soldTiles.map((t) => (
@@ -197,7 +200,7 @@ export default async function AreaInsights({
               href={`/analytics?region=${encodeURIComponent(munKey)}`}
               className="mt-2 inline-block text-sm text-cyan-700 hover:underline dark:text-cyan-300"
             >
-              See full {cityName} market analytics →
+              See full {munKey} market analytics →
             </Link>
           </section>
         )
@@ -218,7 +221,9 @@ export default async function AreaInsights({
         isLease={false}
         footer={
           <Link href={cityHref} className="mt-2 inline-block text-sm text-cyan-700 hover:underline dark:text-cyan-300">
-            More homes for sale in {cityName} →
+            {/* cityHref is the municipality hub (cityHubSlug strips the district), so label
+                it with munKey to match its actual scope. */}
+            More homes for sale in {munKey} →
           </Link>
         }
       />
