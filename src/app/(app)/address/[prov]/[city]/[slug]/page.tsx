@@ -4,12 +4,13 @@
  * The Zolo/HouseSigma model for sold/off-market properties: the page exists publicly and
  * ranks for the street address, but VOW Listing Information (sold price/date, beds/baths,
  * photos, brokerage) is shown ONLY to a signed-in registered consumer. Anonymous visitors
- * and Googlebot see address + neighbourhood + PUBLIC school/walkability context, plus a
- * REDACTED teaser (the consumer's "Sale history" card with labels/structure only — every
- * value a placeholder that never carries data) and a locked photo frame (only when the
- * record actually has media, so "see photos" is never a false promise). No price and no
- * photo URL is ever fetched or rendered on the anon path — the teaser just makes the gate
- * legible and pushes the free sign-up.
+ * and Googlebot see address + neighbourhood + PUBLIC school/walkability context, the
+ * SOLD/LEASED/OFF-MARKET status KIND (a public signal — the same one /properties already
+ * shows anon; no price/date; audit R24a), plus a REDACTED teaser (the consumer's "Sale
+ * history" card with labels/structure only — every value a placeholder that never carries
+ * data) and a locked photo frame (only when the record actually has media, so "see photos"
+ * is never a false promise). No price and no photo URL is ever fetched or rendered on the
+ * anon path — the teaser just makes the gate legible and pushes the free sign-up.
  *
  * GATE (structural, stricter than Zolo's blur):
  *   - getSoldPublicByKey() uses Typesense include_fields → only address/city/region/geo
@@ -149,15 +150,40 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
 }
 
 /**
+ * Public transaction-status badge — the status KIND only (no price/date). Shown to anon AND
+ * consumers so /address treats this signal the same way /properties already does for anon
+ * (audit R24a). Rose = closed transaction (sold/leased); amber = off-market (de-list reason
+ * stays gated, exactly as /properties nulls mlsStatus).
+ */
+function StatusBadge({ kind }: { kind: SoldPublic["dealKind"] }) {
+  const label = kind === "sold" ? "SOLD" : kind === "leased" ? "LEASED" : "OFF MARKET";
+  const cls =
+    kind === "offmarket"
+      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+      : "bg-rose-500/15 text-rose-700 dark:text-rose-400";
+  return (
+    <span className={`rounded px-2 py-0.5 font-mono text-sm font-bold tracking-wider ${cls}`}>{label}</span>
+  );
+}
+
+/** Status-aware copy for the price the gate withholds — mirrors the consumer row labels. */
+function priceWordFor(kind: SoldPublic["dealKind"]): string {
+  return kind === "leased" ? "lease price" : kind === "offmarket" ? "last price" : "sale price";
+}
+
+/**
  * Anonymous locked teaser — the SAME "Sale history" card a consumer sees, but redacted:
  * labels + structure only, every value a placeholder that never carries VOW data. A locked
  * photo frame appears ONLY when the record actually has media (hasPhoto), so "see photos"
- * is never a false promise. This reveals nothing new (no price, no photo URL) — it just
- * makes the gate legible and pushes the free sign-up.
+ * is never a false promise. The status KIND (via the header badge) is public; the price is
+ * not. This reveals no value or photo URL — it just makes the gate legible and pushes sign-up.
  */
 const REDACTED_ROWS = ["Price", "Date", "Beds", "Baths", "Size", "Type"];
 
-function AnonLocked({ hasPhoto }: { hasPhoto: boolean }) {
+function AnonLocked({ hasPhoto, dealKind }: { hasPhoto: boolean; dealKind: SoldPublic["dealKind"] }) {
+  const statusLine =
+    dealKind === "sold" ? "This home has sold." : dealKind === "leased" ? "This home has been leased." : "This home is off-market.";
+  const priceWord = priceWordFor(dealKind);
   return (
     <div className="mb-6 space-y-4">
       {hasPhoto && (
@@ -177,8 +203,8 @@ function AnonLocked({ hasPhoto }: { hasPhoto: boolean }) {
           <Lock className="h-4 w-4 text-cyan-700 dark:text-cyan-400" /> Sale history
         </h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          This home is off-market. Real estate boards require a free verified account to view its
-          sale price, history{hasPhoto ? " and photos" : ""}.
+          {statusLine} Real estate boards require a free verified account to view its {priceWord}, history
+          {hasPhoto ? " and photos" : ""}.
         </p>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
           {REDACTED_ROWS.map((label) => (
@@ -191,7 +217,7 @@ function AnonLocked({ hasPhoto }: { hasPhoto: boolean }) {
           ))}
         </dl>
         <UnlockCta
-          label={hasPhoto ? "Sign up free to see the price & photos" : "Sign up free to see the sale price"}
+          label={hasPhoto ? `Sign up free to see the ${priceWord} & photos` : `Sign up free to see the ${priceWord}`}
           note="Sold data via TRREB VOW — for personal, non-commercial use."
         />
       </section>
@@ -272,10 +298,13 @@ export default async function AddressPage({
 
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{pub.address}</h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <StatusBadge kind={pub.dealKind} />
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
+            </p>
+          </div>
         </header>
 
         {isConsumer ? (
@@ -284,7 +313,7 @@ export default async function AddressPage({
         ) : (
           /* Anonymous → locked teaser (structure only, no VOW values) + free sign-up push.
              No price and no photo URL is fetched or rendered on this path. */
-          <AnonLocked hasPhoto={pub.hasPhoto} />
+          <AnonLocked hasPhoto={pub.hasPhoto} dealKind={pub.dealKind} />
         )}
 
         {/* PUBLIC neighbourhood context — EQAO schools + Overture walkability. Never VOW. */}

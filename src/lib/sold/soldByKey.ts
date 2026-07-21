@@ -51,6 +51,14 @@ export interface SoldPublic {
    * the client. The URL itself is a VOW field and is discarded server-side (see below).
    */
   hasPhoto: boolean;
+  /**
+   * Transaction status KIND (not the price/date) — the one public signal on the sold record.
+   * Maps DealType: sold→'sold', leased→'leased', terminated/expired/suspended→'offmarket'
+   * (missing DealType = legacy sold doc → 'sold', mirroring getSoldGatedByKey's isSold).
+   * Powers the SOLD / LEASED / OFF-MARKET badge, shown to anon AND consumers so both routes
+   * treat the status kind the same way /properties already does (audit R24a). No price/date.
+   */
+  dealKind: "sold" | "leased" | "offmarket";
 }
 
 // The ONLY fields the anonymous path retrieves. Anything not listed here cannot reach the
@@ -72,8 +80,9 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
         filter_by: `id:=${key}`,
         // primaryImageUrl is fetched ONLY to derive the `hasPhoto` existence bit below; the
         // URL is discarded and never returned/rendered, so no VOW media reaches the anon path.
-        // Everything actually returned to the caller stays within PUBLIC_FIELDS.
-        include_fields: `${PUBLIC_FIELDS},primaryImageUrl`,
+        // DealType yields the public status KIND (sold/leased/offmarket) — no price/date.
+        // Everything else returned stays within PUBLIC_FIELDS.
+        include_fields: `${PUBLIC_FIELDS},primaryImageUrl,DealType`,
         per_page: 1,
       });
     const d = res.hits?.[0]?.document as Partial<SoldListingDocument> | undefined;
@@ -82,6 +91,11 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
         ? ([d.location[0], d.location[1]] as [number, number])
         : null;
+    // Missing DealType = legacy sold doc → 'sold' (mirrors getSoldGatedByKey's isSold rule).
+    // De-listed rows always carry terminated/expired/suspended → collapse to 'offmarket'
+    // (the de-list REASON stays gated, exactly as /properties nulls mlsStatus for anon).
+    const dealKind: SoldPublic["dealKind"] =
+      !d.DealType || d.DealType === "sold" ? "sold" : d.DealType === "leased" ? "leased" : "offmarket";
     return {
       id: d.id,
       address: d.UnparsedAddress ?? "",
@@ -89,6 +103,7 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
       cityRegion: d.CityRegion ?? "",
       location: loc,
       hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
+      dealKind,
     };
   } catch (err) {
     console.error(`[soldByKey] public fetch failed for "${key}":`, err);
