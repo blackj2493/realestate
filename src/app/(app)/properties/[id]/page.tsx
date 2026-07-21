@@ -13,7 +13,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -57,6 +57,7 @@ import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
+import IntelligencePanel from "@/components/Property/IntelligencePanel";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
@@ -540,16 +541,117 @@ export default async function PropertyPage({
   // not VOW-gated, so view.geoFlags is populated for anon users too. Feeds The Read.
   const diligenceFlags = buildDiligenceFlags(view.full_payload, view.geoFlags);
 
-  // Mobile section jumper — lets phones skip straight to a section instead of
-  // scrolling the full ~10-screen page (financials stack last on mobile).
+  // Mobile section jumper — matches the zoned mobile scroll order (the Numbers
+  // panel sits second); ids are shared with the desktop layout's anchors.
   const navSections = [
     { id: "overview", label: "Overview" },
-    { id: "financials", label: "Financials" },
+    { id: "numbers", label: "Numbers" },
     { id: "details", label: "Details" },
     ...(rooms.length > 0 ? [{ id: "rooms", label: "Rooms" }] : []),
     { id: "history", label: "History" },
     { id: "comps", label: "Comps" },
   ];
+
+  // The consolidated Intelligence panel replaces the stacked analysis cards for
+  // the standard case (active residential sale). Sold / lease / commercial keep
+  // the legacy card stack — their card set differs too much to tab identically.
+  const panelEligible = isActiveListing && !isCommercial && !isLease;
+  const read = panelEligible ? buildTheRead(view, diligenceFlags) : null;
+  // The lite-tier nudge sentence is appended to thesis AND priceRead — the
+  // panel has ONE gate strip instead, so strip the duplicated pitch here.
+  const stripNudge = (s: string) =>
+    s.replace(" Sign in for our price estimate, Deal Score and reno-upside read.", "");
+
+  // Asset/Rental summary + finance card render in the rail (legacy path) or
+  // inside the panel's Costs tab (panel path) — defined once, used in one spot.
+  const assetSummaryCard = (
+    <div className="rounded-lg border border-border bg-card/50 p-4">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground">
+        {isLease ? "Rental Summary" : "Asset Summary"}
+      </h3>
+      <div className="space-y-2 text-xs">
+        {soldPrice !== null && (
+          <SummaryRow
+            label={status.kind === "sold" && status.label === "LEASED" ? "Leased Price" : "Sold Price"}
+            value={formatPrice(soldPrice)}
+            valueClass="text-rose-700 dark:text-rose-400"
+          />
+        )}
+        <SummaryRow
+          label={
+            isLease
+              ? isCommercial && p.ListPriceUnit && !/month/i.test(p.ListPriceUnit)
+                ? `Asking Rent (${p.ListPriceUnit})`
+                : "Monthly Rent"
+              : "List Price"
+          }
+          value={formatPrice(price)}
+          valueClass={isActiveListing ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
+        />
+        {(!isLease || isCommercial) && (
+          <>
+            <SummaryRow
+              label={
+                isCommercial && typeof p.TaxType === "string" && p.TaxType.trim().toUpperCase() === "TMI"
+                  ? "TMI (as listed)"
+                  : "Annual Taxes"
+              }
+              value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
+            />
+            <SummaryRow
+              label="Monthly Fees"
+              value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
+            />
+          </>
+        )}
+        <SummaryRow
+          label={isLease ? "Days Available" : "True DOM"}
+          value={`${trueDom} days`}
+          valueClass={trueDom > 45 ? "text-emerald-700 dark:text-emerald-400" : trueDom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}
+        />
+      </div>
+    </div>
+  );
+
+  const financeCard = isLease ? (
+    isCommercial ? (
+      <CommercialLeaseSnapshot
+        listPrice={soldPrice ?? price}
+        listPriceUnit={p.ListPriceUnit ?? null}
+        buildingAreaTotal={areaSqftOrNull}
+        leaseTerm={p.LeaseTerm ?? null}
+        rentIncludes={p.RentIncludes ?? null}
+        tmi={p.TMI ?? null}
+        taxType={typeof p.TaxType === "string" ? p.TaxType : null}
+        taxAnnualAmount={p.TaxAnnualAmount ?? null}
+        leased={status.kind === "sold"}
+      />
+    ) : (
+      <RentalSnapshot
+        monthlyRent={soldPrice ?? price}
+        leased={status.kind === "sold"}
+        buildingAreaTotal={areaSqftOrNull}
+        livingAreaRange={p.LivingAreaRange ?? null}
+        leaseTerm={p.LeaseTerm ?? null}
+        depositRequired={p.DepositRequired ?? null}
+        rentIncludes={p.RentIncludes ?? null}
+      />
+    )
+  ) : (
+    <ListingCalculator
+      listingId={id}
+      listPrice={soldPrice ?? price}
+      annualTaxes={p.TaxAnnualAmount || 0}
+      monthlyFees={p.AssociationFee || 0}
+      hasSuitePotential={hasSuitePotential}
+      incomeApplicable={incomeApplicable}
+      isToronto={isToronto}
+      isOntario={isOntario}
+      initialRatePct={mortgageRate.ratePct}
+      rateAsOf={mortgageRate.asOf}
+      defaultLens={calcDefaultLens}
+    />
+  );
 
   return (
     <main className="min-h-app bg-background text-foreground">
@@ -588,8 +690,8 @@ export default async function PropertyPage({
         <DetailMobileNav sections={navSections} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_3fr]">
-          {/* ── LEFT-TOP: triage + verdict. Desktop col 1 / row 1; renders FIRST on mobile. ── */}
-          <div className="lg:col-start-1 lg:row-start-1">
+          {/* ── LEFT: THE HOME zone — the property itself, before any analysis. ── */}
+          <div id="home" className="scroll-mt-28 lg:col-start-1 lg:row-start-1">
             {/* Header */}
             <div id="overview" className="mb-6 scroll-mt-28">
               {badges.length > 0 && (
@@ -718,6 +820,42 @@ export default async function PropertyPage({
                   />
                 )}
               </div>
+
+              {/* PROTOTYPE (Proposal B): hero scent — the moat one tap from the price.
+                  Mobile-only (on desktop the Intelligence panel is already beside the
+                  hero). VOW-safe: anon sees locked chips, never a number or direction. */}
+              {panelEligible && (hasDealScore || hasEstimate || hasExpectedSale) && (
+                <a
+                  href="#numbers"
+                  className="mt-3 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-cyan-500/10 lg:hidden"
+                >
+                  {hasDealScore && (
+                    <span className="inline-flex items-center gap-1">
+                      Deal grade
+                      {isAuthed && (view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade) ? (
+                        <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">
+                          {view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
+                        </span>
+                      ) : (
+                        <Lock className="h-3 w-3 text-muted-foreground" aria-label="locked" />
+                      )}
+                    </span>
+                  )}
+                  {(hasEstimate || hasExpectedSale) && (
+                    <span className="inline-flex items-center gap-1">
+                      Est. sale
+                      {isAuthed && salePrice ? (
+                        <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                          {formatPrice(salePrice.value)}
+                        </span>
+                      ) : (
+                        <Lock className="h-3 w-3 text-muted-foreground" aria-label="locked" />
+                      )}
+                    </span>
+                  )}
+                  <span className="text-cyan-700 dark:text-cyan-400">Full analysis ↓</span>
+                </a>
+              )}
               {status.kind === "delisted" && (
                 <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
                   {status.mlsStatus
@@ -811,40 +949,37 @@ export default async function PropertyPage({
                 leases. Takes The Read's slot here, since that verdict is buyer-oriented. */}
             {rentalGlance && <RentalGlance glance={rentalGlance} />}
 
-            {/* The Read — synthesized, persona-aware verdict (deterministic, §4-safe).
-                Persona theses are residential (Homebuyer/Cashflow/Flipper/Builder) — off for
-                commercial, and off on leases (buyer/investor framing). */}
-            {isActiveListing && !isCommercial && !isLease && (
-              <TheReadCard read={buildTheRead(view, diligenceFlags)} defaultPersona={lens} listingId={id} />
-            )}
-
-            {/* Things to Know — interpretive diligence flags surfaced beside the verdict
-                (loss-aversion). geoChecked gates the "checked & clear" claim (054). */}
-            <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
-
-            {/* Zoning — municipal open data (NOT MLS), its own attributed card. Renders
-                nothing until zoning is harvested/backfilled for this listing. */}
-            <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
-
+            {/* Desktop keeps the prod layout: full verdict + diligence cards in the
+                left column. Mobile carries both inside the Intelligence panel. */}
+            <div className="hidden lg:block">
+              {panelEligible && read && (
+                <TheReadCard read={read} defaultPersona={lens} listingId={id} />
+              )}
+              <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
+            </div>
           </div>
 
-          {/* ── RIGHT rail (decision cockpit): desktop col 2 spanning rows 1-2; renders SECOND on
-               mobile so the Deal Score / Estimate / CTA aren't buried beneath the full detail stack. ── */}
-          <div id="financials" className="scroll-mt-28 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+          {/* ── RIGHT rail: THE NUMBERS zone — one Intelligence panel instead of six
+               stacked analysis cards. Desktop col 2, sticky; renders SECOND on mobile,
+               after the home itself. ── */}
+          <div id="numbers" className="scroll-mt-28 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="sticky top-6 space-y-4">
-              {/* Anonymous-only, single-field email capture — pinned to the TOP of the rail so the
-                  low-friction "email me if this changes" ask is visible without scrolling (it was
-                  previously buried under the CTA cluster). Signed-in users get watchlist alerts, so
-                  it's suppressed for them. */}
-              {!isAuthed && (
-                <ListingAlertCapture
-                  listingKey={id}
-                  address={address}
-                  city={detail.city ?? undefined}
-                  statusKind={status.kind}
-                />
-              )}
+              <div className="lg:hidden"><ZoneLabel>The Numbers</ZoneLabel></div>
+              {/* Legacy deep-link anchor (The Read evidence fallback, old inbound links). */}
+              <div id="financials" className="scroll-mt-28" aria-hidden />
 
+              {/* Desktop (prod layout): anon alert capture pinned to the rail top.
+                  Mobile renders its own instance below the CTA cluster instead. */}
+              {!isAuthed && (
+                <div className="hidden lg:block">
+                  <ListingAlertCapture
+                    listingKey={id}
+                    address={address}
+                    city={detail.city ?? undefined}
+                    statusKind={status.kind}
+                  />
+                </div>
+              )}
               {/* The financial cards below (sold-accuracy receipt, Deal Score, Estimated
                   Sale Price / True Value, Force Appreciation) are all AVM-derived and assume
                   a SALE. They're gated off on LEASE listings, where ListPrice is the monthly
@@ -855,53 +990,115 @@ export default async function PropertyPage({
                   Deal Score, Estimated Sale / True Value, Renovation Upside) is trained
                   on dwellings — suppressed rather than fabricated (commercial-gap Phase 0). */}
 
-              {/* Sold: lead with the accuracy receipt — Deal Score / Expected Sale are
-                  for live asks; their job here is done. */}
-              {status.kind === "sold" && !isLease && !isCommercial && (
-                <SoldOutcomeCard
-                  accuracy={soldAccuracy}
-                  soldDate={soldDate}
-                  locked={!isAuthed && hasSoldAccuracy}
+              {panelEligible && read ? (
+                <>
+                {/* MOBILE ONLY: the consolidated Intelligence panel.
+                   Verdict = The Read compressed to three one-line rows (nudge
+                   sentence stripped — the panel has ONE gate strip) + the full
+                   diligence card. Price = estimate + reno upside. Score = Deal
+                   Score. Costs = asset summary + calculator. Desktop keeps the
+                   prod card stack below instead. */}
+                <div className="lg:hidden">
+                <IntelligencePanel
+                  verdict={
+                    <div>
+                      <div className="divide-y divide-border/60">
+                        <VerdictRow label="THESIS" tone="emerald" text={stripNudge(read.thesisByPersona[lens])} />
+                        <VerdictRow label="THE CATCH" tone="amber" text={read.catch_} />
+                        <VerdictRow label="PRICE READ" tone="cyan" text={stripNudge(read.priceRead)} />
+                      </div>
+                      <div className="mt-3">
+                        <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
+                      </div>
+                    </div>
+                  }
+                  price={
+                    <div className="space-y-4">
+                      <EstimatedSaleCard
+                        salePrice={salePrice}
+                        listPrice={price}
+                        city={p.City}
+                        propertySubType={p.PropertySubType}
+                        locked={!isAuthed && (hasEstimate || hasExpectedSale)}
+                      />
+                      <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
+                    </div>
+                  }
+                  score={
+                    <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
+                  }
+                  costs={
+                    <div className="space-y-4">
+                      {assetSummaryCard}
+                      {financeCard}
+                    </div>
+                  }
+                  footer={
+                    !isAuthed ? (
+                      <div className="mt-3 rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 p-3">
+                        <p className="text-sm font-semibold text-foreground">One sign-in unlocks everything</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Price estimate, Deal Score, sold prices &amp; full history. Free, ~20 seconds.
+                        </p>
+                        <Link
+                          href="/login"
+                          className="mt-2 inline-flex min-h-[38px] items-center rounded-lg border border-cyan-500 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
+                        >
+                          Unlock this home
+                        </Link>
+                      </div>
+                    ) : undefined
+                  }
                 />
-              )}
+                </div>
 
-              {isActiveListing && !isLease && !isCommercial && (
-                <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
-              )}
-
-              {!isLease && !isCommercial && (isActiveListing ? (
-                /* ONE number: the Estimated Sale Price (list-anchored where we can be,
-                   AVM as fallback). The intrinsic AVM lives on as the faint "comparable
-                   value" band inside this card + as the Deal Score signal above. */
-                <EstimatedSaleCard
-                  salePrice={salePrice}
-                  listPrice={price}
-                  city={p.City}
-                  propertySubType={p.PropertySubType}
-                  locked={!isAuthed && (hasEstimate || hasExpectedSale)}
-                />
-              ) : status.kind === "sold" && hasSoldAccuracy ? (
-                /* Sold WITH a receipt: the "Our Call vs. The Sale" card above IS the single
-                   number. Don't also show a standalone True Value — that was the confusing
-                   second estimate the user flagged. */
-                null
+                {/* DESKTOP ONLY: the prod rail — same cards, same order as live. */}
+                <div className="hidden space-y-4 lg:block">
+                  <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
+                  <EstimatedSaleCard
+                    salePrice={salePrice}
+                    listPrice={price}
+                    city={p.City}
+                    propertySubType={p.PropertySubType}
+                    locked={!isAuthed && (hasEstimate || hasExpectedSale)}
+                  />
+                  <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
+                </div>
+                </>
               ) : (
-                /* Delisted/off-market, or sold without a receipt: the independent True
-                   Value is the only number we can offer (no live ask to anchor to). */
-                <ListingEstimateCard
-                  estimate={view.estimate}
-                  listPrice={price}
-                  cityRegion={p.CityRegion}
-                  city={p.City}
-                  locked={!isAuthed && hasEstimate}
-                  hideAskDelta={status.kind === "sold"}
-                />
-              ))}
+                <>
+                  {/* Legacy stack (sold / lease / commercial): lead with the accuracy
+                      receipt — Deal Score / Expected Sale are for live asks. */}
+                  {status.kind === "sold" && !isLease && !isCommercial && (
+                    <SoldOutcomeCard
+                      accuracy={soldAccuracy}
+                      soldDate={soldDate}
+                      locked={!isAuthed && hasSoldAccuracy}
+                    />
+                  )}
 
-              {/* Renovation upside — Force-Appreciation ROI from the Value-Add Engine. One of the
-                  product's headline differentiators, so it sits directly beneath the sale estimate. */}
-              {!isLease && !isCommercial && (
-                <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
+                  {!isLease && !isCommercial && (status.kind === "sold" && hasSoldAccuracy ? (
+                    /* Sold WITH a receipt: the "Our Call vs. The Sale" card above IS the
+                       single number. */
+                    null
+                  ) : (
+                    /* Delisted/off-market, or sold without a receipt: the independent True
+                       Value is the only number we can offer (no live ask to anchor to). */
+                    <ListingEstimateCard
+                      estimate={view.estimate}
+                      listPrice={price}
+                      cityRegion={p.CityRegion}
+                      city={p.City}
+                      locked={!isAuthed && hasEstimate}
+                      hideAskDelta={status.kind === "sold"}
+                    />
+                  ))}
+
+                  {/* Renovation upside — Force-Appreciation ROI from the Value-Add Engine. */}
+                  {!isLease && !isCommercial && (
+                    <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
+                  )}
+                </>
               )}
 
               {/* Commit cluster — primary actions + honest social proof, kept HIGH and reachable
@@ -917,103 +1114,33 @@ export default async function PropertyPage({
               />
               <SocialProofBar listingId={id} isLease={isLease} />
 
-              {/* Asset / Rental Summary. On a residential lease the tenant pays neither the
-                  property taxes nor the condo fee, so those rows drop; "True DOM" reframes as
-                  how long the unit has been available. Commercial leases keep the TMI/tax row
-                  — it's the tenant's cost there. */}
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground">
-                  {isLease ? "Rental Summary" : "Asset Summary"}
-                </h3>
-                <div className="space-y-2 text-xs">
-                  {soldPrice !== null && (
-                    <SummaryRow
-                      label={status.kind === "sold" && status.label === "LEASED" ? "Leased Price" : "Sold Price"}
-                      value={formatPrice(soldPrice)}
-                      valueClass="text-rose-700 dark:text-rose-400"
-                    />
-                  )}
-                  <SummaryRow
-                    label={
-                      isLease
-                        ? isCommercial && p.ListPriceUnit && !/month/i.test(p.ListPriceUnit)
-                          ? // Commercial lease quoted on a non-monthly basis — label the
-                            // basis verbatim instead of asserting "Monthly Rent".
-                            `Asking Rent (${p.ListPriceUnit})`
-                          : "Monthly Rent"
-                        : "List Price"
-                    }
-                    value={formatPrice(price)}
-                    valueClass={isActiveListing ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
-                  />
-                  {(!isLease || isCommercial) && (
-                    <>
-                      <SummaryRow
-                        label={
-                          // TaxType="TMI" → TaxAnnualAmount is the TMI figure, not a property tax.
-                          isCommercial && typeof p.TaxType === "string" && p.TaxType.trim().toUpperCase() === "TMI"
-                            ? "TMI (as listed)"
-                            : "Annual Taxes"
-                        }
-                        value={p.TaxAnnualAmount ? formatPrice(p.TaxAnnualAmount) : "N/A"}
-                      />
-                      <SummaryRow
-                        label="Monthly Fees"
-                        value={p.AssociationFee ? formatPrice(p.AssociationFee) : "None"}
-                      />
-                    </>
-                  )}
-                  <SummaryRow
-                    label={isLease ? "Days Available" : "True DOM"}
-                    value={`${trueDom} days`}
-                    valueClass={trueDom > 45 ? "text-emerald-700 dark:text-emerald-400" : trueDom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}
+              {/* MOBILE ONLY: anon email capture BELOW the Intelligence panel and
+                  CTAs — the product's brain should never rank under an email field.
+                  (Desktop's instance is pinned to the rail top, prod layout.) */}
+              {!isAuthed && (
+                <div className="lg:hidden">
+                  <ListingAlertCapture
+                    listingKey={id}
+                    address={address}
+                    city={detail.city ?? undefined}
+                    statusKind={status.kind}
                   />
                 </div>
-              </div>
+              )}
 
-              {isLease ? (
-                isCommercial ? (
-                  /* Commercial lease — basis-aware economics ($/sqft/yr, TMI) instead of
-                     the residential rent-comp framing (commercial-gap Phase 1).
-                     areaSqftOrNull: the $/sqft math may only see a SQFT area — an
-                     acres-quoted BuildingAreaTotal (land leases) would inflate the
-                     rate ~43,560×, so non-sqft units pass null (rate omitted). */
-                  <CommercialLeaseSnapshot
-                    listPrice={soldPrice ?? price}
-                    listPriceUnit={p.ListPriceUnit ?? null}
-                    buildingAreaTotal={areaSqftOrNull}
-                    leaseTerm={p.LeaseTerm ?? null}
-                    rentIncludes={p.RentIncludes ?? null}
-                    tmi={p.TMI ?? null}
-                    taxType={typeof p.TaxType === "string" ? p.TaxType : null}
-                    taxAnnualAmount={p.TaxAnnualAmount ?? null}
-                    leased={status.kind === "sold"}
-                  />
-                ) : (
-                <RentalSnapshot
-                  monthlyRent={soldPrice ?? price}
-                  leased={status.kind === "sold"}
-                  buildingAreaTotal={areaSqftOrNull}
-                  livingAreaRange={p.LivingAreaRange ?? null}
-                  leaseTerm={p.LeaseTerm ?? null}
-                  depositRequired={p.DepositRequired ?? null}
-                  rentIncludes={p.RentIncludes ?? null}
-                />
-                )
+              {/* Asset/Rental Summary + finance card: on mobile, panel-eligible
+                  listings carry these inside the panel's Costs tab; desktop (and the
+                  legacy stack) keeps them in the rail — the prod layout. */}
+              {panelEligible ? (
+                <div className="hidden space-y-4 lg:block">
+                  {assetSummaryCard}
+                  {financeCard}
+                </div>
               ) : (
-                <ListingCalculator
-                  listingId={id}
-                  listPrice={soldPrice ?? price}
-                  annualTaxes={p.TaxAnnualAmount || 0}
-                  monthlyFees={p.AssociationFee || 0}
-                  hasSuitePotential={hasSuitePotential}
-                  incomeApplicable={incomeApplicable}
-                  isToronto={isToronto}
-                  isOntario={isOntario}
-                  initialRatePct={mortgageRate.ratePct}
-                  rateAsOf={mortgageRate.asOf}
-                  defaultLens={calcDefaultLens}
-                />
+                <>
+                  {assetSummaryCard}
+                  {financeCard}
+                </>
               )}
 
               {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add) */}
@@ -1026,8 +1153,11 @@ export default async function PropertyPage({
             </div>
           </div>
 
-          {/* ── LEFT-REST: deep detail. Desktop col 1 / row 2; renders THIRD on mobile (after the cockpit). ── */}
+          {/* ── LEFT / row 2: THE HOME detail. Renders THIRD on mobile — after the
+               Intelligence panel, so the moat sits one screen from the price. ── */}
           <div className="lg:col-start-1 lg:row-start-2">
+            <div className="lg:hidden"><ZoneLabel>The Home</ZoneLabel></div>
+
             {/* Remarks (the listing's own description) */}
             <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />}>
               <div className="rounded-lg border border-border bg-card/30 p-4">
@@ -1038,12 +1168,22 @@ export default async function PropertyPage({
               </div>
             </Section>
 
-            {/* Property Data Sheet — full TRREB payload, registry-driven (spec 2026-06-12).
-                Brokerage (§6.3(c)) is displayed in the header + the compliance notice, so the
-                standalone "Listed By" block was dropped as redundant. */}
+            {/* MOBILE, legacy card set (sold / lease / commercial): diligence flags
+                keep their own card here; panel-eligible mobile carries them in the
+                Verdict tab, and desktop's instance sits in the left column above. */}
+            {!panelEligible && (
+              <div className="lg:hidden">
+                <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
+              </div>
+            )}
+
+            {/* Property Data Sheet — full TRREB payload, registry-driven. */}
             <div id="details" className="scroll-mt-28">
               <PropertyDataSheet groups={datasheet} />
             </div>
+
+            {/* Zoning — municipal open data (NOT MLS), its own attributed card. */}
+            <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
 
             {/* Room Dimensions — proportional, drawn-to-scale room map */}
             {rooms.length > 0 && (
@@ -1058,8 +1198,7 @@ export default async function PropertyPage({
             {/* Grocery + recreation proximity */}
             <NearbyAmenities listingId={id} />
 
-            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage).
-                Deal-breaker rules (min beds, min cap) are residential — off for commercial. */}
+            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage). */}
             {!isCommercial && (
               <YourTakeCard
                 listingKey={id}
@@ -1075,8 +1214,11 @@ export default async function PropertyPage({
           </div>
         </div>
 
-        {/* ── FULL-WIDTH: Property History — timeline + campaign/sale tables, given room out of the 30% rail ── */}
-        <section id="history" className="mt-6 scroll-mt-28">
+        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — history + comps. ── */}
+        <section id="market" className="scroll-mt-28 lg:mt-6">
+          <div className="lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
+
+        <section id="history" className="scroll-mt-28">
           {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
               Pure CSS (a peer checkbox), so it stays server-rendered — no client
               boundary, no hydration flash. Desktop (md+) always shows it and hides
@@ -1146,6 +1288,7 @@ export default async function PropertyPage({
           cityHubHref={cityHref}
         />
         </div>
+        </section>
 
         {/* IDX consumer notice — unconditional on every listing page (§6.3(i)+(k)),
             independent of whether AVM figures rendered above. */}
@@ -1207,6 +1350,42 @@ function Section({
         {title}
       </h3>
       {children}
+    </div>
+  );
+}
+
+/** PROTOTYPE (Proposal B): zone marker — mono eyebrow + hairline, echoing the terminal voice. */
+function ZoneLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-4 mt-2 flex items-center gap-3">
+      <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-400">
+        {children}
+      </span>
+      <span className="h-px flex-1 bg-border" aria-hidden />
+    </div>
+  );
+}
+
+/** PROTOTYPE (Proposal B): one compressed verdict row (The Read → scoreboard form). */
+function VerdictRow({
+  label,
+  tone,
+  text,
+}: {
+  label: string;
+  tone: "emerald" | "amber" | "cyan";
+  text: string;
+}) {
+  const toneClass =
+    tone === "emerald"
+      ? "text-emerald-700 dark:text-emerald-400"
+      : tone === "amber"
+        ? "text-amber-700 dark:text-amber-400"
+        : "text-cyan-700 dark:text-cyan-400";
+  return (
+    <div className="grid grid-cols-[84px_1fr] gap-2 py-2">
+      <span className={cn("pt-0.5 font-mono text-[11px] font-bold tracking-wider", toneClass)}>{label}</span>
+      <span className="text-sm leading-snug text-foreground">{text}</span>
     </div>
   );
 }
