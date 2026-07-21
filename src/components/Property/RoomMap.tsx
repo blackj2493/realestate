@@ -12,11 +12,15 @@
  * Honesty: areas are proportional and dimensions are as listed, but we have no room
  * positions/adjacency — this is NOT an architectural floor plan. Captioned as such.
  *
+ * Layout is computed in measured CSS pixels (ResizeObserver), not a fixed viewBox:
+ * on narrow screens the map grows taller (per-room area target) instead of shrinking
+ * tiles and text below legibility.
+ *
  * Compliance (CLAUDE.md §4): deterministic squarified-treemap layout from numeric
  * areas — no LLM.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Ruler, LayoutGrid, List as ListIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -41,10 +45,15 @@ const LEVEL_ORDER: Record<string, number> = {
   Basement: 6,
 };
 
-// Treemap coordinate space (viewBox units; each floor SVG scales to container width).
-const VB_W = 1000;
-const H_TOTAL = 540; // total viewBox height shared across all floors (∝ area)
-const MIN_FLOOR_VBH = 96; // floor band floor so a tiny floor stays usable
+// Treemap layout runs in CSS-pixel space: the container width is measured and the
+// SVG viewBox matches it 1:1, so tile sizes, label thresholds, and font sizes are
+// the real on-screen pixels. (A fixed 1000-unit viewBox CSS-scaled down made labels
+// ~6px and floor bands sliver-thin on phones.)
+const FALLBACK_W = 1000; // pre-measure / SSR fallback width
+const DESKTOP_ASPECT = 0.54; // map height ≈ 54% of width on wide screens (old 540/1000)
+const MIN_TILE_AREA = 15000; // target px² per room; stretches the map taller on narrow screens
+const MAX_H_TOTAL = 640; // height cap so room-dense listings don't grow unbounded
+const MIN_FLOOR_H = 96; // floor band minimum so a tiny floor stays usable
 const OUTER_PAD = 3;
 const ROOM_GAP = 3; // inset between room tiles
 
@@ -175,7 +184,8 @@ function inset(r: Rect, gap: number): Rect {
 /** One treemap section per floor; floor band height ∝ floor area (shared scale). */
 function buildFloorSections(
   rooms: ProcessedRoom[],
-  levelFilter: string | null
+  levelFilter: string | null,
+  width: number
 ): FloorSection[] {
   const visible = levelFilter ? rooms.filter((r) => r.level === levelFilter) : rooms;
   if (visible.length === 0) return [];
@@ -184,6 +194,13 @@ function buildFloorSections(
   const levels = orderedLevels(getUniqueLevels(visible));
   const totalArea = visible.reduce((s, r) => s + r.areaMeters, 0) || 1;
 
+  // On wide screens this is the classic 0.54 aspect; on narrow screens the
+  // per-room area target wins, making the map taller instead of the tiles tiny.
+  const hTotal = Math.max(
+    width * DESKTOP_ASPECT,
+    Math.min(MAX_H_TOTAL, (MIN_TILE_AREA * visible.length) / width)
+  );
+
   const sections: FloorSection[] = [];
   for (const floor of levels) {
     const lvlRooms = (grouped.get(floor) ?? [])
@@ -191,9 +208,9 @@ function buildFloorSections(
       .sort((a, b) => b.areaMeters - a.areaMeters);
     if (lvlRooms.length === 0) continue;
     const floorArea = lvlRooms.reduce((s, r) => s + r.areaMeters, 0);
-    const vbH = Math.max(MIN_FLOOR_VBH, (floorArea / totalArea) * H_TOTAL);
+    const vbH = Math.max(MIN_FLOOR_H, (floorArea / totalArea) * hTotal);
     const color = getLevelColor(floor);
-    const rect: Rect = { x: OUTER_PAD, y: OUTER_PAD, w: VB_W - 2 * OUTER_PAD, h: vbH - 2 * OUTER_PAD };
+    const rect: Rect = { x: OUTER_PAD, y: OUTER_PAD, w: width - 2 * OUTER_PAD, h: vbH - 2 * OUTER_PAD };
     const items: TItem[] = lvlRooms.map((r) => ({ id: r.id, value: r.areaMeters, room: r }));
     const tiles: RoomTile[] = [];
     for (const t of squarify(items, rect)) {
@@ -227,9 +244,24 @@ export default function RoomMap({
   const [levelFilter, setLevelFilter] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  // Measure the card's content width so the treemap lays out in real pixels.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [measuredW, setMeasuredW] = useState(0);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setMeasuredW(Math.round(w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const width = measuredW || FALLBACK_W;
+
   const sections = useMemo(
-    () => buildFloorSections(processed, levelFilter),
-    [processed, levelFilter]
+    () => buildFloorSections(processed, levelFilter, width),
+    [processed, levelFilter, width]
   );
   const filterLevels = useMemo(() => orderedLevels(getUniqueLevels(processed)), [processed]);
   const active = useMemo(() => {
@@ -258,7 +290,7 @@ export default function RoomMap({
   }
 
   return (
-    <div data-tour="listing-room-map" className={cn("bg-card rounded-lg border border-border p-4", className)}>
+    <div ref={containerRef} data-tour="listing-room-map" className={cn("bg-card rounded-lg border border-border p-4", className)}>
       <Header unit={unit} setUnit={setUnit} mode={mode} setMode={setMode} showToggle={hasScaled} />
 
       {/* Level filter pills (double as the floor legend) */}
@@ -299,8 +331,8 @@ export default function RoomMap({
                   </span>
                 </div>
                 <svg
-                  viewBox={`0 0 ${VB_W} ${sec.vbH}`}
-                  width={VB_W}
+                  viewBox={`0 0 ${width} ${sec.vbH}`}
+                  width={width}
                   height={sec.vbH}
                   className="block h-auto w-full"
                   role="img"
@@ -308,9 +340,11 @@ export default function RoomMap({
                 >
                   {sec.tiles.map((t) => {
                     const isActive = active?.room.id === t.room.id;
-                    const showName = t.w > 64 && t.h > 30;
-                    const showArea = t.w > 64 && t.h > 50;
-                    const showDim = t.w > 96 && t.h > 70;
+                    // Thresholds are real pixels (viewBox is 1:1 with CSS pixels),
+                    // so labels genuinely disappear before they become unreadable.
+                    const showName = t.w > 58 && t.h > 26;
+                    const showArea = t.w > 58 && t.h > 44;
+                    const showDim = t.w > 90 && t.h > 62;
                     return (
                       <g
                         key={t.room.id}
@@ -324,6 +358,8 @@ export default function RoomMap({
                         onMouseLeave={() => setActiveId((c) => (c === t.room.id ? null : c))}
                         onFocus={() => setActiveId(t.room.id)}
                         onBlur={() => setActiveId((c) => (c === t.room.id ? null : c))}
+                        // Touch: tap selects (idempotent with onFocus, so no toggle-off race).
+                        onClick={() => setActiveId(t.room.id)}
                         style={{ cursor: "pointer", outline: "none" }}
                       >
                         {/* Single string child — React requires <title> children to
@@ -365,20 +401,20 @@ export default function RoomMap({
                         )}
                         {showName && (
                           <text
-                            x={t.x + 7}
-                            y={t.y + 19}
-                            fontSize={16}
+                            x={t.x + 6}
+                            y={t.y + 17}
+                            fontSize={13}
                             className="font-semibold fill-slate-900 dark:fill-slate-100"
                             pointerEvents="none"
                           >
-                            {truncate(t.room.name, t.w, 16)}
+                            {truncate(t.room.name, t.w, 13)}
                           </text>
                         )}
                         {showArea && (
                           <text
-                            x={t.x + 7}
-                            y={t.y + 37}
-                            fontSize={13}
+                            x={t.x + 6}
+                            y={t.y + 31}
+                            fontSize={11}
                             fontFamily="monospace"
                             className="fill-slate-700 dark:fill-slate-300"
                             pointerEvents="none"
@@ -388,9 +424,9 @@ export default function RoomMap({
                         )}
                         {showDim && (
                           <text
-                            x={t.x + 7}
-                            y={t.y + 53}
-                            fontSize={12}
+                            x={t.x + 6}
+                            y={t.y + 45}
+                            fontSize={10}
                             fontFamily="monospace"
                             className="fill-slate-600 dark:fill-slate-400"
                             pointerEvents="none"
@@ -406,8 +442,8 @@ export default function RoomMap({
             ))}
           </div>
 
-          {/* Hover/focus detail strip */}
-          <div className="mt-2 h-5 text-xs">
+          {/* Hover/focus/tap detail strip (min-h so it can wrap on narrow screens) */}
+          <div className="mt-2 min-h-5 text-xs">
             {active ? (
               <span className="flex flex-wrap items-center gap-x-2 text-foreground">
                 <span className="font-semibold text-foreground">{active.room.name}</span>
