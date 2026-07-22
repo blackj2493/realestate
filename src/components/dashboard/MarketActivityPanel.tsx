@@ -178,7 +178,7 @@ export default function MarketActivityPanel({
   const visibleSold = soldRows ? (soldExpanded ? soldRows : soldRows.slice(0, ROW_LIMIT)) : null;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {/* New listings (active / IDX) */}
       <div className="flex flex-col border border-border bg-card/40">
         <CountHeader title="New Listings" accent="text-cyan-700 dark:text-cyan-400" count={newCount} />

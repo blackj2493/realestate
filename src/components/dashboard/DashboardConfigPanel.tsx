@@ -55,7 +55,7 @@ export default function DashboardConfigPanel({
         Customize Workspace
       </h2>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Market areas */}
         <div>
           <label className="terminal-font mb-2 block text-[10px] uppercase tracking-wider text-muted-foreground">
