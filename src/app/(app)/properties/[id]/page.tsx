@@ -742,15 +742,19 @@ export default async function PropertyPage({
                       </>
                     ) : (
                       <>
-                        <span className="font-mono text-3xl font-bold text-muted-foreground">
+                        {/* Anon: the ask is NOT the closing number — strike it through
+                            (the authed view already does once the sold price shows),
+                            and give the sign-in gate real CTA weight. */}
+                        <span className="font-mono text-3xl font-bold text-muted-foreground line-through decoration-2">
                           {formatPrice(price)}
                         </span>
                         {hasSoldPrice && (
                           <Link
                             href="/login"
-                            className="rounded border border-border px-2 py-0.5 text-xs text-cyan-700 dark:text-cyan-300 hover:bg-muted"
+                            className="inline-flex min-h-[40px] items-center gap-1.5 self-center rounded-lg border border-cyan-500 bg-cyan-500/10 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300"
                           >
-                            Sign in for the sold price
+                            <Lock className="h-4 w-4" />
+                            Sign in for the {status.label === "LEASED" ? "leased" : "sold"} price — free
                           </Link>
                         )}
                       </>
