@@ -21,6 +21,7 @@ import {
   MapTimeline,
   MapCommandPalette,
   MobileMapTools,
+  ActiveLensBar,
 } from "@/components/CommandCenter";
 import QuickLookPanel from "@/components/CommandCenter/QuickLookPanel";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
@@ -430,6 +431,10 @@ function CommandCenterContent() {
               always; phones in list view). Compliance audit R9/R11 flagged this
               notice as mandatory on IDX pages — do not remove that ledger-footer
               instance too. */}
+          {/* Phone-only, IN-FLOW active-mode chips (one-tap exits). Lives above the
+              map on purpose: absolute banners over the map kept colliding with the
+              legend HUD, burying the exit affordance (the "stuck in a mode" bug). */}
+          <ActiveLensBar />
           <div className="relative min-h-0 flex-1">
             <AlphaMap
               properties={displayed}

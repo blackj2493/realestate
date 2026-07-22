@@ -1029,7 +1029,10 @@ export default function AlphaMap({
           button, so a user can exit "tap to add" straight from the map without hunting for
           the toggle in the Compare drawer (which is often closed — the stuck-in-select-mode bug). */}
       {isSelectMode && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-2.5 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md">
+        /* hidden md:flex — on phones the in-flow ActiveLensBar (above the map)
+           carries the "Selecting — Done" chip; this absolute toast collided with
+           the legend HUD there (both pinned top-of-map), burying the exit. */
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 items-center gap-2.5 border border-cyan-500/40 bg-cyan-500/15 px-3.5 py-1.5 backdrop-blur-md md:flex">
           <p className="font-mono text-xs text-cyan-200">Tap properties to add to your selection</p>
           <button
             type="button"

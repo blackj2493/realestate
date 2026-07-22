@@ -13,6 +13,7 @@ export { default as MapDrawer } from './MapDrawer';
 export { default as MapModeDock } from './MapModeDock';
 export { default as MapStatusHUD } from './MapStatusHUD';
 export { default as MobileMapTools } from './MobileMapTools';
+export { default as ActiveLensBar } from './ActiveLensBar';
 export { default as MapTimeline } from './MapTimeline';
 export { default as MapCommandPalette } from './MapCommandPalette';
 export { default as ShareDialog } from './ShareDialog';
