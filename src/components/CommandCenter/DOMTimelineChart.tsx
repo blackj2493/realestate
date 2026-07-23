@@ -86,7 +86,9 @@ function fmtDate(d: Date): string {
 function fmtMonthYear(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  // Date-only strings parse as UTC midnight — timeZone:'UTC' or a sale dated the 1st
+  // of a month renders as the PREVIOUS month for Ontario viewers (audit MEDIUM-18).
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 // Colored-dot renderer: amber for prior sales, emerald for the current asking.

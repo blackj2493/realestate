@@ -169,29 +169,51 @@ export function toSoldDocument(
   return doc;
 }
 
-/** Upsert a batch of sold docs into Typesense (chunked). Returns success/fail counts. */
+/**
+ * Upsert a batch of sold docs into Typesense (chunked). Returns success/fail counts.
+ * Docs that fail get ONE retry pass: a transient per-doc import error otherwise drops
+ * the row from the dashboard SOLD panel until the next window reindex — days of a
+ * quiet, plausible-looking gap (exactly the 2026-07-22 East Gwillimbury report).
+ */
 export async function importSoldBatch(
   client: Client,
   docs: SoldListingDocument[]
 ): Promise<{ success: number; failed: number }> {
-  let success = 0;
+  const importChunks = async (input: SoldListingDocument[]) => {
+    let ok = 0;
+    const failedDocs: SoldListingDocument[] = [];
+    for (let i = 0; i < input.length; i += IMPORT_CHUNK) {
+      const chunk = input.slice(i, i + IMPORT_CHUNK);
+      if (chunk.length === 0) continue;
+      const resp = await client
+        .collections(SOLD_LISTINGS_COLLECTION)
+        .documents()
+        .import(chunk, { action: 'upsert' });
+      const results = Array.isArray(resp)
+        ? resp
+        : JSON.parse(resp as unknown as string);
+      results.forEach((res: { success: boolean; error?: string }, j: number) => {
+        if (res.success) ok++;
+        else {
+          failedDocs.push(chunk[j]);
+          console.warn(`   ⚠️  sold_listings import error (${chunk[j]?.id}): ${res.error ?? 'unknown'}`);
+        }
+      });
+    }
+    return { ok, failedDocs };
+  };
+
+  const first = await importChunks(docs);
+  let success = first.ok;
   let failed = 0;
-  for (let i = 0; i < docs.length; i += IMPORT_CHUNK) {
-    const chunk = docs.slice(i, i + IMPORT_CHUNK);
-    if (chunk.length === 0) continue;
-    const resp = await client
-      .collections(SOLD_LISTINGS_COLLECTION)
-      .documents()
-      .import(chunk, { action: 'upsert' });
-    const results = Array.isArray(resp)
-      ? resp
-      : JSON.parse(resp as unknown as string);
-    for (const res of results) {
-      if (res.success) success++;
-      else {
-        failed++;
-        console.warn(`   ⚠️  sold_listings import error: ${res.error ?? 'unknown'}`);
-      }
+  if (first.failedDocs.length > 0) {
+    const retry = await importChunks(first.failedDocs);
+    success += retry.ok;
+    failed = retry.failedDocs.length;
+    if (failed > 0) {
+      console.error(
+        `   ❌ ${failed} sold doc(s) failed to index after retry — they will be invisible in the SOLD panel until the next window reindex: ${retry.failedDocs.map((d) => d.id).join(', ')}`
+      );
     }
   }
   return { success, failed };
@@ -226,12 +248,12 @@ const BACKFILL_PAGE = 1000;
  * index on purchase_contract_date, so ordering by it sorts the whole table → statement
  * timeout. Ordering by the PK uses its index (no sort); each keyset page is ~1-2s.
  */
-async function backfill(): Promise<void> {
-  console.log(`\n🌱 sold_listings backfill — last ${SOLD_WINDOW_DAYS}d from raw_vow_sold`);
+async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
+  console.log(`\n🌱 sold_listings backfill — last ${days}d from raw_vow_sold`);
   const supabase = getServiceRoleClient();
   const client = getSoldAdminClient();
 
-  const cutoffISO = new Date(windowCutoffMs()).toISOString();
+  const cutoffISO = new Date(windowCutoffMs(days)).toISOString();
   const nowISO = new Date().toISOString();
   const columns =
     'listing_key, unparsed_address, city_region, city, postal_code, property_sub_type, ' +
@@ -307,14 +329,24 @@ if (invokedDirectly) {
   (async () => {
     const mode = process.argv[2] || 'backfill';
     if (mode === 'backfill') {
-      await backfill();
+      // --days N bounds the reindex window (default: the full 180d collection window).
+      // The nightly sync runs `backfill --days 7` as a self-heal: any row the inline
+      // Query B indexing missed (transient import failure, geocode hiccup) is re-derived
+      // from the vault within 24h instead of waiting for the Sun/Wed reconcile.
+      const daysIdx = process.argv.indexOf('--days');
+      const days = daysIdx > -1 ? Number(process.argv[daysIdx + 1]) : SOLD_WINDOW_DAYS;
+      if (!Number.isFinite(days) || days < 1 || days > SOLD_WINDOW_DAYS) {
+        console.error(`--days must be 1-${SOLD_WINDOW_DAYS}, got "${process.argv[daysIdx + 1]}"`);
+        process.exit(1);
+      }
+      await backfill(days);
       process.exit(0);
     }
     if (mode === 'prune') {
       await pruneOldSold(getSoldAdminClient());
       process.exit(0);
     }
-    console.error(`Unknown mode "${mode}". Use: backfill | prune`);
+    console.error(`Unknown mode "${mode}". Use: backfill [--days N] | prune`);
     process.exit(1);
   })().catch((err) => {
     console.error('❌ soldIndexer failed:', err.message);

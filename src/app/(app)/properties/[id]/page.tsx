@@ -196,12 +196,14 @@ function calculateDaysOnMarket(ts?: string): number {
   return Math.max(0, Math.ceil(diff / 86_400_000) - 1);
 }
 
-/** Format a feed date; malformed strings pass through raw instead of "Invalid Date". */
+/** Format a feed date; malformed strings pass through raw instead of "Invalid Date".
+ *  Feed dates are date-only strings that parse as UTC midnight — without timeZone:'UTC'
+ *  Ontario viewers see the previous day (audit MEDIUM-18). */
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function cleanDescription(remarks: string | undefined, max = 155): string {

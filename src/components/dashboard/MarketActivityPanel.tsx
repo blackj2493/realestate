@@ -29,9 +29,11 @@ function relTime(ts?: number): string {
 function soldDateFmt(s?: string | null): string {
   if (!s) return "";
   const d = new Date(s);
+  // soldDate encodes a date-only value as UTC midnight; without timeZone:'UTC' every
+  // UTC− viewer (all of Ontario) sees the previous day (audit MEDIUM-18).
   return Number.isNaN(d.getTime())
     ? ""
-    : d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+    : d.toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /**

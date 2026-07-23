@@ -21,9 +21,11 @@ const BRAG_THRESHOLD_PCT = 3;
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);
+  // Date-only strings parse as UTC midnight — without timeZone:'UTC' Ontario viewers
+  // see the previous day (audit MEDIUM-18).
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export default function SoldOutcomeCard({
