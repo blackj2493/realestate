@@ -36,6 +36,17 @@ type Row =
   | { kind: "sold"; sortMs: number; sold: SoldNearEvent }
   | { kind: "locked"; sortMs: number };
 
+// Per-kind left accent rail — the at-a-glance colour cue so NEW / CUT / SOLD read
+// apart before you parse the row. Pairs with the Badge label (which names the event).
+const ROW_ACCENT: Record<"new" | "cut" | "sold" | "locked", string> = {
+  new: "border-l-cyan-500/70 hover:bg-cyan-500/[0.06]",
+  cut: "border-l-amber-500/70 hover:bg-amber-500/[0.06]",
+  sold: "border-l-emerald-500/70 hover:bg-emerald-500/[0.06]",
+  locked: "border-l-emerald-500/30 hover:bg-emerald-500/[0.05]",
+};
+const ROW_BASE =
+  "flex items-center gap-3 rounded-r-md border-l-2 py-2.5 pl-3 pr-1 transition-colors";
+
 function Badge({ kind }: { kind: "new" | "cut" | "sold" }) {
   const cls =
     kind === "new"
@@ -108,11 +119,11 @@ export default function ActivityFeed({
         <span className="font-mono text-[10px] text-muted-foreground">{radiusKm} km · newest first</span>
       </div>
 
-      <div className="divide-y divide-border/60">
+      <div className="space-y-1">
         {visible.map((row, i) => {
           if (row.kind === "locked") {
             return (
-              <Link key={`locked-${i}`} href="/login" className="group flex items-center gap-3 py-2.5">
+              <Link key={`locked-${i}`} href="/login" className={`group ${ROW_BASE} ${ROW_ACCENT.locked}`}>
                 <Badge kind="sold" />
                 <div className="redact-skeleton h-10 w-14 shrink-0 rounded" aria-hidden="true" />
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -128,7 +139,7 @@ export default function ActivityFeed({
           if (row.kind === "sold") {
             const s = row.sold;
             return (
-              <div key={`sold-${s.id}`} className="flex items-center gap-3 py-2.5">
+              <div key={`sold-${s.id}`} className={`${ROW_BASE} ${ROW_ACCENT.sold}`}>
                 <Badge kind="sold" />
                 <Thumb url={s.imageUrl} alt={s.address} />
                 <div className="min-w-0 flex-1">
@@ -152,7 +163,11 @@ export default function ActivityFeed({
           const l = row.ev.listing;
           const isCut = row.kind === "cut";
           return (
-            <Link key={`${row.kind}-${l.id}`} href={`/properties/${l.id}`} className="group flex items-center gap-3 py-2.5">
+            <Link
+              key={`${row.kind}-${l.id}`}
+              href={`/properties/${l.id}`}
+              className={`group ${ROW_BASE} ${ROW_ACCENT[row.kind]}`}
+            >
               <Badge kind={row.kind} />
               <Thumb url={l.imageUrl} alt={l.address} />
               <div className="min-w-0 flex-1">
