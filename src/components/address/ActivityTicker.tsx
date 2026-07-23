@@ -21,9 +21,11 @@ const KIND_CLS: Record<TickerItem["kind"], string> = {
 
 const KIND_LABEL: Record<TickerItem["kind"], string> = { new: "NEW", cut: "CUT", sold: "SOLD" };
 
-export default function ActivityTicker({ items, radiusKm }: { items: TickerItem[]; radiusKm: number }) {
-  if (items.length === 0) return null;
-  const Tape = () => (
+// Declared at module scope (not inside render) so it keeps a stable identity —
+// a component created during render trips react-hooks/static-components and
+// would reset its subtree state on every parent render.
+function Tape({ items }: { items: TickerItem[] }) {
+  return (
     <>
       {items.map((it, i) => (
         <span key={i} className="inline-flex shrink-0 items-baseline gap-2 whitespace-nowrap">
@@ -33,6 +35,10 @@ export default function ActivityTicker({ items, radiusKm }: { items: TickerItem[
       ))}
     </>
   );
+}
+
+export default function ActivityTicker({ items, radiusKm }: { items: TickerItem[]; radiusKm: number }) {
+  if (items.length === 0) return null;
   return (
     <div
       className="mt-4 flex items-center overflow-hidden rounded-md border border-border bg-card/40"
@@ -46,8 +52,8 @@ export default function ActivityTicker({ items, radiusKm }: { items: TickerItem[
           Two copies → seamless -50% loop; decorative duplication is aria-hidden. */}
       <div className="min-w-0 flex-1 overflow-hidden" aria-hidden="true">
         <div className="pp-tape flex w-max gap-10 pl-5">
-          <Tape />
-          <Tape />
+          <Tape items={items} />
+          <Tape items={items} />
         </div>
       </div>
     </div>

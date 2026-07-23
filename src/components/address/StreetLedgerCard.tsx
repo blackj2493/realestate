@@ -17,15 +17,22 @@ function fmtK(n: number): string {
   return `$${Math.round(n / 1000)}k`;
 }
 
-/** Date-only ISO string → UTC-safe year/short label (audit MEDIUM-18). */
-function yearOf(dateISO: string): string {
-  return dateISO.slice(0, 4);
-}
+/** Date-only ISO string → UTC-safe month/year label (audit MEDIUM-18). */
 function fmtDate(dateISO: string): string {
   const d = new Date(dateISO);
   return Number.isNaN(d.getTime())
     ? dateISO
     : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", timeZone: "UTC" });
+}
+
+/** Street-level move vs the previous (older) recorded sale — an insight neither
+ *  HouseSigma nor Realtor.ca surface inline. Different homes, so it's labelled as a
+ *  street trajectory, never a same-home appreciation figure. */
+function pctMove(cur: number, prev: number): { pct: number; up: boolean } | null {
+  if (!Number.isFinite(prev) || prev <= 0) return null;
+  const pct = ((cur - prev) / prev) * 100;
+  if (!Number.isFinite(pct) || Math.abs(pct) < 0.5) return null;
+  return { pct: Math.round(Math.abs(pct)), up: pct >= 0 };
 }
 
 export default function StreetLedgerCard({
@@ -42,82 +49,112 @@ export default function StreetLedgerCard({
   const streetLabel = (isConsumer ? gated?.streetLabel : publicLedger?.streetLabel) ?? "";
   if (count === 0 || !streetLabel) return null;
 
-  // ── Consumer: real timeline, dots positioned by sale date ──────────────────
+  // ── Consumer: vertical timeline ledger, newest first ───────────────────────
+  // A vertical rail (one row per sale) can't overlap the way the old date-proportional
+  // horizontal dots did when sales clustered in the same period. Each row carries the
+  // move vs the previous street sale — the added scannable insight.
   if (isConsumer && gated) {
     const sales = gated.sales.slice(0, MAX_DOTS); // newest first
-    const times = sales.map((s) => new Date(s.dateISO).getTime()).filter((t) => Number.isFinite(t));
-    const minT = Math.min(...times);
-    const maxT = Math.max(...times);
-    const span = Math.max(1, maxT - minT);
-    const latest = gated.sales[0];
+    const prices = sales.map((s) => s.closePrice).filter((p) => Number.isFinite(p) && p > 0);
+    const hi = prices.length ? Math.max(...prices) : 0;
+    const lo = prices.length ? Math.min(...prices) : 0;
+    const earlier = gated.count - sales.length;
     return (
       <section className="rounded-lg border border-border bg-card/40 p-5">
-        <div className="mb-1 flex items-baseline justify-between gap-3">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{streetLabel} ledger</h2>
           <span className="font-mono text-[10px] text-muted-foreground">
             {gated.count} sale{gated.count === 1 ? "" : "s"} on record
           </span>
         </div>
 
-        <div className="relative mx-1 mb-9 mt-10 h-0.5 rounded bg-border" aria-hidden="true">
+        <ol className="relative ml-1">
+          {/* Continuous rail behind the dots. */}
+          <span className="absolute bottom-3 left-[3px] top-3 w-px bg-border" aria-hidden="true" />
           {sales.map((s, i) => {
-            const t = new Date(s.dateISO).getTime();
-            const left = sales.length === 1 ? 50 : 4 + ((t - minT) / span) * 92;
+            const prev = sales[i + 1]; // the next-older street sale
+            const move = prev ? pctMove(s.closePrice, prev.closePrice) : null;
+            const isHi = s.closePrice === hi && hi !== lo;
+            const isLo = s.closePrice === lo && hi !== lo;
             return (
-              <span
-                key={`${s.listingKey}-${i}`}
-                className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-emerald-500"
-                style={{ left: `${left}%` }}
-                title={`${s.address} — ${fmtK(s.closePrice)} · ${fmtDate(s.dateISO)}`}
-              >
-                <span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[9px] text-muted-foreground">
-                  {yearOf(s.dateISO)}
-                </span>
-                <span className="absolute left-1/2 top-3.5 -translate-x-1/2 font-mono text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
-                  {fmtK(s.closePrice)}
-                </span>
-              </span>
+              <li key={`${s.listingKey}-${i}`} className="relative flex items-center gap-3 py-2 pl-5">
+                <span
+                  className="absolute left-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rounded-full border-2 border-card bg-emerald-500"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">{s.address}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">{fmtDate(s.dateISO)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 text-right">
+                  {move && (
+                    <span
+                      className={`font-mono text-[10px] font-semibold tabular-nums ${
+                        move.up ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                      }`}
+                      title="vs the previous recorded sale on this street"
+                    >
+                      {move.up ? "▲" : "▼"}
+                      {move.pct}%
+                    </span>
+                  )}
+                  <span className="font-mono text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {fmtK(s.closePrice)}
+                  </span>
+                  {(isHi || isLo) && (
+                    <span
+                      className={`w-8 shrink-0 rounded px-1 py-0.5 text-center font-mono text-[8px] font-bold uppercase tracking-wider ${
+                        isHi
+                          ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isHi ? "High" : "Low"}
+                    </span>
+                  )}
+                </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
 
-        {latest && (
-          <p className="text-xs text-muted-foreground">
-            Latest: <b className="font-semibold text-foreground">{latest.address}</b> —{" "}
-            <span className="font-mono text-emerald-700 dark:text-emerald-400">{fmtK(latest.closePrice)}</span> ·{" "}
-            {fmtDate(latest.dateISO)}
-            {gated.count > MAX_DOTS ? ` · +${gated.count - MAX_DOTS} earlier` : ""}
+        {earlier > 0 && (
+          <p className="mt-1 pl-5 font-mono text-[10px] text-muted-foreground">
+            +{earlier} earlier sale{earlier === 1 ? "" : "s"} on record
           </p>
         )}
-        <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-          Sold data via TRREB VOW — for your personal, non-commercial use.
+        <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+          ▲/▼ is the street&apos;s move vs the previous recorded sale (different homes) — not a per-home appreciation
+          figure. Sold data via TRREB VOW — for your personal, non-commercial use.
         </p>
       </section>
     );
   }
 
-  // ── Anonymous: count + pure-placeholder dots, sign-in CTA ──────────────────
-  const dots = Math.min(count, 8);
+  // ── Anonymous: count + pure-placeholder rows, sign-in CTA ──────────────────
+  const rows = Math.min(count, 5);
   return (
     <section className="rounded-lg border border-border bg-card/40 p-5">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
+      <div className="mb-4 flex items-baseline justify-between gap-3">
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{streetLabel} ledger</h2>
         <span className="font-mono text-[10px] text-muted-foreground">
           {count} sale{count === 1 ? "" : "s"} on record
         </span>
       </div>
 
-      <div className="relative mx-1 mb-8 mt-8 h-0.5 rounded bg-border" aria-hidden="true">
-        {Array.from({ length: dots }).map((_, i) => (
-          <span
-            key={i}
-            className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-emerald-500/80"
-            style={{ left: `${dots === 1 ? 50 : 4 + (i / (dots - 1)) * 92}%` }}
-          >
-            <span className="redact-skeleton absolute left-1/2 top-3.5 h-2.5 w-7 -translate-x-1/2 rounded-sm" />
-          </span>
+      <ol className="relative ml-1 mb-4" aria-hidden="true">
+        <span className="absolute bottom-3 left-[3px] top-3 w-px bg-border" />
+        {Array.from({ length: rows }).map((_, i) => (
+          <li key={i} className="relative flex items-center gap-3 py-2 pl-5">
+            <span className="absolute left-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rounded-full border-2 border-card bg-emerald-500/70" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="redact-skeleton h-3 w-2/5 rounded" />
+              <div className="redact-skeleton h-2.5 w-16 rounded" />
+            </div>
+            <div className="redact-skeleton h-4 w-14 shrink-0 rounded" />
+          </li>
         ))}
-      </div>
+      </ol>
 
       <p className="text-xs text-muted-foreground">
         <b className="font-semibold text-foreground">
