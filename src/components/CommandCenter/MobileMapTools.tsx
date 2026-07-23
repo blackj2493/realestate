@@ -52,6 +52,7 @@ export default function MobileMapTools() {
   const amenityEnabled = useCommandCenterStore((s) => s.amenity.enabled);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
+  const startDrawing = useCommandCenterStore((s) => s.startDrawing);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
   const showZoning = useCommandCenterStore((s) => s.showZoning);
   const setShowZoning = useCommandCenterStore((s) => s.setShowZoning);
@@ -70,6 +71,10 @@ export default function MobileMapTools() {
   // Unified tile list: the panel-opening modules, plus Zoning — an instant on/off map
   // lens (no panel), mirroring the desktop rail's ZONING action tile. Toggling it closes
   // the sheet so the overlay is visible on the map underneath.
+  // Draw Area also skips its panel here: the sheet is full-screen, so the desktop
+  // click-the-map draw loop is impossible inside it (the user's first map tap hit the
+  // backdrop and cancelled the draw). Instead the tile starts the draw and closes the
+  // sheet; ActiveLensBar carries the point count + Undo/Finish/Cancel controls.
   type MobileTile = { key: string; label: string; icon: LucideIcon; active: boolean; badge?: number; onClick: () => void };
   const tiles: MobileTile[] = [
     ...TOOLS.map((t) => ({
@@ -78,7 +83,13 @@ export default function MobileMapTools() {
       icon: t.icon,
       active: dataActive[t.module],
       badge: t.module === "compare" ? selectedCount : undefined,
-      onClick: () => setActiveModule(t.module),
+      onClick:
+        t.module === "draw"
+          ? () => {
+              startDrawing();
+              setOpen(false);
+            }
+          : () => setActiveModule(t.module),
     })),
     {
       key: "zoning",
