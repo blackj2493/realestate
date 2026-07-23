@@ -1,6 +1,12 @@
 /**
  * Daily ETL orchestrator — the Railway-cron entry point for the full pipeline.
  *
+ * ⚠️  NOT SCHEDULED ANYWHERE. Railway was abandoned (2026-06); the production pipeline is
+ * .github/workflows/daily-sync.yml. A step added ONLY here never runs in prod — that is
+ * exactly how "Refresh region metrics" and "Capture price events" sat unscheduled until
+ * the 2026-07-22 canary alert (region_metrics 45h stale, price_events empty forever).
+ * If you add a step, add it to daily-sync.yml; mirror it here only as documentation.
+ *
  * WHY THIS EXISTS: the pipeline historically lived in .github/workflows/daily-sync.yml,
  * but GitHub Actions' egress to Supabase started truncating REST responses
  * ("premature close") — Supabase logged 200s while the runner never received the body.

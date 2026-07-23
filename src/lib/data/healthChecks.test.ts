@@ -3,6 +3,7 @@ import {
   checkMarketRows,
   checkCondoRows,
   checkMigrationLedger,
+  checkPriceLedger,
   checkDrift,
   snapshotFromRows,
   LATEST_MONTH_KEY,
@@ -351,5 +352,32 @@ describe("regression: an unapplied migration (the 082 root cause)", () => {
 
   it("stays quiet when every migration is recorded", () => {
     expect(checkMigrationLedger(["081_a.sql"], ["081_a.sql", "080_old.sql"])).toEqual([]);
+  });
+});
+
+describe("regression: price-events capture never scheduled (zero rows ever, 2026-07-22)", () => {
+  // The nightly capture step lived only in the abandoned Railway orchestrator, so
+  // price_events stayed empty in prod for a week — nothing watched it. The heartbeat
+  // is listing_price_state.updated_at (state moves every successful run).
+  const NOW = Date.parse("2026-07-22T12:00:00Z");
+
+  it("errors when the state table has never been seeded", () => {
+    const problems = checkPriceLedger({ stateNewest: null, staleHours: 48, now: NOW });
+    expect(errorsOf(problems).some((e) => e.check === "price-ledger" && e.detail.includes("never run"))).toBe(true);
+  });
+
+  it("errors when the capture stops landing (state older than the limit)", () => {
+    const problems = checkPriceLedger({
+      stateNewest: "2026-07-19T12:00:00Z", // 72h before NOW
+      staleHours: 48,
+      now: NOW,
+    });
+    expect(errorsOf(problems).some((e) => e.check === "price-ledger" && e.detail.includes("72.0h"))).toBe(true);
+  });
+
+  it("stays quiet when the nightly capture is landing", () => {
+    expect(
+      checkPriceLedger({ stateNewest: "2026-07-22T04:00:00Z", staleHours: 48, now: NOW })
+    ).toEqual([]);
   });
 });

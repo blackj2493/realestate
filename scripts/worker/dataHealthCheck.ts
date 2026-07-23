@@ -37,6 +37,7 @@ import {
   checkMarketRows,
   checkCondoRows,
   checkMigrationLedger,
+  checkPriceLedger,
   checkDrift,
   snapshotFromRows,
   type Problem,
@@ -48,6 +49,9 @@ const TO = process.env.SYNC_ALERT_EMAIL || '';
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
 const METRICS_STALE_HOURS = Number(process.env.METRICS_STALE_HOURS) || 36;
 const CONDO_STALE_DAYS = Number(process.env.CONDO_STALE_DAYS) || 10;
+// 48h (vs 36 for region_metrics): state only moves when the capture RUNS, but a single
+// missed night shouldn't page — two consecutive misses should.
+const PRICE_STATE_STALE_HOURS = Number(process.env.PRICE_STATE_STALE_HOURS) || 48;
 
 const problems: Problem[] = [];
 
@@ -139,6 +143,29 @@ async function checkCondoFees(): Promise<void> {
   );
 }
 
+async function checkPriceLedgerFreshness(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const { data, error } = await sb
+    .from('listing_price_state')
+    .select('updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    problems.push({
+      severity: 'warn',
+      check: 'price-ledger',
+      detail: `listing_price_state unavailable (${error.message}) — is migration 069 applied?`,
+    });
+    return;
+  }
+  problems.push(
+    ...checkPriceLedger({
+      stateNewest: data?.length ? String((data[0] as { updated_at: string }).updated_at) : null,
+      staleHours: PRICE_STATE_STALE_HOURS,
+    })
+  );
+}
+
 async function checkMigrations(): Promise<void> {
   const dir = path.join(process.cwd(), 'supabase', 'migrations');
   let files: string[];
@@ -210,6 +237,7 @@ async function main(): Promise<void> {
   for (const [name, fn] of [
     ['market metrics', checkMarketMetrics],
     ['condo fees', checkCondoFees],
+    ['price ledger', checkPriceLedgerFreshness],
     ['migrations', checkMigrations],
   ] as const) {
     try {
