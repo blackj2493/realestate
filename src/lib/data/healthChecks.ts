@@ -324,6 +324,49 @@ export function checkDrift(prev: SnapshotEntry[], curr: SnapshotEntry[]): Proble
   return out;
 }
 
+/**
+ * The price-events capture going dark — the "zero rows EVER" failure mode (2026-07-22):
+ * the nightly capture step existed only in the abandoned Railway orchestrator, so
+ * price_events sat empty for a week with nothing watching. price_events itself only grows
+ * when a price actually changes, so the liveness signal is listing_price_state: the capture
+ * job seeds/updates state rows every run (~5.5k listings/day churn guarantees movement),
+ * making its newest updated_at a reliable heartbeat for the whole pipeline.
+ */
+export function checkPriceLedger(input: {
+  /** max(listing_price_state.updated_at), or null when the table is empty. */
+  stateNewest: string | null;
+  staleHours: number;
+  now?: number;
+}): Problem[] {
+  const now = input.now ?? Date.now();
+  if (!input.stateNewest) {
+    return [
+      {
+        severity: "error",
+        check: "price-ledger",
+        detail:
+          "listing_price_state is empty — capture-price-events has never run (price_events is not accruing)",
+      },
+    ];
+  }
+  const age = hoursSince(input.stateNewest, now);
+  if (age == null) {
+    return [
+      { severity: "error", check: "price-ledger", detail: "listing_price_state.updated_at is unreadable" },
+    ];
+  }
+  if (age > input.staleHours) {
+    return [
+      {
+        severity: "error",
+        check: "price-ledger",
+        detail: `listing_price_state is ${age.toFixed(1)}h old (limit ${input.staleHours}h) — the nightly price-events capture is not landing`,
+      },
+    ];
+  }
+  return [];
+}
+
 /** Repo migration files not recorded as applied — the migration-082 failure mode. */
 export function checkMigrationLedger(files: string[], applied: string[]): Problem[] {
   const out: Problem[] = [];

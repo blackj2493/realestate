@@ -90,6 +90,34 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-market-summary.ts --apply
 
+      # Precompute the FULL base-scope /analytics payload (all 11 metrics per curated
+      # market) into region_metrics (migration 081), so the default Market Trends view and
+      # the dashboard scorecard read one point lookup instead of the live RPC batch.
+      # NOTE: this step (and Capture Price Events below) previously existed ONLY in the
+      # abandoned Railway orchestrator (scripts/worker/dailySync.ts) and was never wired
+      # into this workflow — the 2026-07-22 canary freshness alert. Reads the same tables
+      # as the market-summary step; Supabase creds only. Additive — continue-on-error.
+      - name: Refresh Region Metrics
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-region-metrics.ts --apply
+
+      # Multi-cut price ledger (migration 069): diff each active listing's fresh
+      # list_price against listing_price_state, append price_events on a change. Never
+      # scheduled anywhere until 2026-07-22 — price_events had ZERO rows in prod (the
+      # canary's price-ledger check now watches for exactly this). Uses raw pg, so it
+      # needs the Session-pooler DATABASE_URL secret (like the geo step), NOT the REST
+      # creds. Additive — continue-on-error.
+      - name: Capture Price Events
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/capture-price-events.ts --apply
+
       # Refresh the precomputed prior-sale ledger from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate property_sale_history table;
       # needs only the Supabase credentials (no TRREB tokens). Powers the listing-page
