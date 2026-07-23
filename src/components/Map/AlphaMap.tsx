@@ -342,9 +342,20 @@ export default function AlphaMap({
     }));
     setMapReady(true);
     mapInitialized.current = true;
+    // Once the fly lands, report the framed viewport so the search scopes to it
+    // immediately (comps/address entry renders pins with no manual pan). Unlike
+    // auto-fit, this camera came from a user-chosen point — not from results — so
+    // re-querying it converges: the auto-fit effect early-returns afterwards
+    // (mapInitialized + unchanged query) and never moves the camera again.
+    // Seed the ref with the fly DESTINATION first: it otherwise only learns the
+    // camera via onViewStateChange, which lags a congested transition — the timer
+    // would then report the take-off viewport, not where the camera lands.
+    viewStateRef.current = { ...viewStateRef.current, longitude: flyTo.lng, latitude: flyTo.lat, zoom: flyTo.zoom ?? 14 };
+    const t = setTimeout(() => computeAndReportBounds(), 1100);
+    return () => clearTimeout(t);
     // Only re-fly when the nonce changes; flyTo carries the latest coords.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flyNonce, markProgrammatic]);
+  }, [flyNonce, markProgrammatic, computeAndReportBounds]);
 
   // A pin dropped at a searched/geocoded address (no listing) — cyan dot.
   const searchPinLayer = useMemo<Layer[]>(() => {

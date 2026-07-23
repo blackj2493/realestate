@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSoldQuery } from "./fetchSoldComps";
+import { boundsAroundPoint, buildSoldQuery } from "./fetchSoldComps";
 
 describe("buildSoldQuery", () => {
   it("uses the viewport as a 4-corner polygon (lat,lng pairs) when bounds exist", () => {
@@ -57,5 +57,32 @@ describe("buildSoldQuery", () => {
     const p = new URLSearchParams(qs);
     expect(p.get("minPrice")).toBeNull();
     expect(p.get("maxPrice")).toBeNull();
+  });
+});
+
+describe("boundsAroundPoint", () => {
+  it("boxes ~2 km around the point (pin fallback while the fly-to is in transit)", () => {
+    const b = boundsAroundPoint(43.6532, -79.3832);
+    expect(b.north).toBeCloseTo(43.6732);
+    expect(b.south).toBeCloseTo(43.6332);
+    expect(b.east).toBeCloseTo(-79.3532);
+    expect(b.west).toBeCloseTo(-79.4132);
+  });
+
+  it("feeds buildSoldQuery a polygon (never the empty-string dead end)", () => {
+    const qs = buildSoldQuery({
+      mapBounds: boundsAroundPoint(43.6532, -79.3832),
+      location: "",
+      windowDays: 90,
+      limit: 100,
+      dealType: "sold",
+    });
+    expect(qs).not.toBe("");
+    const poly = new URLSearchParams(qs).get("polygon");
+    expect(poly).not.toBeNull();
+    const nums = poly!.split(",").map(Number);
+    expect(nums).toHaveLength(8);
+    expect(nums[0]).toBeCloseTo(43.6332); // S
+    expect(nums[1]).toBeCloseTo(-79.4132); // W
   });
 });
