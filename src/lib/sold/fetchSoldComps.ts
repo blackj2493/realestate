@@ -33,6 +33,13 @@ export interface SoldQueryArgs {
   };
 }
 
+/** ~Zoom-14 viewport box around a point (±~2 km at Ontario latitudes) — the
+ *  first-query fallback when the camera hasn't reported bounds yet (fly-to still
+ *  in transit), so comps never depend on camera timing. */
+export function boundsAroundPoint(lat: number, lng: number): MapBounds {
+  return { north: lat + 0.02, south: lat - 0.02, east: lng + 0.03, west: lng - 0.03 };
+}
+
 /** Build the route query string. Empty string = no area resolvable (caller shows empty state). */
 export function buildSoldQuery({ mapBounds, location, windowDays, limit, dealType, filters }: SoldQueryArgs): string {
   const p = new URLSearchParams();

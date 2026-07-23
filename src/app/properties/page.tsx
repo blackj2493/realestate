@@ -40,7 +40,7 @@ import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
-import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
+import { boundsAroundPoint, fetchSoldComps } from "@/lib/sold/fetchSoldComps";
 import { queryPlan } from "@/lib/sold/layers";
 import { mergeLayers } from "@/lib/sold/mergeLayers";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
@@ -328,11 +328,18 @@ function CommandCenterContent() {
         compFilters.maxPrice = searchPin.maxPrice || undefined;
       }
 
+      // Comps must not depend on camera timing: while the fly-to is still in
+      // transit the viewport hasn't reported yet (mapBounds null) and the old
+      // region/empty fallback returned nothing until a manual pan. With a pin
+      // anchor, query a ~zoom-14 box around it — the same few-km area the fly is
+      // about to frame; the live viewport takes over on the next bounds report.
+      const compBounds = mapBounds ?? (searchPin ? boundsAroundPoint(searchPin.lat, searchPin.lng) : null);
+
       // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
       // whichever layers are lit, in parallel; then merge into one recency-sorted list.
       const [compRes, activeRes] = await Promise.all([
         plan.comps.length
-          ? fetchSoldComps({ mapBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps, filters: compFilters })
+          ? fetchSoldComps({ mapBounds: compBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps, filters: compFilters })
           : Promise.resolve({ docs: [] as ListingDocument[], count: 0, locked: false }),
         plan.active ? runActiveSearch() : Promise.resolve(null),
       ]);
