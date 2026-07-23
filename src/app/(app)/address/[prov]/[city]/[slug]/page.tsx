@@ -116,7 +116,9 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
   const fmt = (n?: number) => (typeof n === "number" && n > 0 ? `$${Math.round(n).toLocaleString()}` : "—");
   const soldDate =
     typeof d.PurchaseContractDate === "number" && d.PurchaseContractDate > 0
-      ? new Date(d.PurchaseContractDate).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })
+      ? // Epoch encodes a date-only value at UTC midnight — timeZone:'UTC' keeps the
+        // rendered day server-TZ-independent (audit MEDIUM-18).
+        new Date(d.PurchaseContractDate).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
       : null;
   const isSold = !d.DealType || d.DealType === "sold" || d.DealType === "leased";
   const rows: [string, string][] = [

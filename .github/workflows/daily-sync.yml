@@ -60,6 +60,21 @@ jobs:
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
         run: npx tsx scripts/worker/ingester.ts sync
 
+      # Self-heal the sold_listings search collection: re-derive the last 7 days from
+      # raw_vow_sold (idempotent upserts). Query B indexes sold rows inline, but a
+      # transient per-doc import failure silently drops that row from the dashboard
+      # SOLD panel — and until 2026-07-22 the only heal was the Sun/Wed reconcile,
+      # leaving quiet multi-day gaps (the East Gwillimbury report). This bounds any
+      # inline miss to 24h. Additive — continue-on-error.
+      - name: Reindex Sold Window (7d)
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/worker/soldIndexer.ts backfill --days 7
+
       # Refresh precomputed condo fee/sqft aggregates from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate condo_fee_stats table; needs
       # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.

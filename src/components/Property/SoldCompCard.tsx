@@ -13,9 +13,11 @@ import type { SimilarSoldCard } from "@/app/api/properties/[id]/similar/route";
 function fmtSoldDate(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
+  // Date-only value encoded as UTC midnight — without timeZone:'UTC' Ontario viewers
+  // see the previous day (audit MEDIUM-18).
   return Number.isNaN(d.getTime())
     ? ""
-    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /** A single recently-sold comp. `locked` (anonymous) blurs the VOW numbers.
