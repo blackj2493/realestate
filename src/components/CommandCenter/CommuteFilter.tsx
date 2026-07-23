@@ -30,10 +30,19 @@ const MODES: { id: CommuteMode; label: string; icon: typeof Car }[] = [
   { id: "cycling", label: "Cycle", icon: Bike },
 ];
 
+/** Interim zoom while the isochrone is in flight — sized to the typical ring for
+ *  each mode so the later ring-fit is a refinement, not a lurch. */
+const FLY_ZOOM: Record<CommuteMode, number> = {
+  driving: 10.5,
+  cycling: 12,
+  walking: 13,
+};
+
 export default function CommuteFilter() {
   const commute = useCommandCenterStore((s) => s.commute);
   const setCommute = useCommandCenterStore((s) => s.setCommute);
   const resetCommute = useCommandCenterStore((s) => s.resetCommute);
+  const setFlyTo = useCommandCenterStore((s) => s.setFlyTo);
 
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<GeocodeResult[]>([]);
@@ -44,7 +53,9 @@ export default function CommuteFilter() {
   React.useEffect(() => {
     if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
     const q = query.trim();
-    if (q.length < 2) {
+    // Selecting a result writes its label back into the input — don't re-search
+    // that exact label, or the dropdown pops back open over the mode buttons.
+    if (q.length < 2 || q === useCommandCenterStore.getState().commute.destination?.label) {
       setResults([]);
       setSearching(false);
       return;
@@ -68,6 +79,11 @@ export default function CommuteFilter() {
 
   const selectDestination = (r: GeocodeResult) => {
     setCommute({ destination: r, enabled: true });
+    // Jump the map to the destination NOW — the isochrone takes ~1s to arrive and
+    // its ring-fit only reframes once the polygon lands; without this the user is
+    // left hunting for the area by hand. flyTo also clears the map's interaction
+    // flag, so the subsequent ring-fit is never starved by a stale gesture state.
+    setFlyTo({ lat: r.lat, lng: r.lng, zoom: FLY_ZOOM[useCommandCenterStore.getState().commute.mode] });
     setQuery(r.label);
     setResults([]);
   };
