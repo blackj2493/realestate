@@ -1,44 +1,66 @@
 /**
- * Address-profile render for a key-less /address slug — an address that is neither for
- * sale nor in our sold window (ADDRESS_PROFILES_PLAN P1). Anonymous-safe BY CONSTRUCTION:
+ * Address-profile render for a key-less /address slug — the "Home Pulse" living
+ * dossier for an off-market home (redesign 2026-07-23; ADDRESS_PROFILES_PLAN P1).
  *
- *  - Nearby ACTIVES lead (IDX — photos/prices/brokerage are public by design; brokerage
- *    shown on every card at the same type size as details, CLAUDE.md §4 + audit R2),
- *    with asking-side stats, a price-distribution histogram and the property-type mix —
- *    all computed from live IDX inventory, never sold/VOW data.
- *  - Schools (EQAO), daily-life amenities and geo "Things to Know" are open data.
- *  - The sold-history card is STATIC copy (no data fetch → no existence leak); the VOW
- *    consumer gate stays the conversion wall.
- *  - TrackAddressCard captures the email-only lead (rung 1); no account required.
+ * AUTH-AWARE: `isConsumer` (decided server-side in page.tsx via getConsumer()) drives
+ * every gate on the page. Signed-in consumers see real sold-side data (sold snapshot,
+ * sold feed rows, the street ledger) and ZERO sign-up CTAs; anonymous visitors see
+ * asking-side data in full plus count-only sold teasers. The gate is STRUCTURAL:
+ * the gated fetchers (getSoldNearGated / getStreetLedgerGated) run ONLY inside the
+ * isConsumer branch, so no VOW value is ever fetched — let alone rendered — for anon.
  *
- * NO VOW field is fetched anywhere on this path.
+ * Anonymous-safe surface (unchanged in kind from v1):
+ *  - Nearby ACTIVES (IDX — photos/prices/brokerage public by design) power the pulse
+ *    score, ticker, "if it listed today" band, feed NEW/CUT rows, radar pins, carousel.
+ *  - Sold teasers are aggregates only: counts + bare ~110m-rounded radar points
+ *    (see soldNearPoint.ts) — matching the market-activity route, which withholds
+ *    even sold addresses from anon.
+ *  - Schools (EQAO), amenities and geo "Things to Know" are open data.
  */
 import Link from "next/link";
 import {
   GraduationCap,
   Footprints,
-  Lock,
   MapPin,
   Bell,
   TriangleAlert,
   Info,
   Dumbbell,
-  Check,
 } from "lucide-react";
 import type { AddressProfile } from "@/lib/address/resolveProfile";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { computePulse } from "@/lib/address/pulse";
+import {
+  getSoldNearSummary,
+  getSoldNearGated,
+  type SoldNearGated,
+  type SoldNearSummary,
+} from "@/lib/address/soldNearPoint";
+import {
+  getStreetLedgerGated,
+  getStreetLedgerPublic,
+  type StreetLedgerGated,
+  type StreetLedgerPublic,
+} from "@/lib/address/streetLedger";
 import { getFlagsNearPoint, CHECKED_LABELS, type AddressFlag } from "@/lib/address/flagsNearPoint";
 import { getNearbySchools, type NearbySchool } from "@/lib/schools/nearbySchoolList";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
 import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import TrackAddressCard from "./TrackAddressCard";
+import PulseCard from "./PulseCard";
+import ActivityTicker, { type TickerItem } from "./ActivityTicker";
+import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
+import ActivityFeed from "./ActivityFeed";
+import StreetRadar from "./StreetRadar";
+import StreetLedgerCard from "./StreetLedgerCard";
+import Standouts from "./Standouts";
 
 function fmtPrice(n: number): string {
   return `$${Math.round(n).toLocaleString("en-CA")}`;
 }
 
-/** "$1.2M" / "$729k" — compact labels for the histogram axis. */
+/** "$1.2M" / "$729k" — compact labels. */
 function fmtK(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
   return `$${Math.round(n / 1000)}k`;
@@ -53,34 +75,17 @@ function fmtKm(km: number): string {
   return km < 1 ? `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m` : `${km.toFixed(1)} km`;
 }
 
-/* ── stat tiles ─────────────────────────────────────────────────────────── */
-
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card/40 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
-    </div>
-  );
+/** Epoch (UTC-midnight date-only) → "Jul 17" — audit MEDIUM-18. */
+function fmtSoldDay(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-function LockedTile({ label }: { label: string }) {
-  return (
-    <Link
-      href="/login"
-      className="group rounded-lg border border-border bg-card/40 p-4 transition-colors hover:border-cyan-500/40"
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-1 flex items-center gap-2 text-lg font-bold text-muted-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
-        <Lock className="h-4 w-4" /> Members
-      </p>
-      <p className="mt-0.5 text-xs text-muted-foreground">Free account</p>
-    </Link>
-  );
+function relDays(ms: number): string {
+  const d = Math.floor((Date.now() - ms) / 86_400_000);
+  return d <= 0 ? "today" : `${d}d`;
 }
 
-/* ── listing card ───────────────────────────────────────────────────────── */
+/* ── listing card (carousel) ────────────────────────────────────────────────── */
 
 function NearbyCard({ l }: { l: NearbyListing }) {
   return (
@@ -95,6 +100,16 @@ function NearbyCard({ l }: { l: NearbyListing }) {
         ) : (
           <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No photo</div>
         )}
+        {l.dropAmount > 0 && (
+          <span className="absolute left-1.5 top-1.5 rounded bg-amber-500 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-950">
+            CUT −{fmtK(l.dropAmount)}
+          </span>
+        )}
+        {l.distanceM !== null && (
+          <span className="absolute right-1.5 top-1.5 rounded bg-background/85 px-1.5 py-0.5 font-mono text-[9px] text-cyan-700 dark:text-cyan-400">
+            {fmtDist(l.distanceM)}
+          </span>
+        )}
       </div>
       <div className="p-3">
         <p className="text-base font-bold text-foreground">{fmtPrice(l.price)}</p>
@@ -102,17 +117,14 @@ function NearbyCard({ l }: { l: NearbyListing }) {
         <p className="mt-0.5 text-xs text-muted-foreground">
           {[l.beds ? `${l.beds} bd` : null, l.baths ? `${l.baths} ba` : null, l.subType].filter(Boolean).join(" · ")}
         </p>
-        <p className="mt-1 flex justify-between gap-2 text-xs text-muted-foreground">
-          <span className="truncate">{l.address}</span>
-          {l.distanceM !== null && <span className="shrink-0 text-emerald-700 dark:text-emerald-400">{fmtDist(l.distanceM)}</span>}
-        </p>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{l.address}</p>
         <p className="mt-1 text-xs text-muted-foreground">{l.brokerage ?? "Brokerage unavailable"}</p>
       </div>
     </Link>
   );
 }
 
-/* ── schools ────────────────────────────────────────────────────────────── */
+/* ── schools ────────────────────────────────────────────────────────────────── */
 
 function scoreClasses(score: number | null): string {
   if (score === null) return "border-border bg-muted/60 text-muted-foreground";
@@ -141,7 +153,7 @@ function SchoolRow({ s }: { s: NearbySchool }) {
   );
 }
 
-/* ── geo flags ──────────────────────────────────────────────────────────── */
+/* ── geo flags ──────────────────────────────────────────────────────────────── */
 
 function FlagCard({ f }: { f: AddressFlag }) {
   const Icon = f.kind === "warn" ? TriangleAlert : Info;
@@ -156,28 +168,114 @@ function FlagCard({ f }: { f: AddressFlag }) {
   );
 }
 
-/* ── page ───────────────────────────────────────────────────────────────── */
+/* ── sold-side snapshot (right column) ──────────────────────────────────────── */
+
+function SoldSnapshot({
+  isConsumer,
+  gated,
+  summary,
+}: {
+  isConsumer: boolean;
+  gated: SoldNearGated | null;
+  summary: SoldNearSummary | null;
+}) {
+  if (isConsumer) {
+    if (!gated || gated.count90 === 0) return null;
+    return (
+      <section className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.04] p-5">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Sold-side snapshot</h2>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <div>
+            <p className="font-mono text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+              {gated.medianClose90 !== null ? fmtK(gated.medianClose90) : "—"}
+            </p>
+            <p className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">median sold</p>
+          </div>
+          <div>
+            <p className="font-mono text-lg font-bold tabular-nums text-foreground">
+              {gated.closeToAskPct90 !== null ? `${gated.closeToAskPct90}%` : "—"}
+            </p>
+            <p className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">of asking</p>
+          </div>
+          <div>
+            <p className="font-mono text-lg font-bold tabular-nums text-foreground">{gated.count90}</p>
+            <p className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">sales · 90d</p>
+          </div>
+        </div>
+        <p className="mt-2.5 text-[10px] leading-snug text-muted-foreground">
+          Closed sales within 2 km, last 90 days · TRREB VOW — for your personal, non-commercial use.
+        </p>
+      </section>
+    );
+  }
+
+  // Anonymous: count-only tease. No values are in props on this branch.
+  const count90 = summary?.count90 ?? 0;
+  if (count90 === 0) return null;
+  return (
+    <section className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.04] p-5">
+      <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Sold-side snapshot</h2>
+      <div className="mt-3 grid grid-cols-3 gap-3" aria-hidden="true">
+        {["median sold", "of asking", "sales · 90d"].map((label) => (
+          <div key={label}>
+            <div className="redact-skeleton h-6 w-14 rounded" />
+            <p className="mt-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        <b className="font-semibold text-foreground">
+          {count90} home{count90 === 1 ? "" : "s"}
+        </b>{" "}
+        sold within 2 km in the last 90 days. The numbers are free with an account.
+      </p>
+      <Link
+        href="/register"
+        className="mt-3 inline-flex h-9 items-center rounded-md bg-emerald-500 px-4 text-xs font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400"
+      >
+        Create free account
+      </Link>
+    </section>
+  );
+}
+
+/* ── page ───────────────────────────────────────────────────────────────────── */
 
 export default async function AddressProfileView({
   profile,
   provSlug,
   citySlug,
   canonical,
+  isConsumer,
 }: {
   profile: AddressProfile;
   provSlug: string;
   citySlug: string;
   canonical: string;
+  /** Server-decided (getConsumer() in page.tsx) — drives every gate on this page. */
+  isConsumer: boolean;
 }) {
   const [lat, lng] = profile.location ?? [null, null];
-  const [nearby, flags] = await Promise.all([
-    lat !== null && lng !== null ? getNearbyForSale(lat, lng) : Promise.resolve(null),
-    lat !== null && lng !== null ? getFlagsNearPoint(lat, lng) : Promise.resolve(null),
+  const hasGeo = lat !== null && lng !== null;
+
+  // Parallel fetches. The GATED fetchers run ONLY on the consumer branch — the
+  // anonymous path never even asks for a VOW value (structural gate).
+  const [nearby, flags, soldSummary, soldGated, ledgerGated, ledgerPublic] = await Promise.all([
+    hasGeo ? getNearbyForSale(lat, lng) : Promise.resolve(null),
+    hasGeo ? getFlagsNearPoint(lat, lng) : Promise.resolve(null),
+    hasGeo ? getSoldNearSummary(lat, lng) : Promise.resolve(null),
+    hasGeo && isConsumer ? getSoldNearGated(lat, lng) : Promise.resolve<SoldNearGated | null>(null),
+    isConsumer
+      ? getStreetLedgerGated(profile.address, profile.city, profile.postal)
+      : Promise.resolve<StreetLedgerGated | null>(null),
+    !isConsumer
+      ? getStreetLedgerPublic(profile.address, profile.city, profile.postal)
+      : Promise.resolve<StreetLedgerPublic | null>(null),
   ]);
-  const schools = lat !== null && lng !== null ? getNearbySchools(lat, lng).slice(0, 6) : [];
+  const schools = hasGeo ? getNearbySchools(lat, lng).slice(0, 4) : [];
   let grocery: { name: string; km: number } | null = null;
   let rec: { name: string; km: number } | null = null;
-  if (lat !== null && lng !== null) {
+  if (hasGeo) {
     try {
       const a = assignAmenities([lat, lng]);
       if (a.NearestGroceryKm < NO_AMENITY_KM) grocery = { name: a.NearestGroceryName, km: a.NearestGroceryKm };
@@ -190,9 +288,84 @@ export default async function AddressProfileView({
   const provLabel = provSlug.toUpperCase();
   const hubSlug = cityHubSlug(profile.city) || slugify(profile.city) || citySlug;
   const cityHref = `/property/${provSlug.toLowerCase()}/${hubSlug}`;
-  const areaLabel = profile.cityRegion || profile.city;
-  const stats = nearby?.stats;
-  const medianAsking = stats?.medianAsking ?? null;
+  const streetAddress = profile.address.split(",")[0];
+
+  // ── Pulse + narrative (asking-side only — anonymous-safe) ──────────────────
+  const pulse = nearby
+    ? computePulse({
+        totalActives: nearby.totalFound,
+        newThisWeek: nearby.momentum.newThisWeek,
+        cutShare: nearby.momentum.cutShare,
+        sitting30: nearby.momentum.sitting30,
+        medianDaysListed: nearby.stats.medianDaysListed,
+      })
+    : null;
+
+  // "If it listed today" bands: top-2 property types with a computable p25-p75 band.
+  const bands: ListedTodayBand[] = (nearby?.typeMix ?? [])
+    .filter((t) => t.p25 !== null && t.p75 !== null)
+    .slice(0, 2)
+    .map((t) => ({
+      label: t.label,
+      count: t.count,
+      p25: t.p25 as number,
+      p75: t.p75 as number,
+      nearest: t.nearest
+        ? {
+            id: t.nearest.id,
+            address: t.nearest.address,
+            price: t.nearest.price,
+            beds: t.nearest.beds,
+            baths: t.nearest.baths,
+            subType: t.nearest.subType,
+            distanceM: t.nearest.distanceM,
+            imageUrl: t.nearest.imageUrl,
+            brokerage: t.nearest.brokerage,
+          }
+        : null,
+    }));
+
+  // Hero narrative: market lean + the concrete next-door anchor. The detailed
+  // momentum read lives in the pulse card's blurb — don't repeat it here.
+  const anchor = bands[0]?.nearest ?? null;
+  const narrative = pulse
+    ? anchor
+      ? `This pocket is ${pulse.lean} right now — ${
+          anchor.distanceM !== null ? `${fmtDist(anchor.distanceM)} away, ` : "nearby, "
+        }${anchor.address} is asking ${fmtPrice(anchor.price)}.`
+      : pulse.blurb
+    : null;
+
+  const ledgerCount = isConsumer ? (ledgerGated?.count ?? 0) : (ledgerPublic?.count ?? 0);
+  const soldCount30 = isConsumer ? (soldGated?.count30 ?? 0) : (soldSummary?.count30 ?? 0);
+
+  // ── Ticker: interleave NEW / CUT / SOLD for variety ────────────────────────
+  const tickerItems: TickerItem[] = [];
+  const newItems: TickerItem[] = (nearby?.events ?? [])
+    .filter((e) => e.kind === "new")
+    .slice(0, 5)
+    .map((e) => ({
+      kind: "new",
+      text: `${e.listing.address} · ${fmtPrice(e.listing.price)}${e.listing.entryMs ? ` · ${relDays(e.listing.entryMs)}` : ""}`,
+    }));
+  const cutItems: TickerItem[] = (nearby?.events ?? [])
+    .filter((e) => e.kind === "cut")
+    .slice(0, 3)
+    .map((e) => ({ kind: "cut", text: `${e.listing.address} · −${fmtK(e.listing.dropAmount)}` }));
+  const soldItems: TickerItem[] = isConsumer
+    ? (soldGated?.events ?? []).slice(0, 4).map((s) => ({
+        kind: "sold" as const,
+        text: `${s.address} · ${fmtPrice(s.closePrice)} · ${fmtSoldDay(s.soldDateMs)}`,
+      }))
+    : soldCount30 > 0
+      ? [{ kind: "sold" as const, text: `${soldCount30} sold nearby this month — sign in to see prices` }]
+      : [];
+  const maxLen = Math.max(newItems.length, cutItems.length, soldItems.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (newItems[i]) tickerItems.push(newItems[i]);
+    if (soldItems[i]) tickerItems.push(soldItems[i]);
+    if (cutItems[i]) tickerItems.push(cutItems[i]);
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -225,276 +398,253 @@ export default async function AddressProfileView({
     <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <div className="mx-auto max-w-[980px] px-4 py-8">
-        <nav className="mb-4 text-sm text-muted-foreground">
+      <div className="mx-auto max-w-[1080px] px-4 py-8">
+        <nav className="mb-5 text-sm text-muted-foreground">
           <Link href="/properties" className="hover:text-cyan-600 dark:hover:text-cyan-400">Properties</Link>
           <span className="mx-2">/</span>
           <Link href={cityHref} className="hover:text-cyan-600 dark:hover:text-cyan-400">{profile.city}</Link>
           <span className="mx-2">/</span>
-          <span className="text-foreground">{profile.address}</span>
+          <span className="text-foreground">{streetAddress}</span>
         </nav>
 
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{profile.address}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            {[profile.cityRegion, profile.city, provLabel].filter(Boolean).join(", ")}
-            {profile.postal && <span className="font-mono text-xs">{profile.postal}</span>}
-            <span className="rounded-full border border-border bg-card/40 px-2.5 py-0.5 text-xs font-medium">
-              Not currently for sale
-            </span>
-            {nearby && nearby.totalFound > 0 && (
-              <a
-                href="#for-sale"
-                className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-0.5 text-xs font-medium text-cyan-700 hover:border-cyan-400 dark:text-cyan-400"
-              >
-                {nearby.totalFound} for sale nearby ↓
-              </a>
-            )}
-          </p>
-        </header>
-
-        {/* ── Nearby actives: the hero. IDX = fully public, no gate. ── */}
-        {nearby && nearby.listings.length > 0 && (
-          <section id="for-sale" className="mb-8 scroll-mt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              The market around {profile.address.split(",")[0]}
-            </h2>
-            <p className="mb-4 mt-1 text-sm text-muted-foreground">
-              This home isn&apos;t on the market — {nearby.totalFound === 1 ? "one neighbour is" : `${nearby.totalFound} neighbours within ${nearby.radiusKm} km are`}. Live asking-side numbers below; sold-side numbers are free with an account.
+        {/* ── Hero: identity + narrative | pulse gauge ── */}
+        <header className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-400">
+              Off-market dossier
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{streetAddress}</h1>
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {[profile.cityRegion, profile.city, provLabel].filter(Boolean).join(", ")}
+              {profile.postal && <span className="font-mono text-xs">{profile.postal}</span>}
             </p>
 
-            {/* Stat tiles — IDX asking + momentum data, plus the gated breadcrumbs.
-                "Price cuts" / listing-age come from the ACTIVE feed (permissible for
-                anon per the compliance audit); days-to-SELL needs sold data → locked. */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              <StatTile label="For sale now" value={String(nearby.totalFound)} sub={`within ${nearby.radiusKm} km`} />
-              {medianAsking !== null && <StatTile label="Median asking" value={fmtK(medianAsking)} sub="live listings" />}
-              <StatTile
-                label="Price cuts"
-                value={`${nearby.momentum.cutCount} · ${Math.round(nearby.momentum.cutShare * 100)}%`}
-                sub={nearby.momentum.medianCut !== null ? `median cut ${fmtK(nearby.momentum.medianCut)}` : "of live listings"}
-              />
-              <StatTile label="New this week" value={String(nearby.momentum.newThisWeek)} sub="listed in the last 7 days" />
-              {stats?.medianDaysListed != null && (
-                <StatTile label="Days listed" value={String(Math.round(stats.medianDaysListed))} sub="median, live listings" />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-border bg-card/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Not currently for sale
+              </span>
+              {ledgerCount > 0 && (
+                <a
+                  href="#ledger"
+                  className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:border-emerald-400 dark:text-emerald-400"
+                >
+                  ◈ {ledgerCount} recorded sale{ledgerCount === 1 ? "" : "s"} on this street
+                </a>
               )}
-              <StatTile label="Sitting 30+ days" value={String(nearby.momentum.sitting30)} sub="of live listings" />
-              {stats?.medianPsf != null && <StatTile label="Asking $/sqft" value={`$${Math.round(stats.medianPsf)}`} sub="where size is listed" />}
-              <LockedTile label="Median sold price" />
-              <LockedTile label="Days to sell" />
+              {nearby && nearby.totalFound > 0 && (
+                <a
+                  href="#for-sale"
+                  className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-700 hover:border-cyan-400 dark:text-cyan-400"
+                >
+                  {nearby.totalFound} live within {nearby.radiusKm} km ↓
+                </a>
+              )}
             </div>
 
-            {/* Asking-price distribution + by-type breakdown — one glance at the market. */}
-            {nearby.histogram && (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="rounded-lg border border-border bg-card/40 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Asking prices within {nearby.radiusKm} km
-                  </p>
-                  <div className="mt-3 flex h-24 items-end gap-[3px]" role="img" aria-label={`Distribution of ${nearby.totalFound} asking prices from ${fmtK(nearby.histogram.min)} to ${fmtK(nearby.histogram.max)}`}>
-                    {(() => {
-                      const peak = Math.max(...nearby.histogram!.buckets, 1);
-                      return nearby.histogram!.buckets.map((c, i) => (
-                        <div
-                          key={i}
-                          className={`flex-1 rounded-t-sm ${c > 0 ? "bg-emerald-500/75" : "bg-muted"}`}
-                          style={{ height: c > 0 ? `${Math.max(8, (c / peak) * 100)}%` : "2px" }}
-                          title={`${c} listing${c === 1 ? "" : "s"}`}
-                        />
-                      ));
-                    })()}
-                  </div>
-                  <div className="mt-1.5 flex justify-between font-mono text-[10px] text-muted-foreground">
-                    <span>{fmtK(nearby.histogram.min)}</span>
-                    {medianAsking !== null && <span className="text-emerald-700 dark:text-emerald-400">median {fmtK(medianAsking)}</span>}
-                    <span>{fmtK(nearby.histogram.max)}</span>
-                  </div>
+            {narrative && <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-foreground">{narrative}</p>}
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <a
+                href="#track"
+                className="inline-flex h-10 items-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
+              >
+                Put this home on my radar
+              </a>
+              {isConsumer ? (
+                ledgerCount > 0 && (
+                  <a href="#ledger" className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                    Street sale ledger →
+                  </a>
+                )
+              ) : (
+                <Link href="/register" className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                  What did it last sell for? →
+                </Link>
+              )}
+            </div>
+            {!isConsumer && (
+              <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+                free · no card · alerts when anything moves on this street
+              </p>
+            )}
+          </div>
+
+          {pulse && nearby && (
+            <PulseCard
+              pulse={pulse}
+              momentum={nearby.momentum}
+              medianDaysListed={nearby.stats.medianDaysListed}
+              radiusKm={nearby.radiusKm}
+            />
+          )}
+        </header>
+
+        {nearby && <ActivityTicker items={tickerItems} radiusKm={nearby.radiusKm} />}
+
+        {/* Dashboard-style superlatives — concrete, repeatable facts (all IDX). */}
+        {nearby && <Standouts nearby={nearby} />}
+
+        {/* ── Main grid ── */}
+        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+          <div className="flex min-w-0 flex-col gap-4">
+            {nearby && (
+              <IfListedToday
+                address={streetAddress}
+                bands={bands}
+                histogram={nearby.histogram}
+                medianAsking={nearby.stats.medianAsking}
+                radiusKm={nearby.radiusKm}
+                isConsumer={isConsumer}
+              />
+            )}
+
+            {nearby && (
+              <ActivityFeed
+                activeEvents={nearby.events}
+                soldEvents={isConsumer ? (soldGated?.events ?? []) : []}
+                soldCount30={soldCount30}
+                isConsumer={isConsumer}
+                radiusKm={nearby.radiusKm}
+              />
+            )}
+
+            {/* ── Nearby actives carousel: IDX = fully public, no gate. ── */}
+            {nearby && nearby.listings.length > 0 && (
+              <section id="for-sale" className="scroll-mt-6">
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
+                    For sale near this home
+                  </h2>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {nearby.totalFound} within {nearby.radiusKm} km
+                  </span>
                 </div>
-                {nearby.typeMix.length > 0 && (
-                  <div className="rounded-lg border border-border bg-card/40 p-4">
-                    {(() => {
-                      const total = nearby.typeMix.reduce((s, t) => s + t.count, 0) || 1;
-                      const cols = "grid grid-cols-[minmax(0,1fr)_minmax(72px,110px)_2.25rem_4rem] items-center gap-x-3";
-                      return (
-                        <>
-                          {/* Aligned header — reads as a table, not a stack of loading bars. */}
-                          <div className={cols}>
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">By type</p>
-                            <p className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Share</p>
-                            <p className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">#</p>
-                            <p className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Median</p>
-                          </div>
-                          <div className="mt-2.5 space-y-2.5">
-                            {nearby.typeMix.map((t) => {
-                              const share = Math.round((t.count / total) * 100);
-                              return (
-                                <div key={t.label} className={cols}>
-                                  <span className="truncate text-sm text-foreground" title={t.label}>{t.label}</span>
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                                      <span className="block h-full rounded-full bg-emerald-500/80" style={{ width: `${Math.max(share, 3)}%` }} />
-                                    </span>
-                                    <span className="w-7 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground">{share}%</span>
-                                  </span>
-                                  <span className="text-right font-mono text-sm tabular-nums text-foreground">{t.count}</span>
-                                  {/* A 1-2 sample "median" is noise (a lone $51M land parcel, say). */}
-                                  <span className="text-right font-mono text-sm tabular-nums text-muted-foreground">
-                                    {t.medianAsking !== null && t.count >= 3 ? fmtK(t.medianAsking) : "—"}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <p className="mt-3 text-[10px] text-muted-foreground">Share of the {total} nearest live listings · median = asking</p>
-                        </>
-                      );
-                    })()}
+                <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+                  {nearby.listings.map((l) => (
+                    <NearbyCard key={l.id} l={l} />
+                  ))}
+                </div>
+                <Link
+                  href={`/properties?city=${encodeURIComponent(profile.city)}`}
+                  className="mt-2 inline-flex h-10 items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
+                >
+                  See all {nearby.totalFound} for sale near here →
+                </Link>
+              </section>
+            )}
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-4">
+            {hasGeo && nearby && (
+              <StreetRadar
+                centerLat={lat}
+                centerLng={lng}
+                radiusKm={nearby.radiusKm}
+                activePins={nearby.pins}
+                soldPoints={soldSummary?.points ?? []}
+              />
+            )}
+
+            <SoldSnapshot isConsumer={isConsumer} gated={soldGated} summary={soldSummary} />
+
+            <div id="ledger" className="scroll-mt-6">
+              <StreetLedgerCard isConsumer={isConsumer} gated={ledgerGated} publicLedger={ledgerPublic} />
+            </div>
+
+            <div id="track" className="scroll-mt-6">
+              <TrackAddressCard
+                address={profile.address}
+                city={profile.city}
+                postal={profile.postal}
+                lat={lat}
+                lng={lng}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── The block, scored: schools + daily life + risk scan ── */}
+        {(schools.length > 0 || grocery || rec || flags !== null) && (
+          <section className="mt-8">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">The block, scored</h2>
+              <span className="font-mono text-[10px] text-muted-foreground">public records · EQAO · Overture</span>
+            </div>
+
+            {schools.length > 0 && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {schools.map((s) => (
+                  <SchoolRow key={s.id} s={s} />
+                ))}
+              </div>
+            )}
+            {schools.length > 0 && (
+              <p className="mt-2 flex flex-wrap items-baseline justify-between gap-2 text-[11px] text-muted-foreground">
+                <span>EQAO-based score out of 10 · straight-line distance</span>
+                <Link href={`/family/${hubSlug}/top-rated-schools`} className="text-cyan-700 hover:underline dark:text-cyan-400">
+                  All top-rated schools in {profile.city} →
+                </Link>
+              </p>
+            )}
+
+            {(grocery || rec) && (
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {grocery && (
+                  <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-4">
+                    <Footprints className="h-5 w-5 shrink-0 text-sky-700 dark:text-sky-400" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-foreground">Groceries · {grocery.name}</span>
+                      <span className="block text-xs text-muted-foreground">nearest supermarket</span>
+                    </span>
+                    <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(grocery.km)}</span>
+                  </div>
+                )}
+                {rec && (
+                  <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-4">
+                    <Dumbbell className="h-5 w-5 shrink-0 text-sky-700 dark:text-sky-400" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-foreground">Recreation · {rec.name}</span>
+                      <span className="block text-xs text-muted-foreground">nearest community/rec centre</span>
+                    </span>
+                    <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(rec.km)}</span>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Horizontal carousel — CSS scroll-snap, no JS. */}
-            <div className="-mx-1 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-              {nearby.listings.map((l) => (
-                <NearbyCard key={l.id} l={l} />
+            {/* Things to Know: open-data geo flags. A clear result is still information —
+                the "clean bill" stamp (soft wording: dataset COVERAGE varies by
+                municipality, so "no hits" must never read as "we verified everything"). */}
+            {flags !== null &&
+              (flags.length > 0 ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {flags.map((f) => (
+                    <FlagCard key={f.id} f={f} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
+                  <p className="inline-flex items-center gap-2 rounded border border-dashed border-emerald-500/40 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    ✓ Nothing flagged around this address
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    No hits in the public-record datasets we track ({CHECKED_LABELS.join(", ")}).
+                    Coverage varies by municipality.
+                  </p>
+                </div>
               ))}
-            </div>
-            <Link
-              href={`/properties?city=${encodeURIComponent(profile.city)}`}
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
-            >
-              See all {nearby.totalFound} for sale near here →
-            </Link>
-          </section>
-        )}
-
-        {/* ── Track this address: rung-1 lead capture, no account. ── */}
-        <TrackAddressCard
-          address={profile.address}
-          city={profile.city}
-          postal={profile.postal}
-          lat={lat}
-          lng={lng}
-        />
-
-        {/* ── Members gate: STATIC copy — no data fetched, nothing leaks. ── */}
-        <section className="mb-8 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.05] p-5">
-          <h2 className="text-base font-bold text-foreground">
-            What did homes in {areaLabel} actually sell for?
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Asking prices are only half the story. Real estate boards require a verified account for the other
-            half — it takes a minute and it&apos;s free:
-          </p>
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-            {[
-              `Sold prices & history on this street`,
-              `Median sold price & days-on-market for ${areaLabel}`,
-              `Asking vs sold — who's overpricing, who's dealing`,
-              `Deal Score & true days-on-market on every listing`,
-            ].map((t) => (
-              <li key={t} className="flex items-start gap-2 text-sm text-foreground">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                {t}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Link
-              href="/register"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-500 px-6 text-sm font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400"
-            >
-              Create free account
-            </Link>
-            <Link href="/login" className="text-sm text-cyan-700 hover:underline dark:text-cyan-400">
-              Sign in
-            </Link>
-          </div>
-        </section>
-
-        {/* ── Things to Know: open-data geo flags. A clear result is still information —
-            show it (soft wording: dataset COVERAGE varies by municipality, so "no hits"
-            must never read as "we verified everything"). null = lookup failed → hide. ── */}
-        {flags !== null && (
-          <section className="mb-8">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Things to know nearby</h2>
-            {flags.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {flags.map((f) => (
-                  <FlagCard key={f.id} f={f} />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-border bg-card/40 p-4">
-                <p className="flex items-start gap-2 text-sm font-medium text-foreground">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
-                  Nothing flagged around this address.
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  No hits in the public-record datasets we track ({CHECKED_LABELS.join(", ")}).
-                  Coverage varies by municipality.
-                </p>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ── Schools: every rated school within 2.5 km — names, EQAO scores, distance. ── */}
-        {schools.length > 0 && (
-          <section className="mb-8">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                <GraduationCap className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Schools within 2.5 km
-              </h2>
-              <Link href={`/family/${hubSlug}/top-rated-schools`} className="text-xs text-cyan-700 hover:underline dark:text-cyan-400">
-                All top-rated schools in {profile.city} →
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {schools.map((s) => (
-                <SchoolRow key={s.id} s={s} />
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">EQAO-based score out of 10 · straight-line distance</p>
-          </section>
-        )}
-
-        {/* ── Daily life: nearest grocery + recreation (Overture open data). ── */}
-        {(grocery || rec) && (
-          <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {grocery && (
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-4">
-                <Footprints className="h-5 w-5 shrink-0 text-sky-700 dark:text-sky-400" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">Groceries · {grocery.name}</span>
-                  <span className="block text-xs text-muted-foreground">nearest supermarket</span>
-                </span>
-                <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(grocery.km)}</span>
-              </div>
-            )}
-            {rec && (
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-4">
-                <Dumbbell className="h-5 w-5 shrink-0 text-sky-700 dark:text-sky-400" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">Recreation · {rec.name}</span>
-                  <span className="block text-xs text-muted-foreground">nearest community/rec centre</span>
-                </span>
-                <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{fmtKm(rec.km)}</span>
-              </div>
-            )}
           </section>
         )}
 
         {profile.provenance === "postal" && (
-          <p className="mb-6 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="mt-6 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Bell className="h-3.5 w-3.5" /> Location is approximate — placed from postal code {profile.postal}.
           </p>
         )}
 
         {/* Public exploration links (internal-link value + crawl path). */}
-        <section className="mb-8 flex flex-wrap gap-2">
+        <section className="mt-8 flex flex-wrap gap-2">
           <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
             Homes for sale in {profile.city} →
           </Link>
@@ -506,7 +656,9 @@ export default async function AddressProfileView({
           </Link>
         </section>
 
-        <ListingComplianceNotice />
+        <div className="mt-8">
+          <ListingComplianceNotice />
+        </div>
       </div>
     </main>
   );
