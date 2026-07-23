@@ -245,12 +245,17 @@ export default async function AddressPage({
     if (resolved?.kind === "active") redirect(`/properties/${resolved.id}`);
     if (resolved?.kind === "sold") redirect(`/address/${prov.toLowerCase()}/${city}/${resolved.slug}`);
     if (resolved?.kind === "profile") {
+      // Server-side auth decision — the profile page is auth-aware (a signed-in
+      // consumer gets real sold-side data and no sign-up CTAs; the old render
+      // showed "Members" walls to everyone, including members).
+      const { isConsumer } = await getConsumer();
       return (
         <AddressProfileView
           profile={resolved.profile}
           provSlug={prov}
           citySlug={city}
           canonical={`${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`}
+          isConsumer={isConsumer}
         />
       );
     }

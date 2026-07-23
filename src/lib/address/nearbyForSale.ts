@@ -7,6 +7,12 @@
  * syntax in the repo, smoke-tested live 2026-07-18 (Typesense returns
  * `geo_distance_meters` per hit when sorting by distance).
  *
+ * Home Pulse (2026-07-23) additions — still 100% asking-side/IDX:
+ *  - per-listing coords + entry date + DOM + total price drop (radar pins, feed events)
+ *  - per-type asking band (p25-p75) + the nearest live listing of each type
+ *    (the "if it listed today" range + next-door anchor)
+ *  - a merged NEW/CUT event list for the activity feed & ticker
+ *
  * Search-only key; runs in server components. Per-query cap far below the 100-listing
  * display limit (CLAUDE.md §4).
  */
@@ -24,6 +30,15 @@ export interface NearbyListing {
   /** Mandatory display (CLAUDE.md §4) — null renders the "Brokerage unavailable" fallback. */
   brokerage: string | null;
   distanceM: number | null;
+  /** Coords for the street-radar pins (public IDX docs carry their geopoint). */
+  lat: number | null;
+  lng: number | null;
+  /** Campaign entry as epoch ms; null when the doc lacks it. */
+  entryMs: number | null;
+  /** Days listed (this campaign — not stitched True DOM, which is gated). */
+  dom: number | null;
+  /** Total price cut this campaign ($); 0 = never cut. */
+  dropAmount: number;
 }
 
 /** Anonymous-safe market context computed from IDX ACTIVES only (asking prices +
@@ -42,11 +57,16 @@ export interface AskingHistogram {
   buckets: number[];
 }
 
-/** Per-property-type slice of the live inventory (count + median asking). */
+/** Per-property-type slice of the live inventory (count + asking band + nearest comp). */
 export interface TypeSlice {
   label: string;
   count: number;
   medianAsking: number | null;
+  /** 25th/75th-percentile asking — the "homes like this ask $X–$Y" band (n≥3 only). */
+  p25: number | null;
+  p75: number | null;
+  /** Nearest live listing of this type — the "your next-door comp" anchor card. */
+  nearest: NearbyListing | null;
 }
 
 /** Momentum signals — ALL derived from the active IDX feed (campaign price cuts,
@@ -62,6 +82,14 @@ export interface MomentumStats {
   sitting30: number;
 }
 
+/** One asking-side feed event. `new` = listed within the event window (dated by entry);
+ *  `cut` = live listing with a price drop (cuts carry no event date in the feed doc, so
+ *  the row shows "-$X · Nd on market" and sorts on campaign entry — conservative). */
+export interface ActiveEvent {
+  kind: "new" | "cut";
+  listing: NearbyListing;
+}
+
 export interface NearbyForSale {
   listings: NearbyListing[];
   totalFound: number;
@@ -71,16 +99,54 @@ export interface NearbyForSale {
   /** Property-type breakdown of the fetched actives, largest first. */
   typeMix: TypeSlice[];
   momentum: MomentumStats;
+  /** NEW (≤30d) + CUT events for the activity feed/ticker, feed-ready order. */
+  events: ActiveEvent[];
+  /** All fetched actives with coords — the street-radar pin set (≤100 by construction). */
+  pins: Array<{ lat: number; lng: number; cut: boolean }>;
 }
 
 const FIELDS =
-  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp";
+  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp,location";
+
+const NEW_EVENT_DAYS = 30;
+const MAX_NEW_EVENTS = 8;
+const MAX_CUT_EVENTS = 6;
 
 function median(xs: number[]): number | null {
   if (!xs.length) return null;
   const s = [...xs].sort((a, b) => a - b);
   const mid = s.length >> 1;
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function percentile(sorted: number[], p: number): number {
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * p)));
+  return sorted[idx];
+}
+
+function toListing(d: Record<string, unknown>, dist: number | undefined): NearbyListing {
+  const loc = Array.isArray(d.location) && d.location.length === 2 ? (d.location as [number, number]) : null;
+  const entry = typeof d.EntryTimestamp === "number" ? d.EntryTimestamp : 0;
+  // EntryTimestamp is epoch ms; tolerate a seconds-scale value defensively.
+  const entryMs = entry > 1e12 ? entry : entry > 0 ? entry * 1000 : null;
+  const dom = typeof d.calculatedDOM === "number" && d.calculatedDOM >= 0 ? d.calculatedDOM : null;
+  return {
+    id: String(d.id ?? ""),
+    address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
+    cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
+    price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
+    beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
+    baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
+    subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
+    imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
+    brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
+    distanceM: typeof dist === "number" ? Math.round(dist) : null,
+    lat: loc ? loc[0] : null,
+    lng: loc ? loc[1] : null,
+    entryMs,
+    dom,
+    dropAmount: typeof d.TotalPriceDrop === "number" && d.TotalPriceDrop > 0 ? d.TotalPriceDrop : 0,
+  };
 }
 
 export async function getNearbyForSale(
@@ -111,23 +177,16 @@ export async function getNearbyForSale(
         include_fields: FIELDS,
         per_page: 100,
       });
-    const docs = (res.hits ?? []).map((h) => ({
-      d: h.document as Record<string, unknown>,
-      dist: (h as { geo_distance_meters?: { location?: number } }).geo_distance_meters?.location,
-    }));
+    const all: NearbyListing[] = (res.hits ?? [])
+      .map((h) =>
+        toListing(
+          h.document as Record<string, unknown>,
+          (h as { geo_distance_meters?: { location?: number } }).geo_distance_meters?.location
+        )
+      )
+      .filter((l) => l.id);
 
-    const listings: NearbyListing[] = docs.slice(0, limit).map(({ d, dist }) => ({
-      id: String(d.id ?? ""),
-      address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
-      cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
-      price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
-      beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
-      baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
-      subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
-      imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
-      brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
-      distanceM: typeof dist === "number" ? Math.round(dist) : null,
-    }));
+    const listings = all.slice(0, limit);
 
     // Asking stats over ALL fetched actives (IDX only): price always; $/sqft and
     // days-listed only from listings that carry the field.
@@ -135,31 +194,28 @@ export async function getNearbyForSale(
     const psfs: number[] = [];
     const doms: number[] = [];
     const cuts: number[] = [];
-    const typePrices = new Map<string, number[]>();
+    const byType = new Map<string, NearbyListing[]>();
     let newThisWeek = 0;
     let sitting30 = 0;
     const weekAgoMs = Date.now() - 7 * 86_400_000;
-    for (const { d } of docs) {
+    for (const l of all) {
+      if (l.price > 0) prices.push(l.price);
+      if (l.dom !== null) doms.push(l.dom);
+      if (l.dom !== null && l.dom >= 30) sitting30++;
+      if (l.dropAmount > 0) cuts.push(l.dropAmount);
+      if (l.entryMs !== null && l.entryMs >= weekAgoMs) newThisWeek++;
+      if (l.subType) {
+        const arr = byType.get(l.subType.trim()) ?? [];
+        arr.push(l);
+        byType.set(l.subType.trim(), arr);
+      }
+    }
+    // $/sqft from the raw hits (BuildingAreaTotal isn't kept on NearbyListing).
+    for (const h of res.hits ?? []) {
+      const d = h.document as Record<string, unknown>;
       const price = typeof d.ListPrice === "number" ? d.ListPrice : 0;
-      if (price > 0) prices.push(price);
       const sqft = typeof d.BuildingAreaTotal === "number" ? d.BuildingAreaTotal : 0;
       if (price > 0 && sqft >= 200) psfs.push(price / sqft);
-      const dom = typeof d.calculatedDOM === "number" ? d.calculatedDOM : -1;
-      if (dom >= 0) doms.push(dom);
-      if (dom >= 30) sitting30++;
-      const drop = typeof d.TotalPriceDrop === "number" ? d.TotalPriceDrop : 0;
-      if (drop > 0) cuts.push(drop);
-      const entry = typeof d.EntryTimestamp === "number" ? d.EntryTimestamp : 0;
-      // EntryTimestamp is epoch ms; tolerate a seconds-scale value defensively.
-      const entryMs = entry > 1e12 ? entry : entry * 1000;
-      if (entryMs >= weekAgoMs) newThisWeek++;
-      const t = typeof d.PropertySubType === "string" ? d.PropertySubType.trim() : "";
-      if (t) {
-        const arr = typePrices.get(t) ?? [];
-        if (price > 0) arr.push(price);
-        else arr.push(0); // keep the count even when the price is unusable
-        typePrices.set(t, arr);
-      }
     }
 
     // Price histogram: 8 equal-width buckets, percentile-clipped against outliers.
@@ -179,8 +235,40 @@ export async function getNearbyForSale(
       }
     }
 
+    // Per-type slice: count + median + p25-p75 band + the nearest listing of that type
+    // (docs arrive distance-sorted, so byType arrays are nearest-first already).
+    const typeMix: TypeSlice[] = [...byType.entries()]
+      .map(([label, ls]) => {
+        const ps = ls.map((l) => l.price).filter((p) => p > 0).sort((a, b) => a - b);
+        return {
+          label,
+          count: ls.length,
+          medianAsking: median(ps),
+          p25: ps.length >= 3 ? percentile(ps, 0.25) : null,
+          p75: ps.length >= 3 ? percentile(ps, 0.75) : null,
+          nearest: ls[0] ?? null,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Feed events: NEW (entered ≤30d, newest first) then CUT (biggest cut first —
+    // cuts have no event date on the doc, so they sort below the dated rows).
+    const newCutoff = Date.now() - NEW_EVENT_DAYS * 86_400_000;
+    const newEvents: ActiveEvent[] = all
+      .filter((l) => l.entryMs !== null && l.entryMs >= newCutoff)
+      .sort((a, b) => (b.entryMs ?? 0) - (a.entryMs ?? 0))
+      .slice(0, MAX_NEW_EVENTS)
+      .map((listing) => ({ kind: "new" as const, listing }));
+    const newIds = new Set(newEvents.map((e) => e.listing.id));
+    const cutEvents: ActiveEvent[] = all
+      .filter((l) => l.dropAmount > 0 && !newIds.has(l.id))
+      .sort((a, b) => b.dropAmount - a.dropAmount)
+      .slice(0, MAX_CUT_EVENTS)
+      .map((listing) => ({ kind: "cut" as const, listing }));
+
     return {
-      listings: listings.filter((l) => l.id),
+      listings,
       totalFound: res.found ?? listings.length,
       radiusKm,
       stats: {
@@ -189,21 +277,18 @@ export async function getNearbyForSale(
         medianDaysListed: median(doms),
       },
       histogram,
-      typeMix: [...typePrices.entries()]
-        .map(([label, ps]) => ({
-          label,
-          count: ps.length,
-          medianAsking: median(ps.filter((p) => p > 0)),
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5),
+      typeMix,
       momentum: {
         cutCount: cuts.length,
-        cutShare: docs.length ? cuts.length / docs.length : 0,
+        cutShare: all.length ? cuts.length / all.length : 0,
         medianCut: median(cuts),
         newThisWeek,
         sitting30,
       },
+      events: [...newEvents, ...cutEvents],
+      pins: all
+        .filter((l) => l.lat !== null && l.lng !== null)
+        .map((l) => ({ lat: l.lat as number, lng: l.lng as number, cut: l.dropAmount > 0 })),
     };
   } catch (err) {
     console.error("[nearbyForSale] search failed:", err);
