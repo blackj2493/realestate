@@ -63,6 +63,7 @@ function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
   if (category === "community") return <MapPin className={cn(cls, "text-cyan-700 dark:text-cyan-400/80")} />;
   if (category === "school") return <GraduationCap className={cn(cls, "text-amber-700 dark:text-amber-400/80")} />;
   if (category === "geo") return <Navigation className={cn(cls, "text-cyan-700 dark:text-cyan-400")} />;
+  if (category === "soldAddress") return <Home className={cn(cls, "text-rose-700 dark:text-rose-400/80")} />;
   return <span className="block h-2 w-2 shrink-0 rounded-full bg-rose-400" />; // sold
 }
 
@@ -218,6 +219,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       case "sold":
         // Comp-on-demand entry: light up the sold layer so comps render on the map.
         if (!activeLayers.has("sold")) toggleLayer("sold");
+        break;
+      case "soldAddress":
+        // This exact address has a sale record → its keyed /address page (sale hero +
+        // property history). The href is server-built; fall back to the profile ladder.
+        router.push(item.sold?.href ?? addressProfileHref(item.label) ?? "/properties");
+        remember(item.label, "address");
         break;
     }
     setValue("");
@@ -479,7 +486,9 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 <div key={g.category}>
                   <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>{g.title}</span>
-                    {g.category === "sold" && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
+                    {(g.category === "sold" || g.category === "soldAddress") && (
+                      <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>
+                    )}
                   </div>
                   {g.items.map((item) => {
                     const idx = flat(item);
@@ -537,6 +546,28 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             )}
                           </span>
                         )}
+                        {/* Sold-record row: status chip + (consumer) close price/date, or a
+                            sign-in nudge. The anon payload never carried a price or date —
+                            nothing here to mask, only to advertise (audit R24a). */}
+                        {item.category === "soldAddress" && (
+                          <span className="flex shrink-0 flex-col items-end gap-0.5">
+                            <span className="border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                              {item.sold?.kindLabel ?? "SOLD"}
+                            </span>
+                            {item.sold?.priceLabel ? (
+                              <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                                {item.sold.priceLabel}
+                                {item.sold.dateLabel && (
+                                  <span className="ml-1 font-normal text-muted-foreground">{item.sold.dateLabel}</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="bg-cyan-500 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-950">
+                                Sign in for price
+                              </span>
+                            )}
+                          </span>
+                        )}
                         {item.category === "community" && item.count !== undefined && (
                           <span className="shrink-0 font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
                             {item.count.toLocaleString()}
@@ -572,7 +603,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             Profile
                           </span>
                         )}
-                        {item.provenance && item.category !== "sold" && item.category !== "community" && (
+                        {item.provenance && item.category !== "sold" && item.category !== "soldAddress" && item.category !== "community" && (
                           <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-muted-foreground sm:group-hover:hidden sm:block">
                             {item.category === "address" ? "for sale" : item.provenance}
                           </span>

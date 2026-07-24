@@ -124,6 +124,19 @@ export function streetNamesMatch(a: string, b: string): boolean {
 }
 
 /**
+ * Prefix-tolerant variant for TYPE-AHEAD surfaces only: every typed token must match a
+ * candidate token, and the LAST typed token may match as a prefix — "via to" matches
+ * "Via Toscana" mid-keystroke. Never use for canonical address resolution (a bare "to"
+ * would claim Toscana, Torino and Tower Rd alike); suggestion ranking absorbs that.
+ */
+export function streetNamesMatchPrefix(typed: string, candidate: string): boolean {
+  const ta = nameTokens(typed);
+  const tb = nameTokens(candidate);
+  if (!ta.length || !tb.length) return false;
+  return ta.every((t, i) => (i === ta.length - 1 ? tb.some((c) => c.startsWith(t)) : tb.includes(t)));
+}
+
+/**
  * Whether two parsed addresses are the SAME physical property. The civic number must
  * match; then either the postal codes agree (strongest), or — when a postal is missing
  * — the city plus the street name agree. Unit-level matching is intentionally not done

@@ -9,7 +9,8 @@ import type { ListingDocument } from "@/lib/typesense/client";
 
 export type SuggestCategory =
   | "address" // active for-sale/-rent listing matched by street address
-  | "sold" // recently-sold address (price VOW-gated)
+  | "sold" // comps-on-demand action row (lights the sold layer)
+  | "soldAddress" // THIS typed address has a sold/leased/off-market record (price VOW-gated)
   | "community" // city / neighbourhood (with live active count)
   | "school" // a rated school (proximity filter)
   | "mls" // exact MLS# → opens that listing
@@ -30,9 +31,36 @@ export interface SuggestItem {
   /** Short "why it matched" tag, e.g. "address", "community", "school". */
   provenance?: string;
   /** Sold metadata (price intentionally absent when gated). */
-  sold?: { dateLabel?: string; priceMasked: boolean };
+  sold?: {
+    dateLabel?: string;
+    priceMasked: boolean;
+    /** "$1,625,000" — consumers only; never present on an anonymous payload. */
+    priceLabel?: string;
+    /** Keyed /address page for the record (soldAddress rows). */
+    href?: string;
+    /** SOLD / LEASED / OFF MARKET — the public status kind (audit R24a). */
+    kindLabel?: string;
+  };
   /** School metadata. */
   school?: { id: string; score?: number };
+}
+
+/** /api/search/address-status response — the dropdown's sold-record probe. */
+export interface AddressStatusResponse {
+  found: boolean;
+  key?: string;
+  address?: string;
+  city?: string;
+  /** Public status kind — shown to anon too (same signal /address shows, R24a). */
+  dealKind?: "sold" | "leased" | "offmarket";
+  href?: string;
+  /** VOW fields — present ONLY on a signed-in consumer's response. */
+  closePrice?: number;
+  /** Epoch ms (UTC-midnight date-only) — render with timeZone:'UTC' (MEDIUM-18). */
+  soldDateMs?: number;
+  beds?: number;
+  baths?: number;
+  subType?: string;
 }
 
 export interface SuggestGroup {

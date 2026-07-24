@@ -5,6 +5,7 @@ import {
   parseAddress,
   resolveDealType,
   streetNamesMatch,
+  streetNamesMatchPrefix,
   vaultTransaction,
   type RelistTarget,
 } from "./disposition";
@@ -155,5 +156,25 @@ describe("resolveDealType", () => {
     expect(resolveDealType({ exact: "terminated", vault: null, addr: null })).toBe("terminated");
     expect(resolveDealType({ exact: null, vault: null, addr: "expired" })).toBe("expired");
     expect(resolveDealType({ exact: null, vault: null, addr: null })).toBeNull();
+  });
+});
+
+describe("streetNamesMatchPrefix", () => {
+  it("matches a mid-keystroke street fragment as a prefix", () => {
+    expect(streetNamesMatchPrefix("via to", "via toscana n a")).toBe(true);
+    expect(streetNamesMatchPrefix("via toscana", "via toscana n a")).toBe(true);
+  });
+
+  it("requires every non-final token to match exactly", () => {
+    expect(streetNamesMatchPrefix("vista toscana", "via toscana")).toBe(false);
+  });
+
+  it("rejects a fragment of a different street", () => {
+    expect(streetNamesMatchPrefix("via tor", "via toscana")).toBe(false);
+    expect(streetNamesMatchPrefix("cappamore", "coldstream")).toBe(false);
+  });
+
+  it("empty inputs never match", () => {
+    expect(streetNamesMatchPrefix("", "via toscana")).toBe(false);
   });
 });

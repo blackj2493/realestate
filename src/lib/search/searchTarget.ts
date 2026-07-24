@@ -7,7 +7,7 @@
 
 import type { SearchSuggestion } from '@/lib/typesense/client';
 import { parseAddress } from '@/lib/watchlist/disposition';
-import { slugify } from '@/lib/listings/listingPath';
+import { slugify, cityHubSlug } from '@/lib/listings/listingPath';
 
 export type SearchTarget =
   | { action: 'open-listing'; listing: NonNullable<SearchSuggestion['listing']> }
@@ -40,6 +40,17 @@ export function addressProfileHref(label: string): string | null {
   if (!streetSlug) return null;
   const citySlug = slugify(parts[1]?.replace(/\b[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d\b/g, '').trim() ?? '') || 'ontario';
   return `/address/on/${citySlug}/${streetSlug}`;
+}
+
+/**
+ * Canonical KEYED /address URL for a sold/off-market record — the same shape the
+ * addresses sitemap and the profile ladder's sold redirect emit, so every surface
+ * lands on one URL per record.
+ */
+export function soldAddressHref(address: string, city: string, key: string): string {
+  const citySlug = cityHubSlug(city) || slugify(city) || 'ontario';
+  const streetSlug = slugify((address || '').split(',')[0]);
+  return `/address/on/${citySlug}/${streetSlug ? `${streetSlug}-${key}` : key}`;
 }
 
 /** navigate-mode only: turn a target into a route into the terminal / listing / profile. */

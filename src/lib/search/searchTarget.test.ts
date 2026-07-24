@@ -5,6 +5,7 @@ import {
   resolveTextTarget,
   targetToHref,
   addressProfileHref,
+  soldAddressHref,
 } from './searchTarget';
 
 // Minimal ListingDocument stand-in — only `id` matters to these functions.
@@ -91,5 +92,17 @@ describe('addressProfileHref (ADDRESS_PROFILES_PLAN P4)', () => {
 
   it('returns null for a bare number', () => {
     expect(addressProfileHref('142')).toBeNull();
+  });
+});
+
+describe("soldAddressHref", () => {
+  it("builds the canonical keyed /address URL (sitemap shape)", () => {
+    expect(soldAddressHref("127 Via Toscana N/A, Vaughan, ON L4H 3C1", "Vaughan", "N13485582")).toBe(
+      "/address/on/vaughan/127-via-toscana-n-a-N13485582"
+    );
+  });
+
+  it("falls back to ontario when the city is empty", () => {
+    expect(soldAddressHref("10 King St", "", "X1")).toBe("/address/on/ontario/10-king-st-X1");
   });
 });

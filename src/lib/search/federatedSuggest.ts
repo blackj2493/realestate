@@ -14,7 +14,7 @@
 import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client";
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { geocodeAddress } from "./geocodeClient";
-import type { SuggestGroup, SuggestItem } from "./types";
+import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
 const SALES_FLOOR = "ListPrice:>=100000";
 const MLS_RE = /^[A-Za-z]\d{6,9}$/;
@@ -41,10 +41,35 @@ const TITLE: Record<string, string> = {
   // ("Addresses" next to the geo group's "Address" read as duplicates).
   address: "For sale",
   sold: "Recent solds · nearby",
+  soldAddress: "Sold record",
   community: "Communities",
   school: "Schools",
   geo: "Address",
 };
+
+/** SOLD / LEASED / OFF MARKET row chip text per the public status kind. */
+const KIND_LABEL: Record<string, string> = { sold: "SOLD", leased: "LEASED", offmarket: "OFF MARKET" };
+
+/**
+ * Probe the server for a sold/leased/off-market record at the typed address. The route
+ * applies the VOW gate (anon payloads carry the status KIND only — no price, no date).
+ * Best-effort: any failure just means the geocode fallback renders instead. Exported
+ * for the header search bar's kind-aware fallback label.
+ */
+export async function fetchAddressStatus(q: string, signal?: AbortSignal): Promise<AddressStatusResponse | null> {
+  try {
+    const res = await fetch(`/api/search/address-status?q=${encodeURIComponent(q)}`, { signal });
+    if (!res.ok) return null;
+    return (await res.json()) as AddressStatusResponse;
+  } catch {
+    return null;
+  }
+}
+
+/** Epoch (UTC-midnight date-only) → "Jul 21, 2026" — audit MEDIUM-18. */
+function fmtSoldDate(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
 
 function geoOf(listing: ListingDocument): { lat: number; lng: number; zoom?: number } | undefined {
   const loc = listing.location;
@@ -181,14 +206,40 @@ export async function federatedSuggest(
     }
   }
 
-  // 3) Geo fallback — typed address with no matching active listing still resolves.
+  // 3) Off-market ladder — typed address with no matching active listing still resolves.
   //    Fires when it looks like a street address (number + a name word) AND no returned
   //    suggestion GENUINELY matches what was typed — typo-tolerant fuzzy hits
   //    ("758 Coldstream" for "758 cappamore") must not suppress the real address.
+  //    Sold record beats geocode (one address = one row): a home that sold last week
+  //    must answer with its sale, never with "Not on the market".
+  const soldAddress: SuggestItem[] = [];
   const typedAddressCovered = addresses.some((a) => matchesTypedAddress(q, a.label));
   if (!structured && !typedAddressCovered && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
-    const hit = await geocodeAddress(q, signal);
-    if (hit) {
+    // Probe both in parallel (latency stays flat); prefer the sold record.
+    const [status, hit] = await Promise.all([fetchAddressStatus(q, signal), geocodeAddress(q, signal)]);
+    if (status?.found && status.key && status.address) {
+      const meta = [
+        status.beds ? `${status.beds} bd` : null,
+        status.baths ? `${status.baths} ba` : null,
+        status.subType?.trim() || null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      soldAddress.push({
+        id: `soldAddress:${status.key}`,
+        category: "soldAddress",
+        label: status.address,
+        sublabel: meta || undefined,
+        provenance: "sold record",
+        sold: {
+          priceMasked: !status.closePrice,
+          priceLabel: status.closePrice ? `$${Math.round(status.closePrice).toLocaleString("en-CA")}` : undefined,
+          dateLabel: status.soldDateMs ? fmtSoldDate(status.soldDateMs) : undefined,
+          href: status.href,
+          kindLabel: KIND_LABEL[status.dealKind ?? "sold"],
+        },
+      });
+    } else if (hit) {
       geo.push({
         id: `geo:${hit.lat},${hit.lng}`,
         category: "geo",
@@ -201,9 +252,10 @@ export async function federatedSuggest(
   }
 
   // The typed-but-unlisted address is the user's stated intent — it outranks fuzzy
-  // lookalikes, so the geo row renders ABOVE the address group.
+  // lookalikes, so the sold-record/geo row renders ABOVE the address group.
   const order: Array<[SuggestItem[], SuggestGroup["category"]]> = [
     [mls, "mls"],
+    [soldAddress, "soldAddress"],
     [geo, "geo"],
     [addresses.slice(0, 5), "address"],
     [communities.slice(0, 6), "community"],
