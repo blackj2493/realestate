@@ -524,31 +524,6 @@ export default async function AddressProfileView({
                 radiusKm={nearby.radiusKm}
               />
             )}
-
-            {/* ── Nearby actives carousel: IDX = fully public, no gate. ── */}
-            {nearby && nearby.listings.length > 0 && (
-              <section id="for-sale" className="scroll-mt-6">
-                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
-                    For sale near this home
-                  </h2>
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    {nearby.totalFound} within {nearby.radiusKm} km
-                  </span>
-                </div>
-                <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-                  {nearby.listings.map((l) => (
-                    <NearbyCard key={l.id} l={l} />
-                  ))}
-                </div>
-                <Link
-                  href={`/properties?city=${encodeURIComponent(profile.city)}`}
-                  className="mt-2 inline-flex h-10 items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
-                >
-                  See all {nearby.totalFound} for sale near here →
-                </Link>
-              </section>
-            )}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
@@ -579,6 +554,33 @@ export default async function AddressProfileView({
             </div>
           </div>
         </div>
+
+        {/* ── Nearby actives carousel: IDX = fully public, no gate. Full container
+            width (owner decision 2026-07-23 — this is the page's key conversion
+            surface, so it never sits squeezed inside the grid's left column). ── */}
+        {nearby && nearby.listings.length > 0 && (
+          <section id="for-sale" className="mt-8 scroll-mt-6">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
+                For sale near this home
+              </h2>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {nearby.totalFound} within {nearby.radiusKm} km
+              </span>
+            </div>
+            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+              {nearby.listings.map((l) => (
+                <NearbyCard key={l.id} l={l} />
+              ))}
+            </div>
+            <Link
+              href={`/properties?city=${encodeURIComponent(profile.city)}`}
+              className="mt-2 inline-flex h-10 items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
+            >
+              See all {nearby.totalFound} for sale near here →
+            </Link>
+          </section>
+        )}
 
         {/* ── The block, scored: schools + daily life + risk scan ── */}
         {(schools.length > 0 || grocery || rec || flags !== null) && (
