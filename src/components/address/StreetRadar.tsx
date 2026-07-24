@@ -1,52 +1,77 @@
 "use client";
 
 /**
- * StreetRadar — schematic 2 km radar around the subject address. NOT a map tile:
- * a pure-CSS projection (equirectangular, fine at neighbourhood scale) of real
- * listing positions — no map vendor, nothing to leak.
+ * StreetRadar — a small real-map view of the pocket around the subject address.
  *
- * v2 (owner feedback "interesting but not sure what to make of it"): the radar now
- * SAYS something —
- *  - a default takeaway strip ("Most live inventory sits NW · 9 of 27 within 1 km"),
- *    computed from real bearings;
- *  - every cyan/amber pin is TAPPABLE (IDX actives are public): address, asking
- *    price, distance + a link to the listing;
- *  - a North marker + ring labels for orientation.
+ * v3 (owner: the abstract dot-void "is not helping the user" → show the map):
+ * the canvas is now a Mapbox STATIC IMAGE (same stock style family the terminal
+ * uses, theme-aware dark-v11/light-v11) with our interactive dots overlaid as DOM
+ * elements. Static-image-plus-DOM keeps everything v2 earned — tap-a-dot info
+ * strip, takeaway caption, VOW gate semantics — while giving the dots the one
+ * thing the schematic lacked: streets the user can recognize. No GL runtime, no
+ * pan/zoom (exploration is what "Full map →" is for), one cacheable image request.
  *
- * VOW gate unchanged: sold dots are identity-free positions (anon gets ~110 m-rounded
- * points, see getSoldNearSummary). Tapping one never reveals anything — consumers are
- * pointed at the feed below (which has the real rows); anon gets the sign-in tease.
+ * PROJECTION: dots are placed with WEB MERCATOR math (512-tile scheme, matching
+ * Mapbox static/GL zoom) so they align with the tile image; the fractional zoom is
+ * computed so the radius circle just fits the square frame. Distance/bearing for
+ * the takeaway caption use the simpler equirectangular math (fine at 2 km scale).
+ *
+ * VOW gate unchanged: sold dots are identity-free positions (anon gets ~110 m-
+ * rounded points — on a real map that shows the block, never the house). Tapping
+ * one reveals nothing; consumers are pointed at the feed, anon at the free account.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { RadarPinData } from "@/lib/address/nearbyForSale";
 
 const KM_PER_DEG_LAT = 110.574;
+/** Logical (CSS) pixel size of the square static image; rendered responsively —
+ *  dot positions are percentages, so alignment survives any rendered size. */
+const IMG_SIZE = 640;
+const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
 
-interface Projected {
-  x: number;
-  y: number;
-  distKm: number;
-  /** Bearing from the home, degrees clockwise from north. */
-  bearing: number;
+/* ── Web Mercator (tile alignment) ────────────────────────────────────────── */
+
+function mercX(lng: number): number {
+  return (lng + 180) / 360;
+}
+function mercY(lat: number): number {
+  const s = Math.sin((lat * Math.PI) / 180);
+  return 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
 }
 
-function project(
+/** Fractional zoom at which the 2·radius diameter (plus padding) spans IMG_SIZE px. */
+function fitZoom(centerLat: number, radiusKm: number): number {
+  const targetMpp = (2 * radiusKm * 1000 * 1.12) / IMG_SIZE;
+  const z = Math.log2(
+    (EARTH_CIRCUMFERENCE_M * Math.cos((centerLat * Math.PI) / 180)) / (512 * targetMpp)
+  );
+  return Math.round(Math.min(16, Math.max(10, z)) * 100) / 100;
+}
+
+/** Percentage position of (lat,lng) inside the static frame; null when outside. */
+function placePct(
   centerLat: number,
   centerLng: number,
+  zoom: number,
   lat: number,
-  lng: number,
-  radiusKm: number
-): Projected | null {
+  lng: number
+): { left: number; top: number } | null {
+  const world = 512 * Math.pow(2, zoom);
+  const left = 50 + (((mercX(lng) - mercX(centerLng)) * world) / IMG_SIZE) * 100;
+  const top = 50 + (((mercY(lat) - mercY(centerLat)) * world) / IMG_SIZE) * 100;
+  if (left < 2 || left > 98 || top < 2 || top > 98) return null;
+  return { left, top };
+}
+
+/* ── Equirectangular (metric facts: distance + bearing for the caption) ───── */
+
+function metrics(centerLat: number, centerLng: number, lat: number, lng: number) {
   const kmPerDegLng = 111.32 * Math.cos((centerLat * Math.PI) / 180);
   const dxKm = (lng - centerLng) * kmPerDegLng;
   const dyKm = (lat - centerLat) * KM_PER_DEG_LAT;
-  const distKm = Math.hypot(dxKm, dyKm);
-  if (distKm > radiusKm * 1.02) return null;
   return {
-    x: 50 + (dxKm / radiusKm) * 48,
-    y: 50 - (dyKm / radiusKm) * 48,
-    distKm,
+    distKm: Math.hypot(dxKm, dyKm),
     bearing: (Math.atan2(dxKm, dyKm) * 180) / Math.PI + (dxKm < 0 ? 360 : 0),
   };
 }
@@ -97,20 +122,37 @@ export default function StreetRadar({
   mapHref?: string;
 }) {
   const [selected, setSelected] = useState<Selection>(null);
+  // Theme-aware tile style. SSR + first paint assume dark (the product default);
+  // Daylight users get the light style right after mount.
+  const [styleId, setStyleId] = useState("dark-v11");
+  useEffect(() => {
+    setStyleId(document.documentElement.classList.contains("dark") ? "dark-v11" : "light-v11");
+  }, []);
 
   if (activePins.length === 0 && soldPoints.length === 0) return null;
 
-  const actives = activePins
-    .map((pin) => ({ pin, pos: project(centerLat, centerLng, pin.lat, pin.lng, radiusKm) }))
-    .filter((p): p is { pin: RadarPinData; pos: Projected } => p.pos !== null);
-  const solds = soldPoints
-    .map(([lat, lng]) => project(centerLat, centerLng, lat, lng, radiusKm))
-    .filter((p): p is Projected => p !== null);
+  const zoom = fitZoom(centerLat, radiusKm);
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const mapSrc =
+    token && token !== "your-mapbox-token"
+      ? `https://api.mapbox.com/styles/v1/mapbox/${styleId}/static/` +
+        `${centerLng.toFixed(6)},${centerLat.toFixed(6)},${zoom}/${IMG_SIZE}x${IMG_SIZE}@2x` +
+        `?access_token=${token}`
+      : null;
+
+  const actives = activePins.flatMap((pin) => {
+    const pos = placePct(centerLat, centerLng, zoom, pin.lat, pin.lng);
+    return pos ? [{ pin, pos, m: metrics(centerLat, centerLng, pin.lat, pin.lng) }] : [];
+  });
+  const solds = soldPoints.flatMap(([lat, lng]) => {
+    const pos = placePct(centerLat, centerLng, zoom, lat, lng);
+    return pos ? [pos] : [];
+  });
 
   // ── Takeaway: dominant direction + inner-ring count (real bearings) ───────
-  const within1km = actives.filter((a) => a.pos.distKm <= radiusKm / 2).length;
+  const within1km = actives.filter((a) => a.m.distKm <= radiusKm / 2).length;
   const counts = new Map<string, number>();
-  for (const a of actives) counts.set(sectorOf(a.pos.bearing), (counts.get(sectorOf(a.pos.bearing)) ?? 0) + 1);
+  for (const a of actives) counts.set(sectorOf(a.m.bearing), (counts.get(sectorOf(a.m.bearing)) ?? 0) + 1);
   let takeaway = `${actives.length} live listing${actives.length === 1 ? "" : "s"} plotted · ${within1km} within ${radiusKm / 2} km`;
   if (actives.length >= 5) {
     const [topSector, topCount] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
@@ -136,21 +178,17 @@ export default function StreetRadar({
       <div
         className="relative aspect-square w-full overflow-hidden rounded-md border border-border bg-muted/25"
         role="group"
-        aria-label={`${actives.length} live listings and ${solds.length} recent sales plotted around this address. Select a dot for details.`}
+        aria-label={`Map of ${actives.length} live listings and ${solds.length} recent sales around this address. Select a dot for details.`}
       >
-        {/* orientation: North marker. Decorative layers are pointer-events-none so
-            they never eat pin taps (same hazard class as the terminal map overlays). */}
-        <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 font-mono text-[9px] font-bold text-muted-foreground" aria-hidden="true">
-          N
-        </span>
-
-        {/* radius rings */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-cyan-500/25" aria-hidden="true">
-          <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-1 font-mono text-[8px] text-cyan-700/70 dark:text-cyan-400/60">
-            {radiusKm / 2} km
-          </span>
-        </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[96%] w-[96%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-cyan-500/20" aria-hidden="true" />
+        {mapSrc && (
+          // eslint-disable-next-line @next/next/no-img-element -- Mapbox static tile, never optimized
+          <img
+            src={mapSrc}
+            alt=""
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+          />
+        )}
 
         {/* sold dots — identity-free positions; tap = contextual nudge, never data */}
         {solds.map((p, i) => (
@@ -160,7 +198,7 @@ export default function StreetRadar({
             onClick={() => setSelected({ kind: "sold" })}
             aria-label="A home sold near here in the last 30 days"
             className="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            style={{ left: `${p.left}%`, top: `${p.top}%` }}
           >
             <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-background bg-emerald-500/90" />
           </button>
@@ -177,7 +215,7 @@ export default function StreetRadar({
               aria-label={`${pin.address} — asking ${fmtPrice(pin.price)}${pin.cut ? ", price cut" : ""}`}
               aria-pressed={isSel}
               className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
-              style={{ left: `${pos.x}%`, top: `${pos.y}%`, zIndex: isSel ? 5 : undefined }}
+              style={{ left: `${pos.left}%`, top: `${pos.top}%`, zIndex: isSel ? 5 : undefined }}
             >
               <span
                 className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-background transition-all ${
