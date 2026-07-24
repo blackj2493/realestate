@@ -628,3 +628,22 @@ table,
     animation: none;
   }
 }
+
+/* PulseLoader (components/ui/PulseLoader) — a 40-unit dash sweeping through the
+   pathLength-100 pulse line (period 140 → seamless loop). Reduced motion shows
+   the full static line instead. */
+@keyframes pp-ekg {
+  to {
+    stroke-dashoffset: -140;
+  }
+}
+.pp-ekg {
+  stroke-dasharray: 40 100;
+  animation: pp-ekg 1.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-ekg {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
