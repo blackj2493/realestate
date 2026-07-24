@@ -67,8 +67,10 @@ import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
+import { Suspense } from "react";
 import NearbySchools from "./NearbySchools";
 import NearbyAmenities from "./NearbyAmenities";
+import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
 import DetailMobileNav from "./DetailMobileNav";
 import ClampText from "./ClampText";
@@ -1203,6 +1205,15 @@ export default async function PropertyPage({
 
             {/* Grocery + recreation proximity */}
             <NearbyAmenities listingId={id} />
+
+            {/* Typical rents nearby — median asking rent by bedrooms × type from live
+                FOR RENT listings (IDX, public). Streamed so its Typesense fetches never
+                block the page; self-hides on thin samples or missing coords. */}
+            {!isCommercial && (
+              <Suspense fallback={null}>
+                <TypicalRents listingId={id} />
+              </Suspense>
+            )}
 
             {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage). */}
             {!isCommercial && (

@@ -50,6 +50,7 @@ import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities
 import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import TrackAddressCard from "./TrackAddressCard";
+import TypicalRentsCard from "./TypicalRentsCard";
 import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
@@ -262,8 +263,10 @@ export default async function AddressProfileView({
 
   // Parallel fetches. The GATED fetchers run ONLY on the consumer branch — the
   // anonymous path never even asks for a VOW value (structural gate).
-  const [nearby, flags, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord] = await Promise.all([
+  const [nearby, lease, flags, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord] = await Promise.all([
     hasGeo ? getNearbyForSale(lat, lng) : Promise.resolve(null),
+    // Live FOR RENT actives — powers the typical-rents grid (asking-side, anon-safe).
+    hasGeo ? getNearbyForSale(lat, lng, { transactionType: "lease" }) : Promise.resolve(null),
     hasGeo ? getFlagsNearPoint(lat, lng) : Promise.resolve(null),
     hasGeo ? getSoldNearSummary(lat, lng) : Promise.resolve(null),
     hasGeo && isConsumer ? getSoldNearGated(lat, lng) : Promise.resolve<SoldNearGated | null>(null),
@@ -526,6 +529,9 @@ export default async function AddressProfileView({
                 />
               </div>
             )}
+
+            {/* Typical rents by bedrooms × type — live FOR RENT asking medians (IDX). */}
+            {lease && <TypicalRentsCard matrix={lease.bedsTypeMatrix} radiusKm={lease.radiusKm} />}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
