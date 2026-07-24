@@ -165,14 +165,7 @@ export default function StreetRadar({
     <section className="rounded-lg border border-border bg-card/40 p-5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Street radar</h2>
-        <span className="flex items-baseline gap-3">
-          <span className="font-mono text-[10px] text-muted-foreground">tap a dot · {radiusKm} km</span>
-          {mapHref && (
-            <Link href={mapHref} className="font-mono text-[10px] font-bold text-cyan-700 hover:underline dark:text-cyan-400">
-              Full map →
-            </Link>
-          )}
-        </span>
+        <span className="font-mono text-[10px] text-muted-foreground">tap a dot · {radiusKm} km</span>
       </div>
 
       <div
@@ -287,6 +280,16 @@ export default function StreetRadar({
           </span>
         )}
       </div>
+
+      {/* Primary CTA — the mini-map orients, the terminal explores (owner: make it big). */}
+      {mapHref && (
+        <Link
+          href={mapHref}
+          className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
+        >
+          Open the full map here →
+        </Link>
+      )}
     </section>
   );
 }
