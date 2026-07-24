@@ -17,6 +17,7 @@
  *    even sold addresses from anon.
  *  - Schools (EQAO), amenities and geo "Things to Know" are open data.
  */
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   GraduationCap,
@@ -161,6 +162,47 @@ function SchoolRow({ s }: { s: NearbySchool }) {
 
 /* ── geo flags ──────────────────────────────────────────────────────────────── */
 
+/** Suspense-streamed risk scan: awaits the flags RPC on its own so the rest of the
+ *  page renders without it. A clear result is still information — the "clean bill"
+ *  stamp (soft wording: dataset COVERAGE varies by municipality, so "no hits" must
+ *  never read as "we verified everything"). null = lookup failed → render nothing. */
+async function ThingsToKnow({ lat, lng }: { lat: number; lng: number }) {
+  const flags = await getFlagsNearPoint(lat, lng);
+  if (flags === null) return null;
+  if (flags.length > 0) {
+    return (
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {flags.map((f) => (
+          <FlagCard key={f.id} f={f} />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
+      <p className="inline-flex items-center gap-2 rounded border border-dashed border-emerald-500/40 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+        ✓ Nothing flagged around this address
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        No hits in the public-record datasets we track ({CHECKED_LABELS.join(", ")}).
+        Coverage varies by municipality.
+      </p>
+    </div>
+  );
+}
+
+/** While the risk scan streams in — tells the user work is happening, not hanging. */
+function ThingsToKnowSkeleton() {
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
+      <p className="animate-pulse font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Scanning {CHECKED_LABELS.length} public-record datasets…
+      </p>
+      <div className="redact-skeleton mt-2 h-3 w-2/3 rounded" aria-hidden="true" />
+    </div>
+  );
+}
+
 function FlagCard({ f }: { f: AddressFlag }) {
   const Icon = f.kind === "warn" ? TriangleAlert : Info;
   return (
@@ -266,11 +308,13 @@ export default async function AddressProfileView({
 
   // Parallel fetches. The GATED fetchers run ONLY on the consumer branch — the
   // anonymous path never even asks for a VOW value (structural gate).
-  const [nearby, lease, flags, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord] = await Promise.all([
+  // NOTE: the geo-flags scan is NOT awaited here — it streams via <Suspense> in the
+  // "Things to know" block below, so a slow/cold flags lookup can never again hold
+  // the whole page hostage (it was the entire ~6 s cold TTFB pre-094).
+  const [nearby, lease, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord] = await Promise.all([
     hasGeo ? getNearbyForSale(lat, lng) : Promise.resolve(null),
     // Live FOR RENT actives — powers the typical-rents grid (asking-side, anon-safe).
     hasGeo ? getNearbyForSale(lat, lng, { transactionType: "lease" }) : Promise.resolve(null),
-    hasGeo ? getFlagsNearPoint(lat, lng) : Promise.resolve(null),
     hasGeo ? getSoldNearSummary(lat, lng) : Promise.resolve(null),
     hasGeo && isConsumer ? getSoldNearGated(lat, lng) : Promise.resolve<SoldNearGated | null>(null),
     isConsumer
@@ -629,7 +673,7 @@ export default async function AddressProfileView({
         )}
 
         {/* ── The block, scored: schools + daily life + risk scan ── */}
-        {(schools.length > 0 || grocery || rec || flags !== null) && (
+        {(schools.length > 0 || grocery || rec || hasGeo) && (
           <section className="mt-8">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">The block, scored</h2>
@@ -677,27 +721,12 @@ export default async function AddressProfileView({
               </div>
             )}
 
-            {/* Things to Know: open-data geo flags. A clear result is still information —
-                the "clean bill" stamp (soft wording: dataset COVERAGE varies by
-                municipality, so "no hits" must never read as "we verified everything"). */}
-            {flags !== null &&
-              (flags.length > 0 ? (
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {flags.map((f) => (
-                    <FlagCard key={f.id} f={f} />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
-                  <p className="inline-flex items-center gap-2 rounded border border-dashed border-emerald-500/40 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    ✓ Nothing flagged around this address
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    No hits in the public-record datasets we track ({CHECKED_LABELS.join(", ")}).
-                    Coverage varies by municipality.
-                  </p>
-                </div>
-              ))}
+            {/* Things to Know: Suspense-streamed so the flags RPC never blocks the page. */}
+            {hasGeo && (
+              <Suspense fallback={<ThingsToKnowSkeleton />}>
+                <ThingsToKnow lat={lat} lng={lng} />
+              </Suspense>
+            )}
           </section>
         )}
 
