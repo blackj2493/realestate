@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import {
   getConfig,
@@ -23,6 +22,7 @@ import MarketActivityControls from "@/components/dashboard/MarketActivityControl
 import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
+import NeighbourhoodLeaderboard from "@/components/dashboard/NeighbourhoodLeaderboard";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles";
 import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
@@ -37,19 +37,6 @@ import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-// deck.gl + mapbox touch the DOM at module load → client-only, no SSR.
-const DashboardHeatTile = dynamic(
-  () => import("@/components/dashboard/DashboardHeatTile"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-64 items-center justify-center border border-border bg-background">
-        <p className="terminal-font text-xs text-muted-foreground">Loading map…</p>
-      </div>
-    ),
-  }
-);
 
 export default function DashboardClient() {
   const [ready, setReady] = useState(false);
@@ -232,10 +219,10 @@ export default function DashboardClient() {
             );
           })}
 
-        {/* Region intelligence: neighbourhood heat + price trend. A shared city
+        {/* Region intelligence: neighbourhood leaderboard + price trend. A shared city
             switcher (rendered inside each tile when >1 region) keeps them in sync. */}
         {hasRegions && (
-          <DashboardHeatTile
+          <NeighbourhoodLeaderboard
             regions={config.regions}
             selected={intelActive}
             onSelect={setIntelRegion}

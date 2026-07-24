@@ -108,7 +108,9 @@ export interface ListingDocument {
   ListPrice: number;
   UnparsedAddress?: string;
   City?: string;
-  
+  /** TRREB community ("Half Moon Bay", "Sandringham-Wellington") — the neighbourhood axis. */
+  CityRegion?: string;
+
   // Property Specs
   BedroomsTotal?: number;
   BedroomsAboveGrade?: number;
