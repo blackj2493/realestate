@@ -25,7 +25,9 @@ import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
 import { getBestTypicalRents } from "@/lib/address/leasedRents";
+import { getBestTypicalPrices } from "@/lib/address/soldPrices";
 import TypicalRentsCard from "@/components/address/TypicalRentsCard";
+import TypicalPricesCard from "@/components/address/TypicalPricesCard";
 import { getRegionMetricsCached } from "@/lib/market/aggregates";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
 import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
@@ -135,9 +137,12 @@ export default async function AreaInsights({
 
   const areaLabel = cityRegion || cityName;
 
-  // Rents grid: consumers see ACTUAL leased closes (VOW — structural gate in the
-  // fetcher); anon sees asking medians. Reuses the lease fetch above on that path.
-  const typicalRents = await getBestTypicalRents(lat, lng, isConsumer, lease);
+  // Sell + rent grids: consumers see ACTUAL closes (VOW — structural gate in the
+  // fetchers); anon sees asking medians. Reuse the 2 km fetches above on that path.
+  const [typicalRents, typicalPrices] = await Promise.all([
+    getBestTypicalRents(lat, lng, isConsumer, lease),
+    getBestTypicalPrices(lat, lng, isConsumer, sale),
+  ]);
 
   // ── PUBLIC snapshot (active/IDX asking — anon-safe) ───────────────────
   const publicTiles: TileData[] = [];
@@ -187,7 +192,16 @@ export default async function AreaInsights({
         </section>
       )}
 
-      {/* Rents by bedrooms × type — leased closes for consumers, asking medians for anon. */}
+      {/* Sale prices + rents by bedrooms × type — actual closes for consumers, asking
+          medians for anon. Prices first: this page is a sold record's home. */}
+      {typicalPrices && (
+        <TypicalPricesCard
+          matrix={typicalPrices.matrix}
+          radiusKm={typicalPrices.radiusKm}
+          source={typicalPrices.source}
+          showSignInNudge={!isConsumer}
+        />
+      )}
       {typicalRents && (
         <TypicalRentsCard
           matrix={typicalRents.matrix}

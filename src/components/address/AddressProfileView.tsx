@@ -30,6 +30,7 @@ import {
 import type { AddressProfile } from "@/lib/address/resolveProfile";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
 import { getBestTypicalRents } from "@/lib/address/leasedRents";
+import { getBestTypicalPrices } from "@/lib/address/soldPrices";
 import { computePulse } from "@/lib/address/pulse";
 import {
   getSoldNearSummary,
@@ -52,6 +53,7 @@ import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import TrackAddressCard from "./TrackAddressCard";
 import TypicalRentsCard from "./TypicalRentsCard";
+import TypicalPricesCard from "./TypicalPricesCard";
 import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
@@ -282,9 +284,15 @@ export default async function AddressProfileView({
       ? getSaleRecordByAddressGated(profile.address, profile.city, profile.postal)
       : Promise.resolve<SaleRecord | null>(null),
   ]);
-  // Rents grid: consumers see ACTUAL leased closes (VOW, fetched only when
-  // isConsumer — structural gate in getBestTypicalRents); anon sees asking medians.
-  const typicalRents = hasGeo ? await getBestTypicalRents(lat, lng, isConsumer, lease) : null;
+  // Rents + sale-price grids: consumers see ACTUAL closes (VOW, fetched only when
+  // isConsumer — structural gate in both fetchers); anon sees asking medians. The
+  // already-fetched 2 km actives (lease / nearby) feed the asking paths for free.
+  const [typicalRents, typicalPrices] = hasGeo
+    ? await Promise.all([
+        getBestTypicalRents(lat, lng, isConsumer, lease),
+        getBestTypicalPrices(lat, lng, isConsumer, nearby),
+      ])
+    : [null, null];
   const schools = hasGeo ? getNearbySchools(lat, lng).slice(0, 4) : [];
   let grocery: { name: string; km: number } | null = null;
   let rec: { name: string; km: number } | null = null;
@@ -529,8 +537,17 @@ export default async function AddressProfileView({
               />
             )}
 
-            {/* Rents grid directly under the sale-side band (owner: prominent placement —
-                "what would it sell for" and "what do homes rent for" are one thought). */}
+            {/* Sell + rent grids directly under the sale-side band (owner: prominent
+                placement — the model's estimate, what homes actually sold for, and what
+                they rent for are one thought: the whole investor calculation). */}
+            {typicalPrices && (
+              <TypicalPricesCard
+                matrix={typicalPrices.matrix}
+                radiusKm={typicalPrices.radiusKm}
+                source={typicalPrices.source}
+                showSignInNudge={!isConsumer}
+              />
+            )}
             {typicalRents && (
               <TypicalRentsCard
                 matrix={typicalRents.matrix}

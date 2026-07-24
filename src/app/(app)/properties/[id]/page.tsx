@@ -1226,12 +1226,13 @@ export default async function PropertyPage({
         <section id="market" className="scroll-mt-28 lg:mt-6">
           <div className="lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
 
-          {/* Rents grid LEADS the market zone (owner call 2026-07-24: prominent
-              placement) — actual leased medians for consumers, asking for anon.
-              Streamed; self-hides on thin samples or missing coords. */}
+          {/* Sell + rent grids LEAD the market zone (owner call 2026-07-24: prominent
+              placement) — actual close medians (+ middle-50% ranges on sale prices)
+              for consumers, asking for anon. Sale listings show prices first, rentals
+              rents first. Streamed; self-hides on thin samples or missing coords. */}
           {!isCommercial && (
             <Suspense fallback={null}>
-              <TypicalRents listingId={id} />
+              <TypicalRents listingId={id} salesFirst={!isLease} />
             </Suspense>
           )}
 

@@ -280,23 +280,32 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
   }
 }
 
-/** One closed lease near a point — the actual signed rent (VOW). */
+/** One closed deal near a point — the actual close price (VOW). Shared by the leased
+ *  (monthly rent) and sold (sale price) fetchers; same shape, different price scale. */
 export interface LeasedRentItem {
   beds: number | null;
   subType: string | null;
-  /** ClosePrice = the monthly rent the home ACTUALLY leased for. */
+  /** ClosePrice = what the home ACTUALLY leased/sold for. */
   price: number;
   /** Full address string — the in-home-unit classifier reads its markers ("Bsmt", "(Lower)"). */
   address: string | null;
 }
 
 /**
- * Closed leases near a point from the rolling ~180-day sold_listings window — the
- * ground truth for "what do homes here actually rent for". VOW DATA: call ONLY inside
- * a getConsumer()-confirmed branch (leased close prices are gated exactly like sold
- * prices). Sanity band 500–20,000 $/mo keeps data-entry garbage out of the medians.
+ * Closed deals of one kind near a point from the rolling ~180-day sold_listings
+ * window. VOW DATA: call ONLY inside a getConsumer()-confirmed branch (close prices
+ * are gated whether the deal was a sale or a lease). The sanity band keeps data-entry
+ * garbage out of the medians. 250 docs max — with q:"*" Typesense orders on the
+ * collection's default sorting field, so a dense downtown cell samples recent deals.
  */
-export async function getLeasedNearPoint(lat: number, lng: number, radiusKm: number): Promise<LeasedRentItem[]> {
+async function getClosedNearPoint(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  deal: "sold" | "leased",
+  priceMin: number,
+  priceMax: number
+): Promise<LeasedRentItem[]> {
   try {
     const res = await getSoldClient()
       .collections(SOLD_LISTINGS_COLLECTION)
@@ -304,7 +313,7 @@ export async function getLeasedNearPoint(lat: number, lng: number, radiusKm: num
       .search({
         q: "*",
         query_by: "UnparsedAddress",
-        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=leased && ClosePrice:>=500 && ClosePrice:<=20000`,
+        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=${deal} && ClosePrice:>=${priceMin} && ClosePrice:<=${priceMax}`,
         include_fields: "ClosePrice,BedroomsTotal,PropertySubType,UnparsedAddress",
         per_page: 250,
       });
@@ -318,9 +327,26 @@ export async function getLeasedNearPoint(lat: number, lng: number, radiusKm: num
       };
     });
   } catch (err) {
-    console.error("[soldByKey] leased-near-point failed:", err);
+    console.error(`[soldByKey] ${deal}-near-point failed:`, err);
     return [];
   }
+}
+
+/**
+ * Closed leases near a point — the ground truth for "what do homes here actually rent
+ * for". Sanity band 500–20,000 $/mo. VOW — consumer branch only.
+ */
+export function getLeasedNearPoint(lat: number, lng: number, radiusKm: number): Promise<LeasedRentItem[]> {
+  return getClosedNearPoint(lat, lng, radiusKm, "leased", 500, 20_000);
+}
+
+/**
+ * Closed SALES near a point — the ground truth for "what do homes here actually sell
+ * for" (the sell-side twin of the rents grid). Sanity band $100k–$30M. VOW — consumer
+ * branch only.
+ */
+export function getSoldNearPoint(lat: number, lng: number, radiusKm: number): Promise<LeasedRentItem[]> {
+  return getClosedNearPoint(lat, lng, radiusKm, "sold", 100_000, 30_000_000);
 }
 
 /**
