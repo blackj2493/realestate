@@ -516,13 +516,15 @@ export default async function AddressProfileView({
             )}
 
             {nearby && (
-              <ActivityFeed
-                activeEvents={nearby.events}
-                soldEvents={isConsumer ? (soldGated?.events ?? []) : []}
-                soldCount30={soldCount30}
-                isConsumer={isConsumer}
-                radiusKm={nearby.radiusKm}
-              />
+              <div id="feed" className="scroll-mt-6">
+                <ActivityFeed
+                  activeEvents={nearby.events}
+                  soldEvents={isConsumer ? (soldGated?.events ?? []) : []}
+                  soldCount30={soldCount30}
+                  isConsumer={isConsumer}
+                  radiusKm={nearby.radiusKm}
+                />
+              </div>
             )}
           </div>
 
@@ -534,6 +536,7 @@ export default async function AddressProfileView({
                 radiusKm={nearby.radiusKm}
                 activePins={nearby.pins}
                 soldPoints={soldSummary?.points ?? []}
+                isConsumer={isConsumer}
               />
             )}
 

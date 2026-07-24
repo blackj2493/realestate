@@ -101,8 +101,21 @@ export interface NearbyForSale {
   momentum: MomentumStats;
   /** NEW (≤30d) + CUT events for the activity feed/ticker, feed-ready order. */
   events: ActiveEvent[];
-  /** All fetched actives with coords — the street-radar pin set (≤100 by construction). */
-  pins: Array<{ lat: number; lng: number; cut: boolean }>;
+  /** All fetched actives with coords — the street-radar pin set (≤100 by construction).
+   *  Carries id/address/price so the radar pins are tappable (IDX = public data). */
+  pins: RadarPinData[];
+}
+
+/** One tappable street-radar pin — public IDX fields only. */
+export interface RadarPinData {
+  id: string;
+  address: string;
+  price: number;
+  lat: number;
+  lng: number;
+  cut: boolean;
+  dropAmount: number;
+  distanceM: number | null;
 }
 
 const FIELDS =
@@ -288,7 +301,16 @@ export async function getNearbyForSale(
       events: [...newEvents, ...cutEvents],
       pins: all
         .filter((l) => l.lat !== null && l.lng !== null)
-        .map((l) => ({ lat: l.lat as number, lng: l.lng as number, cut: l.dropAmount > 0 })),
+        .map((l) => ({
+          id: l.id,
+          address: l.address,
+          price: l.price,
+          lat: l.lat as number,
+          lng: l.lng as number,
+          cut: l.dropAmount > 0,
+          dropAmount: l.dropAmount,
+          distanceM: l.distanceM,
+        })),
     };
   } catch (err) {
     console.error("[nearbyForSale] search failed:", err);
