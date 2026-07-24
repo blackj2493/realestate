@@ -52,6 +52,18 @@ function median(xs: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
+/**
+ * OREB CityRegion values arrive as "7711 - Barrhaven - Half Moon Bay" — strip the
+ * numeric board code and the redundant own-city prefix for display ("Half Moon
+ * Bay"). Raw value stays the grouping key; TRREB names without codes pass through.
+ */
+function displayName(region: string, city: string): string {
+  let n = region.replace(/^\d{3,4}\s*-\s*/, "").trim();
+  const cityPrefix = new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-\\s*`, "i");
+  n = n.replace(cityPrefix, "").trim();
+  return n || region;
+}
+
 interface Row {
   name: string;
   median: number;
@@ -199,7 +211,7 @@ export default function NeighbourhoodLeaderboard({
                       {i + 1}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-300">
-                      {r.name}
+                      {displayName(r.name, selected)}
                     </span>
                     <span className="terminal-font shrink-0 font-mono text-sm font-bold tabular-nums text-foreground">
                       {m.fmt(r.median)}
