@@ -32,6 +32,8 @@ import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
 import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, type SoldPublic } from "@/lib/sold/soldByKey";
+import { getSaleRecordByKeyGated } from "@/lib/address/saleRecord";
+import SaleRecordCard from "@/components/address/SaleRecordCard";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
 import AddressProfileView from "@/components/address/AddressProfileView";
 import AreaInsights from "@/components/address/AreaInsights";
@@ -111,7 +113,10 @@ function GatedSection({ soldKey }: { soldKey: string }) {
 
 /** Rendered ONLY for a signed-in consumer — fetches + shows VOW Listing Information. */
 async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
-  const d = await getSoldGatedByKey(soldKey);
+  // The sale record (hero + full campaign ledger) is best-effort: when the vault/ledger
+  // has nothing for this key, `record` is null and the render below degrades to the
+  // original flat "Sale history" card unchanged.
+  const [d, record] = await Promise.all([getSoldGatedByKey(soldKey), getSaleRecordByKeyGated(soldKey)]);
   if (!d) return null;
   const fmt = (n?: number) => (typeof n === "number" && n > 0 ? `$${Math.round(n).toLocaleString()}` : "—");
   const soldDate =
@@ -121,9 +126,16 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
         new Date(d.PurchaseContractDate).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
       : null;
   const isSold = !d.DealType || d.DealType === "sold" || d.DealType === "leased";
+  // With the hero card rendering the price/date story, the flat card carries only the
+  // physical facts; without it (no record), it keeps its original price/date rows.
+  const hasHero = !!record?.latestSale;
   const rows: [string, string][] = [
-    [d.DealType === "leased" ? "Leased price" : isSold ? "Sold price" : "Last list price", fmt(isSold ? d.ClosePrice : d.OriginalListPrice ?? d.ListPrice)],
-    [d.DealType === "leased" ? "Leased on" : isSold ? "Sold on" : "Removed on", soldDate ?? "—"],
+    ...(hasHero
+      ? []
+      : ([
+          [d.DealType === "leased" ? "Leased price" : isSold ? "Sold price" : "Last list price", fmt(isSold ? d.ClosePrice : d.OriginalListPrice ?? d.ListPrice)],
+          [d.DealType === "leased" ? "Leased on" : isSold ? "Sold on" : "Removed on", soldDate ?? "—"],
+        ] as [string, string][])),
     ["Beds", d.BedroomsTotal ? String(d.BedroomsTotal) : "—"],
     ["Baths", d.BathroomsTotalInteger ? String(d.BathroomsTotalInteger) : "—"],
     ["Size", d.BuildingAreaTotal ? `${Math.round(d.BuildingAreaTotal).toLocaleString()} sqft` : "—"],
@@ -136,8 +148,11 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
   return (
     <div className="mb-6 space-y-4">
       {media.length > 0 && <PropertyGallery images={media} />}
+      <SaleRecordCard record={record} />
       <section className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Sale history</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+          {hasHero ? "Property facts" : "Sale history"}
+        </h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
           {rows.map(([k, v]) => (
             <div key={k}>

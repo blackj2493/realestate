@@ -42,6 +42,8 @@ import {
   type StreetLedgerGated,
   type StreetLedgerPublic,
 } from "@/lib/address/streetLedger";
+import { getSaleRecordByAddressGated, type SaleRecord } from "@/lib/address/saleRecord";
+import SaleRecordCard from "./SaleRecordCard";
 import { getFlagsNearPoint, CHECKED_LABELS, type AddressFlag } from "@/lib/address/flagsNearPoint";
 import { getNearbySchools, type NearbySchool } from "@/lib/schools/nearbySchoolList";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
@@ -260,7 +262,7 @@ export default async function AddressProfileView({
 
   // Parallel fetches. The GATED fetchers run ONLY on the consumer branch — the
   // anonymous path never even asks for a VOW value (structural gate).
-  const [nearby, flags, soldSummary, soldGated, ledgerGated, ledgerPublic] = await Promise.all([
+  const [nearby, flags, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord] = await Promise.all([
     hasGeo ? getNearbyForSale(lat, lng) : Promise.resolve(null),
     hasGeo ? getFlagsNearPoint(lat, lng) : Promise.resolve(null),
     hasGeo ? getSoldNearSummary(lat, lng) : Promise.resolve(null),
@@ -271,6 +273,10 @@ export default async function AddressProfileView({
     !isConsumer
       ? getStreetLedgerPublic(profile.address, profile.city, profile.postal)
       : Promise.resolve<StreetLedgerPublic | null>(null),
+    // The subject's OWN sale record (VOW) — consumer branch only (structural gate).
+    isConsumer
+      ? getSaleRecordByAddressGated(profile.address, profile.city, profile.postal)
+      : Promise.resolve<SaleRecord | null>(null),
   ]);
   const schools = hasGeo ? getNearbySchools(lat, lng).slice(0, 4) : [];
   let grocery: { name: string; km: number } | null = null;
@@ -479,6 +485,16 @@ export default async function AddressProfileView({
             />
           )}
         </header>
+
+        {/* ── This home's own sale record (consumer-only; renders nothing without one) ── */}
+        {saleRecord && saleRecord.campaignCount > 0 && (
+          <div className="mt-5">
+            <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-400">
+              This home&rsquo;s record
+            </p>
+            <SaleRecordCard record={saleRecord} />
+          </div>
+        )}
 
         {nearby && <ActivityTicker items={tickerItems} radiusKm={nearby.radiusKm} />}
 
