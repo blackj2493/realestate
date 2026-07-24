@@ -299,6 +299,13 @@ export default async function AddressProfileView({
   const cityHref = `/property/${provSlug.toLowerCase()}/${hubSlug}`;
   const streetAddress = profile.address.split(",")[0];
 
+  // Map-terminal deep link centered on this home (?lat/&lng seed flyTo + the search
+  // pin — see properties/page.tsx). NO ?city=: bounds scope the query there, so the
+  // geocoder-vs-feed naming split (Nepean vs Barrhaven) can't hide nearby inventory.
+  const mapHref = hasGeo
+    ? `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=14&pin=${encodeURIComponent(streetAddress)}`
+    : `/properties?city=${encodeURIComponent(profile.city)}`;
+
   // ── Pulse + narrative (asking-side only — anonymous-safe) ──────────────────
   const pulse = nearby
     ? computePulse({
@@ -543,6 +550,7 @@ export default async function AddressProfileView({
                 activePins={nearby.pins}
                 soldPoints={soldSummary?.points ?? []}
                 isConsumer={isConsumer}
+                mapHref={mapHref}
               />
             )}
 
@@ -583,10 +591,10 @@ export default async function AddressProfileView({
               ))}
             </div>
             <Link
-              href={`/properties?city=${encodeURIComponent(profile.city)}`}
+              href={mapHref}
               className="mt-2 inline-flex h-10 items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
             >
-              See all {nearby.totalFound} for sale near here →
+              See all {nearby.totalFound} on the map →
             </Link>
           </section>
         )}
