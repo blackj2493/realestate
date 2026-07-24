@@ -53,6 +53,7 @@ import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities
 import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
 import { cityHrefOrMap } from "@/lib/listings/cityHubs";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import PulseLoader from "@/components/ui/PulseLoader";
 import TrackAddressCard from "./TrackAddressCard";
 import TypicalRentsCard from "./TypicalRentsCard";
 import TypicalPricesCard from "./TypicalPricesCard";
@@ -195,11 +196,8 @@ async function ThingsToKnow({ lat, lng }: { lat: number; lng: number }) {
 /** While the risk scan streams in — tells the user work is happening, not hanging. */
 function ThingsToKnowSkeleton() {
   return (
-    <div className="mt-3 rounded-lg border border-border bg-card/40 p-4">
-      <p className="animate-pulse font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        Scanning {CHECKED_LABELS.length} public-record datasets…
-      </p>
-      <div className="redact-skeleton mt-2 h-3 w-2/3 rounded" aria-hidden="true" />
+    <div className="mt-3 flex justify-center rounded-lg border border-border bg-card/40 p-4">
+      <PulseLoader size="sm" label={`Scanning ${CHECKED_LABELS.length} public-record datasets`} />
     </div>
   );
 }
