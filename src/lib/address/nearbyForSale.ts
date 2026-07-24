@@ -104,6 +104,73 @@ export interface NearbyForSale {
   /** All fetched actives with coords — the street-radar pin set (≤100 by construction).
    *  Carries id/address/price so the radar pins are tappable (IDX = public data). */
   pins: RadarPinData[];
+  /** Median asking by bedrooms × property type over ALL fetched actives — the
+   *  "typical rents" grid on lease queries. Null when the sample is too thin. */
+  bedsTypeMatrix: AskingMatrix | null;
+}
+
+/** One cell of the beds × type asking grid. Median hides below MIN_CELL_SAMPLES. */
+export interface AskingMatrixCell {
+  median: number | null;
+  count: number;
+}
+
+export interface AskingMatrix {
+  /** Bedroom columns present in the data; 4 renders as "4+". */
+  bedCols: number[];
+  /** Top property types by inventory, each with one cell per bed column. */
+  rows: Array<{ label: string; cells: AskingMatrixCell[]; count: number }>;
+  /** Listings that entered the grid (beds + type + price all present). */
+  sample: number;
+}
+
+const MIN_CELL_SAMPLES = 2;
+const MIN_MATRIX_SAMPLE = 5;
+const MAX_MATRIX_ROWS = 4;
+
+/**
+ * Median asking by bedrooms (1/2/3/4+) × property type. Pure — exported for tests.
+ * Cells under MIN_CELL_SAMPLES keep their count but hide the median (a single
+ * outlier lease must not read as "typical"); a grid under MIN_MATRIX_SAMPLE
+ * listings returns null so the panel self-hides (silent-null convention).
+ */
+export function buildBedsTypeMatrix(
+  items: Array<{ beds: number | null; subType: string | null; price: number }>
+): AskingMatrix | null {
+  const usable = items.filter((i) => i.beds !== null && i.beds > 0 && i.subType && i.price > 0);
+  if (usable.length < MIN_MATRIX_SAMPLE) return null;
+
+  const byType = new Map<string, Map<number, number[]>>();
+  const colsSeen = new Set<number>();
+  for (const i of usable) {
+    const bucket = Math.min(4, i.beds as number);
+    colsSeen.add(bucket);
+    const type = (i.subType as string).trim();
+    const cols = byType.get(type) ?? new Map<number, number[]>();
+    const prices = cols.get(bucket) ?? [];
+    prices.push(i.price);
+    cols.set(bucket, prices);
+    byType.set(type, cols);
+  }
+
+  const bedCols = [...colsSeen].sort((a, b) => a - b);
+  const rows = [...byType.entries()]
+    .map(([label, cols]) => {
+      let count = 0;
+      const cells: AskingMatrixCell[] = bedCols.map((b) => {
+        const prices = cols.get(b) ?? [];
+        count += prices.length;
+        return { median: prices.length >= MIN_CELL_SAMPLES ? median(prices) : null, count: prices.length };
+      });
+      return { label, cells, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MAX_MATRIX_ROWS)
+    // A row whose every median hid (all lone samples) says nothing — drop it.
+    .filter((r) => r.cells.some((c) => c.median !== null));
+  if (!rows.length) return null;
+
+  return { bedCols, rows, sample: usable.length };
 }
 
 /** One tappable street-radar pin — public IDX fields only. */
@@ -299,6 +366,7 @@ export async function getNearbyForSale(
         sitting30,
       },
       events: [...newEvents, ...cutEvents],
+      bedsTypeMatrix: buildBedsTypeMatrix(all),
       pins: all
         .filter((l) => l.lat !== null && l.lng !== null)
         .map((l) => ({

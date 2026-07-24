@@ -24,6 +24,7 @@ import { Home, KeyRound, LineChart, Lock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
+import TypicalRentsCard from "@/components/address/TypicalRentsCard";
 import { getRegionMetricsCached } from "@/lib/market/aggregates";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
 import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
@@ -180,6 +181,9 @@ export default async function AreaInsights({
           </div>
         </section>
       )}
+
+      {/* Typical rents by bedrooms × type — live FOR RENT asking medians (IDX, anon-safe). */}
+      {lease && <TypicalRentsCard matrix={lease.bedsTypeMatrix} radiusKm={lease.radiusKm} />}
 
       {/* Market trends — consumer sees VOW-derived sold numbers; anon a sign-up nudge. */}
       {isConsumer ? (
