@@ -51,6 +51,7 @@ import { getFlagsNearPoint, CHECKED_LABELS, type AddressFlag } from "@/lib/addre
 import { getNearbySchools, type NearbySchool } from "@/lib/schools/nearbySchoolList";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
 import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
+import { cityHrefOrMap } from "@/lib/listings/cityHubs";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import TrackAddressCard from "./TrackAddressCard";
 import TypicalRentsCard from "./TypicalRentsCard";
@@ -337,6 +338,10 @@ export default async function AddressProfileView({
         getBestTypicalPrices(lat, lng, isConsumer, nearby),
       ])
     : [null, null];
+  // City link: the hub page only when it actually holds inventory — geocoder community
+  // names ("Bolton") aren't TRREB City values, and their hub renders an empty shell.
+  // Fallback = map terminal centered here (owner call 2026-07-24).
+  const cityLink = await cityHrefOrMap(profile.city, provSlug, hasGeo ? [lat, lng] : null);
   const schools = hasGeo ? getNearbySchools(lat, lng).slice(0, 4) : [];
   let grocery: { name: string; km: number } | null = null;
   let rec: { name: string; km: number } | null = null;
@@ -352,7 +357,7 @@ export default async function AddressProfileView({
 
   const provLabel = provSlug.toUpperCase();
   const hubSlug = cityHubSlug(profile.city) || slugify(profile.city) || citySlug;
-  const cityHref = `/property/${provSlug.toLowerCase()}/${hubSlug}`;
+  const { href: cityHref, isHub: cityIsHub } = cityLink;
   const streetAddress = profile.address.split(",")[0];
 
   // Map-terminal deep link centered on this home (?lat/&lng seed flyTo + the search
@@ -456,11 +461,13 @@ export default async function AddressProfileView({
       },
       {
         "@type": "BreadcrumbList",
+        // The city row exists only when a real hub backs it — structured data must
+        // never point crawlers at the map-terminal fallback (a query URL).
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: "/" },
           { "@type": "ListItem", position: 2, name: "Properties", item: "/properties" },
-          { "@type": "ListItem", position: 3, name: `${profile.city}, ${provLabel}`, item: cityHref },
-          { "@type": "ListItem", position: 4, name: profile.address, item: canonical },
+          ...(cityIsHub ? [{ "@type": "ListItem", position: 3, name: `${profile.city}, ${provLabel}`, item: cityHref }] : []),
+          { "@type": "ListItem", position: cityIsHub ? 4 : 3, name: profile.address, item: canonical },
         ],
       },
     ],
@@ -736,17 +743,24 @@ export default async function AddressProfileView({
           </p>
         )}
 
-        {/* Public exploration links (internal-link value + crawl path). */}
+        {/* Public exploration links (internal-link value + crawl path). The schools/
+            walkable pills are hub-derived pages — hidden when no real hub backs this
+            city name (they'd be as empty as the hub itself); the first pill then
+            points at the map terminal instead of a dead shell. */}
         <section className="mt-8 flex flex-wrap gap-2">
           <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Homes for sale in {profile.city} →
+            Homes for sale {cityIsHub ? `in ${profile.city}` : `near ${streetAddress}`} →
           </Link>
-          <Link href={`/family/${hubSlug}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Top-rated schools in {profile.city} →
-          </Link>
-          <Link href={`/lifestyle/${hubSlug}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Most walkable homes in {profile.city} →
-          </Link>
+          {cityIsHub && (
+            <>
+              <Link href={`/family/${hubSlug}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+                Top-rated schools in {profile.city} →
+              </Link>
+              <Link href={`/lifestyle/${hubSlug}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+                Most walkable homes in {profile.city} →
+              </Link>
+            </>
+          )}
         </section>
 
         <div className="mt-8">

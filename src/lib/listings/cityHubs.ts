@@ -61,6 +61,34 @@ export async function citiesForHubSlug(
 }
 
 /**
+ * City link for the address-surface breadcrumbs/pills, where the city name may be a
+ * GEOCODER community ("Bolton", "Nepean") rather than a TRREB City value — those hub
+ * pages render an empty "No active listings" shell (owner report 2026-07-24: never
+ * send a user to nothing). Returns the hub href only when the hub actually holds live
+ * inventory; otherwise a map-terminal link centered on the home (or a ?city= map query
+ * without coords), which always shows real homes. isHub=false ⇒ callers should drop
+ * the city row from JSON-LD breadcrumbs and hide hub-derived links (schools/walkable).
+ * Best-effort by construction: a Typesense failure yields total 0 → map fallback.
+ */
+export async function cityHrefOrMap(
+  city: string,
+  provSlug: string,
+  coords: [number, number] | null
+): Promise<{ href: string; isHub: boolean }> {
+  const slug = cityHubSlug(city);
+  if (slug) {
+    const { total } = await citiesForHubSlug(slug);
+    if (total > 0) return { href: `/property/${provSlug.toLowerCase()}/${slug}`, isHub: true };
+  }
+  return {
+    href: coords
+      ? `/properties?lat=${coords[0].toFixed(6)}&lng=${coords[1].toFixed(6)}&z=13`
+      : `/properties?city=${encodeURIComponent(city)}`,
+    isHub: false,
+  };
+}
+
+/**
  * Typesense filter clause matching a set of City values. Uses the OR form (proven in the
  * Command Center's filter builder) rather than the [] multi-value form for compatibility.
  */

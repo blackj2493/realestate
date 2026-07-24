@@ -31,6 +31,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
+import { cityHrefOrMap } from "@/lib/listings/cityHubs";
 import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, hasFullListingRow, type SoldPublic } from "@/lib/sold/soldByKey";
 import { getSaleRecordByKeyGated } from "@/lib/address/saleRecord";
 import SaleRecordCard from "@/components/address/SaleRecordCard";
@@ -288,7 +289,9 @@ export default async function AddressPage({
 
   const cityName = pub.city || deslugCity(city);
   const provLabel = prov.toUpperCase();
-  const cityHref = `/property/${prov.toLowerCase()}/${cityHubSlug(pub.city) || city}`;
+  // Hub link only when a real hub holds inventory; else the map terminal centered on
+  // this home (owner call 2026-07-24 — an empty hub shell is a dead-end click).
+  const { href: cityHref, isHub: cityIsHub } = await cityHrefOrMap(cityName, prov, pub.location);
   const canonical = `${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`;
   const ctx = publicContext(pub.location);
 
@@ -303,11 +306,13 @@ export default async function AddressPage({
       },
       {
         "@type": "BreadcrumbList",
+        // City row only when a real hub backs it — never point crawlers at the
+        // map-terminal fallback (a query URL).
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
           { "@type": "ListItem", position: 2, name: "Properties", item: `${SITE_URL}/properties` },
-          { "@type": "ListItem", position: 3, name: `${cityName}, ${provLabel}`, item: `${SITE_URL}${cityHref}` },
-          { "@type": "ListItem", position: 4, name: pub.address, item: canonical },
+          ...(cityIsHub ? [{ "@type": "ListItem", position: 3, name: `${cityName}, ${provLabel}`, item: `${SITE_URL}${cityHref}` }] : []),
+          { "@type": "ListItem", position: cityIsHub ? 4 : 3, name: pub.address, item: canonical },
         ],
       },
     ],
@@ -392,17 +397,23 @@ export default async function AddressPage({
           </section>
         )}
 
-        {/* Public exploration links (internal-link value + crawl path). */}
+        {/* Public exploration links (internal-link value + crawl path). Hub-derived
+            pills hide when no real hub backs this city name; the first pill then
+            points at the map terminal instead of a dead shell. */}
         <section className="mb-8 flex flex-wrap gap-2">
           <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Homes for sale in {cityName} →
+            Homes for sale {cityIsHub ? `in ${cityName}` : "near this home"} →
           </Link>
-          <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Top-rated schools in {cityName} →
-          </Link>
-          <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Most walkable homes in {cityName} →
-          </Link>
+          {cityIsHub && (
+            <>
+              <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+                Top-rated schools in {cityName} →
+              </Link>
+              <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+                Most walkable homes in {cityName} →
+              </Link>
+            </>
+          )}
         </section>
 
         <ListingComplianceNotice />
