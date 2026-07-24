@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildBedsTypeMatrix } from "./nearbyForSale";
+import { buildBedsTypeMatrix, pickRentMatrix } from "./nearbyForSale";
 
 const r = (beds: number | null, subType: string | null, price: number) => ({ beds, subType, price });
 
@@ -68,5 +68,29 @@ describe("buildBedsTypeMatrix", () => {
       r(1, "E", 1500),
     ]);
     expect(m).toBeNull();
+  });
+});
+
+describe("pickRentMatrix", () => {
+  const m = (sample: number) => ({ bedCols: [2], rows: [{ label: "Detached", cells: [{ median: 3000, count: sample }], count: sample }], sample });
+
+  it("keeps the local grid when dense enough", () => {
+    expect(pickRentMatrix(m(12), 2, m(40), 5)!.radiusKm).toBe(2);
+  });
+
+  it("widens when the local grid is thin and the wide one is richer", () => {
+    const picked = pickRentMatrix(m(5), 2, m(30), 5)!;
+    expect(picked.radiusKm).toBe(5);
+    expect(picked.matrix.sample).toBe(30);
+  });
+
+  it("keeps the thin local grid when widening gained nothing", () => {
+    expect(pickRentMatrix(m(5), 2, m(5), 5)!.radiusKm).toBe(2);
+    expect(pickRentMatrix(m(5), 2, null, 5)!.radiusKm).toBe(2);
+  });
+
+  it("null local + usable wide -> wide; both null -> null", () => {
+    expect(pickRentMatrix(null, 2, m(8), 5)!.radiusKm).toBe(5);
+    expect(pickRentMatrix(null, 2, null, 5)).toBeNull();
   });
 });

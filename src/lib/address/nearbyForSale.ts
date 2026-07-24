@@ -128,6 +128,48 @@ const MIN_CELL_SAMPLES = 2;
 const MIN_MATRIX_SAMPLE = 5;
 const MAX_MATRIX_ROWS = 4;
 
+/** Below this many rentals, the 2 km grid is mostly "—" cells — widen the net. */
+const RENT_TARGET_SAMPLE = 12;
+const WIDE_RENT_RADIUS_KM = 5;
+
+export interface TypicalRents {
+  matrix: AskingMatrix;
+  radiusKm: number;
+}
+
+/** Prefer the local grid when it's dense enough; else the widest usable one. Pure — exported for tests. */
+export function pickRentMatrix(
+  near: AskingMatrix | null,
+  nearRadiusKm: number,
+  wide: AskingMatrix | null,
+  wideRadiusKm: number
+): TypicalRents | null {
+  if (near && near.sample >= RENT_TARGET_SAMPLE) return { matrix: near, radiusKm: nearRadiusKm };
+  if (wide && (!near || wide.sample > near.sample)) return { matrix: wide, radiusKm: wideRadiusKm };
+  return near ? { matrix: near, radiusKm: nearRadiusKm } : null;
+}
+
+/**
+ * Typical-rents grid with an ADAPTIVE radius: suburban pockets rarely hold enough
+ * live rentals within 2 km to fill the beds × type cells (Barrhaven: 11), so a thin
+ * local grid re-queries at 5 km and the denser result wins. `first` lets callers
+ * that already fetched the 2 km lease pass it in (no duplicate query on the dense
+ * path); pass null to have both radii fetched here.
+ */
+export async function getTypicalRents(
+  lat: number,
+  lng: number,
+  first?: NearbyForSale | null
+): Promise<TypicalRents | null> {
+  const near = first !== undefined ? first : await getNearbyForSale(lat, lng, { transactionType: "lease" });
+  const nearMatrix = near?.bedsTypeMatrix ?? null;
+  if (nearMatrix && nearMatrix.sample >= RENT_TARGET_SAMPLE) {
+    return { matrix: nearMatrix, radiusKm: near!.radiusKm };
+  }
+  const wide = await getNearbyForSale(lat, lng, { transactionType: "lease", radiusKm: WIDE_RENT_RADIUS_KM });
+  return pickRentMatrix(nearMatrix, near?.radiusKm ?? 2, wide?.bedsTypeMatrix ?? null, wide?.radiusKm ?? WIDE_RENT_RADIUS_KM);
+}
+
 /**
  * Median asking by bedrooms (1/2/3/4+) × property type. Pure — exported for tests.
  * Cells under MIN_CELL_SAMPLES keep their count but hide the median (a single
