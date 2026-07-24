@@ -32,6 +32,8 @@ function relDays(ms: number): string {
 interface Standout {
   key: string;
   label: string;
+  /** Short label for the mobile row caption ("Biggest cut" vs "Biggest cut nearby"). */
+  short: string;
   value: string;
   accent: "amber" | "cyan" | "emerald";
   listing: NearbyListing;
@@ -62,6 +64,7 @@ export default function Standouts({ nearby }: { nearby: NearbyForSale }) {
     standouts.push({
       key: "cut",
       label: "Biggest cut nearby",
+      short: "Biggest cut",
       value: `−${fmtK(biggestCut.dropAmount)}`,
       accent: "amber",
       listing: biggestCut,
@@ -77,6 +80,7 @@ export default function Standouts({ nearby }: { nearby: NearbyForSale }) {
     standouts.push({
       key: "fresh",
       label: "Freshest listing",
+      short: "Freshest listing",
       value: relDays(freshest.entryMs as number),
       accent: "cyan",
       listing: freshest,
@@ -89,6 +93,7 @@ export default function Standouts({ nearby }: { nearby: NearbyForSale }) {
     standouts.push({
       key: "close",
       label: "Closest to this home",
+      short: "Closest for sale",
       value: fmtDist(closest.distanceM),
       accent: "emerald",
       listing: closest,
@@ -99,26 +104,51 @@ export default function Standouts({ nearby }: { nearby: NearbyForSale }) {
   if (standouts.length < 2) return null;
 
   return (
-    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {standouts.map((s) => (
-        <Link
-          key={s.key}
-          href={`/properties/${s.listing.id}`}
-          className="group rounded-lg border border-border bg-card/40 p-3.5 transition-colors hover:border-cyan-500/40"
-        >
-          <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            {s.label}
-          </p>
-          <p className={`mt-1 font-mono text-xl font-bold tabular-nums ${ACCENT[s.accent]}`}>{s.value}</p>
-          <p className="mt-1 truncate text-xs font-medium text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-400">
-            {s.listing.address}
-          </p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {s.caption}
-            {s.key !== "close" && s.listing.distanceM !== null ? ` · ${fmtDist(s.listing.distanceM)}` : ""}
-          </p>
-        </Link>
-      ))}
-    </div>
+    <>
+      {/* Mobile (<sm): ONE compact card, one two-line row per standout — the three
+          stacked cards ate ~500px of a phone screen (owner feedback 2026-07-24),
+          the rows say the same thing in ~140px. Desktop keeps the 3-across cards. */}
+      <div className="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border bg-card/40 sm:hidden">
+        {standouts.map((s) => (
+          <Link
+            key={s.key}
+            href={`/properties/${s.listing.id}`}
+            className="flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-muted/30"
+          >
+            <span className={`shrink-0 font-mono text-sm font-bold tabular-nums ${ACCENT[s.accent]}`}>
+              {s.key === "fresh" ? s.value.replace(/^listed /, "") : s.value}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-medium text-foreground">{s.listing.address}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">
+                {s.short} · {s.caption}
+                {s.key !== "close" && s.listing.distanceM !== null ? ` · ${fmtDist(s.listing.distanceM)}` : ""}
+              </span>
+            </span>
+          </Link>
+        ))}
+      </div>
+      <div className="mt-4 hidden gap-3 sm:grid sm:grid-cols-3">
+        {standouts.map((s) => (
+          <Link
+            key={s.key}
+            href={`/properties/${s.listing.id}`}
+            className="group rounded-lg border border-border bg-card/40 p-3.5 transition-colors hover:border-cyan-500/40"
+          >
+            <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {s.label}
+            </p>
+            <p className={`mt-1 font-mono text-xl font-bold tabular-nums ${ACCENT[s.accent]}`}>{s.value}</p>
+            <p className="mt-1 truncate text-xs font-medium text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-400">
+              {s.listing.address}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {s.caption}
+              {s.key !== "close" && s.listing.distanceM !== null ? ` · ${fmtDist(s.listing.distanceM)}` : ""}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }
