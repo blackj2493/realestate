@@ -120,7 +120,51 @@ export default function MarketGridCard({
         </h2>
         <span className="font-mono text-[10px] text-muted-foreground">{meta}</span>
       </div>
-      <div className="overflow-x-auto">
+      {/* Mobile (<sm): stacked type blocks with WRAPPED bed chips — only populated
+          cells render, so the dash grid and the horizontal scroll disappear (owner
+          feedback 2026-07-24: the wide table needed too much side-scrolling on
+          phones). Desktop keeps the aligned table for cross-bed comparison. */}
+      <div className="divide-y divide-border sm:hidden">
+        {rows.map((row) => {
+          const inHome = row.label === IN_HOME_UNIT_LABEL;
+          return (
+            <div key={row.label} className="px-4 py-3">
+              <p className={`text-sm ${inHome ? "text-muted-foreground" : "text-foreground"}`}>{row.label}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {matrix.bedCols.map((b, i) => {
+                  const cell = row.cells[i];
+                  if (!cell || cell.median === null) return null;
+                  const hasRange = sell && cell.p25 != null && cell.p75 != null && cell.p25 < cell.p75;
+                  const dense = cell.count >= DENSE_N;
+                  return (
+                    <span
+                      key={b}
+                      title={`${cell.count} ${unit}${cell.count === 1 ? "" : "s"}`}
+                      className={`rounded-md border border-border px-2 py-1 font-mono tabular-nums ${
+                        dense && !inHome ? cellTint : ""
+                      }`}
+                    >
+                      <span className="block text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {bedLabel(b)}
+                      </span>
+                      <span className={`text-sm font-semibold ${inHome ? "text-muted-foreground" : "text-foreground"}`}>
+                        {fmt(cell.median)}
+                      </span>
+                      <span className="ml-1 text-[9px] text-muted-foreground">×{cell.count}</span>
+                      {hasRange && (
+                        <span className="block text-[9px] leading-tight text-muted-foreground">
+                          {fmtPrice(cell.p25 as number)}–{fmtPrice(cell.p75 as number)}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[460px] border-collapse text-sm">
           <thead>
             <tr>
