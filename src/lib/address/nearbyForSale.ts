@@ -116,7 +116,7 @@ export interface AskingMatrixCell {
 }
 
 export interface AskingMatrix {
-  /** Bedroom columns present in the data; 4 renders as "4+". */
+  /** Bedroom columns present in the data; 0 renders as "Studio", 6 as "6+". */
   bedCols: number[];
   /** Top property types by inventory, each with one cell per bed column. */
   rows: Array<{ label: string; cells: AskingMatrixCell[]; count: number }>;
@@ -124,9 +124,16 @@ export interface AskingMatrix {
   sample: number;
 }
 
-const MIN_CELL_SAMPLES = 2;
-const MIN_MATRIX_SAMPLE = 5;
-const MAX_MATRIX_ROWS = 4;
+// Owner calls (2026-07-24): a single real data point beats a dash — every cell with
+// data shows its median WITH its sample count (the count is the honesty device), and
+// the grid renders from 3 usable listings up. MEDIAN (not mean) throughout: rent
+// distributions are right-skewed (audited live: Detached 5bd near Beckett — median
+// $3,900 vs mean $4,167, one $6,000 lease dragging the mean 7% high).
+const MIN_CELL_SAMPLES = 1;
+const MIN_MATRIX_SAMPLE = 3;
+const MAX_MATRIX_ROWS = 6;
+/** Beds bucket cap: 0 (studio) and 1–5 render as-is; 6 means "6+". */
+const BEDS_BUCKET_CAP = 6;
 
 /** Below this many rentals, the 2 km grid is mostly "—" cells — widen the net. */
 const RENT_TARGET_SAMPLE = 12;
@@ -171,21 +178,21 @@ export async function getTypicalRents(
 }
 
 /**
- * Median asking by bedrooms (1/2/3/4+) × property type. Pure — exported for tests.
- * Cells under MIN_CELL_SAMPLES keep their count but hide the median (a single
- * outlier lease must not read as "typical"); a grid under MIN_MATRIX_SAMPLE
- * listings returns null so the panel self-hides (silent-null convention).
+ * Median rent by bedrooms (Studio/1/2/3/4/5/6+) × property type. Pure — exported for
+ * tests. Every cell with data shows its median plus the sample count; a grid under
+ * MIN_MATRIX_SAMPLE listings returns null so the panel self-hides (silent-null
+ * convention). Beds 0 is a real bucket (bachelor/basement studios lease constantly).
  */
 export function buildBedsTypeMatrix(
   items: Array<{ beds: number | null; subType: string | null; price: number }>
 ): AskingMatrix | null {
-  const usable = items.filter((i) => i.beds !== null && i.beds > 0 && i.subType && i.price > 0);
+  const usable = items.filter((i) => i.beds !== null && i.beds >= 0 && i.subType && i.price > 0);
   if (usable.length < MIN_MATRIX_SAMPLE) return null;
 
   const byType = new Map<string, Map<number, number[]>>();
   const colsSeen = new Set<number>();
   for (const i of usable) {
-    const bucket = Math.min(4, i.beds as number);
+    const bucket = Math.min(BEDS_BUCKET_CAP, i.beds as number);
     colsSeen.add(bucket);
     const type = (i.subType as string).trim();
     const cols = byType.get(type) ?? new Map<number, number[]>();
@@ -257,7 +264,9 @@ function toListing(d: Record<string, unknown>, dist: number | undefined): Nearby
     address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
     cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
     price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
-    beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
+    // 0 is a REAL value (bachelor/basement studio) — every card guard is truthy
+    // (`l.beds ? …`), so 0 stays hidden in card metas but reaches the rents grid.
+    beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal >= 0 ? d.BedroomsTotal : null,
     baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
     subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
     imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,

@@ -24,42 +24,54 @@ describe("buildBedsTypeMatrix", () => {
     expect(det.cells[2].median).toBe(3500);
   });
 
-  it("hides single-sample cells (a lone lease is not 'typical') but keeps the count", () => {
+  it("single-sample cells render their value WITH the count (owner call: 1 point beats a dash)", () => {
     const m = buildBedsTypeMatrix([
       r(2, "Condo Apartment", 2400),
       r(2, "Condo Apartment", 2500),
-      r(3, "Condo Apartment", 9800), // lone outlier
+      r(3, "Condo Apartment", 2600),
       r(1, "Condo Apartment", 2000),
       r(1, "Condo Apartment", 2100),
     ]);
     const condo = m!.rows[0];
     const threeBd = condo.cells[m!.bedCols.indexOf(3)];
-    expect(threeBd.median).toBeNull();
+    expect(threeBd.median).toBe(2600);
     expect(threeBd.count).toBe(1);
   });
 
-  it("buckets 4+ bedrooms together and drops bedless/typeless/free rows", () => {
+  it("keeps 4, 5 and 6+ bedrooms as separate columns; drops bedless/typeless/free rows", () => {
     const m = buildBedsTypeMatrix([
       r(4, "Detached", 4200),
       r(5, "Detached", 4800),
-      r(6, "Detached", 5000),
+      r(7, "Detached", 5000),
       r(null, "Detached", 3000),
       r(3, null, 3000),
       r(3, "Detached", 0),
       r(2, "Condo Apartment", 2400),
       r(2, "Condo Apartment", 2500),
     ]);
-    expect(m!.bedCols).toEqual([2, 4]);
+    expect(m!.bedCols).toEqual([2, 4, 5, 6]); // 7 beds buckets into 6+
     const det = m!.rows.find((x) => x.label === "Detached")!;
-    expect(det.cells[m!.bedCols.indexOf(4)].median).toBe(4800);
+    expect(det.cells[m!.bedCols.indexOf(4)].median).toBe(4200);
+    expect(det.cells[m!.bedCols.indexOf(5)].median).toBe(4800);
+    expect(det.cells[m!.bedCols.indexOf(6)].median).toBe(5000);
     expect(m!.sample).toBe(5);
+  });
+
+  it("beds 0 is a real Studio bucket (bachelor/basement rentals)", () => {
+    const m = buildBedsTypeMatrix([
+      r(0, "Detached", 1250),
+      r(0, "Detached", 1300),
+      r(2, "Detached", 1850),
+    ]);
+    expect(m!.bedCols).toEqual([0, 2]);
+    expect(m!.rows[0].cells[0].median).toBe(1275);
   });
 
   it("returns null under the minimum sample so the panel self-hides", () => {
     expect(buildBedsTypeMatrix([r(2, "Condo Apartment", 2400), r(2, "Condo Apartment", 2500)])).toBeNull();
   });
 
-  it("returns null when every cell would hide (all lone samples)", () => {
+  it("a grid of lone samples still renders (each cell carries its ×1 count)", () => {
     const m = buildBedsTypeMatrix([
       r(1, "A", 1000),
       r(2, "B", 2000),
@@ -67,7 +79,9 @@ describe("buildBedsTypeMatrix", () => {
       r(4, "D", 4000),
       r(1, "E", 1500),
     ]);
-    expect(m).toBeNull();
+    expect(m).not.toBeNull();
+    expect(m!.sample).toBe(5);
+    expect(m!.rows.every((row) => row.cells.some((c) => c.median !== null && c.count === 1))).toBe(true);
   });
 });
 

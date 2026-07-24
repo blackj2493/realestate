@@ -23,7 +23,8 @@ import Link from "next/link";
 import { Home, KeyRound, LineChart, Lock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
-import { getNearbyForSale, getTypicalRents, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { getBestTypicalRents } from "@/lib/address/leasedRents";
 import TypicalRentsCard from "@/components/address/TypicalRentsCard";
 import { getRegionMetricsCached } from "@/lib/market/aggregates";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
@@ -134,8 +135,9 @@ export default async function AreaInsights({
 
   const areaLabel = cityRegion || cityName;
 
-  // Adaptive-radius rents grid (2 km → 5 km when thin); reuses the lease fetch above.
-  const typicalRents = await getTypicalRents(lat, lng, lease);
+  // Rents grid: consumers see ACTUAL leased closes (VOW — structural gate in the
+  // fetcher); anon sees asking medians. Reuses the lease fetch above on that path.
+  const typicalRents = await getBestTypicalRents(lat, lng, isConsumer, lease);
 
   // ── PUBLIC snapshot (active/IDX asking — anon-safe) ───────────────────
   const publicTiles: TileData[] = [];
@@ -185,8 +187,15 @@ export default async function AreaInsights({
         </section>
       )}
 
-      {/* Typical rents by bedrooms × type — live FOR RENT asking medians (IDX, anon-safe). */}
-      {typicalRents && <TypicalRentsCard matrix={typicalRents.matrix} radiusKm={typicalRents.radiusKm} />}
+      {/* Rents by bedrooms × type — leased closes for consumers, asking medians for anon. */}
+      {typicalRents && (
+        <TypicalRentsCard
+          matrix={typicalRents.matrix}
+          radiusKm={typicalRents.radiusKm}
+          source={typicalRents.source}
+          showSignInNudge={!isConsumer}
+        />
+      )}
 
       {/* Market trends — consumer sees VOW-derived sold numbers; anon a sign-up nudge. */}
       {isConsumer ? (
