@@ -150,3 +150,55 @@ describe("isPartialUnitRental", () => {
     expect(inHome.cells[m!.bedCols.indexOf(2)].median).toBe(1950); // Lower Level folded in
   });
 });
+
+describe("outlier rules", () => {
+  it("Rule A: trims points outside 0.5-2x of a well-sampled cell's median", () => {
+    const m = buildBedsTypeMatrix([
+      { beds: 2, subType: "Condo Apartment", price: 2400, address: null },
+      { beds: 2, subType: "Condo Apartment", price: 2450, address: null },
+      { beds: 2, subType: "Condo Apartment", price: 2500, address: null },
+      { beds: 2, subType: "Condo Apartment", price: 9800, address: null }, // obvious outlier
+    ]);
+    const cell = m!.rows[0].cells[0];
+    expect(cell.median).toBe(2450);
+    expect(cell.count).toBe(3); // the 9800 was left out
+  });
+
+  it("Rule A: never trims tiny cells (under 4 points the median IS the data)", () => {
+    const m = buildBedsTypeMatrix([
+      { beds: 2, subType: "Condo Apartment", price: 2400, address: null },
+      { beds: 2, subType: "Condo Apartment", price: 2450, address: null },
+      { beds: 2, subType: "Condo Apartment", price: 9800, address: null },
+    ]);
+    expect(m!.rows[0].cells[0].count).toBe(3);
+  });
+
+  it("Rule B: implausibly cheap low-bed HOUSE items reclassify as in-home units", () => {
+    const m = buildBedsTypeMatrix([
+      { beds: 3, subType: "Detached", price: 2800, address: "1 A St" },
+      { beds: 3, subType: "Detached", price: 3000, address: "2 A St" },
+      { beds: 4, subType: "Detached", price: 3000, address: "3 A St" },
+      { beds: 1, subType: "Detached", price: 1350, address: "4 A St" }, // unmarked basement (45% of anchor)
+      { beds: 2, subType: "Detached", price: 1825, address: "5 A St" }, // unmarked basement (61%)
+      { beds: 2, subType: "Detached", price: 2400, address: "6 A St" }, // legit whole 2bd (80%) - stays
+    ]);
+    const det = m!.rows.find((r) => r.label === "Detached")!;
+    expect(det.cells[m!.bedCols.indexOf(1)].count).toBe(0);
+    expect(det.cells[m!.bedCols.indexOf(2)].median).toBe(2400);
+    const inHome = m!.rows.find((r) => r.label === IN_HOME_UNIT_LABEL)!;
+    expect(inHome.cells[m!.bedCols.indexOf(1)].median).toBe(1350);
+    expect(inHome.cells[m!.bedCols.indexOf(2)].median).toBe(1825);
+  });
+
+  it("Rule B: condo rows are exempt (a cheap condo 1bd is normal) and rows without an anchor untouched", () => {
+    const m = buildBedsTypeMatrix([
+      { beds: 3, subType: "Condo Apartment", price: 3000, address: null },
+      { beds: 3, subType: "Condo Apartment", price: 3100, address: null },
+      { beds: 3, subType: "Condo Apartment", price: 3200, address: null },
+      { beds: 1, subType: "Condo Apartment", price: 1800, address: null }, // 58% of anchor - stays put
+    ]);
+    const condo = m!.rows.find((r) => r.label === "Condo Apartment")!;
+    expect(condo.cells[m!.bedCols.indexOf(1)].median).toBe(1800);
+    expect(m!.rows.find((r) => r.label === IN_HOME_UNIT_LABEL)).toBeUndefined();
+  });
+});
