@@ -529,6 +529,17 @@ export default async function AddressProfileView({
               />
             )}
 
+            {/* Rents grid directly under the sale-side band (owner: prominent placement —
+                "what would it sell for" and "what do homes rent for" are one thought). */}
+            {typicalRents && (
+              <TypicalRentsCard
+                matrix={typicalRents.matrix}
+                radiusKm={typicalRents.radiusKm}
+                source={typicalRents.source}
+                showSignInNudge={!isConsumer}
+              />
+            )}
+
             {nearby && (
               <div id="feed" className="scroll-mt-6">
                 <ActivityFeed
@@ -539,16 +550,6 @@ export default async function AddressProfileView({
                   radiusKm={nearby.radiusKm}
                 />
               </div>
-            )}
-
-            {/* Typical rents by bedrooms × type — live FOR RENT asking medians (IDX). */}
-            {typicalRents && (
-              <TypicalRentsCard
-                matrix={typicalRents.matrix}
-                radiusKm={typicalRents.radiusKm}
-                source={typicalRents.source}
-                showSignInNudge={!isConsumer}
-              />
             )}
           </div>
 

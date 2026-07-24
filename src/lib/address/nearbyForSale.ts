@@ -211,13 +211,33 @@ export function isPartialUnitRental(address: string | null | undefined, subType?
   return !!address && PARTIAL_UNIT_RE.test(address);
 }
 
+// ── Outlier handling (owner decision 2026-07-24: "if it's an obvious outlier, we
+// leave it out") ─────────────────────────────────────────────────────────────────
+// Rule A — cell trim: in a cell with ≥4 points, anything outside 0.5×–2× of the
+// cell's own median is dropped before the final median (the ×n count reflects what
+// was kept). Rule B — unmarked basements: a 0–2 bd item in a HOUSE row priced under
+// 70% of that row's own ≥3 bd whole-home median is reclassified to the in-home row
+// (catches the address-marker misses; a legit whole 2 bd at ~80% stays). Condo rows
+// are exempt from Rule B — a cheap condo 1 bd is normal, not a basement.
+const TRIM_MIN_N = 4;
+const TRIM_LO = 0.5;
+const TRIM_HI = 2.0;
+const HOUSE_ANCHOR_MIN_N = 3;
+const RECLASS_FRACTION = 0.7;
+
+/** House-style types whose low-bed cheap items are almost always unmarked in-home units. */
+function isHouseType(label: string): boolean {
+  return !/condo|apartment|co-?op|room|other|lower|upper|duplex|triplex|multiplex/i.test(label);
+}
+
 /**
  * Median rent by bedrooms (Studio/1/2/3/4/5/6+) × property type. Pure — exported for
  * tests. Every cell with data shows its median plus the sample count; a grid under
  * MIN_MATRIX_SAMPLE listings returns null so the panel self-hides (silent-null
  * convention). Beds 0 is a real bucket (bachelor/basement studios lease constantly).
  * In-home units (basement/upper/main-floor rentals filed under the HOUSE's type) are
- * routed to their own row so they never drag a whole-home median down.
+ * routed to their own row so they never drag a whole-home median down; obvious
+ * outliers are trimmed per the rules above.
  */
 export function buildBedsTypeMatrix(
   items: Array<{ beds: number | null; subType: string | null; price: number; address?: string | null }>
@@ -225,25 +245,51 @@ export function buildBedsTypeMatrix(
   const usable = items.filter((i) => i.beds !== null && i.beds >= 0 && i.subType && i.price > 0);
   if (usable.length < MIN_MATRIX_SAMPLE) return null;
 
+  // Pass 1 — initial (label, bucket, price) assignment via the address classifier.
+  const assigned = usable.map((i) => ({
+    label: isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim(),
+    bucket: Math.min(BEDS_BUCKET_CAP, i.beds as number),
+    price: i.price,
+  }));
+
+  // Pass 2 (Rule B) — per house row, anchor on its ≥3 bd whole-home median and move
+  // implausibly cheap 0–2 bd items to the in-home row.
+  const anchors = new Map<string, number | null>();
+  for (const a of assigned) {
+    if (a.label === IN_HOME_UNIT_LABEL || !isHouseType(a.label) || anchors.has(a.label)) continue;
+    const bigBeds = assigned.filter((x) => x.label === a.label && x.bucket >= 3).map((x) => x.price);
+    anchors.set(a.label, bigBeds.length >= HOUSE_ANCHOR_MIN_N ? median(bigBeds) : null);
+  }
+  for (const a of assigned) {
+    const anchor = anchors.get(a.label);
+    if (anchor && a.bucket <= 2 && a.price < anchor * RECLASS_FRACTION) a.label = IN_HOME_UNIT_LABEL;
+  }
+
   const byType = new Map<string, Map<number, number[]>>();
   const colsSeen = new Set<number>();
-  for (const i of usable) {
-    const bucket = Math.min(BEDS_BUCKET_CAP, i.beds as number);
-    colsSeen.add(bucket);
-    const type = isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim();
-    const cols = byType.get(type) ?? new Map<number, number[]>();
-    const prices = cols.get(bucket) ?? [];
-    prices.push(i.price);
-    cols.set(bucket, prices);
-    byType.set(type, cols);
+  for (const a of assigned) {
+    colsSeen.add(a.bucket);
+    const cols = byType.get(a.label) ?? new Map<number, number[]>();
+    const prices = cols.get(a.bucket) ?? [];
+    prices.push(a.price);
+    cols.set(a.bucket, prices);
+    byType.set(a.label, cols);
   }
+
+  // Rule A — trim obvious outliers inside well-sampled cells.
+  const trimCell = (prices: number[]): number[] => {
+    if (prices.length < TRIM_MIN_N) return prices;
+    const m = median(prices)!;
+    const kept = prices.filter((p) => p >= m * TRIM_LO && p <= m * TRIM_HI);
+    return kept.length ? kept : prices;
+  };
 
   const bedCols = [...colsSeen].sort((a, b) => a - b);
   const rows = [...byType.entries()]
     .map(([label, cols]) => {
       let count = 0;
       const cells: AskingMatrixCell[] = bedCols.map((b) => {
-        const prices = cols.get(b) ?? [];
+        const prices = trimCell(cols.get(b) ?? []);
         count += prices.length;
         return { median: prices.length >= MIN_CELL_SAMPLES ? median(prices) : null, count: prices.length };
       });

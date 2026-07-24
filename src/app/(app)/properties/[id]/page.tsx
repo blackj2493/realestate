@@ -1206,15 +1206,6 @@ export default async function PropertyPage({
             {/* Grocery + recreation proximity */}
             <NearbyAmenities listingId={id} />
 
-            {/* Typical rents nearby — median asking rent by bedrooms × type from live
-                FOR RENT listings (IDX, public). Streamed so its Typesense fetches never
-                block the page; self-hides on thin samples or missing coords. */}
-            {!isCommercial && (
-              <Suspense fallback={null}>
-                <TypicalRents listingId={id} />
-              </Suspense>
-            )}
-
             {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage). */}
             {!isCommercial && (
               <YourTakeCard
@@ -1231,9 +1222,18 @@ export default async function PropertyPage({
           </div>
         </div>
 
-        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — history + comps. ── */}
+        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps. ── */}
         <section id="market" className="scroll-mt-28 lg:mt-6">
           <div className="lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
+
+          {/* Rents grid LEADS the market zone (owner call 2026-07-24: prominent
+              placement) — actual leased medians for consumers, asking for anon.
+              Streamed; self-hides on thin samples or missing coords. */}
+          {!isCommercial && (
+            <Suspense fallback={null}>
+              <TypicalRents listingId={id} />
+            </Suspense>
+          )}
 
         <section id="history" className="scroll-mt-28">
           {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
