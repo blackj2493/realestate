@@ -15,7 +15,7 @@
 import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typesense/soldListingsSchema";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { parseAddress, addressesMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
+import { parseAddress, addressesMatch, streetNamesMatchPrefix, type ParsedAddress } from "@/lib/watchlist/disposition";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -164,6 +164,59 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
     };
   } catch (err) {
     console.error(`[soldByKey] address lookup failed:`, err);
+    return null;
+  }
+}
+
+/**
+ * PREFIX-TOLERANT public sold lookup — for the search dropdown's type-ahead, where the
+ * street name is usually mid-keystroke ("127 via to"). Same structural gate as
+ * getSoldPublicByAddress (PUBLIC fields only; PurchaseContractDate fetched solely to
+ * rank candidates server-side and never returned). Matching: civic number equal +
+ * prefix street-name match (+ postal equality when both sides have one); the strict
+ * city check is intentionally dropped — a typed fragment rarely carries a city, and the
+ * newest-first ranking absorbs lookalikes. NEVER use for canonical resolution.
+ */
+export async function getSoldPublicByAddressLoose(parsed: ParsedAddress): Promise<SoldPublic | null> {
+  if (!parsed.streetNumber || parsed.streetName.length < 3) return null;
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: `${parsed.streetNumber} ${parsed.streetName}`.trim(),
+        query_by: "UnparsedAddress",
+        include_fields: `${PUBLIC_STATUS_FIELDS},PurchaseContractDate`,
+        per_page: 25,
+      });
+    let best: { d: Partial<SoldListingDocument>; date: number } | null = null;
+    for (const h of res.hits ?? []) {
+      const d = h.document as Partial<SoldListingDocument>;
+      if (!d.id) continue;
+      const cand = parseAddress(d.UnparsedAddress ?? "");
+      if (cand.streetNumber !== parsed.streetNumber) continue;
+      if (!streetNamesMatchPrefix(parsed.streetName, cand.streetName)) continue;
+      if (parsed.postal && cand.postal && parsed.postal !== cand.postal) continue;
+      const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
+      if (!best || date > best.date) best = { d, date };
+    }
+    if (!best) return null;
+    const d = best.d;
+    const loc =
+      Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
+        ? ([d.location[0], d.location[1]] as [number, number])
+        : null;
+    return {
+      id: d.id!,
+      address: d.UnparsedAddress ?? "",
+      city: d.City ?? "",
+      cityRegion: d.CityRegion ?? "",
+      location: loc,
+      hasPhoto: typeof d.primaryImageUrl === "string" && d.primaryImageUrl.length > 0,
+      dealKind: deriveDealKind(d.DealType),
+    };
+  } catch (err) {
+    console.error(`[soldByKey] loose address lookup failed:`, err);
     return null;
   }
 }

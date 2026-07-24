@@ -22,7 +22,7 @@ import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
 import { useRouter } from "next/navigation";
 import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
-import { matchesTypedAddress } from "@/lib/search/federatedSuggest";
+import { matchesTypedAddress, fetchAddressStatus } from "@/lib/search/federatedSuggest";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { chipsToQueryString } from "@/lib/search/chipUrl";
@@ -112,8 +112,20 @@ export default function LocationSearch({
       if (mode === "navigate" && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
         const covered = results.some((s) => s.kind === "address" && matchesTypedAddress(q, s.label));
         if (!covered) {
-          const hit = await geocodeAddress(q);
-          if (hit) {
+          // Sold-record probe alongside the geocode: an address that SOLD must say so,
+          // not "Not on the market". Status KIND only here (anon-safe, audit R24a) —
+          // the destination page carries the gated price/history. Click path is
+          // unchanged either way (the profile ladder already redirects sold keys).
+          const [hit, status] = await Promise.all([geocodeAddress(q), fetchAddressStatus(q)]);
+          if (status?.found && status.address) {
+            const kindWord =
+              status.dealKind === "leased" ? "leased" : status.dealKind === "offmarket" ? "recently off-market" : "sold";
+            results.unshift({
+              kind: "address",
+              label: status.address,
+              sublabel: `This home has ${kindWord} — view its record`,
+            });
+          } else if (hit) {
             results.unshift({
               kind: "address",
               label: hit.label,
