@@ -85,6 +85,7 @@ export default function StreetRadar({
   activePins,
   soldPoints,
   isConsumer,
+  mapHref,
 }: {
   centerLat: number;
   centerLng: number;
@@ -92,6 +93,8 @@ export default function StreetRadar({
   activePins: RadarPinData[];
   soldPoints: Array<[number, number]>;
   isConsumer: boolean;
+  /** Deep link into the map terminal centered on this home (?lat=&lng=&pin=). */
+  mapHref?: string;
 }) {
   const [selected, setSelected] = useState<Selection>(null);
 
@@ -120,7 +123,14 @@ export default function StreetRadar({
     <section className="rounded-lg border border-border bg-card/40 p-5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Street radar</h2>
-        <span className="font-mono text-[10px] text-muted-foreground">tap a dot · {radiusKm} km</span>
+        <span className="flex items-baseline gap-3">
+          <span className="font-mono text-[10px] text-muted-foreground">tap a dot · {radiusKm} km</span>
+          {mapHref && (
+            <Link href={mapHref} className="font-mono text-[10px] font-bold text-cyan-700 hover:underline dark:text-cyan-400">
+              Full map →
+            </Link>
+          )}
+        </span>
       </div>
 
       <div

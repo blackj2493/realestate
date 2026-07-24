@@ -139,6 +139,8 @@ function CommandCenterContent() {
     setSchool,
     addFilter,
     removeAddedFilter,
+    setFlyTo,
+    setSearchPin,
   } = useCommandCenterStore();
 
   // Property-open routing: mobile (≤767) → full report; desktop → Quick Look drawer.
@@ -184,6 +186,28 @@ function CommandCenterContent() {
     const cityParam = searchParams.get("city") || searchParams.get("search") || "";
     if (cityParam && cityParam !== location) setLocation(cityParam);
   }, [searchParams, location, setLocation]);
+
+  // Center deep link (?lat=&lng=[&z=][&pin=]) — e.g. the address-profile "open the
+  // map here" link. Rides the flyTo path (which also reports the framed viewport,
+  // so results render with no manual pan) and drops the search pin so the subject
+  // address is visible among the listings. Deliberately carries NO ?city=: bounds
+  // scope the query, so feed-vs-geocoder naming (Nepean vs Barrhaven) can't hide
+  // nearby inventory. Guarded to fire once per distinct center.
+  const centeredRef = useRef<string | null>(null);
+  useEffect(() => {
+    const lat = Number(searchParams.get("lat"));
+    const lng = Number(searchParams.get("lng"));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return;
+    const key = `${lat},${lng},${searchParams.get("z") ?? ""},${searchParams.get("pin") ?? ""}`;
+    if (centeredRef.current === key) return;
+    centeredRef.current = key;
+    const zRaw = Number(searchParams.get("z"));
+    const zoom = Number.isFinite(zRaw) ? Math.min(18, Math.max(8, zRaw)) : 14;
+    setFlyTo({ lat, lng, zoom });
+    const label = (searchParams.get("pin") ?? "").trim();
+    if (label) setSearchPin({ lat, lng, label });
+  }, [searchParams, setFlyTo, setSearchPin]);
 
   // Hydrate the FULL filter set from a deep link (?beds=&maxPrice=&type=…). A search
   // typed anywhere — the global header on any app page — serializes its parsed chips
