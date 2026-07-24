@@ -277,13 +277,14 @@ export default async function AddressPage({
     notFound();
   }
 
+  // Owner decision (2026-07-23): the FULL sold report (/properties/{key} — sold hero,
+  // analytics, tour) ALWAYS wins while its listings row renders. This keyed /address
+  // view only serves records beyond that archive, so every arrival path (search,
+  // header bar, sitemap, old links, profile chips) redirects to the full report.
+  if (await hasFullListingRow(pub.id)) redirect(`/properties/${pub.id}`);
+
   // Server-side auth decision. The VOW fetch is gated behind this.
   const { isConsumer } = await getConsumer();
-
-  // The FULL sold report (/properties/{key}) is strictly richer — link to it whenever
-  // its listings row still renders (search routes there directly; this covers
-  // sitemap/profile-chip arrivals).
-  const fullReport = await hasFullListingRow(pub.id);
 
   const cityName = pub.city || deslugCity(city);
   const provLabel = prov.toUpperCase();
@@ -333,14 +334,6 @@ export default async function AddressPage({
               <MapPin className="h-4 w-4" />
               {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
             </p>
-            {fullReport && (
-              <Link
-                href={`/properties/${pub.id}`}
-                className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-700 transition-colors hover:border-cyan-400 dark:text-cyan-300"
-              >
-                Open the full sold report →
-              </Link>
-            )}
           </div>
         </header>
 
