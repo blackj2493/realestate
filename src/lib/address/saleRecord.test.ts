@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assembleSaleRecord } from "./saleRecord";
+import { assembleSaleRecord, overlaySubjectEvent } from "./saleRecord";
 import type { CampaignEvent } from "@/lib/campaignHistory/types";
 
 function ev(overrides: Partial<CampaignEvent>): CampaignEvent {
@@ -112,5 +112,26 @@ describe("assembleSaleRecord", () => {
     const r = assembleSaleRecord([]);
     expect(r.latestSale).toBeNull();
     expect(r.campaignCount).toBe(0);
+  });
+});
+
+describe("overlaySubjectEvent", () => {
+  it("fresh vault truth replaces the ledger's stale copy of the same campaign", () => {
+    const staleActive = ev({ listing_key: "K1", status: "Active", end_reason: null, end_date: null, close_price: null, list_price: 1_679_900 });
+    const other = ev({ listing_key: "OLD", status: "Terminated", end_reason: "Terminated", close_price: null, end_date: "2026-06-24" });
+    const subject = ev({ listing_key: "K1", close_price: 1_625_000, end_date: "2026-07-21" });
+    const merged = overlaySubjectEvent([staleActive, other], subject);
+    expect(merged).toHaveLength(2);
+    expect(merged.find((e) => e.listing_key === "K1")!.close_price).toBe(1_625_000);
+    // End-to-end: the stale-Active ledger no longer masks the sale.
+    const r = assembleSaleRecord(merged);
+    expect(r.latestSale!.closePrice).toBe(1_625_000);
+    expect(r.campaigns[0].kind).toBe("sold");
+  });
+
+  it("adds the subject when the ledger never saw it; no-ops without a subject", () => {
+    const other = ev({ listing_key: "OLD" });
+    expect(overlaySubjectEvent([other], ev({ listing_key: "NEW" }))).toHaveLength(2);
+    expect(overlaySubjectEvent([other], null)).toHaveLength(1);
   });
 });

@@ -31,7 +31,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
-import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, type SoldPublic } from "@/lib/sold/soldByKey";
+import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, hasFullListingRow, type SoldPublic } from "@/lib/sold/soldByKey";
 import { getSaleRecordByKeyGated } from "@/lib/address/saleRecord";
 import SaleRecordCard from "@/components/address/SaleRecordCard";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
@@ -280,6 +280,11 @@ export default async function AddressPage({
   // Server-side auth decision. The VOW fetch is gated behind this.
   const { isConsumer } = await getConsumer();
 
+  // The FULL sold report (/properties/{key}) is strictly richer — link to it whenever
+  // its listings row still renders (search routes there directly; this covers
+  // sitemap/profile-chip arrivals).
+  const fullReport = await hasFullListingRow(pub.id);
+
   const cityName = pub.city || deslugCity(city);
   const provLabel = prov.toUpperCase();
   const cityHref = `/property/${prov.toLowerCase()}/${cityHubSlug(pub.city) || city}`;
@@ -328,6 +333,14 @@ export default async function AddressPage({
               <MapPin className="h-4 w-4" />
               {[pub.cityRegion, cityName, provLabel].filter(Boolean).join(", ")}
             </p>
+            {fullReport && (
+              <Link
+                href={`/properties/${pub.id}`}
+                className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-700 transition-colors hover:border-cyan-400 dark:text-cyan-300"
+              >
+                Open the full sold report →
+              </Link>
+            )}
           </div>
         </header>
 
