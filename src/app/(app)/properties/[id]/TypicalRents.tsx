@@ -12,7 +12,8 @@
  */
 import { getTypesenseClient } from "@/lib/typesense/client";
 import { getSoldPublicByKey } from "@/lib/sold/soldByKey";
-import { getTypicalRents } from "@/lib/address/nearbyForSale";
+import { getBestTypicalRents } from "@/lib/address/leasedRents";
+import { getConsumer } from "@/lib/auth/requireConsumer";
 import TypicalRentsCard from "@/components/address/TypicalRentsCard";
 
 async function resolveCoords(listingId: string): Promise<[number, number] | null> {
@@ -44,12 +45,14 @@ async function resolveCoords(listingId: string): Promise<[number, number] | null
 export default async function TypicalRents({ listingId }: { listingId: string }) {
   const coords = await resolveCoords(listingId);
   if (!coords) return null;
-  // Adaptive radius: 2 km when the rental sample is dense, widened to 5 km when thin.
-  const rents = await getTypicalRents(coords[0], coords[1]);
+  // Consumers see ACTUAL leased closes (VOW — structural gate in the fetcher);
+  // anon sees asking medians. Adaptive radius (2 km → 5 km when thin) on both.
+  const { isConsumer } = await getConsumer();
+  const rents = await getBestTypicalRents(coords[0], coords[1], isConsumer);
   if (!rents) return null;
   return (
     <div className="mb-6">
-      <TypicalRentsCard matrix={rents.matrix} radiusKm={rents.radiusKm} />
+      <TypicalRentsCard matrix={rents.matrix} radiusKm={rents.radiusKm} source={rents.source} showSignInNudge={!isConsumer} />
     </div>
   );
 }

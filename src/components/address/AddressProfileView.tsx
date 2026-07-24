@@ -28,7 +28,8 @@ import {
   Dumbbell,
 } from "lucide-react";
 import type { AddressProfile } from "@/lib/address/resolveProfile";
-import { getNearbyForSale, getTypicalRents, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { getBestTypicalRents } from "@/lib/address/leasedRents";
 import { computePulse } from "@/lib/address/pulse";
 import {
   getSoldNearSummary,
@@ -281,8 +282,9 @@ export default async function AddressProfileView({
       ? getSaleRecordByAddressGated(profile.address, profile.city, profile.postal)
       : Promise.resolve<SaleRecord | null>(null),
   ]);
-  // Adaptive-radius rents grid (2 km → 5 km when thin); reuses the lease fetch above.
-  const typicalRents = hasGeo ? await getTypicalRents(lat, lng, lease) : null;
+  // Rents grid: consumers see ACTUAL leased closes (VOW, fetched only when
+  // isConsumer — structural gate in getBestTypicalRents); anon sees asking medians.
+  const typicalRents = hasGeo ? await getBestTypicalRents(lat, lng, isConsumer, lease) : null;
   const schools = hasGeo ? getNearbySchools(lat, lng).slice(0, 4) : [];
   let grocery: { name: string; km: number } | null = null;
   let rec: { name: string; km: number } | null = null;
@@ -540,7 +542,14 @@ export default async function AddressProfileView({
             )}
 
             {/* Typical rents by bedrooms × type — live FOR RENT asking medians (IDX). */}
-            {typicalRents && <TypicalRentsCard matrix={typicalRents.matrix} radiusKm={typicalRents.radiusKm} />}
+            {typicalRents && (
+              <TypicalRentsCard
+                matrix={typicalRents.matrix}
+                radiusKm={typicalRents.radiusKm}
+                source={typicalRents.source}
+                showSignInNudge={!isConsumer}
+              />
+            )}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">

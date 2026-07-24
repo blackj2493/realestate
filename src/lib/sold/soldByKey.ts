@@ -280,6 +280,46 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
   }
 }
 
+/** One closed lease near a point — the actual signed rent (VOW). */
+export interface LeasedRentItem {
+  beds: number | null;
+  subType: string | null;
+  /** ClosePrice = the monthly rent the home ACTUALLY leased for. */
+  price: number;
+}
+
+/**
+ * Closed leases near a point from the rolling ~180-day sold_listings window — the
+ * ground truth for "what do homes here actually rent for". VOW DATA: call ONLY inside
+ * a getConsumer()-confirmed branch (leased close prices are gated exactly like sold
+ * prices). Sanity band 500–20,000 $/mo keeps data-entry garbage out of the medians.
+ */
+export async function getLeasedNearPoint(lat: number, lng: number, radiusKm: number): Promise<LeasedRentItem[]> {
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: "*",
+        query_by: "UnparsedAddress",
+        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=leased && ClosePrice:>=500 && ClosePrice:<=20000`,
+        include_fields: "ClosePrice,BedroomsTotal,PropertySubType",
+        per_page: 250,
+      });
+    return (res.hits ?? []).map((h) => {
+      const d = h.document as Partial<SoldListingDocument>;
+      return {
+        beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal >= 0 ? d.BedroomsTotal : null,
+        subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
+        price: typeof d.ClosePrice === "number" ? d.ClosePrice : 0,
+      };
+    });
+  } catch (err) {
+    console.error("[soldByKey] leased-near-point failed:", err);
+    return [];
+  }
+}
+
 /**
  * Whether /properties/{key} still renders — the listings row is the detail page's data
  * source (sold rows stay in the table; only records older than the archive lose theirs).
