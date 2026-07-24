@@ -163,9 +163,17 @@ export default function StreetRadar({
 
   return (
     <section className="rounded-lg border border-border bg-card/40 p-5">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Street radar</h2>
-        <span className="font-mono text-[10px] text-muted-foreground">tap a dot · {radiusKm} km</span>
+        {/* Compact but unmissable — a full-width bar here ate too much column (owner). */}
+        {mapHref && (
+          <Link
+            href={mapHref}
+            className="inline-flex h-8 shrink-0 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 text-xs font-bold text-cyan-700 transition-colors hover:border-cyan-400 hover:bg-cyan-500/20 dark:text-cyan-400"
+          >
+            Full map →
+          </Link>
+        )}
       </div>
 
       <div
@@ -279,17 +287,8 @@ export default function StreetRadar({
             <i className="h-2 w-2 rounded-full bg-emerald-500" /> sold · 30d
           </span>
         )}
+        <span className="text-muted-foreground/70">tap a dot · {radiusKm} km</span>
       </div>
-
-      {/* Primary CTA — the mini-map orients, the terminal explores (owner: make it big). */}
-      {mapHref && (
-        <Link
-          href={mapHref}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
-        >
-          Open the full map here →
-        </Link>
-      )}
     </section>
   );
 }
