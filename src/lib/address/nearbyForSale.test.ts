@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildBedsTypeMatrix, pickRentMatrix } from "./nearbyForSale";
+import { buildBedsTypeMatrix, pickRentMatrix, isPartialUnitRental, IN_HOME_UNIT_LABEL } from "./nearbyForSale";
 
 const r = (beds: number | null, subType: string | null, price: number) => ({ beds, subType, price });
 
@@ -106,5 +106,47 @@ describe("pickRentMatrix", () => {
   it("null local + usable wide -> wide; both null -> null", () => {
     expect(pickRentMatrix(null, 2, m(8), 5)!.radiusKm).toBe(5);
     expect(pickRentMatrix(null, 2, null, 5)).toBeNull();
+  });
+});
+
+describe("isPartialUnitRental", () => {
+  it("catches real feed phrasings for basement / in-home units", () => {
+    // Every string below appeared verbatim in the live feed audits (2026-07-24).
+    expect(isPartialUnitRental("41 Eberly Woods Drive Basement, Caledon, ON L7C 4J2")).toBe(true);
+    expect(isPartialUnitRental("6 Sweet Briar Lane Bsmt, Brampton, ON L6Z 4V3")).toBe(true);
+    expect(isPartialUnitRental("106 Benadir Avenue #bsmnt, Caledon, ON L7C 4E7")).toBe(true);
+    expect(isPartialUnitRental("78 Burnett's Grove Circle B - Basement Unit, Barrhaven, ON")).toBe(true);
+    expect(isPartialUnitRental("764 Botany Hill(Lower Unit) Crescent, Newmarket, ON")).toBe(true);
+    expect(isPartialUnitRental("495 Bristol Road B (lower), Newmarket, ON")).toBe(true);
+    expect(isPartialUnitRental("143 William Booth Avenue Basement, Newmarket, ON")).toBe(true);
+    expect(isPartialUnitRental("1234 Bathurst St Upper, Toronto, ON")).toBe(true);
+    expect(isPartialUnitRental("12 King St Main Floor, Toronto, ON")).toBe(true);
+  });
+
+  it("subtypes that ARE in-home units count regardless of address", () => {
+    expect(isPartialUnitRental("10 Anywhere St, Whitby, ON", "Lower Level")).toBe(true);
+    expect(isPartialUnitRental("10 Anywhere St, Whitby, ON", "Upper Level")).toBe(true);
+  });
+
+  it("never matches street NAMES containing lower/upper/main", () => {
+    expect(isPartialUnitRental("15 Upper Canada Drive, Toronto, ON")).toBe(false);
+    expect(isPartialUnitRental("126 Lower Base Line W, Milton, ON")).toBe(false);
+    expect(isPartialUnitRental("22 Main Street S, Newmarket, ON")).toBe(false);
+    expect(isPartialUnitRental("66 Beckett Avenue, East Gwillimbury, ON")).toBe(false);
+  });
+
+  it("routes in-home units to their own row so whole-home medians stay clean", () => {
+    const m = buildBedsTypeMatrix([
+      { beds: 3, subType: "Detached", price: 3300, address: "134 Petch Avenue" },
+      { beds: 3, subType: "Detached", price: 3400, address: "45 Daisy Meadow Crescent" },
+      { beds: 3, subType: "Detached", price: 2000, address: "41 Eberly Woods Drive Basement" },
+      { beds: 3, subType: "Detached", price: 1700, address: "6 Sweet Briar Lane Bsmt" },
+      { beds: 2, subType: "Lower Level", price: 1950, address: "10 Anywhere St" },
+    ]);
+    const det = m!.rows.find((r) => r.label === "Detached")!;
+    expect(det.cells[m!.bedCols.indexOf(3)].median).toBe(3350); // basements no longer drag it
+    const inHome = m!.rows.find((r) => r.label === IN_HOME_UNIT_LABEL)!;
+    expect(inHome.cells[m!.bedCols.indexOf(3)].median).toBe(1850);
+    expect(inHome.cells[m!.bedCols.indexOf(2)].median).toBe(1950); // Lower Level folded in
   });
 });

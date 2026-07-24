@@ -178,13 +178,49 @@ export async function getTypicalRents(
 }
 
 /**
+ * In-home rental unit detector (owner-reported contamination 2026-07-24: Brampton's
+ * "Detached 3bd" median was $1,975 — basements listed AS Detached: "41 Eberly Woods
+ * Drive Basement $2,000", "6 Sweet Briar Lane Bsmt $1,700", "106 Benadir Avenue
+ * #bsmnt $1,900"). Address markers, tuned against real feed strings:
+ *  - "basement"/"bsmt"/"#bsmnt"/"walk-out" anywhere (never street names);
+ *  - lower/upper/main ONLY in unit positions — parenthesized "(Lower Unit)", after a
+ *    dash "B - Upper", before level/floor/unit/apt/suite, or trailing ("… St Upper")
+ *    — so "Upper Canada Drive", "Lower Base Line" and "Main Street" never match.
+ * Known miss: bare numeric units ("3407 Woodroffe Avenue 2") — no safe signal.
+ */
+const PARTIAL_UNIT_RE = new RegExp(
+  [
+    /\b(?:bsmn?t|basement|walk\s*-?\s*out)\b/.source,
+    /#\s*(?:bsmn?t|basement)/.source,
+    /\([^)]*\b(?:lower|upper|main|bsmn?t|basement)\b[^)]*\)/.source,
+    /-\s*(?:lower|upper|main)\b/.source,
+    /\b(?:lower|upper|main)\s+(?:level|floor|unit|apt|apartment|suite)\b/.source,
+    /\b(?:lower|upper|main)\s*(?:$|,)/.source,
+  ].join("|"),
+  "i"
+);
+
+/** Whole-listing subtypes that ARE in-home units — folded into the same row. */
+const IN_HOME_SUBTYPES = new Set(["lower level", "upper level"]);
+
+export const IN_HOME_UNIT_LABEL = "Basement / in-home unit";
+
+/** True when a rental is a PART of a house (basement/upper/main-floor unit). Exported for tests. */
+export function isPartialUnitRental(address: string | null | undefined, subType?: string | null): boolean {
+  if (subType && IN_HOME_SUBTYPES.has(subType.trim().toLowerCase())) return true;
+  return !!address && PARTIAL_UNIT_RE.test(address);
+}
+
+/**
  * Median rent by bedrooms (Studio/1/2/3/4/5/6+) × property type. Pure — exported for
  * tests. Every cell with data shows its median plus the sample count; a grid under
  * MIN_MATRIX_SAMPLE listings returns null so the panel self-hides (silent-null
  * convention). Beds 0 is a real bucket (bachelor/basement studios lease constantly).
+ * In-home units (basement/upper/main-floor rentals filed under the HOUSE's type) are
+ * routed to their own row so they never drag a whole-home median down.
  */
 export function buildBedsTypeMatrix(
-  items: Array<{ beds: number | null; subType: string | null; price: number }>
+  items: Array<{ beds: number | null; subType: string | null; price: number; address?: string | null }>
 ): AskingMatrix | null {
   const usable = items.filter((i) => i.beds !== null && i.beds >= 0 && i.subType && i.price > 0);
   if (usable.length < MIN_MATRIX_SAMPLE) return null;
@@ -194,7 +230,7 @@ export function buildBedsTypeMatrix(
   for (const i of usable) {
     const bucket = Math.min(BEDS_BUCKET_CAP, i.beds as number);
     colsSeen.add(bucket);
-    const type = (i.subType as string).trim();
+    const type = isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim();
     const cols = byType.get(type) ?? new Map<number, number[]>();
     const prices = cols.get(bucket) ?? [];
     prices.push(i.price);

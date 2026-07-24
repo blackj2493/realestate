@@ -286,6 +286,8 @@ export interface LeasedRentItem {
   subType: string | null;
   /** ClosePrice = the monthly rent the home ACTUALLY leased for. */
   price: number;
+  /** Full address string — the in-home-unit classifier reads its markers ("Bsmt", "(Lower)"). */
+  address: string | null;
 }
 
 /**
@@ -303,7 +305,7 @@ export async function getLeasedNearPoint(lat: number, lng: number, radiusKm: num
         q: "*",
         query_by: "UnparsedAddress",
         filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=leased && ClosePrice:>=500 && ClosePrice:<=20000`,
-        include_fields: "ClosePrice,BedroomsTotal,PropertySubType",
+        include_fields: "ClosePrice,BedroomsTotal,PropertySubType,UnparsedAddress",
         per_page: 250,
       });
     return (res.hits ?? []).map((h) => {
@@ -312,6 +314,7 @@ export async function getLeasedNearPoint(lat: number, lng: number, radiusKm: num
         beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal >= 0 ? d.BedroomsTotal : null,
         subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
         price: typeof d.ClosePrice === "number" ? d.ClosePrice : 0,
+        address: typeof d.UnparsedAddress === "string" && d.UnparsedAddress ? d.UnparsedAddress : null,
       };
     });
   } catch (err) {
