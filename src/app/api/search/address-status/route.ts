@@ -16,7 +16,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { parseAddress } from "@/lib/watchlist/disposition";
-import { getSoldPublicByAddressLoose, getSoldGatedByKey } from "@/lib/sold/soldByKey";
+import { getSoldPublicByAddressLoose, getSoldGatedByKey, hasFullListingRow } from "@/lib/sold/soldByKey";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { soldAddressHref } from "@/lib/search/searchTarget";
 import type { AddressStatusResponse } from "@/lib/search/types";
@@ -34,13 +34,21 @@ export async function GET(req: NextRequest) {
   const pub = await getSoldPublicByAddressLoose(parsed);
   if (!pub) return NextResponse.json(NOT_FOUND);
 
+  // Destination ladder (owner decision 2026-07-23): the FULL sold report
+  // (/properties/{key} — photos, sold hero, deal analytics) is strictly richer, so it
+  // wins whenever its listings row still exists; the keyed /address page is the
+  // fallback for records beyond that archive.
+  const href = (await hasFullListingRow(pub.id))
+    ? `/properties/${pub.id}`
+    : soldAddressHref(pub.address, pub.city, pub.id);
+
   const base: AddressStatusResponse = {
     found: true,
     key: pub.id,
     address: pub.address,
     city: pub.city,
     dealKind: pub.dealKind,
-    href: soldAddressHref(pub.address, pub.city, pub.id),
+    href,
   };
 
   const { isConsumer } = await getConsumer();

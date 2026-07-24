@@ -183,6 +183,18 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   ]);
 }
 
+/**
+ * Fresh vault truth wins: replace (or add) the subject's own event in the ledger set.
+ * The ledger's TTL cache can predate the sale — a row refreshed while the campaign was
+ * still Active serves as-is and would render the SOLD home as "ACTIVE asked $X" (seen
+ * live on 127 Via Toscana). The subject event comes straight from the raw_vow_sold
+ * payload, so it always carries the closed status/price. Exported for tests.
+ */
+export function overlaySubjectEvent(events: CampaignEvent[], subject: CampaignEvent | null): CampaignEvent[] {
+  if (!subject) return events;
+  return [subject, ...events.filter((e) => e.listing_key !== subject.listing_key)];
+}
+
 /** Ledger refresh from a raw VOW payload (the exact RESO address fields). */
 async function recordFromPayload(payload: Record<string, unknown>): Promise<SaleRecord | null> {
   const subject = normalizeCampaign(payload as RawVowCampaign);
@@ -207,7 +219,7 @@ async function recordFromPayload(payload: Record<string, unknown>): Promise<Sale
       8000,
       "Campaign history"
     );
-    if (row?.events?.length) events = row.events;
+    if (row?.events?.length) events = overlaySubjectEvent(row.events, subject);
   } catch (err) {
     console.error("[saleRecord] ledger refresh failed (degrading to subject-only):", err);
   }

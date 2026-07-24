@@ -281,6 +281,20 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
 }
 
 /**
+ * Whether /properties/{key} still renders — the listings row is the detail page's data
+ * source (sold rows stay in the table; only records older than the archive lose theirs).
+ * One indexed PK existence check; best-effort false on failure. Server-only.
+ */
+export async function hasFullListingRow(key: string): Promise<boolean> {
+  try {
+    const { data } = await getServiceRoleClient().from("listings").select("listing_key").eq("listing_key", key).maybeSingle();
+    return !!data;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Photo URLs for the AUTHED /address gallery. VOW media — call ONLY inside the
  * getConsumer()-gated branch (never on the anonymous path).
  *
