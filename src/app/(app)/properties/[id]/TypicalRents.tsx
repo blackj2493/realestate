@@ -12,7 +12,7 @@
  */
 import { getTypesenseClient } from "@/lib/typesense/client";
 import { getSoldPublicByKey } from "@/lib/sold/soldByKey";
-import { getNearbyForSale } from "@/lib/address/nearbyForSale";
+import { getTypicalRents } from "@/lib/address/nearbyForSale";
 import TypicalRentsCard from "@/components/address/TypicalRentsCard";
 
 async function resolveCoords(listingId: string): Promise<[number, number] | null> {
@@ -44,11 +44,12 @@ async function resolveCoords(listingId: string): Promise<[number, number] | null
 export default async function TypicalRents({ listingId }: { listingId: string }) {
   const coords = await resolveCoords(listingId);
   if (!coords) return null;
-  const lease = await getNearbyForSale(coords[0], coords[1], { transactionType: "lease" });
-  if (!lease?.bedsTypeMatrix) return null;
+  // Adaptive radius: 2 km when the rental sample is dense, widened to 5 km when thin.
+  const rents = await getTypicalRents(coords[0], coords[1]);
+  if (!rents) return null;
   return (
     <div className="mb-6">
-      <TypicalRentsCard matrix={lease.bedsTypeMatrix} radiusKm={lease.radiusKm} />
+      <TypicalRentsCard matrix={rents.matrix} radiusKm={rents.radiusKm} />
     </div>
   );
 }

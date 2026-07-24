@@ -23,7 +23,7 @@ import Link from "next/link";
 import { Home, KeyRound, LineChart, Lock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
-import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { getNearbyForSale, getTypicalRents, type NearbyListing } from "@/lib/address/nearbyForSale";
 import TypicalRentsCard from "@/components/address/TypicalRentsCard";
 import { getRegionMetricsCached } from "@/lib/market/aggregates";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
@@ -134,6 +134,9 @@ export default async function AreaInsights({
 
   const areaLabel = cityRegion || cityName;
 
+  // Adaptive-radius rents grid (2 km → 5 km when thin); reuses the lease fetch above.
+  const typicalRents = await getTypicalRents(lat, lng, lease);
+
   // ── PUBLIC snapshot (active/IDX asking — anon-safe) ───────────────────
   const publicTiles: TileData[] = [];
   if (sale?.stats.medianAsking) publicTiles.push({ label: "Median asking (for sale)", value: formatPrice(sale.stats.medianAsking) });
@@ -183,7 +186,7 @@ export default async function AreaInsights({
       )}
 
       {/* Typical rents by bedrooms × type — live FOR RENT asking medians (IDX, anon-safe). */}
-      {lease && <TypicalRentsCard matrix={lease.bedsTypeMatrix} radiusKm={lease.radiusKm} />}
+      {typicalRents && <TypicalRentsCard matrix={typicalRents.matrix} radiusKm={typicalRents.radiusKm} />}
 
       {/* Market trends — consumer sees VOW-derived sold numbers; anon a sign-up nudge. */}
       {isConsumer ? (
