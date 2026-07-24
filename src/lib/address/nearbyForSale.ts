@@ -113,6 +113,12 @@ export interface NearbyForSale {
 export interface AskingMatrixCell {
   median: number | null;
   count: number;
+  /** Middle-50% band (25th/75th pct of the kept prices) — set only when the cell holds
+   *  ≥ RANGE_MIN_N points, where quartiles stop being noise. Sale-price cells render it
+   *  (owner call 2026-07-24: heterogeneous stock makes a bare sale median falsely
+   *  precise — downtown condo 2bd IQR measured at 36% of median vs 4–11% suburban). */
+  p25?: number | null;
+  p75?: number | null;
 }
 
 export interface AskingMatrix {
@@ -224,6 +230,8 @@ const TRIM_LO = 0.5;
 const TRIM_HI = 2.0;
 const HOUSE_ANCHOR_MIN_N = 3;
 const RECLASS_FRACTION = 0.7;
+/** Quartiles below this many kept points are noise — the cell shows median-only. */
+const RANGE_MIN_N = 5;
 
 /** House-style types whose low-bed cheap items are almost always unmarked in-home units. */
 function isHouseType(label: string): boolean {
@@ -238,31 +246,39 @@ function isHouseType(label: string): boolean {
  * In-home units (basement/upper/main-floor rentals filed under the HOUSE's type) are
  * routed to their own row so they never drag a whole-home median down; obvious
  * outliers are trimmed per the rules above.
+ *
+ * mode "sale" (the sell-side grid): homes are never SOLD as a basement unit, so the
+ * in-home classifier and Rule B are rent-only logic there — a cheap 2 bd detached is
+ * a small bungalow, not an unmarked basement. Rule A (cell trim) applies to both.
  */
 export function buildBedsTypeMatrix(
-  items: Array<{ beds: number | null; subType: string | null; price: number; address?: string | null }>
+  items: Array<{ beds: number | null; subType: string | null; price: number; address?: string | null }>,
+  opts: { mode?: "rent" | "sale" } = {}
 ): AskingMatrix | null {
+  const isRent = (opts.mode ?? "rent") === "rent";
   const usable = items.filter((i) => i.beds !== null && i.beds >= 0 && i.subType && i.price > 0);
   if (usable.length < MIN_MATRIX_SAMPLE) return null;
 
   // Pass 1 — initial (label, bucket, price) assignment via the address classifier.
   const assigned = usable.map((i) => ({
-    label: isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim(),
+    label: isRent && isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim(),
     bucket: Math.min(BEDS_BUCKET_CAP, i.beds as number),
     price: i.price,
   }));
 
-  // Pass 2 (Rule B) — per house row, anchor on its ≥3 bd whole-home median and move
-  // implausibly cheap 0–2 bd items to the in-home row.
-  const anchors = new Map<string, number | null>();
-  for (const a of assigned) {
-    if (a.label === IN_HOME_UNIT_LABEL || !isHouseType(a.label) || anchors.has(a.label)) continue;
-    const bigBeds = assigned.filter((x) => x.label === a.label && x.bucket >= 3).map((x) => x.price);
-    anchors.set(a.label, bigBeds.length >= HOUSE_ANCHOR_MIN_N ? median(bigBeds) : null);
-  }
-  for (const a of assigned) {
-    const anchor = anchors.get(a.label);
-    if (anchor && a.bucket <= 2 && a.price < anchor * RECLASS_FRACTION) a.label = IN_HOME_UNIT_LABEL;
+  // Pass 2 (Rule B, rent only) — per house row, anchor on its ≥3 bd whole-home median
+  // and move implausibly cheap 0–2 bd items to the in-home row.
+  if (isRent) {
+    const anchors = new Map<string, number | null>();
+    for (const a of assigned) {
+      if (a.label === IN_HOME_UNIT_LABEL || !isHouseType(a.label) || anchors.has(a.label)) continue;
+      const bigBeds = assigned.filter((x) => x.label === a.label && x.bucket >= 3).map((x) => x.price);
+      anchors.set(a.label, bigBeds.length >= HOUSE_ANCHOR_MIN_N ? median(bigBeds) : null);
+    }
+    for (const a of assigned) {
+      const anchor = anchors.get(a.label);
+      if (anchor && a.bucket <= 2 && a.price < anchor * RECLASS_FRACTION) a.label = IN_HOME_UNIT_LABEL;
+    }
   }
 
   const byType = new Map<string, Map<number, number[]>>();
@@ -291,7 +307,14 @@ export function buildBedsTypeMatrix(
       const cells: AskingMatrixCell[] = bedCols.map((b) => {
         const prices = trimCell(cols.get(b) ?? []);
         count += prices.length;
-        return { median: prices.length >= MIN_CELL_SAMPLES ? median(prices) : null, count: prices.length };
+        const showRange = prices.length >= RANGE_MIN_N;
+        const sorted = showRange ? [...prices].sort((x, y) => x - y) : null;
+        return {
+          median: prices.length >= MIN_CELL_SAMPLES ? median(prices) : null,
+          count: prices.length,
+          p25: sorted ? percentile(sorted, 0.25) : null,
+          p75: sorted ? percentile(sorted, 0.75) : null,
+        };
       });
       return { label, cells, count };
     })
@@ -499,7 +522,8 @@ export async function getNearbyForSale(
         sitting30,
       },
       events: [...newEvents, ...cutEvents],
-      bedsTypeMatrix: buildBedsTypeMatrix(all),
+      // Sale-side matrices use sale mode: no basement classifier / Rule B (rent logic).
+      bedsTypeMatrix: buildBedsTypeMatrix(all, { mode: isLease ? "rent" : "sale" }),
       pins: all
         .filter((l) => l.lat !== null && l.lng !== null)
         .map((l) => ({

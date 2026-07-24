@@ -1,20 +1,24 @@
 /**
- * "Typical rents nearby" for the listing detail page — median asking rent by
- * bedrooms × property type from live FOR RENT listings around this home.
+ * Market grids for the listing detail page — "what homes sell for here" (median +
+ * middle-50% range) and "typical rents" by bedrooms × property type around this home.
  *
  * Server component, best-effort: resolves the listing's coordinates from the
  * active index first, then the sold store (SOLD pages — their `properties` doc is
  * pruned by the ghost reconcile, but the coords live on the sold doc; the lookup
  * is PUBLIC fields only, see getSoldPublicByKey). Renders null when coords or the
- * rent sample are missing — mount unconditionally, ideally inside <Suspense>.
+ * samples are missing — mount unconditionally, ideally inside <Suspense>.
  *
- * IDX asking rents are public — no gate (same class as every asking surface).
+ * Consumers see ACTUAL closes (VOW — structural gate in the fetchers); anon sees
+ * asking medians (IDX-public). `salesFirst` orders the two grids by what the
+ * visitor came for: sale listings lead with prices, rentals with rents.
  */
 import { getTypesenseClient } from "@/lib/typesense/client";
 import { getSoldPublicByKey } from "@/lib/sold/soldByKey";
 import { getBestTypicalRents } from "@/lib/address/leasedRents";
+import { getBestTypicalPrices } from "@/lib/address/soldPrices";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import TypicalRentsCard from "@/components/address/TypicalRentsCard";
+import TypicalPricesCard from "@/components/address/TypicalPricesCard";
 
 async function resolveCoords(listingId: string): Promise<[number, number] | null> {
   try {
@@ -42,17 +46,26 @@ async function resolveCoords(listingId: string): Promise<[number, number] | null
   return null;
 }
 
-export default async function TypicalRents({ listingId }: { listingId: string }) {
+export default async function TypicalRents({ listingId, salesFirst = true }: { listingId: string; salesFirst?: boolean }) {
   const coords = await resolveCoords(listingId);
   if (!coords) return null;
-  // Consumers see ACTUAL leased closes (VOW — structural gate in the fetcher);
-  // anon sees asking medians. Adaptive radius (2 km → 5 km when thin) on both.
+  // Adaptive radius (2 km → 5 km when thin) on all paths.
   const { isConsumer } = await getConsumer();
-  const rents = await getBestTypicalRents(coords[0], coords[1], isConsumer);
-  if (!rents) return null;
+  const [rents, prices] = await Promise.all([
+    getBestTypicalRents(coords[0], coords[1], isConsumer),
+    getBestTypicalPrices(coords[0], coords[1], isConsumer),
+  ]);
+  if (!rents && !prices) return null;
+  const pricesCard = prices && (
+    <TypicalPricesCard matrix={prices.matrix} radiusKm={prices.radiusKm} source={prices.source} showSignInNudge={!isConsumer} />
+  );
+  const rentsCard = rents && (
+    <TypicalRentsCard matrix={rents.matrix} radiusKm={rents.radiusKm} source={rents.source} showSignInNudge={!isConsumer} />
+  );
   return (
-    <div className="mb-6">
-      <TypicalRentsCard matrix={rents.matrix} radiusKm={rents.radiusKm} source={rents.source} showSignInNudge={!isConsumer} />
+    <div className="mb-6 flex flex-col gap-4">
+      {salesFirst ? pricesCard : rentsCard}
+      {salesFirst ? rentsCard : pricesCard}
     </div>
   );
 }

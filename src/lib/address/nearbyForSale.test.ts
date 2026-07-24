@@ -190,6 +190,61 @@ describe("outlier rules", () => {
     expect(inHome.cells[m!.bedCols.indexOf(2)].median).toBe(1825);
   });
 
+  it("cells with 5+ kept points carry the middle-50% band; thinner cells stay median-only", () => {
+    const m = buildBedsTypeMatrix([
+      r(2, "Condo Apartment", 500_000),
+      r(2, "Condo Apartment", 520_000),
+      r(2, "Condo Apartment", 540_000),
+      r(2, "Condo Apartment", 560_000),
+      r(2, "Condo Apartment", 580_000),
+      r(3, "Condo Apartment", 700_000),
+      r(3, "Condo Apartment", 720_000),
+      r(3, "Condo Apartment", 740_000),
+    ]);
+    const condo = m!.rows[0];
+    const twoBd = condo.cells[m!.bedCols.indexOf(2)];
+    expect(twoBd.median).toBe(540_000);
+    expect(twoBd.p25).toBe(520_000);
+    expect(twoBd.p75).toBe(560_000);
+    const threeBd = condo.cells[m!.bedCols.indexOf(3)];
+    expect(threeBd.median).toBe(720_000);
+    expect(threeBd.p25).toBeNull();
+    expect(threeBd.p75).toBeNull();
+  });
+
+  it("Rule A trims BEFORE the band is computed — an outlier can't stretch the range", () => {
+    const m = buildBedsTypeMatrix([
+      r(2, "Condo Apartment", 500_000),
+      r(2, "Condo Apartment", 510_000),
+      r(2, "Condo Apartment", 520_000),
+      r(2, "Condo Apartment", 530_000),
+      r(2, "Condo Apartment", 540_000),
+      r(2, "Condo Apartment", 2_000_000), // trimmed by Rule A
+    ]);
+    const cell = m!.rows[0].cells[0];
+    expect(cell.count).toBe(5);
+    expect(cell.median).toBe(520_000);
+    expect(cell.p25).toBe(510_000);
+    expect(cell.p75).toBe(530_000);
+  });
+
+  it("sale mode: no basement classifier and no Rule B — a cheap 2bd detached is a bungalow, not a basement", () => {
+    const m = buildBedsTypeMatrix(
+      [
+        { beds: 3, subType: "Detached", price: 900_000, address: "1 A St" },
+        { beds: 3, subType: "Detached", price: 920_000, address: "2 A St" },
+        { beds: 4, subType: "Detached", price: 950_000, address: "3 A St" },
+        { beds: 2, subType: "Detached", price: 600_000, address: "4 A St" }, // 65% of anchor — stays put in sale mode
+        { beds: 3, subType: "Detached", price: 880_000, address: "41 Eberly Woods Drive Basement" }, // marker ignored in sale mode
+      ],
+      { mode: "sale" }
+    );
+    expect(m!.rows.find((x) => x.label === IN_HOME_UNIT_LABEL)).toBeUndefined();
+    const det = m!.rows.find((x) => x.label === "Detached")!;
+    expect(det.cells[m!.bedCols.indexOf(2)].median).toBe(600_000);
+    expect(det.cells[m!.bedCols.indexOf(3)].count).toBe(3);
+  });
+
   it("Rule B: condo rows are exempt (a cheap condo 1bd is normal) and rows without an anchor untouched", () => {
     const m = buildBedsTypeMatrix([
       { beds: 3, subType: "Condo Apartment", price: 3000, address: null },
