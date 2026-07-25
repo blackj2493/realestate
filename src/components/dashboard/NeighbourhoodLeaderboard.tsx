@@ -1,39 +1,40 @@
 "use client";
 
 /**
- * Neighbourhood Heat, leaderboard edition — replaces the decorative 3D hexbin tile
- * (owner call 2026-07-24: non-interactive unlabeled columns couldn't answer "WHICH
- * pocket is hot"). Ranks the selected region's communities (CityRegion) by a
- * toggleable metric — median over the same ≤100-active sample the old tile drew
- * (TRREB §6.3(b) UI cap), with the ×n honesty count — and every row deep-links
- * into the Map Terminal centered on that community's listings, so the tile is an
- * entry point to action, not decoration. No WebGL: readable on mobile and drops
- * the deck.gl bundle from the dashboard.
+ * Neighbourhood Heat — ranked community (CityRegion) leaderboard for one watched
+ * region. Stats come from /api/dashboard/neighbourhood-heat, which aggregates the
+ * region's FULL active inventory server-side (owner call 2026-07-25: the old
+ * 100-listing browser sample gave big-city communities 1–3 listings each, so the
+ * ranking was noise). Only communities with MIN_COMMUNITY_N+ listings rank, and
+ * the tile hides itself entirely when no metric can field a credible leaderboard
+ * (silent-null convention — better absent than noisy).
+ *
+ * Rows: rank | fixed-width name (shared bar baseline) | inline range-scaled bar |
+ * median | ×n. Bars scale to the RANGE of shown medians (tight spreads still read
+ * as a ranking). Every row deep-links to the Map Terminal at the community's
+ * listing centroid. Two balanced columns on lg+.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Layers } from "lucide-react";
-import { searchListings, type ListingDocument } from "@/lib/typesense/client";
-import { locationFilter } from "@/lib/dashboard/queries";
-import { capRateOrNull } from "@/lib/metrics/sanityBand";
-import { isValidLocation } from "@/components/Map/mapLogic";
+import {
+  MIN_COMMUNITY_N,
+  MIN_QUALIFYING_COMMUNITIES,
+  hasUsableHeat,
+  type CommunityStat,
+  type HeatStats,
+} from "@/lib/dashboard/neighbourhoodHeat";
 import RegionSwitcher from "./RegionSwitcher";
 
 type MetricId = "cap" | "dom" | "drop";
 
-const METRICS: {
-  id: MetricId;
-  label: string;
-  get: (d: ListingDocument) => number | undefined;
-  fmt: (v: number) => string;
-}[] = [
-  { id: "cap", label: "Cap Rate", get: (d) => capRateOrNull(d.cap_rate_est) ?? undefined, fmt: (v) => `${v.toFixed(1)}%` },
-  { id: "dom", label: "True DOM", get: (d) => d.TrueDom, fmt: (v) => `${Math.round(v)}d` },
+const METRICS: { id: MetricId; label: string; fmt: (v: number) => string }[] = [
+  { id: "cap", label: "Cap Rate", fmt: (v) => `${v.toFixed(1)}%` },
+  { id: "dom", label: "True DOM", fmt: (v) => `${Math.round(v)}d` },
   {
     id: "drop",
     label: "Price Drop",
-    get: (d) => d.TotalPriceDrop,
     fmt: (v) => (v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v / 1000)}k`),
   },
 ];
@@ -43,14 +44,6 @@ const METRIC_CAPTION: Record<MetricId, string> = {
   dom: "Communities where active listings have sat on the market the longest.",
   drop: "Communities where sellers have made the deepest price cuts.",
 };
-
-const MAX_ROWS = 6;
-
-function median(xs: number[]): number {
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = s.length >> 1;
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
 
 /**
  * OREB CityRegion values arrive as "7711 - Barrhaven - Half Moon Bay" — strip the
@@ -64,14 +57,6 @@ function displayName(region: string, city: string): string {
   return n || region;
 }
 
-interface Row {
-  name: string;
-  median: number;
-  count: number;
-  lat: number;
-  lng: number;
-}
-
 export default function NeighbourhoodLeaderboard({
   regions,
   selected,
@@ -82,17 +67,18 @@ export default function NeighbourhoodLeaderboard({
   onSelect: (region: string) => void;
 }) {
   const [metric, setMetric] = useState<MetricId>("cap");
-  const [listings, setListings] = useState<ListingDocument[]>([]);
+  const [heat, setHeat] = useState<HeatStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    searchListings({ query: "*", rawFilterBy: locationFilter(selected), perPage: 100 })
-      .then((res) => {
-        if (alive) setListings(res.listings.filter((l) => isValidLocation(l.location)));
+    fetch(`/api/dashboard/neighbourhood-heat?region=${encodeURIComponent(selected)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setHeat(d.heat ?? null);
       })
-      .catch(() => alive && setListings([]))
+      .catch(() => alive && setHeat(null))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
@@ -100,48 +86,24 @@ export default function NeighbourhoodLeaderboard({
   }, [selected]);
 
   const m = METRICS.find((x) => x.id === metric)!;
+  const rows: CommunityStat[] = heat ? heat[metric] : [];
 
-  const rows = useMemo<Row[]>(() => {
-    const groups = new Map<string, { values: number[]; latSum: number; lngSum: number }>();
-    for (const l of listings) {
-      const name = (l.CityRegion || "").trim();
-      const v = m.get(l);
-      if (!name || v == null || !Number.isFinite(v) || v <= 0) continue;
-      const g = groups.get(name) ?? { values: [], latSum: 0, lngSum: 0 };
-      g.values.push(v);
-      g.latSum += l.location[0];
-      g.lngSum += l.location[1];
-      groups.set(name, g);
-    }
-    return [...groups.entries()]
-      .map(([name, g]) => ({
-        name,
-        median: median(g.values),
-        count: g.values.length,
-        lat: g.latSum / g.values.length,
-        lng: g.lngSum / g.values.length,
-      }))
-      .sort((a, b) => b.median - a.median)
-      .slice(0, MAX_ROWS);
-  }, [listings, m]);
+  // No metric can field a credible leaderboard here — the tile says nothing, so it
+  // says nothing (silent-null convention).
+  if (!loading && (!heat || !hasUsableHeat(heat))) return null;
 
   // Bars scale to the RANGE of shown medians, not zero: cap rates cluster (4.2–4.8%),
-  // so a zero-based scale rendered six near-identical full-width stripes. Range
-  // scaling turns a 0.6pt spread into a 15%→100% length spread the eye can rank.
+  // so a zero-based scale rendered near-identical full-width stripes.
   const minMedian = rows.length ? rows[rows.length - 1].median : 0;
   const maxMedian = rows.length ? rows[0].median : 1;
   const barPct = (v: number) =>
     maxMedian === minMedian ? 100 : 15 + 85 * ((v - minMedian) / (maxMedian - minMedian));
-  const sampled = useMemo(
-    () => listings.reduce((n, l) => (m.get(l) != null && (m.get(l) as number) > 0 && (l.CityRegion || "").trim() ? n + 1 : n), 0),
-    [listings, m]
-  );
+
   const mapUrl = `/properties?city=${encodeURIComponent(selected)}`;
 
   // One-line row: rank | name (fixed col, so every bar starts on a shared baseline)
-  // | inline range-scaled bar | value | ×n. The bar sits BETWEEN name and value —
-  // the previous under-row stripe left ~1,500px of dead track between them.
-  const renderRow = (r: Row, rank: number) => (
+  // | inline range-scaled bar | value | ×n.
+  const renderRow = (r: CommunityStat, rank: number) => (
     <li key={r.name}>
       <Link
         href={`/properties?lat=${r.lat.toFixed(6)}&lng=${r.lng.toFixed(6)}&z=14`}
@@ -166,14 +128,14 @@ export default function NeighbourhoodLeaderboard({
         <span className="terminal-font w-14 shrink-0 text-right font-mono text-sm font-bold tabular-nums text-foreground">
           {m.fmt(r.median)}
         </span>
-        <span className="terminal-font w-7 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+        <span className="terminal-font w-9 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
           ×{r.count}
         </span>
       </Link>
     </li>
   );
 
-  // Two balanced columns on lg+ (ranks 1–3 | 4–6) — six full-width rows on a wide
+  // Two balanced columns on lg+ (ranks 1–3 | 4–6) — full-width rows on a wide
   // monitor read as sparse stripes; two tidy columns read as an instrument.
   const split = Math.ceil(rows.length / 2);
   const colA = rows.slice(0, split);
@@ -226,12 +188,12 @@ export default function NeighbourhoodLeaderboard({
             <div key={i} className="h-9 animate-pulse bg-muted/40" />
           ))}
         </div>
-      ) : rows.length === 0 ? (
-        <div className="flex h-40 items-center justify-center text-center">
+      ) : rows.length < MIN_QUALIFYING_COMMUNITIES ? (
+        <div className="flex h-32 items-center justify-center text-center">
           <div>
-            <Layers className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+            <Layers className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
             <p className="terminal-font text-xs text-muted-foreground">
-              No {m.label.toLowerCase()} data by community here
+              Too few communities with {MIN_COMMUNITY_N}+ listings for a {m.label.toLowerCase()} ranking here
             </p>
           </div>
         </div>
@@ -246,7 +208,11 @@ export default function NeighbourhoodLeaderboard({
 
       <p className="terminal-font flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border px-3.5 py-1.5 text-[9px] uppercase tracking-wider text-muted-foreground">
         <span className="normal-case tracking-normal">{METRIC_CAPTION[metric]} Tap a row to see it on the map.</span>
-        {!loading && rows.length > 0 && <span>{sampled} of up to 100 active in sample</span>}
+        {!loading && heat && (
+          <span>
+            {heat.analyzed.toLocaleString()} active listings analyzed · communities with {MIN_COMMUNITY_N}+ shown
+          </span>
+        )}
       </p>
     </section>
   );
