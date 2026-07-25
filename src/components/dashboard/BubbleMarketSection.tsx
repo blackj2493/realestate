@@ -29,6 +29,7 @@ import {
   ExternalLink,
   GraduationCap,
   MapPin,
+  Mail,
   MoreHorizontal,
   Pencil,
   SlidersHorizontal,
@@ -248,10 +249,15 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
           aria-label="Alert scope"
           title="What the nightly email matches: every new listing in this area, or only ones matching the filters saved with this bubble"
         >
+          {/* Mail glyph = this control is about the EMAIL, not the dashboard view
+              (owner: "All / My filters" alone was ambiguous). */}
+          <span className="flex items-center border-r border-border px-1.5 text-muted-foreground" aria-hidden="true">
+            <Mail className="h-3 w-3" />
+          </span>
           {(
             [
-              ["all", "All"],
-              ["filtered", "My filters"],
+              ["all", "All listings"],
+              ["filtered", "My filters only"],
             ] as const
           ).map(([value, label]) => {
             const locked = value === "filtered" && !hasSnapshot;
