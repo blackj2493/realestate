@@ -227,7 +227,7 @@ export default function DashboardClient() {
               // The bell mirrors the per-bubble alert toggle: city sections are
               // localStorage-only, so it materializes an area_type 'city' bubble row
               // the nightly worker can deliver against (see CityAlertBell).
-              <RegionDrilldown key={loc} title={loc} actions={<CityAlertBell city={loc} />}>
+              <RegionDrilldown key={loc} title={loc} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (

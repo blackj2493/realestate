@@ -31,11 +31,13 @@ import {
   MapPin,
   MoreHorizontal,
   Pencil,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Bubble } from "@/lib/bubbles/serialize";
+import { buildFiltersSnapshot, type Bubble } from "@/lib/bubbles/serialize";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
+import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { bubbleToArea } from "@/lib/dashboard/area";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import type { BoardDef } from "@/lib/dashboard/boards";
@@ -77,6 +79,7 @@ function tagline(b: Bubble): string {
 function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
   const rename = useBubblesStore((s) => s.rename);
   const remove = useBubblesStore((s) => s.remove);
+  const updateAlertFilters = useBubblesStore((s) => s.updateAlertFilters);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -170,6 +173,36 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
           >
             <Pencil className="h-3 w-3" /> Rename
           </button>
+          {/* One-click in-place capture (owner ask): copies the Map Terminal's
+              CURRENT filters onto this bubble and switches its alerts to
+              "My filters" — no save-plus-delete dance. Open the Terminal first
+              to set the filters you want captured. */}
+          {bubble.area_type !== "city" && (
+            <button
+              type="button"
+              title="Copies the Map Terminal's current filters to this area and switches its nightly alerts to 'My filters'. Open the Terminal and set your filters first."
+              onClick={() => {
+                const s = useCommandCenterStore.getState();
+                void updateAlertFilters(
+                  bubble.id,
+                  buildFiltersSnapshot({
+                    activePersona: s.activePersona,
+                    filters: s.filters,
+                    location: s.location,
+                    commute: s.commute,
+                    school: s.school,
+                    universalFilters: s.universalFilters,
+                    transactionMode: s.transactionMode,
+                    propertyClass: s.propertyClass,
+                  })
+                );
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
+            >
+              <SlidersHorizontal className="h-3 w-3" /> Capture current filters
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -198,7 +231,9 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
   // The 'filtered' scope needs a 095-era snapshot (universal basics captured at
   // save time). Older bubbles must be re-saved in the terminal to enable it —
   // we never guess filters the user didn't choose as alert rules.
-  const hasSnapshot = Boolean(bubble.filters?.universalFilters);
+  const hasSnapshot = Boolean(
+    bubble.filters && "universalFilters" in bubble.filters && bubble.filters.universalFilters
+  );
   const scope: "all" | "filtered" = bubble.alert_scope === "filtered" ? "filtered" : "all";
   return (
     <>

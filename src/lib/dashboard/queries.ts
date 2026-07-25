@@ -183,9 +183,14 @@ function transactionClause(lens: MarketActivityLens): string {
  * every active-inventory surface AND-joins so a city or a custom bubble shows one
  * coherent slice instead of a mix of rentals, condos and 4-beds.
  */
-export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
+/**
+ * The LENS-ONLY clause set (no area, no window) — the dashboard filter semantics
+ * as one reusable fragment. Shared by buildScopeFilter below AND the nightly
+ * alerts worker (bubbleFilterClause), so a city bubble's 'filtered' alerts match
+ * exactly what the dashboard's own panels show under the same lens.
+ */
+export function buildLensClauses(lens: MarketActivityLens): string {
   return combine(
-    areaFilter(area),
     transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
     // Beds: above-grade with a total fallback — identical semantics to the For Sale
@@ -200,6 +205,10 @@ export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
     basementClause(lens.basement),
     lens.minFrontage > 0 ? `LotWidth:>=${lens.minFrontage}` : undefined
   );
+}
+
+export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
+  return combine(areaFilter(area), buildLensClauses(lens));
 }
 
 /**

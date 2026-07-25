@@ -28,6 +28,7 @@ import type {
 } from "@/lib/personas/personaConfig";
 import type { UniversalFilterState } from "@/lib/filters/types";
 import type { TransactionMode, PropertyClass } from "@/lib/filters/fundamentals";
+import type { MarketActivityLens } from "@/lib/dashboard/config";
 
 export type BubbleAreaType = "draw" | "commute" | "school" | "city";
 
@@ -48,6 +49,16 @@ export interface BubbleFiltersSnapshot {
   transactionMode?: TransactionMode;
   propertyClass?: PropertyClass;
 }
+
+/** City alert rows' filter variant: the DASHBOARD lens captured when the user
+ *  switched the city to 'filtered' alerts (translated by buildLensClauses —
+ *  the email matches what the dashboard shows). Terminal snapshots and lens
+ *  captures share the same jsonb column; bubbleAlertFilter branches on shape. */
+export interface CityLensFilters {
+  lens: MarketActivityLens;
+}
+
+export type BubbleFilters = BubbleFiltersSnapshot | CityLensFilters;
 
 export interface BubbleSourceDraw {
   /** Raw clicked points in [lng, lat] order. */
@@ -86,8 +97,8 @@ export interface BubblePayload {
   /** [lat, lng]; empty for area_type 'city' (alert-carrier rows have no polygon). */
   polygon: [number, number][];
   source: BubbleSource;
-  /** null for city alert rows — they're created from the dashboard, not the terminal. */
-  filters: BubbleFiltersSnapshot | null;
+  /** Terminal snapshot, city-lens capture, or null (city rows start without one). */
+  filters: BubbleFilters | null;
 }
 
 /** As returned by GET /api/bubbles. */
@@ -149,17 +160,41 @@ export function synthesizeCirclePolygon(
   return out;
 }
 
-interface StoreSliceForSave {
+/** The store slice a filter snapshot is built from (no area/polygon fields). */
+export interface StoreSliceForSnapshot {
   activePersona: PersonaType;
   filters: TerminalFilterState;
   location: string;
   commute: CommuteState;
   school: SchoolState;
-  drawPolygon: [number, number][] | null;
-  drawPoints: [number, number][];
   universalFilters: UniversalFilterState;
   transactionMode: TransactionMode;
   propertyClass: PropertyClass;
+}
+
+interface StoreSliceForSave extends StoreSliceForSnapshot {
+  drawPolygon: [number, number][] | null;
+  drawPoints: [number, number][];
+}
+
+/** Snapshot of the terminal's CURRENT filter state — used at bubble save time
+ *  AND by the dashboard's "Capture current filters" action (in-place update). */
+export function buildFiltersSnapshot(store: StoreSliceForSnapshot): BubbleFiltersSnapshot {
+  return {
+    activePersona: store.activePersona,
+    filters: store.filters,
+    location: store.location,
+    commute: {
+      enabled: store.commute.enabled,
+      destination: store.commute.destination,
+      mode: store.commute.mode,
+      minutes: store.commute.minutes,
+    },
+    school: store.school,
+    universalFilters: store.universalFilters,
+    transactionMode: store.transactionMode,
+    propertyClass: store.propertyClass,
+  };
 }
 
 /**
@@ -176,21 +211,7 @@ export function buildBubblePayload(
     school?: { key: string; name: string; point: [number, number]; radiusKm?: number };
   }
 ): BubblePayload {
-  const filtersSnapshot: BubbleFiltersSnapshot = {
-    activePersona: store.activePersona,
-    filters: store.filters,
-    location: store.location,
-    commute: {
-      enabled: store.commute.enabled,
-      destination: store.commute.destination,
-      mode: store.commute.mode,
-      minutes: store.commute.minutes,
-    },
-    school: store.school,
-    universalFilters: store.universalFilters,
-    transactionMode: store.transactionMode,
-    propertyClass: store.propertyClass,
-  };
+  const filtersSnapshot = buildFiltersSnapshot(store);
 
   if (opts.area_type === "draw") {
     if (!store.drawPolygon || store.drawPolygon.length < 3) {
@@ -274,7 +295,9 @@ export function applyBubbleToStore(
   setters: StoreSettersForLoad
 ): void {
   const f = bubble.filters;
-  if (!f) return; // city alert rows carry no filter snapshot and never rehydrate the terminal
+  // City alert rows carry no snapshot (or a dashboard-lens capture, which has no
+  // terminal state to restore) — only real terminal snapshots rehydrate.
+  if (!f || !("activePersona" in f)) return;
   setters.setActivePersona(f.activePersona);
   setters.setFilters(f.filters);
   // Universal basics (beds/price/types…) — captured since 095. Restored per key so

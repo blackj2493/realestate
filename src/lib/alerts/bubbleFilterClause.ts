@@ -25,7 +25,10 @@ import {
   defaultTerminalFilters,
   type TerminalFilterState,
 } from "@/lib/personas/personaConfig";
-import type { BubbleFiltersSnapshot } from "@/lib/bubbles/serialize";
+import type { BubbleFiltersSnapshot, CityLensFilters } from "@/lib/bubbles/serialize";
+import { buildLensClauses } from "@/lib/dashboard/queries";
+import { normalizeConfig, type MarketActivityLens } from "@/lib/dashboard/config";
+import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 
 export interface BubbleAlertFilter {
   /** Full filter_by fragment (floor + transaction + class + price + persona +
@@ -52,7 +55,52 @@ export function parseSnapshot(raw: unknown): BubbleFiltersSnapshot | null {
   return raw as BubbleFiltersSnapshot;
 }
 
+/** Human label for a dashboard lens ("Detached · 3+ bd · finished bsmt"). */
+function lensLabel(lens: MarketActivityLens): string | null {
+  const parts: string[] = [];
+  if (lens.propertyTypes.length) {
+    const byKey = new Map(PROPERTY_TYPE_OPTIONS.map((o) => [o.key, o.label]));
+    parts.push(lens.propertyTypes.map((k) => byKey.get(k) ?? k).join("/"));
+  }
+  if (lens.minBeds > 0) parts.push(`${lens.minBeds}${lens.bedsExact ? "" : "+"} bd`);
+  if (lens.minBaths > 0) parts.push(`${lens.minBaths}${lens.bathsExact ? "" : "+"} ba`);
+  if (lens.minGarage > 0) parts.push(`${lens.minGarage}${lens.garageExact ? "" : "+"} garage`);
+  if (lens.basement !== "any") parts.push(`${lens.basement} bsmt`);
+  if (lens.minFrontage > 0) parts.push(`≥${lens.minFrontage}′ frontage`);
+  if (lens.transactionType === "lease") parts.push("For Rent");
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/**
+ * City-bubble variant: the stored filters are the DASHBOARD lens ({ lens }),
+ * translated by the dashboard's own clause builder (buildLensClauses) — the
+ * email matches exactly what the dashboard shows under that lens. windowDays is
+ * deliberately ignored (the worker's watermark governs "new").
+ */
+function lensAlertFilter(rawLens: unknown): BubbleAlertFilter {
+  try {
+    const lens = normalizeConfig({ marketActivity: rawLens }).marketActivity;
+    const floor = lens.transactionType === "lease" ? "ListPrice:>=500" : "ListPrice:>=100000";
+    const lensClauses = buildLensClauses(lens);
+    return {
+      clause: lensClauses ? `${floor} && ${lensClauses}` : floor,
+      label: lensLabel(lens),
+    };
+  } catch (err) {
+    console.error("[bubbleFilterClause] lens translation failed:", err);
+    return NONE;
+  }
+}
+
 export function bubbleAlertFilter(rawSnapshot: unknown): BubbleAlertFilter {
+  if (
+    rawSnapshot &&
+    typeof rawSnapshot === "object" &&
+    "lens" in rawSnapshot &&
+    (rawSnapshot as CityLensFilters).lens
+  ) {
+    return lensAlertFilter((rawSnapshot as CityLensFilters).lens);
+  }
   const snap = parseSnapshot(rawSnapshot);
   // universalFilters is the 095 marker: without it the snapshot predates the
   // feature and we must not guess at the user's intent.
