@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import {
   getConfig,
   saveConfig,
+  normalizeConfig,
   getProfile,
   stampVisit,
   DEFAULT_ACTIVITY_LENS,
@@ -13,6 +14,7 @@ import {
   type DashboardConfig,
   type MarketActivityLens,
 } from "@/lib/dashboard/config";
+import { fetchServerConfig, pushConfig } from "@/lib/dashboard/configSync";
 import { BOARDS } from "@/lib/dashboard/boards";
 import { orderBoardsForPersona } from "@/lib/dashboard/personaDashboard";
 import MissionControlHeader from "@/components/dashboard/MissionControlHeader";
@@ -61,8 +63,9 @@ export default function DashboardClient() {
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
 
-  // The server page (page.tsx) already enforced an authenticated session, so we
-  // just hydrate the localStorage-backed config/profile and enter.
+  // Hydrate localStorage-first (instant paint), then reconcile with the server
+  // copy (dashboard_prefs, migration 096) so the config follows the ACCOUNT, not
+  // the browser. Server wins on load; edits are last-writer-wins via pushConfig.
   useEffect(() => {
     const cfg = getConfig();
     setConfig(cfg);
@@ -71,11 +74,37 @@ export default function DashboardClient() {
     setSinceVisit(previous ?? Date.now() - SEVEN_DAYS_MS);
     setPickerOpen(cfg.regions.length === 0); // first run → open the live setup card
     setReady(true);
+
+    let cancelled = false;
+    (async () => {
+      const server = await fetchServerConfig();
+      if (cancelled || server.unavailable) return; // signed-out/offline → local-only
+      if (server.config) {
+        const merged = normalizeConfig(server.config);
+        // The action-feed cutoff should honour visits from OTHER devices too.
+        const serverPrev = merged.lastVisitAt;
+        if (serverPrev !== null && (previous === null || serverPrev > previous)) {
+          setSinceVisit(serverPrev);
+        }
+        merged.lastVisitAt = Date.now(); // re-stamp this visit on the merged copy
+        setConfig(merged);
+        saveConfig(merged);
+        pushConfig(merged);
+        setPickerOpen(merged.regions.length === 0);
+      } else {
+        // Signed in but never synced — seed the server from this device.
+        pushConfig({ ...cfg, lastVisitAt: Date.now() });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const update = (c: DashboardConfig) => {
     setConfig(c);
     saveConfig(c);
+    pushConfig(c);
   };
 
   // Auto-apply: add/remove a single region live so its dashboard sections appear/disappear
@@ -85,12 +114,14 @@ export default function DashboardClient() {
       if (!area || prev.regions.includes(area)) return prev;
       const next = { ...prev, regions: [...prev.regions, area] };
       saveConfig(next);
+      pushConfig(next);
       return next;
     });
   const removeRegion = (area: string) =>
     setConfig((prev) => {
       const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
       saveConfig(next);
+      pushConfig(next);
       return next;
     });
 

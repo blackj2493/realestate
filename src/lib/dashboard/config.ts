@@ -217,25 +217,31 @@ export function saveConfig(c: DashboardConfig): void {
   if (hasWindow()) window.localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
 }
 
+/**
+ * Shape-guard an untyped config blob (localStorage OR the dashboard_prefs jsonb —
+ * migration 096) onto the current DashboardConfig shape. Single normalizer so
+ * server and local storage can never drift in how they degrade.
+ */
+export function normalizeConfig(raw: unknown): DashboardConfig {
+  const parsed = (raw ?? {}) as Partial<DashboardConfig>;
+  return {
+    regions: Array.isArray(parsed.regions) ? parsed.regions : [],
+    boards:
+      Array.isArray(parsed.boards) && parsed.boards.length
+        ? parsed.boards
+        : [...DEFAULT_BOARD_ORDER],
+    marketActivity: mergeLens(parsed.marketActivity),
+    persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
+    lastVisitAt: typeof parsed.lastVisitAt === 'number' ? parsed.lastVisitAt : null,
+  };
+}
+
 /** Stored config, else seeded from the profile, else a sensible empty default. */
 export function getConfig(): DashboardConfig {
   if (hasWindow()) {
     try {
       const raw = window.localStorage.getItem(CONFIG_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<DashboardConfig>;
-        return {
-          regions: Array.isArray(parsed.regions) ? parsed.regions : [],
-          boards:
-            Array.isArray(parsed.boards) && parsed.boards.length
-              ? parsed.boards
-              : [...DEFAULT_BOARD_ORDER],
-          marketActivity: mergeLens(parsed.marketActivity),
-          persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
-          lastVisitAt:
-            typeof parsed.lastVisitAt === 'number' ? parsed.lastVisitAt : null,
-        };
-      }
+      if (raw) return normalizeConfig(JSON.parse(raw));
     } catch {
       /* fall through to seed */
     }
