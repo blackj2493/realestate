@@ -30,6 +30,7 @@ import { Resend } from 'resend';
 import Typesense, { Client } from 'typesense';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildAreaClause } from '@/lib/bubbles/stats';
+import { bubbleAlertFilter } from '@/lib/alerts/bubbleFilterClause';
 import {
   classifyStatusChange,
   isRelistScanBaseline,
@@ -97,6 +98,10 @@ interface BubbleRow {
   source: { kind: string; schoolKey?: string; city?: string };
   notify_since: string | null;
   notified_keys: unknown;
+  /** 'all' (default) | 'filtered' — apply the saved filter snapshot (migration 095). */
+  alert_scope?: string;
+  /** BubbleFiltersSnapshot jsonb — untyped at this boundary; bubbleAlertFilter parses defensively. */
+  filters?: unknown;
 }
 
 /** How long after a campaign dies without a transaction we keep scanning for a relist. */
@@ -944,19 +949,27 @@ async function main() {
   {
     const first = await supabase
       .from('market_bubbles')
-      .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys')
+      .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys, alert_scope, filters')
       .eq('alerts_enabled', true);
     if (!first.error) {
       bubbleData = (first.data ?? []) as unknown as BubbleRow[];
     } else {
-      // Pre-083: retry without the dedup column (lookback disabled — old strict-watermark behavior).
-      hasNotifiedKeys = false;
-      const legacy = await supabase
+      // Pre-095 (no alert_scope) or pre-083 (no notified_keys): degrade in order.
+      const pre095 = await supabase
         .from('market_bubbles')
-        .select('id, user_id, name, area_type, polygon, source, notify_since')
+        .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys')
         .eq('alerts_enabled', true);
-      if (legacy.error) bubbleErrMsg = legacy.error.message;
-      else bubbleData = (legacy.data ?? []).map((r) => ({ ...r, notified_keys: [] })) as unknown as BubbleRow[];
+      if (!pre095.error) {
+        bubbleData = (pre095.data ?? []) as unknown as BubbleRow[]; // alert_scope undefined → 'all'
+      } else {
+        hasNotifiedKeys = false;
+        const legacy = await supabase
+          .from('market_bubbles')
+          .select('id, user_id, name, area_type, polygon, source, notify_since')
+          .eq('alerts_enabled', true);
+        if (legacy.error) bubbleErrMsg = legacy.error.message;
+        else bubbleData = (legacy.data ?? []).map((r) => ({ ...r, notified_keys: [] })) as unknown as BubbleRow[];
+      }
     }
   }
 
@@ -985,10 +998,17 @@ async function main() {
         const notified: NotifiedKey[] = hasNotifiedKeys ? parseNotifiedKeys(b.notified_keys) : [];
         const watermarkMs = new Date(b.notify_since).getTime();
         const sinceMs = hasNotifiedKeys ? watermarkMs - BUBBLE_LOOKBACK_MS : watermarkMs;
+
+        // alert_scope 'filtered': swap the bare price floor for the bubble's saved
+        // filter snapshot, translated by the SAME builder the terminal search uses
+        // (bubbleAlertFilter). Pre-095 snapshots translate to null → 'all' behaviour.
+        const scoped = b.alert_scope === 'filtered' ? bubbleAlertFilter(b.filters) : { clause: null, label: null };
+        const baseClauses = scoped.clause ?? SALES_FLOOR;
+
         const res = await ts.collections('properties').documents().search({
           q: '*',
           query_by: 'City',
-          filter_by: `${SALES_FLOOR} && ${areaClause} && EntryTimestamp:>${sinceMs}`,
+          filter_by: `${baseClauses} && ${areaClause} && EntryTimestamp:>${sinceMs}`,
           sort_by: 'EntryTimestamp:desc',
           per_page: MAX_BUBBLE_FETCH,
           include_fields:
@@ -1031,7 +1051,7 @@ async function main() {
         // total by however many the dedup dropped (same rule buildBubbleSections uses).
         const total = Math.max(matches.length, (res.found ?? fetched.length) - (fetched.length - matches.length));
         const list = bubbleMatchesByUser.get(b.user_id) ?? [];
-        list.push({ bubbleId: b.id, bubbleName: b.name, total, matches });
+        list.push({ bubbleId: b.id, bubbleName: b.name, total, matches, filterLabel: scoped.label });
         bubbleMatchesByUser.set(b.user_id, list);
         bubbleAdvances.push({ id: b.id, user_id: b.user_id, alerted: true, patch: advancePatch });
       } catch (e) {

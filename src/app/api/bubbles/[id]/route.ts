@@ -46,6 +46,8 @@ interface PatchBody {
   source?: unknown;
   /** Nightly new-listing digest toggle (migration 034). */
   alerts_enabled?: boolean;
+  /** Digest match scope: 'all' | 'filtered' (migration 095). */
+  alert_scope?: string;
 }
 
 export async function PATCH(
@@ -91,6 +93,11 @@ export async function PATCH(
     if (typeof body.alerts_enabled !== "boolean")
       return NextResponse.json({ error: "alerts_enabled must be boolean" }, { status: 400 });
     patch.alerts_enabled = body.alerts_enabled;
+  }
+  if (body.alert_scope !== undefined) {
+    if (body.alert_scope !== "all" && body.alert_scope !== "filtered")
+      return NextResponse.json({ error: "alert_scope must be 'all' or 'filtered'" }, { status: 400 });
+    patch.alert_scope = body.alert_scope;
   }
 
   if (Object.keys(patch).length === 0)

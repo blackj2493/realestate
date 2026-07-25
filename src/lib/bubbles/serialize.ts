@@ -26,6 +26,8 @@ import type {
   PersonaType,
   TerminalFilterState,
 } from "@/lib/personas/personaConfig";
+import type { UniversalFilterState } from "@/lib/filters/types";
+import type { TransactionMode, PropertyClass } from "@/lib/filters/fundamentals";
 
 export type BubbleAreaType = "draw" | "commute" | "school" | "city";
 
@@ -38,6 +40,13 @@ export interface BubbleFiltersSnapshot {
   commute: Omit<CommuteState, "polygon">;
   /** school WITHOUT enabled flag (re-enabled on rehydrate). */
   school: SchoolState;
+  /** Universal basics (price band, beds, baths, types, …) — captured since
+   *  alert_scope 'filtered' (095). Optional: pre-095 bubbles never saved them,
+   *  which is why the 'filtered' toggle requires a re-save on old bubbles. */
+  universalFilters?: UniversalFilterState;
+  /** Captured for honest clause translation in the alerts worker. */
+  transactionMode?: TransactionMode;
+  propertyClass?: PropertyClass;
 }
 
 export interface BubbleSourceDraw {
@@ -89,6 +98,8 @@ export interface Bubble extends BubblePayload {
   /** Nightly new-listing digest toggle (default ON; migration 034). Optional so
    *  pre-034 API payloads stay assignable. */
   alerts_enabled?: boolean;
+  /** Digest match scope (migration 095): 'all' (default) | 'filtered'. */
+  alert_scope?: "all" | "filtered";
   notify_since?: string | null;
 }
 
@@ -146,6 +157,9 @@ interface StoreSliceForSave {
   school: SchoolState;
   drawPolygon: [number, number][] | null;
   drawPoints: [number, number][];
+  universalFilters: UniversalFilterState;
+  transactionMode: TransactionMode;
+  propertyClass: PropertyClass;
 }
 
 /**
@@ -173,6 +187,9 @@ export function buildBubblePayload(
       minutes: store.commute.minutes,
     },
     school: store.school,
+    universalFilters: store.universalFilters,
+    transactionMode: store.transactionMode,
+    propertyClass: store.propertyClass,
   };
 
   if (opts.area_type === "draw") {
@@ -235,6 +252,9 @@ export function buildBubblePayload(
 export interface StoreSettersForLoad {
   setActivePersona: (p: PersonaType) => void;
   setFilters: (f: TerminalFilterState) => void;
+  /** Restores the universal basics captured since 095; pre-095 bubbles skip it.
+   *  Optional so existing callers stay assignable. */
+  setUniversalFilter?: (key: string, value: UniversalFilterState[string]) => void;
   setLocation: (loc: string) => void;
   setCommute: (patch: Partial<CommuteState>) => void;
   setCommutePolygon: (polygon: [number, number][] | null) => void;
@@ -257,6 +277,15 @@ export function applyBubbleToStore(
   if (!f) return; // city alert rows carry no filter snapshot and never rehydrate the terminal
   setters.setActivePersona(f.activePersona);
   setters.setFilters(f.filters);
+  // Universal basics (beds/price/types…) — captured since 095. Restored per key so
+  // unknown/renamed keys degrade to no-ops. transactionMode/propertyClass are NOT
+  // restored: mode derives from the active layer tabs (transactionModeForLayers)
+  // and forcing it here would desync them — they're captured for the alerts worker.
+  if (f.universalFilters && setters.setUniversalFilter) {
+    for (const [key, value] of Object.entries(f.universalFilters)) {
+      setters.setUniversalFilter(key, value);
+    }
+  }
   setters.setLocation(f.location ?? "");
 
   // Clear all three area sources first, then populate the one this bubble owns.
