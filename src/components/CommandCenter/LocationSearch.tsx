@@ -129,7 +129,9 @@ export default function LocationSearch({
             results.unshift({
               kind: "address",
               label: hit.label,
-              sublabel: "Not on the market — view the address profile",
+              sublabel: "Not on the market",
+              // Coords power the explicit Map/Profile button pair on this row.
+              geo: { lat: hit.lat, lng: hit.lng },
             });
           }
         }
@@ -305,9 +307,46 @@ export default function LocationSearch({
                   <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
                 )}
               </span>
-              <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
-                {tagFor(s)}
-              </span>
+              {/* Geocoded not-listed address: the two destinations as EXPLICIT
+                  buttons (owner: nobody knew where to click) — bordered Map
+                  (centered-terminal deep link, PR #155 contract) + solid Profile.
+                  Row-click still opens the profile (unchanged default). */}
+              {s.geo ? (
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(
+                        `/properties?lat=${s.geo!.lat.toFixed(6)}&lng=${s.geo!.lng.toFixed(6)}&z=14&pin=${encodeURIComponent(s.label.split(",")[0])}`
+                      );
+                      setValue("");
+                      closeAndBlur();
+                    }}
+                    className="flex items-center gap-1 border border-cyan-500/50 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-700 transition-colors hover:border-cyan-400 hover:bg-cyan-500/10 dark:text-cyan-300"
+                  >
+                    <MapPin className="h-3 w-3" />
+                    Map
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      select(s);
+                    }}
+                    className="flex items-center gap-1 bg-cyan-500 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                  >
+                    <Home className="h-3 w-3" />
+                    Profile
+                  </span>
+                </span>
+              ) : (
+                <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {tagFor(s)}
+                </span>
+              )}
               {s.count !== undefined && (
                 <span className="w-16 shrink-0 text-right font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
                   {s.count.toLocaleString()}
