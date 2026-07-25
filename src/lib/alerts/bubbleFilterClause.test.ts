@@ -75,6 +75,37 @@ describe("bubbleAlertFilter", () => {
     expect(out.label).toContain("2");
   });
 
+  it("city lens variant: dashboard-lens semantics + readable label", () => {
+    const out = bubbleAlertFilter({
+      lens: {
+        windowDays: 7,
+        transactionType: "sale",
+        propertyTypes: ["detached", "town"],
+        minBeds: 3,
+        bedsExact: false,
+        minBaths: 0,
+        bathsExact: false,
+        minGarage: 2,
+        garageExact: false,
+        basement: "finished",
+        minFrontage: 0,
+      },
+    });
+    expect(out.clause).toBeTruthy();
+    expect(out.clause).toContain("ListPrice:>=100000");
+    expect(out.clause).toContain("PropertySubType"); // type expansion via the dashboard builder
+    expect(out.clause).toContain("ParkingTotal:>=2");
+    expect(out.label).toContain("Detached/Townhouse");
+    expect(out.label).toContain("3+ bd");
+    expect(out.label).toContain("finished bsmt");
+  });
+
+  it("city lens with junk fields degrades to defaults, never throws", () => {
+    const out = bubbleAlertFilter({ lens: { windowDays: "x", propertyTypes: 42 } });
+    expect(out.clause).toBeTruthy(); // floor + transaction at minimum
+    expect(out.label).toBeNull(); // nothing active → area-wide (≈ 'all')
+  });
+
   it("rent-mode snapshot labels itself and uses rent price bounds", () => {
     const out = bubbleAlertFilter({
       ...BASE_SNAPSHOT,

@@ -13,7 +13,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/browser";
-import type { Bubble, BubblePayload } from "./serialize";
+import type { Bubble, BubbleFilters, BubblePayload } from "./serialize";
 
 const PENDING_KEY = "pp_pending_bubble";
 
@@ -38,6 +38,9 @@ interface BubbleState {
   setAlertsEnabled: (id: string, enabled: boolean) => Promise<void>;
   /** Digest match scope: 'all' (every listing in the area) | 'filtered' (saved snapshot). */
   setAlertScope: (id: string, scope: "all" | "filtered") => Promise<void>;
+  /** One-click capture: replace the bubble's saved filters AND switch it to
+   *  'filtered' alerts in a single PATCH (terminal snapshot or dashboard lens). */
+  updateAlertFilters: (id: string, filters: BubbleFilters) => Promise<void>;
 }
 
 export const useBubblesStore = create<BubbleState>((set, get) => ({
@@ -142,6 +145,22 @@ export const useBubblesStore = create<BubbleState>((set, get) => ({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alert_scope: scope }),
+      });
+      if (!res.ok) set((s) => ({ items: { ...s.items, [id]: prev } }));
+    } catch {
+      set((s) => ({ items: { ...s.items, [id]: prev } }));
+    }
+  },
+
+  updateAlertFilters: async (id, filters) => {
+    const prev = get().items[id];
+    if (!prev) return;
+    set((s) => ({ items: { ...s.items, [id]: { ...prev, filters, alert_scope: "filtered" } } }));
+    try {
+      const res = await fetch(`/api/bubbles/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters, alert_scope: "filtered" }),
       });
       if (!res.ok) set((s) => ({ items: { ...s.items, [id]: prev } }));
     } catch {
