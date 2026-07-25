@@ -125,26 +125,69 @@ export default function NeighbourhoodLeaderboard({
       .slice(0, MAX_ROWS);
   }, [listings, m]);
 
+  // Bars scale to the RANGE of shown medians, not zero: cap rates cluster (4.2–4.8%),
+  // so a zero-based scale rendered six near-identical full-width stripes. Range
+  // scaling turns a 0.6pt spread into a 15%→100% length spread the eye can rank.
+  const minMedian = rows.length ? rows[rows.length - 1].median : 0;
   const maxMedian = rows.length ? rows[0].median : 1;
+  const barPct = (v: number) =>
+    maxMedian === minMedian ? 100 : 15 + 85 * ((v - minMedian) / (maxMedian - minMedian));
   const sampled = useMemo(
     () => listings.reduce((n, l) => (m.get(l) != null && (m.get(l) as number) > 0 && (l.CityRegion || "").trim() ? n + 1 : n), 0),
     [listings, m]
   );
   const mapUrl = `/properties?city=${encodeURIComponent(selected)}`;
 
+  // One-line row: rank | name (fixed col, so every bar starts on a shared baseline)
+  // | inline range-scaled bar | value | ×n. The bar sits BETWEEN name and value —
+  // the previous under-row stripe left ~1,500px of dead track between them.
+  const renderRow = (r: Row, rank: number) => (
+    <li key={r.name}>
+      <Link
+        href={`/properties?lat=${r.lat.toFixed(6)}&lng=${r.lng.toFixed(6)}&z=14`}
+        className="group flex h-11 items-center gap-3 px-3.5 transition-colors hover:bg-cyan-500/5"
+      >
+        <span
+          className={`terminal-font w-4 shrink-0 text-right font-mono text-[10px] font-bold ${
+            rank === 1 ? "text-cyan-700 dark:text-cyan-300" : "text-muted-foreground"
+          }`}
+        >
+          {rank}
+        </span>
+        <span className="w-36 shrink-0 truncate text-sm font-medium text-foreground group-hover:text-cyan-700 sm:w-48 dark:group-hover:text-cyan-300">
+          {displayName(r.name, selected)}
+        </span>
+        <span className="h-1.5 min-w-8 flex-1 overflow-hidden rounded-sm bg-muted/30">
+          <span
+            className="block h-full rounded-sm bg-gradient-to-r from-cyan-600/80 to-cyan-400 dark:from-cyan-500/60 dark:to-cyan-300/90"
+            style={{ width: `${barPct(r.median)}%` }}
+          />
+        </span>
+        <span className="terminal-font w-14 shrink-0 text-right font-mono text-sm font-bold tabular-nums text-foreground">
+          {m.fmt(r.median)}
+        </span>
+        <span className="terminal-font w-7 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+          ×{r.count}
+        </span>
+      </Link>
+    </li>
+  );
+
+  // Two balanced columns on lg+ (ranks 1–3 | 4–6) — six full-width rows on a wide
+  // monitor read as sparse stripes; two tidy columns read as an instrument.
+  const split = Math.ceil(rows.length / 2);
+  const colA = rows.slice(0, split);
+  const colB = rows.slice(split);
+
   return (
-    <section className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+    <section className="dt-panel dt-reg border border-border bg-card dark:bg-card/40">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
-            Neighbourhood Heat
+          <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
+            Neighbourhood Heat{regions.length > 1 ? "" : ` — ${selected}`}
           </h2>
-          {regions.length > 1 ? (
+          {regions.length > 1 && (
             <RegionSwitcher regions={regions} selected={selected} onSelect={onSelect} />
-          ) : (
-            <span className="terminal-font text-sm font-bold uppercase tracking-widest text-muted-foreground">
-              · {selected}
-            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -177,66 +220,34 @@ export default function NeighbourhoodLeaderboard({
         </div>
       </div>
 
-      <p className="text-[11px] leading-snug text-muted-foreground">
-        {METRIC_CAPTION[metric]} Median per community over a sample of up to 100 active listings
-        (×n = listings behind each figure). Tap a row to see it on the map.
-      </p>
-
-      <div className="border border-border bg-card dark:bg-card/40">
-        {loading ? (
-          <div className="space-y-2 p-3">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-9 animate-pulse bg-muted/40" />
-            ))}
+      {loading ? (
+        <div className="grid grid-cols-1 gap-x-6 gap-y-2 p-3 lg:grid-cols-2">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-9 animate-pulse bg-muted/40" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex h-40 items-center justify-center text-center">
+          <div>
+            <Layers className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+            <p className="terminal-font text-xs text-muted-foreground">
+              No {m.label.toLowerCase()} data by community here
+            </p>
           </div>
-        ) : rows.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-center">
-            <div>
-              <Layers className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="terminal-font text-xs text-muted-foreground">
-                No {m.label.toLowerCase()} data by community here
-              </p>
-            </div>
-          </div>
-        ) : (
-          <ol className="divide-y divide-border">
-            {rows.map((r, i) => (
-              <li key={r.name}>
-                <Link
-                  href={`/properties?lat=${r.lat.toFixed(6)}&lng=${r.lng.toFixed(6)}&z=14`}
-                  className="group block px-3.5 py-2.5 transition-colors hover:bg-cyan-500/5"
-                >
-                  <span className="flex items-baseline gap-2.5">
-                    <span className="terminal-font w-4 shrink-0 text-right text-[10px] font-bold text-muted-foreground">
-                      {i + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-300">
-                      {displayName(r.name, selected)}
-                    </span>
-                    <span className="terminal-font shrink-0 font-mono text-sm font-bold tabular-nums text-foreground">
-                      {m.fmt(r.median)}
-                    </span>
-                    <span className="terminal-font shrink-0 font-mono text-[10px] text-muted-foreground">
-                      ×{r.count}
-                    </span>
-                  </span>
-                  <span className="mt-1.5 ml-[26px] block h-1.5 rounded-sm bg-muted/40">
-                    <span
-                      className="block h-full rounded-sm bg-gradient-to-r from-cyan-600/70 to-cyan-400/80 dark:from-cyan-500/50 dark:to-cyan-300/70"
-                      style={{ width: `${Math.max(6, (r.median / maxMedian) * 100)}%` }}
-                    />
-                  </span>
-                </Link>
-              </li>
-            ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-border">
+          <ol className="divide-y divide-border/60">{colA.map((r, i) => renderRow(r, i + 1))}</ol>
+          <ol className="divide-y divide-border/60 max-lg:border-t max-lg:border-border/60">
+            {colB.map((r, i) => renderRow(r, split + i + 1))}
           </ol>
-        )}
-        {!loading && rows.length > 0 && (
-          <p className="terminal-font border-t border-border px-3.5 py-1.5 text-right text-[9px] uppercase tracking-wider text-muted-foreground">
-            {sampled} of up to 100 active in sample
-          </p>
-        )}
-      </div>
+        </div>
+      )}
+
+      <p className="terminal-font flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border px-3.5 py-1.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+        <span className="normal-case tracking-normal">{METRIC_CAPTION[metric]} Tap a row to see it on the map.</span>
+        {!loading && rows.length > 0 && <span>{sampled} of up to 100 active in sample</span>}
+      </p>
     </section>
   );
 }
