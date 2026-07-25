@@ -19,7 +19,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, Mail } from "lucide-react";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,9 @@ export default function CityAlertBell({
           role="group"
           aria-label={`Alert scope for ${city}`}
         >
+          <span className="flex items-center border-r border-border px-1.5 text-muted-foreground" aria-hidden="true">
+            <Mail className="h-3 w-3" />
+          </span>
           <button
             type="button"
             aria-pressed={scope === "all"}
@@ -98,7 +101,7 @@ export default function CityAlertBell({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            All
+            All listings
           </button>
           <button
             type="button"
@@ -112,7 +115,7 @@ export default function CityAlertBell({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            My filters
+            My filters only
           </button>
         </span>
       )}
