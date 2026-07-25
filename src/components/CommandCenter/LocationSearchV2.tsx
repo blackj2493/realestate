@@ -585,9 +585,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           </span>
                         )}
                         {/* Geocoded address (no listing anywhere) → its address-profile page
-                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action.
-                            Always visible (not hover-gated): this chip is the only touch-
-                            reachable path to the profile from the terminal. */}
+                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action
+                            (the row itself). Rendered as a SOLID button with an action verb —
+                            the old ghost "Profile" chip read as a status tag and nobody
+                            realized it was clickable (owner, 2026-07-24). Always visible
+                            (not hover-gated): it's the only touch-reachable path to the
+                            profile from the terminal. */}
                         {item.category === "geo" && addressProfileHref(item.label) && (
                           <span
                             role="button"
@@ -597,10 +600,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                               const href = addressProfileHref(item.label);
                               if (href) router.push(href);
                             }}
-                            className="flex shrink-0 items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 transition-colors hover:border-cyan-400 hover:text-cyan-200 dark:text-cyan-300"
+                            className="flex shrink-0 items-center gap-1 bg-cyan-500 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
                           >
-                            <Home className="h-2.5 w-2.5" />
-                            Profile
+                            <Home className="h-3 w-3" />
+                            View profile →
                           </span>
                         )}
                         {item.provenance && item.category !== "sold" && item.category !== "soldAddress" && item.category !== "community" && (
