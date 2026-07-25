@@ -37,6 +37,7 @@ export function useBubbleHydration(): void {
 
   const setActivePersona = useCommandCenterStore((s) => s.setActivePersona);
   const setFilters = useCommandCenterStore((s) => s.setFilters);
+  const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
   const setCommute = useCommandCenterStore((s) => s.setCommute);
   const setCommutePolygon = useCommandCenterStore((s) => s.setCommutePolygon);
@@ -61,6 +62,7 @@ export function useBubbleHydration(): void {
         applyBubbleToStore(item, {
           setActivePersona,
           setFilters,
+          setUniversalFilter,
           setLocation,
           setCommute,
           setCommutePolygon,
@@ -80,6 +82,7 @@ export function useBubbleHydration(): void {
     searchParams,
     setActivePersona,
     setFilters,
+    setUniversalFilter,
     setLocation,
     setCommute,
     setCommutePolygon,

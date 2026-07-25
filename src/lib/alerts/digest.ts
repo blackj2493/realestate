@@ -181,7 +181,12 @@ function dropRowsHtml(drops: DropAlert[]): string {
 }
 
 function bubbleSectionHtml(b: BubbleSection): string {
-  const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>`;
+  // alert_scope 'filtered': always show WHAT the alert matched, so a quiet or
+  // short digest is legible ("why didn't I see X?" → it didn't fit the filters).
+  const filterLine = b.filterLabel
+    ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">filtered to: ${b.filterLabel}</div>`
+    : "";
+  const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>${filterLine}`;
   if (b.collapsed) {
     return `${title}
       <div style="font-size:13px;color:#475569;margin-top:4px;">
@@ -289,8 +294,8 @@ export function renderAlertsDigest(
         p.bubbles
           .map((b) =>
             b.collapsed
-              ? `• ${b.bubbleName}: ${b.total} new listings — view in the app`
-              : `• ${b.bubbleName} (${b.total} new):\n` +
+              ? `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""}: ${b.total} new listings — view in the app`
+              : `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${b.total} new):\n` +
                 b.listings
                   .map(
                     (l) =>

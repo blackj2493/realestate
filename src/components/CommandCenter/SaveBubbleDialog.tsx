@@ -50,6 +50,11 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
   const school = useCommandCenterStore((s) => s.school);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
   const drawPoints = useCommandCenterStore((s) => s.drawPoints);
+  // Universal basics + mode/class — captured in the snapshot since 095 so the
+  // nightly worker can honour alert_scope 'filtered' with terminal-identical clauses.
+  const universalFilters = useCommandCenterStore((s) => s.universalFilters);
+  const transactionMode = useCommandCenterStore((s) => s.transactionMode);
+  const propertyClass = useCommandCenterStore((s) => s.propertyClass);
 
   const create = useBubblesStore((s) => s.create);
   const signedIn = useBubblesStore((s) => s.signedIn);
@@ -131,6 +136,9 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
             school,
             drawPolygon,
             drawPoints,
+            universalFilters,
+            transactionMode,
+            propertyClass,
           },
           {
             name: name.trim(),
@@ -153,6 +161,9 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
           school,
           drawPolygon,
           drawPoints,
+          universalFilters,
+          transactionMode,
+          propertyClass,
         },
         { name: name.trim(), area_type: areaType }
       );
