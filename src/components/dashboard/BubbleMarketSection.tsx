@@ -202,7 +202,11 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
   const scope: "all" | "filtered" = bubble.alert_scope === "filtered" ? "filtered" : "all";
   return (
     <>
-      {enabled && hasSnapshot && (
+      {/* Always visible while alerts are on (city bells excepted — whole-city by
+          design). Hiding it on pre-095 bubbles made the feature undiscoverable
+          (owner: "I don't see it") — now "My filters" renders DISABLED with the
+          re-save instruction instead of silently not existing. */}
+      {enabled && bubble.area_type !== "city" && (
         <div
           className="terminal-font flex items-stretch border border-border text-[10px] uppercase tracking-wider"
           role="group"
@@ -214,22 +218,36 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
               ["all", "All"],
               ["filtered", "My filters"],
             ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={scope === value}
-              onClick={() => scope !== value && setAlertScope(bubble.id, value)}
-              className={cn(
-                "px-2 py-1 transition-colors",
-                scope === value
-                  ? "bg-cyan-600/15 font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {label}
-            </button>
-          ))}
+          ).map(([value, label]) => {
+            const locked = value === "filtered" && !hasSnapshot;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={scope === value}
+                aria-disabled={locked}
+                title={
+                  locked
+                    ? "This area was saved before filters were captured. Open it in the Terminal, set your filters, and Save it again to enable filtered alerts."
+                    : undefined
+                }
+                onClick={() => {
+                  if (locked || scope === value) return;
+                  setAlertScope(bubble.id, value);
+                }}
+                className={cn(
+                  "px-2 py-1 transition-colors",
+                  locked
+                    ? "cursor-not-allowed text-muted-foreground/50"
+                    : scope === value
+                      ? "bg-cyan-600/15 font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
+                      : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
       <button
