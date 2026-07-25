@@ -592,6 +592,9 @@ export interface SearchSuggestion {
   sublabel?: string;            // e.g. the address under an MLS#
   count?: number;               // city / neighbourhood only
   listing?: ListingDocument;    // address / mls only
+  /** Geocoded not-listed address rows only — powers the explicit Map/Profile
+   *  action pair in the header dropdown (centered-map deep link needs coords). */
+  geo?: { lat: number; lng: number };
 }
 
 const SALES_FLOOR = 'ListPrice:>=100000';

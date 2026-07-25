@@ -592,18 +592,32 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             (not hover-gated): it's the only touch-reachable path to the
                             profile from the terminal. */}
                         {item.category === "geo" && addressProfileHref(item.label) && (
-                          <span
-                            role="button"
-                            tabIndex={-1}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const href = addressProfileHref(item.label);
-                              if (href) router.push(href);
-                            }}
-                            className="flex shrink-0 items-center gap-1 bg-cyan-500 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
-                          >
-                            <Home className="h-3 w-3" />
-                            View profile →
+                          <span className="flex shrink-0 items-center gap-1.5">
+                            {/* Bordered Map button deliberately does NOT stop propagation —
+                                it labels the row's own fly-to action rather than duplicating
+                                it. Same visual pair as the header dropdown (owner: make the
+                                two destinations unmistakable). */}
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              className="flex items-center gap-1 border border-cyan-500/50 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-700 transition-colors hover:border-cyan-400 hover:bg-cyan-500/10 dark:text-cyan-300"
+                            >
+                              <MapPin className="h-3 w-3" />
+                              Map
+                            </span>
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const href = addressProfileHref(item.label);
+                                if (href) router.push(href);
+                              }}
+                              className="flex items-center gap-1 bg-cyan-500 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                            >
+                              <Home className="h-3 w-3" />
+                              Profile
+                            </span>
                           </span>
                         )}
                         {item.provenance && item.category !== "sold" && item.category !== "soldAddress" && item.category !== "community" && (
