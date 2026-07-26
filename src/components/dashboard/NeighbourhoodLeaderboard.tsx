@@ -33,11 +33,13 @@ type MetricId = "cap" | "dom" | "drop" | "price";
 const fmtMoney = (v: number) =>
   v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(v >= 10_000_000 ? 1 : 2).replace(/\.?0+$/, "")}M` : `$${Math.round(v / 1000)}k`;
 
+// Order = owner call 2026-07-25: lead with the lens every user understands
+// (Asking $, also the default), then the bargain lenses, investor yield last.
 const METRICS: { id: MetricId; label: string; fmt: (v: number) => string }[] = [
-  { id: "cap", label: "Cap Rate", fmt: (v) => `${v.toFixed(1)}%` },
-  { id: "dom", label: "True DOM", fmt: (v) => `${Math.round(v)}d` },
-  { id: "drop", label: "Price Drop", fmt: fmtMoney },
   { id: "price", label: "Asking $", fmt: fmtMoney },
+  { id: "drop", label: "Price Drop", fmt: fmtMoney },
+  { id: "dom", label: "True DOM", fmt: (v) => `${Math.round(v)}d` },
+  { id: "cap", label: "Cap Rate", fmt: (v) => `${v.toFixed(1)}%` },
 ];
 
 const METRIC_CAPTION: Record<MetricId, string> = {
@@ -68,7 +70,7 @@ export default function NeighbourhoodLeaderboard({
   selected: string;
   onSelect: (region: string) => void;
 }) {
-  const [metric, setMetric] = useState<MetricId>("cap");
+  const [metric, setMetric] = useState<MetricId>("price");
   const [heat, setHeat] = useState<HeatStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
