@@ -15,8 +15,10 @@
  */
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
 import { parseTypeKeys } from "@/lib/dashboard/propertyTypes";
 import {
@@ -57,7 +59,12 @@ export default async function AnalyticsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/analytics");
+  // Anonymous visitors get a locked preview instead of the old hard redirect to /login —
+  // Market Trends is a top-nav destination and the bounce was a dead end for the
+  // highest-intent anonymous surface. No VOW value ever reaches the DOM here: the
+  // placeholder is a static skeleton, and both market endpoints independently return a
+  // locked shape for anonymous callers (defense in depth).
+  if (!user) return <AnalyticsTeaser />;
   if (!(await hasAcceptedTerms(user.id))) redirect("/welcome?next=/analytics");
 
   // Resolve the initial scope from the URL (region + property-type chips), exactly as
@@ -130,6 +137,41 @@ async function AnalyticsData({ region, typeKeys }: { region: string; typeKeys: s
   });
 
   return <AnalyticsClient initial={initial} />;
+}
+
+/**
+ * Anonymous locked preview: page header + the streaming skeleton under the shared VOW
+ * lock, plus an honest escape hatch to the free public trackers. The leaderboard and
+ * every data panel stay unmounted — nothing sold-derived is fetched or rendered.
+ */
+function AnalyticsTeaser() {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-6">
+      <h1 className="terminal-font text-lg font-bold uppercase tracking-wider text-foreground">
+        Market Trends
+      </h1>
+      <p className="mt-1 max-w-2xl text-sm text-foreground/70">
+        Sold-price trends, true days on market, sell-through and price-cut pressure for
+        every GTA market.
+      </p>
+      <div className="relative mt-4 overflow-hidden">
+        <AnalyticsSkeleton />
+        <VowGateOverlay
+          headline="See how every GTA market is actually moving"
+          message="Sold-price trends, true days on market and price-cut pressure — free with one sign-in."
+          ctaLabel="See it free →"
+          next="/analytics"
+        />
+      </div>
+      <p className="mt-6 text-center text-sm text-foreground/60">
+        Just browsing? The{" "}
+        <Link href="/data" className="underline underline-offset-2 hover:text-foreground">
+          public data trackers
+        </Link>{" "}
+        are free — no account needed.
+      </p>
+    </div>
+  );
 }
 
 /** Lightweight above-the-fold skeleton shown while AnalyticsData streams. Theme-aware. */

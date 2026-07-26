@@ -88,6 +88,24 @@ export default function DiscoveryRoot() {
     return () => window.clearTimeout(id);
   }, [eligible, surface]);
 
+  // The nudge must never camp over the page: the first scroll on phones (where it
+  // overlaps the listing page's sticky action bar) or 15s anywhere auto-hides it,
+  // and either path counts as seen — one appearance per surface per device.
+  React.useEffect(() => {
+    if (!nudge) return;
+    const hide = () => {
+      setNudge(false);
+      dismissNudge(surface);
+    };
+    const timer = window.setTimeout(hide, 15000);
+    const onScroll = () => hide();
+    if (isMobile) window.addEventListener("scroll", onScroll, { once: true, passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      if (isMobile) window.removeEventListener("scroll", onScroll);
+    };
+  }, [nudge, isMobile, surface, dismissNudge]);
+
   const unseenNew = hydrated
     ? newFeatures().filter((f) => seen[f.id] === undefined).length
     : 0;
@@ -109,7 +127,15 @@ export default function DiscoveryRoot() {
 
       {/* First-run nudge — bottom-left so it never collides with the launcher. */}
       {nudge && !overlayUp && (
-        <div className="pp-fade-up fixed left-4 z-[140] w-[min(20rem,calc(100vw-2rem))] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl [bottom:max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          className={cn(
+            "pp-fade-up fixed left-4 z-[140] w-[min(20rem,calc(100vw-2rem))] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl",
+            // Phones: clear the listing page's sticky action bar instead of covering it.
+            isMobile
+              ? "[bottom:max(5.5rem,env(safe-area-inset-bottom))]"
+              : "[bottom:max(1rem,env(safe-area-inset-bottom))]"
+          )}
+        >
           <button
             type="button"
             onClick={() => {
