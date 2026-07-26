@@ -45,7 +45,7 @@ async function computeHeat(region: string): Promise<HeatStats> {
         q: "*",
         query_by: "City",
         filter_by: `${locationFilter(region)} && ${ACTIVE_FILTER}`,
-        include_fields: "CityRegion,cap_rate_est,TrueDom,TotalPriceDrop,location",
+        include_fields: "CityRegion,cap_rate_est,TrueDom,TotalPriceDrop,ListPrice,location",
         per_page: PER_PAGE,
         page,
       });
@@ -56,6 +56,7 @@ async function computeHeat(region: string): Promise<HeatStats> {
         cap_rate_est?: number;
         TrueDom?: number;
         TotalPriceDrop?: number;
+        ListPrice?: number;
         location?: [number, number];
       };
       const loc = Array.isArray(d.location) && d.location.length === 2 ? d.location : null;
@@ -64,6 +65,7 @@ async function computeHeat(region: string): Promise<HeatStats> {
         cap: capRateOrNull(d.cap_rate_est),
         dom: d.TrueDom,
         drop: d.TotalPriceDrop,
+        price: d.ListPrice,
         lat: loc ? loc[0] : null,
         lng: loc ? loc[1] : null,
       });
@@ -73,7 +75,9 @@ async function computeHeat(region: string): Promise<HeatStats> {
   return aggregateCommunities(items);
 }
 
-const getHeatCached = unstable_cache(computeHeat, ["dashboard-neighbourhood-heat"], {
+// Key versioned: v2 added the price metric + full (unsliced) rankings — a bumped key
+// means an old cached shape can never be served to a client expecting the new one.
+const getHeatCached = unstable_cache(computeHeat, ["dashboard-neighbourhood-heat", "v2"], {
   revalidate: 3600,
 });
 

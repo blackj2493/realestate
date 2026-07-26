@@ -3,7 +3,6 @@ import {
   aggregateCommunities,
   hasUsableHeat,
   MIN_COMMUNITY_N,
-  MAX_ROWS,
   type HeatInput,
 } from "./neighbourhoodHeat";
 
@@ -12,6 +11,7 @@ const item = (region: string, cap: number | null, extra: Partial<HeatInput> = {}
   cap,
   dom: null,
   drop: null,
+  price: null,
   lat: 43.7,
   lng: -79.7,
   ...extra,
@@ -34,14 +34,30 @@ describe("aggregateCommunities", () => {
     expect(stats.analyzed).toBe(13);
   });
 
-  it(`drops communities below ${MIN_COMMUNITY_N} listings and caps at ${MAX_ROWS} rows`, () => {
+  it(`drops communities below ${MIN_COMMUNITY_N} listings but returns EVERY qualifier, ranked`, () => {
     const many = Array.from({ length: 8 }, (_, i) =>
       community(`Area ${i}`, [3 + i, 3 + i, 3 + i, 3 + i, 3 + i])
     ).flat();
     const stats = aggregateCommunities([...many, ...community("Thin", [9, 9, 9, 9])]);
-    expect(stats.cap).toHaveLength(MAX_ROWS);
+    // The full ranking comes back (the client collapses to its teaser view) — a
+    // truncated list would make "where does MY community rank?" unanswerable.
+    expect(stats.cap).toHaveLength(8);
     expect(stats.cap.find((r) => r.name === "Thin")).toBeUndefined();
     expect(stats.cap[0].name).toBe("Area 7"); // highest median leads
+    expect(stats.cap[7].name).toBe("Area 0"); // ...down to the lowest qualifier
+  });
+
+  it("ranks median asking price as its own lens", () => {
+    const priced = (region: string, prices: number[]) =>
+      prices.map((p) => item(region, null, { price: p }));
+    const stats = aggregateCommunities([
+      ...priced("Premium Pocket", [1_200_000, 1_250_000, 1_180_000, 1_300_000, 1_220_000]),
+      ...priced("Value Pocket", [740_000, 760_000, 755_000, 750_000, 745_000]),
+    ]);
+    expect(stats.price.map((r) => r.name)).toEqual(["Premium Pocket", "Value Pocket"]);
+    expect(stats.price[0].median).toBe(1_220_000);
+    expect(stats.price[1].median).toBe(750_000);
+    expect(stats.cap).toEqual([]); // no cap data in this set
   });
 
   it("computes the deep-link centroid from contributing listings only", () => {

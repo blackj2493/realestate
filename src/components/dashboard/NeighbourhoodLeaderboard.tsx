@@ -17,8 +17,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Layers } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Layers } from "lucide-react";
 import {
+  COLLAPSED_ROWS,
   MIN_COMMUNITY_N,
   MIN_QUALIFYING_COMMUNITIES,
   hasUsableHeat,
@@ -27,22 +28,23 @@ import {
 } from "@/lib/dashboard/neighbourhoodHeat";
 import RegionSwitcher from "./RegionSwitcher";
 
-type MetricId = "cap" | "dom" | "drop";
+type MetricId = "cap" | "dom" | "drop" | "price";
+
+const fmtMoney = (v: number) =>
+  v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(v >= 10_000_000 ? 1 : 2).replace(/\.?0+$/, "")}M` : `$${Math.round(v / 1000)}k`;
 
 const METRICS: { id: MetricId; label: string; fmt: (v: number) => string }[] = [
   { id: "cap", label: "Cap Rate", fmt: (v) => `${v.toFixed(1)}%` },
   { id: "dom", label: "True DOM", fmt: (v) => `${Math.round(v)}d` },
-  {
-    id: "drop",
-    label: "Price Drop",
-    fmt: (v) => (v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v / 1000)}k`),
-  },
+  { id: "drop", label: "Price Drop", fmt: fmtMoney },
+  { id: "price", label: "Asking $", fmt: fmtMoney },
 ];
 
 const METRIC_CAPTION: Record<MetricId, string> = {
   cap: "Communities where active listings show the highest cap rates (rental yield).",
   dom: "Communities where active listings have sat on the market the longest.",
   drop: "Communities where sellers have made the deepest price cuts.",
+  price: "Communities ranked by median asking price — premium pockets first, most affordable last.",
 };
 
 /**
@@ -69,10 +71,12 @@ export default function NeighbourhoodLeaderboard({
   const [metric, setMetric] = useState<MetricId>("cap");
   const [heat, setHeat] = useState<HeatStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setExpanded(false); // a new region is a new ranking — start compact again
     fetch(`/api/dashboard/neighbourhood-heat?region=${encodeURIComponent(selected)}`)
       .then((r) => r.json())
       .then((d) => {
@@ -86,14 +90,15 @@ export default function NeighbourhoodLeaderboard({
   }, [selected]);
 
   const m = METRICS.find((x) => x.id === metric)!;
-  const rows: CommunityStat[] = heat ? heat[metric] : [];
+  const allRows: CommunityStat[] = heat?.[metric] ?? [];
+  const rows = expanded ? allRows : allRows.slice(0, COLLAPSED_ROWS);
 
   // No metric can field a credible leaderboard here — the tile says nothing, so it
   // says nothing (silent-null convention).
   if (!loading && (!heat || !hasUsableHeat(heat))) return null;
 
-  // Bars scale to the RANGE of shown medians, not zero: cap rates cluster (4.2–4.8%),
-  // so a zero-based scale rendered near-identical full-width stripes.
+  // Bars scale to the RANGE of the rows on screen, not zero: cap rates cluster
+  // (4.2–4.8%), so a zero-based scale rendered near-identical full-width stripes.
   const minMedian = rows.length ? rows[rows.length - 1].median : 0;
   const maxMedian = rows.length ? rows[0].median : 1;
   const barPct = (v: number) =>
@@ -198,12 +203,27 @@ export default function NeighbourhoodLeaderboard({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-border">
-          <ol className="divide-y divide-border/60">{colA.map((r, i) => renderRow(r, i + 1))}</ol>
-          <ol className="divide-y divide-border/60 max-lg:border-t max-lg:border-border/60">
-            {colB.map((r, i) => renderRow(r, split + i + 1))}
-          </ol>
-        </div>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-border">
+            <ol className="divide-y divide-border/60">{colA.map((r, i) => renderRow(r, i + 1))}</ol>
+            <ol className="divide-y divide-border/60 max-lg:border-t max-lg:border-border/60">
+              {colB.map((r, i) => renderRow(r, split + i + 1))}
+            </ol>
+          </div>
+          {/* The route returns EVERY qualifying community — the collapsed view is a
+              teaser; this answers "where does MY community rank?". */}
+          {allRows.length > COLLAPSED_ROWS && (
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              className="terminal-font flex min-h-[36px] w-full items-center justify-center gap-1.5 border-t border-border text-[10px] font-bold uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/5 dark:text-cyan-400"
+            >
+              {expanded ? "Show top 6" : `Show all ${allRows.length} ranked communities`}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </button>
+          )}
+        </>
       )}
 
       <p className="terminal-font flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border px-3.5 py-1.5 text-[9px] uppercase tracking-wider text-muted-foreground">
