@@ -13,6 +13,7 @@ import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 import { aboveGradeBedsClause } from '@/lib/filters/filterRegistry';
 import { toSimpleRing } from '@/lib/geo/simplifyRing';
 import { reportSearchFailure } from '@/lib/telemetry/searchHealth';
+import { rankAddressSuggestions } from '@/lib/search/addressRank';
 
 // Typesense configuration.
 // NOTE: the host is intentionally hardcoded (Typesense Cloud) and is NOT read from env.
@@ -702,7 +703,11 @@ export async function suggestSearch(query: string): Promise<SearchSuggestion[]> 
       }
     }
 
-    out.push(...addresses.slice(0, 4), ...places.slice(0, 6));
+    // Re-rank by closeness to the typed string before slicing: Typesense's
+    // typo-tolerant order otherwise floats lookalikes (right civic number/wrong
+    // street, or a shared street-name word) above the typed address.
+    const rankedAddresses = rankAddressSuggestions(q, addresses, (a) => a.label);
+    out.push(...rankedAddresses.slice(0, 4), ...places.slice(0, 6));
   }
 
   if (out.length === 0) {

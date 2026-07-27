@@ -14,6 +14,7 @@
 import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client";
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { geocodeAddress } from "./geocodeClient";
+import { rankAddressSuggestions } from "./addressRank";
 import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
 const SALES_FLOOR = "ListPrice:>=100000";
@@ -253,11 +254,15 @@ export async function federatedSuggest(
 
   // The typed-but-unlisted address is the user's stated intent — it outranks fuzzy
   // lookalikes, so the sold-record/geo row renders ABOVE the address group.
+  // Re-rank address hits by closeness to the typed string before slicing: Typesense's
+  // typo-tolerant order otherwise floats lookalikes (same civic number, wrong street;
+  // or a shared street-name word) above the address the user actually typed.
+  const rankedAddresses = rankAddressSuggestions(q, addresses, (a) => a.label);
   const order: Array<[SuggestItem[], SuggestGroup["category"]]> = [
     [mls, "mls"],
     [soldAddress, "soldAddress"],
     [geo, "geo"],
-    [addresses.slice(0, 5), "address"],
+    [rankedAddresses.slice(0, 5), "address"],
     [communities.slice(0, 6), "community"],
   ];
   return order

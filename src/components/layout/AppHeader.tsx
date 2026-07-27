@@ -90,8 +90,10 @@ export default function AppHeader({
         <div className="flex-1" />
 
         {/* Primary section nav — pushed to the right, before the alerts/account
-            cluster. Inline on md+, drawer below (see MobileNav). */}
-        {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
+            cluster. Inline on md+, drawer below (see MobileNav). Rendered on
+            marketing pages too (/data, /glossary, /whats-my-home-hiding) so an
+            SEO visitor always has a path into Map / Market Trends / Dashboard. */}
+        <PrimaryNav className="hidden shrink-0 md:flex" />
 
         {/* Phone width budget (360-390px): smaller full wordmark + tighter gap +
             account button relocated to the drawer keep the control set (incl. the
@@ -113,14 +115,13 @@ export default function AppHeader({
           )}
           <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
           <WatchlistAlertsBell />
-          {/* Sign in/out is the widest control (~90px) — on app pages below md it
-              lives in the MobileNav drawer instead, so the full wordmark fits at
-              360px. Marketing pages have no drawer, so it stays inline there
-              (they also have no search icon/burger, so the row still fits). */}
-          <div className={variant === "app" ? "hidden md:flex" : "flex"}>
+          {/* Sign in/out is the widest control (~90px) — below md it lives in the
+              MobileNav drawer instead (both variants now render that drawer), so
+              the full wordmark + controls fit a 360px viewport. */}
+          <div className="hidden md:flex">
             <AccountButton />
           </div>
-          {variant === "app" && <MobileNav className="md:hidden" />}
+          <MobileNav className="md:hidden" />
         </div>
       </div>
 

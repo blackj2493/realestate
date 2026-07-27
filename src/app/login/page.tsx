@@ -59,7 +59,7 @@ export default async function LoginPage({
           {/* Title — scale matches the apply page hero heading */}
           <div className="text-center">
             <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
-              Terminal Access
+              Sign in
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               Sign in to sync your watchlist across devices and receive market alerts.
@@ -76,7 +76,7 @@ export default async function LoginPage({
             <p className="mt-6 text-center text-sm text-muted-foreground">
               New here? Enter your email above — first sign-in creates your account.{" "}
               <Link href="/apply" className="text-cyan-400 underline">
-                Learn about Terminal Access
+                Learn more
               </Link>
               .
             </p>
