@@ -22,9 +22,33 @@ import Logo from "@/components/Logo";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
 import { isFirstRunEntry } from "@/lib/auth/firstRunEntry";
+import { marketSourceFromNext } from "@/lib/auth/seedMarket";
+import { regionForCity } from "@/lib/dashboard/area";
+import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import AcceptTermsForm from "@/components/auth/AcceptTermsForm";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The market to seed a listing-origin signup with, inferred from where they're headed.
+ *
+ * Best-effort by design: this only ever ADDS a starting city to an otherwise empty
+ * workspace, so a miss costs nothing and must never block terms acceptance. The listing
+ * lookup is the same cached read the listing page itself just did (unstable_cache, keyed
+ * by ListingKey), so in the common flow — read listing, sign up, come back — it is a warm
+ * cache hit rather than a new query on the critical path.
+ */
+async function inferSeedMarket(explicitNext: string | null): Promise<string | null> {
+  const source = marketSourceFromNext(explicitNext);
+  if (!source) return null;
+  try {
+    if (source.kind === "city") return regionForCity(source.city);
+    const listing = await getListingDetailCached(source.listingKey);
+    return regionForCity(listing?.city);
+  } catch {
+    return null;
+  }
+}
 
 export default async function WelcomePage({
   searchParams,
@@ -48,6 +72,9 @@ export default async function WelcomePage({
   // Not accepted + nothing worth honouring = first-ever session: offer the market seed
   // and open the terminal. See isFirstRunEntry for why /dashboard counts as "nothing".
   const firstRun = isFirstRunEntry(explicitNext);
+  // A signup WITH a destination skips the picker, so infer its market instead of leaving
+  // the workspace empty. Only worth resolving when we're not going to ask anyway.
+  const seedMarket = firstRun ? null : await inferSeedMarket(explicitNext);
 
   return (
     <div className="flex min-h-app flex-col bg-background text-foreground">
@@ -69,7 +96,7 @@ export default async function WelcomePage({
           </p>
 
           <div className="mt-6">
-            <AcceptTermsForm next={safeNext} firstRun={firstRun} />
+            <AcceptTermsForm next={safeNext} firstRun={firstRun} seedMarket={seedMarket} />
           </div>
         </div>
       </div>
