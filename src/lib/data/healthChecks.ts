@@ -367,6 +367,31 @@ export function checkPriceLedger(input: {
   return [];
 }
 
+/**
+ * Transactional email failures (email_send_failures, migration 098). Exists because the
+ * welcome email silently failed for weeks when Vercel's Resend key was wrong — recording a
+ * row per miss and alerting here (from GitHub Actions, a channel that works even when the
+ * Vercel Resend credential is dead) is what turns that silence into a same-day signal.
+ *
+ * A `missing_key` is the loudest tell — the web runtime has no key at all.
+ */
+export function checkEmailFailures(failures: { kind: string; reason: string }[]): Problem[] {
+  if (failures.length === 0) return [];
+  const byKind = new Map<string, number>();
+  let missingKey = 0;
+  for (const f of failures) {
+    if (f.reason === "missing_key") missingKey++;
+    byKind.set(f.kind, (byKind.get(f.kind) ?? 0) + 1);
+  }
+  const breakdown = [...byKind.entries()].map(([k, n]) => `${k}×${n}`).join(", ");
+  const detail =
+    `${failures.length} transactional email send(s) failed recently (${breakdown})` +
+    (missingKey > 0
+      ? ` — ${missingKey} were 'missing_key' (RESEND_API_KEY absent from the web runtime — check Vercel env + redeploy)`
+      : " — check the Resend key value/status");
+  return [{ severity: "error", check: "email-delivery", detail }];
+}
+
 /** Repo migration files not recorded as applied — the migration-082 failure mode. */
 export function checkMigrationLedger(files: string[], applied: string[]): Problem[] {
   const out: Problem[] = [];

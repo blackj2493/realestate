@@ -13,9 +13,9 @@
  * Compliance: no sold/closing prices appear; "deemed reliable" notice + CASL mailing
  * address in the footer; one-click unsubscribe. Copy is deterministic (no LLM).
  */
-import { Resend } from "resend";
 import { SENDERS } from "./senders";
 import { marketingUnsubscribeUrl } from "./unsubscribe";
+import { sendTransactionalEmail, type SendResult } from "./sendEmail";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const MAIL_ADDRESS = "268 America Ave, Vaughan, ON L6A 3G7";
@@ -194,11 +194,12 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
  * Fire-and-forget welcome send. Best-effort: never throws to the caller (a failed
  * welcome must not break Terms acceptance). No-ops without RESEND_API_KEY.
  */
-export async function sendWelcomeEmail(to: string): Promise<void> {
-  if (!process.env.RESEND_API_KEY) return;
+export async function sendWelcomeEmail(to: string): Promise<SendResult> {
   const { subject, html, text } = renderWelcomeEmail(to);
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
+  // Observable, non-throwing send — a missing/bad key is logged + recorded (098) and caught
+  // by the data-health canary, instead of vanishing (the 2026-07 incident).
+  return sendTransactionalEmail({
+    kind: "welcome",
     from: SENDERS.welcome.from,
     replyTo: SENDERS.welcome.replyTo,
     to,

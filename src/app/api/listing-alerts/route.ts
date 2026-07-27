@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { SENDERS } from "@/lib/alerts/senders";
+import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import { renderConfirmationEmail } from "@/lib/alerts/confirmationEmail";
 import { unsubscribeUrl } from "@/lib/alerts/unsubscribe";
 import { SITE } from "@/lib/alerts/emailShell";
@@ -92,34 +92,29 @@ export async function POST(req: NextRequest) {
 
     // Best-effort confirmation to the subscriber — the DB row is the lead; email failure must
     // not 500. Doubles as first-touch: gets our domain into their inbox with a concrete promise.
-    try {
-      if (process.env.RESEND_API_KEY) {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const copy = KIND_COPY[kind];
-        const { subject, html, text } = renderConfirmationEmail({
-          email,
-          address,
-          city,
-          listingKey,
-          kindLabel: copy.label,
-          watchingFor: WATCHING_FOR[kind] || "changes",
-        });
-        await resend.emails.send({
-          from: SENDERS.confirmation.from,
-          replyTo: SENDERS.confirmation.replyTo,
-          to: email,
-          subject,
-          html,
-          text,
-          headers: {
-            "List-Unsubscribe": `<${unsubscribeUrl(email, SITE)}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
-        });
-      }
-    } catch (mailErr) {
-      console.error("[listing-alerts] confirmation email failed (lead saved):", mailErr);
-    }
+    // sendTransactionalEmail is observable + non-throwing (logs + records a missing/bad key).
+    const copy = KIND_COPY[kind];
+    const { subject, html, text } = renderConfirmationEmail({
+      email,
+      address,
+      city,
+      listingKey,
+      kindLabel: copy.label,
+      watchingFor: WATCHING_FOR[kind] || "changes",
+    });
+    await sendTransactionalEmail({
+      kind: "confirmation:listing-alerts",
+      from: SENDERS.confirmation.from,
+      replyTo: SENDERS.confirmation.replyTo,
+      to: email,
+      subject,
+      html,
+      text,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl(email, SITE)}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (e) {
