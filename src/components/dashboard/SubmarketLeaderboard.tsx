@@ -142,10 +142,18 @@ export default function SubmarketLeaderboard() {
                     {formatRegionLabel(s.region)}
                     <ArrowUpRight className="ml-1 inline h-3 w-3 text-muted-foreground" />
                   </Link>
+                  {/* The ranked metric shows once, as the right-aligned bold value; the
+                      inline stats carry only the OTHER two so the row never repeats itself. */}
                   <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">
-                    <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
-                    <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
-                    <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
+                    {opt.field !== "medianCapRate" && (
+                      <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
+                    )}
+                    {opt.field !== "stalePct" && (
+                      <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
+                    )}
+                    {opt.field !== "activeCount" && (
+                      <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
+                    )}
                   </div>
                   {/* Daylight yield bar (light only) — magnitude at a glance. */}
                   {v != null && (

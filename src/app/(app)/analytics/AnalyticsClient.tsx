@@ -422,7 +422,7 @@ function TrueDomPanel({ dom, loading }: { dom: DomDistData | null; loading: bool
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · relist-stitched TrueDom · across {active.toLocaleString()} active listings
+        source · true days on market (relisting-adjusted) · across {active.toLocaleString()} active listings
       </p>
     </div>
   );
@@ -483,7 +483,7 @@ function PriceCutPanel({ cuts, loading }: { cuts: PriceCutsData | null; loading:
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · relist-stitched TotalPriceDrop · {(cuts?.cutCount ?? 0).toLocaleString()} of{" "}
+        source · listings that cut their asking price · {(cuts?.cutCount ?? 0).toLocaleString()} of{" "}
         {active.toLocaleString()} active reduced
       </p>
     </div>
@@ -761,7 +761,7 @@ function SoldDynamicsPanel({ d, loading }: { d: SoldDynamicsData | null; loading
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · {sold.toLocaleString()} sold · board DaysOnMarket · OriginalListPrice · close $psf
+        source · {sold.toLocaleString()} sold · days on market · original list price · close $/sqft
       </p>
     </div>
   );
@@ -880,7 +880,7 @@ function AvmConfidencePanel({ avm, loading }: { avm: AvmReliabilityData | null; 
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · avm_audit_report · sales-weighted across {(avm?.cohortCount ?? 0).toLocaleString()} cohorts
+        source · home-value model audit · sales-weighted across {(avm?.cohortCount ?? 0).toLocaleString()} cohorts
       </p>
     </div>
   );
@@ -1087,7 +1087,7 @@ function SeasonalityPanel({ months, loading }: { months: SeasonMonthData[]; load
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · 5-year raw_vow_sold · each sale indexed to its own year’s median
+        source · 5 years of sold records · each sale indexed to its own year’s median
       </p>
     </div>
   );
@@ -1138,7 +1138,7 @@ function PriceLedgerPanel({ l, loading }: { l: PriceLedgerData | null; loading: 
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
-        source · price_events ledger · nightly capture · complements the net price-cut pressure above
+        source · price-cut ledger · nightly capture · complements the net price-cut pressure above
       </p>
     </div>
   );

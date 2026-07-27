@@ -13,7 +13,7 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
-import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, type SortDir } from "./columnSort";
+import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, dropEmptyColumns, type SortDir } from "./columnSort";
 import { makeCohortRanker } from "./cohortPercentiles";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -62,10 +62,22 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   }, []);
 
   const columns = PERSONA_CONFIG[activePersona].columns;
-  const visibleColumns = useMemo(() => fitLedgerColumns(columns, width), [columns, width]);
   const allProperties = searchResult?.listings || [];
   const visible = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
   const ms = searchResult?.processingTimeMs ?? 0;
+
+  // Adaptive columns (fix #21): drop any column no row in the result set can
+  // populate — most visibly Alpha Flag, which is all "—" on the homebuyer lens
+  // (and for anon, whose VOW-gated flags collapse to none). Computed over the
+  // FULL result set (like the percentile ranker) rather than the selection view
+  // so the column set is stable as the user selects/hides rows. Feeding this into
+  // the width-fit keeps the header and every row iterating the same list, so the
+  // flex grid stays aligned; the address card is always kept.
+  const populatedColumns = useMemo(
+    () => dropEmptyColumns(columns, searchResult?.listings ?? [], isAuthed),
+    [columns, searchResult, isAuthed]
+  );
+  const visibleColumns = useMemo(() => fitLedgerColumns(populatedColumns, width), [populatedColumns, width]);
 
   // Client-side column sort over the already-loaded set (instant, no refetch).
   // null = persona/server default order. Cleared on persona change so a sort

@@ -95,6 +95,7 @@ const METRICS: Partial<Record<HeadlineMetricId, TileMetric>> = {
     sub: (d) => (d.specialty ? `${d.specialty.cashflowCount.toLocaleString()} ≥${CASHFLOW_CAP_FLOOR}% cap` : null),
     dir: "higherGood",
     kind: "peer",
+    glossaryKey: "cashflowGrade",
   },
   priceCutShare: {
     label: "Price-Cut Share",
