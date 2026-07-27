@@ -10,6 +10,7 @@
  */
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
 import type { ActiveEvent } from "@/lib/address/nearbyForSale";
 import type { SoldNearEvent } from "@/lib/address/soldNearPoint";
 
@@ -123,7 +124,7 @@ export default function ActivityFeed({
         {visible.map((row, i) => {
           if (row.kind === "locked") {
             return (
-              <Link key={`locked-${i}`} href="/login" className={`group ${ROW_BASE} ${ROW_ACCENT.locked}`}>
+              <SignInLink key={`locked-${i}`} className={`group ${ROW_BASE} ${ROW_ACCENT.locked}`}>
                 <Badge kind="sold" />
                 <div className="redact-skeleton h-10 w-14 shrink-0 rounded" aria-hidden="true" />
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -133,7 +134,7 @@ export default function ActivityFeed({
                   </p>
                 </div>
                 <div className="redact-skeleton h-4 w-16 shrink-0 rounded" aria-hidden="true" />
-              </Link>
+              </SignInLink>
             );
           }
           if (row.kind === "sold") {

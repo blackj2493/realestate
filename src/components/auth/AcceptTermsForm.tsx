@@ -13,6 +13,15 @@
  * step. The chip applies on tap with no separate commit button, deliberately: the
  * dashboard's old stage-then-commit picker lost users who did the work but never
  * pressed the button (see FirstRunRegionPicker).
+ *
+ * A signup that arrived FROM a listing is not asked at all: `seedMarket` carries that
+ * property's city (resolved in /welcome) and we write it silently. Asking someone who is
+ * three clicks into one specific home which city they care about is a question we can
+ * already answer, and the interruption costs more than the answer is worth.
+ *
+ * Either way a market gets written, because either way this is the account's FIRST-EVER
+ * acceptance — /welcome redirects past this form once terms are on file — and leaving
+ * config.regions empty is what puts a new user on a blank dashboard.
  */
 
 import { useState, useEffect } from "react";
@@ -59,10 +68,16 @@ function CheckRow({
 export default function AcceptTermsForm({
   next,
   firstRun = false,
+  seedMarket = null,
 }: {
   next: string;
   /** Brand-new account with no destination — seed a market and open the terminal. */
   firstRun?: boolean;
+  /**
+   * Market inferred from the page this signup came from (see seedMarket.ts). Used only
+   * when we are NOT asking — a listing-origin signup already told us where it cares about.
+   */
+  seedMarket?: string | null;
 }) {
   const router = useRouter();
   const [notAgent, setNotAgent] = useState(false);
@@ -76,10 +91,11 @@ export default function AcceptTermsForm({
   // the picker itself no longer depends on it.
   const [foreignWorkspace, setForeignWorkspace] = useState(false);
 
+  // Not gated on firstRun: a listing-origin signup writes to this same workspace, so it
+  // needs the warning too.
   useEffect(() => {
-    if (!firstRun) return;
     setForeignWorkspace(hasForeignWorkspace());
-  }, [firstRun]);
+  }, []);
 
   const allChecked = notAgent && bonaFide && agree;
   // A first-ever acceptance ALWAYS asks. An earlier version skipped the question when
@@ -107,27 +123,34 @@ export default function AcceptTermsForm({
         throw new Error(body.error || "Could not record your acceptance. Please try again.");
       }
 
+      // Asked (first run) or inferred from the listing they came from — either way this is
+      // the account's first-ever acceptance, so write a starting market rather than leave
+      // the dashboard empty.
+      const city = firstRun ? (market ?? DEFAULT_MARKET) : seedMarket;
+      // Best-effort: a storage failure must never block entry to the terminal.
+      try {
+        // Clear anything a PREVIOUS account left in this browser before seeding. The
+        // workspace is localStorage, not Supabase, so it survives account deletion and
+        // sign-out — leaving a new account with the old one's cities, persona and
+        // boards, and greeted by the old one's name (DashboardClient reads
+        // getProfile()?.fullName). A brand-new account starts clean on this device.
+        // Runs on BOTH paths: a listing-origin signup used to skip this and inherit it.
+        if (hasForeignWorkspace()) resetLocalWorkspace();
+        if (city) saveConfig({ ...getConfig(), regions: [city] });
+      } catch {
+        /* private mode / quota — never block entry over a convenience seed */
+      }
+
       if (firstRun) {
-        const city = market ?? DEFAULT_MARKET;
-        // Best-effort: a storage failure must never block entry to the terminal.
-        try {
-          // Clear anything a PREVIOUS account left in this browser before seeding. The
-          // workspace is localStorage, not Supabase, so it survives account deletion and
-          // sign-out — leaving a new account with the old one's cities, persona and
-          // boards, and greeted by the old one's name (DashboardClient reads
-          // getProfile()?.fullName). A brand-new account starts clean on this device.
-          if (hasForeignWorkspace()) resetLocalWorkspace();
-          saveConfig({ ...getConfig(), regions: [city] });
-        } catch {
-          /* private mode / quota — the terminal seed below still works */
-        }
         // Seed the CAMERA via the terminal's existing ?lat/?lng/?z contract, NOT ?city=.
         // A new user is exploring: a city text filter blanks the map the moment they pan
         // past its boundary, whereas a camera leaves the query unfiltered so the viewport
         // bounds scope it and results follow the drag. That is the same reasoning the
         // ?lat/?lng seed already documents for address entry — reuse it rather than
         // inventing a second camera param.
-        const cam = marketCamera(city);
+        // Non-null on this path (market ?? DEFAULT_MARKET); the fallback only satisfies
+        // the widened type shared with the inferred-seed path.
+        const cam = marketCamera(city ?? DEFAULT_MARKET);
         router.replace(
           cam ? `/properties?lat=${cam.lat}&lng=${cam.lng}&z=${cam.zoom}` : "/properties"
         );
@@ -186,14 +209,25 @@ export default function AcceptTermsForm({
           <p className="mt-2 text-[11px] text-muted-foreground">
             Optional — you can search any area once you&rsquo;re in, and add more later.
           </p>
-          {/* Don't wipe someone's saved setup silently — say so before it happens. */}
-          {foreignWorkspace && (
-            <p className="mt-2 text-[11px] leading-snug text-amber-700 dark:text-amber-300">
-              This browser still has a saved workspace from a previous account. Continuing
-              replaces it with your own.
-            </p>
-          )}
         </div>
+      )}
+
+      {/* Inferred instead of asked. Say what we're setting up rather than silently
+          configuring someone's account behind a Terms checkbox. */}
+      {!askMarket && seedMarket && (
+        <p className="border-t border-border pt-4 text-[11px] leading-snug text-muted-foreground">
+          We&rsquo;ll set your dashboard up for{" "}
+          <span className="text-foreground">{seedMarket}</span> — change it any time.
+        </p>
+      )}
+
+      {/* Don't wipe someone's saved setup silently — say so before it happens. Applies to
+          both paths: the inferred seed writes to this same workspace. */}
+      {foreignWorkspace && (
+        <p className="text-[11px] leading-snug text-amber-700 dark:text-amber-300">
+          This browser still has a saved workspace from a previous account. Continuing
+          replaces it with your own.
+        </p>
       )}
 
       <p className="text-[11px] leading-snug text-muted-foreground">

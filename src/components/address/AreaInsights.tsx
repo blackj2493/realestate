@@ -21,6 +21,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Home, KeyRound, LineChart, Lock } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
@@ -235,12 +236,9 @@ export default async function AreaInsights({
           </section>
         )
       ) : (
-        <Link
-          href="/login"
-          className="flex items-center justify-center gap-2 rounded-lg border border-cyan-600/40 bg-cyan-500/5 px-4 py-2.5 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
-        >
+        <SignInLink className="flex items-center justify-center gap-2 rounded-lg border border-cyan-600/40 bg-cyan-500/5 px-4 py-2.5 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300">
           <Lock className="h-3.5 w-3.5" /> Sold prices, price trends &amp; sell-through — sign up free
-        </Link>
+        </SignInLink>
       )}
 
       {/* Nearby actives — somewhere to continue the search (IDX, anon-legal). */}

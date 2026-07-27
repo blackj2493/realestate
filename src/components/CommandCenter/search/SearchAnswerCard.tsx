@@ -17,6 +17,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock, TrendingUp } from "lucide-react";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
+import { loginHref } from "@/lib/auth/loginHref";
 
 interface Props {
   area: string;
@@ -150,8 +151,7 @@ export default function SearchAnswerCard({ area, activeCount }: Props) {
 
   const masked = !authed || data.locked;
   const dash = data.loading ? "…" : "—";
-  const safeNext = pathname && pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : null;
-  const loginHref = safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login";
+  const signInHref = loginHref(pathname);
 
   return (
     <div className="border-b border-border bg-gradient-to-b from-cyan-950/30 to-slate-950 px-3 py-3">
@@ -173,7 +173,7 @@ export default function SearchAnswerCard({ area, activeCount }: Props) {
       </div>
       {masked && (
         <Link
-          href={loginHref}
+          href={signInHref}
           className="mt-2.5 inline-flex items-center gap-1.5 bg-cyan-500 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
         >
           <Lock className="h-3 w-3" />

@@ -18,8 +18,8 @@
  * spreads run 4–11%, the band would add noise, not information).
  * Renders null on null matrix. Server component — flavor decides copy/format.
  */
-import Link from "next/link";
 import { CircleDollarSign, KeyRound } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
 import { IN_HOME_UNIT_LABEL, type AskingMatrix } from "@/lib/address/nearbyForSale";
 
 /** Compact money for sale prices: $620k, $1.24M — full figures don't fit the grid. */
@@ -236,14 +236,11 @@ export default function MarketGridCard({
             : "Median asking rent of live rental listings (×n = listings) — not a rent appraisal."}
       </p>
       {showSignInNudge && !actual && (
-        <Link
-          href="/login"
-          className="block border-t border-border px-4 py-2 text-xs font-medium text-cyan-700 hover:bg-cyan-500/5 dark:text-cyan-300"
-        >
+        <SignInLink className="block border-t border-border px-4 py-2 text-xs font-medium text-cyan-700 hover:bg-cyan-500/5 dark:text-cyan-300">
           {sell
             ? "See what homes here actually sold for — sign in free →"
             : "See what homes here actually leased for — sign in free →"}
-        </Link>
+        </SignInLink>
       )}
     </section>
   );

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
+import SignInLink from "@/components/auth/SignInLink";
 
 /**
  * Header account control. Shows "Sign in" for anonymous visitors, or the user's
@@ -25,12 +25,9 @@ export default function AccountButton() {
 
   if (!email) {
     return (
-      <Link
-        href="/login"
-        className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-border px-3 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-slate-500"
-      >
+      <SignInLink className="terminal-font inline-flex shrink-0 items-center gap-1.5 border border-border px-3 py-2 text-[11px] uppercase tracking-wider text-foreground transition-colors hover:border-slate-500">
         <LogIn className="h-3.5 w-3.5" /> Sign in
-      </Link>
+      </SignInLink>
     );
   }
 

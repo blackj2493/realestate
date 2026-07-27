@@ -65,6 +65,33 @@ export const CITY_GROUPS: Record<string, string[]> = {
   Ottawa: OTTAWA_AREAS,
 };
 
+/**
+ * The region string to SAVE for a listing's raw TRREB `City` value.
+ *
+ * A listing's City is often a sub-value of a real municipality — "Toronto C12",
+ * "London South", "Barrhaven". Saving that verbatim is not wrong (areaFilter matches it
+ * exactly) but it scopes a new user's whole dashboard to one district of one city, which
+ * reads as broken inventory. Roll a member up to its CITY_GROUPS parent so the seed means
+ * "this city" rather than "the one district that listing happened to sit in".
+ *
+ * Driven off CITY_GROUPS — the same table areaFilter expands — so anything this returns
+ * provably resolves to inventory. Deliberately NOT the `municipality()` string-strip in
+ * listingPath: that handles Toronto/London by pattern but has no rule for Ottawa's OREB
+ * names ("Kanata" → "Ottawa" is a membership fact, not a suffix rule; see ottawaAreas).
+ *
+ * A city in no group (Mississauga, Burlington, …) passes through unchanged.
+ */
+export function regionForCity(city: string | null | undefined): string | null {
+  const raw = (city ?? "").trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  for (const [parent, members] of Object.entries(CITY_GROUPS)) {
+    if (parent.toLowerCase() === lower) return parent;
+    if (members.some((m) => m.toLowerCase() === lower)) return parent;
+  }
+  return raw;
+}
+
 export interface QuickPickMarket {
   /** Display label AND the region value written to config.regions. */
   name: string;

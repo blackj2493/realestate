@@ -15,6 +15,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
+import { loginHref } from "@/lib/auth/loginHref";
 
 /**
  * A withheld value: signals "a real number lives here, revealed on sign-in" without
@@ -36,10 +37,7 @@ export function Redact({ className = "" }: { className?: string }) {
  * sign-in (open-redirect-safe `next`).
  */
 export function UnlockCta({ label, note }: { label: string; note?: string }) {
-  const pathname = usePathname();
-  const safeNext =
-    pathname && pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : null;
-  const href = safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login";
+  const href = loginHref(usePathname());
   return (
     <div className="mt-3">
       <Link
