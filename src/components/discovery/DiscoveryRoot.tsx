@@ -42,6 +42,10 @@ export default function DiscoveryRoot() {
   const nudgesDone = useDiscovery((s) => s.nudgesDone);
   const startRun = useDiscovery((s) => s.startRun);
   const dismissNudge = useDiscovery((s) => s.dismissNudge);
+  // A full-screen / side drawer with its own primary CTA (the terminal FILTERS
+  // drawer + mobile filter sheet) sets this while open; the launcher hides so it
+  // can never sit over that CTA. See useDiscovery.chromeBlockers.
+  const chromeBlocked = useDiscovery((s) => s.chromeBlockers > 0);
 
   const pathname = usePathname() || "/";
   const surface = surfaceForPath(pathname);
@@ -184,8 +188,10 @@ export default function DiscoveryRoot() {
         </div>
       )}
 
-      {/* Floating launcher — hidden while an overlay is open. */}
-      {!overlayUp && (
+      {/* Floating launcher — hidden while the guide/tour is up (overlayUp) or while
+          a blocking drawer with its own primary CTA is open (chromeBlocked), so it
+          never collides with e.g. the FILTERS drawer's "Show N results" button. */}
+      {!overlayUp && !chromeBlocked && (
         <button
           type="button"
           onClick={() => openGuide("page")}

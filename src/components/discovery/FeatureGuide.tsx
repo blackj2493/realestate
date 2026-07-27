@@ -30,6 +30,7 @@ import {
 } from "@/lib/discovery/featureRegistry";
 import { getConfig } from "@/lib/dashboard/config";
 import type { PersonaType } from "@/lib/personas/personaConfig";
+import { useIsMac, formatShortcut } from "@/hooks/useIsMac";
 
 const TABS: { id: GuideTab; label: string }[] = [
   { id: "page", label: "On this page" },
@@ -47,6 +48,9 @@ export default function FeatureGuide() {
   const showFeature = useDiscovery((s) => s.showFeature);
   const markSeen = useDiscovery((s) => s.markSeen);
   const markUsed = useDiscovery((s) => s.markUsed);
+  // Platform-correct any ⌘ shortcut in the catalog (kbd hint + blurb prose).
+  // SSR-safe: non-Mac on the server, corrected after mount.
+  const isMac = useIsMac();
 
   const pathname = usePathname() || "/";
   const [persona, setPersona] = React.useState<PersonaType | undefined>(undefined);
@@ -221,11 +225,11 @@ export default function FeatureGuide() {
                       {isUsed && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />}
                       {f.shortcut && (
                         <kbd className="shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                          {f.shortcut}
+                          {formatShortcut(f.shortcut, isMac)}
                         </kbd>
                       )}
                     </div>
-                    <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">{f.blurb}</p>
+                    <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">{formatShortcut(f.blurb, isMac)}</p>
                     <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{f.category}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">

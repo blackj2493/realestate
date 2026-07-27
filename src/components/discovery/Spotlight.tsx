@@ -20,6 +20,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import { getFeature } from "@/lib/discovery/featureRegistry";
+import { useIsMac, formatShortcut } from "@/hooks/useIsMac";
 
 /** Padding kept around the highlighted element, and viewport breathing room. */
 const HOLE_PAD = 6;
@@ -104,6 +105,9 @@ export default function Spotlight() {
   const runNext = useDiscovery((s) => s.runNext);
   const runPrev = useDiscovery((s) => s.runPrev);
   const endRun = useDiscovery((s) => s.endRun);
+  // Platform-correct any ⌘ shortcut (blurb prose + the Shortcut kbd). SSR-safe:
+  // non-Mac on the server, corrected after mount.
+  const isMac = useIsMac();
 
   const step = run ? run.steps[run.index] : undefined;
   const feature = step ? getFeature(step) : undefined;
@@ -197,13 +201,13 @@ export default function Spotlight() {
         </button>
       </div>
 
-      <p className="mt-2 text-[13px] leading-relaxed text-foreground">{feature.blurb}</p>
+      <p className="mt-2 text-[13px] leading-relaxed text-foreground">{formatShortcut(feature.blurb, isMac)}</p>
 
       {feature.shortcut && (
         <p className="mt-2 text-[11px] text-muted-foreground">
           Shortcut:{" "}
           <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-            {feature.shortcut}
+            {formatShortcut(feature.shortcut, isMac)}
           </kbd>
         </p>
       )}

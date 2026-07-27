@@ -34,10 +34,10 @@ export default function MissionControlHeader({
         <span className="terminal-font text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground lg:justify-self-start lg:text-left">
           {name ? (
             <>
-              Workspace: <span className="text-foreground">{name}</span> · Mission Control
+              Workspace: <span className="text-foreground">{name}</span> · Dashboard
             </>
           ) : (
-            "Mission Control"
+            "Dashboard"
           )}
         </span>
 
