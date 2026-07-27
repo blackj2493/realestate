@@ -47,6 +47,7 @@ import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
 import { getConfig } from "@/lib/dashboard/config";
+import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
 
 /**
  * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
@@ -103,6 +104,7 @@ function CommandCenterContent() {
   const searchParams = useSearchParams();
   const {
     activePersona,
+    setActivePersona,
     filters,
     universalFilters,
     searchResult,
@@ -187,6 +189,18 @@ function CommandCenterContent() {
     const cityParam = searchParams.get("city") || searchParams.get("search") || "";
     if (cityParam && cityParam !== location) setLocation(cityParam);
   }, [searchParams, location, setLocation]);
+
+  // Persona unification (fix #6): open the terminal on the ONE shared lens instead of
+  // a private in-memory state that always cold-started on Flippers. Resolve once on
+  // mount — explicit ?lens= > the persona saved in the dashboard config (or adopted
+  // from the account) > the Homebuyer default — and let setActivePersona write any
+  // change back through so the terminal, dashboard and listing pages stay in sync.
+  const personaHydratedRef = useRef(false);
+  useEffect(() => {
+    if (personaHydratedRef.current) return;
+    personaHydratedRef.current = true;
+    void hydrateTerminalPersona(searchParams.get("lens"), setActivePersona);
+  }, [searchParams, setActivePersona]);
 
   // Center deep link (?lat=&lng=[&z=][&pin=]) — e.g. the address-profile "open the
   // map here" link. Rides the flyTo path (which also reports the framed viewport,

@@ -53,7 +53,8 @@ import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
 import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
-import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
+import DealScoreCard from "@/components/Property/DealScoreCard";
+import { LiveDealScoreBadge, LiveDealGrade } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
@@ -832,10 +833,9 @@ export default async function PropertyPage({
                   </span>
                 )}
                 {isActiveListing && !isCommercial && !isLease && (
-                  <DealScoreBadge
-                    score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
-                    grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
-                  />
+                  // Follows the Deal Score panel's active tab (fix #6) — the chip and
+                  // panel resolve ONE lens, so they can't disagree (91 vs 92) on screen.
+                  <LiveDealScoreBadge dealScore={view.dealScore} initialLens={lens} />
                 )}
               </div>
 
@@ -850,13 +850,8 @@ export default async function PropertyPage({
                   {hasDealScore && (
                     <span className="inline-flex items-center gap-1">
                       Deal grade
-                      {isAuthed && (view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade) ? (
-                        <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">
-                          {view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
-                        </span>
-                      ) : (
-                        <Lock className="h-3 w-3 text-muted-foreground" aria-label="locked" />
-                      )}
+                      {/* Same active lens as the chip + panel (fix #6). */}
+                      <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
                     </span>
                   )}
                   {(hasEstimate || hasExpectedSale) && (
@@ -1130,7 +1125,7 @@ export default async function PropertyPage({
                 statusKind={status.kind}
                 isLease={isLease}
               />
-              <SocialProofBar listingId={id} isLease={isLease} />
+              <SocialProofBar listingId={id} isLease={isLease} persona={lens} />
 
               {/* MOBILE ONLY: anon email capture BELOW the Intelligence panel and
                   CTAs — the product's brain should never rank under an email field.

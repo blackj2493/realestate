@@ -120,6 +120,11 @@ export default function DiscoveryRoot() {
 
   const overlayUp = guideOpen || !!run;
 
+  // Tour-nudge copy follows the active lens: the investor personas hear "how you
+  // invest"; the Homebuyer lens (and the cold-start default) hears neutral "what
+  // you're looking for", so a brand-new / anonymous visitor isn't told they invest.
+  const homebuyerLens = !hydrated || getConfig().persona === "smart";
+
   return (
     <>
       <FeatureGuide />
@@ -152,7 +157,8 @@ export default function DiscoveryRoot() {
             <div>
               <p className="text-sm font-semibold text-slate-100">New here? Take the 30-second tour</p>
               <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-                A quick, skippable walkthrough of the tools on this screen — tailored to how you invest.
+                A quick, skippable walkthrough of the tools on this screen — tailored to{" "}
+                {homebuyerLens ? "what you're looking for" : "how you invest"}.
               </p>
             </div>
           </div>
