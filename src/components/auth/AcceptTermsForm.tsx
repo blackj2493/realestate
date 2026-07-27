@@ -4,13 +4,28 @@
  * AcceptTermsForm — the one-time VOW Terms acceptance for a signed-in user. Posts to
  * /api/vow/accept-terms, then returns the user to where they were headed (`next`).
  * Mirrors the §3 attestations on /apply, but for an authenticated account.
+ *
+ * In `firstRun` mode (a brand-new account that arrived with no destination — see
+ * /welcome) this also asks for ONE starting market and lands the user in the map
+ * terminal instead of the dashboard. That single tap does double duty: it seeds
+ * `?city=` so the terminal opens somewhere real, and it writes config.regions so the
+ * dashboard already has content the first time the user visits it — no second setup
+ * step. The chip applies on tap with no separate commit button, deliberately: the
+ * dashboard's old stage-then-commit picker lost users who did the work but never
+ * pressed the button (see FirstRunRegionPicker).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QUICK_PICK_MARKETS, marketCamera } from "@/lib/dashboard/area";
+import { getConfig, saveConfig } from "@/lib/dashboard/config";
+
+/** Where an unseeded first-run user lands if they never tap a market. Matches the
+ *  terminal map's INITIAL_VIEW_STATE, so the opening camera needs no correcting fly. */
+const DEFAULT_MARKET = "Toronto";
 
 function CheckRow({
   checked,
@@ -36,15 +51,37 @@ function CheckRow({
   );
 }
 
-export default function AcceptTermsForm({ next }: { next: string }) {
+export default function AcceptTermsForm({
+  next,
+  firstRun = false,
+}: {
+  next: string;
+  /** Brand-new account with no destination — seed a market and open the terminal. */
+  firstRun?: boolean;
+}) {
   const router = useRouter();
   const [notAgent, setNotAgent] = useState(false);
   const [bonaFide, setBonaFide] = useState(false);
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [market, setMarket] = useState<string | null>(null);
+  // Regions already on file (an /apply signup seeds them from its profile). When we
+  // know them we don't ask again — we just open the terminal on the first one.
+  const [knownRegion, setKnownRegion] = useState<string | null>(null);
+  const [configRead, setConfigRead] = useState(false);
+
+  // localStorage is client-only, so this can't inform the server render — hence the
+  // picker mounts after hydration rather than being decided in /welcome.
+  useEffect(() => {
+    if (!firstRun) return;
+    setKnownRegion(getConfig().regions[0] ?? null);
+    setConfigRead(true);
+  }, [firstRun]);
 
   const allChecked = notAgent && bonaFide && agree;
+  // Only ask when this is a first run AND we have nothing on file.
+  const askMarket = firstRun && configRead && knownRegion === null;
 
   const submit = async () => {
     if (!allChecked) {
@@ -64,6 +101,32 @@ export default function AcceptTermsForm({ next }: { next: string }) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Could not record your acceptance. Please try again.");
       }
+
+      if (firstRun) {
+        const city = knownRegion ?? market ?? DEFAULT_MARKET;
+        // Seed the dashboard too, so it has content whenever the user first opens it.
+        // Best-effort: a storage failure must never block entry to the terminal.
+        if (knownRegion === null) {
+          try {
+            saveConfig({ ...getConfig(), regions: [city] });
+          } catch {
+            /* private mode / quota — the terminal seed below still works */
+          }
+        }
+        // Seed the CAMERA via the terminal's existing ?lat/?lng/?z contract, NOT ?city=.
+        // A new user is exploring: a city text filter blanks the map the moment they pan
+        // past its boundary, whereas a camera leaves the query unfiltered so the viewport
+        // bounds scope it and results follow the drag. That is the same reasoning the
+        // ?lat/?lng seed already documents for address entry — reuse it rather than
+        // inventing a second camera param.
+        const cam = marketCamera(city);
+        router.replace(
+          cam ? `/properties?lat=${cam.lat}&lng=${cam.lng}&z=${cam.zoom}` : "/properties"
+        );
+        router.refresh();
+        return;
+      }
+
       router.replace(next);
       router.refresh();
     } catch (e) {
@@ -85,6 +148,38 @@ export default function AcceptTermsForm({ next }: { next: string }) {
         I agree to the VOW Terms of Use and will use this data for personal, non-commercial purposes
         only.
       </CheckRow>
+
+      {askMarket && (
+        <div className="border-t border-border pt-4">
+          <p className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
+            Where do you want to start?
+          </p>
+          <div role="group" aria-label="Starting market" className="mt-3 flex flex-wrap gap-2">
+            {QUICK_PICK_MARKETS.map(({ name: city }) => {
+              const active = market === city;
+              return (
+                <button
+                  key={city}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setMarket(active ? null : city)}
+                  className={cn(
+                    "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
+                    active
+                      ? "border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                      : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
+                  )}
+                >
+                  {city}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Optional — you can search any area once you&rsquo;re in, and add more later.
+          </p>
+        </div>
+      )}
 
       <p className="text-[11px] leading-snug text-muted-foreground">
         Read our full{" "}

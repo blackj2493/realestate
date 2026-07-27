@@ -22,6 +22,7 @@ import {
   MapCommandPalette,
   MobileMapTools,
   ActiveLensBar,
+  LocationBoundsNotice,
 } from "@/components/CommandCenter";
 import QuickLookPanel from "@/components/CommandCenter/QuickLookPanel";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
@@ -184,11 +185,19 @@ function CommandCenterContent() {
     window.addEventListener("mouseup", onUp);
   }, []);
 
-  // Seed location from URL (?city= / ?search=)
+  // Seed location from URL (?city= / ?search=). SEEDS ONCE per distinct param — it must
+  // not re-assert itself afterwards. Re-running whenever `location` changed made the URL
+  // fight the user: clearing the search box (or tapping the out-of-bounds notice, which
+  // clears it via searchVisibleArea) set location to "", this effect saw ""  !== "Toronto"
+  // and immediately put "Toronto" back. Arriving via a ?city= link meant the place filter
+  // could never be cleared at all. Mirrors the hydratedParamsRef guard below.
+  const citySeededRef = useRef<string | null>(null);
   useEffect(() => {
     const cityParam = searchParams.get("city") || searchParams.get("search") || "";
-    if (cityParam && cityParam !== location) setLocation(cityParam);
-  }, [searchParams, location, setLocation]);
+    if (!cityParam || citySeededRef.current === cityParam) return;
+    citySeededRef.current = cityParam;
+    setLocation(cityParam);
+  }, [searchParams, setLocation]);
 
   // Persona unification (fix #6): open the terminal on the ONE shared lens instead of
   // a private in-memory state that always cold-started on Flippers. Resolve once on
@@ -563,6 +572,9 @@ function CommandCenterContent() {
               {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
                   which are otherwise desktop-only via MapControlRail/MapDrawer. */}
               <MobileMapTools />
+              {/* Tells the user their place filter is hiding listings that are on screen,
+                  and clears it in one tap. Self-hides the moment nothing is hidden. */}
+              <LocationBoundsNotice />
               {/* Save the current custom area as a Market Bubble. Self-hides when no
                   draw / commute / school filter is active. */}
               <div className="pointer-events-auto absolute right-3 top-3 z-30">

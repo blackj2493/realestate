@@ -8,15 +8,19 @@ describe("postSignInPath", () => {
     );
   });
 
-  it("defaults to /dashboard when next is missing", () => {
-    expect(postSignInPath(undefined)).toBe("/welcome?next=%2Fdashboard");
-    expect(postSignInPath(null)).toBe("/welcome?next=%2Fdashboard");
-    expect(postSignInPath("")).toBe("/welcome?next=%2Fdashboard");
+  it("emits a BARE /welcome when next is missing, so /welcome can detect a first-run signup", () => {
+    expect(postSignInPath(undefined)).toBe("/welcome");
+    expect(postSignInPath(null)).toBe("/welcome");
+    expect(postSignInPath("")).toBe("/welcome");
   });
 
   it("rejects protocol-relative and absolute URLs (open-redirect guard)", () => {
-    expect(postSignInPath("//evil.example.com")).toBe("/welcome?next=%2Fdashboard");
-    expect(postSignInPath("https://evil.example.com")).toBe("/welcome?next=%2Fdashboard");
+    expect(postSignInPath("//evil.example.com")).toBe("/welcome");
+    expect(postSignInPath("https://evil.example.com")).toBe("/welcome");
+  });
+
+  it("still honours an EXPLICIT /dashboard destination", () => {
+    expect(postSignInPath("/dashboard")).toBe("/welcome?next=%2Fdashboard");
   });
 
   it("does not double-wrap a destination already pointed at /welcome", () => {

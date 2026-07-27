@@ -4,6 +4,7 @@ import { Check, Plus, ArrowRight, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LocationSearch from "@/components/CommandCenter/LocationSearch";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { QUICK_PICK_MARKETS } from "@/lib/dashboard/area";
 
 /**
  * First-run market-area picker. Shown on the dashboard when the user has no saved
@@ -17,21 +18,10 @@ import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
  * the dashboard stayed empty — see PostHog). "Done" just collapses this setup card; the
  * areas are already live.
  */
-// One-tap markets. Every entry must map to real inventory via areaFilter (see CITY_GROUPS
-// in @/lib/dashboard/area). "Toronto" and "Ottawa" are GROUPS — TRREB has no single City
-// value for them (Toronto = ~36 district codes; Ottawa = ~51 OREB area names), so areaFilter
-// expands them to a city-wide section. A user wanting a smaller slice (e.g. just Orleans or
-// Kanata) adds that area via the search box, which gets its own focused section.
-const QUICK_PICKS = [
-  "Toronto",
-  "Ottawa",
-  "Mississauga",
-  "Brampton",
-  "Vaughan",
-  "Markham",
-  "Oakville",
-  "Hamilton",
-];
+// One-tap markets — shared with the /welcome first-run seed so both surfaces offer the
+// same starting areas. See QUICK_PICK_MARKETS for why Toronto/Ottawa are groups. Only
+// the names matter here; the cameras on those entries are for the terminal's ?near= seed.
+const QUICK_PICKS = QUICK_PICK_MARKETS.map((m) => m.name);
 
 export default function FirstRunRegionPicker({
   selected,
