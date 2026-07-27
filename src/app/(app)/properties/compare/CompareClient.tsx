@@ -58,7 +58,7 @@ export default function CompareClient({
         <div className="py-20 text-center text-muted-foreground">
           <p className="mb-4">No properties to compare.</p>
           <Link href="/properties" className="rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
-            ← Pick properties in the Command Center
+            ← Pick properties on the Map
           </Link>
         </div>
       </div>
@@ -208,7 +208,7 @@ function Header() {
       <div>
         <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
           <ArrowLeft className="h-4 w-4" />
-          Back to Command Center
+          Back to Map
         </Link>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
           <GitCompareArrows className="h-6 w-6 text-cyan-700 dark:text-cyan-400" />

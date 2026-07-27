@@ -219,7 +219,7 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   if (view.campaignHistory.campaignCount > 1 && trueDom != null) {
     negs.push({
       sev: 58,
-      text: `relisted ${view.campaignHistory.campaignCount}× — true time on market is ${trueDom}d, not the ${rawDom ?? "fresh"}d the MLS shows`,
+      text: `relisted ${view.campaignHistory.campaignCount}× — true time on market is ${trueDom}d, not the ${rawDom != null ? `${rawDom}d` : "fresh listing"} the MLS shows`,
       link: LINKS.history,
     });
   }

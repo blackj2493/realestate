@@ -336,8 +336,8 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     (location
       ? `${location}, ON  |  Search ${fmt} listings…`
       : totalCount > 0
-        ? `Search ${fmt} listings — or describe it…`
-        : "Search address, community, school, MLS# — or describe it…");
+        ? `Search or describe ${fmt} listings…`
+        : "Search or describe a home — address, school, MLS#…");
 
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
