@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
 import {
@@ -25,36 +24,6 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CheckRow({
-  checked,
-  onToggle,
-  children,
-}: {
-  checked: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-start gap-3 text-left"
-    >
-      <span
-        className={cn(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
-          checked
-            ? "border-emerald-500 bg-emerald-500 text-slate-950"
-            : "border-slate-600 bg-slate-900"
-        )}
-      >
-        {checked && <Check className="h-3.5 w-3.5" />}
-      </span>
-      <span className="text-sm leading-snug text-slate-300">{children}</span>
-    </button>
-  );
-}
-
 export default function ApplyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -62,16 +31,11 @@ export default function ApplyPage() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [attestNotAgent, setAttestNotAgent] = useState(false);
-  const [attestBonaFide, setAttestBonaFide] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
 
   const validate = (): string => {
     if (!fullName.trim()) return "Enter your full name.";
     // Strict shape: one @, a dot in domain, ≥2-char TLD (mirrors /api/viewing-requests EMAIL_RE).
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return "Enter a valid email address.";
-    if (!attestNotAgent || !attestBonaFide || !agreeTerms)
-      return "All three confirmations are required to continue.";
     return "";
   };
 
@@ -96,16 +60,19 @@ export default function ApplyPage() {
     };
 
     // Best-effort lead capture — never block access on a Supabase hiccup.
+    //
+    // The three VOW attestations are deliberately NOT collected here any more. They were
+    // asked twice: once on this pre-account form and again on /welcome, word for word.
+    // Only the /welcome set is the compliance boundary — the gate reads
+    // profiles.terms_accepted_at + bona_fide_attested (lib/auth/terms.ts), which requires
+    // a registered Consumer and therefore an authenticated account this form does not yet
+    // have. The onboarding row's attest_* columns are write-only; nothing reads them for
+    // access. So this stays lead capture, and the attestation happens once, where it binds.
     try {
       await fetch("/api/onboarding/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...profile,
-          attestNotAgent,
-          attestBonaFide,
-          agreeTerms,
-        }),
+        body: JSON.stringify(profile),
       });
     } catch (e) {
       console.warn("[apply] persist failed (granting access anyway):", e);
@@ -182,30 +149,11 @@ export default function ApplyPage() {
                 </div>
 
                 <div className="space-y-4 border-t border-slate-800 pt-6">
-                  <CheckRow
-                    checked={attestNotAgent}
-                    onToggle={() => setAttestNotAgent((v) => !v)}
-                  >
-                    {
-                      "I am applying as a principal/investor deploying my own capital — not as a licensed agent prospecting for clients."
-                    }
-                  </CheckRow>
-                  <CheckRow
-                    checked={attestBonaFide}
-                    onToggle={() => setAttestBonaFide((v) => !v)}
-                  >
-                    {
-                      "I certify that I have a bona fide interest in the purchase, sale, or lease of real estate."
-                    }
-                  </CheckRow>
-                  <CheckRow
-                    checked={agreeTerms}
-                    onToggle={() => setAgreeTerms((v) => !v)}
-                  >
-                    {"I agree to the Terms of Service and Privacy Policy."}
-                  </CheckRow>
+                  {/* The VOW attestations used to sit here as well as on /welcome, asking
+                      the same three things twice. They live on /welcome only — that is
+                      where they bind, against a real account. */}
                   <p className="text-xs leading-snug text-slate-500">
-                    Read our{" "}
+                    Next you&rsquo;ll confirm the VOW access terms, then the terminal opens. Read our{" "}
                     <Link href="/terms" className="text-cyan-400 hover:underline">
                       Terms of Service
                     </Link>{" "}

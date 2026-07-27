@@ -21,6 +21,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { hasAcceptedTerms } from "@/lib/auth/terms";
+import { isFirstRunEntry } from "@/lib/auth/firstRunEntry";
 import AcceptTermsForm from "@/components/auth/AcceptTermsForm";
 
 export const dynamic = "force-dynamic";
@@ -44,8 +45,9 @@ export default async function WelcomePage({
   if (!user) redirect(explicitNext ? `/login?next=${encodeURIComponent(explicitNext)}` : "/login");
   if (await hasAcceptedTerms(user.id)) redirect(safeNext);
 
-  // Not accepted + no destination = first-ever session. Offer the market seed.
-  const firstRun = explicitNext === null;
+  // Not accepted + nothing worth honouring = first-ever session: offer the market seed
+  // and open the terminal. See isFirstRunEntry for why /dashboard counts as "nothing".
+  const firstRun = isFirstRunEntry(explicitNext);
 
   return (
     <div className="flex min-h-app flex-col bg-background text-foreground">
