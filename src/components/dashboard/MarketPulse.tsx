@@ -14,6 +14,7 @@ import {
 import { smoothedYoY } from "@/lib/dashboard/marketAggregates";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { useChartTheme } from "@/lib/theme/useChartTheme";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import RegionSwitcher from "./RegionSwitcher";
 
 interface TrendPoint {
@@ -83,7 +84,7 @@ export default function MarketPulse({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex flex-wrap items-center gap-2.5">
           <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-            Market Pulse{regions.length > 1 ? "" : ` — ${selected}`}
+            Market Pulse{regions.length > 1 ? "" : ` — ${formatRegionLabel(selected)}`}
           </h3>
           {regions.length > 1 && (
             <RegionSwitcher regions={regions} selected={selected} onSelect={onSelect} />

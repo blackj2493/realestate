@@ -3,6 +3,7 @@
 import { Check, Plus, ArrowRight, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LocationSearch from "@/components/CommandCenter/LocationSearch";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 /**
  * First-run market-area picker. Shown on the dashboard when the user has no saved
@@ -98,12 +99,13 @@ export default function FirstRunRegionPicker({
             <span
               key={area}
               className="inline-flex items-center gap-1.5 rounded-md border border-cyan-600/50 bg-cyan-600/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100"
+              title={area}
             >
-              {area}
+              {formatRegionLabel(area)}
               <button
                 type="button"
                 onClick={() => onRemove(area)}
-                aria-label={`Remove ${area}`}
+                aria-label={`Remove ${formatRegionLabel(area)}`}
                 className="inline-flex h-4 w-4 items-center justify-center rounded-full text-cyan-700/70 transition-colors hover:bg-cyan-600/15 hover:text-cyan-900 dark:text-cyan-300/70 dark:hover:bg-cyan-500/25 dark:hover:text-cyan-50"
               >
                 <X className="h-3 w-3" />

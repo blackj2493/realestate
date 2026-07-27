@@ -59,7 +59,7 @@ function torontoDistricts(): string[] {
     for (let i = 1; i <= n; i++) out.push(`Toronto ${p}${String(i).padStart(2, "0")}`);
   return out;
 }
-const CITY_GROUPS: Record<string, string[]> = {
+export const CITY_GROUPS: Record<string, string[]> = {
   Toronto: torontoDistricts(),
   London: ["London", "London North", "London South", "London East", "London West"],
   Ottawa: OTTAWA_AREAS,

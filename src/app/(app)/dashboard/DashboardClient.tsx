@@ -35,6 +35,7 @@ import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -227,7 +228,7 @@ export default function DashboardClient() {
               // The bell mirrors the per-bubble alert toggle: city sections are
               // localStorage-only, so it materializes an area_type 'city' bubble row
               // the nightly worker can deliver against (see CityAlertBell).
-              <RegionDrilldown key={loc} title={loc} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
+              <RegionDrilldown key={loc} title={formatRegionLabel(loc)} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (

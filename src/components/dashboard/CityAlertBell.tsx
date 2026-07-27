@@ -23,6 +23,7 @@ import { Bell, BellOff, Mail } from "lucide-react";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { cn } from "@/lib/utils";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 export default function CityAlertBell({
   city,
@@ -54,6 +55,8 @@ export default function CityAlertBell({
   );
   const enabled = !!row && row.alerts_enabled !== false;
   const scope: "all" | "filtered" = row?.alert_scope === "filtered" ? "filtered" : "all";
+  // Display only — the raw `city` stays the alert row's key/source everywhere below.
+  const cityLabel = formatRegionLabel(city);
 
   const toggle = async () => {
     if (busy) return;
@@ -84,7 +87,7 @@ export default function CityAlertBell({
         <span
           className="terminal-font flex items-stretch border border-border text-[10px] uppercase tracking-wider"
           role="group"
-          aria-label={`Alert scope for ${city}`}
+          aria-label={`Alert scope for ${cityLabel}`}
         >
           <span className="flex items-center border-r border-border px-1.5 text-muted-foreground" aria-hidden="true">
             <Mail className="h-3 w-3" />
@@ -92,7 +95,7 @@ export default function CityAlertBell({
           <button
             type="button"
             aria-pressed={scope === "all"}
-            title={`Email every new listing in ${city}`}
+            title={`Email every new listing in ${cityLabel}`}
             onClick={() => scope !== "all" && setAlertScope(row.id, "all")}
             className={cn(
               "px-2 py-1 transition-colors",
@@ -126,8 +129,8 @@ export default function CityAlertBell({
         aria-pressed={enabled}
         title={
           enabled
-            ? `New-listing alerts ON for ${city} — click to mute`
-            : `Get nightly new-listing alerts for ${city}`
+            ? `New-listing alerts ON for ${cityLabel} — click to mute`
+            : `Get nightly new-listing alerts for ${cityLabel}`
         }
         className={cn(
           "flex h-7 w-7 items-center justify-center border transition-colors",

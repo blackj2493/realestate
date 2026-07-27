@@ -16,6 +16,7 @@ import Link from "next/link";
 import { Trophy, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModuleHead, Panel } from "@/components/daylight/primitives";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 /** One row of the batched /api/market/leaderboard payload. */
 interface LeaderboardRow {
@@ -136,8 +137,9 @@ export default function SubmarketLeaderboard() {
                   <Link
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
                     className="terminal-font min-w-0 flex-1 truncate text-sm font-semibold text-foreground hover:text-[color:var(--dt-sig)] dark:hover:text-cyan-300"
+                    title={s.region}
                   >
-                    {s.region}
+                    {formatRegionLabel(s.region)}
                     <ArrowUpRight className="ml-1 inline h-3 w-3 text-muted-foreground" />
                   </Link>
                   <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">

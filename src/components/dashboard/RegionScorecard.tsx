@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { ModuleHead } from "@/components/daylight/primitives";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 type SortKey =
   | "region"
@@ -209,7 +210,7 @@ export default function RegionScorecard({
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
                     className="terminal-font flex items-center gap-1 px-2 py-3 text-[13px] font-semibold text-foreground hover:text-cyan-700 dark:hover:text-cyan-300"
                   >
-                    <span className="truncate">{s.region}</span>
+                    <span className="truncate" title={s.region}>{formatRegionLabel(s.region)}</span>
                     <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                   </Link>
 

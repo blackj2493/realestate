@@ -20,6 +20,7 @@ import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
+import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
@@ -513,6 +514,15 @@ export default async function PropertyPage({
   const provinceCode = (p.StateOrProvince || "ON").trim().toUpperCase();
   const isOntario = provinceCode === "ON" || provinceCode === "ONTARIO";
   const isToronto = /^toronto\b/i.test(p.City ?? "");
+  // Breadcrumb shows the consumer-readable area name, keeping the raw TRREB code in
+  // parens when it differs ("Downtown & Waterfront (Toronto C01)"). The crawl href
+  // (cityHref) stays keyed to the raw p.City — display only.
+  const cityParts = p.City ? formatRegionParts(p.City) : null;
+  const cityCrumb = cityParts
+    ? cityParts.code
+      ? `${cityParts.name} (${cityParts.code})`
+      : cityParts.name
+    : p.City;
   // Live 5-yr-fixed seed (Bank-of-Canada refreshed nightly job; cached, fallback-safe).
   const mortgageRate = await getCurrentMortgageRate();
   // Which lens opens first: investor personas → the underwrite; the Homebuyer
@@ -685,7 +695,7 @@ export default async function PropertyPage({
             <>
               <span aria-hidden>/</span>
               <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
-                {isCommercial ? `Commercial properties in ${p.City}` : `Homes for sale in ${p.City}`}
+                {isCommercial ? `Commercial properties in ${cityCrumb}` : `Homes for sale in ${cityCrumb}`}
               </Link>
             </>
           )}
