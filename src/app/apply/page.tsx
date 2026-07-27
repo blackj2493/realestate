@@ -116,9 +116,12 @@ export default function ApplyPage() {
     // compliance, §3A) — the full VOW terms attestation is enforced again at /welcome.
     saveProfile(profile);
     saveConfig(seedConfigFromProfile(profile));
-    // Carry the captured email across the wall so /login can pre-fill it —
-    // no re-typing at the funnel's most fragile point.
-    router.push(`/login?next=/dashboard&email=${encodeURIComponent(email.trim())}`);
+    // Carry the captured email across the wall so /login can pre-fill it — no re-typing
+    // at the funnel's most fragile point. Deliberately NO `next`: pinning /dashboard here
+    // made every applicant look like an intentional navigation, which suppressed the
+    // first-run terminal routing at /welcome. Since profiling was dropped, the seed above
+    // carries NO regions — so /welcome asks for one market and opens the terminal there.
+    router.push(`/login?email=${encodeURIComponent(email.trim())}`);
   };
 
   return (

@@ -2,6 +2,18 @@
  * /welcome — one-time VOW Terms acceptance gate for a signed-in user who hasn't yet
  * accepted (the dashboard server gate and requireConsumer route here when enforcement
  * is on). Bounces to /login if not signed in, or straight to `next` if already accepted.
+ *
+ * This is also the ONLY reliable first-run signal we have: `hasAcceptedTerms` is false
+ * exactly once per account, and every sign-in funnels through here (see postSignInPath).
+ * So when a brand-new account arrives with NO explicit destination, we treat it as a
+ * signup rather than a navigation and hand AcceptTermsForm the first-run flow — pick one
+ * market, land in the map terminal. Previously every such user was dropped on /dashboard,
+ * which renders almost nothing until regions are configured (see DashboardClient's
+ * `hasRegions` gate), so the highest-intent moment was spent on a setup chore.
+ *
+ * An EXPLICIT `next` (a gated listing teaser, /analytics, a shared compare link) always
+ * wins — that user already told us where they were going, and returning them there with
+ * the gate open is the strongest flow we have. Only intent-less signups get redirected.
  */
 
 import { redirect } from "next/navigation";
@@ -19,11 +31,21 @@ export default async function WelcomePage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  // Open-redirect guard. `null` = no destination, which is what distinguishes a signup
+  // from a navigation — do NOT collapse it into the "/dashboard" default below.
+  const explicitNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  // Where a user WITH a destination goes, and where an already-accepted user without
+  // one goes (a returning sign-in belongs on their dashboard — it has content by then).
+  const safeNext = explicitNext ?? "/dashboard";
 
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(safeNext)}`);
+  // Bounce with a bare /login when there's no destination, so the round trip back through
+  // postSignInPath doesn't manufacture a `?next=/dashboard` and erase the first-run signal.
+  if (!user) redirect(explicitNext ? `/login?next=${encodeURIComponent(explicitNext)}` : "/login");
   if (await hasAcceptedTerms(user.id)) redirect(safeNext);
+
+  // Not accepted + no destination = first-ever session. Offer the market seed.
+  const firstRun = explicitNext === null;
 
   return (
     <div className="flex min-h-app flex-col bg-background text-foreground">
@@ -39,12 +61,13 @@ export default async function WelcomePage({
             VOW Access Terms
           </h1>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
-            One step before you can view sold data and valuations. Confirm the following to unlock the
-            terminal.
+            {firstRun
+              ? "One step before you can view sold data and valuations — then pick where you want to start."
+              : "One step before you can view sold data and valuations. Confirm the following to unlock the terminal."}
           </p>
 
           <div className="mt-6">
-            <AcceptTermsForm next={safeNext} />
+            <AcceptTermsForm next={safeNext} firstRun={firstRun} />
           </div>
         </div>
       </div>

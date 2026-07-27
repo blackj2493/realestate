@@ -13,12 +13,20 @@
  * users never accepted Terms, `isConsumer` stayed false, and the VOW cards stayed
  * locked indefinitely even though they were signed in.
  *
+ * When there is NO destination we deliberately emit a BARE `/welcome` rather than
+ * defaulting to `?next=/dashboard`. That preserves the distinction between "the user
+ * had a specific destination" and "the user just signed in", which is the signal
+ * /welcome uses to route a first-ever account into the map terminal instead of an
+ * empty dashboard. Collapsing the two here would make every signup look intentional.
+ *
  * The returned value is a relative path, safe for both client navigation
  * (window.location.assign) and server redirects (`${origin}${path}`).
  */
 export function postSignInPath(next: string | null | undefined): string {
-  // Open-redirect guard: only honor relative, single-slash paths.
-  const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  // Open-redirect guard: only honor relative, single-slash paths. Anything else
+  // (absent, absolute, protocol-relative) counts as "no destination".
+  const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  if (!dest) return "/welcome";
   // Already pointed at /welcome? Don't double-wrap (avoids a self-referential next loop).
   if (dest === "/welcome" || dest.startsWith("/welcome?") || dest.startsWith("/welcome/")) {
     return dest;

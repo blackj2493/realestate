@@ -65,6 +65,51 @@ export const CITY_GROUPS: Record<string, string[]> = {
   Ottawa: OTTAWA_AREAS,
 };
 
+export interface QuickPickMarket {
+  /** Display label AND the region value written to config.regions. */
+  name: string;
+  /** Opening map camera. See the note below on why this is a camera, not a filter. */
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
+/**
+ * One-tap markets offered wherever we ask a user to choose a starting area — the
+ * /welcome first-run seed and the dashboard's FirstRunRegionPicker. Every name must
+ * resolve to real inventory through areaFilter above, so "Toronto" and "Ottawa" are
+ * GROUPS (TRREB has no single City value for either) that expand to their whole
+ * City-group. Anything finer (Orleans, Kanata) is reached via location search, not here.
+ * Keep this list short — it is a starting point the user edits later, not a taxonomy.
+ *
+ * The coordinates exist because a first-run user is EXPLORING, not searching. Seeding
+ * them with a city text filter pins the terminal to that city, and panning one street
+ * past the boundary empties the map with no explanation. Seeding the CAMERA instead
+ * leaves the query unfiltered, so results follow the viewport and panning just works.
+ * The city filter is the right model only when the user deliberately typed a place.
+ *
+ * data/city-centroids.json is NOT usable here — it is keyed by raw TRREB City strings
+ * (it has "Toronto C01" but no "Toronto") and covers only 34 geocoding fallbacks. These
+ * are hand-set, cross-checked against that file for the four it does contain, with zoom
+ * chosen per market so a dense core and a spread-out suburb both frame sensibly.
+ */
+export const QUICK_PICK_MARKETS: readonly QuickPickMarket[] = [
+  { name: "Toronto", lat: 43.6532, lng: -79.3832, zoom: 11 },
+  { name: "Ottawa", lat: 45.4215, lng: -75.6972, zoom: 11 },
+  { name: "Mississauga", lat: 43.5853, lng: -79.645, zoom: 11.5 },
+  { name: "Brampton", lat: 43.6882, lng: -79.763, zoom: 11.5 },
+  { name: "Vaughan", lat: 43.8361, lng: -79.4983, zoom: 11.5 },
+  { name: "Markham", lat: 43.8599, lng: -79.335, zoom: 11.5 },
+  { name: "Oakville", lat: 43.4675, lng: -79.6877, zoom: 12 },
+  { name: "Hamilton", lat: 43.2557, lng: -79.8711, zoom: 11.5 },
+];
+
+/** Camera for a market name, or null if it isn't one of the quick picks. */
+export function marketCamera(name: string): QuickPickMarket | null {
+  const key = name.trim().toLowerCase();
+  return QUICK_PICK_MARKETS.find((m) => m.name.toLowerCase() === key) ?? null;
+}
+
 /**
  * Typesense filter fragment to AND-join into rawFilterBy. Backtick-quoted
  * string values so names with spaces / hyphens parse safely; backticks inside
