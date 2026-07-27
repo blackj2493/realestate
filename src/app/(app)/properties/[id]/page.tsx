@@ -1191,7 +1191,7 @@ export default async function PropertyPage({
             )}
 
             {/* Property Data Sheet — full TRREB payload, registry-driven. */}
-            <div id="details" className="scroll-mt-28">
+            <div id="details" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_720px]">
               <PropertyDataSheet groups={datasheet} />
             </div>
 
@@ -1200,7 +1200,7 @@ export default async function PropertyPage({
 
             {/* Room Dimensions — proportional, drawn-to-scale room map */}
             {rooms.length > 0 && (
-              <div id="rooms" className="scroll-mt-28">
+              <div id="rooms" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_520px]">
                 <RoomMap rooms={rooms} className="mb-6" />
               </div>
             )}
@@ -1241,7 +1241,7 @@ export default async function PropertyPage({
             </Suspense>
           )}
 
-        <section id="history" className="scroll-mt-28">
+        <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
           {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
               Pure CSS (a peer checkbox), so it stays server-rendered — no client
               boundary, no hydration flash. Desktop (md+) always shows it and hides
@@ -1288,7 +1288,7 @@ export default async function PropertyPage({
         {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island.
              Commercial subjects use exact-subtype + area/price matching; commercial
              leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" className="scroll-mt-28">
+        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
         <SimilarProperties
           subjectId={id}
           cityRegion={p.CityRegion ?? null}

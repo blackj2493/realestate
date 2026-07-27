@@ -626,7 +626,7 @@ export default async function AddressProfileView({
             )}
 
             {nearby && (
-              <div id="feed" className="scroll-mt-6">
+              <div id="feed" className="scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
                 <ActivityFeed
                   activeEvents={nearby.events}
                   soldEvents={isConsumer ? (soldGated?.events ?? []) : []}
@@ -653,7 +653,7 @@ export default async function AddressProfileView({
 
             <SoldSnapshot isConsumer={isConsumer} gated={soldGated} summary={soldSummary} />
 
-            <div id="ledger" className="scroll-mt-6">
+            <div id="ledger" className="scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_480px]">
               <StreetLedgerCard isConsumer={isConsumer} gated={ledgerGated} publicLedger={ledgerPublic} />
             </div>
 
@@ -673,7 +673,7 @@ export default async function AddressProfileView({
             width (owner decision 2026-07-23 — this is the page's key conversion
             surface, so it never sits squeezed inside the grid's left column). ── */}
         {nearby && nearby.listings.length > 0 && (
-          <section id="for-sale" className="mt-8 scroll-mt-6">
+          <section id="for-sale" className="mt-8 scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_380px]">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
                 For sale near this home
@@ -698,7 +698,7 @@ export default async function AddressProfileView({
 
         {/* ── The block, scored: schools + daily life + risk scan ── */}
         {(schools.length > 0 || grocery || rec || hasGeo) && (
-          <section className="mt-8">
+          <section className="mt-8 [content-visibility:auto] [contain-intrinsic-size:0px_600px]">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">The block, scored</h2>
               <span className="font-mono text-[10px] text-muted-foreground">public records · EQAO · Overture</span>
