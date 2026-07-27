@@ -24,8 +24,14 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon } =
     useCommandCenterStore();
+
+  // Scope chip (fix #4): with no typed place and no draw area, the results are
+  // scoped to the visible map extent (first-load viewport scoping / "search this
+  // map area"), not to a named place — say so explicitly rather than leaving the
+  // count reading like a province-wide total.
+  const viewportScoped = Boolean(mapBounds) && !location && !drawPolygon;
   const isAuthed = useIsAuthed();
   // Mobile → full report; desktop → in-page Quick Look drawer.
   const openListing = useOpenListing();
@@ -162,6 +168,14 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
             </>
           )}
         </p>
+        {viewportScoped && (
+          <span
+            title="Results are scoped to the visible map area. Pan or zoom the map, or search a place, to change the scope."
+            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-sm border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-700 dark:text-cyan-300"
+          >
+            <MapPin className="h-3 w-3" /> Map area
+          </span>
+        )}
       </div>
 
       {/* Column headers — desktop only (mobile card mode has no columns to sort).

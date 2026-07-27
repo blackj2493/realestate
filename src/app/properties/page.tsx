@@ -46,6 +46,7 @@ import { mergeLayers } from "@/lib/sold/mergeLayers";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
+import { getConfig } from "@/lib/dashboard/config";
 
 /**
  * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
@@ -244,6 +245,45 @@ function CommandCenterContent() {
 
   const persona = PERSONA_CONFIG[activePersona];
 
+  // First-load scope detector (fix #4). A "bare cold start" has none of: a typed/
+  // seeded place, a draw area, an active commute zone, a dropped pin, or a deep-link
+  // center/city/filter. Everything else is a form of explicit scope that keeps its
+  // existing behavior. ONLY the bare case holds the first query for the map's
+  // viewport box (see performSearch + the AlphaMap scopeToViewport prop) so the list
+  // matches the map instead of spilling province-wide.
+  const latParam = Number(searchParams.get("lat"));
+  const lngParam = Number(searchParams.get("lng"));
+  const hasCenterParam =
+    Number.isFinite(latParam) &&
+    Number.isFinite(lngParam) &&
+    Math.abs(latParam) <= 90 &&
+    Math.abs(lngParam) <= 180 &&
+    !(latParam === 0 && lngParam === 0);
+  const hasCityParam = Boolean(searchParams.get("city") || searchParams.get("search"));
+  const wantViewportScope =
+    !location &&
+    !drawPolygon &&
+    !commute.enabled &&
+    !searchPin &&
+    !hasCenterParam &&
+    !hasCityParam &&
+    !hasStructuredParams(searchParams);
+
+  // Signed-in initial viewport (fix #4): with no URL scope and no typed place, open
+  // the terminal on the user's first saved market (dashboard config in localStorage)
+  // instead of the generic Toronto default. Seeding `location` reuses the existing
+  // place-query + auto-fit path (the cheapest reliable, fully-synchronous variant);
+  // a saved-bubble-geometry fly-to is a noted follow-up. Runs once, and only while
+  // the terminal is still bare (a URL place/center/filter owns the scope instead).
+  const savedMarketSeededRef = useRef(false);
+  useEffect(() => {
+    if (savedMarketSeededRef.current) return;
+    if (location || hasCityParam || hasCenterParam || hasStructuredParams(searchParams)) return;
+    savedMarketSeededRef.current = true;
+    const savedRegions = getConfig().regions;
+    if (savedRegions.length > 0) setLocation(savedRegions[0]);
+  }, [location, hasCityParam, hasCenterParam, searchParams, setLocation]);
+
   // Switching persona drops the map into that persona's default render mode
   // (e.g. Cashflow/Builders → Heatmap). The user can re-toggle freely after.
   useEffect(() => {
@@ -280,6 +320,11 @@ function CommandCenterContent() {
       commute.enabled && commute.polygon && commute.polygon.length >= 3
         ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
         : undefined;
+    // Lens-aware default sort (fix #4): the Homebuyer lens leads with FRESHNESS
+    // (newest listed first, EntryTimestamp desc); the investor lenses keep their
+    // deal-signal sort (cap rate / True DOM / lot width). The School lens still
+    // overrides both, and the basic browse modes (rent / commercial) stay on price.
+    const lensSort = activePersona === "smart" ? "EntryTimestamp" : persona.sortBy;
     return await searchListings({
       query: location || "*",
       rawFilterBy,
@@ -288,12 +333,22 @@ function CommandCenterContent() {
       perPage: MAX_LISTINGS,
       facetBy: FACET_FIELDS.join(","),
       excludeFields: TERMINAL_EXCLUDE_FIELDS,
-      sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
+      sortBy: schoolField ?? (investorLayer ? lensSort : BASIC_SORT),
       sortOrder: "desc",
     });
-  }, [transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
+  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
 
   const performSearch = useCallback(async () => {
+    // First-load viewport hold (fix #4): on a bare cold start with no explicit
+    // scope, do NOT fire the province-wide unbounded query. Keep the skeleton up and
+    // wait for AlphaMap to report its settled viewport (setMapBounds) — that flips
+    // mapBounds (a dep here) and re-runs this with a bounding box, so the very first
+    // result set matches the map. Any explicit scope (place / filter / draw / pin /
+    // deep-link) makes wantViewportScope false and this branch never trips.
+    if (wantViewportScope && !mapBounds) {
+      setIsLoading(true);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     const plan = queryPlan(activeLayers);
@@ -386,7 +441,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [wantViewportScope, activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // Drop any stale comps/search pin when the user navigates to a NEW area (location
   // change only — NOT on layer toggles, so the pin set alongside the Sold toggle in
@@ -473,6 +528,7 @@ function CommandCenterContent() {
               heatAggregation={heatAggregation}
               onSelectProperty={openListing}
               currentSearchQuery={`${activePersona}:${location}`}
+              scopeToViewport={wantViewportScope}
               className="h-full w-full"
             />
             {/* Instrument Deck — dark control surface layered over the dark map. The
