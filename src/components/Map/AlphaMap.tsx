@@ -910,7 +910,15 @@ export default function AlphaMap({
   // Show the empty state only before the map has ever framed results. Once it's
   // up (commute active or a prior search rendered), keep the map mounted even at
   // 0 in-view results so viewport browsing into sparse areas isn't a dead end.
-  if (validProperties.length === 0 && !commuteRing && !mapReady) {
+  //
+  // BUT never short-circuit while scopeToViewport is bootstrapping (fix #4): the page
+  // holds the first query until the map reports its viewport, and that report only fires
+  // from the mounted DeckGL canvas (onResize → computeAndReportBounds). If we returned the
+  // empty state here on the 0-result cold start, the canvas would never mount, bounds would
+  // never be sent, the hold would never release, and the terminal would deadlock on
+  // "scanning" forever for any visitor with no saved market. Always render the map during
+  // the bootstrap so it can report bounds; the scoped results arrive on the next tick.
+  if (validProperties.length === 0 && !commuteRing && !mapReady && !scopeToViewport) {
     return (
       <div className={`flex items-center justify-center bg-background ${className}`}>
         <div className="p-6 text-center">
