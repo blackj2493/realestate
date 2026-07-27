@@ -21,7 +21,12 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUICK_PICK_MARKETS, marketCamera } from "@/lib/dashboard/area";
-import { getConfig, saveConfig } from "@/lib/dashboard/config";
+import {
+  getConfig,
+  saveConfig,
+  hasForeignWorkspace,
+  resetLocalWorkspace,
+} from "@/lib/dashboard/config";
 
 /** Where an unseeded first-run user lands if they never tap a market. Matches the
  *  terminal map's INITIAL_VIEW_STATE, so the opening camera needs no correcting fly. */
@@ -66,22 +71,22 @@ export default function AcceptTermsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [market, setMarket] = useState<string | null>(null);
-  // Regions already on file (an /apply signup seeds them from its profile). When we
-  // know them we don't ask again — we just open the terminal on the first one.
-  const [knownRegion, setKnownRegion] = useState<string | null>(null);
-  const [configRead, setConfigRead] = useState(false);
+  // Whether a PREVIOUS account left a workspace behind in this browser's localStorage.
+  // Read after hydration (localStorage is client-only) purely so we can say so in the UI;
+  // the picker itself no longer depends on it.
+  const [foreignWorkspace, setForeignWorkspace] = useState(false);
 
-  // localStorage is client-only, so this can't inform the server render — hence the
-  // picker mounts after hydration rather than being decided in /welcome.
   useEffect(() => {
     if (!firstRun) return;
-    setKnownRegion(getConfig().regions[0] ?? null);
-    setConfigRead(true);
+    setForeignWorkspace(hasForeignWorkspace());
   }, [firstRun]);
 
   const allChecked = notAgent && bonaFide && agree;
-  // Only ask when this is a first run AND we have nothing on file.
-  const askMarket = firstRun && configRead && knownRegion === null;
+  // A first-ever acceptance ALWAYS asks. An earlier version skipped the question when
+  // localStorage already held a region — but that storage is not scoped to an account.
+  // Deleting a user in Supabase (or just signing out) leaves it intact, so a genuinely
+  // new account silently inherited the previous one's city and never saw the picker.
+  const askMarket = firstRun;
 
   const submit = async () => {
     if (!allChecked) {
@@ -103,15 +108,18 @@ export default function AcceptTermsForm({
       }
 
       if (firstRun) {
-        const city = knownRegion ?? market ?? DEFAULT_MARKET;
-        // Seed the dashboard too, so it has content whenever the user first opens it.
+        const city = market ?? DEFAULT_MARKET;
         // Best-effort: a storage failure must never block entry to the terminal.
-        if (knownRegion === null) {
-          try {
-            saveConfig({ ...getConfig(), regions: [city] });
-          } catch {
-            /* private mode / quota — the terminal seed below still works */
-          }
+        try {
+          // Clear anything a PREVIOUS account left in this browser before seeding. The
+          // workspace is localStorage, not Supabase, so it survives account deletion and
+          // sign-out — leaving a new account with the old one's cities, persona and
+          // boards, and greeted by the old one's name (DashboardClient reads
+          // getProfile()?.fullName). A brand-new account starts clean on this device.
+          if (hasForeignWorkspace()) resetLocalWorkspace();
+          saveConfig({ ...getConfig(), regions: [city] });
+        } catch {
+          /* private mode / quota — the terminal seed below still works */
         }
         // Seed the CAMERA via the terminal's existing ?lat/?lng/?z contract, NOT ?city=.
         // A new user is exploring: a city text filter blanks the map the moment they pan
@@ -178,6 +186,13 @@ export default function AcceptTermsForm({
           <p className="mt-2 text-[11px] text-muted-foreground">
             Optional — you can search any area once you&rsquo;re in, and add more later.
           </p>
+          {/* Don't wipe someone's saved setup silently — say so before it happens. */}
+          {foreignWorkspace && (
+            <p className="mt-2 text-[11px] leading-snug text-amber-700 dark:text-amber-300">
+              This browser still has a saved workspace from a previous account. Continuing
+              replaces it with your own.
+            </p>
+          )}
         </div>
       )}
 
