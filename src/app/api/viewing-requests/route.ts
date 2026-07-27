@@ -90,9 +90,14 @@ export async function POST(req: NextRequest) {
       ].filter(Boolean).join("\n"),
     });
 
-    // Tier-0 speed-to-lead: instant auto-acknowledgement TO the lead. sendLeadFollowUp is
-    // now observable + non-throwing (records a missing/bad key), so no try/catch needed.
-    await sendLeadFollowUp({ name, address, listingKey, email });
+    // Tier-0 speed-to-lead: instant auto-acknowledgement TO the lead (best-effort). The
+    // SEND is now observable + non-throwing, but rendering still can throw (e.g. a missing
+    // unsubscribe secret), so keep the guard — a follow-up failure must never fail capture.
+    try {
+      await sendLeadFollowUp({ name, address, listingKey, email });
+    } catch (fuErr) {
+      console.error("[viewing-requests] lead follow-up failed (lead saved):", fuErr);
+    }
 
     return NextResponse.json({ success: true });
   } catch (e) {
