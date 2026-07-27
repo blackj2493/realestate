@@ -13,6 +13,7 @@ import WatchButton from "@/components/watchlist/WatchButton";
 import WatchlistSummary from "./WatchlistSummary";
 import WatchlistPulseStrip from "./WatchlistPulseStrip";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
+import SignInLink from "@/components/auth/SignInLink";
 import { ModuleHead, StatusLight, type StatusTone } from "@/components/daylight/primitives";
 
 function Thumb({ item }: { item: WatchItem }) {
@@ -90,12 +91,9 @@ export default function WatchlistSection() {
           title="Watchlist"
           right={
             !signedIn ? (
-              <Link
-                href="/login"
-                className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline"
-              >
+              <SignInLink className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline">
                 Sign in to sync across devices →
-              </Link>
+              </SignInLink>
             ) : undefined
           }
         />
@@ -126,12 +124,9 @@ export default function WatchlistSection() {
         count={rollup.count}
         right={
           !signedIn ? (
-            <Link
-              href="/login"
-              className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline"
-            >
+            <SignInLink className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline">
               Sign in to sync across devices →
-            </Link>
+            </SignInLink>
           ) : undefined
         }
       />

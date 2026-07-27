@@ -16,6 +16,7 @@
 
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
 import type { MetricContext } from "@/lib/compare/compareMetricsConfig";
 import { formatPrice } from "@/lib/utils";
 
@@ -87,12 +88,14 @@ export default function CompareValuePlot({
           It maps each home against our comp value — what recent comparable sales support — a
           VOW-derived figure we only show to signed-in members. The table works either way.
         </p>
-        <Link
-          href="/login"
+        <SignInLink
+          // The shortlist lives entirely in ?ids=, which usePathname() drops — without
+          // this the user signs in and returns to an empty comparison.
+          next={`/properties/compare?ids=${contexts.map((c) => c.listing.id).join(",")}`}
           className="inline-flex min-h-[40px] items-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/30"
         >
           Sign in — free
-        </Link>
+        </SignInLink>
       </Panel>
     );
   }

@@ -12,6 +12,7 @@ import { usePathname } from "next/navigation";
 import { X, Lock } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { fetchSimilarComps, type SoldComp } from "@/lib/comps/fetchSimilarComps";
+import { loginHref } from "@/lib/auth/loginHref";
 
 const money = (n: number): string =>
   n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `$${Math.round(n / 1_000)}K` : `$${Math.round(n)}`;
@@ -54,8 +55,7 @@ export default function CompsPopover({
     return () => ctrl.abort();
   }, [listing]);
 
-  const safeNext = pathname && pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : null;
-  const loginHref = safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login";
+  const signInHref = loginHref(pathname);
 
   return (
     <div
@@ -74,7 +74,7 @@ export default function CompsPopover({
       {s.loading ? (
         <div className="px-3 py-3 font-mono text-[11px] text-muted-foreground">Scanning recent sales…</div>
       ) : s.locked ? (
-        <Link href={loginHref} className="flex items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/60">
+        <Link href={signInHref} className="flex items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/60">
           <Lock className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-300" />
           <span className="font-mono text-[11px] text-foreground">Sign in to view recent comparable solds</span>
         </Link>

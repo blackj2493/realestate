@@ -26,6 +26,7 @@ import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getConsumer } from "@/lib/auth/requireConsumer";
+import SignInLink from "@/components/auth/SignInLink";
 import { logVowAccess } from "@/lib/audit/vowAccessLog";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import ListingCalculator from "@/components/Property/ListingCalculator";
@@ -764,13 +765,10 @@ export default async function PropertyPage({
                           {formatPrice(price)}
                         </span>
                         {hasSoldPrice && (
-                          <Link
-                            href="/login"
-                            className="inline-flex min-h-[40px] items-center gap-1.5 self-center rounded-lg border border-cyan-500 bg-cyan-500/10 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300"
-                          >
+                          <SignInLink className="inline-flex min-h-[40px] items-center gap-1.5 self-center rounded-lg border border-cyan-500 bg-cyan-500/10 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300">
                             <Lock className="h-4 w-4" />
                             Sign in for the {status.label === "LEASED" ? "leased" : "sold"} price — free
-                          </Link>
+                          </SignInLink>
                         )}
                       </>
                     )}
@@ -1053,12 +1051,9 @@ export default async function PropertyPage({
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           Price estimate, Deal Score, sold prices &amp; full history. Free, ~20 seconds.
                         </p>
-                        <Link
-                          href="/login"
-                          className="mt-2 inline-flex min-h-[38px] items-center rounded-lg border border-cyan-500 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
-                        >
+                        <SignInLink className="mt-2 inline-flex min-h-[38px] items-center rounded-lg border border-cyan-500 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300">
                           Unlock this home
-                        </Link>
+                        </SignInLink>
                       </div>
                     ) : undefined
                   }

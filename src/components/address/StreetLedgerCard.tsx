@@ -6,8 +6,8 @@
  * placeholders (redact-skeleton, evenly spaced, no year/price/date anywhere in the
  * DOM). Consumers receive the full ledger and get real dots positioned by date.
  */
-import Link from "next/link";
 import { Lock } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
 import type { StreetLedgerGated, StreetLedgerPublic } from "@/lib/address/streetLedger";
 
 const MAX_DOTS = 10;
@@ -162,12 +162,9 @@ export default function StreetLedgerCard({
         </b>{" "}
         on this street. Sign in free to read the whole ledger — every price, every date.
       </p>
-      <Link
-        href="/login"
-        className="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-400"
-      >
+      <SignInLink className="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-400">
         <Lock className="h-3 w-3" /> Unlock the ledger
-      </Link>
+      </SignInLink>
     </section>
   );
 }
