@@ -242,13 +242,20 @@ const OFFER_NUDGE_CEIL = 85; // Terms ≥ 85 → full nudge
 
 // ── Grade bands (provisional hand-calibration; replace with the population curve job) ─
 // Tuned so a fairly-priced listing (~50 blended) lands a C, not an F.
+//
+// The verdict is a persona-BLENDED grade over all four pillars, so it must NOT claim a
+// single-axis price position (e.g. "priced below…") — that both over-attributes a yield- or
+// upside-driven score to price AND collides with the Estimated Sale card's ask-relative line
+// ("−5.7% below ask · room to negotiate"), so the two read as if they disagree. These
+// phrasings describe the grade itself ("across the signals we track"); the specific
+// price-vs-comps read lives in the expandable breakdown + The Read, not here.
 const GRADE_BANDS: Array<[number, DealScoreGrade, string]> = [
-  [80, "A+", "Exceptional — priced well below the signals we track."],
-  [70, "A", "Strong deal — multiple metrics favor the buyer."],
-  [58, "B", "Solid opportunity with real room to negotiate."],
+  [80, "A+", "Exceptional — scores at the top of the signals we track."],
+  [70, "A", "Strong deal — the signals we track favor the buyer."],
+  [58, "B", "Solid — most of the signals we track favor the buyer."],
   [40, "C", "Fairly priced for the area — a normal deal, no red flags."],
-  [28, "D", "Priced a bit ahead of the fundamentals."],
-  [0, "F", "Overpriced on the metrics we track."],
+  [28, "D", "Underwhelming on the signals we track."],
+  [0, "F", "Weak across the signals we track."],
 ];
 
 /** Direction thresholds: how a sub-score maps to an arrow. */

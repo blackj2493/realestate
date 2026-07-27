@@ -57,6 +57,19 @@ interface QuickLookPanelProps {
   onClose: () => void;
 }
 
+/**
+ * Structural Vitals resolved by the deal-score API from the full payload (the same
+ * datasheet.ts "vitals" registry the full report uses). Heating/Cooling are absent from
+ * the light Typesense index doc, so without this they showed "—"; each field is null when
+ * the feed left it empty, and the drawer then hides that row.
+ */
+interface QuickLookVitals {
+  lot: string | null;
+  propertyAge: string | null;
+  heating: string | null;
+  cooling: string | null;
+}
+
 const pct = (v: number | null) => (v != null ? `${v.toFixed(1)}%` : "—");
 
 export default function QuickLookPanel({ property, onClose }: QuickLookPanelProps) {
@@ -82,6 +95,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const [hasDealScore, setHasDealScore] = useState(false);
   const [hasEstimate, setHasEstimate] = useState(false);
   const [hasExpectedSale, setHasExpectedSale] = useState(false);
+  const [vitals, setVitals] = useState<QuickLookVitals | null>(null);
   const [loadingScore, setLoadingScore] = useState(showBuyerAnalytics);
 
   // Esc closes; lock body scroll while the drawer is open.
@@ -113,6 +127,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
         setDealScore(data?.dealScore ?? null);
         setEstimate(data?.estimate ?? null);
         setSalePrice(data?.salePrice ?? null);
+        setVitals(data?.vitals ?? null);
         setIsAuthed(!!data?.isAuthed);
         setHasDealScore(!!data?.hasDealScore);
         setHasEstimate(!!data?.hasEstimate);
@@ -153,6 +168,16 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const showEstimate = !loadingScore && (!!salePrice || (!isAuthed && (hasEstimate || hasExpectedSale)));
   const showDisclaimer =
     !loadingScore && ((salePrice?.value ?? 0) > 0 || (estimate?.estimatedValue ?? 0) > 0);
+
+  // Structural Vitals rows: prefer the API-resolved value (matches the full report's data
+  // sheet exactly — e.g. Heating "Radiant · Gas"), fall back to the index doc, and drop any
+  // field the feed left empty so no bare "—" row renders (audit #9).
+  const vitalRows = [
+    { k: "Lot", v: vitals?.lot ?? (lot !== "—" ? lot : null) },
+    { k: "Property Age", v: vitals?.propertyAge ?? (property.ApproximateAge?.trim() || null) },
+    { k: "Heating", v: vitals?.heating ?? (property.Heating?.trim() || null) },
+    { k: "Cooling", v: vitals?.cooling ?? (typeof cooling === "string" ? cooling.trim() || null : null) },
+  ].filter((r): r is { k: string; v: string } => !!r.v);
 
   return (
     <>
@@ -328,21 +353,26 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             </div>
           )}
 
-          {/* Structural Vitals — zero-fetch, scannable facts from the index doc */}
-          <div className="mb-4">
-            <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-              <Home className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-              Structural Vitals
-            </h3>
-            <table className="w-full border-collapse text-sm">
-              <tbody className="divide-y divide-border">
-                <Vital k="Lot" v={lot} />
-                <Vital k="Property Age" v={property.ApproximateAge || "—"} />
-                <Vital k="Heating" v={property.Heating || "—"} />
-                <Vital k="Cooling" v={cooling || "—"} />
-              </tbody>
-            </table>
-          </div>
+          {/* Structural Vitals — real facts, matching the full report's data sheet. Heating/
+              Cooling aren't in the light index doc, so they come from the deal-score fetch
+              (same datasheet registry as the full page); Lot/Age fall back to the index doc.
+              A row with no value is HIDDEN — a bare "—" beside populated rows reads as broken
+              data (audit #9), so we show the real value or nothing. */}
+          {vitalRows.length > 0 && (
+            <div className="mb-4">
+              <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+                <Home className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+                Structural Vitals
+              </h3>
+              <table className="w-full border-collapse text-sm">
+                <tbody className="divide-y divide-border">
+                  {vitalRows.map((row) => (
+                    <Vital key={row.k} k={row.k} v={row.v} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
             The full report adds schools, room map, sale history

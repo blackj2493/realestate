@@ -690,7 +690,7 @@ export default async function PropertyPage({
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
           <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
-            Command Center
+            Map
           </Link>
           {cityHref && p.City && (
             <>

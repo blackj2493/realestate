@@ -14,6 +14,7 @@ import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 import InfoDot from "@/components/ui/InfoDot";
 import { onLensChanged, persistLens } from "@/lib/personas/lensPersistence";
 import { DEAL_PERSONA_ORDER, effectiveDealPersona, scoredDealPersonas } from "@/lib/dealScore/effectivePersona";
+import { roundToStep, OFFER_BAND_DISPLAY_STEP } from "@/lib/avm/displayRounding";
 
 /**
  * Deal Score UI — the flagship "is this a good deal — for ME?" signal.
@@ -306,8 +307,10 @@ export default function DealScoreCard({
           <InfoDot term="dealScore" />
         </span>
         {dealScore.confidence && (
+          // Names its axis ("Deal signal") so it can't be confused with the Estimated Sale
+          // card's separate "Estimate · X confidence" chip sitting right beside it.
           <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-muted-foreground">
-            {dealScore.confidence} confidence
+            Deal signal · {dealScore.confidence} confidence
           </span>
         )}
       </h3>
@@ -385,11 +388,12 @@ export default function DealScoreCard({
           </p>
           {band.hotMarket ? (
             <p className="mt-1 text-sm font-medium text-foreground">
-              Expect to compete near {formatPrice(band.likelyClose)}
+              Expect to compete near {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>
           ) : (
             <p className="mt-1 text-sm font-medium text-foreground">
-              Offer {formatPrice(band.aggressive)}–{formatPrice(band.likelyClose)}
+              Offer {formatPrice(roundToStep(band.aggressive, OFFER_BAND_DISPLAY_STEP))}–
+              {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>
           )}
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{band.note}</p>
