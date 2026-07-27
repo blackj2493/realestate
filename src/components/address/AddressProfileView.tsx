@@ -60,6 +60,8 @@ import TypicalPricesCard from "./TypicalPricesCard";
 import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
+import { dominantSubType } from "./listedTodayDefault";
+import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import ActivityFeed from "./ActivityFeed";
 import StreetRadar from "./StreetRadar";
 import StreetLedgerCard from "./StreetLedgerCard";
@@ -400,6 +402,22 @@ export default async function AddressProfileView({
         : null,
     }));
 
+  // Default the "if listed today" band to the SUBJECT's likely type, not the raw
+  // nearby count-leader (audit #16 — a condo-dense pocket forced "Condo Apartment"
+  // onto a detached-house address). Prefer the street's dominant RECORDED type
+  // (members only — sold ledger), then the dominant type of same-street LIVE
+  // listings (anon-safe IDX). Null → IfListedToday falls back to the non-condo band.
+  const subjectStreetName = parseAddress(`${profile.address}, ${profile.city}`).streetName;
+  const streetSoldType = dominantSubType((ledgerGated?.sales ?? []).map((s) => s.subType));
+  const streetActiveType = subjectStreetName
+    ? dominantSubType(
+        (nearby?.listings ?? [])
+          .filter((l) => streetNamesMatch(subjectStreetName, parseAddress(l.address).streetName))
+          .map((l) => l.subType)
+      )
+    : null;
+  const listedTodayDefaultType = streetSoldType ?? streetActiveType ?? null;
+
   // Hero narrative: market lean + the concrete next-door anchor. The detailed
   // momentum read lives in the pulse card's blurb — don't repeat it here.
   const anchor = bands[0]?.nearest ?? null;
@@ -583,6 +601,7 @@ export default async function AddressProfileView({
                 medianAsking={nearby.stats.medianAsking}
                 radiusKm={nearby.radiusKm}
                 isConsumer={isConsumer}
+                defaultType={listedTodayDefaultType}
               />
             )}
 

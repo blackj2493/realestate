@@ -177,10 +177,37 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
 
             <div className="max-h-[70dvh] overflow-y-auto pb-safe">
               {drops.length === 0 ? (
-                <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  {watchedIds.length === 0
-                    ? "Save properties to your watchlist to get price-drop alerts."
-                    : "No price drops on your watchlist yet."}
+                <div className="px-4 py-6 text-center">
+                  {watchedIds.length === 0 ? (
+                    <>
+                      <p className="text-xs font-medium text-foreground">No watched homes yet</p>
+                      <p className="mx-auto mt-1 max-w-[15rem] text-[11px] leading-relaxed text-muted-foreground">
+                        Save homes you like and we&apos;ll watch the price — a drop lights up this bell.
+                      </p>
+                      <Link
+                        href="/properties"
+                        onClick={() => setOpen(false)}
+                        className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-cyan-500/50 bg-cyan-500/10 px-4 text-xs font-semibold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300"
+                      >
+                        Browse homes
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs font-medium text-foreground">You&apos;re all caught up</p>
+                      <p className="mx-auto mt-1 max-w-[15rem] text-[11px] leading-relaxed text-muted-foreground">
+                        No price drops on your {watchedIds.length} watched home{watchedIds.length === 1 ? "" : "s"} yet
+                        — we&apos;ll email you the moment one dips.
+                      </p>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setOpen(false)}
+                        className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-cyan-500/50 bg-cyan-500/10 px-4 text-xs font-semibold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300"
+                      >
+                        Manage alerts
+                      </Link>
+                    </>
+                  )}
                 </div>
               ) : (
                 drops.map((d) => (

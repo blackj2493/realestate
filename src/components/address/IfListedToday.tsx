@@ -13,6 +13,7 @@
  */
 import { useState } from "react";
 import Link from "next/link";
+import { pickDefaultBandIndex } from "./listedTodayDefault";
 
 export interface ListedTodayAnchor {
   id: string;
@@ -61,6 +62,7 @@ export default function IfListedToday({
   medianAsking,
   radiusKm,
   isConsumer,
+  defaultType,
 }: {
   address: string;
   bands: ListedTodayBand[];
@@ -68,8 +70,13 @@ export default function IfListedToday({
   medianAsking: number | null;
   radiusKm: number;
   isConsumer: boolean;
+  /** The subject street's likely type (audit #16) — opens the band on that type
+   *  instead of the raw nearby count-leader. Null → prefer the non-condo band. */
+  defaultType?: string | null;
 }) {
-  const [active, setActive] = useState(0);
+  // Open on the subject's likely type, not whatever's most common nearby (a condo-
+  // dense pocket used to force "Condo Apartment" onto a detached-house address).
+  const [active, setActive] = useState(() => pickDefaultBandIndex(bands.map((b) => b.label), defaultType));
   if (bands.length === 0) return null;
   const band = bands[Math.min(active, bands.length - 1)];
   const peak = histogram ? Math.max(...histogram.buckets, 1) : 1;
