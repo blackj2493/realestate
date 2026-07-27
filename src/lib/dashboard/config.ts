@@ -150,6 +150,37 @@ export function getProfile(): ApplyProfile | null {
   }
 }
 
+/**
+ * Wipe the locally-stored workspace — the applicant profile and the dashboard config.
+ *
+ * These live in localStorage, NOT in Supabase, so they outlive the account that created
+ * them: deleting a user server-side leaves them untouched, and so does signing out. On a
+ * shared browser that means the next person to create an account inherits the previous
+ * one's saved cities, persona, boards and market lens — and, because DashboardClient
+ * greets the user with getProfile()?.fullName, is greeted by the previous person's NAME.
+ *
+ * Call this when a brand-new account is being set up (see AcceptTermsForm's first-run
+ * path) so a new account always starts from a clean workspace on this device.
+ */
+export function resetLocalWorkspace(): void {
+  if (!hasWindow()) return;
+  window.localStorage.removeItem(PROFILE_KEY);
+  window.localStorage.removeItem(CONFIG_KEY);
+}
+
+/**
+ * Whether the stored workspace must belong to a DIFFERENT account than one that is only
+ * now accepting terms for the first time.
+ *
+ * The tell is saved regions. /apply — the only pre-account writer — always stores
+ * `regions: []` (profiling was dropped from signup), and nothing else writes regions
+ * until a user picks them from inside the app. So on a first-ever acceptance any
+ * non-empty regions list can only have come from a previous account on this browser.
+ */
+export function hasForeignWorkspace(): boolean {
+  return getConfig().regions.length > 0;
+}
+
 // ── Region → city mapping ────────────────────────────────────────────────────
 export function citiesFromRegions(regions: string[]): string[] {
   const out: string[] = [];
