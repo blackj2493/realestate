@@ -52,21 +52,23 @@ export default function HomePage() {
           {/* The comparison: sparse consumer card vs. our decoded intelligence card */}
           <ListingCompare />
 
-          <Link
-            href="/apply"
-            className="glow-emerald mt-7 inline-flex h-[3.25rem] items-center justify-center rounded-md bg-emerald-500 px-12 text-base font-bold uppercase tracking-[0.15em] text-slate-950 transition-colors hover:bg-emerald-400"
-          >
-            Apply for Terminal Access
-          </Link>
-
-          {/* Secondary ghost CTA: lets cold/anonymous visitors reach the terminal
-              without the high-friction application form. */}
-          <Link
-            href="/properties"
-            className="terminal-font mt-3.5 inline-flex h-10 items-center justify-center rounded-md border border-border/70 px-6 text-[13px] tracking-[0.2em] text-foreground transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
-          >
-            Explore the Terminal &rarr;
-          </Link>
+          {/* Two co-primary paths, side by side near the hero: sign up, OR browse
+              listings straight away. A visitor who isn't ready to apply can still
+              enter the product without hunting for a link at the bottom of the page. */}
+          <div className="mt-7 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+            <Link
+              href="/apply"
+              className="glow-emerald inline-flex h-[3.25rem] w-full items-center justify-center rounded-md bg-emerald-500 px-10 text-base font-bold uppercase tracking-[0.15em] text-slate-950 transition-colors hover:bg-emerald-400 sm:w-auto"
+            >
+              Get started free
+            </Link>
+            <Link
+              href="/properties"
+              className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-md border border-border/70 px-10 text-base font-bold uppercase tracking-[0.15em] text-foreground transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)] sm:w-auto"
+            >
+              Browse listings
+            </Link>
+          </div>
 
           {/* Crawlable entry to the city-hub directory — Googlebot can't crawl the
               client-only terminal above, so this is the top of the SEO hub tree. */}

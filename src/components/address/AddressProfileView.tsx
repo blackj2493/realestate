@@ -60,6 +60,8 @@ import TypicalPricesCard from "./TypicalPricesCard";
 import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
+import { dominantSubType } from "./listedTodayDefault";
+import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import ActivityFeed from "./ActivityFeed";
 import StreetRadar from "./StreetRadar";
 import StreetLedgerCard from "./StreetLedgerCard";
@@ -400,6 +402,22 @@ export default async function AddressProfileView({
         : null,
     }));
 
+  // Default the "if listed today" band to the SUBJECT's likely type, not the raw
+  // nearby count-leader (audit #16 — a condo-dense pocket forced "Condo Apartment"
+  // onto a detached-house address). Prefer the street's dominant RECORDED type
+  // (members only — sold ledger), then the dominant type of same-street LIVE
+  // listings (anon-safe IDX). Null → IfListedToday falls back to the non-condo band.
+  const subjectStreetName = parseAddress(`${profile.address}, ${profile.city}`).streetName;
+  const streetSoldType = dominantSubType((ledgerGated?.sales ?? []).map((s) => s.subType));
+  const streetActiveType = subjectStreetName
+    ? dominantSubType(
+        (nearby?.listings ?? [])
+          .filter((l) => streetNamesMatch(subjectStreetName, parseAddress(l.address).streetName))
+          .map((l) => l.subType)
+      )
+    : null;
+  const listedTodayDefaultType = streetSoldType ?? streetActiveType ?? null;
+
   // Hero narrative: market lean + the concrete next-door anchor. The detailed
   // momentum read lives in the pulse card's blurb — don't repeat it here.
   const anchor = bands[0]?.nearest ?? null;
@@ -583,6 +601,7 @@ export default async function AddressProfileView({
                 medianAsking={nearby.stats.medianAsking}
                 radiusKm={nearby.radiusKm}
                 isConsumer={isConsumer}
+                defaultType={listedTodayDefaultType}
               />
             )}
 
@@ -607,7 +626,7 @@ export default async function AddressProfileView({
             )}
 
             {nearby && (
-              <div id="feed" className="scroll-mt-6">
+              <div id="feed" className="scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
                 <ActivityFeed
                   activeEvents={nearby.events}
                   soldEvents={isConsumer ? (soldGated?.events ?? []) : []}
@@ -634,7 +653,7 @@ export default async function AddressProfileView({
 
             <SoldSnapshot isConsumer={isConsumer} gated={soldGated} summary={soldSummary} />
 
-            <div id="ledger" className="scroll-mt-6">
+            <div id="ledger" className="scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_480px]">
               <StreetLedgerCard isConsumer={isConsumer} gated={ledgerGated} publicLedger={ledgerPublic} />
             </div>
 
@@ -654,7 +673,7 @@ export default async function AddressProfileView({
             width (owner decision 2026-07-23 — this is the page's key conversion
             surface, so it never sits squeezed inside the grid's left column). ── */}
         {nearby && nearby.listings.length > 0 && (
-          <section id="for-sale" className="mt-8 scroll-mt-6">
+          <section id="for-sale" className="mt-8 scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_380px]">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
                 For sale near this home
@@ -679,7 +698,7 @@ export default async function AddressProfileView({
 
         {/* ── The block, scored: schools + daily life + risk scan ── */}
         {(schools.length > 0 || grocery || rec || hasGeo) && (
-          <section className="mt-8">
+          <section className="mt-8 [content-visibility:auto] [contain-intrinsic-size:0px_600px]">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">The block, scored</h2>
               <span className="font-mono text-[10px] text-muted-foreground">public records · EQAO · Overture</span>

@@ -22,8 +22,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   // The Command Center map terminal. EXACT match only: /properties/[id] and
   // /properties/compare share this prefix but are contextual sub-pages — they
-  // should NOT light up "Map Terminal".
-  { label: "Map Terminal", href: "/properties", icon: Map },
+  // should NOT light up "Map".
+  { label: "Map", href: "/properties", icon: Map },
   { label: "Market Trends", href: "/analytics", icon: TrendingUp },
 ];
 

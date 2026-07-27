@@ -14,7 +14,7 @@
 "use client";
 
 import React from "react";
-import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft } from "lucide-react";
+import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -26,6 +26,8 @@ import { matchesTypedAddress, fetchAddressStatus } from "@/lib/search/federatedS
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { chipsToQueryString } from "@/lib/search/chipUrl";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
 
 interface LocationSearchProps {
   className?: string;
@@ -159,6 +161,9 @@ export default function LocationSearch({
   // places stay plain (isStructured === false) and flow through the typeahead.
   const nl = React.useMemo(() => parseNlQuery(value), [value]);
   const showStructured = mode === "navigate" && nl.isStructured;
+  // Parent city (Toronto/London) whose whole-city scope is reachable through the
+  // existing ?city= / setLocation full-text path — offered as a synthetic top row.
+  const cityGroup = expandableCityGroupFor(value);
 
   const goStructured = () => {
     const qs = chipsToQueryString(nl.chips);
@@ -261,6 +266,24 @@ export default function LocationSearch({
 
       {open && (suggestions.length > 0 || searching || showStructured || value.trim().length >= 2) && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto border border-border bg-card">
+          {/* Whole-city shortcut: TRREB has no single value for Toronto/London, so this
+              scopes the whole city via the existing ?city= / setLocation path (applyTarget
+              handles navigate/inplace/onPlace). Sits above the individual district rows. */}
+          {cityGroup && (
+            <button
+              type="button"
+              onMouseEnter={() => setHighlight(-1)}
+              onClick={() => applyTarget(resolveTextTarget(cityGroup))}
+              className="flex w-full items-center gap-2.5 border-b border-border bg-cyan-500/5 px-3 py-2 text-left transition-colors hover:bg-cyan-500/10"
+            >
+              <Layers className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-mono text-xs text-foreground">{cityGroup} — all districts</span>
+                <span className="truncate text-[10px] text-muted-foreground">Search the whole city</span>
+              </span>
+              <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">City-wide</span>
+            </button>
+          )}
           {/* Structured-query shortcut: parsed the sentence into filters → deep-link
               into the terminal. Sits above place/address matches and is the default
               Enter action (highlight stays -1 until the user arrows into a place). */}
@@ -302,7 +325,12 @@ export default function LocationSearch({
             >
               <SuggestionIcon kind={s.kind} />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-mono text-xs text-foreground">{s.label}</span>
+                <span
+                  className="truncate font-mono text-xs text-foreground"
+                  title={s.kind === "city" || s.kind === "neighbourhood" ? s.label : undefined}
+                >
+                  {s.kind === "city" || s.kind === "neighbourhood" ? formatRegionLabel(s.label) : s.label}
+                </span>
                 {s.sublabel && (
                   <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
                 )}

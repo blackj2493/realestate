@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 import FundamentalToggle from "./FundamentalToggle";
@@ -70,6 +71,15 @@ export default function MobileFilterSheet({
   const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
   const addFilter = useCommandCenterStore((s) => s.addFilter);
   const removeAddedFilter = useCommandCenterStore((s) => s.removeAddedFilter);
+
+  // While this sheet is open, hide the global Guide launcher (FAB) so it can't
+  // float over the "Show N results" CTA below. Mounts only when open, so a plain
+  // mount/unmount ref-count is enough. See useDiscovery.chromeBlockers.
+  React.useEffect(() => {
+    const { blockChrome, unblockChrome } = useDiscovery.getState();
+    blockChrome();
+    return unblockChrome;
+  }, []);
 
   // Lock body scroll while open; close on Escape.
   React.useEffect(() => {

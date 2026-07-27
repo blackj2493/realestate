@@ -35,6 +35,7 @@ import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { regionArea } from "@/lib/dashboard/area";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -202,6 +203,21 @@ export default function DashboardClient() {
             minGarage={config.marketActivity.minGarage}
             minFrontage={config.marketActivity.minFrontage}
             basement={config.marketActivity.basement}
+            // Clear only the property filters; keep the chosen time window and sale/lease.
+            onClearFilters={() =>
+              updateLens({
+                ...config.marketActivity,
+                propertyTypes: [],
+                minBeds: 0,
+                bedsExact: false,
+                minBaths: 0,
+                bathsExact: false,
+                minGarage: 0,
+                garageExact: false,
+                basement: "any",
+                minFrontage: 0,
+              })
+            }
           />
         )}
 
@@ -227,7 +243,7 @@ export default function DashboardClient() {
               // The bell mirrors the per-bubble alert toggle: city sections are
               // localStorage-only, so it materializes an area_type 'city' bubble row
               // the nightly worker can deliver against (see CityAlertBell).
-              <RegionDrilldown key={loc} title={loc} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
+              <RegionDrilldown key={loc} title={formatRegionLabel(loc)} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (

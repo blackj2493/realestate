@@ -181,7 +181,7 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
           {bubble.area_type !== "city" && (
             <button
               type="button"
-              title="Copies the Map Terminal's current filters to this area and switches its nightly alerts to 'My filters'. Open the Terminal and set your filters first."
+              title="Copies the Map's current filters to this area and switches its nightly alerts to 'My filters'. Open the Map and set your filters first."
               onClick={() => {
                 const s = useCommandCenterStore.getState();
                 void updateAlertFilters(

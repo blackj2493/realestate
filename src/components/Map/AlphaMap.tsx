@@ -17,11 +17,15 @@ import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
+  PIN_GRID_COLS,
+  PIN_GRID_ROWS,
+  PINS_PER_CELL,
   clusterRadiusForZoom,
   formatPriceShort,
   hasMetricValue,
   isClusterFeature,
   isValidLocation,
+  pickRepresentativePins,
   scatterColorFor,
   toDeckPosition,
 } from "./mapLogic";
@@ -38,6 +42,11 @@ interface AlphaMapProps {
   onSelectProperty?: (d: ListingDocument) => void;
   className?: string;
   currentSearchQuery?: string;
+  /** First-load viewport scoping (fix #4): on a bare cold start (no place/filters/
+   *  draw/deep-link), report the initial viewport extent as the search box so the
+   *  first result set matches the map instead of firing a province-wide query.
+   *  Self-heals — re-reports whenever the box is cleared while still unscoped. */
+  scopeToViewport?: boolean;
 }
 
 type MapDataPoint = ListingDocument & { coordinates: [number, number] };
@@ -74,10 +83,15 @@ export default function AlphaMap({
   onSelectProperty,
   className = "",
   currentSearchQuery = "",
+  scopeToViewport = false,
 }: AlphaMapProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
+  // Flips true the first time DeckGL measures a non-zero canvas — the initial
+  // bounds report (below) waits for it, since computeAndReportBounds no-ops
+  // while dims are 0 and would otherwise never retry.
+  const [dimsReady, setDimsReady] = useState(false);
   // Once the map has framed real results, keep it mounted even if a later
   // viewport-scoped query returns 0 — blanking it mid-browse would trap the user.
   const [mapReady, setMapReady] = useState(false);
@@ -103,6 +117,7 @@ export default function AlphaMap({
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
   const commuteDestination = useCommandCenterStore((s) => s.commute.destination);
   const setMapBounds = useCommandCenterStore((s) => s.setMapBounds);
+  const mapBounds = useCommandCenterStore((s) => s.mapBounds);
   const isDrawing = useCommandCenterStore((s) => s.isDrawing);
   const drawPoints = useCommandCenterStore((s) => s.drawPoints);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
@@ -196,6 +211,17 @@ export default function AlphaMap({
     return () => clearTimeout(t);
   }, [searchAreaNonce, computeAndReportBounds]);
 
+  // First-load viewport scoping (fix #4): on a bare cold start the page holds the
+  // listings query until the map reports a viewport box, so the first result set
+  // matches what's on screen instead of spilling province-wide. Report the current
+  // (initial Toronto, or a mode-tilted) viewport once the canvas is measured. Re-runs
+  // whenever the box is cleared (persona/mode reset) while still unscoped, so the
+  // scope self-heals; stops the moment a box exists or the user starts driving.
+  useEffect(() => {
+    if (!scopeToViewport || mapBounds || !dimsReady || userMovedRef.current) return;
+    computeAndReportBounds();
+  }, [scopeToViewport, mapBounds, dimsReady, computeAndReportBounds]);
+
   // Mode change re-tilts the camera (flat for Listings, pitched for Heatmap/3D)
   // with an animated transition so switching modes feels physical, not a cut.
   useEffect(() => {
@@ -244,6 +270,22 @@ export default function AlphaMap({
     const first = validProperties[0]?.id ?? "";
     const last = validProperties[validProperties.length - 1]?.id ?? "";
     const dataSig = `${validProperties.length}:${first}:${last}`;
+
+    // Viewport-scoped session (fix #4): the camera already frames the exact box the
+    // query was scoped to, so reframing to the result cluster would move the map away
+    // from the area the list was built for — the very list≠map desync we're fixing.
+    // Mark ready (clear the empty state; let drill-downs behave) and keep the camera
+    // put, but still advance the fit-tracking refs to what's shown so that later
+    // EXITING to a named search correctly detects the new query and waits for its
+    // data before fitting. Named searches (scopeToViewport false) fit as before.
+    if (scopeToViewport) {
+      setMapReady(true);
+      mapInitialized.current = true;
+      lastSearchQuery.current = currentSearchQuery;
+      lastFitData.current = dataSig;
+      return;
+    }
+
     const queryChanged = lastSearchQuery.current !== currentSearchQuery;
     if (queryChanged) {
       if (dataSig === lastFitData.current) return; // still the old query's data — wait
@@ -279,7 +321,7 @@ export default function AlphaMap({
     mapInitialized.current = true;
     setMapReady(true);
     lastFitData.current = dataSig;
-  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode]);
+  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode, scopeToViewport]);
 
   // Fit to the commute zone whenever the isochrone changes (frames the whole
   // reachable area, even when zero listings match).
@@ -415,6 +457,24 @@ export default function AlphaMap({
 
   const singles = useMemo(() => clusters.filter((f) => !isClusterFeature(f)), [clusters]);
   const groups = useMemo(() => clusters.filter((f) => isClusterFeature(f)), [clusters]);
+
+  // Spatially representative price labels (fix #4): cap the UN-clustered pins to a
+  // few per coarse grid cell so extreme-priced outliers and dense pockets can't
+  // dominate the labels. Grids over the singles' own extent, so it re-thins only
+  // when the set changes (same cadence as `singles`) — not on every pan. Clusters
+  // (groups) and their counts are untouched.
+  const labelledSingles = useMemo(
+    () =>
+      pickRepresentativePins(singles, {
+        cols: PIN_GRID_COLS,
+        rows: PIN_GRID_ROWS,
+        perCell: PINS_PER_CELL,
+        getLngLat: (f) => f.geometry.coordinates as [number, number],
+        getPrice: (f) => (f.properties as PinProps).listing.ListPrice ?? 0,
+        getFreshness: (f) => (f.properties as PinProps).listing.EntryTimestamp ?? 0,
+      }),
+    [singles]
+  );
 
   const expandCluster = useCallback(
     (clusterId: number, lng: number, lat: number) => {
@@ -699,7 +759,7 @@ export default function AlphaMap({
 
     const listingPins = new TextLayer<ClusterPoint>({
       id: "listing-pins",
-      data: singles,
+      data: labelledSingles,
       getPosition: (f) => f.geometry.coordinates as [number, number],
       getText: (f) => {
         const listing = (f.properties as PinProps).listing;
@@ -760,7 +820,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [renderData, heatData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing, computeAndReportBounds]);
+  }, [renderData, heatData, mapMode, heatAggregation, groups, labelledSingles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing, computeAndReportBounds]);
 
   // Current viewport extent for the school-zone overlay — computed locally (not via
   // the store's settle-gated mapBounds) so zones paint the moment they're toggled on.
@@ -874,6 +934,8 @@ export default function AlphaMap({
         onViewStateChange={handleViewStateChange}
         onResize={({ width, height }) => {
           dimsRef.current = { width, height };
+          // First non-zero measure releases the initial-bounds report effect.
+          if (width > 0 && height > 0 && !dimsReady) setDimsReady(true);
         }}
         onDragStart={() => { setPopup(null); setCatchmentHover(null); setHexHover(null); setZoningHover(null); }}
         onDragEnd={handleDragEnd}

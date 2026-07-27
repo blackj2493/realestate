@@ -131,7 +131,7 @@ export default function ApplyPage() {
           {/* Title */}
           <div className="text-center">
             <h1 className="text-3xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
-              Terminal Access
+              Create your account
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:mt-4 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               {

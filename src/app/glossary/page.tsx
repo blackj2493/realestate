@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Logo from "@/components/Logo";
+import AppHeader from "@/components/layout/AppHeader";
 import { GLOSSARY, type GlossaryEntry } from "@/lib/glossary";
 
 export const metadata: Metadata = {
@@ -19,27 +19,9 @@ export default function GlossaryPage() {
   return (
     <div className="min-h-app flex flex-col bg-background text-foreground">
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <header className="border-b border-border px-4 py-3">
-        <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <Link href="/" aria-label="PureProperty.ca home" className="inline-flex items-center">
-            <Logo size="md" theme="dark" />
-          </Link>
-          <nav className="flex gap-1 text-xs uppercase tracking-wider text-muted-foreground">
-            <Link
-              href="/terms"
-              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-300 active:text-cyan-400"
-            >
-              Terms
-            </Link>
-            <Link
-              href="/privacy"
-              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-300 active:text-cyan-400"
-            >
-              Privacy
-            </Link>
-          </nav>
-        </div>
-      </header>
+      {/* Shared marketing header (same as /data + /whats-my-home-hiding) so this
+          SEO page routes into Map / Market Trends / Dashboard, not a dead end. */}
+      <AppHeader variant="marketing" />
 
       {/* ── Main content ────────────────────────────────────────────── */}
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
@@ -70,6 +52,20 @@ export default function GlossaryPage() {
 
       {/* ── Footer ──────────────────────────────────────────────────── */}
       <footer className="border-t border-border pb-safe pt-6 text-center text-xs text-muted-foreground">
+        <nav className="mb-2 flex justify-center gap-4 uppercase tracking-wider">
+          <Link
+            href="/terms"
+            className="text-foreground transition-colors hover:text-cyan-300 active:text-cyan-400"
+          >
+            Terms
+          </Link>
+          <Link
+            href="/privacy"
+            className="text-foreground transition-colors hover:text-cyan-300 active:text-cyan-400"
+          >
+            Privacy
+          </Link>
+        </nav>
         © {new Date().getFullYear()} PureProperty.ca · Powered by PROPTX MLS®
       </footer>
     </div>

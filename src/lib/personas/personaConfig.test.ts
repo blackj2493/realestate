@@ -36,7 +36,10 @@ describe("buildInvestorClause — persona-independent (applies every set signal)
 });
 
 describe("default persona", () => {
-  it("defaults to the Flipper beachhead", () => {
-    expect(useCommandCenterStore.getState().activePersona).toBe("flippers");
+  it("cold-starts on the Homebuyer lens (fix #6 — no more Flipper default for new/anon visitors)", () => {
+    // The terminal store's cold-start default is the shared SCOPE_DEFAULT_PERSONA.terminal
+    // (now "smart"); the terminal page hydrates it from the shared config on mount under
+    // the ?lens= > stored > default precedence.
+    expect(useCommandCenterStore.getState().activePersona).toBe("smart");
   });
 });

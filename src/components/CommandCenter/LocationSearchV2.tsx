@@ -16,7 +16,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair } from "lucide-react";
+import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -32,6 +32,8 @@ import { rankListings, type RankBadge } from "@/lib/search/personaRank";
 import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
 import { addressProfileHref } from "@/lib/search/searchTarget";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
 import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
 import { recordParse, parseMissRate } from "@/lib/search/parseMetrics";
 import type { SuggestGroup, SuggestItem, ParsedQuery } from "@/lib/search/types";
@@ -334,13 +336,17 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     (location
       ? `${location}, ON  |  Search ${fmt} listings…`
       : totalCount > 0
-        ? `Search ${fmt} listings — or describe it…`
-        : "Search address, community, school, MLS# — or describe it…");
+        ? `Search ${fmt} listings — or describe what you want`
+        : "Search an address, community, school, or MLS# — or describe what you want");
 
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
   const addrIntent = /\d/.test(value) && !parsed?.isStructured;
   const topCommunity = groups.find((g) => g.category === "community")?.items[0];
+  // A parent city the query is reaching for (Toronto/London) whose whole-city scope
+  // is reachable via the terminal's existing full-text location path — offers a
+  // synthetic "all districts" row above the individual district facets.
+  const cityGroup = expandableCityGroupFor(value);
   const locationChip = parsed?.chips.find((c) => c.kind === "location");
   const showAnswer = addrIntent || Boolean(topCommunity) || Boolean(locationChip);
   const answerArea =
@@ -435,6 +441,32 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               )}
               {parsed?.isStructured && <SearchChipsRow chips={parsed.chips} onRemove={removeChip} />}
 
+              {/* Synthetic "whole city" row — TRREB has no single value for Toronto/London,
+                  so this scopes the map to every district at once via the existing full-text
+                  location path (setLocation of the parent name). Deliberately carries NO
+                  per-community stats: it stands in for the group, not a single community. */}
+              {cityGroup && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocation(cityGroup);
+                    remember(cityGroup, "place");
+                    setValue("");
+                    close();
+                  }}
+                  className="flex w-full items-center gap-2.5 border-b border-border/60 px-3 py-2 text-left transition-colors hover:bg-muted"
+                >
+                  <Layers className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-mono text-xs text-foreground">{cityGroup} — all districts</span>
+                    <span className="truncate text-[10px] text-muted-foreground">Every district across the whole city</span>
+                  </span>
+                  <span className="shrink-0 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                    City-wide
+                  </span>
+                </button>
+              )}
+
               {showAnswer && <SearchAnswerCard area={answerArea} activeCount={topCommunity?.count} />}
 
               {/* Structured query → a PEEK at the real filtered matches (these honour the
@@ -506,7 +538,9 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                       >
                         <CategoryIcon category={item.category} />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-foreground">{item.label}</span>
+                          <span className="truncate font-mono text-xs text-foreground" title={item.category === "community" ? item.label : undefined}>
+                            {item.category === "community" ? formatRegionLabel(item.label) : item.label}
+                          </span>
                           {item.sublabel && (
                             <span className="truncate text-[10px] text-muted-foreground">
                               {item.category === "sold" && authed

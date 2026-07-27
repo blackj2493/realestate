@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CalendarDays, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/browser";
 import { LEAD_INTENTS, isLeadIntent, seedMessageFor, type LeadIntent } from "./leadIntents";
 
 // Same strict email shape used by the API route (audit LOW-18).
@@ -55,6 +56,40 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
     window.addEventListener("pp:open-viewing", onOpen);
     return () => window.removeEventListener("pp:open-viewing", onOpen);
   }, [listingKey, price, address]);
+
+  // Prefill Name/Email/Phone for a signed-in user (audit #11) — a member shouldn't be
+  // treated as a stranger. Sourced client-side from the Supabase session; only fills
+  // BLANK fields (functional updates), so anything typed before auth resolves is kept
+  // and every field stays editable. Anonymous → no-op (fields stay empty as today).
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const user = data.user;
+        if (!user) return;
+        const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+        const em = user.email;
+        const fullName =
+          typeof meta.full_name === "string" ? meta.full_name : typeof meta.name === "string" ? meta.name : "";
+        const ph =
+          typeof user.phone === "string" && user.phone
+            ? user.phone
+            : typeof meta.phone === "string"
+              ? meta.phone
+              : "";
+        if (em) setEmail((v) => v || em);
+        if (fullName) setName((v) => v || fullName);
+        if (ph) setPhone((v) => v || ph);
+      })
+      .catch(() => {
+        /* not signed in / auth unavailable → leave fields empty (anonymous behavior) */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // After the form renders (open/submitting/error states), bring it into view.
   useEffect(() => {

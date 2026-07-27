@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { ModuleHead } from "@/components/daylight/primitives";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 type SortKey =
   | "region"
@@ -66,6 +67,7 @@ export default function RegionScorecard({
   minGarage = 0,
   minFrontage = 0,
   basement = "any",
+  onClearFilters,
 }: {
   regions: string[];
   /** Global lens property-type keys ([] = all). Drives the sold/active aggregates. */
@@ -77,6 +79,10 @@ export default function RegionScorecard({
   minFrontage?: number;
   /** Global lens basement finish (any = no filter). Scopes sold + active medians (migration 043). */
   basement?: BasementFilter;
+  /** Reset the lens's property filters (keeps the time window + sale/lease). When
+   *  provided, a prominent "Filtered view" cue with a Clear action appears whenever
+   *  a filter is active — so the reshaped numbers never look like the full population. */
+  onClearFilters?: () => void;
 }) {
   const [scores, setScores] = useState<RegionScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,6 +150,7 @@ export default function RegionScorecard({
     minBaths > 0 ? `${minBaths}+ baths` : null,
     minGarage > 0 ? `${minGarage}+ parking` : null,
     minFrontage > 0 ? `${minFrontage}+ ft frontage` : null,
+    basement !== "any" ? `${basement} basement` : null,
   ].filter(Boolean) as string[];
 
   // VOW gate: when every row came back locked (anonymous), blur the grid and
@@ -153,6 +160,27 @@ export default function RegionScorecard({
   return (
     <section className="space-y-2">
       <ModuleHead title="Region Scorecard" count={regions.length} right="full-population · daily sync" />
+
+      {/* #18 — a filtered scorecard silently reshapes every number below. Surface a
+          prominent cue (not just the fine-print footnote) with a one-click Clear, so
+          the reader always knows these aren't the full-population figures. */}
+      {onClearFilters && filterParts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1.5">
+          <span className="terminal-font text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            Filtered view
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Every number below reflects {filterParts.join(" · ")}.
+          </span>
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="terminal-font ml-auto text-[10px] font-semibold uppercase tracking-wider text-cyan-700 underline-offset-2 hover:underline dark:text-cyan-400"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
 
       {/* Mobile-only affordance: the 1000px table scrolls horizontally; tell the user. */}
       <p className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground md:hidden">
@@ -209,7 +237,7 @@ export default function RegionScorecard({
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
                     className="terminal-font flex items-center gap-1 px-2 py-3 text-[13px] font-semibold text-foreground hover:text-cyan-700 dark:hover:text-cyan-300"
                   >
-                    <span className="truncate">{s.region}</span>
+                    <span className="truncate" title={s.region}>{formatRegionLabel(s.region)}</span>
                     <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                   </Link>
 

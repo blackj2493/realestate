@@ -17,6 +17,7 @@ import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/fil
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
 import { SCOPE_DEFAULT_PERSONA } from "@/lib/personas/resolvePersona";
+import { persistPersona } from "@/lib/personas/personaStore";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -316,8 +317,19 @@ export interface CommandCenterState {
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
+  // Cold-start default (Homebuyer, via SCOPE_DEFAULT_PERSONA). On mount the terminal
+  // page hydrates this from the shared config (hydrateTerminalPersona) under the
+  // ?lens= > stored > default precedence; a stable default here avoids an SSR/client
+  // hydration mismatch.
   activePersona: SCOPE_DEFAULT_PERSONA.terminal,
-  setActivePersona: (persona) => set({ activePersona: persona }),
+  // The persona is ONE shared value (dashboard config). Write terminal lens changes
+  // through so the dashboard, listing pages and this terminal never diverge — this is
+  // the single chokepoint every terminal persona switch (top bar, saved lenses,
+  // command palette) already flows through. No-op when unchanged; SSR/anon-safe.
+  setActivePersona: (persona) => {
+    set({ activePersona: persona });
+    persistPersona(persona);
+  },
 
   filters: { ...defaultTerminalFilters },
   setFilter: (key, value) =>

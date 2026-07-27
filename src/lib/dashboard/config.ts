@@ -213,8 +213,38 @@ function mergeLens(raw: unknown): MarketActivityLens {
   };
 }
 
+/** True when THIS device already has a saved dashboard config (i.e. an explicit
+ *  choice exists). Lets the account-metadata adopt path stay local-first. SSR-safe. */
+export function hasStoredConfig(): boolean {
+  if (!hasWindow()) return false;
+  try {
+    return window.localStorage.getItem(CONFIG_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function saveConfig(c: DashboardConfig): void {
-  if (hasWindow()) window.localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
+  if (!hasWindow()) return;
+  // Mirror a CHANGED persona to the signed-in user's account metadata so the lens
+  // follows the account across devices + surfaces (the terminal, dashboard and
+  // listing pages all read this one store). localStorage stays the source of truth;
+  // this is a best-effort fire-and-forget. Gated on an actual persona change so
+  // region/board edits and per-visit lastVisitAt stamps never trigger an auth write.
+  // The Supabase browser client is dynamically imported so it never lands in a
+  // server bundle that happens to import this (SSR-safe) config module.
+  let personaChanged = false;
+  try {
+    personaChanged = getConfig().persona !== c.persona;
+  } catch {
+    personaChanged = true;
+  }
+  window.localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
+  if (personaChanged) {
+    void import("@/lib/personas/personaAccount")
+      .then((m) => m.mirrorPersonaToAccount(c.persona))
+      .catch(() => {});
+  }
 }
 
 /**

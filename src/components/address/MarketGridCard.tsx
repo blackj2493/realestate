@@ -109,7 +109,9 @@ export default function MarketGridCard({
       : `${matrix.sample} live rentals · ${radiusKm} km`;
   const unit = sell ? (actual ? "closed sale" : "live listing") : actual ? "signed lease" : "live rental";
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-card/40">
+    // min-w-0 lets the card shrink inside any flex/grid parent so the wide table
+    // scrolls inside its own overflow-x-auto container below (never the page body).
+    <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/40">
       <div className={`h-0.5 bg-gradient-to-r ${bar} to-transparent`} />
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-foreground">

@@ -18,13 +18,17 @@ export type PersonaScope = "terminal" | "dashboard" | "detail" | "compare";
 
 /**
  * Per-scope cold-start default — used ONLY when there is no url / persisted /
- * profile signal. The terminal leads with `flippers` (the cold-start investor
- * view that showcases relist-corrected True DOM, a durable moat), while every
- * buyer-facing surface (dashboard, detail, Compare) opens on the `smart`
- * Homebuyer lens. Change a default HERE and every surface follows.
+ * profile signal. EVERY surface now opens on the `smart` Homebuyer lens: the
+ * terminal used to cold-start on `flippers`, which gave brand-new / anonymous
+ * visitors investor framing everywhere (deal-signal columns, "how you invest"
+ * copy) before they had chosen anything. The persona is a single shared value
+ * (the dashboard config store) so this default only bites a first-ever visit;
+ * any explicit choice — a stored persona, an /apply objective, or a ?lens= deep
+ * link — still wins via the precedence below. Change a default HERE and every
+ * surface follows.
  */
 export const SCOPE_DEFAULT_PERSONA: Record<PersonaScope, PersonaType> = {
-  terminal: "flippers",
+  terminal: "smart",
   dashboard: "smart",
   detail: "smart",
   compare: "smart",
@@ -104,4 +108,19 @@ export function resolvePersona(
     personaFromObjectives(sources.objectives) ??
     SCOPE_DEFAULT_PERSONA[scope]
   );
+}
+
+/**
+ * Two-arg convenience over resolvePersona for the surfaces that only have a URL
+ * param and a stored value (the terminal + listing detail): explicit ?lens= wins,
+ * else the stored persona, else the scope's cold-start default. The applicant's
+ * /apply objectives are already baked into the stored persona, so they need not be
+ * re-supplied here.
+ */
+export function resolveActiveLens(
+  urlParam: string | null | undefined,
+  stored: string | null | undefined,
+  scope: PersonaScope = "terminal"
+): PersonaType {
+  return resolvePersona(scope, { url: urlParam, persisted: stored });
 }

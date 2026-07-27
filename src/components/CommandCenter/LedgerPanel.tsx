@@ -13,7 +13,7 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
-import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, type SortDir } from "./columnSort";
+import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, dropEmptyColumns, type SortDir } from "./columnSort";
 import { makeCohortRanker } from "./cohortPercentiles";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -24,8 +24,14 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon } =
     useCommandCenterStore();
+
+  // Scope chip (fix #4): with no typed place and no draw area, the results are
+  // scoped to the visible map extent (first-load viewport scoping / "search this
+  // map area"), not to a named place — say so explicitly rather than leaving the
+  // count reading like a province-wide total.
+  const viewportScoped = Boolean(mapBounds) && !location && !drawPolygon;
   const isAuthed = useIsAuthed();
   // Mobile → full report; desktop → in-page Quick Look drawer.
   const openListing = useOpenListing();
@@ -56,10 +62,22 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   }, []);
 
   const columns = PERSONA_CONFIG[activePersona].columns;
-  const visibleColumns = useMemo(() => fitLedgerColumns(columns, width), [columns, width]);
   const allProperties = searchResult?.listings || [];
   const visible = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
   const ms = searchResult?.processingTimeMs ?? 0;
+
+  // Adaptive columns (fix #21): drop any column no row in the result set can
+  // populate — most visibly Alpha Flag, which is all "—" on the homebuyer lens
+  // (and for anon, whose VOW-gated flags collapse to none). Computed over the
+  // FULL result set (like the percentile ranker) rather than the selection view
+  // so the column set is stable as the user selects/hides rows. Feeding this into
+  // the width-fit keeps the header and every row iterating the same list, so the
+  // flex grid stays aligned; the address card is always kept.
+  const populatedColumns = useMemo(
+    () => dropEmptyColumns(columns, searchResult?.listings ?? [], isAuthed),
+    [columns, searchResult, isAuthed]
+  );
+  const visibleColumns = useMemo(() => fitLedgerColumns(populatedColumns, width), [populatedColumns, width]);
 
   // Client-side column sort over the already-loaded set (instant, no refetch).
   // null = persona/server default order. Cleared on persona change so a sort
@@ -162,6 +180,14 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
             </>
           )}
         </p>
+        {viewportScoped && (
+          <span
+            title="Results are scoped to the visible map area. Pan or zoom the map, or search a place, to change the scope."
+            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-sm border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-700 dark:text-cyan-300"
+          >
+            <MapPin className="h-3 w-3" /> Map area
+          </span>
+        )}
       </div>
 
       {/* Column headers — desktop only (mobile card mode has no columns to sort).

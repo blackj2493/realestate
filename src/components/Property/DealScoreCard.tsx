@@ -13,6 +13,8 @@ import {
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 import InfoDot from "@/components/ui/InfoDot";
 import { onLensChanged, persistLens } from "@/lib/personas/lensPersistence";
+import { DEAL_PERSONA_ORDER, effectiveDealPersona, scoredDealPersonas } from "@/lib/dealScore/effectivePersona";
+import { roundToStep, OFFER_BAND_DISPLAY_STEP } from "@/lib/avm/displayRounding";
 
 /**
  * Deal Score UI — the flagship "is this a good deal — for ME?" signal.
@@ -33,7 +35,6 @@ const PERSONA_LABEL: Record<DealPersona, string> = {
   flippers: "Flipper",
   builders: "Builder",
 };
-const PERSONA_ORDER: DealPersona[] = ["smart", "cashflow", "flippers", "builders"];
 
 function gradeStyles(grade: DealScoreGrade | null): {
   text: string;
@@ -159,16 +160,10 @@ export default function DealScoreCard({
 }) {
   const [open, setOpen] = useState(false);
   // Personas that actually scored for this listing (a lens with no applicable pillars is hidden).
-  const scoredPersonas = useMemo(
-    () => PERSONA_ORDER.filter((p) => dealScore.personaScores?.[p]?.score != null),
-    [dealScore.personaScores]
-  );
-  const defaultPersona =
-    initialPersona && scoredPersonas.includes(initialPersona)
-      ? initialPersona
-      : scoredPersonas.includes(dealScore.persona)
-        ? dealScore.persona
-        : scoredPersonas[0];
+  const scoredPersonas = useMemo(() => scoredDealPersonas(dealScore), [dealScore]);
+  // Shared with the header chip (LiveDealScoreBadge) so the two can't resolve
+  // different lenses and show different scores on the same screen.
+  const defaultPersona = effectiveDealPersona(dealScore, initialPersona);
   const [persona, setPersona] = useState<DealPersona | undefined>(defaultPersona);
 
   // Follow lens changes made in TheReadCard (persistLens broadcasts; write-through is
@@ -204,7 +199,7 @@ export default function DealScoreCard({
 
         {/* Lens switcher — the same home, scored for each investor type (grades hidden). */}
         <div className="mb-3 flex flex-wrap gap-1.5" aria-hidden="true">
-          {PERSONA_ORDER.map((p) => (
+          {DEAL_PERSONA_ORDER.map((p) => (
             <span
               key={p}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-2 py-1 text-[11px] font-medium text-muted-foreground"
@@ -312,8 +307,10 @@ export default function DealScoreCard({
           <InfoDot term="dealScore" />
         </span>
         {dealScore.confidence && (
+          // Names its axis ("Deal signal") so it can't be confused with the Estimated Sale
+          // card's separate "Estimate · X confidence" chip sitting right beside it.
           <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-muted-foreground">
-            {dealScore.confidence} confidence
+            Deal signal · {dealScore.confidence} confidence
           </span>
         )}
       </h3>
@@ -391,11 +388,12 @@ export default function DealScoreCard({
           </p>
           {band.hotMarket ? (
             <p className="mt-1 text-sm font-medium text-foreground">
-              Expect to compete near {formatPrice(band.likelyClose)}
+              Expect to compete near {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>
           ) : (
             <p className="mt-1 text-sm font-medium text-foreground">
-              Offer {formatPrice(band.aggressive)}–{formatPrice(band.likelyClose)}
+              Offer {formatPrice(roundToStep(band.aggressive, OFFER_BAND_DISPLAY_STEP))}–
+              {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>
           )}
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{band.note}</p>

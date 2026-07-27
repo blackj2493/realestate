@@ -20,6 +20,7 @@ import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
+import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
@@ -52,7 +53,8 @@ import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
 import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
-import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
+import DealScoreCard from "@/components/Property/DealScoreCard";
+import { LiveDealScoreBadge, LiveDealGrade } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
@@ -513,6 +515,15 @@ export default async function PropertyPage({
   const provinceCode = (p.StateOrProvince || "ON").trim().toUpperCase();
   const isOntario = provinceCode === "ON" || provinceCode === "ONTARIO";
   const isToronto = /^toronto\b/i.test(p.City ?? "");
+  // Breadcrumb shows the consumer-readable area name, keeping the raw TRREB code in
+  // parens when it differs ("Downtown & Waterfront (Toronto C01)"). The crawl href
+  // (cityHref) stays keyed to the raw p.City — display only.
+  const cityParts = p.City ? formatRegionParts(p.City) : null;
+  const cityCrumb = cityParts
+    ? cityParts.code
+      ? `${cityParts.name} (${cityParts.code})`
+      : cityParts.name
+    : p.City;
   // Live 5-yr-fixed seed (Bank-of-Canada refreshed nightly job; cached, fallback-safe).
   const mortgageRate = await getCurrentMortgageRate();
   // Which lens opens first: investor personas → the underwrite; the Homebuyer
@@ -679,13 +690,13 @@ export default async function PropertyPage({
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
           <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
-            Command Center
+            Map
           </Link>
           {cityHref && p.City && (
             <>
               <span aria-hidden>/</span>
               <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
-                {isCommercial ? `Commercial properties in ${p.City}` : `Homes for sale in ${p.City}`}
+                {isCommercial ? `Commercial properties in ${cityCrumb}` : `Homes for sale in ${cityCrumb}`}
               </Link>
             </>
           )}
@@ -822,10 +833,9 @@ export default async function PropertyPage({
                   </span>
                 )}
                 {isActiveListing && !isCommercial && !isLease && (
-                  <DealScoreBadge
-                    score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
-                    grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
-                  />
+                  // Follows the Deal Score panel's active tab (fix #6) — the chip and
+                  // panel resolve ONE lens, so they can't disagree (91 vs 92) on screen.
+                  <LiveDealScoreBadge dealScore={view.dealScore} initialLens={lens} />
                 )}
               </div>
 
@@ -840,13 +850,8 @@ export default async function PropertyPage({
                   {hasDealScore && (
                     <span className="inline-flex items-center gap-1">
                       Deal grade
-                      {isAuthed && (view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade) ? (
-                        <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">
-                          {view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
-                        </span>
-                      ) : (
-                        <Lock className="h-3 w-3 text-muted-foreground" aria-label="locked" />
-                      )}
+                      {/* Same active lens as the chip + panel (fix #6). */}
+                      <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
                     </span>
                   )}
                   {(hasEstimate || hasExpectedSale) && (
@@ -1120,7 +1125,7 @@ export default async function PropertyPage({
                 statusKind={status.kind}
                 isLease={isLease}
               />
-              <SocialProofBar listingId={id} isLease={isLease} />
+              <SocialProofBar listingId={id} isLease={isLease} persona={lens} />
 
               {/* MOBILE ONLY: anon email capture BELOW the Intelligence panel and
                   CTAs — the product's brain should never rank under an email field.
@@ -1186,7 +1191,7 @@ export default async function PropertyPage({
             )}
 
             {/* Property Data Sheet — full TRREB payload, registry-driven. */}
-            <div id="details" className="scroll-mt-28">
+            <div id="details" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_720px]">
               <PropertyDataSheet groups={datasheet} />
             </div>
 
@@ -1195,7 +1200,7 @@ export default async function PropertyPage({
 
             {/* Room Dimensions — proportional, drawn-to-scale room map */}
             {rooms.length > 0 && (
-              <div id="rooms" className="scroll-mt-28">
+              <div id="rooms" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_520px]">
                 <RoomMap rooms={rooms} className="mb-6" />
               </div>
             )}
@@ -1236,7 +1241,7 @@ export default async function PropertyPage({
             </Suspense>
           )}
 
-        <section id="history" className="scroll-mt-28">
+        <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
           {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
               Pure CSS (a peer checkbox), so it stays server-rendered — no client
               boundary, no hydration flash. Desktop (md+) always shows it and hides
@@ -1283,7 +1288,7 @@ export default async function PropertyPage({
         {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island.
              Commercial subjects use exact-subtype + area/price matching; commercial
              leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" className="scroll-mt-28">
+        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
         <SimilarProperties
           subjectId={id}
           cityRegion={p.CityRegion ?? null}

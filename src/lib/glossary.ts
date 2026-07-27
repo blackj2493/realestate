@@ -47,6 +47,13 @@ export const GLOSSARY = {
     formula: "Rent − all monthly costs",
     context: "Positive means the property pays you; negative means you top it up.",
   },
+  cashflowGrade: {
+    term: "Cashflow-grade",
+    short:
+      "The share of active listings whose estimated cap rate clears the cash-flow floor — homes whose rent would likely more than cover their monthly costs.",
+    context:
+      "The count beside it is how many active listings clear that floor (currently a 4.5% cap rate).",
+  },
   noi: {
     term: "Net operating income (NOI)",
     short: "Rental income minus operating expenses — but before the mortgage payment.",

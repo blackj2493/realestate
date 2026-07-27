@@ -26,6 +26,7 @@ import {
   type CommunityStat,
   type HeatStats,
 } from "@/lib/dashboard/neighbourhoodHeat";
+import { formatRegionLabel, formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import RegionSwitcher from "./RegionSwitcher";
 
 type MetricId = "cap" | "dom" | "drop" | "price";
@@ -50,15 +51,18 @@ const METRIC_CAPTION: Record<MetricId, string> = {
 };
 
 /**
- * OREB CityRegion values arrive as "7711 - Barrhaven - Half Moon Bay" — strip the
- * numeric board code and the redundant own-city prefix for display ("Half Moon
- * Bay"). Raw value stays the grouping key; TRREB names without codes pass through.
+ * Community row label. formatRegionParts does the shared work (strip an OREB board
+ * code, map a Toronto district to its neighbourhoods); on top of that this drops the
+ * redundant own-city prefix so a sub-area of "Barrhaven" reads "Half Moon Bay", not
+ * "Barrhaven - Half Moon Bay". Raw value stays the grouping key.
  */
 function displayName(region: string, city: string): string {
-  let n = region.replace(/^\d{3,4}\s*-\s*/, "").trim();
+  const base = formatRegionParts(region);
+  // Only fold away the parent-city prefix from a plain area name — never from a
+  // Toronto district (base.code present), where the code IS the identity.
+  if (base.code) return `${base.code} · ${base.name}`;
   const cityPrefix = new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-\\s*`, "i");
-  n = n.replace(cityPrefix, "").trim();
-  return n || region;
+  return base.name.replace(cityPrefix, "").trim() || base.name;
 }
 
 export default function NeighbourhoodLeaderboard({
@@ -153,7 +157,7 @@ export default function NeighbourhoodLeaderboard({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex flex-wrap items-center gap-2.5">
           <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-            Neighbourhood Heat{regions.length > 1 ? "" : ` — ${selected}`}
+            Neighbourhood Heat{regions.length > 1 ? "" : ` — ${formatRegionLabel(selected)}`}
           </h2>
           {regions.length > 1 && (
             <RegionSwitcher regions={regions} selected={selected} onSelect={onSelect} />

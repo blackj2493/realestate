@@ -16,6 +16,7 @@ import Link from "next/link";
 import { Trophy, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModuleHead, Panel } from "@/components/daylight/primitives";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 /** One row of the batched /api/market/leaderboard payload. */
 interface LeaderboardRow {
@@ -136,14 +137,23 @@ export default function SubmarketLeaderboard() {
                   <Link
                     href={`/properties?city=${encodeURIComponent(s.region)}`}
                     className="terminal-font min-w-0 flex-1 truncate text-sm font-semibold text-foreground hover:text-[color:var(--dt-sig)] dark:hover:text-cyan-300"
+                    title={s.region}
                   >
-                    {s.region}
+                    {formatRegionLabel(s.region)}
                     <ArrowUpRight className="ml-1 inline h-3 w-3 text-muted-foreground" />
                   </Link>
+                  {/* The ranked metric shows once, as the right-aligned bold value; the
+                      inline stats carry only the OTHER two so the row never repeats itself. */}
                   <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">
-                    <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
-                    <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
-                    <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
+                    {opt.field !== "medianCapRate" && (
+                      <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
+                    )}
+                    {opt.field !== "stalePct" && (
+                      <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
+                    )}
+                    {opt.field !== "activeCount" && (
+                      <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
+                    )}
                   </div>
                   {/* Daylight yield bar (light only) — magnitude at a glance. */}
                   {v != null && (
