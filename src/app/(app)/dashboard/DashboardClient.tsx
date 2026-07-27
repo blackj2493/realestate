@@ -203,6 +203,21 @@ export default function DashboardClient() {
             minGarage={config.marketActivity.minGarage}
             minFrontage={config.marketActivity.minFrontage}
             basement={config.marketActivity.basement}
+            // Clear only the property filters; keep the chosen time window and sale/lease.
+            onClearFilters={() =>
+              updateLens({
+                ...config.marketActivity,
+                propertyTypes: [],
+                minBeds: 0,
+                bedsExact: false,
+                minBaths: 0,
+                bathsExact: false,
+                minGarage: 0,
+                garageExact: false,
+                basement: "any",
+                minFrontage: 0,
+              })
+            }
           />
         )}
 
