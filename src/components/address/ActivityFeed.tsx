@@ -46,7 +46,7 @@ const ROW_ACCENT: Record<"new" | "cut" | "sold" | "locked", string> = {
   locked: "border-l-emerald-500/30 hover:bg-emerald-500/[0.05]",
 };
 const ROW_BASE =
-  "flex items-center gap-3 rounded-r-md border-l-2 py-2.5 pl-3 pr-1 transition-colors";
+  "flex items-center gap-3 rounded-r-md border-l-2 py-3 pl-3 pr-2 transition-colors";
 
 function Badge({ kind }: { kind: "new" | "cut" | "sold" }) {
   const cls =
@@ -56,7 +56,7 @@ function Badge({ kind }: { kind: "new" | "cut" | "sold" }) {
         ? "bg-amber-500/12 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400"
         : "bg-emerald-500/12 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400";
   return (
-    <span className={`w-12 shrink-0 rounded py-1 text-center font-mono text-[9px] font-bold tracking-wider ${cls}`}>
+    <span className={`w-14 shrink-0 rounded py-1 text-center font-mono text-[10px] font-bold tracking-wider ${cls}`}>
       {kind.toUpperCase()}
     </span>
   );
@@ -64,7 +64,7 @@ function Badge({ kind }: { kind: "new" | "cut" | "sold" }) {
 
 function Thumb({ url, alt }: { url: string | null; alt: string }) {
   return (
-    <div className="h-10 w-14 shrink-0 overflow-hidden rounded bg-muted">
+    <div className="h-14 w-20 shrink-0 overflow-hidden rounded bg-muted">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- MLS photos are never optimized (cost + TRREB watermark)
         <img src={url} alt={alt} loading="lazy" className="h-full w-full object-cover" />
@@ -117,7 +117,7 @@ export default function ActivityFeed({
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground">
           The last 30 days around this home
         </h2>
-        <span className="font-mono text-[10px] text-muted-foreground">{radiusKm} km · newest first</span>
+        <span className="font-mono text-xs text-muted-foreground">{radiusKm} km · newest first</span>
       </div>
 
       <div className="space-y-1">
@@ -126,14 +126,14 @@ export default function ActivityFeed({
             return (
               <SignInLink key={`locked-${i}`} className={`group ${ROW_BASE} ${ROW_ACCENT.locked}`}>
                 <Badge kind="sold" />
-                <div className="redact-skeleton h-10 w-14 shrink-0 rounded" aria-hidden="true" />
+                <div className="redact-skeleton h-14 w-20 shrink-0 rounded" aria-hidden="true" />
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="redact-skeleton h-3 w-2/5 rounded" aria-hidden="true" />
                   <p className="flex items-center gap-1.5 font-mono text-[10px] text-emerald-700 group-hover:underline dark:text-emerald-400">
                     <Lock className="h-3 w-3" /> price unlocks with a free account
                   </p>
                 </div>
-                <div className="redact-skeleton h-4 w-16 shrink-0 rounded" aria-hidden="true" />
+                <div className="redact-skeleton h-5 w-20 shrink-0 rounded" aria-hidden="true" />
               </SignInLink>
             );
           }
@@ -146,17 +146,17 @@ export default function ActivityFeed({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">{s.address}</p>
                   {/* Brokerage at the same tier as details — TRREB §6.3(c). */}
-                  <p className="truncate font-mono text-[10px] text-muted-foreground">
+                  <p className="truncate font-mono text-xs text-muted-foreground">
                     {[s.subType, s.beds ? `${s.beds} bd` : null, s.baths ? `${s.baths} ba` : null, s.brokerage ?? "Brokerage unavailable"]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-mono text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                  <p className="font-mono text-base font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
                     {fmtPrice(s.closePrice)}
                   </p>
-                  <p className="font-mono text-[10px] text-muted-foreground">{fmtSoldDate(s.soldDateMs)}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{fmtSoldDate(s.soldDateMs)}</p>
                 </div>
               </div>
             );
@@ -175,7 +175,7 @@ export default function ActivityFeed({
                 <p className="truncate text-sm font-semibold text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-400">
                   {l.address}
                 </p>
-                <p className="truncate font-mono text-[10px] text-muted-foreground">
+                <p className="truncate font-mono text-xs text-muted-foreground">
                   {[
                     l.subType,
                     l.beds ? `${l.beds} bd` : null,
@@ -189,13 +189,13 @@ export default function ActivityFeed({
               </div>
               <div className="shrink-0 text-right">
                 <p
-                  className={`font-mono text-sm font-bold tabular-nums ${
+                  className={`font-mono text-base font-bold tabular-nums ${
                     isCut ? "text-amber-700 dark:text-amber-400" : "text-foreground"
                   }`}
                 >
                   {isCut ? `−${fmtPrice(l.dropAmount)}` : fmtPrice(l.price)}
                 </p>
-                <p className="font-mono text-[10px] text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   {isCut ? (l.dom !== null ? `${l.dom}d on market` : "price cut") : l.entryMs ? relDays(l.entryMs) : ""}
                 </p>
               </div>
