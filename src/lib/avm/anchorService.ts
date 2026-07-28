@@ -667,16 +667,18 @@ export async function fetchPeerAnchor(
   }
 
   // Rung 2 — city-wide (broader pool of homes like it).
+  // Via RPC (migration 099) rather than .ilike('city', …): ILIKE could not use
+  // idx_vow_sold_city_lower_pcd, so this seq-scanned ~289k rows per call — 52,676 calls
+  // @ 128 ms over 4.2d, mostly from the twice-weekly estimates sweep. The RPC returns
+  // COMP_SELECT's columns in the same order; see migration 099 for the mapping.
   if (cityKey) {
-    const res = await supabase
-      .from('raw_vow_sold')
-      .select(COMP_SELECT)
-      .ilike('city', cityKey)
-      .in('property_sub_type', subVariants)
-      .gte('close_price', MIN_SALE_PRICE)
-      .gte('purchase_contract_date', windowStartIso)
-      .order('purchase_contract_date', { ascending: false })
-      .limit(MAX_COMPS);
+    const res = await supabase.rpc('sold_city_comps', {
+      p_city: cityKey,
+      p_sub_types: subVariants,
+      p_price_floor: MIN_SALE_PRICE,
+      p_cutoff: windowStartIso,
+      p_limit: MAX_COMPS,
+    });
     const peer = peerLevelFromComps(
       subject,
       ((res.data as unknown as CompRow[] | null) ?? []),

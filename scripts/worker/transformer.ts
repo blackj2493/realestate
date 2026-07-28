@@ -34,6 +34,21 @@ import { normalizeDirectionFaces } from '@/lib/listings/directionFaces';
 
 const BASELINE_RENT = 1200;  // Monthly rent placeholder per bedroom
 
+/**
+ * Drop the `media` array before a listing record is persisted to
+ * listings.full_payload (migration 103).
+ *
+ * Returns a shallow copy — the caller's `raw` keeps its media, because sync.ts still
+ * builds the Typesense doc from it and mediaUrls/primaryThumbnailUrl are derived from
+ * it here. Only what lands in Postgres is slimmed; media_urls carries the photos.
+ */
+function stripStoredMedia(raw: Record<string, unknown>): Record<string, unknown> {
+  if (!('media' in raw)) return raw;
+  const out = { ...raw };
+  delete out.media;
+  return out;
+}
+
 /** Coerce a raw RESO scalar to a finite number, else 0 — used for the flat dimension
  *  columns (migration 045). 0 = missing, matching the Typesense extraction so a stored
  *  row is never NULL and the region RPC's full_payload fallback only fires pre-backfill. */
@@ -925,7 +940,12 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // Build Supabase payload (full document)
   const supabasePayload = {
     listing_key: raw.ListingKey,
-    full_payload: raw,
+    // `media` is stripped before storing (migration 103). It was ~20 KB/row of photo
+    // objects duplicating media_urls below, which is what every render path actually
+    // reads — and the largest single thing in the database. `raw` is NOT mutated:
+    // mediaUrls/primaryThumbnailUrl above are already derived from it, and the caller
+    // (sync.ts) still needs raw.media for the Typesense doc.
+    full_payload: stripStoredMedia(raw),
     media_urls: mediaUrls,
     derived_metrics: metrics,
     carry_cost: carryCost,

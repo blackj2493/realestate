@@ -14,34 +14,16 @@ vi.mock("./normalizeType", () => ({
 import { fetchSiblingModel } from "./siblingModel";
 
 /**
- * Chainable Supabase stub that:
- * - For .from('raw_vow_sold'): serves `dataset` in pages when .range() is called.
- * - For any other .from(): returns { data: [], error: null } immediately.
- *
- * Chained methods used by the raw_vow_sold query: .select, .ilike, .in, .order, .range
- * Chained methods used by subsequent queries: .select, .ilike, .in (resolved via .then)
+ * Supabase stub for the post-migration-099 contract:
+ * - .rpc('sold_city_regions', …) resolves to `dataset` (already DISTINCT, server-side).
+ * - .from(<anything>) returns an empty chainable result; its .in() is a dedicated spy so
+ *   tests can assert WHICH communities reached the donor query.
  */
 function makeSupabaseStub(dataset: { city_region: string }[]) {
-  let capturedFrom = "";
-  let rangeFrom = 0;
-  let rangeTo = 0;
+  const rpcCall = vi.fn((_fn: string, _params: Record<string, unknown>) =>
+    Promise.resolve({ data: dataset, error: null })
+  );
 
-  const rangeCall = vi.fn((f: number, t: number) => {
-    rangeFrom = f;
-    rangeTo = t;
-    return vowChain;
-  });
-
-  const vowChain: Record<string, unknown> = {};
-  for (const m of ["select", "ilike", "in", "order"]) {
-    vowChain[m] = vi.fn(() => vowChain);
-  }
-  vowChain.range = rangeCall;
-  vowChain.then = (resolve: (v: unknown) => unknown) =>
-    Promise.resolve(resolve({ data: dataset.slice(rangeFrom, rangeTo + 1), error: null }));
-
-  // Generic chain for other tables (avm_audit_report, etc.). Its .in() is a
-  // dedicated spy so tests can assert WHICH communities reached the donor query.
   const auditInCall = vi.fn(() => emptyChain);
   const emptyChain: Record<string, unknown> = {};
   for (const m of ["select", "ilike", "order", "range"]) {
@@ -51,29 +33,33 @@ function makeSupabaseStub(dataset: { city_region: string }[]) {
   emptyChain.then = (resolve: (v: unknown) => unknown) =>
     Promise.resolve(resolve({ data: [], error: null }));
 
-  const stub = {
-    from: vi.fn((table: string) => {
-      capturedFrom = table;
-      return capturedFrom === "raw_vow_sold" ? vowChain : emptyChain;
-    }),
-  };
+  const fromCall = vi.fn((_table: string) => emptyChain);
+  const stub = { rpc: rpcCall, from: fromCall };
 
-  return { stub, rangeCall, auditInCall };
+  return { stub, rpcCall, fromCall, auditInCall };
 }
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("fetchSiblingModel — PostgREST 1k paging (audit MEDIUM-9)", () => {
-  it("collects city_regions from BOTH pages when there are 1,500 rows", async () => {
-    // 1,500 rows: page 1 has regions A0-A999, page 2 has regions B0-B499
-    const page1 = Array.from({ length: 1000 }, (_, i) => ({ city_region: `RegionA${i}` }));
-    const page2 = Array.from({ length: 500 }, (_, i) => ({ city_region: `RegionB${i}` }));
-    const dataset = [...page1, ...page2];
+describe("fetchSiblingModel — no community truncation (audit MEDIUM-9)", () => {
+  // Formerly a paging test: PostgREST caps responses at 1,000 rows, so the old
+  // implementation walked up to 20 pages of raw city_region rows and de-duped in JS —
+  // and silently dropped donors past page 20. Migration 099 moved the DISTINCT into
+  // sold_city_regions, so the cap can only bite at >1,000 *distinct* communities
+  // (real maximum observed in prod: 124, for Hamilton). The invariant under test is
+  // unchanged: every distinct community must reach the donor query.
+  it("passes every distinct community through to the donor query", async () => {
+    // Deliberately oversized (1,500 distinct communities) — far beyond any real city —
+    // to prove nothing is trimmed between the RPC and the avm_audit_report lookup.
+    const dataset = [
+      ...Array.from({ length: 1000 }, (_, i) => ({ city_region: `RegionA${i}` })),
+      ...Array.from({ length: 500 }, (_, i) => ({ city_region: `RegionB${i}` })),
+    ];
 
-    const { stub, rangeCall, auditInCall } = makeSupabaseStub(dataset);
+    const { stub, rpcCall, fromCall, auditInCall } = makeSupabaseStub(dataset);
 
-    // fetchSiblingModel will then query avm_audit_report → returns [] → best=null → returns null
-    // That's fine — we only care that both pages were fetched AND used downstream.
+    // avm_audit_report returns [] → best=null → fetchSiblingModel returns null.
+    // That's fine — we only care which communities were offered downstream.
     const result = await fetchSiblingModel(
       stub as unknown as Parameters<typeof fetchSiblingModel>[0],
       "Aurora",
@@ -81,30 +67,43 @@ describe("fetchSiblingModel — PostgREST 1k paging (audit MEDIUM-9)", () => {
       "Detached"
     );
 
-    // With no trained sibling cohorts the function returns null — expected
     expect(result).toBeNull();
 
-    // The key assertion: .range must have been called at least twice (page 1 + page 2)
-    expect(rangeCall).toHaveBeenCalledTimes(2);
+    // Communities come from the RPC, in ONE call — not a paged table scan.
+    expect(rpcCall).toHaveBeenCalledTimes(1);
+    expect(rpcCall.mock.calls[0][0]).toBe("sold_city_regions");
+    expect(rpcCall.mock.calls[0][1]).toEqual({
+      p_city: "Aurora",
+      p_sub_types: ["Detached"],
+    });
+    // raw_vow_sold must never be queried directly any more (that was the ILIKE seq scan).
+    expect(fromCall.mock.calls.map((c) => c[0])).not.toContain("raw_vow_sold");
 
-    // First call must be range(0, 999)
-    expect(rangeCall.mock.calls[0]).toEqual([0, 999]);
-    // Second call must be range(1000, 1999)
-    expect(rangeCall.mock.calls[1]).toEqual([1000, 1999]);
-
-    // Fetching page 2 is not enough — its communities must be USED downstream.
-    // The avm_audit_report donor query filters .in('city_region', cityRegions);
-    // assert that list includes communities from BOTH pages (a Set reset per
-    // iteration, or a discarded page-2 read, would fail here).
+    // The donor query must receive all 1,500 — a dropped page or a reset accumulator fails here.
     const auditCityRegionCall = auditInCall.mock.calls.find(
       (c: unknown[]) => c[0] === "city_region"
     ) as [string, string[]] | undefined;
     expect(auditCityRegionCall).toBeDefined();
     const offered = auditCityRegionCall![1];
-    expect(offered).toContain("RegionA0"); // page 1
-    expect(offered).toContain("RegionB0"); // page 2
-    expect(offered).toContain("RegionB499"); // last row of page 2
-    expect(offered).toHaveLength(1500); // every distinct community across both pages
+    expect(offered).toContain("RegionA0");
+    expect(offered).toContain("RegionB0");
+    expect(offered).toContain("RegionB499");
+    expect(offered).toHaveLength(1500);
+  });
+
+  it("returns null when the RPC errors, rather than throwing", async () => {
+    const stub = {
+      rpc: vi.fn(() => Promise.resolve({ data: null, error: { message: "boom" } })),
+      from: vi.fn(),
+    };
+    await expect(
+      fetchSiblingModel(
+        stub as unknown as Parameters<typeof fetchSiblingModel>[0],
+        "Aurora",
+        "Detached",
+        "Detached"
+      )
+    ).resolves.toBeNull();
   });
 });
 

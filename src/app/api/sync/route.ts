@@ -141,11 +141,16 @@ export async function POST(request: NextRequest) {
 
       // Fallback: legacy minimal upsert (pre-HIGH-6 behavior, kept as a floor)
       const supabase = getServiceRoleClient();
+      // `media` is attached to `prop` above only so transformListing can derive
+      // media_urls; it must not be persisted (migration 103). Without this the
+      // fallback would re-inflate full_payload for whichever listings hit it —
+      // slowly undoing the strip, one visitor-triggered sync at a time.
+      const { media: _droppedMedia, ...propForStorage } = prop as Record<string, unknown>;
       const { error: upsertError } = await supabase
         .from('listings')
         .upsert({
           listing_key: listingKey,
-          full_payload: prop as unknown as Record<string, unknown>,
+          full_payload: propForStorage,
           media_urls: mediaUrls,
           derived_metrics: {
             isDistressed: false,
