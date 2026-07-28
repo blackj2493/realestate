@@ -55,6 +55,9 @@ export async function GET(
       listing_key: view.listing_key,
       full_payload: view.full_payload,
       media_urls: view.media_urls,
+      // Count only. Empty media_urls on a sold record means "gated", not "none" — without
+      // this a consumer of the API can't tell those apart.
+      photoTeaser: view.photoTeaser,
       city: view.city,
       property_sub_type: view.property_sub_type,
       synced_at: view.synced_at,

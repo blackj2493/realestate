@@ -253,10 +253,44 @@ const BACKFILL_PAGE = 1000;
  * index on purchase_contract_date, so ordering by it sorts the whole table → statement
  * timeout. Ordering by the PK uses its index (no sort); each keyset page is ~1-2s.
  */
+/**
+ * Existing id → primaryImageUrl, so a re-index can never DESTROY a thumbnail.
+ *
+ * A Typesense upsert replaces the whole document, so any row whose thumbnail can no longer
+ * be derived comes back blank — and ~19% of rows in the 180-day window have no `photos`
+ * (measured 2026-07-28: 84,835 of 104,714). Without this, re-indexing to FIX thumbnails
+ * would simultaneously destroy the ones that survive from before migration 102 stripped
+ * raw_payload->media. Mirrors the clobber protection the active path already runs
+ * (mediaEnrichment.preserveExistingMedia), for the same reason.
+ *
+ * One streamed export of two fields; a failure degrades to "no protection", never a crash.
+ */
+async function exportExistingThumbnails(client: Client): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const raw: string = await client
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .export({ include_fields: 'id,primaryImageUrl' });
+    for (const line of raw.split('\n')) {
+      if (!line) continue;
+      const doc = JSON.parse(line) as { id?: string; primaryImageUrl?: string };
+      if (doc.id && doc.primaryImageUrl) map.set(doc.id, doc.primaryImageUrl);
+    }
+  } catch (err: any) {
+    console.warn(`   ⚠️  Could not export existing thumbnails (non-fatal): ${err.message}`);
+  }
+  return map;
+}
+
 async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
   console.log(`\n🌱 sold_listings backfill — last ${days}d from raw_vow_sold`);
   const supabase = getServiceRoleClient();
   const client = getSoldAdminClient();
+
+  const existingThumbs = await exportExistingThumbnails(client);
+  console.log(`   🛡️  ${existingThumbs.size} existing thumbnails held as fallback`);
+  let preserved = 0;
 
   const cutoffISO = new Date(windowCutoffMs(days)).toISOString();
   const nowISO = new Date().toISOString();
@@ -305,7 +339,17 @@ async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
         row.brokerage ?? null,
         { photos: row.photos }
       );
-      if (doc) docs.push(doc);
+      if (doc) {
+        // Keep whatever the collection already had when this row can no longer supply one.
+        if (!doc.primaryImageUrl) {
+          const kept = existingThumbs.get(doc.id);
+          if (kept) {
+            doc.primaryImageUrl = kept;
+            preserved++;
+          }
+        }
+        docs.push(doc);
+      }
       else totalSkipped++;
     }
 
@@ -323,7 +367,8 @@ async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
 
   await pruneOldSold(client);
   console.log(
-    `\n✅ Backfill complete: ${totalImported} imported, ${totalFailed} failed, ${totalSkipped} skipped (no contract date).`
+    `\n✅ Backfill complete: ${totalImported} imported, ${totalFailed} failed, ${totalSkipped} skipped (no contract date).` +
+      `\n   🛡️  ${preserved} thumbnails preserved from the existing index (row had no photos).`
   );
 }
 

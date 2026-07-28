@@ -11,6 +11,7 @@
 
 import { cache as reactCache } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
 import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { calculateAVM } from "@/lib/avm/calculator";
@@ -120,9 +121,20 @@ export function gateSaleHistory(sh: SaleHistory, isAuthed: boolean): SaleHistory
  * renders a blurred "Login Required" teaser. Folds in gateSaleHistory and strips the
  * VOW-stitched `true_dom` from the raw payload too (the property API ships full_payload),
  * so ONE call fully de-VOWs a ListingDetail. IDX list-price movement stays intact.
+ *
+ * PHOTOS ON SOLD/OFF-MARKET RECORDS are gated here too. They are VOW Listing Information —
+ * /address has always treated them that way ("The URL itself is a VOW field and is
+ * discarded server-side", soldByKey.ts) — but this page shipped them to anonymous users,
+ * so the two public surfaces disagreed about the same photo of the same home. The count
+ * survives as `photoTeaser` so the UI can show a blurred, locked gallery rather than an
+ * empty box: an honest "there are 17 photos here" without carrying one.
+ *
+ * ACTIVE listings are untouched. Their photos are IDX, are meant to be public, and are the
+ * main reason anyone finds the site.
  */
 export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): ListingDetail {
   if (isAuthed) return detail;
+  const vowMedia = detail.status.kind !== "active";
   const gatedPayload = { ...(detail.full_payload as Record<string, unknown>) };
   delete gatedPayload.true_dom; // VOW-stitched; raw DaysOnMarket (IDX) stays
   // Sold listings live in `listings` with their raw Closed payload (Query B), and the
@@ -139,6 +151,13 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
   return {
     ...detail,
     full_payload: gatedPayload,
+    // Withhold the URLs, keep the fact. The count is recomputed HERE from the ungated
+    // input rather than trusting `detail.photoTeaser`: this function is the one step that
+    // always runs per-request, while the detail itself arrives from unstable_cache and may
+    // predate the field (for an hour after any deploy that changes the shape). Deriving it
+    // here means a stale cache entry degrades to a correct teaser, not a blank box.
+    media_urls: vowMedia ? [] : detail.media_urls,
+    photoTeaser: vowMedia ? { count: detail.media_urls.length } : null,
     estimate: null,
     valueAdd: null,
     dealScore: EMPTY_DEAL_SCORE,
@@ -162,7 +181,19 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
 export interface ListingDetail {
   listing_key: string;
   full_payload: Record<string, unknown>;
+  /**
+   * Photo URLs. For SOLD/LEASED/off-market listings these are VOW Listing Information, and
+   * gateVowDerived empties this for anonymous users — see `photoTeaser`, which survives
+   * gating so the page can still say how many photos exist.
+   */
   media_urls: string[];
+  /**
+   * Photo EXISTENCE + COUNT — safe for anonymous users, and the whole point of the locked
+   * gallery teaser. Mirrors the rule /address already follows (soldByKey.ts `hasPhoto`):
+   * the count is not VOW Listing Information, the URLs are. Null for active listings,
+   * whose photos are IDX and shown to everyone.
+   */
+  photoTeaser: { count: number } | null;
   city: string | null;
   property_sub_type: string | null;
   synced_at: string | null;
@@ -650,10 +681,21 @@ export const getListingDetail = cache(
       console.error(`[getListingDetail] Geo flags failed for ${listingKey}:`, geoErr);
     }
 
+    // `listings.media_urls` is only ever filled while a listing is ACTIVE, so a property
+    // that entered our data already-sold has an empty column while its photos sit in
+    // raw_vow_sold.photos. Recover them — one indexed PK lookup, and only on the empty
+    // path, so the 71% of sold rows that already have media pay nothing. See soldPhotos.ts.
+    let mediaUrls: string[] = listing.media_urls || [];
+    if (mediaUrls.length === 0 && status.kind === "sold") {
+      mediaUrls = await getSoldPhotoUrls(listingKey);
+    }
+
     return {
       listing_key: listing.listing_key,
       full_payload: payload,
-      media_urls: listing.media_urls || [],
+      media_urls: mediaUrls,
+      // Count only — survives gateVowDerived so anon can be told what's behind the gate.
+      photoTeaser: status.kind === "active" ? null : { count: mediaUrls.length },
       city: listing.city ?? null,
       property_sub_type: listing.property_sub_type ?? null,
       synced_at: listing.synced_at ?? null,
