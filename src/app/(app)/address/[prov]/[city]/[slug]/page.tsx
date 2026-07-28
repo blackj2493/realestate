@@ -148,7 +148,9 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
   const media = await getSoldMediaByKey(soldKey, d.primaryImageUrl);
   return (
     <div className="mb-6 space-y-4">
-      {media.length > 0 && <PropertyGallery images={media} />}
+      {/* Consumer-gated branch: `media` is the real gallery, so no locked teaser applies —
+          the anonymous path renders AnonLocked and never reaches here. */}
+      {media.length > 0 && <PropertyGallery images={media} listingKey={soldKey} />}
       <SaleRecordCard record={record} />
       <section className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">

@@ -262,7 +262,11 @@ export async function generateMetadata({
   // the resolved status, not the stale payload field.
   const isActive =
     detail.status.kind === "active" && (p.StandardStatus ?? "Active") === "Active";
-  const ogImage = detail.media_urls[0];
+  // Metadata is built from the UNGATED detail (it has no viewer, and is shared by every
+  // request), so a sold listing's lead photo would be republished in the og:image tag to
+  // any scraper — around the gate the page itself now applies. Photos on a closed record
+  // are VOW Listing Information; only ACTIVE (IDX) listings get one.
+  const ogImage = isActive ? detail.media_urls[0] : undefined;
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -303,7 +307,10 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
       : "SingleFamilyResidence";
   const url = listingCanonical(id, p);
   const cityPath = cityHubPath(p, isCommercial);
-  const photos = detail.media_urls.slice(0, 8);
+  // Structured data is public by definition — emitting a closed listing's photo URLs here
+  // would hand crawlers exactly what the page now withholds from anonymous visitors. Only
+  // ACTIVE (IDX) listings carry photos into JSON-LD. Same rule as og:image above.
+  const photos = detail.status.kind === "active" ? detail.media_urls.slice(0, 8) : [];
   const availability =
     detail.status.kind === "sold"
       ? "https://schema.org/SoldOut"
@@ -681,7 +688,7 @@ export default async function PropertyPage({
         id={id}
         address={address}
         price={price}
-        thumb={detail.media_urls[0]}
+        thumb={view.media_urls[0]}
         city={detail.city ?? undefined}
         brokerage={p.ListOfficeName}
       />
@@ -727,7 +734,7 @@ export default async function PropertyPage({
                     address,
                     city: detail.city ?? undefined,
                     list_price: price,
-                    thumb: detail.media_urls[0],
+                    thumb: view.media_urls[0],
                   }}
                   label="Save"
                   className="min-h-[44px] shrink-0 md:min-h-0"
@@ -891,7 +898,13 @@ export default async function PropertyPage({
             {/* Gallery — leads the page: the photo is the universal triage hook (now above the
                 verdict; social proof moved down to the action cluster in the rail). */}
             <div className="mb-6">
-              <PropertyGallery images={detail.media_urls} tourUrl={tourUrl ?? undefined} />
+              <PropertyGallery
+                images={view.media_urls}
+                tourUrl={tourUrl ?? undefined}
+                listingKey={id}
+                photoTeaser={view.photoTeaser}
+                statusLabel={status.kind === "sold" ? status.label : undefined}
+              />
             </div>
 
             {/* Specs — 3-up on mobile (wider cells so a long basement value wraps
@@ -1116,7 +1129,7 @@ export default async function PropertyPage({
                 address={address}
                 city={detail.city ?? undefined}
                 price={price}
-                thumb={detail.media_urls[0]}
+                thumb={view.media_urls[0]}
                 statusKind={status.kind}
                 isLease={isLease}
               />
@@ -1321,7 +1334,7 @@ export default async function PropertyPage({
           address,
           city: detail.city ?? undefined,
           list_price: price,
-          thumb: detail.media_urls[0],
+          thumb: view.media_urls[0],
         }}
         listingKey={id}
         canContact={isActiveListing}
