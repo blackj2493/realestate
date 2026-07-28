@@ -48,6 +48,7 @@ import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
 import { getConfig } from "@/lib/dashboard/config";
+import { marketCamera } from "@/lib/dashboard/area";
 import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
 
 /**
@@ -294,18 +295,35 @@ function CommandCenterContent() {
 
   // Signed-in initial viewport (fix #4): with no URL scope and no typed place, open
   // the terminal on the user's first saved market (dashboard config in localStorage)
-  // instead of the generic Toronto default. Seeding `location` reuses the existing
-  // place-query + auto-fit path (the cheapest reliable, fully-synchronous variant);
-  // a saved-bubble-geometry fly-to is a noted follow-up. Runs once, and only while
-  // the terminal is still bare (a URL place/center/filter owns the scope instead).
+  // instead of the generic Toronto default. Runs once, and only while the terminal is
+  // still bare (a URL place/center/filter owns the scope instead).
+  //
+  // Seed the CAMERA, not a place filter. `location` is a Typesense text query, so
+  // setLocation(region) pinned the ENTIRE terminal to that city: every listing outside it
+  // vanished and the out-of-bounds notice read "Showing Vaughan only · N more here" the
+  // instant the map opened — and it never cleared, because the user never typed the place
+  // to clear (bug report 2026-07-28). Flying the camera leaves the query unfiltered
+  // (wantViewportScope stays true), so results follow the viewport and panning past the
+  // city just works. This is the "saved-bubble-geometry fly-to" the old place-seed noted as
+  // the follow-up; see QUICK_PICK_MARKETS in area.ts for the same camera-vs-filter reasoning.
   const savedMarketSeededRef = useRef(false);
   useEffect(() => {
     if (savedMarketSeededRef.current) return;
     if (location || hasCityParam || hasCenterParam || hasStructuredParams(searchParams)) return;
     savedMarketSeededRef.current = true;
-    const savedRegions = getConfig().regions;
-    if (savedRegions.length > 0) setLocation(savedRegions[0]);
-  }, [location, hasCityParam, hasCenterParam, searchParams, setLocation]);
+    const first = getConfig().regions[0];
+    if (!first) return;
+    const cam = marketCamera(first);
+    if (cam) {
+      setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+    } else {
+      // A finer saved area with no quick-pick camera (an Ottawa OREB sub-area, or a Toronto
+      // district saved directly). No synchronous centroid exists for it, so fall back to the
+      // place-scoped open — narrower than a metro parent, so the hidden-inventory surprise is
+      // small — until a geometry-based fly-to lands here too.
+      setLocation(first);
+    }
+  }, [location, hasCityParam, hasCenterParam, searchParams, setLocation, setFlyTo]);
 
   // Switching persona drops the map into that persona's default render mode
   // (e.g. Cashflow/Builders → Heatmap). The user can re-toggle freely after.
