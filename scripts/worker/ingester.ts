@@ -35,6 +35,7 @@ import {
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
 import { fetchRoomsForKeys } from './roomsEnrichment';
 import { enrichListingsWithMedia, preserveExistingMedia } from './mediaEnrichment';
+import { storedPhotosToMediaItems } from '@/lib/etl/selectPrimaryImage';
 import { nextSyncCursor } from './syncCursor';
 import { describeError } from '@/lib/etl/describeError';
 import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
@@ -90,8 +91,54 @@ interface SoldListingRecord {
   interior_tier: number;
   exterior_tier: number;
   basement_tier: number;
-  // Full raw VOW payload (NOT NULL JSONB). Powers re-scoring / future backfills.
+  // Full raw VOW payload (NOT NULL JSONB), minus the bulky keys carried elsewhere.
+  // Powers re-scoring / future backfills.
   raw_payload: Record<string, unknown>;
+  // Active photos in display order — see raw_vow_sold.photos (migration 101).
+  photos: Array<{ u: string; c?: string }>;
+}
+
+/**
+ * Keys deliberately not persisted into raw_vow_sold.raw_payload (migrations 101/102).
+ *  - `media`: ~37 eight-field objects per row; superseded by the `photos` column.
+ *  - `PrivateRemarks`: broker-only text (lockbox codes, seller motivation). Read by
+ *    nothing, and never displayable, so retaining it is cost plus needless exposure.
+ */
+const SOLD_PAYLOAD_DROP_KEYS = ['media', 'PrivateRemarks'] as const;
+
+function stripBulkKeys(raw: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...raw };
+  for (const k of SOLD_PAYLOAD_DROP_KEYS) delete out[k];
+  return out;
+}
+
+/**
+ * Extract `photos` from a feed record's media array.
+ *
+ * MUST stay semantically identical to the SQL in scripts/admin/backfillSoldPhotos.ts,
+ * or nightly rows and backfilled rows would disagree: drop Deleted, drop entries with
+ * no URL, keep the LOWEST Order per duplicate URL, emit sorted by Order, and carry
+ * ShortDescription through as `c` when present.
+ */
+export function photosFromRawMedia(raw: Record<string, unknown>): Array<{ u: string; c?: string }> {
+  const media = (raw as { media?: unknown }).media;
+  if (!Array.isArray(media)) return [];
+  const best = new Map<string, { ord: number; c?: string }>();
+  for (const m of media as Array<Record<string, unknown>>) {
+    const url = typeof m?.MediaURL === 'string' ? m.MediaURL : '';
+    if (!url) continue;
+    if (m?.MediaStatus === 'Deleted') continue;
+    const ordRaw = Number(m?.Order);
+    const ord = Number.isFinite(ordRaw) ? ordRaw : Number.POSITIVE_INFINITY;
+    const caption = typeof m?.ShortDescription === 'string' && m.ShortDescription.trim()
+      ? m.ShortDescription
+      : undefined;
+    const prev = best.get(url);
+    if (!prev || ord < prev.ord) best.set(url, { ord, c: caption });
+  }
+  return [...best.entries()]
+    .sort((a, b) => a[1].ord - b[1].ord)
+    .map(([u, v]) => (v.c ? { u, c: v.c } : { u }));
 }
 
 // ── small coercion helpers (messy board data; CLAUDE.md §6 fallbacks) ──────────
@@ -234,7 +281,14 @@ export function extractSoldListingData(raw: any): SoldListingRecord | null {
       interior_tier: deriveInteriorTier(raw),
       exterior_tier: deriveExteriorTier(raw),
       basement_tier: deriveBasementTier(raw),
-      raw_payload: raw,
+      // `media` is NOT persisted into raw_payload (migrations 101/102). It was ~37
+      // eight-field objects per row and the single largest thing in the database; the
+      // `photos` column below keeps the useful residue (Active only, deduped, ordered,
+      // url + caption). PrivateRemarks is dropped too: broker-only text read by nothing
+      // and never displayable. Tiers above are derived from `raw` BEFORE this strip, so
+      // the text they scan is still available at this point.
+      raw_payload: stripBulkKeys(raw),
+      photos: photosFromRawMedia(raw),
     };
 
     return record;
@@ -304,6 +358,7 @@ export async function upsertSoldListings(
             exterior_tier: record.exterior_tier,
             basement_tier: record.basement_tier,
             raw_payload: record.raw_payload,
+            photos: record.photos,
           },
           { onConflict: 'listing_key' }
         );
@@ -1050,7 +1105,7 @@ async function reconcileMissingSoldMedia(
       const chunk = ids.slice(i, i + 200);
       const { data, error } = await supabase
         .from('raw_vow_sold')
-        .select('listing_key, raw_payload')
+        .select('listing_key, raw_payload, photos')
         .in('listing_key', chunk);
       if (error) {
         console.warn(`   ⚠️  Sold raw_payload fetch failed (non-fatal): ${error.message}`);
@@ -1058,7 +1113,14 @@ async function reconcileMissingSoldMedia(
       }
       for (const row of data ?? []) {
         const p = (row as any).raw_payload;
-        if (p && p.ListingKey) rawListings.push(p);
+        if (!p || !p.ListingKey) continue;
+        // Photos now live in the `photos` column, not raw_payload->media (migration
+        // 101). Re-attach them under the key the rest of this routine expects, so the
+        // "already has media" branch below still short-circuits instead of sending
+        // every candidate to AMPRE.
+        const stored = storedPhotosToMediaItems((row as any).photos);
+        if (stored.length > 0) p.media = stored;
+        rawListings.push(p);
       }
     }
     if (rawListings.length === 0) return { scanned: ids.length, recovered: 0 };

@@ -7,6 +7,10 @@
  * so repeated detail-page loads never re-scan the 217k-row table at request time (Supabase
  * Disk IO budget — memory supabase-io-budget). Scalar columns only, recent-first, capped.
  * Mirrors the proven query in /api/market/price-trend. 100% deterministic (§4).
+ *
+ * Reads through the sold_close_list_rows RPC (migration 099) rather than an ILIKE filter,
+ * so the lower(city) / lower(city_region) indexes are actually usable — this callsite was
+ * the single largest consumer of DB time in the database (74,736 calls @ 273 ms over 4.2d).
  */
 
 import { unstable_cache } from "next/cache";
@@ -36,19 +40,23 @@ async function compute(
   const sb = getServiceRoleClient();
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - WINDOW_DAYS);
-  // Match municipality (city) OR community (city_region); ilike = case-insensitive.
+  // Match municipality (city) OR community (city_region), case-insensitively.
   const safe = city.replace(/[,()]/g, " ").trim();
   if (!safe) return null;
   const variants = new Set(rawVariantsOf(normSub, rawSub)); // exact spellings incl. "Semi-Detached "
 
-  const { data, error } = await sb
-    .from("raw_vow_sold")
-    .select("close_price, list_price, property_sub_type")
-    .or(`city.ilike.${safe},city_region.ilike.${safe}`)
-    .gte("close_price", PRICE_FLOOR)
-    .gte("purchase_contract_date", cutoff.toISOString())
-    .order("purchase_contract_date", { ascending: false })
-    .limit(MAX_ROWS);
+  // Via RPC (migration 099), not .or('city.ilike.…'): ILIKE is the pattern operator, so
+  // the planner could not use idx_vow_sold_city_lower_pcd / _cityregion_lower_pcd and
+  // seq-scanned ~289k rows on every call. The RPC writes the same predicate as
+  // lower(col) = lower($1), which resolves to a BitmapOr across both indexes.
+  // Measured on prod: 408 ms → ~10 ms, 34,749 → ~2,800 buffers, identical result set.
+  const { data, error } = await sb.rpc("sold_close_list_rows", {
+    p_city: safe,
+    p_price_floor: PRICE_FLOOR,
+    // Date, not full ISO: PostgREST already cast the timestamp to the date column.
+    p_cutoff: cutoff.toISOString().slice(0, 10),
+    p_limit: MAX_ROWS,
+  });
 
   if (error || !data) return null;
 

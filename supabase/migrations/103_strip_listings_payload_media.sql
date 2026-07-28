@@ -1,0 +1,46 @@
+-- 103_strip_listings_payload_media.sql
+--
+-- DB audit 2026-07-27, step 2. DESTRUCTIVE.
+--
+-- Removes 'media' from listings.full_payload. It duplicated the flat `media_urls`
+-- column at roughly 7x the size (~20 KB/row vs ~3 KB), and media_urls is what every
+-- render path actually reads:
+--     properties/[id]/page.tsx:740 <PropertyGallery images={detail.media_urls}>
+--     :257 OG image, :298 gallery strip, :561/:909/:1160 thumbnails
+--     share/[token]/page.tsx:50, api/property/[id]/route.ts:57
+--     getListingDetail.ts:654 (the only media field on ListingDetail)
+--
+-- No backfill needed — unlike raw_vow_sold, listings already carries media_urls.
+--
+-- Expected: listings 5,631 MB -> ~2,460 MB once repacked (-35.5%, measured across
+-- three independent 5% samples that agreed to within 13 MB).
+--
+-- PRE-CONDITIONS verified before running:
+--   1. media_urls never misses a photo the payload has: on a 9,399-row sample,
+--      "payload has usable photos AND media_urls empty" = 0
+--   2. Restoring from media_urls picks the SAME thumbnail selectPrimaryImage would:
+--      8,339/8,339 sampled listings agreed. (dedupeMediaByObject collapses each photo
+--      to one size, so the size-rank tiebreak never discriminates in practice.)
+--   3. Reader repointed: mediaEnrichment.preserveExistingMedia now recovers active
+--      listings from media_urls instead of full_payload->media — this is the nightly
+--      clobber protection that stops an AMPRE hiccup wiping photos, so it had to move
+--      BEFORE the key disappeared, not after.
+--   4. Writer repointed: transformer.ts stripStoredMedia() keeps `media` out of the
+--      stored payload (raw is left intact — sync.ts still needs raw.media for the
+--      Typesense doc).
+--   5. backfillMedia.ts updateActiveListing() now patches media_urls only; it used to
+--      jsonb_set the media key straight back in, which would have re-inflated the
+--      payload one row at a time.
+--
+-- NOT applied via applyMigrationFiles.ts — a single UPDATE over 231k rows would rewrite
+-- the whole TOAST at once. Applied by scripts/admin/stripListingsMedia.ts, batched with
+-- interleaved VACUUM. On raw_vow_sold the same approach grew the file by only ~105 MB
+-- before plateauing, versus the table's own size if done in one statement.
+--
+-- Equivalent single statement (documentation only — do not run as-is):
+--   UPDATE listings SET full_payload = full_payload - 'media' WHERE full_payload ? 'media';
+--
+-- ROLLBACK: photo URLs survive in media_urls, so galleries are unaffected. The dropped
+-- per-photo metadata (MediaKey, MediaObjectID, ShortDescription captions) is not
+-- recoverable from the database — restore from a Supabase backup, or re-fetch from
+-- AMPRE /Media via scripts/admin/backfillMedia.ts.

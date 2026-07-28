@@ -51,31 +51,18 @@ export async function fetchSiblingModel(
   if (subVariants.length === 0) return null;
 
   // 1. Which community cohorts live in this municipality? (raw_vow_sold carries both.)
-  //    Paged loop: PostgREST hard-caps at 1,000 rows per response; .limit(5000) was
-  //    silently truncated to 1,000, dropping donor communities past row 1,000 in big
-  //    cities and degrading untrained-cohort AVM. (audit MEDIUM-9)
-  const PAGE = 1000;
-  const communitySet = new Set<string>();
-  for (let from = 0; from < PAGE * 20; from += PAGE) {
-    const { data, error } = await supabase
-      .from('raw_vow_sold')
-      .select('city_region')
-      .ilike('city', city.trim())
-      .in('property_sub_type', subVariants)
-      .order('city_region')
-      .range(from, from + PAGE - 1);
-    if (error || !data) break;
-    for (const r of data as { city_region: string }[]) {
-      if (r.city_region) communitySet.add(r.city_region);
-    }
-    if (data.length < PAGE) break;
-    if (from + PAGE >= PAGE * 20) {
-      console.warn(
-        `[siblingModel] IO-budget guard: stopped after 20 pages fetching city_regions for city="${city}". Some communities may be missing.`
-      );
-    }
-  }
-  const cityRegions = Array.from(communitySet);
+  //    Single DISTINCT via RPC (migration 099). This replaced a 20 x 1,000-row paged
+  //    loop that existed only because PostgREST hard-caps responses at 1,000 rows
+  //    (audit MEDIUM-9) — it cost up to 20 round-trips and 20,000 transferred rows to
+  //    produce the ~30-50 distinct values we actually want, and still truncated silently
+  //    past 20 pages. The RPC also drops the ILIKE filter that made every one of those
+  //    pages seq-scan ~289k rows (43,023 calls @ 166 ms over 4.2d).
+  const { data: regionRows, error: regionErr } = await supabase.rpc('sold_city_regions', {
+    p_city: city.trim(),
+    p_sub_types: subVariants,
+  });
+  if (regionErr || !regionRows) return null;
+  const cityRegions = (regionRows as { city_region: string }[]).map((r) => r.city_region);
   if (cityRegions.length === 0) return null;
 
   // 2. Which of those are trained? Pick the best.

@@ -30,7 +30,7 @@ import {
 import { resolveLocation } from './resolveLocation';
 import { parsePostalFromAddress } from './parsePostal';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
-import { selectPrimaryImage } from '../../src/lib/etl/selectPrimaryImage';
+import { selectPrimaryImage, primaryImageFromPhotos } from '../../src/lib/etl/selectPrimaryImage';
 import { deriveDealType } from '../../src/lib/sold/dealType';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
@@ -108,20 +108,25 @@ export function toSoldDocument(
   r: SoldIndexInput,
   listOfficeName: string | null,
   /**
-   * Optional raw payload (media + images arrays) used to pick the thumbnail.
-   * The incremental path (ingester.ts Query B) has it in memory for free; the
-   * backfill path passes the JSONB-extracted slice from raw_vow_sold.
+   * Optional thumbnail source. Two shapes, because the two callers have different data:
+   *  - `{ media, images }` — the incremental path (ingester.ts Query B) holds the live
+   *    VOW feed record in memory, so it still has the full media array for free.
+   *  - `{ photos }` — the backfill path reads the stored `photos` column
+   *    (migration 101) instead of the raw_payload->media sub-tree it used to pull.
+   * Both resolve to the same URL; see primaryImageFromPhotos for why.
    */
-  rawMedia?: { media?: unknown; images?: unknown }
+  rawMedia?: { media?: unknown; images?: unknown; photos?: unknown }
 ): SoldListingDocument | null {
   if (!r.listing_key) return null;
   if (!r.purchase_contract_date) return null;
   const ms = new Date(r.purchase_contract_date).getTime();
   if (!Number.isFinite(ms)) return null;
 
-  const primaryImageUrl = rawMedia
-    ? selectPrimaryImage(rawMedia as { media?: any[]; images?: any[] })
-    : null;
+  const primaryImageUrl = !rawMedia
+    ? null
+    : rawMedia.photos !== undefined
+      ? primaryImageFromPhotos(rawMedia.photos)
+      : selectPrimaryImage(rawMedia as { media?: any[]; images?: any[] });
 
   // raw_vow_sold carries the grade split but no separate total column, so the true
   // BedroomsTotal is above + below. (Previously BedroomsTotal was set to above-grade
@@ -262,9 +267,12 @@ async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
     'brokerage:raw_payload->>ListOfficeName, ' +
     'mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, ' +
-    // Pull the JSONB sub-trees PostgREST-side so selectPrimaryImage() can pick a thumbnail
-    // without us streaming the whole ~50 KB raw_payload per row.
-    'media:raw_payload->media, images:raw_payload->images';
+    // Thumbnail comes from the flat `photos` column (migration 101) — already
+    // Active-only, de-duplicated and Order-sorted. This previously pulled the
+    // raw_payload->media sub-tree: ~37 eight-field objects per row, of which only the
+    // first URL was ever used. The `images` key was read here too and exists on no row
+    // (0 of 2,000 sampled), so it is dropped.
+    'photos';
 
   let lastKey = '';
   let totalSeen = 0;
@@ -295,7 +303,7 @@ async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
       const doc = toSoldDocument(
         { ...(row as any), mls_status: row.mls_status ?? null, transaction_type: row.txn_type ?? null } as SoldIndexInput,
         row.brokerage ?? null,
-        { media: row.media, images: row.images }
+        { photos: row.photos }
       );
       if (doc) docs.push(doc);
       else totalSkipped++;

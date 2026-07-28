@@ -16,6 +16,12 @@
  * can already see in /Property.
  */
 
+// Safe against the self-containment note above: selectPrimaryImage is a pure module
+// with no env reads and no side effects at import time — the thing being avoided is
+// scripts/worker/sync.ts, which hard-throws on a missing TYPESENSE_ADMIN_API_KEY.
+// soldIndexer.ts already imports from here.
+import { storedPhotosToMediaItems, mediaUrlsToMediaItems } from '../../src/lib/etl/selectPrimaryImage';
+
 const API_BASE_URL = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
 
 const MAX_RETRIES = 3;
@@ -323,9 +329,16 @@ export async function preserveExistingMedia(
   if (emptyKeys.length === 0) return 0;
 
   try {
-    // PostgREST JSONB sub-tree projection — same pattern soldIndexer.ts uses.
-    // No full-payload detoast: only the `media` key is read.
-    const select = `listing_key, media:${payloadColumn}->media`;
+    // Sold rows keep their photos in the flat `photos` column (migration 101), not in
+    // raw_payload->media, so the recovery source differs per table. Active rows still
+    // read the payload sub-tree. Either way this is a narrow projection — no
+    // full-payload detoast.
+    // Both tables now recover from a flat column rather than a JSONB sub-tree:
+    // sold from `photos` (migration 101), active from `media_urls` (migration 103).
+    // media_urls is what the UI renders from anyway, so restoring it is exactly what
+    // the clobber protection is there to save.
+    const fromPhotosColumn = table === 'raw_vow_sold';
+    const select = fromPhotosColumn ? 'listing_key, photos' : 'listing_key, media_urls';
     const { data, error } = await supabase
       .from(table)
       .select(select)
@@ -339,8 +352,12 @@ export async function preserveExistingMedia(
     }
 
     const existingByKey = new Map<string, StoredMedia[]>();
-    for (const row of data as Array<{ listing_key: string; media: unknown }>) {
-      const media = Array.isArray(row.media) ? (row.media as StoredMedia[]) : [];
+    for (const row of data as Array<{ listing_key: string; media_urls?: unknown; photos?: unknown }>) {
+      // Both inflate back to the feed's MediaItem shape, so downstream
+      // (collectMediaUrls / selectPrimaryImage) is unchanged either way.
+      const media = (fromPhotosColumn
+        ? storedPhotosToMediaItems(row.photos)
+        : mediaUrlsToMediaItems(row.media_urls)) as StoredMedia[];
       if (media.length > 0) existingByKey.set(row.listing_key, media);
     }
 

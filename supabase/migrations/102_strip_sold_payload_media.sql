@@ -1,0 +1,41 @@
+-- 102_strip_sold_payload_media.sql
+--
+-- DB audit 2026-07-27, step 3 (part 2 of 2: DESTRUCTIVE).
+--
+-- Removes two keys from raw_vow_sold.raw_payload now that everything reading them has
+-- been repointed:
+--
+--   'media'          -> superseded by the `photos` column (migration 101). ~37
+--                       eight-field objects per row, of which only MediaURL and
+--                       ShortDescription carried information; 17.3% of the entries
+--                       were MediaStatus='Deleted' and were never renderable at all.
+--   'PrivateRemarks' -> broker-only text (lockbox codes, seller motivation). Read by
+--                       no code path, and never displayable under VOW terms.
+--
+-- Expected: raw_vow_sold 4,539 MB -> ~3,342 MB once repacked (-17.1%), preserving an
+-- average of 32.7 photos per listing plus their captions.
+--
+-- PRE-CONDITIONS, all verified before this ran:
+--   1. photos backfilled on 288,963/288,963 rows (migration 101)
+--   2. 0 count/thumbnail mismatches on a 14,227-row sample vs the media array
+--   3. scripts/admin/verifyPhotosParity.ts: 0 mismatches over 3,000 rows / 88,717
+--      photos — the nightly TS extractor and the SQL backfill agree exactly
+--   4. readers repointed: soldIndexer.ts (thumbnail), ingester.ts (sold reconcile),
+--      mediaEnrichment.ts preserveExistingMedia (clobber protection)
+--   5. writer repointed: ingester.ts extractSoldListingData no longer persists
+--      `media`/`PrivateRemarks` into raw_payload, so the space does not regrow
+--
+-- NOT applied via applyMigrationFiles.ts: a single UPDATE over 289k rows would rewrite
+-- the whole TOAST at once, and production disk is ~70% full. Applied by
+-- scripts/admin/stripSoldPayloadKeys.ts, which batches by listing_key and VACUUMs
+-- between batches so freed pages are reused instead of the file growing.
+--
+-- Equivalent single statement (documentation only — do not run as-is):
+--   UPDATE raw_vow_sold
+--      SET raw_payload = raw_payload - 'media' - 'PrivateRemarks'
+--    WHERE raw_payload ? 'media' OR raw_payload ? 'PrivateRemarks';
+--
+-- ROLLBACK: the photo URLs survive in `photos`, so a gallery can be rebuilt from that.
+-- The dropped media metadata (MediaKey, MediaObjectID) and PrivateRemarks are NOT
+-- recoverable from the database — restore from a Supabase backup, or re-fetch media
+-- from AMPRE /Media via scripts/admin/backfillMedia.ts.
