@@ -286,10 +286,20 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
 // ─── Sold path ───────────────────────────────────────────────────────────────
 
 /**
- * Sold read: keyset-paginate by PK only — no `WHERE NOT (raw_payload ?
- * 'media')` filter, because that detoasts ~217k JSONB rows on a single scan
- * and exhausts the Disk IO budget. Idempotency is enforced at UPDATE time
- * (per-row PK lookup, cheap).
+ * Sold read: keyset-paginate by PK, skipping rows that already have photos.
+ *
+ * That filter USED to be impossible. The only tell was `raw_payload ? 'media'`, and
+ * detoasting ~50 KB of JSONB across 217k rows blew the Disk IO budget — so the scan read
+ * everything and leaned on the UPDATE to no-op. Migration 101 changed the shape: `photos`
+ * is a separate ~3 KB column, so the same question costs a fraction of the IO and can be
+ * asked on the READ instead.
+ *
+ * It matters because the FETCH, not the write, is the expensive half. Unfiltered, a full
+ * run issues an AMPRE /Media request for all 288,963 rows in order to write ~30k of them.
+ *
+ * The predicate matches updateSoldListing's guard exactly, so behaviour is unchanged —
+ * including that an EMPTY `photos` stays eligible, which is what lets a listing whose
+ * photos only appear on AMPRE later get picked up by a re-run.
  *
  * Project `purchase_contract_date` so we can decide whether the row is inside
  * the Typesense `sold_listings` 180-day window before issuing a partial
@@ -301,6 +311,7 @@ async function readSoldPage(pg: PgClient, cursor: string, pageSize: number): Pro
     SELECT listing_key, purchase_contract_date
       FROM raw_vow_sold
      WHERE listing_key > $1
+       AND (photos IS NULL OR jsonb_array_length(photos) = 0)
      ORDER BY listing_key
      LIMIT $2`;
   const res = await pg.query<{ listing_key: string; purchase_contract_date: string | null }>(sql, [cursor, pageSize]);
