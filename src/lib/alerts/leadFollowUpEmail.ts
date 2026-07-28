@@ -6,10 +6,10 @@
  * Mode B "plain note" from the human identity (SENDERS.leadFollowUp = Tanmay). Phase-1
  * framing — delivers data/insight, makes NO representation claim (voice.md §3/§10).
  */
-import { Resend } from "resend";
 import { SENDERS } from "./senders";
 import { plainNote, esc, SITE } from "./emailShell";
 import { marketingUnsubscribeUrl } from "./unsubscribe";
+import { sendTransactionalEmail, type SendResult } from "./sendEmail";
 
 const firstName = (name: string) => (name || "").trim().split(/\s+/)[0] || "there";
 
@@ -55,11 +55,10 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
 
 /** Best-effort send. Never throws to the caller (a failed follow-up must not fail the
  *  lead capture). No-ops without RESEND_API_KEY. */
-export async function sendLeadFollowUp(input: LeadFollowUpInput): Promise<void> {
-  if (!process.env.RESEND_API_KEY) return;
+export async function sendLeadFollowUp(input: LeadFollowUpInput): Promise<SendResult> {
   const { subject, html, text } = renderLeadFollowUpEmail(input);
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
+  return sendTransactionalEmail({
+    kind: "lead-follow-up",
     from: SENDERS.leadFollowUp.from,
     replyTo: SENDERS.leadFollowUp.replyTo,
     to: input.email,

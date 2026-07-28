@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { slugify } from "@/lib/listings/listingPath";
 import { SENDERS } from "@/lib/alerts/senders";
+import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import { SITE } from "@/lib/alerts/emailShell";
 import { unsubscribeUrl } from "@/lib/alerts/unsubscribe";
 
@@ -74,28 +74,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Best-effort confirmation — the DB row is the lead; email failure must not 500.
-    try {
-      if (process.env.RESEND_API_KEY) {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const where = city ? `${address}, ${city}` : address;
-        await resend.emails.send({
-          from: SENDERS.confirmation.from,
-          replyTo: SENDERS.confirmation.replyTo,
-          to: email,
-          subject: `Watching ${address} for you`,
-          text:
-            `You're tracking ${where} on PureProperty.\n\n` +
-            `We'll email you if this address hits the market.\n\n` +
-            `Didn't sign up? Ignore this email, or unsubscribe: ${unsubscribeUrl(email, SITE)}`,
-          headers: {
-            "List-Unsubscribe": `<${unsubscribeUrl(email, SITE)}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
-        });
-      }
-    } catch (mailErr) {
-      console.error("[address-watches] confirmation email failed (lead saved):", mailErr);
-    }
+    // Observable + non-throwing (a missing/bad key is logged + recorded, not silent).
+    const where = city ? `${address}, ${city}` : address;
+    await sendTransactionalEmail({
+      kind: "confirmation:address-watch",
+      from: SENDERS.confirmation.from,
+      replyTo: SENDERS.confirmation.replyTo,
+      to: email,
+      subject: `Watching ${address} for you`,
+      text:
+        `You're tracking ${where} on PureProperty.\n\n` +
+        `We'll email you if this address hits the market.\n\n` +
+        `Didn't sign up? Ignore this email, or unsubscribe: ${unsubscribeUrl(email, SITE)}`,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl(email, SITE)}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (e) {

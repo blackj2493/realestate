@@ -5,6 +5,7 @@ import {
   checkMigrationLedger,
   checkPriceLedger,
   checkDrift,
+  checkEmailFailures,
   snapshotFromRows,
   LATEST_MONTH_KEY,
   type Problem,
@@ -332,6 +333,37 @@ describe("drift detection — the wrong-but-plausible class", () => {
     expect(find(LATEST_MONTH_KEY)).toBe(202606);
     expect(find("cutSharePct")).toBeCloseTo(14.5, 1);
     expect(find("medianPrice")).toBe(830_000);
+  });
+});
+
+describe("regression: silent email-send failure (the 2026-07 welcome-email incident)", () => {
+  it("stays quiet when there are no recent failures", () => {
+    expect(checkEmailFailures([])).toEqual([]);
+  });
+
+  it("errors on a missing_key failure with a Vercel-pointed hint", () => {
+    const p = checkEmailFailures([{ kind: "welcome", reason: "missing_key" }]);
+    expect(p.length).toBe(1);
+    expect(p[0].severity).toBe("error");
+    expect(p[0].check).toBe("email-delivery");
+    expect(p[0].detail).toContain("missing_key");
+    expect(p[0].detail).toContain("Vercel");
+  });
+
+  it("errors on a bad-key/API failure and points at the key value", () => {
+    const p = checkEmailFailures([{ kind: "welcome", reason: "validation_error: API key is invalid" }]);
+    expect(p[0].severity).toBe("error");
+    expect(p[0].detail).toContain("Resend key value");
+  });
+
+  it("summarizes a mixed batch by kind", () => {
+    const p = checkEmailFailures([
+      { kind: "welcome", reason: "missing_key" },
+      { kind: "welcome", reason: "missing_key" },
+      { kind: "confirmation:listing-alerts", reason: "missing_key" },
+    ]);
+    expect(p[0].detail).toContain("welcome×2");
+    expect(p[0].detail).toContain("confirmation:listing-alerts×1");
   });
 });
 

@@ -39,6 +39,7 @@ import {
   checkMigrationLedger,
   checkPriceLedger,
   checkDrift,
+  checkEmailFailures,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
@@ -49,6 +50,9 @@ const TO = process.env.SYNC_ALERT_EMAIL || '';
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
 const METRICS_STALE_HOURS = Number(process.env.METRICS_STALE_HOURS) || 36;
 const CONDO_STALE_DAYS = Number(process.env.CONDO_STALE_DAYS) || 10;
+// Email failures are urgent (broken transactional email) — a short window keeps the alert
+// current without re-firing on a failure that was already investigated and resolved.
+const EMAIL_FAIL_LOOKBACK_HOURS = Number(process.env.EMAIL_FAIL_LOOKBACK_HOURS) || 48;
 // 48h (vs 36 for region_metrics): state only moves when the capture RUNS, but a single
 // missed night shouldn't page — two consecutive misses should.
 const PRICE_STATE_STALE_HOURS = Number(process.env.PRICE_STATE_STALE_HOURS) || 48;
@@ -186,6 +190,34 @@ async function checkMigrations(): Promise<void> {
   problems.push(...checkMigrationLedger(files, (data ?? []).map((r) => String((r as { filename: string }).filename))));
 }
 
+/**
+ * Transactional email health — reads email_send_failures (098). Catches a dead Vercel
+ * Resend key within a day; alerts from GitHub Actions, which works even when the web
+ * runtime's Resend credential is broken (an email alert about broken email is circular).
+ */
+async function checkEmailHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const sinceIso = new Date(Date.now() - EMAIL_FAIL_LOOKBACK_HOURS * 3_600_000).toISOString();
+  const { data, error } = await sb
+    .from('email_send_failures')
+    .select('kind, reason, occurred_at')
+    .gte('occurred_at', sinceIso)
+    .limit(500);
+  if (error) {
+    problems.push({ severity: 'warn', check: 'email-delivery', detail: `email_send_failures unavailable (${error.message}) — is migration 098 applied?` });
+    return;
+  }
+  const rows = (data ?? []).map((r) => {
+    const row = r as { kind: string; reason: string };
+    return { kind: row.kind, reason: row.reason };
+  });
+  problems.push(...checkEmailFailures(rows));
+
+  // Keep the table bounded — it is a monitoring signal, not an archive.
+  const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
+  await sb.from('email_send_failures').delete().lt('occurred_at', cutoff);
+}
+
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -238,6 +270,7 @@ async function main(): Promise<void> {
     ['market metrics', checkMarketMetrics],
     ['condo fees', checkCondoFees],
     ['price ledger', checkPriceLedgerFreshness],
+    ['email delivery', checkEmailHealth],
     ['migrations', checkMigrations],
   ] as const) {
     try {

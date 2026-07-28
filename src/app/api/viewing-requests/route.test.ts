@@ -9,11 +9,17 @@ vi.mock('@/lib/supabase/client', () => ({
   })),
 }));
 
-// Mock resend so Resend can be imported at the top level in the route.
-vi.mock('resend', () => ({
-  Resend: vi.fn(() => ({
-    emails: { send: vi.fn().mockResolvedValue({}) },
-  })),
+// The route now sends through the observable sendTransactionalEmail wrapper (and the lead
+// follow-up), so mock at THAT boundary rather than the raw `resend` module. This keeps the
+// route test about the route (validation, insert, status), and means a send failure doesn't
+// route through the wrapper's getServiceRoleClient() failure-recording (which would
+// otherwise reuse insertSpy and inflate the insert count).
+const sendSpy = vi.fn().mockResolvedValue({ sent: true });
+vi.mock('@/lib/alerts/sendEmail', () => ({
+  sendTransactionalEmail: (...args: unknown[]) => sendSpy(...args),
+}));
+vi.mock('@/lib/alerts/leadFollowUpEmail', () => ({
+  sendLeadFollowUp: vi.fn().mockResolvedValue({ sent: true }),
 }));
 
 import { POST } from './route';
@@ -35,6 +41,8 @@ function makeReq(body: unknown): Request {
 beforeEach(() => {
   insertSpy.mockReset();
   insertSpy.mockResolvedValue({ error: null });
+  sendSpy.mockReset();
+  sendSpy.mockResolvedValue({ sent: true });
 });
 
 describe('POST /api/viewing-requests', () => {
@@ -115,26 +123,23 @@ describe('POST /api/viewing-requests', () => {
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
-  it('Resend throwing → still returns 200 (email is best-effort)', async () => {
-    const { Resend } = await import('resend');
-    vi.mocked(Resend).mockImplementationOnce(() => ({
-      emails: {
-        send: vi.fn().mockRejectedValue(new Error('SMTP down')),
-      },
-    }));
+  it('email send failing → still returns 200 (email is best-effort)', async () => {
+    // The wrapper is non-throwing; a failed send resolves { sent: false }. Even so, and even
+    // if it threw, the lead capture (the insert) must stand and the route must return 200.
+    sendSpy.mockResolvedValueOnce({ sent: false, error: 'SMTP down' });
 
-    // Set the env var so the email branch is entered.
-    process.env.RESEND_API_KEY = 'test-key';
     const res = await POST(makeReq({
       listingKey: 'W12632618',
       name: 'Jane Doe',
       email: 'jane@example.com',
     }) as never);
-    delete process.env.RESEND_API_KEY;
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ success: true });
     expect(insertSpy).toHaveBeenCalledTimes(1);
+    expect(sendSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'notification:viewing-request' })
+    );
   });
 });

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { SENDERS } from "@/lib/alerts/senders";
+import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import {
   evaluateSearchHealth,
   REPORTABLE_KINDS,
@@ -114,7 +114,9 @@ export async function POST(req: NextRequest) {
       lastAlertAtMs,
       nowMs,
     });
-    if (!decision.alert || !process.env.RESEND_API_KEY) return ok();
+    // Key presence is no longer gated here: routing through sendTransactionalEmail means a
+    // missing/bad key gets RECORDED (and caught by the canary) instead of silently returning.
+    if (!decision.alert) return ok();
 
     // Mark BEFORE sending: a concurrent beacon must not double-email, and a failed
     // send costing one cooldown window is the cheaper mistake.
@@ -151,8 +153,8 @@ export async function POST(req: NextRequest) {
       )}h.`,
     ].join("\n");
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
+    await sendTransactionalEmail({
+      kind: "ops:search-timeout",
       from: SENDERS.alerts.from,
       to: OPS_EMAIL,
       subject,

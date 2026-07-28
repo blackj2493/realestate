@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { sendLeadFollowUp } from "@/lib/alerts/leadFollowUpEmail";
+import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -73,33 +73,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Best-effort owner notification — the DB row is the lead; email failure must not 500.
-    try {
-      if (process.env.RESEND_API_KEY) {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const to = process.env.VIEWING_REQUESTS_EMAIL || process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca";
-        const from = process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca";
-        await resend.emails.send({
-          from,
-          to,
-          replyTo: email,
-          subject: `${leadLabel} — ${address || listingKey}`,
-          text: [
-            `Listing: ${listingKey}${address ? ` — ${address}` : ""}`,
-            `Name: ${name}`,
-            `Email: ${email}`,
-            phone && `Phone: ${phone}`,
-            preferredTime && `Preferred time: ${preferredTime}`,
-            message && `Message: ${message}`,
-          ].filter(Boolean).join("\n"),
-        });
-      }
-    } catch (mailErr) {
-      console.error("[viewing-requests] notification email failed (lead saved):", mailErr);
-    }
+    // Observable + non-throwing (a missing/bad key is logged + recorded, not silent).
+    await sendTransactionalEmail({
+      kind: "notification:viewing-request",
+      from: process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca",
+      to: process.env.VIEWING_REQUESTS_EMAIL || process.env.ALERTS_FROM_EMAIL || "support@pureproperty.ca",
+      replyTo: email,
+      subject: `${leadLabel} — ${address || listingKey}`,
+      text: [
+        `Listing: ${listingKey}${address ? ` — ${address}` : ""}`,
+        `Name: ${name}`,
+        `Email: ${email}`,
+        phone && `Phone: ${phone}`,
+        preferredTime && `Preferred time: ${preferredTime}`,
+        message && `Message: ${message}`,
+      ].filter(Boolean).join("\n"),
+    });
 
-    // Tier-0 speed-to-lead: instant auto-acknowledgement TO the lead (best-effort; a
-    // follow-up failure must never fail the capture). This is the reply the lead used to
-    // never get. `message` intentionally omitted from the reply — it's their own words.
+    // Tier-0 speed-to-lead: instant auto-acknowledgement TO the lead (best-effort). The
+    // SEND is now observable + non-throwing, but rendering still can throw (e.g. a missing
+    // unsubscribe secret), so keep the guard — a follow-up failure must never fail capture.
     try {
       await sendLeadFollowUp({ name, address, listingKey, email });
     } catch (fuErr) {
