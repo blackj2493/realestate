@@ -102,9 +102,9 @@ function NearbyCard({ l }: { l: NearbyListing }) {
   return (
     <Link
       href={`/properties/${l.id}`}
-      className="group w-60 shrink-0 snap-start overflow-hidden rounded-lg border border-border bg-card/40 transition-colors hover:border-cyan-500/40"
+      className="group w-72 shrink-0 snap-start overflow-hidden rounded-lg border border-border bg-card/40 transition-colors hover:border-cyan-500/40"
     >
-      <div className="relative h-28 bg-muted">
+      <div className="relative h-44 bg-muted">
         {l.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- MLS photos are never optimized (cost + TRREB watermark)
           <img src={l.imageUrl} alt={l.address} loading="lazy" className="h-full w-full object-cover" />
@@ -122,14 +122,14 @@ function NearbyCard({ l }: { l: NearbyListing }) {
           </span>
         )}
       </div>
-      <div className="p-3">
-        <p className="text-base font-bold text-foreground">{fmtPrice(l.price)}</p>
+      <div className="p-4">
+        <p className="text-lg font-bold text-foreground">{fmtPrice(l.price)}</p>
         {/* Details + brokerage share one type tier — §6.3: no visual de-emphasis. */}
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           {[l.beds ? `${l.beds} bd` : null, l.baths ? `${l.baths} ba` : null, l.subType].filter(Boolean).join(" · ")}
         </p>
-        <p className="mt-1 truncate text-xs text-muted-foreground">{l.address}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{l.brokerage ?? "Brokerage unavailable"}</p>
+        <p className="mt-1 truncate text-sm text-muted-foreground">{l.address}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{l.brokerage ?? "Brokerage unavailable"}</p>
       </div>
     </Link>
   );
