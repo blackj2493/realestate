@@ -57,6 +57,8 @@ import CampaignHistorySection from "@/components/Property/CampaignHistorySection
 import DealScoreCard from "@/components/Property/DealScoreCard";
 import { LiveDealScoreBadge, LiveDealGrade } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
+import OffMarketOutcome from "@/components/Property/OffMarketOutcome";
+import { soldAddressHref } from "@/lib/search/searchTarget";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
@@ -892,6 +894,22 @@ export default async function PropertyPage({
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   Listed by {p.ListOfficeName}
                 </p>
+              )}
+
+              {/* Off-market → launchpad: surface the two decoded signals the page
+                  otherwise shows only for ACTIVE listings (True DOM + Deal Score),
+                  and bridge to the address's full Home Pulse dossier. VOW-safe —
+                  anon gets locked cells + a free sign-in (null trueDom, gated score). */}
+              {!isActiveListing && !isCommercial && !isLease && (
+                <OffMarketOutcome
+                  kind={status.kind === "sold" ? "sold" : "delisted"}
+                  isAuthed={isAuthed}
+                  addressHref={soldAddressHref(address, detail.city ?? "", id)}
+                  trueDom={isAuthed ? trueDom : null}
+                  dealScore={view.dealScore}
+                  hasDealScore={hasDealScore}
+                  initialLens={lens}
+                />
               )}
             </div>
 
