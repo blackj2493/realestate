@@ -145,7 +145,7 @@ export default function MapComparePanel() {
               )}
             >
               {showSelectedOnly ? <ListFilter className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {showSelectedOnly ? "Show all" : "Isolate"}
+              {showSelectedOnly ? "Show all" : "Show selected"}
             </button>
             <Link
               href={compareHref}
