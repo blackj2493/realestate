@@ -58,7 +58,6 @@ import DealScoreCard from "@/components/Property/DealScoreCard";
 import { LiveDealScoreBadge, LiveDealGrade } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import OffMarketOutcome from "@/components/Property/OffMarketOutcome";
-import { soldAddressHref } from "@/lib/search/searchTarget";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
@@ -907,7 +906,7 @@ export default async function PropertyPage({
                   kind={status.kind === "sold" ? "sold" : "delisted"}
                   isLease={isLease}
                   isAuthed={isAuthed}
-                  addressHref={soldAddressHref(address, detail.city ?? "", id)}
+                  nearbyHref={cityHref}
                   trueDom={isAuthed ? trueDom : null}
                   hasTrueDom={trueDom > 0}
                   dealScore={view.dealScore}

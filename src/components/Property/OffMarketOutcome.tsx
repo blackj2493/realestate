@@ -16,19 +16,25 @@ import type { DealPersona, DealScoreResult } from "@/lib/dealScore/computeDealSc
  * today", nearby active — all already built at /address).
  *
  * Deal Score is a PURCHASE metric, so its cell is omitted for leases; True DOM and
- * the address bridge apply to every off-market page (leased rentals get the same
- * dead-end and SEO traffic).
+ * the "homes for sale nearby" forward-path apply to every off-market page (leased
+ * rentals get the same dead-end and SEO traffic).
+ *
+ * The forward-path is the area's live for-sale inventory (the city/community hub),
+ * NOT the /address dossier: for an off-market record whose listing row survives
+ * (i.e. every record that reaches this page), the address ladder resolves back to
+ * this same listing URL, so an /address link would just loop. The hub is a distinct
+ * page and serves the "missed buyer" who wants what's actually available near here.
  *
  * VOW-safe: the caller passes `trueDom={null}` and the already-gated (EMPTY)
  * `dealScore` for anonymous visitors, so no VOW-derived number can reach an
- * anonymous DOM here — anon sees locked cells + a free sign-in. The bridge is a
+ * anonymous DOM here — anon sees locked cells + a free sign-in. The hub is a
  * public link, shown to everyone.
  */
 export default function OffMarketOutcome({
   kind,
   isLease,
   isAuthed,
-  addressHref,
+  nearbyHref,
   trueDom,
   hasTrueDom,
   dealScore,
@@ -38,8 +44,8 @@ export default function OffMarketOutcome({
   kind: "sold" | "delisted";
   isLease: boolean;
   isAuthed: boolean;
-  /** Canonical /address dossier URL for this record (soldAddressHref); null to hide. */
-  addressHref: string | null;
+  /** Live for-sale inventory near here (the city/community hub); null to hide. */
+  nearbyHref: string | null;
   /** Resolved True DOM — the caller passes null for anon (VOW gate); never rendered for anon. */
   trueDom: number | null;
   /** Ungated flag — is there a days-on-market figure to reveal at all. */
@@ -60,7 +66,7 @@ export default function OffMarketOutcome({
       : "Unlock the full history — free";
 
   // Nothing to say and nowhere to go → render nothing.
-  if (!hasTrueDom && !showScore && !addressHref) return null;
+  if (!hasTrueDom && !showScore && !nearbyHref) return null;
 
   const LockedValue = () => (
     <span className="mt-1 inline-flex items-center gap-1 font-mono text-lg font-bold text-muted-foreground">
@@ -107,17 +113,19 @@ export default function OffMarketOutcome({
           </div>
         )}
 
-        {/* The bridge — public, shown to everyone. Routes into the address dossier. */}
-        {addressHref && (
+        {/* Forward-path — public, shown to everyone. The area's live for-sale
+            inventory (city/community hub), for the visitor who wants what's actually
+            available near here. A distinct page, so it never loops back. */}
+        {nearbyHref && (
           <Link
-            href={addressHref}
+            href={nearbyHref}
             className="group flex flex-col justify-between rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2.5 transition-colors hover:bg-cyan-500/20"
           >
             <p className="font-mono text-[10px] uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
-              This address
+              Nearby
             </p>
             <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 dark:text-cyan-200">
-              See everything
+              Homes for sale
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
           </Link>
