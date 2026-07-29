@@ -9,7 +9,9 @@
  *    master cursor, and vice versa. Failed runs keep the previous cursor.
  *  - Routes: every record → raw_vow_delisted upsert (12-month slim archive);
  *    records with a de-list date inside DELISTED_WINDOW_DAYS → sold_listings
- *    doc upsert. No media fetches (v1 cards are photo-less).
+ *    doc upsert. No AMPRE media fetch — the thumbnail is stamped from the record's
+ *    surviving `listings` row (enrichThumbnailsFromListings), matching sold comps.
+ *    Consumer-only surface (the comp ledger is VOW-gated), so nothing new is exposed.
  *  - Stale-active cleanup: every batch's keys are deleted from `properties`
  *    (a terminated listing's For Sale doc is frozen stale — same bug class as
  *    the sold purge, PR #19).
@@ -18,6 +20,7 @@
  *   npx tsx scripts/worker/delistedIndexer.ts backfill   (seed cursor 12mo back, run to caught-up)
  *   npx tsx scripts/worker/delistedIndexer.ts delta      (one capped run, as the nightly does)
  *   npx tsx scripts/worker/delistedIndexer.ts prune      (prune the 90d window only)
+ *   npx tsx scripts/worker/delistedIndexer.ts thumbs     (one-off: stamp thumbnails onto existing de-listed docs)
  */
 import 'dotenv/config';
 import { getServiceRoleClient } from '../../src/lib/supabase/client';
@@ -28,6 +31,7 @@ import { extractDelistedRecord, toDelistedDocument, type DelistedRecord } from '
 import { buildIdDeleteFilters } from './staleSearchDocs';
 import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
+import { firstMediaUrl } from '../../src/lib/sold/firstMediaUrl';
 
 export const DELISTED_WINDOW_DAYS = 90;
 export const DELISTED_ARCHIVE_MONTHS = 12;
@@ -162,6 +166,38 @@ function toWindowedDoc(r: DelistedRecord, windowCutoffMs: number): SoldListingDo
 }
 
 /**
+ * Best-effort: stamp each windowed doc's thumbnail from its surviving `listings`
+ * row's media_urls. The delisted VOW feed carries no media (v1 cards were blank),
+ * but the listings row survives with the same photos the detail page shows. The
+ * terminal comp ledger is VOW-gated (consumer-only), so this exposes nothing new.
+ *
+ * Non-fatal BY DESIGN: any failure just leaves the docs photo-less, exactly as
+ * before — it can never break the delisted sync. Only fills docs missing a thumb.
+ */
+async function enrichThumbnailsFromListings(docs: SoldListingDocument[]): Promise<void> {
+  const targets = docs.filter((d) => !d.primaryImageUrl && d.id);
+  if (targets.length === 0) return;
+  try {
+    const supabase = getServiceRoleClient();
+    const { data, error } = await supabase
+      .from('listings')
+      .select('listing_key, media_urls')
+      .in('listing_key', targets.map((d) => d.id));
+    if (error || !data) return;
+    const byKey = new Map<string, unknown>();
+    for (const row of data as Array<{ listing_key: unknown; media_urls: unknown }>) {
+      byKey.set(String(row.listing_key), row.media_urls);
+    }
+    for (const doc of targets) {
+      const url = firstMediaUrl(byKey.get(doc.id));
+      if (url) doc.primaryImageUrl = url;
+    }
+  } catch (err: any) {
+    console.warn(`   ⚠️  De-listed thumbnail enrich failed (non-fatal): ${err?.message || err}`);
+  }
+}
+
+/**
  * Keep the slim Supabase archive at its 12-month design size — without this it
  * grows ~330k rows/year unbounded. Cheap: delisted_date is indexed and the
  * nightly delete removes roughly one day's worth (~900 rows). Non-fatal.
@@ -240,6 +276,7 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
       .map((r) => toWindowedDoc(r, windowCutoff))
       .filter((d): d is SoldListingDocument => d !== null);
     if (docs.length > 0) {
+      await enrichThumbnailsFromListings(docs); // best-effort thumbnail from the surviving listings row
       const { success, failed } = await importSoldBatch(getSoldAdminClient(), docs);
       result.indexed += success;
       if (failed > 0) console.warn(`   ⚠️  ${failed} de-listed docs failed to index`);
@@ -383,7 +420,54 @@ if (invokedDirectly) {
       await pruneOldDelisted();
       process.exit(0);
     }
-    console.error(`Unknown mode "${mode}". Use: backfill | delta | prune`);
+    if (mode === 'thumbs') {
+      // One-off: stamp thumbnails onto EXISTING de-listed docs from their surviving
+      // listings rows. New de-lists get thumbnails automatically via the nightly
+      // (enrichThumbnailsFromListings); this repairs the ones already indexed.
+      // Non-destructive — a partial `action:update` that only sets primaryImageUrl.
+      const ts = getSoldAdminClient();
+      const supabase = getServiceRoleClient();
+      const jsonl = (await ts
+        .collections(SOLD_LISTINGS_COLLECTION)
+        .documents()
+        .export({
+          filter_by: 'DealType:=[terminated,expired,suspended]',
+          include_fields: 'id,primaryImageUrl',
+        } as any)) as unknown as string;
+      const rows = jsonl
+        .split('\n')
+        .filter(Boolean)
+        .map((l) => JSON.parse(l) as { id: string; primaryImageUrl?: string });
+      const missing = rows.filter((r) => !r.primaryImageUrl).map((r) => r.id);
+      console.log(`🖼️  De-listed docs missing a thumbnail: ${missing.length} / ${rows.length}`);
+      let stamped = 0;
+      const CHUNK = 200;
+      for (let i = 0; i < missing.length; i += CHUNK) {
+        const keys = missing.slice(i, i + CHUNK);
+        const { data } = await supabase
+          .from('listings')
+          .select('listing_key, media_urls')
+          .in('listing_key', keys);
+        const byKey = new Map<string, unknown>();
+        for (const row of (data ?? []) as Array<{ listing_key: unknown; media_urls: unknown }>) {
+          byKey.set(String(row.listing_key), row.media_urls);
+        }
+        const updates = keys
+          .map((id) => ({ id, primaryImageUrl: firstMediaUrl(byKey.get(id)) }))
+          .filter((u): u is { id: string; primaryImageUrl: string } => !!u.primaryImageUrl);
+        if (updates.length > 0) {
+          await ts
+            .collections(SOLD_LISTINGS_COLLECTION)
+            .documents()
+            .import(updates, { action: 'update' } as any);
+          stamped += updates.length;
+        }
+        console.log(`   …${Math.min(i + CHUNK, missing.length)}/${missing.length} scanned · ${stamped} stamped`);
+      }
+      console.log(`✅ Thumbs backfill complete: ${stamped} de-listed thumbnails stamped from listings.`);
+      process.exit(0);
+    }
+    console.error(`Unknown mode "${mode}". Use: backfill | delta | prune | thumbs`);
     process.exit(1);
   })().catch((err) => {
     console.error('❌ delistedIndexer failed:', err?.message || err);
