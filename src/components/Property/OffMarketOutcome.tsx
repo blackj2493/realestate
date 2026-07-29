@@ -30,6 +30,18 @@ import type { DealPersona, DealScoreResult } from "@/lib/dealScore/computeDealSc
  * anonymous DOM here — anon sees locked cells + a free sign-in. The hub is a
  * public link, shown to everyone.
  */
+
+/** Locked placeholder for a VOW value an anonymous visitor can't see. Module-scope on
+ *  purpose — defining it inside the render body re-creates a component every render
+ *  (react-hooks "Cannot create components during render"); it closes over nothing. */
+function LockedValue() {
+  return (
+    <span className="mt-1 inline-flex items-center gap-1 font-mono text-lg font-bold text-muted-foreground">
+      <Lock className="h-3.5 w-3.5" /> —
+    </span>
+  );
+}
+
 export default function OffMarketOutcome({
   kind,
   isLease,
@@ -67,12 +79,6 @@ export default function OffMarketOutcome({
 
   // Nothing to say and nowhere to go → render nothing.
   if (!hasTrueDom && !showScore && !nearbyHref) return null;
-
-  const LockedValue = () => (
-    <span className="mt-1 inline-flex items-center gap-1 font-mono text-lg font-bold text-muted-foreground">
-      <Lock className="h-3.5 w-3.5" /> —
-    </span>
-  );
 
   return (
     <div className="mt-4 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.04] p-4">
