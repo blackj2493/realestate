@@ -896,16 +896,20 @@ export default async function PropertyPage({
                 </p>
               )}
 
-              {/* Off-market → launchpad: surface the two decoded signals the page
-                  otherwise shows only for ACTIVE listings (True DOM + Deal Score),
-                  and bridge to the address's full Home Pulse dossier. VOW-safe —
-                  anon gets locked cells + a free sign-in (null trueDom, gated score). */}
-              {!isActiveListing && !isCommercial && !isLease && (
+              {/* Off-market → launchpad: surface the decoded signals the page
+                  otherwise shows only for ACTIVE listings (True DOM, + Deal Score for
+                  purchases), and bridge to the address's full Home Pulse dossier.
+                  Covers leased off-market pages too (same dead-end + SEO traffic; the
+                  purchase-only Deal Score cell self-omits). VOW-safe — anon gets locked
+                  cells + a free sign-in (null trueDom, gated score). */}
+              {!isActiveListing && !isCommercial && (
                 <OffMarketOutcome
                   kind={status.kind === "sold" ? "sold" : "delisted"}
+                  isLease={isLease}
                   isAuthed={isAuthed}
                   addressHref={soldAddressHref(address, detail.city ?? "", id)}
                   trueDom={isAuthed ? trueDom : null}
+                  hasTrueDom={trueDom > 0}
                   dealScore={view.dealScore}
                   hasDealScore={hasDealScore}
                   initialLens={lens}
