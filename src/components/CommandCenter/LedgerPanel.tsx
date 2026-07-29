@@ -5,7 +5,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import Link from "next/link";
+import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown, ChevronsUpDown, Eye, ListFilter, GitCompareArrows, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SEARCH_BRAND } from "@/lib/brand";
 import LedgerRow from "./LedgerRow";
@@ -24,7 +25,7 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon } =
     useCommandCenterStore();
 
   // Scope chip (fix #4): with no typed place and no draw area, the results are
@@ -65,6 +66,15 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   const allProperties = searchResult?.listings || [];
   const visible = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
   const ms = searchResult?.processingTimeMs ?? 0;
+
+  // Multi-select basket → quick actions (isolate / compare / clear) surfaced right on
+  // the list, so a selection made with the row checkboxes is actionable without opening
+  // Tools → Compare. `showSelectedOnly` filters both this ledger and the map (page.tsx).
+  const selectedCount = selectedIds.size;
+  const compareHref = useMemo(
+    () => `/properties/compare?ids=${encodeURIComponent(Array.from(selectedIds).join(","))}&lens=${activePersona}`,
+    [selectedIds, activePersona]
+  );
 
   // Adaptive columns (fix #21): drop any column no row in the result set can
   // populate — most visibly Alpha Flag, which is all "—" on the homebuyer lens
@@ -189,6 +199,55 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
           </span>
         )}
       </div>
+
+      {/* Selection quick-actions — appears the moment a row is checked, on BOTH the mobile
+          card list and the desktop pane. Filter the list (and map) to just the picks, jump
+          to a side-by-side compare, or clear — no need to open Tools → Compare to reach the
+          isolate toggle. Same `showSelectedOnly` / compare route the Compare drawer uses. */}
+      {selectedCount > 0 && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-cyan-500/5 px-3 py-2">
+          <span className="text-xs font-semibold text-foreground">{selectedCount} selected</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowSelectedOnly(!showSelectedOnly)}
+              aria-pressed={showSelectedOnly}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                showSelectedOnly
+                  ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-700 dark:text-cyan-200"
+                  : "border-border bg-card text-foreground hover:border-cyan-500/40"
+              )}
+            >
+              {showSelectedOnly ? <ListFilter className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {showSelectedOnly ? "Show all" : "Show selected"}
+            </button>
+            <Link
+              href={compareHref}
+              aria-disabled={selectedCount < 2}
+              title={selectedCount < 2 ? "Select at least 2 to compare" : "Compare side by side"}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                selectedCount >= 2
+                  ? "border-border bg-card text-foreground hover:border-cyan-500/40"
+                  : "pointer-events-none border-border text-muted-foreground opacity-50"
+              )}
+            >
+              <GitCompareArrows className="h-3.5 w-3.5" />
+              Compare
+            </Link>
+            <button
+              type="button"
+              onClick={clearSelected}
+              aria-label="Clear selection"
+              title="Clear selection"
+              className="flex items-center justify-center rounded-md border border-border px-2 py-1.5 text-muted-foreground transition-colors hover:border-rose-500/40 hover:text-rose-600 dark:hover:text-rose-300"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Column headers — desktop only (mobile card mode has no columns to sort).
           Mirrors the width-fitted `visibleColumns` so each header aligns with its cell. */}
