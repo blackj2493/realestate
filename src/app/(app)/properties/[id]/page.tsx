@@ -476,6 +476,14 @@ export default async function PropertyPage({
   // before cityHref so the breadcrumb routes into the commercial hub tree (Phase 2).
   const isCommercial = isCommercialProperty(p.PropertyType);
   const cityHref = cityHubPath(p, isCommercial);
+  // Off-market forward-path: scope the terminal to the listing's COMMUNITY (TRREB
+  // CityRegion, e.g. "Leaside") for the tightest "homes for sale near here", falling
+  // back to the district (City) then the city SEO hub. A distinct page — never loops.
+  const nearbyHref = p.CityRegion?.trim()
+    ? `/properties?city=${encodeURIComponent(p.CityRegion.trim())}`
+    : p.City?.trim()
+      ? `/properties?city=${encodeURIComponent(p.City.trim())}`
+      : cityHref;
   // BuildingAreaTotal in SQFT, or null when the feed quotes another unit (Acres,
   // Square Metres — common on commercial/land). Everything that does per-sqft math
   // (lease snapshots, comps area scoring) must consume THIS, never the raw field.
@@ -897,16 +905,16 @@ export default async function PropertyPage({
 
               {/* Off-market → launchpad: surface the decoded signals the page
                   otherwise shows only for ACTIVE listings (True DOM, + Deal Score for
-                  purchases), and bridge to the address's full Home Pulse dossier.
-                  Covers leased off-market pages too (same dead-end + SEO traffic; the
-                  purchase-only Deal Score cell self-omits). VOW-safe — anon gets locked
-                  cells + a free sign-in (null trueDom, gated score). */}
+                  purchases), and offer a forward-path to live for-sale inventory in the
+                  listing's community. Covers leased off-market pages too (same dead-end +
+                  SEO traffic; the purchase-only Deal Score cell self-omits). VOW-safe —
+                  anon gets locked cells + a free sign-in (null trueDom, gated score). */}
               {!isActiveListing && !isCommercial && (
                 <OffMarketOutcome
                   kind={status.kind === "sold" ? "sold" : "delisted"}
                   isLease={isLease}
                   isAuthed={isAuthed}
-                  nearbyHref={cityHref}
+                  nearbyHref={nearbyHref}
                   trueDom={isAuthed ? trueDom : null}
                   hasTrueDom={trueDom > 0}
                   dealScore={view.dealScore}
