@@ -58,6 +58,13 @@ import DealScoreCard from "@/components/Property/DealScoreCard";
 import { LiveDealScoreBadge, LiveDealGrade } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import OffMarketOutcome from "@/components/Property/OffMarketOutcome";
+import StreetLedgerCard from "@/components/address/StreetLedgerCard";
+import {
+  getStreetLedgerGated,
+  getStreetLedgerPublic,
+  type StreetLedgerGated,
+  type StreetLedgerPublic,
+} from "@/lib/address/streetLedger";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
@@ -484,6 +491,26 @@ export default async function PropertyPage({
     : p.City?.trim()
       ? `/properties?city=${encodeURIComponent(p.City.trim())}`
       : cityHref;
+
+  // v2 launchpad: "recent sales on THIS street" — embedded on off-market pages, where
+  // there is no separate /address dossier to bridge to (a surviving-row record resolves
+  // its /address URL back to this page). Distinct from the comps below (similar homes vs
+  // same street). VOW-safe by structure: the gated fetch runs ONLY in the consumer
+  // branch; an anonymous visitor gets the count + street label only, never a sale value.
+  const showStreetLedger = !isActiveListing && !isCommercial;
+  const [streetLedgerGated, streetLedgerPublic] = showStreetLedger
+    ? await Promise.all([
+        isAuthed
+          ? getStreetLedgerGated(address, detail.city ?? "", p.PostalCode ?? null)
+          : Promise.resolve<StreetLedgerGated | null>(null),
+        !isAuthed
+          ? getStreetLedgerPublic(address, detail.city ?? "", p.PostalCode ?? null)
+          : Promise.resolve<StreetLedgerPublic | null>(null),
+      ])
+    : [null, null];
+  const streetLedgerCount = isAuthed
+    ? (streetLedgerGated?.count ?? 0)
+    : (streetLedgerPublic?.count ?? 0);
   // BuildingAreaTotal in SQFT, or null when the feed quotes another unit (Acres,
   // Square Metres — common on commercial/land). Everything that does per-sqft math
   // (lease snapshots, comps area scoring) must consume THIS, never the raw field.
@@ -935,6 +962,19 @@ export default async function PropertyPage({
                 statusLabel={status.kind === "sold" ? status.label : undefined}
               />
             </div>
+
+            {/* v2: recent sales on THIS street — off-market pages only, where the address
+                dossier isn't a separate page. Consumer sees the dated ledger; anon sees the
+                sale count + street label with a sign-in (VOW-gated inside the card). */}
+            {streetLedgerCount > 0 && (
+              <div className="mb-6">
+                <StreetLedgerCard
+                  isConsumer={isAuthed}
+                  gated={streetLedgerGated}
+                  publicLedger={streetLedgerPublic}
+                />
+              </div>
+            )}
 
             {/* Specs — 3-up on mobile (wider cells so a long basement value wraps
                 cleanly), 5-up from sm↑ where all stats sit on one row. Commercial swaps
