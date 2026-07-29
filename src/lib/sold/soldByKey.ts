@@ -16,6 +16,7 @@ import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typesense/soldListingsSchema";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, addressesMatch, streetNamesMatchPrefix, type ParsedAddress } from "@/lib/watchlist/disposition";
+import { deriveDealType } from "@/lib/sold/dealType";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -80,6 +81,134 @@ function deriveDealKind(dealType?: string): SoldPublic["dealKind"] {
   return !dealType || dealType === "sold" ? "sold" : dealType === "leased" ? "leased" : "offmarket";
 }
 
+// ── raw_vow_sold archive fallback (records older than the 180-day Typesense cache) ────────
+// The `sold_listings` collection is a rolling 180-day cache (soldIndexer's SOLD_WINDOW_DAYS,
+// pruned nightly). A home that sold 6 mo–2 yr ago is pruned from it, so a by-key or by-address
+// lookup here missed — and the search dropdown / keyed /address page fell through to a geocoded
+// lookalike ("41 Duggan Drive" resolved to "41 Duggan Avenue"). The full ~2 yr+ record still
+// lives in Supabase `raw_vow_sold`, so we probe it when the cache misses. The archive is the
+// SAME source the /address street-ledger and sale-record cards already read.
+//
+// GATE is preserved: the PUBLIC helpers select address/status fields only (no price/date); the
+// VOW figures are read solely by the GATED helper, called only inside a getConsumer() branch.
+
+function toInt(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+function toFloat(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** PUBLIC archive record by key — address + status KIND only (no price/date). listing_key is
+ *  the raw_vow_sold PK, so this is an index lookup, never a scan. `location` isn't stored flat
+ *  here, so the keyed /address page renders address + sale history without the geo-derived
+ *  neighbourhood-context block (acceptable degrade for a beyond-cache record). */
+async function getSoldArchivePublicByKey(key: string): Promise<SoldPublic | null> {
+  try {
+    const { data } = await getServiceRoleClient()
+      .from("raw_vow_sold")
+      .select("listing_key, unparsed_address, city, city_region, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType")
+      .eq("listing_key", key)
+      .maybeSingle();
+    const row = data as Record<string, unknown> | null;
+    if (!row?.listing_key) return null;
+    return {
+      id: String(row.listing_key),
+      address: (row.unparsed_address as string | null) ?? "",
+      city: (row.city as string | null) ?? "",
+      cityRegion: (row.city_region as string | null) ?? "",
+      location: null,
+      hasPhoto: false,
+      dealKind: deriveDealKind(deriveDealType(row.mls_status as string | null, row.txn_type as string | null)),
+    };
+  } catch (err) {
+    console.error(`[soldByKey] archive public-by-key failed for "${key}":`, err);
+    return null;
+  }
+}
+
+/** GATED archive record by key — the VOW figures (close price, sold date, beds/baths/size)
+ *  from raw_vow_sold flat columns. CONSUMER-ONLY: call solely inside a getConsumer()-confirmed
+ *  branch, exactly like getSoldGatedByKey. Shaped as the SoldListingDocument fields its callers
+ *  read; ParkingTotal/LotWidth/BasementTier default 0 (never read on the gated dropdown / sale
+ *  card paths). */
+async function getSoldArchiveGatedByKey(key: string): Promise<SoldListingDocument | null> {
+  try {
+    const { data } = await getServiceRoleClient()
+      .from("raw_vow_sold")
+      .select(
+        "listing_key, unparsed_address, city, city_region, close_price, list_price, purchase_contract_date, " +
+          "bedrooms_above_grade, bedrooms_below_grade, bathrooms_total_integer, building_area_total, property_sub_type, " +
+          "office:raw_payload->>ListOfficeName, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType"
+      )
+      .eq("listing_key", key)
+      .maybeSingle();
+    const row = data as Record<string, unknown> | null;
+    if (!row?.listing_key) return null;
+    // Mirror the indexer: date-only value → epoch ms (rendered with timeZone:'UTC').
+    const ms = row.purchase_contract_date ? new Date(row.purchase_contract_date as string).getTime() : 0;
+    const above = toInt(row.bedrooms_above_grade);
+    const below = toInt(row.bedrooms_below_grade);
+    return {
+      id: String(row.listing_key),
+      ClosePrice: toInt(row.close_price),
+      ListPrice: toInt(row.list_price),
+      City: (row.city as string | null) ?? "",
+      CityRegion: (row.city_region as string | null) ?? "",
+      UnparsedAddress: (row.unparsed_address as string | null) ?? "",
+      PropertySubType: (row.property_sub_type as string | null) ?? "",
+      BedroomsTotal: above + below,
+      BedroomsAboveGrade: above,
+      BedroomsBelowGrade: below,
+      BathroomsTotalInteger: toFloat(row.bathrooms_total_integer),
+      BuildingAreaTotal: toInt(row.building_area_total),
+      ParkingTotal: 0,
+      LotWidth: 0,
+      BasementTier: 0,
+      ListOfficeName: (row.office as string | null) ?? "",
+      PurchaseContractDate: Number.isFinite(ms) ? ms : 0,
+      DealType: deriveDealType(row.mls_status as string | null, row.txn_type as string | null),
+    };
+  } catch (err) {
+    console.error(`[soldByKey] archive gated-by-key failed for "${key}":`, err);
+    return null;
+  }
+}
+
+/** PUBLIC archive record by address — the by-address fallback for the search dropdown and the
+ *  /address resolver. Light probe (flat columns, no raw_payload → no detoast), civic-number
+ *  anchored + prefix street-name match (mirrors getSoldPublicByAddressLoose), newest first;
+ *  then one PK read to build the record. The anchored ILIKE mirrors the sale-record probe
+ *  (saleRecord.ts) that already runs on raw_vow_sold in production. */
+async function getSoldArchivePublicByAddress(parsed: ParsedAddress): Promise<SoldPublic | null> {
+  if (!parsed.streetNumber || parsed.streetName.length < 3) return null;
+  const token = parsed.streetName.split(/\s+/).sort((a, b) => b.length - a.length)[0];
+  if (!token || token.length < 3) return null;
+  const safeToken = token.replace(/[%_,()]/g, "");
+  try {
+    const { data } = await getServiceRoleClient()
+      .from("raw_vow_sold")
+      .select("listing_key, unparsed_address, purchase_contract_date")
+      .ilike("unparsed_address", `${parsed.streetNumber}%${safeToken}%`)
+      .order("purchase_contract_date", { ascending: false })
+      .limit(25);
+    for (const r of (data ?? []) as Array<Record<string, unknown>>) {
+      const cand = parseAddress((r.unparsed_address as string | null) ?? "");
+      if (cand.streetNumber !== parsed.streetNumber) continue;
+      if (!streetNamesMatchPrefix(parsed.streetName, cand.streetName)) continue;
+      if (parsed.postal && cand.postal && parsed.postal !== cand.postal) continue;
+      // Ordered newest-first → the first genuine match is the most recent sale.
+      return await getSoldArchivePublicByKey(String(r.listing_key));
+    }
+    return null;
+  } catch (err) {
+    console.error(`[soldByKey] archive by-address failed:`, err);
+    return null;
+  }
+}
+
 /**
  * Address + geo for a sold/off-market listing key, or null if there's no such sold record
  * (e.g. the key is an active listing, or unknown). VOW fields are not requested.
@@ -100,7 +229,8 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
         per_page: 1,
       });
     const d = res.hits?.[0]?.document as Partial<SoldListingDocument> | undefined;
-    if (!d?.id) return null;
+    // Cache miss → the record may be older than the 180-day window; try the archive.
+    if (!d?.id) return await getSoldArchivePublicByKey(key);
     const loc =
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
         ? ([d.location[0], d.location[1]] as [number, number])
@@ -147,7 +277,7 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
       const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
       if (!best || date > best.date) best = { d, date };
     }
-    if (!best) return null;
+    if (!best) return await getSoldArchivePublicByAddress(parsed);
     const d = best.d;
     const loc =
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
@@ -200,7 +330,7 @@ export async function getSoldPublicByAddressLoose(parsed: ParsedAddress): Promis
       const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
       if (!best || date > best.date) best = { d, date };
     }
-    if (!best) return null;
+    if (!best) return await getSoldArchivePublicByAddress(parsed);
     const d = best.d;
     const loc =
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
@@ -273,7 +403,8 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
         filter_by: `id:=${key}`,
         per_page: 1,
       });
-    return (res.hits?.[0]?.document as SoldListingDocument | undefined) ?? null;
+    // Cache miss (record older than the 180-day window) → gated archive read.
+    return (res.hits?.[0]?.document as SoldListingDocument | undefined) ?? (await getSoldArchiveGatedByKey(key));
   } catch (err) {
     console.error(`[soldByKey] gated fetch failed for "${key}":`, err);
     return null;
