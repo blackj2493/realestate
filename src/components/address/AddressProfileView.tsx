@@ -55,8 +55,7 @@ import { cityHrefOrMap } from "@/lib/listings/cityHubs";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import PulseLoader from "@/components/ui/PulseLoader";
 import TrackAddressCard from "./TrackAddressCard";
-import TypicalRentsCard from "./TypicalRentsCard";
-import TypicalPricesCard from "./TypicalPricesCard";
+import MarketGrids from "./MarketGrids";
 import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
@@ -608,22 +607,7 @@ export default async function AddressProfileView({
             {/* Sell + rent grids directly under the sale-side band (owner: prominent
                 placement — the model's estimate, what homes actually sold for, and what
                 they rent for are one thought: the whole investor calculation). */}
-            {typicalPrices && (
-              <TypicalPricesCard
-                matrix={typicalPrices.matrix}
-                radiusKm={typicalPrices.radiusKm}
-                source={typicalPrices.source}
-                showSignInNudge={!isConsumer}
-              />
-            )}
-            {typicalRents && (
-              <TypicalRentsCard
-                matrix={typicalRents.matrix}
-                radiusKm={typicalRents.radiusKm}
-                source={typicalRents.source}
-                showSignInNudge={!isConsumer}
-              />
-            )}
+            <MarketGrids sell={typicalPrices ?? null} rent={typicalRents ?? null} showSignInNudge={!isConsumer} />
 
             {nearby && (
               <div id="feed" className="scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">

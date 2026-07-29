@@ -17,8 +17,7 @@ import { getSoldPublicByKey } from "@/lib/sold/soldByKey";
 import { getBestTypicalRents } from "@/lib/address/leasedRents";
 import { getBestTypicalPrices } from "@/lib/address/soldPrices";
 import { getConsumer } from "@/lib/auth/requireConsumer";
-import TypicalRentsCard from "@/components/address/TypicalRentsCard";
-import TypicalPricesCard from "@/components/address/TypicalPricesCard";
+import MarketGrids from "@/components/address/MarketGrids";
 
 async function resolveCoords(listingId: string): Promise<[number, number] | null> {
   try {
@@ -56,16 +55,9 @@ export default async function TypicalRents({ listingId, salesFirst = true }: { l
     getBestTypicalPrices(coords[0], coords[1], isConsumer),
   ]);
   if (!rents && !prices) return null;
-  const pricesCard = prices && (
-    <TypicalPricesCard matrix={prices.matrix} radiusKm={prices.radiusKm} source={prices.source} showSignInNudge={!isConsumer} />
-  );
-  const rentsCard = rents && (
-    <TypicalRentsCard matrix={rents.matrix} radiusKm={rents.radiusKm} source={rents.source} showSignInNudge={!isConsumer} />
-  );
   return (
-    <div className="mb-6 flex flex-col gap-4">
-      {salesFirst ? pricesCard : rentsCard}
-      {salesFirst ? rentsCard : pricesCard}
+    <div className="mb-6">
+      <MarketGrids sell={prices ?? null} rent={rents ?? null} salesFirst={salesFirst} showSignInNudge={!isConsumer} />
     </div>
   );
 }

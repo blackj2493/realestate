@@ -27,8 +27,7 @@ import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
 import { getBestTypicalRents } from "@/lib/address/leasedRents";
 import { getBestTypicalPrices } from "@/lib/address/soldPrices";
-import TypicalRentsCard from "@/components/address/TypicalRentsCard";
-import TypicalPricesCard from "@/components/address/TypicalPricesCard";
+import MarketGrids from "@/components/address/MarketGrids";
 import { getRegionMetricsCached } from "@/lib/market/aggregates";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
 import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
@@ -195,22 +194,7 @@ export default async function AreaInsights({
 
       {/* Sale prices + rents by bedrooms × type — actual closes for consumers, asking
           medians for anon. Prices first: this page is a sold record's home. */}
-      {typicalPrices && (
-        <TypicalPricesCard
-          matrix={typicalPrices.matrix}
-          radiusKm={typicalPrices.radiusKm}
-          source={typicalPrices.source}
-          showSignInNudge={!isConsumer}
-        />
-      )}
-      {typicalRents && (
-        <TypicalRentsCard
-          matrix={typicalRents.matrix}
-          radiusKm={typicalRents.radiusKm}
-          source={typicalRents.source}
-          showSignInNudge={!isConsumer}
-        />
-      )}
+      <MarketGrids sell={typicalPrices ?? null} rent={typicalRents ?? null} showSignInNudge={!isConsumer} />
 
       {/* Market trends — consumer sees VOW-derived sold numbers; anon a sign-up nudge. */}
       {isConsumer ? (
