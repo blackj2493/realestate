@@ -17,6 +17,8 @@ import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typese
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, addressesMatch, streetNamesMatchPrefix, type ParsedAddress } from "@/lib/watchlist/disposition";
 import { deriveDealType } from "@/lib/sold/dealType";
+import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
+import { primaryImageFromPhotos } from "@/lib/etl/selectPrimaryImage";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -101,26 +103,39 @@ function toFloat(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** PUBLIC archive record by key — address + status KIND only (no price/date). listing_key is
- *  the raw_vow_sold PK, so this is an index lookup, never a scan. `location` isn't stored flat
- *  here, so the keyed /address page renders address + sale history without the geo-derived
- *  neighbourhood-context block (acceptable degrade for a beyond-cache record). */
+/** Postal-centroid location for an archive record — raw_vow_sold stores no rooftop lat/lng,
+ *  so resolve the full 6-char postal (from the address, else the postal_code column) through
+ *  the Ontario LDU library. Precise enough for the /address radius features (nearest school,
+ *  walkability, nearby homes). Null when no postal resolves → the page degrades to no geo block. */
+function archiveLocation(address: string, postalCol: string | null): [number, number] | null {
+  const postal = parseAddress(address).postal || (postalCol ?? "").trim();
+  if (!postal) return null;
+  loadPostalCodes();
+  const c = getCoordinates(postal);
+  return c ? [c.lat, c.lng] : null;
+}
+
+/** PUBLIC archive record by key — address + status KIND + geo/photo-existence bit (no
+ *  price/date). listing_key is the raw_vow_sold PK, so this is an index lookup, never a scan.
+ *  `location` comes from the postal centroid (raw_vow_sold has no rooftop lat/lng) so the keyed
+ *  /address page still gets its schools / walkability / nearby-homes context. */
 async function getSoldArchivePublicByKey(key: string): Promise<SoldPublic | null> {
   try {
     const { data } = await getServiceRoleClient()
       .from("raw_vow_sold")
-      .select("listing_key, unparsed_address, city, city_region, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType")
+      .select("listing_key, unparsed_address, city, city_region, postal_code, photos, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType")
       .eq("listing_key", key)
       .maybeSingle();
     const row = data as Record<string, unknown> | null;
     if (!row?.listing_key) return null;
+    const address = (row.unparsed_address as string | null) ?? "";
     return {
       id: String(row.listing_key),
-      address: (row.unparsed_address as string | null) ?? "",
+      address,
       city: (row.city as string | null) ?? "",
       cityRegion: (row.city_region as string | null) ?? "",
-      location: null,
-      hasPhoto: false,
+      location: archiveLocation(address, row.postal_code as string | null),
+      hasPhoto: !!primaryImageFromPhotos(row.photos),
       dealKind: deriveDealKind(deriveDealType(row.mls_status as string | null, row.txn_type as string | null)),
     };
   } catch (err) {
@@ -139,7 +154,7 @@ async function getSoldArchiveGatedByKey(key: string): Promise<SoldListingDocumen
     const { data } = await getServiceRoleClient()
       .from("raw_vow_sold")
       .select(
-        "listing_key, unparsed_address, city, city_region, close_price, list_price, purchase_contract_date, " +
+        "listing_key, unparsed_address, city, city_region, close_price, list_price, purchase_contract_date, photos, " +
           "bedrooms_above_grade, bedrooms_below_grade, bathrooms_total_integer, building_area_total, property_sub_type, " +
           "office:raw_payload->>ListOfficeName, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType"
       )
@@ -151,6 +166,7 @@ async function getSoldArchiveGatedByKey(key: string): Promise<SoldListingDocumen
     const ms = row.purchase_contract_date ? new Date(row.purchase_contract_date as string).getTime() : 0;
     const above = toInt(row.bedrooms_above_grade);
     const below = toInt(row.bedrooms_below_grade);
+    const primaryImageUrl = primaryImageFromPhotos(row.photos);
     return {
       id: String(row.listing_key),
       ClosePrice: toInt(row.close_price),
@@ -170,6 +186,7 @@ async function getSoldArchiveGatedByKey(key: string): Promise<SoldListingDocumen
       ListOfficeName: (row.office as string | null) ?? "",
       PurchaseContractDate: Number.isFinite(ms) ? ms : 0,
       DealType: deriveDealType(row.mls_status as string | null, row.txn_type as string | null),
+      ...(primaryImageUrl ? { primaryImageUrl } : {}),
     };
   } catch (err) {
     console.error(`[soldByKey] archive gated-by-key failed for "${key}":`, err);
