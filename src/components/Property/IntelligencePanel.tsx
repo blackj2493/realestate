@@ -22,6 +22,10 @@ export interface IntelligenceSection {
   key: string;
   /** Row label — kept short and plain so a collapsed row still says what it is. */
   label: string;
+  /** Leading icon (feature-coloured) — gives the row an anchor for the eye. */
+  icon?: ReactNode;
+  /** One-line context under the label (the delta, verdict, best move …). */
+  caption?: ReactNode;
   /** Headline "answer" shown on the collapsed row (a value, grade chip, or lock). */
   summary?: ReactNode;
   /** The full card, revealed when the row is open. */
@@ -62,12 +66,24 @@ export default function IntelligencePanel({
                 aria-controls={panelId}
                 onClick={() => setOpenKey(open ? null : s.key)}
                 className={cn(
-                  "flex min-h-[48px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                  "flex min-h-[52px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50",
                   open && "bg-cyan-500/5"
                 )}
               >
-                <span className="flex-1 text-sm font-semibold text-foreground">{s.label}</span>
-                {s.summary != null && <span className="shrink-0">{s.summary}</span>}
+                {s.icon != null && (
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center" aria-hidden>
+                    {s.icon}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold leading-tight text-foreground">{s.label}</span>
+                  {s.caption != null && (
+                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-muted-foreground">
+                      {s.caption}
+                    </span>
+                  )}
+                </span>
+                {s.summary != null && <span className="shrink-0 text-right">{s.summary}</span>}
                 <ChevronDown
                   className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
                   aria-hidden

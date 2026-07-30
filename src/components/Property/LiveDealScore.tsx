@@ -12,7 +12,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Lock } from "lucide-react";
-import { DealScoreBadge } from "@/components/Property/DealScoreCard";
+import { DealScoreBadge, DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { onLensChanged } from "@/lib/personas/lensPersistence";
 import { effectiveDealPersona, scoredDealPersonas } from "@/lib/dealScore/effectivePersona";
 import type { DealPersona, DealScoreResult } from "@/lib/dealScore/computeDealScore";
@@ -53,6 +53,31 @@ export function LiveDealScoreBadge({
       className={className}
     />
   );
+}
+
+/** Grade-coloured pill (letter + score) for the active lens, or a lock for anon.
+ *  Like LiveDealGrade but carries the grade colour + score — for the mobile
+ *  Intelligence accordion's collapsed row, where it must agree with the panel's lens. */
+export function LiveDealGradePill({
+  dealScore,
+  initialLens,
+  locked = false,
+  className,
+}: {
+  dealScore: DealScoreResult;
+  initialLens: DealPersona;
+  /** VOW gate: anon sees the lock, never a grade. */
+  locked?: boolean;
+  className?: string;
+}) {
+  const persona = useActiveDealPersona(dealScore, initialLens);
+  const active = persona ? dealScore.personaScores?.[persona] : undefined;
+  const score = active?.score ?? dealScore.score;
+  const grade = active?.grade ?? dealScore.grade;
+  if (locked || score === null || grade === null) {
+    return <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />;
+  }
+  return <DealScoreGradePill score={score} grade={grade} className={className} />;
 }
 
 /** Mobile hero-scent grade — the letter grade for the active lens, or a lock for anon. */
