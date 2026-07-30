@@ -21,6 +21,7 @@
  */
 
 import type { DiligenceFlag } from "@/lib/property/diligence";
+import { permitDetailLine } from "@/lib/property/permitDetail";
 
 export type GeoGeometryFamily = "polygon" | "line" | "point";
 
@@ -83,6 +84,15 @@ export interface GeoDataset {
   license: string;
   sources: GeoDatasetSource[];
   flag: GeoFlagSpec;
+  /**
+   * Optional: turn the NEAREST matched feature's raw `geo_features.attrs` into the flag's
+   * one-line elaboration (DiligenceFlag.detail). Set only on datasets whose source rows
+   * carry facts worth showing (major_construction → permitDetailLine). When present, the
+   * enrichment fetches the nearest feature's attrs instead of a bare MIN(distance); when
+   * absent, nothing about the cheaper distance-only path changes. Must be PURE and
+   * deterministic (§4) and must never surface a third party's street address.
+   */
+  detail?: (attrs: unknown) => string | null;
 }
 
 const OGL_ON = "Open Government Licence – Ontario";
@@ -683,6 +693,10 @@ export const GEO_DATASETS: GeoDataset[] = [
       ask: "Active construction nearby can mean noise, dust and changed views or traffic — check the project's scope and timeline.",
       title: (m) => `Recent major construction permit issued ~${Math.round(m)} m away`,
     },
+    // "How big is it?" is the question the bare distance leaves open — so the nearest
+    // permit's scale/cost/vintage rides along as the flag's sub-line. The neighbouring
+    // property's street address is deliberately NOT surfaced (see permitDetail.ts).
+    detail: permitDetailLine,
   },
   {
     // Deferred: no reliable region-wide open AADT (City of Toronto is single-day TMC,
@@ -709,9 +723,15 @@ export const GEO_DATASETS: GeoDataset[] = [
 /** Datasets the enrichment/loader should act on (enabled only). */
 export const ACTIVE_DATASETS = GEO_DATASETS.filter((d) => d.enabled);
 
-/** Build one DiligenceFlag from a dataset + measured distance (0 for intersect). */
-export function buildGeoFlag(ds: GeoDataset, distM: number): DiligenceFlag {
+/**
+ * Build one DiligenceFlag from a dataset + measured distance (0 for intersect).
+ * `attrs` = the NEAREST matched feature's raw source properties, when the caller has
+ * them and the dataset declares a `detail` normalizer; omitting it simply yields the
+ * pre-detail flag, so every existing caller stays correct.
+ */
+export function buildGeoFlag(ds: GeoDataset, distM: number, attrs?: unknown): DiligenceFlag {
   const f = ds.flag;
+  const detail = attrs != null && ds.detail ? ds.detail(attrs) : null;
   return {
     id: f.id,
     kind: f.kind,
@@ -719,5 +739,6 @@ export function buildGeoFlag(ds: GeoDataset, distM: number): DiligenceFlag {
     title: f.title(distM),
     source: f.source,
     ...(f.ask ? { ask: f.ask } : {}),
+    ...(detail ? { detail } : {}),
   };
 }

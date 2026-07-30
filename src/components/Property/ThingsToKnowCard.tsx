@@ -108,6 +108,11 @@ export default function ThingsToKnowCard({
               </span>
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold leading-snug text-foreground">{f.title}</p>
+                {/* Scale/cost/vintage read off the source record (e.g. the permit itself) —
+                    the "how big is it?" the headline distance leaves open. */}
+                {f.detail && (
+                  <p className="mt-0.5 font-mono text-[11px] leading-snug text-foreground/70">{f.detail}</p>
+                )}
                 <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                   Source: {f.source}
                   {asOf ? ` · as of ${asOf}` : ""}

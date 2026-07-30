@@ -20,12 +20,16 @@ import { ACTIVE_DATASETS, buildGeoFlag } from "@/lib/property/geoDatasets";
  *   - inside[kind]    : the point intersects this dataset's geometry (polygon flags)
  *   - distanceM[kind] : metres to the nearest feature WITHIN the dataset's threshold,
  *                       or null/absent when none is near (distance flags)
+ *   - attrs[kind]     : that nearest feature's raw source properties, for datasets that
+ *                       declare a `detail` normalizer (major_construction → permit scale,
+ *                       cost, issue date). Absent → the flag renders without its sub-line.
  * All optional so the enrichment can ship/skip predicates incrementally — an absent
  * signal simply yields no flag.
  */
 export interface GeoSignals {
   inside?: Record<string, boolean | null | undefined>;
   distanceM?: Record<string, number | null | undefined>;
+  attrs?: Record<string, unknown>;
 }
 
 /**
@@ -36,17 +40,18 @@ export interface GeoSignals {
 export function geoFlagsFor(sig: GeoSignals): DiligenceFlag[] {
   const inside = sig.inside ?? {};
   const distanceM = sig.distanceM ?? {};
+  const attrs = sig.attrs ?? {};
   const out: DiligenceFlag[] = [];
 
   for (const ds of ACTIVE_DATASETS) {
     if (ds.predicate.type === "intersect") {
-      if (inside[ds.kind] === true) out.push(buildGeoFlag(ds, 0));
+      if (inside[ds.kind] === true) out.push(buildGeoFlag(ds, 0, attrs[ds.kind]));
     } else {
       const m = distanceM[ds.kind];
       // The enrichment already applies ST_DWithin(meters); re-guard defensively so a
       // stray out-of-range value can't produce a flag.
       if (m != null && Number.isFinite(m) && m <= ds.predicate.meters) {
-        out.push(buildGeoFlag(ds, m));
+        out.push(buildGeoFlag(ds, m, attrs[ds.kind]));
       }
     }
   }

@@ -15,7 +15,7 @@
  */
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { ACTIVE_DATASETS } from "@/lib/property/geoDatasets";
+import { ACTIVE_DATASETS, buildGeoFlag } from "@/lib/property/geoDatasets";
 import type { DiligenceFlag } from "@/lib/property/diligence";
 
 /** intersect predicates test at 0 m (inside → distance 0); distance predicates use their radius. */
@@ -43,21 +43,14 @@ async function fetchFlags(lat: number, lng: number): Promise<AddressFlag[] | nul
       if (error) console.error("[flagsNearPoint] rpc failed (section hidden):", error.message);
       return null;
     }
-    // One flag per dataset kind — the nearest feature wins (rows arrive distance-sorted).
+    // One flag per dataset kind — the nearest feature wins (rows arrive distance-sorted),
+    // so that row's `attrs` are the right ones to build the flag's detail sub-line from.
     const out = new Map<string, AddressFlag>();
     for (const row of data as Array<{ kind: string; attrs: unknown; distance_m: number }>) {
       const ds = byKind.get(row.kind);
       if (!ds || out.has(row.kind)) continue;
       const distM = Math.max(0, Math.round(row.distance_m ?? 0));
-      out.set(row.kind, {
-        id: ds.flag.id,
-        kind: ds.flag.kind,
-        severity: ds.flag.severity,
-        title: ds.flag.title(distM),
-        source: ds.flag.source,
-        ask: ds.flag.ask,
-        distanceM: distM,
-      });
+      out.set(row.kind, { ...buildGeoFlag(ds, distM, row.attrs), distanceM: distM });
     }
     return [...out.values()].sort((a, b) => b.severity - a.severity);
   } catch (err) {

@@ -31,6 +31,14 @@ export interface DiligenceFlag {
   /** Optional "worth asking" prompt. */
   ask?: string;
   /**
+   * Optional one-line elaboration of the same fact — scale/cost/vintage read off the
+   * source record (e.g. a building permit's "12-unit new build · ~$4.2M · issued Mar
+   * 2026"). Produced by the dataset's own normalizer (permitDetail.ts) from
+   * geo_features.attrs; deterministic, no LLM (§4). Absent when the source carries
+   * nothing extra, so the card must render fine without it.
+   */
+  detail?: string;
+  /**
    * Source-data retrieval date (ISO yyyy-mm-dd) — provenance for geo flags, stamped
    * by enrichGeoFlags.ts from geo_sources.retrieved_on. Absent on payload flags
    * (they are as-of the listing itself).

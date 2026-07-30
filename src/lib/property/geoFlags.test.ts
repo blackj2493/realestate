@@ -82,6 +82,35 @@ describe("geoFlagsFor — distance (line/point) flags", () => {
     expect(geoFlagsFor({ distanceM: { major_construction: 301 } })).toEqual([]);
   });
 
+  it("carries the nearest permit's scale/cost/date as the flag's detail sub-line", () => {
+    const flags = geoFlagsFor({
+      distanceM: { major_construction: 85 },
+      attrs: {
+        major_construction: {
+          SCOPE: "NEW BUILDING",
+          EST_CON_VALUE: 4_200_000,
+          RES_UNITS: 12,
+          ISSUE_DATE: "2026-03-14",
+          _match_radius_m: 150,
+        },
+      },
+    });
+    expect(flags[0].title).toBe("Recent major construction permit issued ~85 m away");
+    expect(flags[0].detail).toBe("12-unit new build · ~$4.2M · issued Mar 2026");
+  });
+
+  it("omits detail when no attrs are supplied or the source carries nothing usable", () => {
+    expect(geoFlagsFor({ distanceM: { major_construction: 85 } })[0].detail).toBeUndefined();
+    expect(
+      geoFlagsFor({ distanceM: { major_construction: 85 }, attrs: { major_construction: { OBJECTID: 3 } } })[0].detail,
+    ).toBeUndefined();
+  });
+
+  it("leaves datasets without a detail normalizer untouched", () => {
+    const flags = geoFlagsFor({ distanceM: { transit: 350 }, attrs: { transit: { NAME: "Union" } } });
+    expect(flags[0].detail).toBeUndefined();
+  });
+
   it("does not flag beyond the threshold, or for null/NaN", () => {
     expect(geoFlagsFor({ distanceM: { hydro: 9999 } })).toEqual([]); // > 150 m
     expect(geoFlagsFor({ distanceM: { rail: null } })).toEqual([]);

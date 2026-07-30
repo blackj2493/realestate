@@ -97,6 +97,36 @@ function preciseCoord(postal: string | null): { lat: number; lng: number } | nul
   return c;
 }
 
+/**
+ * SQL for "the nearest feature of `kind` to `point`, within the dataset radius".
+ *
+ * Index-optimized: ST_DWithin with the CONSTANT dataset radius prunes candidates through
+ * the geography GIST index; the explicit ST_Distance filter then applies any tighter
+ * per-source radius (attrs._match_radius_m, e.g. dense Toronto ≤150 m). A VARIABLE distance
+ * inside ST_DWithin defeats the index (seq scan over all geo_features → ~100x slower, CI
+ * timeout) — so the index bound stays constant and the per-feature radius refines it.
+ * predicate.meters must be >= the largest per-source radius (it's the index superset).
+ *
+ * `withAttrs` (datasets declaring a `detail` normalizer, e.g. major_construction) returns
+ * a jsonb {m, a} — the distance AND that one nearest feature's raw source attributes, which
+ * become the flag's sub-line. It orders the already-pruned candidate set and takes one row
+ * instead of aggregating; datasets without `detail` keep the cheaper bare MIN(distance).
+ */
+function nearestExpr(kind: string, meters: number, point: string, withAttrs: boolean): string {
+  const dist = `ST_Distance(f.geom::geography, ${point}::geography)`;
+  const where = `f.kind = '${kind}'
+                AND ST_DWithin(f.geom::geography, ${point}::geography, ${meters})
+                AND ${dist} <= COALESCE((f.attrs->>'_match_radius_m')::float8, ${meters})`;
+  if (!withAttrs) {
+    return `(SELECT MIN(${dist}) FROM geo_features f WHERE ${where})`;
+  }
+  return `(SELECT jsonb_build_object('m', ${dist}, 'a', f.attrs)
+               FROM geo_features f
+              WHERE ${where}
+              ORDER BY ${dist} ASC
+              LIMIT 1)`;
+}
+
 /** Build the per-point spatial SELECT columns from the active dataset registry. */
 function spatialColumns(): string {
   return ACTIVE_DATASETS.map((ds) => {
@@ -105,34 +135,37 @@ function spatialColumns(): string {
                 AND ST_Intersects(f.geom, p.geom)) AS in_${ds.kind}`;
     }
     const m = ds.predicate.meters;
-    // Index-optimized: ST_DWithin with the CONSTANT dataset radius prunes candidates through
-    // the geography GIST index; the explicit ST_Distance filter then applies any tighter
-    // per-source radius (attrs._match_radius_m, e.g. dense Toronto ≤150 m). A VARIABLE distance
-    // inside ST_DWithin defeats the index (seq scan over all geo_features → ~100x slower, CI
-    // timeout) — so the index bound stays constant and the per-feature radius refines it.
-    // predicate.meters must be >= the largest per-source radius (it's the index superset).
-    return `(SELECT MIN(ST_Distance(f.geom::geography, p.geom::geography))
-               FROM geo_features f
-              WHERE f.kind='${ds.kind}'
-                AND ST_DWithin(f.geom::geography, p.geom::geography, ${m})
-                AND ST_Distance(f.geom::geography, p.geom::geography)
-                    <= COALESCE((f.attrs->>'_match_radius_m')::float8, ${m})) AS m_${ds.kind}`;
+    // n_ = nearest-feature jsonb (distance + attrs); m_ = bare distance. See nearestExpr.
+    return ds.detail
+      ? `${nearestExpr(ds.kind, m, "p.geom", true)} AS n_${ds.kind}`
+      : `${nearestExpr(ds.kind, m, "p.geom", false)} AS m_${ds.kind}`;
   }).join(",\n         ");
+}
+
+/** One nearest-feature jsonb payload as returned by nearestExpr(withAttrs=true). */
+interface NearestRow {
+  m: number | string | null;
+  a: unknown;
 }
 
 /** Map a spatial result row → GeoSignals for geoFlagsFor. */
 function rowToSignals(row: Record<string, unknown>): GeoSignals {
   const inside: Record<string, boolean> = {};
   const distanceM: Record<string, number | null> = {};
+  const attrs: Record<string, unknown> = {};
   for (const ds of ACTIVE_DATASETS) {
     if (ds.predicate.type === "intersect") {
       inside[ds.kind] = row[`in_${ds.kind}`] === true;
+    } else if (ds.detail) {
+      const near = row[`n_${ds.kind}`] as NearestRow | null | undefined;
+      distanceM[ds.kind] = near?.m == null ? null : Number(near.m);
+      if (near?.a != null) attrs[ds.kind] = near.a;
     } else {
       const v = row[`m_${ds.kind}`];
       distanceM[ds.kind] = v == null ? null : Number(v);
     }
   }
-  return { inside, distanceM };
+  return { inside, distanceM, attrs };
 }
 
 interface ListingRow {
@@ -315,9 +348,16 @@ async function runTargetedRefresh(client: Client, kind: string, sourceDates: Rec
   // Candidate listings = those NEAR a current feature (join from the small, kind-filtered
   // feature set — index-probes listing_geo_flags.geom) UNION those that currently carry the
   // flag (so a removed / aged-out feature CLEARS the stale flag). For each, recompute the
-  // per-feature-radius min distance (COALESCE mirrors the full sweep). geom NULL → excluded
-  // (a listing with no trustworthy coord is correctly never flagged).
-  const { rows } = await client.query<{ listing_key: string; flags: unknown; dist: string | null }>(
+  // per-feature-radius nearest match (COALESCE mirrors the full sweep) — as jsonb {m, a}
+  // when the dataset has a `detail` normalizer, so the sub-line is recomputed too, else a
+  // bare distance. geom NULL → excluded (a listing with no trustworthy coord is correctly
+  // never flagged).
+  const nearest = nearestExpr(kind, meters, "lgf.geom", Boolean(ds.detail));
+  const { rows } = await client.query<{
+    listing_key: string;
+    flags: unknown;
+    near: NearestRow | string | number | null;
+  }>(
     `WITH near AS (
         SELECT DISTINCT g.listing_key
         FROM geo_features f
@@ -333,13 +373,7 @@ async function runTargetedRefresh(client: Client, kind: string, sourceDates: Rec
         UNION
         SELECT listing_key FROM flagged
      )
-     SELECT lgf.listing_key, lgf.flags,
-            (SELECT MIN(ST_Distance(f.geom::geography, lgf.geom::geography))
-               FROM geo_features f
-              WHERE f.kind = $2
-                AND ST_DWithin(f.geom::geography, lgf.geom::geography, $1)
-                AND ST_Distance(f.geom::geography, lgf.geom::geography)
-                    <= COALESCE((f.attrs->>'_match_radius_m')::float8, $1)) AS dist
+     SELECT lgf.listing_key, lgf.flags, ${nearest} AS near
      FROM cand c
      JOIN listing_geo_flags lgf ON lgf.listing_key = c.listing_key
      WHERE lgf.geom IS NOT NULL`,
@@ -357,9 +391,14 @@ async function runTargetedRefresh(client: Client, kind: string, sourceDates: Rec
 
   for (const row of rows) {
     const existing: DiligenceFlag[] = Array.isArray(row.flags) ? (row.flags as DiligenceFlag[]) : [];
-    const dist = row.dist == null ? null : Number(row.dist);
+    // `near` is jsonb {m, a} for detail datasets, a bare distance otherwise (see nearestExpr).
+    const near = row.near;
+    const isObj = near !== null && typeof near === "object";
+    const raw = isObj ? (near as NearestRow).m : near;
+    const attrs = isObj ? (near as NearestRow).a : undefined;
+    const dist = raw == null ? null : Number(raw);
     const matched = dist != null && Number.isFinite(dist) && dist <= meters;
-    const newFlag = matched ? withAsOf(buildGeoFlag(ds, dist as number), sourceDates) : null;
+    const newFlag = matched ? withAsOf(buildGeoFlag(ds, dist as number, attrs), sourceDates) : null;
 
     const before = existing.find((f) => f && f.id === ds.flag.id) ?? null;
     if (eq(before, newFlag)) continue; // nothing about this flag changed → skip the write

@@ -211,6 +211,7 @@ function FlagCard({ f }: { f: AddressFlag }) {
         <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${f.kind === "warn" ? "text-amber-600 dark:text-amber-400" : "text-sky-700 dark:text-sky-400"}`} />
         {f.title}
       </p>
+      {f.detail && <p className="mt-1 font-mono text-xs text-foreground/70">{f.detail}</p>}
       <p className="mt-1 text-xs text-muted-foreground">{f.source}</p>
     </div>
   );
