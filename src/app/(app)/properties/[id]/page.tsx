@@ -13,7 +13,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -55,7 +55,7 @@ import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
 import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
 import DealScoreCard from "@/components/Property/DealScoreCard";
-import { LiveDealScoreBadge, LiveDealGrade } from "@/components/Property/LiveDealScore";
+import { LiveDealScoreBadge, LiveDealGrade, LiveDealGradePill } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
 import OffMarketOutcome from "@/components/Property/OffMarketOutcome";
 import StreetLedgerCard from "@/components/address/StreetLedgerCard";
@@ -69,7 +69,7 @@ import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
 import IntelligencePanel, { type IntelligenceSection } from "@/components/Property/IntelligencePanel";
-import { shouldRender as valueAddWillRender } from "@/components/Property/forceAppreciationView";
+import { shouldRender as valueAddWillRender, buildView as buildValueAddView } from "@/components/Property/forceAppreciationView";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
@@ -622,6 +622,94 @@ export default async function PropertyPage({
   const stripNudge = (s: string) =>
     s.replace(" Sign in for our price estimate, Deal Score and reno-upside read.", "");
 
+  // ── Intelligence panel (mobile): each collapsed accordion row leads with a plain-
+  //    language "answer" line + a value/badge, all built from data already on the page.
+  //    Everything VOW-derived (delta, verdict, best move, the value chips) drops to a
+  //    generic line + a lock for anon — the real numbers never reach their DOM. ──
+  const compactMoney = (n: number) =>
+    n >= 1_000_000
+      ? `$${(n / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M`
+      : n >= 1_000
+        ? `$${Math.round(n / 1_000)}K`
+        : formatPrice(n);
+  const readCaption = read ? stripNudge(read.thesisByPersona[lens]) : undefined;
+
+  const estLocked = !isAuthed && (hasEstimate || hasExpectedSale);
+  const hasEstVal = !!salePrice && salePrice.value > 0;
+  const estBelow = hasEstVal && (salePrice!.deltaVsAskPct ?? 0) < 0;
+  const estCaption = estLocked
+    ? "What this home is likely to close at."
+    : hasEstVal
+      ? salePrice!.competitive
+        ? "Priced to compete — likely at or above ask."
+        : salePrice!.deltaVsAskPct !== null && price > 0
+          ? (
+              <>
+                <span
+                  className={
+                    estBelow
+                      ? "font-medium text-emerald-700 dark:text-emerald-400"
+                      : "font-medium text-rose-700 dark:text-rose-400"
+                  }
+                >
+                  {compactMoney(Math.abs(salePrice!.value - price))} ({estBelow ? "" : "+"}
+                  {((salePrice!.deltaVsAskPct ?? 0) * 100).toFixed(1)}%) {estBelow ? "below" : "above"} ask
+                </span>
+                {estBelow ? " · room to negotiate" : ""}
+              </>
+            )
+          : "What this home is likely to close at."
+      : undefined;
+  const estSummary = estLocked ? (
+    <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+  ) : hasEstVal ? (
+    <span className="flex flex-col items-end gap-0.5">
+      <span className="font-mono text-sm font-bold text-primary">{compactMoney(salePrice!.value)}</span>
+      <span
+        className={cn(
+          "border px-1 py-px font-mono text-[8.5px] font-semibold uppercase tracking-wide",
+          salePrice!.confidence === "HIGH"
+            ? "border-emerald-500/50 text-emerald-700 dark:text-emerald-400"
+            : salePrice!.confidence === "MEDIUM"
+              ? "border-amber-500/50 text-amber-700 dark:text-amber-400"
+              : "border-border text-muted-foreground"
+        )}
+      >
+        {salePrice!.confidence}
+      </span>
+    </span>
+  ) : undefined;
+
+  const dealCaption =
+    !isAuthed && hasDealScore
+      ? "We grade this home A–F for your buying style."
+      : hasDealScore
+        ? view.dealScore.verdict
+        : undefined;
+
+  const renoLocked = !isAuthed && hasValueAdd;
+  const renoView = valueAddWillRender(view.valueAdd) ? buildValueAddView(view.valueAdd) : null;
+  const renoInclude = renoLocked || renoView !== null;
+  const renoCaption = renoLocked
+    ? "Which renovations pay back here."
+    : renoView
+      ? renoView.recommendedRows.length > 0
+        ? `${renoView.recommendedRows.length} move${renoView.recommendedRows.length === 1 ? "" : "s"} pay back · best: ${renoView.recommendedRows[0].label}`
+        : "Modeled moves — none pay back here."
+      : undefined;
+  const renoSummary = renoLocked ? (
+    <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+  ) : renoView && renoView.headlineNet > 0 ? (
+    <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+      +{compactMoney(renoView.headlineNet)}
+    </span>
+  ) : undefined;
+
+  const costsCaption =
+    p.TaxAnnualAmount && p.TaxAnnualAmount > 0
+      ? `Taxes ~${formatPrice(Math.round(p.TaxAnnualAmount / 12))}/mo + your mortgage — tap to model.`
+      : "Mortgage, taxes & fees — tap to model.";
+
   // Asset/Rental summary + finance card render in the rail (legacy path) or
   // inside the panel's Costs tab (panel path) — defined once, used in one spot.
   const assetSummaryCard = (
@@ -1100,6 +1188,8 @@ export default async function PropertyPage({
                       {
                         key: "read",
                         label: "The read",
+                        icon: <Lightbulb className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        caption: readCaption,
                         detail: (
                           <div>
                             <div className="divide-y divide-border/60">
@@ -1116,13 +1206,11 @@ export default async function PropertyPage({
                       {
                         key: "estimate",
                         label: "Estimated sale price",
-                        // Collapsed answer: the estimate (cyan, as on the card) — or a lock for anon.
-                        summary:
-                          !isAuthed && (hasEstimate || hasExpectedSale) ? (
-                            <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
-                          ) : salePrice && salePrice.value > 0 ? (
-                            <span className="font-mono text-sm font-bold text-primary">{formatPrice(salePrice.value)}</span>
-                          ) : undefined,
+                        icon: <Tag className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        // Context line: the ask-delta (green below / rose above); answer: the
+                        // estimate + its confidence. Both drop to a generic line + lock for anon.
+                        caption: estCaption,
+                        summary: estSummary,
                         detail: (
                           <EstimatedSaleCard
                             salePrice={salePrice}
@@ -1136,9 +1224,11 @@ export default async function PropertyPage({
                       {
                         key: "score",
                         label: "Deal grade",
-                        // Live grade chip — follows the same lens as the card below (fix #6).
+                        icon: <Gauge className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        caption: dealCaption,
+                        // Live grade pill — follows the same lens as the card below (fix #6).
                         summary: hasDealScore ? (
-                          <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
+                          <LiveDealGradePill dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
                         ) : undefined,
                         detail: (
                           <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
@@ -1146,24 +1236,21 @@ export default async function PropertyPage({
                       },
                       // Renovation upside self-hides when there's no priced move, so only add the
                       // row when the card will actually render something (or its anon teaser).
-                      (!isAuthed && hasValueAdd) || valueAddWillRender(view.valueAdd)
+                      renoInclude
                         ? {
                             key: "reno",
                             label: "Renovation upside",
-                            summary:
-                              !isAuthed && hasValueAdd ? (
-                                <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
-                              ) : valueAddWillRender(view.valueAdd) && view.valueAdd.headlineUpside > 0 ? (
-                                <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                                  +{formatPrice(view.valueAdd.headlineUpside)}
-                                </span>
-                              ) : undefined,
+                            icon: <Hammer className="h-[18px] w-[18px] text-emerald-700 dark:text-emerald-400" />,
+                            caption: renoCaption,
+                            summary: renoSummary,
                             detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
                           }
                         : null,
                       {
                         key: "costs",
                         label: "Your costs",
+                        icon: <Wallet className="h-[18px] w-[18px] text-muted-foreground" />,
+                        caption: costsCaption,
                         detail: (
                           <div className="space-y-4">
                             {assetSummaryCard}
