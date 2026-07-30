@@ -68,7 +68,8 @@ import {
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
-import IntelligencePanel from "@/components/Property/IntelligencePanel";
+import IntelligencePanel, { type IntelligenceSection } from "@/components/Property/IntelligencePanel";
+import { shouldRender as valueAddWillRender } from "@/components/Property/forceAppreciationView";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
@@ -1093,42 +1094,88 @@ export default async function PropertyPage({
                    prod card stack below instead. */}
                 <div className="lg:hidden">
                 <IntelligencePanel
-                  verdict={
-                    <div>
-                      <div className="divide-y divide-border/60">
-                        <VerdictRow label="THESIS" tone="emerald" text={stripNudge(read.thesisByPersona[lens])} />
-                        <VerdictRow label="THE CATCH" tone="amber" text={read.catch_} />
-                        <VerdictRow label="PRICE READ" tone="cyan" text={stripNudge(read.priceRead)} />
-                      </div>
-                      <div className="mt-3">
-                        <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
-                      </div>
-                    </div>
-                  }
-                  price={
-                    <div className="space-y-4">
-                      <EstimatedSaleCard
-                        salePrice={salePrice}
-                        listPrice={price}
-                        city={p.City}
-                        propertySubType={p.PropertySubType}
-                        locked={!isAuthed && (hasEstimate || hasExpectedSale)}
-                      />
-                      <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
-                    </div>
-                  }
-                  score={
-                    <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
-                  }
-                  costs={
-                    <div className="space-y-4">
-                      {assetSummaryCard}
-                      {financeCard}
-                    </div>
+                  defaultOpenKey="read"
+                  sections={
+                    [
+                      {
+                        key: "read",
+                        label: "The read",
+                        detail: (
+                          <div>
+                            <div className="divide-y divide-border/60">
+                              <VerdictRow label="THESIS" tone="emerald" text={stripNudge(read.thesisByPersona[lens])} />
+                              <VerdictRow label="THE CATCH" tone="amber" text={read.catch_} />
+                              <VerdictRow label="PRICE READ" tone="cyan" text={stripNudge(read.priceRead)} />
+                            </div>
+                            <div className="mt-3">
+                              <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
+                            </div>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "estimate",
+                        label: "Estimated sale price",
+                        // Collapsed answer: the estimate (cyan, as on the card) — or a lock for anon.
+                        summary:
+                          !isAuthed && (hasEstimate || hasExpectedSale) ? (
+                            <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+                          ) : salePrice && salePrice.value > 0 ? (
+                            <span className="font-mono text-sm font-bold text-primary">{formatPrice(salePrice.value)}</span>
+                          ) : undefined,
+                        detail: (
+                          <EstimatedSaleCard
+                            salePrice={salePrice}
+                            listPrice={price}
+                            city={p.City}
+                            propertySubType={p.PropertySubType}
+                            locked={!isAuthed && (hasEstimate || hasExpectedSale)}
+                          />
+                        ),
+                      },
+                      {
+                        key: "score",
+                        label: "Deal grade",
+                        // Live grade chip — follows the same lens as the card below (fix #6).
+                        summary: hasDealScore ? (
+                          <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
+                        ) : undefined,
+                        detail: (
+                          <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
+                        ),
+                      },
+                      // Renovation upside self-hides when there's no priced move, so only add the
+                      // row when the card will actually render something (or its anon teaser).
+                      (!isAuthed && hasValueAdd) || valueAddWillRender(view.valueAdd)
+                        ? {
+                            key: "reno",
+                            label: "Renovation upside",
+                            summary:
+                              !isAuthed && hasValueAdd ? (
+                                <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+                              ) : valueAddWillRender(view.valueAdd) && view.valueAdd.headlineUpside > 0 ? (
+                                <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                                  +{formatPrice(view.valueAdd.headlineUpside)}
+                                </span>
+                              ) : undefined,
+                            detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
+                          }
+                        : null,
+                      {
+                        key: "costs",
+                        label: "Your costs",
+                        detail: (
+                          <div className="space-y-4">
+                            {assetSummaryCard}
+                            {financeCard}
+                          </div>
+                        ),
+                      },
+                    ].filter(Boolean) as IntelligenceSection[]
                   }
                   footer={
                     !isAuthed ? (
-                      <div className="mt-3 rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 p-3">
+                      <div className="rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 p-3">
                         <p className="text-sm font-semibold text-foreground">One sign-in unlocks everything</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           Price estimate, Deal Score, sold prices &amp; full history. Free, ~20 seconds.
