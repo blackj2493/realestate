@@ -1517,9 +1517,6 @@ export default async function PropertyPage({
           // actives + DealType=leased closings — sale comps under a rental compare a
           // monthly rent against purchase prices.
           isLease={isLease}
-          // Buyer-facing "browse more homes" CTAs land on the list-first city hub
-          // (SimilarProperties ignores it for lease/commercial, which the hub doesn't cover).
-          cityHubHref={cityHref}
         />
         </div>
         </section>
