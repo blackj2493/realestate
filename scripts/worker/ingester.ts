@@ -40,6 +40,7 @@ import { nextSyncCursor } from './syncCursor';
 import { describeError } from '@/lib/etl/describeError';
 import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
 import { isDelistedDealType } from '@/lib/sold/dealType';
+import { parseLivingAreaRange } from '@/lib/condo/feeStability';
 
 // ============================================================================
 // Sold Listing Types
@@ -151,15 +152,22 @@ function styleToString(v: unknown): string | null {
   if (Array.isArray(v)) return v.length ? v.filter(Boolean).join(', ') : null;
   return v ? String(v) : null;
 }
-// living_area_range is an INTEGER column though TRREB sends a bucket string
-// ("1500-2000"). The historical convention stores the midpoint (→ 1750).
+/**
+ * living_area_range is an INTEGER column though TRREB sends a bucket string
+ * ("1500-2000"). The historical convention stores the midpoint (→ 1750).
+ *
+ * Delegates to `parseLivingAreaRange` — the parser the AVM already trusts — so
+ * there is one implementation instead of two that disagree. The copy that used
+ * to live here required a `\d+-\d+` shape, so TRREB's two open-ended bands
+ * (`< 700`, `5000 +`) fell through to `Number(...)` → NaN → null. That silently
+ * nulled 5,607 sold rows and 5,748 active listings, and the `5000 +` half landed
+ * squarely on the luxury tail, where the AVM's GLA fallback can least afford a
+ * hole. Filtering reads the interval bounds instead — see
+ * `@/lib/listings/livingAreaBands` — but this column stays a midpoint for the
+ * AVM and the existing consumers.
+ */
 function livingAreaRangeToInt(v: unknown): number | null {
-  if (v === undefined || v === null || v === '') return null;
-  const s = String(v).trim();
-  const m = s.match(/(\d+)\s*-\s*(\d+)/);
-  if (m) return Math.round((Number(m[1]) + Number(m[2])) / 2);
-  const single = Number(s);
-  return Number.isFinite(single) ? Math.round(single) : null;
+  return parseLivingAreaRange(v);
 }
 
 /**

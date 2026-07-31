@@ -1,6 +1,7 @@
-import type { FilterDef, FilterValue, StepperValue, UniversalFilterState } from "./types";
+import type { BandRangeValue, FilterDef, FilterValue, StepperValue, UniversalFilterState } from "./types";
 import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig, type PropertyClass } from "./fundamentals";
 import { DIRECTION_OPTIONS } from "@/lib/listings/directionFaces";
+import { SQFT_OPEN_MAX, SQFT_UNKNOWN } from "@/lib/listings/livingAreaBands";
 
 const fmtPrice = (v: number): string =>
   v >= 1_000_000
@@ -258,8 +259,100 @@ function stepperFilter(o: {
   };
 }
 
+/**
+ * Normalises a band-range value, so a partial or legacy shape still reads.
+ * `loose` defaults ON: TRREB publishes size as a band, and silently discarding
+ * every listing whose band straddles the user's limit is exactly the behaviour
+ * this filter exists to avoid.
+ */
+export const readBandRange = (v: FilterValue): BandRangeValue => {
+  const b = (v ?? {}) as Partial<BandRangeValue>;
+  return {
+    lo: typeof b.lo === "number" ? b.lo : 0,
+    hi: typeof b.hi === "number" ? b.hi : SQFT_OPEN_MAX,
+    loose: b.loose !== false,
+    unsized: b.unsized === true,
+  };
+};
+
+const fmtSf = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : String(v));
+
+/**
+ * The size clause for [lo, hi), read either way:
+ *
+ *   loose=false → `sqft_min>=lo && sqft_max<=hi`  the band sits INSIDE the range
+ *   loose=true  → `sqft_min<hi  && sqft_max>lo`   the band OVERLAPS the range
+ *
+ * Returns null when the range is wide open. Exported so the control's
+ * certain/possible counts are built from the very same expression the search
+ * runs — if these two ever disagreed, the count would promise results the
+ * filter then refuses to show.
+ *
+ * Both halves are always emitted, never just the constrained one: unsized
+ * listings carry the -1 sentinel, and a one-sided clause like `sqft_min:<2000`
+ * would happily match it.
+ */
+export function sqftRangeClause(lo: number, hi: number, loose: boolean): string | null {
+  if (lo <= 0 && hi >= SQFT_OPEN_MAX) return null;
+  return loose
+    ? `sqft_min:<${hi} && sqft_max:>${lo}`
+    : `sqft_min:>=${lo} && sqft_max:<=${hi}`;
+}
+
+/** Typesense fragment matching only listings that report no size at all. */
+export const SQFT_UNSIZED_CLAUSE = `sqft_min:=${SQFT_UNKNOWN}`;
+
+/**
+ * Interior size — the one filter that must not pretend to be precise.
+ *
+ * Residential sqft is 100% banded (measured 2026-07-30: zero of 119,503 active
+ * houses and condos carry an exact BuildingAreaTotal), so a conventional numeric
+ * slider filters on a midpoint that was manufactured from a range every single
+ * time. This filters on the band's real bounds instead:
+ *
+ *   strict — the whole band sits inside [lo, hi)        → certainly in range
+ *   loose  — the band overlaps [lo, hi)                 → certainly OR possibly
+ *
+ * The difference between the two counts is the honest measure of how much the
+ * feed's resolution is costing the answer.
+ */
+const SQFT_FILTER: FilterDef = {
+  key: "sqft",
+  label: "Size",
+  category: "Property",
+  control: "bands",
+  defaultPinned: false,
+  defaultValue: { lo: 0, hi: SQFT_OPEN_MAX, loose: true, unsized: false },
+  min: 0,
+  max: SQFT_OPEN_MAX,
+  field: "sqft_min",
+  formatValue: (v) => `${v.toLocaleString("en-US")} sf`,
+  isActive: (v) => {
+    // Only the BOUNDS activate the filter — `loose`/`unsized` are modifiers, and
+    // a bare toggle with the range wide open must not read as an active filter.
+    const { lo, hi } = readBandRange(v);
+    return lo > 0 || hi < SQFT_OPEN_MAX;
+  },
+  buildClause: (v) => {
+    const { lo, hi, loose, unsized } = readBandRange(v);
+    const core = sqftRangeClause(lo, hi, loose);
+    if (!core) return null;
+    return unsized ? `((${core}) || ${SQFT_UNSIZED_CLAUSE})` : core;
+  },
+  chipLabel: (v) => {
+    const { lo, hi } = readBandRange(v);
+    const capped = hi < SQFT_OPEN_MAX;
+    if (lo > 0 && capped) return `${fmtSf(lo)}–${fmtSf(hi)} sf`;
+    if (lo > 0) return `${fmtSf(lo)}+ sf`;
+    if (capped) return `≤${fmtSf(hi)} sf`;
+    return "Size";
+  },
+};
+
 /** The deeper, opt-in field library reached via "+ Add filter". Values live-verified. */
 export const MORE_FILTERS: FilterDef[] = [
+  // First: interior size is the most-reached-for filter after price and beds.
+  SQFT_FILTER,
   enumFilter({
     key: "basement",
     label: "Basement",
@@ -392,11 +485,23 @@ export const FILTERS_BY_KEY: Record<string, FilterDef> = Object.fromEntries(
   ALL_FILTERS.map((f) => [f.key, f])
 );
 
-/** Fresh default-value map (arrays cloned so store state never shares references). */
+/**
+ * A deep-enough copy of a default value. Arrays AND objects are cloned — a
+ * stepper's `{n, exact}` and a band range's `{lo, hi, …}` are just as mutable as
+ * a `[min, max]` tuple, and sharing one across every store instance would let a
+ * single user's edit leak into everyone's defaults.
+ */
+export function cloneFilterValue(v: FilterValue): FilterValue {
+  if (Array.isArray(v)) return [...v] as FilterValue;
+  if (v !== null && typeof v === "object") return { ...v } as FilterValue;
+  return v;
+}
+
+/** Fresh default-value map (values cloned so store state never shares references). */
 export function makeDefaultUniversalFilters(): UniversalFilterState {
   const out: UniversalFilterState = {};
   for (const f of ALL_FILTERS) {
-    out[f.key] = Array.isArray(f.defaultValue) ? ([...f.defaultValue] as FilterValue) : f.defaultValue;
+    out[f.key] = cloneFilterValue(f.defaultValue);
   }
   return out;
 }
