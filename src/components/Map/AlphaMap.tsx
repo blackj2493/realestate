@@ -60,6 +60,14 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
+// Nonce of the last flyTo we actually flew, at MODULE scope so it survives a remount.
+// The store's flyTo lingers after it's consumed (nulling it here would cancel the
+// post-fly bounds report via the effect's cleanup). On a mobile Back remount that
+// stale flyTo would otherwise replay over the restored camera; skipping an
+// already-flown nonce prevents the replay while a genuinely new flyTo (bumped nonce)
+// still flies. Resets on full page reload — the same lifetime as the camera restore.
+let consumedFlyNonce = 0;
+
 // Camera tilt per render mode: Listings reads best flat (2D scan); Heatmap
 // tilts to reveal the hex columns; 3D Explore tilts further into the cityscape.
 const pitchForMode = (mode: string) => (mode === "listings" ? 0 : mode === "3d" ? 55 : 45);
@@ -87,14 +95,29 @@ export default function AlphaMap({
 }: AlphaMapProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-  const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
+  // Restore the last in-session camera (computed ONCE at mount). Mobile opens a
+  // listing via a full route push, so Back remounts this component — without a
+  // restore it would reset to INITIAL_VIEW_STATE and then re-run a URL/saved-market
+  // seed, snapping the user away from wherever they had browsed. Read the store
+  // imperatively (no subscription) so this is purely the mount-time value.
+  const initialCameraRef = useRef<{ vs: MapViewState; restored: boolean } | null>(null);
+  if (!initialCameraRef.current) {
+    const cam = useCommandCenterStore.getState().lastCamera;
+    initialCameraRef.current = cam
+      ? { vs: { longitude: cam.lng, latitude: cam.lat, zoom: cam.zoom, pitch: 0, bearing: 0 }, restored: true }
+      : { vs: INITIAL_VIEW_STATE, restored: false };
+  }
+  const { vs: initialViewState, restored: didRestore } = initialCameraRef.current;
+
+  const [viewState, setViewState] = useState<MapViewState>(initialViewState);
   // Flips true the first time DeckGL measures a non-zero canvas — the initial
   // bounds report (below) waits for it, since computeAndReportBounds no-ops
   // while dims are 0 and would otherwise never retry.
   const [dimsReady, setDimsReady] = useState(false);
   // Once the map has framed real results, keep it mounted even if a later
   // viewport-scoped query returns 0 — blanking it mid-browse would trap the user.
-  const [mapReady, setMapReady] = useState(false);
+  // A restored camera counts as "ready" so the map renders immediately on Back.
+  const [mapReady, setMapReady] = useState(didRestore);
   // Pinned, interactive popup: the card(s) at a clicked pin/stacked cluster.
   const [popup, setPopup] = useState<{ x: number; y: number; listings: ListingDocument[] } | null>(null);
   // Floating label for a hovered school catchment / proximity circle.
@@ -132,6 +155,7 @@ export default function AlphaMap({
   const enterComps = useCommandCenterStore((s) => s.enterComps);
   const exitComps = useCommandCenterStore((s) => s.exitComps);
   const soldCount = useCommandCenterStore((s) => s.soldCount);
+  const setLastCamera = useCommandCenterStore((s) => s.setLastCamera);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -141,7 +165,13 @@ export default function AlphaMap({
 
   const isInteracting = useRef(false);
   const lastSearchQuery = useRef(currentSearchQuery);
-  const mapInitialized = useRef(false);
+  // A restored camera is already "framed" — flag it so the results auto-fit doesn't
+  // reframe away from where the user left off the moment the first query returns.
+  const mapInitialized = useRef(didRestore);
+  // Report the restored viewport as the search box once deck reports its dimensions
+  // (mapBounds is nulled by the page's remount effect, so results would otherwise
+  // come back province-wide). One-shot; false when there's nothing to restore.
+  const pendingRestoreReport = useRef(didRestore);
   // Signature of the result set we last framed — lets the auto-fit wait for a new
   // query's data to actually arrive before reframing (results lag the query string).
   const lastFitData = useRef("");
@@ -150,7 +180,11 @@ export default function AlphaMap({
   // what's on screen (HouseSigma-style progressive reveal under the 100-cap).
   const programmaticRef = useRef(false);
   const userMovedRef = useRef(false);
-  const viewStateRef = useRef<MapViewState>(INITIAL_VIEW_STATE);
+  // Which flyTo nonce THIS component instance has flown — distinguishes a strict-mode
+  // effect re-invoke (same instance, ref set) from a genuine remount (new instance,
+  // ref null) so the stale-flyTo guard below only suppresses the true replay.
+  const flewNonceRef = useRef<number | null>(null);
+  const viewStateRef = useRef<MapViewState>(initialViewState);
   const dimsRef = useRef<{ width: number; height: number } | null>(null);
   const reportTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -221,6 +255,17 @@ export default function AlphaMap({
     if (!scopeToViewport || mapBounds || !dimsReady || userMovedRef.current) return;
     computeAndReportBounds();
   }, [scopeToViewport, mapBounds, dimsReady, computeAndReportBounds]);
+
+  // Restored session (mobile Back remounts this page): once the canvas is measured,
+  // report the RESTORED viewport as the search box so results scope to where the user
+  // returned — mapBounds was nulled by the page's remount. The bare cold-start path
+  // (scopeToViewport) already self-reports via the effect above, so only a scoped
+  // restore (a named/center/city session) needs this. One-shot.
+  useEffect(() => {
+    if (!pendingRestoreReport.current || !dimsReady) return;
+    pendingRestoreReport.current = false;
+    if (!scopeToViewport) computeAndReportBounds();
+  }, [dimsReady, scopeToViewport, computeAndReportBounds]);
 
   // Mode change re-tilts the camera (flat for Listings, pitched for Heatmap/3D)
   // with an animated transition so switching modes feels physical, not a cut.
@@ -372,6 +417,15 @@ export default function AlphaMap({
   const flyNonce = flyTo?.nonce ?? 0;
   useEffect(() => {
     if (!flyTo) return;
+    // Skip a stale flyTo replay: on a mobile Back remount the store still holds the
+    // last command, and re-flying it would override the restored camera. "Already
+    // flown by a PRIOR instance" = (module-scope) consumedFlyNonce matches AND this
+    // instance (per-instance ref) hasn't flown it — true only after a genuine remount.
+    // React 18 dev strict-mode re-invokes this same instance's mount effect; there the
+    // ref already matches, so it proceeds and re-schedules the post-fly bounds report.
+    if (flewNonceRef.current !== flyTo.nonce && flyTo.nonce === consumedFlyNonce) return;
+    flewNonceRef.current = flyTo.nonce;
+    consumedFlyNonce = flyTo.nonce;
     isInteracting.current = false;
     markProgrammatic(1000);
     setViewState((vs) => ({
@@ -882,12 +936,17 @@ export default function AlphaMap({
     // movement (programmatic auto-fit flies are flagged and skipped → no loop).
     if (reportTimer.current) clearTimeout(reportTimer.current);
     reportTimer.current = setTimeout(() => {
+      // Remember the settled camera (user OR programmatic) so returning to the
+      // terminal restores this exact view. Not a search dependency, so writing it
+      // never triggers a re-query on its own.
+      const v = viewStateRef.current;
+      setLastCamera({ lat: v.latitude, lng: v.longitude, zoom: v.zoom });
       if (userMovedRef.current && !programmaticRef.current) {
         userMovedRef.current = false;
         computeAndReportBounds();
       }
     }, 350);
-  }, [computeAndReportBounds]);
+  }, [computeAndReportBounds, setLastCamera]);
 
   const handleDragEnd = useCallback(() => {
     setTimeout(() => {

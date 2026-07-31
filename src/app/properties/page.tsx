@@ -61,6 +61,19 @@ const SUBTYPE_TO_DASHBOARD_KEY: ReadonlyMap<string, string> = new Map(
   PROPERTY_TYPE_OPTIONS.flatMap((opt) => opt.variants.map((v) => [v, opt.key] as [string, string]))
 );
 
+// URL/saved-market camera seeds must fire on genuine navigation but NOT re-fire when
+// the terminal merely REMOUNTS. Mobile opens a listing via a full route push, so
+// pressing Back remounts this whole page; a per-instance useRef guard resets on that
+// remount and would replay the onboarding seed, snapping the camera back to the seeded
+// market (e.g. Brampton) over wherever the user had browsed. Keying the "already
+// seeded" markers at MODULE scope (by param VALUE where there is one) makes them
+// idempotent across remounts, while a genuinely new value still seeds. AlphaMap's
+// lastCamera restore then returns the map to where the user actually left it. These
+// reset only on a full page reload — exactly the intended lifetime.
+let seededCityValue: string | null = null;
+let seededCenterKey: string | null = null;
+let savedMarketSeeded = false;
+
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
   ssr: false,
@@ -192,11 +205,10 @@ function CommandCenterContent() {
   // clears it via searchVisibleArea) set location to "", this effect saw ""  !== "Toronto"
   // and immediately put "Toronto" back. Arriving via a ?city= link meant the place filter
   // could never be cleared at all. Mirrors the hydratedParamsRef guard below.
-  const citySeededRef = useRef<string | null>(null);
   useEffect(() => {
     const cityParam = searchParams.get("city") || searchParams.get("search") || "";
-    if (!cityParam || citySeededRef.current === cityParam) return;
-    citySeededRef.current = cityParam;
+    if (!cityParam || seededCityValue === cityParam) return;
+    seededCityValue = cityParam;
     setLocation(cityParam);
   }, [searchParams, setLocation]);
 
@@ -218,15 +230,14 @@ function CommandCenterContent() {
   // address is visible among the listings. Deliberately carries NO ?city=: bounds
   // scope the query, so feed-vs-geocoder naming (Nepean vs Barrhaven) can't hide
   // nearby inventory. Guarded to fire once per distinct center.
-  const centeredRef = useRef<string | null>(null);
   useEffect(() => {
     const lat = Number(searchParams.get("lat"));
     const lng = Number(searchParams.get("lng"));
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return;
     const key = `${lat},${lng},${searchParams.get("z") ?? ""},${searchParams.get("pin") ?? ""}`;
-    if (centeredRef.current === key) return;
-    centeredRef.current = key;
+    if (seededCenterKey === key) return;
+    seededCenterKey = key;
     const zRaw = Number(searchParams.get("z"));
     const zoom = Number.isFinite(zRaw) ? Math.min(18, Math.max(8, zRaw)) : 14;
     setFlyTo({ lat, lng, zoom });
@@ -306,11 +317,10 @@ function CommandCenterContent() {
   // (wantViewportScope stays true), so results follow the viewport and panning past the
   // city just works. This is the "saved-bubble-geometry fly-to" the old place-seed noted as
   // the follow-up; see QUICK_PICK_MARKETS in area.ts for the same camera-vs-filter reasoning.
-  const savedMarketSeededRef = useRef(false);
   useEffect(() => {
-    if (savedMarketSeededRef.current) return;
+    if (savedMarketSeeded) return;
     if (location || hasCityParam || hasCenterParam || hasStructuredParams(searchParams)) return;
-    savedMarketSeededRef.current = true;
+    savedMarketSeeded = true;
     const first = getConfig().regions[0];
     if (!first) return;
     const cam = marketCamera(first);
