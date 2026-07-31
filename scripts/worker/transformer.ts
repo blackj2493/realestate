@@ -27,6 +27,7 @@ import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 import { deriveBasementTier } from '@/lib/avm/conditionScoring';
 import { normalizeDirectionFaces } from '@/lib/listings/directionFaces';
+import { sqftBoundsFor } from '@/lib/listings/livingAreaBands';
 
 // ============================================================================
 // Configuration
@@ -727,6 +728,9 @@ export interface TransformResult {
     CoveredSpaces?: number;
     BuildingAreaTotal?: number;
     LivingAreaRange?: string;
+    /** Interior size as half-open interval bounds; both -1 when unreported. */
+    sqft_min?: number;
+    sqft_max?: number;
     isDistressed: boolean;
     targetGrossYield?: number;
     hasSecondarySuitePotential: boolean;
@@ -1062,6 +1066,14 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // BuildingAreaTotal): undeclared in the schema, so returned but not filter/sortable.
   // BuildingAreaTotal is ~never filled for houses, so this is the headline sqft fallback.
   typesensePayload.LivingAreaRange = raw.LivingAreaRange || '';
+  // …and the same size as a filterable INTERVAL. Residential sqft is 100% banded
+  // (measured 2026-07-30: 81,555/81,570 houses and 37,932/37,933 condos carry a
+  // band, zero carry an exact value), so collapsing to a midpoint would make every
+  // size query assert a precision the feed cannot support. Indexing both bounds
+  // keeps "definitely in range" and "might be in range" separable.
+  const sqft = sqftBoundsFor(raw);
+  typesensePayload.sqft_min = sqft.lo;
+  typesensePayload.sqft_max = sqft.hi;
   // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;
   typesensePayload.primaryImageUrl = primaryThumbnailUrl || '';

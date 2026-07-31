@@ -12,6 +12,7 @@ import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 import { aboveGradeBedsClause } from '@/lib/filters/filterRegistry';
 import { toSimpleRing } from '@/lib/geo/simplifyRing';
+import { sqftBoundsFor } from '@/lib/listings/livingAreaBands';
 import { reportSearchFailure } from '@/lib/telemetry/searchHealth';
 import { rankAddressSuggestions } from '@/lib/search/addressRank';
 
@@ -98,6 +99,33 @@ export async function searchHistogram(params: {
   return (res.results ?? []).map((r: { found?: number }) => r.found ?? 0);
 }
 
+/**
+ * COUNT-only results for a list of arbitrary filter fragments, in one
+ * multi_search round-trip. Generalises {@link searchHistogram} to clauses that
+ * aren't a single field's range — the sqft band control needs per-band counts
+ * (unequal-width TRREB bands) plus its certain/possible/unsized totals, and none
+ * of those are expressible as `bandFilter`.
+ *
+ * A fragment of "" counts the unfiltered base. Order in = order out.
+ */
+export async function searchClauseCounts(params: {
+  baseFilterBy: string;
+  clauses: string[];
+}): Promise<number[]> {
+  const { baseFilterBy, clauses } = params;
+  if (!clauses.length) return [];
+  const searches = clauses.map((c) => ({
+    collection: 'properties',
+    q: '*',
+    query_by: 'City',
+    filter_by: [baseFilterBy, c].filter(Boolean).join(' && '),
+    per_page: 0,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const res: any = await getTypesenseClient().multiSearch.perform({ searches } as any);
+  return (res.results ?? []).map((r: { found?: number }) => r.found ?? 0);
+}
+
 // ============================================================================
 // Type Definitions (matches updated schema with camelCase fields)
 // ============================================================================
@@ -145,6 +173,10 @@ export interface ListingDocument {
   // TRREB sqft band ("2500-3000"). Stored-only display cargo; BuildingAreaTotal is
   // ~never filled for houses, so this is the sqft fallback on cards / quick-look.
   LivingAreaRange?: string;
+  // The same size as filterable interval bounds. Derived from the two fields above
+  // when absent, so every write path gets them without having to remember.
+  sqft_min?: number;
+  sqft_max?: number;
   
   // Derived Metrics
   isDistressed: boolean;
@@ -785,6 +817,17 @@ export async function indexListing(listing: ListingDocument): Promise<void> {
   if (listing.ParkingTotal !== undefined) document.ParkingTotal = listing.ParkingTotal;
   if (listing.BuildingAreaTotal !== undefined) document.BuildingAreaTotal = listing.BuildingAreaTotal;
   if (listing.LivingAreaRange) document.LivingAreaRange = listing.LivingAreaRange;
+  // Size bounds: honour explicit values, otherwise derive from the two fields above.
+  // Deriving here means a caller that forgets them still produces a filterable doc,
+  // rather than one that silently vanishes from every size query.
+  {
+    const s =
+      listing.sqft_min !== undefined && listing.sqft_max !== undefined
+        ? { lo: listing.sqft_min, hi: listing.sqft_max }
+        : sqftBoundsFor(listing);
+    document.sqft_min = s.lo;
+    document.sqft_max = s.hi;
+  }
   if (listing.calculatedDOM !== undefined) document.calculatedDOM = listing.calculatedDOM;
   if (listing.thumbnailUrl) document.thumbnailUrl = listing.thumbnailUrl;
   if (listing.ListOfficeName) document.ListOfficeName = listing.ListOfficeName;

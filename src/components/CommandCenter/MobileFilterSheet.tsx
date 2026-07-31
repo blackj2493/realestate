@@ -15,7 +15,7 @@ import React from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
-import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
+import { moreFiltersForClass, cloneFilterValue } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import FilterChip, { FilterControl } from "./FilterChip";
@@ -24,8 +24,7 @@ import FundamentalToggle from "./FundamentalToggle";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
-const freshDefault = (v: FilterValue): FilterValue =>
-  Array.isArray(v) ? ([...v] as FilterValue) : v;
+const freshDefault = cloneFilterValue;
 
 export interface FilterItem {
   def: FilterDef;
