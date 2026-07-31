@@ -227,6 +227,13 @@ export interface CommandCenterState {
   // consumes it (the `nonce` bumps so re-selecting the same place re-flies).
   flyTo: { lat: number; lng: number; zoom?: number; nonce: number } | null;
   setFlyTo: (target: { lat: number; lng: number; zoom?: number } | null) => void;
+  // Last settled map camera, remembered in-session so returning to the terminal
+  // restores where the user was. Mobile opens a listing via a full route push, so
+  // Back REMOUNTS this page — without this, the map falls back to the URL seed
+  // (?lat=/?city=, e.g. the onboarding market Brampton) instead of the area the user
+  // had browsed to. The store is a module singleton, so this survives the remount.
+  lastCamera: { lat: number; lng: number; zoom: number } | null;
+  setLastCamera: (cam: { lat: number; lng: number; zoom: number } | null) => void;
   // A pin dropped at a searched/geocoded address that has no active listing.
   /** A dropped map pin. For comps-on-demand it also carries the subject's constraints
    *  (type keys + ±band price) so the sold-comp fetch returns SIMILAR solds, not all. */
@@ -484,6 +491,8 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
     set((state) => ({
       flyTo: target ? { ...target, nonce: (state.flyTo?.nonce ?? 0) + 1 } : null,
     })),
+  lastCamera: null,
+  setLastCamera: (lastCamera) => set({ lastCamera }),
   searchPin: null,
   setSearchPin: (pin) => set({ searchPin: pin }),
   enterComps: (pin) =>
