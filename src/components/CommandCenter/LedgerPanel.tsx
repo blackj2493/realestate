@@ -231,7 +231,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
                       : "border-border text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {g ?? "Any"}
+                  {g ? `≥${g}` : "Any"}
                 </button>
               );
             })}
