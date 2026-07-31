@@ -49,6 +49,8 @@ import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
 import { getConfig } from "@/lib/dashboard/config";
 import { marketCamera } from "@/lib/dashboard/area";
+import { useIsAuthed } from "@/hooks/useIsAuthed";
+import { passesDealGrade } from "@/lib/dealScore/gradeFilter";
 import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
 
 /**
@@ -117,6 +119,7 @@ const TERMINAL_EXCLUDE_FIELDS = [
 
 function CommandCenterContent() {
   const searchParams = useSearchParams();
+  const isAuthed = useIsAuthed();
   const {
     activePersona,
     setActivePersona,
@@ -138,6 +141,7 @@ function CommandCenterContent() {
     setMapBounds,
     selectedIds,
     showSelectedOnly,
+    minDealGrade,
     totalCount,
     setMapMode,
     colorMetricId,
@@ -519,8 +523,13 @@ function CommandCenterContent() {
   }, [performSearch]);
 
   const listings = searchResult?.listings ?? [];
-  // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query).
-  const displayed = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
+  // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query);
+  // the min-deal-grade filter (authed) further narrows list + map to the active-lens floor.
+  const selectedScoped = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
+  const displayed =
+    isAuthed && minDealGrade
+      ? selectedScoped.filter((l) => passesDealGrade(l, activePersona, minDealGrade))
+      : selectedScoped;
 
   // Color precedence: an explicit "Color By" metric wins; else the School lens
   // shades by score; else the persona's default metric. The explicit metric also

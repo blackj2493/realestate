@@ -13,6 +13,7 @@ import LedgerRow from "./LedgerRow";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { passesDealGrade, MIN_GRADE_OPTIONS } from "@/lib/dealScore/gradeFilter";
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
 import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, dropEmptyColumns, type SortDir } from "./columnSort";
 import { makeCohortRanker } from "./cohortPercentiles";
@@ -25,7 +26,7 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon } =
+  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, minDealGrade, setMinDealGrade } =
     useCommandCenterStore();
 
   // Scope chip (fix #4): with no typed place and no draw area, the results are
@@ -65,6 +66,13 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   const columns = PERSONA_CONFIG[activePersona].columns;
   const allProperties = searchResult?.listings || [];
   const visible = showSelectedOnly ? allProperties.filter((p) => selectedIds.has(p.id)) : allProperties;
+  // Min-deal-grade filter (authed only): narrow the LOADED rows to the active-lens grade
+  // floor, using the same per-row score the grade pill shows. Memoised on `visible` (a stable
+  // ref unless a query/selection changes) so hover re-renders don't re-run the score.
+  const dealFiltered = useMemo(
+    () => (isAuthed && minDealGrade ? visible.filter((p) => passesDealGrade(p, activePersona, minDealGrade)) : visible),
+    [visible, isAuthed, minDealGrade, activePersona]
+  );
   const ms = searchResult?.processingTimeMs ?? 0;
 
   // Multi-select basket → quick actions (isolate / compare / clear) surfaced right on
@@ -108,8 +116,8 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     );
 
   const properties = useMemo(
-    () => (sort ? [...visible].sort(compareByColumn(sort.type, sort.dir)) : visible),
-    [visible, sort]
+    () => (sort ? [...dealFiltered].sort(compareByColumn(sort.type, sort.dir)) : dealFiltered),
+    [dealFiltered, sort]
   );
 
   // Percentile context (#1): rank each numeric cell against the FULL result set
@@ -199,6 +207,37 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
           </span>
         )}
       </div>
+
+      {/* Minimum Deal Score grade — narrows the LOADED rows to a grade floor for the active
+          lens (client-side; the score isn't indexed) and drives the map via the store.
+          Consumer-only: the grade is VOW-derived, shown only to authed users. */}
+      {isAuthed && allProperties.length > 0 && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-1.5">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Min deal grade</span>
+          <div className="ml-auto flex items-center gap-1">
+            {MIN_GRADE_OPTIONS.map((g) => {
+              const on = minDealGrade === g;
+              return (
+                <button
+                  key={g ?? "any"}
+                  type="button"
+                  onClick={() => setMinDealGrade(g)}
+                  aria-pressed={on}
+                  title={g ? `Only homes grading ${g} or better (this lens)` : "No deal-grade floor"}
+                  className={cn(
+                    "rounded border px-2 py-0.5 font-mono text-[11px] font-bold transition-colors",
+                    on
+                      ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-700 dark:text-cyan-200"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {g ?? "Any"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Selection quick-actions — appears the moment a row is checked, on BOTH the mobile
           card list and the desktop pane. Filter the list (and map) to just the picks, jump
@@ -322,7 +361,11 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
             <MapPin className="mb-3 h-8 w-8 text-muted-foreground" />
             <span className="mb-1 text-sm text-muted-foreground">No Assets Found</span>
             <span className="text-xs text-muted-foreground">
-              {location ? `No properties in ${location}` : "Adjust your filters to expand search"}
+              {isAuthed && minDealGrade && allProperties.length > 0
+                ? `None of the ${allProperties.length} loaded homes grade ${minDealGrade} or better — lower the minimum, or pan/zoom to load more.`
+                : location
+                  ? `No properties in ${location}`
+                  : "Adjust your filters to expand search"}
             </span>
           </div>
         ) : (

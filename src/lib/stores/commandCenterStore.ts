@@ -18,6 +18,7 @@ import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
 import { SCOPE_DEFAULT_PERSONA } from "@/lib/personas/resolvePersona";
 import { persistPersona } from "@/lib/personas/personaStore";
+import type { DealScoreGrade } from "@/lib/dealScore/computeDealScore";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -179,6 +180,12 @@ export interface CommandCenterState {
   // True when the last add was blocked by MAX_SELECTED, so the basket can
   // explain the cap. Cleared on any successful add / remove / clear.
   selectionLimitHit: boolean;
+
+  // Client-side "minimum deal grade" filter (terminal-only). The Deal Score isn't indexed,
+  // so this narrows the LOADED results for the active lens — not the whole market. null =
+  // off. Consumer-gated in the UI (the grade is VOW-derived).
+  minDealGrade: DealScoreGrade | null;
+  setMinDealGrade: (grade: DealScoreGrade | null) => void;
 
   // Search results
   searchResult: SearchResult | null;
@@ -449,6 +456,9 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   showSelectedOnly: false,
   setShowSelectedOnly: (on) => set({ showSelectedOnly: on }),
   selectionLimitHit: false,
+
+  minDealGrade: null,
+  setMinDealGrade: (grade) => set({ minDealGrade: grade }),
 
   searchResult: null,
   setSearchResult: (result) => set({ searchResult: result }),
