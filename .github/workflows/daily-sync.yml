@@ -75,6 +75,26 @@ jobs:
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
         run: npx tsx scripts/worker/soldIndexer.ts backfill --days 7
 
+      # Recover relist SOLD closes the delta crawl (Query B) missed. A terminate-then-relist
+      # resell closes under a NEW MLS# that can enter the feed behind the sold watermark, so it
+      # never reaches raw_vow_sold — surviving only in property_campaign_history (populated by
+      # an unfiltered by-address query). This bounded backstop scans ledger rows refreshed in
+      # the last week, re-fetches the missing closes by MLS# from the VOW feed, and re-derives
+      # the comp with the exact ingester mappers. Placed BEFORE the raw_vow_sold-derived
+      # precomputes below (sale history, region/market aggregates, estimates) so they pick up
+      # the recovered comps the same night. Needs the VOW token (by-key re-fetch) + Typesense
+      # (sold_listings import). Idempotent upserts — additive, continue-on-error. The one-time
+      # historical backfill is a manual --scan --apply --archive run (see the script header).
+      - name: Reconcile Relist Sold Closes (7d)
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+        run: npx tsx scripts/admin/reconcile-sold-from-campaign-history.ts --scan --apply --since-days=7 --window-days=180
+
       # Refresh precomputed condo fee/sqft aggregates from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate condo_fee_stats table; needs
       # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.
