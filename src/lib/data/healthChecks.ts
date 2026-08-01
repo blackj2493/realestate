@@ -368,6 +368,84 @@ export function checkPriceLedger(input: {
 }
 
 /**
+ * The PureProperty Estimate (property_estimates) silently drifting stale against a moving list
+ * price. The AVM deliberately does NOT use list price as a feature, so a price change should
+ * not move the stored estimate — but the surfaces that read this precompute (Compare, the
+ * Command-Center "Estimated Sale Price" batch) render it AGAINST the current list price, so a
+ * stale row shows a wrong gap once the doc/Typesense side carries the new price. The refresh
+ * that keeps it current is `continue-on-error` with a 30-min timeout (daily-sync.yml) and the
+ * table has no is_stale/model_version/price-snapshot column, so both failure modes below are
+ * otherwise invisible — this was previously the one precompute the canary did not watch.
+ *
+ *  1. HEARTBEAT — the nightly delta re-estimates every re-synced listing (~5.5k/day churn), so
+ *     max(computed_at) must advance nightly. A stale newest timestamp ⇒ the refresh stopped
+ *     landing entirely (the whole step timed out or was dropped).
+ *
+ *  2. BACKLOG — the nastier partial case: the step bumps a few rows then times out, so the
+ *     heartbeat still looks fresh while thousands keep a days-old estimate. Every active row is
+ *     re-based by the twice-weekly full recompute (≤ ~4-day cycle), so ANY active estimate older
+ *     than `staleMaxHours` (set above that cycle) has definitively missed both the recompute and
+ *     any interim re-estimate — a growing count of them is a chronic/partial under-run.
+ */
+export function checkEstimateFreshness(input: {
+  /** max(property_estimates.computed_at), or null when the table is empty. */
+  estimateNewest: string | null;
+  /** Active estimate rows whose computed_at is older than `staleMaxHours`. */
+  staleCount: number;
+  /** Total active estimate rows (for the share in the message). */
+  totalCount: number;
+  /** Heartbeat: max(computed_at) must advance within this window (nightly delta). */
+  staleHours: number;
+  /** A row older than this is stale — set ABOVE the twice-weekly full-recompute cycle. */
+  staleMaxHours: number;
+  /** Tolerate this many straggling stale rows before erroring (a few always straddle a run). */
+  staleTolerance: number;
+  now?: number;
+}): Problem[] {
+  const now = input.now ?? Date.now();
+
+  if (!input.estimateNewest) {
+    return [
+      {
+        severity: "error",
+        check: "estimate-freshness",
+        detail:
+          "property_estimates is empty — refresh-property-estimates has never run (Compare & the Command-Center batch have no estimate to show)",
+      },
+    ];
+  }
+
+  const out: Problem[] = [];
+
+  const age = hoursSince(input.estimateNewest, now);
+  if (age == null) {
+    out.push({ severity: "error", check: "estimate-freshness", detail: "property_estimates.computed_at is unreadable" });
+    return out;
+  }
+  if (age > input.staleHours) {
+    out.push({
+      severity: "error",
+      check: "estimate-freshness",
+      detail: `property_estimates is ${age.toFixed(1)}h old (limit ${input.staleHours}h) — the nightly estimate refresh is not landing`,
+    });
+  }
+
+  if (input.staleCount > input.staleTolerance) {
+    const pct = input.totalCount > 0 ? ((input.staleCount / input.totalCount) * 100).toFixed(1) : "?";
+    out.push({
+      severity: "error",
+      check: "estimate-staleness",
+      detail:
+        `${input.staleCount} of ${input.totalCount} active estimates (${pct}%) are older than ${input.staleMaxHours}h ` +
+        `(tolerance ${input.staleTolerance}) — the estimate refresh/recompute is under-running, so those listings show a stale ` +
+        `"Estimated Sale Price" on Compare & the Command-Center batch even after a price change`,
+    });
+  }
+
+  return out;
+}
+
+/**
  * Transactional email failures (email_send_failures, migration 098). Exists because the
  * welcome email silently failed for weeks when Vercel's Resend key was wrong — recording a
  * row per miss and alerting here (from GitHub Actions, a channel that works even when the

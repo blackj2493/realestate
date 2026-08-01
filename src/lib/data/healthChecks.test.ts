@@ -4,6 +4,7 @@ import {
   checkCondoRows,
   checkMigrationLedger,
   checkPriceLedger,
+  checkEstimateFreshness,
   checkDrift,
   checkEmailFailures,
   snapshotFromRows,
@@ -411,5 +412,78 @@ describe("regression: price-events capture never scheduled (zero rows ever, 2026
     expect(
       checkPriceLedger({ stateNewest: "2026-07-22T04:00:00Z", staleHours: 48, now: NOW })
     ).toEqual([]);
+  });
+});
+
+describe("estimate freshness: property_estimates drifting stale against a moving list price", () => {
+  // The precompute Compare + the Command-Center batch read AGAINST the live list price. Its
+  // refresh is continue-on-error and the table has no is_stale column, so a total OR partial
+  // refresh failure is silent. NOW is 2026-07-20T12:00Z (from the top of this file).
+  const eBase = {
+    staleHours: 48,
+    staleMaxHours: 120,
+    staleTolerance: 500,
+    now: NOW,
+  };
+
+  it("stays quiet on a fresh, fully-refreshed table", () => {
+    const p = checkEstimateFreshness({
+      ...eBase,
+      estimateNewest: FRESH, // 8h old
+      staleCount: 0,
+      totalCount: 90_000,
+    });
+    expect(p).toEqual([]);
+  });
+
+  it("errors when the table has never been populated", () => {
+    const p = checkEstimateFreshness({ ...eBase, estimateNewest: null, staleCount: 0, totalCount: 0 });
+    expect(errorsOf(p).some((e) => e.check === "estimate-freshness" && e.detail.includes("never run"))).toBe(true);
+  });
+
+  it("HEARTBEAT: errors when the whole nightly refresh stopped landing", () => {
+    const p = checkEstimateFreshness({
+      ...eBase,
+      estimateNewest: "2026-07-17T04:00:00Z", // ~80h old > 48h limit
+      staleCount: 0,
+      totalCount: 90_000,
+    });
+    expect(errorsOf(p).some((e) => e.check === "estimate-freshness" && e.detail.includes("not landing"))).toBe(true);
+  });
+
+  it("BACKLOG: errors on the partial under-run the heartbeat can't see", () => {
+    // Newest looks fresh (the step bumped a few rows before timing out) while thousands rot.
+    const p = checkEstimateFreshness({
+      ...eBase,
+      estimateNewest: FRESH,
+      staleCount: 21_000,
+      totalCount: 90_000,
+    });
+    const errs = errorsOf(p);
+    expect(errs.some((e) => e.check === "estimate-staleness")).toBe(true);
+    expect(errs.every((e) => e.check !== "estimate-freshness")).toBe(true); // heartbeat NOT tripped
+    expect(errs[0].detail).toContain("Estimated Sale Price");
+  });
+
+  it("BACKLOG: tolerates a handful of rows straddling the run boundary", () => {
+    const p = checkEstimateFreshness({
+      ...eBase,
+      estimateNewest: FRESH,
+      staleCount: 300, // below the 500 tolerance
+      totalCount: 90_000,
+    });
+    expect(p).toEqual([]);
+  });
+
+  it("reports BOTH signals when the refresh is dead outright", () => {
+    const p = checkEstimateFreshness({
+      ...eBase,
+      estimateNewest: "2026-07-14T04:00:00Z", // ~152h old
+      staleCount: 60_000,
+      totalCount: 90_000,
+    });
+    const checks = new Set(errorsOf(p).map((e) => e.check));
+    expect(checks.has("estimate-freshness")).toBe(true);
+    expect(checks.has("estimate-staleness")).toBe(true);
   });
 });
