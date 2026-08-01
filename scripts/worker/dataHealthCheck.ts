@@ -23,7 +23,8 @@
  * Env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
  *      (optional) RESEND_API_KEY + SYNC_ALERT_EMAIL to receive the email,
  *      (optional) ALERTS_FROM_EMAIL, NEXT_PUBLIC_SITE_URL,
- *      (optional) METRICS_STALE_HOURS (default 36), CONDO_STALE_DAYS (default 10).
+ *      (optional) METRICS_STALE_HOURS (default 36), CONDO_STALE_DAYS (default 10),
+ *      (optional) ESTIMATE_STALE_HOURS (default 48), ESTIMATE_MAX_AGE_HOURS (default 120).
  */
 import 'dotenv/config';
 import { Resend } from 'resend';
@@ -38,6 +39,7 @@ import {
   checkCondoRows,
   checkMigrationLedger,
   checkPriceLedger,
+  checkEstimateFreshness,
   checkDrift,
   checkEmailFailures,
   snapshotFromRows,
@@ -56,6 +58,15 @@ const EMAIL_FAIL_LOOKBACK_HOURS = Number(process.env.EMAIL_FAIL_LOOKBACK_HOURS) 
 // 48h (vs 36 for region_metrics): state only moves when the capture RUNS, but a single
 // missed night shouldn't page — two consecutive misses should.
 const PRICE_STATE_STALE_HOURS = Number(process.env.PRICE_STATE_STALE_HOURS) || 48;
+// Estimate heartbeat: the nightly delta re-estimates every re-synced listing, so
+// max(computed_at) advances daily; 48h tolerates one missed night (the refresh step is
+// continue-on-error), two consecutive misses fire.
+const ESTIMATE_STALE_HOURS = Number(process.env.ESTIMATE_STALE_HOURS) || 48;
+// Backlog threshold: every active row is re-based by the twice-weekly full recompute (≤ ~4-day
+// cycle), so 120h (5d) sits safely above it — only rows that missed a recompute age past it.
+const ESTIMATE_MAX_AGE_HOURS = Number(process.env.ESTIMATE_MAX_AGE_HOURS) || 120;
+// A handful of rows can straddle a run boundary; thousands is an under-run.
+const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 500;
 
 const problems: Problem[] = [];
 
@@ -170,6 +181,60 @@ async function checkPriceLedgerFreshness(): Promise<void> {
   );
 }
 
+/**
+ * PureProperty Estimate (property_estimates) freshness — the precompute Compare and the
+ * Command-Center batch read. Two cheap, single-table reads (no join to `listings`, whose
+ * synced_at is unindexed and would risk the very statement-timeout this guards): the newest
+ * computed_at (heartbeat) and a count of rows older than the recompute cycle (backlog). The
+ * pure rules in checkEstimateFreshness decide.
+ */
+async function checkEstimateHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const staleCutoff = new Date(Date.now() - ESTIMATE_MAX_AGE_HOURS * 3_600_000).toISOString();
+
+  const newest = await sb
+    .from('property_estimates')
+    .select('computed_at')
+    .order('computed_at', { ascending: false })
+    .limit(1);
+  if (newest.error) {
+    problems.push({
+      severity: 'warn',
+      check: 'estimate-freshness',
+      detail: `property_estimates unavailable (${newest.error.message}) — is migration 023 applied?`,
+    });
+    return;
+  }
+
+  // head:true → count only, no rows read. Both counts are over one narrow row per active
+  // listing (no full_payload TOAST), so they stay cheap for a once-daily canary.
+  const stale = await sb
+    .from('property_estimates')
+    .select('listing_key', { count: 'exact', head: true })
+    .lt('computed_at', staleCutoff);
+  const total = await sb
+    .from('property_estimates')
+    .select('listing_key', { count: 'exact', head: true });
+  if (stale.error || total.error) {
+    problems.push({
+      severity: 'warn',
+      check: 'estimate-staleness',
+      detail: `estimate backlog counts unavailable (${stale.error?.message ?? total.error?.message}) — heartbeat still checked`,
+    });
+  }
+
+  problems.push(
+    ...checkEstimateFreshness({
+      estimateNewest: newest.data?.length ? String((newest.data[0] as { computed_at: string }).computed_at) : null,
+      staleCount: stale.error ? 0 : stale.count ?? 0,
+      totalCount: total.error ? 0 : total.count ?? 0,
+      staleHours: ESTIMATE_STALE_HOURS,
+      staleMaxHours: ESTIMATE_MAX_AGE_HOURS,
+      staleTolerance: ESTIMATE_STALE_TOLERANCE,
+    })
+  );
+}
+
 async function checkMigrations(): Promise<void> {
   const dir = path.join(process.cwd(), 'supabase', 'migrations');
   let files: string[];
@@ -270,6 +335,7 @@ async function main(): Promise<void> {
     ['market metrics', checkMarketMetrics],
     ['condo fees', checkCondoFees],
     ['price ledger', checkPriceLedgerFreshness],
+    ['estimate freshness', checkEstimateHealth],
     ['email delivery', checkEmailHealth],
     ['migrations', checkMigrations],
   ] as const) {
