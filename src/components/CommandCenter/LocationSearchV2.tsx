@@ -548,6 +548,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                                 : item.sublabel}
                             </span>
                           )}
+                          {/* Public record meta (shown to everyone): MLS# · brokerage. */}
+                          {item.category === "soldAddress" && (item.sold?.mls || item.sold?.brokerage) && (
+                            <span className="truncate font-mono text-[10px] text-muted-foreground/80" title={[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}>
+                              {[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}
+                            </span>
+                          )}
                           {badges.length > 0 && (
                             <span className="mt-1 flex flex-wrap gap-1">
                               {badges.slice(0, 2).map((b, i) => (
@@ -588,7 +594,16 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             only to advertise (audit R24a). */}
                         {item.category === "soldAddress" && (
                           <span className="flex shrink-0 flex-col items-end gap-0.5">
-                            <span className="border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                            <span
+                              className={cn(
+                                "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                                item.sold?.kindLabel === "LEASED"
+                                  ? "border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300"
+                                  : item.sold?.kindLabel === "OFF MARKET"
+                                    ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                                    : "border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                              )}
+                            >
                               {item.sold?.kindLabel ?? "SOLD"}
                             </span>
                             {item.sold?.priceLabel ? (
