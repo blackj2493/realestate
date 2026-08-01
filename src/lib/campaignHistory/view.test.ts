@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toCampaignHistoryView, gateCampaignHistory } from './view';
+import { toCampaignHistoryView, gateCampaignHistory, latestCloseFromCampaigns } from './view';
 import type { CampaignHistoryRow } from './store';
 import type { CampaignEvent } from './types';
 
@@ -32,5 +32,39 @@ describe('gateCampaignHistory', () => {
   it('strips VOW-sensitive parts for anon, keeping the count + first-seen teaser', () => {
     const gated = gateCampaignHistory(toCampaignHistoryView(row), false);
     expect(gated).toEqual({ available: true, campaignCount: 7, trueDom: null, totalPriceDrop: 0, firstSeenDate: '2025-06-10', events: [] });
+  });
+});
+
+describe('latestCloseFromCampaigns — terminate→relist→sold reconciliation', () => {
+  const ev = (over: Partial<CampaignEvent>): CampaignEvent => ({
+    listing_key: 'X', transaction_type: 'Sale', status: 'Active', entry_date: null, end_date: null,
+    end_reason: null, list_price: null, original_list_price: null, close_price: null, brokerage: null,
+    price_change_date: null, address: null, ...over,
+  });
+
+  // 7 Stemford Rd: original terminated May 31, relist sold Jun 12 $885k.
+  const terminated = ev({ listing_key: 'W13090288', status: 'Terminated', end_reason: 'Terminated', entry_date: '2026-05-06', end_date: '2026-05-31', list_price: 925000 });
+  const soldRelist = ev({ listing_key: 'W13224994', status: 'Sold', end_reason: 'Sold', entry_date: '2026-06-01', end_date: '2026-06-12', list_price: 910000, close_price: 885000 });
+
+  it('returns the relist close when it is the newest campaign (order-independent)', () => {
+    const expected = { listingKey: 'W13224994', kind: 'sold', closePrice: 885000, closeDateISO: '2026-06-12' };
+    expect(latestCloseFromCampaigns([terminated, soldRelist])).toEqual(expected);
+    expect(latestCloseFromCampaigns([soldRelist, terminated])).toEqual(expected); // sort, not input order
+  });
+
+  it('returns null when the newest campaign is not a close (sold, then relisted active)', () => {
+    const activeAfterSale = ev({ listing_key: 'W99', status: 'Active', entry_date: '2026-07-01', end_date: null });
+    expect(latestCloseFromCampaigns([terminated, soldRelist, activeAfterSale])).toBeNull();
+  });
+
+  it('handles leases (kind = leased)', () => {
+    const leased = ev({ listing_key: 'L1', transaction_type: 'Lease', status: 'Leased', end_reason: 'Leased', end_date: '2026-06-20', close_price: 3200 });
+    expect(latestCloseFromCampaigns([leased])).toMatchObject({ kind: 'leased', closePrice: 3200 });
+  });
+
+  it('returns null on no events, a lone terminated, or a close with no disclosed price', () => {
+    expect(latestCloseFromCampaigns([])).toBeNull();
+    expect(latestCloseFromCampaigns([terminated])).toBeNull();
+    expect(latestCloseFromCampaigns([ev({ status: 'Sold', end_reason: 'Sold', end_date: '2026-06-12', close_price: 0 })])).toBeNull();
   });
 });

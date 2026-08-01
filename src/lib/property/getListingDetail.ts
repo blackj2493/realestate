@@ -38,6 +38,7 @@ import { refreshCampaignHistoryForListing } from "@/lib/campaignHistory/store";
 import {
   toCampaignHistoryView,
   gateCampaignHistory,
+  latestCloseFromCampaigns,
   type CampaignHistoryView,
 } from "@/lib/campaignHistory/view";
 import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/normalize";
@@ -575,7 +576,7 @@ export const getListingDetail = cache(
 
     // Non-disclosure fallback (own sale event only) + the accuracy receipt.
     status = fillClosePriceFromSaleHistory(status, listing.listing_key, saleHistory.events);
-    const soldAccuracy = pickSoldAccuracy({
+    let soldAccuracy = pickSoldAccuracy({
       closePrice: status.kind === "sold" ? status.closePrice : null,
       avmValue: estimate?.estimatedValue ?? null,
       expectedSalePrice: expectedSale?.expectedPrice ?? null,
@@ -611,6 +612,35 @@ export const getListingDetail = cache(
       }
     } catch (chErr) {
       console.error(`[getListingDetail] Campaign history failed for ${listingKey}:`, chErr);
+    }
+
+    // Relist reconciliation: the viewed key may be a TERMINATED/EXPIRED original whose
+    // property was relisted under a NEW key that then SOLD. That close lives only in the
+    // address-stitched campaign history (fetched by address, not key) — never in this
+    // key's own payload or raw_vow_delisted — so status resolved to "delisted" while the
+    // property actually sold (e.g. 7 Stemford Rd: W13090288 terminated May 31, relist
+    // W13224994 sold Jun 12 $885k). Promote to SOLD when the NEWEST stitched campaign is a
+    // close on a DIFFERENT key dated at/after this key's delist. The soldAccuracy receipt
+    // is recomputed so the sold hero carries its estimate-vs-close delta.
+    if (status.kind === "delisted" && campaignHistory.events.length > 0) {
+      const close = latestCloseFromCampaigns(campaignHistory.events);
+      if (
+        close &&
+        close.listingKey !== listing.listing_key &&
+        (status.delistedDate == null || close.closeDateISO >= status.delistedDate)
+      ) {
+        status = {
+          kind: "sold",
+          label: close.kind === "leased" ? "LEASED" : "SOLD",
+          closePrice: close.closePrice,
+          soldDate: close.closeDateISO,
+        };
+        soldAccuracy = pickSoldAccuracy({
+          closePrice: close.closePrice,
+          avmValue: estimate?.estimatedValue ?? null,
+          expectedSalePrice: expectedSale?.expectedPrice ?? null,
+        });
+      }
     }
 
     // Price timeline — list-price movement only (IDX-class). total_price_drop / true_dom
