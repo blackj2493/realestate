@@ -336,8 +336,8 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     (location
       ? `${location}, ON  |  Search ${fmt} listings…`
       : totalCount > 0
-        ? `Search ${fmt} listings — or describe what you want`
-        : "Search an address, community, school, or MLS# — or describe what you want");
+        ? `Search ${fmt} listings…`
+        : "Search an address, community, school, or MLS#…");
 
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
@@ -396,7 +396,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       </form>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[384px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[440px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
           {/* Empty state */}
           {value.trim().length < SUGGEST_MIN_CHARS ? (
             <SearchEmptyState
@@ -494,7 +494,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                       >
                         <Home className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-400/80" />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-foreground">
+                          <span className="line-clamp-2 font-mono text-xs text-foreground" title={listing.UnparsedAddress || undefined}>
                             {listing.UnparsedAddress || "—"}
                           </span>
                           <span className="truncate text-[10px] text-muted-foreground">{previewMeta(listing)}</span>
@@ -538,7 +538,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                       >
                         <CategoryIcon category={item.category} />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-foreground" title={item.category === "community" ? item.label : undefined}>
+                          <span className="line-clamp-2 font-mono text-xs text-foreground" title={item.label}>
                             {item.category === "community" ? formatRegionLabel(item.label) : item.label}
                           </span>
                           {item.sublabel && (
@@ -580,9 +580,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             )}
                           </span>
                         )}
-                        {/* Sold-record row: status chip + (consumer) close price/date, or a
-                            sign-in nudge. The anon payload never carried a price or date —
-                            nothing here to mask, only to advertise (audit R24a). */}
+                        {/* Sold-record row: status chip + (consumer) close price/date. When
+                            no price is attached — an OFF MARKET record never closed, or the
+                            viewer isn't a VOW consumer — an authed user gets a neutral "View"
+                            (never an anon sign-in nudge), anon gets the sign-in CTA. The anon
+                            payload never carried a price or date, so there is nothing to mask,
+                            only to advertise (audit R24a). */}
                         {item.category === "soldAddress" && (
                           <span className="flex shrink-0 flex-col items-end gap-0.5">
                             <span className="border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
@@ -594,6 +597,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                                 {item.sold.dateLabel && (
                                   <span className="ml-1 font-normal text-muted-foreground">{item.sold.dateLabel}</span>
                                 )}
+                              </span>
+                            ) : authed ? (
+                              <span className="border border-cyan-500/40 bg-cyan-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                                View
                               </span>
                             ) : (
                               <span className="bg-cyan-500 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-950">
