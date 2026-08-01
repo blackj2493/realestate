@@ -15,9 +15,16 @@ import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { geocodeAddress } from "./geocodeClient";
 import { rankAddressSuggestions } from "./addressRank";
+import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
 import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
-const SALES_FLOOR = "ListPrice:>=100000";
+/**
+ * Placeholder-price floor. Derived from each document's own `TransactionType`
+ * rather than assuming a sale price — a bare `ListPrice:>=100000` here hid every
+ * lease listing, because a lease's ListPrice is a monthly rent, not a sale price.
+ * See anyTransactionPriceFloor.
+ */
+const LISTING_FLOOR = anyTransactionPriceFloor();
 const MLS_RE = /^[A-Za-z]\d{6,9}$/;
 const hasStreetNumber = (q: string) => /\d/.test(q);
 
@@ -137,7 +144,7 @@ export async function federatedSuggest(
   //    retry if UnparsedAddress isn't indexed (pre-migration safety).
   const base = {
     q,
-    filter_by: SALES_FLOOR,
+    filter_by: LISTING_FLOOR,
     facet_by: "City,CityRegion",
     max_facet_values: 100,
     per_page: 6,

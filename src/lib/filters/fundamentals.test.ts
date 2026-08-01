@@ -3,6 +3,9 @@ import {
   buildTransactionClause,
   buildClassClause,
   priceFloorClause,
+  anyTransactionPriceFloor,
+  SALE_PRICE_FLOOR,
+  RENT_PRICE_FLOOR,
   isInvestorLayerActive,
   priceConfig,
   RESIDENTIAL_TYPE_OPTIONS,
@@ -38,6 +41,53 @@ describe("fundamentals — price floor", () => {
   });
   it("drops to $1 for rentals (ListPrice is monthly rent)", () => {
     expect(priceFloorClause("rent")).toBe("ListPrice:>=1");
+  });
+});
+
+/**
+ * These guard the bug that made 5967 Perth Street unfindable: the typeahead
+ * applied the SALE floor to every document, so leases — whose ListPrice is a
+ * monthly rent — were filtered out wholesale (23,989 of 23,990, plus all 362
+ * `For Sub-Lease` rows).
+ */
+describe("fundamentals — cross-transaction price floor", () => {
+  const clause = anyTransactionPriceFloor();
+
+  it("applies the sale floor only to sale rows", () => {
+    expect(clause).toContain("TransactionType:=`For Sale` && ListPrice:>=100000");
+  });
+
+  it("applies the placeholder floor to everything that is not a sale", () => {
+    expect(clause).toContain("TransactionType:!=`For Sale` && ListPrice:>=1");
+  });
+
+  /**
+   * The non-sale side must be a NEGATION, never an OR over known lease values.
+   * `For Sub-Lease` (362 live rows) was already in the feed and unaccounted for;
+   * enumerating would silently drop whatever TRREB adds next — the exact failure
+   * mode being fixed.
+   */
+  it("does not enumerate lease values", () => {
+    expect(clause).not.toContain("For Lease");
+    expect(clause).not.toContain("For Sub-Lease");
+  });
+
+  it("is parenthesised so it survives being AND-joined", () => {
+    // Without the outer parens the trailing `||` would swallow any clause the
+    // caller appends, quietly widening the search instead of narrowing it.
+    expect(clause.startsWith("(")).toBe(true);
+    expect(clause.endsWith(")")).toBe(true);
+  });
+
+  it("reuses the same floors as the mode-driven clause", () => {
+    expect(clause).toContain(String(SALE_PRICE_FLOOR));
+    expect(priceFloorClause("sale")).toContain(String(SALE_PRICE_FLOOR));
+    expect(priceFloorClause("rent")).toContain(String(RENT_PRICE_FLOOR));
+  });
+
+  it("names the sale value identically to buildTransactionClause", () => {
+    // Both must agree, or a doc could pass one gate and fail the other.
+    expect(clause).toContain(buildTransactionClause("sale"));
   });
 });
 

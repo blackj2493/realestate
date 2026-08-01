@@ -67,13 +67,49 @@ export function isCommercialProperty(propertyType?: string | null): boolean {
   return (propertyType ?? "").trim() === "Commercial";
 }
 
+/** Sale placeholder floor: a real sale is never under $100k, a $1 row is a stub. */
+export const SALE_PRICE_FLOOR = 100_000;
+/** Rent placeholder floor: a monthly rent is ~$2k, so only $0 is a stub. */
+export const RENT_PRICE_FLOOR = 1;
+
 /**
  * Price floor. For sales, ListPrice is a sale price → keep the $100k floor that
  * drops $0/$1 placeholder listings. For rentals, ListPrice is a MONTHLY rent
  * (~$2k) → a $100k floor would hide every rental, so floor at $1 (drop $0 only).
  */
 export function priceFloorClause(mode: TransactionMode): string {
-  return mode === "rent" ? "ListPrice:>=1" : "ListPrice:>=100000";
+  return mode === "rent"
+    ? `ListPrice:>=${RENT_PRICE_FLOOR}`
+    : `ListPrice:>=${SALE_PRICE_FLOOR}`;
+}
+
+/**
+ * Placeholder-price floor for surfaces that span BOTH transaction types — the
+ * search typeahead above all, where the user has typed an address and expects to
+ * find it whether it is for sale or for lease.
+ *
+ * {@link priceFloorClause} picks a floor from the mode the user is BROWSING in.
+ * This one picks it from the mode each DOCUMENT declares, using the feed's own
+ * `TransactionType` field, so nothing has to be inferred from price at all.
+ *
+ * That distinction was a real bug: the typeahead hardcoded the sale floor, and
+ * because a lease's ListPrice is a monthly rent (~$2k, well under $100k) it hid
+ * 23,989 of 23,990 lease listings and every one of the 362 `For Sub-Lease` rows —
+ * 28% of the index. Worse than invisible: with the exact match filtered out,
+ * Typesense drops query tokens and returns fuzzy matches instead, so a searched
+ * address came back as a list of unrelated streets.
+ *
+ * The non-sale side is written as `!=` rather than an OR over the known lease
+ * values on purpose. `For Sub-Lease` was already in the feed and unaccounted for;
+ * enumerating would silently drop the next value TRREB adds, which is exactly the
+ * failure being fixed here.
+ */
+export function anyTransactionPriceFloor(): string {
+  const sale = TRANSACTION_VALUE.sale;
+  return (
+    `((TransactionType:=\`${sale}\` && ListPrice:>=${SALE_PRICE_FLOOR}) || ` +
+    `(TransactionType:!=\`${sale}\` && ListPrice:>=${RENT_PRICE_FLOOR}))`
+  );
 }
 
 /**

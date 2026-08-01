@@ -11,6 +11,7 @@ import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 import { aboveGradeBedsClause } from '@/lib/filters/filterRegistry';
+import { anyTransactionPriceFloor } from '@/lib/filters/fundamentals';
 import { toSimpleRing } from '@/lib/geo/simplifyRing';
 import { sqftBoundsFor } from '@/lib/listings/livingAreaBands';
 import { reportSearchFailure } from '@/lib/telemetry/searchHealth';
@@ -630,7 +631,14 @@ export interface SearchSuggestion {
   geo?: { lat: number; lng: number };
 }
 
-const SALES_FLOOR = 'ListPrice:>=100000';
+/**
+ * Placeholder-price floor for the typeahead. Reads each document's own
+ * `TransactionType` rather than assuming a sale — see anyTransactionPriceFloor.
+ * This used to be a bare `ListPrice:>=100000`, which hid every lease listing
+ * (a lease's ListPrice is a monthly rent) and made searched addresses come back
+ * as unrelated streets.
+ */
+const LISTING_FLOOR = anyTransactionPriceFloor();
 // TRREB MLS keys look like a board letter + 6–9 digits (e.g. W12632618, X13162416).
 const MLS_RE = /^[A-Za-z]\d{6,9}$/;
 
@@ -693,7 +701,7 @@ export async function suggestSearch(query: string): Promise<SearchSuggestion[]> 
   // 2) Combined address-hits + place-facets. Retry place-only if address isn't indexed.
   const baseParams = {
     q,
-    filter_by: SALES_FLOOR,
+    filter_by: LISTING_FLOOR,
     facet_by: 'City,CityRegion',
     max_facet_values: 100,
     per_page: 6,
