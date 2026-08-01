@@ -368,6 +368,71 @@ export async function getSoldPublicByAddressLoose(parsed: ParsedAddress): Promis
   }
 }
 
+/** One disposition (campaign) at a typed address for the HouseSigma-style multi-record search
+ *  dropdown. PUBLIC fields only — status KIND, address, MLS#, and brokerage (brokerage is public
+ *  per TRREB §6.3(c)). Price/date/beds stay VOW-gated and are attached per-key by the route's
+ *  getConsumer() branch, never here. */
+export interface AddressRecord {
+  id: string;
+  address: string;
+  city: string;
+  cityRegion: string;
+  dealKind: SoldPublic["dealKind"];
+  brokerage: string | null;
+}
+
+/**
+ * ALL dispositions at a typed address (HouseSigma-style), newest-first, deduped by MLS#. Same
+ * loose match + gate as getSoldPublicByAddressLoose, but returns EVERY campaign instead of
+ * collapsing to the newest — so a terminated original AND its sold relist both surface as
+ * distinct rows. `sold_listings` already indexes sold/leased AND terminated/expired/suspended
+ * (by DealType), so one query covers every state. Falls back to the raw_vow_sold archive (single
+ * record) when the 180-day cache misses. NEVER use for canonical resolution.
+ */
+export async function getAddressRecordsLoose(parsed: ParsedAddress): Promise<AddressRecord[]> {
+  if (!parsed.streetNumber || parsed.streetName.length < 3) return [];
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: `${parsed.streetNumber} ${parsed.streetName}`.trim(),
+        query_by: "UnparsedAddress",
+        include_fields: `${PUBLIC_STATUS_FIELDS},ListOfficeName,PurchaseContractDate`,
+        per_page: 25,
+      });
+    const byId = new Map<string, { rec: AddressRecord; date: number }>();
+    for (const h of res.hits ?? []) {
+      const d = h.document as Partial<SoldListingDocument> & { ListOfficeName?: string };
+      if (!d.id || byId.has(d.id)) continue;
+      const cand = parseAddress(d.UnparsedAddress ?? "");
+      if (cand.streetNumber !== parsed.streetNumber) continue;
+      if (!streetNamesMatchPrefix(parsed.streetName, cand.streetName)) continue;
+      if (parsed.postal && cand.postal && parsed.postal !== cand.postal) continue;
+      byId.set(d.id, {
+        rec: {
+          id: d.id,
+          address: d.UnparsedAddress ?? "",
+          city: d.City ?? "",
+          cityRegion: d.CityRegion ?? "",
+          dealKind: deriveDealKind(d.DealType),
+          brokerage: d.ListOfficeName?.trim() || null,
+        },
+        date: typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0,
+      });
+    }
+    const records = [...byId.values()].sort((a, b) => b.date - a.date).map((x) => x.rec);
+    if (records.length > 0) return records;
+    const archive = await getSoldArchivePublicByAddress(parsed);
+    return archive
+      ? [{ id: archive.id, address: archive.address, city: archive.city, cityRegion: archive.cityRegion, dealKind: archive.dealKind, brokerage: null }]
+      : [];
+  } catch (err) {
+    console.error(`[soldByKey] address records lookup failed:`, err);
+    return [];
+  }
+}
+
 /** One sold/off-market record reduced to the PUBLIC fields needed to build an /address URL. */
 export interface SoldSitemapEntry {
   id: string;

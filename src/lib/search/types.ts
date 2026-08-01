@@ -40,23 +40,53 @@ export interface SuggestItem {
     href?: string;
     /** SOLD / LEASED / OFF MARKET — the public status kind (audit R24a). */
     kindLabel?: string;
+    /** MLS# — public, shown to anon (the doc id / listing key). */
+    mls?: string;
+    /** Listing brokerage — public (TRREB §6.3(c)); shown to anon. */
+    brokerage?: string;
   };
   /** School metadata. */
   school?: { id: string; score?: number };
 }
 
-/** /api/search/address-status response — the dropdown's sold-record probe. */
-export interface AddressStatusResponse {
-  found: boolean;
-  key?: string;
-  address?: string;
-  city?: string;
+/** One disposition (campaign) at a typed address for the multi-state dropdown. Public fields
+ *  (status kind, address, MLS#, brokerage) reach anon; the VOW fields only a consumer. */
+export interface AddressRecordResponse {
+  key: string;
+  address: string;
+  city: string;
   /** Public status kind — shown to anon too (same signal /address shows, R24a). */
-  dealKind?: "sold" | "leased" | "offmarket";
-  href?: string;
+  dealKind: "sold" | "leased" | "offmarket";
+  /** Listing brokerage — public (TRREB §6.3(c)). */
+  brokerage?: string;
+  href: string;
   /** VOW fields — present ONLY on a signed-in consumer's response. */
   closePrice?: number;
   /** Epoch ms (UTC-midnight date-only) — render with timeZone:'UTC' (MEDIUM-18). */
+  soldDateMs?: number;
+  beds?: number;
+  baths?: number;
+  subType?: string;
+}
+
+/**
+ * /api/search/address-status response — the dropdown's sold-record probe.
+ * `records` carries ALL dispositions at the typed address (HouseSigma-style, newest-first).
+ * The flat primary-record fields mirror records[0] and are kept for the header bar's simpler
+ * kind-aware label (LocationSearch.tsx), which only needs found/address/dealKind.
+ */
+export interface AddressStatusResponse {
+  found: boolean;
+  /** All dispositions at the address, newest-first — the multi-state dropdown reads this. */
+  records?: AddressRecordResponse[];
+  // ── flat primary (= records[0]) for the header bar's kind-aware label ──
+  key?: string;
+  address?: string;
+  city?: string;
+  dealKind?: "sold" | "leased" | "offmarket";
+  brokerage?: string;
+  href?: string;
+  closePrice?: number;
   soldDateMs?: number;
   beds?: number;
   baths?: number;

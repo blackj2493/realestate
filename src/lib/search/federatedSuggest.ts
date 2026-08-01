@@ -42,7 +42,7 @@ const TITLE: Record<string, string> = {
   // ("Addresses" next to the geo group's "Address" read as duplicates).
   address: "For sale",
   sold: "Recent solds · nearby",
-  soldAddress: "Sold record",
+  soldAddress: "Property records",
   community: "Communities",
   school: "Schools",
   geo: "Address",
@@ -213,34 +213,38 @@ export async function federatedSuggest(
   //    ("758 Coldstream" for "758 cappamore") must not suppress the real address.
   //    Sold record beats geocode (one address = one row): a home that sold last week
   //    must answer with its sale, never with "Not on the market".
+  // HouseSigma-style: surface EVERY disposition at the typed address as its own row (a
+  // terminated original AND its sold relist both show), each with its status, VOW-gated price,
+  // date, MLS# and brokerage. Fires for any address-shaped query — NOT gated on "no active
+  // match" — so records show ALONGSIDE a live For-Sale row. The geocode fallback still only
+  // renders when the address is genuinely unlisted (no records AND no active coverage).
   const soldAddress: SuggestItem[] = [];
   const typedAddressCovered = addresses.some((a) => matchesTypedAddress(q, a.label));
-  if (!structured && !typedAddressCovered && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
-    // Probe both in parallel (latency stays flat); prefer the sold record.
+  if (!structured && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
     const [status, hit] = await Promise.all([fetchAddressStatus(q, signal), geocodeAddress(q, signal)]);
-    if (status?.found && status.key && status.address) {
-      const meta = [
-        status.beds ? `${status.beds} bd` : null,
-        status.baths ? `${status.baths} ba` : null,
-        status.subType?.trim() || null,
-      ]
+    const records = status?.found ? status.records ?? [] : [];
+    for (const r of records) {
+      const meta = [r.subType?.trim() || null, r.beds ? `${r.beds} bd` : null, r.baths ? `${r.baths} ba` : null]
         .filter(Boolean)
         .join(" · ");
       soldAddress.push({
-        id: `soldAddress:${status.key}`,
+        id: `soldAddress:${r.key}`,
         category: "soldAddress",
-        label: status.address,
+        label: r.address,
         sublabel: meta || undefined,
-        provenance: "sold record",
+        provenance: "record",
         sold: {
-          priceMasked: !status.closePrice,
-          priceLabel: status.closePrice ? `$${Math.round(status.closePrice).toLocaleString("en-CA")}` : undefined,
-          dateLabel: status.soldDateMs ? fmtSoldDate(status.soldDateMs) : undefined,
-          href: status.href,
-          kindLabel: KIND_LABEL[status.dealKind ?? "sold"],
+          priceMasked: !r.closePrice,
+          priceLabel: r.closePrice ? `$${Math.round(r.closePrice).toLocaleString("en-CA")}` : undefined,
+          dateLabel: r.soldDateMs ? fmtSoldDate(r.soldDateMs) : undefined,
+          href: r.href,
+          kindLabel: KIND_LABEL[r.dealKind],
+          mls: r.key,
+          brokerage: r.brokerage,
         },
       });
-    } else if (hit) {
+    }
+    if (records.length === 0 && !typedAddressCovered && hit) {
       geo.push({
         id: `geo:${hit.lat},${hit.lng}`,
         category: "geo",
