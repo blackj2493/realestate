@@ -281,7 +281,11 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       ...tsDoc,
       PropertyHash: metrics?.property_hash || '',
       TrueDom: metrics?.true_dom || 0,
-      TotalPriceDrop: metrics?.total_price_drop || 0
+      TotalPriceDrop: metrics?.total_price_drop || 0,
+      // IsStale MUST track the stitched+naive-floored TrueDom (60d) computed above, NOT the
+      // transformer's naive basicDOM>90 placeholder in ...tsDoc — otherwise the STALE badge /
+      // watchlist "going stale" / IsStale:=true bubbles contradict the TrueDom on the same doc.
+      IsStale: metrics?.is_stale ?? false,
     };
     
     // If processing sold listings, mark them with is_sold flag
