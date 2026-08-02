@@ -77,11 +77,29 @@ describe("onboarding email renderers", () => {
     expect(html).not.toContain("PROPTX MLS");
   });
 
-  it("#3 uses the approved subject and shows the example as an example (not a real address)", () => {
-    const { subject, html } = renderSaveHomeEmail({});
+  it("#3 shows REAL homes (with brokerage) when provided + an honest text price example", () => {
+    const homes = [
+      { listing_key: "H1", address: "5 Maple Ave", city: "Vaughan", price: 1120000, thumb: "https://media.example.com/h1.jpg", brokerage: "Sample Realty" },
+      { listing_key: "H2", address: "8 Oak St", city: "Vaughan", price: 980000, thumb: null, brokerage: null },
+    ];
+    const { subject, html } = renderSaveHomeEmail({ homes, areaName: "Vaughan", unsubscribeUrl: "u" });
     expect(subject).toBe("Save the homes you like — we'll watch the price for you");
-    expect(html).toContain("A home you're watching");
-    expect(html).toMatch(/>Example</);
+    // Real homes surface with a section heading + brokerage per row (TRREB), incl. fallback.
+    expect(html).toContain("Homes in Vaughan worth a look");
+    expect(html).toContain("5 Maple Ave");
+    expect(html).toContain("Sample Realty");
+    expect(html).toContain("Brokerage unavailable");
+    // Real listings shown → MLS notice kept.
+    expect(html).toContain("PROPTX MLS");
+    // The price-move is an honest labelled text example (no fabricated listing).
+    expect(html).toContain("Example alert");
+  });
+
+  it("#3 degrades to the no-homes layout (no MLS notice) when there are no homes", () => {
+    const { html } = renderSaveHomeEmail({});
+    expect(html).toContain("Save the homes you like");
+    expect(html).not.toContain("worth a look");
+    expect(html).not.toContain("PROPTX MLS");
   });
 
   it("finish-account nudge points its CTA at the supplied url", () => {

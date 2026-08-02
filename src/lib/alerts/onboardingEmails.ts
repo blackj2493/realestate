@@ -45,6 +45,16 @@ export interface OnboardingAreaData {
   rows: OnboardingListingRow[];
 }
 
+/** A plain real listing shown in #3 ("homes worth saving") — real MLS photo in prod. */
+export interface SaveHomeListing {
+  listing_key: string;
+  address: string;
+  city: string | null;
+  price: number | null;
+  thumb: string | null;
+  brokerage: string | null;
+}
+
 interface FooterOpts {
   unsubscribeUrl?: string;
   manageUrl?: string;
@@ -283,41 +293,39 @@ function statTile(label: string, value: string): string {
 
 // ── #3 · "Save the homes you like" (no saved homes yet) ────────────────────────
 
-export function renderSaveHomeEmail(opts: FooterOpts): Rendered {
+// A real listing row for #3 — real MLS photo (or clean gray fallback), address,
+// brokerage (TRREB §6.3(c)), price, and a "save" link back to the listing page.
+function saveHomeRowHtml(r: SaveHomeListing): string {
+  return `
+      <tr>
+        ${thumbCell(r.listing_key, r.thumb)}
+        <td valign="top" style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
+          <a href="${listingUrl(r.listing_key)}" style="color:#0f172a;text-decoration:none;font-weight:600;font-size:15px;">${esc(r.address)}</a>
+          <div style="color:#64748b;font-size:12px;margin-top:2px;">${esc(r.city || "")}</div>
+          ${brokerageLine(r.brokerage)}
+          <div style="margin-top:6px;font-size:14px;color:#0f172a;">
+            ${r.price != null ? `<strong>${money(r.price)}</strong>` : ""}
+            <a href="${listingUrl(r.listing_key)}" style="color:#0891b2;text-decoration:none;font-weight:600;font-size:12px;margin-left:8px;">&#9829; save</a>
+          </div>
+        </td>
+      </tr>`;
+}
+
+export function renderSaveHomeEmail(
+  opts: { homes?: SaveHomeListing[]; areaName?: string } & FooterOpts
+): Rendered {
   const subject = "Save the homes you like — we'll watch the price for you";
   const preheader = "We'll tell you the second the price drops or it sells.";
+  const homes = opts.homes ?? [];
+  const areaBit = opts.areaName ? ` in ${esc(opts.areaName)}` : "";
 
-  // Illustrative price-move card — deliberately NOT a fabricated real address (labelled
-  // "Example"); the mechanic, not a specific listing, is what teaches the feature.
-  const exampleCard = `
-      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-top:4px;">
-        <div style="background:#f1f5f9;padding:6px 12px;font-family:${MONO};font-size:10px;letter-spacing:.08em;color:#64748b;text-transform:uppercase;">Example</div>
-        <table role="presentation" style="width:100%;border-collapse:collapse;"><tr>
-          <td width="84" valign="top" style="width:84px;padding:12px;">
-            <span style="display:block;width:84px;height:63px;border-radius:6px;background:#eef2f6;"></span>
-          </td>
-          <td valign="top" style="padding:12px 12px 12px 0;">
-            <div style="font-weight:600;color:#0f172a;font-size:14px;">A home you're watching</div>
-            <div style="margin-top:6px;font-size:14px;">
-              <span style="color:#94a3b8;text-decoration:line-through;">${money(1299000)}</span>
-              &nbsp;&rarr;&nbsp;<span style="color:#0f766e;font-weight:700;">${money(1259000)}</span>
-              <span style="color:#dc2626;font-weight:600;">&nbsp;(&minus;${money(40000)})</span>
-            </div>
-          </td>
-        </tr></table>
-      </div>`;
-
+  // Two ways to save — affordances only (no empty thumbnail; the real homes below carry
+  // the photos). Heart on a card, or the Add-to-Watchlist button on the listing page.
   const saveWaysCard = uiCard(
     `<table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
         <td valign="top" width="52%" style="padding-right:14px;">
           ${mono10("On a listing card")}
-          <div style="margin-top:10px;border:1px solid #1e293b;border-radius:8px;overflow:hidden;">
-            <table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
-              <td style="background:#1e2b3d;height:70px;"></td>
-              <td align="right" valign="top" width="34" style="background:#1e2b3d;padding:6px;"><span style="display:inline-block;background:#0f172a;border-radius:999px;padding:3px 6px;color:#f0466a;font-size:14px;">&#9829;</span></td>
-            </tr></table>
-            <div style="padding:8px 10px;color:#94a3b8;font-size:11px;">Tap the heart to save it</div>
-          </div>
+          <div style="margin-top:10px;"><span style="display:inline-block;background:#0f172a;border:1px solid #334155;border-radius:999px;padding:6px 12px;color:#f0466a;font-size:14px;font-weight:600;">&#9829;&nbsp; <span style="color:#e7eef5;">Tap to save</span></span></div>
         </td>
         <td valign="top" style="padding-left:14px;">
           ${mono10("Or on its page")}
@@ -327,25 +335,58 @@ export function renderSaveHomeEmail(opts: FooterOpts): Rendered {
       uiCap(`Tap the <span style="color:#f0466a;">&#9829;</span> heart on any home — or <b style="color:#cbd5e1;">Add to Watchlist</b> on its page.`)
   );
 
+  // Real homes to save (real MLS photos in prod). Only render when we have some.
+  const homesSection = homes.length
+    ? `<h2 style="font-size:13px;color:#334155;text-transform:uppercase;letter-spacing:.08em;margin:26px 0 4px;">Homes${areaBit} worth a look</h2>
+       <table style="width:100%;border-collapse:collapse;">${homes.map(saveHomeRowHtml).join("")}</table>`
+    : "";
+
+  // Price-move mechanic as TEXT — the numbers are illustrative, so no fabricated
+  // listing/photo sits behind them; the strike-through shows exactly what an alert says.
+  const priceMech = `
+      <p ${P} style="margin-top:18px;">And the moment a price moves, you'll get an email — for example:</p>
+      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;background:#f8fafc;">
+        <span style="font-family:${MONO};font-size:10px;letter-spacing:.08em;color:#64748b;text-transform:uppercase;">Example alert</span>
+        <div style="margin-top:6px;font-size:15px;">
+          <span style="color:#94a3b8;text-decoration:line-through;">${money(1299000)}</span>
+          &nbsp;&rarr;&nbsp;<span style="color:#0f766e;font-weight:700;">${money(1259000)}</span>
+          <span style="color:#dc2626;font-weight:600;">&nbsp;(&minus;${money(40000)})</span>
+        </div>
+      </div>`;
+
   const body = `
       <h1 ${H1}>Save the homes you like</h1>
       <p ${P}>When you find a home worth watching, tap the heart to save it. We'll email you if the price drops, if it sells, or if it comes back on the market.</p>
       ${saveWaysCard}
-      <p ${P} style="margin-top:14px;">Then the moment the price moves, you get this:</p>
-      ${exampleCard}
+      ${homesSection}
+      ${priceMech}
       <div style="margin:18px 0 0;">${button("Find homes to save &rarr;", `${SITE}/properties`)}</div>
       <p ${FINE}>Everything you save lives in one place, with the numbers behind each one.</p>
       ${footer({
         intro: "You created a PureProperty.ca account.",
         manageUrl: opts.manageUrl,
         unsubscribeUrl: opts.unsubscribeUrl,
-        mls: false,
+        // Real listings shown → keep the MLS notice; none → drop it.
+        mls: homes.length > 0,
       })}`;
 
   const html = shell({ preheader, headerLabel: "GETTING STARTED", body });
+
+  const textHomes = homes.length
+    ? "\n\n" +
+      `Homes${opts.areaName ? ` in ${opts.areaName}` : ""} worth a look:\n` +
+      homes
+        .map(
+          (r) =>
+            `• ${r.address}${r.brokerage ? ` — ${r.brokerage}` : ""}${r.price != null ? ` — ${money(r.price)}` : ""}\n  ${listingUrl(r.listing_key)}`
+        )
+        .join("\n")
+    : "";
   const text =
     `Save the homes you like\n\n` +
-    `When you find a home worth watching, tap the heart to save it (or "Add to Watchlist" on its page). We'll email you if the price drops, if it sells, or if it comes back on the market.\n\n` +
+    `When you find a home worth watching, tap the heart to save it (or "Add to Watchlist" on its page). We'll email you if the price drops, if it sells, or if it comes back on the market.` +
+    textHomes +
+    `\n\nAnd the moment a price moves, you'll get an email — for example: ${money(1299000)} -> ${money(1259000)} (-${money(40000)}).\n\n` +
     `Find homes to save: ${SITE}/properties\n` +
     (opts.unsubscribeUrl ? `\nUnsubscribe: ${opts.unsubscribeUrl}` : "");
   return { subject, html, text };

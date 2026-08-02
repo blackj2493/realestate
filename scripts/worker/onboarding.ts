@@ -36,8 +36,9 @@ import {
   renderSaveHomeEmail,
   renderFinishAccountEmail,
   type OnboardingAreaData,
+  type SaveHomeListing,
 } from "@/lib/alerts/onboardingEmails";
-import { buildExampleAreaData } from "@/lib/alerts/onboardingData";
+import { buildExampleAreaData, buildSaveHomeListings, EXAMPLE_REGION } from "@/lib/alerts/onboardingData";
 import { canSendOnboarding, type EmailPrefsRow, type LifecycleRow } from "@/lib/email/sendPolicy";
 
 const DAY = 86_400_000;
@@ -176,6 +177,12 @@ async function main(): Promise<void> {
     if (exampleArea === undefined) exampleArea = await buildExampleAreaData();
     return exampleArea;
   };
+  // #3 homes for users with no area of their own — the example region, fetched once.
+  let fallbackHomes: SaveHomeListing[] | undefined;
+  const getFallbackHomes = async () => {
+    if (fallbackHomes === undefined) fallbackHomes = await buildSaveHomeListings(EXAMPLE_REGION);
+    return fallbackHomes;
+  };
 
   let sent = 0;
   let considered = 0;
@@ -242,15 +249,21 @@ async function main(): Promise<void> {
               };
             }
           }
-        }
-        // #3 — only if nothing higher in the sequence fired this run.
-        if (!due && unlockedDays >= SAVE_HOME_MIN_DAYS) {
-          const messageId = "onboarding_save_home";
-          if (
-            canSendOnboarding({ messageId, now, marketingOptOut: optOut, prefs, lifecycle: lc }) &&
-            !(await hasWatchlist(sb, p.id as string))
-          ) {
-            due = { messageId, rendered: renderSaveHomeEmail({ unsubscribeUrl: uUrl, manageUrl: MANAGE_URL }) };
+          // #3 — only if nothing higher in the sequence fired this run. Show REAL homes to
+          // save: from their area if they have one, else the example region's listings.
+          if (!due && unlockedDays >= SAVE_HOME_MIN_DAYS) {
+            const messageId = "onboarding_save_home";
+            if (
+              canSendOnboarding({ messageId, now, marketingOptOut: optOut, prefs, lifecycle: lc }) &&
+              !(await hasWatchlist(sb, p.id as string))
+            ) {
+              const homeRegion = regions[0];
+              const homes = homeRegion ? await buildSaveHomeListings(homeRegion) : await getFallbackHomes();
+              due = {
+                messageId,
+                rendered: renderSaveHomeEmail({ homes, areaName: homeRegion, unsubscribeUrl: uUrl, manageUrl: MANAGE_URL }),
+              };
+            }
           }
         }
       }

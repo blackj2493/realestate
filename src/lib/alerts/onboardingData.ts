@@ -15,12 +15,12 @@
  */
 
 import { BOARDS, DEFAULT_BOARD_ORDER, type BoardDef, type BoardId } from "@/lib/dashboard/boards";
-import { fetchBoard, fetchNewCount, fetchRegionStats } from "@/lib/dashboard/queries";
+import { fetchBoard, fetchNewCount, fetchNewListings, fetchRegionStats } from "@/lib/dashboard/queries";
 import { regionArea } from "@/lib/dashboard/area";
 import { DEFAULT_ACTIVITY_LENS } from "@/lib/dashboard/config";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import type { ListingDocument } from "@/lib/typesense/client";
-import type { OnboardingAreaData, OnboardingListingRow } from "./onboardingEmails";
+import type { OnboardingAreaData, OnboardingListingRow, SaveHomeListing } from "./onboardingEmails";
 
 /** The representative area 2B shows when the recipient has no saved area of their own. */
 export const EXAMPLE_REGION = "Woodbridge";
@@ -81,5 +81,27 @@ export async function buildExampleAreaData(): Promise<OnboardingAreaData | null>
   } catch (e) {
     console.warn("[onboarding] example area fetch failed:", e);
     return null;
+  }
+}
+
+/**
+ * Real "homes worth saving" for email #3 — newest active listings in a region, mapped to
+ * plain rows (real MLS photo when present, clean gray fallback otherwise). Best-effort:
+ * a thin/empty area or a fetch error yields [], so #3 degrades to its no-homes layout.
+ */
+export async function buildSaveHomeListings(region: string, limit = 3): Promise<SaveHomeListing[]> {
+  try {
+    const listings = await fetchNewListings(regionArea(region), DEFAULT_ACTIVITY_LENS, limit);
+    return listings.map((l) => ({
+      listing_key: l.id,
+      address: l.UnparsedAddress?.trim() || l.City || "Address unavailable",
+      city: l.City ?? null,
+      price: typeof l.ListPrice === "number" ? l.ListPrice : null,
+      thumb: l.thumbnailUrl || l.primaryImageUrl || null,
+      brokerage: l.ListOfficeName ?? null,
+    }));
+  } catch (e) {
+    console.warn("[onboarding] save-home listings fetch failed:", e);
+    return [];
   }
 }
