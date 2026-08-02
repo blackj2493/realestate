@@ -293,6 +293,9 @@ async function fetchListingRooms(listingKey: string): Promise<RoomData[]> {
       RoomLevel: r.RoomLevel,
       RoomLength: r.RoomLength,
       RoomWidth: r.RoomWidth,
+      // Carried through so the detail page's AVM reads the feed's declared unit
+      // instead of guessing it — guessing wrong scales living area by 10.76.
+      RoomLengthWidthUnits: r.RoomLengthWidthUnits ?? null,
       RoomDimensions: r.RoomDimensions,
       RoomFeatures: r.RoomFeatures,
     }));

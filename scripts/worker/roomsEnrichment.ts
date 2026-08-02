@@ -24,6 +24,14 @@ export interface StoredRoom {
   RoomLevel?: string | string[];
   RoomLength?: number;
   RoomWidth?: number;
+  /**
+   * The unit RoomLength/RoomWidth are expressed in, as the feed declares it
+   * ("Meters" / "Feet"). Sparsely populated — roughly a fifth of rooms carry it —
+   * but authoritative where present, and guessing wrong is a 10.76x error in the
+   * AVM's living-area maths. Previously dropped here, which is the only reason
+   * livingArea.ts had to infer the unit from magnitude at all.
+   */
+  RoomLengthWidthUnits?: string | null;
   RoomDimensions?: string | null;
   RoomFeatures?: string[];
 }
@@ -96,6 +104,7 @@ export function toStoredRoom(r: any): StoredRoom {
     RoomLevel: r.RoomLevel,
     RoomLength: r.RoomLength,
     RoomWidth: r.RoomWidth,
+    RoomLengthWidthUnits: r.RoomLengthWidthUnits ?? null,
     RoomDimensions: r.RoomDimensions ?? null,
     RoomFeatures: r.RoomFeatures,
   };

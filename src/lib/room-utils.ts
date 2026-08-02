@@ -5,6 +5,9 @@ export interface RoomData {
   RoomLevel?: string | string[];
   RoomLength?: number;
   RoomWidth?: number;
+  /** Feed-declared unit for RoomLength/RoomWidth ("Meters" / "Feet"). Sparsely
+   *  populated but authoritative — see resolveDimensionUnit in avm/livingArea.ts. */
+  RoomLengthWidthUnits?: string | null;
   RoomDimensions?: string;
   RoomFeatures?: string | string[];
 }
