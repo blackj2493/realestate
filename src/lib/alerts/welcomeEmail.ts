@@ -73,7 +73,7 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
         <!-- heatmap hero (hosted PNG of the AlphaMap hex heatmap) -->
         ${eyebrow("The map &middot; the terminal view")}
         <img src="${SITE}/email-assets/welcome/map.jpg?v=3" width="524" alt="PureProperty map terminal — Toronto listings as a live heat map by yield and days-on-market" style="display:block;width:100%;max-width:524px;height:auto;border:0;border-radius:8px;margin:8px 0 6px;">
-        ${fbody(`Your market, x-rayed block by block — yield, days-on-market and price compression. ${link("Open the map", `${SITE}/terminal`)}`)}
+        ${fbody(`Your market, x-rayed block by block — rental returns, days on the market, and where prices are heading. ${link("Open the map", `${SITE}/properties`)}`)}
 
         <!-- 1 · Estimated Sale Price -->
         <table role="presentation" width="100%" style="border-collapse:collapse;margin-top:26px;border-top:1px solid #eef2f6;"><tr><td style="padding-top:20px;">
@@ -89,7 +89,7 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
             <table role="presentation" width="100%" style="border-collapse:collapse;border-radius:4px;overflow:hidden;margin:14px 0 4px;"><tr><td style="width:78%;background:#94a3b8;height:8px;">&nbsp;</td><td style="width:22%;background:#e2e8f0;height:8px;">&nbsp;</td></tr></table>
             <div style="font-family:${MONO};font-size:9px;color:#94a3b8;">&#9670; estimate sits below the comparable-sale band and the ask</div>
           </td></tr></table>
-          <div style="margin-top:10px;">${link("See any home's real value", `${SITE}/terminal`)}</div>
+          <div style="margin-top:10px;">${link("See any home's real value", `${SITE}/properties`)}</div>
         </td></tr></table>
 
         <!-- 2 · Renovation Upside -->
@@ -108,19 +108,19 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
             </table>
             <div style="font-size:11px;color:#475569;margin-top:10px;line-height:1.5;border-top:1px solid #eef2f6;padding-top:9px;">Best payback in Vellore Village: <b>add a full bathroom</b> — +$40,000 net (3.0&times;). Based on 301 comparable sales.</div>
           </td></tr></table>
-          <div style="margin-top:10px;">${link("See the upside on any home", `${SITE}/terminal`)}</div>
+          <div style="margin-top:10px;">${link("See the upside on any home", `${SITE}/properties`)}</div>
         </td></tr></table>
 
         <!-- 3 · True DOM (hosted chart image) -->
         <table role="presentation" width="100%" style="border-collapse:collapse;margin-top:24px;border-top:1px solid #eef2f6;"><tr><td style="padding-top:20px;">
-          ${eyebrow("True DOM &middot; the relist trick")}
+          ${eyebrow("True days on market &middot; the relist trick")}
           ${ftitle('"New listing." Actually a year of price cuts.')}
           ${fbody("Sellers reset the days-on-market clock by re-listing. We stitch every campaign back together, so the real path shows — and how motivated the seller really is.")}
           <table role="presentation" width="100%" style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:10px;background:#fbfdff;"><tr><td style="padding:14px 18px;">
-            <div style="font-family:${MONO};font-size:12px;color:#334155;margin-bottom:8px;">Listed <b style="color:#047857;">6&times;</b> &middot; True DOM <b style="color:#0e7490;">41d</b> &middot; $2.64M &rarr; $2.28M <b style="color:#047857;">(&#8722;14%)</b></div>
+            <div style="font-family:${MONO};font-size:12px;color:#334155;margin-bottom:8px;">Listed <b style="color:#047857;">6&times;</b> &middot; really <b style="color:#0e7490;">41 days</b> on the market &middot; $2.64M &rarr; $2.28M <b style="color:#047857;">(&#8722;14%)</b></div>
             <img src="${TRUE_DOM_CHART}" width="524" alt="Price-path: listed at $2.64M, expired and relisted 4 times through the year, now active at $2.28M — a 14% decline the public days-on-market hides." style="display:block;width:100%;max-width:524px;height:auto;border:0;">
           </td></tr></table>
-          <div style="margin-top:10px;">${link("See the real timeline", `${SITE}/terminal`)}</div>
+          <div style="margin-top:10px;">${link("See the real timeline", `${SITE}/properties`)}</div>
         </td></tr></table>
 
         <!-- 4 · Compare -->
@@ -132,7 +132,7 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
             <tr style="background:#0a1828;color:#cbd5e1;"><td style="padding:7px 10px;">Metric</td><td style="padding:7px 10px;">128 Maplecrest<br><span style="font-family:${MONO};color:#34d399;">$2,282,000</span></td><td style="padding:7px 10px;">363 Maria Antonia<br><span style="font-family:${MONO};color:#34d399;">$1,905,000</span></td></tr>
             <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">Est. sale price</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">$2,231,796</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">$1,942,500</td></tr>
             <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">vs comp value</td><td style="padding:7px 10px;font-family:${MONO};color:#b45309;border-top:1px solid #eef2f6;">6% over</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">9% under</td></tr>
-            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">True DOM</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">41 days</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">12 days</td></tr>
+            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">Days on market (real)</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">41 days</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">12 days</td></tr>
             <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">Monthly cashflow</td><td style="padding:7px 10px;font-family:${MONO};color:#be123c;border-top:1px solid #eef2f6;">&#8722;$1,240</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">&#8722;$610</td></tr>
           </table>
           <div style="margin-top:10px;">${link("Compare two homes", `${SITE}/properties/compare`)}</div>
@@ -144,14 +144,14 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
           <div style="color:#8fa4b8;font-size:13px;line-height:1.5;margin:5px 0 15px;">Four more things 128 Maplecrest is quietly telling us:</div>
           <table role="presentation" width="100%" style="border-collapse:collapse;">
             <tr>${finding("Nearby development", '48 townhomes approved <span style="color:#fbbf24;">&middot; 220m away</span>', "#d97706")}${finding("Suite Potential", 'legal basement suite <span style="color:#34d399;">&middot; likely</span>', "#059669")}</tr>
-            <tr>${finding("School boundaries", "zoned &middot; Vellore Village PS", "#334155")}${finding("Underwriting sandbox", 'rented out: <span style="color:#fb7185;">&#8722;$1,240/mo</span>', "#be123c")}</tr>
+            <tr>${finding("School boundaries", "zoned &middot; Vellore Village PS", "#334155")}${finding("If you rented it out", 'monthly cash flow <span style="color:#fb7185;">&#8722;$1,240/mo</span>', "#be123c")}</tr>
           </table>
-          <div style="color:#64748b;font-size:11px;border-top:1px solid #1e3a52;padding-top:12px;margin-top:6px;">+ walkability, heritage flags, rental yield &amp; assignment detection — on every listing.</div>
+          <div style="color:#64748b;font-size:11px;border-top:1px solid #1e3a52;padding-top:12px;margin-top:6px;">+ walkability, heritage flags, rental returns &amp; pre-construction resale flags — on every listing.</div>
         </td></tr></table>
 
         <!-- CTA -->
         <p style="font-size:15px;line-height:1.6;color:#334155;margin:24px 0 14px;">Start with a street you already know — your own, or the one you keep driving past. Pull it up and see it the way the terminal does.</p>
-        <a href="${SITE}/terminal" style="display:inline-block;background:#0891b2;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-size:14px;font-weight:600;">Open your terminal &rarr;</a>
+        <a href="${SITE}/properties" style="display:inline-block;background:#0891b2;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-size:14px;font-weight:600;">Open your terminal &rarr;</a>
         <p style="font-size:14px;line-height:1.6;color:#475569;margin:24px 0 0;">— The PureProperty terminal</p>
 
         <!-- footer -->
@@ -173,12 +173,12 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
     "",
     "- Estimated sale price — what a home should actually sell for vs the ask (e.g. est. $2,231,796 on a $2,282,000 ask; room to negotiate).",
     "- Renovation upside — the value-add moves that pay back, ranked by return (e.g. up to $118,898 unlockable, ~$74,898 net).",
-    "- True DOM — the real days-on-market, stitched across every relist (a 'new' listing can be a year of quiet price cuts).",
+    "- True days on market — how long it's really been for sale, stitched across every relist (a 'new' listing can be a year of quiet price cuts).",
     "- Compare — any two homes on the figures that decide it.",
     "",
-    "And that's just the first layer: nearby development, suite potential, school boundaries, an underwriting sandbox, walkability, heritage flags, rental yield and assignment detection — on every listing.",
+    "And that's just the first layer: nearby development, basement-suite potential, school boundaries, rental math, walkability, heritage flags, rental returns and pre-construction resale flags — on every listing.",
     "",
-    `Start with a street you already know: ${SITE}/terminal`,
+    `Start with a street you already know: ${SITE}/properties`,
     "",
     "— The PureProperty terminal",
     "",

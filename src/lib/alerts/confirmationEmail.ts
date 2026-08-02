@@ -35,7 +35,7 @@ export function renderConfirmationEmail(input: ConfirmationInput): {
       <div style="color:#0f172a;font-weight:700;font-size:15px;margin-top:4px;">${esc(where)}${cityChip}</div>
       <div style="font-family:${MONO};color:#475569;font-size:13px;margin-top:6px;">Watching for: ${esc(input.watchingFor)}</div>
     </td></tr></table>
-    <div style="margin-top:18px;">${button("See what else the terminal shows &rarr;", `${SITE}/terminal`)}</div>
+    <div style="margin-top:18px;">${button("See what else the terminal shows &rarr;", `${SITE}/properties`)}</div>
     ${footer({
       intro: "Machine-sent by PureProperty Alerts because you asked to watch this on PureProperty.ca.",
       unsubscribeUrl: unsub,
@@ -47,7 +47,7 @@ export function renderConfirmationEmail(input: ConfirmationInput): {
     "",
     `We're now tracking ${where} for ${input.kindLabel.toLowerCase()}. The day something actually changes, you'll hear it from us — same day, with the history behind the number. That's the only reason we'll email you.`,
     "",
-    `See what else the terminal shows: ${SITE}/terminal`,
+    `See what else the terminal shows: ${SITE}/properties`,
     "",
     `Unsubscribe anytime: ${unsub}`,
   ].join("\n");
