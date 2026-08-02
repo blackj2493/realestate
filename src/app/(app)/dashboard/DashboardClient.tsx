@@ -36,7 +36,8 @@ import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
-import { regionArea } from "@/lib/dashboard/area";
+import { regionArea, defaultAlertScopeForRegion } from "@/lib/dashboard/area";
+import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -110,21 +111,64 @@ export default function DashboardClient() {
 
   // Auto-apply: add/remove a single region live so its dashboard sections appear/disappear
   // instantly. Functional updates keep rapid clicks from racing on a stale `config`.
-  const addRegion = (area: string) =>
+  const addRegion = (area: string) => {
+    let added = false;
     setConfig((prev) => {
       if (!area || prev.regions.includes(area)) return prev;
+      added = true;
       const next = { ...prev, regions: [...prev.regions, area] };
       saveConfig(next);
       pushConfig(next);
       return next;
     });
-  const removeRegion = (area: string) =>
+    // Tiered default-ON alerts (§176): materialize the area's new-listing alert as a
+    // city bubble the nightly worker can deliver against, so "add an area" also turns on
+    // its email. Whole cities default to 'filtered' (the current dashboard lens) to avoid
+    // a city-wide firehose; communities/neighbourhoods default to 'all'. Best-effort —
+    // never blocks the (local, instant) region add; the section bell is the manual fallback.
+    if (added) void ensureAreaAlert(area);
+  };
+  const removeRegion = (area: string) => {
     setConfig((prev) => {
       const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
       saveConfig(next);
       pushConfig(next);
       return next;
     });
+    // Keep alerts from outliving the visible area: removing a region also removes its
+    // auto-created city alert (its bell lives on the section that just disappeared).
+    // Drawn/school bubbles are unaffected. Re-adding the area re-creates the alert.
+    void removeAreaAlert(area);
+  };
+
+  // Find this region's materialized city-alert bubble in the store, if any.
+  const findCityAlert = (area: string) =>
+    Object.values(useBubblesStore.getState().items).find(
+      (b) => b.area_type === "city" && b.source.kind === "city" && b.source.city === area
+    );
+
+  const ensureAreaAlert = async (area: string) => {
+    await useBubblesStore.getState().init(); // idempotent; sets signedIn + loads rows
+    const store = useBubblesStore.getState();
+    if (!store.signedIn || findCityAlert(area)) return;
+    const scope = defaultAlertScopeForRegion(area);
+    await store.create({
+      name: area,
+      area_type: "city",
+      polygon: [],
+      source: { kind: "city", city: area },
+      filters: scope === "filtered" ? { lens: config.marketActivity } : null,
+      alert_scope: scope,
+    });
+  };
+
+  const removeAreaAlert = async (area: string) => {
+    await useBubblesStore.getState().init();
+    const store = useBubblesStore.getState();
+    if (!store.signedIn) return;
+    const existing = findCityAlert(area);
+    if (existing) await store.remove(existing.id);
+  };
 
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });

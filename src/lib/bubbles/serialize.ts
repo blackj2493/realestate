@@ -99,6 +99,10 @@ export interface BubblePayload {
   source: BubbleSource;
   /** Terminal snapshot, city-lens capture, or null (city rows start without one). */
   filters: BubbleFilters | null;
+  /** Digest match scope (migration 095). Omitted → DB default 'all'. Set at create
+   *  time by the tiered default-ON add-area flow (§176): whole city → 'filtered'
+   *  (carries a { lens } filters), community/drawn → 'all'. */
+  alert_scope?: "all" | "filtered";
 }
 
 /** As returned by GET /api/bubbles. */

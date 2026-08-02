@@ -56,6 +56,11 @@ function validatePayload(body: unknown):
   if (!source || typeof source !== "object")
     return { ok: false, error: "source required" };
 
+  // Optional digest scope (migration 095); omit → DB default 'all'. Set by the tiered
+  // default-ON add-area flow (§176) so whole cities start 'filtered' not firehose-'all'.
+  const alert_scope =
+    b.alert_scope === "all" || b.alert_scope === "filtered" ? b.alert_scope : undefined;
+
   // City alert rows (migration 083) carry no polygon — the worker scopes them by the
   // source.city string (CITY_GROUPS expansion), same as the dashboard city sections.
   if (area_type === "city") {
@@ -63,9 +68,16 @@ function validatePayload(body: unknown):
       source.kind === "city" && typeof source.city === "string" ? source.city.trim() : "";
     if (!city || city.length > 80)
       return { ok: false, error: "source.city required for area_type city" };
+    // City rows may carry a dashboard-lens capture ({ lens }) when scope is 'filtered'
+    // (tiered default), else null. Not deep-validated — a client-owned passthrough blob
+    // guarded by RLS + the worker's shape check (bubbleAlertFilter branches on shape).
+    const cityFilters =
+      b.filters && typeof b.filters === "object" && "lens" in (b.filters as object)
+        ? (b.filters as BubblePayload["filters"])
+        : null;
     return {
       ok: true,
-      payload: { name, area_type, polygon: [], source: { kind: "city", city }, filters: null },
+      payload: { name, area_type, polygon: [], source: { kind: "city", city }, filters: cityFilters, alert_scope },
     };
   }
 
@@ -82,6 +94,7 @@ function validatePayload(body: unknown):
       polygon: b.polygon as [number, number][],
       source,
       filters: (b.filters ?? null) as BubblePayload["filters"],
+      alert_scope,
     },
   };
 }
@@ -99,6 +112,9 @@ function rowToBubble(r: Record<string, unknown>): Bubble {
     // Alert fields (migration 034). Mapped optionally so a pre-034 database
     // (column absent from `select *`) still serializes — defaults to ON client-side.
     alerts_enabled: typeof r.alerts_enabled === "boolean" ? r.alerts_enabled : undefined,
+    // Scope (migration 095) so the client reflects the tiered default immediately after
+    // create (pre-095 rows lack the column → undefined → client treats as 'all').
+    alert_scope: r.alert_scope === "all" || r.alert_scope === "filtered" ? r.alert_scope : undefined,
     notify_since: (r.notify_since as string | null | undefined) ?? null,
   };
 }
@@ -141,6 +157,8 @@ export async function POST(req: Request) {
       polygon: v.payload.polygon,
       source: v.payload.source,
       filters: v.payload.filters,
+      // Only set when provided — otherwise the DB default ('all') stands.
+      ...(v.payload.alert_scope ? { alert_scope: v.payload.alert_scope } : {}),
     })
     .select("*")
     .single();
