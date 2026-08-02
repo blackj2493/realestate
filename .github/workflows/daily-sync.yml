@@ -219,6 +219,21 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-property-estimates.ts --apply --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
 
+      # Prune orphaned estimates. property_estimates keeps ONE row per ACTIVE listing, but the
+      # refresh only WRITES active rows — a listing that has since sold/terminated/dropped out
+      # is skipped, never deleted, so its estimate lingers forever (frozen computed_at), bloats
+      # the table (Disk IO budget §12), and the freshness canary miscounts it as a stale ACTIVE
+      # estimate (2026-08-02: 24.5k such orphans). Deletes rows that are BOTH stale (>120h) AND
+      # not active-eligible by the SAME isActive predicate the refresh uses — active rows are
+      # never touched, and every estimate is regenerable, so it's non-destructive. Raw pg →
+      # Session-pooler DATABASE_URL (like Capture Price Events). Additive — continue-on-error.
+      - name: Prune Orphaned Estimates
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/prune-property-estimates.ts --apply
+
       # Precompute geo "Things to Know" flags (flood now; rail/traffic later) for
       # listings synced in the last day, into listing_geo_flags. PUBLIC-records
       # PostGIS spatial joins — reads listings, writes the separate listing_geo_flags

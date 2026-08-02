@@ -65,8 +65,13 @@ const ESTIMATE_STALE_HOURS = Number(process.env.ESTIMATE_STALE_HOURS) || 48;
 // Backlog threshold: every active row is re-based by the twice-weekly full recompute (≤ ~4-day
 // cycle), so 120h (5d) sits safely above it — only rows that missed a recompute age past it.
 const ESTIMATE_MAX_AGE_HOURS = Number(process.env.ESTIMATE_MAX_AGE_HOURS) || 120;
-// A handful of rows can straddle a run boundary; thousands is an under-run.
-const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 500;
+// Tolerance covers the steady-state active residual, NOT orphans. The nightly prune
+// (prune-property-estimates.ts) removes estimates for sold/terminal listings, so what
+// legitimately stays >120h stale is ~1-1.5k genuinely-ACTIVE listings the refresh can't
+// re-estimate (no comps AND no GLA → skipped without a write; measured ~1.3k, 2026-08-02).
+// 2500 sits above that floor yet well below a real under-run (a failed recompute shard ≈
+// 20k, or the prune ceasing → orphans re-accumulate past this within days).
+const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 2500;
 
 const problems: Problem[] = [];
 
