@@ -23,8 +23,15 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
 
-/** Leases live in raw_vow_sold too — same sale floor the AVM/metrics paths use. */
-const MIN_SALE_PRICE = 50_000;
+/**
+ * Leases live in raw_vow_sold too, and are excluded by the feed's own
+ * transaction_type (migration 104) rather than by a price threshold. The old
+ * `close_price >= 50_000` proxy inferred "this is a sale" from "this cost a lot",
+ * which quietly dropped 482 genuine low-price sales and would admit the first
+ * lease to close above the line.
+ */
+const SALE_TRANSACTION_TYPE = "For Sale";
+const MIN_CLOSE_PRICE = 1;
 const MAX_SALES = 80;
 const SCAN_LIMIT = 200; // headroom: the street token can match other municipalities
 const CACHE_SECONDS = 6 * 3600;
@@ -101,7 +108,8 @@ const fetchLedger = unstable_cache(
         .from("raw_vow_sold")
         .select("listing_key, unparsed_address, city, city_region, close_price, purchase_contract_date, property_sub_type")
         .ilike("unparsed_address", `%${safeToken}%`)
-        .gte("close_price", MIN_SALE_PRICE)
+        .eq("transaction_type", SALE_TRANSACTION_TYPE)
+        .gte("close_price", MIN_CLOSE_PRICE)
         .order("purchase_contract_date", { ascending: false })
         .limit(SCAN_LIMIT);
       if (error || !data) {
@@ -126,7 +134,7 @@ const fetchLedger = unstable_cache(
           continue;
         const close = Number(r.close_price); // NUMERIC arrives as a string via PostgREST
         const dateISO = typeof r.purchase_contract_date === "string" ? r.purchase_contract_date : "";
-        if (!(close >= MIN_SALE_PRICE) || !dateISO) continue;
+        if (!(close >= MIN_CLOSE_PRICE) || !dateISO) continue;
         sales.push({
           listingKey: String(r.listing_key ?? ""),
           address: rowAddress.split(",")[0].trim(),

@@ -17,7 +17,7 @@ import {
   cityRegionLookupCandidates,
   rawVariantsOf,
 } from '@/lib/avm/normalizeType';
-import { MIN_SALE_PRICE } from '@/lib/avm/types';
+import { SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as MIN_SALE_PRICE } from '@/lib/avm/types';
 
 function num(name: string, def: number): number {
   const a = process.argv.find((x) => x.startsWith(name));
@@ -84,6 +84,7 @@ async function streamPool(windowStart: string): Promise<Raw[]> {
     for (;;) {
       const res = await sb.from('raw_vow_sold').select(SELECT)
         .gt('listing_key', cursor).gte('purchase_contract_date', windowStart)
+        .eq('transaction_type', SALE_TRANSACTION_TYPE)
         .gte('close_price', MIN_SALE_PRICE).order('listing_key', { ascending: true }).limit(1000);
       if (!res.error) { data = res.data as Record<string, unknown>[]; break; }
       if (++attempt > 5) throw new Error(res.error.message);

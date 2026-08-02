@@ -33,7 +33,8 @@ import {
   BW_BATHS,
   BW_LOT,
   BW_SQFT,
-  MIN_SALE_PRICE,
+  SALE_TRANSACTION_TYPE,
+  MIN_CLOSE_PRICE,
   DEFAULT_TUNING,
   resolveTau2,
 } from './types';
@@ -171,7 +172,8 @@ export async function fetchAnchor(
       .select(COMP_SELECT)
       .in('city_region', cityRegionCandidates)
       .in('property_sub_type', subVariants)
-      .gte('close_price', MIN_SALE_PRICE)
+      .eq('transaction_type', SALE_TRANSACTION_TYPE)
+      .gte('close_price', MIN_CLOSE_PRICE)
       .gte('purchase_contract_date', windowStartIso)
       .order('purchase_contract_date', { ascending: false })
       .limit(MAX_COMPS),
@@ -653,7 +655,8 @@ export async function fetchPeerAnchor(
       .select(COMP_SELECT)
       .in('city_region', cands)
       .in('property_sub_type', subVariants)
-      .gte('close_price', MIN_SALE_PRICE)
+      .eq('transaction_type', SALE_TRANSACTION_TYPE)
+      .gte('close_price', MIN_CLOSE_PRICE)
       .gte('purchase_contract_date', windowStartIso)
       .order('purchase_contract_date', { ascending: false })
       .limit(MAX_COMPS);
@@ -675,7 +678,9 @@ export async function fetchPeerAnchor(
     const res = await supabase.rpc('sold_city_comps', {
       p_city: cityKey,
       p_sub_types: subVariants,
-      p_price_floor: MIN_SALE_PRICE,
+      // The RPC now filters transaction_type = 'For Sale' itself (migration 105),
+      // so this is a placeholder guard only, not the lease exclusion.
+      p_price_floor: MIN_CLOSE_PRICE,
       p_cutoff: windowStartIso,
       p_limit: MAX_COMPS,
     });

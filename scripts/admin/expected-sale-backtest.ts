@@ -67,7 +67,7 @@ import {
   cityRegionLookupCandidates,
   rawVariantsOf,
 } from '@/lib/avm/normalizeType';
-import { MIN_SALE_PRICE as DEFAULT_SALE_PRICE_FLOOR } from '@/lib/avm/types';
+import { SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_SALE_PRICE_FLOOR } from '@/lib/avm/types';
 
 const agent = new https.Agent({ rejectUnauthorized: false });
 (global as unknown as { fetch: typeof fetch }).fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -194,6 +194,7 @@ async function readPoolPage(cursor: string, windowStartIso: string): Promise<Poo
       .select(SELECT_COLS)
       .gt('listing_key', cursor)
       .gte('purchase_contract_date', windowStartIso)
+      .eq('transaction_type', SALE_TRANSACTION_TYPE)
       .gte('close_price', MIN_SALE_PRICE)
       .order('listing_key', { ascending: true })
       .limit(READ_PAGE);

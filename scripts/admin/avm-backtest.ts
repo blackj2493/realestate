@@ -82,7 +82,7 @@ import {
 } from '@/lib/avm/calculator';
 import type { CoefficientRow } from '@/lib/avm/matrixService';
 import type { AVMInput, AVMResult } from '@/lib/avm/types';
-import { COMP_WINDOW_MO, MIN_SALE_PRICE as DEFAULT_SALE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
+import { COMP_WINDOW_MO, SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_CLOSE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
 import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
@@ -108,7 +108,9 @@ const EVAL_LIMIT = numFlag('--limit', Infinity);
 const TREND_WINDOW_MONTHS = numFlag('--trend-window-mo', 24);
 const RUN_ID = strFlag('--run-id', `branch-eval${EVAL_MONTHS}m${LEAKY ? '-leaky' : ''}`);
 const OUT_PATH = strFlag('--out', `avm-backtest-${RUN_ID}.json`);
-const MIN_SALE_PRICE = numFlag('--min-sale-price', DEFAULT_SALE_PRICE_FLOOR);
+// Leases are excluded by transaction_type, matching production exactly — a pool
+// filtered differently would score the model on a population production never sees.
+const MIN_SALE_PRICE = numFlag('--min-sale-price', DEFAULT_CLOSE_PRICE_FLOOR);
 
 // ── statistical thresholds (match the live anchor / refresh job) ──────────────
 const MAX_COMPS = 500;
@@ -275,6 +277,7 @@ async function readPoolPage(cursor: string, windowStartIso: string): Promise<Poo
       .select(SELECT_COLS)
       .gt('listing_key', cursor)
       .gte('purchase_contract_date', windowStartIso)
+      .eq('transaction_type', SALE_TRANSACTION_TYPE)
       .gte('close_price', MIN_SALE_PRICE)
       .order('listing_key', { ascending: true })
       .limit(READ_PAGE);

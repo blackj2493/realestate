@@ -60,6 +60,12 @@ interface SoldListingRecord {
   city: string | null;
   postal_code: string | null;
   property_sub_type: string;
+  /**
+   * "For Sale" / "For Lease" / "For Sub-Lease", verbatim from the feed. This is
+   * how sales and leases are separated — never a close_price threshold, which
+   * infers the category from magnitude and breaks the moment a lease closes high.
+   */
+  transaction_type: string | null;
   architectural_style: string | null;
   approximate_age: string | null;
   living_area_range: number | null;
@@ -249,6 +255,7 @@ export function extractSoldListingData(raw: any): SoldListingRecord | null {
       city: raw.City || null,
       postal_code: raw.PostalCode || null,
       property_sub_type: raw.PropertySubType || raw.PropertyType || '',
+      transaction_type: raw.TransactionType || null,
       architectural_style: styleToString(raw.ArchitecturalStyle),
       approximate_age: raw.ApproximateAge || null,
       living_area_range: livingAreaRangeToInt(raw.LivingAreaRange),

@@ -39,7 +39,11 @@ function numFlag(name: string, def: number): number {
 const MIN_SAMPLES = numFlag('--min-samples', 40);
 const WINDOW_MONTHS = numFlag('--window-months', 36);
 const LAMBDA = numFlag('--lambda', 1.0);
-const MIN_SALE_PRICE = 50_000; // matches types.MIN_SALE_PRICE (excludes lease "closings")
+// Leases are excluded by the feed's own transaction_type (migration 104), not by a
+// price threshold — matches types.SALE_TRANSACTION_TYPE. The floor below is only a
+// guard against $0 placeholder closings.
+const SALE_TRANSACTION_TYPE = 'For Sale';
+const MIN_CLOSE_PRICE = 1; // matches types.MIN_CLOSE_PRICE
 const Z_CLAMP = 3; // matches types.Z_CLAMP
 
 // The 8 trained features, in a fixed column order.
@@ -214,8 +218,9 @@ async function main(): Promise<void> {
               basement_tier::float8             AS basement_tier
          FROM raw_vow_sold
         WHERE listing_key > $1 AND close_price >= $2 AND purchase_contract_date >= $3
+          AND transaction_type = $4
         ORDER BY listing_key LIMIT 2000`,
-      [cursor, MIN_SALE_PRICE, sinceIso],
+      [cursor, MIN_CLOSE_PRICE, sinceIso, SALE_TRANSACTION_TYPE],
     );
     if (rows.length === 0) break;
     cursor = rows[rows.length - 1].listing_key;
