@@ -94,13 +94,32 @@ function boardRowHtml(r: OnboardingListingRow): string {
       </tr>`;
 }
 
-// A styled "tip" block for the education email (mirrors the mockup's numbered cards).
-function tipBlock(n: number, title: string, body: string): string {
-  return `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-top:12px;background:#f8fafc;">
-      <div style="font-family:${MONO};font-size:12px;font-weight:700;color:#0f172a;">${n} &middot; ${title}</div>
-      <div style="font-size:13px;color:#475569;margin-top:6px;line-height:1.5;">${body}</div>
-    </div>`;
-}
+// ── "App UI" illustration helpers — dark cards that show what a feature looks like,
+//    reproducing the owner-approved mockup. Email-safe: inline styles, inline-block
+//    chips, tables for two-sided rows. No flexbox, no SVG (Gmail strips inline SVG), so
+//    the little house drawings from the mockup can't ride along — real sends use real MLS
+//    photos in the listing rows; these blocks are pure styled HTML that DOES render. ──
+const UI_CARD = "background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:16px;margin-top:12px;";
+const uiCard = (inner: string) => `<div style="${UI_CARD}">${inner}</div>`;
+const uiLabel = (t: string) =>
+  `<div style="font-family:${MONO};font-size:11px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:.08em;">${t}</div>`;
+const uiSub = (t: string) => `<div style="font-size:12px;color:#94a3b8;margin-top:6px;line-height:1.5;">${t}</div>`;
+const uiCap = (t: string) => `<div style="font-size:12px;color:#94a3b8;margin-top:12px;line-height:1.5;">${t}</div>`;
+const mono10 = (t: string) =>
+  `<div style="font-family:${MONO};font-size:10px;color:#64748b;letter-spacing:.08em;text-transform:uppercase;">${t}</div>`;
+// A pill/chip: highlighted (on) = cyan, else outlined. `label` is trusted markup (entities).
+const chip = (label: string, on = false) =>
+  `<span style="display:inline-block;border:1px solid ${on ? "#0891b2" : "#334155"};background:${on ? "rgba(8,145,178,.15)" : "transparent"};color:${on ? "#67e8f9" : "#94a3b8"};border-radius:6px;padding:6px 11px;font-size:12px;font-weight:600;margin:8px 6px 0 0;">${label}</span>`;
+// A segmented [A][B][C] control with one segment active.
+const scopeSeg = (labels: string[], activeIdx: number) =>
+  `<span style="display:inline-block;border:1px solid #334155;border-radius:6px;overflow:hidden;vertical-align:middle;">` +
+  labels
+    .map(
+      (l, i) =>
+        `<span style="display:inline-block;padding:5px 10px;font-size:11px;font-weight:600;${i === activeIdx ? "background:rgba(8,145,178,.18);color:#67e8f9;" : "color:#94a3b8;"}">${l}</span>`
+    )
+    .join("") +
+  `</span>`;
 
 const H1 = 'style="font-size:18px;color:#0f172a;margin:0 0 10px;"';
 const P = 'style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 12px;"';
@@ -113,23 +132,30 @@ export function renderDashboardEducationEmail(opts: { areaName: string } & Foote
   const subject = `Get more out of your ${opts.areaName} dashboard`;
   const preheader = "Rank it to your goal, filter it — and it's already watching for new listings.";
 
+  const bellRow = `<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:12px;"><tr>
+        <td style="color:#e7eef5;font-size:13px;font-weight:600;">&#9662; ${area}</td>
+        <td align="right">${scopeSeg(["All listings", "My filters only"], 0)}&nbsp;<span style="display:inline-block;border:1px solid #0891b2;background:rgba(8,145,178,.15);color:#67e8f9;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;vertical-align:middle;">&#128276; Alerts on</span></td>
+      </tr></table>`;
+
   const body = `
       <h1 ${H1}>Make your ${area} dashboard work for you</h1>
       <p ${P}>You're following ${area} — and new listings there already come to your inbox. Three quick ways to get more out of it:</p>
-      ${tipBlock(
-        1,
-        "Rank it to your goal",
-        `Pick what you're after and the boards reorder — cash-flow buyers see <b>Cap Rate</b> (the yearly return if you rented it out) and <b>Capital Burn</b> (what it costs to hold each month) first; flippers see the biggest price drops and the homes that have sat longest.`
+      ${uiCard(
+        uiLabel("1 · Rank it to your goal") +
+          `<div>${chip("&#10003; Cash flow", true)}${chip("Flip")}${chip("To live in")}${chip("Develop")}</div>` +
+          uiCap(
+            `Pick what you're after and the boards reorder — cash-flow buyers see <b style="color:#cbd5e1;">Cap Rate</b> (the yearly return if you rented it out) and <b style="color:#cbd5e1;">Capital Burn</b> (what it costs to hold each month) first; flippers see the biggest <b style="color:#cbd5e1;">price drops</b> and the homes that have sat <b style="color:#cbd5e1;">longest on the market</b>.`
+          )
       )}
-      ${tipBlock(
-        2,
-        "Filter to your kind of home",
-        `Set property type, beds, or price — every board and count updates to match.`
+      ${uiCard(
+        uiLabel("2 · Filter to your kind of home") +
+          `<div>${chip("&#10003; Detached", true)}${chip("&#10003; 3+ beds", true)}${chip("&#10003; &le; $1.5M", true)}</div>` +
+          uiCap("Set property type, beds, or price — every board and count updates to match.")
       )}
-      ${tipBlock(
-        3,
-        "You're already getting alerts",
-        `New ${area} listings come to your inbox. Switch to <b>My filters only</b>, or mute them, with the bell on the ${area} section anytime.`
+      ${uiCard(
+        uiLabel("3 · You're already getting alerts") +
+          bellRow +
+          uiCap(`New ${area} listings come to your inbox. Switch to <b style="color:#cbd5e1;">My filters only</b>, or mute them, with the bell on the ${area} section anytime.`)
       )}
       <div style="margin:20px 0 0;">${button(`Open your ${area} dashboard &rarr;`, `${SITE}/dashboard`)}</div>
       <p ${FINE}>Tune or turn off any of this in one tap.</p>
@@ -187,10 +213,35 @@ export function renderAddAreaEmail(opts: { example: OnboardingAreaData | null } 
       </div>`
     : "";
 
+  const setupCard = uiCard(
+    uiLabel("Set up your terminal") +
+      uiSub(`Search <b style="color:#cbd5e1;">any</b> city, neighbourhood, or community — each one loads into your dashboard the moment you add it.`) +
+      `<div style="margin-top:12px;"><span style="display:inline-block;border:1px solid #334155;border-radius:6px;padding:8px 12px;color:#e7eef5;font-size:12px;font-weight:600;">+ Add areas</span></div>` +
+      // Search field (a two-cell table keeps the hint right-aligned without floats).
+      `<table role="presentation" width="100%" style="border-collapse:separate;margin-top:12px;"><tr>
+        <td style="border:1px solid #334155;border-radius:6px;padding:11px 12px;">
+          <table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
+            <td style="color:#e7eef5;font-size:14px;">&#128269;&nbsp;&nbsp;Woodbridge</td>
+            <td align="right" style="font-family:${MONO};color:#64748b;font-size:11px;">search any community</td>
+          </tr></table>
+        </td>
+      </tr></table>` +
+      // Autocomplete dropdown.
+      `<div style="border:1px solid #1e293b;border-radius:6px;margin-top:6px;overflow:hidden;">
+        <div style="padding:9px 12px;background:rgba(8,145,178,.12);color:#e7eef5;font-size:13px;">&#128205;&nbsp; <b>Woodbridge</b> &middot; Vaughan</div>
+        <div style="padding:9px 12px;color:#64748b;font-size:13px;border-top:1px solid #1e293b;">&#128205;&nbsp; Kleinburg &middot; Vaughan</div>
+      </div>` +
+      `<div style="margin-top:14px;">${mono10("or tap a popular one")}</div>` +
+      `<div>${chip("+ Toronto")}${chip("+ Ottawa")}${chip("+ Mississauga")}${chip("&#10003; Vaughan", true)}${chip("Show more…")}</div>` +
+      uiCap(`Search any neighbourhood — <b style="color:#cbd5e1;">Woodbridge</b>, <b style="color:#cbd5e1;">Leslieville</b>, <b style="color:#cbd5e1;">Westboro</b> — not just the popular cities. It's saved the instant you add it.`) +
+      `<div style="font-size:12px;color:#94a3b8;margin-top:12px;">And when you add it — <b style="color:#cbd5e1;">email me new listings</b>&nbsp; ${scopeSeg(["All", "My filters", "Off"], 0)}</div>`
+  );
+
   const body = `
       <h1 ${H1}>Follow a neighbourhood. See everything in it.</h1>
       <p ${P}>Add an area you care about — a whole city, or a single community like ${exName} — and PureProperty builds you a live dashboard for it: every home ranked the ways that matter, plus every new listing and recent sale. Updated daily.</p>
       <p ${P}>Add as many as you like. Tighter areas mean sharper detail. Search any city, neighbourhood, or community — not just the popular ones — and it's saved the instant you add it.</p>
+      ${setupCard}
       ${exampleBlock}
       <p ${P} style="margin-top:14px;">You'll get the dashboard the instant you add it — and new listings start coming to your inbox automatically (you pick all, just your filters, or off, right when you add it).</p>
       <div style="margin:18px 0 0;">${button("Add your first area &rarr;", `${SITE}/dashboard`)}</div>
@@ -256,13 +307,31 @@ export function renderSaveHomeEmail(opts: FooterOpts): Rendered {
         </tr></table>
       </div>`;
 
+  const saveWaysCard = uiCard(
+    `<table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
+        <td valign="top" width="52%" style="padding-right:14px;">
+          ${mono10("On a listing card")}
+          <div style="margin-top:10px;border:1px solid #1e293b;border-radius:8px;overflow:hidden;">
+            <table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
+              <td style="background:#1e2b3d;height:70px;"></td>
+              <td align="right" valign="top" width="34" style="background:#1e2b3d;padding:6px;"><span style="display:inline-block;background:#0f172a;border-radius:999px;padding:3px 6px;color:#f0466a;font-size:14px;">&#9829;</span></td>
+            </tr></table>
+            <div style="padding:8px 10px;color:#94a3b8;font-size:11px;">Tap the heart to save it</div>
+          </div>
+        </td>
+        <td valign="top" style="padding-left:14px;">
+          ${mono10("Or on its page")}
+          <div style="margin-top:10px;"><span style="display:inline-block;border:1px solid #334155;border-radius:6px;padding:8px 12px;color:#e7eef5;font-size:12px;font-weight:600;">&#128278;&nbsp; Add to Watchlist</span></div>
+        </td>
+      </tr></table>` +
+      uiCap(`Tap the <span style="color:#f0466a;">&#9829;</span> heart on any home — or <b style="color:#cbd5e1;">Add to Watchlist</b> on its page.`)
+  );
+
   const body = `
       <h1 ${H1}>Save the homes you like</h1>
       <p ${P}>When you find a home worth watching, tap the heart to save it. We'll email you if the price drops, if it sells, or if it comes back on the market.</p>
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin:0 0 14px;background:#f8fafc;font-size:13px;color:#475569;line-height:1.6;">
-        Tap the <span style="color:#f0466a;">&#9829;</span> heart on any home card — or <b>Add to Watchlist</b> on its page.
-      </div>
-      <p ${P}>Then the moment the price moves, you get this:</p>
+      ${saveWaysCard}
+      <p ${P} style="margin-top:14px;">Then the moment the price moves, you get this:</p>
       ${exampleCard}
       <div style="margin:18px 0 0;">${button("Find homes to save &rarr;", `${SITE}/properties`)}</div>
       <p ${FINE}>Everything you save lives in one place, with the numbers behind each one.</p>
