@@ -49,7 +49,7 @@ const SAVE_HOME_MIN_DAYS = 4; // #3 after unlock
 const LEAD_WINDOW_DAYS = 14; // how far back to look for abandoned /apply leads
 
 const DRY = process.argv.includes("--dry") || process.env.ONBOARDING_DRY_RUN === "1";
-const MANAGE_URL = `${SITE}/dashboard`; // preference-center URL wires in with WS4.1
+const MANAGE_URL = `${SITE}/account/emails`; // the preference center (WS4.1)
 
 type SB = ReturnType<typeof getServiceRoleClient>;
 
