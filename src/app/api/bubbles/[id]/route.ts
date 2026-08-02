@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { recordActivation } from "@/lib/analytics/activation";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +113,17 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Activation milestone (0.3) — only when the user explicitly turns an existing
+  // area's alert ON (area-create logs 'save_area'; disabling is not a milestone).
+  if (body.alerts_enabled === true) {
+    await recordActivation({
+      kind: "enable_alert",
+      userId: user.id,
+      context: { scope: "area", bubble_id: id },
+    });
+  }
+
   return NextResponse.json({ item: data });
 }
 

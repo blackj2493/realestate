@@ -6,6 +6,7 @@ import { SENDERS } from "@/lib/alerts/senders";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import { SITE } from "@/lib/alerts/emailShell";
 import { unsubscribeUrl } from "@/lib/alerts/unsubscribe";
+import { recordActivation } from "@/lib/analytics/activation";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,13 @@ export async function POST(req: NextRequest) {
       console.error("[address-watches] insert failed:", error.message);
       return NextResponse.json({ success: false, error: "Could not save your watch" }, { status: 500 });
     }
+
+    // Activation milestone (0.3) — best-effort, never blocks the response.
+    await recordActivation({
+      kind: "watch_address",
+      email,
+      context: { address_key: addressKey, city: city || null },
+    });
 
     // Best-effort confirmation — the DB row is the lead; email failure must not 500.
     // Observable + non-throwing (a missing/bad key is logged + recorded, not silent).

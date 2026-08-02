@@ -13,6 +13,7 @@
 
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { recordActivation } from "@/lib/analytics/activation";
 import type {
   Bubble,
   BubbleAreaType,
@@ -152,5 +153,15 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Activation milestone (0.3) — saving an area (city / community / drawn) is one of
+  // the strongest activation signals; best-effort, never blocks the response.
+  await recordActivation({
+    kind: "save_area",
+    userId: user.id,
+    email: user.email ?? null,
+    context: { area_type: v.payload.area_type, name: v.payload.name },
+  });
+
   return NextResponse.json({ item: rowToBubble(data as Record<string, unknown>) });
 }

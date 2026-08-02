@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { recordActivation } from "@/lib/analytics/activation";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,14 @@ export async function POST(req: Request) {
   );
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Activation milestone (0.3) — best-effort, never blocks the response.
+  await recordActivation({
+    kind: "save_listing",
+    userId: user.id,
+    context: { listing_key: key },
+  });
+
   return NextResponse.json({ ok: true });
 }
 
