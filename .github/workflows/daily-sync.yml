@@ -249,6 +249,22 @@ jobs:
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
         run: npx tsx scripts/worker/alerts.ts
 
+      # Onboarding drip — the milestone-gated welcome sequence (engagement plan WS1.2).
+      # Additive + continue-on-error so it can never break the core sync. Fail-closed:
+      # no-ops if RESEND_API_KEY is unset AND self-skips until migration 105
+      # (user_email_lifecycle) is applied, so it can't re-send without idempotency.
+      # Needs the search-only Typesense key for 2B's live example dashboard.
+      - name: Send Onboarding Sequence
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY: ${{ secrets.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY }}
+        run: npx tsx scripts/worker/onboarding.ts
+
       # Refresh cached listing detail for everything synced today so nightly changes
       # appear immediately instead of within the page's 1h TTL. Additive — must never
       # break the core sync, so continue-on-error; no-ops cleanly if REVALIDATE_SECRET
