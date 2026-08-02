@@ -17,7 +17,7 @@ export type BoardId =
   | 'suite'
   | 'fresh'
   | 'price_drop'
-  | 'density'
+  | 'high_dom'
   | 'carry';
 
 export interface BoardDef {
@@ -44,8 +44,6 @@ const days = (v: number | undefined | null) =>
   v == null || !Number.isFinite(v) ? '—' : `${Math.round(v)}d`;
 const score6 = (v: number | undefined | null) =>
   v == null || !Number.isFinite(v) ? '—' : `${v}/6`;
-const sqft = (v: number | undefined | null) =>
-  v == null || !Number.isFinite(v) || v <= 0 ? '—' : `${Math.round(v).toLocaleString()} sf`;
 
 export const BOARDS: Record<BoardId, BoardDef> = {
   cap_rate: {
@@ -92,16 +90,18 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     rawFilterBy: 'TotalPriceDrop:>0',
     objectives: ['Target distressed & off-market deals'],
   },
-  density: {
-    id: 'density',
-    title: 'Surplus-Parking Lots',
-    metricField: 'LotSqftTotal',
-    metricLabel: 'LOT',
-    formatMetric: sqft,
-    sortBy: 'LotSqftTotal',
+  high_dom: {
+    id: 'high_dom',
+    title: 'Highest True DOM',
+    metricField: 'TrueDom',
+    metricLabel: 'TRUE DOM',
+    formatMetric: days,
+    sortBy: 'TrueDom',
     sortOrder: 'desc',
-    rawFilterBy: 'is_density_ready:=true',
-    objectives: ['Land assembly / development'],
+    // Longest genuinely-on-market listings (True DOM stitches relists back together) —
+    // the motivated-seller / negotiation-leverage board. Mirror of `fresh` (asc).
+    rawFilterBy: 'TrueDom:>=0',
+    objectives: ['Target distressed & off-market deals'],
   },
   carry: {
     id: 'carry',
@@ -122,7 +122,7 @@ export const DEFAULT_BOARD_ORDER: BoardId[] = [
   'suite',
   'fresh',
   'price_drop',
-  'density',
+  'high_dom',
   'carry',
 ];
 
