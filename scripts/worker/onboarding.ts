@@ -47,6 +47,12 @@ const FINISH_MIN_DAYS = 1;
 const FINISH_MAX_DAYS = 14; // stop nagging after two weeks
 const DRIP_MIN_DAYS = 2; // 2A/2B after unlock
 const SAVE_HOME_MIN_DAYS = 4; // #3 after unlock
+// Upper age bound on the drip (2A/2B/#3). Without it, the FIRST run would email every
+// existing user who ever unlocked — a backfill blast + deliverability spike. Capping to
+// ~30 days keeps onboarding a first-month experience and scopes the initial run to recent
+// signups only. Tunable via env for the very first turn-on (e.g. set to 3 to go
+// forward-only, then raise once the base is caught up).
+const DRIP_MAX_DAYS = Number(process.env.ONBOARDING_DRIP_MAX_DAYS) || 30;
 const LEAD_WINDOW_DAYS = 14; // how far back to look for abandoned /apply leads
 
 const DRY = process.argv.includes("--dry") || process.env.ONBOARDING_DRY_RUN === "1";
@@ -230,7 +236,7 @@ async function main(): Promise<void> {
         }
       } else {
         const unlockedDays = (now - Date.parse(p.terms_accepted_at as string)) / DAY;
-        if (unlockedDays >= DRIP_MIN_DAYS) {
+        if (unlockedDays >= DRIP_MIN_DAYS && unlockedDays <= DRIP_MAX_DAYS) {
           const regions = await loadRegions(sb, p.id as string);
           if (regions.length === 0) {
             const messageId = "onboarding_add_area";
