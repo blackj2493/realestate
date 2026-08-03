@@ -99,3 +99,121 @@ describe('fetchMediaForKeys — pagination beyond the 100-record page cap', () =
     expect(failedKeys.size).toBe(0);
   });
 });
+
+describe('fetchMediaForKeys — size-variant fallback', () => {
+  /** Serves records filtered by the ImageSizeDescription pinned in the $filter. */
+  function sizeAwareFetch(dataset: any[], onSize?: (size: string) => void) {
+    return vi.fn().mockImplementation(async (url: string) => {
+      const filter = decodeURIComponent(new URL(url).searchParams.get('$filter') ?? '');
+      const size = /ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '';
+      onSize?.(size);
+      const keys = [...filter.matchAll(/ResourceRecordKey eq '([^']+)'/g)].map((m) => m[1]);
+      const rows = dataset.filter(
+        (r) => r.ImageSizeDescription === size && keys.includes(r.ResourceRecordKey)
+      );
+      return fakeResponse({ value: rows });
+    });
+  }
+
+  const photo = (key: string, size: string, i: number) => ({
+    ResourceRecordKey: key,
+    MediaURL: `https://cdn/${key}-${size}-${i}.jpg`,
+    MediaObjectID: `${key}-${size}-${i}`,
+    ImageSizeDescription: size,
+    Order: i,
+  });
+
+  it('falls back to Large when a listing has no Medium variant', async () => {
+    // The permanent false-empty: AMPRE has photos, just not at Medium.
+    const dataset = [photo('K1', 'Large', 0), photo('K1', 'Large', 1)];
+    vi.stubGlobal('fetch', sizeAwareFetch(dataset));
+
+    const { media, failedKeys } = await fetchMediaForKeys(['K1'], 'tok');
+    expect(media.get('K1')?.length).toBe(2);
+    expect(media.get('K1')?.[0].MediaURL).toBe('https://cdn/K1-Large-0.jpg');
+    expect(failedKeys.size).toBe(0);
+  });
+
+  it('walks Medium → Large → Largest → Thumbnail and stops at the first hit', async () => {
+    const sizes: string[] = [];
+    const dataset = [photo('K1', 'Largest', 0)];
+    vi.stubGlobal('fetch', sizeAwareFetch(dataset, (s) => sizes.push(s)));
+
+    const { media } = await fetchMediaForKeys(['K1'], 'tok');
+    expect(media.get('K1')?.length).toBe(1);
+    // Tried Medium, then Large, then Largest — and stopped: no Thumbnail request.
+    expect(sizes).toEqual(['Medium', 'Large', 'Largest']);
+  });
+
+  it('never mixes sizes for one listing (no duplicate photos in media_urls)', async () => {
+    // K1 has BOTH Medium and Large variants of the same 2 photos. Asking for every
+    // size at once would list each photo twice — the Medium pass must win outright.
+    const dataset = [
+      photo('K1', 'Medium', 0),
+      photo('K1', 'Medium', 1),
+      photo('K1', 'Large', 0),
+      photo('K1', 'Large', 1),
+    ];
+    const sizes: string[] = [];
+    vi.stubGlobal('fetch', sizeAwareFetch(dataset, (s) => sizes.push(s)));
+
+    const { media } = await fetchMediaForKeys(['K1'], 'tok');
+    expect(media.get('K1')?.length).toBe(2);
+    expect(media.get('K1')?.every((m) => m.MediaURL.includes('Medium'))).toBe(true);
+    expect(sizes).toEqual(['Medium']); // no fallback request at all
+  });
+
+  it('only re-probes the keys that came back empty', async () => {
+    // K1 has Medium, K2 only has Large. The fallback must carry K2 alone.
+    const dataset = [photo('K1', 'Medium', 0), photo('K2', 'Large', 0)];
+    const perSizeKeys: Record<string, string[]> = {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        const filter = decodeURIComponent(new URL(url).searchParams.get('$filter') ?? '');
+        const size = /ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '';
+        const keys = [...filter.matchAll(/ResourceRecordKey eq '([^']+)'/g)].map((m) => m[1]);
+        perSizeKeys[size] = keys;
+        return fakeResponse({
+          value: dataset.filter(
+            (r) => r.ImageSizeDescription === size && keys.includes(r.ResourceRecordKey)
+          ),
+        });
+      })
+    );
+
+    const { media } = await fetchMediaForKeys(['K1', 'K2'], 'tok');
+    expect(media.get('K1')?.length).toBe(1);
+    expect(media.get('K2')?.length).toBe(1);
+    expect(perSizeKeys.Medium).toEqual(['K1', 'K2']);
+    expect(perSizeKeys.Large).toEqual(['K2']); // K1 is settled, not re-probed
+  });
+
+  it('does NOT run the fallback for a key whose primary fetch failed', async () => {
+    // A failed fetch means "unknown", not "empty" — re-probing it at another size
+    // during an outage just burns requests and can manufacture a false-empty.
+    const sizes: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        const filter = decodeURIComponent(new URL(url).searchParams.get('$filter') ?? '');
+        sizes.push(/ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '');
+        return fakeResponse('bad request', { ok: false, status: 400 });
+      })
+    );
+
+    const { media, failedKeys } = await fetchMediaForKeys(['K1'], 'tok');
+    expect(media.size).toBe(0);
+    expect(failedKeys.has('K1')).toBe(true);
+    expect(sizes).toEqual(['Medium']);
+  });
+
+  it('never requests LargestNoWatermark (§6.3(c))', async () => {
+    const sizes: string[] = [];
+    vi.stubGlobal('fetch', sizeAwareFetch([], (s) => sizes.push(s)));
+
+    await fetchMediaForKeys(['K1'], 'tok');
+    expect(sizes).toEqual(['Medium', 'Large', 'Largest', 'Thumbnail']);
+    expect(sizes).not.toContain('LargestNoWatermark');
+  });
+});
