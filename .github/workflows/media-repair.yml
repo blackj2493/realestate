@@ -1,0 +1,103 @@
+name: Media Repair
+
+# Manual photo repair for listings whose gallery is blank while the feed has photos.
+#
+# Exists because the two root causes need prod credentials to act on, and those live
+# only here as repo secrets:
+#   1. Listings whose photos AMPRE never generated a 'Medium' variant for. The ETL
+#      pinned its /Media query to Medium, so these were stored as permanent
+#      false-empties. mediaEnrichment.ts now falls back Large → Largest → Thumbnail;
+#      this workflow is what re-runs the affected keys through it.
+#   2. Listings starved by the nightly reconciliation, which restarted its keyset
+#      scan at the top every night behind a row cap and so never reached late-sorting
+#      key prefixes (X- = Hamilton/Niagara/Waterloo/London). Migration 107 gives that
+#      sweep a resumable cursor; the migration step below applies it.
+#
+# Steps 2 and 3 are read-only diagnostics; only step 4 writes, and only when
+# `apply` is true. Safe to re-run — every step is idempotent.
+#
+# NOTE (new-workflow gotcha, same as refresh-mortgage-rate.yml): a workflow is only
+# dispatchable once this file is on the DEFAULT branch.
+on:
+  workflow_dispatch:
+    inputs:
+      listing_keys:
+        description: 'Space-separated ListingKeys to diagnose and repair (e.g. "X13163816 W12345678")'
+        required: true
+        default: 'X13163816'
+      apply:
+        description: 'Write the recovered photos (false = dry run, diagnostics only)'
+        required: false
+        default: 'true'
+      run_migration:
+        description: 'Apply migration 107 (sync_state.cursor_key) first. Idempotent.'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: media-repair
+  cancel-in-progress: false
+
+jobs:
+  media-repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Additive DDL (ADD COLUMN IF NOT EXISTS) — instant, no table rewrite.
+      # continue-on-error: without cursor_key the reconciliation sweep degrades to its
+      # old non-resumable behaviour rather than failing, so a missing DATABASE_URL must
+      # not block the per-key repair below, which is the point of the run.
+      - name: Apply migration 107 (sync_state.cursor_key)
+        if: ${{ github.event.inputs.run_migration != 'false' }}
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/applyMigrationFiles.ts 107_sync_state_cursor_key.sql
+
+      # Read-only. Prints, per key, the Supabase row state next to AMPRE's FULL
+      # per-size media inventory, and names which of the four causes applies.
+      - name: Diagnose
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          # Via env, never inlined into the script body — a ${{ }} interpolation
+          # inside `run:` is a shell-injection seam even for collaborator-only input.
+          LISTING_KEYS: ${{ github.event.inputs.listing_keys }}
+        run: |
+          for key in $LISTING_KEYS; do
+            npx tsx scripts/admin/diagnoseListingMedia.ts "$key" || true
+          done
+
+      # The actual repair: re-fetch /Media for these keys (with the size fallback) and
+      # re-upsert through the daily sync's own path, so Supabase and Typesense agree.
+      - name: Repair
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          LISTING_KEYS: ${{ github.event.inputs.listing_keys }}
+          APPLY_INPUT: ${{ github.event.inputs.apply }}
+        run: |
+          FLAG=""
+          if [ "$APPLY_INPUT" != "false" ]; then FLAG="--apply"; fi
+          # shellcheck disable=SC2086 -- LISTING_KEYS is intentionally word-split into args
+          npx tsx scripts/admin/repairListingMedia.ts $LISTING_KEYS $FLAG
