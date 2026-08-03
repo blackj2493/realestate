@@ -1,6 +1,6 @@
 {
   "generatedForDateUtc": "2026-08-03",
-  "dataAsOf": "2026-08-02T06:25:08.125+00:00",
+  "dataAsOf": "2026-08-03T06:32:21.756+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,7 +9,7 @@
       "region": "Brampton",
       "headline": "19% of active Brampton listings have cut their asking price",
       "figure": "19%",
-      "sampleN": 2269,
+      "sampleN": 2210,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
       "context": "typical reduction 8.3%"
@@ -17,18 +17,18 @@
     {
       "kind": "days_on_market",
       "region": "Richmond Hill",
-      "headline": "The typical active Richmond Hill listing has now sat 101 days",
-      "figure": "101 days",
-      "sampleN": 1130,
+      "headline": "The typical active Richmond Hill listing has now sat 103 days",
+      "figure": "103 days",
+      "sampleN": 1098,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
     {
       "kind": "inventory",
       "region": "Richmond Hill",
-      "headline": "Richmond Hill is sitting at 5.8 months of supply",
-      "figure": "5.8 months of supply",
-      "sampleN": 1130,
+      "headline": "Richmond Hill is sitting at 5.6 months of supply",
+      "figure": "5.6 months of supply",
+      "sampleN": 1098,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
       "whySurprising": "Highest months-of-supply of the markets tracked (≈4–6 = balanced; above tilts to buyers)."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 7.2% rental yield",
       "figure": "7.2% gross yield",
-      "sampleN": 3927,
+      "sampleN": 3821,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
