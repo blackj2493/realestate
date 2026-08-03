@@ -44,6 +44,7 @@
  */
 import 'dotenv/config';
 import Typesense, { Client } from 'typesense';
+import { Client as PgClient } from 'pg';
 import { extractSoldListingData, upsertSoldListings } from './ingester';
 import { processBatch } from './sync';
 import { toSoldDocument, importSoldBatch, getSoldAdminClient } from './soldIndexer';
@@ -185,6 +186,54 @@ async function repairSoldChunk(raws: any[]): Promise<{ vaulted: number; anchored
   return { vaulted: raws.length, anchored, indexed };
 }
 
+const HEARTBEAT_TERMINAL = ['sold', 'closed', 'closed sale', 'leased', 'terminated', 'expired', 'suspended'];
+
+/**
+ * HEARTBEAT — persist the Active snapshot to `listings.last_seen_at`.
+ *
+ * The delta sync (Query A) never stamps last_seen_at, so ~40% of rows are NULL (migration 082)
+ * and the region RPCs' freshness gate is forced to treat NULL as live — keeping dead rows in the
+ * active-set / %-stale / months-of-supply. ghostReconcile already holds the FULL active key set
+ * (it fetched it to diff the index), so persisting it here is free — no extra feed enumeration.
+ *
+ * This only POPULATES the signal (and reports the listings-table ghost count for visibility). It
+ * is the enabling step for a later, reviewed flip of the region-RPC gate to `last_seen_at >=
+ * now()-30d` (or a purge) — deferred until a few weekly stamps have accrued so a listing briefly
+ * absent from one snapshot is never mistaken for dead. pg via DATABASE_URL; skips gracefully (so
+ * the core reconcile is never blocked) if the secret is absent.
+ */
+async function stampLastSeenHeartbeat(activeKeys: string[], apply: boolean): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    console.log('   ⏭️  DATABASE_URL not set — skipping last_seen_at heartbeat (add the secret to enable).');
+    return;
+  }
+  const pg = new PgClient({ connectionString: process.env.DATABASE_URL });
+  await pg.connect();
+  try {
+    await pg.query('CREATE TEMP TABLE swept (listing_key text PRIMARY KEY)');
+    await pg.query('INSERT INTO swept (listing_key) SELECT DISTINCT unnest($1::text[]) ON CONFLICT DO NOTHING', [activeKeys]);
+    const ourActive = `list_price >= 50000 AND standard_status IS NOT NULL AND standard_status <> ALL($1::text[])`;
+    const recon = await pg.query(
+      `SELECT
+         (SELECT count(*) FROM listings WHERE ${ourActive}) AS our_active,
+         (SELECT count(*) FROM listings l WHERE ${ourActive}
+            AND NOT EXISTS (SELECT 1 FROM swept s WHERE s.listing_key = l.listing_key)) AS absent_from_feed
+       `,
+      [HEARTBEAT_TERMINAL]
+    );
+    const r = recon.rows[0];
+    console.log(`   listings active=${r.our_active} · absent-from-feed (region-metric ghosts)=${r.absent_from_feed}`);
+    if (!apply) {
+      console.log('   (dry-run — no stamp)');
+      return;
+    }
+    const upd = await pg.query('UPDATE listings l SET last_seen_at = now() FROM swept s WHERE s.listing_key = l.listing_key');
+    console.log(`   ✅ heartbeat: stamped last_seen_at on ${upd.rowCount} listings row(s).`);
+  } finally {
+    await pg.end();
+  }
+}
+
 async function main() {
   if (!IDX_TOKEN || !VOW_TOKEN) throw new Error('PROPTX_IDX_TOKEN / PROPTX_VOW_TOKEN missing');
   const ts = tsClient();
@@ -198,6 +247,9 @@ async function main() {
 
   console.log('\n2️⃣  Fetching feed Active snapshot…');
   const active = await fetchActiveKeySnapshot();
+
+  console.log('\n2️⃣.5  Heartbeat: persisting last_seen_at from the snapshot…');
+  await stampLastSeenHeartbeat([...active], APPLY);
 
   let ghosts = [...propIds].filter((id) => !active.has(id));
   console.log(`\n3️⃣  Ghost candidates: ${ghosts.length}`);

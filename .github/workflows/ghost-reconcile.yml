@@ -57,6 +57,9 @@ jobs:
           PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
           PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          # Session-pooler URL for the last_seen_at heartbeat (stampLastSeenHeartbeat, raw pg).
+          # If unset the reconcile still runs and the heartbeat step no-ops with a warning.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/worker/ghostReconcile.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
 
       - name: Notify operator
