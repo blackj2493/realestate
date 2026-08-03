@@ -603,6 +603,13 @@ const SOLD_STATUS_FILTER = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`
  *  from its own cursor next night — nothing is lost. */
 const SOLD_DELTA_MAX_PAGES = 150;
 
+const ACTIVE_CURSOR_ROW_ID = 'active';
+const ACTIVE_STATUS_FILTER = `StandardStatus eq 'Active'`;
+/** Active delta page cap. Normal daily active churn ≈ 5.5k mods (~55 pages); 400 gives
+ *  multi-day catch-up slack (~40k records). A capped run reports caughtUp=false and resumes
+ *  from the 'active' cursor next run — nothing is lost (mirrors Query B). */
+const ACTIVE_DELTA_MAX_PAGES = 400;
+
 export async function readSoldCursor(defaultIso: string): Promise<string> {
   const supabase = getServiceRoleClient();
   const { data, error } = await supabase
@@ -631,6 +638,38 @@ export async function updateSoldCursor(
     .update({ last_sync_timestamp: timestamp, status, updated_at: new Date().toISOString() })
     .eq('id', SOLD_CURSOR_ROW_ID);
   if (error) throw new Error(`update sold cursor: ${error.message}`);
+}
+
+/** Active-sync cursor (sync_state id='active'), seeded from the master cursor on first run —
+ *  mirrors readSoldCursor so Query A gets its own drift-proof per-page cursor advance. */
+export async function readActiveCursor(defaultIso: string): Promise<string> {
+  const supabase = getServiceRoleClient();
+  const { data, error } = await supabase
+    .from('sync_state')
+    .select('last_sync_timestamp')
+    .eq('id', ACTIVE_CURSOR_ROW_ID)
+    .maybeSingle();
+  if (error) throw new Error(`read active cursor: ${error.message}`);
+  if (!data) {
+    const { error: insErr } = await supabase
+      .from('sync_state')
+      .insert({ id: ACTIVE_CURSOR_ROW_ID, last_sync_timestamp: defaultIso, status: 'idle' });
+    if (insErr) throw new Error(`init active cursor: ${insErr.message}`);
+    return defaultIso;
+  }
+  return data.last_sync_timestamp;
+}
+
+export async function updateActiveCursor(
+  timestamp: string,
+  status: 'running' | 'completed' | 'failed'
+): Promise<void> {
+  const supabase = getServiceRoleClient();
+  const { error } = await supabase
+    .from('sync_state')
+    .update({ last_sync_timestamp: timestamp, status, updated_at: new Date().toISOString() })
+    .eq('id', ACTIVE_CURSOR_ROW_ID);
+  if (error) throw new Error(`update active cursor: ${error.message}`);
 }
 
 /** One ordered sold page (VOW). Single $orderby only — AMPRE rejects compound
@@ -790,6 +829,140 @@ export async function runSoldSync(
     console.error(`   ❌ Sold sync failed: ${err?.message || err}`);
     // Cursor intentionally NOT advanced past the last fully-persisted page.
     await updateSoldCursor(cursor, 'failed').catch(() => {});
+    throw err;
+  }
+  return result;
+}
+
+// ─── Query A (Active Sync): ordered cursor-advance pagination ─────────────────
+// Mirrors Query B's drift-proof shape (see runSoldSync) for the ACTIVE feed: single
+// $orderby=ModificationTimestamp asc, the cursor advances per fully-persisted page, and the
+// boundary second is drained via `eq`+$skip before the cursor crosses it. Replaces the old
+// $skip-OFFSET/no-$orderby walk that drifted and permanently dropped active listings.
+
+/** One ordered active page (IDX). $skip is used ONLY inside the bounded boundary-second drain. */
+async function fetchActivePage(filter: string, skip = 0): Promise<any[]> {
+  const token = IDX_TOKEN;
+  if (!token) throw new Error('PROPTX_IDX_TOKEN environment variable is not set');
+  const url =
+    `${API_BASE_URL}/Property?$filter=${encodeURIComponent(filter)}` +
+    `&$orderby=${encodeURIComponent('ModificationTimestamp asc')}&$top=100` +
+    (skip > 0 ? `&$skip=${skip}` : '');
+  const result = await fetchWithRetry<any>(url, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!result.success || !result.data) {
+    throw new Error(`Query A fetch failed: ${result.error}`);
+  }
+  return result.data.value ?? [];
+}
+
+export interface ActiveSyncResult {
+  records: number;
+  pages: number;
+  caughtUp: boolean;
+  errors: string[];
+}
+
+/**
+ * Catch up ACTIVE listings from the 'active' cursor, up to maxPages. Each persisted page runs
+ * the exact prior Query-A body: rooms enrichment → media enrichment → media-clobber preserve →
+ * processBatch (builds true_dom + campaign history + the Typesense doc). The cursor only
+ * advances after a page (and its boundary-second drain) fully persists (upserts make re-runs
+ * safe), so a drift or a crash never permanently skips a record.
+ */
+export async function runActiveSync(
+  defaultIso: string,
+  maxPages = ACTIVE_DELTA_MAX_PAGES
+): Promise<ActiveSyncResult> {
+  let cursor = await readActiveCursor(defaultIso);
+  console.log(`   📖 Active cursor: ${cursor}`);
+  await updateActiveCursor(cursor, 'running');
+  const supabaseClient = getServiceRoleClient();
+  const result: ActiveSyncResult = { records: 0, pages: 0, caughtUp: false, errors: [] };
+
+  /** Persist one page — byte-identical to the prior inline Query-A per-page body. */
+  const persistActivePage = async (listings: any[]): Promise<void> => {
+    console.log('   📐 Enriching batch with room dimensions...');
+    const roomsAttached = await enrichActiveListingsWithRooms(listings);
+    console.log(`   📐 Rooms attached to ${roomsAttached}/${listings.length} listings`);
+
+    console.log('   🖼️  Enriching batch with media (photo URLs)...');
+    const mediaAttached = await enrichListingsWithMedia(listings, IDX_TOKEN);
+    console.log(`   🖼️  Media attached to ${mediaAttached}/${listings.length} listings`);
+
+    const preservedActive = await preserveExistingMedia(listings, supabaseClient);
+    if (preservedActive > 0) {
+      console.log(`   🛡️  Preserved existing media on ${preservedActive} listings (AMPRE empty)`);
+    }
+
+    console.log('   🔄 Processing batch through ETL pipeline...');
+    const syncResult = await processBatch(listings);
+    if (!syncResult.success) {
+      result.errors.push(...syncResult.supabase.errors, ...syncResult.typesense.errors);
+    }
+  };
+
+  try {
+    while (result.pages < maxPages) {
+      const listings = await fetchActivePage(
+        `${ACTIVE_STATUS_FILTER} and ModificationTimestamp gt ${cursor}`
+      );
+      if (listings.length === 0) {
+        result.caughtUp = true;
+        break;
+      }
+      await persistActivePage(listings);
+      result.records += listings.length;
+      result.pages++;
+
+      const lastTs = listings[listings.length - 1]?.ModificationTimestamp;
+      if (!lastTs) {
+        console.warn('   ⚠️  Active page last record has no ModificationTimestamp — stopping.');
+        result.caughtUp = listings.length < 100;
+        break;
+      }
+      console.log(`   📄 Active page ${result.pages}: +${listings.length} (cursor → ${lastTs})`);
+
+      if (listings.length < 100) {
+        // Short page = feed exhausted; the boundary second arrived complete.
+        cursor = lastTs;
+        result.caughtUp = true;
+        break;
+      }
+
+      // Full page: drain the boundary second fully via `eq`+$skip before the cursor
+      // advances past it (overlap with rows already processed is idempotent).
+      let drainComplete = false;
+      const eqFilter = `${ACTIVE_STATUS_FILTER} and ModificationTimestamp eq ${lastTs}`;
+      for (let skip = 0; result.pages < maxPages; skip += 100) {
+        await sleep(PAGE_DELAY_MS);
+        const drain = await fetchActivePage(eqFilter, skip);
+        if (drain.length > 0) {
+          await persistActivePage(drain);
+          result.records += drain.length;
+          result.pages++;
+          console.log(`   📄 Active drain: +${drain.length} @ ${lastTs} (skip ${skip})`);
+        }
+        if (drain.length < 100) {
+          drainComplete = true;
+          break;
+        }
+      }
+      if (!drainComplete) {
+        // Page cap hit mid-drain — leave the cursor BEFORE lastTs so the next run re-fetches
+        // and re-drains that second (idempotent), never skips it.
+        break;
+      }
+      cursor = lastTs;
+      await sleep(PAGE_DELAY_MS);
+    }
+    await updateActiveCursor(cursor, 'completed');
+  } catch (err: any) {
+    console.error(`   ❌ Active sync failed: ${err?.message || err}`);
+    // Cursor intentionally NOT advanced past the last fully-persisted page.
+    await updateActiveCursor(cursor, 'failed').catch(() => {});
     throw err;
   }
   return result;
@@ -1244,78 +1417,25 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
     // Mark as running
     await updateSyncState(state.lastSyncTimestamp, 0, 'running');
     
-    // ─── Query A: Active Sync (via ModificationTimestamp) ───────────────────
+    // ─── Query A: Active Sync — ordered cursor-advance (drift-proof) ─────────
+    // Query A runs on its OWN cursor row (sync_state id='active'), seeded from the master
+    // cursor on first run, with $orderby=ModificationTimestamp asc + per-page cursor-advance
+    // and a boundary-second `eq` drain — the SAME proven shape as Query B/C. The old $skip
+    // OFFSET walk (no $orderby) drifted across page boundaries on a mutating result set and
+    // permanently dropped records once the cursor moved past them (the ACTIVE-side of the 6
+    // Alexie Way incident; measured 2026-08 = 5,880 residential For-Sale homes missing). A
+    // Query A failure preserves the 'active' cursor before the last fully-persisted page.
     console.log('\n════════════════════════════════════════════════');
     console.log('  QUERY A: Active Listings Sync');
     console.log('════════════════════════════════════════════════\n');
-    
-    let activeSkip = 0;
-    let activeHasMore = true;
-    let currentTimestamp = state.lastSyncTimestamp;
-    
-    do {
-      console.log(`\n📄 Active Page ${result.activePages + 1} (Skip: ${activeSkip}):`);
-      const batch = await fetchActiveListingsBatch(activeSkip, currentTimestamp);
-      
-      if (batch.listings.length === 0) {
-        console.log('   ℹ️  No active listings found in this batch');
-        break;
-      }
-
-      // Enrich with per-room dimensions (separate /PropertyRooms resource) so they
-      // persist into full_payload — the detail page then needs no per-view API call.
-      // Best-effort: never blocks/fails the sync.
-      console.log('   📐 Enriching batch with room dimensions...');
-      const roomsAttached = await enrichActiveListingsWithRooms(batch.listings);
-      console.log(`   📐 Rooms attached to ${roomsAttached}/${batch.listings.length} listings`);
-
-      // Enrich with photo media (separate /Media resource — AMPRE does not support
-      // $expand=Media on /Property). Attached as `media: StoredMedia[]` on each
-      // raw listing; the transformer's selectPrimaryImage/collectMediaUrls helpers
-      // read it from there and persist via full_payload + media_urls columns.
-      console.log('   🖼️  Enriching batch with media (photo URLs)...');
-      const mediaAttached = await enrichListingsWithMedia(batch.listings, IDX_TOKEN);
-      console.log(`   🖼️  Media attached to ${mediaAttached}/${batch.listings.length} listings`);
-
-      // Clobber protection: for listings whose AMPRE fetch returned empty,
-      // restore previously-stored media from Supabase so the impending UPSERT
-      // doesn't wipe a successful prior sync's / backfill's photos.
-      const preservedActive = await preserveExistingMedia(
-        batch.listings,
-        getServiceRoleClient()
-      );
-      if (preservedActive > 0) {
-        console.log(`   🛡️  Preserved existing media on ${preservedActive} listings (AMPRE empty)`);
-      }
-
-      // Process batch through ETL pipeline (sync.ts)
-      console.log('   🔄 Processing batch through ETL pipeline...');
-      const syncResult = await processBatch(batch.listings);
-      
-      if (!syncResult.success) {
-        result.errors.push(...syncResult.supabase.errors);
-        result.errors.push(...syncResult.typesense.errors);
-      }
-      
-      // Update counters
-      result.activeRecords += batch.listings.length;
-      result.activePages++;
-      activeSkip += batch.listings.length;
-      
-      // nextLink is the authoritative "more pages" signal; the ===100 heuristic stays
-      // as a fallback for endpoints that omit nextLink (the /Media endpoint does — see
-      // memory media-reconciliation-gap). Resolves audit MEDIUM-7.
-      activeHasMore = batch.nextLink != null || batch.listings.length === 100;
-      
-      console.log(`   📊 Running totals: ${result.activeRecords} active records, ${result.activePages} pages`);
-      
-      // Rate limit delay
-      console.log(`   ⏳ Rate limiting: sleeping ${PAGE_DELAY_MS}ms...`);
-      await sleep(PAGE_DELAY_MS);
-      
-    } while (activeHasMore);
-    
-    console.log(`\n✅ Query A Complete: ${result.activeRecords} active records, ${result.activePages} pages`);
+    const activeRes = await runActiveSync(state.lastSyncTimestamp);
+    result.activeRecords = activeRes.records;
+    result.activePages = activeRes.pages;
+    result.errors.push(...activeRes.errors);
+    console.log(`\n✅ Query A Complete: ${activeRes.records} active records, ${activeRes.pages} pages, caughtUp=${activeRes.caughtUp}`);
+    if (!activeRes.caughtUp) {
+      console.warn('   ⚠️  Active page cap hit — run did NOT catch up; resumes from the active cursor next run.');
+    }
 
     // ─── Query A2: Media Reconciliation (self-heal new-listing photo lag) ────
     console.log('\n════════════════════════════════════════════════');
