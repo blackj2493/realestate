@@ -1,0 +1,66 @@
+name: Content Data Snapshot
+
+# Produces the daily PUBLIC-SAFE data snapshot that the Content Factory cloud routine drafts
+# from. The routine (a scheduled Claude Code routine on the Max plan) runs in a sandbox with
+# NO secrets and blocked egress, so it cannot read the DB or the live site. This job runs in
+# GitHub Actions — which HAS the Supabase service-role secret — reads the same nightly
+# region_metrics precompute the public /data trackers render (via computeMarketBoardUncached),
+# distills today's most surprising AGGREGATE figures, and commits them to content-queue/data/.
+# The routine then reads content-queue/data/latest.json from its checkout. Nothing posts.
+#
+# TIMING: 09:00 UTC — after the nightly region-metrics refresh (~08:00, per data-health.yml)
+# and before the content routine (10:00 UTC), so a fresh snapshot is waiting for the routine.
+#
+# NEW-WORKFLOW GOTCHA: schedule + workflow_dispatch only activate once this file is on the
+# DEFAULT branch (main). After merge, seed the first snapshot with the Actions "Run workflow"
+# button, or:  gh workflow run content-data-snapshot.yml
+#
+# BRANCH PROTECTION: the commit step pushes straight to main. If main is protected against
+# Actions pushes, allow the github-actions bot to bypass, or point the routine at a data
+# branch instead — either way the snapshot must land where the routine's checkout can read it.
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write # commits the snapshot back to the repo
+
+concurrency:
+  group: content-data-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync / data-health (@supabase/realtime-js needs >=22)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build public-safe snapshot
+        timeout-minutes: 10
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/marketing/contentFactory/snapshotPublicData.ts --write
+
+      - name: Commit snapshot to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content-queue/data
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit (no public-safe angles, or figures unchanged)."
+          else
+            git commit -m "chore(content): daily public-data snapshot ($(date -u +%Y-%m-%d))"
+            git push
+          fi
