@@ -138,6 +138,29 @@ export function marketCamera(name: string): QuickPickMarket | null {
 }
 
 /**
+ * Is this region a WHOLE CITY (as opposed to a community / neighbourhood)? True for a
+ * CITY_GROUPS parent (Toronto/London/Ottawa — the multi-district giants) or one of the
+ * launch-city QUICK_PICK_MARKETS. A finer place typed via search (Woodbridge, Kanata,
+ * Barrhaven) is community-scale and returns false. Name-only heuristic — no Typesense probe.
+ */
+export function isWholeCityRegion(name: string): boolean {
+  const lower = (name ?? "").trim().toLowerCase();
+  if (!lower) return false;
+  if (Object.keys(CITY_GROUPS).some((p) => p.toLowerCase() === lower)) return true;
+  return QUICK_PICK_MARKETS.some((m) => m.name.toLowerCase() === lower);
+}
+
+/**
+ * Default new-listing-alert scope when an area is added (engagement build plan §176).
+ * Adding an area turns alerts ON by default, tiered by breadth to protect deliverability:
+ *   • a WHOLE CITY → 'filtered' ("My filters only" — never a city-wide firehose)
+ *   • a COMMUNITY / neighbourhood / drawn area → 'all' (every new listing; manageable volume)
+ */
+export function defaultAlertScopeForRegion(name: string): "all" | "filtered" {
+  return isWholeCityRegion(name) ? "filtered" : "all";
+}
+
+/**
  * Typesense filter fragment to AND-join into rawFilterBy. Backtick-quoted
  * string values so names with spaces / hyphens parse safely; backticks inside
  * the value are stripped (defensive, no legitimate City/CityRegion/schoolKey

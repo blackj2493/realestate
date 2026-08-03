@@ -33,7 +33,7 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
 
   const body = `
     <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">Hi ${esc(fn)},</p>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">Got your request on <b>${esc(where)}</b> — I'll come back to you personally, fast, with the shadow numbers on this one: True DOM, the full price history, and the Capital Burn Rate the listing never shows. That's the read most buyers never get.</p>
+    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">Got your request on <b>${esc(where)}</b> — I'll come back to you personally, fast, with the shadow numbers on this one: how long it's really been for sale (even after relisting), the full price history, and what it costs to hold each month. That's the read most buyers never get.</p>
     <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 22px;">Anything specific you want me to dig into first?</p>
     <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0;">— Tanmay, PureProperty</p>
     <p style="color:#94a3b8;font-size:11px;margin-top:30px;line-height:1.6;">You asked us about this property on PureProperty.ca. <a href="${unsub}" style="color:#94a3b8;">Not interested — stop these</a>.</p>`;
@@ -41,7 +41,7 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   const text = [
     `Hi ${fn},`,
     "",
-    `Got your request on ${where} — I'll come back to you personally, fast, with the shadow numbers on this one: True DOM, the full price history, and the Capital Burn Rate the listing never shows. That's the read most buyers never get.`,
+    `Got your request on ${where} — I'll come back to you personally, fast, with the shadow numbers on this one: how long it's really been for sale (even after relisting), the full price history, and what it costs to hold each month. That's the read most buyers never get.`,
     "",
     "Anything specific you want me to dig into first?",
     "",

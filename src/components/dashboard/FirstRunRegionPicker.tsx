@@ -105,6 +105,15 @@ export default function FirstRunRegionPicker({
         </div>
       )}
 
+      {/* Tell users what adding an area does for email — alerts are on by default now
+          (§176), controlled by the bell on each area's section below. */}
+      {has && (
+        <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
+          New-listing emails are on for each area you add. Mute or fine-tune any of them
+          with the alert bell on its section below.
+        </p>
+      )}
+
       {/* "Done" just collapses this card — the areas are already live in the dashboard. */}
       <button
         type="button"

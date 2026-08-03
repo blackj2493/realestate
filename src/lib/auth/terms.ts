@@ -14,6 +14,7 @@
  */
 
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { recordActivation } from "@/lib/analytics/activation";
 
 /** Bump when the Terms text materially changes — forces everyone to re-accept. */
 export const CURRENT_TERMS_VERSION = "2026-06-01";
@@ -86,5 +87,16 @@ export async function recordTermsAcceptance(): Promise<{
     .eq("id", user.id);
 
   if (error) return { ok: false, error: error.message };
+
+  // Activation milestone (0.3) — the VOW unlock is the single most important
+  // activation event; log only the first-ever acceptance, not re-accepts.
+  if (firstAcceptance) {
+    await recordActivation({
+      kind: "accept_vow_terms",
+      userId: user.id,
+      email: user.email ?? null,
+    });
+  }
+
   return { ok: true, firstAcceptance, email: user.email ?? undefined };
 }

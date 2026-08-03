@@ -12,6 +12,13 @@ const nextConfig = {
       { source: '/ingest/decide', destination: 'https://us.i.posthog.com/decide' },
     ];
   },
+  async redirects() {
+    // The terminal map lives at /properties. Older emails/links point at /terminal;
+    // keep them working with a permanent (308) redirect.
+    return [
+      { source: '/terminal', destination: '/properties', permanent: true },
+    ];
+  },
   images: {
     // TRREB/MLS photos are already pre-sized (`rs:fit:…` variants) and carry a
     // baked-in watermark that IDX §6.3(f) bars us from altering. Routing them

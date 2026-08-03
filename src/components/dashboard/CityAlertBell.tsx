@@ -4,16 +4,18 @@
  * carries the same alert affordance.
  *
  * City regions live only in localStorage dashboard config, which the nightly worker
- * can't see — so the bell materializes the subscription as a market_bubbles row with
- * area_type 'city' (migration 083; alert-carrier only, filtered out of BubbleSections).
- * States:
- *   - no row yet      → muted bell. Click CREATES the row (alerts default ON server-side).
+ * can't see — so the alert is materialized as a market_bubbles row with area_type 'city'
+ * (migration 083; alert-carrier only, filtered out of BubbleSections).
+ *
+ * Since the tiered default-ON change (§176), ADDING an area auto-creates this row (see
+ * DashboardClient.addRegion), so the bell usually renders already-ON. It remains: the
+ * manual opt-in for regions saved BEFORE that change (which have no row yet), the mute
+ * control, and the All / My-filters scope pair. States:
+ *   - no row yet      → muted bell. Click CREATES the row with the TIERED default scope
+ *                       (whole city → 'filtered'/lens, community → 'all') — never a
+ *                       surprise city-wide firehose.
  *   - row + enabled   → cyan bell. Click mutes (PATCH alerts_enabled=false).
  *   - row + disabled  → muted bell. Click re-enables.
- * Cities start OFF (no row) by design: regions are added for dashboard stats, and
- * auto-enrolling a whole city (Toronto ≈ hundreds of listings/day) into email from a
- * localStorage config would surprise-spam — one explicit tap opts in, matching the
- * consent model of the drawn/school bubbles (which ARE an explicit save, so default ON).
  */
 
 "use client";
@@ -22,6 +24,7 @@ import React, { useEffect, useState } from "react";
 import { Bell, BellOff, Mail } from "lucide-react";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
+import { defaultAlertScopeForRegion } from "@/lib/dashboard/area";
 import { cn } from "@/lib/utils";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
@@ -63,12 +66,16 @@ export default function CityAlertBell({
     setBusy(true);
     try {
       if (!row) {
+        // Apply the tiered default (§176) so a manual opt-in matches the add-area
+        // behaviour: whole city → 'filtered' (this lens), community → 'all'.
+        const scope = defaultAlertScopeForRegion(city);
         await create({
           name: city,
           area_type: "city",
           polygon: [],
           source: { kind: "city", city },
-          filters: null,
+          filters: scope === "filtered" && lens ? { lens } : null,
+          alert_scope: scope,
         });
       } else {
         await setAlertsEnabled(row.id, !enabled);

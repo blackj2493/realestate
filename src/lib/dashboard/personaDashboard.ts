@@ -59,7 +59,7 @@ export const PERSONA_DASHBOARD: Record<PersonaType, PersonaDashboardSpec> = {
     headlineMetrics: ['pctStale', 'priceCutShare', 'soldToList'],
   },
   builders: {
-    featuredBoards: ['density', 'suite', 'cap_rate'],
+    featuredBoards: ['high_dom', 'suite', 'cap_rate'],
     headlineMetrics: ['medianPrice', 'densityShare', 'monthsSupply'],
   },
 };

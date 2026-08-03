@@ -6,6 +6,7 @@ import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import { renderConfirmationEmail } from "@/lib/alerts/confirmationEmail";
 import { unsubscribeUrl } from "@/lib/alerts/unsubscribe";
 import { SITE } from "@/lib/alerts/emailShell";
+import { recordActivation } from "@/lib/analytics/activation";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,13 @@ export async function POST(req: NextRequest) {
       console.error("[listing-alerts] insert failed:", error.message);
       return NextResponse.json({ success: false, error: "Could not save your alert" }, { status: 500 });
     }
+
+    // Activation milestone (0.3) — best-effort, never blocks the response.
+    await recordActivation({
+      kind: "enable_alert",
+      email,
+      context: { scope: "listing", listing_key: listingKey, alert_kind: kind },
+    });
 
     // Best-effort confirmation to the subscriber — the DB row is the lead; email failure must
     // not 500. Doubles as first-touch: gets our domain into their inbox with a concrete promise.
