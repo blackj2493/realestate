@@ -1,0 +1,71 @@
+name: Weekly Backfill Missing Actives
+
+# Self-heal for the ACTIVE-side coverage gap: listings that are Active in the feed but
+# absent from our `listings` table. Query A (the daily active sync) pages with $skip OFFSET
+# and no $orderby, so records drift across page boundaries and get permanently skipped (the
+# active-side of the 6 Alexie Way sold-ghost incident). Measured 2026-08-02: 11,067 feed-active
+# listings missing from our DB — 5,880 of them residential For-Sale homes (~9.6% of the market).
+#
+# This diffs the feed's full Active $select=ListingKey snapshot against our table and re-ingests
+# the missing keys through the exact daily-sync path (processBatch). --limit bounds each run so
+# the ~11k backlog clears over a few weeks and steady-state is only the weekly trickle; photos
+# heal via the nightly media reconcile. A SPIKE in the count is the early warning that Query A's
+# paging regressed further — the proper root-cause fix is converting Query A to ordered
+# cursor-advance paging (mirror Query B), tracked separately.
+#
+# CADENCE: weekly (Wednesdays 09:00 UTC — offset from the Sunday ghost reconcile). Manual full
+# clears via workflow_dispatch (raise/remove --limit).
+on:
+  schedule:
+    - cron: '0 9 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backfill-missing-actives
+  cancel-in-progress: false
+
+jobs:
+  backfill-missing-actives:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: backfill-missing-actives-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Backfill missing actives
+        # Bounded per run so the initial backlog clears over ~3 weeks without blowing the
+        # timeout (each ingested listing does a VOW campaign-history fetch via processBatch,
+        # ~the daily sync's per-listing cost). Resumable: the next run re-diffs and continues.
+        timeout-minutes: 180
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/backfill-missing-actives.ts --apply --limit=4000 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Weekly Backfill Missing Actives
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts
