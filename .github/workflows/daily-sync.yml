@@ -95,6 +95,28 @@ jobs:
           PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
         run: npx tsx scripts/admin/reconcile-sold-from-campaign-history.ts --scan --apply --since-days=7 --window-days=180
 
+      # Re-floor active True DOM to the naive current-listing age. The floor that keeps
+      # true_dom honest — GREATEST(true_dom, days-since-OriginalEntryTimestamp) — lives only
+      # in the core sync's processBatch, which runs on the ModificationTimestamp DELTA. A
+      # listing that is stable in the feed AND has no campaign-history ledger row falls out of
+      # every delta and freezes at true_dom=0 as it ages (2026-08-02: 22k active rows >60d old
+      # reading 0). The region RPCs mask this with a query-time floor, but Typesense/the flat
+      # column do not, so per-listing cards / watchlist / IsStale bubbles under-report DOM and
+      # drop STALE badges. This persists the same floor to the flat column AND pushes
+      # TrueDom/IsStale to the `properties` collection. --min-drift=3 bounds nightly churn
+      # (stable cards within 3 days; a 60d stale-line crossing is always caught immediately).
+      # Placed before the region/market precomputes so the flat column is fresh (they floor at
+      # query time regardless). Raw pg → Session-pooler DATABASE_URL + Typesense admin key.
+      # Additive — must never break the core sync, so continue-on-error. The one-time full
+      # backfill is a manual `--apply` (min-drift 1) run; see the script header.
+      - name: Re-floor Active True DOM
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/refloor-active-true-dom.ts --apply --min-drift=3
+
       # Refresh precomputed condo fee/sqft aggregates from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate condo_fee_stats table; needs
       # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.
