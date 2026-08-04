@@ -154,7 +154,7 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
           <div className="relative border-b border-border bg-background px-3 pb-3 pt-3">
             <div className="flex items-center gap-2">
               {SEARCH_V2_ENABLED ? (
-                <LocationSearchV2 className="min-w-0 flex-1" />
+                <LocationSearchV2 className="min-w-0 flex-1" onSelect={() => setSearchOpen(false)} />
               ) : (
                 <LocationSearch className="min-w-0 flex-1" />
               )}

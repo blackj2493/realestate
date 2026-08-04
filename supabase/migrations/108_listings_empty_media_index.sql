@@ -33,6 +33,15 @@
 -- silently reverts to the 42.7 s seq scan. sweepMissingMedia carries a comment saying so, and
 -- the data-health canary (checkMediaReconcile) fires if the sweep ever scans 0 again.
 --
+-- ONE INDEX, NOT TWO. A companion index on (created_at, listing_key) was proposed for the
+-- recent sweep. It cannot help: that sweep is `created_at >= cutoff ORDER BY listing_key`, and
+-- a created_at-leading index over a RANGE cannot produce listing_key order, so every page
+-- would have to sort the whole matching set. The index below yields the ordering directly and
+-- filters created_at as it goes — ~99% of empty-media rows fall inside the recency window, so
+-- almost nothing is discarded. Measured on the real query: 320 ms recent / 496 ms backlog over
+-- PostgREST, 0.26 ms planned. There is no gap left for a second index to close, and a partial
+-- index still costs a predicate evaluation on every write to `listings`.
+--
 -- CONCURRENTLY so the build takes no write lock on a 255k-row table. This file must therefore
 -- stay a SINGLE statement: applyMigrationFiles.ts sends the whole file in one client.query(),
 -- and a multi-statement simple query runs inside an implicit transaction, which
