@@ -435,9 +435,15 @@ const PAGE_DELAY_MS = 1000;
 //    "nothing needed recovering". Fixed by migration 108's partial index; the keys-first
 //    projection below additionally keeps the scan off the TOAST heap.
 //
-//    The 08-04 run above is the one night it did plan — do not read that as "intermittent
-//    and self-healing". A plan flip is exactly as likely to flip back, which is why the
-//    fix is an index rather than a stats tweak, and why checkMediaReconcile now alerts.
+//    The 08-04 run above did NOT plan on its own — it ran AFTER the index existed, and is
+//    the evidence that the index is what fixed this:
+//        migration 108 applied   2026-08-04 02:58:10 UTC
+//        daily-sync 30881332249  2026-08-04 05:38:44 UTC  →  scanned 1000, recovered 999
+//    That run executed unchanged main-branch code (this branch is unmerged, so neither the
+//    keys-first projection nor the raised budget was deployed). Exactly one variable changed
+//    between a night that recovered 0 and a night that recovered 999. So: not intermittent,
+//    and nothing self-healed — remove the index and the 42.7 s seq scan comes straight back.
+//    checkMediaReconcile alerts if it ever regresses.
 //
 // 2. The 999/1000 recovery rate is the more useful number: essentially every listing the
 //    sweep reaches HAS photos waiting at AMPRE that we never fetched. The backlog is
