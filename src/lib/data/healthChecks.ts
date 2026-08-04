@@ -493,3 +493,88 @@ export function checkMigrationLedger(files: string[], applied: string[]): Proble
   }
   return out;
 }
+
+/**
+ * The media-reconciliation sweep silently doing nothing — the failure this check exists for.
+ *
+ * From at least 2026-06-30 to 2026-08-03, reconcileMissingMedia recovered ZERO listings every
+ * night while the sync run stayed green. Its page query timed out (a planner mis-estimate sent
+ * it to a 42.7 s seq scan against an 8 s statement_timeout — see migration 108), the sweep
+ * caught the error exactly as designed, logged a non-fatal warning, and reported success.
+ * 10,751 active listings sat with a blank gallery and nothing surfaced it.
+ *
+ * The trap is that "scanned 0" is AMBIGUOUS: it is the correct, healthy answer when there is
+ * no work to do, and the signature of total failure when there is. So the rule is a JOIN of
+ * two facts the sweep alone cannot see — its own outcome, and whether work was outstanding:
+ *
+ *   status='failed'                        → error, unconditionally (the sweep knows it broke)
+ *   emptyMedia > tolerance AND scanned = 0 → error (work was waiting and nothing was looked at)
+ *   sweep row missing / stale              → warn  (the job stopped running at all)
+ *
+ * Deliberately NOT alerting on "emptyMedia is large" by itself: a legitimate bulk insert
+ * (backfill-missing-actives.ts adds ~10k photo-less rows in one run) makes that number spike
+ * for perfectly healthy reasons. What must never happen is the number being large while the
+ * sweep reports having looked at nothing.
+ */
+export function checkMediaReconcile(input: {
+  emptyMedia: number;
+  sweeps: { id: string; scanned: number | null; status: string | null; updatedAt: string | null }[];
+  nowMs: number;
+  /** Empty-media rows tolerated before "scanned 0" is treated as a failure. */
+  tolerance?: number;
+  /** Hours before a sweep row is considered stale (default 36 — one missed night is fine). */
+  staleHours?: number;
+}): Problem[] {
+  const out: Problem[] = [];
+  const tolerance = input.tolerance ?? 100;
+  const staleHours = input.staleHours ?? 36;
+
+  if (input.sweeps.length === 0) {
+    return [
+      {
+        severity: "warn",
+        check: "media-reconcile",
+        detail:
+          "no media-reconcile sweep rows in sync_state — the nightly sweep has never recorded an outcome " +
+          "(is migration 107 applied, and has daily-sync run since?)",
+      },
+    ];
+  }
+
+  const totalScanned = input.sweeps.reduce((n, s) => n + (s.scanned ?? 0), 0);
+
+  for (const s of input.sweeps) {
+    if (s.status === "failed") {
+      out.push({
+        severity: "error",
+        check: "media-reconcile",
+        detail:
+          `media sweep '${s.id}' recorded status=failed (scanned ${s.scanned ?? 0}) — its page query is erroring. ` +
+          "Check the plan first: idx_listings_empty_media (migration 108) must still match the .or() filter in sweepMissingMedia.",
+      });
+    }
+    const ageH = s.updatedAt ? (input.nowMs - new Date(s.updatedAt).getTime()) / 3_600_000 : null;
+    if (ageH === null || ageH > staleHours) {
+      out.push({
+        severity: "warn",
+        check: "media-reconcile",
+        detail:
+          `media sweep '${s.id}' last recorded an outcome ` +
+          (ageH === null ? "never" : `${ageH.toFixed(0)}h ago`) +
+          ` (>${staleHours}h) — the nightly reconcile step may have stopped running`,
+      });
+    }
+  }
+
+  if (input.emptyMedia > tolerance && totalScanned === 0) {
+    out.push({
+      severity: "error",
+      check: "media-reconcile",
+      detail:
+        `${input.emptyMedia} active listings have no photos but the media sweeps scanned 0 rows — ` +
+        "the reconcile is not doing any work. This is the 2026-06/07 silent-timeout signature (migration 108).",
+    });
+  }
+
+  return out;
+}

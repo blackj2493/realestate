@@ -14,8 +14,10 @@
  *
  * This finds those keys (feed Active minus our table) and re-ingests them through the EXACT
  * daily-sync path (processBatch) so true_dom / campaign history / Typesense doc are all built
- * identically. Media is not fetched inline (the same tradeoff ghostReconcile's sold-repair
- * makes) — the nightly media reconcile heals photos; the listing appears immediately.
+ * identically. Photos ARE fetched inline: deferring them to the nightly media reconcile is only
+ * safe while that reconcile works, and on 2026-08-03 this script fed 10,642 photo-less rows into
+ * one that had been silently timing out since June (migration 108). A backfilled listing now
+ * arrives complete instead of depending on a downstream job.
  *
  * NOTE: the proper root-cause fix is converting Query A to ordered cursor-advance paging
  * (mirror Query B). This backfill clears the accrued backlog and is a safety net; run it (or a
@@ -32,6 +34,7 @@
 import 'dotenv/config';
 import { Client } from 'pg';
 import { processBatch } from '../worker/sync';
+import { enrichListingsWithMedia } from '../worker/mediaEnrichment';
 
 const API = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
 const IDX_TOKEN = (process.env.PROPTX_IDX_TOKEN || '').trim();
@@ -138,10 +141,31 @@ async function main() {
     console.log(`   residential-only: ${payloads.length}/${before} kept.`);
   }
 
-  let ingested = 0, failed = 0;
+  let ingested = 0, failed = 0, withPhotos = 0;
   for (let i = 0; i < payloads.length; i += PROCESS_CHUNK) {
     const chunk = payloads.slice(i, i + PROCESS_CHUNK);
     try {
+      // Fetch photos INLINE rather than deferring to the nightly reconcile.
+      //
+      // This used to be skipped ("photos heal via the nightly media reconcile"), which is a
+      // fine tradeoff only while that reconcile works. On 2026-08-03 this script inserted
+      // 11,195 listings, 10,642 of them photo-less, straight into a reconcile that had been
+      // silently timing out since June (migration 108) — so they were not "healing", they
+      // were a permanent gallery-less backlog, and that is what the user actually reported.
+      //
+      // Enriching here removes the dependency entirely: a backfilled listing arrives complete.
+      // It also costs almost nothing relative to the payload fetch this loop already does, and
+      // enrichListingsWithMedia is failure-aware — a key whose /Media fetch fails keeps its
+      // empty marker unwritten and stays eligible for the sweep, so the safety net still
+      // applies to the tail. Non-fatal: a media outage must not stop listings appearing.
+      if (IDX_TOKEN) {
+        try {
+          await enrichListingsWithMedia(chunk, IDX_TOKEN);
+          withPhotos += chunk.filter((p: any) => Array.isArray(p?.media) && p.media.length > 0).length;
+        } catch (e) {
+          console.warn(`   ⚠️  media enrichment chunk ${i} failed (listings still ingest):`, (e as Error)?.message ?? e);
+        }
+      }
       const r = await processBatch(chunk); // active path — builds true_dom + campaign history + Typesense doc
       ingested += r.supabase.inserted;
       failed += r.supabase.failed;
@@ -149,9 +173,12 @@ async function main() {
       failed += chunk.length;
       console.warn(`   ⚠️  processBatch chunk ${i} failed:`, (e as Error)?.message ?? e);
     }
-    console.log(`   ingested ${Math.min(i + PROCESS_CHUNK, payloads.length)}/${payloads.length} (ok ${ingested}, failed ${failed})`);
+    console.log(`   ingested ${Math.min(i + PROCESS_CHUNK, payloads.length)}/${payloads.length} (ok ${ingested}, failed ${failed}, with photos ${withPhotos})`);
   }
-  console.log(`\n✅ Backfill complete: ${ingested} ingested, ${failed} failed. (Photos heal via the nightly media reconcile.)`);
+  console.log(
+    `\n✅ Backfill complete: ${ingested} ingested, ${failed} failed, ${withPhotos} arrived with photos. ` +
+      'Any still photo-less are picked up by the nightly media reconcile.'
+  );
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error('❌ backfill-missing-actives failed:', e?.message ?? e); process.exit(1); });

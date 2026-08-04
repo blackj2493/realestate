@@ -75,3 +75,6 @@ scripts/admin/.backfill-*-cursor.json
 # Anchored to the repo root so it does NOT also swallow src/lib/audit/ (VOW access-log
 # source), which slipped uncommitted and broke the build — see hotfix.
 /audit/
+
+# Playwright demo session state (contains auth cookies)
+scripts/demos/.auth-state.json
