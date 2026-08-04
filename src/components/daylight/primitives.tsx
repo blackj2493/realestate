@@ -182,7 +182,9 @@ const STATUS_TONE: Record<StatusTone, { bg: string; dark: string }> = {
   new: { bg: "bg-[color:var(--dt-up)]", dark: "dark:bg-cyan-400/10 dark:text-cyan-400 dark:border-cyan-400/30" },
   off: { bg: "bg-[color:var(--dt-warn)]", dark: "dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/30" },
   sold: { bg: "bg-[color:var(--dt-down)]", dark: "dark:bg-rose-400/10 dark:text-rose-400 dark:border-rose-400/30" },
-  stale: { bg: "bg-[color:var(--dt-down)]", dark: "dark:bg-rose-400/10 dark:text-rose-400 dark:border-rose-400/30" },
+  // NOT --dt-down/rose — that is SOLD. A stale listing is still for sale, so it
+  // takes the one desaturated tone in the set and never competes with an outcome.
+  stale: { bg: "bg-[color:var(--dt-stale)]", dark: "dark:bg-slate-400/10 dark:text-slate-300 dark:border-slate-400/40" },
   leased: { bg: "bg-[color:var(--dt-violet)]", dark: "dark:bg-violet-400/10 dark:text-violet-400 dark:border-violet-400/30" },
   drop: { bg: "bg-[color:var(--dt-up)]", dark: "dark:bg-emerald-400/10 dark:text-emerald-400 dark:border-emerald-400/30" },
 };

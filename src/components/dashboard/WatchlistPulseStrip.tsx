@@ -43,7 +43,8 @@ export default function WatchlistPulseStrip({ rollup }: { rollup: WatchlistRollu
       { count: leased, label: "leased", color: "text-violet-700 dark:text-violet-400", plural: false },
       { count: relisted, label: "relisted", color: "text-cyan-700 dark:text-cyan-400", plural: false },
       { count: offMarket, label: "off-market", color: "text-amber-700 dark:text-amber-400", plural: true },
-      { count: goingStale, label: "going stale", color: "text-rose-700 dark:text-rose-400", plural: false },
+      // Desaturated on purpose — matches StatusTone "stale". Rose belongs to sold.
+      { count: goingStale, label: "going stale", color: "text-slate-700 dark:text-slate-300", plural: false },
     ] as const
   ).filter((s) => s.count > 0);
 
