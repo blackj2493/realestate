@@ -43,10 +43,12 @@ import {
   checkDrift,
   checkEmailFailures,
   checkMediaReconcile,
+  checkOnboardingExample,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
 } from '@/lib/data/healthChecks';
+import { buildAreaData, EXAMPLE_REGION } from '@/lib/alerts/onboardingData';
 
 const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
 const TO = process.env.SYNC_ALERT_EMAIL || '';
@@ -350,6 +352,27 @@ async function checkMediaReconcileHealth(): Promise<void> {
   );
 }
 
+/**
+ * Onboarding example integrity — the intro email (2B) builds a live dashboard for a HARDCODED
+ * region (EXAMPLE_REGION = "Woodbridge"), which resolves only via the COMMUNITY_ALIASES
+ * expansion in area.ts. This runs the SAME resolver against live Typesense and asserts the
+ * PRIMARY example still resolves to inventory — catching a TRREB CityRegion rename that would
+ * silence the alias and ship a "0 new / 0 for sale" intro email. The email itself falls back
+ * to a whole city, so this is a WARN (fix the alias), not a user-facing outage.
+ */
+async function checkOnboardingExampleHealth(): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY) {
+    problems.push({
+      severity: 'warn',
+      check: 'onboarding-example',
+      detail: 'NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY not set — onboarding example not checked',
+    });
+    return;
+  }
+  const data = await buildAreaData(EXAMPLE_REGION);
+  problems.push(...checkOnboardingExample({ region: EXAMPLE_REGION, activeCount: data.activeCount }));
+}
+
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -405,6 +428,7 @@ async function main(): Promise<void> {
     ['estimate freshness', checkEstimateHealth],
     ['email delivery', checkEmailHealth],
     ['media reconcile', checkMediaReconcileHealth],
+    ['onboarding example', checkOnboardingExampleHealth],
     ['migrations', checkMigrations],
   ] as const) {
     try {

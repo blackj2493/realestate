@@ -41,6 +41,9 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Search-only Typesense key — the onboarding-example check resolves the intro
+          # email's example region against the live properties index (getTypesenseClient).
+          NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY: ${{ secrets.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY }}
           # Optional — set these to receive the email alert (the red run fires regardless):
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}

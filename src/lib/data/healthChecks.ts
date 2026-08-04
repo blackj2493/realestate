@@ -578,3 +578,40 @@ export function checkMediaReconcile(input: {
 
   return out;
 }
+
+/** Minimum live active inventory the onboarding example region must resolve to. Woodbridge
+ *  sits at ~266; 25 clears normal fluctuation but catches a break to ~0 (a CityRegion rename
+ *  that silences the COMMUNITY_ALIASES expansion), which would ship a 0/0 intro email. */
+export const ONBOARDING_EXAMPLE_MIN_ACTIVE = 25;
+
+/**
+ * The onboarding email's example dashboard (2B) is built from a HARDCODED region name
+ * (EXAMPLE_REGION = "Woodbridge"). "Woodbridge" is not a raw TRREB facet value — it resolves
+ * only through the COMMUNITY_ALIASES expansion (→ East + West Woodbridge). If TRREB ever
+ * renames those CityRegions, the alias silently yields 0 and the intro email shows "0 new /
+ * 0 for sale" (the exact bug this replays). The email itself falls back to a whole city so a
+ * user never sees the 0 — which is precisely why this WARN exists: without it the primary
+ * example could rot to the fallback unnoticed. Warn, not error: the fallback protects the
+ * user, so this is "fix the alias soon", not "page now".
+ */
+export function checkOnboardingExample(input: {
+  region: string;
+  activeCount: number | null;
+  minActive?: number;
+}): Problem[] {
+  const min = input.minActive ?? ONBOARDING_EXAMPLE_MIN_ACTIVE;
+  if (input.activeCount == null || input.activeCount < min) {
+    return [
+      {
+        severity: "warn",
+        check: "onboarding-example",
+        detail:
+          `onboarding example region "${input.region}" resolves to ` +
+          `${input.activeCount ?? "null"} active listings (< ${min}) — the CityRegion alias ` +
+          "(COMMUNITY_ALIASES in area.ts) may have drifted from TRREB's facet values. The email " +
+          "falls back to a whole city so users don't see a 0, but fix the alias.",
+      },
+    ];
+  }
+  return [];
+}

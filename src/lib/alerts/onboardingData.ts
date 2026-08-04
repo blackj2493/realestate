@@ -22,8 +22,18 @@ import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { OnboardingAreaData, OnboardingListingRow, SaveHomeListing } from "./onboardingEmails";
 
-/** The representative area 2B shows when the recipient has no saved area of their own. */
+/** The representative area 2B shows when the recipient has no saved area of their own.
+ *  Woodbridge is a colloquial umbrella community — it resolves to live inventory via the
+ *  COMMUNITY_ALIASES expansion in area.ts (→ East + West Woodbridge). */
 export const EXAMPLE_REGION = "Woodbridge";
+
+/**
+ * Example-area candidates for 2B, tried in order until one resolves to LIVE active inventory.
+ * The primary (Woodbridge) resolves via the alias expansion; the whole-city fallbacks are a
+ * safety net so the email can NEVER present a 0/empty example if a TRREB CityRegion rename
+ * ever breaks the alias — a whole city always resolves. The heading follows whichever wins.
+ */
+export const EXAMPLE_REGION_CANDIDATES: readonly string[] = [EXAMPLE_REGION, "Vaughan", "Mississauga"];
 
 function mapRow(l: ListingDocument, board: BoardDef): OnboardingListingRow {
   const addr = l.UnparsedAddress?.trim() || l.City || "Address unavailable";
@@ -74,14 +84,27 @@ export async function buildAreaData(region: string): Promise<OnboardingAreaData>
   };
 }
 
-/** 2B's example area (Woodbridge), fully swallowed on failure so the email still sends. */
-export async function buildExampleAreaData(): Promise<OnboardingAreaData | null> {
-  try {
-    return await buildAreaData(EXAMPLE_REGION);
-  } catch (e) {
-    console.warn("[onboarding] example area fetch failed:", e);
-    return null;
+/**
+ * 2B's example area — the FIRST candidate that resolves to live active inventory (never a
+ * 0/empty example). Fully swallowed on failure so the email still sends; returns null only
+ * when nothing resolves, which the renderer degrades to generic copy. `build` is injectable
+ * for tests — production uses buildAreaData.
+ */
+export async function buildExampleAreaData(
+  build: (region: string) => Promise<OnboardingAreaData> = buildAreaData
+): Promise<OnboardingAreaData | null> {
+  for (const region of EXAMPLE_REGION_CANDIDATES) {
+    try {
+      const data = await build(region);
+      // A resolving area has live active inventory; 0/null means the name matched no facet
+      // value (a fragmented/renamed community) — try the next candidate rather than ship a 0.
+      if ((data.activeCount ?? 0) > 0) return data;
+      console.warn(`[onboarding] example area '${region}' resolved to no active inventory — trying next`);
+    } catch (e) {
+      console.warn(`[onboarding] example area '${region}' fetch failed:`, e);
+    }
   }
+  return null;
 }
 
 /**

@@ -66,6 +66,26 @@ export const CITY_GROUPS: Record<string, string[]> = {
 };
 
 /**
+ * Colloquial UMBRELLA community names that TRREB does NOT store as a single CityRegion
+ * value — an exact `CityRegion:=\`Name\`` match hits ~nothing, so a dashboard section (or the
+ * onboarding email's example) built from the bare name renders empty. TRREB splits these
+ * into directional/sub-communities; a name here expands to its real CityRegion members.
+ *   • Woodbridge (Vaughan) → "East Woodbridge" + "West Woodbridge".
+ *
+ * Members are LIVE CityRegion facet values (verified against the properties collection).
+ * Distinct from CITY_GROUPS, whose members are CITY values: these are CityRegion values
+ * under one parent city, so the expansion filters CityRegion, not City.
+ *
+ * This is only reached for a colloquial name used RAW (hardcoded like EXAMPLE_REGION, or a
+ * legacy seed) — real user saves already pick the exact member ("East Woodbridge") from the
+ * facet-backed search, and those resolve through the exact-match branch untouched. Keep this
+ * table SHORT: an entry is only needed for an umbrella name something actually passes raw.
+ */
+export const COMMUNITY_ALIASES: Record<string, string[]> = {
+  Woodbridge: ["East Woodbridge", "West Woodbridge"],
+};
+
+/**
  * The region string to SAVE for a listing's raw TRREB `City` value.
  *
  * A listing's City is often a sub-value of a real municipality — "Toronto C12",
@@ -176,6 +196,12 @@ export function areaFilter(area: Area): string {
       // op per member + per ||) blows the 100-op `filter_by` ceiling for large groups
       // (Ottawa = 51 areas). Group members are City values, so no CityRegion clause needed.
       return `City:=[${group.map((c) => `\`${c}\``).join(", ")}]`;
+    }
+    const community = COMMUNITY_ALIASES[safe];
+    if (community) {
+      // Umbrella community (e.g. Woodbridge) → its real CityRegion members. IN form = one
+      // filter op. Members are CityRegion values under a parent city, so no City clause.
+      return `CityRegion:=[${community.map((c) => `\`${c}\``).join(", ")}]`;
     }
     return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
   }
