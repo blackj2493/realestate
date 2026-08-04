@@ -508,7 +508,7 @@ function AbsorptionPanel({
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-          Absorption &amp; Sell-Through
+          How fast homes sell
         </h2>
         <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
           New
@@ -698,7 +698,7 @@ function SoldDynamicsPanel({ d, loading }: { d: SoldDynamicsData | null; loading
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-          Sold-Side Dynamics
+          How homes are selling
         </h2>
         <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
           New
@@ -776,12 +776,12 @@ function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loadi
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-          Rent &amp; Gross Yield
+          Rent &amp; rental return
         </h2>
         <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
           New
         </span>
-        <span className="text-[11px] text-muted-foreground">typical monthly rent &amp; gross yield by home size</span>
+        <span className="text-[11px] text-muted-foreground">typical monthly rent &amp; rental return by home size</span>
       </div>
 
       {loading ? (
@@ -794,7 +794,7 @@ function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loadi
             <span>Beds</span>
             <span className="text-right">Rent / mo</span>
             <span className="text-right">Med. price</span>
-            <span className="pl-3">Gross yield</span>
+            <span className="pl-3">Rental return</span>
           </div>
           {rows.map((r) => {
             const y = r.grossYieldPct;
@@ -1165,7 +1165,7 @@ function SellThroughPanel({ o, loading }: { o: ListingOutcomesData | null; loadi
     <div className="mt-5 border border-border bg-card/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-          Sell-Through
+          Did it actually sell?
         </h2>
         <span className="terminal-font rounded-sm bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
           New
@@ -1436,7 +1436,7 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         {/* KPI grid */}
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
           <KpiCard
-            label="Median Sold Price"
+            label="Typical Sold Price"
             value={score.medianPrice != null ? fmtPrice(score.medianPrice) : "—"}
             sub={
               <span className="inline-flex flex-wrap items-center gap-x-1.5">
@@ -1451,18 +1451,18 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
             loading={loading}
           />
           <KpiCard
-            label="Median $ / Sqft"
+            label="Typical Price / Sq Ft"
             value={score.medianPpsf != null ? `$${Math.round(score.medianPpsf)}` : "—"}
             sub={<YoYBadge pct={score.ppsfYoyPct} />}
             loading={loading}
           />
           <KpiCard
-            label="Sold-to-List"
+            label="Sold vs. Asking"
             value={score.soldToListPct != null ? `${score.soldToListPct.toFixed(1)}%` : "—"}
             sub={
               score.pctOverAsking != null
                 ? `${score.pctOverAsking.toFixed(0)}% sold over asking`
-                : "low list-price coverage"
+                : "not enough asking-price data"
             }
             loading={loading}
           />
@@ -1650,28 +1650,28 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
         {(score.medianCapRate != null || score.topCapRate != null) && (
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <KpiCard
-              label="Median Cap Rate (Active)"
+              label="Typical Rental Return"
               value={score.medianCapRate != null ? `${score.medianCapRate.toFixed(2)}%` : "—"}
               loading={loading}
             />
             <KpiCard
-              label="Top Cap Rate (Active)"
+              label="Best Rental Return"
               value={score.topCapRate != null ? `${score.topCapRate.toFixed(2)}%` : "—"}
               loading={loading}
             />
             <KpiCard
-              label="Avg Cap Rate (Active)"
+              label="Average Rental Return"
               value={stats?.stats?.avgCapRate != null ? `${stats.stats.avgCapRate.toFixed(2)}%` : "—"}
               loading={loading}
             />
             <KpiCard
-              label="List-Price Coverage"
+              label="Asking Price on File"
               value={
                 trend?.summary.listPriceCoverage != null
                   ? `${Math.round(trend.summary.listPriceCoverage * 100)}%`
                   : "—"
               }
-              sub="of sold have a comparable list price"
+              sub="of solds have an asking price to compare"
               loading={loading}
             />
           </div>
