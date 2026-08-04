@@ -66,13 +66,18 @@ const ESTIMATE_STALE_HOURS = Number(process.env.ESTIMATE_STALE_HOURS) || 48;
 // Backlog threshold: every active row is re-based by the twice-weekly full recompute (≤ ~4-day
 // cycle), so 120h (5d) sits safely above it — only rows that missed a recompute age past it.
 const ESTIMATE_MAX_AGE_HOURS = Number(process.env.ESTIMATE_MAX_AGE_HOURS) || 120;
-// Tolerance covers the steady-state active residual, NOT orphans. The nightly prune
-// (prune-property-estimates.ts) removes estimates for sold/terminal listings, so what
-// legitimately stays >120h stale is ~1-1.5k genuinely-ACTIVE listings the refresh can't
-// re-estimate (no comps AND no GLA → skipped without a write; measured ~1.3k, 2026-08-02).
-// 2500 sits above that floor yet well below a real under-run (a failed recompute shard ≈
-// 20k, or the prune ceasing → orphans re-accumulate past this within days).
-const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 2500;
+// Tolerance covers two benign populations: (1) the steady-state ACTIVE residual — ~1.35k
+// genuinely-active listings the refresh can't re-estimate (no comps AND no GLA → skipped
+// without a write; measured 2026-08); and (2) a rolling ORPHAN backlog. The nightly prune
+// (prune-property-estimates.ts) only deletes an orphan once its estimate is >120h stale — the
+// SAME threshold this canary counts at — so a whole recompute cohort's sold/terminal subset
+// ages past 120h together and transiently counts as "stale" until the next daily prune clears
+// it (measured 2026-08-03: +1,674 terminal orphans → 3,033 total, a false alarm; pruned back
+// to 1,357). 4000 covers residual + a full cohort's orphan crossing with margin, while staying
+// an order of magnitude below a real under-run (a failed recompute shard ≈ 20k). A cleaner fix
+// (prune orphans promptly, or exclude them from the count) needs a whole-table listings status
+// join that trips the statement timeout — deferred; this calibrates to the real baseline.
+const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 4000;
 // Empty-media listings tolerated before "the sweep scanned 0 rows" counts as a failure
 // rather than a healthy no-op. New listings legitimately land photo-less (AMPRE publishes
 // /Property before /Media), so a steady trickle is normal; 100 sits above that trickle and

@@ -51,6 +51,11 @@
     --dt-warn: #b3730f; /* amber — off-market / warm market */
     --dt-cold: #3061c7; /* blue — relisted / cold market */
     --dt-violet: #7c4dc4; /* leased */
+    /* slate — "still live, just sitting". Deliberately the only DESATURATED status
+       hue: stale is a condition of an active listing, not a status change, so it
+       must not read as an event. Every saturated hue above is already spoken for,
+       and reusing --dt-down made STALE indistinguishable from SOLD. */
+    --dt-stale: #5b6b7c;
     --dt-gold: #c47d10; /* persona lens */
     --dt-gold-line: #a86a0c;
     --dt-sh: 0 1px 1px rgba(10, 24, 40, 0.03), 0 5px 14px -6px rgba(10, 24, 40, 0.12); /* instrument-panel lift */
