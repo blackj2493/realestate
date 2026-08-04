@@ -26,6 +26,7 @@
  *   npx tsx --env-file=.env.local scripts/admin/repairListingMedia.ts X13163816
  *   npx tsx --env-file=.env.local scripts/admin/repairListingMedia.ts X1316381 W1234567 --apply
  *   npx tsx --env-file=.env.local scripts/admin/repairListingMedia.ts --all-empty --apply
+ *   npx tsx --env-file=.env.local scripts/admin/repairListingMedia.ts --all-empty --apply --no-revalidate
  *   npx tsx --env-file=.env.local scripts/admin/repairListingMedia.ts --all-empty --limit=500 --apply
  *
  * Env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, PROPTX_IDX_TOKEN,
@@ -40,6 +41,7 @@ import { processBatch } from '../worker/sync';
 const APPLY = process.argv.includes('--apply');
 const ALL_EMPTY = process.argv.includes('--all-empty');
 const LIMIT = Math.max(0, Number(process.argv.find((a) => a.startsWith('--limit='))?.split('=')[1]) || 0);
+const NO_REVALIDATE = process.argv.includes('--no-revalidate');
 const KEYS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 
 // Listings enriched + upserted per round. enrichListingsWithMedia OR-batches 25 keys
@@ -65,6 +67,7 @@ interface Totals {
   noPhotos: number;
   writeFailed: number;
   notFound: number;
+  revalidated: number;
 }
 
 /** Every listing with a blank gallery, keyset-paginated by listing_key. */
@@ -89,6 +92,39 @@ async function collectEmptyKeys(supabase: any, cap: number): Promise<string[]> {
     if (rows.length < pageSize) break;
   }
   return keys;
+}
+
+/**
+ * Bust the per-listing data cache for keys we just repaired.
+ *
+ * The detail page is force-dynamic (per-request VOW gating), but getListingDetailCached
+ * wraps the DATA in unstable_cache with revalidate: 3600. So a listing whose page was
+ * rendered shortly BEFORE its repair keeps serving the empty gallery for up to an hour —
+ * the row is fixed, the page still says "NO MEDIA". Verified on X10402479: 0 images
+ * before the bust, rendering immediately after.
+ *
+ * Best-effort and non-fatal: without REVALIDATE_SECRET (or on any error) the cache simply
+ * ages out on its own within the hour. Sequential on purpose — this hits production, and
+ * a repair job has no business generating a burst of load against the live site.
+ */
+async function revalidateKeys(keys: string[]): Promise<number> {
+  const secret = process.env.REVALIDATE_SECRET;
+  if (!secret || NO_REVALIDATE) return 0;
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
+  let busted = 0;
+  for (const listingKey of keys) {
+    try {
+      const res = await fetch(`${site}/api/revalidate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret },
+        body: JSON.stringify({ listingKey }),
+      });
+      if (res.ok) busted++;
+    } catch {
+      /* the 1h TTL is the backstop */
+    }
+  }
+  return busted;
 }
 
 async function repairChunk(
@@ -134,6 +170,7 @@ async function repairChunk(
     return;
   }
   totals.recovered += gained.length;
+  totals.revalidated += await revalidateKeys(gained.map((p: any) => String(p.ListingKey)));
 }
 
 (async () => {
@@ -158,7 +195,7 @@ async function repairChunk(
 
   console.log(`\n🔧 Media repair for ${targets.length} listing(s) — ${APPLY ? 'APPLY' : 'DRY RUN'}\n`);
 
-  const totals: Totals = { considered: targets.length, recovered: 0, noPhotos: 0, writeFailed: 0, notFound: 0 };
+  const totals: Totals = { considered: targets.length, recovered: 0, noPhotos: 0, writeFailed: 0, notFound: 0, revalidated: 0 };
   for (let i = 0; i < targets.length; i += CHUNK) {
     const chunk = targets.slice(i, i + CHUNK);
     try {
@@ -180,6 +217,7 @@ async function repairChunk(
   console.log(`  no photos at any size : ${totals.noPhotos}`);
   console.log(`  not in listings : ${totals.notFound}`);
   console.log(`  write failed    : ${totals.writeFailed}`);
+  console.log(`  cache busted    : ${totals.revalidated}` + (NO_REVALIDATE ? ' (--no-revalidate)' : !process.env.REVALIDATE_SECRET ? ' (REVALIDATE_SECRET unset — pages refresh within 1h)' : ''));
   if (!APPLY) console.log('\nRe-run with --apply to persist.');
 
   // Non-zero only on a genuine write failure — "this listing truly has no photos" is a
