@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import type { ListingDocument } from "@/lib/typesense/client";
-import type { BoardDef } from "@/lib/dashboard/boards";
+import type { ResolvedBoardView } from "@/lib/dashboard/boards";
 import WatchButton from "@/components/watchlist/WatchButton";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 
 export default function PlaylistRow({
   listing,
-  board,
+  view,
 }: {
   listing: ListingDocument;
-  board: BoardDef;
+  view: ResolvedBoardView;
 }) {
   const raw = listing.thumbnailUrl || listing.primaryImageUrl;
-  const metric = board.formatMetric(listing[board.metricField] as number | undefined);
+  const metric = view.formatMetric(listing[view.metricField] as number | undefined);
   const addr = listing.UnparsedAddress?.trim() || listing.City || "Address unavailable";
 
   return (

@@ -47,6 +47,10 @@ describe('buildCampaignHistoryRow', () => {
     expect(row.total_price_drop).toBe(0);
     expect(row.is_stale).toBe(false);
   });
+  it('carries the lease track (from the 2025 lease campaign)', () => {
+    expect(row.lease_true_dom).toBe(57); // 2025-06-10T13:28 -> its 2025-08-07 terminal (floored)
+    expect(row.lease_total_price_drop).toBe(0);
+  });
   it('sets first_seen_date to the oldest entry (date only)', () => {
     expect(row.first_seen_date).toBe('2025-06-10');
   });
@@ -74,6 +78,7 @@ describe('isLedgerStale', () => {
 describe('preferFreshOrPrior', () => {
   const row = (campaign_count: number): CampaignHistoryRow => ({
     property_hash: 'h', events: [], true_dom: 0, total_price_drop: 0,
+    lease_true_dom: 0, lease_total_price_drop: 0,
     campaign_count, first_seen_date: null, is_stale: false, fetched_at: '2026-06-08T18:00:00.000Z',
   });
   it('keeps a richer prior when the fetch returned nothing (no regression)', () => {

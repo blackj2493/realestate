@@ -9,6 +9,8 @@ export interface CampaignHistoryRow {
   events: CampaignEvent[];
   true_dom: number;
   total_price_drop: number;
+  lease_true_dom: number;
+  lease_total_price_drop: number;
   campaign_count: number;
   first_seen_date: string | null;
   is_stale: boolean;
@@ -63,6 +65,8 @@ export function buildCampaignHistoryRow(
     events,
     true_dom: m.true_dom,
     total_price_drop: m.total_price_drop,
+    lease_true_dom: m.lease_true_dom,
+    lease_total_price_drop: m.lease_total_price_drop,
     campaign_count: m.campaign_count,
     first_seen_date: oldestEntryDate(events),
     is_stale: m.is_stale,
@@ -102,7 +106,7 @@ export async function readCampaignHistory(
   const { data, error } = await supabase
     .from('property_campaign_history')
     .select(
-      'property_hash, events, true_dom, total_price_drop, campaign_count, first_seen_date, is_stale, fetched_at'
+      'property_hash, events, true_dom, total_price_drop, lease_true_dom, lease_total_price_drop, campaign_count, first_seen_date, is_stale, fetched_at'
     )
     .eq('property_hash', propertyHash)
     .maybeSingle();

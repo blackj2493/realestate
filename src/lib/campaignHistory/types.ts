@@ -19,10 +19,14 @@ export interface CampaignEvent {
   address: string | null;           // UnparsedAddress
 }
 
-/** Result of computeTrueDomFromCampaigns. */
+/** Result of computeTrueDomFromCampaigns. `true_dom`/`total_price_drop` are the SALE
+ *  track; `lease_true_dom`/`lease_total_price_drop` are the LEASE track (rental-native
+ *  metrics for the "For Rent" dashboard boards). See computeTrueDomFromCampaigns. */
 export interface CampaignTrueDom {
   true_dom: number;
   total_price_drop: number;
+  lease_true_dom: number;
+  lease_total_price_drop: number;
   campaign_count: number;
   is_stale: boolean;
 }

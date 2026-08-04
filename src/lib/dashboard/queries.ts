@@ -11,7 +11,7 @@
  */
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
-import type { BoardDef } from './boards';
+import { resolveBoardView, type BoardDef } from './boards';
 import type { BasementFilter, MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
@@ -37,11 +37,14 @@ export async function fetchBoard(
   lens: MarketActivityLens,
   perPage = 5
 ): Promise<ListingDocument[]> {
+  // In "For Rent" mode a board swaps to its rental-native metric (sort + filter);
+  // buildScopeFilter already AND-joins TransactionType:=`For Lease`.
+  const view = resolveBoardView(board, lens.transactionType);
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(buildScopeFilter(area, lens), board.rawFilterBy),
-    sortBy: board.sortBy,
-    sortOrder: board.sortOrder,
+    rawFilterBy: combine(buildScopeFilter(area, lens), view.rawFilterBy),
+    sortBy: view.sortBy,
+    sortOrder: view.sortOrder,
     perPage,
   });
   return res.listings;

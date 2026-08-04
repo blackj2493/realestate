@@ -48,6 +48,10 @@ function soldQueryParams(area: Area, lens: MarketActivityLens, limit: number): s
   const p = new URLSearchParams({
     windowDays: String(lens.windowDays),
     limit: String(limit),
+    // Follow the sale/lease lens: in "For Rent" mode this column shows recent LEASES
+    // (DealType=leased, ClosePrice = monthly rent), not sold sales. The route +
+    // buildSoldFilter + mapSoldDoc already handle `leased` end-to-end.
+    dealType: lens.transactionType === "lease" ? "leased" : "sold",
   });
   if (area.kind === "region") {
     p.set("region", area.name);
@@ -178,6 +182,9 @@ export default function MarketActivityPanel({
   // Collapsed to ROW_LIMIT until the user taps "Show more" — keeps the mobile list short.
   const visibleNew = newRows ? (newExpanded ? newRows : newRows.slice(0, ROW_LIMIT)) : null;
   const visibleSold = soldRows ? (soldExpanded ? soldRows : soldRows.slice(0, ROW_LIMIT)) : null;
+  // In "For Rent" mode the right column is recent LEASES, not sold sales — relabel it
+  // (header / price tag / empty + gate copy) to match the data the lens now fetches.
+  const isLease = lens.transactionType === "lease";
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -228,7 +235,7 @@ export default function MarketActivityPanel({
 
       {/* Sold (VOW) — gated: anon sees the count + blurred "Login Required" rows */}
       <div className="flex flex-col border border-border bg-card/40">
-        <CountHeader title="Sold" accent="text-emerald-700 dark:text-emerald-400" count={soldCount} />
+        <CountHeader title={isLease ? "Leased" : "Sold"} accent="text-emerald-700 dark:text-emerald-400" count={soldCount} />
         <div>
           {soldLocked ? (
             <div className="relative min-h-[208px]">
@@ -247,8 +254,8 @@ export default function MarketActivityPanel({
               <VowGateOverlay
                 message={
                   soldCount && soldCount > 0
-                    ? `${soldCount.toLocaleString()} recent sale${soldCount === 1 ? "" : "s"} — sign in to view`
-                    : "Sign in to view recent sold comps"
+                    ? `${soldCount.toLocaleString()} recent ${isLease ? "lease" : "sale"}${soldCount === 1 ? "" : "s"} — sign in to view`
+                    : `Sign in to view recent ${isLease ? "leased" : "sold"} comps`
                 }
               />
             </div>
@@ -258,7 +265,7 @@ export default function MarketActivityPanel({
               {soldErr && <p className="px-3 py-6 text-center text-xs text-rose-700 dark:text-rose-400">Failed to load</p>}
               {soldRows && soldRows.length === 0 && (
                 <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  No sales in this window
+                  {isLease ? "No leases in this window" : "No sales in this window"}
                 </p>
               )}
               {visibleSold?.map((l) => (
@@ -269,7 +276,7 @@ export default function MarketActivityPanel({
                   city={l.city}
                   brokerage={l.brokerage}
                   price={l.closePrice}
-                  priceLabel="SOLD"
+                  priceLabel={isLease ? "LEASED" : "SOLD"}
                   caption={soldDateFmt(l.soldDate)}
                   image={l.primaryImageUrl}
                   propertySubType={l.propertySubType}
@@ -291,7 +298,7 @@ export default function MarketActivityPanel({
       </div>
       {/* TRREB §6.3(i)/(k): reliability + bona-fide-interest notice, local to the sold rows. */}
       <p className="text-[10px] leading-snug text-muted-foreground md:col-span-2">
-        Sold data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for
+        {isLease ? "Leased" : "Sold"} data via TRREB VOW — deemed reliable but not guaranteed accurate by PROPTX; for
         consumers with a bona fide interest only, not for any commercial purpose.{" "}
         <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">
           Operated under licence
