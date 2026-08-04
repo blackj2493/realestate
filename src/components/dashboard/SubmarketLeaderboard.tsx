@@ -32,27 +32,27 @@ const RANK_OPTIONS: {
   key: RankKey;
   label: string;
   hint: string;
-  /** Hover definition — keeps the precise/investor term for power users. */
+  /** Hover definition — a plain, literal description of exactly what the metric measures. */
   tip: string;
   field: keyof LeaderboardRow;
 }[] = [
   {
     key: "yield",
     label: "Rental return",
-    hint: "typical rental return",
-    tip: "Typical rental return — a year's rent ÷ the price (investors call this the cap rate). Higher = better income.",
+    hint: "rental return",
+    tip: "A year's rent as a share of the home's price (also called the cap rate).",
     field: "medianCapRate",
   },
   {
     key: "leverage",
-    label: "Slow to sell",
+    label: "Sitting 60+ days",
     hint: "share of homes sitting 60+ days",
-    tip: "Buyer's-market signal — the share of listings that have sat 60+ days. More sitting = more room to negotiate.",
+    tip: "The share of homes for sale that have been on the market 60 days or more.",
     field: "stalePct",
   },
   {
     key: "inventory",
-    label: "Most listings",
+    label: "Homes for sale",
     hint: "number of homes for sale",
     tip: "How many homes are currently for sale in the market.",
     field: "activeCount",
