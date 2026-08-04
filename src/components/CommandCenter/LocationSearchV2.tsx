@@ -24,6 +24,7 @@ import { useOpenListing } from "@/hooks/useOpenListing";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { priceConfig } from "@/lib/filters/fundamentals";
 import { federatedSuggest } from "@/lib/search/federatedSuggest";
+import { resolveCityCamera } from "@/lib/search/cityCamera";
 import { fetchChipPreview, type ChipPreview } from "@/lib/search/chipPreview";
 import { schoolScoreField } from "@/lib/schools/schoolLens";
 import { parseNlQuery } from "@/lib/search/nlParse";
@@ -45,6 +46,8 @@ import SearchEmptyState, { type WatchedArea } from "./search/SearchEmptyState";
 interface Props {
   className?: string;
   placeholder?: string;
+  /** Called after any suggestion is selected — lets the mobile search overlay close. */
+  onSelect?: () => void;
 }
 
 const TONE: Record<RankBadge["tone"], string> = {
@@ -69,7 +72,7 @@ function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
   return <span className="block h-2 w-2 shrink-0 rounded-full bg-rose-400" />; // sold
 }
 
-export default function LocationSearchV2({ className, placeholder: placeholderProp }: Props) {
+export default function LocationSearchV2({ className, placeholder: placeholderProp, onSelect }: Props) {
   const router = useRouter();
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
@@ -210,6 +213,13 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       case "community":
         setLocation(item.label);
         remember(item.label, "place");
+        // Fly the map to the city so it never stays on a stale viewport. A city carries no
+        // coordinates in the suggestion, so resolve a centroid (instant for markets, else a
+        // quick query over the city's listings) and use the robust setFlyTo path — auto-fit
+        // alone silently fails on mobile (map hidden behind the search overlay / list view).
+        void resolveCityCamera(item.label).then((cam) => {
+          if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+        });
         break;
       case "geo":
         if (item.geo) {
@@ -231,6 +241,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     }
     setValue("");
     close();
+    onSelect?.();
   };
 
   // Comp-on-demand from a specific address row.
@@ -250,6 +261,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     }
     setValue("");
     close();
+    onSelect?.();
   };
 
   // "3 bd · 4 ba · Townhouse · $1,599,000" line under a preview sample.
@@ -294,10 +306,17 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     } else if (parsed?.isStructured) {
       applyNl();
     } else if (value.trim()) {
-      setLocation(value.trim());
-      remember(value.trim(), "place");
+      const q = value.trim();
+      setLocation(q);
+      remember(q, "place");
+      // Same as picking a city suggestion: fly the map to it + close the mobile sheet, so a
+      // typed-then-Enter search doesn't leave the map on a stale viewport / the sheet open.
+      void resolveCityCamera(q).then((cam) => {
+        if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+      });
       setValue("");
       close();
+      onSelect?.();
     }
   };
 
@@ -451,8 +470,13 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                   onClick={() => {
                     setLocation(cityGroup);
                     remember(cityGroup, "place");
+                    // Fly to the whole city + close the mobile sheet, like any other pick.
+                    void resolveCityCamera(cityGroup).then((cam) => {
+                      if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+                    });
                     setValue("");
                     close();
+                    onSelect?.();
                   }}
                   className="flex w-full items-center gap-2.5 border-b border-border/60 px-3 py-2 text-left transition-colors hover:bg-muted"
                 >
