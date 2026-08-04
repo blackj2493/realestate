@@ -207,7 +207,7 @@ export function getTrendCached(region: string, typeKeys: string[], scope: Scope)
     // v12 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v11);
     // v11 = basement filter (043); v10 = Toronto district roll-up (042); v9 = RPC (040).
     // Bumped so stale empty Ottawa entries (and any v11 entry) are not served post-migration.
-    // v14 = migration 107 (complete months only — no partial-month bucket — + banded-sqft $/psf).
+    // v14 = migration 109 (complete months only — no partial-month bucket — + banded-sqft $/psf).
     ["market-price-trend", "v14", region.toLowerCase(), k], // v13 = migration 082 (avgPrice)
     { revalidate: 86400 }
   )();
@@ -425,7 +425,7 @@ export function getSoldDynamicsCached(region: string, typeKeys: string[], scope:
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeSoldDynamics(region, typeKeys, scope),
-    ["market-sold-dynamics", "v2", region.toLowerCase(), k], // v2 = 107 (banded-sqft $/psf); v1 = 061
+    ["market-sold-dynamics", "v2", region.toLowerCase(), k], // v2 = 109 (banded-sqft $/psf); v1 = 061
     { revalidate: 86400 }
   )();
 }

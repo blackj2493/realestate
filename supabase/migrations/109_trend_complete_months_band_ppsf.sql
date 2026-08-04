@@ -1,4 +1,4 @@
--- 107: region_price_trend / region_sold_dynamics — complete months only + banded-sqft $/psf.
+-- 109: region_price_trend / region_sold_dynamics — complete months only + banded-sqft $/psf.
 --
 -- Two defects, one root pattern each:
 --
@@ -49,7 +49,7 @@ AS $function$
       close_price::numeric            AS price,
       list_price::numeric             AS list,
       purchase_contract_date::date    AS pcd,
-      -- 107: exact sqft when the feed still gave one; else the banded midpoint
+      -- 109: exact sqft when the feed still gave one; else the banded midpoint
       -- (living_area_range flat column). Never raw_payload at query time.
       COALESCE(NULLIF(building_area_total, 0), living_area_range)::numeric AS sqft
     FROM raw_vow_sold
@@ -72,7 +72,7 @@ AS $function$
       )
       AND transaction_type = 'For Sale'
       AND close_price >= 50000
-      -- 107: month-aligned window start, so the oldest bucket is a full month too.
+      -- 109: month-aligned window start, so the oldest bucket is a full month too.
       AND purchase_contract_date >= date_trunc('month', current_date) - make_interval(months => p_months)
       AND (p_subtypes IS NULL OR property_sub_type = ANY (p_subtypes))
       AND (p_min_beds = 0     OR bedrooms_above_grade    >= p_min_beds)
@@ -96,7 +96,7 @@ AS $function$
       round(avg(price / list) FILTER (WHERE list >= 50000 AND price / list > 0.5 AND price / list < 2) * 100, 1)
                                                                                      AS "soldToList"
     FROM base
-    -- 107: the in-progress month is never a chart point (a 2-sale "median" is
+    -- 109: the in-progress month is never a chart point (a 2-sale "median" is
     -- composition noise, not a trend). The s90 summary below still sees it.
     WHERE pcd < date_trunc('month', current_date)
     GROUP BY 1
@@ -135,7 +135,7 @@ AS $function$
   WITH base AS (
     SELECT
       close_price::numeric         AS price,
-      -- 107: exact sqft when fed; else banded midpoint (see region_price_trend).
+      -- 109: exact sqft when fed; else banded midpoint (see region_price_trend).
       COALESCE(NULLIF(building_area_total, 0), living_area_range)::numeric AS sqft,
       -- Flat original_list_price (080); raw_payload fallback keeps un-backfilled rows correct.
       COALESCE(original_list_price, NULLIF(raw_payload->>'OriginalListPrice', '')::numeric) AS olp,
