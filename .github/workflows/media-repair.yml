@@ -121,6 +121,14 @@ jobs:
           PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
           PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          # Without these two, repairListingMedia's revalidateKeys() returns 0 on its
+          # first line and the cache bust silently does nothing — so a repaired listing
+          # keeps serving its blank gallery for up to an hour from getListingDetailCached's
+          # 3600s unstable_cache. That is the exact silent-no-op shape this PR exists to
+          # fix, and it would bite hardest here, since this workflow IS how the repair runs
+          # against prod. Same two secrets daily-sync.yml passes to its revalidate step.
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
           LISTING_KEYS: ${{ github.event.inputs.listing_keys }}
           APPLY_INPUT: ${{ github.event.inputs.apply }}
           ALL_EMPTY: ${{ github.event.inputs.all_empty }}
