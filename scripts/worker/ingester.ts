@@ -414,28 +414,43 @@ const RETRY_DELAYS = [1000, 2000, 3000];  // ms between retry attempts
 // Rate limiting
 const PAGE_DELAY_MS = 1000;
 
-// Media reconciliation (Query A2): re-fetch /Media for active listings still
-// missing photos. Runs as TWO sweeps, each with its own persisted keyset cursor:
+// Media reconciliation (Query A2): re-fetch /Media for active listings still missing
+// photos.
+//
+// HISTORY — this sweep was a silent no-op in production. Its candidate query selected
+// full_payload while filtering on an unindexed empty-media predicate, so it detoasted a
+// large JSONB per candidate and hit the statement timeout. The error is caught as
+// non-fatal, so every night logged a clean "Scanned 0 recent empty-media listings,
+// recovered 0" while recovering nothing (2026-08-03 run, job 91609249666). That, not
+// AMPRE, is why the empty-media backlog never drained. Fixed by migration 108's partial
+// indexes plus the keys-first projection in sweepMissingMedia.
+//
+// Runs as TWO sweeps, each with its own persisted keyset cursor:
 //
 //   RECENT  — listings created inside MEDIA_RECONCILE_WINDOW_DAYS. New listings
 //             routinely reach /Property before their photos reach /Media, and this
 //             pass is what closes that lag within a night or two.
-//   BACKLOG — everything else, no recency bound. Without it a listing that missed
-//             its window was abandoned FOREVER: Query A only revisits a listing when
+//   BACKLOG — everything else, no recency bound. Without it a listing that missed its
+//             window is abandoned FOREVER: Query A only revisits a listing when
 //             ModificationTimestamp moves, but a photos-only update on AMPRE bumps
-//             PhotosChangeTimestamp instead, so nothing would ever look again.
+//             PhotosChangeTimestamp instead, so nothing would ever look again. This is
+//             where the entire standing backlog lives.
 //
-// Both are bounded per night and both RESUME from sync_state.cursor_key, wrapping
-// to the top when they walk off the end. The cursor has to persist: the sweep
-// paginates ordered by listing_key, so a run that always restarts at '' re-scans the
-// same alphabetically-first slice every night and never reaches the tail. TRREB
-// prefixes sort C < E < N < S < W < X, so that starved X- keys (Hamilton, Niagara,
-// Waterloo, London) hardest — permanently blank galleries on listings whose photos
-// the feed had all along.
+// Both are bounded per night and both RESUME from sync_state.cursor_key, wrapping to the
+// top only once a full rotation completes. The cursor has to persist because the sweep
+// paginates ordered by listing_key: a run that always restarts at '' re-scans the same
+// alphabetically-first slice forever and never reaches the tail. TRREB prefixes sort
+// C < E < N < S < W < X, so that would starve X- keys (Hamilton, Niagara, Waterloo,
+// London) hardest — and with a backlog far larger than one night's budget, the tail
+// would never be reached at all.
 const MEDIA_RECONCILE_WINDOW_DAYS = 21;
-const MEDIA_RECONCILE_PAGE = 100;           // keys (and full_payloads) hydrated per page
+const MEDIA_RECONCILE_PAGE = 100;           // candidate keys per page (payloads hydrated by PK)
 const MEDIA_RECONCILE_MAX = 1000;           // recent-sweep rows scanned per night (safety cap)
-const MEDIA_BACKLOG_MAX = 750;              // backlog-sweep rows scanned per night
+// Backlog budget sets the rotation period: the last measured standing backlog was ~74k
+// rows (scripts/admin/sampleEmptyMedia.ts), so 3000/night is a ~25-night full rotation.
+// Cost is ~120 /Media chunk requests + 30 PK hydration lookups per night. Raise it to
+// drain faster; the sweep is resumable, so changing it is safe at any time.
+const MEDIA_BACKLOG_MAX = 3000;             // backlog-sweep rows scanned per night
 const MEDIA_RECONCILE_PAGE_DELAY_MS = 300;  // polite pacing between pages
 const MEDIA_CURSOR_RECENT = 'media_reconcile_recent';   // sync_state row id
 const MEDIA_CURSOR_BACKLOG = 'media_reconcile_backlog'; // sync_state row id
@@ -1225,9 +1240,15 @@ async function sweepMissingMedia(
 
   while (scanned < opts.maxRows) {
     const pageSize = Math.min(MEDIA_RECONCILE_PAGE, opts.maxRows - scanned);
+    // KEYS ONLY. Selecting full_payload here is what killed this sweep: the filtered
+    // scan detoasted a large JSONB for every candidate row it touched and blew the
+    // statement timeout, and because the error is (correctly) non-fatal the sweep
+    // logged a clean "Scanned 0" every night while recovering nothing. Migration 108
+    // adds the partial indexes that make the predicate sargable; this projection keeps
+    // the scan itself off the TOAST heap (CLAUDE.md §12).
     let query = supabase
       .from('listings')
-      .select('listing_key, full_payload')
+      .select('listing_key')
       .or('media_urls.is.null,media_urls.eq.{}')
       .gt('listing_key', cursor)
       .order('listing_key', { ascending: true })
@@ -1238,7 +1259,11 @@ async function sweepMissingMedia(
     const { data: rows, error } = await query;
 
     if (error) {
-      console.warn(`   ⚠️  ${opts.label} reconciliation query failed (non-fatal): ${error.message}`);
+      // Loud on purpose: a swallowed timeout here is exactly how this sweep went
+      // unnoticed as a no-op for months.
+      console.warn(
+        `   ⚠️  ${opts.label} reconciliation candidate query FAILED (non-fatal, sweep recovers nothing this run): ${error.message}`
+      );
       break;
     }
     if (!rows || rows.length === 0) {
@@ -1263,7 +1288,23 @@ async function sweepMissingMedia(
     cursor = rows[rows.length - 1].listing_key;
     scanned += rows.length;
 
-    const listings = rows
+    // Hydrate full_payload for THIS page only, by primary key — a bounded lookup of
+    // ≤MEDIA_RECONCILE_PAGE rows on the unique index, so the detoast cost is paid for
+    // the page we're about to process rather than for everything the scan walked past.
+    const pageKeys = rows.map((r: any) => r.listing_key).filter(Boolean);
+    const { data: payloadRows, error: payloadErr } = await supabase
+      .from('listings')
+      .select('listing_key, full_payload')
+      .in('listing_key', pageKeys);
+
+    if (payloadErr) {
+      console.warn(
+        `   ⚠️  ${opts.label} payload hydration failed (non-fatal): ${payloadErr.message}`
+      );
+      break;
+    }
+
+    const listings = (payloadRows ?? [])
       .map((r: any) => r.full_payload)
       .filter((p: any) => p && p.ListingKey);
 

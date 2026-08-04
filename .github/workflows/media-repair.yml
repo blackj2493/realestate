@@ -8,10 +8,11 @@ name: Media Repair
 #      pinned its /Media query to Medium, so these were stored as permanent
 #      false-empties. mediaEnrichment.ts now falls back Large → Largest → Thumbnail;
 #      this workflow is what re-runs the affected keys through it.
-#   2. Listings starved by the nightly reconciliation, which restarted its keyset
-#      scan at the top every night behind a row cap and so never reached late-sorting
-#      key prefixes (X- = Hamilton/Niagara/Waterloo/London). Migration 107 gives that
-#      sweep a resumable cursor; the migration step below applies it.
+#   2. Listings the nightly reconciliation never reached. Its candidate query selected
+#      full_payload behind an unindexed empty-media predicate, so it hit the statement
+#      timeout and — because that error is non-fatal — logged a clean "Scanned 0" every
+#      night while recovering nothing. Migration 108 adds the partial indexes and 107
+#      gives the sweep a resumable cursor; the migration step below applies both.
 #
 # Steps 2 and 3 are read-only diagnostics; only step 4 writes, and only when
 # `apply` is true. Safe to re-run — every step is idempotent.
@@ -60,12 +61,15 @@ jobs:
       # continue-on-error: without cursor_key the reconciliation sweep degrades to its
       # old non-resumable behaviour rather than failing, so a missing DATABASE_URL must
       # not block the per-key repair below, which is the point of the run.
-      - name: Apply migration 107 (sync_state.cursor_key)
+      - name: Apply migrations 107 + 108 (reconciliation cursor + empty-media indexes)
         if: ${{ github.event.inputs.run_migration != 'false' }}
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx scripts/admin/applyMigrationFiles.ts 107_sync_state_cursor_key.sql
+        run: |
+          npx tsx scripts/admin/applyMigrationFiles.ts \
+            107_sync_state_cursor_key.sql \
+            108_listings_empty_media_indexes.sql
 
       # Read-only. Prints, per key, the Supabase row state next to AMPRE's FULL
       # per-size media inventory, and names which of the four causes applies.
