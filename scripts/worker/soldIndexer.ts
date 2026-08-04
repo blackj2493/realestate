@@ -32,6 +32,7 @@ import { parsePostalFromAddress } from './parsePostal';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { selectPrimaryImage, primaryImageFromPhotos } from '../../src/lib/etl/selectPrimaryImage';
 import { deriveDealType } from '../../src/lib/sold/dealType';
+import { purgeSupersededForCloses } from './purgeSupersededDelisted';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
 const IMPORT_CHUNK = 100;
@@ -179,6 +180,12 @@ export function toSoldDocument(
  * Docs that fail get ONE retry pass: a transient per-doc import error otherwise drops
  * the row from the dashboard SOLD panel until the next window reindex — days of a
  * quiet, plausible-looking gap (exactly the 2026-07-22 East Gwillimbury report).
+ *
+ * Indexing a CLOSE also purges any de-listed comp it supersedes (the same property's
+ * earlier terminate/expire, which relisted under a new MLS# and then sold — see
+ * purgeSupersededDelisted.ts). Hooked HERE rather than at the six call sites so every
+ * writer of a close gets it; it is a no-op for the de-listed batches delistedIndexer
+ * pushes through this same function. Best-effort — never throws, never blocks the import.
  */
 export async function importSoldBatch(
   client: Client,
@@ -211,16 +218,26 @@ export async function importSoldBatch(
   const first = await importChunks(docs);
   let success = first.ok;
   let failed = 0;
+  let unindexed: SoldListingDocument[] = [];
   if (first.failedDocs.length > 0) {
     const retry = await importChunks(first.failedDocs);
     success += retry.ok;
     failed = retry.failedDocs.length;
+    unindexed = retry.failedDocs;
     if (failed > 0) {
       console.error(
         `   ❌ ${failed} sold doc(s) failed to index after retry — they will be invisible in the SOLD panel until the next window reindex: ${retry.failedDocs.map((d) => d.id).join(', ')}`
       );
     }
   }
+  // AFTER the upsert, and only for docs that actually landed: a close that failed to
+  // index must not delete the de-listed pin it would have replaced, or the property
+  // would vanish from both layers until the next reindex.
+  const unindexedIds = new Set(unindexed.map((d) => d.id));
+  await purgeSupersededForCloses(
+    client,
+    unindexedIds.size === 0 ? docs : docs.filter((d) => !unindexedIds.has(d.id))
+  );
   return { success, failed };
 }
 

@@ -32,6 +32,7 @@ import { buildIdDeleteFilters } from './staleSearchDocs';
 import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { firstMediaUrl } from '../../src/lib/sold/firstMediaUrl';
+import { partitionSupersededDelisted } from './purgeSupersededDelisted';
 
 export const DELISTED_WINDOW_DAYS = 90;
 export const DELISTED_ARCHIVE_MONTHS = 12;
@@ -244,6 +245,8 @@ export interface DelistedSyncResult {
   records: number;
   pages: number;
   indexed: number;
+  /** De-lists withheld from the index because the property has since closed. */
+  superseded: number;
   caughtUp: boolean;
 }
 
@@ -261,7 +264,13 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
   // overwrite it with 'completed'/'failed' below).
   await updateDelistedCursor(cursor, 'running');
   const windowCutoff = Date.now() - DELISTED_WINDOW_DAYS * 86_400_000;
-  const result: DelistedSyncResult = { records: 0, pages: 0, indexed: 0, caughtUp: false };
+  const result: DelistedSyncResult = {
+    records: 0,
+    pages: 0,
+    indexed: 0,
+    superseded: 0,
+    caughtUp: false,
+  };
 
   /** Persist one page: archive upsert + windowed index + stale-active delete. */
   const persistPage = async (listings: any[]): Promise<void> => {
@@ -272,9 +281,34 @@ export async function runDelistedSync(maxPages = DELTA_MAX_PAGES): Promise<Delis
 
     await upsertDelistedRecords(records);
 
-    const docs = records
+    const windowed = records
       .map((r) => toWindowedDoc(r, windowCutoff))
       .filter((d): d is SoldListingDocument => d !== null);
+
+    // Drop de-lists whose property has ALREADY closed (relisted under a new MLS# that
+    // then sold). Query C replays such records on a `backfill` and whenever TRREB
+    // re-touches an old terminated row, which would otherwise re-insert the exact pin
+    // the sold side just purged — the two directions of the same fix. Superseded docs
+    // are deleted rather than merely skipped, since an earlier run may have indexed
+    // them. The Supabase archive above keeps them regardless (detail-page truth).
+    // See purgeSupersededDelisted.ts.
+    const { keep: docs, superseded } = await partitionSupersededDelisted(
+      getSoldAdminClient(),
+      windowed
+    );
+    if (superseded.length > 0) {
+      result.superseded += superseded.length;
+      try {
+        const ts = getSoldAdminClient();
+        for (const filter of buildIdDeleteFilters(superseded.map((d) => d.id))) {
+          await ts.collections(SOLD_LISTINGS_COLLECTION).documents().delete({ filter_by: filter } as any);
+        }
+      } catch (err: any) {
+        console.warn(`   ⚠️  Superseded de-listed delete failed (non-fatal): ${err.message}`);
+      }
+      console.log(`   🧹 Skipped ${superseded.length} de-list(s) whose property has since closed`);
+    }
+
     if (docs.length > 0) {
       await enrichThumbnailsFromListings(docs); // best-effort thumbnail from the surviving listings row
       const { success, failed } = await importSoldBatch(getSoldAdminClient(), docs);
@@ -413,7 +447,9 @@ if (invokedDirectly) {
     if (mode === 'delta') {
       const r = await runDelistedSync();
       await pruneOldDelisted();
-      console.log(`✅ Delta complete: ${r.records} records, ${r.indexed} indexed, caughtUp=${r.caughtUp}`);
+      console.log(
+        `✅ Delta complete: ${r.records} records, ${r.indexed} indexed, ${r.superseded} superseded, caughtUp=${r.caughtUp}`
+      );
       process.exit(0);
     }
     if (mode === 'prune') {

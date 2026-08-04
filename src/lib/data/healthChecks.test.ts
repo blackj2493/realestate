@@ -7,6 +7,7 @@ import {
   checkEstimateFreshness,
   checkDrift,
   checkEmailFailures,
+  checkMediaReconcile,
   snapshotFromRows,
   LATEST_MONTH_KEY,
   type Problem,
@@ -485,5 +486,83 @@ describe("estimate freshness: property_estimates drifting stale against a moving
     const checks = new Set(errorsOf(p).map((e) => e.check));
     expect(checks.has("estimate-freshness")).toBe(true);
     expect(checks.has("estimate-staleness")).toBe(true);
+  });
+});
+
+/**
+ * Regression: the media reconciliation swept nothing, every night, for five weeks.
+ *
+ * reconcileMissingMedia's page query timed out (planner mis-estimate → 42.7s seq scan vs an
+ * 8s statement_timeout; migration 108). The sweep caught the error exactly as designed, wrote
+ * a non-fatal warning, and the sync run went green. 10,751 active listings held a blank
+ * gallery — including the one a user reported — and nothing anywhere said so.
+ */
+const MEDIA_HOUR = 3_600_000;
+const MEDIA_NOW = Date.UTC(2026, 7, 4, 6, 0, 0);
+const fresh = (h = 2) => new Date(MEDIA_NOW - h * MEDIA_HOUR).toISOString();
+
+describe("regression: media reconcile silently scanned 0 for five weeks", () => {
+  it("errors when listings are waiting but the sweeps scanned nothing", () => {
+    const out = checkMediaReconcile({
+      emptyMedia: 10_751,
+      sweeps: [
+        { id: "media_reconcile_recent", scanned: 0, status: "failed", updatedAt: fresh() },
+        { id: "media_reconcile_backlog", scanned: 0, status: "failed", updatedAt: fresh() },
+      ],
+      nowMs: MEDIA_NOW,
+    });
+    expect(out.filter((p: Problem) => p.severity === "error").length).toBeGreaterThan(0);
+    expect(out.some((p: Problem) => /status=failed/.test(p.detail))).toBe(true);
+  });
+
+  it("errors on scanned-0-with-work even if the sweep believed it succeeded", () => {
+    // The subtle case: a sweep can complete "successfully" having looked at nothing —
+    // e.g. a filter/index mismatch that returns an empty page instead of an error.
+    const out = checkMediaReconcile({
+      emptyMedia: 10_751,
+      sweeps: [{ id: "media_reconcile_recent", scanned: 0, status: "completed", updatedAt: fresh() }],
+      nowMs: MEDIA_NOW,
+    });
+    expect(out.some((p: Problem) => p.severity === "error" && /scanned 0 rows/.test(p.detail))).toBe(true);
+  });
+
+  it("stays silent when the sweep is working through a real backlog", () => {
+    const out = checkMediaReconcile({
+      emptyMedia: 8_000,
+      sweeps: [
+        { id: "media_reconcile_recent", scanned: 3000, status: "completed", updatedAt: fresh() },
+        { id: "media_reconcile_backlog", scanned: 91, status: "completed", updatedAt: fresh() },
+      ],
+      nowMs: MEDIA_NOW,
+    });
+    expect(out).toEqual([]);
+  });
+
+  it("does NOT fire on scanned 0 when there is genuinely nothing to do", () => {
+    // The ambiguity this rule exists to resolve: 0 scanned is the CORRECT answer here.
+    const out = checkMediaReconcile({
+      emptyMedia: 12,
+      sweeps: [
+        { id: "media_reconcile_recent", scanned: 0, status: "completed", updatedAt: fresh() },
+        { id: "media_reconcile_backlog", scanned: 0, status: "completed", updatedAt: fresh() },
+      ],
+      nowMs: MEDIA_NOW,
+    });
+    expect(out).toEqual([]);
+  });
+
+  it("warns when the sweep stops recording outcomes at all", () => {
+    const out = checkMediaReconcile({
+      emptyMedia: 12,
+      sweeps: [{ id: "media_reconcile_recent", scanned: 40, status: "completed", updatedAt: fresh(72) }],
+      nowMs: MEDIA_NOW,
+    });
+    expect(out.some((p: Problem) => p.severity === "warn" && /stopped running/.test(p.detail))).toBe(true);
+  });
+
+  it("warns when no sweep row exists yet (migration 107 unapplied / never run)", () => {
+    const out = checkMediaReconcile({ emptyMedia: 10_751, sweeps: [], nowMs: NOW });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warn");
   });
 });

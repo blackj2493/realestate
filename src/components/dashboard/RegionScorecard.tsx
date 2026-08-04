@@ -38,19 +38,66 @@ type SortKey =
   | "temperature";
 
 const GRID =
-  "grid-cols-[minmax(130px,1.5fr)_minmax(150px,1.4fr)_minmax(84px,0.9fr)_minmax(72px,0.8fr)_minmax(90px,0.9fr)_minmax(96px,1fr)_minmax(84px,0.9fr)_minmax(96px,1fr)_minmax(80px,0.9fr)_minmax(78px,0.8fr)]";
+  "grid-cols-[minmax(130px,1.5fr)_minmax(150px,1.4fr)_minmax(84px,0.9fr)_minmax(72px,0.8fr)_minmax(90px,0.9fr)_minmax(96px,1fr)_minmax(84px,0.9fr)_minmax(96px,1fr)_minmax(88px,0.9fr)_minmax(78px,0.8fr)]";
 
-const COLUMNS: { key: SortKey; label: string; align: "left" | "right" }[] = [
-  { key: "region", label: "Region", align: "left" },
-  { key: "medianPrice", label: "Median Price", align: "right" },
-  { key: "medianPpsf", label: "$/Sqft", align: "right" },
-  { key: "activeCount", label: "Active", align: "right" },
-  { key: "monthsOfSupply", label: "Mo. Supply", align: "right" },
-  { key: "trueDom", label: "True DoM", align: "right" },
-  { key: "soldToListPct", label: "Sold/List", align: "right" },
-  { key: "sellThroughPct", label: "Sell-Thru", align: "right" },
-  { key: "medianCapRate", label: "Med Cap", align: "right" },
-  { key: "temperature", label: "Temp", align: "right" },
+/**
+ * Headings stay terse — this is the terminal, and the dense grid is the point
+ * (voice.md §5.1). `hint` is the plain-language translation, surfaced on hover
+ * so nobody has to already know the vocabulary to read the table. Write hints
+ * for someone buying their first house: no jargon, and if a term is unavoidable
+ * ("cap rate") say what it means in the same breath.
+ */
+const COLUMNS: { key: SortKey; label: string; align: "left" | "right"; hint: string }[] = [
+  { key: "region", label: "Region", align: "left", hint: "The city or district. Click a name to see its listings." },
+  {
+    key: "medianPrice",
+    label: "Median Price",
+    align: "right",
+    hint: "The middle price of homes that sold — half went for more, half for less. We use the middle rather than the average so one unusually expensive sale can't drag the number up.",
+  },
+  {
+    key: "medianPpsf",
+    label: "$/Sqft",
+    align: "right",
+    hint: "Middle sale price per square foot. The fairest way to compare areas when the homes are different sizes.",
+  },
+  { key: "activeCount", label: "Active", align: "right", hint: "How many homes are for sale here right now." },
+  {
+    key: "monthsOfSupply",
+    label: "Mo. Supply",
+    align: "right",
+    hint: "How many months it would take to sell every home currently for sale, at the pace they're selling now. Under 4 months favours sellers; over 6 favours buyers.",
+  },
+  {
+    key: "trueDom",
+    label: "True DoM",
+    align: "right",
+    hint: "How long the typical home for sale has been on the market — counted from the first day it was listed, so pulling it and relisting to look fresh doesn't hide the wait. \"% stale\" is the share sitting 60+ days.",
+  },
+  {
+    key: "soldToListPct",
+    label: "Sold/List",
+    align: "right",
+    hint: "What homes actually sold for, compared with what they were asking. Below 100% means buyers are negotiating the price down; above means bidding wars.",
+  },
+  {
+    key: "sellThroughPct",
+    label: "Sell-Thru",
+    align: "right",
+    hint: "Of the homes that stopped being for sale in the past year, the share that actually sold — the rest gave up without a sale. A home taken off the market and listed again counts as a sale if it eventually sold.",
+  },
+  {
+    key: "medianCapRate",
+    label: "Cap Rate",
+    align: "right",
+    hint: "If you bought the typical home for sale here and rented it out, this is the yearly return after running costs like taxes, insurance and upkeep — but before mortgage payments. The rent is our estimate, not a signed lease.",
+  },
+  {
+    key: "temperature",
+    label: "Temp",
+    align: "right",
+    hint: "Whether the market currently favours buyers or sellers, based on months of supply and how close homes sell to their asking price.",
+  },
 ];
 
 function sortValue(s: RegionScore, key: SortKey): number | string | null {
@@ -199,6 +246,7 @@ export default function RegionScorecard({
                 <button
                   key={c.key}
                   type="button"
+                  title={c.hint}
                   onClick={() => onSort(c.key)}
                   className={`terminal-font flex items-center gap-1 px-2 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors hover:text-cyan-700 dark:hover:text-cyan-300 ${
                     c.align === "right" ? "justify-end" : "justify-start"
@@ -285,17 +333,28 @@ export default function RegionScorecard({
         {locked && <VowGateOverlay message="Sign in to view region market stats" />}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-muted-foreground">
-        {filterParts.length > 0 && (
-          <span className="text-muted-foreground">Filtered to {filterParts.join(", ")}. </span>
-        )}
-        Active metrics (True DoM, cap rate, active count, % stale) are full-population over current active
-        inventory, deduped by property. Median price, $/sqft, Sold/List & months of supply are from sold
-        records (recent months lag). Sell-Thru = share of listings that sold vs withdrew, last 12 months.
-        Median price, $/sqft, YoY &amp; months of supply need ≥ 10 recent sales (thinner samples are
-        composition noise, not a trend). Sold/List needs list-price coverage ≥ 50%; median cap ≥ 5 priced
-        active; True DoM ≥ 10 active; Sell-Thru ≥ 30 resolved listings.
-      </p>
+      {/* The definitions are repeated here, not left to the column tooltips alone: this
+          table is a horizontal scroller on phones, where a native title= can't be reached. */}
+      <div className="space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+        <p>
+          {filterParts.length > 0 && <span>Filtered to {filterParts.join(", ")}. </span>}
+          Hover a column heading for a plain-English definition. The three that trip people up:{" "}
+          <strong className="font-semibold text-foreground">True DoM</strong> — how long the typical home
+          for sale has been listed, counted from the day it first went up, so pulling it and relisting
+          can&rsquo;t reset the clock.{" "}
+          <strong className="font-semibold text-foreground">Sell-Thru</strong> — of the homes that stopped
+          being for sale, the share that actually sold rather than giving up.{" "}
+          <strong className="font-semibold text-foreground">Cap Rate</strong> — the yearly return on a
+          rental after running costs, before mortgage payments.
+        </p>
+        <p>
+          Active, True DoM, % stale and Cap Rate describe what is for sale <em>today</em>; Median Price,
+          $/sqft, Sold/List, Mo. Supply and Sell-Thru come from homes that have <em>already sold</em>, so
+          they trail the market by a few months. A dash means we don&rsquo;t have enough recent sales to
+          give you a number worth trusting — it never means zero (we need 10 recent sales for the price
+          columns, 5 priced listings for Cap Rate, 10 for True DoM, and 30 finished listings for Sell-Thru).
+        </p>
+      </div>
     </section>
   );
 }

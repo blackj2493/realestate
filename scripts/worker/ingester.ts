@@ -414,14 +414,76 @@ const RETRY_DELAYS = [1000, 2000, 3000];  // ms between retry attempts
 // Rate limiting
 const PAGE_DELAY_MS = 1000;
 
-// Media reconciliation (Query A2): re-fetch /Media for recently-created active
-// listings still missing photos (new-listing AMPRE propagation lag). Bounded so
-// the nightly sweep stays cheap and genuinely photo-less listings age OUT of the
-// window instead of being re-probed forever.
+// Media reconciliation (Query A2): re-fetch /Media for active listings still missing
+// photos.
+//
+// HISTORY — two consecutive nightly runs, and they told different stories:
+//
+//   2026-08-03 (job 91609249666)   ⚠️  canceling statement due to statement timeout
+//                                  🩹 Scanned 0 recent empty-media listings, recovered 0
+//   2026-08-04 (job 91903179184)   ℹ️  Hit the 1000-row reconciliation cap
+//                                  🩹 Scanned 1000 recent empty-media listings, recovered 999
+//
+// Two separate problems, both fixed here:
+//
+// 1. The candidate query could not be planned. Migration 108 has the measured post-mortem
+//    — short version: the planner under-estimated the empty-media match by 219x and chose
+//    a 42.7 s Parallel Seq Scan against an 8 s inherited statement_timeout, so the query
+//    timed out at ANY limit. It failed this way from at least 2026-06-30 to 2026-08-03.
+//    The failure is swallowed as non-fatal (correctly — media must never fail the sync),
+//    so a dead night looks identical to a clean one: "Scanned 0 … recovered 0" reads as
+//    "nothing needed recovering". Fixed by migration 108's partial index; the keys-first
+//    projection below additionally keeps the scan off the TOAST heap.
+//
+//    The 08-04 run above did NOT plan on its own — it ran AFTER the index existed, and is
+//    the evidence that the index is what fixed this:
+//        migration 108 applied   2026-08-04 02:58:10 UTC
+//        daily-sync 30881332249  2026-08-04 05:38:44 UTC  →  scanned 1000, recovered 999
+//    That run executed unchanged main-branch code (this branch is unmerged, so neither the
+//    keys-first projection nor the raised budget was deployed). Exactly one variable changed
+//    between a night that recovered 0 and a night that recovered 999. So: not intermittent,
+//    and nothing self-healed — remove the index and the 42.7 s seq scan comes straight back.
+//    checkMediaReconcile alerts if it ever regresses.
+//
+// 2. The 999/1000 recovery rate is the more useful number: essentially every listing the
+//    sweep reaches HAS photos waiting at AMPRE that we never fetched. The backlog is
+//    recoverable inventory, not genuinely photo-less listings — so the nightly budget, and
+//    the ORDER the budget is spent in, decide who stays blank and for how long.
+//
+// Runs as TWO sweeps, each with its own persisted keyset cursor:
+//
+//   RECENT  — listings created inside MEDIA_RECONCILE_WINDOW_DAYS. New listings
+//             routinely reach /Property before their photos reach /Media, and this
+//             pass is what closes that lag within a night or two.
+//   BACKLOG — everything else, no recency bound. Without it a listing that missed its
+//             window is abandoned FOREVER: Query A only revisits a listing when
+//             ModificationTimestamp moves, but a photos-only update on AMPRE bumps
+//             PhotosChangeTimestamp instead, so nothing would ever look again. This is
+//             where the entire standing backlog lives.
+//
+// Both are bounded per night and both RESUME from sync_state.cursor_key, wrapping to the
+// top only once a full rotation completes. The cursor has to persist because the sweep
+// paginates ordered by listing_key and the budget is smaller than the backlog: without
+// it, every night re-starts at '' and drains the key space in strict alphabetical order.
+// Recovered rows do leave the candidate set, so that ordering does make progress — but it
+// makes it FRONT-FIRST, and TRREB prefixes sort C < E < N < S < W < X. X- keys (Hamilton,
+// Niagara, Waterloo, London) are last in line for as many nights as the backlog takes to
+// drain, while any row that keeps failing accumulates at the head and permanently eats
+// budget. A persisted cursor turns "always from the front" into a fair rotation.
 const MEDIA_RECONCILE_WINDOW_DAYS = 21;
-const MEDIA_RECONCILE_PAGE = 100;           // keys (and full_payloads) hydrated per page
-const MEDIA_RECONCILE_MAX = 1000;           // total rows scanned per night (safety cap)
+const MEDIA_RECONCILE_PAGE = 100;           // candidate keys per page (payloads hydrated by PK)
+// Measured 2026-08-04: 1000 rows took 3m06s end-to-end (10 batches — /Media fetch +
+// processBatch upsert + Typesense index), i.e. ~5.4 rows/s, and the sweep hit the cap
+// with 999 still-recoverable listings behind it. 1000/night was the binding constraint on
+// how fast anything drains, so both budgets are 3000: ~9 min added to a sync step that
+// currently runs ~17 min, well inside the 300-min job ceiling. Against the last measured
+// ~74k standing backlog (scripts/admin/sampleEmptyMedia.ts) that is a ~25-night rotation
+// rather than ~74. Both sweeps are resumable, so these are safe to retune at any time.
+const MEDIA_RECONCILE_MAX = 3000;           // recent-sweep rows scanned per night
+const MEDIA_BACKLOG_MAX = 3000;             // backlog-sweep rows scanned per night
 const MEDIA_RECONCILE_PAGE_DELAY_MS = 300;  // polite pacing between pages
+const MEDIA_CURSOR_RECENT = 'media_reconcile_recent';   // sync_state row id
+const MEDIA_CURSOR_BACKLOG = 'media_reconcile_backlog'; // sync_state row id
 // Query B2 (sold): cap on photo-less in-window sold listings re-checked per night.
 // Candidates come from the in-memory sold_listings Typesense export (no raw_vow_sold
 // scan); we pull raw_payload only for this many, by primary key.
@@ -1115,8 +1177,8 @@ export interface DualSyncResult {
   soldPages: number;
   errors: string[];
   lastSyncTimestamp: string;
-  // Query A2: # of recently-created active listings whose missing photos were
-  // recovered from AMPRE this run (see reconcileMissingMedia).
+  // Query A2: # of active listings whose missing photos were recovered from AMPRE
+  // this run, across both the recent and backlog sweeps (see reconcileMissingMedia).
   reconciledMedia?: number;
   // Query B2: # of in-window sold listings whose missing photos were recovered
   // from AMPRE this run (see reconcileMissingSoldMedia).
@@ -1124,7 +1186,243 @@ export interface DualSyncResult {
 }
 
 /**
- * Query A2 — Media reconciliation (self-heals new-listing photo lag).
+ * Reads a sweep's persisted keyset cursor (migration 107). Returns '' — "start at
+ * the top" — when the row is absent, the column has not been migrated yet, or the
+ * read fails: the sweep is best-effort and must degrade to its old behaviour rather
+ * than abort the nightly sync.
+ */
+async function readReconcileCursor(rowId: string): Promise<string> {
+  try {
+    const supabase = getServiceRoleClient();
+    const { data, error } = await supabase
+      .from('sync_state')
+      .select('cursor_key')
+      .eq('id', rowId)
+      .maybeSingle();
+    if (error) {
+      console.warn(`   ⚠️  Could not read ${rowId} cursor (starting from the top): ${error.message}`);
+      return '';
+    }
+    return (data?.cursor_key as string | null) ?? '';
+  } catch (err: any) {
+    console.warn(`   ⚠️  Could not read ${rowId} cursor (starting from the top): ${err?.message || err}`);
+    return '';
+  }
+}
+
+/**
+ * Persists a sweep's keyset cursor AND its outcome. Upserts its own sync_state row —
+ * these rows are pure sweep bookkeeping and never touch the master/sold/delisted delta
+ * cursors, so a failure here can only cost the NEXT run some re-scanning, never a data
+ * gap. last_sync_timestamp is NOT NULL on the table, so it is stamped with the run time
+ * purely to satisfy the constraint; nothing reads it for these rows.
+ *
+ * `status` and `records_synced` are NOT bookkeeping — they are the canary's only view of
+ * this job. reconcileMissingMedia is best-effort by design: it swallows every failure so
+ * a broken sweep can never fail the nightly sync. That is correct, and it is also exactly
+ * how this job died unnoticed for five weeks (see migration 108) — the run stayed green
+ * while recovering zero listings a night. Writing the outcome where a separate observer
+ * can read it is what makes "silently did nothing" a visible state instead of a log line
+ * nobody tails. checkMediaReconcile in src/lib/data/healthChecks.ts is that observer.
+ */
+async function writeReconcileOutcome(
+  rowId: string,
+  cursorKey: string,
+  outcome: { scanned: number; ok: boolean }
+): Promise<void> {
+  try {
+    const supabase = getServiceRoleClient();
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('sync_state')
+      .upsert(
+        {
+          id: rowId,
+          cursor_key: cursorKey,
+          last_sync_timestamp: now,
+          status: outcome.ok ? 'completed' : 'failed',
+          records_synced: outcome.scanned,
+          updated_at: now,
+        },
+        { onConflict: 'id' }
+      );
+    if (error) {
+      console.warn(`   ⚠️  Could not persist ${rowId} outcome (non-fatal): ${error.message}`);
+    }
+  } catch (err: any) {
+    console.warn(`   ⚠️  Could not persist ${rowId} outcome (non-fatal): ${err?.message || err}`);
+  }
+}
+
+/**
+ * One media-reconciliation sweep over the empty-media set, resuming from a
+ * persisted keyset cursor and wrapping to the top when it runs off the end.
+ *
+ * Re-fetches /Media for each page and re-runs ONLY the listings that actually
+ * gained photos through the normal ETL upsert (processBatch), repopulating
+ * media_urls + the Typesense doc. Still-empty rows are left untouched — no needless
+ * write, no AVM recompute; they get another look on a later rotation.
+ *
+ * Pagination rules (CLAUDE.md §12): keyset by listing_key. created_at is only ever
+ * FILTERED on, never ORDERed on — it is unindexed and ordering by it trips the
+ * statement timeout.
+ *
+ * ⚠️  THE .or() FILTER BELOW IS LOAD-BEARING AND MUST MATCH MIGRATION 108 EXACTLY.
+ * It is served by the partial index idx_listings_empty_media, whose predicate is the
+ * same expression. A partial index is only usable when the query's WHERE clause implies
+ * the index predicate, so the two are a matched pair: change this filter (even to the
+ * equivalent `cardinality(media_urls) = 0`, or by dropping the now-vacuous IS NULL
+ * branch) without changing the migration and the planner silently falls back to a
+ * Parallel Seq Scan — 42.7 s against PostgREST's 8 s timeout, i.e. this sweep dies
+ * again and recovers nothing. That is not hypothetical: it is what happened from at
+ * least 2026-06-30 to 2026-08-03. Migration 108 has the full post-mortem.
+ *
+ * Best-effort throughout: any failure is swallowed and none of this touches the delta
+ * sync cursor — but the outcome is RECORDED (writeReconcileOutcome) so the data-health
+ * canary can see a sweep that quietly stopped working.
+ */
+async function sweepMissingMedia(
+  idxToken: string,
+  opts: { rowId: string; label: string; maxRows: number; sinceIso: string | null; untilIso: string | null }
+): Promise<{ scanned: number; recovered: number; ok: boolean }> {
+  const supabase = getServiceRoleClient();
+  const startCursor = await readReconcileCursor(opts.rowId);
+  let cursor = startCursor;
+  let scanned = 0;
+  let recovered = 0;
+  // True once this run has walked off the end of the set and restarted at the top.
+  let wrapped = false;
+  // True once every row in the set has been seen this run — only then is it safe to
+  // reset the stored cursor to the top. Exiting on the row budget (or a query error)
+  // must KEEP the cursor, or the sweep would restart at the head every night and the
+  // tail of the key space would never be reached.
+  let rotationComplete = false;
+  // False once any page query errors. Distinct from "scanned 0 because the set is
+  // empty" — the canary must be able to tell a healthy no-op from a dead sweep.
+  let ok = true;
+
+  while (scanned < opts.maxRows) {
+    const pageSize = Math.min(MEDIA_RECONCILE_PAGE, opts.maxRows - scanned);
+    // KEYS ONLY. Selecting full_payload here is what killed this sweep: the filtered
+    // scan detoasted a large JSONB for every candidate row it touched and blew the
+    // statement timeout, and because the error is (correctly) non-fatal the sweep
+    // logged a clean "Scanned 0" every night while recovering nothing. Migration 108
+    // adds the partial indexes that make the predicate sargable; this projection keeps
+    // the scan itself off the TOAST heap (CLAUDE.md §12).
+    let query = supabase
+      .from('listings')
+      .select('listing_key')
+      .or('media_urls.is.null,media_urls.eq.{}')
+      .gt('listing_key', cursor)
+      .order('listing_key', { ascending: true })
+      .limit(pageSize);
+    if (opts.sinceIso) query = query.gte('created_at', opts.sinceIso);
+    if (opts.untilIso) query = query.lt('created_at', opts.untilIso);
+
+    const { data: rows, error } = await query;
+
+    if (error) {
+      // Loud on purpose: a swallowed timeout here is exactly how this sweep went
+      // unnoticed as a no-op for months. Loud in the LOG is not enough on its own
+      // though — nobody tails a green run — so `ok` carries the failure into
+      // writeReconcileOutcome, where the nightly canary can see it.
+      console.warn(
+        `   ⚠️  ${opts.label} reconciliation candidate query FAILED (non-fatal, sweep recovers nothing this run): ${error.message}`
+      );
+      ok = false;
+      break;
+    }
+    if (!rows || rows.length === 0) {
+      // Off the end of the set. Restart at the top ONCE so the tail of the key
+      // space is never the only part that gets scanned; a second exhaustion (or an
+      // already-empty set) means there is genuinely nothing left to do.
+      if (wrapped || cursor === '') {
+        rotationComplete = true;
+        break;
+      }
+      cursor = '';
+      wrapped = true;
+      continue;
+    }
+    // Back around to where this run started → a full rotation is done; stop rather
+    // than re-probing the same listings repeatedly to burn the remaining budget.
+    if (wrapped && rows[0].listing_key > startCursor) {
+      rotationComplete = true;
+      break;
+    }
+
+    cursor = rows[rows.length - 1].listing_key;
+    scanned += rows.length;
+
+    // Hydrate full_payload for THIS page only, by primary key — a bounded lookup of
+    // ≤MEDIA_RECONCILE_PAGE rows on the unique index, so the detoast cost is paid for
+    // the page we're about to process rather than for everything the scan walked past.
+    const pageKeys = rows.map((r: any) => r.listing_key).filter(Boolean);
+    const { data: payloadRows, error: payloadErr } = await supabase
+      .from('listings')
+      .select('listing_key, full_payload')
+      .in('listing_key', pageKeys);
+
+    if (payloadErr) {
+      console.warn(
+        `   ⚠️  ${opts.label} payload hydration failed (non-fatal): ${payloadErr.message}`
+      );
+      break;
+    }
+
+    const listings = (payloadRows ?? [])
+      .map((r: any) => r.full_payload)
+      .filter((p: any) => p && p.ListingKey);
+
+    if (listings.length > 0) {
+      await enrichListingsWithMedia(listings, idxToken);
+      const gained = listings.filter(
+        (l: any) => Array.isArray(l?.media) && l.media.length > 0
+      );
+      if (gained.length > 0) {
+        const syncResult = await processBatch(gained);
+        if (!syncResult.success) {
+          const errs = [...syncResult.supabase.errors, ...syncResult.typesense.errors];
+          console.warn(`   ⚠️  ${opts.label} reconciliation upsert errors: ${errs.slice(0, 3).join('; ')}`);
+        }
+        recovered += gained.length;
+      }
+    }
+
+    if (rows.length < pageSize) {
+      // Short page = end of the set. Same wrap rule as the empty-page branch, plus:
+      // a run that STARTED at the top has now seen the whole set, so wrapping would
+      // just re-query the same rows and throw the page away. (The backlog sweep is
+      // permanently in that state — it holds ~91 rows against a 750-row budget — so
+      // without this guard it paid for two full passes every single night.)
+      if (wrapped || startCursor === '') {
+        rotationComplete = true;
+        break;
+      }
+      cursor = '';
+      wrapped = true;
+      continue;
+    }
+    await sleep(MEDIA_RECONCILE_PAGE_DELAY_MS);
+  }
+
+  // A completed rotation resets to the top; otherwise the next run picks up exactly
+  // where this one stopped, so no slice of the key space can be starved.
+  await writeReconcileOutcome(opts.rowId, rotationComplete ? '' : cursor, { scanned, ok });
+
+  console.log(
+    `   ${ok ? '🩹' : '❌'} ${opts.label}: scanned ${scanned}, recovered ${recovered}` +
+      (ok
+        ? rotationComplete
+          ? ' (full rotation complete)'
+          : ` (resumes after ${cursor || 'the top'})`
+        : ' — SWEEP FAILED, see the query error above')
+  );
+  return { scanned, recovered, ok };
+}
+
+/**
+ * Query A2 — Media reconciliation (self-heals photo gaps on active listings).
  *
  * New listings frequently appear in /Property BEFORE their photos have
  * propagated to AMPRE's separate /Media resource, so Query A first stores them
@@ -1134,90 +1432,51 @@ export interface DualSyncResult {
  * stay imageless forever (the "NO MEDIA" detail-page fallback). preserveExistingMedia
  * can't help either: a first-ingest row has no prior media to restore.
  *
- * This pass re-fetches /Media for recently-created Active listings still missing
- * media and re-runs ONLY the recovered ones through the normal ETL upsert
- * (processBatch), repopulating full_payload.media + media_urls + the Typesense
- * doc. Bounded by a recency window (genuinely photo-less listings age out instead
- * of being re-probed nightly) and a hard row cap. Fully best-effort: any failure
- * is swallowed and never blocks, fails, or advances the sync cursor.
+ * Two sweeps, each on its own persisted cursor (see the constants block):
+ *   1. RECENT  — created inside the window; catches propagation lag fast.
+ *   2. BACKLOG — everything older, so a listing that missed its window still gets
+ *                looked at again eventually instead of being written off.
+ * The window is a split point, not a filter: every row belongs to exactly one sweep,
+ * so the two never re-scan each other's rows.
+ *
+ * Fully best-effort: any failure is swallowed and never blocks, fails, or advances
+ * the sync cursor.
  */
 async function reconcileMissingMedia(
   idxToken: string
-): Promise<{ scanned: number; recovered: number }> {
+): Promise<{ scanned: number; recovered: number; ok: boolean }> {
   if (!idxToken) {
     console.warn('   ⚠️  Media reconciliation skipped: PROPTX_IDX_TOKEN not set');
-    return { scanned: 0, recovered: 0 };
+    return { scanned: 0, recovered: 0, ok: false };
   }
   try {
-    const supabase = getServiceRoleClient();
     const cutoffIso = new Date(
       Date.now() - MEDIA_RECONCILE_WINDOW_DAYS * 86_400_000
     ).toISOString();
 
-    // Keyset-paginate by listing_key (indexed via the UNIQUE constraint) while
-    // FILTERING on created_at — never ORDER on created_at, which is unindexed and
-    // trips the statement timeout (CLAUDE.md §12). Paginating every page (instead of
-    // one capped fetch) guarantees no key-prefix is starved of the cap: a single
-    // `ORDER BY listing_key LIMIT 500` was entirely consumed by C-prefix keys and
-    // never reached N-/W-/X- listings.
-    let cursor = '';
-    let scanned = 0;
-    let recovered = 0;
+    const recent = await sweepMissingMedia(idxToken, {
+      rowId: MEDIA_CURSOR_RECENT,
+      label: 'Recent empty-media',
+      maxRows: MEDIA_RECONCILE_MAX,
+      sinceIso: cutoffIso,
+      untilIso: null,
+    });
+    const backlog = await sweepMissingMedia(idxToken, {
+      rowId: MEDIA_CURSOR_BACKLOG,
+      label: 'Backlog empty-media',
+      maxRows: MEDIA_BACKLOG_MAX,
+      sinceIso: null,
+      untilIso: cutoffIso,
+    });
 
-    while (scanned < MEDIA_RECONCILE_MAX) {
-      const pageSize = Math.min(MEDIA_RECONCILE_PAGE, MEDIA_RECONCILE_MAX - scanned);
-      const { data: rows, error } = await supabase
-        .from('listings')
-        .select('listing_key, full_payload')
-        .or('media_urls.is.null,media_urls.eq.{}')
-        .gte('created_at', cutoffIso)
-        .gt('listing_key', cursor)
-        .order('listing_key', { ascending: true })
-        .limit(pageSize);
-
-      if (error) {
-        console.warn(`   ⚠️  Reconciliation query failed (non-fatal): ${error.message}`);
-        break;
-      }
-      if (!rows || rows.length === 0) break;
-      cursor = rows[rows.length - 1].listing_key;
-      scanned += rows.length;
-
-      const listings = rows
-        .map((r: any) => r.full_payload)
-        .filter((p: any) => p && p.ListingKey);
-
-      if (listings.length > 0) {
-        // Re-fetch /Media (attaches `media` in place) and re-upsert ONLY the ones
-        // that actually gained photos — still-empty rows are left untouched (no
-        // needless write / AVM recompute; they recover on a future night once AMPRE
-        // has their photos, or age out of the window).
-        await enrichListingsWithMedia(listings, idxToken);
-        const gained = listings.filter(
-          (l: any) => Array.isArray(l?.media) && l.media.length > 0
-        );
-        if (gained.length > 0) {
-          const syncResult = await processBatch(gained);
-          if (!syncResult.success) {
-            const errs = [...syncResult.supabase.errors, ...syncResult.typesense.errors];
-            console.warn(`   ⚠️  Reconciliation upsert errors: ${errs.slice(0, 3).join('; ')}`);
-          }
-          recovered += gained.length;
-        }
-      }
-
-      if (rows.length < pageSize) break; // last page
-      await sleep(MEDIA_RECONCILE_PAGE_DELAY_MS);
-    }
-
-    if (scanned >= MEDIA_RECONCILE_MAX) {
-      console.log(`   ℹ️  Hit the ${MEDIA_RECONCILE_MAX}-row reconciliation cap; remaining empties roll to the next sync.`);
-    }
-    console.log(`   🩹 Scanned ${scanned} recent empty-media listings, recovered ${recovered}`);
-    return { scanned, recovered };
+    return {
+      scanned: recent.scanned + backlog.scanned,
+      recovered: recent.recovered + backlog.recovered,
+      ok: recent.ok && backlog.ok,
+    };
   } catch (err: any) {
     console.warn(`   ⚠️  Media reconciliation failed (non-fatal): ${err?.message || err}`);
-    return { scanned: 0, recovered: 0 };
+    return { scanned: 0, recovered: 0, ok: false };
   }
 }
 
@@ -1503,7 +1762,8 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       const delisted = await runDelistedSync();
       await pruneOldDelisted();
       console.log(
-        `\n✅ Query C Complete: ${delisted.records} de-listed records, ${delisted.indexed} indexed, caughtUp=${delisted.caughtUp}`
+        `\n✅ Query C Complete: ${delisted.records} de-listed records, ${delisted.indexed} indexed, ` +
+          `${delisted.superseded} superseded by a later close, caughtUp=${delisted.caughtUp}`
       );
     } catch (err: any) {
       console.warn(`\n⚠️  Query C failed (non-fatal for the A/B sync): ${err?.message || err}`);

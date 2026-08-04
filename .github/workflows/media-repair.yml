@@ -1,0 +1,148 @@
+name: Media Repair
+
+# Manual photo repair for listings whose gallery is blank while the feed has photos.
+#
+# Exists because the two root causes need prod credentials to act on, and those live
+# only here as repo secrets:
+#   1. Listings whose photos AMPRE never generated a 'Medium' variant for. The ETL
+#      pinned its /Media query to Medium, so these were stored as permanent
+#      false-empties. mediaEnrichment.ts now falls back Large → Largest → Thumbnail;
+#      this workflow is what re-runs the affected keys through it.
+#   2. Listings the nightly reconciliation never reached. Its candidate query selected
+#      full_payload behind an unindexed empty-media predicate, so it hit the statement
+#      timeout and — because that error is non-fatal — logged a clean "Scanned 0" every
+#      night while recovering nothing. Migration 108 adds the partial indexes and 107
+#      gives the sweep a resumable cursor; the migration step below applies both.
+#
+# Steps 2 and 3 are read-only diagnostics; only step 4 writes, and only when
+# `apply` is true. Safe to re-run — every step is idempotent.
+#
+# NOTE (new-workflow gotcha, same as refresh-mortgage-rate.yml): a workflow is only
+# dispatchable once this file is on the DEFAULT branch.
+on:
+  workflow_dispatch:
+    inputs:
+      listing_keys:
+        description: 'Space-separated ListingKeys to diagnose and repair (e.g. "X13163816 W12345678"). Ignored when all_empty is true.'
+        required: false
+        default: 'X13163816'
+      all_empty:
+        description: 'Repair EVERY listing with a blank gallery instead of named keys (drains the whole backlog in one run).'
+        required: false
+        default: 'false'
+      limit:
+        description: 'With all_empty: cap how many listings to repair (blank = no cap).'
+        required: false
+        default: ''
+      apply:
+        description: 'Write the recovered photos (false = dry run, diagnostics only)'
+        required: false
+        default: 'true'
+      run_migration:
+        description: 'Apply migrations 107 + 108 first. Idempotent.'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: media-repair
+  cancel-in-progress: false
+
+jobs:
+  media-repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Additive DDL (ADD COLUMN IF NOT EXISTS) — instant, no table rewrite.
+      # continue-on-error: without cursor_key the reconciliation sweep degrades to its
+      # old non-resumable behaviour rather than failing, so a missing DATABASE_URL must
+      # not block the per-key repair below, which is the point of the run.
+      - name: Apply migrations 107 + 108 (reconciliation cursor + empty-media indexes)
+        if: ${{ github.event.inputs.run_migration != 'false' }}
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npx tsx scripts/admin/applyMigrationFiles.ts \
+            107_sync_state_cursor_key.sql \
+            108_listings_empty_media_index.sql
+
+      # Asserts the partial index is VALID, that the sweep's predicate still plans as an
+      # index scan, and that the real query runs under the real 8s PostgREST ceiling.
+      # Runs BEFORE the repair on purpose: if the nightly sweep has been re-broken, that
+      # is the finding — repairing a few keys by hand would paper over it.
+      - name: Verify the nightly reconcile is healthy
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/verifyMediaReconcile.ts
+
+      # Read-only. Prints, per key, the Supabase row state next to AMPRE's FULL
+      # per-size media inventory, and names which of the four causes applies.
+      # Skipped in all_empty mode — there is nothing useful to print per key across
+      # thousands of listings, and the repair reports its own totals.
+      - name: Diagnose
+        if: ${{ github.event.inputs.all_empty != 'true' }}
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          # Via env, never inlined into the script body — a ${{ }} interpolation
+          # inside `run:` is a shell-injection seam even for collaborator-only input.
+          LISTING_KEYS: ${{ github.event.inputs.listing_keys }}
+        run: |
+          for key in $LISTING_KEYS; do
+            npx tsx scripts/admin/diagnoseListingMedia.ts "$key" || true
+          done
+
+      # The actual repair: re-fetch /Media for these keys (with the size fallback) and
+      # re-upsert through the daily sync's own path, so Supabase and Typesense agree.
+      - name: Repair
+        timeout-minutes: 120
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_IDX_TOKEN: ${{ secrets.PROPTX_IDX_TOKEN }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          # Without these two, repairListingMedia's revalidateKeys() returns 0 on its
+          # first line and the cache bust silently does nothing — so a repaired listing
+          # keeps serving its blank gallery for up to an hour from getListingDetailCached's
+          # 3600s unstable_cache. That is the exact silent-no-op shape this PR exists to
+          # fix, and it would bite hardest here, since this workflow IS how the repair runs
+          # against prod. Same two secrets daily-sync.yml passes to its revalidate step.
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          LISTING_KEYS: ${{ github.event.inputs.listing_keys }}
+          APPLY_INPUT: ${{ github.event.inputs.apply }}
+          ALL_EMPTY: ${{ github.event.inputs.all_empty }}
+          LIMIT_INPUT: ${{ github.event.inputs.limit }}
+        run: |
+          FLAG=""
+          if [ "$APPLY_INPUT" != "false" ]; then FLAG="--apply"; fi
+          if [ "$ALL_EMPTY" = "true" ]; then
+            # Whole-backlog drain. ~5.4 listings/s measured, so the 120-minute cap covers
+            # roughly 39k listings — well past any realistic backlog.
+            LIM=""
+            if [ -n "$LIMIT_INPUT" ]; then LIM="--limit=$LIMIT_INPUT"; fi
+            npx tsx scripts/admin/repairListingMedia.ts --all-empty $LIM $FLAG
+          else
+            # shellcheck disable=SC2086 -- LISTING_KEYS is intentionally word-split into args
+            npx tsx scripts/admin/repairListingMedia.ts $LISTING_KEYS $FLAG
+          fi

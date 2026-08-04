@@ -1,0 +1,55 @@
+-- Migration 108: partial index that makes the empty-media sweep plannable.
+--
+-- THE BUG THIS FIXES (measured 2026-08-04, production):
+-- reconcileMissingMedia — the nightly job that heals blank galleries — recovered ZERO
+-- listings every night from at least 2026-06-30 to 2026-08-03. Every daily-sync run logs:
+--     ⚠️  Reconciliation query failed (non-fatal): canceling statement due to statement timeout
+--     🩹 Scanned 0 recent empty-media listings, recovered 0
+--
+-- It is not a slow query, it is a PLAN CHOICE. supabase-js's
+--   .or('media_urls.is.null,media_urls.eq.{}')
+-- reaches Postgres as `media_urls IS NULL OR media_urls = '{}'::text[]`. pg_stats reports
+-- n_distinct = -0.9979 for that column (near-unique), so the planner estimated 49 matching
+-- rows against an actual 10,751 — a 219x under-estimate. Believing the match was rare, it
+-- chose a Parallel Seq Scan + Sort over the ordered index scan: 42.7 s. PostgREST executes as
+-- service_role, whose rolconfig is NULL, so it inherits authenticator's 8 s statement_timeout.
+-- The query could never finish, at any LIMIT — even LIMIT 10 timed out.
+--
+-- Proof it was only the plan: with enable_seqscan = off the IDENTICAL predicate returned in
+-- 445 ms via listings_listing_key_key.
+--
+-- WHY A PARTIAL INDEX AND NOT AN ANALYZE / STATISTICS TARGET:
+-- raising the stats target cannot fix this. There is no MCV entry to find — media_urls holds
+-- ~244k distinct non-empty arrays, so the empty-array value is invisible to the histogram no
+-- matter how many rows are sampled. A partial index removes the estimate from the critical
+-- path entirely: the index CONTAINS only the empty-media rows, ordered by listing_key, which
+-- is exactly the sweep's access pattern (keyset-paginate by listing_key, filter created_at).
+--
+-- The predicate is written to match the PostgREST-generated WHERE clause EXACTLY, including
+-- the IS NULL branch. media_urls is nullable (default '{}'), and although production
+-- currently holds 0 NULLs, a partial index is only usable when the query predicate implies
+-- the index predicate — so the two must stay in lockstep. If the sweep's filter in
+-- scripts/worker/ingester.ts ever changes, this predicate has to change with it, or the plan
+-- silently reverts to the 42.7 s seq scan. sweepMissingMedia carries a comment saying so, and
+-- the data-health canary (checkMediaReconcile) fires if the sweep ever scans 0 again.
+--
+-- ONE INDEX, NOT TWO. A companion index on (created_at, listing_key) was proposed for the
+-- recent sweep. It cannot help: that sweep is `created_at >= cutoff ORDER BY listing_key`, and
+-- a created_at-leading index over a RANGE cannot produce listing_key order, so every page
+-- would have to sort the whole matching set. The index below yields the ordering directly and
+-- filters created_at as it goes — ~99% of empty-media rows fall inside the recency window, so
+-- almost nothing is discarded. Measured on the real query: 320 ms recent / 496 ms backlog over
+-- PostgREST, 0.26 ms planned. There is no gap left for a second index to close, and a partial
+-- index still costs a predicate evaluation on every write to `listings`.
+--
+-- CONCURRENTLY so the build takes no write lock on a 255k-row table. This file must therefore
+-- stay a SINGLE statement: applyMigrationFiles.ts sends the whole file in one client.query(),
+-- and a multi-statement simple query runs inside an implicit transaction, which
+-- CREATE INDEX CONCURRENTLY refuses. (Hence no COMMENT ON INDEX here — it would be a second
+-- statement and would break the apply.)
+--
+-- Run: npx tsx scripts/admin/applyMigrationFiles.ts 108_listings_empty_media_index.sql
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_listings_empty_media
+  ON public.listings (listing_key)
+  WHERE media_urls IS NULL OR media_urls = '{}'::text[];

@@ -28,10 +28,35 @@ interface LeaderboardRow {
 
 type RankKey = "yield" | "leverage" | "inventory";
 
-const RANK_OPTIONS: { key: RankKey; label: string; hint: string; field: keyof LeaderboardRow }[] = [
-  { key: "yield", label: "Yield", hint: "median cap rate", field: "medianCapRate" },
-  { key: "leverage", label: "Buyer leverage", hint: "% stale (60d+ True DOM)", field: "stalePct" },
-  { key: "inventory", label: "Inventory", hint: "active listings", field: "activeCount" },
+const RANK_OPTIONS: {
+  key: RankKey;
+  label: string;
+  hint: string;
+  /** Hover definition — keeps the precise/investor term for power users. */
+  tip: string;
+  field: keyof LeaderboardRow;
+}[] = [
+  {
+    key: "yield",
+    label: "Rental return",
+    hint: "typical rental return",
+    tip: "Typical rental return — a year's rent ÷ the price (investors call this the cap rate). Higher = better income.",
+    field: "medianCapRate",
+  },
+  {
+    key: "leverage",
+    label: "Slow to sell",
+    hint: "share of homes sitting 60+ days",
+    tip: "Buyer's-market signal — the share of listings that have sat 60+ days. More sitting = more room to negotiate.",
+    field: "stalePct",
+  },
+  {
+    key: "inventory",
+    label: "Most listings",
+    hint: "number of homes for sale",
+    tip: "How many homes are currently for sale in the market.",
+    field: "activeCount",
+  },
 ];
 
 export default function SubmarketLeaderboard() {
@@ -99,6 +124,7 @@ export default function SubmarketLeaderboard() {
                   type="button"
                   onClick={() => setRankBy(o.key)}
                   aria-pressed={rankBy === o.key}
+                  title={o.tip}
                   className={cn(
                     "terminal-font border-l border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors first:border-l-0",
                     rankBy === o.key
@@ -114,7 +140,7 @@ export default function SubmarketLeaderboard() {
         />
 
         <p className="text-[11px] text-muted-foreground">
-          {scores.length ? `${scores.length} ` : ""}GTA markets ranked by {opt.hint} — all active inventory. Click a market to open it in the terminal.
+          {scores.length ? `All ${scores.length} ` : "All "}GTA markets we cover, ranked by {opt.hint} — using every home currently for sale. Click a market to see its listings.
         </p>
 
         <Panel className="divide-y divide-border/60">
@@ -126,7 +152,7 @@ export default function SubmarketLeaderboard() {
             </p>
           ) : ranked.length === 0 ? (
             <p className="px-3 py-8 text-center text-xs text-muted-foreground">
-              No ranked markets right now — check back after the next daily sync.
+              No markets to rank right now — check back tomorrow.
             </p>
           ) : (
             ranked.map(({ s, v }, i) => (
@@ -146,13 +172,19 @@ export default function SubmarketLeaderboard() {
                       inline stats carry only the OTHER two so the row never repeats itself. */}
                   <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">
                     {opt.field !== "medianCapRate" && (
-                      <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
+                      <span title="Typical rental return — a year's rent ÷ the price (the cap rate)">
+                        {s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% return` : "— return"}
+                      </span>
                     )}
                     {opt.field !== "stalePct" && (
-                      <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
+                      <span title="Share of homes that have sat on the market 60+ days">
+                        {s.stalePct != null ? `${s.stalePct.toFixed(0)}% sitting 60d+` : "— sitting 60d+"}
+                      </span>
                     )}
                     {opt.field !== "activeCount" && (
-                      <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
+                      <span title="Homes currently for sale">
+                        {s.activeCount != null ? `${s.activeCount.toLocaleString()} for sale` : "—"}
+                      </span>
                     )}
                   </div>
                   {/* Daylight yield bar (light only) — magnitude at a glance. */}
@@ -172,8 +204,9 @@ export default function SubmarketLeaderboard() {
         </Panel>
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Full-population aggregates over current active inventory (no 100-row sampling). Median cap requires ≥5 priced
-          active listings; “stale” = 60d+ True DOM. Deterministic, no AI (§4).
+          Based on every home currently for sale in each market — not a sample. Rental return only shows where at least 5
+          priced homes are listed. “Sitting 60+ days” counts real days on the market — re-listing a home doesn’t reset the
+          clock. Updated daily.
         </p>
       </section>
     </div>
