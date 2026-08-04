@@ -625,8 +625,15 @@ export const getListingDetail = cache(
     // W13224994 sold Jun 12 $885k). Promote to SOLD when the NEWEST stitched campaign is a
     // close on a DIFFERENT key dated at/after this key's delist. The soldAccuracy receipt
     // is recomputed so the sold hero carries its estimate-vs-close delta.
+    //
+    // Scoped to THIS campaign's transaction type: a close of the other type is a different
+    // deal on the same bricks and must not settle this page (a terminated SALE at a
+    // property later LEASED did not sell — see latestCloseFromCampaigns).
     if (status.kind === "delisted" && campaignHistory.events.length > 0) {
-      const close = latestCloseFromCampaigns(campaignHistory.events);
+      const close = latestCloseFromCampaigns(
+        campaignHistory.events,
+        /lease/i.test(String(payload["TransactionType"] ?? "")) ? "Lease" : "Sale"
+      );
       if (
         close &&
         close.listingKey !== listing.listing_key &&
