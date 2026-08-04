@@ -93,6 +93,49 @@ describe('computeTrueDomFromCampaigns — edges', () => {
   });
 });
 
+describe('computeTrueDomFromCampaigns — LEASE track (rental-native metrics)', () => {
+  it('stitches lease campaigns into lease_true_dom + surfaces the rent reduction', () => {
+    const r = computeTrueDomFromCampaigns(
+      [
+        ev({ listing_key: 'L2', transaction_type: 'Lease', status: 'Active', entry_date: '2026-06-06T00:00:00Z', list_price: 3000, original_list_price: 3000 }),
+        ev({ listing_key: 'L1', transaction_type: 'Lease', status: 'Terminated', entry_date: '2026-05-10T00:00:00Z', end_date: '2026-05-20', list_price: 3200, original_list_price: 3200 }),
+      ],
+      { nowMs: NOW }
+    );
+    expect(r.lease_true_dom).toBe(29);          // 2026-05-10 -> NOW (stitched, gap 17d)
+    expect(r.lease_total_price_drop).toBe(200); // earliest ask 3200 -> current 3000
+    expect(r.true_dom).toBe(0);                 // no sale campaign
+    expect(r.total_price_drop).toBe(0);
+  });
+
+  it('keeps the sale and lease tracks independent for a sale->lease flip (62 Fernbrook shape)', () => {
+    const r = computeTrueDomFromCampaigns(
+      [
+        // current campaign: For Lease at $2,800 (no rent drop)
+        ev({ listing_key: 'LNow', transaction_type: 'Lease', status: 'Active', entry_date: '2026-06-06T00:00:00Z', list_price: 2800, original_list_price: 2800 }),
+        // a prior FAILED sale with a big drop
+        ev({ listing_key: 'SOld', transaction_type: 'Sale', status: 'Terminated', entry_date: '2026-05-10T00:00:00Z', end_date: '2026-05-20', list_price: 805100, original_list_price: 1000000 }),
+      ],
+      { nowMs: NOW }
+    );
+    // the six-figure drop stays on the SALE track and NEVER lands on the rental
+    expect(r.total_price_drop).toBe(194900);
+    expect(r.lease_total_price_drop).toBe(0);
+    // rental DOM is the lease campaign's own age, not the old sale span
+    expect(r.lease_true_dom).toBe(2);  // 2026-06-06 -> NOW
+    expect(r.true_dom).toBe(10);       // sale span 2026-05-10 -> its 2026-05-20 terminal
+  });
+
+  it('a sale-only listing carries zero lease metrics', () => {
+    const r = computeTrueDomFromCampaigns(
+      [ev({ listing_key: 'S', status: 'Active', entry_date: '2026-06-06T00:00:00Z', list_price: 800000, original_list_price: 800000 })],
+      { nowMs: NOW }
+    );
+    expect(r.lease_true_dom).toBe(0);
+    expect(r.lease_total_price_drop).toBe(0);
+  });
+});
+
 describe('null end_date on non-Active campaigns (audit HIGH-9)', () => {
   it('does NOT stitch a Terminated campaign with no end_date — true_dom counts only the fresh campaign', () => {
     const now = Date.parse('2026-06-09T00:00:00Z');

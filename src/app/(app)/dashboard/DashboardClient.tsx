@@ -176,10 +176,15 @@ export default function DashboardClient() {
   if (!ready) return <div className="min-h-app bg-background" aria-busy="true" />;
 
   // Persona reorders which boards lead (non-destructive — config.boards stays the
-  // user's enable/disable set).
+  // user's enable/disable set). The lens then hides boards that don't apply to the
+  // current transaction mode — the sale-only investor boards (cap rate, capital burn,
+  // suite) drop out in "For Rent" mode, where the rental-native boards adapt in place.
+  // This one array feeds both the built-in city sections and the saved bubble sections.
+  const lensScope = config.marketActivity.transactionType;
   const enabledBoards = orderBoardsForPersona(config.persona, config.boards)
     .map((id) => BOARDS[id])
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((b) => b.scopes.includes(lensScope));
   const hasRegions = config.regions.length > 0;
   // Effective focus city for the intelligence tiles: the user's pick if it's still
   // a configured region, else the first region.

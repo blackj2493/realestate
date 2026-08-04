@@ -11,6 +11,7 @@
  */
 
 import type { ListingDocument } from '@/lib/typesense/client';
+import type { TransactionScope } from './config';
 
 export type BoardId =
   | 'cap_rate'
@@ -19,6 +20,18 @@ export type BoardId =
   | 'price_drop'
   | 'high_dom'
   | 'carry';
+
+/** The lens-dependent face of a board — the fields that differ between sale and
+ *  lease mode (title, headline metric, sort, filter). See `lease` on BoardDef and
+ *  `resolveBoardView`. */
+export interface BoardLensView {
+  title: string;
+  metricField: keyof ListingDocument;
+  metricLabel: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  rawFilterBy?: string;
+}
 
 export interface BoardDef {
   id: BoardId;
@@ -33,6 +46,46 @@ export interface BoardDef {
   rawFilterBy?: string;
   /** /apply objectives this board best serves — drives lead ordering */
   objectives: string[];
+  /** transaction modes this board is valid for. Sale-only boards (cap rate, carry,
+   *  suite) are hidden in "For Rent" mode; boards with a `lease` override adapt. */
+  scopes: TransactionScope[];
+  /** "For Rent" overrides — the rental-native metric (LeaseTrueDom / LeaseTotalPriceDrop).
+   *  Absent → the board is sale-only. formatMetric is shared with the sale view. */
+  lease?: BoardLensView;
+}
+
+/**
+ * The board's effective face for a given lens. In lease mode a board with a `lease`
+ * override swaps to its rental-native metric; otherwise the sale definition is used.
+ * `formatMetric` is shared (LeaseTrueDom is days like TrueDom; LeaseTotalPriceDrop is
+ * dollars like TotalPriceDrop).
+ */
+export interface ResolvedBoardView {
+  title: string;
+  metricField: keyof ListingDocument;
+  metricLabel: string;
+  formatMetric: (v: number | undefined | null) => string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  rawFilterBy?: string;
+}
+
+export function resolveBoardView(
+  board: BoardDef,
+  transactionType: TransactionScope
+): ResolvedBoardView {
+  const v: BoardLensView =
+    transactionType === 'lease' && board.lease
+      ? board.lease
+      : {
+          title: board.title,
+          metricField: board.metricField,
+          metricLabel: board.metricLabel,
+          sortBy: board.sortBy,
+          sortOrder: board.sortOrder,
+          rawFilterBy: board.rawFilterBy,
+        };
+  return { ...v, formatMetric: board.formatMetric };
 }
 
 // cap_rate_est is stored as a percentage (7.1 → "7.1%").
@@ -56,6 +109,8 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortOrder: 'desc',
     rawFilterBy: 'cap_rate_est:>=1 && cap_rate_est:<=15',
     objectives: ['Analyze rental yield / cap rates'],
+    // Sale-only: cap rate needs a purchase price; the ETL zeroes it for leases.
+    scopes: ['sale'],
   },
   suite: {
     id: 'suite',
@@ -67,6 +122,8 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortOrder: 'desc',
     rawFilterBy: 'SuiteScore:>=3',
     objectives: ['Source zoning & conversion upside', 'Buy a home with hidden value (suite / basement potential)'],
+    // Sale-only: a suite/conversion investor board, off-topic for renters.
+    scopes: ['sale'],
   },
   fresh: {
     id: 'fresh',
@@ -78,6 +135,15 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortOrder: 'asc',
     rawFilterBy: 'TrueDom:>=0',
     objectives: [],
+    scopes: ['sale', 'lease'],
+    lease: {
+      title: 'Freshest Rentals',
+      metricField: 'LeaseTrueDom',
+      metricLabel: 'RENTAL DOM',
+      sortBy: 'LeaseTrueDom',
+      sortOrder: 'asc',
+      rawFilterBy: 'LeaseTrueDom:>=0',
+    },
   },
   price_drop: {
     id: 'price_drop',
@@ -89,6 +155,15 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortOrder: 'desc',
     rawFilterBy: 'TotalPriceDrop:>0',
     objectives: ['Target distressed & off-market deals'],
+    scopes: ['sale', 'lease'],
+    lease: {
+      title: 'Biggest Rent Reductions',
+      metricField: 'LeaseTotalPriceDrop',
+      metricLabel: 'RENT CUT',
+      sortBy: 'LeaseTotalPriceDrop',
+      sortOrder: 'desc',
+      rawFilterBy: 'LeaseTotalPriceDrop:>0',
+    },
   },
   high_dom: {
     id: 'high_dom',
@@ -102,6 +177,15 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     // the motivated-seller / negotiation-leverage board. Mirror of `fresh` (asc).
     rawFilterBy: 'TrueDom:>=0',
     objectives: ['Target distressed & off-market deals'],
+    scopes: ['sale', 'lease'],
+    lease: {
+      title: 'Longest-Listed Rentals',
+      metricField: 'LeaseTrueDom',
+      metricLabel: 'RENTAL DOM',
+      sortBy: 'LeaseTrueDom',
+      sortOrder: 'desc',
+      rawFilterBy: 'LeaseTrueDom:>=0',
+    },
   },
   carry: {
     id: 'carry',
@@ -113,6 +197,8 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortOrder: 'asc',
     rawFilterBy: 'CapitalBurnRateMonthly:>0',
     objectives: ['Analyze rental yield / cap rates'],
+    // Sale-only: capital burn is a purchase carrying-cost; meaningless for a rental.
+    scopes: ['sale'],
   },
 };
 

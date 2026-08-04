@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ListingDocument } from "@/lib/typesense/client";
-import type { BoardDef } from "@/lib/dashboard/boards";
+import { resolveBoardView, type BoardDef } from "@/lib/dashboard/boards";
 import { fetchBoard } from "@/lib/dashboard/queries";
 import { scopeKey } from "@/lib/dashboard/lensKey";
 import { areaKey, type Area } from "@/lib/dashboard/area";
@@ -23,6 +23,8 @@ export default function PlaylistBoard({
   const [error, setError] = useState(false);
   const key = areaKey(area);
   const scope = scopeKey(lens);
+  // Lens-aware face of the board — swaps to the rental-native metric in "For Rent" mode.
+  const view = resolveBoardView(board, lens.transactionType);
 
   useEffect(() => {
     let alive = true;
@@ -45,10 +47,10 @@ export default function PlaylistBoard({
     <div className="border border-border bg-card/40">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-          {board.title}
+          {view.title}
         </h3>
         <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
-          {board.metricLabel}
+          {view.metricLabel}
         </span>
       </div>
 
@@ -67,7 +69,7 @@ export default function PlaylistBoard({
       )}
       {rows &&
         rows.length > 0 &&
-        rows.map((l) => <PlaylistRow key={l.id} listing={l} board={board} />)}
+        rows.map((l) => <PlaylistRow key={l.id} listing={l} view={view} />)}
     </div>
   );
 }

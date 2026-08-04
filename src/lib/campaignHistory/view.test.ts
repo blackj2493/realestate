@@ -8,6 +8,7 @@ const events: CampaignEvent[] = [
 ];
 const row: CampaignHistoryRow = {
   property_hash: 'h', events, true_dom: 24, total_price_drop: 50000,
+  lease_true_dom: 0, lease_total_price_drop: 0,
   campaign_count: 7, first_seen_date: '2025-06-10', is_stale: false, fetched_at: '2026-06-08T18:00:00.000Z',
 };
 

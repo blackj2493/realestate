@@ -192,6 +192,9 @@ export interface ListingDocument {
   
   // Extended fields for Command Center
   TrueDom?: number;
+  // Rental-native LEASE-track twins (0 for sale listings) — back the "For Rent" boards.
+  LeaseTrueDom?: number;
+  LeaseTotalPriceDrop?: number;
   primaryImageUrl?: string;
 
   // Full deduped photo URL array (unindexed Typesense cargo `RawImages`) — used by

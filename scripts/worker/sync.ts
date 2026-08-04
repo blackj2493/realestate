@@ -133,7 +133,7 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
   const supabaseClient = getServiceRoleClient();
   const vowToken = process.env.PROPTX_VOW_TOKEN;
   const nowMs = Date.now();
-  const temporalMetrics = new Map<string, { true_dom: number; total_price_drop: number; property_hash: string; is_stale: boolean }>();
+  const temporalMetrics = new Map<string, { true_dom: number; total_price_drop: number; lease_true_dom: number; lease_total_price_drop: number; property_hash: string; is_stale: boolean }>();
 
   for (const t of transformed) {
     const listingKey = t.supabasePayload.listing_key;
@@ -141,6 +141,10 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     const propertyHash = generatePropertyHash(raw);
     let true_dom = 0;
     let total_price_drop = 0;
+    // LEASE track — rental-native twins of true_dom/total_price_drop for the "For Rent"
+    // dashboard boards. Kept separate from the sale fields; 0 for sale listings.
+    let lease_true_dom = 0;
+    let lease_total_price_drop = 0;
     let is_stale = false;
     // Sold/Closed batches (Query B → isSold) are never indexed in Typesense and their
     // True DOM is not surfaced, so skip the per-listing VOW address-query entirely —
@@ -164,6 +168,8 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
         if (row) {
           true_dom = row.true_dom;
           total_price_drop = row.total_price_drop;
+          lease_true_dom = row.lease_true_dom ?? 0;
+          lease_total_price_drop = row.lease_total_price_drop ?? 0;
           is_stale = row.is_stale;
         }
       } catch (e) {
@@ -180,12 +186,23 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
           true_dom = naiveAge;
           is_stale = true_dom > STALE_THRESHOLD_DAYS;
         }
+        // Lease-track floor: a For-Lease listing's rental DOM is AT LEAST its current
+        // listing's age (same reasoning as the sale floor above). Gated to lease
+        // listings so a sale listing's LeaseTrueDom stays 0 — it never surfaces on a
+        // rental board anyway, and this keeps the sale-track floor byte-identical.
+        if (String(raw['TransactionType']) === 'For Lease' && naiveAge > lease_true_dom) {
+          lease_true_dom = naiveAge;
+        }
       }
     }
     raw['property_hash'] = propertyHash;
     raw['true_dom'] = true_dom;
     raw['total_price_drop'] = total_price_drop;
-    temporalMetrics.set(listingKey, { true_dom, total_price_drop, property_hash: propertyHash, is_stale });
+    // Persist the lease track into full_payload too so reindex-from-vault (which reads
+    // the vault's full_payload, not the flat columns) can restore LeaseTrueDom/LeaseTotalPriceDrop.
+    raw['lease_true_dom'] = lease_true_dom;
+    raw['lease_total_price_drop'] = lease_total_price_drop;
+    temporalMetrics.set(listingKey, { true_dom, total_price_drop, lease_true_dom, lease_total_price_drop, property_hash: propertyHash, is_stale });
   }
 
   console.log(`   ⏱️  Temporal metrics calculated for ${temporalMetrics.size} listings`);
@@ -269,6 +286,10 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       // Flat relist-stitched price drop (migration 074) so region_price_cuts skips the
       // full_payload detoast (Toronto was ~32s). Same source as the full_payload write above.
       total_price_drop: metrics?.total_price_drop ?? 0,
+      // Rental-native LEASE-track columns (migration 107). Source for reindex-from-vault;
+      // no region RPC reads them, so the sale surfaces are unaffected. 0 for sale listings.
+      lease_true_dom: metrics?.lease_true_dom ?? 0,
+      lease_total_price_drop: metrics?.lease_total_price_drop ?? 0,
     };
   });
   
@@ -282,6 +303,10 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       PropertyHash: metrics?.property_hash || '',
       TrueDom: metrics?.true_dom || 0,
       TotalPriceDrop: metrics?.total_price_drop || 0,
+      // Rental-native LEASE-track twins — power the "For Rent" boards (Freshest /
+      // Longest-Listed Rentals, Biggest Rent Reductions). 0 for sale listings.
+      LeaseTrueDom: metrics?.lease_true_dom || 0,
+      LeaseTotalPriceDrop: metrics?.lease_total_price_drop || 0,
       // IsStale MUST track the stitched+naive-floored TrueDom (60d) computed above, NOT the
       // transformer's naive basicDOM>90 placeholder in ...tsDoc — otherwise the STALE badge /
       // watchlist "going stale" / IsStale:=true bubbles contradict the TrueDom on the same doc.

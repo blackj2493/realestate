@@ -99,6 +99,11 @@ export const indexedFields: IndexedField[] = [
   { name: 'TrueDom', type: 'int32', facet: false, sort: true },
   { name: 'TotalPriceDrop', type: 'int32', sort: true },
   { name: 'IsStale', type: 'bool', facet: true },
+  // Rental-native twins of TrueDom/TotalPriceDrop — the LEASE campaign's DOM + rent
+  // reduction, for the "For Rent" dashboard boards. 0 for sale listings. Kept
+  // SEPARATE from the sale fields so the region RPCs / analytics stay untouched.
+  { name: 'LeaseTrueDom', type: 'int32', facet: false, sort: true },
+  { name: 'LeaseTotalPriceDrop', type: 'int32', sort: true },
   { name: 'IsSold', type: 'bool', facet: true },
 
   // ─── Suite Analysis (Phase 5) — status enum is a facet, score is a slider ─
@@ -270,6 +275,9 @@ export const typesenseSchema = {
     { name: 'TrueDom', type: 'int32' as const, facet: false, sort: true },
     { name: 'TotalPriceDrop', type: 'int32' as const, sort: true },
     { name: 'IsStale', type: 'bool' as const, facet: true },
+    // Rental-native twins (LEASE campaign DOM + rent reduction); 0 for sale listings.
+    { name: 'LeaseTrueDom', type: 'int32' as const, facet: false, sort: true },
+    { name: 'LeaseTotalPriceDrop', type: 'int32' as const, sort: true },
 
     // ─── Persona 2: Cashflow Investor — range sliders ──────────────────────
     { name: 'cap_rate_est', type: 'float' as const, facet: false, sort: true },
@@ -483,6 +491,10 @@ export interface TypesensePropertyDocument {
   TotalPriceDrop: number;
   /** True if TrueDom > 60 days - stale inventory indicator (STALE_THRESHOLD_DAYS) */
   IsStale: boolean;
+  /** LEASE-track True DOM — rental days-on-market (0 for sale listings). */
+  LeaseTrueDom: number;
+  /** LEASE-track rent reduction $ (0 for sale listings). */
+  LeaseTotalPriceDrop: number;
   
   // ─── ADU/Suite Potential (Phase 2) ──────────────────────────────────────
   // Distress Analysis
