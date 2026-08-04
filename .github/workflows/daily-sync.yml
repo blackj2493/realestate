@@ -95,6 +95,25 @@ jobs:
           PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
         run: npx tsx scripts/admin/reconcile-sold-from-campaign-history.ts --scan --apply --since-days=7 --window-days=180
 
+      # Drop de-listed comps whose property has since SOLD. `pruneOldDelisted` only ever
+      # expires de-listed docs on AGE, so a terminate-then-relist resale left the ORIGINAL
+      # key lit on the terminal's De-listed layer for up to 90 days after the sale — while
+      # /properties/<original key> already rendered SOLD via getListingDetail's relist
+      # reconciliation (the 210 Charlton Ave E report; 7,103 of 59,730 For-Sale de-listed
+      # pins were stale when measured 2026-08-03). Both indexers now handle this inline —
+      # soldIndexer purges on close, delistedIndexer withholds a replayed de-list — so this
+      # whole-window join is only a backstop for anything they missed (e.g. a close indexed
+      # while Typesense was refusing the purge). A LEASE deliberately does NOT retire a pin:
+      # the owner still owns the property and still wanted to sell (see SUPERSEDING_DEAL_TYPES).
+      # Placed AFTER every step that writes a close so it sees tonight's full picture.
+      # Idempotent; typically deletes 0. Additive — continue-on-error.
+      - name: Sweep Superseded De-listed Comps
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/worker/purgeSupersededDelisted.ts sweep --apply
+
       # Re-floor active True DOM to the naive current-listing age. The floor that keeps
       # true_dom honest — GREATEST(true_dom, days-since-OriginalEntryTimestamp) — lives only
       # in the core sync's processBatch, which runs on the ModificationTimestamp DELTA. A
