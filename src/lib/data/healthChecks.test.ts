@@ -8,6 +8,7 @@ import {
   checkDrift,
   checkEmailFailures,
   checkMediaReconcile,
+  checkOnboardingExample,
   snapshotFromRows,
   LATEST_MONTH_KEY,
   type Problem,
@@ -564,5 +565,29 @@ describe("regression: media reconcile silently scanned 0 for five weeks", () => 
     const out = checkMediaReconcile({ emptyMedia: 10_751, sweeps: [], nowMs: NOW });
     expect(out).toHaveLength(1);
     expect(out[0].severity).toBe("warn");
+  });
+});
+
+describe("regression: the onboarding intro email showed Woodbridge 0/0", () => {
+  it("passes when the example region resolves to healthy inventory", () => {
+    expect(checkOnboardingExample({ region: "Woodbridge", activeCount: 266 })).toEqual([]);
+  });
+
+  it("warns when the CityRegion alias breaks and the example resolves to ~0", () => {
+    const out = checkOnboardingExample({ region: "Woodbridge", activeCount: 0 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warn");
+    expect(out[0].check).toBe("onboarding-example");
+  });
+
+  it("warns on a null (fully unresolved) count", () => {
+    const out = checkOnboardingExample({ region: "Woodbridge", activeCount: null });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warn");
+  });
+
+  it("respects a custom minimum", () => {
+    expect(checkOnboardingExample({ region: "X", activeCount: 30, minActive: 25 })).toEqual([]);
+    expect(checkOnboardingExample({ region: "X", activeCount: 20, minActive: 25 })).toHaveLength(1);
   });
 });
