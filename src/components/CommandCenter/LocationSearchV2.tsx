@@ -306,10 +306,17 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     } else if (parsed?.isStructured) {
       applyNl();
     } else if (value.trim()) {
-      setLocation(value.trim());
-      remember(value.trim(), "place");
+      const q = value.trim();
+      setLocation(q);
+      remember(q, "place");
+      // Same as picking a city suggestion: fly the map to it + close the mobile sheet, so a
+      // typed-then-Enter search doesn't leave the map on a stale viewport / the sheet open.
+      void resolveCityCamera(q).then((cam) => {
+        if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+      });
       setValue("");
       close();
+      onSelect?.();
     }
   };
 
@@ -463,8 +470,13 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                   onClick={() => {
                     setLocation(cityGroup);
                     remember(cityGroup, "place");
+                    // Fly to the whole city + close the mobile sheet, like any other pick.
+                    void resolveCityCamera(cityGroup).then((cam) => {
+                      if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+                    });
                     setValue("");
                     close();
+                    onSelect?.();
                   }}
                   className="flex w-full items-center gap-2.5 border-b border-border/60 px-3 py-2 text-left transition-colors hover:bg-muted"
                 >
