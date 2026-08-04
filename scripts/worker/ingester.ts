@@ -426,18 +426,23 @@ const PAGE_DELAY_MS = 1000;
 //
 // Two separate problems, both fixed here:
 //
-// 1. The candidate query is INTERMITTENTLY too slow. It selected full_payload while
-//    filtering on an unindexed empty-media predicate, so it detoasted a large JSONB per
-//    candidate row the scan touched — right on the edge of the statement timeout, tipping
-//    over on a bad night. The failure is swallowed as non-fatal (correctly — media must
-//    never fail the sync), so a lost night looks identical to a clean one: "Scanned 0 …
-//    recovered 0" reads as "nothing needed recovering". Fixed by migration 108's partial
-//    indexes plus the keys-first projection in sweepMissingMedia.
+// 1. The candidate query could not be planned. Migration 108 has the measured post-mortem
+//    — short version: the planner under-estimated the empty-media match by 219x and chose
+//    a 42.7 s Parallel Seq Scan against an 8 s inherited statement_timeout, so the query
+//    timed out at ANY limit. It failed this way from at least 2026-06-30 to 2026-08-03.
+//    The failure is swallowed as non-fatal (correctly — media must never fail the sync),
+//    so a dead night looks identical to a clean one: "Scanned 0 … recovered 0" reads as
+//    "nothing needed recovering". Fixed by migration 108's partial index; the keys-first
+//    projection below additionally keeps the scan off the TOAST heap.
 //
-// 2. The 999/1000 recovery rate is the real headline: essentially every listing the sweep
-//    reaches HAS photos waiting at AMPRE that we never fetched. The backlog is recoverable
-//    inventory, not genuinely photo-less listings — so the nightly budget, and the ORDER
-//    the budget is spent in, decide who stays blank and for how long.
+//    The 08-04 run above is the one night it did plan — do not read that as "intermittent
+//    and self-healing". A plan flip is exactly as likely to flip back, which is why the
+//    fix is an index rather than a stats tweak, and why checkMediaReconcile now alerts.
+//
+// 2. The 999/1000 recovery rate is the more useful number: essentially every listing the
+//    sweep reaches HAS photos waiting at AMPRE that we never fetched. The backlog is
+//    recoverable inventory, not genuinely photo-less listings — so the nightly budget, and
+//    the ORDER the budget is spent in, decide who stays blank and for how long.
 //
 // Runs as TWO sweeps, each with its own persisted keyset cursor:
 //
