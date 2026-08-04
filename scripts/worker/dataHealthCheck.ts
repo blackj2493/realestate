@@ -42,6 +42,7 @@ import {
   checkEstimateFreshness,
   checkDrift,
   checkEmailFailures,
+  checkMediaReconcile,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
@@ -72,6 +73,11 @@ const ESTIMATE_MAX_AGE_HOURS = Number(process.env.ESTIMATE_MAX_AGE_HOURS) || 120
 // 2500 sits above that floor yet well below a real under-run (a failed recompute shard ≈
 // 20k, or the prune ceasing → orphans re-accumulate past this within days).
 const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 2500;
+// Empty-media listings tolerated before "the sweep scanned 0 rows" counts as a failure
+// rather than a healthy no-op. New listings legitimately land photo-less (AMPRE publishes
+// /Property before /Media), so a steady trickle is normal; 100 sits above that trickle and
+// far below a dead sweep (which parks the number in the thousands).
+const MEDIA_EMPTY_TOLERANCE = Number(process.env.MEDIA_EMPTY_TOLERANCE) || 100;
 
 const problems: Problem[] = [];
 
@@ -288,6 +294,57 @@ async function checkEmailHealth(): Promise<void> {
   await sb.from('email_send_failures').delete().lt('occurred_at', cutoff);
 }
 
+/**
+ * Media reconciliation health — is the nightly blank-gallery healer actually working?
+ *
+ * Counts active listings with no photos, and reads the outcome each sweep recorded in
+ * sync_state (writeReconcileOutcome in scripts/worker/ingester.ts). The rule needs both:
+ * "scanned 0" is healthy when nothing is waiting and fatal when 10k listings are. See
+ * checkMediaReconcile for the failure this replays.
+ */
+async function checkMediaReconcileHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+
+  // head+exact = a COUNT, no rows shipped. Served by idx_listings_empty_media (108).
+  const { count, error: countErr } = await sb
+    .from('listings')
+    .select('listing_key', { count: 'exact', head: true })
+    .or('media_urls.is.null,media_urls.eq.{}');
+  if (countErr) {
+    problems.push({
+      severity: 'warn',
+      check: 'media-reconcile',
+      detail: `could not count empty-media listings (${countErr.message}) — is migration 108 applied?`,
+    });
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('sync_state')
+    .select('id, records_synced, status, updated_at')
+    .in('id', ['media_reconcile_recent', 'media_reconcile_backlog']);
+  if (error) {
+    problems.push({
+      severity: 'warn',
+      check: 'media-reconcile',
+      detail: `sync_state unavailable (${error.message}) — is migration 107 applied?`,
+    });
+    return;
+  }
+
+  problems.push(
+    ...checkMediaReconcile({
+      emptyMedia: count ?? 0,
+      sweeps: (data ?? []).map((r) => {
+        const row = r as { id: string; records_synced: number | null; status: string | null; updated_at: string | null };
+        return { id: row.id, scanned: row.records_synced, status: row.status, updatedAt: row.updated_at };
+      }),
+      nowMs: Date.now(),
+      tolerance: MEDIA_EMPTY_TOLERANCE,
+    })
+  );
+}
+
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -342,6 +399,7 @@ async function main(): Promise<void> {
     ['price ledger', checkPriceLedgerFreshness],
     ['estimate freshness', checkEstimateHealth],
     ['email delivery', checkEmailHealth],
+    ['media reconcile', checkMediaReconcileHealth],
     ['migrations', checkMigrations],
   ] as const) {
     try {

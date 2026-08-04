@@ -993,27 +993,46 @@ async function readReconcileCursor(rowId: string): Promise<string> {
 }
 
 /**
- * Persists a sweep's keyset cursor. Upserts its own sync_state row — these rows are
- * pure sweep bookkeeping and never touch the master/sold/delisted delta cursors, so
- * a failure here can only cost the NEXT run some re-scanning, never a data gap.
- * last_sync_timestamp is NOT NULL on the table, so it is stamped with the run time
+ * Persists a sweep's keyset cursor AND its outcome. Upserts its own sync_state row —
+ * these rows are pure sweep bookkeeping and never touch the master/sold/delisted delta
+ * cursors, so a failure here can only cost the NEXT run some re-scanning, never a data
+ * gap. last_sync_timestamp is NOT NULL on the table, so it is stamped with the run time
  * purely to satisfy the constraint; nothing reads it for these rows.
+ *
+ * `status` and `records_synced` are NOT bookkeeping — they are the canary's only view of
+ * this job. reconcileMissingMedia is best-effort by design: it swallows every failure so
+ * a broken sweep can never fail the nightly sync. That is correct, and it is also exactly
+ * how this job died unnoticed for five weeks (see migration 108) — the run stayed green
+ * while recovering zero listings a night. Writing the outcome where a separate observer
+ * can read it is what makes "silently did nothing" a visible state instead of a log line
+ * nobody tails. checkMediaReconcile in src/lib/data/healthChecks.ts is that observer.
  */
-async function writeReconcileCursor(rowId: string, cursorKey: string): Promise<void> {
+async function writeReconcileOutcome(
+  rowId: string,
+  cursorKey: string,
+  outcome: { scanned: number; ok: boolean }
+): Promise<void> {
   try {
     const supabase = getServiceRoleClient();
     const now = new Date().toISOString();
     const { error } = await supabase
       .from('sync_state')
       .upsert(
-        { id: rowId, cursor_key: cursorKey, last_sync_timestamp: now, status: 'completed', updated_at: now },
+        {
+          id: rowId,
+          cursor_key: cursorKey,
+          last_sync_timestamp: now,
+          status: outcome.ok ? 'completed' : 'failed',
+          records_synced: outcome.scanned,
+          updated_at: now,
+        },
         { onConflict: 'id' }
       );
     if (error) {
-      console.warn(`   ⚠️  Could not persist ${rowId} cursor (non-fatal): ${error.message}`);
+      console.warn(`   ⚠️  Could not persist ${rowId} outcome (non-fatal): ${error.message}`);
     }
   } catch (err: any) {
-    console.warn(`   ⚠️  Could not persist ${rowId} cursor (non-fatal): ${err?.message || err}`);
+    console.warn(`   ⚠️  Could not persist ${rowId} outcome (non-fatal): ${err?.message || err}`);
   }
 }
 
@@ -1026,17 +1045,28 @@ async function writeReconcileCursor(rowId: string, cursorKey: string): Promise<v
  * media_urls + the Typesense doc. Still-empty rows are left untouched — no needless
  * write, no AVM recompute; they get another look on a later rotation.
  *
- * Pagination rules (CLAUDE.md §12): keyset by listing_key, which is indexed via the
- * UNIQUE constraint. created_at is only ever FILTERED on, never ORDERed on — it is
- * unindexed and ordering by it trips the statement timeout.
+ * Pagination rules (CLAUDE.md §12): keyset by listing_key. created_at is only ever
+ * FILTERED on, never ORDERed on — it is unindexed and ordering by it trips the
+ * statement timeout.
  *
- * Best-effort throughout: any failure is swallowed, and none of this touches the
- * delta sync cursor.
+ * ⚠️  THE .or() FILTER BELOW IS LOAD-BEARING AND MUST MATCH MIGRATION 108 EXACTLY.
+ * It is served by the partial index idx_listings_empty_media, whose predicate is the
+ * same expression. A partial index is only usable when the query's WHERE clause implies
+ * the index predicate, so the two are a matched pair: change this filter (even to the
+ * equivalent `cardinality(media_urls) = 0`, or by dropping the now-vacuous IS NULL
+ * branch) without changing the migration and the planner silently falls back to a
+ * Parallel Seq Scan — 42.7 s against PostgREST's 8 s timeout, i.e. this sweep dies
+ * again and recovers nothing. That is not hypothetical: it is what happened from at
+ * least 2026-06-30 to 2026-08-03. Migration 108 has the full post-mortem.
+ *
+ * Best-effort throughout: any failure is swallowed and none of this touches the delta
+ * sync cursor — but the outcome is RECORDED (writeReconcileOutcome) so the data-health
+ * canary can see a sweep that quietly stopped working.
  */
 async function sweepMissingMedia(
   idxToken: string,
   opts: { rowId: string; label: string; maxRows: number; sinceIso: string | null; untilIso: string | null }
-): Promise<{ scanned: number; recovered: number }> {
+): Promise<{ scanned: number; recovered: number; ok: boolean }> {
   const supabase = getServiceRoleClient();
   const startCursor = await readReconcileCursor(opts.rowId);
   let cursor = startCursor;
@@ -1049,6 +1079,9 @@ async function sweepMissingMedia(
   // must KEEP the cursor, or the sweep would restart at the head every night and the
   // tail of the key space would never be reached.
   let rotationComplete = false;
+  // False once any page query errors. Distinct from "scanned 0 because the set is
+  // empty" — the canary must be able to tell a healthy no-op from a dead sweep.
+  let ok = true;
 
   while (scanned < opts.maxRows) {
     const pageSize = Math.min(MEDIA_RECONCILE_PAGE, opts.maxRows - scanned);
@@ -1066,6 +1099,7 @@ async function sweepMissingMedia(
 
     if (error) {
       console.warn(`   ⚠️  ${opts.label} reconciliation query failed (non-fatal): ${error.message}`);
+      ok = false;
       break;
     }
     if (!rows || rows.length === 0) {
@@ -1110,8 +1144,12 @@ async function sweepMissingMedia(
     }
 
     if (rows.length < pageSize) {
-      // Short page = end of the set. Same wrap rule as the empty-page branch.
-      if (wrapped) {
+      // Short page = end of the set. Same wrap rule as the empty-page branch, plus:
+      // a run that STARTED at the top has now seen the whole set, so wrapping would
+      // just re-query the same rows and throw the page away. (The backlog sweep is
+      // permanently in that state — it holds ~91 rows against a 750-row budget — so
+      // without this guard it paid for two full passes every single night.)
+      if (wrapped || startCursor === '') {
         rotationComplete = true;
         break;
       }
@@ -1124,13 +1162,17 @@ async function sweepMissingMedia(
 
   // A completed rotation resets to the top; otherwise the next run picks up exactly
   // where this one stopped, so no slice of the key space can be starved.
-  await writeReconcileCursor(opts.rowId, rotationComplete ? '' : cursor);
+  await writeReconcileOutcome(opts.rowId, rotationComplete ? '' : cursor, { scanned, ok });
 
   console.log(
-    `   🩹 ${opts.label}: scanned ${scanned}, recovered ${recovered}` +
-      (rotationComplete ? ' (full rotation complete)' : ` (resumes after ${cursor || 'the top'})`)
+    `   ${ok ? '🩹' : '❌'} ${opts.label}: scanned ${scanned}, recovered ${recovered}` +
+      (ok
+        ? rotationComplete
+          ? ' (full rotation complete)'
+          : ` (resumes after ${cursor || 'the top'})`
+        : ' — SWEEP FAILED, see the query error above')
   );
-  return { scanned, recovered };
+  return { scanned, recovered, ok };
 }
 
 /**
@@ -1156,10 +1198,10 @@ async function sweepMissingMedia(
  */
 async function reconcileMissingMedia(
   idxToken: string
-): Promise<{ scanned: number; recovered: number }> {
+): Promise<{ scanned: number; recovered: number; ok: boolean }> {
   if (!idxToken) {
     console.warn('   ⚠️  Media reconciliation skipped: PROPTX_IDX_TOKEN not set');
-    return { scanned: 0, recovered: 0 };
+    return { scanned: 0, recovered: 0, ok: false };
   }
   try {
     const cutoffIso = new Date(
@@ -1184,10 +1226,11 @@ async function reconcileMissingMedia(
     return {
       scanned: recent.scanned + backlog.scanned,
       recovered: recent.recovered + backlog.recovered,
+      ok: recent.ok && backlog.ok,
     };
   } catch (err: any) {
     console.warn(`   ⚠️  Media reconciliation failed (non-fatal): ${err?.message || err}`);
-    return { scanned: 0, recovered: 0 };
+    return { scanned: 0, recovered: 0, ok: false };
   }
 }
 
