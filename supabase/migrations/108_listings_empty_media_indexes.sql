@@ -10,17 +10,23 @@
 --      ORDER BY listing_key LIMIT 100
 --
 -- has no index that covers the empty-media predicate, so it degenerates into a scan
--- that also DETOASTS full_payload for every candidate it touches. Verified in the
--- 2026-08-03 nightly run (job 91609249666):
+-- that also DETOASTS full_payload for every candidate it touches. That sits right on
+-- the edge of the statement timeout and tips over on a bad night — two consecutive
+-- nightly runs, same code:
 --
---     ⚠️  Reconciliation query failed (non-fatal): canceling statement due to statement timeout
---     🩹 Scanned 0 recent empty-media listings, recovered 0
+--   2026-08-03 (job 91609249666)  ⚠️  canceling statement due to statement timeout
+--                                 🩹 Scanned 0 recent empty-media listings, recovered 0
+--   2026-08-04 (job 91903179184)  ℹ️  Hit the 1000-row reconciliation cap
+--                                 🩹 Scanned 1000 recent empty-media listings, recovered 999
 --
--- The error is swallowed as non-fatal, so the sweep reported a clean "0 scanned"
--- every night while doing nothing at all — which is why the empty-media backlog has
--- never drained. The companion code change stops selecting full_payload during the
--- scan (keys first, payloads hydrated per page by primary key); these indexes make
--- the remaining predicate sargable.
+-- The failure is swallowed as non-fatal (correct — media must never fail the sync), so a
+-- lost night is indistinguishable from a clean one: "Scanned 0 … recovered 0" reads as
+-- "nothing needed recovering". The 999/1000 recovery rate on the night it DID run shows
+-- the backlog is recoverable inventory, so every lost night is real listings left blank.
+--
+-- The companion code change stops selecting full_payload during the scan (keys first,
+-- payloads hydrated per page by primary key); these indexes make the remaining
+-- predicate sargable so the query stops flirting with the timeout at all.
 --
 -- Predicate note: it is spelled EXACTLY as PostgREST renders `.or('media_urls.is.null,
 -- media_urls.eq.{}')` — `media_urls IS NULL OR media_urls = '{}'::text[]`. The planner

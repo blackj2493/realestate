@@ -417,13 +417,27 @@ const PAGE_DELAY_MS = 1000;
 // Media reconciliation (Query A2): re-fetch /Media for active listings still missing
 // photos.
 //
-// HISTORY — this sweep was a silent no-op in production. Its candidate query selected
-// full_payload while filtering on an unindexed empty-media predicate, so it detoasted a
-// large JSONB per candidate and hit the statement timeout. The error is caught as
-// non-fatal, so every night logged a clean "Scanned 0 recent empty-media listings,
-// recovered 0" while recovering nothing (2026-08-03 run, job 91609249666). That, not
-// AMPRE, is why the empty-media backlog never drained. Fixed by migration 108's partial
-// indexes plus the keys-first projection in sweepMissingMedia.
+// HISTORY — two consecutive nightly runs, and they told different stories:
+//
+//   2026-08-03 (job 91609249666)   ⚠️  canceling statement due to statement timeout
+//                                  🩹 Scanned 0 recent empty-media listings, recovered 0
+//   2026-08-04 (job 91903179184)   ℹ️  Hit the 1000-row reconciliation cap
+//                                  🩹 Scanned 1000 recent empty-media listings, recovered 999
+//
+// Two separate problems, both fixed here:
+//
+// 1. The candidate query is INTERMITTENTLY too slow. It selected full_payload while
+//    filtering on an unindexed empty-media predicate, so it detoasted a large JSONB per
+//    candidate row the scan touched — right on the edge of the statement timeout, tipping
+//    over on a bad night. The failure is swallowed as non-fatal (correctly — media must
+//    never fail the sync), so a lost night looks identical to a clean one: "Scanned 0 …
+//    recovered 0" reads as "nothing needed recovering". Fixed by migration 108's partial
+//    indexes plus the keys-first projection in sweepMissingMedia.
+//
+// 2. The 999/1000 recovery rate is the real headline: essentially every listing the sweep
+//    reaches HAS photos waiting at AMPRE that we never fetched. The backlog is recoverable
+//    inventory, not genuinely photo-less listings — so the nightly budget, and the ORDER
+//    the budget is spent in, decide who stays blank and for how long.
 //
 // Runs as TWO sweeps, each with its own persisted keyset cursor:
 //
@@ -438,18 +452,23 @@ const PAGE_DELAY_MS = 1000;
 //
 // Both are bounded per night and both RESUME from sync_state.cursor_key, wrapping to the
 // top only once a full rotation completes. The cursor has to persist because the sweep
-// paginates ordered by listing_key: a run that always restarts at '' re-scans the same
-// alphabetically-first slice forever and never reaches the tail. TRREB prefixes sort
-// C < E < N < S < W < X, so that would starve X- keys (Hamilton, Niagara, Waterloo,
-// London) hardest — and with a backlog far larger than one night's budget, the tail
-// would never be reached at all.
+// paginates ordered by listing_key and the budget is smaller than the backlog: without
+// it, every night re-starts at '' and drains the key space in strict alphabetical order.
+// Recovered rows do leave the candidate set, so that ordering does make progress — but it
+// makes it FRONT-FIRST, and TRREB prefixes sort C < E < N < S < W < X. X- keys (Hamilton,
+// Niagara, Waterloo, London) are last in line for as many nights as the backlog takes to
+// drain, while any row that keeps failing accumulates at the head and permanently eats
+// budget. A persisted cursor turns "always from the front" into a fair rotation.
 const MEDIA_RECONCILE_WINDOW_DAYS = 21;
 const MEDIA_RECONCILE_PAGE = 100;           // candidate keys per page (payloads hydrated by PK)
-const MEDIA_RECONCILE_MAX = 1000;           // recent-sweep rows scanned per night (safety cap)
-// Backlog budget sets the rotation period: the last measured standing backlog was ~74k
-// rows (scripts/admin/sampleEmptyMedia.ts), so 3000/night is a ~25-night full rotation.
-// Cost is ~120 /Media chunk requests + 30 PK hydration lookups per night. Raise it to
-// drain faster; the sweep is resumable, so changing it is safe at any time.
+// Measured 2026-08-04: 1000 rows took 3m06s end-to-end (10 batches — /Media fetch +
+// processBatch upsert + Typesense index), i.e. ~5.4 rows/s, and the sweep hit the cap
+// with 999 still-recoverable listings behind it. 1000/night was the binding constraint on
+// how fast anything drains, so both budgets are 3000: ~9 min added to a sync step that
+// currently runs ~17 min, well inside the 300-min job ceiling. Against the last measured
+// ~74k standing backlog (scripts/admin/sampleEmptyMedia.ts) that is a ~25-night rotation
+// rather than ~74. Both sweeps are resumable, so these are safe to retune at any time.
+const MEDIA_RECONCILE_MAX = 3000;           // recent-sweep rows scanned per night
 const MEDIA_BACKLOG_MAX = 3000;             // backlog-sweep rows scanned per night
 const MEDIA_RECONCILE_PAGE_DELAY_MS = 300;  // polite pacing between pages
 const MEDIA_CURSOR_RECENT = 'media_reconcile_recent';   // sync_state row id
