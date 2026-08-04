@@ -755,6 +755,8 @@ export interface TransformResult {
     PropertyHash?: string;
     TrueDom?: number;
     TotalPriceDrop?: number;
+    LeaseTrueDom?: number;
+    LeaseTotalPriceDrop?: number;
     IsStale?: boolean;
     IsSold?: boolean;
     // Suite Analysis fields
@@ -1021,6 +1023,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // the real chain delta after the historical lookup, but we emit a 0
     // placeholder here so the schema contract holds for any other caller.
     TotalPriceDrop: 0,
+    // LEASE-track twins (rental-native metrics) — same contract as TotalPriceDrop:
+    // required int32s that sync.ts overwrites from the campaign stitch. 0 placeholder.
+    LeaseTrueDom: 0,
+    LeaseTotalPriceDrop: 0,
     IsStale: trueDOM.isStale,
     // IsSold: defaults to false, sync.ts will set true for sold listings
     IsSold: false,
