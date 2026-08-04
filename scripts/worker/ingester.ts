@@ -1762,7 +1762,8 @@ export async function runDeltaSync(): Promise<DualSyncResult> {
       const delisted = await runDelistedSync();
       await pruneOldDelisted();
       console.log(
-        `\n✅ Query C Complete: ${delisted.records} de-listed records, ${delisted.indexed} indexed, caughtUp=${delisted.caughtUp}`
+        `\n✅ Query C Complete: ${delisted.records} de-listed records, ${delisted.indexed} indexed, ` +
+          `${delisted.superseded} superseded by a later close, caughtUp=${delisted.caughtUp}`
       );
     } catch (err: any) {
       console.warn(`\n⚠️  Query C failed (non-fatal for the A/B sync): ${err?.message || err}`);
