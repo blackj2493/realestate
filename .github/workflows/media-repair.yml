@@ -23,15 +23,23 @@ on:
   workflow_dispatch:
     inputs:
       listing_keys:
-        description: 'Space-separated ListingKeys to diagnose and repair (e.g. "X13163816 W12345678")'
-        required: true
+        description: 'Space-separated ListingKeys to diagnose and repair (e.g. "X13163816 W12345678"). Ignored when all_empty is true.'
+        required: false
         default: 'X13163816'
+      all_empty:
+        description: 'Repair EVERY listing with a blank gallery instead of named keys (drains the whole backlog in one run).'
+        required: false
+        default: 'false'
+      limit:
+        description: 'With all_empty: cap how many listings to repair (blank = no cap).'
+        required: false
+        default: ''
       apply:
         description: 'Write the recovered photos (false = dry run, diagnostics only)'
         required: false
         default: 'true'
       run_migration:
-        description: 'Apply migration 107 (sync_state.cursor_key) first. Idempotent.'
+        description: 'Apply migrations 107 + 108 first. Idempotent.'
         required: false
         default: 'true'
 
@@ -69,11 +77,26 @@ jobs:
         run: |
           npx tsx scripts/admin/applyMigrationFiles.ts \
             107_sync_state_cursor_key.sql \
-            108_listings_empty_media_indexes.sql
+            108_listings_empty_media_index.sql
+
+      # Asserts the partial index is VALID, that the sweep's predicate still plans as an
+      # index scan, and that the real query runs under the real 8s PostgREST ceiling.
+      # Runs BEFORE the repair on purpose: if the nightly sweep has been re-broken, that
+      # is the finding — repairing a few keys by hand would paper over it.
+      - name: Verify the nightly reconcile is healthy
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/verifyMediaReconcile.ts
 
       # Read-only. Prints, per key, the Supabase row state next to AMPRE's FULL
       # per-size media inventory, and names which of the four causes applies.
+      # Skipped in all_empty mode — there is nothing useful to print per key across
+      # thousands of listings, and the repair reports its own totals.
       - name: Diagnose
+        if: ${{ github.event.inputs.all_empty != 'true' }}
         continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -91,7 +114,7 @@ jobs:
       # The actual repair: re-fetch /Media for these keys (with the size fallback) and
       # re-upsert through the daily sync's own path, so Supabase and Typesense agree.
       - name: Repair
-        timeout-minutes: 30
+        timeout-minutes: 120
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -100,8 +123,18 @@ jobs:
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
           LISTING_KEYS: ${{ github.event.inputs.listing_keys }}
           APPLY_INPUT: ${{ github.event.inputs.apply }}
+          ALL_EMPTY: ${{ github.event.inputs.all_empty }}
+          LIMIT_INPUT: ${{ github.event.inputs.limit }}
         run: |
           FLAG=""
           if [ "$APPLY_INPUT" != "false" ]; then FLAG="--apply"; fi
-          # shellcheck disable=SC2086 -- LISTING_KEYS is intentionally word-split into args
-          npx tsx scripts/admin/repairListingMedia.ts $LISTING_KEYS $FLAG
+          if [ "$ALL_EMPTY" = "true" ]; then
+            # Whole-backlog drain. ~5.4 listings/s measured, so the 120-minute cap covers
+            # roughly 39k listings — well past any realistic backlog.
+            LIM=""
+            if [ -n "$LIMIT_INPUT" ]; then LIM="--limit=$LIMIT_INPUT"; fi
+            npx tsx scripts/admin/repairListingMedia.ts --all-empty $LIM $FLAG
+          else
+            # shellcheck disable=SC2086 -- LISTING_KEYS is intentionally word-split into args
+            npx tsx scripts/admin/repairListingMedia.ts $LISTING_KEYS $FLAG
+          fi
