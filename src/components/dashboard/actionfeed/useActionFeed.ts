@@ -45,18 +45,10 @@ export interface FeedItem {
   brokerage?: string | null; // TRREB §VOW/IDX — brokerage shown on every listing
   headline: string;
   chipText: string;
-  chipCls: string;
+  // No colour here on purpose: ActionFeedItem maps `kind` → StatusTone and the
+  // hues live in ONE table (daylight/primitives STATUS_TONE). A second palette
+  // here drifted out of sync and re-collided stale with sold.
 }
-
-const CHIP = {
-  sold: "text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
-  leased: "text-violet-700 dark:text-violet-400 bg-violet-400/10 border-violet-400/30",
-  relisted: "text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
-  off: "text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/30",
-  drop: "text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
-  stale: "text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/30",
-  new: "text-cyan-700 dark:text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
-} as const;
 
 /** "terminated" → "Terminated". */
 function titleCase(s: string): string {
@@ -132,7 +124,6 @@ export function useActionFeed({
             brokerage: d.ListOfficeName ?? null,
             headline: "New in your market",
             chipText: "New",
-            chipCls: CHIP.new,
           }));
         setNewItems(items);
       })
@@ -170,7 +161,6 @@ export function useActionFeed({
             rank: 0,
             headline: "Relisted under a new MLS #",
             chipText: "Relisted",
-            chipCls: CHIP.relisted,
           });
         } else if (disp?.kind === "sold" || disp?.kind === "leased") {
           const sold = disp.kind === "sold";
@@ -181,7 +171,6 @@ export function useActionFeed({
             rank: 0,
             headline: sold ? "Sold since you saved it" : "Leased since you saved it",
             chipText: sold ? "Sold" : "Leased",
-            chipCls: sold ? CHIP.sold : CHIP.leased,
           });
         } else {
           // Terminated/Expired/Suspended, an unexplained vanish, or still resolving.
@@ -196,7 +185,6 @@ export function useActionFeed({
                 ? `Off-market · ${titleCase(reason)} since you saved it`
                 : "Left the market since you saved it",
             chipText: "Off-market",
-            chipCls: CHIP.off,
           });
         }
       } else if (c.priceDeltaSinceSave != null && c.priceDeltaSinceSave < 0) {
@@ -208,7 +196,6 @@ export function useActionFeed({
           rank: drop,
           headline: `Dropped ${formatPrice(drop)} since you saved it`,
           chipText: `▼ ${formatPrice(drop)}`,
-          chipCls: CHIP.drop,
         });
       } else if (c.isStale) {
         watch.push({
@@ -218,7 +205,6 @@ export function useActionFeed({
           rank: c.trueDom ?? 0,
           headline: c.trueDom ? `Going stale · ${c.trueDom} days on market` : "Going stale",
           chipText: "Stale",
-          chipCls: CHIP.stale,
         });
       }
     }
