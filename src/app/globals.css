@@ -77,6 +77,16 @@
     --pp-text-secondary-light: #4a6378;
     --pp-text-tertiary-light: #6b7e92;
 
+    /* Theme-following logo tokens — consumed by <Logo theme="auto">, for the
+       wordmark on surfaces that actually FLIP with the theme (e.g. the MobileNav
+       drawer, which is bg-background). The fixed dark/light theme props stay for
+       surfaces that are permanently one shade (the .dt-header brand band, the
+       hero, legal/share pages). These are the ON-LIGHT values; `.dark` below
+       flips them to the on-dark set. */
+    --pp-logo-primary: #0a1828;
+    --pp-logo-secondary: #4a6378;
+    --pp-logo-tertiary: #6b7e92;
+
     /* ------------------------------------------------------------------
        Design-system tokens (additive — see PUREPROPERTY_DESIGN_SPEC).
        These do NOT replace the shadcn --background/--radius vars or
@@ -159,6 +169,12 @@
     --input: 215 28% 17%; /* slate-800 */
     --ring: 189 94% 43%; /* cyan-500 */
     color-scheme: dark; /* native scrollbars/controls dark to match the UI */
+
+    /* On-dark wordmark for <Logo theme="auto">. Also applies inside the
+       `.dt-header dark` brand band, which carries the class explicitly. */
+    --pp-logo-primary: #ffffff;
+    --pp-logo-secondary: #8fa4b8;
+    --pp-logo-tertiary: #6b7e92;
   }
 
   /* Light-mode elevation — dark separates surfaces via contrast; light needs real

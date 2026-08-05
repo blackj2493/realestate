@@ -1,7 +1,11 @@
 import React from "react";
 
 type LogoSize = "sm" | "md" | "lg" | "xl";
-type LogoTheme = "dark" | "light";
+/** "dark"/"light" pin the wordmark to a permanently-one-shade surface (the
+ *  brand header band, hero, legal/share pages). "auto" follows the app theme via
+ *  CSS variables — use it on surfaces that flip (e.g. the MobileNav drawer).
+ *  Variables (not JS) so there is no hydration flash on first paint. */
+type LogoTheme = "dark" | "light" | "auto";
 
 interface LogoProps {
   size?: LogoSize; // default 'md'
@@ -27,9 +31,18 @@ export const Logo: React.FC<LogoProps> = ({
   ariaLabel = "PureProperty.ca home",
 }) => {
   const s = SIZE_MAP[size];
-  const primary = theme === "dark" ? "var(--pp-text-primary)" : "var(--pp-text-primary-light)";
-  const secondary = theme === "dark" ? "var(--pp-text-secondary)" : "var(--pp-text-secondary-light)";
-  const tertiary = theme === "dark" ? "var(--pp-text-tertiary)" : "var(--pp-text-tertiary-light)";
+  const primary =
+    theme === "auto" ? "var(--pp-logo-primary)"
+    : theme === "dark" ? "var(--pp-text-primary)"
+    : "var(--pp-text-primary-light)";
+  const secondary =
+    theme === "auto" ? "var(--pp-logo-secondary)"
+    : theme === "dark" ? "var(--pp-text-secondary)"
+    : "var(--pp-text-secondary-light)";
+  const tertiary =
+    theme === "auto" ? "var(--pp-logo-tertiary)"
+    : theme === "dark" ? "var(--pp-text-tertiary)"
+    : "var(--pp-text-tertiary-light)";
 
   // Chevron geometry inside its own viewBox
   const cx2 = s.chevW - 2;
