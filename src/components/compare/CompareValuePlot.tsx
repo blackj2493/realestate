@@ -28,7 +28,6 @@ const C = {
   grid: "#1e293b",
   divider: "#334155",
   axis: "#64748b",
-  label: "#e2e8f0",
   sub: "#94a3b8",
 };
 
@@ -214,7 +213,18 @@ export default function CompareValuePlot({
             return (
               <g key={p.n}>
                 <circle cx={cx} cy={cy} r={14} fill={col} fillOpacity={0.22} stroke={col} strokeWidth={2} />
-                <text x={cx} y={cy + 4} textAnchor="middle" fontSize={12} fontWeight={700} fill={C.label}>
+                {/* Theme-aware: the dot number must contrast on the light-tinted circle in BOTH
+                    themes. A hardcoded light fill vanished in light mode — currentColor +
+                    text-foreground makes it dark-on-light / light-on-dark. */}
+                <text
+                  x={cx}
+                  y={cy + 4}
+                  textAnchor="middle"
+                  fontSize={12}
+                  fontWeight={700}
+                  className="text-foreground"
+                  fill="currentColor"
+                >
                   {p.n}
                 </text>
               </g>
