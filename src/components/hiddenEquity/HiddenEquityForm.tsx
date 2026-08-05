@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import RenoAddressField from '@/components/reno/RenoAddressField';
 
 // Mirror AVMPropertyForm label arrays exactly
 // Human-readable condition labels (no cryptic tier numbers shown to the user).
@@ -109,6 +110,25 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
   return (
     <div className="space-y-4">
+      {/* ── Address-first entry — resolves city + community into the tree, best-effort ── */}
+      <RenoAddressField
+        tree={tree}
+        onResolve={(r) =>
+          onChange({
+            ...value,
+            city: r.city || value.city,
+            cityRegion: r.cityRegion,
+            propertySubType: '',
+          })
+        }
+      />
+
+      <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <span className="h-px flex-1 bg-border" aria-hidden />
+        or pick manually
+        <span className="h-px flex-1 bg-border" aria-hidden />
+      </div>
+
       {/* ── Location cascades ── */}
       <div className="grid grid-cols-1 gap-4">
         {/* City — self-owned filtered combobox (no <datalist>: unreliable on iOS) */}

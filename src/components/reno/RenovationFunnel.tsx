@@ -138,7 +138,7 @@ export default function RenovationFunnel({
         <div className="space-y-6">
           <div>
             <h2 className="mb-1 font-mono text-lg text-foreground">YOUR HOME</h2>
-            <p className="text-xs text-muted-foreground">Pick your neighbourhood and home details.</p>
+            <p className="text-xs text-muted-foreground">Enter your address, then confirm the details.</p>
           </div>
           <HiddenEquityForm tree={tree} value={form} onChange={setForm} />
           <Button
