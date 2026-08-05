@@ -50,7 +50,7 @@ export default function ThingsToKnowCard({
   // ── Checked & clear: the diligence layer stays visible on clean listings ──
   if (!flags.length) {
     return (
-      <section data-tour="listing-things-to-know" className="mb-6 rounded-xl border border-emerald-500/25 bg-card/40 p-4">
+      <section data-tour="listing-things-to-know" className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-50 p-4 dark:border-emerald-500/25 dark:bg-card/40">
         <h3 className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.09em] text-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           Things to Know
@@ -76,7 +76,7 @@ export default function ThingsToKnowCard({
   const askCount = flags.filter((f) => f.ask).length;
 
   return (
-    <section data-tour="listing-things-to-know" className="mb-6 rounded-xl border border-amber-500/25 bg-card/40 p-4">
+    <section data-tour="listing-things-to-know" className="mb-6 rounded-xl border border-amber-500/40 bg-amber-50 p-4 dark:border-amber-500/25 dark:bg-card/40">
       <h3 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.09em] text-foreground">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         Things to Know
