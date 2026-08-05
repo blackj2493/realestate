@@ -1,7 +1,7 @@
 import type { TransactionMode } from "@/lib/filters/fundamentals";
 
 export type LayerKey = "forSale" | "sold" | "leased" | "delisted" | "forRent";
-export const LAYER_KEYS: LayerKey[] = ["forSale", "sold", "leased", "delisted", "forRent"];
+export const LAYER_KEYS: LayerKey[] = ["forSale", "sold", "forRent", "leased", "delisted"];
 
 /** Toggle a layer; never returns an empty set (the last lit layer stays on).
  *  forSale/forRent are mutually exclusive (different price contexts); lighting one
