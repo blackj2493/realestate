@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveSalePrice,
+  detectCompetitive,
   RATIO_HIGH_CONFIDENCE_N,
   SALE_BAND_HALF_WIDTH,
   isThresholdPrice,
   COMPETITIVE_OVER_ASK_RATE,
+  COMPETITIVE_MEDIAN_CLOSE_RATIO,
 } from "./salePrice";
 import { computeExpectedSale, type CloseListRatio } from "./expectedSale";
 import type { AVMResult } from "./types";
@@ -160,6 +162,9 @@ describe("resolveSalePrice · competitive (priced-to-compete) detection", () => 
     expect(r.competitive!.rangeHigh).toBe(1_180_000); // comp low (it clears the ask)
     expect(r.competitive!.overAskRate).toBe(COMPETITIVE_OVER_ASK_RATE);
     expect(r.competitive!.belowCompsPct).toBeCloseTo((1_258_000 - list) / 1_258_000, 6);
+    // The bucket's measured median close/list rides along so every consumer (offer band,
+    // The Read) anchors "likely close" to the SAME calibration.
+    expect(r.competitive!.medianCloseRatio).toBe(COMPETITIVE_MEDIAN_CLOSE_RATIO);
     // The headline number is UNCHANGED — the treatment is presentation-only.
     expect(r.source).toBe("expected-sale");
     expect(r.value).toBe(es(list).expectedPrice);
@@ -205,5 +210,12 @@ describe("resolveSalePrice · competitive (priced-to-compete) detection", () => 
     const r = resolveSalePrice({ listPrice: list, isActive: false, expectedSale: null, estimate: underComps })!;
     expect(r.source).toBe("avm");
     expect(r.competitive).toBeNull();
+  });
+
+  it("detectCompetitive (exported) matches what resolveSalePrice embeds — one detector, no drift", () => {
+    const list = 999_000;
+    const viaResolver = resolveSalePrice({ listPrice: list, isActive: true, expectedSale: es(list), estimate: underComps })!;
+    expect(detectCompetitive(list, underComps)).toEqual(viaResolver.competitive);
+    expect(detectCompetitive(list, null)).toBeNull();
   });
 });

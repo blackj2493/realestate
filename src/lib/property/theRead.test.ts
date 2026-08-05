@@ -111,6 +111,59 @@ describe("buildTheRead", () => {
     expect(buildTheRead(base()).priceRead).not.toMatch(/Last traded/);
   });
 
+  it("keeps the ask and the expected close distinguishable in compact millions", () => {
+    const r = buildTheRead(
+      base({
+        full_payload: {
+          ListPrice: 1_250_000, // mid-band — NOT threshold-shaped, so competitive can't fire
+          KitchensBelowGrade: 1,
+          PropertySubType: "Detached House",
+        },
+        estimate: { estimatedValue: 1_210_000, confidence: "HIGH" },
+        expectedSale: { expectedPrice: 1_212_500, ratio: 0.97 },
+      } as unknown as Partial<ListingDetail>),
+    );
+    // One-decimal rounding used to collapse both numbers to "$1.2M".
+    expect(r.priceRead).toMatch(/Asking \$1\.25M — likely closes near \$1\.21M \(97\.0% of ask\)/);
+  });
+
+  it("competitive (hold-offers) listing gets the priced-to-compete read, not the cohort-ratio story", () => {
+    const r = buildTheRead(
+      base({
+        status: { kind: "active", label: "FOR SALE" },
+        // Threshold $899,000 ask (base fixture) well below a HIGH-confidence comp band.
+        estimate: { estimatedValue: 1_010_000, confidence: "HIGH", lowBand: 940_000, highBand: 1_080_000 },
+      } as unknown as Partial<ListingDetail>),
+    );
+    expect(r.priceRead).toMatch(/set ~11% below comparable sales/);
+    expect(r.priceRead).toMatch(/~40% sold over ask, median close ≈ ask/);
+    expect(r.priceRead).toMatch(/Expect \$899K–\$940K if offers compete/);
+    expect(r.priceRead).not.toMatch(/likely closes near/);
+  });
+
+  it("exposes per-lens scores for the badge when personaScores are present", () => {
+    const r = buildTheRead(
+      base({
+        dealScore: {
+          score: 67,
+          grade: "B",
+          verdict: "",
+          components: [],
+          personaScores: {
+            smart: { score: 67, grade: "B", verdict: "" },
+            cashflow: { score: 85, grade: "A+", verdict: "" },
+            flippers: { score: 70, grade: "A", verdict: "" },
+            builders: { score: 60, grade: "B", verdict: "" },
+          },
+        },
+      } as unknown as Partial<ListingDetail>),
+    );
+    expect(r.scoreByPersona?.cashflow).toEqual({ score: 85, grade: "A+" });
+    expect(r.scoreByPersona?.smart).toEqual({ score: 67, grade: "B" });
+    // Fixtures without personaScores (older shape / gated) degrade to null, not a crash.
+    expect(buildTheRead(base()).scoreByPersona).toBeNull();
+  });
+
   it("folds condo fee position and trend into the catch ledger", () => {
     const r = buildTheRead(
       base({

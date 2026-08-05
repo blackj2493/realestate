@@ -386,7 +386,14 @@ export default function DealScoreCard({
             <Target className="h-3.5 w-3.5" />
             Suggested move
           </p>
-          {band.hotMarket ? (
+          {band.competitive ? (
+            // Hold-offers setup: aggressive IS the exact ask (a real listed number — no
+            // display rounding), and an under-ask range here would contradict the
+            // Estimated Sale card's over-ask framing on the same page.
+            <p className="mt-1 text-sm font-medium text-foreground">
+              Offer {formatPrice(band.aggressive)}+ — priced to draw competing offers
+            </p>
+          ) : band.hotMarket ? (
             <p className="mt-1 text-sm font-medium text-foreground">
               Expect to compete near {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>

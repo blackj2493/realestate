@@ -169,6 +169,46 @@ describe('computeDealScore (v2 pillar/persona)', () => {
       closeListRatio: 1.03,
     });
     expect(r.offerBand!.hotMarket).toBe(true);
+    expect(r.offerBand!.competitive).toBe(false);
+  });
+
+  it('offer band: the competitive signal floors the band at the ask, never under', () => {
+    // 79 Westhampton shape: threshold $1,199,000 ask, cohort ratio 96.8%, comps ~$1.265M.
+    const r = computeDealScore({
+      listPrice: 1_199_000,
+      avmEstimate: { estimatedValue: 1_264_906, confidence: 'HIGH' },
+      domDays: 11,
+      expectedSalePrice: 1_160_199,
+      closeListRatio: 0.968,
+      competitive: {
+        belowCompsPct: (1_264_906 - 1_199_000) / 1_264_906,
+        overAskRate: 0.4,
+        rangeLow: 1_199_000,
+        rangeHigh: 1_264_906,
+        medianCloseRatio: 0.99,
+      },
+    });
+    const band = r.offerBand!;
+    expect(band.competitive).toBe(true);
+    expect(band.aggressive).toBe(1_199_000); // the ask — never an under-ask recommendation
+    expect(band.likelyClose).toBe(Math.round(1_199_000 * 0.99)); // bucket median, not the cohort ratio
+    expect(band.ceiling).toBe(1_264_906); // overpaying line = comps, unchanged
+    expect(band.note).toMatch(/sold over ask ~40% of the time/);
+    expect(band.note).toMatch(/median ≈ 1% under ask/);
+    // The cohort figure survives as the quiet-night aside, not the recommendation.
+    expect(band.note).toMatch(/quiet offer night could land near \$1,160,199/);
+    expect(band.note).toMatch(/overpaying above ~\$1,264,906/);
+  });
+
+  it('offer band: without the competitive signal the same inputs still quote the cohort ratio', () => {
+    const r = computeDealScore({
+      listPrice: 1_199_000,
+      avmEstimate: { estimatedValue: 1_264_906, confidence: 'HIGH' },
+      expectedSalePrice: 1_160_199,
+      closeListRatio: 0.968,
+    });
+    expect(r.offerBand!.competitive).toBe(false);
+    expect(r.offerBand!.likelyClose).toBe(1_160_199);
   });
 
   it('confidence is HIGH only with a HIGH AVM and ≥2 pillars', () => {
