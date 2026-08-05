@@ -54,6 +54,7 @@ export default function MobileMapTools() {
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
   const startDrawing = useCommandCenterStore((s) => s.startDrawing);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
+  const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
   const showZoning = useCommandCenterStore((s) => s.showZoning);
   const setShowZoning = useCommandCenterStore((s) => s.setShowZoning);
 
@@ -87,6 +88,18 @@ export default function MobileMapTools() {
         t.module === "draw"
           ? () => {
               startDrawing();
+              setOpen(false);
+            }
+          : t.module === "compare" && selectedCount === 0
+          ? () => {
+              // Compare from an EMPTY basket has the same problem Draw had: the panel's
+              // whole instruction is "tap map to add", and this sheet is full-screen, so
+              // it covers the very map it is telling you to tap. Skip the panel — arm
+              // select mode and get out of the way. ActiveLensBar then carries the
+              // "Tap pins to add" chip and the Compare action.
+              // With a NON-empty basket the panel is genuinely useful (review the
+              // thumbnails, isolate, share, clear), so it still opens normally.
+              setSelectMode(true);
               setOpen(false);
             }
           : () => setActiveModule(t.module),

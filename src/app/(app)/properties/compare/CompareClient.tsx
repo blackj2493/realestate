@@ -125,7 +125,7 @@ export default function CompareClient({
                   <CompareMediaCell listing={l} />
                   <Link href={`/properties/${l.id}`} className="group block">
                     <p className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
-                    <p className="text-xs leading-snug text-foreground group-hover:text-cyan-300">
+                    <p className="text-xs leading-snug text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-300">
                       {l.UnparsedAddress || l.City || "Address unavailable"}
                     </p>
                   </Link>
@@ -194,7 +194,7 @@ function AnonBanner({ ids }: { ids: string[] }) {
       </p>
       <Link
         href={`/login?next=${encodeURIComponent(`/properties/compare?ids=${ids.join(",")}`)}`}
-        className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/30 active:scale-95"
+        className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-800 transition-colors hover:bg-cyan-500/30 active:scale-95 dark:text-cyan-100"
       >
         Unlock deal scores + AVM estimates — free
       </Link>

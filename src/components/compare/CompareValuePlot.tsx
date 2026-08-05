@@ -92,7 +92,7 @@ export default function CompareValuePlot({
           // The shortlist lives entirely in ?ids=, which usePathname() drops — without
           // this the user signs in and returns to an empty comparison.
           next={`/properties/compare?ids=${contexts.map((c) => c.listing.id).join(",")}`}
-          className="inline-flex min-h-[40px] items-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/30"
+          className="inline-flex min-h-[40px] items-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-800 hover:bg-cyan-500/30 dark:text-cyan-100"
         >
           Sign in — free
         </SignInLink>
@@ -202,7 +202,7 @@ export default function CompareValuePlot({
                   {p.n}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/properties/${p.ctx.listing.id}`} className="block truncate text-xs font-medium text-foreground hover:text-cyan-300">
+                  <Link href={`/properties/${p.ctx.listing.id}`} className="block truncate text-xs font-medium text-foreground hover:text-cyan-700 dark:hover:text-cyan-300">
                     {p.addr}
                   </Link>
                   <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
