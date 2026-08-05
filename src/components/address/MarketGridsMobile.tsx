@@ -148,7 +148,15 @@ export default function MarketGridsMobile({
         <span className="font-mono text-[10px] text-muted-foreground">{meta}</span>
       </div>
 
-      {/* Sold | Leased (or For sale | For rent) — only when both matrices exist. */}
+      {/* Sold | Leased (or For sale | For rent) — only when both matrices exist.
+          Selected state is surface-based in LIGHT (a white pill lifted off the grey track
+          by its shadow) but TINTED in DARK: there, `bg-card` (slate-900) is actually DARKER
+          than the `bg-muted/40` track (slate-800) and `shadow-sm` is invisible on a dark
+          ground, so the pill read as a barely-there depression and the two tabs were hard
+          to tell apart (owner report 2026-08-04). Dark uses the same accent tint the bed
+          chips below already use (FLAVOR.active), plus an inset ring: unlike an inactive
+          bed chip, an inactive TAB has no box of its own, so the selected one needs a
+          crisp edge and not just a fill to read as selected. Light is untouched. */}
       {flavors.length > 1 && (
         <div className="mx-4 mt-3 flex gap-1 rounded-lg border border-border bg-muted/40 p-1" role="tablist" aria-label="Transaction">
           {flavors.map((f) => {
@@ -165,8 +173,8 @@ export default function MarketGridsMobile({
                 className={`flex-1 rounded-md px-3 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${
                   on
                     ? f === "sell"
-                      ? "bg-card text-emerald-700 shadow-sm dark:text-emerald-300"
-                      : "bg-card text-cyan-700 shadow-sm dark:text-cyan-300"
+                      ? "bg-card text-emerald-700 shadow-sm dark:bg-emerald-500/20 dark:text-emerald-300 dark:shadow-none dark:ring-1 dark:ring-inset dark:ring-emerald-400/35"
+                      : "bg-card text-cyan-700 shadow-sm dark:bg-cyan-500/20 dark:text-cyan-300 dark:shadow-none dark:ring-1 dark:ring-inset dark:ring-cyan-400/35"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
