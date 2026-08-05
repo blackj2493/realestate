@@ -8,9 +8,10 @@
  * Design (Proposal B — "surface the moat"): every section's HEADLINE is always on
  * screen — the icon, label, the one-line takeaway (`caption`) and the answer chip
  * (`summary`) — so a visitor gets each insight while scrolling, with no taps. Only the
- * deep EVIDENCE (comps, grade breakdown, reno moves, cost model) sits behind a single
- * HIGHLIGHTED "See the …" toggle per row, opened independently (multi-open — opening
- * one no longer closes the others). A short synthesised `verdict` leads the panel.
+ * deep EVIDENCE (comps, grade breakdown, reno moves, cost model) sits behind a quiet
+ * "See the …" link per row — the big answer value/grade is the visual hero, not the
+ * link — opened independently (multi-open — opening one no longer closes the others).
+ * A short synthesised `verdict` leads the panel.
  * Sections arrive server-rendered from page.tsx with their VOW gating already applied;
  * this component adds nothing gated.
  */
@@ -69,7 +70,10 @@ export default function IntelligencePanel({
           const panelId = `intel-panel-${s.key}`;
           return (
             <div key={s.key} className="px-4 py-3">
-              {/* Always-visible headline: icon · label · answer chip · one-line takeaway. */}
+              {/* Always-visible headline: icon · label · BIG answer · one-line takeaway.
+                  The answer (value / grade / net upside) is the hero; the evidence link
+                  below is a quiet, deliberate way in — not a full-width button that steals
+                  attention from the numbers. */}
               <div className="flex items-start gap-3">
                 {s.icon != null && (
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center" aria-hidden>
@@ -78,37 +82,35 @@ export default function IntelligencePanel({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-[13px] font-semibold leading-tight text-foreground">{s.label}</span>
-                    {s.summary != null && <span className="shrink-0 text-right">{s.summary}</span>}
+                    <span className="text-sm font-semibold leading-tight text-foreground">{s.label}</span>
+                    {s.summary != null && <span className="shrink-0 pt-0.5 text-right">{s.summary}</span>}
                   </div>
                   {s.caption != null && (
                     <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{s.caption}</p>
                   )}
+                  {s.detail != null && (
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      aria-controls={panelId}
+                      onClick={() => toggle(s.key)}
+                      className="mt-2 inline-flex items-center gap-1 py-1 text-[12px] font-semibold text-cyan-700 transition-colors hover:text-cyan-600 dark:text-cyan-300 dark:hover:text-cyan-200"
+                    >
+                      <span>{open ? "Hide details" : (s.evidenceLabel ?? "See the full breakdown")}</span>
+                      <ChevronDown
+                        className={cn("h-3.5 w-3.5 shrink-0 transition-transform", open && "rotate-180")}
+                        aria-hidden
+                      />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Highlighted evidence toggle — the deliberate, tappable way into the
-                  comps / breakdown / moves / cost model. Deep content is only rendered
-                  (and mounted) once opened, so the collapsed panel stays cheap. */}
+              {/* Deep evidence — full row width, revealed on toggle, mounted only when open. */}
               {s.detail != null && (
-                <>
-                  <button
-                    type="button"
-                    aria-expanded={open}
-                    aria-controls={panelId}
-                    onClick={() => toggle(s.key)}
-                    className="mt-2.5 flex min-h-[44px] w-full items-center justify-between gap-2 rounded-md border border-cyan-500/40 bg-cyan-500/5 px-3 py-2.5 text-[12px] font-semibold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
-                  >
-                    <span>{open ? "Hide details" : (s.evidenceLabel ?? "See the full breakdown")}</span>
-                    <ChevronDown
-                      className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")}
-                      aria-hidden
-                    />
-                  </button>
-                  <div id={panelId} role="region" aria-label={s.label} hidden={!open} className="pt-3">
-                    {open && s.detail}
-                  </div>
-                </>
+                <div id={panelId} role="region" aria-label={s.label} hidden={!open} className="pt-2">
+                  {open && s.detail}
+                </div>
               )}
             </div>
           );

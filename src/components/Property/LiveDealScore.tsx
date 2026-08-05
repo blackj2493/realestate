@@ -62,12 +62,15 @@ export function LiveDealGradePill({
   dealScore,
   initialLens,
   locked = false,
+  size = "sm",
   className,
 }: {
   dealScore: DealScoreResult;
   initialLens: DealPersona;
   /** VOW gate: anon sees the lock, never a grade. */
   locked?: boolean;
+  /** "lg" for the mobile Intelligence panel's hero answer chip. */
+  size?: "sm" | "lg";
   className?: string;
 }) {
   const persona = useActiveDealPersona(dealScore, initialLens);
@@ -75,9 +78,14 @@ export function LiveDealGradePill({
   const score = active?.score ?? dealScore.score;
   const grade = active?.grade ?? dealScore.grade;
   if (locked || score === null || grade === null) {
-    return <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />;
+    return (
+      <Lock
+        className={`${size === "lg" ? "h-5 w-5" : "h-3.5 w-3.5"} text-muted-foreground`}
+        aria-label="locked"
+      />
+    );
   }
-  return <DealScoreGradePill score={score} grade={grade} className={className} />;
+  return <DealScoreGradePill score={score} grade={grade} size={size} className={className} />;
 }
 
 /** Mobile hero-scent grade — the letter grade for the active lens, or a lock for anon. */

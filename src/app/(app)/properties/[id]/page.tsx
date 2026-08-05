@@ -661,13 +661,13 @@ export default async function PropertyPage({
           : "What this home is likely to close at."
       : undefined;
   const estSummary = estLocked ? (
-    <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+    <Lock className="h-5 w-5 text-muted-foreground" aria-label="locked" />
   ) : hasEstVal ? (
     <span className="flex flex-col items-end gap-0.5">
-      <span className="font-mono text-sm font-bold text-primary">{compactMoney(salePrice!.value)}</span>
+      <span className="font-mono text-xl font-bold leading-none text-primary">{compactMoney(salePrice!.value)}</span>
       <span
         className={cn(
-          "border px-1 py-px font-mono text-[8.5px] font-semibold uppercase tracking-wide",
+          "border px-1 py-px font-mono text-[10px] font-semibold uppercase tracking-wide",
           salePrice!.confidence === "HIGH"
             ? "border-emerald-500/50 text-emerald-700 dark:text-emerald-400"
             : salePrice!.confidence === "MEDIUM"
@@ -698,9 +698,9 @@ export default async function PropertyPage({
         : "Modeled moves — none pay back here."
       : undefined;
   const renoSummary = renoLocked ? (
-    <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+    <Lock className="h-5 w-5 text-muted-foreground" aria-label="locked" />
   ) : renoView && renoView.headlineNet > 0 ? (
-    <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+    <span className="font-mono text-xl font-bold leading-none text-emerald-700 dark:text-emerald-400">
       +{compactMoney(renoView.headlineNet)}
     </span>
   ) : undefined;
@@ -1284,7 +1284,7 @@ export default async function PropertyPage({
                         caption: dealCaption,
                         // Live grade pill — follows the same lens as the card below (fix #6).
                         summary: hasDealScore ? (
-                          <LiveDealGradePill dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
+                          <LiveDealGradePill dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} size="lg" />
                         ) : undefined,
                         detail: (
                           <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
