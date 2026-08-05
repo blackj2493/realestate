@@ -43,7 +43,6 @@ import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
 import { buildDatasheet } from "@/lib/property/datasheet";
 import ThingsToKnowCard from "@/components/Property/ThingsToKnowCard";
 import { buildDiligenceFlags } from "@/lib/property/diligence";
-import YourTakeCard from "@/components/Property/YourTakeCard";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
@@ -839,7 +838,7 @@ export default async function PropertyPage({
         brokerage={p.ListOfficeName}
       />
 
-      <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
+      <div className="dt-lift mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
@@ -1481,10 +1480,10 @@ export default async function PropertyPage({
 
             {/* Remarks (the listing's own description) */}
             <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />}>
-              {/* Solid, raised white card in light mode (bg-card + shadow) so the listing's own
-                  prose stands out from the grey ground and the identically-styled data section
-                  below it — bg-card/30 washed out to a grey tint there. Dark mode unchanged. */}
-              <div className="rounded-lg border border-border bg-card p-4 shadow-sm dark:bg-card/30 dark:shadow-none">
+              {/* Solid raised white card in light mode + darker prose so the listing's own
+                  description stands out from the grey ground. Uniform with the other content
+                  sections (lifted by the .dt-lift rule in globals.css). Dark mode unchanged. */}
+              <div className="rounded-lg border border-border bg-card p-4 dark:bg-card/30">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
                   className="text-sm leading-relaxed text-foreground/90 dark:text-muted-foreground"
@@ -1521,20 +1520,6 @@ export default async function PropertyPage({
 
             {/* Grocery + recreation proximity */}
             <NearbyAmenities listingId={id} />
-
-            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage). */}
-            {!isCommercial && (
-              <YourTakeCard
-                listingKey={id}
-                isLease={isLease}
-                metrics={{
-                  listPrice: price || null,
-                  capRatePct: view.capRatePct,
-                  beds: p.BedroomsTotal ?? null,
-                  trueDom,
-                }}
-              />
-            )}
           </div>
         </div>
 

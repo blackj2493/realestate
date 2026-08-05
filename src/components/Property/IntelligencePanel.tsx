@@ -67,7 +67,7 @@ export default function IntelligencePanel({
   }, [openTile]);
 
   return (
-    <div className="rounded-lg border border-cyan-500/30 bg-card/50" data-tour="listing-intelligence">
+    <div className="rounded-lg border border-cyan-500/40 bg-cyan-50 dark:border-cyan-500/30 dark:bg-card/50" data-tour="listing-intelligence">
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <span className="h-2 w-2 rounded-full bg-cyan-400" aria-hidden />
         <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">

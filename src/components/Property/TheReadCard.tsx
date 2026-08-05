@@ -59,7 +59,7 @@ export default function TheReadCard({
   const lens = read.scoreByPersona?.[persona] ?? { score: read.score, grade: read.grade };
 
   return (
-    <div data-tour="listing-the-read" className="mb-6 rounded-xl border border-emerald-500/30 bg-card/40 p-4 shadow-[0_0_0_1px_rgba(52,211,153,0.06)]">
+    <div data-tour="listing-the-read" className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-50 p-4 shadow-[0_0_0_1px_rgba(52,211,153,0.06)] dark:border-emerald-500/30 dark:bg-card/40">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
         <h2 className="text-[11px] font-bold uppercase tracking-[0.09em] text-foreground">The Read</h2>

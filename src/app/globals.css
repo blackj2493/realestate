@@ -185,6 +185,23 @@
 /* Gate: decorative markup wrapped in .dt-light shows in light, vanishes in dark. */
 .dark .dt-light { display: none !important; }
 
+/* Listing-page card lift (LIGHT MODE ONLY). The content sections use bg-card/NN — white at
+   a low opacity, which was tuned for dark (slate-900 over slate-950 reads as a subtle raised
+   panel). On the daylight grey-slate ground (--background #e9edf4) that same translucency
+   washes out to a flat grey tint, so sections blur into one another (esp. the description vs
+   the data sheet vs the comps). Inside `.dt-lift` (the listing content wrapper) promote those
+   washed cards to a SOLID white card in light mode only, so the intended "white card = raised"
+   depth returns. Dark mode is untouched (rule gated to :root:not(.dark)); the hero gallery has
+   its own styles and carries no bg-card/NN, so over-photo chrome is unaffected. Higher
+   specificity than the Tailwind utility, so no !important needed. */
+:root:not(.dark) .dt-lift .bg-card\/20,
+:root:not(.dark) .dt-lift .bg-card\/30,
+:root:not(.dark) .dt-lift .bg-card\/40,
+:root:not(.dark) .dt-lift .bg-card\/50,
+:root:not(.dark) .dt-lift .bg-card\/60 {
+  background-color: hsl(var(--card));
+}
+
 /* Device 1 — tick-rule: a measured graticule strip under each module heading. */
 .dt-rule {
   height: 8px;
