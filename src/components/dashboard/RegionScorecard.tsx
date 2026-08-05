@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown } from "lucide-react";
 import { fetchRegionScores, type RegionScore } from "@/lib/dashboard/marketAggregates";
 import type { BasementFilter } from "@/lib/dashboard/config";
 import {
@@ -333,27 +333,40 @@ export default function RegionScorecard({
         {locked && <VowGateOverlay message="Sign in to view region market stats" />}
       </div>
 
-      {/* The definitions are repeated here, not left to the column tooltips alone: this
-          table is a horizontal scroller on phones, where a native title= can't be reached. */}
+      {/* One always-visible honesty line (the single thing readers misread), with the fuller
+          glossary + sample thresholds tucked into a tap-to-open disclosure — reachable on
+          phones, where the column-heading tooltips (title=) can't be hovered, without a wall
+          of text dominating the view. The active-filter restatement that used to live here is
+          dropped: the amber "Filtered view" banner above already carries it. */}
       <div className="space-y-2 text-[11px] leading-relaxed text-muted-foreground">
         <p>
-          {filterParts.length > 0 && <span>Filtered to {filterParts.join(", ")}. </span>}
-          Hover a column heading for a plain-English definition. The three that trip people up:{" "}
-          <strong className="font-semibold text-foreground">True DoM</strong> — how long the typical home
-          for sale has been listed, counted from the day it first went up, so pulling it and relisting
-          can&rsquo;t reset the clock.{" "}
-          <strong className="font-semibold text-foreground">Sell-Thru</strong> — of the homes that stopped
-          being for sale, the share that actually sold rather than giving up.{" "}
-          <strong className="font-semibold text-foreground">Cap Rate</strong> — the yearly return on a
-          rental after running costs, before mortgage payments.
+          Sold-based columns (Median Price, $/sqft, Sold/List, Mo. Supply, Sell-Thru) trail the market by
+          a few months. A dash means too few recent sales to trust &mdash; never zero.
         </p>
-        <p>
-          Active, True DoM, % stale and Cap Rate describe what is for sale <em>today</em>; Median Price,
-          $/sqft, Sold/List, Mo. Supply and Sell-Thru come from homes that have <em>already sold</em>, so
-          they trail the market by a few months. A dash means we don&rsquo;t have enough recent sales to
-          give you a number worth trusting — it never means zero (we need 10 recent sales for the price
-          columns, 5 priced listings for Cap Rate, 10 for True DoM, and 30 finished listings for Sell-Thru).
-        </p>
+        <details className="group">
+          <summary className="terminal-font inline-flex cursor-pointer list-none items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-700 marker:content-none [&::-webkit-details-marker]:hidden hover:underline dark:text-cyan-400">
+            <span>How to read this</span>
+            <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-2 space-y-2">
+            <p>
+              The three terms that trip people up:{" "}
+              <strong className="font-semibold text-foreground">True DoM</strong> — how long the typical
+              home for sale has been listed, counted from the day it first went up, so pulling it and
+              relisting can&rsquo;t reset the clock.{" "}
+              <strong className="font-semibold text-foreground">Sell-Thru</strong> — of the homes that
+              stopped being for sale, the share that actually sold rather than giving up.{" "}
+              <strong className="font-semibold text-foreground">Cap Rate</strong> — the yearly return on a
+              rental after running costs, before mortgage payments. Hover any column heading for the rest.
+            </p>
+            <p>
+              Active, True DoM, % stale and Cap Rate describe what is for sale <em>today</em>; the
+              sold-based columns come from homes that have <em>already sold</em>. A dash shows until there
+              are enough recent sales to trust the number: 10 sales for the price columns, 5 priced
+              listings for Cap Rate, 10 for True DoM, and 30 finished listings for Sell-Thru.
+            </p>
+          </div>
+        </details>
       </div>
     </section>
   );
