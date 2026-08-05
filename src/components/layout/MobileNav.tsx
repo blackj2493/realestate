@@ -41,7 +41,11 @@ export default function MobileNav({ className }: MobileNavProps) {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
         <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-background shadow-2xl focus:outline-none">
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
-            <Logo size="md" theme="dark" />
+            {/* The drawer is bg-background, which FLIPS with the theme — so the
+                wordmark must follow it. Pinned theme="dark" painted the white
+                #ffffff / #8fa4b8 lockup onto the light panel, where it read as
+                washed out. */}
+            <Logo size="md" theme="auto" />
             <Dialog.Close
               className="p-1 text-muted-foreground transition-colors hover:text-foreground"
               aria-label="Close navigation menu"
@@ -64,9 +68,15 @@ export default function MobileNav({ className }: MobileNavProps) {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "terminal-font flex items-center gap-3 px-4 py-3 text-[12px] uppercase tracking-[0.2em] transition-colors",
+                    // Light-first, with the ORIGINAL dark values behind `dark:`
+                    // (dark mode renders byte-identical). cyan-400 (#22d3ee) is
+                    // tuned for the near-black dark panel; on the light drawer it
+                    // fails contrast and the selected row read as disabled, so
+                    // light gets cyan-700 (~ --dt-sig, the Daylight signal teal)
+                    // over a 10% wash instead of 5%.
                     active
-                      ? "border-l-2 border-cyan-400 bg-cyan-400/5 text-cyan-400"
-                      : "border-l-2 border-transparent text-foreground hover:bg-card hover:text-cyan-400"
+                      ? "border-l-2 border-cyan-700 bg-cyan-600/10 text-cyan-700 dark:border-cyan-400 dark:bg-cyan-400/5 dark:text-cyan-400"
+                      : "border-l-2 border-transparent text-foreground hover:bg-card hover:text-cyan-700 dark:hover:text-cyan-400"
                   )}
                 >
                   {Icon && <Icon className="h-4 w-4 shrink-0" />}
