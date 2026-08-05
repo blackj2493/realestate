@@ -1425,9 +1425,29 @@ export default async function PropertyPage({
                 </>
               )}
 
-              {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add) */}
+              {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add).
+                  Desktop keeps the full prod block. Mobile COLLAPSES it — the same verbatim
+                  text is one tap away, and the mandatory §6.3(i)/(k) notice still renders
+                  un-collapsed at the page foot (<ListingComplianceNotice/> below the grid),
+                  so nothing required is hidden — the mid-scroll wall of text just isn't. */}
               {!isLease && !isCommercial && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
-                <Disclaimers />
+                <>
+                  <div className="hidden lg:block">
+                    <Disclaimers />
+                  </div>
+                  <details className="group rounded-md border border-border bg-card/40 lg:hidden">
+                    <summary className="flex min-h-[40px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                      <span>Estimate &amp; data disclaimer</span>
+                      <ChevronDown
+                        className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180"
+                        aria-hidden
+                      />
+                    </summary>
+                    <div className="border-t border-border px-3 py-2">
+                      <Disclaimers bare />
+                    </div>
+                  </details>
+                </>
               )}
 
               {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
