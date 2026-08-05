@@ -89,18 +89,23 @@ const GRADE_BADGE: Record<DealScoreGrade, { solid: string; darkOutline: string }
 export function DealScoreGradePill({
   score,
   grade,
+  size = "sm",
   className,
 }: {
   score: number | null;
   grade: DealScoreGrade | null;
+  /** "lg" for hero spots (the mobile Intelligence panel answer chip); "sm" (default) for tight spots. */
+  size?: "sm" | "lg";
   className?: string;
 }) {
   if (score === null || grade === null) return null;
   const g = GRADE_BADGE[grade];
+  const lg = size === "lg";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border border-transparent px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white",
+        "inline-flex items-center rounded-sm border border-transparent font-mono font-bold leading-none text-white",
+        lg ? "gap-1.5 px-2 py-1 text-lg" : "gap-1 px-1.5 py-0.5 text-[10px]",
         g.solid,
         "dark:border dark:bg-transparent",
         g.darkOutline,
@@ -109,7 +114,7 @@ export function DealScoreGradePill({
       title={`Deal Score ${score}/100 (grade ${grade}) — PureProperty's deterministic deal metric`}
     >
       {grade}
-      <span className="text-[9px] opacity-90">{score}</span>
+      <span className={cn("opacity-90", lg ? "text-xs" : "text-[9px]")}>{score}</span>
     </span>
   );
 }
