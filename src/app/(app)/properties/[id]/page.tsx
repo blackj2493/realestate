@@ -1481,10 +1481,13 @@ export default async function PropertyPage({
 
             {/* Remarks (the listing's own description) */}
             <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />}>
-              <div className="rounded-lg border border-border bg-card/30 p-4">
+              {/* Solid, raised white card in light mode (bg-card + shadow) so the listing's own
+                  prose stands out from the grey ground and the identically-styled data section
+                  below it — bg-card/30 washed out to a grey tint there. Dark mode unchanged. */}
+              <div className="rounded-lg border border-border bg-card p-4 shadow-sm dark:bg-card/30 dark:shadow-none">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
-                  className="text-sm leading-relaxed text-muted-foreground"
+                  className="text-sm leading-relaxed text-foreground/90 dark:text-muted-foreground"
                 />
               </div>
             </Section>
