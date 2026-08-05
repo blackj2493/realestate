@@ -72,13 +72,19 @@ export default function AppHeader({
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
           {/* FULL wordmark on every width (brand requirement — never truncate to
-              "PURE"). Phones get the smaller `sm` scale, and the account button
-              moves into the MobileNav drawer below md, which together keep the
-              row inside the 360-390px budget. */}
-          <span className="md:hidden">
+              "PURE"). The `sm` scale (14px) read undersized next to the 20px
+              control icons, so the `md` scale (18px) now starts at 360px — the
+              Android baseline — rather than at the md breakpoint.
+              Budget, measured on a real 360px device: the row's free space
+              between the wordmark and the first control is ~54px, and md costs
+              ~36px more than sm, so ~18px stays spare. Below 360px that slack is
+              gone (moving the account button into the MobileNav drawer is what
+              bought it), so those viewports keep `sm` — the row used to overflow
+              and clip the hamburger off-screen. */}
+          <span className="xs:hidden">
             <Logo size="sm" theme={logoTheme} />
           </span>
-          <span className="hidden md:inline-flex">
+          <span className="hidden xs:inline-flex">
             <Logo size="md" theme={logoTheme} />
           </span>
         </Link>
