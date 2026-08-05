@@ -1,22 +1,43 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import HiddenEquityForm, { type HEFormState } from '@/components/hiddenEquity/HiddenEquityForm';
-import HiddenEquityReport from '@/components/hiddenEquity/HiddenEquityReport';
-import RenovationRevealLocked from './RenovationRevealLocked';
-import ShareChallengeButton from './ShareChallengeButton';
+/**
+ * Renovation-upside experience (redesign) — address + property type, nothing else.
+ *
+ * The old 11-field form is gone. You type an address (auto-resolves the neighbourhood),
+ * tap a property type, and we show the renovation upside for a TYPICAL home like that
+ * in the area — the engine runs on sensible defaults (3 bed / 2 bath / standard), which
+ * is exactly a "typical" home. Anyone who wants a precise, personalised read opens the
+ * "Add your details" escape hatch. Anon sees the free result + a gated payoff; signing
+ * in reveals the payback and value. VOW-safe: the anon path never renders a VOW number.
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import RenoAddressField from './RenoAddressField';
+import RenoResult, { type RenoResultData } from './RenoResult';
+import type { HEFormState } from '@/components/hiddenEquity/HiddenEquityForm';
 import type { CohortTree } from '@/lib/avm/cohorts';
-import type { AVMResult } from '@/lib/avm/types';
-import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
-import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
-import { Button } from '@/components/ui/button';
+import { normalizeCityRegion } from '@/lib/avm/cohorts';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const STASH_KEY = 'reno_funnel_pending';
 
-type Result =
-  | { locked: true; catalog: AnonCatalogItem[] }
-  | { locked: false; estimate: AVMResult | null; report: ValueAddReport | null };
+const INTERIOR_LABELS = ['', 'Executive (luxury)', 'Premium (updated)', 'Standard (average)', 'Economy (dated)', 'Minimal (original)'];
+const BASEMENT_LABELS = ['', 'Finished — high-end', '', 'Finished — standard', '', 'Unfinished', '', 'Partial / crawl space', '', 'None'];
+
+const TYPICAL: Omit<HEFormState, 'city' | 'cityRegion' | 'propertySubType'> = {
+  bedroomsAboveGrade: 3,
+  bathroomsTotalInteger: 2,
+  parkingTotal: 1,
+  interiorTier: 3,
+  exteriorTier: 3,
+  basementTier: 5,
+  buildingAreaTotal: null,
+};
 
 export default function RenovationFunnel({
   tree,
@@ -35,26 +56,24 @@ export default function RenovationFunnel({
     city: initialCity,
     cityRegion: initialCityRegion,
     propertySubType: '',
-    bedroomsAboveGrade: 3,
-    bathroomsTotalInteger: 2,
-    parkingTotal: 1,
-    interiorTier: 3,
-    exteriorTier: 3,
-    basementTier: 5,
-    buildingAreaTotal: null,
+    ...TYPICAL,
   });
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<RenoResultData | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const autoTried = useRef(false);
+  const inputRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const canSubmit = !!(form.city && form.cityRegion && form.propertySubType);
+  const community = tree[form.city]?.find((c) => c.cityRegion === form.cityRegion);
+  const types = community?.types ?? [];
+  const communityDisplay = communityLabel ?? (form.cityRegion ? normalizeCityRegion(form.cityRegion) : null);
 
   const submit = useCallback(async (f: HEFormState) => {
+    if (!f.city || !f.cityRegion || !f.propertySubType) return;
     setSubmitting(true);
-    setSubmitError(null);
-    setResult(null);
+    setError(null);
     try {
       const res = await fetch('/api/avm/hidden-equity', {
         method: 'POST',
@@ -74,16 +93,13 @@ export default function RenovationFunnel({
       });
       const json = await res.json();
       if (!res.ok) {
-        setSubmitError(json.error ?? 'Something went wrong. Please try again.');
+        setError(json.error ?? 'Something went wrong. Please try again.');
         return;
       }
-      if (json.locked) {
-        setResult({ locked: true, catalog: json.catalog ?? [] });
-      } else {
-        setResult({ locked: false, estimate: json.estimate ?? null, report: json.valueAdd ?? null });
-      }
+      if (json.locked) setResult({ locked: true, catalog: json.catalog ?? [] });
+      else setResult({ locked: false, estimate: json.estimate ?? null, report: json.valueAdd ?? null });
     } catch {
-      setSubmitError('Unable to reach the service. Please try again.');
+      setError('Unable to reach the service. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -102,10 +118,6 @@ export default function RenovationFunnel({
     }
     if (stashed) {
       sessionStorage.removeItem(STASH_KEY);
-      // Rehydrate the form from the pre-sign-in stash. setState-in-effect is
-      // intentional and SSR-safe: sessionStorage is unavailable during SSR so
-      // useState can't be lazy-initialised from it, and the one-shot autoTried
-      // ref prevents cascading re-runs.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(stashed);
       void submit(stashed);
@@ -116,7 +128,7 @@ export default function RenovationFunnel({
     try {
       sessionStorage.setItem(STASH_KEY, JSON.stringify(form));
     } catch {
-      /* storage blocked — unlock still navigates, user re-enters once */
+      /* storage blocked — unlock still navigates */
     }
   }, [form]);
 
@@ -124,71 +136,170 @@ export default function RenovationFunnel({
     `/whats-my-home-hiding${communitySlug ? `?community=${communitySlug}` : ''}`,
   )}`;
 
-  // Scroll the result card into view on mobile once it populates.
+  // Pick a type → submit immediately with typical defaults (or current detail overrides).
+  const pickType = (propertySubType: string) => {
+    const next = { ...form, propertySubType };
+    setForm(next);
+    void submit(next);
+  };
+
+  const patch = (p: Partial<HEFormState>) => setForm((f) => ({ ...f, ...p }));
+
+  const numSel = (label: string, value: number, on: (n: number) => void) => (
+    <div className="space-y-1.5">
+      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+      <Select value={String(value)} onValueChange={(v) => on(Number(v))}>
+        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   useEffect(() => {
-    if (result) {
-      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [result]);
 
+  const onRefine = () => {
+    setShowDetails(true);
+    inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      {/* LEFT — form */}
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div>
-            <h2 className="mb-1 font-mono text-lg text-foreground">YOUR HOME</h2>
-            <p className="text-xs text-muted-foreground">Enter your address, then confirm the details.</p>
-          </div>
-          <HiddenEquityForm tree={tree} value={form} onChange={setForm} />
-          <Button
-            onClick={() => void submit(form)}
-            disabled={!canSubmit || submitting}
-            className="h-11 w-full bg-emerald-700 font-mono text-white hover:bg-emerald-600 active:bg-emerald-800 disabled:opacity-40 [touch-action:manipulation]"
-          >
-            {submitting ? 'Analyzing…' : "See what my home's hiding"}
-          </Button>
-          {submitError && <p className="text-sm text-red-700 dark:text-red-400">{submitError}</p>}
-        </div>
-      </Card>
+    <div className="space-y-6">
+      {/* ── INPUT ── */}
+      <Card ref={inputRef} className="p-5">
+        <div className="space-y-4">
+          <RenoAddressField
+            tree={tree}
+            onResolve={(r) => {
+              setResult(null);
+              setForm((f) => ({ ...f, city: r.city || f.city, cityRegion: r.cityRegion, propertySubType: '' }));
+            }}
+          />
 
-      {/* RIGHT — reveal */}
-      <Card className="p-6">
-        <div ref={resultRef} className="space-y-6">
-          <div>
-            <h2 className="mb-1 font-mono text-lg text-foreground">RENOVATION UPSIDE</h2>
-            <p className="text-xs text-muted-foreground">What pays back most — for your home.</p>
-          </div>
+          {types.length > 0 ? (
+            <div>
+              <Label className="mb-2 block text-xs text-muted-foreground">PROPERTY TYPE</Label>
+              <div className="flex flex-wrap gap-2">
+                {types.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => pickType(t)}
+                    aria-pressed={form.propertySubType === t}
+                    className={cn(
+                      'min-h-[42px] rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors [touch-action:manipulation]',
+                      form.propertySubType === t
+                        ? 'border-cyan-500 bg-cyan-500/10 text-foreground shadow-[inset_0_0_0_1px] shadow-cyan-500/60'
+                        : 'border-border bg-card text-muted-foreground hover:border-cyan-500/40 hover:text-foreground',
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Enter your address to choose a property type.</p>
+          )}
 
-          {!result && (
-            <p className="text-sm text-muted-foreground">
-              Fill in your home on the left to reveal its renovation upside.
+          {/* escape hatch — precise, personalised read */}
+          {form.propertySubType && !showDetails && (
+            <button
+              type="button"
+              onClick={() => setShowDetails(true)}
+              className="text-xs font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
+            >
+              Not a typical home? Add your details →
+            </button>
+          )}
+
+          {showDetails && (
+            <div className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
+              <p className="text-xs text-muted-foreground">Fine-tune for a precise read, then update.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {numSel('Beds', form.bedroomsAboveGrade, (n) => patch({ bedroomsAboveGrade: n }))}
+                {numSel('Baths', form.bathroomsTotalInteger, (n) => patch({ bathroomsTotalInteger: n }))}
+                {numSel('Parking', form.parkingTotal, (n) => patch({ parkingTotal: n }))}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Interior condition</Label>
+                  <Select value={String(form.interiorTier)} onValueChange={(v) => patch({ interiorTier: Number(v) })}>
+                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((t) => (
+                        <SelectItem key={t} value={String(t)}>{INTERIOR_LABELS[t]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Basement</Label>
+                  <Select value={String(form.basementTier)} onValueChange={(v) => patch({ basementTier: Number(v) })}>
+                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1, 3, 5, 7, 9].map((t) => (
+                        <SelectItem key={t} value={String(t)}>{BASEMENT_LABELS[t]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Square footage (optional)</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.buildingAreaTotal ?? ''}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/[^\d.]/g, '');
+                    const n = parseFloat(cleaned);
+                    patch({ buildingAreaTotal: cleaned === '' || !Number.isFinite(n) || n <= 0 ? null : n });
+                  }}
+                  placeholder="e.g. 1800"
+                  className="h-10"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void submit(form)}
+                disabled={submitting || !form.propertySubType}
+                className="h-10 w-full rounded-md bg-emerald-700 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-40 [touch-action:manipulation]"
+              >
+                Update result
+              </button>
+            </div>
+          )}
+
+          {submitting && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Analysing a typical home like yours…
             </p>
           )}
-
-          {result?.locked && (
-            <div className="space-y-4">
-              <RenovationRevealLocked
-                community={communityLabel}
-                catalog={result.catalog}
-                unlockHref={unlockHref}
-                onUnlock={onUnlock}
-              />
-              {/* Anon-visible curiosity-gap share — carries only the community slug,
-                  never a VOW number. Placed here (not just in the unlocked branch) so the
-                  loop can spread before sign-in. */}
-              <ShareChallengeButton communitySlug={communitySlug} community={communityLabel} />
-            </div>
-          )}
-
-          {result && !result.locked && (
-            <div className="space-y-4">
-              <HiddenEquityReport estimate={result.estimate} report={result.report} />
-              <ShareChallengeButton communitySlug={communitySlug} community={communityLabel} />
-            </div>
-          )}
+          {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
         </div>
       </Card>
+
+      {/* ── RESULT ── */}
+      {result && (
+        <div ref={resultRef}>
+          <RenoResult
+            result={result}
+            city={form.city}
+            community={communityDisplay}
+            typeLabel={form.propertySubType}
+            unlockHref={unlockHref}
+            onUnlock={onUnlock}
+            onRefine={onRefine}
+            communitySlug={communitySlug}
+          />
+        </div>
+      )}
     </div>
   );
 }
