@@ -34,7 +34,7 @@ export default function ListingCompare() {
             <div className="terminal-font text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Every other platform
             </div>
-            <div className="text-[10px] text-muted-foreground">Realtor.ca · HouseSigma · etc.</div>
+            <div className="text-[10px] text-muted-foreground">Just the basics</div>
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl bg-white text-slate-900 opacity-95 shadow-2xl transition-transform duration-300 will-change-transform hover:-translate-y-1">
