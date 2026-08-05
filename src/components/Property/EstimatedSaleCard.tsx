@@ -189,8 +189,11 @@ export default function EstimatedSaleCard({
                 <p className="text-3xl font-extrabold tracking-tight text-primary">
                   {compact(comp.rangeLow)} – {compact(comp.rangeHigh)}
                 </p>
+                {/* "near ask — above it if offers compete", not "at or above": the measured
+                    median of this bucket still closes ~1% UNDER ask, per
+                    COMPETITIVE_MEDIAN_CLOSE_RATIO — an at-or-above floor overstates it. */}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Likely to close at or above the {formatPrice(listPrice)} ask.
+                  Likely closes near the {formatPrice(listPrice)} ask — above it if offers compete.
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground/90">
                   Listed ~{Math.round(comp.belowCompsPct * 100)}% below comparable sales. Homes priced

@@ -54,14 +54,18 @@ export default function TheReadCard({
     track("read_persona_switched", { listingId, persona: p });
   };
 
+  // Badge follows the selected lens (parity with DealScoreCard's headline) — a frozen
+  // default-persona badge reads as the page disagreeing with itself when lenses differ.
+  const lens = read.scoreByPersona?.[persona] ?? { score: read.score, grade: read.grade };
+
   return (
     <div data-tour="listing-the-read" className="mb-6 rounded-xl border border-emerald-500/30 bg-card/40 p-4 shadow-[0_0_0_1px_rgba(52,211,153,0.06)]">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
         <h2 className="text-[11px] font-bold uppercase tracking-[0.09em] text-foreground">The Read</h2>
-        {read.grade && (
+        {lens.grade && (
           <span className="ml-auto rounded bg-cyan-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-300">
-            Deal Score {read.score} · {read.grade}
+            Deal Score {lens.score} · {lens.grade}
           </span>
         )}
       </div>

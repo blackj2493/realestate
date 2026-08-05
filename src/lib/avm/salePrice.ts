@@ -66,6 +66,10 @@ export interface SalePriceEstimate {
     rangeLow: number;
     /** Ceiling of the "likely close" range — comp low if above the ask, else comp mid. */
     rangeHigh: number;
+    /** Measured median close/list for this bucket (COMPETITIVE_MEDIAN_CLOSE_RATIO) — the
+     *  honest "likely close" anchor for hold-offers listings; the citywide cohort ratio
+     *  does NOT apply to them. */
+    medianCloseRatio: number;
   } | null;
 }
 
@@ -105,6 +109,13 @@ export function isThresholdPrice(list: number): boolean {
  *  never a confident above-ask number. */
 export const COMPETITIVE_OVER_ASK_RATE = 0.4;
 
+/** Measured median close/list for the fired pattern (same backtest bucket): the typical
+ *  hold-offers home still closes ~1% UNDER ask. Every consumer of the competitive signal
+ *  anchors "likely close" to THIS ratio, never to the citywide cohort ratio (often 3–5%
+ *  under ask) — quoting the cohort figure on a deliberately under-listed home is what made
+ *  the Suggested Move contradict the card's over-ask framing. */
+export const COMPETITIVE_MEDIAN_CLOSE_RATIO = 0.99;
+
 /** The AVM comp mid must clear the ask by at least this for a listing to count as "below
  *  comps" (matches the backtest's AVM>list margin; guards against the ~11% AVM noise). */
 export const COMPETITIVE_COMP_MARGIN = 0.05;
@@ -123,12 +134,18 @@ function avmComparable(estimate: AVMResult | null): SalePriceEstimate["comparabl
  * null. Pure. Guards on AVM confidence — a LOW-confidence comp band is too noisy to call a
  * listing "under-priced". The range floor is the ask; the ceiling is the conservative comp
  * low (or the mid when the comp low is still under the ask).
+ *
+ * EXPORTED as the single detector for every surface that must agree on this pattern: the
+ * Estimated Sale card (via resolveSalePrice), the Deal Score Suggested Move
+ * (getListingDetail → computeDealScore), and The Read's price line (buildTheRead). Same
+ * inputs → same verdict, so one surface can never call a listing a bidding-war setup while
+ * another recommends an under-ask offer on it.
  */
-function detectCompetitive(
+export function detectCompetitive(
   listPrice: number,
-  comparable: SalePriceEstimate["comparable"],
   estimate: AVMResult | null,
 ): SalePriceEstimate["competitive"] {
+  const comparable = avmComparable(estimate);
   if (!comparable || !(listPrice > 0)) return null;
   if (estimate && estimate.confidence === "LOW") return null;
   if (!isThresholdPrice(listPrice)) return null;
@@ -138,6 +155,7 @@ function detectCompetitive(
     overAskRate: COMPETITIVE_OVER_ASK_RATE,
     rangeLow: listPrice,
     rangeHigh: comparable.low > listPrice ? comparable.low : comparable.mid,
+    medianCloseRatio: COMPETITIVE_MEDIAN_CLOSE_RATIO,
   };
 }
 
@@ -177,7 +195,7 @@ export function resolveSalePrice(opts: {
         "Calibrated to how comparable homes recently sold relative to asking.",
       market: { ratio, sampleSize, scope, windowMonths },
       comparable,
-      competitive: detectCompetitive(listPrice as number, comparable, estimate),
+      competitive: detectCompetitive(listPrice as number, estimate),
     };
   }
 

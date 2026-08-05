@@ -44,6 +44,7 @@ import {
 import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/normalize";
 import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
 import { computeExpectedSale, type ExpectedSale } from "@/lib/avm/expectedSale";
+import { detectCompetitive } from "@/lib/avm/salePrice";
 import {
   resolveListingStatus,
   fillClosePriceFromSaleHistory,
@@ -681,6 +682,13 @@ export const getListingDetail = cache(
       subType: ratioSub,
       expectedSalePrice: expectedSale?.expectedPrice ?? null,
       closeListRatio: expectedSale?.ratio ?? null,
+      // "Priced to compete" — the SAME detector the Estimated Sale card runs (via
+      // resolveSalePrice in the page/API routes), so the Suggested Move can never
+      // recommend an under-ask offer on a listing the card calls a bidding-war setup.
+      competitive:
+        status.kind === "active" && typeof listPrice === "number" && listPrice > 0
+          ? detectCompetitive(listPrice, estimate)
+          : null,
     });
     const originalPrice =
       originalListPrice && listPrice && originalListPrice > listPrice
