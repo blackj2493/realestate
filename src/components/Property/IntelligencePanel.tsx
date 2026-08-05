@@ -1,57 +1,70 @@
 "use client";
 
 /**
- * The "PureProperty Intelligence" panel (mobile). Consolidates the analysis cards
- * (the read / estimate / deal grade / renovation / costs) into one place so the page
- * reads Home → Numbers → Market instead of stacking six full cards.
+ * "PureProperty Intelligence" panel (mobile) — bento tile layout.
  *
- * Design (Proposal B — "surface the moat"): every section's HEADLINE is always on
- * screen — the icon, label, the one-line takeaway (`caption`) and the answer chip
- * (`summary`) — so a visitor gets each insight while scrolling, with no taps. Only the
- * deep EVIDENCE (comps, grade breakdown, reno moves, cost model) sits behind a quiet
- * "See the …" link per row — the big answer value/grade is the visual hero, not the
- * link — opened independently (multi-open — opening one no longer closes the others).
- * A short synthesised `verdict` leads the panel.
- * Sections arrive server-rendered from page.tsx with their VOW gating already applied;
- * this component adds nothing gated.
+ * A synthesised `verdict` leads, then every insight is a TILE showing its headline
+ * answer, so the whole set fits one screen with no scroll. Tapping a tile opens a
+ * bottom SHEET with the full analysis (comps, grade breakdown, reno moves, cost
+ * model) — the card→sheet progressive-disclosure pattern. Tiles arrive from page.tsx
+ * with their VOW gating already applied; a `locked` tile shows a "Sign in" state and
+ * never a real number, and the sheet renders the locked card's own teaser.
+ *
+ * The sheet is portaled to <body> so no transformed/sticky ancestor can trap it, and
+ * it mounts a tile's `detail` only while open (collapsed panel stays cheap).
  */
 
-import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { X, Lock, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export interface IntelligenceSection {
+export interface IntelligenceTile {
   key: string;
-  /** Row label — kept short and plain. */
   label: string;
-  /** Leading icon (feature-coloured) — gives the row an anchor for the eye. */
   icon?: ReactNode;
-  /** One-line takeaway under the label — ALWAYS visible (the delta, verdict, best move…). */
-  caption?: ReactNode;
-  /** Headline "answer" shown on the row (a value, grade chip, or lock) — ALWAYS visible. */
-  summary?: ReactNode;
-  /** Label for the highlighted evidence toggle, e.g. "See the comps". Falls back to a generic. */
-  evidenceLabel?: string;
-  /** The deep-evidence card, revealed only when the row's toggle is open. */
-  detail?: ReactNode;
+  /** The tile's headline content — a value, grade pill, or short text. Ignored when `locked`. */
+  value?: ReactNode;
+  /** One short line under the value. Hidden when `locked`. */
+  sub?: ReactNode;
+  /** Full analysis, shown in the bottom sheet on tap. */
+  detail: ReactNode;
+  /** Full-width tile (spans both columns). */
+  wide?: boolean;
+  /** VOW gate — show a sign-in state instead of the value; the sheet still shows the locked card. */
+  locked?: boolean;
+  /** Sheet header title (defaults to `label`). */
+  sheetTitle?: string;
 }
 
 export default function IntelligencePanel({
-  sections,
   verdict,
+  tiles,
   footer,
 }: {
-  sections: IntelligenceSection[];
-  /** One-line synthesis + headline chips, rendered at the top of the panel. */
+  /** One-line synthesis + headline chips, rendered above the tiles. */
   verdict?: ReactNode;
-  /** Rendered below every section — the single sign-in gate strip for anon. */
+  tiles: IntelligenceTile[];
+  /** Rendered below the grid — the single sign-in gate strip for anon. */
   footer?: ReactNode;
 }) {
-  // Multi-open: each row's evidence toggles independently, so a visitor can line up
-  // the comps, the grade breakdown and the reno moves at once (the old single-open
-  // accordion forced them to close one to see another).
-  const [openKeys, setOpenKeys] = useState<Record<string, boolean>>({});
-  const toggle = (key: string) => setOpenKeys((o) => ({ ...o, [key]: !o[key] }));
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openTile = tiles.find((t) => t.key === openKey) ?? null;
+
+  // Close on Escape + lock body scroll while the sheet is open.
+  useEffect(() => {
+    if (!openTile) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenKey(null);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [openTile]);
 
   return (
     <div className="rounded-lg border border-cyan-500/30 bg-card/50" data-tour="listing-intelligence">
@@ -62,62 +75,97 @@ export default function IntelligencePanel({
         </h3>
       </div>
 
-      {verdict != null && <div className="border-b border-border p-3">{verdict}</div>}
+      <div className="space-y-3 p-3">
+        {verdict != null && verdict}
 
-      <div className="divide-y divide-border">
-        {sections.map((s) => {
-          const open = !!openKeys[s.key];
-          const panelId = `intel-panel-${s.key}`;
-          return (
-            <div key={s.key} className="px-4 py-3">
-              {/* Always-visible headline: icon · label · BIG answer · one-line takeaway.
-                  The answer (value / grade / net upside) is the hero; the evidence link
-                  below is a quiet, deliberate way in — not a full-width button that steals
-                  attention from the numbers. */}
-              <div className="flex items-start gap-3">
-                {s.icon != null && (
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center" aria-hidden>
-                    {s.icon}
+        <div className="grid grid-cols-2 gap-2.5">
+          {tiles.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setOpenKey(t.key)}
+              aria-haspopup="dialog"
+              className={cn(
+                "relative flex min-h-[98px] flex-col rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-cyan-500/40 hover:bg-cyan-500/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60",
+                t.wide && "col-span-2"
+              )}
+            >
+              <span className="flex items-center gap-2 text-muted-foreground">
+                {t.icon != null && (
+                  <span className="text-cyan-700 dark:text-cyan-400" aria-hidden>
+                    {t.icon}
                   </span>
                 )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-semibold leading-tight text-foreground">{s.label}</span>
-                    {s.summary != null && <span className="shrink-0 pt-0.5 text-right">{s.summary}</span>}
-                  </div>
-                  {s.caption != null && (
-                    <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{s.caption}</p>
-                  )}
-                  {s.detail != null && (
-                    <button
-                      type="button"
-                      aria-expanded={open}
-                      aria-controls={panelId}
-                      onClick={() => toggle(s.key)}
-                      className="mt-2 inline-flex items-center gap-1 py-1 text-[12px] font-semibold text-cyan-700 transition-colors hover:text-cyan-600 dark:text-cyan-300 dark:hover:text-cyan-200"
-                    >
-                      <span>{open ? "Hide details" : (s.evidenceLabel ?? "See the full breakdown")}</span>
-                      <ChevronDown
-                        className={cn("h-3.5 w-3.5 shrink-0 transition-transform", open && "rotate-180")}
-                        aria-hidden
-                      />
-                    </button>
-                  )}
-                </div>
-              </div>
+                <span className="text-[11px] font-semibold">{t.label}</span>
+              </span>
 
-              {/* Deep evidence — full row width, revealed on toggle, mounted only when open. */}
-              {s.detail != null && (
-                <div id={panelId} role="region" aria-label={s.label} hidden={!open} className="pt-2">
-                  {open && s.detail}
-                </div>
+              {/* Subtle "opens a detail" affordance — the whole tile is the tap target. */}
+              <Maximize2 className="absolute right-2.5 top-2.5 h-3 w-3 text-muted-foreground/40" aria-hidden />
+
+              <span className="mt-2 flex flex-1 flex-col justify-center">
+                {t.locked ? (
+                  <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
+                    <Lock className="h-4 w-4" aria-hidden /> Sign in to see
+                  </span>
+                ) : (
+                  t.value
+                )}
+              </span>
+
+              {!t.locked && t.sub != null && (
+                <span className="mt-1.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">{t.sub}</span>
               )}
-            </div>
-          );
-        })}
+            </button>
+          ))}
+        </div>
       </div>
 
       {footer && <div className="border-t border-border p-4">{footer}</div>}
+
+      {openTile != null &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[80] flex flex-col justify-end"
+            role="dialog"
+            aria-modal="true"
+            aria-label={openTile.sheetTitle ?? openTile.label}
+          >
+            {/* Scrim — tap to dismiss. */}
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setOpenKey(null)}
+              className="absolute inset-0 bg-black/60"
+            />
+            <div className="relative max-h-[86vh] overflow-y-auto rounded-t-2xl border-t border-cyan-500/30 bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl">
+              {/* Sticky header: drag handle + title + explicit close (obvious dismissal). */}
+              <div className="sticky top-0 z-10 -mx-4 mb-2 border-b border-border bg-background/95 px-4 pb-2 pt-1 backdrop-blur">
+                <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    {openTile.icon != null && (
+                      <span className="text-cyan-700 dark:text-cyan-400" aria-hidden>
+                        {openTile.icon}
+                      </span>
+                    )}
+                    {openTile.sheetTitle ?? openTile.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenKey(null)}
+                    aria-label="Close"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="pt-1">{openTile.detail}</div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
