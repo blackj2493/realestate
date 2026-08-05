@@ -68,7 +68,7 @@ import {
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
-import IntelligencePanel, { type IntelligenceSection } from "@/components/Property/IntelligencePanel";
+import IntelligencePanel, { type IntelligenceTile } from "@/components/Property/IntelligencePanel";
 import { shouldRender as valueAddWillRender, buildView as buildValueAddView } from "@/components/Property/forceAppreciationView";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
@@ -660,26 +660,6 @@ export default async function PropertyPage({
             )
           : "What this home is likely to close at."
       : undefined;
-  const estSummary = estLocked ? (
-    <Lock className="h-5 w-5 text-muted-foreground" aria-label="locked" />
-  ) : hasEstVal ? (
-    <span className="flex flex-col items-end gap-0.5">
-      <span className="font-mono text-xl font-bold leading-none text-primary">{compactMoney(salePrice!.value)}</span>
-      <span
-        className={cn(
-          "border px-1 py-px font-mono text-[10px] font-semibold uppercase tracking-wide",
-          salePrice!.confidence === "HIGH"
-            ? "border-emerald-500/50 text-emerald-700 dark:text-emerald-400"
-            : salePrice!.confidence === "MEDIUM"
-              ? "border-amber-500/50 text-amber-700 dark:text-amber-400"
-              : "border-border text-muted-foreground"
-        )}
-      >
-        {salePrice!.confidence}
-      </span>
-    </span>
-  ) : undefined;
-
   const dealCaption =
     !isAuthed && hasDealScore
       ? "We grade this home A–F for your buying style."
@@ -697,18 +677,6 @@ export default async function PropertyPage({
         ? `${renoView.recommendedRows.length} move${renoView.recommendedRows.length === 1 ? "" : "s"} pay back · best: ${renoView.recommendedRows[0].label}`
         : "Modeled moves — none pay back here."
       : undefined;
-  const renoSummary = renoLocked ? (
-    <Lock className="h-5 w-5 text-muted-foreground" aria-label="locked" />
-  ) : renoView && renoView.headlineNet > 0 ? (
-    <span className="font-mono text-xl font-bold leading-none text-emerald-700 dark:text-emerald-400">
-      +{compactMoney(renoView.headlineNet)}
-    </span>
-  ) : undefined;
-
-  const costsCaption =
-    p.TaxAnnualAmount && p.TaxAnnualAmount > 0
-      ? `Property tax ~${formatPrice(Math.round(p.TaxAnnualAmount / 12))}/mo + your mortgage.`
-      : "Mortgage, property tax & fees.";
 
   // ── Verdict header for the Intelligence panel (mobile, Proposal B): a one-line
   //    synthesis + the headline chips, above the always-visible insight rows. VOW-safe:
@@ -1236,14 +1204,124 @@ export default async function PropertyPage({
                 <div className="lg:hidden">
                 <IntelligencePanel
                   verdict={verdictNode}
-                  sections={
+                  tiles={
                     [
+                      // Estimated sale — the headline number, given the full-width tile.
+                      hasEstimate || hasExpectedSale
+                        ? {
+                            key: "estimate",
+                            label: "Estimated sale price",
+                            icon: <Tag className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                            wide: true,
+                            locked: estLocked,
+                            value: (
+                              <span className="flex items-baseline gap-2">
+                                <span className="font-mono text-2xl font-bold leading-none text-primary">
+                                  {hasEstVal ? compactMoney(salePrice!.value) : "—"}
+                                </span>
+                                {hasEstVal && (
+                                  <span
+                                    className={cn(
+                                      "border px-1 py-px font-mono text-[9px] font-semibold uppercase tracking-wide",
+                                      salePrice!.confidence === "HIGH"
+                                        ? "border-emerald-500/50 text-emerald-700 dark:text-emerald-400"
+                                        : salePrice!.confidence === "MEDIUM"
+                                          ? "border-amber-500/50 text-amber-700 dark:text-amber-400"
+                                          : "border-border text-muted-foreground"
+                                    )}
+                                  >
+                                    {salePrice!.confidence}
+                                  </span>
+                                )}
+                              </span>
+                            ),
+                            sub: estCaption,
+                            detail: (
+                              <EstimatedSaleCard
+                                salePrice={salePrice}
+                                listPrice={price}
+                                city={p.City}
+                                propertySubType={p.PropertySubType}
+                                locked={estLocked}
+                              />
+                            ),
+                          }
+                        : null,
+                      // Deal grade — VOW-gated (locked → "Sign in"; the grade pill shows for authed).
+                      hasDealScore
+                        ? {
+                            key: "score",
+                            label: "Deal grade",
+                            icon: <Gauge className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                            locked: !isAuthed,
+                            value: (
+                              <LiveDealGradePill dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} size="lg" />
+                            ),
+                            sub: dealCaption,
+                            sheetTitle: "Deal grade",
+                            detail: (
+                              <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
+                            ),
+                          }
+                        : null,
+                      // Renovation upside — self-hides when there's no priced move (renoInclude).
+                      renoInclude
+                        ? {
+                            key: "reno",
+                            label: "Renovation upside",
+                            icon: <Hammer className="h-[18px] w-[18px] text-emerald-700 dark:text-emerald-400" />,
+                            locked: renoLocked,
+                            value:
+                              renoView && renoView.headlineNet > 0 ? (
+                                <span className="font-mono text-2xl font-bold leading-none text-emerald-700 dark:text-emerald-400">
+                                  +{compactMoney(renoView.headlineNet)}
+                                </span>
+                              ) : (
+                                <span className="text-[13px] font-semibold text-muted-foreground">No payback here</span>
+                              ),
+                            sub: renoCaption,
+                            detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
+                          }
+                        : null,
+                      // Your costs — public (property tax), not VOW-gated.
+                      {
+                        key: "costs",
+                        label: "Your costs",
+                        icon: <Wallet className="h-[18px] w-[18px] text-muted-foreground" />,
+                        sheetTitle: "Your costs",
+                        value:
+                          p.TaxAnnualAmount && p.TaxAnnualAmount > 0 ? (
+                            <span className="font-mono text-2xl font-bold leading-none text-foreground">
+                              ~{formatPrice(Math.round(p.TaxAnnualAmount / 12))}
+                              <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                            </span>
+                          ) : (
+                            <span className="text-[13px] font-semibold text-foreground">Model your costs</span>
+                          ),
+                        sub:
+                          p.TaxAnnualAmount && p.TaxAnnualAmount > 0
+                            ? "Property tax + your mortgage"
+                            : "Mortgage, tax & fees",
+                        detail: (
+                          <div className="space-y-4">
+                            {assetSummaryCard}
+                            {financeCard}
+                          </div>
+                        ),
+                      },
+                      // The read — qualitative; the thesis teases, the sheet carries the catch,
+                      // price read and things-to-know. Not VOW-gated (shown to anon).
                       {
                         key: "read",
                         label: "The read",
                         icon: <Lightbulb className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
-                        evidenceLabel: "See the full read",
-                        caption: readCaption,
+                        sheetTitle: "The read",
+                        value: (
+                          <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
+                            {readCaption}
+                          </span>
+                        ),
+                        sub: "The catch, price read & things to know",
                         detail: (
                           <div>
                             <div className="divide-y divide-border/60">
@@ -1257,66 +1335,7 @@ export default async function PropertyPage({
                           </div>
                         ),
                       },
-                      {
-                        key: "estimate",
-                        label: "Estimated sale price",
-                        icon: <Tag className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
-                        evidenceLabel: "See the comps",
-                        // Context line: the ask-delta (green below / rose above); answer: the
-                        // estimate + its confidence. Both drop to a generic line + lock for anon.
-                        caption: estCaption,
-                        summary: estSummary,
-                        detail: (
-                          <EstimatedSaleCard
-                            salePrice={salePrice}
-                            listPrice={price}
-                            city={p.City}
-                            propertySubType={p.PropertySubType}
-                            locked={!isAuthed && (hasEstimate || hasExpectedSale)}
-                          />
-                        ),
-                      },
-                      {
-                        key: "score",
-                        label: "Deal grade",
-                        icon: <Gauge className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
-                        evidenceLabel: "See the breakdown",
-                        caption: dealCaption,
-                        // Live grade pill — follows the same lens as the card below (fix #6).
-                        summary: hasDealScore ? (
-                          <LiveDealGradePill dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} size="lg" />
-                        ) : undefined,
-                        detail: (
-                          <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
-                        ),
-                      },
-                      // Renovation upside self-hides when there's no priced move, so only add the
-                      // row when the card will actually render something (or its anon teaser).
-                      renoInclude
-                        ? {
-                            key: "reno",
-                            label: "Renovation upside",
-                            icon: <Hammer className="h-[18px] w-[18px] text-emerald-700 dark:text-emerald-400" />,
-                            evidenceLabel: "See the moves",
-                            caption: renoCaption,
-                            summary: renoSummary,
-                            detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
-                          }
-                        : null,
-                      {
-                        key: "costs",
-                        label: "Your costs",
-                        icon: <Wallet className="h-[18px] w-[18px] text-muted-foreground" />,
-                        evidenceLabel: "Model your costs",
-                        caption: costsCaption,
-                        detail: (
-                          <div className="space-y-4">
-                            {assetSummaryCard}
-                            {financeCard}
-                          </div>
-                        ),
-                      },
-                    ].filter(Boolean) as IntelligenceSection[]
+                    ].filter(Boolean) as IntelligenceTile[]
                   }
                   footer={
                     !isAuthed ? (
