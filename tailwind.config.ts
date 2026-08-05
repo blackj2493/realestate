@@ -9,6 +9,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Phone-width gate. The smallest viewport we design the app header for is
+      // 360px (Android baseline); below that the header row has no slack left,
+      // so `xs:` marks the point where an element may take its larger scale.
+      // Additive — sm/md/lg keep their Tailwind defaults.
+      screens: {
+        xs: "360px",
+      },
       fontFamily: {
         sans: ["var(--font-sans)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
