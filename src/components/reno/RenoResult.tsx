@@ -1,0 +1,181 @@
+'use client';
+
+import Link from 'next/link';
+import { Lock } from 'lucide-react';
+import { formatPrice } from '@/lib/utils';
+import type { AVMResult } from '@/lib/avm/types';
+import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
+import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
+import { localRulesFor } from '@/lib/reno/localRules';
+import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
+import ShareChallengeButton from './ShareChallengeButton';
+import {
+  EligibilityPanel,
+  PermitsPanel,
+  FinancingPanel,
+  DontOverInvestPanel,
+  AssumptionsPanel,
+} from './RenoPanels';
+
+export type RenoResultData =
+  | { locked: true; catalog: AnonCatalogItem[] }
+  | { locked: false; estimate: AVMResult | null; report: ValueAddReport | null };
+
+export default function RenoResult({
+  result,
+  city,
+  community,
+  typeLabel,
+  unlockHref,
+  onUnlock,
+  onRefine,
+  communitySlug,
+}: {
+  result: RenoResultData;
+  city: string;
+  community: string | null;
+  typeLabel: string;
+  unlockHref: string;
+  onUnlock: () => void;
+  onRefine: () => void;
+  communitySlug: string | null;
+}) {
+  const where = community || city || 'your area';
+  const rules = localRulesFor(city);
+
+  // Normalise both API shapes into one ranked move list for the cards.
+  let moves: RenoMoveDisplay[];
+  if (result.locked) {
+    moves = result.catalog.map((m, i) => ({
+      key: m.key,
+      rank: i + 1,
+      label: m.label,
+      costLow: m.costLow,
+      costHigh: m.costHigh,
+      locked: true,
+    }));
+  } else {
+    const priced = (result.report?.moves ?? []).filter((m) => m.status === 'priced');
+    priced.sort(
+      (a, b) => Number(b.recommended) - Number(a.recommended) || b.paybackRatio - a.paybackRatio,
+    );
+    moves = priced.map((m, i) => ({
+      key: m.key,
+      rank: i + 1,
+      label: m.label,
+      costLow: m.costLow,
+      costHigh: m.costHigh,
+      locked: false,
+      valueAddTyp: m.valueAddTyp,
+      paybackRatio: m.paybackRatio,
+      recommended: m.recommended,
+    }));
+  }
+
+  const report = result.locked ? null : result.report;
+  const estimate = result.locked ? null : result.estimate;
+  const insight = report?.neighbourhoodInsight;
+
+  return (
+    <div className="space-y-4">
+      {/* context */}
+      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+        📊 A <span className="font-semibold text-foreground">typical {typeLabel.toLowerCase()}</span> in {where}
+      </div>
+
+      {/* HERO */}
+      {result.locked ? (
+        <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 to-transparent p-5 text-center">
+          <p className="text-xs text-muted-foreground">
+            How much a smart reno could add to a typical {typeLabel.toLowerCase()} here
+          </p>
+          <p className="my-1 select-none text-4xl font-extrabold tracking-tight text-emerald-700 blur-[7px] dark:text-emerald-400" aria-hidden>
+            $•••,•••
+          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground">
+              <Lock className="h-3.5 w-3.5" aria-hidden /> Sign in to reveal your number
+            </span>
+            <span className="rounded-full border border-cyan-600/35 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:text-cyan-400">
+              Based on recent {city} sales
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/12 to-transparent p-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">You could unlock up to</p>
+              <p className="my-0.5 text-4xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400">
+                +{formatPrice(report?.headlineUpsideGross ?? 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ≈ <b className="text-emerald-700 dark:text-emerald-400">+{formatPrice(report?.headlineUpside ?? 0)}</b> net of renovation cost
+              </p>
+            </div>
+            {report && report.valueAddScore > 0 && (
+              <span className="rounded-full border border-emerald-600/40 bg-emerald-500/10 px-3 py-1.5 font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                Score {report.valueAddScore}/100
+              </span>
+            )}
+          </div>
+          {estimate && estimate.estimatedValue > 0 && (
+            <p className="mt-2 border-t border-border pt-2 font-mono text-[11px] text-muted-foreground">
+              Est. value {formatPrice(estimate.estimatedValue)}
+              {estimate.lowBand > 0 && estimate.highBand > 0 && (
+                <> · range {formatPrice(estimate.lowBand)}–{formatPrice(estimate.highBand)}</>
+              )}
+            </p>
+          )}
+          {insight && <p className="mt-2 text-xs text-muted-foreground">{insight}</p>}
+        </div>
+      )}
+
+      {/* two-column: moves + rail */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
+        {/* MOVES */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-foreground">🔧 The moves that pay back most</h2>
+            <span className="font-mono text-[10.5px] text-muted-foreground">ranked for a typical {typeLabel.toLowerCase()}</span>
+          </div>
+          {moves.length > 0 ? (
+            moves.map((m) => <RenoMoveCard key={m.key} m={m} />)
+          ) : (
+            <p className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
+              Renovation modelling isn’t available for this neighbourhood yet — try a nearby community.
+            </p>
+          )}
+
+          {result.locked ? (
+            <Link
+              href={unlockHref}
+              onClick={onUnlock}
+              className="mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700 [touch-action:manipulation]"
+            >
+              <Lock className="h-4 w-4" /> Unlock which pays back most — free →
+            </Link>
+          ) : (
+            <Link
+              href="/properties"
+              className="mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-500 active:bg-emerald-700 [touch-action:manipulation]"
+            >
+              📈 Track this home’s value →
+            </Link>
+          )}
+          <ShareChallengeButton communitySlug={communitySlug} community={community} />
+          {report?.basis && <p className="text-[10.5px] text-muted-foreground">{report.basis}</p>}
+        </div>
+
+        {/* RAIL — free over-deliver */}
+        <div className="space-y-3.5">
+          <EligibilityPanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} />
+          <PermitsPanel rules={rules} />
+          <FinancingPanel />
+          <DontOverInvestPanel rules={rules} />
+          <AssumptionsPanel typeLabel={typeLabel} onRefine={onRefine} />
+        </div>
+      </div>
+    </div>
+  );
+}
