@@ -35,9 +35,9 @@ function Row({ row }: { row: LedgerRow }) {
 }
 
 const CONFIDENCE_CHIP: Record<AVMResult["confidence"], string> = {
-  HIGH:   "border-emerald-700 bg-emerald-950/40 text-emerald-300",
-  MEDIUM: "border-yellow-700  bg-yellow-950/40  text-yellow-300",
-  LOW:    "border-border   bg-muted/40   text-muted-foreground",
+  HIGH:   "border-emerald-600/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  MEDIUM: "border-yellow-600/40  bg-yellow-500/10  text-yellow-700  dark:text-yellow-300",
+  LOW:    "border-border         bg-muted/40       text-muted-foreground",
 };
 
 // ── Main export ──────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
                   {vaConfidence} CONFIDENCE
                 </span>
               )}
-              <span className="rounded border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 font-mono text-xs text-emerald-300">
+              <span className="rounded border border-emerald-600/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs text-emerald-700 dark:text-emerald-300">
                 Score {v.score}/100
               </span>
             </div>
@@ -138,7 +138,7 @@ export default function HiddenEquityReport({ estimate, report }: HiddenEquityRep
           {/* "Other moves" disclosure */}
           {(v.moreRows.length > 0 || v.suppressed.length > 0) && (
             <details>
-              <summary className="cursor-pointer list-none text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
+              <summary className="cursor-pointer list-none text-xs text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
                 Other moves
               </summary>
               <div className="mt-2 space-y-1.5">

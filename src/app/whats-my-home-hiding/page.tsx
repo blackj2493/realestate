@@ -52,7 +52,7 @@ export default async function WhatsMyHomeHidingPage({
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
-        <h1 className="mb-1 text-3xl font-bold text-white">What&apos;s my home hiding?</h1>
+        <h1 className="mb-1 text-3xl font-bold text-foreground">What&apos;s my home hiding?</h1>
         <p className="mb-3 max-w-2xl text-sm text-muted-foreground">
           Describe your home and see the renovations that pay back the most where you are —
           ranked by what actually sells nearby. Free.

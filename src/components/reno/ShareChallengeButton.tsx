@@ -46,7 +46,7 @@ export default function ShareChallengeButton({
     <button
       type="button"
       onClick={onShare}
-      className="flex w-full items-center justify-center gap-2 rounded-md border border-emerald-700 bg-emerald-950/40 px-4 py-2.5 text-sm font-semibold text-emerald-200 transition-colors hover:bg-emerald-900/40"
+      className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-emerald-600/40 bg-emerald-500/[0.06] px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/[0.12] dark:text-emerald-300 [touch-action:manipulation]"
     >
       {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
       {copied ? 'Link copied' : `Challenge a neighbour`}
