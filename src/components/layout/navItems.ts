@@ -1,4 +1,4 @@
-import { LayoutDashboard, Map, TrendingUp, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Map, TrendingUp, Hammer, type LucideIcon } from "lucide-react";
 
 /**
  * Single source of truth for the app's primary navigation.
@@ -25,6 +25,10 @@ export const NAV_ITEMS: NavItem[] = [
   // should NOT light up "Map".
   { label: "Map", href: "/properties", icon: Map },
   { label: "Market Trends", href: "/analytics", icon: TrendingUp },
+  // Public renovation-upside tool ("What's my home hiding?"). A launch growth /
+  // lead-gen surface (works signed-out) — the one non-core entry we keep here so
+  // it's reachable from the menu on desktop + mobile instead of being an orphan.
+  { label: "Reno Upside", href: "/whats-my-home-hiding", icon: Hammer },
 ];
 
 /**
