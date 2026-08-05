@@ -31,6 +31,8 @@ import { logVowAccess } from "@/lib/audit/vowAccessLog";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import ListingCalculator from "@/components/Property/ListingCalculator";
 import { getCurrentMortgageRate } from "@/lib/finance/getMortgageRate";
+import { calculateCanadianMonthlyMortgage } from "@/lib/finance/canadianMortgage";
+import { DEFAULT_DOWN_PCT, DEFAULT_AMORT_YEARS } from "@/lib/finance/dealInputs";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
 import RentalGlance from "@/components/Property/RentalGlance";
 import CommercialLeaseSnapshot from "@/components/Property/CommercialLeaseSnapshot";
@@ -781,6 +783,25 @@ export default async function PropertyPage({
     </div>
   );
 
+  // Headline monthly ownership cost for the "Your costs" tile — the SAME all-in figure the
+  // ListingCalculator opens to: mortgage P&I at the default 20% down / current rate / 25-yr
+  // amort, PLUS property tax and condo/HOA fees. NOT property tax alone (the old value, which
+  // even contradicted its own "property tax + your mortgage" caption). Null for leases (a
+  // renter carries no mortgage) and when there's no price to model.
+  const costBasePrice = soldPrice ?? price;
+  const monthlyOwnershipCost =
+    !isLease && costBasePrice > 0
+      ? Math.round(
+          calculateCanadianMonthlyMortgage(
+            costBasePrice * (1 - DEFAULT_DOWN_PCT / 100),
+            mortgageRate.ratePct / 100,
+            DEFAULT_AMORT_YEARS * 12
+          ) +
+            (p.TaxAnnualAmount || 0) / 12 +
+            (p.AssociationFee || 0)
+        )
+      : null;
+
   const financeCard = isLease ? (
     isCommercial ? (
       <CommercialLeaseSnapshot
@@ -1282,24 +1303,31 @@ export default async function PropertyPage({
                             detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
                           }
                         : null,
-                      // Your costs — public (property tax), not VOW-gated.
+                      // Your costs — all-in monthly ownership estimate (mortgage + tax + fees),
+                      // matching the calculator in the sheet. Public, not VOW-gated.
                       {
                         key: "costs",
                         label: "Your costs",
                         icon: <Wallet className="h-[18px] w-[18px] text-muted-foreground" />,
                         sheetTitle: "Your costs",
                         value:
-                          p.TaxAnnualAmount && p.TaxAnnualAmount > 0 ? (
+                          isLease && costBasePrice > 0 ? (
                             <span className="font-mono text-2xl font-bold leading-none text-foreground">
-                              ~{formatPrice(Math.round(p.TaxAnnualAmount / 12))}
+                              ~{formatPrice(Math.round(costBasePrice))}
+                              <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                            </span>
+                          ) : monthlyOwnershipCost && monthlyOwnershipCost > 0 ? (
+                            <span className="font-mono text-2xl font-bold leading-none text-foreground">
+                              ~{formatPrice(monthlyOwnershipCost)}
                               <span className="text-sm font-normal text-muted-foreground">/mo</span>
                             </span>
                           ) : (
                             <span className="text-[13px] font-semibold text-foreground">Model your costs</span>
                           ),
-                        sub:
-                          p.TaxAnnualAmount && p.TaxAnnualAmount > 0
-                            ? "Property tax + your mortgage"
+                        sub: isLease
+                          ? "Monthly rent — see terms"
+                          : monthlyOwnershipCost && monthlyOwnershipCost > 0
+                            ? "Est. mortgage, tax & fees · 20% down"
                             : "Mortgage, tax & fees",
                         detail: (
                           <div className="space-y-4">
