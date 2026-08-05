@@ -57,7 +57,9 @@ export default function AssumptionsBar({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all active:scale-95",
             diffOnly
-              ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-100"
+              // Same dark-surface colour bug as LensSelector: unreadable on the light
+              // compare page. Dark mode unchanged.
+              ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-800 dark:text-cyan-100"
               : "border-border text-muted-foreground hover:text-foreground"
           )}
           title="Hide rows where every property is identical"
