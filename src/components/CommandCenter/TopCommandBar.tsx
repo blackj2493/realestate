@@ -71,12 +71,19 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
             aria-label="PureProperty.ca home"
           >
             {/* FULL wordmark on every width (brand requirement — never truncate
-                to "PURE"). Phones use the smaller `sm` scale plus the tighter
-                paddings/gaps in this row to fit 360-390px. */}
-            <span className="sm:hidden">
+                to "PURE"). The `md` scale starts at 360px, matching the AppHeader
+                so the wordmark is one size across the app at phone widths.
+                Budget, measured on a real 360px device: the wordmark ends at
+                ~136px and this row's controls start at ~186px, so ~42px is free
+                after the bar's 8px gap. md costs ~36px more than sm, leaving
+                ~6px — too tight on its own, which is why the control gap below
+                sm tightened to gap-1.5 (see the right cluster) to buy back 6px
+                across its three gaps, for ~12px of slack. Below 360px there is
+                none at all, so those viewports keep `sm`. */}
+            <span className="xs:hidden">
               <Logo size="sm" theme="dark" />
             </span>
-            <span className="hidden sm:inline-flex">
+            <span className="hidden xs:inline-flex">
               <Logo size="md" theme="dark" />
             </span>
           </Link>
@@ -103,8 +110,12 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
         </div>
 
         {/* Right: cross-section nav (same NAV_ITEMS as the AppHeader) + alerts.
-            gap-2 below sm is part of the 360px budget for the full wordmark. */}
-        <div className="flex items-center justify-end gap-2 sm:gap-3">
+            The gap below sm is part of the 360px budget for the full wordmark:
+            gap-1.5 (matching the AppHeader's cluster) buys back 6px across the
+            three gaps, which is what lets the wordmark take the md scale here.
+            Only the SPACING tightens — every control keeps its own box, so the
+            44px search target and the 36px others are unchanged. */}
+        <div className="flex items-center justify-end gap-1.5 sm:gap-3">
           {/* Mobile-only search trigger — the inline LocationSearch is hidden
               below sm, so this is the only way to search on phones. 44px tap
               target, dark terminal styling. */}
