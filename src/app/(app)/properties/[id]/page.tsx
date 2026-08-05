@@ -707,8 +707,61 @@ export default async function PropertyPage({
 
   const costsCaption =
     p.TaxAnnualAmount && p.TaxAnnualAmount > 0
-      ? `Taxes ~${formatPrice(Math.round(p.TaxAnnualAmount / 12))}/mo + your mortgage — tap to model.`
-      : "Mortgage, taxes & fees — tap to model.";
+      ? `Property tax ~${formatPrice(Math.round(p.TaxAnnualAmount / 12))}/mo + your mortgage.`
+      : "Mortgage, property tax & fees.";
+
+  // ── Verdict header for the Intelligence panel (mobile, Proposal B): a one-line
+  //    synthesis + the headline chips, above the always-visible insight rows. VOW-safe:
+  //    the $ synthesis and the below/above-ask chip are AUTHED-ONLY; the True DOM chip
+  //    self-hides for anon (trueDom collapses to dom); the grade chip carries its own
+  //    lock. So an anon visitor sees a generic lead + a locked grade — never a number. ──
+  const estDiff = hasEstVal ? Math.abs(salePrice!.value - price) : 0;
+  const verdictLead =
+    isAuthed && hasEstVal && !salePrice!.competitive && salePrice!.deltaVsAskPct !== null && price > 0
+      ? `Priced ${compactMoney(estDiff)} ${estBelow ? "below" : "above"} ask${trueDom > dom ? ` and on the market ${trueDom} days` : ""}${estBelow ? " — room to negotiate." : "."}`
+      : isAuthed && hasEstVal && salePrice!.competitive
+        ? `Priced to compete${trueDom > dom ? `, though it's shown ${trueDom} days on market` : ""} — expect it to move near ask.`
+        : "We've priced this home, graded the deal and flagged what to check — open any card below for the numbers.";
+  const verdictNode = read ? (
+    <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
+        The verdict
+      </p>
+      <p className="mt-1.5 text-sm leading-snug text-foreground">{verdictLead}</p>
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {hasDealScore && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+            Deal grade
+            <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
+          </span>
+        )}
+        {!estLocked && hasEstVal && !salePrice!.competitive && salePrice!.deltaVsAskPct !== null && price > 0 && (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+              estBelow
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+            )}
+          >
+            {compactMoney(estDiff)} {estBelow ? "below" : "above"} ask
+          </span>
+        )}
+        {isActiveListing && trueDom > dom && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[11px] font-semibold",
+              trueDom >= 90
+                ? "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+            )}
+          >
+            <Clock className="h-3 w-3" /> True DOM {trueDom}d
+          </span>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   // Asset/Rental summary + finance card render in the rail (legacy path) or
   // inside the panel's Costs tab (panel path) — defined once, used in one spot.
@@ -1182,13 +1235,14 @@ export default async function PropertyPage({
                    prod card stack below instead. */}
                 <div className="lg:hidden">
                 <IntelligencePanel
-                  defaultOpenKey="read"
+                  verdict={verdictNode}
                   sections={
                     [
                       {
                         key: "read",
                         label: "The read",
                         icon: <Lightbulb className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        evidenceLabel: "See the full read",
                         caption: readCaption,
                         detail: (
                           <div>
@@ -1207,6 +1261,7 @@ export default async function PropertyPage({
                         key: "estimate",
                         label: "Estimated sale price",
                         icon: <Tag className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        evidenceLabel: "See the comps",
                         // Context line: the ask-delta (green below / rose above); answer: the
                         // estimate + its confidence. Both drop to a generic line + lock for anon.
                         caption: estCaption,
@@ -1225,6 +1280,7 @@ export default async function PropertyPage({
                         key: "score",
                         label: "Deal grade",
                         icon: <Gauge className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        evidenceLabel: "See the breakdown",
                         caption: dealCaption,
                         // Live grade pill — follows the same lens as the card below (fix #6).
                         summary: hasDealScore ? (
@@ -1241,6 +1297,7 @@ export default async function PropertyPage({
                             key: "reno",
                             label: "Renovation upside",
                             icon: <Hammer className="h-[18px] w-[18px] text-emerald-700 dark:text-emerald-400" />,
+                            evidenceLabel: "See the moves",
                             caption: renoCaption,
                             summary: renoSummary,
                             detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
@@ -1250,6 +1307,7 @@ export default async function PropertyPage({
                         key: "costs",
                         label: "Your costs",
                         icon: <Wallet className="h-[18px] w-[18px] text-muted-foreground" />,
+                        evidenceLabel: "Model your costs",
                         caption: costsCaption,
                         detail: (
                           <div className="space-y-4">
