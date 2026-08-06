@@ -5,10 +5,9 @@ import { cn, formatPrice } from '@/lib/utils';
 import { moveMetaFor } from '@/lib/reno/moveMeta';
 
 /**
- * A single renovation move, rendered rich: rank, icon, cost range, timeline,
- * permit badge, and a plain "why it pays back" line. The payback column is either
- * the real value-add $ + multiple (signed-in consumers) or a lock (anon) — the
- * caller decides via `locked`, and NEVER passes VOW-derived numbers when locked.
+ * A single renovation move — icon, name, the value it adds (or a lock for anon),
+ * one quiet meta line (cost · timeline · permit · payback), and a short "why".
+ * Deliberately low-chrome so a list of them reads calmly.
  */
 export interface RenoMoveDisplay {
   key: string;
@@ -18,27 +17,9 @@ export interface RenoMoveDisplay {
   costHigh: number;
   /** VOW gate — show a lock instead of the value-add + payback. */
   locked: boolean;
-  /** Consumer-only: typical value the move adds. */
   valueAddTyp?: number;
-  /** Consumer-only: value ÷ cost. */
   paybackRatio?: number;
-  /** Part of the recommended set — highlighted. */
   recommended?: boolean;
-}
-
-function Badge({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'muted' | 'ok' | 'permit' }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-1.5 py-1 font-mono text-[10.5px] font-semibold',
-        tone === 'muted' && 'border-border text-muted-foreground',
-        tone === 'ok' && 'border-emerald-600/35 text-emerald-700 dark:text-emerald-400',
-        tone === 'permit' && 'border-amber-600/35 text-amber-700 dark:text-amber-400',
-      )}
-    >
-      {children}
-    </span>
-  );
 }
 
 export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
@@ -46,39 +27,46 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
   return (
     <div
       className={cn(
-        'grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 rounded-xl border p-3',
-        m.recommended ? 'border-emerald-500/30 bg-emerald-500/[0.05]' : 'border-border bg-card',
+        'flex items-start gap-3 rounded-xl border p-3',
+        m.recommended ? 'border-emerald-500/25 bg-emerald-500/[0.04]' : 'border-border bg-card',
       )}
     >
-      <span className="mt-1 w-4 text-center font-mono text-xs font-bold text-muted-foreground">{m.rank}</span>
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-cyan-500/10 text-lg" aria-hidden>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-500/10 text-lg" aria-hidden>
         {meta.icon}
       </span>
-      <div className="min-w-0">
-        <div className="text-[15px] font-bold leading-tight text-foreground">{m.label}</div>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <Badge>💵 {formatPrice(m.costLow)}–{formatPrice(m.costHigh)}</Badge>
-          <Badge>⏱ {meta.timeline}</Badge>
-          <Badge tone={meta.permit === 'none' ? 'ok' : 'permit'}>📋 {meta.permitNote}</Badge>
-        </div>
-        <p className="mt-2 text-xs leading-snug text-muted-foreground">{meta.why}</p>
-      </div>
-      <div className="shrink-0 text-right">
-        {m.locked ? (
-          <span className="inline-flex flex-col items-end gap-1 text-[11px] font-semibold text-muted-foreground">
-            <Lock className="h-4 w-4" aria-hidden />
-            payback
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[15px] font-bold leading-tight text-foreground">{m.label}</span>
+          <span className="shrink-0 text-right">
+            {m.locked ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" aria-hidden /> payback
+              </span>
+            ) : (
+              <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                +{formatPrice(m.valueAddTyp ?? 0)}
+              </span>
+            )}
           </span>
-        ) : (
-          <>
-            <div className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
-              +{formatPrice(m.valueAddTyp ?? 0)}
-            </div>
-            <div className="font-mono text-[11px] text-muted-foreground">
-              {Number.isFinite(m.paybackRatio) ? `${(m.paybackRatio ?? 0).toFixed(1)}×` : '—'} back
-            </div>
-          </>
-        )}
+        </div>
+
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] text-muted-foreground">
+          <span>{formatPrice(m.costLow)}–{formatPrice(m.costHigh)}</span>
+          <span aria-hidden>·</span>
+          <span>{meta.timeline}</span>
+          <span aria-hidden>·</span>
+          <span className={meta.permit === 'none' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>
+            {meta.permitNote}
+          </span>
+          {!m.locked && Number.isFinite(m.paybackRatio) && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="font-semibold text-foreground">{(m.paybackRatio ?? 0).toFixed(1)}× back</span>
+            </>
+          )}
+        </div>
+
+        <p className="mt-1.5 text-[11.5px] leading-snug text-muted-foreground">{meta.why}</p>
       </div>
     </div>
   );

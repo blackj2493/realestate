@@ -192,6 +192,29 @@ export default function RenovationFunnel({
             }}
           />
 
+          {form.city && (tree[form.city]?.length ?? 0) > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                NEIGHBOURHOOD{' '}
+                <span className="font-normal text-muted-foreground/70">— we guessed this; change if it&apos;s off</span>
+              </Label>
+              <Select
+                value={form.cityRegion}
+                onValueChange={(cr) => {
+                  setResult(null);
+                  setForm((f) => ({ ...f, cityRegion: cr, propertySubType: '' }));
+                }}
+              >
+                <SelectTrigger className="h-10"><SelectValue placeholder="Select neighbourhood" /></SelectTrigger>
+                <SelectContent>
+                  {tree[form.city].map((c) => (
+                    <SelectItem key={c.cityRegion} value={c.cityRegion}>{c.community}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {types.length > 0 ? (
             <div>
               <Label className="mb-2 block text-xs text-muted-foreground">PROPERTY TYPE</Label>

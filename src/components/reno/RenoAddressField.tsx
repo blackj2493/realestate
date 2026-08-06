@@ -64,22 +64,53 @@ function matchCohort(
   return fallback;
 }
 
-/** Nearest active listing to a point (≤ radius). Distance-sorted, one doc, light payload. */
-async function nearestListing(
+/**
+ * Resolve a point to its area by a PROXIMITY-WEIGHTED VOTE across the nearest
+ * active listings — not the single closest, which can sit just over a community
+ * line and mis-label the address (e.g. an NW-Brampton home landing in Fletcher's
+ * Meadow). We pull the ~15 nearest within 3 km (widening to 8 km only if that's
+ * thin) and pick the CityRegion with the most weight, nearer listings counting
+ * for more. City-level geocoding is reliable; this is about the community.
+ */
+async function nearestArea(
   lat: number,
   lng: number,
 ): Promise<{ City?: string; CityRegion?: string } | null> {
-  try {
+  const fetchNear = async (radiusKm: number) => {
     const res = await searchListings({
       query: '*',
-      perPage: 1,
+      perPage: 15,
       sortBy: `location(${lat}, ${lng})`,
       sortOrder: 'asc',
-      // Bound the scan; the distance sort still returns the single closest listing.
-      rawFilterBy: `location:(${lat}, ${lng}, 8 km)`,
+      rawFilterBy: `location:(${lat}, ${lng}, ${radiusKm} km)`,
       excludeFields: 'RawImages,RawRooms,PublicRemarks',
     });
-    return res.listings[0] ?? null;
+    return res.listings;
+  };
+  try {
+    let listings = await fetchNear(3);
+    if (listings.length < 3) {
+      const wider = await fetchNear(8);
+      if (wider.length > listings.length) listings = wider;
+    }
+    if (!listings.length) return null;
+
+    const score = new Map<string, { city?: string; weight: number }>();
+    listings.forEach((l, i) => {
+      const cr = l.CityRegion;
+      if (!cr) return;
+      const weight = listings.length - i; // rank 0 (closest) weighs most
+      const cur = score.get(cr) ?? { city: l.City, weight: 0 };
+      cur.weight += weight;
+      if (!cur.city && l.City) cur.city = l.City;
+      score.set(cr, cur);
+    });
+
+    let best: { cr: string; city?: string; weight: number } | null = null;
+    for (const [cr, v] of score) {
+      if (!best || v.weight > best.weight) best = { cr, city: v.city, weight: v.weight };
+    }
+    return best ? { City: best.city, CityRegion: best.cr } : null;
   } catch {
     return null;
   }
@@ -145,7 +176,7 @@ export default function RenoAddressField({
       setSuggestions([]);
       setStatus({ kind: 'resolving' });
 
-      const doc = await nearestListing(hit.lat, hit.lng);
+      const doc = await nearestArea(hit.lat, hit.lng);
       const match = matchCohort(tree, doc?.City, doc?.CityRegion);
 
       if (match) {
