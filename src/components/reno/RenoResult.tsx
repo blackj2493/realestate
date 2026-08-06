@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Lock } from 'lucide-react';
+import { Lock, Home, TrendingUp, LineChart } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import type { AVMResult } from '@/lib/avm/types';
 import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
@@ -82,8 +82,8 @@ export default function RenoResult({
   return (
     <div className="space-y-4">
       {/* context */}
-      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-        📊 A <span className="font-semibold text-foreground">typical {typeLabel.toLowerCase()}</span> in {where}
+      <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+        <Home className="h-3.5 w-3.5" aria-hidden /> A <span className="font-semibold text-foreground">typical {typeLabel.toLowerCase()}</span> in {where}
       </div>
 
       {/* HERO */}
@@ -139,7 +139,9 @@ export default function RenoResult({
         {/* MOVES */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-foreground">🔧 The moves that pay back most</h2>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+              <TrendingUp className="h-4 w-4 text-cyan-700 dark:text-cyan-400" aria-hidden /> The moves that pay back most
+            </h2>
             <span className="font-mono text-[10.5px] text-muted-foreground">ranked for a typical {typeLabel.toLowerCase()}</span>
           </div>
           {moves.length > 0 ? (
@@ -163,7 +165,7 @@ export default function RenoResult({
               href="/properties"
               className="mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-500 active:bg-emerald-700 [touch-action:manipulation]"
             >
-              📈 Track this home’s value →
+              <LineChart className="h-4 w-4" aria-hidden /> Track this home’s value →
             </Link>
           )}
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
