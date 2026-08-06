@@ -62,6 +62,7 @@ export default function RenovationFunnel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const autoTried = useRef(false);
   const inputRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -109,28 +110,37 @@ export default function RenovationFunnel({
   useEffect(() => {
     if (autoTried.current) return;
     autoTried.current = true;
-    let stashed: HEFormState | null = null;
+    let raw: string | null = null;
     try {
-      const raw = sessionStorage.getItem(STASH_KEY);
-      if (raw) stashed = JSON.parse(raw) as HEFormState;
+      raw = sessionStorage.getItem(STASH_KEY);
     } catch {
-      stashed = null;
+      raw = null;
     }
-    if (stashed) {
+    if (raw) {
       sessionStorage.removeItem(STASH_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm(stashed);
-      void submit(stashed);
+      try {
+        const parsed = JSON.parse(raw) as {
+          form?: HEFormState;
+          coords?: { lat: number; lng: number } | null;
+        } & Partial<HEFormState>;
+        const f = (parsed.form ?? (parsed as HEFormState));
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setForm(f);
+        if (parsed.coords) setCoords(parsed.coords);
+        void submit(f);
+      } catch {
+        /* corrupt stash — ignore */
+      }
     }
   }, [submit]);
 
   const onUnlock = useCallback(() => {
     try {
-      sessionStorage.setItem(STASH_KEY, JSON.stringify(form));
+      sessionStorage.setItem(STASH_KEY, JSON.stringify({ form, coords }));
     } catch {
       /* storage blocked — unlock still navigates */
     }
-  }, [form]);
+  }, [form, coords]);
 
   const unlockHref = `/login?next=${encodeURIComponent(
     `/whats-my-home-hiding${communitySlug ? `?community=${communitySlug}` : ''}`,
@@ -177,6 +187,7 @@ export default function RenovationFunnel({
             tree={tree}
             onResolve={(r) => {
               setResult(null);
+              setCoords(r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null);
               setForm((f) => ({ ...f, city: r.city || f.city, cityRegion: r.cityRegion, propertySubType: '' }));
             }}
           />
@@ -297,6 +308,8 @@ export default function RenovationFunnel({
             onUnlock={onUnlock}
             onRefine={onRefine}
             communitySlug={communitySlug}
+            lat={coords?.lat ?? null}
+            lng={coords?.lng ?? null}
           />
         </div>
       )}
