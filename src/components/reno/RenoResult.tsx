@@ -169,14 +169,9 @@ export default function RenoResult({
         </div>
       )}
 
-      {/* THE SECRETS — the reframe centrepiece */}
-      <RenoInsightStrip
-        moves={moves}
-        locked={result.locked}
-        where={where}
-        unlockHref={unlockHref}
-        onUnlock={onUnlock}
-      />
+      {/* ANON only — the one card that says what the locked numbers are. Signed-in users
+          go straight to the ranked cards; the old 3-card insight strip repeated them. */}
+      {result.locked && <RenoInsightStrip where={where} unlockHref={unlockHref} onUnlock={onUnlock} />}
 
       <p className="text-[13px] leading-relaxed text-muted-foreground">
         These are typical numbers for a {typeLabel.toLowerCase()} in {where}. For a specific home’s own
