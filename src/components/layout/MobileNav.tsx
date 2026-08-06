@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import AccountButton from "@/components/auth/AccountButton";
-import { NAV_ITEMS, isActive } from "./navItems";
+import { NAV_ITEMS, MORE_NAV_ITEMS, isActive } from "./navItems";
 
 /**
  * Mobile navigation — a hamburger that opens a slide-in drawer listing the same
@@ -57,7 +57,7 @@ export default function MobileNav({ className }: MobileNavProps) {
           <Dialog.Title className="sr-only">Navigation</Dialog.Title>
 
           <nav aria-label="Primary" className="flex flex-col py-2">
-            {NAV_ITEMS.map((item) => {
+            {[...NAV_ITEMS, ...MORE_NAV_ITEMS].map((item) => {
               const active = isActive(pathname, item);
               const Icon = item.icon;
               return (
