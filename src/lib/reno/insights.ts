@@ -1,13 +1,15 @@
 // src/lib/reno/insights.ts
 //
-// Turns the value-add engine's per-move numbers into "insight/secret" framing for
-// the marketing tool: which moves quietly pay back 3×, which popular ones lose money
-// at resale, and the plain-language decode of the payback multiple.
+// Per-move decoders for the renovation result's ranked cards: the payback tier, the
+// plain-language reading of the multiple, and the counter-intuitive chip.
+//
+// The 3-card "what the sales quietly tell you" strip these once also fed was removed —
+// it restated the cards verbatim (same multiple, same decode, same winner and loser) at
+// about a screen of extra height.
 //
 // DETERMINISTIC only (no AI — CLAUDE.md §4). Everything here is derived from the
 // numeric moves the engine already returned; nothing new is inferred from VOW data.
 
-import { Sparkles, AlertTriangle, Target, type LucideIcon } from 'lucide-react';
 import type { MoveKey } from '@/lib/avm/valueAdd/types';
 
 /** Moves owners tend to *assume* add value — the interesting ones when they don't. */
@@ -66,84 +68,4 @@ export function moveFlag(m: RenoMoveLike): MoveFlag | null {
   if (r! < 1 && key === 'legal_suite') return { label: 'Rent play, not resale', tone: 'weak' };
   if (r! < 1 && ASSUMED_GOOD.has(key)) return { label: 'Rarely pays back here', tone: 'weak' };
   return null;
-}
-
-export interface RenoInsight {
-  kicker: string;
-  icon: LucideIcon;
-  tone: 'good' | 'watch' | 'neutral';
-  headline: string;
-  detail: string;
-}
-
-/**
- * Up to three "secrets" pulled from the ranked moves: the best-kept winner, the
- * popular-but-weak trap, and the real lesson (concentration beats spend). Each
- * references a distinct move so the strip never repeats itself.
- */
-export function deriveRenoInsights(moves: RenoMoveLike[]): RenoInsight[] {
-  const priced = moves.filter((m) => Number.isFinite(m.paybackRatio));
-  if (priced.length === 0) return [];
-
-  const byPayback = [...priced].sort((a, b) => b.paybackRatio! - a.paybackRatio!);
-  const winner = byPayback[0];
-  const out: RenoInsight[] = [];
-
-  // 1 — the winner (or, if nothing pays back, an honest "temper expectations").
-  if (winner.paybackRatio! >= 1) {
-    const overlooked = OVERLOOKED.has(winner.key as MoveKey);
-    out.push({
-      kicker: overlooked ? 'Most-overlooked win' : 'Best-kept secret',
-      icon: Sparkles,
-      tone: 'good',
-      headline: `${winner.label} pays back ${winner.paybackRatio!.toFixed(1)}×`,
-      detail: overlooked
-        ? `The highest return of any move here — and the one most owners never think of. ${roiDecode(winner.paybackRatio!)}`
-        : `The strongest payback of any move in this area. ${roiDecode(winner.paybackRatio!)}`,
-    });
-  } else {
-    out.push({
-      kicker: 'The honest read',
-      icon: AlertTriangle,
-      tone: 'watch',
-      headline: `Even the best move here returns only ${winner.paybackRatio!.toFixed(1)}×`,
-      detail:
-        'Right now, renovations in this area recover less than they cost at resale. Spend for how you’ll live in the home, not for the sale price.',
-    });
-  }
-
-  // 2 — the trap: a "sure thing" that quietly loses money (lowest payback among them).
-  const traps = byPayback.filter(
-    (m) => ASSUMED_GOOD.has(m.key as MoveKey) && m.paybackRatio! < 1 && m.key !== winner.key,
-  );
-  const trap = traps.length ? traps[traps.length - 1] : null;
-  if (trap) {
-    const isSuite = trap.key === 'legal_suite';
-    out.push({
-      kicker: 'Don’t be fooled',
-      icon: AlertTriangle,
-      tone: 'watch',
-      headline: `${trap.label} returns just ${trap.paybackRatio!.toFixed(1)}×`,
-      detail: isSuite
-        ? `You recover about ${roiCents(trap.paybackRatio!)}¢ per $1 at resale — the rent it earns is the real payoff, not the sale price.`
-        : `It feels like a sure thing, but you get back only about ${roiCents(trap.paybackRatio!)}¢ of every $1 when you sell.`,
-    });
-  }
-
-  // 3 — the real lesson: where you spend beats how much (only if there's a real split).
-  const winners = priced.filter((m) => m.paybackRatio! >= 1);
-  const losers = priced.filter((m) => m.paybackRatio! < 1);
-  if (winners.length > 0 && losers.length > 0 && out.length < 3) {
-    out.push({
-      kicker: 'The real lesson',
-      icon: Target,
-      tone: 'neutral',
-      headline: 'Where you spend beats how much',
-      detail: `${winners.length} ${winners.length === 1 ? 'move' : 'moves'} here pay you back; ${losers.length} quietly ${
-        losers.length === 1 ? 'loses' : 'lose'
-      } money at resale. Picking the right few matters more than spending big.`,
-    });
-  }
-
-  return out.slice(0, 3);
 }

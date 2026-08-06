@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveRenoInsights, roiDecode, roiTier, roiCents, moveFlag, type RenoMoveLike } from './insights';
+import { roiDecode, roiTier, roiCents, moveFlag, type RenoMoveLike } from './insights';
 
 /** A representative ranked move set (Northwest Brampton detached, from the live tool). */
 const MOVES: RenoMoveLike[] = [
@@ -39,35 +39,3 @@ describe('moveFlag', () => {
     expect(moveFlag(MOVES[2])).toBeNull(); // bedroom 1.8× (not in the overlooked set)
   });
 });
-
-describe('deriveRenoInsights', () => {
-  const ins = deriveRenoInsights(MOVES);
-  it('returns up to three distinct insights', () => {
-    expect(ins).toHaveLength(3);
-    const kickers = new Set(ins.map((i) => i.kicker));
-    expect(kickers.size).toBe(3);
-  });
-  it('leads with the overlooked winner', () => {
-    expect(ins[0].kicker).toBe('Most-overlooked win');
-    expect(ins[0].tone).toBe('good');
-    expect(ins[0].headline).toContain('parking');
-  });
-  it('surfaces the popular-but-weak trap with a plain decode', () => {
-    expect(ins[1].kicker).toBe('Don’t be fooled');
-    expect(ins[1].headline).toContain('basement');
-    expect(ins[1].detail).toContain('10¢');
-  });
-  it('closes with the concentration lesson when there is a real split', () => {
-    expect(ins[2].kicker).toBe('The real lesson');
-  });
-  it('turns honest when nothing pays back', () => {
-    const allLosers = MOVES.map((m) => ({ ...m, paybackRatio: 0.4 }));
-    const out = deriveRenoInsights(allLosers);
-    expect(out[0].kicker).toBe('The honest read');
-    expect(out[0].tone).toBe('watch');
-  });
-  it('returns nothing when no move is priced', () => {
-    expect(deriveRenoInsights(MOVES.map((m) => ({ ...m, paybackRatio: undefined })))).toHaveLength(0);
-  });
-});
-
