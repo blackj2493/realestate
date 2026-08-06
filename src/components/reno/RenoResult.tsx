@@ -8,6 +8,7 @@ import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
+import RenoCarousels from './RenoCarousels';
 import ShareChallengeButton from './ShareChallengeButton';
 import {
   EligibilityPanel,
@@ -30,6 +31,8 @@ export default function RenoResult({
   onUnlock,
   onRefine,
   communitySlug,
+  lat,
+  lng,
 }: {
   result: RenoResultData;
   city: string;
@@ -39,6 +42,8 @@ export default function RenoResult({
   onUnlock: () => void;
   onRefine: () => void;
   communitySlug: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }) {
   const where = community || city || 'your area';
   const rules = localRulesFor(city);
@@ -176,6 +181,10 @@ export default function RenoResult({
           <AssumptionsPanel typeLabel={typeLabel} onRefine={onRefine} />
         </div>
       </div>
+
+      {lat != null && lng != null && (
+        <RenoCarousels lat={lat} lng={lng} type={typeLabel} where={where} />
+      )}
     </div>
   );
 }

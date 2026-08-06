@@ -32,6 +32,9 @@ export interface ResolvedLocation {
   matched: boolean;
   /** The geocoded address label the user selected. */
   label: string;
+  /** Geocoded coordinates — power the point-based nearby carousels. */
+  lat: number | null;
+  lng: number | null;
 }
 
 /**
@@ -148,7 +151,7 @@ export default function RenoAddressField({
       if (match) {
         const community = normalizeCityRegion(match.cityRegion);
         setStatus({ kind: 'matched', label: hit.label, community, city: match.city });
-        onResolve({ ...match, matched: true, label: hit.label });
+        onResolve({ ...match, matched: true, label: hit.label, lat: hit.lat, lng: hit.lng });
         return;
       }
 
@@ -156,7 +159,7 @@ export default function RenoAddressField({
       // key, scope the community dropdown to it; otherwise leave the pickers open.
       const cityKey = doc?.City && tree[doc.City] ? doc.City : '';
       setStatus({ kind: 'nomatch', label: hit.label });
-      onResolve({ city: cityKey, cityRegion: '', matched: false, label: hit.label });
+      onResolve({ city: cityKey, cityRegion: '', matched: false, label: hit.label, lat: hit.lat, lng: hit.lng });
     },
     [tree, onResolve],
   );
