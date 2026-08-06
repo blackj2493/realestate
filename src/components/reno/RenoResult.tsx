@@ -134,6 +134,11 @@ export default function RenoResult({
         </div>
       )}
 
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        These are typical numbers for a {typeLabel.toLowerCase()} in {where}. For a specific home’s own
+        estimate and details, open its listing page.
+      </p>
+
       {/* two-column: moves + rail */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         {/* MOVES */}
@@ -184,7 +189,7 @@ export default function RenoResult({
 
         {/* RAIL — free over-deliver, one calm capsule */}
         <div>
-          <RenoGuidePanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} />
+          <RenoGuidePanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} isAuthed={!result.locked} />
         </div>
       </div>
 
