@@ -206,7 +206,7 @@ export default function RegionScorecard({
 
   return (
     <section className="space-y-2">
-      <ModuleHead title="Region Scorecard" count={regions.length} right="full-population · daily sync" />
+      <ModuleHead title="Region Scorecard" right="full-population · daily sync" />
 
       {/* #18 — a filtered scorecard silently reshapes every number below. Surface a
           prominent cue (not just the fine-print footnote) with a one-click Clear, so

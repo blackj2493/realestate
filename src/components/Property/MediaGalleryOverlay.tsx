@@ -111,9 +111,10 @@ export default function MediaGalleryOverlay({
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-border">
-        {/* Counter */}
+        {/* Counter — "3 / 50". Kept (it says which photo you're on, which nothing
+            else on screen does) but unbracketed: `[3] / [50]` read as a code. */}
         <div className="font-mono text-muted-foreground text-sm">
-          [{currentIndex + 1}] / [{images.length}]
+          {currentIndex + 1} / {images.length}
         </div>
 
         {/* Close Button */}
