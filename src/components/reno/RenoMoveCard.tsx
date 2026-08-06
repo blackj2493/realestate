@@ -43,21 +43,21 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[15px] font-semibold leading-tight text-foreground">{m.label}</span>
+          <span className="text-[17px] font-semibold leading-snug text-foreground">{m.label}</span>
           <span className="shrink-0 text-right">
             {m.locked ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                <Lock className="h-3.5 w-3.5" aria-hidden /> payback
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <Lock className="h-4 w-4" aria-hidden /> payback
               </span>
             ) : (
-              <span className="font-mono text-[15px] font-bold text-emerald-700 dark:text-emerald-400">
+              <span className="font-mono text-[17px] font-bold text-emerald-700 dark:text-emerald-400">
                 +{formatPrice(m.valueAddTyp ?? 0)}
               </span>
             )}
           </span>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-muted-foreground">
           <span className="font-mono">{formatPrice(m.costLow)}–{formatPrice(m.costHigh)}</span>
           <span className="text-border" aria-hidden>|</span>
           <span>{meta.timeline}</span>
@@ -73,7 +73,7 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
           )}
         </div>
 
-        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">{meta.why}</p>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">{meta.why}</p>
       </div>
     </div>
   );
