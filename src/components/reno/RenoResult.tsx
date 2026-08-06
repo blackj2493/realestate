@@ -82,14 +82,14 @@ export default function RenoResult({
   return (
     <div className="space-y-4">
       {/* context */}
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-        <Home className="h-3.5 w-3.5" aria-hidden /> A <span className="font-semibold text-foreground">typical {typeLabel.toLowerCase()}</span> in {where}
+      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-[13px] text-muted-foreground">
+        <Home className="h-4 w-4" aria-hidden /> A <span className="font-semibold text-foreground">typical {typeLabel.toLowerCase()}</span> in {where}
       </div>
 
       {/* HERO */}
       {result.locked ? (
         <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 to-transparent p-5 text-center">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             How much a smart reno could add to a typical {typeLabel.toLowerCase()} here
           </p>
           <p className="my-1 select-none text-4xl font-extrabold tracking-tight text-emerald-700 blur-[7px] dark:text-emerald-400" aria-hidden>
@@ -108,11 +108,11 @@ export default function RenoResult({
         <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/12 to-transparent p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">You could unlock up to</p>
+              <p className="text-[13px] text-muted-foreground">You could unlock up to</p>
               <p className="my-0.5 text-4xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400">
                 +{formatPrice(report?.headlineUpsideGross ?? 0)}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 ≈ <b className="text-emerald-700 dark:text-emerald-400">+{formatPrice(report?.headlineUpside ?? 0)}</b> net of renovation cost
               </p>
             </div>
@@ -123,18 +123,18 @@ export default function RenoResult({
             )}
           </div>
           {estimate && estimate.estimatedValue > 0 && (
-            <p className="mt-2 border-t border-border pt-2 font-mono text-[11px] text-muted-foreground">
+            <p className="mt-2 border-t border-border pt-2 font-mono text-[12.5px] text-muted-foreground">
               Est. value {formatPrice(estimate.estimatedValue)}
               {estimate.lowBand > 0 && estimate.highBand > 0 && (
                 <> · range {formatPrice(estimate.lowBand)}–{formatPrice(estimate.highBand)}</>
               )}
             </p>
           )}
-          {insight && <p className="mt-2 text-xs text-muted-foreground">{insight}</p>}
+          {insight && <p className="mt-2 text-[13px] text-muted-foreground">{insight}</p>}
         </div>
       )}
 
-      <p className="text-xs leading-relaxed text-muted-foreground">
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
         These are typical numbers for a {typeLabel.toLowerCase()} in {where}. For a specific home’s own
         estimate and details, open its listing page.
       </p>
@@ -144,10 +144,10 @@ export default function RenoResult({
         {/* MOVES */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <TrendingUp className="h-4 w-4 text-cyan-700 dark:text-cyan-400" aria-hidden /> The moves that pay back most
+            <h2 className="flex items-center gap-2 text-[15px] font-bold text-foreground">
+              <TrendingUp className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" aria-hidden /> The moves that pay back most
             </h2>
-            <span className="font-mono text-[10.5px] text-muted-foreground">ranked for a typical {typeLabel.toLowerCase()}</span>
+            <span className="font-mono text-[11.5px] text-muted-foreground">ranked for a typical {typeLabel.toLowerCase()}</span>
           </div>
           {moves.length > 0 ? (
             moves.map((m) => <RenoMoveCard key={m.key} m={m} />)
@@ -174,8 +174,8 @@ export default function RenoResult({
             </Link>
           )}
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
-          {report?.basis && <p className="text-[10.5px] text-muted-foreground">{report.basis}</p>}
-          <p className="text-[11px] text-muted-foreground">
+          {report?.basis && <p className="text-xs text-muted-foreground">{report.basis}</p>}
+          <p className="text-[13px] text-muted-foreground">
             Based on a typical {typeLabel.toLowerCase()} — about 3 bed, 2 bath.{' '}
             <button
               type="button"
