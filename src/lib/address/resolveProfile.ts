@@ -93,7 +93,7 @@ interface GeocodeHit {
  * persistent storage of geocode results). Accepts ONLY rooftop address features (the
  * feature must carry a civic number); a city/street-level match is not a profile.
  */
-const geocodeCached = unstable_cache(
+export const geocodeCached = unstable_cache(
   async (query: string): Promise<GeocodeHit | null> => {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token || token === "your-mapbox-token") return null;
