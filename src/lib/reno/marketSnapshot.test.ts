@@ -3,7 +3,8 @@ import {
   computeMedianPrice,
   computeYoyPct,
   snapshotHeadline,
-  snapshotPressure,
+  snapshotScopeLine,
+  domGapDays,
   type RenoMarketSnapshot,
   type SnapshotTrendPoint,
 } from './marketSnapshot';
@@ -32,7 +33,14 @@ const BASE: RenoMarketSnapshot = {
   medianDom: 21,
   soldToListPct: 98.4,
   cutShare: null,
+  medianCutPct: null,
   underAskShare: null,
+  activeCount: 42,
+  trueDom: null,
+  naiveDom: null,
+  stalePct: null,
+  sellThroughPct: null,
+  failedMedianDom: null,
 };
 
 describe('computeYoyPct', () => {
@@ -86,6 +94,19 @@ describe('snapshotHeadline', () => {
     expect(h).toContain('21 days');
   });
 
+  it('leads with the hidden relist gap when there is one', () => {
+    const h = snapshotHeadline({ ...BASE, trueDom: 47, naiveDom: 19 }, 'Detached');
+    expect(h).toContain('really been sitting 47 days');
+    expect(h).toContain('28 more than the board');
+    expect(h).not.toContain('takes 21 days to sell'); // the sold-side line steps aside
+  });
+
+  it('ignores a gap too small to be a story', () => {
+    const h = snapshotHeadline({ ...BASE, trueDom: 22, naiveDom: 19 });
+    expect(h).toContain('21 days to sell');
+    expect(h).not.toContain('board');
+  });
+
   it('reads a sub-1% move as flat', () => {
     expect(snapshotHeadline({ ...BASE, yoyPct: 0.4 })).toContain('flat on the year');
   });
@@ -102,17 +123,29 @@ describe('snapshotHeadline', () => {
   });
 });
 
-describe('snapshotPressure', () => {
-  it('leads with price cuts when a quarter of listings have cut', () => {
-    expect(snapshotPressure({ ...BASE, cutShare: 0.31 })).toContain('31%');
+describe('domGapDays', () => {
+  it('is how many days the board clock under-reports', () => {
+    expect(domGapDays({ ...BASE, trueDom: 47, naiveDom: 19 })).toBe(28);
   });
-  it('otherwise reports under-ask closes', () => {
-    expect(snapshotPressure({ ...BASE, cutShare: 0.1, underAskShare: 0.62 })).toContain('62%');
+  it('is null when there is no gap to report', () => {
+    expect(domGapDays({ ...BASE, trueDom: 19, naiveDom: 19 })).toBeNull();
+    expect(domGapDays({ ...BASE, trueDom: 47, naiveDom: null })).toBeNull();
+    expect(domGapDays(BASE)).toBeNull();
   });
-  it('flags a seller market at or above asking', () => {
-    expect(snapshotPressure({ ...BASE, soldToListPct: 101.2 })).toContain('sellers hold the edge');
+});
+
+describe('snapshotScopeLine', () => {
+  it('states what the tiles were measured over', () => {
+    const line = snapshotScopeLine({ ...BASE, activeCount: 42 }, 'Detached')!;
+    expect(line).toContain('85 detached sales');
+    expect(line).toContain('42 listings');
   });
-  it('is null when every signal is missing', () => {
-    expect(snapshotPressure({ ...BASE, soldToListPct: null })).toBeNull();
+  it('drops a side it has no count for', () => {
+    expect(snapshotScopeLine({ ...BASE, activeCount: 0 }, 'Detached')).toBe(
+      'Measured across 85 detached sales in the last 90 days.',
+    );
+  });
+  it('is null when there is nothing to measure', () => {
+    expect(snapshotScopeLine({ ...BASE, sales90: 0, activeCount: 0 })).toBeNull();
   });
 });

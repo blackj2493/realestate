@@ -32,8 +32,24 @@ export interface RenoMarketSnapshot {
   soldToListPct: number | null;
   /** Share (0..1) of active listings that have cut their asking price. */
   cutShare: number | null;
+  /** Median % cut among the listings that cut (positive magnitude — render as −x%). */
+  medianCutPct: number | null;
   /** Share (0..1) of sales that closed below their ORIGINAL ask. */
   underAskShare: number | null;
+
+  // ── the shadow metrics: what the board's own numbers hide ──
+  /** Active listings in scope. */
+  activeCount: number;
+  /** Median TRUE days on market — relists stitched back together. */
+  trueDom: number | null;
+  /** Median days as the board shows it (clock resets on relist). */
+  naiveDom: number | null;
+  /** Share (0..1) of active listings sitting 60+ true days. */
+  stalePct: number | null;
+  /** Share (0..100) of market exits that actually closed (vs de-listed unsold). */
+  sellThroughPct: number | null;
+  /** Median true DOM of the listings that gave up without selling. */
+  failedMedianDom: number | null;
 }
 
 export type RenoMarketSnapshotResp =
@@ -108,7 +124,14 @@ export function snapshotHeadline(s: RenoMarketSnapshot, typeLabel?: string | nul
     parts.push(`Here is how ${s.label} is actually trading`);
   }
 
-  if (s.medianDom != null && s.medianDom > 0) {
+  // The punchline, when we have it: the gap between how long listings have REALLY been
+  // sitting and the clock the board restarts on every relist. Nobody else shows this.
+  const gap = domGapDays(s);
+  if (gap != null && gap >= DOM_GAP_MIN_DAYS) {
+    parts.push(
+      `and listings have really been sitting ${Math.round(s.trueDom!)} days — ${gap} more than the board's clock shows`,
+    );
+  } else if (s.medianDom != null && s.medianDom > 0) {
     parts.push(`and a typical home takes ${Math.round(s.medianDom)} days to sell`);
   } else if (s.sales90 > 0) {
     parts.push(`across ${s.sales90} sales in the last 90 days`);
@@ -116,19 +139,22 @@ export function snapshotHeadline(s: RenoMarketSnapshot, typeLabel?: string | nul
   return `${parts.join(' ')}.`;
 }
 
-/** Short "pressure" line — who has the upper hand right now. Null when the data is thin. */
-export function snapshotPressure(s: RenoMarketSnapshot): string | null {
-  if (s.cutShare != null && s.cutShare >= 0.25) {
-    return `${Math.round(s.cutShare * 100)}% of listings here have already cut their price.`;
-  }
-  if (s.underAskShare != null && s.underAskShare >= 0.5) {
-    return `${Math.round(s.underAskShare * 100)}% of sales closed below their original ask.`;
-  }
-  if (s.soldToListPct != null && s.soldToListPct >= 100) {
-    return `Homes are still closing at ${s.soldToListPct.toFixed(1)}% of asking — sellers hold the edge.`;
-  }
-  if (s.soldToListPct != null) {
-    return `Homes are closing at ${s.soldToListPct.toFixed(1)}% of asking.`;
-  }
-  return null;
+/** Below this the relist gap is noise, not a story. */
+export const DOM_GAP_MIN_DAYS = 5;
+
+/** How many days the board's clock under-reports, or null when we can't tell. */
+export function domGapDays(s: RenoMarketSnapshot): number | null {
+  if (s.trueDom == null || s.naiveDom == null) return null;
+  const gap = Math.round(s.trueDom) - Math.round(s.naiveDom);
+  return gap > 0 ? gap : null;
+}
+
+/** Scope line under the headline: what the tiles were computed over. Never a tile's own figure. */
+export function snapshotScopeLine(s: RenoMarketSnapshot, typeLabel?: string | null): string | null {
+  const kind = typeLabel ? typeLabel.toLowerCase() : 'home';
+  const bits: string[] = [];
+  if (s.sales90 > 0) bits.push(`${s.sales90} ${kind} sales in the last 90 days`);
+  if (s.activeCount > 0) bits.push(`${s.activeCount} listings on the market now`);
+  if (bits.length === 0) return null;
+  return `Measured across ${bits.join(' and ')}.`;
 }

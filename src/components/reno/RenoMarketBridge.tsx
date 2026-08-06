@@ -2,11 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { LineChart, ArrowRight, TrendingUp, TrendingDown, Timer, Scissors, Lock, Gavel } from 'lucide-react';
+import {
+  LineChart,
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  Timer,
+  Scissors,
+  Lock,
+  Hourglass,
+  CircleSlash,
+  Gavel,
+} from 'lucide-react';
 import { typeKeyForSubType } from '@/lib/dashboard/propertyTypes';
 import {
   snapshotHeadline,
-  snapshotPressure,
+  snapshotScopeLine,
+  domGapDays,
   type RenoMarketSnapshotResp,
 } from '@/lib/reno/marketSnapshot';
 
@@ -31,11 +43,13 @@ function Stat({
   icon: Icon,
   label,
   value,
+  sub,
   tone = 'neutral',
 }: {
   icon: typeof TrendingUp;
   label: string;
   value: string;
+  sub?: string;
   tone?: 'up' | 'down' | 'neutral';
 }) {
   const toneClass =
@@ -51,6 +65,7 @@ function Stat({
         {label}
       </div>
       <div className={`mt-1 font-mono text-[19px] font-bold leading-none ${toneClass}`}>{value}</div>
+      {sub && <div className="mt-1 text-[11px] leading-tight text-muted-foreground">{sub}</div>}
     </div>
   );
 }
@@ -110,7 +125,8 @@ export default function RenoMarketBridge({
 
   const hasData = !!snap && !snap.locked;
   const headline = hasData ? snapshotHeadline(snap, typeLabel) : null;
-  const pressure = hasData ? snapshotPressure(snap) : null;
+  const scopeLine = hasData ? snapshotScopeLine(snap, typeLabel) : null;
+  const domGap = hasData ? domGapDays(snap) : null;
 
   return (
     <section className={CARD} aria-labelledby="reno-market-heading">
@@ -130,39 +146,73 @@ export default function RenoMarketBridge({
         {headline ?? `Is now the moment to renovate in ${where}?`}
       </h2>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-        {pressure ??
+        {scopeLine ??
           'The same sold data behind these estimates — read as the story of your market, not a spreadsheet.'}
       </p>
 
-      {/* ── THE AREA — direction + pressure, scoped to this property type ── */}
+      {/* ── THE AREA — the derived metrics a portal won't print, scoped to this type ── */}
       {hasData ? (
         <div className="mt-4">
           <div className="mb-2 text-[12px] font-semibold text-foreground">
             {typeLabel} across {areaLabel}
           </div>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {/* TRUE DOM — the flagship: relists stitched back into one clock. */}
+            <Stat
+              icon={Hourglass}
+              label="True days on market"
+              value={snap.trueDom != null ? `${Math.round(snap.trueDom)}d` : '—'}
+              sub={
+                domGap != null
+                  ? `board shows ${Math.round(snap.naiveDom!)}d · +${domGap} hidden`
+                  : snap.naiveDom != null
+                    ? 'no relist gap here'
+                    : undefined
+              }
+              tone={domGap != null ? 'down' : 'neutral'}
+            />
+            {/* Stale inventory — how much of the shelf nobody is buying. */}
+            <Stat
+              icon={Timer}
+              label="Sitting 60+ days"
+              value={snap.stalePct != null ? `${Math.round(snap.stalePct * 100)}%` : '—'}
+              sub="of listings on the market"
+              tone={snap.stalePct != null && snap.stalePct >= 0.3 ? 'down' : 'neutral'}
+            />
+            {/* Sell-through — the share that never sells at all. Portals never show this. */}
+            <Stat
+              icon={CircleSlash}
+              label="Actually sell"
+              value={snap.sellThroughPct != null ? `${Math.round(snap.sellThroughPct)}%` : '—'}
+              sub={
+                snap.sellThroughPct != null
+                  ? `${Math.round(100 - snap.sellThroughPct)}% give up unsold`
+                  : 'of listings that exit'
+              }
+              tone={snap.sellThroughPct != null && snap.sellThroughPct < 70 ? 'down' : 'up'}
+            />
+            {/* Cut depth — not just who cuts, but by how much. */}
+            <Stat
+              icon={Scissors}
+              label="Cut depth"
+              value={snap.medianCutPct != null ? `−${snap.medianCutPct.toFixed(1)}%` : '—'}
+              sub={snap.cutShare != null ? `${Math.round(snap.cutShare * 100)}% of listings cut` : undefined}
+              tone={snap.medianCutPct != null && snap.medianCutPct >= 3 ? 'down' : 'neutral'}
+            />
+            {/* Negotiating room — how sales actually close against the ORIGINAL ask. */}
+            <Stat
+              icon={Gavel}
+              label="Close under ask"
+              value={snap.underAskShare != null ? `${Math.round(snap.underAskShare * 100)}%` : '—'}
+              sub={snap.soldToListPct != null ? `at ${snap.soldToListPct.toFixed(1)}% of list` : 'of sales'}
+              tone={snap.underAskShare != null && snap.underAskShare >= 0.5 ? 'down' : 'up'}
+            />
             <Stat
               icon={snap.yoyPct != null && snap.yoyPct < 0 ? TrendingDown : TrendingUp}
               label="Vs last year"
               value={snap.yoyPct != null ? `${snap.yoyPct > 0 ? '+' : ''}${snap.yoyPct.toFixed(1)}%` : '—'}
+              sub={snap.medianDom != null ? `${Math.round(snap.medianDom)}d median time to sell` : undefined}
               tone={snap.yoyPct == null ? 'neutral' : snap.yoyPct >= 0 ? 'up' : 'down'}
-            />
-            <Stat
-              icon={Timer}
-              label="Days to sell"
-              value={snap.medianDom != null ? `${Math.round(snap.medianDom)}d` : '—'}
-            />
-            <Stat
-              icon={snap.cutShare != null ? Scissors : Gavel}
-              label={snap.cutShare != null ? 'Cutting price' : 'Of asking'}
-              value={
-                snap.cutShare != null
-                  ? `${Math.round(snap.cutShare * 100)}%`
-                  : snap.soldToListPct != null
-                    ? `${snap.soldToListPct.toFixed(1)}%`
-                    : '—'
-              }
-              tone={snap.cutShare != null && snap.cutShare >= 0.25 ? 'down' : 'neutral'}
             />
           </div>
         </div>
@@ -172,8 +222,8 @@ export default function RenoMarketBridge({
           Sold prices, days to sell and price-cut pressure for {where} — free with one sign-in.
         </p>
       ) : settled ? null /* fetch failed — the CTA still works, just without the teaser */ : (
-        <div className="mt-4 grid grid-cols-3 gap-2.5" aria-hidden>
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3" aria-hidden>
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-[62px] animate-pulse rounded-xl bg-black/5 dark:bg-white/10" />
           ))}
         </div>
