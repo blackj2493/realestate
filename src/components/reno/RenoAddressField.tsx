@@ -5,21 +5,19 @@
  *
  * The cohort tree is geography-LESS — `cityRegion` is the raw MLS community string,
  * not computable from a geocode by rule (see loadCohortTree). So we resolve an
- * address to a trained cohort the only reliable way: geocode → nearest ACTIVE
- * listing (IDX `properties`, sorted by distance) → read that listing's City +
- * CityRegion → match the community into the tree. This is a best-effort *pre-fill*
- * the user can always override with the dropdowns below.
+ * address to a trained cohort by asking /api/reno/resolve-area, which votes on the
+ * MLS community across the nearest SOLD records (dense, per-house) plus active
+ * listings — then match that community into the tree. Best-effort *pre-fill* the
+ * user can override with the neighbourhood picker.
  *
- * VOW: this touches only the active IDX `properties` collection (never `sold_*`),
- * exactly like the public terminal, and surfaces only the community/city taxonomy
- * label — no price, no listing identity, no VOW-derived number.
+ * VOW: the resolver returns only a community NAME (public taxonomy) — never a
+ * price, address, date, or count — so no VOW Listing Information is disclosed.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { searchListings } from '@/lib/typesense/client';
 import { normalizeCityRegion, type CohortTree } from '@/lib/avm/cohorts';
 import type { GeocodeResult } from '@/app/api/geocode/route';
 
@@ -65,52 +63,21 @@ function matchCohort(
 }
 
 /**
- * Resolve a point to its area by a PROXIMITY-WEIGHTED VOTE across the nearest
- * active listings — not the single closest, which can sit just over a community
- * line and mis-label the address (e.g. an NW-Brampton home landing in Fletcher's
- * Meadow). We pull the ~15 nearest within 3 km (widening to 8 km only if that's
- * thin) and pick the CityRegion with the most weight, nearer listings counting
- * for more. City-level geocoding is reliable; this is about the community.
+ * Resolve a point to its MLS community via the server resolver, which votes across
+ * nearby SOLD records (dense, per-house) plus active listings. Sold density fixes
+ * the sparse-inventory boundary errors the old active-only, single-nearest match
+ * produced (an NW-Brampton home landing in Fletcher's Meadow).
  */
-async function nearestArea(
+async function resolveArea(
   lat: number,
   lng: number,
-): Promise<{ City?: string; CityRegion?: string } | null> {
-  const fetchNear = async (radiusKm: number) => {
-    const res = await searchListings({
-      query: '*',
-      perPage: 15,
-      sortBy: `location(${lat}, ${lng})`,
-      sortOrder: 'asc',
-      rawFilterBy: `location:(${lat}, ${lng}, ${radiusKm} km)`,
-      excludeFields: 'RawImages,RawRooms,PublicRemarks',
-    });
-    return res.listings;
-  };
+): Promise<{ city?: string; cityRegion?: string } | null> {
   try {
-    let listings = await fetchNear(3);
-    if (listings.length < 3) {
-      const wider = await fetchNear(8);
-      if (wider.length > listings.length) listings = wider;
-    }
-    if (!listings.length) return null;
-
-    const score = new Map<string, { city?: string; weight: number }>();
-    listings.forEach((l, i) => {
-      const cr = l.CityRegion;
-      if (!cr) return;
-      const weight = listings.length - i; // rank 0 (closest) weighs most
-      const cur = score.get(cr) ?? { city: l.City, weight: 0 };
-      cur.weight += weight;
-      if (!cur.city && l.City) cur.city = l.City;
-      score.set(cr, cur);
-    });
-
-    let best: { cr: string; city?: string; weight: number } | null = null;
-    for (const [cr, v] of score) {
-      if (!best || v.weight > best.weight) best = { cr, city: v.city, weight: v.weight };
-    }
-    return best ? { City: best.city, CityRegion: best.cr } : null;
+    const res = await fetch(`/api/reno/resolve-area?lat=${lat}&lng=${lng}`);
+    if (!res.ok) return null;
+    const d = (await res.json()) as { cityRegion?: string | null; city?: string | null };
+    if (!d.cityRegion) return null;
+    return { city: d.city ?? undefined, cityRegion: d.cityRegion };
   } catch {
     return null;
   }
@@ -176,8 +143,8 @@ export default function RenoAddressField({
       setSuggestions([]);
       setStatus({ kind: 'resolving' });
 
-      const doc = await nearestArea(hit.lat, hit.lng);
-      const match = matchCohort(tree, doc?.City, doc?.CityRegion);
+      const area = await resolveArea(hit.lat, hit.lng);
+      const match = matchCohort(tree, area?.city, area?.cityRegion);
 
       if (match) {
         const community = normalizeCityRegion(match.cityRegion);
@@ -188,7 +155,7 @@ export default function RenoAddressField({
 
       // Couldn't place the exact community. If the listing's city is itself a tree
       // key, scope the community dropdown to it; otherwise leave the pickers open.
-      const cityKey = doc?.City && tree[doc.City] ? doc.City : '';
+      const cityKey = area?.city && tree[area.city] ? area.city : '';
       setStatus({ kind: 'nomatch', label: hit.label });
       onResolve({ city: cityKey, cityRegion: '', matched: false, label: hit.label, lat: hit.lat, lng: hit.lng });
     },
