@@ -157,7 +157,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 3. STREET MATCH — same-street listings share one community.
+  // 3. GEOCODE neighbourhood — Mapbox's community for the point. BEFORE the feed-based
+  // street/proximity votes so the reno tool matches the /address profile page (which
+  // resolves no-record addresses via the geocoded neighbourhood). Our own OLDER feed
+  // records near a reclassified pocket can still say the wrong community — that's the
+  // Bleasdale → Fletcher's-Meadow case: geocode says "Northwest Brampton", the feed vote
+  // said "Fletcher's Meadow". Trust the point's neighbourhood over stale nearby records.
+  if (geoNbhd) {
+    const r = answer(geoNbhd, geoCity, 'geocode');
+    if (r) return r;
+  }
+
+  // 4. STREET MATCH — same-street listings share one community (fallback when the
+  // geocoded neighbourhood doesn't map to a trained cohort).
   const streetQ = parsed?.streetName ?? '';
   if (hasGeo && streetQ.length >= 3) {
     const [aS, sS] = await Promise.all([
@@ -169,12 +181,6 @@ export async function GET(req: NextRequest) {
       const r = answer(w.cityRegion, w.city, 'street');
       if (r) return r;
     }
-  }
-
-  // 4. GEOCODE neighbourhood — Mapbox's community for the point (covers no-record homes).
-  if (geoNbhd) {
-    const r = answer(geoNbhd, geoCity, 'geocode');
-    if (r) return r;
   }
 
   // 5. PROXIMITY — nearest sold (dense) + active.
