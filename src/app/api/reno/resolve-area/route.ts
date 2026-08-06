@@ -1,15 +1,22 @@
 /**
- * GET /api/reno/resolve-area?lat=&lng=&address=
+ * GET /api/reno/resolve-area?address=&lat=&lng=
  *
- * Pins an address to its MLS community (CityRegion). Ladder, in order — mirrors the
- * proven /address profile resolution so the reno tool agrees with the profile page:
- *   1. EXACT-ADDRESS record (definitive) — the property's OWN feed CityRegion, from a
- *      live listing or a sold/off-market record at that exact civic address.
+ * Pins an address to its MLS community (CityRegion). Ladder (mirrors the proven
+ * /address profile resolution so the reno tool agrees with the profile page):
+ *   1. EXACT-ADDRESS record (definitive) — the property's OWN feed CityRegion, from
+ *      a live listing or a sold/off-market record at that exact civic address.
  *   2. STREET MATCH — any listing on the same street (one community per street).
- *   3. PROXIMITY VOTE — nearest sold (dense) + active listings.
+ *   3. PROXIMITY VOTE — nearest sold (dense) + active listings (needs lat/lng).
  *
- * Returns ONLY taxonomy labels ({ city, cityRegion }); no price/address/date/count is
- * ever returned, so nothing about any individual sale is disclosed.
+ * The response carries `via` (which rung answered) purely for diagnosis — it is not
+ * VOW data. Returns ONLY taxonomy labels ({ city, cityRegion }); no price/address/
+ * date/count is ever returned.
+ *
+ * IMPORTANT: we strip the postal before matching. The /address profile matches with
+ * civic + city + street (no postal) and resolves correctly; `addressesMatch` (and the
+ * loose matcher) SHORT-CIRCUIT to fail on any postal mismatch, so feeding the geocoded
+ * postal — which can differ from the feed record's — made the exact match miss and drop
+ * to the wrong proximity guess (the Fletcher's-Meadow bug).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getTypesenseClient } from '@/lib/typesense/client';
@@ -18,6 +25,7 @@ import { getSoldPublicByAddress, getSoldPublicByAddressLoose } from '@/lib/sold/
 import { parseAddress, addressesMatch } from '@/lib/watchlist/disposition';
 
 type Vote = { cr: string; city?: string };
+type Via = 'exact-active' | 'exact-sold' | 'street' | 'proximity' | 'none';
 
 function pickWinner(active: Vote[], sold: string[]): { cityRegion: string | null; city: string | null } {
   const score = new Map<string, number>();
@@ -39,32 +47,37 @@ function pickWinner(active: Vote[], sold: string[]): { cityRegion: string | null
 }
 
 export async function GET(req: NextRequest) {
-  const lat = Number(req.nextUrl.searchParams.get('lat'));
-  const lng = Number(req.nextUrl.searchParams.get('lng'));
+  const latRaw = Number(req.nextUrl.searchParams.get('lat'));
+  const lngRaw = Number(req.nextUrl.searchParams.get('lng'));
+  const hasGeo = Number.isFinite(latRaw) && Number.isFinite(lngRaw);
+  const lat = hasGeo ? latRaw : 0;
+  const lng = hasGeo ? lngRaw : 0;
   const address = (req.nextUrl.searchParams.get('address') ?? '').trim();
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return NextResponse.json({ error: 'lat and lng are required' }, { status: 400 });
+
+  if (!hasGeo && !address) {
+    return NextResponse.json({ error: 'address or lat/lng required' }, { status: 400 });
   }
 
   const client = getTypesenseClient();
 
   // ── 1. EXACT-ADDRESS record — the property's own feed CityRegion (authoritative). ──
+  // Strip the postal: match civic + city + street like the /address profile does.
   const parsed = address ? parseAddress(address) : null;
+  if (parsed) parsed.postal = '';
   if (parsed?.streetNumber && parsed?.streetName) {
     // Active listing at this exact address.
     try {
       const res = (await client.collections('properties').documents().search({
         q: `${parsed.streetNumber} ${parsed.streetName}`.trim(),
         query_by: 'UnparsedAddress',
-        include_fields: 'UnparsedAddress,PostalCode,CityRegion,City',
+        include_fields: 'UnparsedAddress,CityRegion,City',
         per_page: 15,
-      })) as { hits?: Array<{ document: { UnparsedAddress?: string; PostalCode?: string; CityRegion?: string; City?: string } }> };
+      })) as { hits?: Array<{ document: { UnparsedAddress?: string; CityRegion?: string; City?: string } }> };
       for (const h of res.hits ?? []) {
-        const d = h.document;
-        const cand = parseAddress(d.UnparsedAddress ?? '');
-        if (!cand.postal && d.PostalCode) cand.postal = String(d.PostalCode).replace(/\s+/g, '').toUpperCase();
-        if (d.CityRegion && addressesMatch(parsed, cand)) {
-          return NextResponse.json({ cityRegion: d.CityRegion, city: d.City ?? null });
+        const cand = parseAddress(h.document.UnparsedAddress ?? '');
+        cand.postal = '';
+        if (h.document.CityRegion && addressesMatch(parsed, cand)) {
+          return NextResponse.json({ cityRegion: h.document.CityRegion, city: h.document.City ?? null, via: 'exact-active' as Via });
         }
       }
     } catch (err) {
@@ -74,11 +87,13 @@ export async function GET(req: NextRequest) {
     // Sold / off-market record at this exact address (dense history; the profile path).
     const sold = (await getSoldPublicByAddress(parsed)) ?? (await getSoldPublicByAddressLoose(parsed));
     if (sold?.cityRegion) {
-      return NextResponse.json({ cityRegion: sold.cityRegion, city: sold.city || null });
+      return NextResponse.json({ cityRegion: sold.cityRegion, city: sold.city || null, via: 'exact-sold' as Via });
     }
   }
 
-  // Nearby active listings, optionally matching a street name.
+  // Fallbacks need coordinates.
+  if (!hasGeo) return NextResponse.json({ cityRegion: null, city: null, via: 'none' as Via });
+
   const activeVotes = async (queryStr: string, radiusKm: number): Promise<Vote[]> => {
     const votes: Vote[] = [];
     try {
@@ -109,11 +124,12 @@ export async function GET(req: NextRequest) {
     ]);
     if (aStreet.length + sStreet.length >= 2) {
       const winner = pickWinner(aStreet, sStreet);
-      if (winner.cityRegion) return NextResponse.json(winner);
+      if (winner.cityRegion) return NextResponse.json({ ...winner, via: 'street' as Via });
     }
   }
 
   // ── 3. PROXIMITY fallback — nearest sold (dense) + active. ──
   const [aProx, sProx] = await Promise.all([activeVotes('', 3), getSoldAreaVotes(lat, lng, 1.5, 20)]);
-  return NextResponse.json(pickWinner(aProx, sProx));
+  const winner = pickWinner(aProx, sProx);
+  return NextResponse.json({ ...winner, via: (winner.cityRegion ? 'proximity' : 'none') as Via });
 }
