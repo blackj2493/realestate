@@ -7,10 +7,8 @@ import type { AVMResult } from '@/lib/avm/types';
 import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
-import { deriveCeilingNotes } from '@/lib/reno/insights';
-import { cohortLabel, pickCohortCell, pickTypeRow } from '@/lib/reno/cohort';
 import { useRenoCohort } from '@/lib/reno/useRenoCohort';
-import { deriveSuiteEconomics } from '@/lib/reno/suiteEconomics';
+import { deriveEligibilityEvidence } from '@/lib/reno/eligibilityEvidence';
 import MarketGrids from '@/components/address/MarketGrids';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
@@ -32,8 +30,6 @@ export default function RenoResult({
   onUnlock,
   communitySlug,
   cityRegion,
-  beds = 3,
-  refined = false,
   lat,
   lng,
 }: {
@@ -46,10 +42,6 @@ export default function RenoResult({
   communitySlug: string | null;
   /** RAW city_region value — what the market RPCs and /analytics match on. */
   cityRegion?: string | null;
-  /** Bedrooms being modelled (the typical default, or the owner's own after refining). */
-  beds?: number;
-  /** True once the owner has opened "Add your details" — the numbers are then theirs. */
-  refined?: boolean;
   lat?: number | null;
   lng?: number | null;
 }) {
@@ -103,38 +95,15 @@ export default function RenoResult({
   // bed, so the table lets them find their own row.
   const { cohort } = useRenoCohort(lat, lng);
 
-  // The ceiling number follows the same rule: the owner's exact bedroom cell only once
-  // they've told us their beds; otherwise the type pooled across sizes, with no size claim.
-  const soldCell = refined
-    ? pickCohortCell(cohort?.sell?.matrix, typeLabel, beds)
-    : pickTypeRow(cohort?.sell?.matrix, typeLabel);
-
-  // What a second unit would EARN here: local in-home-unit rents × the engine's legal-suite
-  // cost. Self-hides when the area has no in-home rentals to read.
-  const suite = deriveSuiteEconomics({
+  // Local proof for the eligibility rules: second units actually leased nearby (with the
+  // rent RANGE across sizes — never one blended figure, since the suite's size is exactly
+  // what we don't know) and plex-type homes actually sold nearby.
+  const evidence = deriveEligibilityEvidence({
     rentMatrix: cohort?.rent?.matrix,
     rentSource: cohort?.rent?.source,
-    moves,
-  });
-
-  // The rail's over-investing warning, sized to THIS home (falls back to the AVM band,
-  // then to the static Ontario cautions when nothing is priced — e.g. anon).
-  const ceilingNotes = deriveCeilingNotes({
-    moves,
-    where,
-    estimateHigh: estimate?.highBand ?? null,
-    cohort: soldCell
-      ? {
-          label: cohortLabel(soldCell, typeLabel),
-          median: soldCell.median,
-          p75: soldCell.p75,
-          count: soldCell.count,
-          radiusKm: cohort?.sell?.radiusKm ?? null,
-          source: cohort?.sell?.source ?? null,
-          pooled: soldCell.basis === 'type',
-        }
-      : null,
-    generic: rules.dontOverInvest,
+    sellMatrix: cohort?.sell?.matrix,
+    sellSource: cohort?.sell?.source,
+    radiusKm: cohort?.sell?.radiusKm ?? cohort?.rent?.radiusKm ?? null,
   });
 
   const movesHeader = (
@@ -267,9 +236,7 @@ export default function RenoResult({
             unlockHref={unlockHref}
             onUnlock={onUnlock}
             isAuthed={!result.locked}
-            ceilingNotes={ceilingNotes}
-            suite={suite}
-            where={where}
+            evidence={evidence}
           />
         </div>
       </div>
