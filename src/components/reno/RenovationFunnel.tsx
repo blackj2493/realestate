@@ -331,6 +331,7 @@ export default function RenovationFunnel({
             onUnlock={onUnlock}
             onRefine={onRefine}
             communitySlug={communitySlug}
+            cityRegion={form.cityRegion}
             lat={coords?.lat ?? null}
             lng={coords?.lng ?? null}
           />
