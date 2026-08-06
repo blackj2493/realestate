@@ -1,20 +1,19 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { Lock, Building2, ClipboardCheck, Calculator, AlertTriangle, Hammer, type LucideIcon } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
-import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
+import { Lock, Building2, AlertTriangle, Hammer, type LucideIcon } from 'lucide-react';
 import type { LocalRules } from '@/lib/reno/localRules';
 
 /**
- * The FREE over-deliver rail, consolidated into ONE capsule ("Your renovation
- * guide") with quiet internal sections — eligibility, permits, a live financing
- * model, and "don't over-invest". All non-VOW, publicly-sourced.
+ * The FREE over-deliver rail, one capsule ("Your renovation guide") with two sections
+ * that each say something a generic guide can't:
+ *   • what this home could legally BECOME (Ontario Bill 23 + local rules), and
+ *   • where the money disappears — the area's own price ceiling and its weakest move.
+ *
+ * The old permit table and reno-loan calculator were dropped: per-move permit needs
+ * already ride on every move card, and a generic amortization slider is available on any
+ * bank site — neither cleared the §10 bar.
  */
-
-const RENO_RATE = 0.069; // ~HELOC / reno-loan rate; wired to live rates as a fast-follow.
-const RENO_MONTHS = 180; // 15-yr amortization
 
 function Section({ icon: Icon, title, first, children }: { icon: LucideIcon; title: string; first?: boolean; children: React.ReactNode }) {
   return (
@@ -28,46 +27,22 @@ function Section({ icon: Icon, title, first, children }: { icon: LucideIcon; tit
   );
 }
 
-function FinancingSection() {
-  const [budget, setBudget] = useState(60000);
-  const monthly = calculateCanadianMonthlyMortgage(budget, RENO_RATE, RENO_MONTHS);
-  return (
-    <>
-      <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-bold text-foreground">{formatPrice(Math.round(monthly))}</span>
-        <span className="text-[13px] text-muted-foreground">/mo for a {formatPrice(budget)} reno</span>
-      </div>
-      <input
-        type="range"
-        min={10000}
-        max={150000}
-        step={5000}
-        value={budget}
-        onChange={(e) => setBudget(Number(e.target.value))}
-        aria-label="Reno budget"
-        className="mt-3 w-full accent-cyan-600 dark:accent-cyan-400"
-      />
-      <div className="flex justify-between text-[11.5px] text-muted-foreground">
-        <span>$10k</span>
-        <span>$150k</span>
-      </div>
-      <p className="mt-1.5 text-[12.5px] text-muted-foreground">Roughly, at ~{(RENO_RATE * 100).toFixed(1)}% over 15 years.</p>
-    </>
-  );
-}
-
 export function RenoGuidePanel({
   rules,
   unlockHref,
   onUnlock,
   isAuthed,
+  ceilingNotes,
 }: {
   rules: LocalRules;
   unlockHref: string;
   onUnlock: () => void;
   /** When signed in, hide the "sign in" upsell row (they're already in). */
   isAuthed?: boolean;
+  /** Area-specific over-investing warnings (falls back to rules.dontOverInvest). */
+  ceilingNotes?: string[];
 }) {
+  const notes = ceilingNotes?.length ? ceilingNotes : rules.dontOverInvest;
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
@@ -104,25 +79,9 @@ export function RenoGuidePanel({
         </div>
       </Section>
 
-      <Section icon={ClipboardCheck} title={`Permits & rules — ${rules.cityLabel}`}>
-        <div className="divide-y divide-border/60">
-          {rules.permits.map((p) => (
-            <div key={p.work} className="flex items-start justify-between gap-3 py-2.5 text-sm">
-              <span className="text-foreground">{p.work}</span>
-              <span className="shrink-0 text-right text-muted-foreground">{p.need}</span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">{rules.permitReviewNote}</p>
-      </Section>
-
-      <Section icon={Calculator} title="Model your reno">
-        <FinancingSection />
-      </Section>
-
-      <Section icon={AlertTriangle} title="Don’t over-invest">
+      <Section icon={AlertTriangle} title="Know your ceiling">
         <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-          {rules.dontOverInvest.map((d, i) => (
+          {notes.map((d, i) => (
             <li key={i} className="flex gap-2">
               <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden />
               <span>{d}</span>

@@ -7,6 +7,7 @@ import type { AVMResult } from '@/lib/avm/types';
 import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
+import { deriveCeilingNotes } from '@/lib/reno/insights';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
 import RenoMarketBridge from './RenoMarketBridge';
@@ -27,6 +28,7 @@ export default function RenoResult({
   onUnlock,
   onRefine,
   communitySlug,
+  cityRegion,
   lat,
   lng,
 }: {
@@ -38,6 +40,8 @@ export default function RenoResult({
   onUnlock: () => void;
   onRefine: () => void;
   communitySlug: string | null;
+  /** RAW city_region value — what the market RPCs and /analytics match on. */
+  cityRegion?: string | null;
   lat?: number | null;
   lng?: number | null;
 }) {
@@ -84,6 +88,15 @@ export default function RenoResult({
   const winners = result.locked ? [] : moves.filter((m) => (m.paybackRatio ?? 0) >= 1);
   const losers = result.locked ? [] : moves.filter((m) => Number.isFinite(m.paybackRatio) && (m.paybackRatio ?? 0) < 1);
   const splitMoves = winners.length > 0 && losers.length > 0;
+
+  // The rail's over-investing warning, made specific to this area (falls back to the
+  // static Ontario cautions when nothing is priced — e.g. anon).
+  const ceilingNotes = deriveCeilingNotes({
+    moves,
+    where,
+    estimateHigh: estimate?.highBand ?? null,
+    generic: rules.dontOverInvest,
+  });
 
   const movesHeader = (
     <div className="flex items-center justify-between">
@@ -220,12 +233,18 @@ export default function RenoResult({
 
         {/* RAIL — free over-deliver, one calm capsule */}
         <div>
-          <RenoGuidePanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} isAuthed={!result.locked} />
+          <RenoGuidePanel
+            rules={rules}
+            unlockHref={unlockHref}
+            onUnlock={onUnlock}
+            isAuthed={!result.locked}
+            ceilingNotes={ceilingNotes}
+          />
         </div>
       </div>
 
-      {/* MARKET-TRENDS bridge — insight promise, deep-linked to this region */}
-      <RenoMarketBridge where={where} region={where} />
+      {/* MARKET TRENDS — the second primary action, personalized to THIS region */}
+      <RenoMarketBridge where={where} region={cityRegion || city} city={city} />
 
       {lat != null && lng != null && (
         <RenoCarousels lat={lat} lng={lng} type={typeLabel} where={where} />

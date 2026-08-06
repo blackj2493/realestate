@@ -68,6 +68,47 @@ export function moveFlag(m: RenoMoveLike): MoveFlag | null {
   return null;
 }
 
+/**
+ * The "know your ceiling" lines for the free rail — the over-investing warning made
+ * SPECIFIC to this area instead of the old generic bullet list. Priority order:
+ *   1. the area's own price ceiling (from the AVM range),
+ *   2. the weakest priced move here and what it actually returns,
+ *   3. one enduring Ontario truth (the pool), as the floor.
+ * `generic` supplies the fallback bullets when nothing is priced (anon / thin cohort).
+ */
+export function deriveCeilingNotes({
+  moves,
+  where,
+  estimateHigh,
+  generic,
+}: {
+  moves: RenoMoveLike[];
+  where: string;
+  estimateHigh?: number | null;
+  generic: string[];
+}): string[] {
+  const out: string[] = [];
+
+  if (estimateHigh && estimateHigh > 0) {
+    const ceiling = `$${Math.round(estimateHigh).toLocaleString('en-CA')}`;
+    out.push(`Homes like this in ${where} top out around ${ceiling}. Money spent past that ceiling rarely comes back.`);
+  }
+
+  const priced = moves.filter((m) => Number.isFinite(m.paybackRatio));
+  const worst = priced.sort((a, b) => a.paybackRatio! - b.paybackRatio!)[0];
+  if (worst && worst.paybackRatio! < 1) {
+    out.push(
+      `${worst.label} is the weakest spend here — about ${roiCents(worst.paybackRatio!)}¢ back on every $1 at resale.`,
+    );
+  }
+
+  for (const g of generic) {
+    if (out.length >= 3) break;
+    out.push(g);
+  }
+  return out.slice(0, 3);
+}
+
 export interface RenoInsight {
   kicker: string;
   icon: LucideIcon;

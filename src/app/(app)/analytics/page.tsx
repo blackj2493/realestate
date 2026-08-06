@@ -37,6 +37,7 @@ import {
   assembleAnalyticsInitial,
   ZERO_SCOPE,
 } from "@/lib/market/aggregates";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import AnalyticsClient from "./AnalyticsClient";
 import SubmarketLeaderboard from "@/components/dashboard/SubmarketLeaderboard";
 
@@ -58,23 +59,31 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Resolve the requested scope from the URL (region + property-type chips), exactly as
+  // AnalyticsClient does, so the server-seeded data matches the client's first render.
+  // Read BEFORE the gate so an anonymous visitor arriving from a deep link (e.g. the
+  // renovation tool's "See the full <area> market trends") keeps their region through
+  // sign-in instead of landing back on the default market.
+  const sp = await searchParams;
+  const usp = new URLSearchParams();
+  if (typeof sp.region === "string") usp.set("region", sp.region);
+  if (typeof sp.types === "string") usp.set("types", sp.types);
+  const rawRegion = (usp.get("region") || "").trim();
+  const region = rawRegion || DEFAULT_REGION;
+  const typeKeys = parseTypeKeys(usp);
+  const deepLink = `/analytics${usp.toString() ? `?${usp.toString()}` : ""}`;
+
   const user = await getCurrentUser();
   // Anonymous visitors get a locked preview instead of the old hard redirect to /login —
   // Market Trends is a top-nav destination and the bounce was a dead end for the
   // highest-intent anonymous surface. No VOW value ever reaches the DOM here: the
   // placeholder is a static skeleton, and both market endpoints independently return a
   // locked shape for anonymous callers (defense in depth).
-  if (!user) return <AnalyticsTeaser />;
-  if (!(await hasAcceptedTerms(user.id))) redirect("/welcome?next=/analytics");
-
-  // Resolve the initial scope from the URL (region + property-type chips), exactly as
-  // AnalyticsClient does, so the server-seeded data matches the client's first render.
-  const sp = await searchParams;
-  const usp = new URLSearchParams();
-  if (typeof sp.region === "string") usp.set("region", sp.region);
-  if (typeof sp.types === "string") usp.set("types", sp.types);
-  const region = (usp.get("region") || DEFAULT_REGION).trim();
-  const typeKeys = parseTypeKeys(usp);
+  if (!user) {
+    const named = rawRegion && REGION_RE.test(rawRegion) ? formatRegionLabel(rawRegion) : null;
+    return <AnalyticsTeaser regionLabel={named} next={deepLink} />;
+  }
+  if (!(await hasAcceptedTerms(user.id))) redirect(`/welcome?next=${encodeURIComponent(deepLink)}`);
 
   return (
     <>
@@ -144,23 +153,27 @@ async function AnalyticsData({ region, typeKeys }: { region: string; typeKeys: s
  * lock, plus an honest escape hatch to the free public trackers. The leaderboard and
  * every data panel stay unmounted — nothing sold-derived is fetched or rendered.
  */
-function AnalyticsTeaser() {
+function AnalyticsTeaser({ regionLabel, next }: { regionLabel: string | null; next: string }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6">
       <h1 className="terminal-font text-lg font-bold uppercase tracking-wider text-foreground">
-        Market Trends
+        Market Trends{regionLabel ? ` — ${regionLabel}` : ""}
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-foreground/70">
         Sold-price trends, true days on market, sell-through and price-cut pressure for
-        every GTA market.
+        {regionLabel ? ` ${regionLabel}` : " every GTA market"}.
       </p>
       <div className="relative mt-4 overflow-hidden">
         <AnalyticsSkeleton />
         <VowGateOverlay
-          headline="See how every GTA market is actually moving"
+          headline={
+            regionLabel
+              ? `See how ${regionLabel} is actually moving`
+              : "See how every GTA market is actually moving"
+          }
           message="Sold-price trends, true days on market and price-cut pressure — free with one sign-in."
           ctaLabel="See it free →"
-          next="/analytics"
+          next={next}
         />
       </div>
       <p className="mt-6 text-center text-sm text-foreground/60">

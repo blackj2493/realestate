@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveRenoInsights, roiDecode, roiTier, roiCents, moveFlag, type RenoMoveLike } from './insights';
+import { deriveCeilingNotes, deriveRenoInsights, roiDecode, roiTier, roiCents, moveFlag, type RenoMoveLike } from './insights';
 
 /** A representative ranked move set (Northwest Brampton detached, from the live tool). */
 const MOVES: RenoMoveLike[] = [
@@ -68,5 +68,42 @@ describe('deriveRenoInsights', () => {
   });
   it('returns nothing when no move is priced', () => {
     expect(deriveRenoInsights(MOVES.map((m) => ({ ...m, paybackRatio: undefined })))).toHaveLength(0);
+  });
+});
+
+describe('deriveCeilingNotes', () => {
+  const generic = ['A pool rarely returns its cost in most Ontario markets.', 'Generic two.', 'Generic three.'];
+
+  it('leads with the area price ceiling, then the weakest move', () => {
+    const notes = deriveCeilingNotes({ moves: MOVES, where: 'Northwest Brampton', estimateHigh: 920453, generic });
+    expect(notes).toHaveLength(3);
+    expect(notes[0]).toContain('Northwest Brampton');
+    expect(notes[0]).toContain('$920,453');
+    expect(notes[1]).toContain('Finish the basement');
+    expect(notes[1]).toContain('10¢');
+    expect(notes[2]).toBe(generic[0]); // tops up with the enduring caution
+  });
+
+  it('falls back entirely to the generic cautions when nothing is priced', () => {
+    const notes = deriveCeilingNotes({
+      moves: MOVES.map((m) => ({ ...m, paybackRatio: undefined })),
+      where: 'Northwest Brampton',
+      estimateHigh: null,
+      generic,
+    });
+    expect(notes).toEqual(generic);
+  });
+
+  it('omits the weakest-move line when every move pays back', () => {
+    const winners = MOVES.map((m) => ({ ...m, paybackRatio: 2 }));
+    const notes = deriveCeilingNotes({ moves: winners, where: 'Milton', estimateHigh: 1000000, generic });
+    expect(notes[0]).toContain('Milton');
+    expect(notes.some((n) => n.includes('weakest spend'))).toBe(false);
+  });
+
+  it('does not mutate the caller’s move array', () => {
+    const input = [...MOVES];
+    deriveCeilingNotes({ moves: input, where: 'X', estimateHigh: 1, generic });
+    expect(input.map((m) => m.key)).toEqual(MOVES.map((m) => m.key));
   });
 });
