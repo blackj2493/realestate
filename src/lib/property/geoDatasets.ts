@@ -65,8 +65,12 @@ export interface GeoFlagSpec {
   /** Attribution shown to the user. */
   source: string;
   ask?: string;
-  /** Plain-English title. `distM` is the measured distance (0 for intersect flags). */
-  title: (distM: number) => string;
+  /**
+   * Plain-English title. `distM` is the measured distance (0 for intersect flags);
+   * `descriptor` is the optional "what is it" phrase for datasets that carry one
+   * (building permits / development applications) — absent → generic wording.
+   */
+  title: (distM: number, descriptor?: string) => string;
 }
 
 export interface GeoDataset {
@@ -83,6 +87,150 @@ export interface GeoDataset {
   license: string;
   sources: GeoDatasetSource[];
   flag: GeoFlagSpec;
+  /**
+   * Optional "what is it" descriptor for the flag title. For datasets whose features carry
+   * a work/application TYPE (building permits, development applications), `derive` turns the
+   * NEAREST matched feature's raw `attrs` into a short human phrase — e.g. "New building",
+   * "Zoning amendment" — so the card says what the nearby activity IS, not just how far.
+   *
+   * `derive` gets the whole attrs object because the shape differs PER CITY: most publish a
+   * single readable type field, but some (Waterloo) split the application across one column
+   * per kind, and others (Brampton) put a constant layer name in the obvious field and the
+   * real type in a description. It is a STRICT classifier — it returns null for anything it
+   * doesn't recognize, so an unknown/ugly raw value never leaks; the title falls back to the
+   * dataset's generic wording. Pure + deterministic (no LLM, §4); tolerant of nully attrs.
+   *
+   * Only distance datasets use this (it describes the nearest feature within radius).
+   */
+  descriptor?: {
+    derive: (attrs: Record<string, unknown>) => string | null;
+  };
+}
+
+// ── descriptor helpers ────────────────────────────────────────────────────────
+// Strict classifiers over the KNOWN municipal vocabularies → a handful of plain phrases;
+// anything unrecognized returns null so the flag keeps its generic title. Deliberately
+// conservative — never overclaim (a bare building-category permit is NOT asserted "new"
+// unless the value explicitly says so).
+
+/** Trimmed non-empty string value of an attr, else null (handles nulls, numbers, blanks). */
+function strAttr(attrs: Record<string, unknown>, key: string): string | null {
+  const v = attrs[key];
+  if (typeof v === "string") {
+    const t = v.trim();
+    return t.length > 0 ? t : null;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return null;
+}
+
+/** First candidate field whose value the classifier recognizes (priority order). */
+function fromFields(
+  attrs: Record<string, unknown>,
+  fields: string[],
+  classify: (raw: string) => string | null,
+): string | null {
+  for (const key of fields) {
+    const raw = strAttr(attrs, key);
+    if (!raw) continue;
+    const label = classify(raw);
+    if (label && label.trim()) return label.trim();
+  }
+  return null;
+}
+
+/** Building-permit work type → short phrase (Waterloo/Mississauga/Kitchener/Toronto/Oakville/Burlington). */
+function classifyConstruction(raw: string): string | null {
+  const s = raw.toLowerCase();
+  if (/demol/.test(s)) return "Demolition";
+  if (/addition|alteration/.test(s)) return "Building addition";
+  // Building CATEGORY, if any (multi / commercial / industrial / institutional).
+  const cat = /multi/.test(s)
+    ? "Multi-unit building"
+    : /commercial/.test(s)
+      ? "Commercial building"
+      : /industrial/.test(s)
+        ? "Industrial building"
+        : /institution/.test(s)
+          ? "Institutional building"
+          : null;
+  // Only assert "New" when the value actually says new / foundation-stage.
+  if (/foundation/.test(s) || /\bnew\b/.test(s)) return cat ? `New ${cat.toLowerCase()}` : "New building";
+  // Category-only permit (e.g. Kitchener "Commercial Building") → name the category, no "New".
+  if (cat) return cat;
+  return null;
+}
+
+/** Readable development-application type text → short phrase (Hamilton/Ottawa/York/Mississauga/Brampton). */
+function classifyDevApp(raw: string): string | null {
+  const s = raw.toLowerCase();
+  if (/official plan/.test(s)) return "Official Plan amendment";
+  if (/zoning|rezoning/.test(s)) return "Zoning amendment";
+  if (/subdivision/.test(s)) return "Plan of subdivision";
+  if (/condominium|condo\b/.test(s)) return "Plan of condominium";
+  if (/site plan/.test(s)) return "Site plan application";
+  if (/rental housing/.test(s)) return "Rental-housing demolition/conversion";
+  return null;
+}
+
+/** Toronto uses short material CODES (not readable text) in APPLICATION_TYPE. Whole-string
+ *  match only, so a code can never collide with a substring of some other city's field. */
+const TORONTO_DEVAPP_CODES: Record<string, string> = {
+  OZ: "Official Plan amendment & rezoning",
+  OP: "Official Plan amendment",
+  ZR: "Zoning amendment",
+  ZBL: "Zoning amendment",
+  SB: "Plan of subdivision",
+  CD: "Plan of condominium",
+  RH: "Rental-housing demolition/conversion",
+};
+
+/** Waterloo splits an application across one file-number column per kind (OPA/ZBA/
+ *  SUBDIVISION/CONDO — the columns always EXIST, populated only for the kinds that apply),
+ *  so its type is read by field PRESENCE, not a value. Gate on the distinctive column
+ *  signature so no other city's stray field can trigger this. */
+function deriveWaterlooDevApp(attrs: Record<string, unknown>): string | null {
+  if (!("OPA" in attrs && "ZBA" in attrs && "SUBDIVISION" in attrs)) return null;
+  const sub = strAttr(attrs, "SUBDIVISION") !== null;
+  const condo = strAttr(attrs, "CONDO") !== null;
+  const opa = strAttr(attrs, "OPA") !== null;
+  const zba = strAttr(attrs, "ZBA") !== null;
+  if (sub) return "Plan of subdivision";
+  if (condo) return "Plan of condominium";
+  if (opa && zba) return "Official Plan amendment & rezoning";
+  if (opa) return "Official Plan amendment";
+  if (zba) return "Zoning amendment";
+  return null; // Waterloo-shaped but all four empty → generic
+}
+
+/** What a development application IS, resolving each city's attribute shape. */
+function deriveDevApp(attrs: Record<string, unknown>): string | null {
+  // 1. Waterloo — one populated column per kind (presence-based).
+  const waterloo = deriveWaterlooDevApp(attrs);
+  if (waterloo) return waterloo;
+  // 2. Toronto — APPLICATION_TYPE is a short material code.
+  const code = strAttr(attrs, "APPLICATION_TYPE");
+  if (code) {
+    const mapped = TORONTO_DEVAPP_CODES[code.toUpperCase()];
+    if (mapped) return mapped;
+  }
+  // 3. Everyone else — a readable single-type field, else a per-feature description.
+  //    Brampton's APPLICATION_TYPE is the CONSTANT layer name "OPA ZBA Subdivision" (useless),
+  //    so it is deliberately NOT scanned here; Brampton's real type lives in DESCRIPTION.
+  return fromFields(
+    attrs,
+    ["APPLICATION_TYPE_EN", "FILE_TYPE", "APPL_TYPE", "LAYER", "DESCRIPTION", "APPLICATION_TITLE", "PROPOSAL_DESCRIPTION", "TYPE"],
+    classifyDevApp,
+  );
+}
+
+/** What a building permit is FOR, across the live permit cities. */
+function deriveConstruction(attrs: Record<string, unknown>): string | null {
+  return fromFields(
+    attrs,
+    ["WORKDESC", "SCOPE", "PERMIT_TYPE", "Worktype", "WORK_TYPE", "PERMITTYPE", "STRUCTURE_TYPE", "TYPE"],
+    classifyConstruction,
+  );
 }
 
 const OGL_ON = "Open Government Licence – Ontario";
@@ -546,6 +694,10 @@ export const GEO_DATASETS: GeoDataset[] = [
         // (--all and the endpoint loop SKIP this source — load it via --file.)
       },
     ],
+    // What the application IS (Zoning amendment / Plan of subdivision / …), from the nearest
+    // feature. Attribute shape differs per city (readable field / Toronto codes / Waterloo
+    // per-kind columns / Brampton description) — deriveDevApp resolves each.
+    descriptor: { derive: deriveDevApp },
     flag: {
       id: "dev_application",
       kind: "info",
@@ -553,7 +705,10 @@ export const GEO_DATASETS: GeoDataset[] = [
       // Generic (multi-source): the nearest match may be any of the cities above. Each
       // source's licence is recorded in geo_sources; see the multi-source note above.
       source: "Municipal development applications (open data)",
-      title: (m) => `Major development application filed ~${Math.round(m)} m away`,
+      title: (m, desc) =>
+        desc
+          ? `${desc} filed ~${Math.round(m)} m away`
+          : `Major development application filed ~${Math.round(m)} m away`,
     },
   },
   {
@@ -675,13 +830,19 @@ export const GEO_DATASETS: GeoDataset[] = [
         matchRadiusM: 150,
       },
     ],
+    // What the permit is FOR (New building / Demolition / Building addition / …), from the
+    // nearest feature's work-type field. Field names differ per city.
+    descriptor: { derive: deriveConstruction },
     flag: {
       id: "major_construction",
       kind: "info",
       severity: 30,
       source: "Municipal building permits (open data)",
       ask: "Active construction nearby can mean noise, dust and changed views or traffic — check the project's scope and timeline.",
-      title: (m) => `Recent major construction permit issued ~${Math.round(m)} m away`,
+      title: (m, desc) =>
+        desc
+          ? `${desc} permit issued ~${Math.round(m)} m away`
+          : `Recent major construction permit issued ~${Math.round(m)} m away`,
     },
   },
   {
@@ -709,14 +870,40 @@ export const GEO_DATASETS: GeoDataset[] = [
 /** Datasets the enrichment/loader should act on (enabled only). */
 export const ACTIVE_DATASETS = GEO_DATASETS.filter((d) => d.enabled);
 
-/** Build one DiligenceFlag from a dataset + measured distance (0 for intersect). */
-export function buildGeoFlag(ds: GeoDataset, distM: number): DiligenceFlag {
+/** Active distance datasets that carry a "what is it" descriptor (building permits,
+ *  development applications) — the enrichment fetches the nearest feature's attrs for these. */
+export const DESCRIPTOR_DATASETS = ACTIVE_DATASETS.filter(
+  (d) => d.descriptor != null && d.predicate.type === "distance",
+);
+
+/**
+ * Derive a flag's "what is it" descriptor from the NEAREST matched feature's raw attributes.
+ * Returns null when the dataset has no descriptor config, when no candidate field carries a
+ * value, or when the value isn't recognized — callers then fall back to the generic title.
+ * Pure + deterministic (no LLM, §4); safe on partial/nully attrs.
+ */
+export function describeFeature(
+  kind: string,
+  attrs: Record<string, unknown> | null | undefined,
+): string | null {
+  const ds = GEO_DATASETS.find((d) => d.kind === kind);
+  if (!ds?.descriptor || attrs == null || typeof attrs !== "object" || Array.isArray(attrs)) return null;
+  const label = ds.descriptor.derive(attrs as Record<string, unknown>);
+  return label && label.trim() ? label.trim() : null;
+}
+
+/**
+ * Build one DiligenceFlag from a dataset + measured distance (0 for intersect). `descriptor`
+ * is the optional "what is it" phrase (permits / dev apps); omitted or null → generic title,
+ * so non-descriptor datasets are byte-identical to before.
+ */
+export function buildGeoFlag(ds: GeoDataset, distM: number, descriptor?: string | null): DiligenceFlag {
   const f = ds.flag;
   return {
     id: f.id,
     kind: f.kind,
     severity: f.severity,
-    title: f.title(distM),
+    title: f.title(distM, descriptor ?? undefined),
     source: f.source,
     ...(f.ask ? { ask: f.ask } : {}),
   };
