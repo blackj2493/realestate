@@ -74,14 +74,76 @@ describe('deriveRenoInsights', () => {
 describe('deriveCeilingNotes', () => {
   const generic = ['A pool rarely returns its cost in most Ontario markets.', 'Generic two.', 'Generic three.'];
 
-  it('leads with the area price ceiling, then the weakest move', () => {
-    const notes = deriveCeilingNotes({ moves: MOVES, where: 'Northwest Brampton', estimateHigh: 920453, generic });
+  const COHORT = {
+    label: '5 bed detached',
+    median: 1_240_000,
+    p75: 1_360_000,
+    count: 12,
+    radiusKm: 2,
+    source: 'sold' as const,
+    pooled: false,
+  };
+
+  it('leads with the ceiling for homes of THIS size and type, then the weakest move', () => {
+    const notes = deriveCeilingNotes({
+      moves: MOVES,
+      where: 'Northwest Brampton',
+      estimateHigh: 920453,
+      cohort: COHORT,
+      generic,
+    });
     expect(notes).toHaveLength(3);
-    expect(notes[0]).toContain('Northwest Brampton');
-    expect(notes[0]).toContain('$920,453');
+    expect(notes[0]).toContain('5 bed detached');
+    expect(notes[0]).toContain('within 2 km');
+    expect(notes[0]).toContain('$1,240,000');
+    expect(notes[0]).toContain('$1,360,000');
+    expect(notes[0]).not.toContain('$920,453'); // the typical-3-bed AVM band must not win
     expect(notes[1]).toContain('Finish the basement');
     expect(notes[1]).toContain('10¢');
     expect(notes[2]).toBe(generic[0]); // tops up with the enduring caution
+  });
+
+  it('says "listed at" — never "sell for" — when the cohort is asking prices (anon)', () => {
+    const notes = deriveCeilingNotes({
+      moves: MOVES,
+      where: 'Northwest Brampton',
+      cohort: { ...COHORT, source: 'asking' },
+      generic,
+    });
+    expect(notes[0]).toContain('are listed at');
+    expect(notes[0]).not.toContain('sell for');
+  });
+
+  it('drops the band when the cohort is pooled across sizes', () => {
+    const notes = deriveCeilingNotes({
+      moves: MOVES,
+      where: 'Northwest Brampton',
+      cohort: { ...COHORT, label: 'Detached (any size)', p75: null, pooled: true },
+      generic,
+    });
+    expect(notes[0]).toContain('about $1,240,000');
+    expect(notes[0]).not.toContain('upper half');
+  });
+
+  it('warns when the ceiling rests on a handful of comparables', () => {
+    const notes = deriveCeilingNotes({
+      moves: MOVES,
+      where: 'Northwest Brampton',
+      cohort: { ...COHORT, count: 3 },
+      generic,
+    });
+    expect(notes[1]).toContain('Only 3 recent comparables');
+  });
+
+  it('falls back to the AVM band when no cohort resolved', () => {
+    const notes = deriveCeilingNotes({
+      moves: MOVES,
+      where: 'Northwest Brampton',
+      estimateHigh: 920453,
+      cohort: null,
+      generic,
+    });
+    expect(notes[0]).toContain('$920,453');
   });
 
   it('falls back entirely to the generic cautions when nothing is priced', () => {

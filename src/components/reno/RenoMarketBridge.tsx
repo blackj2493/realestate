@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { LineChart, ArrowRight, TrendingUp, TrendingDown, Timer, Scissors, Lock, Gavel, Banknote } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { LineChart, ArrowRight, TrendingUp, TrendingDown, Timer, Scissors, Lock, Gavel } from 'lucide-react';
+import { typeKeyForSubType } from '@/lib/dashboard/propertyTypes';
 import {
   snapshotHeadline,
   snapshotPressure,
@@ -13,14 +13,15 @@ import {
 /**
  * The PERSONALIZED market-trends doorway — the page's second primary action.
  *
- * Instead of a generic "what prices are doing near you" tile, this pulls the caller's OWN
- * neighbourhood read from /api/reno/market-snapshot (VOW-gated; anon gets a locked shape and
- * a sign-in CTA) and shows the four numbers that decide whether a reno is worth doing here:
- * price direction on the year, days to sell, sell-through, and price-cut pressure. The
- * button then deep-links /analytics?region=<raw region> so the market page opens ON their
- * neighbourhood — the numbers they just read, expanded.
+ * It carries the AREA read only — direction and pressure (YoY, days to sell, price cuts),
+ * scoped to the property type so a detached owner isn't shown a direction diluted by
+ * condo sales. Per-home price levels deliberately live ABOVE this card, in the beds × type
+ * grid (MarketGrids), because we don't know whether the owner's home is 3, 4 or 5 bed —
+ * the table lets them find their own row instead of us asserting one median for them.
  *
- * All figures are deterministic aggregates from the same cached RPCs /analytics uses (§4).
+ * The button then deep-links /analytics?region=<raw region>&types=<key> so Market Trends
+ * opens on the same scope the caller just read. All figures are deterministic aggregates
+ * from the cached region RPCs and the shared beds × type grid (§4 — no LLM).
  */
 
 const CARD =
@@ -58,6 +59,7 @@ export default function RenoMarketBridge({
   where,
   region,
   city,
+  typeLabel,
 }: {
   /** Display name of the area the result is about. */
   where: string;
@@ -65,10 +67,16 @@ export default function RenoMarketBridge({
   region: string;
   /** The city, used as the fallback scope when the neighbourhood is thin. */
   city: string;
+  /** PropertySubType being modelled, e.g. "Detached". */
+  typeLabel: string;
 }) {
+  // Scope the area read to the property type — a detached owner should not be shown a
+  // direction diluted by condo sales. Null (unknown type) = no filter, as before.
+  const typeKey = typeKeyForSubType(typeLabel);
+
   // Keyed by the scope it was fetched for, so a stale response can never be painted
   // against a new region (and no reset-setState is needed inside the effect).
-  const scopeKey = `${region}|${city}`;
+  const scopeKey = `${region}|${city}|${typeKey ?? ''}`;
   const [loaded, setLoaded] = useState<{ key: string; data: RenoMarketSnapshotResp | null } | null>(null);
 
   useEffect(() => {
@@ -76,8 +84,9 @@ export default function RenoMarketBridge({
     const qs = new URLSearchParams();
     if (region) qs.set('region', region);
     if (city) qs.set('city', city);
+    if (typeKey) qs.set('types', typeKey);
     if (!qs.toString()) return;
-    const key = `${region}|${city}`;
+    const key = `${region}|${city}|${typeKey ?? ''}`;
     fetch(`/api/reno/market-snapshot?${qs.toString()}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
@@ -89,18 +98,18 @@ export default function RenoMarketBridge({
     return () => {
       cancelled = true;
     };
-  }, [region, city]);
+  }, [region, city, typeKey]);
 
   const settled = loaded?.key === scopeKey;
   const snap = settled ? loaded!.data : null;
 
   // Deep-link to the scope we actually managed to read (community, or the city fallback).
   const linkRegion = snap && !snap.locked ? snap.region : region || city;
-  const href = `/analytics?region=${encodeURIComponent(linkRegion)}`;
+  const href = `/analytics?region=${encodeURIComponent(linkRegion)}${typeKey ? `&types=${typeKey}` : ''}`;
   const areaLabel = snap && !snap.locked ? snap.label : where;
 
   const hasData = !!snap && !snap.locked;
-  const headline = hasData ? snapshotHeadline(snap) : null;
+  const headline = hasData ? snapshotHeadline(snap, typeLabel) : null;
   const pressure = hasData ? snapshotPressure(snap) : null;
 
   return (
@@ -125,38 +134,37 @@ export default function RenoMarketBridge({
           'The same sold data behind these estimates — read as the story of your market, not a spreadsheet.'}
       </p>
 
+      {/* ── THE AREA — direction + pressure, scoped to this property type ── */}
       {hasData ? (
-        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Stat
-            icon={Banknote}
-            label="Sold price"
-            value={snap.medianPrice != null ? formatPrice(snap.medianPrice) : '—'}
-            tone="neutral"
-          />
-          <Stat
-            icon={snap.yoyPct != null && snap.yoyPct < 0 ? TrendingDown : TrendingUp}
-            label="Vs last year"
-            value={snap.yoyPct != null ? `${snap.yoyPct > 0 ? '+' : ''}${snap.yoyPct.toFixed(1)}%` : '—'}
-            tone={snap.yoyPct == null ? 'neutral' : snap.yoyPct >= 0 ? 'up' : 'down'}
-          />
-          <Stat
-            icon={Timer}
-            label="Days to sell"
-            value={snap.medianDom != null ? `${Math.round(snap.medianDom)}d` : '—'}
-            tone="neutral"
-          />
-          <Stat
-            icon={snap.cutShare != null ? Scissors : Gavel}
-            label={snap.cutShare != null ? 'Cutting price' : 'Of asking'}
-            value={
-              snap.cutShare != null
-                ? `${Math.round(snap.cutShare * 100)}%`
-                : snap.soldToListPct != null
-                  ? `${snap.soldToListPct.toFixed(1)}%`
-                  : '—'
-            }
-            tone={snap.cutShare != null && snap.cutShare >= 0.25 ? 'down' : 'neutral'}
-          />
+        <div className="mt-4">
+          <div className="mb-2 text-[12px] font-semibold text-foreground">
+            {typeLabel} across {areaLabel}
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Stat
+              icon={snap.yoyPct != null && snap.yoyPct < 0 ? TrendingDown : TrendingUp}
+              label="Vs last year"
+              value={snap.yoyPct != null ? `${snap.yoyPct > 0 ? '+' : ''}${snap.yoyPct.toFixed(1)}%` : '—'}
+              tone={snap.yoyPct == null ? 'neutral' : snap.yoyPct >= 0 ? 'up' : 'down'}
+            />
+            <Stat
+              icon={Timer}
+              label="Days to sell"
+              value={snap.medianDom != null ? `${Math.round(snap.medianDom)}d` : '—'}
+            />
+            <Stat
+              icon={snap.cutShare != null ? Scissors : Gavel}
+              label={snap.cutShare != null ? 'Cutting price' : 'Of asking'}
+              value={
+                snap.cutShare != null
+                  ? `${Math.round(snap.cutShare * 100)}%`
+                  : snap.soldToListPct != null
+                    ? `${snap.soldToListPct.toFixed(1)}%`
+                    : '—'
+              }
+              tone={snap.cutShare != null && snap.cutShare >= 0.25 ? 'down' : 'neutral'}
+            />
+          </div>
         </div>
       ) : snap?.locked ? (
         <p className="mt-3 flex items-center gap-1.5 text-[13px] text-muted-foreground">
@@ -164,8 +172,8 @@ export default function RenoMarketBridge({
           Sold prices, days to sell and price-cut pressure for {where} — free with one sign-in.
         </p>
       ) : settled ? null /* fetch failed — the CTA still works, just without the teaser */ : (
-        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4" aria-hidden>
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="mt-4 grid grid-cols-3 gap-2.5" aria-hidden>
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-[62px] animate-pulse rounded-xl bg-black/5 dark:bg-white/10" />
           ))}
         </div>
@@ -181,8 +189,9 @@ export default function RenoMarketBridge({
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
       </Link>
       <p className="mt-2 text-center text-[12px] text-muted-foreground">
-        Opens Market Trends already set to {areaLabel} — 24 months of sold prices, true days on market
-        and where sellers are cutting.
+        Opens Market Trends already set to {areaLabel}
+        {typeKey ? ` and ${typeLabel.toLowerCase()}` : ''} — 24 months of sold prices, true days on
+        market and where sellers are cutting.
       </p>
     </section>
   );

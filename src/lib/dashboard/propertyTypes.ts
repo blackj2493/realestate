@@ -93,6 +93,32 @@ export function parseTypeKeys(params: URLSearchParams): string[] {
 }
 
 /**
+ * The reverse map: a raw PropertySubType ("Att/Row/Townhouse", "Semi-Detached ") →
+ * the option key the market endpoints filter on ("town", "semi"). Exact variant match
+ * first (authoritative), then a spelling-tolerant fallback for feed values not in the
+ * registry (e.g. "Detached Condo Apartment"). Returns null when nothing matches, which
+ * callers must read as "no type filter" rather than guessing.
+ *
+ * Order in the fallback matters: "semi" before "detached", "town" before "condo"
+ * (a Condo Townhouse is a townhouse) — same precedence as normalizePropertySubType.
+ */
+export function typeKeyForSubType(raw: string | null | undefined): string | null {
+  const s = (raw ?? '').trim();
+  if (!s) return null;
+  const lower = s.toLowerCase();
+  for (const opt of PROPERTY_TYPE_OPTIONS) {
+    if (opt.variants.some((v) => v.trim().toLowerCase() === lower)) return opt.key;
+  }
+  if (lower.includes('semi')) return 'semi';
+  if (lower.includes('town')) return 'town';
+  if (lower.includes('detached')) return 'detached';
+  if (lower.includes('link')) return 'link';
+  if (/condo|apartment|apt|co-?op|co-ownership/.test(lower)) return 'condo';
+  if (/duplex|triplex|fourplex|multiplex/.test(lower)) return 'multiplex';
+  return null;
+}
+
+/**
  * Typesense filter_by clause for the selected property types, backtick-quoted.
  * Returns undefined when nothing is selected (= all types).
  */

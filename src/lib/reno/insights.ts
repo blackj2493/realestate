@@ -70,8 +70,9 @@ export function moveFlag(m: RenoMoveLike): MoveFlag | null {
 
 /**
  * The "know your ceiling" lines for the free rail — the over-investing warning made
- * SPECIFIC to this area instead of the old generic bullet list. Priority order:
- *   1. the area's own price ceiling (from the AVM range),
+ * SPECIFIC to this home instead of the old generic bullet list. Priority order:
+ *   1. the ceiling for HOMES OF THIS SIZE AND TYPE nearby (the beds × type cohort —
+ *      the AVM band is a typical-3-bed number and misleads a bigger or smaller home),
  *   2. the weakest priced move here and what it actually returns,
  *   3. one enduring Ontario truth (the pool), as the floor.
  * `generic` supplies the fallback bullets when nothing is priced (anon / thin cohort).
@@ -80,18 +81,46 @@ export function deriveCeilingNotes({
   moves,
   where,
   estimateHigh,
+  cohort,
   generic,
 }: {
   moves: RenoMoveLike[];
   where: string;
   estimateHigh?: number | null;
+  /** The beds × type cohort for THIS home, when we could resolve one. */
+  cohort?: {
+    label: string;
+    median: number;
+    p75: number | null;
+    count: number;
+    radiusKm: number | null;
+    /** 'sold' = actual closes (consumer); 'asking' = live list prices (anon). */
+    source: 'sold' | 'asking' | null;
+    /** True when the cell is pooled across bedroom counts (no size match). */
+    pooled: boolean;
+  } | null;
   generic: string[];
 }): string[] {
   const out: string[] = [];
+  const money = (n: number) => `$${Math.round(n).toLocaleString('en-CA')}`;
 
-  if (estimateHigh && estimateHigh > 0) {
-    const ceiling = `$${Math.round(estimateHigh).toLocaleString('en-CA')}`;
-    out.push(`Homes like this in ${where} top out around ${ceiling}. Money spent past that ceiling rarely comes back.`);
+  if (cohort && cohort.median > 0) {
+    const verb = cohort.source === 'asking' ? 'are listed at' : 'sell for';
+    const radius = cohort.radiusKm ? ` within ${cohort.radiusKm} km` : ' nearby';
+    const top = cohort.p75 && cohort.p75 > cohort.median ? cohort.p75 : null;
+    const size = cohort.pooled ? '' : ' of your size';
+    out.push(
+      top
+        ? `${cohort.label} homes${radius} ${verb} ${money(cohort.median)}, with the upper half reaching ${money(top)} (${cohort.count} of them). Spending past the top of that band rarely comes back.`
+        : `${cohort.label} homes${radius} ${verb} about ${money(cohort.median)} (${cohort.count} of them). That is the ceiling your reno is spending against — not the street's biggest house.`,
+    );
+    if (size && cohort.count < 5) {
+      out.push(`Only ${cohort.count} recent comparable${cohort.count === 1 ? '' : 's'}${size} — treat that ceiling as a rough guide.`);
+    }
+  } else if (estimateHigh && estimateHigh > 0) {
+    out.push(
+      `Homes like this in ${where} top out around ${money(estimateHigh)}. Money spent past that ceiling rarely comes back.`,
+    );
   }
 
   const priced = moves.filter((m) => Number.isFinite(m.paybackRatio));

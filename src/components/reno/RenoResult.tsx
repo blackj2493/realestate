@@ -8,6 +8,9 @@ import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
 import { deriveCeilingNotes } from '@/lib/reno/insights';
+import { cohortLabel, pickCohortCell, pickTypeRow } from '@/lib/reno/cohort';
+import { useRenoCohort } from '@/lib/reno/useRenoCohort';
+import MarketGrids from '@/components/address/MarketGrids';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
 import RenoMarketBridge from './RenoMarketBridge';
@@ -29,6 +32,8 @@ export default function RenoResult({
   onRefine,
   communitySlug,
   cityRegion,
+  beds = 3,
+  refined = false,
   lat,
   lng,
 }: {
@@ -42,6 +47,10 @@ export default function RenoResult({
   communitySlug: string | null;
   /** RAW city_region value — what the market RPCs and /analytics match on. */
   cityRegion?: string | null;
+  /** Bedrooms being modelled (the typical default, or the owner's own after refining). */
+  beds?: number;
+  /** True once the owner has opened "Add your details" — the numbers are then theirs. */
+  refined?: boolean;
   lat?: number | null;
   lng?: number | null;
 }) {
@@ -89,12 +98,35 @@ export default function RenoResult({
   const losers = result.locked ? [] : moves.filter((m) => Number.isFinite(m.paybackRatio) && (m.paybackRatio ?? 0) < 1);
   const splitMoves = winners.length > 0 && losers.length > 0;
 
-  // The rail's over-investing warning, made specific to this area (falls back to the
-  // static Ontario cautions when nothing is priced — e.g. anon).
+  // The beds × type grids for this location — the same "what homes sell/rent for here"
+  // tables the listing pages show. We render the WHOLE grid rather than assert a size:
+  // unless the owner opened "Add your details", we don't know if their home is 3, 4 or 5
+  // bed, so the table lets them find their own row.
+  const { cohort } = useRenoCohort(lat, lng);
+
+  // The ceiling number follows the same rule: the owner's exact bedroom cell only once
+  // they've told us their beds; otherwise the type pooled across sizes, with no size claim.
+  const soldCell = refined
+    ? pickCohortCell(cohort?.sell?.matrix, typeLabel, beds)
+    : pickTypeRow(cohort?.sell?.matrix, typeLabel);
+
+  // The rail's over-investing warning, sized to THIS home (falls back to the AVM band,
+  // then to the static Ontario cautions when nothing is priced — e.g. anon).
   const ceilingNotes = deriveCeilingNotes({
     moves,
     where,
     estimateHigh: estimate?.highBand ?? null,
+    cohort: soldCell
+      ? {
+          label: cohortLabel(soldCell, typeLabel),
+          median: soldCell.median,
+          p75: soldCell.p75,
+          count: soldCell.count,
+          radiusKm: cohort?.sell?.radiusKm ?? null,
+          source: cohort?.sell?.source ?? null,
+          pooled: soldCell.basis === 'type',
+        }
+      : null,
     generic: rules.dontOverInvest,
   });
 
@@ -220,14 +252,20 @@ export default function RenoResult({
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
           {report?.basis && <p className="text-xs text-muted-foreground">{report.basis}</p>}
           <p className="text-[13px] text-muted-foreground">
-            Based on a typical {typeLabel.toLowerCase()} — about 3 bed, 2 bath.{' '}
-            <button
-              type="button"
-              onClick={onRefine}
-              className="font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
-            >
-              Not typical? Add your details →
-            </button>
+            {refined ? (
+              <>Based on your {beds}-bed {typeLabel.toLowerCase()}.</>
+            ) : (
+              <>
+                Based on a typical {typeLabel.toLowerCase()} — about {beds} bed, 2 bath.{' '}
+                <button
+                  type="button"
+                  onClick={onRefine}
+                  className="font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
+                >
+                  Not typical? Add your details →
+                </button>
+              </>
+            )}
           </p>
         </div>
 
@@ -243,8 +281,14 @@ export default function RenoResult({
         </div>
       </div>
 
-      {/* MARKET TRENDS — the second primary action, personalized to THIS region */}
-      <RenoMarketBridge where={where} region={cityRegion || city} city={city} />
+      {/* WHAT HOMES SELL / RENT FOR HERE — the same beds × type tables as the listing
+          pages. Every size is on screen, so nobody has to take our "typical" on faith. */}
+      {(cohort?.sell || cohort?.rent) && (
+        <MarketGrids sell={cohort.sell} rent={cohort.rent} showSignInNudge={result.locked} />
+      )}
+
+      {/* MARKET TRENDS — the second primary action, personalized to THIS region + type. */}
+      <RenoMarketBridge where={where} region={cityRegion || city} city={city} typeLabel={typeLabel} />
 
       {lat != null && lng != null && (
         <RenoCarousels lat={lat} lng={lng} type={typeLabel} where={where} />
