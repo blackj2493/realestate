@@ -121,7 +121,6 @@ export default function WatchlistSection() {
     <section className="space-y-3">
       <ModuleHead
         title="Watchlist"
-        count={rollup.count}
         right={
           !signedIn ? (
             <SignInLink className="terminal-font text-[11px] normal-case tracking-wider text-cyan-700 dark:text-cyan-400 hover:underline">

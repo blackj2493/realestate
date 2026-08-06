@@ -18,21 +18,23 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
 /* ── ModuleHead ────────────────────────────────────────────────────────────
    The mono "channel label" that heads every module: teal channel ticks (light)
-   / section glyph (dark) · title · zero-padded count · right-aligned meta, with
-   a tick-rule beneath in light or a hairline in dark. */
+   / section glyph (dark) · title · right-aligned meta, with a tick-rule beneath
+   in light or a hairline in dark.
+
+   No item count. There used to be a zero-padded `count` here rendered as `[03]`,
+   which reads as an ID or channel number rather than a quantity — and at every
+   call site the number was already on screen anyway (the watchlist's own SAVED
+   tile, the rows you can see, the "show N more" button). Don't add it back; if a
+   module needs to state a quantity, label it in words where it belongs. */
 export function ModuleHead({
   title,
-  count,
   right,
   icon,
   className,
 }: {
   title: ReactNode;
-  count?: number;
   right?: ReactNode;
   /** Section glyph shown in DARK only (light uses the teal channel ticks). */
   icon?: ReactNode;
@@ -54,9 +56,6 @@ export function ModuleHead({
         <h2 className="terminal-font text-[13px] font-bold uppercase tracking-[0.14em] text-foreground">
           {title}
         </h2>
-        {count != null && (
-          <span className="terminal-font text-[11px] text-muted-foreground">[{pad2(count)}]</span>
-        )}
         {right && (
           <span className="terminal-font ml-auto text-[10.5px] uppercase tracking-[0.04em] text-muted-foreground">
             {right}

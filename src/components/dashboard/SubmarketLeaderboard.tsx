@@ -114,7 +114,6 @@ export default function SubmarketLeaderboard() {
       <section className="space-y-2">
         <ModuleHead
           title="Submarket Leaderboard"
-          count={scores.length || undefined}
           icon={<Trophy className="h-4 w-4" />}
           right={
             <span className="inline-flex overflow-hidden border border-border align-middle">
