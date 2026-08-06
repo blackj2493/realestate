@@ -10,13 +10,7 @@ import { localRulesFor } from '@/lib/reno/localRules';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoCarousels from './RenoCarousels';
 import ShareChallengeButton from './ShareChallengeButton';
-import {
-  EligibilityPanel,
-  PermitsPanel,
-  FinancingPanel,
-  DontOverInvestPanel,
-  AssumptionsPanel,
-} from './RenoPanels';
+import { RenoGuidePanel } from './RenoPanels';
 
 export type RenoResultData =
   | { locked: true; catalog: AnonCatalogItem[] }
@@ -60,7 +54,11 @@ export default function RenoResult({
       locked: true,
     }));
   } else {
-    const priced = (result.report?.moves ?? []).filter((m) => m.status === 'priced');
+    // Priced moves, dropping trivial non-recommended ones (e.g. a "+$27" move is
+    // noise that undermines the result). Recommended moves always stay.
+    const priced = (result.report?.moves ?? []).filter(
+      (m) => m.status === 'priced' && (m.recommended || m.valueAddTyp >= 1000),
+    );
     priced.sort(
       (a, b) => Number(b.recommended) - Number(a.recommended) || b.paybackRatio - a.paybackRatio,
     );
@@ -170,15 +168,21 @@ export default function RenoResult({
           )}
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
           {report?.basis && <p className="text-[10.5px] text-muted-foreground">{report.basis}</p>}
+          <p className="text-[11px] text-muted-foreground">
+            Based on a typical {typeLabel.toLowerCase()} — about 3 bed, 2 bath.{' '}
+            <button
+              type="button"
+              onClick={onRefine}
+              className="font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
+            >
+              Not typical? Add your details →
+            </button>
+          </p>
         </div>
 
-        {/* RAIL — free over-deliver */}
-        <div className="space-y-3.5">
-          <EligibilityPanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} />
-          <PermitsPanel rules={rules} />
-          <FinancingPanel />
-          <DontOverInvestPanel rules={rules} />
-          <AssumptionsPanel typeLabel={typeLabel} onRefine={onRefine} />
+        {/* RAIL — free over-deliver, one calm capsule */}
+        <div>
+          <RenoGuidePanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} />
         </div>
       </div>
 
