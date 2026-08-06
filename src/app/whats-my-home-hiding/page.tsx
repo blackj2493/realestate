@@ -17,10 +17,10 @@ export async function generateMetadata({
   const where = slug ? deslugifyCommunity(slug) : null;
   const title = where
     ? `Which renovation pays you back most in ${where}?`
-    : "What's my home hiding? Renovation upside, free";
+    : 'What could a reno add to your home? Free renovation upside';
   const description = where
     ? `Find the renovation that pays back most for your ${where} home. Free, 60-second analysis.`
-    : 'Describe your home and find the renovations that pay back most in your neighbourhood. Free.';
+    : 'See the renovations that pay back most for a home like yours — ranked by real nearby sales. Free.';
   const ogImage = `/api/og/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`;
 
   return {
@@ -51,10 +51,10 @@ export default async function WhatsMyHomeHidingPage({
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
-        <h1 className="mb-1 text-3xl font-bold text-foreground">What&apos;s my home hiding?</h1>
+        <h1 className="mb-1 text-3xl font-bold text-foreground">What could a reno add to your home?</h1>
         <p className="mb-8 max-w-2xl text-sm text-muted-foreground">
-          Enter your address and see the renovations that pay back the most where you are —
-          ranked by what actually sells nearby. Free.
+          See the renovations that pay back most for a home like yours — ranked by real nearby sales.
+          Free, in under a minute.
         </p>
         <RenovationFunnel
           tree={tree}
