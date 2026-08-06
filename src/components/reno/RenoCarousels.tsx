@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Lock, Home, Tag, Map as MapIcon, TrendingUp } from 'lucide-react';
+import { Lock, Home, Tag, Map as MapIcon } from 'lucide-react';
 import { ForSaleCompCard } from '@/components/Property/ForSaleCompCard';
 import { SoldCompCard } from '@/components/Property/SoldCompCard';
 import type { SimilarForSaleCard, SimilarSoldCard } from '@/app/api/properties/[id]/similar/route';
@@ -136,29 +136,17 @@ export default function RenoCarousels({
         </section>
       )}
 
-      {/* BRIDGE band — doorways into the real product */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Link
-          href="/properties"
-          className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-cyan-500/50"
-        >
-          <MapIcon className="mt-0.5 h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-400" aria-hidden />
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground">Browse the live map</span>
-            <span className="text-xs text-muted-foreground">Every home for sale near you →</span>
-          </span>
-        </Link>
-        <Link
-          href="/analytics"
-          className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-cyan-500/50"
-        >
-          <TrendingUp className="mt-0.5 h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-400" aria-hidden />
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground">Market trends</span>
-            <span className="text-xs text-muted-foreground">What prices are doing near you →</span>
-          </span>
-        </Link>
-      </div>
+      {/* BRIDGE — doorway into the live map (the region Market Trends bridge sits above). */}
+      <Link
+        href="/properties"
+        className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-cyan-500/50"
+      >
+        <MapIcon className="mt-0.5 h-5 w-5 shrink-0 text-cyan-700 dark:text-cyan-400" aria-hidden />
+        <span className="flex flex-col gap-0.5">
+          <span className="text-sm font-semibold text-foreground">Browse the live map</span>
+          <span className="text-xs text-muted-foreground">Every home for sale near {where} →</span>
+        </span>
+      </Link>
     </div>
   );
 }

@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Lock, Home, TrendingUp, LineChart } from 'lucide-react';
+import { Lock, Home, TrendingUp, TrendingDown, LineChart } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import type { AVMResult } from '@/lib/avm/types';
 import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
+import RenoInsightStrip from './RenoInsights';
+import RenoMarketBridge from './RenoMarketBridge';
 import RenoCarousels from './RenoCarousels';
 import ShareChallengeButton from './ShareChallengeButton';
 import { RenoGuidePanel } from './RenoPanels';
@@ -77,10 +79,23 @@ export default function RenoResult({
 
   const report = result.locked ? null : result.report;
   const estimate = result.locked ? null : result.estimate;
-  const insight = report?.neighbourhoodInsight;
+
+  // The counter-intuitive split: moves that pay back vs popular ones that don't.
+  const winners = result.locked ? [] : moves.filter((m) => (m.paybackRatio ?? 0) >= 1);
+  const losers = result.locked ? [] : moves.filter((m) => Number.isFinite(m.paybackRatio) && (m.paybackRatio ?? 0) < 1);
+  const splitMoves = winners.length > 0 && losers.length > 0;
+
+  const movesHeader = (
+    <div className="flex items-center justify-between">
+      <h2 className="flex items-center gap-2 text-[15px] font-bold text-foreground">
+        <TrendingUp className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" aria-hidden /> Every dollar, ranked
+      </h2>
+      <span className="font-mono text-[11.5px] text-muted-foreground">for a typical {typeLabel.toLowerCase()}</span>
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* context */}
       <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-[13px] text-muted-foreground">
         <Home className="h-4 w-4" aria-hidden /> A <span className="font-semibold text-foreground">typical {typeLabel.toLowerCase()}</span> in {where}
@@ -108,12 +123,12 @@ export default function RenoResult({
         <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/12 to-transparent p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[13px] text-muted-foreground">You could unlock up to</p>
+              <p className="text-[13px] text-muted-foreground">A focused reno here could add up to</p>
               <p className="my-0.5 text-4xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400">
                 +{formatPrice(report?.headlineUpsideGross ?? 0)}
               </p>
               <p className="text-[13px] text-muted-foreground">
-                ≈ <b className="text-emerald-700 dark:text-emerald-400">+{formatPrice(report?.headlineUpside ?? 0)}</b> net of renovation cost
+                ≈ <b className="text-emerald-700 dark:text-emerald-400">+{formatPrice(report?.headlineUpside ?? 0)}</b> left over after you pay for the work
               </p>
             </div>
             {report && report.valueAddScore > 0 && (
@@ -130,9 +145,17 @@ export default function RenoResult({
               )}
             </p>
           )}
-          {insight && <p className="mt-2 text-[13px] text-muted-foreground">{insight}</p>}
         </div>
       )}
+
+      {/* THE SECRETS — the reframe centrepiece */}
+      <RenoInsightStrip
+        moves={moves}
+        locked={result.locked}
+        where={where}
+        unlockHref={unlockHref}
+        onUnlock={onUnlock}
+      />
 
       <p className="text-[13px] leading-relaxed text-muted-foreground">
         These are typical numbers for a {typeLabel.toLowerCase()} in {where}. For a specific home’s own
@@ -143,18 +166,26 @@ export default function RenoResult({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         {/* MOVES */}
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-[15px] font-bold text-foreground">
-              <TrendingUp className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" aria-hidden /> The moves that pay back most
-            </h2>
-            <span className="font-mono text-[11.5px] text-muted-foreground">ranked for a typical {typeLabel.toLowerCase()}</span>
-          </div>
-          {moves.length > 0 ? (
-            moves.map((m) => <RenoMoveCard key={m.key} m={m} />)
-          ) : (
+          {movesHeader}
+
+          {moves.length === 0 ? (
             <p className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
               Renovation modelling isn’t available for this neighbourhood yet — try a nearby community.
             </p>
+          ) : splitMoves ? (
+            <>
+              <div className="space-y-2.5">
+                {winners.map((m) => <RenoMoveCard key={m.key} m={m} />)}
+              </div>
+              <div className="flex items-center gap-2 pt-2 text-[12.5px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-500">
+                <TrendingDown className="h-4 w-4" aria-hidden /> Popular here — but they don’t pay back
+              </div>
+              <div className="space-y-2.5">
+                {losers.map((m) => <RenoMoveCard key={m.key} m={m} />)}
+              </div>
+            </>
+          ) : (
+            moves.map((m) => <RenoMoveCard key={m.key} m={m} />)
           )}
 
           {result.locked ? (
@@ -192,6 +223,9 @@ export default function RenoResult({
           <RenoGuidePanel rules={rules} unlockHref={unlockHref} onUnlock={onUnlock} isAuthed={!result.locked} />
         </div>
       </div>
+
+      {/* MARKET-TRENDS bridge — insight promise, deep-linked to this region */}
+      <RenoMarketBridge where={where} region={where} />
 
       {lat != null && lng != null && (
         <RenoCarousels lat={lat} lng={lng} type={typeLabel} where={where} />
