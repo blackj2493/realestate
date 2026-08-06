@@ -210,14 +210,18 @@ export async function getSoldAreaVotes(
   lng: number,
   radiusKm = 1.5,
   limit = 20,
+  queryStr?: string,
 ): Promise<string[]> {
   try {
+    // With a street name, match sold rows ON THAT STREET (definitive); else "*"
+    // returns the nearest sold rows for a proximity vote.
+    const q = queryStr && queryStr.trim().length >= 3 ? queryStr.trim() : "*";
     const res = await getSoldClient()
       .collections(SOLD_LISTINGS_COLLECTION)
       .documents()
       .search({
-        q: "*",
-        query_by: "UnparsedAddress", // syntactic; ignored for q:"*"
+        q,
+        query_by: "UnparsedAddress",
         filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=sold`,
         sort_by: `location(${lat}, ${lng}):asc`,
         include_fields: "CityRegion,location",

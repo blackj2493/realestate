@@ -68,12 +68,31 @@ function matchCohort(
  * the sparse-inventory boundary errors the old active-only, single-nearest match
  * produced (an NW-Brampton home landing in Fletcher's Meadow).
  */
+/**
+ * Distinctive street name from a geocoded label:
+ *   "37 Bleasdale Avenue, Brampton, …" → "Bleasdale".
+ * Same-street listings share one MLS community, so this is the definitive signal.
+ */
+function streetName(label: string): string {
+  const first = (label.split(',')[0] ?? '').trim(); // "37 Bleasdale Avenue"
+  const noNum = first.replace(/^\d+[a-z]?\s+/i, ''); // "Bleasdale Avenue"
+  const noType = noNum.replace(
+    /\s+(avenue|ave|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|court|ct|way|lane|ln|circle|cir|terrace|terr|place|pl|gate|grove|trail|trl|close|common|commons|heights|hts|square|sq|parkway|pkwy|hill|hollow|path|run|ridge|point|pt|gardens|gdns)\.?$/i,
+    '',
+  );
+  return noType.trim();
+}
+
 async function resolveArea(
   lat: number,
   lng: number,
+  label: string,
 ): Promise<{ city?: string; cityRegion?: string } | null> {
   try {
-    const res = await fetch(`/api/reno/resolve-area?lat=${lat}&lng=${lng}`);
+    const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
+    const street = streetName(label);
+    if (street.length >= 3) params.set('street', street);
+    const res = await fetch(`/api/reno/resolve-area?${params.toString()}`);
     if (!res.ok) return null;
     const d = (await res.json()) as { cityRegion?: string | null; city?: string | null };
     if (!d.cityRegion) return null;
@@ -143,7 +162,7 @@ export default function RenoAddressField({
       setSuggestions([]);
       setStatus({ kind: 'resolving' });
 
-      const area = await resolveArea(hit.lat, hit.lng);
+      const area = await resolveArea(hit.lat, hit.lng, hit.label);
       const match = matchCohort(tree, area?.city, area?.cityRegion);
 
       if (match) {
