@@ -196,3 +196,41 @@ export async function getSoldNearGated(lat: number, lng: number): Promise<SoldNe
     return null;
   }
 }
+
+/**
+ * AREA RESOLUTION (server-only). Returns the CityRegion of the nearest SOLD
+ * records to a point, nearest-first — for pinning an address to its MLS community
+ * using DENSE per-house sold data (far denser than live inventory, so it resolves
+ * boundaries reliably). Restricted to `CityRegion,location`: no price/address/date
+ * leaves Typesense, and a community NAME is public taxonomy, not VOW Listing
+ * Information. Not gated — it discloses nothing about any individual sale.
+ */
+export async function getSoldAreaVotes(
+  lat: number,
+  lng: number,
+  radiusKm = 1.5,
+  limit = 20,
+): Promise<string[]> {
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: "*",
+        query_by: "UnparsedAddress", // syntactic; ignored for q:"*"
+        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=sold`,
+        sort_by: `location(${lat}, ${lng}):asc`,
+        include_fields: "CityRegion,location",
+        per_page: limit,
+      });
+    const out: string[] = [];
+    for (const h of res.hits ?? []) {
+      const cr = (h.document as { CityRegion?: string }).CityRegion;
+      if (cr) out.push(cr);
+    }
+    return out;
+  } catch (err) {
+    console.error("[soldNearPoint] area votes failed:", err);
+    return [];
+  }
+}
