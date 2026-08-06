@@ -60,10 +60,13 @@ export function RenoGuidePanel({
   rules,
   unlockHref,
   onUnlock,
+  isAuthed,
 }: {
   rules: LocalRules;
   unlockHref: string;
   onUnlock: () => void;
+  /** When signed in, hide the "sign in" upsell row (they're already in). */
+  isAuthed?: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -88,14 +91,16 @@ export function RenoGuidePanel({
               <span className="shrink-0 text-right font-medium text-emerald-700 dark:text-emerald-400">{e.status}</span>
             </div>
           ))}
-          <Link
-            href={unlockHref}
-            onClick={onUnlock}
-            className="flex items-center justify-between gap-3 py-2 text-[12.5px] text-amber-700 hover:underline dark:text-amber-500"
-          >
-            <span className="inline-flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" aria-hidden /> Your lot’s exact zoning + suite score</span>
-            <span className="shrink-0 font-medium">Sign in</span>
-          </Link>
+          {!isAuthed && (
+            <Link
+              href={unlockHref}
+              onClick={onUnlock}
+              className="flex items-center justify-between gap-3 py-2 text-[12.5px] text-amber-700 hover:underline dark:text-amber-500"
+            >
+              <span className="inline-flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" aria-hidden /> Your lot’s exact zoning + suite score</span>
+              <span className="shrink-0 font-medium">Sign in</span>
+            </Link>
+          )}
         </div>
       </Section>
 

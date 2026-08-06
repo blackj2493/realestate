@@ -28,10 +28,10 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
   return (
     <div
       className={cn(
-        'flex items-start gap-3.5 rounded-xl border p-3.5 transition-colors',
-        m.recommended
-          ? 'border-emerald-500/30 bg-emerald-500/[0.035]'
-          : 'border-border bg-card hover:border-border/70',
+        'flex items-start gap-3.5 rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-border/70',
+        // The stronger-payback moves get a crisp emerald left-accent (a dull green
+        // wash made the BEST options read as duller than the rest — inverted hierarchy).
+        m.recommended && 'border-l-[3px] border-l-emerald-500',
       )}
     >
       <span
