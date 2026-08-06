@@ -332,6 +332,8 @@ export default function RenovationFunnel({
             onRefine={onRefine}
             communitySlug={communitySlug}
             cityRegion={form.cityRegion}
+            beds={form.bedroomsAboveGrade}
+            refined={showDetails}
             lat={coords?.lat ?? null}
             lng={coords?.lng ?? null}
           />

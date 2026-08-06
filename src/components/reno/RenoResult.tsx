@@ -8,6 +8,8 @@ import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
 import { deriveCeilingNotes } from '@/lib/reno/insights';
+import { cohortLabel } from '@/lib/reno/cohort';
+import { useRenoCohort } from '@/lib/reno/useRenoCohort';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
 import RenoMarketBridge from './RenoMarketBridge';
@@ -29,6 +31,8 @@ export default function RenoResult({
   onRefine,
   communitySlug,
   cityRegion,
+  beds = 3,
+  refined = false,
   lat,
   lng,
 }: {
@@ -42,6 +46,10 @@ export default function RenoResult({
   communitySlug: string | null;
   /** RAW city_region value — what the market RPCs and /analytics match on. */
   cityRegion?: string | null;
+  /** Bedrooms being modelled (the typical default, or the owner's own after refining). */
+  beds?: number;
+  /** True once the owner has opened "Add your details" — the numbers are then theirs. */
+  refined?: boolean;
   lat?: number | null;
   lng?: number | null;
 }) {
@@ -89,12 +97,29 @@ export default function RenoResult({
   const losers = result.locked ? [] : moves.filter((m) => Number.isFinite(m.paybackRatio) && (m.paybackRatio ?? 0) < 1);
   const splitMoves = winners.length > 0 && losers.length > 0;
 
-  // The rail's over-investing warning, made specific to this area (falls back to the
-  // static Ontario cautions when nothing is priced — e.g. anon).
+  // "Homes like yours" — the beds × type cell for THIS home (2 km→5 km pool), the basis
+  // for both the ceiling and the market card's price. Scoped by the owner's own bedroom
+  // count when they've refined, otherwise by the typical 3-bed the engine modelled.
+  const { cohort } = useRenoCohort(lat, lng, typeLabel, beds);
+  const soldCell = cohort?.sold ?? null;
+
+  // The rail's over-investing warning, sized to THIS home (falls back to the AVM band,
+  // then to the static Ontario cautions when nothing is priced — e.g. anon).
   const ceilingNotes = deriveCeilingNotes({
     moves,
     where,
     estimateHigh: estimate?.highBand ?? null,
+    cohort: soldCell
+      ? {
+          label: cohortLabel(soldCell, typeLabel),
+          median: soldCell.median,
+          p75: soldCell.p75,
+          count: soldCell.count,
+          radiusKm: cohort?.radiusKm ?? null,
+          source: cohort?.soldSource ?? null,
+          pooled: soldCell.basis === 'type',
+        }
+      : null,
     generic: rules.dontOverInvest,
   });
 
@@ -220,14 +245,20 @@ export default function RenoResult({
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
           {report?.basis && <p className="text-xs text-muted-foreground">{report.basis}</p>}
           <p className="text-[13px] text-muted-foreground">
-            Based on a typical {typeLabel.toLowerCase()} — about 3 bed, 2 bath.{' '}
-            <button
-              type="button"
-              onClick={onRefine}
-              className="font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
-            >
-              Not typical? Add your details →
-            </button>
+            {refined ? (
+              <>Based on your {beds}-bed {typeLabel.toLowerCase()}.</>
+            ) : (
+              <>
+                Based on a typical {typeLabel.toLowerCase()} — about {beds} bed, 2 bath.{' '}
+                <button
+                  type="button"
+                  onClick={onRefine}
+                  className="font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
+                >
+                  Not typical? Add your details →
+                </button>
+              </>
+            )}
           </p>
         </div>
 
@@ -243,8 +274,17 @@ export default function RenoResult({
         </div>
       </div>
 
-      {/* MARKET TRENDS — the second primary action, personalized to THIS region */}
-      <RenoMarketBridge where={where} region={cityRegion || city} city={city} />
+      {/* MARKET TRENDS — the second primary action, personalized to THIS region and,
+          via the cohort, to homes of THIS size and type. */}
+      <RenoMarketBridge
+        where={where}
+        region={cityRegion || city}
+        city={city}
+        typeLabel={typeLabel}
+        cohort={cohort}
+        refined={refined}
+        onRefine={onRefine}
+      />
 
       {lat != null && lng != null && (
         <RenoCarousels lat={lat} lng={lng} type={typeLabel} where={where} />

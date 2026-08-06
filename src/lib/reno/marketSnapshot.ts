@@ -91,14 +91,19 @@ export function computeMedianPrice(points: SnapshotTrendPoint[]): number | null 
  * The one-line personalized read: direction of prices + how long homes take to sell.
  * Deterministic templating over the snapshot's own numbers.
  */
-export function snapshotHeadline(s: RenoMarketSnapshot): string {
+export function snapshotHeadline(s: RenoMarketSnapshot, typeLabel?: string | null): string {
   const parts: string[] = [];
+  // When the snapshot was scoped to a property type, say so — "sold prices" alone reads
+  // as all housing stock, which is exactly the over-generalization we're fixing.
+  const kind = typeLabel ? `${typeLabel} sold prices` : 'Sold prices';
   if (s.yoyPct != null) {
     const mag = Math.abs(s.yoyPct);
-    if (mag < 1) parts.push(`Sold prices in ${s.label} are flat on the year`);
-    else parts.push(`Sold prices in ${s.label} are ${s.yoyPct > 0 ? 'up' : 'down'} ${mag.toFixed(1)}% on the year`);
+    if (mag < 1) parts.push(`${kind} in ${s.label} are flat on the year`);
+    else parts.push(`${kind} in ${s.label} are ${s.yoyPct > 0 ? 'up' : 'down'} ${mag.toFixed(1)}% on the year`);
   } else if (s.medianPrice != null) {
-    parts.push(`Homes in ${s.label} are selling around $${Math.round(s.medianPrice).toLocaleString('en-CA')}`);
+    parts.push(
+      `${typeLabel ? `${typeLabel} homes` : 'Homes'} in ${s.label} are selling around $${Math.round(s.medianPrice).toLocaleString('en-CA')}`,
+    );
   } else {
     parts.push(`Here is how ${s.label} is actually trading`);
   }
