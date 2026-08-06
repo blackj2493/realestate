@@ -41,7 +41,7 @@ import dotenv from "dotenv";
 import { getCoordinates, getFsaCentroid, loadPostalCodes, isDataLoaded } from "@/lib/postalCodes";
 import { parsePostalFromAddress } from "./parsePostal";
 import { geoFlagsFor, mergeDatasetFlag, type GeoSignals } from "@/lib/property/geoFlags";
-import { ACTIVE_DATASETS, buildGeoFlag } from "@/lib/property/geoDatasets";
+import { ACTIVE_DATASETS, DESCRIPTOR_DATASETS, buildGeoFlag, describeFeature } from "@/lib/property/geoDatasets";
 import type { DiligenceFlag } from "@/lib/property/diligence";
 dotenv.config({ path: [".env.local", ".env"] });
 
@@ -120,6 +120,28 @@ function spatialColumns(): string {
   }).join(",\n         ");
 }
 
+/**
+ * Extra SELECT columns for descriptor datasets (permits / dev apps): the NEAREST matched
+ * feature's attrs, so geoFlagsFor can say WHAT the nearby activity is. Uses the SAME
+ * match predicate as spatialColumns' distance branch (index-driven ST_DWithin superset +
+ * exact per-source _match_radius_m refine), so `attrs_<kind>` describes exactly the feature
+ * that produced `m_<kind>`. Deterministic tiebreak on f.id for stable re-runs. Purely
+ * additive — the distance computation in spatialColumns() is untouched. Empty when no
+ * descriptor datasets are active. */
+function descriptorColumns(): string {
+  return DESCRIPTOR_DATASETS.map((ds) => {
+    const m = (ds.predicate as { type: "distance"; meters: number }).meters;
+    return `(SELECT f.attrs
+               FROM geo_features f
+              WHERE f.kind='${ds.kind}'
+                AND ST_DWithin(f.geom::geography, p.geom::geography, ${m})
+                AND ST_Distance(f.geom::geography, p.geom::geography)
+                    <= COALESCE((f.attrs->>'_match_radius_m')::float8, ${m})
+              ORDER BY ST_Distance(f.geom::geography, p.geom::geography), f.id
+              LIMIT 1) AS attrs_${ds.kind}`;
+  }).join(",\n         ");
+}
+
 /** Map a spatial result row → GeoSignals for geoFlagsFor. */
 function rowToSignals(row: Record<string, unknown>): GeoSignals {
   const inside: Record<string, boolean> = {};
@@ -132,7 +154,13 @@ function rowToSignals(row: Record<string, unknown>): GeoSignals {
       distanceM[ds.kind] = v == null ? null : Number(v);
     }
   }
-  return { inside, distanceM };
+  // Nearest-feature attrs for descriptor datasets (pg parses jsonb → object).
+  const nearestAttrs: Record<string, Record<string, unknown> | null> = {};
+  for (const ds of DESCRIPTOR_DATASETS) {
+    const a = row[`attrs_${ds.kind}`];
+    nearestAttrs[ds.kind] = a != null && typeof a === "object" ? (a as Record<string, unknown>) : null;
+  }
+  return { inside, distanceM, nearestAttrs };
 }
 
 interface ListingRow {
@@ -159,6 +187,7 @@ async function loadSourceDates(client: Client): Promise<Record<string, string>> 
 // ── FULL / DELTA / GEOM-ONLY: scan listings, geocode, compute + upsert ─────────
 async function runScanSweep(client: Client, sourceDates: Record<string, string>) {
   const cols = spatialColumns();
+  const descCols = descriptorColumns();
   const flagCounts: Record<string, number> = {};
   let scanned = 0;
   let geocoded = 0;
@@ -247,7 +276,7 @@ async function runScanSweep(client: Client, sourceDates: Record<string, string>)
            FROM unnest($1::text[], $2::float8[], $3::float8[]) AS u(k, lng, lat)
          )
          SELECT p.k AS listing_key,
-         ${cols}
+         ${cols}${descCols ? `,\n         ${descCols}` : ""}
          FROM pts p`,
         [keys, lngs, lats],
       );
@@ -317,7 +346,12 @@ async function runTargetedRefresh(client: Client, kind: string, sourceDates: Rec
   // flag (so a removed / aged-out feature CLEARS the stale flag). For each, recompute the
   // per-feature-radius min distance (COALESCE mirrors the full sweep). geom NULL → excluded
   // (a listing with no trustworthy coord is correctly never flagged).
-  const { rows } = await client.query<{ listing_key: string; flags: unknown; dist: string | null }>(
+  const { rows } = await client.query<{
+    listing_key: string;
+    flags: unknown;
+    dist: string | null;
+    attrs: Record<string, unknown> | null;
+  }>(
     `WITH near AS (
         SELECT DISTINCT g.listing_key
         FROM geo_features f
@@ -339,7 +373,19 @@ async function runTargetedRefresh(client: Client, kind: string, sourceDates: Rec
               WHERE f.kind = $2
                 AND ST_DWithin(f.geom::geography, lgf.geom::geography, $1)
                 AND ST_Distance(f.geom::geography, lgf.geom::geography)
-                    <= COALESCE((f.attrs->>'_match_radius_m')::float8, $1)) AS dist
+                    <= COALESCE((f.attrs->>'_match_radius_m')::float8, $1)) AS dist,
+            -- Nearest feature's attrs → the "what is it" descriptor, computed with the SAME
+            -- predicate as dist so the two agree; f.id tiebreak = deterministic (matches the
+            -- full sweep's descriptorColumns, so a targeted refresh reproduces the identical
+            -- flag and doesn't churn). Null for non-descriptor datasets → describeFeature null.
+            (SELECT f.attrs
+               FROM geo_features f
+              WHERE f.kind = $2
+                AND ST_DWithin(f.geom::geography, lgf.geom::geography, $1)
+                AND ST_Distance(f.geom::geography, lgf.geom::geography)
+                    <= COALESCE((f.attrs->>'_match_radius_m')::float8, $1)
+              ORDER BY ST_Distance(f.geom::geography, lgf.geom::geography), f.id
+              LIMIT 1) AS attrs
      FROM cand c
      JOIN listing_geo_flags lgf ON lgf.listing_key = c.listing_key
      WHERE lgf.geom IS NOT NULL`,
@@ -359,7 +405,8 @@ async function runTargetedRefresh(client: Client, kind: string, sourceDates: Rec
     const existing: DiligenceFlag[] = Array.isArray(row.flags) ? (row.flags as DiligenceFlag[]) : [];
     const dist = row.dist == null ? null : Number(row.dist);
     const matched = dist != null && Number.isFinite(dist) && dist <= meters;
-    const newFlag = matched ? withAsOf(buildGeoFlag(ds, dist as number), sourceDates) : null;
+    const descriptor = describeFeature(kind, row.attrs);
+    const newFlag = matched ? withAsOf(buildGeoFlag(ds, dist as number, descriptor), sourceDates) : null;
 
     const before = existing.find((f) => f && f.id === ds.flag.id) ?? null;
     if (eq(before, newFlag)) continue; // nothing about this flag changed → skip the write
