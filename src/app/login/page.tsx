@@ -26,7 +26,7 @@ export default async function LoginPage({
     <div className="relative min-h-app overflow-hidden bg-background text-foreground">
       {/* CSS-only background (no Mapbox/deck.gl on the auth page): grid + emerald wash + scrim */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-background">
-        <div className="grid-pattern absolute inset-0 opacity-20" />
+        <div className="grid-pattern absolute inset-0 opacity-10 dark:opacity-20" />
         <div
           className="absolute inset-0"
           style={{
@@ -34,8 +34,19 @@ export default async function LoginPage({
               "radial-gradient(80% 50% at 50% 0%, rgba(16,185,129,0.10) 0%, transparent 60%)",
           }}
         />
+        {/* Vignette. The dark one is slate-950 at 32–60% — painted over a LIGHT
+            background that turned the whole page into grey mud, which is what
+            "washed out" was. It's now dark-only; light gets a pale slate wash
+            that still seats the card without draining the page. */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 dark:hidden"
+          style={{
+            background:
+              "radial-gradient(115% 95% at 50% 35%, rgba(255,255,255,0.55) 0%, rgba(203,213,225,0.45) 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 hidden dark:block"
           style={{
             background:
               "radial-gradient(115% 95% at 50% 35%, rgba(2,6,23,0.32) 0%, rgba(2,6,23,0.6) 100%)",
@@ -51,17 +62,22 @@ export default async function LoginPage({
             className="flex items-center"
             aria-label="PureProperty.ca home"
           >
-            <Logo size="lg" theme="dark" />
+            {/* auto, not dark: this page flips with the app theme. In dark the
+                variables resolve to the identical wordmark colours. */}
+            <Logo size="lg" theme="auto" />
           </Link>
         </header>
 
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">
           {/* Title — scale matches the apply page hero heading */}
           <div className="text-center">
-            <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
+            {/* The heading was pure white with a black glow behind it — legible
+                on the dark scrim, ~2.5:1 once the scrim went light. Dark ink in
+                light mode; the glow is a dark-mode device and stays there. */}
+            <h1 className="text-4xl font-black uppercase tracking-tight text-slate-900 md:text-6xl dark:text-white dark:[text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
               Sign in
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground dark:[text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               Sign in to sync your watchlist across devices and receive market alerts.
             </p>
           </div>
@@ -75,7 +91,7 @@ export default async function LoginPage({
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
               New here? Enter your email above — first sign-in creates your account.{" "}
-              <Link href="/apply" className="text-cyan-400 underline">
+              <Link href="/apply" className="text-cyan-700 underline dark:text-cyan-400">
                 Learn more
               </Link>
               .
@@ -92,11 +108,11 @@ export default async function LoginPage({
               </p>
               <p className="mt-2">
                 See our{" "}
-                <Link href="/terms" className="text-cyan-400 hover:underline">
+                <Link href="/terms" className="text-cyan-700 hover:underline dark:text-cyan-400">
                   Terms of Use
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-cyan-400 hover:underline">
+                <Link href="/privacy" className="text-cyan-700 hover:underline dark:text-cyan-400">
                   Privacy Policy
                 </Link>
                 .

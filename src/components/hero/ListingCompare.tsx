@@ -31,10 +31,12 @@ export default function ListingCompare() {
         <div className="flex items-center gap-2">
           <span className="h-px w-5 bg-slate-600" />
           <div>
-            <div className="terminal-font text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {/* slate-400, not text-muted-foreground: these two labels sit on the
+                dark hero, outside the white card below. */}
+            <div className="terminal-font text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               Every other platform
             </div>
-            <div className="text-[10px] text-muted-foreground">Just the basics</div>
+            <div className="text-[10px] text-slate-400">Just the basics</div>
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl bg-white text-slate-900 opacity-95 shadow-2xl transition-transform duration-300 will-change-transform hover:-translate-y-1">

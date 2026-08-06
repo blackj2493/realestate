@@ -16,7 +16,9 @@ export default function TopNav() {
       </Link>
       <Link
         href="/login"
-        className="terminal-font inline-flex h-11 shrink-0 items-center px-2 text-sm tracking-[0.15em] text-foreground transition-colors hover:text-emerald-600 dark:hover:text-emerald-400 active:text-emerald-300 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 [touch-action:manipulation] md:text-base md:tracking-[0.25em]"
+        // Pinned, not text-foreground: this nav only ever sits on the dark hero,
+        // so in light mode the token rendered [ LOGIN ] as slate-900 on a dark map.
+        className="terminal-font inline-flex h-11 shrink-0 items-center px-2 text-sm tracking-[0.15em] text-slate-200 transition-colors hover:text-emerald-400 active:text-emerald-300 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 [touch-action:manipulation] md:text-base md:tracking-[0.25em]"
       >
         [ LOGIN ]
       </Link>
