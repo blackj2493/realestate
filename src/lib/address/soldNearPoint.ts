@@ -127,8 +127,22 @@ export async function getSoldNearSummary(lat: number, lng: number): Promise<Sold
   }
 }
 
-/** Consumer path — call ONLY inside a getConsumer()-confirmed branch. */
-export async function getSoldNearGated(lat: number, lng: number): Promise<SoldNearGated | null> {
+/**
+ * Consumer path — call ONLY inside a getConsumer()-confirmed branch.
+ *
+ * `opts` widens the CARD list only (the address profile's 6-card 30-day feed is the
+ * default): a surface that headlines the 90-day count — e.g. the renovation tool's
+ * "85 sold within 2 km (90 days)" — can ask for cards drawn from that same window so
+ * the strip doesn't contradict its own header. Counts, medians and the §6.3(b) 100-row
+ * page are unaffected; `count30` stays a 30-day figure for every caller.
+ */
+export async function getSoldNearGated(
+  lat: number,
+  lng: number,
+  opts: { maxEvents?: number; eventWindowDays?: number } = {},
+): Promise<SoldNearGated | null> {
+  const maxEvents = Math.max(1, Math.min(50, opts.maxEvents ?? MAX_FEED_EVENTS));
+  const eventWindowDays = Math.max(1, Math.min(STATS_WINDOW_DAYS, opts.eventWindowDays ?? FEED_WINDOW_DAYS));
   try {
     const res = await getSoldClient()
       .collections(SOLD_LISTINGS_COLLECTION)
@@ -147,6 +161,7 @@ export async function getSoldNearGated(lat: number, lng: number): Promise<SoldNe
     const ratios: number[] = [];
     const events: SoldNearEvent[] = [];
     const feedCutoff = Date.now() - FEED_WINDOW_DAYS * 86_400_000;
+    const eventCutoff = Date.now() - eventWindowDays * 86_400_000;
     let count30 = 0;
 
     for (const h of res.hits ?? []) {
@@ -159,27 +174,25 @@ export async function getSoldNearGated(lat: number, lng: number): Promise<SoldNe
         const r = close / list;
         if (r > 0.5 && r < 2) ratios.push(r); // guard mis-keyed rows
       }
-      if (dateMs >= feedCutoff) {
-        count30++;
-        if (events.length < MAX_FEED_EVENTS) {
-          const loc = Array.isArray(d.location) && d.location.length === 2 ? (d.location as [number, number]) : null;
-          events.push({
-            id: String(d.id ?? ""),
-            address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
-            closePrice: close,
-            soldDateMs: dateMs,
-            subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
-            beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
-            baths:
-              typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0
-                ? d.BathroomsTotalInteger
-                : null,
-            brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
-            imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
-            lat: loc ? loc[0] : null,
-            lng: loc ? loc[1] : null,
-          });
-        }
+      if (dateMs >= feedCutoff) count30++;
+      if (dateMs >= eventCutoff && events.length < maxEvents) {
+        const loc = Array.isArray(d.location) && d.location.length === 2 ? (d.location as [number, number]) : null;
+        events.push({
+          id: String(d.id ?? ""),
+          address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
+          closePrice: close,
+          soldDateMs: dateMs,
+          subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
+          beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
+          baths:
+            typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0
+              ? d.BathroomsTotalInteger
+              : null,
+          brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
+          imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
+          lat: loc ? loc[0] : null,
+          lng: loc ? loc[1] : null,
+        });
       }
     }
 

@@ -35,7 +35,11 @@ export async function GET(req: NextRequest) {
   }
 
   // ── CONSUMER: full VOW rows, mapped to the card view model. ──
-  const gated = await getSoldNearGated(lat, lng);
+  // Cards are drawn from the SAME 90-day window the strip's header advertises ("85 sold
+  // within 2 km · 90 days") — the 6-card / 30-day default belongs to the address profile,
+  // and here it made the strip contradict its own count. 12 is a scroll-worth; the full
+  // set lives on the map's comps view, which the strip's "See all" link opens.
+  const gated = await getSoldNearGated(lat, lng, { maxEvents: 12, eventWindowDays: 90 });
   const cards: SimilarSoldCard[] = (gated?.events ?? []).map((e) => ({
     id: e.id,
     address: e.address,

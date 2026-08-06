@@ -155,6 +155,7 @@ function CommandCenterContent() {
     soldLocked,
     setSoldCount,
     searchPin,
+    enterComps,
     exitComps,
     setUniversalFilter,
     setFilter,
@@ -246,8 +247,13 @@ function CommandCenterContent() {
     const zoom = Number.isFinite(zRaw) ? Math.min(18, Math.max(8, zRaw)) : 14;
     setFlyTo({ lat, lng, zoom });
     const label = (searchParams.get("pin") ?? "").trim();
-    if (label) setSearchPin({ lat, lng, label });
-  }, [searchParams, setFlyTo, setSearchPin]);
+    // ?comps=1 opens the SOLD comps view around that point (sold-only layer, price
+    // bounds reset) instead of dropping a plain pin — the destination for any surface
+    // that says "see all N sold near here" (the renovation tool's sold strip today).
+    // Same state the in-map "comps" affordances produce, so there is one comps mode.
+    if (searchParams.get("comps") === "1") enterComps({ lat, lng, label: label || "This area" });
+    else if (label) setSearchPin({ lat, lng, label });
+  }, [searchParams, setFlyTo, setSearchPin, enterComps]);
 
   // Hydrate the FULL filter set from a deep link (?beds=&maxPrice=&type=…). A search
   // typed anywhere — the global header on any app page — serializes its parsed chips
