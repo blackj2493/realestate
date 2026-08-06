@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Lock, Home, Tag, Map as MapIcon } from 'lucide-react';
+import { Lock, Home, Tag, Map as MapIcon, MapPinned } from 'lucide-react';
 import { ForSaleCompCard } from '@/components/Property/ForSaleCompCard';
 import { SoldCompCard } from '@/components/Property/SoldCompCard';
 import type { SimilarForSaleCard, SimilarSoldCard } from '@/app/api/properties/[id]/similar/route';
@@ -88,6 +88,13 @@ export default function RenoCarousels({
   const soldLockedCount = sold && sold.locked ? Math.max(1, Math.min(4, sold.count90)) : 0;
   const showSold = sold && (sold.locked ? sold.count90 > 0 : sold.cards.length > 0);
 
+  // Where "see all" goes: the map's SOLD COMPS view centred on this point — every sale
+  // in the radius as pins plus the full ledger list, which is the only surface that can
+  // actually hold 85 of them. ?comps=1 is the URL entry to that mode.
+  const compsHref = `/properties?lat=${lat}&lng=${lng}&z=14&comps=1${where ? `&pin=${encodeURIComponent(where)}` : ''}`;
+  const shownSold = sold && !sold.locked ? sold.cards.length : 0;
+  const moreSold = sold && !sold.locked ? Math.max(0, sold.count90 - shownSold) : 0;
+
   return (
     <div className="space-y-6">
       {/* SOLD — the gated hook */}
@@ -114,6 +121,15 @@ export default function RenoCarousels({
                   <SoldCompCard key={c.id} card={{ ...c, why: c.why || (where ? `Nearby in ${where}` : '') }} />
                 ))}
           </Row>
+          {!sold.locked && moreSold > 0 && (
+            <Link
+              href={compsHref}
+              className="mt-1 flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-rose-500/50 [touch-action:manipulation]"
+            >
+              <MapPinned className="h-4 w-4 text-rose-600 dark:text-rose-400" aria-hidden />
+              See all {sold.count90} sold near here on the map
+            </Link>
+          )}
         </section>
       )}
 

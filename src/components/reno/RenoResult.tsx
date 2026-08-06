@@ -10,6 +10,7 @@ import { localRulesFor } from '@/lib/reno/localRules';
 import { deriveCeilingNotes } from '@/lib/reno/insights';
 import { cohortLabel, pickCohortCell, pickTypeRow } from '@/lib/reno/cohort';
 import { useRenoCohort } from '@/lib/reno/useRenoCohort';
+import { deriveSuiteEconomics } from '@/lib/reno/suiteEconomics';
 import MarketGrids from '@/components/address/MarketGrids';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
@@ -29,7 +30,6 @@ export default function RenoResult({
   typeLabel,
   unlockHref,
   onUnlock,
-  onRefine,
   communitySlug,
   cityRegion,
   beds = 3,
@@ -43,7 +43,6 @@ export default function RenoResult({
   typeLabel: string;
   unlockHref: string;
   onUnlock: () => void;
-  onRefine: () => void;
   communitySlug: string | null;
   /** RAW city_region value — what the market RPCs and /analytics match on. */
   cityRegion?: string | null;
@@ -109,6 +108,14 @@ export default function RenoResult({
   const soldCell = refined
     ? pickCohortCell(cohort?.sell?.matrix, typeLabel, beds)
     : pickTypeRow(cohort?.sell?.matrix, typeLabel);
+
+  // What a second unit would EARN here: local in-home-unit rents × the engine's legal-suite
+  // cost. Self-hides when the area has no in-home rentals to read.
+  const suite = deriveSuiteEconomics({
+    rentMatrix: cohort?.rent?.matrix,
+    rentSource: cohort?.rent?.source,
+    moves,
+  });
 
   // The rail's over-investing warning, sized to THIS home (falls back to the AVM band,
   // then to the static Ontario cautions when nothing is priced — e.g. anon).
@@ -251,22 +258,6 @@ export default function RenoResult({
           )}
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
           {report?.basis && <p className="text-xs text-muted-foreground">{report.basis}</p>}
-          <p className="text-[13px] text-muted-foreground">
-            {refined ? (
-              <>Based on your {beds}-bed {typeLabel.toLowerCase()}.</>
-            ) : (
-              <>
-                Based on a typical {typeLabel.toLowerCase()} — about {beds} bed, 2 bath.{' '}
-                <button
-                  type="button"
-                  onClick={onRefine}
-                  className="font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
-                >
-                  Not typical? Add your details →
-                </button>
-              </>
-            )}
-          </p>
         </div>
 
         {/* RAIL — free over-deliver, one calm capsule */}
@@ -277,6 +268,8 @@ export default function RenoResult({
             onUnlock={onUnlock}
             isAuthed={!result.locked}
             ceilingNotes={ceilingNotes}
+            suite={suite}
+            where={where}
           />
         </div>
       </div>

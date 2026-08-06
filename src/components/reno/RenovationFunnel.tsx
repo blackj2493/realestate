@@ -173,11 +173,6 @@ export default function RenovationFunnel({
     if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [result]);
 
-  const onRefine = () => {
-    setShowDetails(true);
-    inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   return (
     <div className="space-y-6">
       {/* ── INPUT ── */}
@@ -329,7 +324,6 @@ export default function RenovationFunnel({
             typeLabel={form.propertySubType}
             unlockHref={unlockHref}
             onUnlock={onUnlock}
-            onRefine={onRefine}
             communitySlug={communitySlug}
             cityRegion={form.cityRegion}
             beds={form.bedroomsAboveGrade}
