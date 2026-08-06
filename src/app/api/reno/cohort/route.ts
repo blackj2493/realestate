@@ -1,26 +1,26 @@
 /**
- * GET /api/reno/cohort?lat=&lng=&type=<PropertySubType>&beds=<n>
+ * GET /api/reno/cohort?lat=&lng=
  *
- * "What homes LIKE YOURS actually trade for" for the renovation tool — the same
- * beds × type grid the listing and address pages render (getBestTypicalPrices /
- * getBestTypicalRents over the adaptive 2 km→5 km pool), reduced to the ONE cell that
- * matches the home being modelled, for both the sale and the rent side.
+ * "What homes sell (and rent) for here" for the renovation tool — the SAME beds × type
+ * grids the listing and address pages render (getBestTypicalPrices / getBestTypicalRents
+ * over the adaptive 2 km→5 km pool), returned whole so the tool can show the table
+ * rather than assert a size.
  *
- * Why it exists: the tool's ceiling and market card were quoting an area-wide median
- * (and an AVM band built for a typical 3 bed / 2 bath), which is wrong for anyone whose
- * home is bigger or smaller. This scopes both numbers to the caller's own bedroom count
- * and property type, and reports how close the match is (`basis`) so the UI can be honest.
+ * Why the whole grid: the tool models a TYPICAL home (3 bed / 2 bath) unless the owner
+ * opens "Add your details", so we genuinely do not know how big their home is. Quoting a
+ * single median was wrong for anyone bigger or smaller; the grid lets the owner find
+ * their own row, and it is the same artefact they'll meet on any listing page.
  *
  * GATE: structural and inherited — getBestTypical* only touch VOW closes inside their
  * own isConsumer branch; anonymous callers get IDX asking medians, which the response
- * labels as such (`soldSource: 'asking'`). No AI anywhere in the path (§4).
+ * labels as such (`source: 'asking'`). No AI anywhere in the path (§4).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getConsumer } from '@/lib/auth/requireConsumer';
 import { getBestTypicalPrices } from '@/lib/address/soldPrices';
 import { getBestTypicalRents } from '@/lib/address/leasedRents';
-import { pickCohortCell, type RenoCohort } from '@/lib/reno/cohort';
+import type { RenoCohort } from '@/lib/reno/cohort';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,15 +28,10 @@ export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const lat = Number(p.get('lat'));
   const lng = Number(p.get('lng'));
-  const type = (p.get('type') || '').trim();
-  const beds = Number(p.get('beds'));
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return NextResponse.json({ error: 'lat and lng are required' }, { status: 400 });
   }
-  if (!type) return NextResponse.json({ error: 'type is required' }, { status: 400 });
-
-  const wantBeds = Number.isFinite(beds) ? beds : 3;
 
   try {
     const { isConsumer } = await getConsumer();
@@ -46,11 +41,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     const body: RenoCohort = {
-      sold: pickCohortCell(prices?.matrix, type, wantBeds),
-      soldSource: prices?.source ?? null,
-      rent: pickCohortCell(rents?.matrix, type, wantBeds),
-      rentSource: rents?.source ?? null,
-      radiusKm: prices?.radiusKm ?? rents?.radiusKm ?? null,
+      sell: prices?.matrix ? { matrix: prices.matrix, radiusKm: prices.radiusKm, source: prices.source } : null,
+      rent: rents?.matrix ? { matrix: rents.matrix, radiusKm: rents.radiusKm, source: rents.source } : null,
     };
     return NextResponse.json(body);
   } catch (e) {

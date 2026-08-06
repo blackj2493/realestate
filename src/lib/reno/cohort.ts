@@ -38,15 +38,18 @@ export interface CohortCell {
   typeLabel: string;
 }
 
+/** The full beds × type grid for one side of the market, as MarketGrids consumes it. */
+export interface CohortGrid<S extends string> {
+  matrix: AskingMatrix;
+  radiusKm: number;
+  source: S;
+}
+
 export interface RenoCohort {
-  /** Actual close prices (consumer) or live asking prices (anon) — always labelled. */
-  sold: CohortCell | null;
-  soldSource: 'sold' | 'asking' | null;
-  /** Achieved leases (consumer) or asking rents (anon). */
-  rent: CohortCell | null;
-  rentSource: 'leased' | 'asking' | null;
-  /** Radius the sold/asking pool was drawn from (2 or 5 km). */
-  radiusKm: number | null;
+  /** Sale side: actual closes (consumer) or live asking prices (anon) — always labelled. */
+  sell: CohortGrid<'sold' | 'asking'> | null;
+  /** Rent side: achieved leases (consumer) or asking rents (anon). */
+  rent: CohortGrid<'leased' | 'asking'> | null;
 }
 
 /** Bedroom label used in copy: 0 → "Studio", 6 → "6+". */
@@ -129,6 +132,42 @@ export function pickCohortCell(
     p75: null,
     count: n,
     beds: target,
+    basis: 'type',
+    typeLabel: row.label,
+  };
+}
+
+/**
+ * The whole type row pooled across bedroom counts — the honest read when we DON'T know
+ * how big the home is (the tool models a typical 3-bed unless the owner says otherwise,
+ * so quoting a 3-bed ceiling to a 5-bed owner would be worse than saying nothing about
+ * size at all). Count-weighted median; no p25/p75, because a band across mixed sizes
+ * describes the stock, not a home.
+ */
+export function pickTypeRow(
+  matrix: AskingMatrix | null | undefined,
+  subType: string,
+): CohortCell | null {
+  if (!matrix || !matrix.rows.length) return null;
+  const want = normalizePropertySubType(subType);
+  if (!want) return null;
+  const row = matrix.rows.find((r) => normalizePropertySubType(r.label) === want);
+  if (!row) return null;
+
+  let weighted = 0;
+  let n = 0;
+  for (const cell of row.cells) {
+    if (!cell || cell.median == null || cell.median <= 0 || cell.count <= 0) continue;
+    weighted += cell.median * cell.count;
+    n += cell.count;
+  }
+  if (n === 0) return null;
+  return {
+    median: Math.round(weighted / n),
+    p25: null,
+    p75: null,
+    count: n,
+    beds: -1, // no bedroom claim
     basis: 'type',
     typeLabel: row.label,
   };

@@ -2,22 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  LineChart,
-  ArrowRight,
-  TrendingUp,
-  TrendingDown,
-  Timer,
-  Scissors,
-  Lock,
-  Gavel,
-  Banknote,
-  KeyRound,
-  Home,
-} from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { LineChart, ArrowRight, TrendingUp, TrendingDown, Timer, Scissors, Lock, Gavel } from 'lucide-react';
 import { typeKeyForSubType } from '@/lib/dashboard/propertyTypes';
-import { bedsLabel, cohortLabel, type RenoCohort } from '@/lib/reno/cohort';
 import {
   snapshotHeadline,
   snapshotPressure,
@@ -27,12 +13,11 @@ import {
 /**
  * The PERSONALIZED market-trends doorway — the page's second primary action.
  *
- * Two bands of numbers, deliberately kept apart because they answer different questions:
- *   • HOMES LIKE YOURS — the beds × type cell (sold/asking price + typical rent) from the
- *     2 km→5 km pool, i.e. what a home of THIS size and type actually trades for. The
- *     area-wide median was misleading for anyone bigger or smaller than the typical 3 bed.
- *   • THE AREA — direction and pressure (YoY, days to sell, price cuts), scoped to the
- *     property type so a detached read isn't diluted by condo sales.
+ * It carries the AREA read only — direction and pressure (YoY, days to sell, price cuts),
+ * scoped to the property type so a detached owner isn't shown a direction diluted by
+ * condo sales. Per-home price levels deliberately live ABOVE this card, in the beds × type
+ * grid (MarketGrids), because we don't know whether the owner's home is 3, 4 or 5 bed —
+ * the table lets them find their own row instead of us asserting one median for them.
  *
  * The button then deep-links /analytics?region=<raw region>&types=<key> so Market Trends
  * opens on the same scope the caller just read. All figures are deterministic aggregates
@@ -46,13 +31,11 @@ function Stat({
   icon: Icon,
   label,
   value,
-  sub,
   tone = 'neutral',
 }: {
   icon: typeof TrendingUp;
   label: string;
   value: string;
-  sub?: string;
   tone?: 'up' | 'down' | 'neutral';
 }) {
   const toneClass =
@@ -68,7 +51,6 @@ function Stat({
         {label}
       </div>
       <div className={`mt-1 font-mono text-[19px] font-bold leading-none ${toneClass}`}>{value}</div>
-      {sub && <div className="mt-1 text-[11px] leading-tight text-muted-foreground">{sub}</div>}
     </div>
   );
 }
@@ -78,9 +60,6 @@ export default function RenoMarketBridge({
   region,
   city,
   typeLabel,
-  cohort,
-  refined,
-  onRefine,
 }: {
   /** Display name of the area the result is about. */
   where: string;
@@ -90,11 +69,6 @@ export default function RenoMarketBridge({
   city: string;
   /** PropertySubType being modelled, e.g. "Detached". */
   typeLabel: string;
-  /** "Homes like yours" cell for this size + type, when one could be resolved. */
-  cohort?: RenoCohort | null;
-  /** True once the owner has entered their own details. */
-  refined?: boolean;
-  onRefine?: () => void;
 }) {
   // Scope the area read to the property type — a detached owner should not be shown a
   // direction diluted by condo sales. Null (unknown type) = no filter, as before.
@@ -138,13 +112,6 @@ export default function RenoMarketBridge({
   const headline = hasData ? snapshotHeadline(snap, typeLabel) : null;
   const pressure = hasData ? snapshotPressure(snap) : null;
 
-  const sold = cohort?.sold ?? null;
-  const rent = cohort?.rent ?? null;
-  const soldAsking = cohort?.soldSource === 'asking';
-  const rentAsking = cohort?.rentSource === 'asking';
-  const yourLabel = sold ? cohortLabel(sold, typeLabel) : `${bedsLabel(3)} ${typeLabel.toLowerCase()}`;
-  const radius = cohort?.radiusKm ? `within ${cohort.radiusKm} km` : 'nearby';
-
   return (
     <section className={CARD} aria-labelledby="reno-market-heading">
       <div className="flex items-center gap-2">
@@ -167,56 +134,9 @@ export default function RenoMarketBridge({
           'The same sold data behind these estimates — read as the story of your market, not a spreadsheet.'}
       </p>
 
-      {/* ── HOMES LIKE YOURS — sized to this home, not to the area's average ── */}
-      {(sold || rent) && (
-        <div className="mt-4">
-          <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
-              <Home className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" strokeWidth={1.75} aria-hidden />
-              {yourLabel} homes {radius}
-            </span>
-            {!refined && onRefine && (
-              <button
-                type="button"
-                onClick={onRefine}
-                className="text-[12px] font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
-              >
-                Not your size? →
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {sold && (
-              <Stat
-                icon={Banknote}
-                label={soldAsking ? 'Asking price' : 'Sold price'}
-                value={formatPrice(sold.median)}
-                sub={
-                  sold.p25 && sold.p75
-                    ? `most ${formatPrice(sold.p25)}–${formatPrice(sold.p75)} · ${sold.count} homes`
-                    : `${sold.count} home${sold.count === 1 ? '' : 's'}${sold.basis === 'type' ? ' · all sizes' : ''}`
-                }
-              />
-            )}
-            {rent && (
-              <Stat
-                icon={KeyRound}
-                label={rentAsking ? 'Asking rent' : 'Typical rent'}
-                value={`${formatPrice(rent.median)}/mo`}
-                sub={
-                  rent.p25 && rent.p75
-                    ? `most ${formatPrice(rent.p25)}–${formatPrice(rent.p75)} · ${rent.count} leases`
-                    : `${rent.count} lease${rent.count === 1 ? '' : 's'}${rent.basis === 'type' ? ' · all sizes' : ''}`
-                }
-              />
-            )}
-          </div>
-        </div>
-      )}
-
       {/* ── THE AREA — direction + pressure, scoped to this property type ── */}
       {hasData ? (
-        <div className="mt-3">
+        <div className="mt-4">
           <div className="mb-2 text-[12px] font-semibold text-foreground">
             {typeLabel} across {areaLabel}
           </div>

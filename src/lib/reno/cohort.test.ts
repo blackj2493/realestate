@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickCohortCell, cohortLabel, bedsLabel } from './cohort';
+import { pickCohortCell, pickTypeRow, cohortLabel, bedsLabel } from './cohort';
 import type { AskingMatrix } from '@/lib/address/nearbyForSale';
 
 /** beds × type grid shaped like the live one near Northwest Brampton. */
@@ -81,6 +81,29 @@ describe('pickCohortCell', () => {
       sample: 4,
     };
     expect(pickCohortCell(big, 'Detached', 9)!.basis).toBe('exact');
+  });
+});
+
+describe('pickTypeRow (used when we do NOT know the home’s size)', () => {
+  it('pools every bedroom count of the type, count-weighted', () => {
+    const row = pickTypeRow(MATRIX, 'Detached')!;
+    expect(row.basis).toBe('type');
+    expect(row.count).toBe(54); // 18 + 24 + 12
+    expect(row.median).toBe(Math.round((905_000 * 18 + 1_050_000 * 24 + 1_240_000 * 12) / 54));
+  });
+
+  it('makes no bedroom claim and no middle-50% band', () => {
+    const row = pickTypeRow(MATRIX, 'Detached')!;
+    expect(row.beds).toBe(-1);
+    expect(row.p25).toBeNull();
+    expect(row.p75).toBeNull();
+    expect(cohortLabel(row, 'Detached')).toBe('Detached (any size)');
+  });
+
+  it('matches board spellings and is null-safe', () => {
+    expect(pickTypeRow(MATRIX, 'Townhouse')!.typeLabel).toBe('Att/Row/Townhouse');
+    expect(pickTypeRow(MATRIX, 'Condo Apartment')).toBeNull();
+    expect(pickTypeRow(null, 'Detached')).toBeNull();
   });
 });
 

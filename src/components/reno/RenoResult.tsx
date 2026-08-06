@@ -8,8 +8,9 @@ import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
 import { deriveCeilingNotes } from '@/lib/reno/insights';
-import { cohortLabel } from '@/lib/reno/cohort';
+import { cohortLabel, pickCohortCell, pickTypeRow } from '@/lib/reno/cohort';
 import { useRenoCohort } from '@/lib/reno/useRenoCohort';
+import MarketGrids from '@/components/address/MarketGrids';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
 import RenoMarketBridge from './RenoMarketBridge';
@@ -97,11 +98,17 @@ export default function RenoResult({
   const losers = result.locked ? [] : moves.filter((m) => Number.isFinite(m.paybackRatio) && (m.paybackRatio ?? 0) < 1);
   const splitMoves = winners.length > 0 && losers.length > 0;
 
-  // "Homes like yours" — the beds × type cell for THIS home (2 km→5 km pool), the basis
-  // for both the ceiling and the market card's price. Scoped by the owner's own bedroom
-  // count when they've refined, otherwise by the typical 3-bed the engine modelled.
-  const { cohort } = useRenoCohort(lat, lng, typeLabel, beds);
-  const soldCell = cohort?.sold ?? null;
+  // The beds × type grids for this location — the same "what homes sell/rent for here"
+  // tables the listing pages show. We render the WHOLE grid rather than assert a size:
+  // unless the owner opened "Add your details", we don't know if their home is 3, 4 or 5
+  // bed, so the table lets them find their own row.
+  const { cohort } = useRenoCohort(lat, lng);
+
+  // The ceiling number follows the same rule: the owner's exact bedroom cell only once
+  // they've told us their beds; otherwise the type pooled across sizes, with no size claim.
+  const soldCell = refined
+    ? pickCohortCell(cohort?.sell?.matrix, typeLabel, beds)
+    : pickTypeRow(cohort?.sell?.matrix, typeLabel);
 
   // The rail's over-investing warning, sized to THIS home (falls back to the AVM band,
   // then to the static Ontario cautions when nothing is priced — e.g. anon).
@@ -115,8 +122,8 @@ export default function RenoResult({
           median: soldCell.median,
           p75: soldCell.p75,
           count: soldCell.count,
-          radiusKm: cohort?.radiusKm ?? null,
-          source: cohort?.soldSource ?? null,
+          radiusKm: cohort?.sell?.radiusKm ?? null,
+          source: cohort?.sell?.source ?? null,
           pooled: soldCell.basis === 'type',
         }
       : null,
@@ -274,17 +281,14 @@ export default function RenoResult({
         </div>
       </div>
 
-      {/* MARKET TRENDS — the second primary action, personalized to THIS region and,
-          via the cohort, to homes of THIS size and type. */}
-      <RenoMarketBridge
-        where={where}
-        region={cityRegion || city}
-        city={city}
-        typeLabel={typeLabel}
-        cohort={cohort}
-        refined={refined}
-        onRefine={onRefine}
-      />
+      {/* WHAT HOMES SELL / RENT FOR HERE — the same beds × type tables as the listing
+          pages. Every size is on screen, so nobody has to take our "typical" on faith. */}
+      {(cohort?.sell || cohort?.rent) && (
+        <MarketGrids sell={cohort.sell} rent={cohort.rent} showSignInNudge={result.locked} />
+      )}
+
+      {/* MARKET TRENDS — the second primary action, personalized to THIS region + type. */}
+      <RenoMarketBridge where={where} region={cityRegion || city} city={city} typeLabel={typeLabel} />
 
       {lat != null && lng != null && (
         <RenoCarousels lat={lat} lng={lng} type={typeLabel} where={where} />
