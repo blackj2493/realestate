@@ -12,6 +12,7 @@ import { deriveEligibilityEvidence } from '@/lib/reno/eligibilityEvidence';
 import MarketGrids from '@/components/address/MarketGrids';
 import RenoMoveCard, { type RenoMoveDisplay } from './RenoMoveCard';
 import RenoInsightStrip from './RenoInsights';
+import RenoMethodNote from './RenoMethodNote';
 import RenoMarketBridge from './RenoMarketBridge';
 import RenoCarousels from './RenoCarousels';
 import ShareChallengeButton from './ShareChallengeButton';
@@ -173,10 +174,22 @@ export default function RenoResult({
           go straight to the ranked cards; the old 3-card insight strip repeated them. */}
       {result.locked && <RenoInsightStrip where={where} unlockHref={unlockHref} onUnlock={onUnlock} />}
 
-      <p className="text-[13px] leading-relaxed text-muted-foreground">
-        These are typical numbers for a {typeLabel.toLowerCase()} in {where}. For a specific home’s own
-        estimate and details, open its listing page.
-      </p>
+      {/* CREDIBILITY — the engine's own diagnostics, collapsed by default. */}
+      <RenoMethodNote
+        locked={result.locked}
+        basis={report?.basis ?? null}
+        typeLabel={typeLabel}
+        where={where}
+        stats={{
+          r2Score: estimate?.r2Score ?? null,
+          comps: estimate?.comps ?? null,
+          nEff: estimate?.nEff ?? null,
+          confidence: report?.confidence ?? estimate?.confidence ?? null,
+          estimatedValue: estimate?.estimatedValue ?? null,
+          lowBand: estimate?.lowBand ?? null,
+          highBand: estimate?.highBand ?? null,
+        }}
+      />
 
       {/* two-column: moves + rail */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
@@ -221,7 +234,6 @@ export default function RenoResult({
             </Link>
           )}
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
-          {report?.basis && <p className="text-xs text-muted-foreground">{report.basis}</p>}
         </div>
 
         {/* RAIL — free over-deliver, one calm capsule */}
