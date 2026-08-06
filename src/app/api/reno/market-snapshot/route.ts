@@ -23,9 +23,13 @@ import {
   getTrendCached,
   getSoldDynamicsCached,
   getPriceCutsCached,
+  getDomDistCached,
+  getListingOutcomesCached,
   ZERO_SCOPE,
   EMPTY_SOLD_DYNAMICS,
   EMPTY_CUTS,
+  EMPTY_DOM,
+  EMPTY_OUTCOMES,
 } from '@/lib/market/aggregates';
 import { formatRegionLabel } from '@/lib/regions/formatRegionLabel';
 import { computeMedianPrice, computeYoyPct, type RenoMarketSnapshotResp } from '@/lib/reno/marketSnapshot';
@@ -77,12 +81,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const [dynR, cutsR] = await Promise.allSettled([
+    // The shadow set: sold dynamics + price-cut pressure + the TRUE-DOM distribution
+    // (relists stitched, which is the metric the board's own clock hides) + listing
+    // outcomes (how many listings never sell at all). allSettled so one slow or missing
+    // RPC degrades a tile instead of the card.
+    const [dynR, cutsR, domR, outR] = await Promise.allSettled([
       getSoldDynamicsCached(resolved, typeKeys, ZERO_SCOPE),
       getPriceCutsCached(resolved, typeKeys, ZERO_SCOPE),
+      getDomDistCached(resolved, typeKeys, ZERO_SCOPE),
+      getListingOutcomesCached(resolved, typeKeys),
     ]);
     const dyn = dynR.status === 'fulfilled' ? dynR.value : EMPTY_SOLD_DYNAMICS;
     const cuts = cutsR.status === 'fulfilled' ? cutsR.value : EMPTY_CUTS;
+    const dom = domR.status === 'fulfilled' ? domR.value : EMPTY_DOM;
+    const out = outR.status === 'fulfilled' ? outR.value : EMPTY_OUTCOMES;
 
     const body: RenoMarketSnapshotResp = {
       locked: false,
@@ -95,7 +107,14 @@ export async function GET(req: NextRequest) {
       medianDom: dyn.medianDom,
       soldToListPct: trend.summary.soldToListPct,
       cutShare: cuts.cutShare,
+      medianCutPct: cuts.medianCutPct,
       underAskShare: dyn.underAskShare,
+      activeCount: dom.activeCount || cuts.activeCount,
+      trueDom: dom.medianTrueDom,
+      naiveDom: dom.medianNaiveDom,
+      stalePct: dom.stalePct,
+      sellThroughPct: out.failureRate != null ? (1 - out.failureRate) * 100 : null,
+      failedMedianDom: out.medianFailedDom,
     };
     return NextResponse.json(body);
   } catch (e) {
