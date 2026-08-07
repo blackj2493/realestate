@@ -19,8 +19,8 @@ export async function generateMetadata({
     ? `Which renovation pays you back most in ${where}?`
     : 'What could a reno add to your home? Renovation payback, ranked';
   const description = where
-    ? `Every renovation ranked by what it returns per dollar spent, modelled on closed ${where} sales — not national reno averages. Free.`
-    : 'Every renovation ranked by what it returns per dollar spent — modelled on closed sales of comparable homes in your neighbourhood, refreshed daily. Free.';
+    ? `PureProperty Intelligence models ${where} on its own closed sales and ranks every renovation by value added per dollar spent — for your property type, in your neighbourhood. Not national reno averages.`
+    : 'PureProperty Intelligence models your neighbourhood on its own closed sales and ranks every renovation by value added per dollar spent — for your property type, on your local market. Not national reno averages.';
   const ogImage = `/api/og/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`;
 
   return {
@@ -51,20 +51,25 @@ export default async function WhatsMyHomeHidingPage({
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
-        <h1 className="mb-1.5 text-3xl font-bold text-foreground">What could a reno add to your home?</h1>
+        <h1 className="mb-1.5 text-3xl font-bold text-foreground">
+          What could a reno add to your home{communityLabel ? ` in ${communityLabel}` : ''}?
+        </h1>
         <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Every renovation ranked by what it actually returns —{' '}
-          <b className="font-semibold text-foreground">value added per dollar spent</b>, measured
-          against closed sales of comparable homes in your neighbourhood. Not national reno averages,
-          not a contractor&rsquo;s estimate.
+          Renovation payback is local — what pays back in{' '}
+          {communityLabel ?? 'one neighbourhood'} is not what pays back the next one over.{' '}
+          <b className="font-semibold text-foreground">PureProperty Intelligence</b> models{' '}
+          {communityLabel ?? 'your neighbourhood'} on its own closed sales and ranks every renovation
+          by <b className="font-semibold text-foreground">value added per dollar spent</b>, for your
+          property type. Not national reno averages, not a contractor&rsquo;s estimate.
         </p>
-        {/* The credibility byline: three facts about the method, stated as facts. */}
+        {/* The credibility byline: facts about the method, stated as facts. */}
         <ul className="mb-8 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 font-mono text-[11.5px] text-muted-foreground">
           {[
-            'Closed sales only — never asking prices',
-            'Fitted per neighbourhood + property type',
+            communityLabel ? `${communityLabel}'s own closed sales` : 'Your neighbourhood’s own closed sales',
+            'Never asking prices',
+            'Modelled per property type',
             'Refreshed every 24h',
-            'Free · about a minute',
+            'About a minute',
           ].map((chip) => (
             <li key={chip} className="rounded-full border border-border bg-card px-2.5 py-1">
               {chip}
