@@ -22,9 +22,28 @@ export default function HeroBackground({
       : "radial-gradient(115% 95% at 50% 40%, rgba(2,6,23,0.06) 0%, rgba(2,6,23,0.5) 100%)";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-background">
-      {/* Faint texture shown only until the map tiles load */}
-      <div className="grid-pattern absolute inset-0 opacity-20" />
+    // The ground is PINNED dark (slate-950 === the dark `--background`, so dark mode
+    // is unchanged) rather than themed `bg-background`. Everything painted on top of
+    // it — the dark-v11 Mapbox style, the scrim below, and the hero/apply content —
+    // is authored light-on-dark, so this surface must not flip with the theme.
+    //
+    // It used to be `bg-background`. On DESKTOP that was invisible because the opaque
+    // map covers it, but the map is skipped on phones (see below), so in light mode the
+    // ground showed through as #e9edf4 and the scrim greyed the whole page out
+    // (#9fa3ad centre → #5e626f edges), washing out the white type and the wordmark.
+    // Same defect #303 fixed on /login; this is the component /  and /apply use.
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-slate-950">
+      {/* Faint texture shown only until the map tiles load. Inlined rather than the
+          global `.grid-pattern`, which is blanked under `:root:not(.dark)` — that rule
+          exists for genuinely light grounds, and this one is never light. */}
+      <div
+        className="absolute inset-0 opacity-20"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(30,41,59,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(30,41,59,0.3) 1px, transparent 1px)",
+          backgroundSize: "20px 20px",
+        }}
+      />
 
       {/* Live deck.gl + Mapbox dark map — desktop only (skipped on phones) */}
       {!isMobile && <HeroMapCanvas />}

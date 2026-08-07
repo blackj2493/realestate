@@ -27,7 +27,9 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <div className="relative min-h-app overflow-hidden bg-background text-foreground">
+    // Pinned dark to match /apply: this page sits on HeroBackground's permanently
+    // dark ground, so themed `bg-background`/`text-foreground` only mis-colored it.
+    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-200">
       <HeroBackground variant="hero" />
 
       <div className="relative z-10 flex min-h-app flex-col">
@@ -35,7 +37,7 @@ export default function HomePage() {
 
         {/* Hero — compact so the comparison cards AND the CTA stay above the fold */}
         <main className="flex flex-1 flex-col items-center justify-center px-6 py-5 text-center">
-          <p className="terminal-font mb-5 text-[14.4px] font-semibold uppercase tracking-[0.3em] text-emerald-700 dark:text-emerald-400 md:text-[16.8px] [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
+          <p className="terminal-font mb-5 text-[14.4px] font-semibold uppercase tracking-[0.3em] text-emerald-400 md:text-[16.8px] [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
             For serious buyers &amp; investors — not browsers
           </p>
 
@@ -66,7 +68,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/properties"
-              className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-md border border-border/70 px-10 text-base font-bold uppercase tracking-[0.15em] text-slate-200 transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)] sm:w-auto"
+              className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-md border border-slate-700/70 px-10 text-base font-bold uppercase tracking-[0.15em] text-slate-200 transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)] sm:w-auto"
             >
               Browse listings
             </Link>
@@ -76,18 +78,18 @@ export default function HomePage() {
               client-only terminal above, so this is the top of the SEO hub tree. */}
           <Link
             href="/property"
-            className="terminal-font mt-3.5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+            className="terminal-font mt-3.5 text-[11px] uppercase tracking-[0.22em] text-slate-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
           >
             Browse homes by city &rarr;
           </Link>
 
-          <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
+          <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-slate-400 [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers
           </p>
           {/* TRESA / VOW §6.3(e): brokerage-identity disclosure, kept low-key as a link. */}
           <Link
             href="/operated-by"
-            className="terminal-font mt-2 text-[10px] uppercase tracking-[0.22em] text-muted-foreground underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+            className="terminal-font mt-2 text-[10px] uppercase tracking-[0.22em] text-slate-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
           >
             Operated under licence
           </Link>
