@@ -107,6 +107,20 @@ export default function RenoResult({
     radiusKm: cohort?.sell?.radiusKm ?? cohort?.rent?.radiusKm ?? null,
   });
 
+  // The hero's credibility line: how much evidence is behind the number. Cohort sales
+  // first (what the model was fitted on), then the nearby comparables the anchor weighed.
+  const sampleLine = (() => {
+    const bits: string[] = [];
+    const cohortN = report?.salesAnalyzed ?? null;
+    if (cohortN && cohortN > 0) {
+      bits.push(`${cohortN.toLocaleString('en-CA')} closed ${typeLabel.toLowerCase()} sales analyzed in ${where}`);
+    }
+    if (estimate?.comps && estimate.comps > 0) {
+      bits.push(`${estimate.comps.toLocaleString('en-CA')} nearby comparables weighted`);
+    }
+    return bits.length ? bits.join(' · ') : null;
+  })();
+
   const movesHeader = (
     <div className="flex items-center justify-between">
       <h2 className="flex items-center gap-2 text-[15px] font-bold text-foreground">
@@ -159,12 +173,12 @@ export default function RenoResult({
               </span>
             )}
           </div>
-          {estimate && estimate.estimatedValue > 0 && (
+          {/* What the number was built FROM — the sample, not the home's own value. The
+              owner came for the reno upside, not an appraisal; the sale price they'd get
+              is a different question, and quoting it here invited it to be read as one. */}
+          {sampleLine && (
             <p className="mt-2 border-t border-border pt-2 font-mono text-[12.5px] text-muted-foreground">
-              Est. value {formatPrice(estimate.estimatedValue)}
-              {estimate.lowBand > 0 && estimate.highBand > 0 && (
-                <> · range {formatPrice(estimate.lowBand)}–{formatPrice(estimate.highBand)}</>
-              )}
+              {sampleLine}
             </p>
           )}
         </div>
@@ -177,7 +191,6 @@ export default function RenoResult({
       {/* CREDIBILITY — the engine's own diagnostics, collapsed by default. */}
       <RenoMethodNote
         locked={result.locked}
-        basis={report?.basis ?? null}
         typeLabel={typeLabel}
         where={where}
         stats={{

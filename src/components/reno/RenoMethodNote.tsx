@@ -6,24 +6,22 @@ import { buildMethodRows, type MethodStatsInput } from '@/lib/reno/methodStats';
 /**
  * "How this number is built" — the credibility block under the headline.
  *
- * It shows the engine's own diagnostics (cohort sample, fit, effective sample after
- * weighting, the width of the predictive band) so a technical reader can see the number
- * is FITTED, not guessed — while giving away nothing about how the model works. The
- * cohort basis line lives here too, instead of floating alone under the moves.
+ * It QUALIFIES the evidence the hero has already counted: how much of the sample really
+ * counted after weighting, how well the model fits, how wide the predictive band is, how
+ * fresh the feed is. A technical reader can see the number is FITTED, not guessed, while
+ * nothing here gives away how the model works. The raw sample size stays in the hero —
+ * one fact, one place.
  *
  * Anonymous callers see the method rows the engine can state without a cohort (data
  * source + determinism); no VOW-derived diagnostic renders behind the gate.
  */
 export default function RenoMethodNote({
   stats,
-  basis,
   typeLabel,
   where,
   locked,
 }: {
   stats: MethodStatsInput;
-  /** The engine's cohort line, e.g. "Based on 348 Barrhaven Detached sales". */
-  basis?: string | null;
   typeLabel: string;
   where: string;
   locked: boolean;
@@ -43,8 +41,6 @@ export default function RenoMethodNote({
       </summary>
 
       <div className="border-t border-border px-3.5 pb-3.5 pt-3">
-        {basis && <p className="mb-2.5 font-mono text-[12.5px] text-foreground">{basis}</p>}
-
         {rows.length > 0 && (
           <dl className="divide-y divide-border/60">
             {rows.map((r) => (

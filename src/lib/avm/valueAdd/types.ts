@@ -88,6 +88,8 @@ export interface ValueAddReport {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   moves: ValueAddMove[];
   neighbourhoodInsight: string;
+  /** Closed sales the cohort's coefficients were fitted on (null when untrained). */
+  salesAnalyzed: number | null;
   basis: string;
   disclaimer: string;
 }
