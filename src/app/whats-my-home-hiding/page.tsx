@@ -17,10 +17,10 @@ export async function generateMetadata({
   const where = slug ? deslugifyCommunity(slug) : null;
   const title = where
     ? `Which renovation pays you back most in ${where}?`
-    : 'What could a reno add to your home? Free renovation upside';
+    : 'What could a reno add to your home? Renovation payback, ranked';
   const description = where
-    ? `Find the renovation that pays back most for your ${where} home. Free, 60-second analysis.`
-    : 'See the renovations that pay back most for a home like yours — ranked by real nearby sales. Free.';
+    ? `Every renovation ranked by what it returns per dollar spent, modelled on closed ${where} sales — not national reno averages. Free.`
+    : 'Every renovation ranked by what it returns per dollar spent — modelled on closed sales of comparable homes in your neighbourhood, refreshed daily. Free.';
   const ogImage = `/api/og/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`;
 
   return {
@@ -51,11 +51,26 @@ export default async function WhatsMyHomeHidingPage({
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
-        <h1 className="mb-1 text-3xl font-bold text-foreground">What could a reno add to your home?</h1>
-        <p className="mb-8 max-w-2xl text-sm text-muted-foreground">
-          See the renovations that pay back most for a home like yours — ranked by real nearby sales.
-          Free, in under a minute.
+        <h1 className="mb-1.5 text-3xl font-bold text-foreground">What could a reno add to your home?</h1>
+        <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+          Every renovation ranked by what it actually returns —{' '}
+          <b className="font-semibold text-foreground">value added per dollar spent</b>, measured
+          against closed sales of comparable homes in your neighbourhood. Not national reno averages,
+          not a contractor&rsquo;s estimate.
         </p>
+        {/* The credibility byline: three facts about the method, stated as facts. */}
+        <ul className="mb-8 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 font-mono text-[11.5px] text-muted-foreground">
+          {[
+            'Closed sales only — never asking prices',
+            'Fitted per neighbourhood + property type',
+            'Refreshed every 24h',
+            'Free · about a minute',
+          ].map((chip) => (
+            <li key={chip} className="rounded-full border border-border bg-card px-2.5 py-1">
+              {chip}
+            </li>
+          ))}
+        </ul>
         <RenovationFunnel
           tree={tree}
           initialCity={resolved?.city ?? ''}
