@@ -47,7 +47,7 @@ export default function HomePage() {
             <span className="text-slate-200">Before you bid, not after you close.</span>
           </h1>
 
-          <p className="mt-5 max-w-[44rem] text-[16.8px] leading-relaxed text-foreground md:text-[18px] [text-shadow:0_2px_14px_rgba(0,0,0,0.8)]">
+          <p className="mt-5 max-w-[44rem] text-[16.8px] leading-relaxed text-slate-200 md:text-[18px] [text-shadow:0_2px_14px_rgba(0,0,0,0.8)]">
             The same listing — on every other platform, and on PureProperty:
           </p>
 
