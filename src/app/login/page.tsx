@@ -34,8 +34,11 @@ export default async function LoginPage({
               "radial-gradient(80% 50% at 50% 0%, rgba(16,185,129,0.10) 0%, transparent 60%)",
           }}
         />
+        {/* Vignette scrim — dark mode only. It exists to darken a dark page toward
+            the edges; painted over the light ground it just greys the whole page
+            out (#e9edf4 → #9fa3ad centre, #5e626f edges) and washes out the type. */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 hidden dark:block"
           style={{
             background:
               "radial-gradient(115% 95% at 50% 35%, rgba(2,6,23,0.32) 0%, rgba(2,6,23,0.6) 100%)",
@@ -51,17 +54,21 @@ export default async function LoginPage({
             className="flex items-center"
             aria-label="PureProperty.ca home"
           >
-            <Logo size="lg" theme="dark" />
+            {/* "auto" follows the app theme — this header sits on the page ground,
+                which flips, not on a permanently-dark band. */}
+            <Logo size="lg" theme="auto" />
           </Link>
         </header>
 
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">
           {/* Title — scale matches the apply page hero heading */}
           <div className="text-center">
-            <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
+            {/* Both the white fill and the heavy black glow assume a dark ground —
+                scoped to dark so light mode gets dark type and no smudge. */}
+            <h1 className="text-4xl font-black uppercase tracking-tight text-slate-900 md:text-6xl dark:text-white dark:[text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
               Sign in
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground dark:[text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               Sign in to sync your watchlist across devices and receive market alerts.
             </p>
           </div>
@@ -75,7 +82,7 @@ export default async function LoginPage({
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
               New here? Enter your email above — first sign-in creates your account.{" "}
-              <Link href="/apply" className="text-cyan-400 underline">
+              <Link href="/apply" className="text-cyan-700 dark:text-cyan-400 underline">
                 Learn more
               </Link>
               .
@@ -92,11 +99,11 @@ export default async function LoginPage({
               </p>
               <p className="mt-2">
                 See our{" "}
-                <Link href="/terms" className="text-cyan-400 hover:underline">
+                <Link href="/terms" className="text-cyan-700 dark:text-cyan-400 hover:underline">
                   Terms of Use
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-cyan-400 hover:underline">
+                <Link href="/privacy" className="text-cyan-700 dark:text-cyan-400 hover:underline">
                   Privacy Policy
                 </Link>
                 .

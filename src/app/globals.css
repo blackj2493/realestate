@@ -474,10 +474,18 @@ table,
 
 /* Grid line background pattern */
 .grid-pattern {
-  background-image: 
+  background-image:
     linear-gradient(rgba(30, 41, 59, 0.3) 1px, transparent 1px),
     linear-gradient(90deg, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* The grid lines are slate-800 — near-invisible texture on the dark ground they
+   were drawn for, but a hard graph-paper overlay on the light one. Drop them in
+   light mode everywhere the class is used (HeroBackground on / and /apply, and
+   the auth page's CSS-only background). */
+:root:not(.dark) .grid-pattern {
+  background-image: none;
 }
 
 /* Blinking cursor animation */
