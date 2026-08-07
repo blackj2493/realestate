@@ -41,17 +41,24 @@ export function bandPct(input: MethodStatsInput): number | null {
 }
 
 /**
- * The rows to render. Order is deliberate: what it learned from → how well it fits →
- * how honest the range is → how fresh the data is.
+ * The rows to render. Order is deliberate: how much of the sample really counted → how
+ * well the model fits → how honest the range is → how fresh the data is. The raw sample
+ * SIZE is deliberately absent: the hero states it, and this panel qualifies it.
  */
 export function buildMethodRows(input: MethodStatsInput): MethodRow[] {
   const rows: MethodRow[] = [];
 
-  if (typeof input.comps === 'number' && input.comps > 0) {
-    const eff = typeof input.nEff === 'number' && input.nEff > 0 ? Math.round(input.nEff) : null;
+  // Only the EFFECTIVE sample lives here — the raw comparable count is stated in the
+  // hero's evidence line, and repeating it would say one fact in two places.
+  if (
+    typeof input.comps === 'number' &&
+    input.comps > 0 &&
+    typeof input.nEff === 'number' &&
+    input.nEff > 0
+  ) {
     rows.push({
-      label: 'Comparable sales',
-      value: eff ? `${input.comps} weighted → ${eff} effective` : `${input.comps} weighted`,
+      label: 'Effective sample',
+      value: `${Math.round(input.nEff)} of ${input.comps}`,
       note: 'Recent and similar sales count for more; outliers count for less.',
     });
   }

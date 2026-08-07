@@ -26,8 +26,8 @@ describe('bandPct', () => {
 describe('buildMethodRows', () => {
   it('reports comparables raw and effective, fit, band and freshness', () => {
     const rows = buildMethodRows(FULL);
-    expect(rows.map((r) => r.label)).toEqual(['Comparable sales', 'Model fit', 'Range shown', 'Data']);
-    expect(rows[0].value).toBe('412 weighted → 96 effective');
+    expect(rows.map((r) => r.label)).toEqual(['Effective sample', 'Model fit', 'Range shown', 'Data']);
+    expect(rows[0].value).toBe('96 of 412');
     expect(rows[1].value).toBe('R² 0.86 · high confidence');
     expect(rows[2].value).toBe('±7.7%');
     expect(rows[3].value).toContain('24h');
@@ -38,13 +38,14 @@ describe('buildMethodRows', () => {
     expect(rows.map((r) => r.label)).toEqual(['Data']); // the only always-true row
   });
 
-  it('drops the effective-sample clause when weighting produced no nEff', () => {
-    expect(buildMethodRows({ ...FULL, nEff: null })[0].value).toBe('412 weighted');
+  it('drops the row entirely when weighting produced no effective sample', () => {
+    // The hero already states the raw comparable count — a bare repeat adds nothing.
+    expect(buildMethodRows({ ...FULL, nEff: null }).map((r) => r.label)).not.toContain('Effective sample');
   });
 
   it('drops the confidence clause when the engine assigned none', () => {
     const rows = buildMethodRows({ ...FULL, confidence: null });
-    expect(rows[1].value).toBe('R² 0.86');
+    expect(rows.find((r) => r.label === 'Model fit')!.value).toBe('R² 0.86');
   });
 
   it('always states the source is closed sales, not asking prices', () => {
