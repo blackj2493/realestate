@@ -42,10 +42,12 @@ export default function HomePage() {
           <h1 className="max-w-[66rem] text-balance font-black uppercase leading-[0.92] tracking-tight text-white text-[clamp(2.4rem,5.76vw,4.62rem)] [text-shadow:0_4px_30px_rgba(0,0,0,0.65)]">
             See every listing like the smart money does.
             <br />
-            <span className="text-foreground">Before you bid, not after you close.</span>
+            {/* Fixed light-on-dark: this sits on HeroBackground's hardcoded dark-v11
+                map, so `text-foreground` went near-black here in light mode. */}
+            <span className="text-slate-200">Before you bid, not after you close.</span>
           </h1>
 
-          <p className="mt-5 max-w-[44rem] text-[16.8px] leading-relaxed text-foreground md:text-[18px] [text-shadow:0_2px_14px_rgba(0,0,0,0.8)]">
+          <p className="mt-5 max-w-[44rem] text-[16.8px] leading-relaxed text-slate-200 md:text-[18px] [text-shadow:0_2px_14px_rgba(0,0,0,0.8)]">
             The same listing — on every other platform, and on PureProperty:
           </p>
 
@@ -64,7 +66,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/properties"
-              className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-md border border-border/70 px-10 text-base font-bold uppercase tracking-[0.15em] text-foreground transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)] sm:w-auto"
+              className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-md border border-border/70 px-10 text-base font-bold uppercase tracking-[0.15em] text-slate-200 transition-colors hover:border-emerald-400/60 hover:text-emerald-300 active:text-emerald-300 [touch-action:manipulation] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)] sm:w-auto"
             >
               Browse listings
             </Link>
