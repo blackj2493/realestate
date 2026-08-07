@@ -224,11 +224,20 @@ export default function LocationSearch({
   };
 
   const fmt = totalCount.toLocaleString();
+  // `totalCount` lives in the terminal's store, so OFF the terminal it stays 0
+  // and this always falls through to the last branch. In navigate mode (the app
+  // header) that box is ~288px — 220px of text once the icon and clear-button
+  // padding are removed — and the long prompt measures 324px in JetBrains Mono
+  // 12px, so it was permanently clipped mid-word rather than transiently. The
+  // header gets a prompt that fits; the terminal's own search is full-width and
+  // keeps the fuller wording.
   const placeholder = placeholderProp ?? (location
     ? `${location}, ON  |  Search ${fmt} Active Listings…`
     : totalCount > 0
       ? `Search ${fmt} Active Listings…`
-      : "Search city, neighbourhood, address, or MLS#…");
+      : mode === "navigate"
+        ? "Search city, address, or MLS#…"
+        : "Search city, neighbourhood, address, or MLS#…");
 
   // In navigate mode the store `location` isn't ours to clear, so the X only
   // reflects the typed value; inplace mode also surfaces a committed location.

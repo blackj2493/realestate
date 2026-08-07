@@ -89,8 +89,25 @@ export default function AppHeader({
           </span>
         </Link>
 
-        {/* Global search sits next to the logo on the left (collapses below lg). */}
-        {search && <LocationSearch mode="navigate" className="hidden shrink-0 lg:block lg:w-72" />}
+        {/* Global search sits next to the logo on the left (collapses below lg).
+            Elastic rather than a fixed w-72: it keeps 18rem as a FLOOR (the old
+            fixed width, so nothing can get tighter than it is today) and grows
+            into whatever the row actually has spare, up to 26rem. A fixed width
+            clipped typed addresses — "127 Via Toscana N/A, Vaughan, ON L4H 3C1"
+            measures 288px against 220px of usable box — and picking wider
+            breakpoints by hand is unsafe here, because the signed-in header
+            carries ~114px more chrome (handle + Sign out) than the signed-out
+            one, and lg is already near capacity. Letting flex do the arithmetic
+            adapts to both without a breakpoint guess. The grow factor is 10
+            against the spacer's 1 so the search claims the slack FIRST and
+            reaches its cap; sharing it evenly left the box at its floor until
+            ~1434px, which is above most laptop widths. */}
+        {search && (
+          <LocationSearch
+            mode="navigate"
+            className="hidden lg:block lg:min-w-[18rem] lg:max-w-[26rem] lg:flex-[10]"
+          />
+        )}
 
         {/* Spacer pushes the nav + right cluster to the edge. */}
         <div className="flex-1" />
