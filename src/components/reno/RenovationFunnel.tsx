@@ -80,6 +80,12 @@ export default function RenovationFunnel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // Campaign tag, so a founding seat can be traced back to the send that
+          // earned it. AVMInputSchema strips it; the route reads the raw body.
+          source:
+            typeof window !== 'undefined'
+              ? new URLSearchParams(window.location.search).get('ref')
+              : null,
           cityRegion: f.cityRegion,
           city: f.city,
           propertySubType: f.propertySubType,

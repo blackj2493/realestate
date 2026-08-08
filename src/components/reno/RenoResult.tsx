@@ -17,10 +17,19 @@ import RenoMarketBridge from './RenoMarketBridge';
 import RenoCarousels from './RenoCarousels';
 import ShareChallengeButton from './ShareChallengeButton';
 import { RenoGuidePanel } from './RenoPanels';
+import { FoundingSeatsOffer, FoundingSeatHeld } from './FoundingSeats';
+import { FOUNDING_SEAT_TOTAL, shouldShowSeats, type SeatSummary } from '@/lib/founding/seats';
 
 export type RenoResultData =
-  | { locked: true; catalog: AnonCatalogItem[] }
-  | { locked: false; estimate: AVMResult | null; report: ValueAddReport | null };
+  | { locked: true; catalog: AnonCatalogItem[]; seats?: SeatSummary | null }
+  | {
+      locked: false;
+      estimate: AVMResult | null;
+      report: ValueAddReport | null;
+      seats?: SeatSummary | null;
+      /** This user's founding seat, taken during this very request. */
+      seat?: number | null;
+    };
 
 export default function RenoResult({
   result,
@@ -188,6 +197,13 @@ export default function RenoResult({
           go straight to the ranked cards; the old 3-card insight strip repeated them. */}
       {result.locked && <RenoInsightStrip where={where} unlockHref={unlockHref} onUnlock={onUnlock} />}
 
+      {/* The seat they just took, in the slot the anon-only insight strip vacates.
+          It was granted server-side during this request — they never pressed a
+          claim button, so this is a confirmation and not another ask. */}
+      {!result.locked && result.seat != null && (
+        <FoundingSeatHeld seat={result.seat} total={FOUNDING_SEAT_TOTAL} />
+      )}
+
       {/* CREDIBILITY — the engine's own diagnostics, collapsed by default. */}
       <RenoMethodNote
         locked={result.locked}
@@ -231,13 +247,19 @@ export default function RenoResult({
           )}
 
           {result.locked ? (
-            <Link
-              href={unlockHref}
-              onClick={onUnlock}
-              className="mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700 [touch-action:manipulation]"
-            >
-              <Lock className="h-4 w-4" /> Unlock which pays back most — free →
-            </Link>
+            <>
+              {/* Above the CTA, never replacing it: the button already promises the
+                  thing they came for, and the seat is a second reason to press it
+                  rather than a competing ask. */}
+              {shouldShowSeats(result.seats) && <FoundingSeatsOffer seats={result.seats} />}
+              <Link
+                href={unlockHref}
+                onClick={onUnlock}
+                className="mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700 [touch-action:manipulation]"
+              >
+                <Lock className="h-4 w-4" /> Unlock which pays back most — free →
+              </Link>
+            </>
           ) : (
             <Link
               href="/properties"
