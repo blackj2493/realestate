@@ -1,5 +1,6 @@
 // src/lib/avm/valueAdd/types.ts
 import type { AVMInput } from '../types';
+import type { NormalizedType } from '../normalizeType';
 
 export type MoveKey =
   | 'finish_basement'
@@ -38,10 +39,22 @@ export interface MoveSpec {
   costHigh: number;
   /** sane absolute value-add ceiling (CAD) for the magnitude cap. */
   capHigh: number;
+  /**
+   * Dwelling types where this move is PHYSICALLY OR LEGALLY IMPOSSIBLE, regardless
+   * of what the coefficients say. This is a feasibility gate, not a statistical one:
+   * the engine's other gates ask "is this beta trustworthy?", which is a different
+   * question from "can the owner actually do this?". A condo cohort happens to carry
+   * a degenerate basement column, so basement moves were being suppressed by
+   * coincidence — but building_area_total is perfectly healthy for condos, so
+   * "Build an addition (~400 sq ft)" priced and displayed on apartments.
+   */
+  infeasibleFor?: readonly NormalizedType[];
 }
 
 export type MoveStatus = 'priced' | 'suppressed';
 export type SuppressReason =
+  /** The owner cannot do this to this kind of home (see MoveSpec.infeasibleFor). */
+  | 'not_applicable_to_type'
   | 'negative_beta'
   | 'placeholder'
   | 'low_r2'

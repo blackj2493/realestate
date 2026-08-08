@@ -30,6 +30,10 @@ export interface ForceAppreciationView {
 }
 
 const REASON_COPY: Record<SuppressReason, string> = {
+  // Every other reason here is about the DATA; this one is about the home. Say so
+  // plainly — "not enough local signal" would be both wrong and faintly insulting
+  // to someone whose flat simply has no basement.
+  not_applicable_to_type: "can't be done in this type of home",
   negative_beta: "local sales don't show a reliable premium",
   placeholder: 'not enough local signal to price this',
   low_r2: 'too few comparable sales to model this area',

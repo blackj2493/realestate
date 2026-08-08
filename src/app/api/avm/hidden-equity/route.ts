@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
         bedroomsAboveGrade: v.bedroomsAboveGrade,
         parkingTotal: v.parkingTotal,
         buildingAreaTotal: v.buildingAreaTotal ?? null,
+        // Without this the teaser offered condo owners a basement to finish.
+        propertySubType: v.propertySubType,
       }),
       seats: await getSeatSummary(seatClient),
     });
