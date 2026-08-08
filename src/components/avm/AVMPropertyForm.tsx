@@ -32,6 +32,13 @@ const BASEMENT_LABELS = [
   'None',
 ];
 
+/**
+ * THEME: every control below overrode the shadcn primitive with dark-tuned greys
+ * (`bg-black/20`, `border-gray-700`, `text-gray-100`) and no light counterpart, so once
+ * light became the app default these rendered near-white text in pale-grey boxes. Each
+ * override is now `token + dark:<the original grey>` — light resolves through the design
+ * tokens, dark keeps the exact previous value.
+ */
 export function AVMPropertyForm() {
   const {
     cityRegion,
@@ -49,7 +56,7 @@ export function AVMPropertyForm() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="cityRegion" className="text-xs text-gray-400">
+          <Label htmlFor="cityRegion" className="text-xs text-muted-foreground dark:text-gray-400">
             CITY REGION
           </Label>
           <Input
@@ -57,21 +64,21 @@ export function AVMPropertyForm() {
             value={cityRegion}
             onChange={(e) => setField('cityRegion', e.target.value)}
             placeholder="e.g., Maple"
-            className="bg-black/20 border-gray-700 text-gray-100 text-base md:text-sm"
+            className="bg-background border-input text-foreground text-base md:text-sm dark:bg-black/20 dark:border-gray-700 dark:text-gray-100"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="propertySubType" className="text-xs text-gray-400">
+          <Label htmlFor="propertySubType" className="text-xs text-muted-foreground dark:text-gray-400">
             PROPERTY TYPE
           </Label>
           <Select
             value={propertySubType}
             onValueChange={(v) => setField('propertySubType', v)}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
               <SelectItem value="Townhouse">Townhouse</SelectItem>
               <SelectItem value="Detached">Detached</SelectItem>
               <SelectItem value="Semi-Detached">Semi-Detached</SelectItem>
@@ -86,17 +93,17 @@ export function AVMPropertyForm() {
 
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="bedrooms" className="text-xs text-gray-400">
+          <Label htmlFor="bedrooms" className="text-xs text-muted-foreground dark:text-gray-400">
             BEDROOMS
           </Label>
           <Select
             value={String(bedroomsAboveGrade)}
             onValueChange={(v) => setField('bedroomsAboveGrade', Number(v))}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
@@ -106,17 +113,17 @@ export function AVMPropertyForm() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="bathrooms" className="text-xs text-gray-400">
+          <Label htmlFor="bathrooms" className="text-xs text-muted-foreground dark:text-gray-400">
             BATHROOMS
           </Label>
           <Select
             value={String(bathroomsTotalInteger)}
             onValueChange={(v) => setField('bathroomsTotalInteger', Number(v))}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
@@ -126,17 +133,17 @@ export function AVMPropertyForm() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="parking" className="text-xs text-gray-400">
+          <Label htmlFor="parking" className="text-xs text-muted-foreground dark:text-gray-400">
             PARKING
           </Label>
           <Select
             value={String(parkingTotal)}
             onValueChange={(v) => setField('parkingTotal', Number(v))}
           >
-            <SelectTrigger className="bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
@@ -148,21 +155,21 @@ export function AVMPropertyForm() {
       </div>
 
       <div className="space-y-3">
-        <Label className="text-xs text-gray-400">CONDITION ASSESSMENT</Label>
+        <Label className="text-xs text-muted-foreground dark:text-gray-400">CONDITION ASSESSMENT</Label>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="interiorTier" className="text-sm text-gray-300">
+            <Label htmlFor="interiorTier" className="text-sm text-foreground dark:text-gray-300">
               Interior
             </Label>
             <Select
               value={String(interiorTier)}
               onValueChange={(v) => setField('interiorTier', Number(v))}
             >
-              <SelectTrigger className="w-40 bg-black/20 border-gray-700 text-gray-100">
+              <SelectTrigger className="w-40 bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
                 {[1, 2, 3, 4, 5].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {t} — {INTERIOR_LABELS[t]}
@@ -175,17 +182,17 @@ export function AVMPropertyForm() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="exteriorTier" className="text-sm text-gray-300">
+            <Label htmlFor="exteriorTier" className="text-sm text-foreground dark:text-gray-300">
               Exterior
             </Label>
             <Select
               value={String(exteriorTier)}
               onValueChange={(v) => setField('exteriorTier', Number(v))}
             >
-              <SelectTrigger className="w-40 bg-black/20 border-gray-700 text-gray-100">
+              <SelectTrigger className="w-40 bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
                 {[1, 2, 3, 4, 5].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {t} — {EXTERIOR_LABELS[t]}
@@ -198,17 +205,17 @@ export function AVMPropertyForm() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="basementTier" className="text-sm text-gray-300">
+            <Label htmlFor="basementTier" className="text-sm text-foreground dark:text-gray-300">
               Basement
             </Label>
             <Select
               value={String(basementTier)}
               onValueChange={(v) => setField('basementTier', Number(v))}
             >
-              <SelectTrigger className="w-40 bg-black/20 border-gray-700 text-gray-100">
+              <SelectTrigger className="w-40 bg-background border-input text-foreground dark:bg-black/20 dark:border-gray-700 dark:text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectContent className="bg-popover border-border dark:bg-gray-900 dark:border-gray-700">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {t} — {BASEMENT_LABELS[t]}

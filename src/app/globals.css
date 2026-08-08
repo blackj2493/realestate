@@ -6,9 +6,12 @@
    Design tokens — shadcn/ui theme variables.
    tailwind.config.ts maps colors to hsl(var(--token)); without these the
    ui/ primitives (Button, Card, Slider, Input, Select) render colorless.
-   LIGHT palette on :root (default); DARK palette under `.dark`, applied by
-   next-themes toggling the `dark` class on <html> (defaultTheme:"dark", so the
-   app is UNCHANGED until a user opts into light). See LIGHT_DARK_THEME_PLAN.
+   LIGHT palette on :root (the app default); DARK palette under `.dark`, applied by
+   next-themes toggling the `dark` class on <html>. defaultTheme is "light", so a
+   first-time visitor lands light and dark is a stored opt-in via the toggle.
+   A bare `dark` class ALSO pins a subtree dark regardless of the app theme — used by
+   /apply, /commercial, the AppHeader brand band, the terminal's map control deck and
+   the discovery floaters. See LIGHT_DARK_THEME_PLAN.
    ============================================================================ */
 @layer base {
   :root {
@@ -474,10 +477,16 @@ table,
 
 /* Grid line background pattern */
 .grid-pattern {
-  background-image: 
+  background-image:
     linear-gradient(rgba(30, 41, 59, 0.3) 1px, transparent 1px),
     linear-gradient(90deg, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* The blueprint grid is a dark-terminal device; on the pale Daylight ground it reads as
+   spreadsheet clutter, so it's suppressed in light mode. Dark mode keeps it verbatim. */
+:root:not(.dark) .grid-pattern {
+  display: none;
 }
 
 /* Blinking cursor animation */

@@ -11,14 +11,21 @@ import { useHydrated } from "@/lib/theme/useHydrated";
  * `style={{ stroke: "hsl(var(--border))" }}` so they don't need this client hook.
  *
  * HYDRATION: because these land in SVG presentation ATTRIBUTES, a theme mismatch is an
- * attribute mismatch — and React does not patch those. Without the `mounted` guard the
- * server (resolvedTheme undefined → dark palette) and a light-mode client disagreed, so a
- * light user's charts kept the server's DARK colours on first paint. Pre-mount we return
- * the same palette the server produced, then correct once mounted.
+ * attribute mismatch — and React does not patch those. So pre-mount we must hand back the
+ * palette the SERVER produced, then correct once mounted. `resolvedTheme` lives in
+ * localStorage and is undefined until next-themes mounts, so the server's palette is
+ * always the app DEFAULT — never whatever this visitor last chose.
  */
 export function useChartTheme() {
   const { resolvedTheme } = useTheme();
-  const light = useHydrated() && resolvedTheme === "light";
+  // That default is now LIGHT (defaultTheme:"light", and the root <html> no longer ships a
+  // `dark` class), so the pre-mount fallback has to be light too. The old
+  // `hydrated && resolvedTheme === "light"` fell back to DARK, which was right only while
+  // dark was the default — flipping the default inverted it, and every chart painted its
+  // navy/cyan dark palette onto the pale SSR page until hydration corrected it (and stayed
+  // there for good without JS). Post-mount, anything that isn't "dark" is light.
+  const hydrated = useHydrated();
+  const light = hydrated ? resolvedTheme !== "dark" : true;
   return {
     grid: light ? "#e2e8f0" : "#1e293b", // slate-200 / slate-800
     axisLine: light ? "#cbd5e1" : "#334155", // slate-300 / slate-700

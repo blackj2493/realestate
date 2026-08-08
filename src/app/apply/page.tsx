@@ -92,8 +92,15 @@ export default function ApplyPage() {
   };
 
   return (
-    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
-      <HeroBackground variant="form" />
+    // `dark` is deliberate, not leftover: this page is pinned to the terminal look in BOTH
+    // themes. Now that light is the app default, without it every shadcn primitive nested
+    // below (Input, Button, Select) and the TopNav wordmark — which reads the --pp-logo-*
+    // CSS variables — would resolve LIGHT against this slate-950 ground. The class also
+    // marks the page as an intentional island rather than one the migration missed.
+    // HeroBackground additionally needs forceDark: its Mapbox style is a JS prop, and no
+    // CSS class can reach that.
+    <div className="dark relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
+      <HeroBackground variant="form" forceDark />
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
 

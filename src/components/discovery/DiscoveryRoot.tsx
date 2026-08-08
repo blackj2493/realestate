@@ -134,11 +134,15 @@ export default function DiscoveryRoot() {
       <FeatureGuide />
       <Spotlight />
 
-      {/* First-run nudge — bottom-left so it never collides with the launcher. */}
+      {/* First-run nudge — bottom-left so it never collides with the launcher.
+          `dark` is deliberate. This mounts from the ROOT layout, so it floats over every
+          page in the app; kept as a dark cyan-accented overlay (the way a tooltip or toast
+          stays one shade) rather than restyled per page, and the class stops any
+          token-driven child resolving light against this slate-900 ground. */}
       {nudge && !overlayUp && (
         <div
           className={cn(
-            "pp-fade-up fixed left-4 z-[140] w-[min(20rem,calc(100vw-2rem))] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl",
+            "dark pp-fade-up fixed left-4 z-[140] w-[min(20rem,calc(100vw-2rem))] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl",
             // Phones: clear the listing page's sticky action bar instead of covering it.
             isMobile
               ? "[bottom:max(5.5rem,env(safe-area-inset-bottom))]"
@@ -197,7 +201,9 @@ export default function DiscoveryRoot() {
           onClick={() => openGuide("page")}
           aria-label="Open feature guide"
           className={cn(
-            "fixed right-4 z-[130] inline-flex items-center gap-2 border border-slate-700 bg-slate-900/95 px-3 py-2.5 text-slate-200 shadow-xl backdrop-blur transition-colors hover:border-cyan-500/60 hover:text-cyan-200",
+            // `dark` for the same reason as the nudge above — a root-mounted floater that
+            // stays one shade over every page.
+            "dark fixed right-4 z-[130] inline-flex items-center gap-2 border border-slate-700 bg-slate-900/95 px-3 py-2.5 text-slate-200 shadow-xl backdrop-blur transition-colors hover:border-cyan-500/60 hover:text-cyan-200",
             "[bottom:max(1.25rem,env(safe-area-inset-bottom))]"
           )}
         >

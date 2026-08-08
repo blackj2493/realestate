@@ -69,11 +69,11 @@ export function AVMCalculator() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left: Property Form */}
-      <Card className="p-4 sm:p-6 bg-gray-900/50 border-gray-800">
+      <Card className="p-4 sm:p-6 bg-card border-border dark:bg-gray-900/50 dark:border-gray-800">
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-mono text-gray-100 mb-1">PROPERTY PROFILE</h2>
-            <p className="text-xs text-gray-500">Enter property characteristics</p>
+            <h2 className="text-lg font-mono text-foreground mb-1 dark:text-gray-100">PROPERTY PROFILE</h2>
+            <p className="text-xs text-muted-foreground dark:text-gray-500">Enter property characteristics</p>
           </div>
           <AVMPropertyForm />
           <div className="flex gap-3">
@@ -87,7 +87,7 @@ export function AVMCalculator() {
             <Button
               onClick={reset}
               variant="outline"
-              className="min-h-[44px] shrink-0 border-gray-700 text-gray-400 hover:text-gray-200"
+              className="min-h-[44px] shrink-0 border-input text-muted-foreground hover:text-foreground dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               RESET
             </Button>
@@ -96,11 +96,11 @@ export function AVMCalculator() {
       </Card>
 
       {/* Right: Result Display */}
-      <Card ref={resultRef} className="p-6 bg-gray-900/50 border-gray-800">
+      <Card ref={resultRef} className="p-6 bg-card border-border dark:bg-gray-900/50 dark:border-gray-800">
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-mono text-gray-100 mb-1">ESTIMATED VALUE</h2>
-            <p className="text-xs text-gray-500">Automated valuation result</p>
+            <h2 className="text-lg font-mono text-foreground mb-1 dark:text-gray-100">ESTIMATED VALUE</h2>
+            <p className="text-xs text-muted-foreground dark:text-gray-500">Automated valuation result</p>
           </div>
           <AVMResultDisplay />
         </div>

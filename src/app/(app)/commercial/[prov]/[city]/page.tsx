@@ -140,7 +140,10 @@ export default async function CommercialCityHubPage({
   };
 
   return (
-    <main className="min-h-app bg-slate-950 text-slate-200">
+    // Pinned dark in both themes (see /apply for the same reasoning): the page carries no
+    // design tokens of its own, so `dark` keeps any token-driven child resolving against
+    // the slate ground it actually sits on rather than the app's light default.
+    <main className="dark min-h-app bg-slate-950 text-slate-200">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
       <div className="mx-auto max-w-[1400px] px-4 py-8">
