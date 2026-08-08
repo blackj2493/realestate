@@ -31,16 +31,8 @@ function DeckOverlay(props: MapboxOverlayProps) {
   return null;
 }
 
-export default function HeroMapCanvas({ dark }: { dark: boolean }) {
+export default function HeroMapCanvas() {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  // Basemap follows the theme: a light basemap under the (now light-default) hero, the
-  // original dark basemap when a user opts into dark. The caller resolves this and mounts
-  // us only once it KNOWS — reading the theme here meant rendering before next-themes had
-  // answered, which loaded the wrong style and then swapped it. It also lets /apply, which
-  // is pinned dark by class rather than by theme, get the dark basemap it expects.
-  const mapStyle = dark
-    ? "mapbox://styles/mapbox/dark-v11"
-    : "mapbox://styles/mapbox/light-v11";
   if (!token || token === "your-mapbox-token") return null;
 
   const layers = [
@@ -75,7 +67,7 @@ export default function HeroMapCanvas({ dark }: { dark: boolean }) {
           pitch: 0,
           bearing: 0,
         }}
-        mapStyle={mapStyle}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
         style={{ width: "100%", height: "100%" }}
         reuseMaps
         attributionControl={false}

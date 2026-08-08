@@ -31,21 +31,28 @@ export default function HeroBackground({
   const isMobile = useIsMobile();
   const { resolvedTheme } = useTheme();
 
-  // `resolvedTheme` is undefined until next-themes mounts. Branching on it directly meant
-  // "not yet known" collapsed into "light", so a dark-mode user watched the basemap load
-  // light-v11 and then swap to dark-v11. Waiting for a definite answer costs a beat of
-  // plain background on a decorative layer and buys no wrong-theme flash or double tile
-  // fetch. forceDark pages know their answer immediately and never wait.
+  // The basemap is ALWAYS mapbox dark-v11 — deliberately unchanged. So it may only be shown
+  // where the ground is genuinely dark: rendering it under a light surface would put dark
+  // type over a dark map with only a pale scrim between them, which is the same
+  // illegibility the light migration exists to remove. Light surfaces fall back to the
+  // CSS-only background (grid + emerald wash + scrim), exactly what /login already uses.
+  //
+  // `resolvedTheme` is undefined until next-themes mounts, so "not yet known" must NOT
+  // collapse into "show the map" — that would flash a dark basemap onto a light page before
+  // correcting. Waiting for a definite answer costs a beat of plain background on a purely
+  // decorative layer. forceDark pages know their answer immediately and never wait.
   const isDark = forceDark || resolvedTheme === "dark";
   const themeKnown = forceDark || resolvedTheme !== undefined;
+  const showMap = themeKnown && isDark;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-background">
       {/* Faint texture shown only until the map tiles load */}
       <div className="grid-pattern absolute inset-0 opacity-20" />
 
-      {/* Live deck.gl + Mapbox map — desktop only (skipped on phones) */}
-      {!isMobile && themeKnown && <HeroMapCanvas dark={isDark} />}
+      {/* Live deck.gl + Mapbox dark map — desktop only (skipped on phones), and dark
+          surfaces only (see showMap). */}
+      {!isMobile && showMap && <HeroMapCanvas />}
 
       {/* Subtle emerald top wash */}
       <div
