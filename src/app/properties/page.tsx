@@ -48,7 +48,7 @@ import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
 import { getConfig } from "@/lib/dashboard/config";
-import { marketCamera } from "@/lib/dashboard/area";
+import { regionCamera } from "@/lib/dashboard/area";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { passesDealGrade } from "@/lib/dealScore/gradeFilter";
 import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
@@ -333,14 +333,19 @@ function CommandCenterContent() {
     savedMarketSeeded = true;
     const first = getConfig().regions[0];
     if (!first) return;
-    const cam = marketCamera(first);
+    // regionCamera, not marketCamera: the quick-pick list holds eight whole metros, so
+    // every community-scale saved area (Barrhaven, Kanata, a Toronto district) missed it
+    // and fell through to the place filter below — reproducing the 2026-07-28 Vaughan bug
+    // on EVERY page load for those users, login included. regionCamera consults
+    // data/city-centroids.json second, which is keyed by raw feed City strings and so
+    // covers exactly those finer names.
+    const cam = regionCamera(first);
     if (cam) {
       setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
     } else {
-      // A finer saved area with no quick-pick camera (an Ottawa OREB sub-area, or a Toronto
-      // district saved directly). No synchronous centroid exists for it, so fall back to the
-      // place-scoped open — narrower than a metro parent, so the hidden-inventory surprise is
-      // small — until a geometry-based fly-to lands here too.
+      // Neither list knows this place. Falling back to the place-scoped open is still
+      // better than guessing a camera — and the out-of-bounds notice now names the action
+      // ("Barrhaven only · Show 308 more"), so the filter is visible and escapable.
       setLocation(first);
     }
   }, [location, hasCityParam, hasCenterParam, searchParams, setLocation, setFlyTo]);

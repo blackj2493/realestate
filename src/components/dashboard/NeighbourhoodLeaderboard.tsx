@@ -27,6 +27,7 @@ import {
   type HeatStats,
 } from "@/lib/dashboard/neighbourhoodHeat";
 import { formatRegionLabel, formatRegionParts } from "@/lib/regions/formatRegionLabel";
+import { regionMapHref } from "@/lib/dashboard/area";
 import RegionSwitcher from "./RegionSwitcher";
 
 type MetricId = "cap" | "dom" | "drop" | "price";
@@ -110,7 +111,10 @@ export default function NeighbourhoodLeaderboard({
   const barPct = (v: number) =>
     maxMedian === minMedian ? 100 : 15 + 85 * ((v - minMedian) / (maxMedian - minMedian));
 
-  const mapUrl = `/properties?city=${encodeURIComponent(selected)}`;
+  // Camera, not `?city=`. Opening a saved area is browsing, not a deliberate place
+  // search, so it must not pin the terminal to a text query the user never typed —
+  // the rows below already open by coordinate for exactly this reason.
+  const mapUrl = regionMapHref(selected);
 
   // One-line row: rank | name (fixed col, so every bar starts on a shared baseline)
   // | inline range-scaled bar | value | ×n.

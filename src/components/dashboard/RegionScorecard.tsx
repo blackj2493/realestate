@@ -21,6 +21,7 @@ import {
   orDash,
 } from "@/components/dashboard/metricViz";
 import { cn } from "@/lib/utils";
+import { regionMapHref } from "@/lib/dashboard/area";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { ModuleHead } from "@/components/daylight/primitives";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
@@ -280,9 +281,10 @@ export default function RegionScorecard({
                   key={s.region}
                   className={`grid ${GRID} items-center border-b border-border/60 transition-colors hover:bg-card/40`}
                 >
-                  {/* Region */}
+                  {/* Region — opens by CAMERA where we can place it, so browsing a saved
+                      area doesn't pin the terminal to a text query the user never typed. */}
                   <Link
-                    href={`/properties?city=${encodeURIComponent(s.region)}`}
+                    href={regionMapHref(s.region)}
                     className="terminal-font flex items-center gap-1 px-2 py-3 text-[13px] font-semibold text-foreground hover:text-cyan-700 dark:hover:text-cyan-300"
                   >
                     <span className="truncate" title={s.region}>{formatRegionLabel(s.region)}</span>
