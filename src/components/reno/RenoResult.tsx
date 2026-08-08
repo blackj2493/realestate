@@ -20,15 +20,23 @@ import { RenoGuidePanel } from './RenoPanels';
 import { FoundingSeatsOffer, FoundingSeatHeld } from './FoundingSeats';
 import { FOUNDING_SEAT_TOTAL, shouldShowSeats, type SeatSummary } from '@/lib/founding/seats';
 
+/**
+ * Seat fields are REQUIRED-but-nullable, deliberately. As `seats?:` they were
+ * optional, so a caller that built a result without them type-checked fine — and
+ * that is exactly what happened: the funnel dropped both, and the offer strip and
+ * the seat confirmation silently never rendered while everything compiled clean.
+ * Required means forgetting them is a compile error; `| null` still allows "we
+ * genuinely have no count".
+ */
 export type RenoResultData =
-  | { locked: true; catalog: AnonCatalogItem[]; seats?: SeatSummary | null }
+  | { locked: true; catalog: AnonCatalogItem[]; seats: SeatSummary | null }
   | {
       locked: false;
       estimate: AVMResult | null;
       report: ValueAddReport | null;
-      seats?: SeatSummary | null;
+      seats: SeatSummary | null;
       /** This user's founding seat, taken during this very request. */
-      seat?: number | null;
+      seat: number | null;
     };
 
 export default function RenoResult({

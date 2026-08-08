@@ -4,7 +4,7 @@ import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
 import AppHeader from '@/components/layout/AppHeader';
 import { getServiceRoleClient } from '@/lib/supabase/client';
-import { getSeatSummary, shouldShowSeats } from '@/lib/founding/seats';
+import { getSeatSummary } from '@/lib/founding/seats';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,24 +84,17 @@ export default async function WhatsMyHomeHidingPage({
             </li>
           ))}
         </ul>
-        {shouldShowSeats(seats) && !seats.soldOut && (
-          <div className="mb-8 flex flex-wrap items-center gap-3 rounded-lg border border-cyan-600/35 bg-cyan-500/10 px-3.5 py-2.5">
-            <span className="shrink-0 font-mono text-2xl font-bold leading-none tabular-nums text-cyan-700 dark:text-cyan-400">
-              {seats.taken}
-              <span className="font-normal text-muted-foreground">/{seats.total}</span>
-            </span>
-            <span className="min-w-0 flex-1 basis-48 text-[13.5px] text-foreground">
-              <b className="font-semibold text-cyan-700 dark:text-cyan-400">founding seats taken.</b>{' '}
-              Seat holders keep full access free, permanently.
-            </span>
-          </div>
-        )}
+        {/* The counter renders INSIDE the funnel, not here: the claim happens a few
+            seconds after this server render (auto-resubmit once terms are accepted),
+            so a server-only counter is permanently one behind for the person who
+            just took a seat. The funnel seeds from this value and keeps it live. */}
         <RenovationFunnel
           tree={tree}
           initialCity={resolved?.city ?? ''}
           initialCityRegion={resolved?.cityRegion ?? ''}
           communitySlug={slug ?? null}
           communityLabel={communityLabel}
+          initialSeats={seats}
         />
       </main>
     </div>
