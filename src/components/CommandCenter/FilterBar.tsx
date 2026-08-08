@@ -275,7 +275,7 @@ export default function FilterBar() {
               onClick={() => setDrawerOpen(true)}
               className={cn(
                 LABEL,
-                "relative flex items-center gap-1.5 border border-border px-2.5 py-1.5 text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                "relative flex items-center gap-1.5 border border-border px-2.5 py-1.5 text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />

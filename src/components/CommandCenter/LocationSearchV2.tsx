@@ -658,7 +658,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => findComps(item, e)}
-                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
+                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300 group-hover:flex"
                           >
                             <Crosshair className="h-2.5 w-2.5" />
                             Comparable sales

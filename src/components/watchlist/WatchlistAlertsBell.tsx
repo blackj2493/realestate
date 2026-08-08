@@ -159,7 +159,7 @@ export default function WatchlistAlertsBell({ className }: { className?: string 
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label={`Watchlist alerts${unseenCount ? ` (${unseenCount} new)` : ""}`}
         aria-expanded={open}
-        className="relative inline-flex h-11 w-11 items-center justify-center border border-border text-foreground transition-colors hover:border-cyan-500/60 hover:text-cyan-300"
+        className="relative inline-flex h-11 w-11 items-center justify-center border border-border text-foreground transition-colors hover:border-cyan-500/60 hover:text-cyan-600 dark:hover:text-cyan-300"
       >
         <Bell className="h-4 w-4" />
         {unseenCount > 0 && (

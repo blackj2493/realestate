@@ -55,13 +55,13 @@ export default function GlossaryPage() {
         <nav className="mb-2 flex justify-center gap-4 uppercase tracking-wider">
           <Link
             href="/terms"
-            className="text-foreground transition-colors hover:text-cyan-300 active:text-cyan-400"
+            className="text-foreground transition-colors hover:text-cyan-600 dark:hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
           >
             Terms
           </Link>
           <Link
             href="/privacy"
-            className="text-foreground transition-colors hover:text-cyan-300 active:text-cyan-400"
+            className="text-foreground transition-colors hover:text-cyan-600 dark:hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
           >
             Privacy
           </Link>

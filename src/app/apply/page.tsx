@@ -13,12 +13,15 @@ import {
   type ApplyProfile,
 } from "@/lib/dashboard/config";
 
+// Themed rather than pinned slate: /apply is a LIGHT page now (only the landing page stays
+// dark), so the field has to read on a white card as well as a slate one. Tokens for the
+// light side, the previous slate values kept verbatim behind `dark:` so dark is unchanged.
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-900/60 px-3.5 py-2.5 text-base text-slate-100 placeholder:text-slate-600 outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40";
+  "w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-base text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-600";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       {children}
     </label>
   );
@@ -92,7 +95,10 @@ export default function ApplyPage() {
   };
 
   return (
-    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
+    // Themed, NOT a dark island. Only the landing page keeps the terminal look; the funnel
+    // past it follows the app theme, so this matches /login rather than `/`. No `dark` class
+    // and no forceDark — HeroBackground resolves its own basemap and scrim from the theme.
+    <div className="relative min-h-app overflow-hidden bg-background text-foreground">
       <HeroBackground variant="form" />
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
@@ -100,10 +106,10 @@ export default function ApplyPage() {
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-6 md:px-10 md:py-10">
           {/* Title */}
           <div className="text-center">
-            <h1 className="text-3xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
+            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 md:text-6xl dark:text-white dark:[text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
               Create your account
             </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:mt-4 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground md:mt-4 dark:text-slate-300 dark:[text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               {
                 "Built for principals and analysts — not agents prospecting for clients. Confirm a couple of details and the terminal opens."
               }
@@ -112,9 +118,9 @@ export default function ApplyPage() {
 
           {/* Body: form + rail */}
           <div className="mt-8 grid gap-8 md:mt-10 lg:grid-cols-[minmax(0,1fr)_260px]">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5 md:p-8">
+            <div className="rounded-xl border border-border bg-card/70 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 p-5 md:p-8">
               {error && (
-                <div className="mb-6 rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                <div className="mb-6 rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
                   {error}
                 </div>
               )}
@@ -148,17 +154,17 @@ export default function ApplyPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 border-t border-slate-800 pt-6">
+                <div className="space-y-4 border-t border-border pt-6 dark:border-slate-800">
                   {/* The VOW attestations used to sit here as well as on /welcome, asking
                       the same three things twice. They live on /welcome only — that is
                       where they bind, against a real account. */}
-                  <p className="text-xs leading-snug text-slate-500">
+                  <p className="text-xs leading-snug text-muted-foreground">
                     Next you&rsquo;ll confirm the VOW access terms, then the terminal opens. Read our{" "}
-                    <Link href="/terms" className="text-cyan-400 hover:underline">
+                    <Link href="/terms" className="text-cyan-700 hover:underline dark:text-cyan-400">
                       Terms of Service
                     </Link>{" "}
                     and{" "}
-                    <Link href="/privacy" className="text-cyan-400 hover:underline">
+                    <Link href="/privacy" className="text-cyan-700 hover:underline dark:text-cyan-400">
                       Privacy Policy
                     </Link>
                     .
@@ -187,17 +193,17 @@ export default function ApplyPage() {
 
             {/* Right rail */}
             <aside className="hidden lg:block">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5">
+              <div className="rounded-xl border border-border bg-card/70 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 p-5">
                 <p className="terminal-font text-[10px] uppercase tracking-[0.2em] text-emerald-400/80">
                   Access protocol
                 </p>
-                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                   {
                     "Built for principals and analysts, not agents prospecting for clients."
                   }
                 </p>
-                <div className="my-4 h-px bg-slate-800" />
-                <p className="text-xs leading-relaxed text-slate-500">
+                <div className="my-4 h-px bg-border dark:bg-slate-800" />
+                <p className="text-xs leading-relaxed text-muted-foreground">
                   {
                     "You're in as soon as you confirm your email — no waiting, no gatekeeping."
                   }

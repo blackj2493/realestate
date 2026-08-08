@@ -145,7 +145,7 @@ export default function CampaignHistorySection({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-2 text-xs font-medium text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300"
+          className="mt-2 text-xs font-medium text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-600 dark:hover:text-cyan-300"
         >
           {expanded ? "Show less ▴" : `Show all ${rows.length} events ▾`}
         </button>

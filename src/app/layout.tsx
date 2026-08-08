@@ -74,13 +74,20 @@ const ORG_AND_SITE_JSONLD = {
 };
 
 // Mobile viewport: device-width + viewport-fit=cover so safe-area-inset env()
-// vars resolve on notched phones; dark theme-color so the browser chrome matches
-// the app instead of flashing white. Pinch-zoom left enabled on purpose (a11y).
+// vars resolve on notched phones; theme-color so the browser chrome matches the app
+// instead of flashing a mismatched band. Pinch-zoom left enabled on purpose (a11y).
+//
+// This is the LIGHT ground (#e9edf4 = --background on :root) because light is the app
+// default for everyone; dark is a stored opt-in. A prefers-color-scheme media list would
+// be wrong more often than right here — it tracks the OS, and the app deliberately does
+// not, so an OS-dark user on the light default would get a navy chrome band above a pale
+// page. Dark-mode users see a slightly light band instead; that's the smaller error, and
+// the browser chrome is the only place it shows.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0A1828",
+  themeColor: "#e9edf4",
 };
 
 export default function RootLayout({
@@ -89,11 +96,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // `dark` is the SSR default so no-JS / slow loads stay dark (unchanged from
-    // before); next-themes reconciles it client-side and honors a saved light choice
-    // before paint. suppressHydrationWarning is required since next-themes edits the
-    // class on <html>.
-    <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+    // Light is the SSR default so no-JS / slow loads land on the pale Daylight
+    // ground (matches defaultTheme:"light" → no dark→light flash for new visitors);
+    // next-themes reconciles client-side and adds `dark` before paint for anyone who
+    // opted into dark. suppressHydrationWarning is required since next-themes edits
+    // the class on <html>.
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} min-h-app bg-background text-foreground`}>
         <script
           type="application/ld+json"

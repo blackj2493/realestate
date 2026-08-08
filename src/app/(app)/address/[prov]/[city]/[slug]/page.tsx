@@ -403,15 +403,15 @@ export default async function AddressPage({
             pills hide when no real hub backs this city name; the first pill then
             points at the map terminal instead of a dead shell. */}
         <section className="mb-8 flex flex-wrap gap-2">
-          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300">
             Homes for sale {cityIsHub ? `in ${cityName}` : "near this home"} →
           </Link>
           {cityIsHub && (
             <>
-              <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+              <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300">
                 Top-rated schools in {cityName} →
               </Link>
-              <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+              <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300">
                 Most walkable homes in {cityName} →
               </Link>
             </>

@@ -79,7 +79,7 @@ export default async function CityDirectoryPage() {
               <Link
                 key={slug}
                 href={`/property/on/${slug}`}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card/40 px-3 py-2.5 text-sm text-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
+                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card/40 px-3 py-2.5 text-sm text-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300"
               >
                 <span className="truncate">{deslugCity(slug)}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">{count.toLocaleString()}</span>

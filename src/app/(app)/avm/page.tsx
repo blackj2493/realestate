@@ -20,14 +20,16 @@ export default async function AVMPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-mono font-bold text-white">
+            {/* Was text-white on bg-background — invisible once light became the default.
+                The tokens resolve to the same shades this page used in dark. */}
+            <h1 className="text-2xl font-mono font-bold text-foreground">
               AVM TERMINAL
             </h1>
-            <span className="text-xs px-2 py-0.5 bg-blue-900 text-blue-300 border border-blue-700 rounded font-mono">
+            <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-300 rounded font-mono dark:bg-blue-900 dark:text-blue-300 dark:border-blue-700">
               COEFFICIENT ENGINE
             </span>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Anchor and Adjust Automated Valuation Model — Maple, Brampton, and
             surrounding Greater Toronto Area markets
           </p>

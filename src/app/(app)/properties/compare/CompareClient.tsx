@@ -125,7 +125,7 @@ export default function CompareClient({
                   <CompareMediaCell listing={l} />
                   <Link href={`/properties/${l.id}`} className="group block">
                     <p className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">{formatPrice(l.ListPrice)}</p>
-                    <p className="text-xs leading-snug text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-300">
+                    <p className="text-xs leading-snug text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-600 dark:hover:text-cyan-300">
                       {l.UnparsedAddress || l.City || "Address unavailable"}
                     </p>
                   </Link>
@@ -206,7 +206,7 @@ function Header() {
   return (
     <div className="mb-6 flex items-center justify-between">
       <div>
-        <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
+        <Link href="/properties" className="mb-2 inline-flex items-center gap-1.5 text-sm text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-600 dark:hover:text-cyan-300">
           <ArrowLeft className="h-4 w-4" />
           Back to Map
         </Link>

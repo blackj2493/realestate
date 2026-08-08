@@ -74,7 +74,7 @@ export default async function HiddenEquityPage({
           Just curious what a renovation could add?{" "}
           <Link
             href="/whats-my-home-hiding"
-            className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+            className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-300"
           >
             See your home&apos;s renovation upside — no sign-in →
           </Link>
@@ -92,7 +92,7 @@ export default async function HiddenEquityPage({
         Curious about a single renovation?{" "}
         <Link
           href="/whats-my-home-hiding"
-          className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+          className="text-cyan-700 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-600 dark:hover:text-cyan-300"
         >
           Compare renovation payback →
         </Link>
