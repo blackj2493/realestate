@@ -1,5 +1,6 @@
 /**
- * Re-floor active listings' True DOM to the naive current-listing age.
+ * Re-floor active listings' True DOM to the highest of their naive current-listing age and
+ * their STITCHED campaign span.
  *
  * WHY THIS EXISTS
  * ───────────────
@@ -35,6 +36,22 @@
  *
  * The floor / threshold below MUST match sync.ts (STALE_THRESHOLD_DAYS = 60) and the RPCs.
  *
+ * SECOND FLOOR — the stitched span (added 2026-08-08)
+ * ───────────────────────────────────────────────────
+ * The naive floor above is blind to a RELISTED property: its stitched span always predates
+ * the current campaign's entry timestamp, so GREATEST(stored, own-age) is a no-op and the
+ * stored value stays frozen at whatever day the sync last wrote it. Reported on
+ * E13615346 (67 North Edgely, Toronto) — nine sale campaigns since 2024-08-23, flat column
+ * written 2026-07-30 = 706, live ledger 714 and climbing one per day. The listing page
+ * re-stitches live (getListingDetail → refreshCampaignHistoryForListing) while Compare and
+ * the cards read the frozen Typesense TrueDom, so one property showed two numbers.
+ *
+ * That divergence also corrupts Compare's BEST badge on the True DOM row (winner:"high"):
+ * it ranks values frozen on DIFFERENT days, so it partly ranks sync recency, not market time.
+ *
+ * See LEDGER_AGE for why we reconstruct the span START instead of copying the ledger's own
+ * true_dom, and for the under-state-by-at-most-one-day error direction.
+ *
  * Usage:
  *   npx tsx scripts/admin/refloor-active-true-dom.ts                # dry-run (counts only)
  *   npx tsx scripts/admin/refloor-active-true-dom.ts --apply        # backfill: re-floor every drifted row
@@ -63,24 +80,65 @@ const PROPERTIES_COLLECTION = 'properties';
 const TS_CHUNK = 500;
 
 // Naive current-listing age in days from the FLAT column (no detoast). GREATEST(0, …) guards
-// a future OriginalEntryTimestamp. Reused verbatim by the count, the UPDATE, and the RETURNING.
-const NAIVE_AGE = `GREATEST(0, floor(EXTRACT(EPOCH FROM (now() - original_entry_timestamp)) / 86400))::int`;
+// a future OriginalEntryTimestamp.
+const NAIVE_AGE = `GREATEST(0, floor(EXTRACT(EPOCH FROM (now() - l.original_entry_timestamp)) / 86400))::int`;
+
+/**
+ * Second floor: the STITCHED campaign span, re-measured to now.
+ *
+ * The naive floor above only rescues a listing whose true_dom sits below ITS OWN age. It is
+ * structurally blind to a relisted property, because the stitched span always predates the
+ * current campaign's entry timestamp — so GREATEST(706, 9) is a no-op and the stored value
+ * stays frozen at whatever day it was last written (E13615346, 67 North Edgely: nine sale
+ * campaigns since 2024-08-23, flat column written 2026-07-30 = 706, ledger 714 and climbing).
+ * Measured 2026-08-08: 115,611 of 196,673 active rows with a ledger disagree, 20,641 of them
+ * by ≥30 days, worst 720.
+ *
+ * We reconstruct the span START rather than copying `property_campaign_history.true_dom`.
+ * That stored number is itself a snapshot taken at `fetched_at`, so copying it would just
+ * inherit a second staleness; the start date is FIXED, so `now - start` is always current.
+ *
+ * start := fetched_at - true_dom days. Since true_dom = floor((fetched_at - start)/day), the
+ * reconstruction lands on or AFTER the real start, so this floor under-states by at most one
+ * day and can never over-state — the same conservative direction the naive floor takes.
+ *
+ * Only ever consulted for rows that pass ACTIVE_ELIGIBLE, so a span that has already ended
+ * (terminated / sold) is never grown: those statuses are excluded before we get here.
+ */
+const LEDGER_AGE = `COALESCE(
+  GREATEST(0, floor(EXTRACT(EPOCH FROM (now() - (h.fetched_at - make_interval(days => h.true_dom)))) / 86400))::int,
+  0)`;
 
 // Active-eligibility (flat columns only — no detoast). Mirrors the region RPCs' active set.
 const ACTIVE_ELIGIBLE = `
-  list_price >= 50000
-  AND original_entry_timestamp IS NOT NULL
-  AND standard_status IS NOT NULL
-  AND standard_status <> ALL($1::text[])`;
+  l.list_price >= 50000
+  AND l.original_entry_timestamp IS NOT NULL
+  AND l.standard_status IS NOT NULL
+  AND l.standard_status <> ALL($1::text[])`;
 
-// A candidate has drifted ≥ minDrift days below its true age, OR just crossed the stale line
-// (that transition is caught regardless of minDrift so the STALE flip is never delayed).
-function candidateWhere(minDrift: number): string {
-  return `${ACTIVE_ELIGIBLE}
-  AND (
-    ${NAIVE_AGE} - true_dom >= ${minDrift}
-    OR (true_dom <= ${STALE_THRESHOLD_DAYS} AND ${NAIVE_AGE} > ${STALE_THRESHOLD_DAYS})
-  )`;
+/**
+ * Every active row with the value it SHOULD carry: the highest of what it already has, its
+ * own age, and its stitched span. One LEFT JOIN (property_campaign_history is keyed by
+ * property_hash, so it cannot fan out) instead of a correlated subquery per row.
+ */
+const CANDIDATES_CTE = `
+  SELECT l.listing_key,
+         l.true_dom AS cur,
+         GREATEST(l.true_dom, ${NAIVE_AGE}, ${LEDGER_AGE}) AS target,
+         ${NAIVE_AGE}  AS naive_age,
+         ${LEDGER_AGE} AS ledger_age
+  FROM listings l
+  LEFT JOIN property_campaign_history h
+         ON h.property_hash = l.property_hash
+        AND h.true_dom > 0
+        AND h.fetched_at IS NOT NULL
+  WHERE ${ACTIVE_ELIGIBLE}`;
+
+// A candidate has drifted ≥ minDrift days below the value it should carry, OR just crossed the
+// stale line (that transition is caught regardless of minDrift so the STALE flip is never delayed).
+function driftFilter(minDrift: number): string {
+  return `target - cur >= ${minDrift}
+    OR (cur <= ${STALE_THRESHOLD_DAYS} AND target > ${STALE_THRESHOLD_DAYS})`;
 }
 
 function argVal(name: string): string | null {
@@ -133,7 +191,6 @@ async function main() {
   const skipTypesense = process.argv.includes('--skip-typesense');
   const limit = Math.max(0, Number(argVal('--limit')) || 0);
   const minDrift = Math.max(1, Number(argVal('--min-drift')) || 1);
-  const where = candidateWhere(minDrift);
 
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL is not set (Session-pooler connection string required)');
@@ -141,41 +198,47 @@ async function main() {
   }
 
   console.log('========================================');
-  console.log('  Re-floor active True DOM (naive-age floor)');
+  console.log('  Re-floor active True DOM (naive age + stitched span)');
   console.log(`  ${apply ? 'APPLY' : 'DRY-RUN'} · min-drift ${minDrift}d${limit ? ` · limit ${limit}` : ''}${skipTypesense ? ' · flat-column only' : ''}`);
   console.log('========================================\n');
 
   const c = new PgClient({ connectionString: process.env.DATABASE_URL });
   await c.connect();
   try {
-    // Dry-run breakdown: how many rows would move, and by how much.
+    // Dry-run breakdown: how many rows would move, by how much, and — the part that matters
+    // for this change — how many are reachable ONLY via the stitched span (the relisted
+    // properties the naive floor is blind to).
     const breakdown = await c.query(
       `
+      WITH cand AS (${CANDIDATES_CTE})
       SELECT
         count(*) AS candidates,
-        count(*) FILTER (WHERE true_dom = 0) AS from_zero,
-        count(*) FILTER (WHERE ${NAIVE_AGE} > ${STALE_THRESHOLD_DAYS}) AS becomes_stale,
-        round(avg(${NAIVE_AGE} - true_dom)) AS avg_days_gained,
-        max(${NAIVE_AGE}) AS max_naive_age
-      FROM listings
-      WHERE ${where}
+        count(*) FILTER (WHERE cur = 0) AS from_zero,
+        count(*) FILTER (WHERE target > ${STALE_THRESHOLD_DAYS} AND cur <= ${STALE_THRESHOLD_DAYS}) AS becomes_stale,
+        count(*) FILTER (WHERE ledger_age > naive_age) AS ledger_beats_naive,
+        count(*) FILTER (WHERE ledger_age > GREATEST(cur, naive_age)) AS only_reachable_via_ledger,
+        round(avg(target - cur)) AS avg_days_gained,
+        max(target - cur) AS max_days_gained,
+        max(target) AS max_target
+      FROM cand
+      WHERE ${driftFilter(minDrift)}
       `,
       [TERMINAL_STATUSES]
     );
     const b = breakdown.rows[0];
-    console.log('Re-floor candidates (active, naive age > stored true_dom):');
+    console.log('Re-floor candidates (active, below naive age OR below stitched span):');
     console.table([b]);
 
     // Coverage note: active-by-detoast rows we skip because the flat standard_status is NULL.
     const skipped = await c.query(
       `
       SELECT count(*) AS active_rows_skipped_null_status
-      FROM listings
-      WHERE list_price >= 50000
-        AND original_entry_timestamp IS NOT NULL
-        AND standard_status IS NULL
-        AND lower(coalesce(full_payload->>'Status', full_payload->>'MlsStatus', full_payload->>'StandardStatus', '')) <> ALL($1::text[])
-        AND ${NAIVE_AGE} > true_dom
+      FROM listings l
+      WHERE l.list_price >= 50000
+        AND l.original_entry_timestamp IS NOT NULL
+        AND l.standard_status IS NULL
+        AND lower(coalesce(l.full_payload->>'Status', l.full_payload->>'MlsStatus', l.full_payload->>'StandardStatus', '')) <> ALL($1::text[])
+        AND ${NAIVE_AGE} > l.true_dom
       `,
       [TERMINAL_STATUSES]
     );
@@ -192,25 +255,27 @@ async function main() {
       return;
     }
 
-    // Apply: raise true_dom to the naive age and recompute is_stale at the 60d threshold.
-    // GREATEST/comparisons read the CURRENT row values (RHS evaluated pre-update).
-    const setClause = `
-      SET true_dom = GREATEST(true_dom, ${NAIVE_AGE}),
-          is_stale = GREATEST(true_dom, ${NAIVE_AGE}) > ${STALE_THRESHOLD_DAYS}`;
-    const upd = limit
-      ? await c.query(
-          `UPDATE listings ${setClause}
-           WHERE listing_key IN (
-             SELECT listing_key FROM listings WHERE ${where} LIMIT ${limit}
+    // Apply: raise true_dom to `target` (the max of current / own age / stitched span) and
+    // recompute is_stale at the 60d threshold. The target is computed ONCE in the CTE and
+    // joined by key, so the SET and the stale flag can't drift apart the way two inlined
+    // GREATEST() copies could.
+    const upd = await c.query(
+      `
+      WITH cand AS (${CANDIDATES_CTE}),
+           sel AS (
+             SELECT listing_key, target FROM cand
+             WHERE ${driftFilter(minDrift)}
+             ${limit ? `LIMIT ${limit}` : ''}
            )
-           RETURNING listing_key, true_dom, is_stale`,
-          [TERMINAL_STATUSES]
-        )
-      : await c.query(
-          `UPDATE listings ${setClause} WHERE ${where}
-           RETURNING listing_key, true_dom, is_stale`,
-          [TERMINAL_STATUSES]
-        );
+      UPDATE listings l
+         SET true_dom = sel.target,
+             is_stale = sel.target > ${STALE_THRESHOLD_DAYS}
+        FROM sel
+       WHERE sel.listing_key = l.listing_key
+      RETURNING l.listing_key, l.true_dom, l.is_stale
+      `,
+      [TERMINAL_STATUSES]
+    );
     console.log(`\n✅ Flat column: re-floored ${upd.rowCount} listing(s).`);
 
     if (skipTypesense) {
