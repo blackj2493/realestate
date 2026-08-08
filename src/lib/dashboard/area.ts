@@ -18,6 +18,9 @@
 
 import type { Bubble } from "@/lib/bubbles/serialize";
 import { OTTAWA_AREAS } from "./ottawaAreas";
+// 34 rows keyed by raw feed City strings (~2KB). Imported directly rather than through
+// lib/postalCodes, which pulls in `fs` and so can't be reached from a client component.
+import cityCentroidsData from "@/data/city-centroids.json";
 
 export type Area =
   | { kind: "region"; name: string }
@@ -135,10 +138,12 @@ export interface QuickPickMarket {
  * leaves the query unfiltered, so results follow the viewport and panning just works.
  * The city filter is the right model only when the user deliberately typed a place.
  *
- * data/city-centroids.json is NOT usable here — it is keyed by raw TRREB City strings
- * (it has "Toronto C01" but no "Toronto") and covers only 34 geocoding fallbacks. These
- * are hand-set, cross-checked against that file for the four it does contain, with zoom
- * chosen per market so a dense core and a spread-out suburb both frame sensibly.
+ * data/city-centroids.json is NOT usable for THIS list — it is keyed by raw TRREB City
+ * strings (it has "Toronto C01" but no "Toronto") and covers only 34 geocoding fallbacks.
+ * These are hand-set, cross-checked against that file for the four it does contain, with
+ * zoom chosen per market so a dense core and a spread-out suburb both frame sensibly.
+ * (That file IS the right source one level down — see regionCamera below, where the
+ * missing names are exactly the finer ones this list deliberately omits.)
  */
 export const QUICK_PICK_MARKETS: readonly QuickPickMarket[] = [
   { name: "Toronto", lat: 43.6532, lng: -79.3832, zoom: 11 },
@@ -155,6 +160,79 @@ export const QUICK_PICK_MARKETS: readonly QuickPickMarket[] = [
 export function marketCamera(name: string): QuickPickMarket | null {
   const key = name.trim().toLowerCase();
   return QUICK_PICK_MARKETS.find((m) => m.name.toLowerCase() === key) ?? null;
+}
+
+/** Where to point the map for a saved region. */
+export interface RegionCamera {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
+/**
+ * Zoom for a community-scale centroid. Looser than the neighbourhood rows in
+ * NeighbourhoodLeaderboard (z=14, a few streets) and tighter than a whole metro
+ * (z=11), so a suburb like Barrhaven or Kanata frames roughly whole.
+ */
+const COMMUNITY_ZOOM = 12.5;
+
+interface CityCentroid {
+  city: string;
+  lat: number;
+  lng: number;
+}
+
+const CITY_CENTROIDS = cityCentroidsData as readonly CityCentroid[];
+
+/**
+ * Camera for ANY saved region — the quick-pick metros first, then the finer
+ * city-centroids table.
+ *
+ * This exists because `marketCamera` alone answers null for everything outside the eight
+ * quick picks, and every caller's fallback for null was `setLocation(region)` — a
+ * Typesense TEXT query that pins the whole terminal to that place. So a user whose saved
+ * area was community-scale (Barrhaven, Kanata, a Toronto district) had the map open
+ * filtered, every listing outside the place hidden, on EVERY page load. Reported for
+ * Vaughan on 2026-07-28 and fixed only for the quick picks; Barrhaven kept reproducing it
+ * because community-scale names never had a camera to fall back to.
+ *
+ * data/city-centroids.json turns out to be exactly the right second source: it is keyed
+ * by raw feed City strings, so its 34 entries are the finer/odd names QUICK_PICK_MARKETS
+ * deliberately omits (Barrhaven, Kanata, the Toronto district codes). The two lists are
+ * near-complements, which is why the quick-pick list's own note calls that file unusable —
+ * true for whole-metro names, backwards here.
+ *
+ * Still returns null for a region in neither list. Callers keep their place-filter
+ * fallback for that case: a wrong camera is worse than a filter the user can now see and
+ * clear (LocationBoundsNotice names the action).
+ */
+export function regionCamera(name: string): RegionCamera | null {
+  const key = (name ?? "").trim().toLowerCase();
+  if (!key) return null;
+
+  const pick = QUICK_PICK_MARKETS.find((m) => m.name.toLowerCase() === key);
+  if (pick) return { lat: pick.lat, lng: pick.lng, zoom: pick.zoom };
+
+  const centroid = CITY_CENTROIDS.find((c) => c.city.trim().toLowerCase() === key);
+  if (!centroid) return null;
+  // Guard the data file rather than trust it: a null/0,0 row would fly the map to the
+  // Gulf of Guinea, which reads as a broken app rather than a missing centroid.
+  const { lat, lng } = centroid;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return null;
+  return { lat, lng, zoom: COMMUNITY_ZOOM };
+}
+
+/**
+ * Map href for a saved region: a CAMERA when we can place it, else the legacy place
+ * filter. Shared so the dashboard's several "open this area on the map" links can't
+ * drift apart again — they were all hand-rolling `?city=`, which is the filter form.
+ */
+export function regionMapHref(name: string): string {
+  const cam = regionCamera(name);
+  return cam
+    ? `/properties?lat=${cam.lat.toFixed(6)}&lng=${cam.lng.toFixed(6)}&z=${cam.zoom}`
+    : `/properties?city=${encodeURIComponent(name)}`;
 }
 
 /**
