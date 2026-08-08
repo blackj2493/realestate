@@ -288,7 +288,15 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saving || !name.trim()}
-                className="flex items-center gap-2 border border-cyan-500/50 bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-500/25 disabled:opacity-40"
+                // text-cyan-200 was a dark-mode value on a dialog that flips: the tint
+                // `bg-cyan-500/15` resolves to rgb(218,244,249) over the light card, so the
+                // label sat at 1.09:1 — the primary action rendered as an empty box. Cancel
+                // beside it was already themed, and the header icon on the SAME tint already
+                // uses a cyan-700/300 split; only this button was missed.
+                // cyan-800 rather than the icon's cyan-700 because this is 12px TEXT (4.5:1
+                // bar, and cyan-700 measures 4.67 — a pass with no margin) where a decorative
+                // icon only answers to 3:1. Measured: 6.33:1 light, 11.17:1 dark (unchanged).
+                className="flex items-center gap-2 border border-cyan-500/50 bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-800 hover:bg-cyan-500/25 disabled:opacity-40 dark:text-cyan-200"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                 {signedIn ? "Save & view in dashboard" : "Save"}
