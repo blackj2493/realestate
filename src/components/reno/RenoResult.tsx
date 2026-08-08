@@ -7,6 +7,7 @@ import type { AVMResult } from '@/lib/avm/types';
 import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
 import type { AnonCatalogItem } from '@/lib/avm/valueAdd/anonCatalog';
 import { localRulesFor } from '@/lib/reno/localRules';
+import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 import { useRenoCohort } from '@/lib/reno/useRenoCohort';
 import { deriveEligibilityEvidence } from '@/lib/reno/eligibilityEvidence';
 import MarketGrids from '@/components/address/MarketGrids';
@@ -65,6 +66,7 @@ export default function RenoResult({
 }) {
   const where = community || city || 'your area';
   const rules = localRulesFor(city);
+  const isApartment = normalizePropertySubType(typeLabel) === 'Condo Apartment';
 
   // Normalise both API shapes into one ranked move list for the cards.
   let moves: RenoMoveDisplay[];
@@ -244,7 +246,13 @@ export default function RenoResult({
 
           {moves.length === 0 ? (
             <p className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
-              Renovation modelling isn’t available for this neighbourhood yet — try a nearby community.
+              {/* Don't blame the neighbourhood for a property-type filter: an apartment
+                  has most of the catalogue ruled out on feasibility (no basement, no
+                  envelope to extend), which is a different fact from "we have no data
+                  here", and sending them to a nearby community would not help. */}
+              {isApartment
+                ? 'Most renovation moves we model — basements, additions, exterior work — aren’t available to an apartment owner. Interior work is, but there isn’t enough local evidence to price it yet.'
+                : 'Renovation modelling isn’t available for this neighbourhood yet — try a nearby community.'}
             </p>
           ) : splitMoves ? (
             <>

@@ -1,5 +1,19 @@
 // src/lib/avm/valueAdd/moveCatalog.ts
 import type { MoveSpec } from './types';
+import { normalizePropertySubType, type NormalizedType } from '../normalizeType';
+
+/**
+ * Moves impossible in an apartment: there is no basement to finish or convert, the
+ * envelope cannot be extended, nothing can be built on land the owner doesn't hold,
+ * and the exterior is a common element belonging to the corporation.
+ *
+ * Deliberately NOT applied to Townhouse. normalizePropertySubType() collapses both
+ * "Condo Townhouse" and freehold "Att/Row/Townhouse" to 'Townhouse' (it tests 'town'
+ * before 'condo'), so we cannot tell them apart here — and freehold towns routinely
+ * do have basements. Gating them would wrongly strip real moves from the more common
+ * case. Only gate what is unambiguous.
+ */
+const CONDO_IMPOSSIBLE = ['Condo Apartment'] as const satisfies readonly NormalizedType[];
 
 /**
  * Renovation moves as achievable tier transitions / physical bundles mapped to the
@@ -16,6 +30,7 @@ export const MOVE_CATALOG: MoveSpec[] = [
     drivingFeatures: ['basement_score'],
     costLow: 25000, costTyp: 40000, costHigh: 65000,
     capHigh: 150000,
+    infeasibleFor: CONDO_IMPOSSIBLE,
   },
   {
     key: 'legal_suite',
@@ -27,6 +42,7 @@ export const MOVE_CATALOG: MoveSpec[] = [
     drivingFeatures: ['basement_score', 'bathrooms_total_integer'],
     costLow: 50000, costTyp: 75000, costHigh: 120000,
     capHigh: 220000,
+    infeasibleFor: CONDO_IMPOSSIBLE,
   },
   {
     key: 'add_bathroom',
@@ -51,6 +67,7 @@ export const MOVE_CATALOG: MoveSpec[] = [
     drivingFeatures: ['building_area_total'],
     costLow: 80000, costTyp: 130000, costHigh: 200000,
     capHigh: 200000,
+    infeasibleFor: CONDO_IMPOSSIBLE,
   },
   {
     key: 'interior_excellent',
@@ -75,6 +92,7 @@ export const MOVE_CATALOG: MoveSpec[] = [
     drivingFeatures: ['parking_total'],
     costLow: 22000, costTyp: 38000, costHigh: 60000,
     capHigh: 90000,
+    infeasibleFor: CONDO_IMPOSSIBLE,
   },
   {
     key: 'curb_appeal',
@@ -83,5 +101,25 @@ export const MOVE_CATALOG: MoveSpec[] = [
     drivingFeatures: ['exterior_score'],
     costLow: 3000, costTyp: 10000, costHigh: 25000,
     capHigh: 60000,
+    infeasibleFor: CONDO_IMPOSSIBLE, // the facade is a common element, not the owner's
   },
 ];
+
+/**
+ * Can the owner of this kind of home actually carry this move out?
+ *
+ * The single feasibility check, shared by BOTH halves of the soft gate — the
+ * anonymous catalog and the priced engine — so the two can never disagree about
+ * what a condo owner is allowed to be shown. Unknown/blank types pass: an
+ * unrecognised spelling should lose no moves, since the failure mode we care about
+ * is showing an impossible one, not hiding a possible one.
+ */
+export function isMoveFeasibleForType(
+  move: MoveSpec,
+  propertySubType: string | null | undefined,
+): boolean {
+  if (!move.infeasibleFor?.length) return true;
+  const normalized = normalizePropertySubType(propertySubType);
+  if (!normalized) return true;
+  return !move.infeasibleFor.includes(normalized as NormalizedType);
+}
