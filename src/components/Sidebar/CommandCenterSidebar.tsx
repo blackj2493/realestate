@@ -316,7 +316,7 @@ export default function CommandCenterSidebar({ onFiltersChange, className }: Com
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <Logo size="sm" theme="dark" />
+          <Logo size="sm" theme="auto" />
           <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
             Terminal
           </span>

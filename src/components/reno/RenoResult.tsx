@@ -155,10 +155,18 @@ export default function RenoResult({
           <p className="my-1 select-none text-4xl font-extrabold tracking-tight text-emerald-700 blur-[7px] dark:text-emerald-400" aria-hidden>
             $•••,•••
           </p>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground">
-              <Lock className="h-3.5 w-3.5" aria-hidden /> Sign in to reveal your number
-            </span>
+          {/* This was a bare <span> styled as a pill — it looked exactly like a button,
+              sat directly under the blurred number (the most compelling thing on the
+              screen), and did nothing when tapped. It is the primary action at this
+              moment, so it is now a real link, at a real touch size. */}
+          <div className="mt-4 flex flex-col items-center gap-2.5">
+            <Link
+              href={unlockHref}
+              onClick={onUnlock}
+              className="inline-flex min-h-[48px] w-full max-w-[280px] items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-[15px] font-bold text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700 [touch-action:manipulation]"
+            >
+              <Lock className="h-4 w-4" aria-hidden /> Sign in to reveal your number
+            </Link>
             <span className="rounded-full border border-cyan-600/35 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:text-cyan-400">
               Based on recent {city} sales
             </span>

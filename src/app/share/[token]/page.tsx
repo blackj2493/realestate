@@ -147,7 +147,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
       <header className="sticky top-0 z-50 border-b bg-background/95 pt-safe backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center" aria-label="PureProperty.ca home">
-            <Logo size="md" theme="dark" />
+            <Logo size="md" theme="auto" />
           </Link>
           {/* ≥44px tap target + active state */}
           <Link

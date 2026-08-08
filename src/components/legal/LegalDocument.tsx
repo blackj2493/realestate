@@ -55,7 +55,7 @@ export default function LegalDocument({
       <header className="border-b border-border px-4 py-3">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <Link href="/" aria-label="PureProperty.ca home" className="inline-flex items-center">
-            <Logo size="md" theme="dark" />
+            <Logo size="md" theme="auto" />
           </Link>
           {/* Task 2: nav links ≥44px tap target + hover/active colour */}
           <nav className="flex gap-1 text-xs uppercase tracking-wider text-muted-foreground">
