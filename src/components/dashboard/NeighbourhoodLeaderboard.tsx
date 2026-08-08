@@ -131,7 +131,7 @@ export default function NeighbourhoodLeaderboard({
         >
           {rank}
         </span>
-        <span className="w-36 shrink-0 truncate text-sm font-medium text-foreground group-hover:text-cyan-700 sm:w-48 dark:group-hover:text-cyan-300">
+        <span className="w-36 shrink-0 truncate text-sm font-medium text-foreground group-hover:text-cyan-700 sm:w-48 dark:group-hover:text-cyan-600 dark:hover:text-cyan-300">
           {displayName(r.name, selected)}
         </span>
         <span className="h-1.5 min-w-8 flex-1 overflow-hidden rounded-sm bg-muted/30">

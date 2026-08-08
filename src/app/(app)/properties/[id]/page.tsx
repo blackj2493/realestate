@@ -863,13 +863,13 @@ export default async function PropertyPage({
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-          <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
+          <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-600 dark:hover:text-cyan-300">
             Map
           </Link>
           {cityHref && p.City && (
             <>
               <span aria-hidden>/</span>
-              <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
+              <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-600 dark:hover:text-cyan-300">
                 {isCommercial ? `Commercial properties in ${cityCrumb}` : `Homes for sale in ${cityCrumb}`}
               </Link>
             </>

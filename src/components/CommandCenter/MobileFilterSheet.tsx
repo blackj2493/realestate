@@ -201,7 +201,7 @@ export default function MobileFilterSheet({
               onClick={clearAll}
               className={cn(
                 "min-h-[44px] flex-1 border border-border px-4 font-mono text-xs font-semibold uppercase tracking-wider text-foreground",
-                "transition-colors hover:border-cyan-500/50 hover:text-cyan-300 active:bg-muted"
+                "transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300 active:bg-muted"
               )}
             >
               Clear all

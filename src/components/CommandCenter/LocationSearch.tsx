@@ -305,7 +305,11 @@ export default function LocationSearch({
             >
               <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-mono text-xs text-cyan-200">
+                {/* cyan-200 on the bg-cyan-500/5 tint is near-white on near-white once this
+                    row renders light — and it does: LocationSearch mounts in AppHeader,
+                    FirstRunRegionPicker and AnalyticsClient, none of them dark islands. The
+                    icon one line up already carries the split; this label was missed. */}
+                <span className="truncate font-mono text-xs text-cyan-800 dark:text-cyan-200">
                   {nl.chips.map((c) => c.label).join("  ·  ")}
                 </span>
                 <span className="truncate text-[10px] text-muted-foreground">Search all matches on the map</span>

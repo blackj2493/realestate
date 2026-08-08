@@ -195,7 +195,9 @@ export default async function CityHubPage({
               {commercialTotal >= MIN_INDEXABLE && (
                 <Link
                   href={`/commercial/${prov.toLowerCase()}/${city}`}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+                  // cyan-400 is a dark-surface accent and this hub is a light page, where it
+                  // measures ~1.7:1. cyan-700 clears AA; dark keeps the original shade.
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-700 transition-colors hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300"
                 >
                   <Building2 className="h-4 w-4" /> Commercial properties in {cityName} →
                 </Link>
@@ -214,7 +216,7 @@ export default async function CityHubPage({
           <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
             <Building2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>Nothing active here at the moment.</p>
-            <Link href="/properties" className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
+            <Link href="/properties" className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300">
               Explore the full map →
             </Link>
           </div>
@@ -230,7 +232,7 @@ export default async function CityHubPage({
                 <Link
                   key={n.slug}
                   href={`/property/${prov.toLowerCase()}/${city}/${n.slug}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300"
                 >
                   {n.name}
                   <span className="text-xs text-muted-foreground">{n.count}</span>

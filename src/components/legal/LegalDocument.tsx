@@ -61,19 +61,19 @@ export default function LegalDocument({
           <nav className="flex gap-1 text-xs uppercase tracking-wider text-muted-foreground">
             <Link
               href="/terms"
-              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
+              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-600 dark:hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
             >
               Terms
             </Link>
             <Link
               href="/privacy"
-              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
+              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-600 dark:hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
             >
               Privacy
             </Link>
             <Link
               href="/glossary"
-              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
+              className="px-2 py-3 text-foreground transition-colors hover:text-cyan-600 dark:hover:text-cyan-300 active:text-cyan-600 dark:active:text-cyan-400"
             >
               Glossary
             </Link>

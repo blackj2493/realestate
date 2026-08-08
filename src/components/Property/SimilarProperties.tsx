@@ -141,7 +141,7 @@ export default function SimilarProperties(props: Props) {
   const browseHref = browseArea ? `/properties?city=${encodeURIComponent(browseArea)}` : null;
   const browseLabel = isLease ? "rentals" : "homes for sale";
   const seeAll = browseHref ? (
-    <Link href={browseHref} className="text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
+    <Link href={browseHref} className="text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300">
       See all in {areaName} →
     </Link>
   ) : null;
