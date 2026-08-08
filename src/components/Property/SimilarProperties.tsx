@@ -199,7 +199,7 @@ export default function SimilarProperties(props: Props) {
         <div className="mt-4 flex justify-center">
           <Link
             href={browseHref}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-200"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-700 dark:hover:text-cyan-200"
           >
             Browse all {browseLabel} in {areaName}
             <ArrowRight className="h-4 w-4" />

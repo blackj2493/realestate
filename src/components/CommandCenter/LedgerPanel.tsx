@@ -323,7 +323,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
                 // carry a persistent sort glyph, so it's obvious at rest that they
                 // click to sort — not just on hover or once already sorted.
                 "group flex cursor-pointer items-center gap-0.5 text-muted-foreground transition-colors hover:text-foreground",
-                active && "text-cyan-700 dark:text-cyan-400 hover:text-cyan-400",
+                active && "text-cyan-700 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-400",
                 col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"
               )}
             >

@@ -707,7 +707,7 @@ export default function PropertiesPage() {
       fallback={
         <div className="flex min-h-app items-center justify-center bg-slate-950">
           <div className="text-center">
-            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-cyan-400" />
+            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-cyan-600 dark:text-cyan-400" />
             <p className="text-slate-400">Initializing map…</p>
           </div>
         </div>
