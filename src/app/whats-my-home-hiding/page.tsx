@@ -3,6 +3,8 @@ import RenovationFunnel from '@/components/reno/RenovationFunnel';
 import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
 import AppHeader from '@/components/layout/AppHeader';
+import { getServiceRoleClient } from '@/lib/supabase/client';
+import { getSeatSummary, shouldShowSeats } from '@/lib/founding/seats';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +49,12 @@ export default async function WhatsMyHomeHidingPage({
   const resolved = slug ? resolveCommunitySlug(tree, slug) : null;
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
+  // The offer has to be visible BEFORE the address field or it can't do its job:
+  // someone arriving from a link needs a reason to start typing. The count only —
+  // the seat map and the seat number belong to the result, where they've seen
+  // something worth having. The page is force-dynamic, so this stays live.
+  const seats = await getSeatSummary(getServiceRoleClient());
+
   return (
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
@@ -76,6 +84,18 @@ export default async function WhatsMyHomeHidingPage({
             </li>
           ))}
         </ul>
+        {shouldShowSeats(seats) && !seats.soldOut && (
+          <div className="mb-8 flex flex-wrap items-center gap-3 rounded-lg border border-cyan-600/35 bg-cyan-500/10 px-3.5 py-2.5">
+            <span className="shrink-0 font-mono text-2xl font-bold leading-none tabular-nums text-cyan-700 dark:text-cyan-400">
+              {seats.taken}
+              <span className="font-normal text-muted-foreground">/{seats.total}</span>
+            </span>
+            <span className="min-w-0 flex-1 basis-48 text-[13.5px] text-foreground">
+              <b className="font-semibold text-cyan-700 dark:text-cyan-400">founding seats taken.</b>{' '}
+              Seat holders keep full access free, permanently.
+            </span>
+          </div>
+        )}
         <RenovationFunnel
           tree={tree}
           initialCity={resolved?.city ?? ''}
