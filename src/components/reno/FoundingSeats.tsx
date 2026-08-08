@@ -60,6 +60,30 @@ function SeatCount({ taken, total }: { taken: number; total: number }) {
   );
 }
 
+/**
+ * The count above the address field — the reason to start typing.
+ *
+ * Rendered by the funnel rather than the page so it can move: the server renders
+ * the page BEFORE the visitor claims anything, and the claim lands a few seconds
+ * later on the auto-resubmit after sign-in. A server-only counter is therefore
+ * permanently one behind for the one person who most wants to see it change.
+ */
+export function FoundingSeatsBanner({ seats }: { seats: SeatSummary }) {
+  if (seats.soldOut) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-cyan-600/35 bg-cyan-500/10 px-3.5 py-2.5">
+      <span className="shrink-0 font-mono text-2xl font-bold leading-none tabular-nums text-cyan-700 dark:text-cyan-400">
+        {seats.taken}
+        <span className="font-normal text-muted-foreground">/{seats.total}</span>
+      </span>
+      <span className="min-w-0 flex-1 basis-48 text-[13.5px] text-foreground">
+        <b className="font-semibold text-cyan-700 dark:text-cyan-400">founding seats taken.</b>{' '}
+        Seat holders keep full access free, permanently.
+      </span>
+    </div>
+  );
+}
+
 /** Anonymous — sits directly above the unlock CTA, whose own wording is unchanged. */
 export function FoundingSeatsOffer({ seats }: { seats: SeatSummary }) {
   return (
