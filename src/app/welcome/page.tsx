@@ -80,7 +80,10 @@ export default async function WelcomePage({
     <div className="flex min-h-app flex-col bg-background text-foreground">
       <header className="px-4 py-3">
         <Link href="/" className="inline-flex items-center" aria-label="PureProperty.ca home">
-          <Logo size="md" theme="dark" />
+          {/* "auto", not "dark": this page's ground is `bg-background`, which flips with
+              the theme, so a pinned dark wordmark renders light ink on the light ground
+              and disappears. Pin the shade only on permanently-one-shade surfaces. */}
+          <Logo size="md" theme="auto" />
         </Link>
       </header>
 

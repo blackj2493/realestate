@@ -81,10 +81,10 @@ export default function TopCommandBar({ className }: TopCommandBarProps) {
                 across its three gaps, for ~12px of slack. Below 360px there is
                 none at all, so those viewports keep `sm`. */}
             <span className="xs:hidden">
-              <Logo size="sm" theme="dark" />
+              <Logo size="sm" theme="auto" />
             </span>
             <span className="hidden xs:inline-flex">
-              <Logo size="md" theme="dark" />
+              <Logo size="md" theme="auto" />
             </span>
           </Link>
 

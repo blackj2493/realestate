@@ -14,7 +14,7 @@ export default function ShareNotFound() {
       <header className="border-b border-border px-4 pt-safe">
         <div className="mx-auto flex h-16 max-w-3xl items-center">
           <Link href="/" aria-label="PureProperty.ca home" className="inline-flex items-center">
-            <Logo size="md" theme="dark" />
+            <Logo size="md" theme="auto" />
           </Link>
         </div>
       </header>
