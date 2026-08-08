@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import MagicLinkForm from "@/components/auth/MagicLinkForm";
 import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
 
@@ -48,7 +49,7 @@ export default async function LoginPage({
 
       <div className="relative z-10 flex min-h-app flex-col">
         {/* Header — logo size/padding match the apply page's TopNav */}
-        <header className="relative z-10 flex items-center px-6 py-5 md:px-12 md:py-7">
+        <header className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12 md:py-7">
           <Link
             href="/"
             className="flex items-center"
@@ -58,6 +59,10 @@ export default async function LoginPage({
                 which flips, not on a permanently-dark band. */}
             <Logo size="lg" theme="auto" />
           </Link>
+          {/* Dark is now reachable only by explicit choice, and this page renders its own
+              header rather than AppHeader's — so without a toggle here a signed-out visitor
+              has no way back to the terminal look. Same reasoning as TopNav. */}
+          <ThemeToggle className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 dark:hover:text-emerald-400 [touch-action:manipulation]" />
         </header>
 
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">
@@ -74,7 +79,7 @@ export default async function LoginPage({
           </div>
 
           {/* Card — translucent + blur to match the apply page form card */}
-          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-border bg-card/70 p-6 backdrop-blur-md md:p-8">
+          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-border bg-card p-6 backdrop-blur-md dark:bg-card/70 md:p-8">
             <div className="mb-5">
               <SocialAuthButtons next={safeNext} />
             </div>

@@ -27,10 +27,21 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    // Pinned dark to match /apply: this page sits on HeroBackground's permanently
-    // dark ground, so themed `bg-background`/`text-foreground` only mis-colored it.
-    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-200">
-      <HeroBackground variant="hero" />
+    // The landing page is a deliberate DARK ISLAND. The app now defaults to light, but this
+    // one surface keeps the terminal look — it is the brand's first impression, and its whole
+    // composition (white display type, emerald glow, the decoded intelligence card) is
+    // authored light-on-dark. Everything past it, /apply and /login included, is light.
+    //
+    // The `dark` CLASS is what makes that safe rather than a pile of hardcoded colours: every
+    // shadcn primitive and token-reading child below resolves against the dark palette, and
+    // the TopNav wordmark (theme="auto", reading --pp-logo-*) goes white here and navy on the
+    // light pages, from one prop.
+    //
+    // forceDark is separate and NOT redundant: HeroBackground picks its Mapbox style as a JS
+    // prop, and no CSS class can reach that. Without it this page would render the light
+    // basemap under white type.
+    <div className="dark relative min-h-app overflow-hidden bg-slate-950 text-slate-200">
+      <HeroBackground variant="hero" forceDark />
 
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />

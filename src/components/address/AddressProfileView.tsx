@@ -749,15 +749,15 @@ export default async function AddressProfileView({
             city name (they'd be as empty as the hub itself); the first pill then
             points at the map terminal instead of a dead shell. */}
         <section className="mt-8 flex flex-wrap gap-2">
-          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-700 dark:hover:text-cyan-300">
             Homes for sale {cityIsHub ? `in ${profile.city}` : `near ${streetAddress}`} →
           </Link>
           {cityIsHub && (
             <>
-              <Link href={`/family/${hubSlug}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+              <Link href={`/family/${hubSlug}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-700 dark:hover:text-cyan-300">
                 Top-rated schools in {profile.city} →
               </Link>
-              <Link href={`/lifestyle/${hubSlug}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
+              <Link href={`/lifestyle/${hubSlug}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-700 dark:hover:text-cyan-300">
                 Most walkable homes in {profile.city} →
               </Link>
             </>

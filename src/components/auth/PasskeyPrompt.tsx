@@ -112,7 +112,7 @@ export default function PasskeyPrompt() {
             Add a passkey to sign in with Face ID, your fingerprint, or your
             device PIN — no code to type.
           </p>
-          {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
+          {error && <p className="mt-1 text-xs text-rose-700 dark:text-rose-400">{error}</p>}
         </div>
       </div>
 

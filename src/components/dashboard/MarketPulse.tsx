@@ -141,8 +141,13 @@ export default function MarketPulse({
       <div className="relative h-56 p-3">
         {locked && (
           <div className="relative h-full w-full">
+            {/* Stand-in for the chart the gate is hiding: a wash rising off the floor, so the
+                lock reads as covering something. It has to invert per theme — the dark values
+                lift OFF the slate-900 card, and on the white light card that same slate is a
+                grey smudge, so light darkens instead (same idiom as RenoMarketBridge's
+                `bg-black/5 dark:bg-white/10`). Dark keeps its exact previous values. */}
             <div
-              className="h-full w-full rounded bg-gradient-to-t from-slate-800/50 to-slate-900/10 blur-sm"
+              className="h-full w-full rounded bg-gradient-to-t from-black/10 to-transparent blur-sm dark:from-slate-800/50 dark:to-slate-900/10"
               aria-hidden="true"
             />
             <VowGateOverlay message="Sign in to view sold-price trends" />

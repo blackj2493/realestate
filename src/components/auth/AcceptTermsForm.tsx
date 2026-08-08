@@ -232,17 +232,17 @@ export default function AcceptTermsForm({
 
       <p className="text-[11px] leading-snug text-muted-foreground">
         Read our full{" "}
-        <Link href="/terms" className="text-cyan-400 hover:underline">
+        <Link href="/terms" className="text-cyan-700 hover:underline dark:text-cyan-400">
           Terms of Use
         </Link>{" "}
         and{" "}
-        <Link href="/privacy" className="text-cyan-400 hover:underline">
+        <Link href="/privacy" className="text-cyan-700 hover:underline dark:text-cyan-400">
           Privacy Policy
         </Link>
         .
       </p>
 
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <p className="text-xs text-rose-700 dark:text-rose-400">{error}</p>}
 
       <button
         type="button"

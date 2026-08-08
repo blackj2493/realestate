@@ -34,7 +34,7 @@ function BreakdownRow({ label, value }: BreakdownRowProps) {
   const sign = value >= 0 ? '+' : '';
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-gray-400">{label}</span>
+      <span className="text-muted-foreground dark:text-gray-400">{label}</span>
       <span className={value >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
         {sign}
         {formatCurrency(value)}
@@ -65,7 +65,7 @@ function EngineBadge({ engineMode }: { engineMode: AVMResult['engineMode'] }) {
       className={`text-xs px-2 py-0.5 border rounded ${
         isCoefficient
           ? 'bg-blue-900 text-blue-300 border-blue-700'
-          : 'bg-gray-700 text-gray-300 border-gray-600'
+          : 'bg-muted text-muted-foreground border-border dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
       }`}
     >
       {isCoefficient ? 'COEFFICIENT ENGINE' : 'FALLBACK'}
@@ -94,7 +94,7 @@ export function AVMResultDisplay() {
 
   if (!result) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-muted-foreground dark:text-gray-500">
         Enter property details and calculate
       </div>
     );
@@ -107,22 +107,22 @@ export function AVMResultDisplay() {
   if (result.basis === 'none' || result.estimatedValue <= 0 || result.anchorPrice <= 0) {
     return (
       <div className="space-y-6">
-        <div className="rounded-md border border-gray-700 bg-gray-900/40 p-6 text-center">
-          <div className="text-lg font-semibold text-gray-200">Estimate unavailable</div>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
+        <div className="rounded-md border border-border bg-muted/40 p-6 text-center dark:border-gray-700 dark:bg-gray-900/40">
+          <div className="text-lg font-semibold text-foreground dark:text-gray-200">Estimate unavailable</div>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground dark:text-gray-400">
             We don&apos;t have enough recent comparable sales in this area to produce a
             reliable valuation. Try a covered city/region — coverage is strongest across
             the Greater Toronto Area.
           </p>
         </div>
-        <div className="space-y-2 pt-4 border-t border-gray-700">
+        <div className="space-y-2 pt-4 border-t border-border dark:border-gray-700">
           <Link
             href="/properties"
             className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
           >
             See live investor deals near you →
           </Link>
-          <p className="text-xs text-gray-500 text-center">
+          <p className="text-xs text-muted-foreground text-center dark:text-gray-500">
             Estimate only — not a formal appraisal or financial advice.
           </p>
         </div>
@@ -137,14 +137,15 @@ export function AVMResultDisplay() {
     <div className="space-y-6">
       {/* Primary Value */}
       <div className="text-center">
-        <div className="text-4xl font-mono font-bold text-white">
+        {/* The headline valuation — text-white made it invisible on the light card. */}
+        <div className="text-4xl font-mono font-bold text-foreground dark:text-white">
           {formatCurrency(result.estimatedValue)}
         </div>
         <div className="mt-2 flex items-center justify-center gap-3">
-          <span className="text-lg text-gray-400">
+          <span className="text-lg text-muted-foreground dark:text-gray-400">
             {isPositive ? '↑' : '↓'} {formatCurrency(Math.abs(adjustmentDiff))}
           </span>
-          <span className="text-gray-500">|</span>
+          <span className="text-muted-foreground dark:text-gray-500">|</span>
           <span className={isPositive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
             {formatPct(result.totalAdjustmentPct)}
           </span>
@@ -155,27 +156,27 @@ export function AVMResultDisplay() {
       <div className="space-y-2">
         <EngineBadge engineMode={result.engineMode} />
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Anchor Price</span>
-          <span className="text-gray-300 font-mono">
+          <span className="text-muted-foreground dark:text-gray-400">Anchor Price</span>
+          <span className="text-foreground font-mono dark:text-gray-300">
             {formatCurrency(result.anchorPrice)}
           </span>
         </div>
         {result.r2Score !== null && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">R² Score</span>
-            <span className="text-gray-300 font-mono">{result.r2Score.toFixed(2)}</span>
+            <span className="text-muted-foreground dark:text-gray-400">R² Score</span>
+            <span className="text-foreground font-mono dark:text-gray-300">{result.r2Score.toFixed(2)}</span>
           </div>
         )}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Confidence</span>
+          <span className="text-muted-foreground dark:text-gray-400">Confidence</span>
           <ConfidenceBadge confidence={result.confidence} />
         </div>
       </div>
 
       {/* Breakdown */}
       {result.engineMode === 'COEFFICIENT_ADJUSTED' && (
-        <div className="space-y-2 pt-4 border-t border-gray-700">
-          <Label className="text-xs text-gray-400">ADJUSTMENT BREAKDOWN</Label>
+        <div className="space-y-2 pt-4 border-t border-border dark:border-gray-700">
+          <Label className="text-xs text-muted-foreground dark:text-gray-400">ADJUSTMENT BREAKDOWN</Label>
           <BreakdownRow label="Bedrooms" value={result.breakdown.bedroomsAdjustment} />
           <BreakdownRow label="Bathrooms" value={result.breakdown.bathroomsAdjustment} />
           <BreakdownRow label="Parking" value={result.breakdown.parkingAdjustment} />
@@ -186,14 +187,14 @@ export function AVMResultDisplay() {
       )}
 
       {/* Lead CTA — route high-intent viewer into the funnel */}
-      <div className="space-y-2 pt-4 border-t border-gray-700">
+      <div className="space-y-2 pt-4 border-t border-border dark:border-gray-700">
         <Link
           href="/properties"
           className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
         >
           See live investor deals near you →
         </Link>
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-muted-foreground text-center dark:text-gray-500">
           Estimate only — not a formal appraisal or financial advice.
         </p>
       </div>
@@ -203,7 +204,7 @@ export function AVMResultDisplay() {
 
 function Label({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`text-xs text-gray-400 uppercase tracking-wider ${className}`}>
+    <div className={`text-xs text-muted-foreground uppercase tracking-wider dark:text-gray-400 ${className}`}>
       {children}
     </div>
   );

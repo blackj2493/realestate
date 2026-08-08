@@ -104,7 +104,7 @@ export default function MagicLinkForm({
           />
         </div>
 
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-rose-700 dark:text-rose-400">{error}</p>}
 
         <button
           type="submit"
@@ -171,7 +171,7 @@ export default function MagicLinkForm({
         />
       </div>
 
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <p className="text-xs text-rose-700 dark:text-rose-400">{error}</p>}
 
       <button
         type="submit"
