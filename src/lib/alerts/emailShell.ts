@@ -66,8 +66,11 @@ export function shell(opts: { preheader: string; headerLabel: string; body: stri
         <tr><td style="padding:0;">
           <table role="presentation" width="100%" style="border-collapse:collapse;background:#0a1828;">
             <tr>
-              <td style="padding:14px 24px;">${LOGO_DARK_BG}</td>
-              <td align="right" style="padding:14px 24px;"><span style="font-family:${MONO};color:#67e8f9;font-size:10px;letter-spacing:.14em;">${opts.headerLabel}</span></td>
+              <!-- 16px sides, not 24px: two cells at 24px spent 96px on padding before a
+                   single character, which pinned every email built on this shell to a 336px
+                   minimum width and wrapped the header label onto two lines even at 390px. -->
+              <td style="padding:14px 16px;">${LOGO_DARK_BG}</td>
+              <td align="right" style="padding:14px 16px;"><span style="font-family:${MONO};color:#67e8f9;font-size:10px;letter-spacing:.14em;">${opts.headerLabel}</span></td>
             </tr>
             <tr><td colspan="2" style="height:2px;background:#0891b2;line-height:2px;">&nbsp;</td></tr>
           </table>
