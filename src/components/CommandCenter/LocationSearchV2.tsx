@@ -33,7 +33,7 @@ import { rankListings, type RankBadge } from "@/lib/search/personaRank";
 import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
 import { addressProfileHref } from "@/lib/search/searchTarget";
-import { RECORD_KIND_LABEL, RECORD_KIND_TONE, backOnMarketLabel } from "@/lib/search/recordKind";
+import { ROW_STATUS_CHIP, ROW_STATUS_LABEL, ROW_STATUS_TONE, backOnMarketLabel } from "@/lib/search/searchRows";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
 import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
@@ -122,11 +122,11 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   // Persona badges for address rows (computed from the listings already in hand).
   const badgeFor = React.useMemo(() => {
     const map = new Map<string, RankBadge[]>();
-    const addr = groups.find((g) => g.category === "address");
-    if (addr) {
-      const listings = addr.items.map((i) => i.listing!).filter(Boolean);
-      for (const r of rankListings(listings, activePersona)) map.set(r.listing.id, r.badges);
-    }
+    const listings = groups
+      .flatMap((g) => g.items)
+      .filter((i) => i.category === "address" && i.listing)
+      .map((i) => i.listing!);
+    for (const r of rankListings(listings, activePersona)) map.set(r.listing.id, r.badges);
     return map;
   }, [groups, activePersona]);
 
@@ -362,7 +362,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
   const addrIntent = /\d/.test(value) && !parsed?.isStructured;
-  const topCommunity = groups.find((g) => g.category === "community")?.items[0];
+  const topCommunity = groups.flatMap((g) => g.items).find((i) => i.category === "community");
   // A parent city the query is reaching for (Toronto/London) whose whole-city scope
   // is reachable via the terminal's existing full-text location path — offers a
   // synthetic "all districts" row above the individual district facets.
@@ -540,12 +540,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               )}
 
               {groups.map((g) => (
-                <div key={g.category}>
+                <div key={g.section}>
                   <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>{g.title}</span>
-                    {(g.category === "sold" || g.category === "soldAddress") && (
-                      <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>
-                    )}
+                    {g.vow && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
                   </div>
                   {g.items.map((item) => {
                     const idx = flat(item);
@@ -632,10 +630,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             <span
                               className={cn(
                                 "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
-                                RECORD_KIND_TONE[item.sold?.kind ?? "sold"]
+                                ROW_STATUS_CHIP[item.sold?.kind ?? "sold"]
                               )}
                             >
-                              {item.sold?.kindLabel ?? RECORD_KIND_LABEL.sold}
+                              {item.sold?.kindLabel ?? ROW_STATUS_LABEL.sold}
                             </span>
                             {item.sold?.priceLabel ? (
                               <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
@@ -665,7 +663,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => findComps(item, e)}
-                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300 group-hover:flex"
+                            className="flex shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
                           >
                             <Crosshair className="h-2.5 w-2.5" />
                             Comparable sales
@@ -707,9 +705,39 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             </span>
                           </span>
                         )}
-                        {item.provenance && item.category !== "sold" && item.category !== "soldAddress" && item.category !== "community" && (
-                          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-muted-foreground sm:group-hover:hidden sm:block">
-                            {item.category === "address" ? "for sale" : item.provenance}
+                        {/* Live listing: MAP is the second destination — flies the map and
+                            drops a pin WITHOUT opening the report, so you can stay in the
+                            terminal. Always visible: the sibling comps action was
+                            `group-hover:flex`, which no touch device can ever trigger. */}
+                        {(item.category === "address" || item.category === "mls") && item.geo && (
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFlyTo({ lat: item.geo!.lat, lng: item.geo!.lng, zoom: item.geo!.zoom ?? 16 });
+                              setSearchPin({ lat: item.geo!.lat, lng: item.geo!.lng, label: item.label });
+                              setValue("");
+                              close();
+                              onSelect?.();
+                            }}
+                            className="flex shrink-0 items-center gap-1 border border-cyan-500/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
+                          >
+                            <MapPin className="h-2.5 w-2.5" />
+                            Map
+                          </span>
+                        )}
+                        {/* Status as a coloured word, from the feed's own TransactionType.
+                            This used to be a hardcoded "for sale" tag shown on every active
+                            row — including every lease. */}
+                        {item.status && (item.category === "address" || item.category === "mls") && (
+                          <span
+                            className={cn(
+                              "shrink-0 font-mono text-[9px] font-bold uppercase tracking-wider",
+                              ROW_STATUS_TONE[item.status]
+                            )}
+                          >
+                            {ROW_STATUS_LABEL[item.status]}
                           </span>
                         )}
                       </button>
@@ -718,7 +746,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                 </div>
               ))}
 
-              {parsed?.isStructured && (
+              {/* Persistent map exit. This footer used to render ONLY for a structured
+                  (natural-language) query, so an address or street search had no way back
+                  to the map at all. Now every query that produced results gets one; the NL
+                  variant still applies the parsed chips, everything else searches the area
+                  the results are in. */}
+              {parsed?.isStructured ? (
                 <button
                   type="button"
                   onClick={() => applyNl()}
@@ -729,6 +762,27 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                     ? `See all ${preview.count.toLocaleString()} matches on the map`
                     : `Apply ${parsed.chips.length} filters`}
                 </button>
+              ) : (
+                groups.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Prefer a coordinate we already resolved for this query — the place
+                      // row's geo — so the map lands on what was searched rather than
+                      // wherever it happened to be sitting.
+                      const anchor = flatItems.find((i) => i.geo)?.geo;
+                      if (anchor) setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: anchor.zoom ?? 14 });
+                      else searchVisibleArea();
+                      setValue("");
+                      close();
+                      onSelect?.();
+                    }}
+                    className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-border bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                  >
+                    <Layers className="h-3 w-3" />
+                    See these on the map
+                  </button>
+                )
               )}
             </>
           )}

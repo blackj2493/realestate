@@ -4,6 +4,7 @@
  */
 
 import type { ListingDocument } from "@/lib/typesense/client";
+import type { RowStatus, SearchSection } from "./searchRows";
 
 // ── Federated, categorized suggestions ──────────────────────────────────────
 
@@ -30,6 +31,9 @@ export interface SuggestItem {
   geo?: { lat: number; lng: number; zoom?: number };
   /** Short "why it matched" tag, e.g. "address", "community", "school". */
   provenance?: string;
+  /** Row status for a LIVE listing — for sale vs for lease, from the feed's own
+   *  TransactionType. Records carry theirs on `sold.kind` instead. */
+  status?: RowStatus;
   /** Sold metadata (price intentionally absent when gated). */
   sold?: {
     dateLabel?: string;
@@ -61,6 +65,10 @@ export interface AddressRecordResponse {
   key: string;
   address: string;
   city: string;
+  /** Feed CityRegion ("Dundas" under City "Hamilton") — the finer-grained name. Present so
+   *  a place row can be labelled from the FEED rather than the geocoder's own municipal
+   *  naming, which would mint a second identity for one home. See searchRows.ts. */
+  cityRegion?: string;
   /** Public status kind — shown to anon too (same signal /address shows, R24a). */
   dealKind: "sold" | "leased" | "offmarket";
   /** Listing brokerage — public (TRREB §6.3(c)). */
@@ -109,10 +117,17 @@ export interface AddressStatusResponse {
   subType?: string;
 }
 
+/**
+ * A rendered section. Grouped by what results ARE (a place vs a listing), never by what
+ * state they're in — status rides on each row instead (see searchRows.ts). `category`
+ * stays on the ITEM and keeps deciding what a click does.
+ */
 export interface SuggestGroup {
-  category: SuggestCategory;
+  section: SearchSection;
   title: string;
   items: SuggestItem[];
+  /** Section can carry VOW-gated figures → the dropdown shows the VOW marker. */
+  vow?: boolean;
 }
 
 // ── Natural-language → editable chips ───────────────────────────────────────

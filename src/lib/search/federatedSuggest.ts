@@ -15,7 +15,15 @@ import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { geocodeAddress } from "./geocodeClient";
 import { rankAddressSuggestions } from "./addressRank";
-import { RECORD_KIND_LABEL, formatRecordDate, formatRecordPrice } from "./recordKind";
+import {
+  ROW_STATUS_LABEL,
+  SECTION_TITLE,
+  activeRowStatus,
+  formatRecordDate,
+  formatRowPrice,
+  isLeaseTransaction,
+  localityLabel,
+} from "./searchRows";
 import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
 import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
@@ -44,20 +52,11 @@ export function matchesTypedAddress(query: string, suggestionAddress: string): b
   return typed.streetNumber === cand.streetNumber && streetNamesMatch(typed.streetName, cand.streetName);
 }
 
-const TITLE: Record<string, string> = {
-  mls: "MLS#",
-  // The address group holds LIVE listings — name it by what it is, not its lookup key
-  // ("Addresses" next to the geo group's "Address" read as duplicates).
-  address: "For sale",
-  sold: "Recent solds · nearby",
-  soldAddress: "Property records",
-  community: "Communities",
-  school: "Schools",
-  geo: "Address",
-};
-
-// Row chip label + colour live in one place shared with the header bar (recordKind.ts) —
-// the two bars used to spell this out separately and drifted apart.
+// Section titles and row-status presentation both live in searchRows.ts, shared with the
+// header bar. Group headings deliberately no longer name a STATUS: the old "For sale"
+// heading sat above lease listings too (every lease has been eligible since the
+// price-floor fix), so the heading was lying about a large slice of the index. Status now
+// rides on each row instead.
 
 /**
  * Probe the server for a sold/leased/off-market record at the typed address. The route
@@ -130,6 +129,7 @@ export async function federatedSuggest(
           listing: doc,
           geo: geoOf(doc),
           provenance: "MLS#",
+          status: activeRowStatus(doc.TransactionType),
         });
     } catch {
       /* fall through to address/place search */
@@ -205,6 +205,7 @@ export async function federatedSuggest(
           listing: doc,
           geo: geoOf(doc),
           provenance: "address",
+          status: activeRowStatus(doc.TransactionType),
         });
       }
     }
@@ -238,11 +239,13 @@ export async function federatedSuggest(
         provenance: "record",
         sold: {
           priceMasked: !r.closePrice,
-          priceLabel: r.closePrice ? formatRecordPrice(r.closePrice) : undefined,
+          priceLabel: r.closePrice
+            ? formatRowPrice(r.closePrice, r.dealKind === "leased")
+            : undefined,
           dateLabel: r.soldDateMs ? formatRecordDate(r.soldDateMs) : undefined,
           href: r.href,
           kind: r.dealKind,
-          kindLabel: RECORD_KIND_LABEL[r.dealKind],
+          kindLabel: ROW_STATUS_LABEL[r.dealKind],
           mls: r.key,
           brokerage: r.brokerage,
           liveKey: r.liveKey,
@@ -251,34 +254,56 @@ export async function federatedSuggest(
         },
       });
     }
-    if (records.length === 0 && !typedAddressCovered && hit) {
+    // The map row is now UNCONDITIONAL for an address-shaped query. It used to render
+    // only when `records.length === 0 && !typedAddressCovered` — i.e. only for addresses
+    // we knew nothing about — so the map option vanished the moment a home had any
+    // history or a live listing, which is exactly when someone wants to see where it is.
+    if (hit) {
+      // Name it from the FEED when we have a row for this address; the geocoder answers
+      // with its own municipal naming ("Dundas" where the feed says City=Hamilton,
+      // CityRegion=Dundas). Only feed vocabulary exists in our region taxonomy and in the
+      // /address URLs already in the sitemap, so a geocoder name here would mint a second
+      // identity for one home. Geocoder → coordinates; feed → every label. (searchRows.ts)
+      const named = records[0] ?? null;
+      const feedLabel = named ? localityLabel(named.city, named.cityRegion) : "";
+      const placeLabel = named ? `${named.address.split(",")[0]}, ${feedLabel}` : hit.label;
       geo.push({
         id: `geo:${hit.lat},${hit.lng}`,
         category: "geo",
-        label: hit.label,
-        sublabel: "Not on the market — view the address profile, or drop a pin",
+        label: placeLabel,
+        sublabel:
+          records.length === 0 && !typedAddressCovered
+            ? "Not on the market — centre the map here, or view the address profile"
+            : "Centre the map here and search this area",
         geo: { lat: hit.lat, lng: hit.lng, zoom: 16 },
         provenance: "geocoded",
       });
     }
   }
 
-  // The typed-but-unlisted address is the user's stated intent — it outranks fuzzy
-  // lookalikes, so the sold-record/geo row renders ABOVE the address group.
   // Re-rank address hits by closeness to the typed string before slicing: Typesense's
   // typo-tolerant order otherwise floats lookalikes (same civic number, wrong street;
   // or a shared street-name word) above the address the user actually typed.
   const rankedAddresses = rankAddressSuggestions(q, addresses, (a) => a.label);
-  const order: Array<[SuggestItem[], SuggestGroup["category"]]> = [
-    [mls, "mls"],
-    [soldAddress, "soldAddress"],
-    [geo, "geo"],
-    [rankedAddresses.slice(0, 5), "address"],
-    [communities.slice(0, 6), "community"],
+
+  // Within Listings: an exact MLS# always leads. Then live listings BEFORE history —
+  // "what can I buy now" is the commoner intent — except when no active row genuinely
+  // matches what was typed. In that case the actives are all fuzzy lookalikes and the
+  // record IS the typed address, so it must not sit below them (the original intent of
+  // the old record-first ordering, kept but made conditional).
+  const actives = rankedAddresses.slice(0, 5);
+  const listings = typedAddressCovered
+    ? [...mls, ...actives, ...soldAddress]
+    : [...mls, ...soldAddress, ...actives];
+
+  // Places first: the map exit must never sit below a long list of listings.
+  const bySection: Array<[SuggestItem[], SuggestGroup["section"], boolean]> = [
+    [[...geo, ...communities.slice(0, 6)], "places", false],
+    [listings, "listings", soldAddress.length > 0],
   ];
-  return order
+  return bySection
     .filter(([items]) => items.length > 0)
-    .map(([items, category]) => ({ category, title: TITLE[category], items }));
+    .map(([items, section, vow]) => ({ section, title: SECTION_TITLE[section], items, vow }));
 }
 
 /** "3 bd · 2 ba · Detached · $749,900" line under an address suggestion. */
@@ -288,6 +313,8 @@ function addressMeta(d: ListingDocument): string {
   if (beds) parts.push(`${beds} bd`);
   if (d.BathroomsTotalInteger) parts.push(`${d.BathroomsTotalInteger} ba`);
   if (d.PropertySubType) parts.push(d.PropertySubType.trim());
-  if (d.ListPrice) parts.push(`$${d.ListPrice.toLocaleString("en-US")}`);
+  // A lease's ListPrice is a MONTHLY RENT. Rendered bare it reads as a purchase price —
+  // "$2,550" on a townhouse is not a sale.
+  if (d.ListPrice) parts.push(formatRowPrice(d.ListPrice, isLeaseTransaction(d.TransactionType)));
   return parts.join(" · ");
 }

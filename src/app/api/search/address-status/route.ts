@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
       key: r.id,
       address: r.address,
       city: r.city,
+      cityRegion: r.cityRegion || undefined,
       dealKind: r.dealKind,
       brokerage: r.brokerage ?? undefined, // public
       href,

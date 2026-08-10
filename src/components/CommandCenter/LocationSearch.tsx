@@ -24,12 +24,17 @@ import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
 import { matchesTypedAddress, fetchAddressStatus } from "@/lib/search/federatedSuggest";
 import {
-  RECORD_KIND_LABEL,
-  RECORD_KIND_TONE,
+  ROW_STATUS_CHIP,
+  ROW_STATUS_LABEL,
+  ROW_STATUS_TONE,
+  SECTION_TITLE,
   backOnMarketLabel,
   formatRecordDate,
-  formatRecordPrice,
-} from "@/lib/search/recordKind";
+  formatRowPrice,
+  activeRowStatus,
+  localityLabel,
+  sectionForCategory,
+} from "@/lib/search/searchRows";
 import type { AddressRecordResponse } from "@/lib/search/types";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
@@ -76,6 +81,23 @@ function tagFor(s: SearchSuggestion): string {
 /** Public record meta, shown to anon too: MLS# · brokerage (TRREB §6.3(c)). */
 function recordSublabel(r: AddressRecordResponse): string | undefined {
   return [r.key, r.brokerage].filter(Boolean).join(" · ") || undefined;
+}
+
+/**
+ * Which section a header-bar suggestion belongs in. This bar predates SuggestCategory and
+ * uses its own `kind` vocabulary, so translate first and then defer to the shared rule —
+ * the two bars must not each decide what counts as a "place".
+ */
+function sectionFor(s: SearchSuggestion) {
+  if (s.kind === "city" || s.kind === "neighbourhood") return sectionForCategory("community");
+  // An address row with coordinates and no listing IS the geocoded place row.
+  if (s.kind === "address" && !s.listing && s.geo) return sectionForCategory("geo");
+  return sectionForCategory(s.kind === "record" ? "soldAddress" : "address");
+}
+
+/** A live listing's status word comes from the feed, never from a hardcoded label. */
+function liveStatus(s: SearchSuggestion) {
+  return s.listing ? activeRowStatus(s.listing.TransactionType) : null;
 }
 
 export default function LocationSearch({
@@ -159,13 +181,27 @@ export default function LocationSearch({
         for (const r of [...records].reverse()) {
           results.unshift({ kind: "record", label: r.address, sublabel: recordSublabel(r), record: r });
         }
-        // Geocode fallback only when the address is genuinely unknown to us — no record
-        // AND no active listing covering what was typed.
-        if (records.length === 0 && !covered && hit) {
+        // The PLACE row is unconditional now. It used to render only when the address was
+        // unknown to us (no record AND no active match), so the map option disappeared
+        // exactly when a home had history or was for sale — the moment you most want to
+        // see where it is.
+        if (hit) {
+          // Named from the FEED whenever we have a row for this address. The geocoder
+          // answers with its own municipal naming ("Dundas" where the feed says
+          // City=Hamilton, CityRegion=Dundas); only feed vocabulary exists in our region
+          // taxonomy and in the /address URLs already indexed, so a geocoder name here
+          // would mint a second identity for one home. (searchRows.ts)
+          const named = records[0];
+          const placeLabel = named
+            ? `${named.address.split(",")[0]}, ${localityLabel(named.city, named.cityRegion)}`
+            : hit.label;
           results.unshift({
             kind: "address",
-            label: hit.label,
-            sublabel: "Not on the market",
+            label: placeLabel,
+            sublabel:
+              records.length === 0 && !covered
+                ? "Not on the market — centre the map here"
+                : "Centre the map here and search this area",
             // Coords power the explicit Map/Profile button pair on this row.
             geo: { lat: hit.lat, lng: hit.lng },
           });
@@ -363,9 +399,23 @@ export default function LocationSearch({
               No matches for “{value.trim()}”. Try a city, neighbourhood, address, or MLS#.
             </div>
           )}
-          {suggestions.map((s, i) => (
+          {suggestions.map((s, i) => {
+            const section = sectionFor(s);
+            // Header only when the section changes — keeps `suggestions` a flat array so
+            // the existing highlight/keyboard indices keep working unchanged.
+            const showHead = i === 0 || sectionFor(suggestions[i - 1]) !== section;
+            const status = liveStatus(s);
+            return (
+            <React.Fragment key={`${s.kind}-${s.label}-${i}`}>
+            {showHead && (
+              <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                <span>{SECTION_TITLE[section]}</span>
+                {section === "listings" && suggestions.some((x) => x.kind === "record") && (
+                  <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>
+                )}
+              </div>
+            )}
             <button
-              key={`${s.kind}-${s.label}-${i}`}
               type="button"
               onMouseEnter={() => setHighlight(i)}
               onClick={() => select(s)}
@@ -402,14 +452,14 @@ export default function LocationSearch({
                   <span
                     className={cn(
                       "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
-                      RECORD_KIND_TONE[s.record.dealKind]
+                      ROW_STATUS_CHIP[s.record.dealKind]
                     )}
                   >
-                    {RECORD_KIND_LABEL[s.record.dealKind]}
+                    {ROW_STATUS_LABEL[s.record.dealKind]}
                   </span>
                   {s.record.closePrice ? (
                     <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
-                      {formatRecordPrice(s.record.closePrice)}
+                      {formatRowPrice(s.record.closePrice, s.record.dealKind === "leased")}
                       {s.record.soldDateMs && (
                         <span className="ml-1 font-normal text-muted-foreground">
                           {formatRecordDate(s.record.soldDateMs)}
@@ -453,6 +503,35 @@ export default function LocationSearch({
                     Profile
                   </span>
                 </span>
+              ) : status ? (
+                /* Live listing: the status word comes from the feed's TransactionType —
+                   `tagFor` hardcoded "For sale" on every active row, lease listings
+                   included. The Map action sits beside it, always visible (never
+                   hover-gated: no touch device can reach a hover-only control). */
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {s.listing?.location && (
+                    <span
+                      role="button"
+                      tabIndex={-1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const [lat, lng] = s.listing!.location;
+                        router.push(
+                          `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=16&pin=${encodeURIComponent(s.label.split(",")[0])}`
+                        );
+                        setValue("");
+                        closeAndBlur();
+                      }}
+                      className="flex items-center gap-1 border border-cyan-500/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
+                    >
+                      <MapPin className="h-2.5 w-2.5" />
+                      Map
+                    </span>
+                  )}
+                  <span className={cn("font-mono text-[10px] font-bold uppercase tracking-wider", ROW_STATUS_TONE[status])}>
+                    {ROW_STATUS_LABEL[status]}
+                  </span>
+                </span>
               ) : (
                 <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
                   {tagFor(s)}
@@ -464,7 +543,9 @@ export default function LocationSearch({
                 </span>
               )}
             </button>
-          ))}
+            </React.Fragment>
+            );
+          })}
         </div>
       )}
     </div>
