@@ -22,8 +22,18 @@ import { slugify, deslugCity } from "@/lib/listings/listingPath";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
 
 export interface AddressProfile {
-  /** Display address, e.g. "142 Maplewood Avenue". */
+  /** Display address, e.g. "142 Maplewood Avenue". Never carries the unit — see `unit`. */
   address: string;
+  /**
+   * Unit from the requested slug ("86" for /address/on/mississauga/86-2945-thomas-street);
+   * null for a freehold address.
+   *
+   * Carried separately because the geocoder cannot: Mapbox resolves a unit address to the
+   * BUILDING and returns "2945 Thomas Street", silently dropping the unit. Anything that
+   * then matched on `address` alone was really matching the whole condo block, so the
+   * subject's own sale record could come from any unit in it.
+   */
+  unit: string | null;
   city: string;
   cityRegion: string | null;
   postal: string | null;
@@ -178,6 +188,7 @@ export const resolveAddressSlug = cache(async (citySlug: string, slug: string): 
       kind: "profile",
       profile: {
         address: titleCase(geo.label || street),
+        unit: parsed.unit || null,
         city: geo.city || cityHint || "Ontario",
         cityRegion: geo.cityRegion,
         postal: geo.postal,
@@ -196,6 +207,7 @@ export const resolveAddressSlug = cache(async (citySlug: string, slug: string): 
         kind: "profile",
         profile: {
           address: titleCase(street.replace(/\s*[a-z]\d[a-z]\s?\d[a-z]\d\s*$/i, "").trim()),
+          unit: parsed.unit || null,
           city: cityHint || "Ontario",
           cityRegion: null,
           postal: parsed.postal,

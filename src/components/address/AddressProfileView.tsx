@@ -324,8 +324,10 @@ export default async function AddressProfileView({
       ? getStreetLedgerPublic(profile.address, profile.city, profile.postal)
       : Promise.resolve<StreetLedgerPublic | null>(null),
     // The subject's OWN sale record (VOW) — consumer branch only (structural gate).
+    // profile.unit is REQUIRED here: the geocoded address is the building, so without it
+    // a unit's page adopts whichever unit in the block sold most recently.
     isConsumer
-      ? getSaleRecordByAddressGated(profile.address, profile.city, profile.postal)
+      ? getSaleRecordByAddressGated(profile.address, profile.city, profile.postal, profile.unit)
       : Promise.resolve<SaleRecord | null>(null),
   ]);
   // Rents + sale-price grids: consumers see ACTUAL closes (VOW, fetched only when
@@ -357,13 +359,17 @@ export default async function AddressProfileView({
   const provLabel = provSlug.toUpperCase();
   const hubSlug = cityHubSlug(profile.city) || slugify(profile.city) || citySlug;
   const { href: cityHref, isHub: cityIsHub } = cityLink;
-  const streetAddress = profile.address.split(",")[0];
+  // The unit belongs in the title. A page reached as ".../86-2945-thomas-street" that
+  // calls itself "2945 Thomas Street" reads as the whole building, and every number on
+  // it inherits that ambiguity.
+  const streetOnly = profile.address.split(",")[0];
+  const streetAddress = profile.unit ? `Unit ${profile.unit} · ${streetOnly}` : streetOnly;
 
   // Map-terminal deep link centered on this home (?lat/&lng seed flyTo + the search
   // pin — see properties/page.tsx). NO ?city=: bounds scope the query there, so the
   // geocoder-vs-feed naming split (Nepean vs Barrhaven) can't hide nearby inventory.
   const mapHref = hasGeo
-    ? `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=14&pin=${encodeURIComponent(streetAddress)}`
+    ? `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=14&pin=${encodeURIComponent(streetOnly)}`
     : `/properties?city=${encodeURIComponent(profile.city)}`;
 
   // ── Pulse + narrative (asking-side only — anonymous-safe) ──────────────────
@@ -515,8 +521,12 @@ export default async function AddressProfileView({
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
+              {/* States what OUR records hold, not what the market is doing. The old copy
+                  ("Not currently for sale") asserted a market fact we never checked — and
+                  it was wrong the moment a listing reached us late, was withheld from the
+                  IDX feed, or sat under a unit we had matched away. */}
               <span className="rounded-full border border-border bg-card/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Not currently for sale
+                No active listing on file
               </span>
               {ledgerCount > 0 && (
                 <a

@@ -141,7 +141,11 @@ export async function GET(req: NextRequest) {
       for (const h of res.hits ?? []) {
         const cand = parseAddress(h.document.UnparsedAddress ?? '');
         cand.postal = '';
-        if (h.document.CityRegion && addressesMatch(parsed, cand)) {
+        // ignoreUnit: this route resolves a NEIGHBOURHOOD cohort, and every unit in a
+        // block shares one. Matching strictly here would strand condo owners who typed
+        // their address without a unit — with no number shown, there is nothing to get
+        // wrong. Any path that renders a per-home figure must NOT pass this.
+        if (h.document.CityRegion && addressesMatch(parsed, cand, { ignoreUnit: true })) {
           const r = answer(h.document.CityRegion, h.document.City, 'exact-active');
           if (r) return r;
         }
@@ -150,7 +154,9 @@ export async function GET(req: NextRequest) {
       console.error('[api/reno/resolve-area] active exact match failed:', err);
     }
 
-    const sold = (await getSoldPublicByAddress(parsed)) ?? (await getSoldPublicByAddressLoose(parsed));
+    const sold =
+      (await getSoldPublicByAddress(parsed, { ignoreUnit: true })) ??
+      (await getSoldPublicByAddressLoose(parsed));
     if (sold?.cityRegion) {
       const r = answer(sold.cityRegion, sold.city, 'exact-sold');
       if (r) return r;

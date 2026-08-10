@@ -18,7 +18,7 @@ import { generatePropertyHash } from "@/lib/typesense/TemporalDistressEngine";
 import { refreshCampaignHistoryForListing } from "@/lib/campaignHistory/store";
 import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/normalize";
 import type { CampaignEvent } from "@/lib/campaignHistory/types";
-import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
+import { parseAddress, streetNamesMatch, unitsMatch, normalizeUnit } from "@/lib/watchlist/disposition";
 import { localityMatch, fsaOf } from "@/lib/address/streetLedger";
 
 /** One ledger row — a campaign at this address, ready to render. */
@@ -255,13 +255,22 @@ export async function getSaleRecordByKeyGated(listingKey: string): Promise<SaleR
  * geocoder-vs-feed naming landmine — see streetLedger), then reuses the newest
  * matching row's payload for the ledger refresh. Null when this address has no
  * archived sale — the Home Pulse profile simply renders without a record.
+ *
+ * `unit` is passed SEPARATELY because the display address usually cannot carry it: the
+ * geocoder resolves "86-2945 Thomas Street" to the building ("2945 Thomas Street") and
+ * drops the unit on the floor. Without it every unit in a condo block probed the same
+ * civic number and took the newest sale in the building — which is exactly how unit 86
+ * came to display unit 62's $690,000 close as "this home's record".
  */
 export async function getSaleRecordByAddressGated(
   address: string,
   city: string,
-  postal: string | null
+  postal: string | null,
+  unit?: string | null
 ): Promise<SaleRecord | null> {
-  const subject = parseAddress(`${address}, ${city}${postal ? ` ${postal}` : ""}`);
+  const parsed = parseAddress(`${address}, ${city}${postal ? ` ${postal}` : ""}`);
+  // An explicitly resolved unit wins over whatever the display string implied.
+  const subject = { ...parsed, unit: normalizeUnit(unit) || parsed.unit };
   if (!subject.streetNumber || !subject.streetName) return null;
   const token = subject.streetName.split(/\s+/).sort((a, b) => b.length - a.length)[0];
   if (!token || token.length < 3) return null;
@@ -288,6 +297,9 @@ export async function getSaleRecordByAddressGated(
       const rowAddress = typeof r.unparsed_address === "string" ? r.unparsed_address : "";
       const parsed = parseAddress(rowAddress);
       if (!parsed.streetNumber || parsed.streetNumber !== subject.streetNumber) return false;
+      // Unit before street/locality: in a condo block every other leg passes for every
+      // unit, so this is the only test that distinguishes the subject from its neighbours.
+      if (!unitsMatch(subject, parsed)) return false;
       if (!streetNamesMatch(subject.streetName, parsed.streetName)) return false;
       if (subject.postal && parsed.postal) return subject.postal === parsed.postal;
       return localityMatch(
