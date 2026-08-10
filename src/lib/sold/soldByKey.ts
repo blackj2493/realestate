@@ -15,7 +15,7 @@
 import Typesense, { Client } from "typesense";
 import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typesense/soldListingsSchema";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { parseAddress, addressesMatch, streetNamesMatchPrefix, type ParsedAddress } from "@/lib/watchlist/disposition";
+import { parseAddress, addressesMatch, streetNamesMatchPrefix, unitsMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
 import { deriveDealType } from "@/lib/sold/dealType";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
 import { primaryImageFromPhotos } from "@/lib/etl/selectPrimaryImage";
@@ -199,7 +199,10 @@ async function getSoldArchiveGatedByKey(key: string): Promise<SoldListingDocumen
  *  anchored + prefix street-name match (mirrors getSoldPublicByAddressLoose), newest first;
  *  then one PK read to build the record. The anchored ILIKE mirrors the sale-record probe
  *  (saleRecord.ts) that already runs on raw_vow_sold in production. */
-async function getSoldArchivePublicByAddress(parsed: ParsedAddress): Promise<SoldPublic | null> {
+async function getSoldArchivePublicByAddress(
+  parsed: ParsedAddress,
+  opts?: { ignoreUnit?: boolean }
+): Promise<SoldPublic | null> {
   if (!parsed.streetNumber || parsed.streetName.length < 3) return null;
   const token = parsed.streetName.split(/\s+/).sort((a, b) => b.length - a.length)[0];
   if (!token || token.length < 3) return null;
@@ -214,6 +217,9 @@ async function getSoldArchivePublicByAddress(parsed: ParsedAddress): Promise<Sol
     for (const r of (data ?? []) as Array<Record<string, unknown>>) {
       const cand = parseAddress((r.unparsed_address as string | null) ?? "");
       if (cand.streetNumber !== parsed.streetNumber) continue;
+      // Unit first. Rows arrive newest-first, so without this the fallback handed back
+      // the most recent sale in the BUILDING as if it were the subject's own.
+      if (!opts?.ignoreUnit && !unitsMatch(parsed, cand)) continue;
       if (!streetNamesMatchPrefix(parsed.streetName, cand.streetName)) continue;
       if (parsed.postal && cand.postal && parsed.postal !== cand.postal) continue;
       // Ordered newest-first → the first genuine match is the most recent sale.
@@ -275,7 +281,10 @@ export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null
  * Matching mirrors the watchlist dispositions route: free-text UnparsedAddress query,
  * then addressesMatch (civic number + postal-or-city/street) so a neighbour never bleeds in.
  */
-export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<SoldPublic | null> {
+export async function getSoldPublicByAddress(
+  parsed: ParsedAddress,
+  opts?: { ignoreUnit?: boolean }
+): Promise<SoldPublic | null> {
   if (!parsed.streetNumber || !parsed.streetName) return null;
   try {
     const res = await getSoldClient()
@@ -290,11 +299,11 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
     let best: { d: Partial<SoldListingDocument>; date: number } | null = null;
     for (const h of res.hits ?? []) {
       const d = h.document as Partial<SoldListingDocument>;
-      if (!d.id || !addressesMatch(parsed, parseAddress(d.UnparsedAddress ?? ""))) continue;
+      if (!d.id || !addressesMatch(parsed, parseAddress(d.UnparsedAddress ?? ""), opts)) continue;
       const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
       if (!best || date > best.date) best = { d, date };
     }
-    if (!best) return await getSoldArchivePublicByAddress(parsed);
+    if (!best) return await getSoldArchivePublicByAddress(parsed, opts);
     const d = best.d;
     const loc =
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
@@ -323,6 +332,11 @@ export async function getSoldPublicByAddress(parsed: ParsedAddress): Promise<Sol
  * prefix street-name match (+ postal equality when both sides have one); the strict
  * city check is intentionally dropped — a typed fragment rarely carries a city, and the
  * newest-first ranking absorbs lookalikes. NEVER use for canonical resolution.
+ *
+ * Deliberately UNIT-BLIND, unlike getSoldPublicByAddress. A suggestion row renders its
+ * own full address ("2945 Thomas Street 62"), so the reader sees exactly which unit they
+ * are being offered; nothing here claims to be the subject's own record. Requiring a unit
+ * would just delete every condo from the dropdown for anyone who typed a street.
  */
 export async function getSoldPublicByAddressLoose(parsed: ParsedAddress): Promise<SoldPublic | null> {
   if (!parsed.streetNumber || parsed.streetName.length < 3) return null;
@@ -347,7 +361,9 @@ export async function getSoldPublicByAddressLoose(parsed: ParsedAddress): Promis
       const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
       if (!best || date > best.date) best = { d, date };
     }
-    if (!best) return await getSoldArchivePublicByAddress(parsed);
+    // Unit-blind here too, so the archive leg can't be stricter than the index leg above
+    // and make the same typed fragment resolve differently depending on which one answers.
+    if (!best) return await getSoldArchivePublicByAddress(parsed, { ignoreUnit: true });
     const d = best.d;
     const loc =
       Array.isArray(d.location) && d.location.length === 2 && Number.isFinite(d.location[0]) && Number.isFinite(d.location[1])
