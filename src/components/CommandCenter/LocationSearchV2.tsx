@@ -33,6 +33,7 @@ import { rankListings, type RankBadge } from "@/lib/search/personaRank";
 import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
 import { addressProfileHref } from "@/lib/search/searchTarget";
+import { RECORD_KIND_LABEL, RECORD_KIND_TONE, backOnMarketLabel } from "@/lib/search/recordKind";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
 import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
@@ -578,6 +579,16 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                               {[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}
                             </span>
                           )}
+                          {/* The relist, said out loud: this campaign ended but the home is
+                              listed again under a different MLS#. An OFF MARKET row also
+                              NAVIGATES there (the server resolved sold.href to the live
+                              listing) — clicking it used to dead-end on the cancelled
+                              campaign while the home sat for sale (owner, 2026-08-10). */}
+                          {item.category === "soldAddress" && item.sold?.liveKey && (
+                            <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              {backOnMarketLabel(item.sold.livePrice, item.sold.liveTransactionType)}
+                            </span>
+                          )}
                           {badges.length > 0 && (
                             <span className="mt-1 flex flex-wrap gap-1">
                               {badges.slice(0, 2).map((b, i) => (
@@ -621,14 +632,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             <span
                               className={cn(
                                 "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
-                                item.sold?.kindLabel === "LEASED"
-                                  ? "border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300"
-                                  : item.sold?.kindLabel === "OFF MARKET"
-                                    ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                                    : "border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                                RECORD_KIND_TONE[item.sold?.kind ?? "sold"]
                               )}
                             >
-                              {item.sold?.kindLabel ?? "SOLD"}
+                              {item.sold?.kindLabel ?? RECORD_KIND_LABEL.sold}
                             </span>
                             {item.sold?.priceLabel ? (
                               <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">

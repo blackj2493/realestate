@@ -19,6 +19,7 @@ import { parseAddress } from "@/lib/watchlist/disposition";
 import { getAddressRecordsLoose, getSoldGatedByKey, hasFullListingRow } from "@/lib/sold/soldByKey";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { soldAddressHref } from "@/lib/search/searchTarget";
+import { findActiveAtAddress, type ActiveAtAddress } from "@/lib/search/activeAtAddress";
 import type { AddressRecordResponse, AddressStatusResponse } from "@/lib/search/types";
 
 export const dynamic = "force-dynamic"; // response depends on auth
@@ -40,11 +41,32 @@ export async function GET(req: NextRequest) {
 
   const { isConsumer } = await getConsumer();
 
+  // Relist join, resolved ONCE per distinct address: records at one address are usually
+  // successive campaigns on the same home, so the per-record fan-out collapses to a
+  // single lookup in the common case.
+  const liveByAddress = new Map<string, ActiveAtAddress | null>();
+  const liveFor = async (r: (typeof records)[number]): Promise<ActiveAtAddress | null> => {
+    const cacheKey = r.address.trim().toLowerCase();
+    if (!liveByAddress.has(cacheKey)) liveByAddress.set(cacheKey, await findActiveAtAddress(r.address, r.id));
+    return liveByAddress.get(cacheKey) ?? null;
+  };
+
   const out: AddressRecordResponse[] = [];
   for (const r of records) {
+    const live = await liveFor(r);
+    // An OFF MARKET record is a campaign that ended — it never closed, so it has no price
+    // or date of its own to show. When the same home is listed again, the live listing is
+    // the only useful destination; sending people to the cancelled campaign is a dead end
+    // (owner, 2026-08-10). SOLD / LEASED records keep their own page: there the close
+    // price IS the answer, and `liveKey` still lets the UI say it's back on the market.
+    const forwardsToLive = r.dealKind === "offmarket" && !!live;
     // Destination ladder (owner decision 2026-07-23): the FULL sold report (/properties/{key})
     // wins whenever its listings row still exists; the keyed /address page is the fallback.
-    const href = (await hasFullListingRow(r.id)) ? `/properties/${r.id}` : soldAddressHref(r.address, r.city, r.id);
+    const href = forwardsToLive
+      ? `/properties/${live!.key}`
+      : (await hasFullListingRow(r.id))
+        ? `/properties/${r.id}`
+        : soldAddressHref(r.address, r.city, r.id);
     const base: AddressRecordResponse = {
       key: r.id,
       address: r.address,
@@ -52,6 +74,10 @@ export async function GET(req: NextRequest) {
       dealKind: r.dealKind,
       brokerage: r.brokerage ?? undefined, // public
       href,
+      // Public IDX (active key + asking price) — safe on the anonymous branch below.
+      liveKey: live?.key,
+      livePrice: live && live.listPrice > 0 ? live.listPrice : undefined,
+      liveTransactionType: live?.transactionType || undefined,
     };
     if (!isConsumer) {
       out.push(base);

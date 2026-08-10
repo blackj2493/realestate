@@ -23,6 +23,14 @@ import { useRouter } from "next/navigation";
 import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
 import { matchesTypedAddress, fetchAddressStatus } from "@/lib/search/federatedSuggest";
+import {
+  RECORD_KIND_LABEL,
+  RECORD_KIND_TONE,
+  backOnMarketLabel,
+  formatRecordDate,
+  formatRecordPrice,
+} from "@/lib/search/recordKind";
+import type { AddressRecordResponse } from "@/lib/search/types";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { chipsToQueryString } from "@/lib/search/chipUrl";
@@ -44,6 +52,7 @@ interface LocationSearchProps {
 
 function SuggestionIcon({ kind }: { kind: SearchSuggestion["kind"] }) {
   if (kind === "address") return <Home className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+  if (kind === "record") return <Home className="h-3.5 w-3.5 shrink-0 text-rose-700 dark:text-rose-400/80" />;
   if (kind === "mls") return <Hash className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
   return <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
 }
@@ -53,6 +62,8 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
   neighbourhood: "Area",
   address: "Address",
   mls: "MLS",
+  // Record rows render a status chip instead of this tag — see the row body.
+  record: "Record",
 };
 
 /** Row tag that says what the row IS: a with-listing address row is a live For-Sale
@@ -60,6 +71,11 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
 function tagFor(s: SearchSuggestion): string {
   if (s.kind === "address") return s.listing ? "For sale" : "Profile";
   return KIND_TAG[s.kind];
+}
+
+/** Public record meta, shown to anon too: MLS# · brokerage (TRREB §6.3(c)). */
+function recordSublabel(r: AddressRecordResponse): string | undefined {
+  return [r.key, r.brokerage].filter(Boolean).join(" · ") || undefined;
 }
 
 export default function LocationSearch({
@@ -84,6 +100,15 @@ export default function LocationSearch({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Clearing the timer only cancels work that hasn't STARTED. Once a fetch is in flight a
+  // newer keystroke's answer can land first and then be overwritten by the older, slower
+  // one — the terminal bar has always guarded this (LocationSearchV2's reqId); this one
+  // didn't, so the dropdown could show rows belonging to a query the user had moved past.
+  const reqId = React.useRef(0);
+  // The record/geocode probes now run on every address-shaped query (they used to be
+  // skipped whenever an active listing matched), so cancel the previous pair rather than
+  // leaving abandoned requests to occupy the browser's per-host connection budget.
+  const abortRef = React.useRef<AbortController | null>(null);
 
   // Close the dropdown on outside click.
   React.useEffect(() => {
@@ -98,6 +123,9 @@ export default function LocationSearch({
   // Debounced autocomplete.
   React.useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Bumped before the early return too, so clearing the box also invalidates any
+    // in-flight request instead of letting it repopulate an emptied dropdown.
+    const mine = ++reqId.current;
     const q = value.trim();
     if (q.length < 2) {
       setSuggestions([]);
@@ -113,31 +141,37 @@ export default function LocationSearch({
       // address. Navigate mode only (inplace/onPlace callers expect place labels).
       if (mode === "navigate" && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
         const covered = results.some((s) => s.kind === "address" && matchesTypedAddress(q, s.label));
-        if (!covered) {
-          // Sold-record probe alongside the geocode: an address that SOLD must say so,
-          // not "Not on the market". Status KIND only here (anon-safe, audit R24a) —
-          // the destination page carries the gated price/history. Click path is
-          // unchanged either way (the profile ladder already redirects sold keys).
-          const [hit, status] = await Promise.all([geocodeAddress(q), fetchAddressStatus(q)]);
-          if (status?.found && status.address) {
-            const kindWord =
-              status.dealKind === "leased" ? "leased" : status.dealKind === "offmarket" ? "recently off-market" : "sold";
-            results.unshift({
-              kind: "address",
-              label: status.address,
-              sublabel: `This home has ${kindWord} — view its record`,
-            });
-          } else if (hit) {
-            results.unshift({
-              kind: "address",
-              label: hit.label,
-              sublabel: "Not on the market",
-              // Coords power the explicit Map/Profile button pair on this row.
-              geo: { lat: hit.lat, lng: hit.lng },
-            });
-          }
+        // EVERY disposition at the address gets its own row, alongside a live For-Sale
+        // row — the same contract federatedSuggest gives the terminal. This used to run
+        // only when no active listing matched, and only ever rendered records[0], so a
+        // relisted home hid its own history and a second record at the address vanished.
+        abortRef.current?.abort();
+        const ctrl = new AbortController();
+        abortRef.current = ctrl;
+        // Both degrade to null when aborted, so a cancelled probe simply renders no
+        // record rows — never a throw out of the effect.
+        const [status, hit] = await Promise.all([
+          fetchAddressStatus(q, ctrl.signal),
+          geocodeAddress(q, ctrl.signal),
+        ]);
+        const records = status?.found ? status.records ?? [] : [];
+        // Reversed: successive unshifts then leave the rows in server order (newest first).
+        for (const r of [...records].reverse()) {
+          results.unshift({ kind: "record", label: r.address, sublabel: recordSublabel(r), record: r });
+        }
+        // Geocode fallback only when the address is genuinely unknown to us — no record
+        // AND no active listing covering what was typed.
+        if (records.length === 0 && !covered && hit) {
+          results.unshift({
+            kind: "address",
+            label: hit.label,
+            sublabel: "Not on the market",
+            // Coords power the explicit Map/Profile button pair on this row.
+            geo: { lat: hit.lat, lng: hit.lng },
+          });
         }
       }
+      if (mine !== reqId.current) return; // a newer keystroke already answered
       setSuggestions(results);
       setHighlight(-1);
       setSearching(false);
@@ -175,8 +209,12 @@ export default function LocationSearch({
   // Apply a resolved target. navigate mode routes; inplace mode mutates the store
   // exactly as before (city → setLocation, listing → setSelectedProperty).
   const applyTarget = (t: SearchTarget) => {
-    if (t.action !== "open-listing" && onPlace) {
+    if (t.action === "set-location" && onPlace) {
       onPlace(t.label); // caller-managed region (e.g. Market Trends page)
+    } else if (t.action === "open-href") {
+      // A record's destination is whatever the server resolved — including the forward
+      // from a dead off-market campaign to the live relist. Never re-derive it here.
+      router.push(t.href);
     } else if (mode === "navigate") {
       router.push(targetToHref(t));
     } else if (t.action === "open-listing") {
@@ -347,12 +385,44 @@ export default function LocationSearch({
                 {s.sublabel && (
                   <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
                 )}
+                {/* The relist, said out loud. A dead campaign whose home is listed again
+                    reads as a dead end without this — and for an off-market record the
+                    row now navigates to that live listing (server-resolved href). */}
+                {s.record?.liveKey && (
+                  <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    {backOnMarketLabel(s.record.livePrice, s.record.liveTransactionType)}
+                  </span>
+                )}
               </span>
-              {/* Geocoded not-listed address: the two destinations as EXPLICIT
+              {/* Property record: the same status chip the terminal bar shows (shared
+                  RECORD_KIND_* maps), plus the close price when the viewer is a VOW
+                  consumer — the anon payload simply never carries one to hide. */}
+              {s.kind === "record" && s.record ? (
+                <span className="flex shrink-0 flex-col items-end gap-0.5">
+                  <span
+                    className={cn(
+                      "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                      RECORD_KIND_TONE[s.record.dealKind]
+                    )}
+                  >
+                    {RECORD_KIND_LABEL[s.record.dealKind]}
+                  </span>
+                  {s.record.closePrice ? (
+                    <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                      {formatRecordPrice(s.record.closePrice)}
+                      {s.record.soldDateMs && (
+                        <span className="ml-1 font-normal text-muted-foreground">
+                          {formatRecordDate(s.record.soldDateMs)}
+                        </span>
+                      )}
+                    </span>
+                  ) : null}
+                </span>
+              ) : /* Geocoded not-listed address: the two destinations as EXPLICIT
                   buttons (owner: nobody knew where to click) — bordered Map
                   (centered-terminal deep link, PR #155 contract) + solid Profile.
-                  Row-click still opens the profile (unchanged default). */}
-              {s.geo ? (
+                  Row-click still opens the profile (unchanged default). */
+              s.geo ? (
                 <span className="flex shrink-0 items-center gap-1.5">
                   <span
                     role="button"

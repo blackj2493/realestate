@@ -15,6 +15,7 @@ import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { geocodeAddress } from "./geocodeClient";
 import { rankAddressSuggestions } from "./addressRank";
+import { RECORD_KIND_LABEL, formatRecordDate, formatRecordPrice } from "./recordKind";
 import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
 import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
@@ -55,8 +56,8 @@ const TITLE: Record<string, string> = {
   geo: "Address",
 };
 
-/** SOLD / LEASED / OFF MARKET row chip text per the public status kind. */
-const KIND_LABEL: Record<string, string> = { sold: "SOLD", leased: "LEASED", offmarket: "OFF MARKET" };
+// Row chip label + colour live in one place shared with the header bar (recordKind.ts) —
+// the two bars used to spell this out separately and drifted apart.
 
 /**
  * Probe the server for a sold/leased/off-market record at the typed address. The route
@@ -72,11 +73,6 @@ export async function fetchAddressStatus(q: string, signal?: AbortSignal): Promi
   } catch {
     return null;
   }
-}
-
-/** Epoch (UTC-midnight date-only) → "Jul 21, 2026" — audit MEDIUM-18. */
-function fmtSoldDate(ms: number): string {
-  return new Date(ms).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function geoOf(listing: ListingDocument): { lat: number; lng: number; zoom?: number } | undefined {
@@ -242,12 +238,16 @@ export async function federatedSuggest(
         provenance: "record",
         sold: {
           priceMasked: !r.closePrice,
-          priceLabel: r.closePrice ? `$${Math.round(r.closePrice).toLocaleString("en-CA")}` : undefined,
-          dateLabel: r.soldDateMs ? fmtSoldDate(r.soldDateMs) : undefined,
+          priceLabel: r.closePrice ? formatRecordPrice(r.closePrice) : undefined,
+          dateLabel: r.soldDateMs ? formatRecordDate(r.soldDateMs) : undefined,
           href: r.href,
-          kindLabel: KIND_LABEL[r.dealKind],
+          kind: r.dealKind,
+          kindLabel: RECORD_KIND_LABEL[r.dealKind],
           mls: r.key,
           brokerage: r.brokerage,
+          liveKey: r.liveKey,
+          livePrice: r.livePrice,
+          liveTransactionType: r.liveTransactionType,
         },
       });
     }

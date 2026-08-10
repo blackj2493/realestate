@@ -36,10 +36,16 @@ export interface SuggestItem {
     priceMasked: boolean;
     /** "$1,625,000" — consumers only; never present on an anonymous payload. */
     priceLabel?: string;
-    /** Keyed /address page for the record (soldAddress rows). */
+    /** Destination the SERVER resolved for the record — already forwards to a relist. */
     href?: string;
+    /** Public status kind (audit R24a) — drives the chip's label AND colour. */
+    kind?: AddressRecordResponse["dealKind"];
     /** SOLD / LEASED / OFF MARKET — the public status kind (audit R24a). */
     kindLabel?: string;
+    /** Relist: this address is live right now (see AddressRecordResponse.liveKey). */
+    liveKey?: string;
+    livePrice?: number;
+    liveTransactionType?: string;
     /** MLS# — public, shown to anon (the doc id / listing key). */
     mls?: string;
     /** Listing brokerage — public (TRREB §6.3(c)); shown to anon. */
@@ -60,6 +66,16 @@ export interface AddressRecordResponse {
   /** Listing brokerage — public (TRREB §6.3(c)). */
   brokerage?: string;
   href: string;
+  /**
+   * Relist join (public). MLS# of a listing that is LIVE right now at this same address —
+   * a terminated campaign and its relist share nothing but the address, so without this
+   * the record is a dead end. An active listing key + asking price are IDX data, so both
+   * reach anonymous viewers.
+   */
+  liveKey?: string;
+  livePrice?: number;
+  /** "For Sale" / "For Lease" of the live campaign — a relisted lease isn't a sale. */
+  liveTransactionType?: string;
   /** VOW fields — present ONLY on a signed-in consumer's response. */
   closePrice?: number;
   /** Epoch ms (UTC-midnight date-only) — render with timeZone:'UTC' (MEDIUM-18). */
