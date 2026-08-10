@@ -13,6 +13,17 @@
  * VOW gate: authed only — anonymous callers get {} (no VOW-derived numbers reach them).
  * Deterministic, no AI (§4). The client passes public IDX fields (id/list/city/type) it
  * already holds from Typesense; only the resolved number is returned.
+ *
+ * ALSO returns `dealInputs` — the three values the DETAIL page feeds computeDealScore
+ * (raw AVM + confidence, expected close, cohort ratio). This route already derives all
+ * three to build the sale price and used to discard them, so the terminal's Deal Score
+ * had no price-vs-value input at all and silently renormalized its weight onto TERMS —
+ * 118 Village Gate graded A+ 95 in the ledger and 38 D on its own page.
+ *
+ * They are returned RAW rather than reconstructed from the SalePriceEstimate above: that
+ * object is a display resolution (list-anchored where possible, AVM otherwise), so deriving
+ * the score's inputs back out of it is the same "restate the conclusion from other inputs"
+ * mistake that produced the contradictory close prices in #250.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -21,6 +32,7 @@ import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
 import { computeExpectedSale, type CloseListRatio } from "@/lib/avm/expectedSale";
 import { resolveSalePrice, type SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { AVMResult } from "@/lib/avm/types";
+import type { DealInputs } from "@/lib/dealScore/fromListingDocument";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +107,7 @@ export async function POST(req: NextRequest) {
   );
 
   const out: Record<string, SalePriceEstimate | null> = {};
+  const dealInputs: Record<string, DealInputs> = {};
   for (const it of items) {
     const listPrice = typeof it.listPrice === "number" && it.listPrice > 0 ? it.listPrice : null;
     const ratio = listPrice ? ratioByCohort.get(cohortKey(it.city, it.propertySubType)) ?? null : null;
@@ -110,7 +123,16 @@ export async function POST(req: NextRequest) {
         } as AVMResult)
       : null;
     out[it.id] = resolveSalePrice({ listPrice, isActive: true, expectedSale, estimate: avmShim });
+    // Mirrors getListingDetail's computeDealScore call exactly — same three fields, same
+    // sources. A row with no property_estimates entry gets estimatedValue null, and the
+    // scorer withholds the grade rather than renormalizing PRICE's weight away.
+    dealInputs[it.id] = {
+      estimatedValue: a?.estimatedValue ?? null,
+      confidence: a?.confidence ?? null,
+      expectedSalePrice: expectedSale?.expectedPrice ?? null,
+      closeListRatio: expectedSale?.ratio ?? null,
+    };
   }
 
-  return NextResponse.json({ salePrices: out });
+  return NextResponse.json({ salePrices: out, dealInputs });
 }

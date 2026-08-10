@@ -19,6 +19,7 @@ import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggl
 import { SCOPE_DEFAULT_PERSONA } from "@/lib/personas/resolvePersona";
 import { persistPersona } from "@/lib/personas/personaStore";
 import type { DealScoreGrade } from "@/lib/dealScore/computeDealScore";
+import type { DealInputs } from "@/lib/dealScore/fromListingDocument";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -190,6 +191,17 @@ export interface CommandCenterState {
   // Search results
   searchResult: SearchResult | null;
   setSearchResult: (result: SearchResult | null) => void;
+
+  /**
+   * VOW-derived Deal Score inputs per listing id, from /api/estimates/sale-price.
+   * Lives here rather than in LedgerPanel (which fetches it) because the MIN DEAL GRADE
+   * filter runs in TWO places — the ledger list and the map-pin filter in
+   * properties/page.tsx — and both must grade from the same inputs, or the map and the
+   * list disagree about which pins clear the floor. Empty until the batch resolves; a row
+   * with no entry scores null and fails any floor rather than passing one.
+   */
+  dealInputsById: Record<string, DealInputs>;
+  setDealInputsById: (byId: Record<string, DealInputs>) => void;
 
   // UI state
   isLoading: boolean;
@@ -462,6 +474,9 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   searchResult: null,
   setSearchResult: (result) => set({ searchResult: result }),
+
+  dealInputsById: {},
+  setDealInputsById: (byId) => set({ dealInputsById: byId }),
 
   isLoading: false,
   setIsLoading: (loading) => set({ isLoading: loading }),

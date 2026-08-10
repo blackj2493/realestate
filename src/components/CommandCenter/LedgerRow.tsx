@@ -15,7 +15,7 @@ import CompsPopover from "./CompsPopover";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
-import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
+import { dealScoreFromDocument, type DealInputs } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "./ListingCardBody";
@@ -43,6 +43,9 @@ interface LedgerRowProps {
   /** The single Estimated Sale Price (list-anchored, AVM fallback), batched by the panel
    *  for authed users. Undefined for anon / comps → the "likely close" line is omitted. */
   salePrice?: SalePriceEstimate | null;
+  /** VOW-derived Deal Score inputs (AVM + expected close + ratio). Without these the
+   *  PRICE pillar is absent and the Homebuyer grade is withheld rather than inflated. */
+  dealInputs?: DealInputs | null;
   /** Card mode for narrow panels (audit C4): render only the photo + address
    *  card, dropping the fixed numeric columns that would starve the price. */
   compact?: boolean;
@@ -247,11 +250,11 @@ function MetricChip({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col:
   );
 }
 
-export default function LedgerRow({ property, columns, visibleColumns, salePrice, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false, ranker }: LedgerRowProps) {
+export default function LedgerRow({ property, columns, visibleColumns, salePrice, dealInputs, onClick, isSelected, isHovered, onHoverChange, isChecked, onToggleSelect, isAuthed = false, compact = false, ranker }: LedgerRowProps) {
   const src = property.thumbnailUrl || property.primaryImageUrl;
   // Grade for the active lens, so the row matches what the detail card opens on.
   const activePersona = useCommandCenterStore((s) => s.activePersona);
-  const deal = dealScoreFromDocument(property, undefined, activePersona);
+  const deal = dealScoreFromDocument(property, dealInputs, activePersona);
   // Comps peek: hover reveals a Comps button; clicking opens an inline popover. "See all"
   // escalates to the full map comps view (enterComps) — same anchor as every entry point.
   const enterComps = useCommandCenterStore((s) => s.enterComps);
