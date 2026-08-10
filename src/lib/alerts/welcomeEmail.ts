@@ -29,8 +29,10 @@ const PREHEADER =
 
 // Small style tokens kept inline-able as plain strings (no <style> — Gmail strips head styles).
 const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace";
+// 11px is the floor for anything a phone has to read. iOS Mail auto-scales small type;
+// Gmail on Android does not, and this email is read on a phone far more often than not.
 const eyebrow = (t: string) =>
-  `<div style="font-family:${MONO};font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#0e7490;">${t}</div>`;
+  `<div style="font-family:${MONO};font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#0e7490;">${t}</div>`;
 const ftitle = (t: string) => `<div style="font-size:16px;font-weight:700;color:#0f172a;margin:5px 0 6px;">${t}</div>`;
 const fbody = (t: string) => `<p style="font-size:13.5px;line-height:1.55;color:#475569;margin:0 0 10px;">${t}</p>`;
 const link = (label: string, href: string) =>
@@ -39,7 +41,7 @@ const link = (label: string, href: string) =>
 /** A "first layer" finding tile (concrete per-listing fact, valence-coloured). */
 function finding(label: string, value: string, accentBar: string): string {
   return `<td width="50%" valign="top" style="padding:0 8px 14px 0;border-left:2px solid ${accentBar};padding-left:11px;">
-    <div style="font-family:${MONO};font-size:9px;letter-spacing:.1em;color:#67e8f9;text-transform:uppercase;">${label}</div>
+    <div style="font-family:${MONO};font-size:11px;letter-spacing:.1em;color:#67e8f9;text-transform:uppercase;">${label}</div>
     <div style="font-size:13px;color:#ffffff;font-weight:600;margin-top:4px;line-height:1.4;">${value}</div>
   </td>`;
 }
@@ -59,8 +61,11 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
           <!-- header -->
           <table role="presentation" width="100%" style="border-collapse:collapse;background:#0a1828;">
         <tr>
-          <td style="padding:14px 24px;"><span style="font-size:17px;font-weight:700;color:#ffffff;"><span style="font-weight:400;margin-right:8px;">&#10094;</span>PURE<span style="font-weight:400;color:#8fa4b8;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span></span></td>
-          <td align="right" style="padding:14px 24px;"><span style="font-family:${MONO};color:#67e8f9;font-size:10px;letter-spacing:.14em;">ACCESS &middot; GRANTED</span></td>
+          <!-- 16px sides, not 24px: two cells at 24px spent 96px on padding before a single
+               character, which forced the whole email to a 336px minimum (horizontal scroll
+               below ~336px) and wrapped this label onto two lines even at 390px. -->
+          <td style="padding:14px 16px;"><span style="font-size:17px;font-weight:700;color:#ffffff;"><span style="font-weight:400;margin-right:8px;">&#10094;</span>PURE<span style="font-weight:400;color:#8fa4b8;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span></span></td>
+          <td align="right" style="padding:14px 16px;"><span style="font-family:${MONO};color:#67e8f9;font-size:10px;letter-spacing:.14em;">ACCESS &middot; GRANTED</span></td>
         </tr>
         <tr><td colspan="2" style="height:2px;background:#0891b2;line-height:2px;">&nbsp;</td></tr>
           </table>
@@ -84,10 +89,10 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
             <div style="font-size:11px;color:#64748b;">128 Maplecrest Ave, Vaughan &middot; asking <span style="font-family:${MONO};">$2,282,000</span></div>
             <div style="font-family:${MONO};font-size:30px;font-weight:800;color:#0f172a;margin:4px 0 2px;">$2,231,796</div>
             <div style="font-family:${MONO};font-size:12px;color:#64748b;">Likely range $2,142,524 &ndash; $2,321,068</div>
-            <div style="margin:9px 0;"><span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;letter-spacing:.06em;border-radius:4px;padding:3px 7px;">MEDIUM CONFIDENCE</span> <span style="font-family:${MONO};font-size:11px;color:#94a3b8;">Based on 214 sales</span></div>
+            <div style="margin:9px 0;"><span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;border-radius:4px;padding:3px 7px;">MEDIUM CONFIDENCE</span> <span style="font-family:${MONO};font-size:11px;color:#94a3b8;">Based on 214 sales</span></div>
             <div style="font-family:${MONO};font-size:12px;color:#047857;font-weight:600;">&#8776; $50,204 (&#8722;2.2%) below ask &middot; room to negotiate</div>
             <table role="presentation" width="100%" style="border-collapse:collapse;border-radius:4px;overflow:hidden;margin:14px 0 4px;"><tr><td style="width:78%;background:#94a3b8;height:8px;">&nbsp;</td><td style="width:22%;background:#e2e8f0;height:8px;">&nbsp;</td></tr></table>
-            <div style="font-family:${MONO};font-size:9px;color:#94a3b8;">&#9670; estimate sits below the comparable-sale band and the ask</div>
+            <div style="font-family:${MONO};font-size:11px;color:#94a3b8;">&#9670; estimate sits below the comparable-sale band and the ask</div>
           </td></tr></table>
           <div style="margin-top:10px;">${link("See any home's real value", `${SITE}/properties`)}</div>
         </td></tr></table>
@@ -100,11 +105,15 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
           <table role="presentation" width="100%" style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:10px;background:#fbfdff;"><tr><td style="padding:16px 18px;">
             <div style="font-size:11px;color:#64748b;">128 Maplecrest Ave &middot; Vellore Village</div>
             <div style="margin:6px 0 12px;"><span style="font-family:${MONO};font-size:22px;font-weight:800;color:#047857;">$118,898</span><span style="font-size:12px;color:#64748b;"> unlockable &middot; </span><span style="font-family:${MONO};font-size:15px;font-weight:700;color:#047857;">~$74,898</span><span style="font-size:12px;color:#64748b;"> net after cost</span></div>
-            <table role="presentation" width="100%" style="border-collapse:collapse;font-size:12px;">
-              <tr><td style="color:#94a3b8;font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;">Move</td><td align="right" style="color:#94a3b8;font-size:9px;text-transform:uppercase;padding-bottom:4px;">Adds</td><td align="right" style="color:#94a3b8;font-size:9px;text-transform:uppercase;padding-bottom:4px;">Cost</td><td align="right" style="color:#94a3b8;font-size:9px;text-transform:uppercase;padding-bottom:4px;">Return</td></tr>
-              <tr><td style="color:#0f172a;border-top:1px solid #eef2f6;padding:5px 0;">Add a parking space</td><td align="right" style="font-family:${MONO};color:#047857;border-top:1px solid #eef2f6;">+$21,850</td><td align="right" style="font-family:${MONO};color:#94a3b8;border-top:1px solid #eef2f6;">&#8722;$5,500</td><td align="right" style="font-family:${MONO};font-weight:700;border-top:1px solid #eef2f6;">3.99&times;</td></tr>
-              <tr><td style="color:#0f172a;border-top:1px solid #eef2f6;padding:5px 0;">Add a full bathroom</td><td align="right" style="font-family:${MONO};color:#047857;border-top:1px solid #eef2f6;">+$54,800</td><td align="right" style="font-family:${MONO};color:#94a3b8;border-top:1px solid #eef2f6;">&#8722;$18,250</td><td align="right" style="font-family:${MONO};font-weight:700;border-top:1px solid #eef2f6;">3.0&times;</td></tr>
-              <tr><td style="color:#0f172a;border-top:1px solid #eef2f6;padding:5px 0;">Add a bedroom</td><td align="right" style="font-family:${MONO};color:#047857;border-top:1px solid #eef2f6;">+$31,950</td><td align="right" style="font-family:${MONO};color:#94a3b8;border-top:1px solid #eef2f6;">&#8722;$16,450</td><td align="right" style="font-family:${MONO};font-weight:700;border-top:1px solid #eef2f6;">1.94&times;</td></tr>
+            <!-- THREE columns, not four. A fourth (Cost) squeezed the numeric cells to 58px at
+                 390px and wrapped every row at 360px (standard Android width). The per-move cost
+                 is already carried by the "net after cost" headline above and the payback ratio
+                 here, so dropping the column loses no information the reader needs. -->
+            <table role="presentation" width="100%" style="border-collapse:collapse;font-size:13px;">
+              <tr><td style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;">Move</td><td align="right" style="color:#94a3b8;font-size:11px;text-transform:uppercase;padding-bottom:4px;">Adds</td><td align="right" style="color:#94a3b8;font-size:11px;text-transform:uppercase;padding-bottom:4px;">Return</td></tr>
+              <tr><td style="color:#0f172a;border-top:1px solid #eef2f6;padding:6px 0;">Add a parking space</td><td align="right" style="font-family:${MONO};color:#047857;border-top:1px solid #eef2f6;">+$21,850</td><td align="right" style="font-family:${MONO};font-weight:700;border-top:1px solid #eef2f6;">3.99&times;</td></tr>
+              <tr><td style="color:#0f172a;border-top:1px solid #eef2f6;padding:6px 0;">Add a full bathroom</td><td align="right" style="font-family:${MONO};color:#047857;border-top:1px solid #eef2f6;">+$54,800</td><td align="right" style="font-family:${MONO};font-weight:700;border-top:1px solid #eef2f6;">3.0&times;</td></tr>
+              <tr><td style="color:#0f172a;border-top:1px solid #eef2f6;padding:6px 0;">Add a bedroom</td><td align="right" style="font-family:${MONO};color:#047857;border-top:1px solid #eef2f6;">+$31,950</td><td align="right" style="font-family:${MONO};font-weight:700;border-top:1px solid #eef2f6;">1.94&times;</td></tr>
             </table>
             <div style="font-size:11px;color:#475569;margin-top:10px;line-height:1.5;border-top:1px solid #eef2f6;padding-top:9px;">Best payback in Vellore Village: <b>add a full bathroom</b> — +$40,000 net (3.0&times;). Based on 301 comparable sales.</div>
           </td></tr></table>
@@ -130,10 +139,10 @@ export function renderWelcomeEmail(recipientEmail?: string): { subject: string; 
           ${fbody("Line up any two listings on the figures that actually settle it. The better buy is usually not the prettier photo.")}
           <table role="presentation" width="100%" style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:12px;">
             <tr style="background:#0a1828;color:#cbd5e1;"><td style="padding:7px 10px;">Metric</td><td style="padding:7px 10px;">128 Maplecrest<br><span style="font-family:${MONO};color:#34d399;">$2,282,000</span></td><td style="padding:7px 10px;">363 Maria Antonia<br><span style="font-family:${MONO};color:#34d399;">$1,905,000</span></td></tr>
-            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">Est. sale price</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">$2,231,796</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">$1,942,500</td></tr>
-            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">vs comp value</td><td style="padding:7px 10px;font-family:${MONO};color:#b45309;border-top:1px solid #eef2f6;">6% over</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">9% under</td></tr>
-            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">Days on market (real)</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">41 days</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">12 days</td></tr>
-            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:10px;border-top:1px solid #eef2f6;">Monthly cashflow</td><td style="padding:7px 10px;font-family:${MONO};color:#be123c;border-top:1px solid #eef2f6;">&#8722;$1,240</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">&#8722;$610</td></tr>
+            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:11px;border-top:1px solid #eef2f6;">Est. sale price</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">$2,231,796</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">$1,942,500</td></tr>
+            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:11px;border-top:1px solid #eef2f6;">vs comp value</td><td style="padding:7px 10px;font-family:${MONO};color:#b45309;border-top:1px solid #eef2f6;">6% over</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">9% under</td></tr>
+            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:11px;border-top:1px solid #eef2f6;">Days on market (real)</td><td style="padding:7px 10px;font-family:${MONO};border-top:1px solid #eef2f6;">41 days</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">12 days</td></tr>
+            <tr><td style="padding:7px 10px;color:#64748b;text-transform:uppercase;font-size:11px;border-top:1px solid #eef2f6;">Monthly cashflow</td><td style="padding:7px 10px;font-family:${MONO};color:#be123c;border-top:1px solid #eef2f6;">&#8722;$1,240</td><td style="padding:7px 10px;font-family:${MONO};color:#047857;font-weight:700;border-top:1px solid #eef2f6;">&#8722;$610</td></tr>
           </table>
           <div style="margin-top:10px;">${link("Compare two homes", `${SITE}/properties/compare`)}</div>
         </td></tr></table>
