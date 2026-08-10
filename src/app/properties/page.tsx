@@ -142,6 +142,7 @@ function CommandCenterContent() {
     selectedIds,
     showSelectedOnly,
     minDealGrade,
+    dealInputsById,
     totalCount,
     setMapMode,
     colorMetricId,
@@ -537,9 +538,12 @@ function CommandCenterContent() {
   // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query);
   // the min-deal-grade filter (authed) further narrows list + map to the active-lens floor.
   const selectedScoped = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
+  // Grades from the SAME dealInputs the ledger rows render (published to the store by
+  // LedgerPanel's batch). Without them this filter scored with no PRICE pillar and kept
+  // pins the list would drop — map and list disagreeing about one floor.
   const displayed =
     isAuthed && minDealGrade
-      ? selectedScoped.filter((l) => passesDealGrade(l, activePersona, minDealGrade))
+      ? selectedScoped.filter((l) => passesDealGrade(l, activePersona, minDealGrade, dealInputsById[l.id]))
       : selectedScoped;
 
   // Color precedence: an explicit "Color By" metric wins; else the School lens

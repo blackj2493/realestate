@@ -26,7 +26,7 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, minDealGrade, setMinDealGrade } =
+  const { activePersona, searchResult, dealInputsById, setDealInputsById, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, minDealGrade, setMinDealGrade } =
     useCommandCenterStore();
 
   // Scope chip (fix #4): with no typed place and no draw area, the results are
@@ -70,8 +70,11 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
   // floor, using the same per-row score the grade pill shows. Memoised on `visible` (a stable
   // ref unless a query/selection changes) so hover re-renders don't re-run the score.
   const dealFiltered = useMemo(
-    () => (isAuthed && minDealGrade ? visible.filter((p) => passesDealGrade(p, activePersona, minDealGrade)) : visible),
-    [visible, isAuthed, minDealGrade, activePersona]
+    () =>
+      isAuthed && minDealGrade
+        ? visible.filter((p) => passesDealGrade(p, activePersona, minDealGrade, dealInputsById[p.id]))
+        : visible,
+    [visible, isAuthed, minDealGrade, activePersona, dealInputsById]
   );
   const ms = searchResult?.processingTimeMs ?? 0;
 
@@ -153,7 +156,12 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         });
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled) setSalePriceById(data?.salePrices ?? {});
+        if (cancelled) return;
+        setSalePriceById(data?.salePrices ?? {});
+        // Same response now carries the Deal Score inputs. Published to the store because
+        // the map-pin grade filter in properties/page.tsx grades the same listings and
+        // must not disagree with the list about which ones clear the floor.
+        setDealInputsById(data?.dealInputs ?? {});
       } catch {
         /* additive — leave rows without the line */
       }
@@ -376,6 +384,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               columns={columns}
               visibleColumns={visibleColumns}
               salePrice={isAuthed ? salePriceById[property.id] : undefined}
+              dealInputs={isAuthed ? dealInputsById[property.id] : undefined}
               compact={cardMode}
               isAuthed={isAuthed}
               onClick={() => openListing(property)}
