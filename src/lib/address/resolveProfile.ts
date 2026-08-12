@@ -20,6 +20,7 @@ import { getSoldPublicByAddress } from "@/lib/sold/soldByKey";
 import { parseAddress, addressesMatch } from "@/lib/watchlist/disposition";
 import { slugify, deslugCity } from "@/lib/listings/listingPath";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
+import { slugToStreetText } from "./addressSlug";
 
 export interface AddressProfile {
   /** Display address, e.g. "142 Maplewood Avenue". Never carries the unit — see `unit`. */
@@ -48,10 +49,8 @@ export type AddressResolution =
   | { kind: "profile"; profile: AddressProfile }
   | null;
 
-/** "142-maplewood-avenue" → "142 maplewood avenue" (lowercase working text). */
-function slugToStreetText(slug: string): string {
-  return decodeURIComponent(slug).replace(/-/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-}
+// slugToStreetText lives in ./addressSlug — pure, so it can be unit-tested without
+// dragging this module's server-only imports into the test environment.
 
 /** Title-case a street string for display ("142 maplewood avenue" → "142 Maplewood Avenue"). */
 function titleCase(s: string): string {
