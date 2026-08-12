@@ -119,6 +119,65 @@ export function backOnMarketLabel(livePrice?: number, transactionType?: string):
   return `${verb} — ${formatRowPrice(livePrice, lease)}`;
 }
 
+// ── Listing facts ───────────────────────────────────────────────────────────
+
+/**
+ * The subset of a listing document these helpers read. Structural on purpose — both bars
+ * pass a full ListingDocument, and keeping the shape local avoids importing the whole
+ * Typesense module into a presentation helper.
+ */
+export interface ListingFacts {
+  id?: string;
+  BedroomsAboveGrade?: number;
+  BedroomsBelowGrade?: number;
+  BedroomsTotal?: number;
+  BathroomsTotalInteger?: number;
+  ParkingTotal?: number;
+  PropertySubType?: string;
+  ListPrice?: number;
+  TransactionType?: string;
+  /** Epoch MILLISECONDS — the listing's entry date. */
+  EntryTimestamp?: number;
+  ListOfficeName?: string;
+}
+
+/**
+ * Beds in the TRREB idiom: "4+1" is four above grade plus one below. We hold both counts
+ * but used to render `BedroomsAboveGrade || BedroomsTotal`, which silently dropped the
+ * basement bedroom — a real difference to anyone shopping for a suite.
+ */
+export function bedsLabel(d: ListingFacts): string | null {
+  const above = d.BedroomsAboveGrade ?? 0;
+  const below = d.BedroomsBelowGrade ?? 0;
+  if (above > 0) return below > 0 ? `${above}+${below}` : `${above}`;
+  return d.BedroomsTotal ? `${d.BedroomsTotal}` : null;
+}
+
+/** "4+1 bd · 3 ba · 2 pk · Detached · $885,000" — the row's spec line. */
+export function listingSpecs(d: ListingFacts): string {
+  const lease = isLeaseTransaction(d.TransactionType);
+  const parts: string[] = [];
+  const beds = bedsLabel(d);
+  if (beds) parts.push(`${beds} bd`);
+  if (d.BathroomsTotalInteger) parts.push(`${d.BathroomsTotalInteger} ba`);
+  if (d.ParkingTotal) parts.push(`${d.ParkingTotal} pk`);
+  if (d.PropertySubType) parts.push(d.PropertySubType.trim());
+  // A lease's ListPrice is a MONTHLY RENT; bare, it reads as a purchase price.
+  if (d.ListPrice) parts.push(formatRowPrice(d.ListPrice, lease));
+  return parts.join(" · ");
+}
+
+/**
+ * "Jun 25, 2026 · X13491562 · ROYAL LEPAGE TEAM REALTY" — provenance under a listing row.
+ * The date is what actually separates several campaigns at one address; MLS# and
+ * brokerage are public (TRREB §6.3(c)). Formatted in UTC like every other date we render,
+ * so the day doesn't drift by viewer.
+ */
+export function listingMetaLine(d: ListingFacts): string | undefined {
+  const date = d.EntryTimestamp && d.EntryTimestamp > 0 ? formatRecordDate(d.EntryTimestamp) : null;
+  return [date, d.id, d.ListOfficeName?.trim() || null].filter(Boolean).join("  ·  ") || undefined;
+}
+
 // ── Locality naming (geocoder vs feed) ──────────────────────────────────────
 
 /**

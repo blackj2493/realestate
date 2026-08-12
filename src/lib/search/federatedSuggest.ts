@@ -21,7 +21,8 @@ import {
   activeRowStatus,
   formatRecordDate,
   formatRowPrice,
-  isLeaseTransaction,
+  listingMetaLine,
+  listingSpecs,
   localityLabel,
 } from "./searchRows";
 import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
@@ -126,6 +127,7 @@ export async function federatedSuggest(
           category: "mls",
           label: `MLS# ${doc.id}`,
           sublabel: doc.UnparsedAddress,
+          meta: listingMetaLine(doc),
           listing: doc,
           geo: geoOf(doc),
           provenance: "MLS#",
@@ -201,7 +203,8 @@ export async function federatedSuggest(
           id: `address:${doc.id}`,
           category: "address",
           label: doc.UnparsedAddress,
-          sublabel: addressMeta(doc),
+          sublabel: listingSpecs(doc),
+          meta: listingMetaLine(doc),
           listing: doc,
           geo: geoOf(doc),
           provenance: "address",
@@ -236,6 +239,9 @@ export async function federatedSuggest(
         category: "soldAddress",
         label: r.address,
         sublabel: meta || undefined,
+        meta: [r.soldDateMs ? formatRecordDate(r.soldDateMs) : null, r.key, r.brokerage]
+          .filter(Boolean)
+          .join("  ·  "),
         provenance: "record",
         sold: {
           priceMasked: !r.closePrice,
@@ -306,15 +312,3 @@ export async function federatedSuggest(
     .map(([items, section, vow]) => ({ section, title: SECTION_TITLE[section], items, vow }));
 }
 
-/** "3 bd · 2 ba · Detached · $749,900" line under an address suggestion. */
-function addressMeta(d: ListingDocument): string {
-  const parts: string[] = [];
-  const beds = d.BedroomsAboveGrade || d.BedroomsTotal;
-  if (beds) parts.push(`${beds} bd`);
-  if (d.BathroomsTotalInteger) parts.push(`${d.BathroomsTotalInteger} ba`);
-  if (d.PropertySubType) parts.push(d.PropertySubType.trim());
-  // A lease's ListPrice is a MONTHLY RENT. Rendered bare it reads as a purchase price —
-  // "$2,550" on a townhouse is not a sale.
-  if (d.ListPrice) parts.push(formatRowPrice(d.ListPrice, isLeaseTransaction(d.TransactionType)));
-  return parts.join(" · ");
-}

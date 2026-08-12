@@ -9,7 +9,10 @@ import {
   backOnMarketLabel,
   formatRecordDate,
   formatRowPrice,
+  bedsLabel,
   isLeaseTransaction,
+  listingMetaLine,
+  listingSpecs,
   localityLabel,
   sectionForCategory,
 } from "./searchRows";
@@ -84,6 +87,50 @@ describe("backOnMarketLabel", () => {
   it("still says the home is listed again with no price attached", () => {
     expect(backOnMarketLabel(undefined, "For Sale")).toBe("Back on the market");
     expect(backOnMarketLabel(0, "For Sale")).toBe("Back on the market");
+  });
+});
+
+describe("listing facts", () => {
+  // 839 Cappamore Drive is a 4+1 — four above grade, one below. Rendering only the
+  // above-grade count silently drops the basement bedroom.
+  it("renders beds in the TRREB idiom", () => {
+    expect(bedsLabel({ BedroomsAboveGrade: 4, BedroomsBelowGrade: 1 })).toBe("4+1");
+    expect(bedsLabel({ BedroomsAboveGrade: 4, BedroomsBelowGrade: 0 })).toBe("4");
+    expect(bedsLabel({ BedroomsTotal: 3 })).toBe("3");
+    expect(bedsLabel({})).toBeNull();
+  });
+
+  it("builds the spec line, parking included", () => {
+    expect(
+      listingSpecs({
+        BedroomsAboveGrade: 4,
+        BedroomsBelowGrade: 1,
+        BathroomsTotalInteger: 3,
+        ParkingTotal: 2,
+        PropertySubType: "Detached",
+        ListPrice: 885_000,
+        TransactionType: "For Sale",
+      })
+    ).toBe("4+1 bd · 3 ba · 2 pk · Detached · $885,000");
+  });
+
+  it("marks a rental's monthly price in the spec line", () => {
+    expect(listingSpecs({ ListPrice: 2550, TransactionType: "For Lease" })).toBe("$2,550/mo");
+  });
+
+  it("leads the provenance line with the date", () => {
+    expect(
+      listingMetaLine({
+        id: "X13491562",
+        EntryTimestamp: Date.UTC(2026, 5, 25),
+        ListOfficeName: "ROYAL LEPAGE TEAM REALTY",
+      })
+    ).toBe("Jun 25, 2026  ·  X13491562  ·  ROYAL LEPAGE TEAM REALTY");
+  });
+
+  it("omits parts the feed does not carry", () => {
+    expect(listingMetaLine({ id: "X1" })).toBe("X1");
+    expect(listingMetaLine({})).toBeUndefined();
   });
 });
 

@@ -32,6 +32,8 @@ import {
   formatRecordDate,
   formatRowPrice,
   activeRowStatus,
+  listingMetaLine,
+  listingSpecs,
   localityLabel,
   sectionForCategory,
 } from "@/lib/search/searchRows";
@@ -80,7 +82,13 @@ function tagFor(s: SearchSuggestion): string {
 
 /** Public record meta, shown to anon too: MLS# · brokerage (TRREB §6.3(c)). */
 function recordSublabel(r: AddressRecordResponse): string | undefined {
-  return [r.key, r.brokerage].filter(Boolean).join(" · ") || undefined;
+  // Date first — it is what separates several campaigns at one address. On a record the
+  // date is VOW, so it is simply absent for an anonymous viewer.
+  return (
+    [r.soldDateMs ? formatRecordDate(r.soldDateMs) : null, r.key, r.brokerage]
+      .filter(Boolean)
+      .join("  ·  ") || undefined
+  );
 }
 
 /**
@@ -435,6 +443,21 @@ export default function LocationSearch({
                 {s.sublabel && (
                   <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
                 )}
+                {/* Live listing: identical spec + provenance lines to the terminal bar —
+                    "4+1 bd · 3 ba · 2 pk · Detached · $885,000" then the date, MLS# and
+                    brokerage. This bar used to show an address and nothing else. */}
+                {s.listing && (
+                  <>
+                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                      {listingSpecs(s.listing)}
+                    </span>
+                    {listingMetaLine(s.listing) && (
+                      <span className="truncate font-mono text-[10px] text-muted-foreground/80">
+                        {listingMetaLine(s.listing)}
+                      </span>
+                    )}
+                  </>
+                )}
                 {/* The relist, said out loud. A dead campaign whose home is listed again
                     reads as a dead end without this — and for an off-market record the
                     row now navigates to that live listing (server-resolved href). */}
@@ -546,6 +569,35 @@ export default function LocationSearch({
             </React.Fragment>
             );
           })}
+          {/* Persistent map exit — the terminal bar's twin. Without it this bar had no way
+              back to the map for an address or street query, which is most of them.
+              navigate mode only: the in-place callers (FirstRunRegionPicker,
+              AnalyticsClient) are not map surfaces and have nowhere to send you. */}
+          {mode === "navigate" && suggestions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                // Prefer a coordinate already resolved for this query — the place row's,
+                // else the first listing's — so the map lands on what was searched.
+                const place = suggestions.find((x) => x.geo)?.geo;
+                const loc = suggestions.find((x) => x.listing?.location)?.listing?.location;
+                const lat = place?.lat ?? loc?.[0];
+                const lng = place?.lng ?? loc?.[1];
+                const pin = suggestions[0]?.label.split(",")[0] ?? value.trim();
+                router.push(
+                  lat != null && lng != null
+                    ? `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=15&pin=${encodeURIComponent(pin)}`
+                    : `/properties?city=${encodeURIComponent(value.trim())}`
+                );
+                setValue("");
+                closeAndBlur();
+              }}
+              className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-border bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+            >
+              <Layers className="h-3 w-3" />
+              See these on the map
+            </button>
+          )}
         </div>
       )}
     </div>

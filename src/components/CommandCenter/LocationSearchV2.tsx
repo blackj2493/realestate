@@ -571,10 +571,14 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                                 : item.sublabel}
                             </span>
                           )}
-                          {/* Public record meta (shown to everyone): MLS# · brokerage. */}
-                          {item.category === "soldAddress" && (item.sold?.mls || item.sold?.brokerage) && (
-                            <span className="truncate font-mono text-[10px] text-muted-foreground/80" title={[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}>
-                              {[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}
+                          {/* Provenance, public on both row kinds: date · MLS# · brokerage.
+                              The DATE is what separates several campaigns at one address —
+                              this line used to carry MLS# and brokerage only, and only on
+                              record rows. (On a record the date is VOW, so it is simply
+                              absent for an anonymous viewer.) */}
+                          {item.meta && (
+                            <span className="truncate font-mono text-[10px] text-muted-foreground/80" title={item.meta}>
+                              {item.meta}
                             </span>
                           )}
                           {/* The relist, said out loud: this campaign ended but the home is

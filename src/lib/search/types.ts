@@ -34,6 +34,9 @@ export interface SuggestItem {
   /** Row status for a LIVE listing — for sale vs for lease, from the feed's own
    *  TransactionType. Records carry theirs on `sold.kind` instead. */
   status?: RowStatus;
+  /** "Jun 25, 2026 · X13491562 · ROYAL LEPAGE TEAM REALTY" — the provenance line under a
+   *  listing row. Public on both kinds; the date is what separates campaigns. */
+  meta?: string;
   /** Sold metadata (price intentionally absent when gated). */
   sold?: {
     dateLabel?: string;
