@@ -9,6 +9,7 @@ import {
   checkEmailFailures,
   checkMediaReconcile,
   checkOnboardingExample,
+  checkUnpriceableValues,
   snapshotFromRows,
   LATEST_MONTH_KEY,
   type Problem,
@@ -589,5 +590,30 @@ describe("regression: the onboarding intro email showed Woodbridge 0/0", () => {
   it("respects a custom minimum", () => {
     expect(checkOnboardingExample({ region: "X", activeCount: 30, minActive: 25 })).toEqual([]);
     expect(checkOnboardingExample({ region: "X", activeCount: 20, minActive: 25 })).toHaveLength(1);
+  });
+});
+
+describe("regression: 1,346 vacant-land listings kept May dwelling-model values through 12+ recomputes", () => {
+  it("passes on zero — the invariant holds", () => {
+    expect(checkUnpriceableValues({ count: 0 })).toEqual([]);
+  });
+
+  it("errors on the exact 2026-08-12 shape (stale values on active unpriceable listings)", () => {
+    const out = checkUnpriceableValues({ count: 1346 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("error");
+    expect(out[0].check).toBe("unpriceable-values");
+    expect(out[0].detail).toContain("1346");
+  });
+
+  it("a single row still errors — wrong data is wrong at n=1", () => {
+    expect(checkUnpriceableValues({ count: 1 })[0].severity).toBe("error");
+  });
+
+  it("warns (not passes) when the RPC is unavailable — an unchecked invariant is not a healthy one", () => {
+    const missing = checkUnpriceableValues({ count: null, error: "function does not exist" });
+    expect(missing).toHaveLength(1);
+    expect(missing[0].severity).toBe("warn");
+    expect(checkUnpriceableValues({ count: null })[0].severity).toBe("warn");
   });
 });

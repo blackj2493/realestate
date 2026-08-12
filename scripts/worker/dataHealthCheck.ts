@@ -44,10 +44,12 @@ import {
   checkEmailFailures,
   checkMediaReconcile,
   checkOnboardingExample,
+  checkUnpriceableValues,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
 } from '@/lib/data/healthChecks';
+import { UNPRICEABLE_EXACT, UNPRICEABLE_PATTERNS } from '@/lib/avm/normalizeType';
 import { buildAreaData, EXAMPLE_REGION } from '@/lib/alerts/onboardingData';
 
 const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
@@ -68,9 +70,11 @@ const ESTIMATE_STALE_HOURS = Number(process.env.ESTIMATE_STALE_HOURS) || 48;
 // Backlog threshold: every active row is re-based by the twice-weekly full recompute (≤ ~4-day
 // cycle), so 120h (5d) sits safely above it — only rows that missed a recompute age past it.
 const ESTIMATE_MAX_AGE_HOURS = Number(process.env.ESTIMATE_MAX_AGE_HOURS) || 120;
-// Tolerance covers two benign populations: (1) the steady-state ACTIVE residual — ~1.35k
-// genuinely-active listings the refresh can't re-estimate (no comps AND no GLA → skipped
-// without a write; measured 2026-08); and (2) a rolling ORPHAN backlog. The nightly prune
+// Tolerance covers two benign populations: (1) the steady-state ACTIVE residual — listings
+// the refresh can't re-estimate. (Was ~1.35k when the refresh SKIPPED empty results without
+// a write; since the empty-result row-clear in refresh-property-estimates.ts those rows are
+// DELETED instead, so this component should trend toward 0 — revisit the tolerance downward
+// once observed.) And (2) a rolling ORPHAN backlog. The nightly prune
 // (prune-property-estimates.ts) only deletes an orphan once its estimate is >120h stale — the
 // SAME threshold this canary counts at — so a whole recompute cohort's sold/terminal subset
 // ages past 120h together and transiently counts as "stale" until the next daily prune clears
@@ -352,6 +356,39 @@ async function checkMediaReconcileHealth(): Promise<void> {
   );
 }
 
+// Keep in lock-step with refresh-property-estimates.ts TERMINAL_STATUSES (which mirrors
+// migration 020's active filter) — same convention as prune-property-estimates.ts.
+const ESTIMATE_TERMINAL_STATUSES = [
+  'sold',
+  'closed',
+  'closed sale',
+  'leased',
+  'terminated',
+  'expired',
+  'suspended',
+];
+
+/**
+ * Stale-unpriceable invariant — one RPC (migration 113) counting ACTIVE unpriceable-type
+ * listings that carry an AVM value. Every predicate list is passed from the code's
+ * canonical exports so the SQL holds no drifted copy; see checkUnpriceableValues for the
+ * failure this replays.
+ */
+async function checkUnpriceableValueHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const { data, error } = await sb.rpc('count_unpriceable_valued_estimates', {
+    p_exact: UNPRICEABLE_EXACT,
+    p_patterns: UNPRICEABLE_PATTERNS,
+    p_terminal: ESTIMATE_TERMINAL_STATUSES,
+  });
+  problems.push(
+    ...checkUnpriceableValues({
+      count: typeof data === 'number' ? data : null,
+      error: error?.message ?? null,
+    })
+  );
+}
+
 /**
  * Onboarding example integrity — the intro email (2B) builds a live dashboard for a HARDCODED
  * region (EXAMPLE_REGION = "Woodbridge"), which resolves only via the COMMUNITY_ALIASES
@@ -426,6 +463,7 @@ async function main(): Promise<void> {
     ['condo fees', checkCondoFees],
     ['price ledger', checkPriceLedgerFreshness],
     ['estimate freshness', checkEstimateHealth],
+    ['unpriceable values', checkUnpriceableValueHealth],
     ['email delivery', checkEmailHealth],
     ['media reconcile', checkMediaReconcileHealth],
     ['onboarding example', checkOnboardingExampleHealth],
