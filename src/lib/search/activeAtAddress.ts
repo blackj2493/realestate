@@ -15,25 +15,9 @@
  */
 
 import { getTypesenseClient, type ListingDocument } from "@/lib/typesense/client";
-import { parseAddress, streetNamesMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
+import { parseAddress } from "@/lib/watchlist/disposition";
+import { isSamePropertyParsed } from "./sameProperty";
 import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
-
-/**
- * Same physical property, for the purpose of SENDING SOMEONE THERE.
- *
- * Deliberately stricter than the shared `addressesMatch`: that one treats equal postals as
- * proof and never looks at the street, which is fine for reconciling a listing against its
- * own relist candidates (already scoped to one address string) but not for a join fed by a
- * typo-tolerant search — one dirty postal in the feed would walk a visitor onto a different
- * house. Here the civic number AND the street must agree, and the postal (or city) only
- * corroborates.
- */
-function sameProperty(a: ParsedAddress, b: ParsedAddress): boolean {
-  if (!a.streetNumber || a.streetNumber !== b.streetNumber) return false;
-  if (!streetNamesMatch(a.streetName, b.streetName)) return false;
-  if (a.postal && b.postal) return a.postal === b.postal;
-  return !!a.city && a.city === b.city;
-}
 
 /** A live listing standing at the same address as a closed/off-market record. */
 export interface ActiveAtAddress {
@@ -52,7 +36,7 @@ const FIELDS = "id,UnparsedAddress,City,ListPrice,TransactionType";
 /**
  * The live listing at `address`, or null when the home isn't currently listed.
  *
- * Matching is STRICT (`sameProperty`), deliberately unlike the typeahead's prefix-tolerant
+ * Matching is STRICT (`isSameProperty`), deliberately unlike the typeahead's prefix-tolerant
  * matcher. This drives navigation: a loose join here would walk someone from one home's
  * record onto a different house's listing.
  *
@@ -79,7 +63,7 @@ export async function findActiveAtAddress(address: string, excludeKey?: string):
     for (const h of (res.hits ?? []) as Array<{ document: ListingDocument }>) {
       const d = h.document;
       if (!d?.id || !d.UnparsedAddress || d.id === excludeKey) continue;
-      if (!sameProperty(parsed, parseAddress(d.UnparsedAddress))) continue;
+      if (!isSamePropertyParsed(parsed, parseAddress(d.UnparsedAddress))) continue;
       return {
         key: d.id,
         address: d.UnparsedAddress,

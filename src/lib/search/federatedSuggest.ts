@@ -21,10 +21,12 @@ import {
   activeRowStatus,
   formatRecordDate,
   formatRowPrice,
+  campaignSpanLabel,
   listingMetaLine,
   listingSpecs,
   localityLabel,
 } from "./searchRows";
+import { isSameProperty } from "./sameProperty";
 import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
 import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
@@ -298,9 +300,10 @@ export async function federatedSuggest(
   // record IS the typed address, so it must not sit below them (the original intent of
   // the old record-first ordering, kept but made conditional).
   const actives = rankedAddresses.slice(0, 5);
-  const listings = typedAddressCovered
+  const flatListings = typedAddressCovered
     ? [...mls, ...actives, ...soldAddress]
     : [...mls, ...soldAddress, ...actives];
+  const listings = stackByProperty(flatListings);
 
   // Places first: the map exit must never sit below a long list of listings.
   const bySection: Array<[SuggestItem[], SuggestGroup["section"], boolean]> = [
@@ -312,3 +315,32 @@ export async function federatedSuggest(
     .map(([items, section, vow]) => ({ section, title: SECTION_TITLE[section], items, vow }));
 }
 
+/**
+ * Fold every campaign at one address into a single row.
+ *
+ * A home that was listed, terminated and relisted arrives here as two or three unrelated
+ * rows — different MLS keys, identical address — which reads as several houses on the same
+ * lot. The FIRST row for an address becomes the lead (the caller has already ordered live
+ * listings ahead of history) and the rest nest underneath as its campaign history.
+ *
+ * The lead also gains the span label: a relist resets the visible clock, so a 250-day-old
+ * home shows as "20 days" on every other portal. Because we stitch the campaigns we can
+ * say what actually happened.
+ */
+function stackByProperty(items: SuggestItem[]): SuggestItem[] {
+  const leads: SuggestItem[] = [];
+  for (const item of items) {
+    const addr = item.listing?.UnparsedAddress ?? item.label;
+    const lead = leads.find((l) => isSameProperty(l.listing?.UnparsedAddress ?? l.label, addr));
+    if (!lead) {
+      leads.push(item);
+      continue;
+    }
+    (lead.children ??= []).push(item);
+  }
+  for (const lead of leads) {
+    const campaigns = 1 + (lead.children?.length ?? 0);
+    if (lead.listing) lead.spanLabel = campaignSpanLabel(lead.listing, campaigns) ?? undefined;
+  }
+  return leads;
+}

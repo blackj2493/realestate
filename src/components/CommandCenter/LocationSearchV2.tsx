@@ -131,7 +131,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   }, [groups, activePersona]);
 
   // Flat list (in render order) for keyboard navigation.
-  const flatItems = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
+  // Flattened in RENDER order, nested campaign rows included — otherwise arrow-key
+  // navigation would skip a home's history entirely.
+  const flatItems = React.useMemo(
+    () => groups.flatMap((g) => g.items.flatMap((i) => [i, ...(i.children ?? [])])),
+    [groups]
+  );
 
   // Close on outside click.
   React.useEffect(() => {
@@ -549,6 +554,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                     const idx = flat(item);
                     const badges = item.listing ? badgeFor.get(item.listing.id) ?? [] : [];
                     return (
+                      <React.Fragment key={item.id}>
                       <button
                         key={item.id}
                         type="button"
@@ -586,6 +592,14 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                               NAVIGATES there (the server resolved sold.href to the live
                               listing) — clicking it used to dead-end on the cancelled
                               campaign while the home sat for sale (owner, 2026-08-10). */}
+                          {/* The stitched span. A relist resets the visible clock, so this
+                              home reads as days old on every other portal; we stitch the
+                              campaigns and can say what actually happened. */}
+                          {item.spanLabel && (
+                            <span className="truncate font-mono text-[10px] font-semibold text-rose-700 dark:text-rose-300">
+                              {item.spanLabel}
+                            </span>
+                          )}
                           {item.category === "soldAddress" && item.sold?.liveKey && (
                             <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
                               {backOnMarketLabel(item.sold.livePrice, item.sold.liveTransactionType)}
@@ -745,6 +759,60 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           </span>
                         )}
                       </button>
+
+                      {/* Campaign history at this SAME address, folded under its home.
+                          Everyone else renders these as sibling rows, so a terminated
+                          campaign and its relist read as two different houses. Indented,
+                          and still reachable by arrow key (flatItems walks children). */}
+                      {item.children && item.children.length > 0 && (
+                        <div className="border-l-2 border-border/70 bg-muted/30">
+                          <div className="px-3 py-1 pl-9 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                            Earlier at this address — {item.children.length}
+                          </div>
+                          {item.children.map((child) => {
+                            const cidx = flat(child);
+                            return (
+                              <button
+                                key={child.id}
+                                type="button"
+                                onMouseEnter={() => setHighlight(cidx)}
+                                onClick={() => selectItem(child)}
+                                className={cn(
+                                  "flex w-full items-start gap-2.5 py-1.5 pl-9 pr-3 text-left transition-colors",
+                                  cidx === highlight ? "bg-muted" : "hover:bg-muted"
+                                )}
+                              >
+                                <span className="flex min-w-0 flex-1 flex-col">
+                                  {child.meta && (
+                                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                                      {child.meta}
+                                    </span>
+                                  )}
+                                  {child.sold?.liveKey && (
+                                    <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                      {backOnMarketLabel(child.sold.livePrice, child.sold.liveTransactionType)}
+                                    </span>
+                                  )}
+                                </span>
+                                {child.sold?.priceLabel && (
+                                  <span className="shrink-0 font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                                    {child.sold.priceLabel}
+                                  </span>
+                                )}
+                                <span
+                                  className={cn(
+                                    "shrink-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                                    ROW_STATUS_CHIP[child.sold?.kind ?? child.status ?? "sold"]
+                                  )}
+                                >
+                                  {child.sold?.kindLabel ?? ROW_STATUS_LABEL[child.status ?? "sold"]}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </div>

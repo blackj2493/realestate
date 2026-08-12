@@ -139,6 +139,48 @@ export interface ListingFacts {
   /** Epoch MILLISECONDS — the listing's entry date. */
   EntryTimestamp?: number;
   ListOfficeName?: string;
+  /** Days on market stitched ACROSS campaigns — survives a terminate-and-relist. */
+  TrueDom?: number;
+  /** Days on market of the CURRENT campaign only — resets on every relist. */
+  calculatedDOM?: number;
+  DaysOnMarket?: number;
+}
+
+/**
+ * Days on market as the rest of the app reads it: the stitched cross-campaign figure when
+ * we have it, else the current campaign's own age. Same fallback chain as columnSort and
+ * LedgerRow — a search row must not invent a fourth way to answer "how long has this been
+ * for sale".
+ */
+export function trueDomOf(d: ListingFacts): number | null {
+  return d.TrueDom ?? d.calculatedDOM ?? d.DaysOnMarket ?? null;
+}
+
+/** The visible age of the CURRENT campaign — what every other portal shows. */
+export function currentDomOf(d: ListingFacts): number | null {
+  return d.calculatedDOM ?? d.DaysOnMarket ?? null;
+}
+
+/**
+ * The one line no competitor can render.
+ *
+ * A home that was terminated and relisted looks brand new everywhere else — the relist
+ * resets the clock, so a 250-day-old listing shows as "20 days". We stitch the campaigns,
+ * so we can say what's actually true. Returns null unless the stitched figure genuinely
+ * exceeds the current campaign's age, so a plain listing never gets a noisy badge.
+ *
+ * @param campaigns total campaigns known at this address (lead + nested history)
+ */
+export function campaignSpanLabel(d: ListingFacts, campaigns: number): string | null {
+  const stitched = trueDomOf(d);
+  const current = currentDomOf(d);
+  if (stitched == null || stitched <= 0) return null;
+  // Only interesting when the relist actually hid something: a meaningfully longer
+  // stitched span, or history we can point at.
+  const hidden = current != null && stitched > current + 1;
+  if (!hidden && campaigns < 2) return null;
+  const span = `${stitched}d on market`;
+  return campaigns >= 2 ? `${span} across ${campaigns} campaigns` : span;
 }
 
 /**

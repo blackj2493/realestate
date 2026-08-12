@@ -37,6 +37,13 @@ export interface SuggestItem {
   /** "Jun 25, 2026 · X13491562 · ROYAL LEPAGE TEAM REALTY" — the provenance line under a
    *  listing row. Public on both kinds; the date is what separates campaigns. */
   meta?: string;
+  /** EARLIER campaigns at this same address, newest first. One address renders as ONE row
+   *  with its history folded underneath, rather than as sibling rows that read like
+   *  separate homes. Rendered indented; still keyboard-reachable. */
+  children?: SuggestItem[];
+  /** "250d on market across 2 campaigns" — the stitched span a relist would otherwise
+   *  hide. Only present when the relist actually reset a visible clock. */
+  spanLabel?: string;
   /** Sold metadata (price intentionally absent when gated). */
   sold?: {
     dateLabel?: string;

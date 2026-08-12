@@ -10,6 +10,8 @@ import {
   formatRecordDate,
   formatRowPrice,
   bedsLabel,
+  campaignSpanLabel,
+  currentDomOf,
   isLeaseTransaction,
   listingMetaLine,
   listingSpecs,
@@ -131,6 +133,36 @@ describe("listing facts", () => {
   it("omits parts the feed does not carry", () => {
     expect(listingMetaLine({ id: "X1" })).toBe("X1");
     expect(listingMetaLine({})).toBeUndefined();
+  });
+});
+
+// 90 Osler Drive: relisted as X13585448 and showing "Listed 20 days ago", while the
+// stitched span across both campaigns is 250 days. Every other portal shows the 20.
+describe("campaignSpanLabel — the number a relist hides", () => {
+  it("states the stitched span and how many campaigns it covers", () => {
+    expect(campaignSpanLabel({ TrueDom: 250, calculatedDOM: 20 }, 2)).toBe(
+      "250d on market across 2 campaigns"
+    );
+  });
+
+  it("still speaks up when the clock was reset but no history row is in hand", () => {
+    expect(campaignSpanLabel({ TrueDom: 250, calculatedDOM: 20 }, 1)).toBe("250d on market");
+  });
+
+  it("stays quiet on an ordinary listing — no relist, nothing hidden", () => {
+    expect(campaignSpanLabel({ TrueDom: 20, calculatedDOM: 20 }, 1)).toBeNull();
+    expect(campaignSpanLabel({ calculatedDOM: 20 }, 1)).toBeNull();
+  });
+
+  it("falls back through the same chain the rest of the app uses", () => {
+    expect(currentDomOf({ calculatedDOM: 12, DaysOnMarket: 99 })).toBe(12);
+    expect(currentDomOf({ DaysOnMarket: 99 })).toBe(99);
+    expect(currentDomOf({})).toBeNull();
+  });
+
+  it("has nothing to say without a figure", () => {
+    expect(campaignSpanLabel({}, 3)).toBeNull();
+    expect(campaignSpanLabel({ TrueDom: 0 }, 2)).toBeNull();
   });
 });
 
