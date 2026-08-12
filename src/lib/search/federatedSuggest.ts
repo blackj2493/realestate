@@ -327,7 +327,7 @@ export async function federatedSuggest(
  * home shows as "20 days" on every other portal. Because we stitch the campaigns we can
  * say what actually happened.
  */
-function stackByProperty(items: SuggestItem[]): SuggestItem[] {
+export function stackByProperty(items: SuggestItem[]): SuggestItem[] {
   const leads: SuggestItem[] = [];
   for (const item of items) {
     const addr = item.listing?.UnparsedAddress ?? item.label;
