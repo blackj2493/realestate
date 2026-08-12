@@ -39,7 +39,7 @@ import {
   resolveTau2,
 } from './types';
 import type { CoefficientRow } from './matrixService';
-import { rawVariantsOf, cityRegionLookupCandidates } from './normalizeType';
+import { rawVariantsOf, cityRegionLookupCandidates, fsaOf } from './normalizeType';
 import { subjectAdjustmentTotal } from './features';
 
 export interface AnchorResult {
@@ -152,7 +152,6 @@ export async function fetchAnchor(
   basePriceFallback: number | null
 ): Promise<AnchorResult> {
   const cityRegionCandidates = cityRegionLookupCandidates(input.cityRegion);
-  if (cityRegionCandidates.length === 0) return UNAVAILABLE;
   const subVariants = rawVariantsOf(input.propertySubType, input.rawPropertySubType);
   if (subVariants.length === 0) return UNAVAILABLE;
 
@@ -164,6 +163,21 @@ export async function fetchAnchor(
   const windowStart = new Date();
   windowStart.setUTCMonth(windowStart.getUTCMonth() - COMP_WINDOW_MO);
   const windowStartIso = windowStart.toISOString().slice(0, 10);
+
+  // No community key at all. This used to `return UNAVAILABLE` — and because
+  // estimateFromMarketData short-circuits on basis 'none' BEFORE the peer branch, that
+  // one line made every downstream rescue unreachable and zeroed whole municipalities
+  // (Waterloo Region + Brantford ship no CityRegion on either side of the comp join).
+  // Anchor on the postal FSA instead; returning a REAL anchor is what keeps the rest
+  // of the pipeline — peer routing, bands, confidence — working normally.
+  if (cityRegionCandidates.length === 0) {
+    return fetchGeoFallbackAnchor(supabase, input, coefficients, basePriceFallback, {
+      subVariants,
+      cityKey,
+      subKey,
+      windowStartIso,
+    });
+  }
 
   // 3 indexed queries in parallel: comps + trend series + community offset.
   const [compsRes, trendRes, offsetRes] = await Promise.all([
@@ -198,6 +212,82 @@ export async function fetchAnchor(
     comps: (compsRes.data as unknown as CompRow[] | null) ?? [],
     trend: (trendRes.data as unknown as TrendRow[] | null) ?? [],
     offsets: (offsetRes.data as unknown as OffsetRow[] | null) ?? [],
+    nowMs: Date.now(),
+  });
+}
+
+/**
+ * Anchor for subjects with NO CityRegion — the feed omits it for entire municipalities
+ * (all of Waterloo Region, Brantford). Two rungs, tightest geography first:
+ *
+ *   1. postal FSA  — neighbourhood scale, and the reason this is worth doing. predSD is
+ *      √(estVar + scale²) where `scale` is the comp pool's irreducible spread and does
+ *      NOT shrink as comps are added. Anchoring on the whole municipality would fold
+ *      every neighbourhood into `scale` and hand back a wide LOW band even at nEff 45+;
+ *      an FSA pool keeps `scale` where a community cohort would have it.
+ *   2. city-wide   — only when the FSA is absent/too thin. Genuinely more dispersed, and
+ *      the wider band it produces says so. Honest, not free.
+ *
+ * The community OFFSET is deliberately not fetched: δ_c is defined relative to the city
+ * mean, so at a granularity inside the city it is legitimately zero. computeAnchorFromData
+ * then seeds the prior from the city trend alone ('parent' basis) — the correct prior
+ * here, not an approximation. Geo weighting still applies within the pool, so comps on
+ * the subject's own block outrank comps across the FSA.
+ */
+async function fetchGeoFallbackAnchor(
+  supabase: SupabaseClient,
+  input: AVMInput,
+  coefficients: CoefficientRow[],
+  basePriceFallback: number | null,
+  ctx: { subVariants: string[]; cityKey: string; subKey: string; windowStartIso: string }
+): Promise<AnchorResult> {
+  const { subVariants, cityKey, subKey, windowStartIso } = ctx;
+  if (!cityKey) return UNAVAILABLE;
+
+  const fsa = fsaOf(input.postalCode);
+
+  // Trend is city-keyed and shared by both rungs — fetch it once, alongside rung 1.
+  const [fsaRes, trendRes] = await Promise.all([
+    fsa
+      ? supabase.rpc('sold_fsa_comps', {
+          p_fsa: fsa,
+          p_city: cityKey,
+          p_sub_types: subVariants,
+          p_price_floor: MIN_CLOSE_PRICE,
+          p_cutoff: windowStartIso,
+          p_limit: MAX_COMPS,
+        })
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('avm_trend_index')
+      .select('period_end, level_log')
+      .ilike('city', cityKey)
+      .ilike('property_sub_type', subKey)
+      .order('period_end', { ascending: false })
+      .limit(8),
+  ]);
+
+  const trend = (trendRes.data as unknown as TrendRow[] | null) ?? [];
+  let comps = (fsaRes.data as unknown as CompRow[] | null) ?? [];
+
+  // Rung 2 — city-wide. MIN_PEER_NEFF is the same bar every other geography rung
+  // clears (fetchPeerAnchor), applied here on raw count before weighting.
+  if (comps.length < MIN_PEER_NEFF) {
+    const cityRes = await supabase.rpc('sold_city_comps', {
+      p_city: cityKey,
+      p_sub_types: subVariants,
+      p_price_floor: MIN_CLOSE_PRICE,
+      p_cutoff: windowStartIso,
+      p_limit: MAX_COMPS,
+    });
+    const cityComps = (cityRes.data as unknown as CompRow[] | null) ?? [];
+    if (cityComps.length > comps.length) comps = cityComps;
+  }
+
+  return computeAnchorFromData(input, coefficients, basePriceFallback, {
+    comps,
+    trend,
+    offsets: [],
     nowMs: Date.now(),
   });
 }
@@ -667,6 +757,34 @@ export async function fetchPeerAnchor(
     // to rung 2 / null, which the caller relabels honestly (not 'floor').
     const peer = peerLevelFromComps(subject, communityComps, coefficients, trend, nowMs);
     if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+  }
+
+  // Rung 1b — postal FSA. Sits between community and city because it is neighbourhood-
+  // scale: without it, a subject whose feed carries no CityRegion (Waterloo Region,
+  // Brantford) skips straight from "no community" to a whole-municipality peer pool,
+  // which is exactly the dispersion the FSA anchor was added to avoid. Only worth a
+  // query when the community rung had no key — a subject WITH a community that came up
+  // thin has already told us its neighbourhood is short of comps.
+  if (cands.length === 0) {
+    const fsa = fsaOf(subject.postalCode);
+    if (fsa && cityKey) {
+      const res = await supabase.rpc('sold_fsa_comps', {
+        p_fsa: fsa,
+        p_city: cityKey,
+        p_sub_types: subVariants,
+        p_price_floor: MIN_CLOSE_PRICE,
+        p_cutoff: windowStartIso,
+        p_limit: MAX_COMPS,
+      });
+      const peer = peerLevelFromComps(
+        subject,
+        ((res.data as unknown as CompRow[] | null) ?? []),
+        coefficients,
+        trend,
+        nowMs
+      );
+      if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+    }
   }
 
   // Rung 2 — city-wide (broader pool of homes like it).

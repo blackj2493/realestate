@@ -116,6 +116,28 @@ const RAW_VARIANTS: Record<NormalizedType, string[]> = {
 };
 
 /**
+ * Postal FSA (forward sortation area) — the first three characters, e.g. "N2H".
+ * '' when absent or malformed.
+ *
+ * This is the comp-cohort key for subjects whose feed carries NO CityRegion: all of
+ * Waterloo Region and Brantford ship it blank on BOTH the active and the sold side,
+ * so the community rung has no key to join on. The FSA is 100% populated on both
+ * sides there and is neighbourhood-scale, not municipality-scale — Kitchener's 18
+ * FSAs carry 50–347 sales each per year, denser than many Toronto communities that
+ * price fine today.
+ *
+ * MUST stay byte-identical to sold_fsa_comps' predicate (migration 112),
+ * `upper(left(btrim(postal_code), 3))`, or the RPC and its caller disagree about
+ * which cohort a subject belongs to. The shape guard is the one addition: a key that
+ * isn't letter-digit-letter is junk, and returning '' makes the caller skip the rung
+ * rather than query for garbage.
+ */
+export function fsaOf(postalCode: string | null | undefined): string {
+  const fsa = (postalCode ?? '').trim().toUpperCase().slice(0, 3);
+  return /^[A-Z]\d[A-Z]$/.test(fsa) ? fsa : '';
+}
+
+/**
  * The raw_vow_sold spellings to pool for the live anchor of a normalized type.
  * Unknown types fall back to the listing's own raw spelling (best effort).
  */

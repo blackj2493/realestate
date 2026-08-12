@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isUnpriceableType } from './normalizeType';
+import { isUnpriceableType, fsaOf } from './normalizeType';
 
 /**
  * Commercial-gap Phase 0: the dwelling comp AVM must return "unavailable" for
@@ -62,5 +62,34 @@ describe('isUnpriceableType', () => {
     expect(isUnpriceableType(undefined)).toBe(false);
     expect(isUnpriceableType(null)).toBe(false);
     expect(isUnpriceableType('')).toBe(false);
+  });
+});
+
+/**
+ * FSA cohort key (feat/avm-fsa-cohort): the comp-cohort fallback for listings whose
+ * feed carries no CityRegion (all of Waterloo Region + Brantford). Must stay
+ * byte-identical to sold_fsa_comps' predicate upper(left(btrim(postal_code),3))
+ * (migration 112) — plus the letter-digit-letter shape guard.
+ */
+describe('fsaOf', () => {
+  it('extracts the FSA from full and compact postal codes', () => {
+    expect(fsaOf('N2H 5X8')).toBe('N2H');
+    expect(fsaOf('N2H5X8')).toBe('N2H');
+    expect(fsaOf('n2h 5x8')).toBe('N2H');
+    expect(fsaOf('  N2H 5X8  ')).toBe('N2H');
+  });
+
+  it('accepts a bare FSA (rural rows are often FSA-truncated)', () => {
+    expect(fsaOf('N0B')).toBe('N0B');
+  });
+
+  it('rejects junk that is not letter-digit-letter', () => {
+    expect(fsaOf('12345')).toBe('');
+    expect(fsaOf('NNN')).toBe('');
+    expect(fsaOf('N2')).toBe('');
+    expect(fsaOf('2N2')).toBe('');
+    expect(fsaOf('')).toBe('');
+    expect(fsaOf(null)).toBe('');
+    expect(fsaOf(undefined)).toBe('');
   });
 });
