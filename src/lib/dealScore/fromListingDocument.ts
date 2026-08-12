@@ -26,7 +26,9 @@ import { capRateOrNull } from "@/lib/metrics/sanityBand";
 /**
  * The VOW-derived scoring inputs for one listing, as returned by
  * /api/estimates/sale-price. Every field is nullable: the AVM is a nightly precompute
- * covering ~94% of the active book, and anonymous callers get nothing at all.
+ * covering ~90% of mainstream residential (measured 2026-08-10: 92,650 of 102,550;
+ * commercial/land and model-suppressed types sit outside it by design), and anonymous
+ * callers get nothing at all.
  */
 export interface DealInputs {
   /** Raw AVM value from property_estimates — the PRICE pillar's input. */

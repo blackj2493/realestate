@@ -21,7 +21,7 @@
 
 import type { AVMInput } from './types';
 import { deriveInteriorTier, deriveExteriorTier, deriveBasementTier } from './conditionScoring';
-import { normalizePropertySubType } from './normalizeType';
+import { normalizePropertySubType, fsaOf } from './normalizeType';
 import { resolveLivingArea, type ResolveLivingAreaOpts } from './livingArea';
 
 /** Mirror of ingester.ts numOrNull: empty/missing/non-finite → null; else the number. */
@@ -41,14 +41,23 @@ export function mapListingToAVMInput(
   const rawPropertySubType =
     typeof payload.PropertySubType === 'string' ? payload.PropertySubType.trim() : '';
 
-  // Anchor + matrix lookups key on these — without them no estimate is possible.
-  if (!cityRegion || !rawPropertySubType) return null;
-
-  // Municipality — drives the city-level trend de-staling. Optional: TRREB
-  // payloads almost always have it, but if missing the anchor pipeline falls
-  // back to treating cityRegion as the trend group.
+  // Municipality — drives the city-level trend de-staling, and (with the postal FSA)
+  // the comp cohort when CityRegion is absent.
   const cityRaw = typeof payload.City === 'string' ? payload.City.trim() : '';
   const city = cityRaw || null;
+  const postalCode = typeof payload.PostalCode === 'string' ? payload.PostalCode.trim() : null;
+
+  // Sub-type is non-negotiable: every comp pool is filtered by it.
+  if (!rawPropertySubType) return null;
+
+  // CityRegion is NOT. It used to be — this returned null without it, on the reasoning
+  // that "anchor + matrix lookups key on these". That silently zeroed whole
+  // municipalities: the TRREB feed ships no CityRegion for any of Waterloo Region or
+  // Brantford, so 4,155 active listings never had an estimate ATTEMPTED (measured: 0
+  // of 4,155 had a value) even though Kitchener alone has 2,433 sales on file from the
+  // last year. fetchAnchor now anchors those on the postal FSA instead, so the only
+  // real requirement is that SOME geographic key survives.
+  if (!cityRegion && !(city && fsaOf(postalCode))) return null;
 
   const lotWidthRaw = numOrNull(payload.LotWidth);
   const lotWidth = lotWidthRaw !== null && lotWidthRaw > 0 ? lotWidthRaw : null;
@@ -71,6 +80,7 @@ export function mapListingToAVMInput(
     basementTier: deriveBasementTier(payload),
     // Full postal for hierarchical geo comp weighting (the active listing payload
     // carries the full 6-char code). Absent → geo weighting is a no-op for this subject.
-    postalCode: typeof payload.PostalCode === 'string' ? payload.PostalCode.trim() : null,
+    // Its FSA is also the comp-cohort key when CityRegion is blank (see the guard above).
+    postalCode,
   };
 }
