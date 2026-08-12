@@ -14,7 +14,7 @@
 "use client";
 
 import React from "react";
-import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft, Layers } from "lucide-react";
+import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft, Layers, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -36,6 +36,7 @@ import {
   listingSpecs,
   localityLabel,
   sectionForCategory,
+  shouldProbeRecords,
 } from "@/lib/search/searchRows";
 import type { AddressRecordResponse } from "@/lib/search/types";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
@@ -169,7 +170,7 @@ export default function LocationSearch({
       // typed address is NOT among the (typo-tolerant) listing matches gets a geocoded
       // address-profile row on top — fuzzy lookalikes must not swallow the typed
       // address. Navigate mode only (inplace/onPlace callers expect place labels).
-      if (mode === "navigate" && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
+      if (mode === "navigate" && shouldProbeRecords(q)) {
         const covered = results.some((s) => s.kind === "address" && matchesTypedAddress(q, s.label));
         // EVERY disposition at the address gets its own row, alongside a live For-Sale
         // row — the same contract federatedSuggest gives the terminal. This used to run
@@ -432,7 +433,24 @@ export default function LocationSearch({
                 i === highlight ? "bg-muted" : "hover:bg-muted"
               )}
             >
-              <SuggestionIcon kind={s.kind} />
+              {/* See LocationSearchV2: active photo is IDX and renders; a record's URL is
+                  VOW so it shows a locked frame; never optimized (watermark + cost). */}
+              {s.listing?.primaryImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={s.listing.primaryImageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-10 w-14 shrink-0 object-cover"
+                />
+              ) : s.record?.hasPhoto ? (
+                <span className="flex h-10 w-14 shrink-0 items-center justify-center bg-muted text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                </span>
+              ) : (
+                <SuggestionIcon kind={s.kind} />
+              )}
               <span className="flex min-w-0 flex-1 flex-col">
                 <span
                   className="truncate font-mono text-xs text-foreground"

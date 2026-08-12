@@ -17,6 +17,7 @@ import {
   listingSpecs,
   localityLabel,
   sectionForCategory,
+  shouldProbeRecords,
 } from "./searchRows";
 
 const ALL = ["forsale", "forlease", "sold", "leased", "offmarket"] as const;
@@ -89,6 +90,31 @@ describe("backOnMarketLabel", () => {
   it("still says the home is listed again with no price attached", () => {
     expect(backOnMarketLabel(undefined, "For Sale")).toBe("Back on the market");
     expect(backOnMarketLabel(0, "For Sale")).toBe("Back on the market");
+  });
+});
+
+describe("shouldProbeRecords — who gets history", () => {
+  it("accepts an address, as it always did", () => {
+    expect(shouldProbeRecords("90 osler")).toBe(true);
+    expect(shouldProbeRecords("784 Cappamore Drive")).toBe(true);
+  });
+
+  // The gap: a street name used to return active listings and nothing else, so a home's
+  // history was reachable only by knowing its civic number.
+  it("now accepts a bare street name", () => {
+    expect(shouldProbeRecords("cappam")).toBe(true);
+    expect(shouldProbeRecords("osler")).toBe(true);
+  });
+
+  it("ignores fragments too short to mean anything", () => {
+    expect(shouldProbeRecords("ca")).toBe(false);
+    expect(shouldProbeRecords("90")).toBe(false);
+    expect(shouldProbeRecords("")).toBe(false);
+  });
+
+  it("ignores a bare postal or number soup — not a street", () => {
+    expect(shouldProbeRecords("L9H 4B5")).toBe(false);
+    expect(shouldProbeRecords("12345")).toBe(false);
   });
 });
 

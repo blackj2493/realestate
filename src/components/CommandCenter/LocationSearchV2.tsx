@@ -16,7 +16,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers } from "lucide-react";
+import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -565,7 +565,28 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           idx === highlight ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
-                        <CategoryIcon category={item.category} />
+                        {/* Thumbnail. An ACTIVE listing's photo is IDX and renders directly;
+                            a record's URL is VOW and never leaves the server, so a record
+                            with a photo shows a LOCKED frame rather than promising an image
+                            we cannot show. Never routed through the image optimizer — MLS
+                            photos carry a burned-in brokerage watermark and re-encoding them
+                            is both a cost and a TRREB problem. */}
+                        {item.thumbUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.thumbUrl}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="h-10 w-14 shrink-0 object-cover"
+                          />
+                        ) : item.sold?.hasPhoto ? (
+                          <span className="flex h-10 w-14 shrink-0 items-center justify-center bg-muted text-muted-foreground">
+                            <Lock className="h-3 w-3" />
+                          </span>
+                        ) : (
+                          <CategoryIcon category={item.category} />
+                        )}
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="line-clamp-2 font-mono text-xs text-foreground" title={item.label}>
                             {item.category === "community" ? formatRegionLabel(item.label) : item.label}

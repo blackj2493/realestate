@@ -22,6 +22,7 @@ import {
   formatRecordDate,
   formatRowPrice,
   campaignSpanLabel,
+  shouldProbeRecords,
   listingMetaLine,
   listingSpecs,
   localityLabel,
@@ -207,6 +208,7 @@ export async function federatedSuggest(
           label: doc.UnparsedAddress,
           sublabel: listingSpecs(doc),
           meta: listingMetaLine(doc),
+          thumbUrl: doc.primaryImageUrl,
           listing: doc,
           geo: geoOf(doc),
           provenance: "address",
@@ -229,7 +231,7 @@ export async function federatedSuggest(
   // renders when the address is genuinely unlisted (no records AND no active coverage).
   const soldAddress: SuggestItem[] = [];
   const typedAddressCovered = addresses.some((a) => matchesTypedAddress(q, a.label));
-  if (!structured && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
+  if (!structured && shouldProbeRecords(q)) {
     const [status, hit] = await Promise.all([fetchAddressStatus(q, signal), geocodeAddress(q, signal)]);
     const records = status?.found ? status.records ?? [] : [];
     for (const r of records) {
@@ -259,6 +261,7 @@ export async function federatedSuggest(
           liveKey: r.liveKey,
           livePrice: r.livePrice,
           liveTransactionType: r.liveTransactionType,
+          hasPhoto: r.hasPhoto,
         },
       });
     }

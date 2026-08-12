@@ -44,6 +44,9 @@ export interface SuggestItem {
   /** "250d on market across 2 campaigns" — the stitched span a relist would otherwise
    *  hide. Only present when the relist actually reset a visible clock. */
   spanLabel?: string;
+  /** Public thumbnail — ACTIVE listings only (IDX). Records expose `sold.hasPhoto`
+   *  instead, because their photo URL is VOW. */
+  thumbUrl?: string;
   /** Sold metadata (price intentionally absent when gated). */
   sold?: {
     dateLabel?: string;
@@ -60,6 +63,8 @@ export interface SuggestItem {
     liveKey?: string;
     livePrice?: number;
     liveTransactionType?: string;
+    /** A photo exists but is VOW-gated → render a locked frame, never a URL. */
+    hasPhoto?: boolean;
     /** MLS# — public, shown to anon (the doc id / listing key). */
     mls?: string;
     /** Listing brokerage — public (TRREB §6.3(c)); shown to anon. */
@@ -94,6 +99,9 @@ export interface AddressRecordResponse {
   livePrice?: number;
   /** "For Sale" / "For Lease" of the live campaign — a relisted lease isn't a sale. */
   liveTransactionType?: string;
+  /** A photo EXISTS for this record. The URL is VOW and never reaches an anon payload, so
+   *  the row shows a locked frame rather than promising an image it cannot show. */
+  hasPhoto?: boolean;
   /** VOW fields — present ONLY on a signed-in consumer's response. */
   closePrice?: number;
   /** Epoch ms (UTC-midnight date-only) — render with timeZone:'UTC' (MEDIUM-18). */

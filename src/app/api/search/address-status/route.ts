@@ -16,7 +16,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { parseAddress } from "@/lib/watchlist/disposition";
-import { getAddressRecordsLoose, getSoldGatedByKey, hasFullListingRow } from "@/lib/sold/soldByKey";
+import { getAddressRecordsLoose, getStreetRecordsLoose, getSoldGatedByKey, hasFullListingRow } from "@/lib/sold/soldByKey";
 import { getConsumer } from "@/lib/auth/requireConsumer";
 import { soldAddressHref } from "@/lib/search/searchTarget";
 import { findActiveAtAddress, type ActiveAtAddress } from "@/lib/search/activeAtAddress";
@@ -29,14 +29,23 @@ const NOT_FOUND: AddressStatusResponse = { found: false };
 // Bound the per-key gate/hasFullListingRow fan-out. An exact address rarely carries more than a
 // handful of campaigns (relists); this caps a pathological match without truncating real history.
 const MAX_RECORDS = 8;
+// A street query answers "which homes here have history", so it needs more rows than one
+// address does — but it also fires on far more queries, hence a hard ceiling.
+const MAX_STREET_RECORDS = 12;
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
-  // Address-shaped only: a civic number + a street fragment (mirrors the geo fallback).
-  if (q.length < 5 || !/\d+\s+[a-zA-Z]{3,}/.test(q)) return NextResponse.json(NOT_FOUND);
+  const addressShaped = /\d+\s+[a-zA-Z]{3,}/.test(q);
+  // A STREET name with no civic number ("cappam") used to return nothing at all, so a home's
+  // history was reachable only by knowing its number. Bounded deliberately: one row per
+  // address, capped, and served from the rolling sold cache rather than the archive scan.
+  const streetShaped = !/\d/.test(q) && /^[a-zA-Z][a-zA-Z '.-]{3,}$/.test(q);
+  if (q.length < 4 || (!addressShaped && !streetShaped)) return NextResponse.json(NOT_FOUND);
 
   const parsed = parseAddress(q);
-  const records = (await getAddressRecordsLoose(parsed)).slice(0, MAX_RECORDS);
+  const records = addressShaped
+    ? (await getAddressRecordsLoose(parsed)).slice(0, MAX_RECORDS)
+    : await getStreetRecordsLoose(q, MAX_STREET_RECORDS);
   if (records.length === 0) return NextResponse.json(NOT_FOUND);
 
   const { isConsumer } = await getConsumer();
@@ -74,6 +83,7 @@ export async function GET(req: NextRequest) {
       cityRegion: r.cityRegion || undefined,
       dealKind: r.dealKind,
       brokerage: r.brokerage ?? undefined, // public
+      hasPhoto: r.hasPhoto || undefined, // existence bit; the URL itself is VOW
       href,
       // Public IDX (active key + asking price) — safe on the anonymous branch below.
       liveKey: live?.key,

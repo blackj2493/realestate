@@ -119,6 +119,24 @@ export function backOnMarketLabel(livePrice?: number, transactionType?: string):
   return `${verb} — ${formatRowPrice(livePrice, lease)}`;
 }
 
+// ── Query shape ─────────────────────────────────────────────────────────────
+
+/** "90 osler" — a civic number followed by a street fragment. */
+export const ADDRESS_SHAPED = /\d+\s+[a-zA-Z]{3,}/;
+
+/**
+ * Whether a query should reach the property-record probe at all.
+ *
+ * It used to demand a civic number, so typing a street name returned active listings and
+ * nothing else — a home's history was reachable only by knowing its number. A bare street
+ * name now qualifies too; the server bounds what that costs.
+ */
+export function shouldProbeRecords(q: string): boolean {
+  const t = q.trim();
+  if (t.length < 4) return false;
+  return ADDRESS_SHAPED.test(t) || (!/\d/.test(t) && /^[a-zA-Z][a-zA-Z '.-]{3,}$/.test(t));
+}
+
 // ── Listing facts ───────────────────────────────────────────────────────────
 
 /**
