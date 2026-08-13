@@ -566,10 +566,11 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           idx === highlight ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
-                        {/* Thumbnail. An ACTIVE listing's photo is IDX and renders directly;
-                            a record's URL is VOW and never leaves the server, so a record
-                            with a photo shows a LOCKED frame rather than promising an image
-                            we cannot show. Never routed through the image optimizer — MLS
+                        {/* Thumbnail. An ACTIVE listing's photo is IDX and renders directly.
+                            A record's photo is VOW: a signed-in consumer is handed the URL
+                            and sees it (same photo /properties/[id] already shows them),
+                            while an anonymous visitor gets only the existence bit and a
+                            server-side blur. Never routed through the image optimizer — MLS
                             photos carry a burned-in brokerage watermark and re-encoding them
                             is both a cost and a TRREB problem. */}
                         {item.thumbUrl ? (
@@ -585,6 +586,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                           <RecordThumb
                             listingKey={item.sold?.mls}
                             hasPhoto={item.sold?.hasPhoto}
+                            photoUrl={item.sold?.thumbUrl}
                             className="h-10 w-14"
                           />
                         ) : (

@@ -465,8 +465,9 @@ export default function LocationSearch({
                 i === highlight ? "bg-muted" : "hover:bg-muted"
               )}
             >
-              {/* See LocationSearchV2: active photo is IDX and renders; a record's URL is
-                  VOW so it shows a locked frame; never optimized (watermark + cost). */}
+              {/* See LocationSearchV2: active photo is IDX and renders; a record's photo is
+                  VOW — real for a signed-in consumer, server-blurred for anon; never
+                  optimized (watermark + cost). */}
               {isHistory ? null : s.listing?.primaryImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -477,7 +478,12 @@ export default function LocationSearch({
                   className="h-10 w-14 shrink-0 object-cover"
                 />
               ) : s.kind === "record" ? (
-                <RecordThumb listingKey={s.record?.key} hasPhoto={s.record?.hasPhoto} className="h-10 w-14" />
+                <RecordThumb
+                  listingKey={s.record?.key}
+                  hasPhoto={s.record?.hasPhoto}
+                  photoUrl={s.record?.thumbUrl}
+                  className="h-10 w-14"
+                />
               ) : (
                 <SuggestionIcon kind={s.kind} />
               )}

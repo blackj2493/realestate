@@ -65,6 +65,9 @@ export interface SuggestItem {
     liveTransactionType?: string;
     /** A photo exists but is VOW-gated → render a locked frame, never a URL. */
     hasPhoto?: boolean;
+    /** The record's lead photo — CONSUMERS ONLY, absent from every anonymous payload.
+     *  See AddressRecordResponse.thumbUrl for why it is safe to hand a consumer. */
+    thumbUrl?: string;
     /** MLS# — public, shown to anon (the doc id / listing key). */
     mls?: string;
     /** Listing brokerage — public (TRREB §6.3(c)); shown to anon. */
@@ -102,6 +105,16 @@ export interface AddressRecordResponse {
   /** A photo EXISTS for this record. The URL is VOW and never reaches an anon payload, so
    *  the row shows a locked frame rather than promising an image it cannot show. */
   hasPhoto?: boolean;
+  /**
+   * The record's lead photo URL — VOW, so present ONLY on a signed-in consumer's response
+   * (attached inside the getConsumer()-confirmed branch, alongside closePrice).
+   *
+   * Without it a consumer saw the SAME 24px blur an anonymous visitor gets, while
+   * /properties/[id] showed them the full gallery for the same home (gateVowDerived keeps
+   * media_urls when isAuthed) — two surfaces disagreeing about one photo. The blur is the
+   * anonymous redaction; a consumer is entitled to the photo and should be handed it.
+   */
+  thumbUrl?: string;
   /** VOW fields — present ONLY on a signed-in consumer's response. */
   closePrice?: number;
   /** Epoch ms (UTC-midnight date-only) — render with timeZone:'UTC' (MEDIUM-18). */
