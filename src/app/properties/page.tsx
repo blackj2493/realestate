@@ -76,6 +76,18 @@ let seededCityValue: string | null = null;
 let seededCenterKey: string | null = null;
 let savedMarketSeeded = false;
 
+// Same remount problem, second casualty: the mobile list/map toggle. It used to be
+// per-instance useState defaulting to "map", so every Back from a listing dropped the
+// user onto the MAP no matter which pane they had opened the listing from — they saw
+// the list for an instant (the browser's back-gesture paint of the old frame) and then
+// it flipped to the map once React remounted. Holding the choice at MODULE scope keeps
+// it across the remount with zero flash and no hydration risk (the server and a cold
+// client both start from the "map" default). MOBILE_VIEW_KEY mirrors it into
+// sessionStorage so the same tab also survives a real document load — e.g. the user
+// reloaded the detail page, or landed on it from a shared link, before pressing Back.
+const MOBILE_VIEW_KEY = "terminalMobileView";
+let lastMobileView: "list" | "map" = "map";
+
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
   ssr: false,
@@ -564,7 +576,34 @@ function CommandCenterContent() {
   // (full-width card ledger) is one tap away. Desktop shows both panes, so the
   // control is md:hidden. The effect below nudges the map to resize whenever it's
   // shown — on first mount (map is the default) and when revealed from the list.
-  const [mobileView, setMobileView] = useState<"list" | "map">("map");
+  //
+  // Seeded from the module-scope `lastMobileView` (see the note at the top of the
+  // file) so pressing Back from a listing returns to the pane the user actually
+  // left, and written back through setMobileView so the next remount agrees.
+  const [mobileView, setMobileViewState] = useState<"list" | "map">(lastMobileView);
+  const setMobileView = useCallback((v: "list" | "map") => {
+    lastMobileView = v;
+    try {
+      sessionStorage.setItem(MOBILE_VIEW_KEY, v);
+    } catch {
+      // Private-mode / storage-disabled: the module-scope copy still carries the
+      // choice across soft navigations, which is the case that actually breaks.
+    }
+    setMobileViewState(v);
+  }, []);
+  // Cold document load: recover the pane from sessionStorage. Only when the module
+  // copy is still untouched — a soft-nav remount has already seeded the right value
+  // above and must not be second-guessed here.
+  useEffect(() => {
+    if (lastMobileView !== "map") return;
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(MOBILE_VIEW_KEY);
+    } catch {
+      saved = null;
+    }
+    if (saved === "list") setMobileView("list");
+  }, [setMobileView]);
   useEffect(() => {
     if (mobileView !== "map") return;
     const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
