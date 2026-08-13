@@ -14,12 +14,19 @@
  * (or city) only corroborates.
  */
 
-import { parseAddress, streetNamesMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
+import { parseAddress, streetNamesMatch, unitsMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
 
 /** Same home, from two parsed addresses. */
 export function isSamePropertyParsed(a: ParsedAddress, b: ParsedAddress): boolean {
   if (!a.streetNumber || a.streetNumber !== b.streetNumber) return false;
   if (!streetNamesMatch(a.streetName, b.streetName)) return false;
+  // The UNIT is load-bearing here, never optional. Every unit in a condo block shares one
+  // civic number and one postal code, so without this 2945 Thomas St #62 and #86 collapse
+  // into a single "home" — campaign stacking would fold one unit's history under another,
+  // and the relist join would forward a visitor to the neighbour's live listing. This is
+  // exactly the collapse `unit` was added to stop; a row that renders a per-home number
+  // must never take the ignoreUnit shortcut.
+  if (!unitsMatch(a, b)) return false;
   if (a.postal && b.postal) return a.postal === b.postal;
   return !!a.city && a.city === b.city;
 }

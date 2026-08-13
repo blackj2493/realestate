@@ -39,6 +39,24 @@ describe("isSameProperty", () => {
     ).toBe(false);
   });
 
+  // The regression #320 fixed elsewhere: every unit in a condo block shares one civic
+  // number and one postal code. Ignoring the unit here would fold one unit's campaign
+  // history under another and forward a visitor to the neighbour's live listing.
+  it("keeps two units in one condo block apart", () => {
+    expect(
+      isSameProperty("86 - 2945 Thomas Street, Mississauga, ON L5M 0P8", "62 - 2945 Thomas Street, Mississauga, ON L5M 0P8")
+    ).toBe(false);
+    expect(
+      isSameProperty("2945 Thomas Street #86, Mississauga, ON", "2945 Thomas Street #62, Mississauga, ON")
+    ).toBe(false);
+  });
+
+  it("still joins the same unit's own campaigns", () => {
+    expect(
+      isSameProperty("86 - 2945 Thomas Street, Mississauga, ON L5M 0P8", "86 - 2945 Thomas St, Mississauga, ON L5M 0P8")
+    ).toBe(true);
+  });
+
   it("refuses to guess from an unusable address", () => {
     expect(isSameProperty("Hamilton", "Hamilton")).toBe(false);
     expect(isSameProperty(null, "90 Osler Drive, Hamilton")).toBe(false);
