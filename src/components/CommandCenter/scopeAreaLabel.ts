@@ -28,6 +28,7 @@
  */
 
 import { cityDisplayName } from "@/lib/listings/listingPath";
+import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 
 /**
  * Above this many distinct neighbourhoods the viewport is too fragmented for one of
@@ -40,6 +41,25 @@ export const MAX_NAMED_AREAS = 12;
 export interface AreaFields {
   City?: string | null;
   CityRegion?: string | null;
+}
+
+/**
+ * Reader-facing form of a raw CityRegion. Ottawa carries the OREB board code on the
+ * region axis ("7706 - Barrhaven", "9008 - Kanata - Morgan's Grant/South March"), so the
+ * chip read "MAP AREA · 7706 - BARRHAVEN" — four digits of board bookkeeping ahead of the
+ * only word that means anything, on the field where width is scarcest.
+ *
+ * formatRegionParts is the repo's existing display formatter (already behind the location
+ * search, the dashboards and the alert emails); routing through it keeps this chip
+ * consistent with them rather than growing a second, drifting strip. `.name` rather than
+ * formatRegionLabel() because the label form re-attaches a Toronto district code
+ * ("Toronto C01 · Downtown & Waterfront") — the codes this chip exists to keep out.
+ *
+ * DISPLAY ONLY: the raw value stays canonical for hub slugs and Typesense filters, and
+ * nothing here feeds either — the chip is terminal text.
+ */
+function regionDisplayName(cityRegion: string | null | undefined): string {
+  return formatRegionParts(cityRegion?.trim() ?? "").name.trim();
 }
 
 interface Tally {
@@ -89,7 +109,12 @@ export function scopeAreaLabel(listings: readonly AreaFields[]): string | null {
     // A blank CityRegion is a real feed state, not bad data: TRREB ships no CityRegion
     // at all for whole markets (Waterloo Region, Brantford). Fall back to the city so
     // those rows still count toward the tally instead of dropping out of it.
-    const neighbourhood = listing.CityRegion?.trim() || city;
+    //
+    // Normalised BEFORE the tally, not after, for two reasons: rows whose board codes
+    // differ but whose names don't would otherwise tally as separate areas and inflate
+    // `+N`, and the alphabetical tie-break would order by the hidden numeric prefix
+    // rather than by the name a reader actually sees.
+    const neighbourhood = regionDisplayName(listing.CityRegion) || city;
     if (neighbourhood) neighbourhoods.push(neighbourhood);
     if (city) cities.push(city);
   }
