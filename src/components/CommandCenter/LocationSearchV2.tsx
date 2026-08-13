@@ -16,7 +16,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers, Lock } from "lucide-react";
+import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -43,6 +43,7 @@ import type { ListingDocument } from "@/lib/typesense/client";
 import SearchChipsRow from "./search/SearchChipsRow";
 import SearchAnswerCard from "./search/SearchAnswerCard";
 import SearchEmptyState, { type WatchedArea } from "./search/SearchEmptyState";
+import RecordThumb from "./search/RecordThumb";
 
 interface Props {
   className?: string;
@@ -580,10 +581,12 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             decoding="async"
                             className="h-10 w-14 shrink-0 object-cover"
                           />
-                        ) : item.sold?.hasPhoto ? (
-                          <span className="flex h-10 w-14 shrink-0 items-center justify-center bg-muted text-muted-foreground">
-                            <Lock className="h-3 w-3" />
-                          </span>
+                        ) : item.category === "soldAddress" ? (
+                          <RecordThumb
+                            listingKey={item.sold?.mls}
+                            hasPhoto={item.sold?.hasPhoto}
+                            className="h-10 w-14"
+                          />
                         ) : (
                           <CategoryIcon category={item.category} />
                         )}

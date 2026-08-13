@@ -14,7 +14,7 @@
 "use client";
 
 import React from "react";
-import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft, Layers, Lock } from "lucide-react";
+import { Search, X, MapPin, Home, Hash, Sparkles, CornerDownLeft, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -39,6 +39,7 @@ import {
   shouldProbeRecords,
 } from "@/lib/search/searchRows";
 import type { AddressRecordResponse } from "@/lib/search/types";
+import RecordThumb from "./search/RecordThumb";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { chipsToQueryString } from "@/lib/search/chipUrl";
@@ -444,10 +445,8 @@ export default function LocationSearch({
                   decoding="async"
                   className="h-10 w-14 shrink-0 object-cover"
                 />
-              ) : s.record?.hasPhoto ? (
-                <span className="flex h-10 w-14 shrink-0 items-center justify-center bg-muted text-muted-foreground">
-                  <Lock className="h-3 w-3" />
-                </span>
+              ) : s.kind === "record" ? (
+                <RecordThumb listingKey={s.record?.key} hasPhoto={s.record?.hasPhoto} className="h-10 w-14" />
               ) : (
                 <SuggestionIcon kind={s.kind} />
               )}
