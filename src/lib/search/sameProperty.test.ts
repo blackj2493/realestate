@@ -63,3 +63,57 @@ describe("isSameProperty", () => {
     expect(isSameProperty(undefined, undefined)).toBe(false);
   });
 });
+
+// ── Grouping ────────────────────────────────────────────────────────────────
+// The header bar shipped without this and rendered a relisted home as three flat
+// siblings — dead campaign FIRST, live listing last, nothing saying they were one
+// house. Both bars now group through here.
+import { groupByProperty } from "./sameProperty";
+
+const row = (id: string, address: string) => ({ id, address });
+const addr = (r: { address: string }) => r.address;
+
+describe("groupByProperty", () => {
+  it("folds later campaigns under the first row for an address", () => {
+    const groups = groupByProperty(
+      [
+        row("X13585448", "90 Osler Drive, Hamilton, ON L9H 4B5"), // live — caller puts it first
+        row("X12888728", "90 Osler Drive, Hamilton, ON L9H 4B5"), // terminated
+        row("X12941486", "90 OSLER Street, Kanata, ON K2W 0K8"), // unrelated home
+      ],
+      addr
+    );
+    expect(groups).toHaveLength(2);
+    expect(groups[0].lead.id).toBe("X13585448");
+    expect(groups[0].history.map((h) => h.id)).toEqual(["X12888728"]);
+    expect(groups[1].lead.id).toBe("X12941486");
+    expect(groups[1].history).toEqual([]);
+  });
+
+  it("respects caller order — whichever row comes first leads", () => {
+    const groups = groupByProperty(
+      [
+        row("X12888728", "90 Osler Drive, Hamilton, ON L9H 4B5"),
+        row("X13585448", "90 Osler Drive, Hamilton, ON L9H 4B5"),
+      ],
+      addr
+    );
+    expect(groups[0].lead.id).toBe("X12888728");
+  });
+
+  it("never folds two units of one condo block together", () => {
+    const groups = groupByProperty(
+      [
+        row("A", "86 - 2945 Thomas Street, Mississauga, ON L5M 0P8"),
+        row("B", "62 - 2945 Thomas Street, Mississauga, ON L5M 0P8"),
+      ],
+      addr
+    );
+    expect(groups).toHaveLength(2);
+  });
+
+  it("leaves rows with no usable address ungrouped", () => {
+    const groups = groupByProperty([row("A", "Hamilton"), row("B", "Hamilton")], addr);
+    expect(groups).toHaveLength(2);
+  });
+});

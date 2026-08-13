@@ -39,6 +39,7 @@ import {
   shouldProbeRecords,
 } from "@/lib/search/searchRows";
 import type { AddressRecordResponse } from "@/lib/search/types";
+import { groupByProperty } from "@/lib/search/sameProperty";
 import RecordThumb from "./search/RecordThumb";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
@@ -187,10 +188,27 @@ export default function LocationSearch({
           geocodeAddress(q, ctrl.signal),
         ]);
         const records = status?.found ? status.records ?? [] : [];
-        // Reversed: successive unshifts then leave the rows in server order (newest first).
-        for (const r of [...records].reverse()) {
-          results.unshift({ kind: "record", label: r.address, sublabel: recordSublabel(r), record: r });
-        }
+        const recordRows: SearchSuggestion[] = records.map((r) => ({
+          kind: "record",
+          label: r.address,
+          sublabel: recordSublabel(r),
+          record: r,
+        }));
+
+        // ONE HOME, ONE ROW. Records used to be unshifted onto the front as flat siblings,
+        // so a relisted home showed its dead campaign FIRST and its live listing last, with
+        // nothing saying they were the same house. Now the live listing leads and its
+        // earlier campaigns fold underneath — the same shape the terminal bar renders,
+        // via the same grouper.
+        const places = results.filter((r) => sectionFor(r) === "places");
+        const actives = results.filter((r) => sectionFor(r) !== "places");
+        // Actives lead when one genuinely matches what was typed; otherwise the actives are
+        // fuzzy lookalikes and the record IS the typed address, so it must not sit below them.
+        const ordered = covered ? [...actives, ...recordRows] : [...recordRows, ...actives];
+        const stacked = groupByProperty(ordered, (r) => r.listing?.UnparsedAddress ?? r.label)
+          .flatMap(({ lead, history }) => [lead, ...history.map((h) => ({ ...h, depth: 1 }))]);
+        results.length = 0;
+        results.push(...places, ...stacked);
         // The PLACE row is unconditional now. It used to render only when the address was
         // unknown to us (no record AND no active match), so the map option disappeared
         // exactly when a home had history or was for sale — the moment you most want to
@@ -415,6 +433,13 @@ export default function LocationSearch({
             // the existing highlight/keyboard indices keep working unchanged.
             const showHead = i === 0 || sectionFor(suggestions[i - 1]) !== section;
             const status = liveStatus(s);
+            // Earlier campaigns at the row above's address. They sit in the same flat array
+            // (so arrow keys reach them) and are marked by depth rather than nesting.
+            const isHistory = s.depth === 1;
+            const historyCount = isHistory
+              ? suggestions.filter((x, j) => x.depth === 1 && j >= i && suggestions.slice(i, j + 1).every((y) => y.depth === 1)).length
+              : 0;
+            const startsHistory = isHistory && suggestions[i - 1]?.depth !== 1;
             return (
             <React.Fragment key={`${s.kind}-${s.label}-${i}`}>
             {showHead && (
@@ -425,18 +450,24 @@ export default function LocationSearch({
                 )}
               </div>
             )}
+            {startsHistory && (
+              <div className="border-l-2 border-border/70 bg-muted/30 px-3 py-1 pl-9 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                Earlier at this address — {historyCount}
+              </div>
+            )}
             <button
               type="button"
               onMouseEnter={() => setHighlight(i)}
               onClick={() => select(s)}
               className={cn(
-                "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                "flex w-full items-start gap-2.5 py-2 pr-3 text-left transition-colors",
+                isHistory ? "border-l-2 border-border/70 bg-muted/30 pl-9" : "pl-3",
                 i === highlight ? "bg-muted" : "hover:bg-muted"
               )}
             >
               {/* See LocationSearchV2: active photo is IDX and renders; a record's URL is
                   VOW so it shows a locked frame; never optimized (watermark + cost). */}
-              {s.listing?.primaryImageUrl ? (
+              {isHistory ? null : s.listing?.primaryImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={s.listing.primaryImageUrl}
@@ -451,11 +482,27 @@ export default function LocationSearch({
                 <SuggestionIcon kind={s.kind} />
               )}
               <span className="flex min-w-0 flex-1 flex-col">
-                <span
-                  className="truncate font-mono text-xs text-foreground"
-                  title={s.kind === "city" || s.kind === "neighbourhood" ? s.label : undefined}
-                >
-                  {s.kind === "city" || s.kind === "neighbourhood" ? formatRegionLabel(s.label) : s.label}
+                <span className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="truncate font-mono text-xs text-foreground"
+                    title={s.kind === "city" || s.kind === "neighbourhood" ? s.label : undefined}
+                  >
+                    {isHistory ? s.record?.key : s.kind === "city" || s.kind === "neighbourhood" ? formatRegionLabel(s.label) : s.label}
+                  </span>
+                  {s.kind === "record" && s.record ? (
+                    <span
+                      className={cn(
+                        "shrink-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                        ROW_STATUS_CHIP[s.record.dealKind]
+                      )}
+                    >
+                      {ROW_STATUS_LABEL[s.record.dealKind]}
+                    </span>
+                  ) : status ? (
+                    <span className={cn("shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider", ROW_STATUS_TONE[status])}>
+                      {ROW_STATUS_LABEL[status]}
+                    </span>
+                  ) : null}
                 </span>
                 {s.sublabel && (
                   <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
@@ -478,6 +525,16 @@ export default function LocationSearch({
                 {/* The relist, said out loud. A dead campaign whose home is listed again
                     reads as a dead end without this — and for an off-market record the
                     row now navigates to that live listing (server-resolved href). */}
+                {s.record?.closePrice ? (
+                  <span className="truncate font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                    {formatRowPrice(s.record.closePrice, s.record.dealKind === "leased")}
+                    {s.record.soldDateMs && (
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        {formatRecordDate(s.record.soldDateMs)}
+                      </span>
+                    )}
+                  </span>
+                ) : null}
                 {s.record?.liveKey && (
                   <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
                     {backOnMarketLabel(s.record.livePrice, s.record.liveTransactionType)}
@@ -487,28 +544,10 @@ export default function LocationSearch({
               {/* Property record: the same status chip the terminal bar shows (shared
                   RECORD_KIND_* maps), plus the close price when the viewer is a VOW
                   consumer — the anon payload simply never carries one to hide. */}
-              {s.kind === "record" && s.record ? (
-                <span className="flex shrink-0 flex-col items-end gap-0.5">
-                  <span
-                    className={cn(
-                      "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
-                      ROW_STATUS_CHIP[s.record.dealKind]
-                    )}
-                  >
-                    {ROW_STATUS_LABEL[s.record.dealKind]}
-                  </span>
-                  {s.record.closePrice ? (
-                    <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
-                      {formatRowPrice(s.record.closePrice, s.record.dealKind === "leased")}
-                      {s.record.soldDateMs && (
-                        <span className="ml-1 font-normal text-muted-foreground">
-                          {formatRecordDate(s.record.soldDateMs)}
-                        </span>
-                      )}
-                    </span>
-                  ) : null}
-                </span>
-              ) : /* Geocoded not-listed address: the two destinations as EXPLICIT
+              {/* The status chip/word now rides on line 1 with the address, so this column
+                  carries only ACTIONS and the close price. It used to hold the status too,
+                  which cost the address ~90px and truncated every row on a phone. */}
+              {s.kind === "record" ? null : /* Geocoded not-listed address: the two destinations as EXPLICIT
                   buttons (owner: nobody knew where to click) — bordered Map
                   (centered-terminal deep link, PR #155 contract) + solid Profile.
                   Row-click still opens the profile (unchanged default). */
@@ -544,10 +583,8 @@ export default function LocationSearch({
                   </span>
                 </span>
               ) : status ? (
-                /* Live listing: the status word comes from the feed's TransactionType —
-                   `tagFor` hardcoded "For sale" on every active row, lease listings
-                   included. The Map action sits beside it, always visible (never
-                   hover-gated: no touch device can reach a hover-only control). */
+                /* Map action only — always visible, never hover-gated: no touch device can
+                   reach a hover-only control. */
                 <span className="flex shrink-0 items-center gap-1.5">
                   {s.listing?.location && (
                     <span
@@ -564,13 +601,9 @@ export default function LocationSearch({
                       }}
                       className="flex items-center gap-1 border border-cyan-500/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
                     >
-                      <MapPin className="h-2.5 w-2.5" />
-                      Map
+                      <MapPin className="h-3 w-3" />
                     </span>
                   )}
-                  <span className={cn("font-mono text-[10px] font-bold uppercase tracking-wider", ROW_STATUS_TONE[status])}>
-                    {ROW_STATUS_LABEL[status]}
-                  </span>
                 </span>
               ) : (
                 <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">

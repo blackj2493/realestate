@@ -27,7 +27,7 @@ import {
   listingSpecs,
   localityLabel,
 } from "./searchRows";
-import { isSameProperty } from "./sameProperty";
+import { groupByProperty } from "./sameProperty";
 import { anyTransactionPriceFloor } from "@/lib/filters/fundamentals";
 import type { AddressStatusResponse, SuggestGroup, SuggestItem } from "./types";
 
@@ -331,19 +331,10 @@ export async function federatedSuggest(
  * say what actually happened.
  */
 export function stackByProperty(items: SuggestItem[]): SuggestItem[] {
-  const leads: SuggestItem[] = [];
-  for (const item of items) {
-    const addr = item.listing?.UnparsedAddress ?? item.label;
-    const lead = leads.find((l) => isSameProperty(l.listing?.UnparsedAddress ?? l.label, addr));
-    if (!lead) {
-      leads.push(item);
-      continue;
-    }
-    (lead.children ??= []).push(item);
-  }
-  for (const lead of leads) {
-    const campaigns = 1 + (lead.children?.length ?? 0);
+  return groupByProperty(items, (i) => i.listing?.UnparsedAddress ?? i.label).map(({ lead, history }) => {
+    if (history.length) lead.children = history;
+    const campaigns = 1 + history.length;
     if (lead.listing) lead.spanLabel = campaignSpanLabel(lead.listing, campaigns) ?? undefined;
-  }
-  return leads;
+    return lead;
+  });
 }

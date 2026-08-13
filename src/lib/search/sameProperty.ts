@@ -36,3 +36,25 @@ export function isSameProperty(a: string | undefined | null, b: string | undefin
   if (!a || !b) return false;
   return isSamePropertyParsed(parseAddress(a), parseAddress(b));
 }
+
+/**
+ * Fold rows that describe the SAME home into one group: the first row for an address
+ * leads, the rest become its history. Callers order the input so the row they want as
+ * lead comes first (a live listing ahead of the campaigns that preceded it).
+ *
+ * Generic over the row type because the two search bars carry different shapes — and
+ * because the last time only one of them learned something, they disagreed about the same
+ * query for weeks.
+ */
+export function groupByProperty<T>(
+  items: T[],
+  addressOf: (item: T) => string | undefined | null
+): Array<{ lead: T; history: T[] }> {
+  const groups: Array<{ lead: T; history: T[] }> = [];
+  for (const item of items) {
+    const group = groups.find((g) => isSameProperty(addressOf(g.lead), addressOf(item)));
+    if (group) group.history.push(item);
+    else groups.push({ lead: item, history: [] });
+  }
+  return groups;
+}

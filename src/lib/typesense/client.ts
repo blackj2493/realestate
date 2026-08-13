@@ -639,6 +639,9 @@ export interface SearchSuggestion {
    *  the URL from the label, which is how it and the terminal bar ended up sending
    *  the same click to two different pages. */
   record?: AddressRecordResponse;
+  /** 1 = an EARLIER campaign at the row above's address. Kept in the same flat array as
+   *  its lead so arrow-key navigation reaches it without a second structure to sync. */
+  depth?: number;
 }
 
 /**
