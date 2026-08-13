@@ -86,7 +86,7 @@ import type { AVMInput, AVMResult } from '@/lib/avm/types';
 import { COMP_WINDOW_MO, SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_CLOSE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
 import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
-import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
+import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
 import type { RoomData } from '@/lib/room-utils';
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
@@ -809,7 +809,12 @@ async function liveAVMForKey(key: string): Promise<{ input: AVMInput; r: AVMResu
   const payload = row.full_payload as Record<string, unknown>;
   const rooms: RoomData[] = Array.isArray(payload?.rooms) ? (payload.rooms as RoomData[]) : [];
   let bucketCalibration: BucketCalibration | null = null;
-  const cityRegion = String(payload?.CityRegion ?? '').trim();
+  // CityRegion ?? City — mirrors getListingDetail / the build script (calibrationRegionKey)
+  // so fidelity keys the same cohort the live path does for blank-CityRegion listings.
+  const cityRegion = calibrationRegionKey(
+    typeof payload?.CityRegion === 'string' ? (payload.CityRegion as string) : null,
+    typeof payload?.City === 'string' ? (payload.City as string) : null
+  );
   const subType = String(payload?.PropertySubType ?? '').trim();
   const bucket = String(payload?.LivingAreaRange ?? '').trim();
   if (cityRegion && subType && bucket && resolveLivingArea(payload, { rooms }).source === 'range_midpoint') {

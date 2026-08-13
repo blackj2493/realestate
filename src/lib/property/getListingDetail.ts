@@ -16,7 +16,7 @@ import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { calculateAVM } from "@/lib/avm/calculator";
 import { mapListingToAVMInput } from "@/lib/avm/mapListingToAVMInput";
-import { resolveLivingArea, type BucketCalibration } from "@/lib/avm/livingArea";
+import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from "@/lib/avm/livingArea";
 import { normalizePropertySubType } from "@/lib/avm/normalizeType";
 import type { AVMResult } from "@/lib/avm/types";
 import {
@@ -371,7 +371,13 @@ export const getListingDetail = cache(
       // (measured) path so we don't add a query per page.
       let bucketCalibration: BucketCalibration | null = null;
       if (resolveLivingArea(payload, { rooms }).source === "range_midpoint") {
-        const cityRegion = String(payload?.["CityRegion"] ?? "").trim();
+        // CityRegion ?? City — matches the build script's calibrationRegionKey, so
+        // blank-CityRegion municipalities (Waterloo Region, Brantford) hit their
+        // city-keyed cohort instead of the naive range midpoint.
+        const cityRegion = calibrationRegionKey(
+          typeof payload?.["CityRegion"] === "string" ? (payload["CityRegion"] as string) : null,
+          typeof payload?.["City"] === "string" ? (payload["City"] as string) : null
+        );
         const subType = normalizePropertySubType(
           typeof payload?.["PropertySubType"] === "string" ? (payload["PropertySubType"] as string) : ""
         );

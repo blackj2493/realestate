@@ -256,3 +256,28 @@ export function resolveLivingArea(
 
   return { sqft: null, source: 'none' };
 }
+
+/**
+ * The avm_sqft_calibration cohort key: CityRegion, falling back to City when the feed
+ * ships none (all of Waterloo Region + Brantford — see the FSA-cohort fix, PR #324).
+ *
+ * Before this fallback those listings could neither CONTRIBUTE calibration samples
+ * (the build script dropped them at its key guard — the same one-line pattern that
+ * zeroed their AVM coverage) nor LOOK ONE UP, so every banded listing there resolved
+ * to the naive range midpoint. City granularity is honest for this table: the
+ * LivingAreaRange band is the dominant size signal, and the median GLA *within* a
+ * band varies far less across neighbourhoods than the band is wide.
+ *
+ * Used by BOTH the build script (refresh-sqft-calibration.ts) and every lookup site,
+ * so the two sides can never disagree about which cohort a listing belongs to. No
+ * collision: city-keyed rows only exist for cities whose listings have no CityRegion,
+ * and lookups only fall back to City for exactly those listings; municipalities where
+ * city_region equals the city name (Blue Mountains, West Grey, …) have the field
+ * POPULATED and never take the fallback.
+ */
+export function calibrationRegionKey(
+  cityRegion: string | null | undefined,
+  city: string | null | undefined
+): string {
+  return (cityRegion ?? '').trim() || (city ?? '').trim();
+}

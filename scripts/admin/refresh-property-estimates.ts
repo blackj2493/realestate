@@ -36,7 +36,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
-import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
+import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
 import { estimateFromMarketData, shouldEvaluatePeers, resolveModel, type AVMMarketData } from '@/lib/avm/calculator';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
 import { type CoefficientRow } from '@/lib/avm/matrixService';
@@ -207,7 +207,13 @@ async function loadCalibration(): Promise<void> {
 function lookupCalibration(payload: Record<string, unknown>, rooms: RoomData[]): BucketCalibration | null {
   // Only the range-midpoint path uses the calibrated bucket (matches getListingDetail).
   if (resolveLivingArea(payload, { rooms }).source !== 'range_midpoint') return null;
-  const cityRegion = String(payload?.['CityRegion'] ?? '').trim();
+  // CityRegion ?? City — the same key the build script writes (calibrationRegionKey),
+  // so blank-CityRegion municipalities (Waterloo Region, Brantford) resolve their
+  // city-keyed cohort instead of falling to the naive range midpoint.
+  const cityRegion = calibrationRegionKey(
+    typeof payload?.['CityRegion'] === 'string' ? (payload['CityRegion'] as string) : null,
+    typeof payload?.['City'] === 'string' ? (payload['City'] as string) : null
+  );
   const subType =
     typeof payload?.['PropertySubType'] === 'string'
       ? normalizePropertySubType(payload['PropertySubType'] as string)
