@@ -47,6 +47,8 @@ import {
 } from "@/lib/address/streetLedger";
 import { getSaleRecordByAddressGated, type SaleRecord } from "@/lib/address/saleRecord";
 import SaleRecordCard from "./SaleRecordCard";
+import { getVowActiveByAddress } from "@/lib/vow/activeByAddress";
+import VowActiveCard from "./VowActiveCard";
 import { getFlagsNearPoint, CHECKED_LABELS, type AddressFlag } from "@/lib/address/flagsNearPoint";
 import { getNearbySchools, type NearbySchool } from "@/lib/schools/nearbySchoolList";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
@@ -311,7 +313,7 @@ export default async function AddressProfileView({
   // NOTE: the geo-flags scan is NOT awaited here — it streams via <Suspense> in the
   // "Things to know" block below, so a slow/cold flags lookup can never again hold
   // the whole page hostage (it was the entire ~6 s cold TTFB pre-094).
-  const [nearby, lease, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord] = await Promise.all([
+  const [nearby, lease, soldSummary, soldGated, ledgerGated, ledgerPublic, saleRecord, vowActive] = await Promise.all([
     hasGeo ? getNearbyForSale(lat, lng) : Promise.resolve(null),
     // Live FOR RENT actives — powers the typical-rents grid (asking-side, anon-safe).
     hasGeo ? getNearbyForSale(lat, lng, { transactionType: "lease" }) : Promise.resolve(null),
@@ -329,6 +331,11 @@ export default async function AddressProfileView({
     isConsumer
       ? getSaleRecordByAddressGated(profile.address, profile.city, profile.postal, profile.unit)
       : Promise.resolve<SaleRecord | null>(null),
+    // Is this home ON THE MARKET via the VOW-only feed? Runs for BOTH audiences — anon
+    // gets an existence teaser, consumers get the listing — because "no active listing
+    // on file" was the single most misleading thing this page could say, and for the
+    // 16.4k VOW-only actives it was saying it about homes that were openly for sale.
+    getVowActiveByAddress(profile.address, profile.city, profile.postal, profile.unit, isConsumer),
   ]);
   // Rents + sale-price grids: consumers see ACTUAL closes (VOW, fetched only when
   // isConsumer — structural gate in both fetchers); anon sees asking medians. The
@@ -524,10 +531,20 @@ export default async function AddressProfileView({
               {/* States what OUR records hold, not what the market is doing. The old copy
                   ("Not currently for sale") asserted a market fact we never checked — and
                   it was wrong the moment a listing reached us late, was withheld from the
-                  IDX feed, or sat under a unit we had matched away. */}
-              <span className="rounded-full border border-border bg-card/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                No active listing on file
-              </span>
+                  IDX feed, or sat under a unit we had matched away.
+                  Now suppressed entirely when a VOW-only active IS on file: saying
+                  "no active listing" beside a card announcing the home is for sale would
+                  be the same contradiction in a smaller font. */}
+              {!vowActive && (
+                <span className="rounded-full border border-border bg-card/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  No active listing on file
+                </span>
+              )}
+              {vowActive && (
+                <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-700 dark:text-cyan-300">
+                  On the market
+                </span>
+              )}
               {ledgerCount > 0 && (
                 <a
                   href="#ledger"
@@ -583,6 +600,15 @@ export default async function AddressProfileView({
             />
           )}
         </header>
+
+        {/* ── On the market NOW via the VOW-only feed. Placed above the sale history: a
+               visitor who asks about a home that is currently listed wants that first,
+               and until now this page had no way to tell them. ── */}
+        {vowActive && (
+          <div className="mt-5">
+            <VowActiveCard listing={vowActive} />
+          </div>
+        )}
 
         {/* ── This home's own sale record (consumer-only; renders nothing without one) ── */}
         {saleRecord && saleRecord.campaignCount > 0 && (
