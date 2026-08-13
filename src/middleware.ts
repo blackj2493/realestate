@@ -14,18 +14,29 @@ export async function middleware(request: NextRequest) {
   // on a host PROPTX has never seen. Runs FIRST and covers /api too (see matcher): the
   // data routes are the ones that actually hand out listings.
   // No-op until ALLOWED_HOSTS is set.
-  const decision = decideHost(
-    request.headers.get('host') ?? request.nextUrl.host,
-    parseAllowedHosts(process.env.ALLOWED_HOSTS)
-  );
+  const allowlist = parseAllowedHosts(process.env.ALLOWED_HOSTS);
+  const decision = decideHost(request.headers.get('host') ?? request.nextUrl.host, allowlist);
   if (!decision.allowed) {
     // 404, not 403: an unregistered host should not learn that anything is here.
     return new NextResponse(null, { status: 404 });
   }
 
+  // Make the gate OBSERVABLE. A safety control you cannot tell is switched on is not a
+  // control — and this one is invisible from outside by construction, because a correctly
+  // configured allowlist and a completely inert one look identical from a browser on the
+  // right host. It is also easy to be wrong here without knowing: Next.js can inline
+  // process.env at build time, so setting the variable in the dashboard without a
+  // redeploy can leave the gate off while looking on.
+  // Reveals nothing an attacker can use: only that a gate exists, and only to a host
+  // already allowed through it.
+  const stamp = (res: NextResponse) => {
+    res.headers.set('x-host-gate', allowlist.length ? 'enforced' : 'off');
+    return res;
+  };
+
   // API routes get the host gate and nothing else — they read cookies directly and must
   // not go through updateSession or the listing-URL rewrites below.
-  if (request.nextUrl.pathname.startsWith('/api')) return NextResponse.next();
+  if (request.nextUrl.pathname.startsWith('/api')) return stamp(NextResponse.next());
 
   // Phase 1c — descriptive listing URLs. /property/{prov}/{city}/{address}-{KEY}
   // rewrites INTERNALLY to the existing /properties/{KEY} route: the URL bar stays
@@ -39,7 +50,7 @@ export async function middleware(request: NextRequest) {
   if (plural) {
     const url = request.nextUrl.clone();
     url.pathname = `/property/${plural[1]}`;
-    return NextResponse.redirect(url, 308);
+    return stamp(NextResponse.redirect(url, 308));
   }
 
   const m = /^\/property\/[^/]+\/[^/]+\/([^/]+)\/?$/.exec(request.nextUrl.pathname);
@@ -48,12 +59,12 @@ export async function middleware(request: NextRequest) {
     if (key) {
       const url = request.nextUrl.clone();
       url.pathname = `/properties/${key}`;
-      return NextResponse.rewrite(url);
+      return stamp(NextResponse.rewrite(url));
     }
     // Descriptive path with no parseable KEY → fall through and let it 404 normally.
   }
 
-  return await updateSession(request);
+  return stamp(await updateSession(request));
 }
 
 export const config = {
