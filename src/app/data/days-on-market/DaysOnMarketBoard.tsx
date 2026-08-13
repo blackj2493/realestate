@@ -8,6 +8,16 @@ import type { MarketRow } from "@/lib/data/marketBoard";
 const DASH = "—";
 const days = (n: number | null) => (n == null ? DASH : `${n}d`);
 
+/**
+ * Days the board clock hides: the gap between the real (relist-stitched) listing age
+ * and the reported one. Never negative — the stitched span always starts at or before
+ * the current campaign.
+ */
+function hiddenDays(r: MarketRow): number | null {
+  if (r.trueDom == null || r.medianNaiveDom == null) return null;
+  return Math.max(0, r.trueDom - r.medianNaiveDom);
+}
+
 /** Share of active listings that have sat 90+ days, from the DoM distribution buckets. */
 function stale90(b: MarketRow["domBuckets"]): number | null {
   if (!b) return null;
@@ -43,12 +53,35 @@ const columns: RankingColumn<MarketRow>[] = [
       r.soldP25Dom == null || r.soldP75Dom == null ? DASH : `${r.soldP25Dom}–${r.soldP75Dom}d`,
   },
   {
-    key: "activeAge",
-    label: "Active Listing Age",
+    key: "reportedAge",
+    label: "Reported Listing Age",
     align: "right",
-    hint: "Median days the current active listings have been on market",
+    hint: "Median age of active listings using the board clock, which restarts at zero each time a home is relisted",
+    sortValue: (r) => r.medianNaiveDom,
+    render: (r) => days(r.medianNaiveDom),
+  },
+  {
+    key: "activeAge",
+    label: "Real Listing Age",
+    align: "right",
+    hint: "The same listings, with relist chains stitched back together so the clock keeps running",
     sortValue: (r) => r.trueDom,
-    render: (r) => days(r.trueDom),
+    render: (r) => (
+      <span className="font-semibold text-[color:var(--dt-sig)] dark:text-cyan-400">{days(r.trueDom)}</span>
+    ),
+  },
+  {
+    key: "hidden",
+    label: "Hidden Days",
+    align: "right",
+    hint: "How much longer homes have really been for sale than the reported figure shows",
+    sortValue: (r) => hiddenDays(r),
+    render: (r) => {
+      const h = hiddenDays(r);
+      return h == null ? DASH : (
+        <span className="text-[color:var(--dt-warn)] dark:text-amber-400">+{h}d</span>
+      );
+    },
   },
   {
     key: "stale90",
@@ -66,32 +99,30 @@ const columns: RankingColumn<MarketRow>[] = [
 ];
 
 const GRID =
-  "minmax(104px,1.3fr) minmax(112px,1.1fr) minmax(120px,1.1fr) minmax(104px,1fr) minmax(100px,1fr)";
+  "minmax(104px,1.3fr) minmax(112px,1.1fr) minmax(120px,1.1fr) minmax(104px,1fr) minmax(100px,1fr) minmax(92px,0.9fr) minmax(100px,1fr)";
 
 export function DaysOnMarketBoard({ rows, embed = false }: { rows: MarketRow[]; embed?: boolean }) {
   const sellable = rows.filter((r) => r.soldMedianDom != null);
   const bySpeed = [...sellable].sort((a, b) => (a.soldMedianDom ?? 0) - (b.soldMedianDom ?? 0));
-  const fastest = bySpeed[0];
   const slowest = bySpeed[bySpeed.length - 1];
   const toronto = rows.find((r) => r.region === "Toronto");
+  const torontoHidden = toronto ? hiddenDays(toronto) : null;
 
   return (
     <div className="space-y-5">
       {!embed && (
         <Readout cols={3}>
           <ReadoutCell
-            label="Fastest market"
-            value={fastest ? fastest.region : DASH}
-            tone="sig"
-            sub={fastest?.soldMedianDom != null ? `${fastest.soldMedianDom} days to sell` : undefined}
+            label="Toronto, as reported"
+            value={toronto?.medianNaiveDom != null ? `${toronto.medianNaiveDom} days` : DASH}
+            sub="board clock, restarts on relist"
           />
           <ReadoutCell
-            label="Toronto"
-            value={toronto?.soldMedianDom != null ? `${toronto.soldMedianDom} days` : DASH}
+            label="Toronto, in reality"
+            value={toronto?.trueDom != null ? `${toronto.trueDom} days` : DASH}
+            tone="sig"
             sub={
-              toronto?.soldP25Dom != null && toronto?.soldP75Dom != null
-                ? `${toronto.soldP25Dom}–${toronto.soldP75Dom}d typical`
-                : undefined
+              torontoHidden != null ? `${torontoHidden} days longer than reported` : "relist chains stitched"
             }
           />
           <ReadoutCell
