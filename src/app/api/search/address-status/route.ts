@@ -8,8 +8,9 @@
  *  - The lookup itself (getSoldPublicByAddressLoose) returns PUBLIC fields only — the
  *    status KIND is the one public signal on a sold record (audit R24a: the same badge
  *    /address shows anon). No date reaches an anonymous payload.
- *  - VOW values (close price, sold date, beds/baths) are fetched via getSoldGatedByKey
- *    ONLY inside the getConsumer()-confirmed branch — never for anon.
+ *  - VOW values (close price, sold date, beds/baths, lead photo URL) are fetched via
+ *    getSoldGatedByKey ONLY inside the getConsumer()-confirmed branch — never for anon.
+ *    Anon gets `hasPhoto` (an existence bit) and the row renders a server-side blur.
  *
  * Prefix-tolerant on purpose (mid-keystroke queries: "127 via to") — suggestion surface
  * only; canonical resolution stays on the strict ladder (resolveAddressSlug).
@@ -101,6 +102,12 @@ export async function GET(req: NextRequest) {
         const isClosed = r.dealKind === "sold" || r.dealKind === "leased";
         out.push({
           ...base,
+          // The lead photo, for a consumer only. The document is already in hand here, so
+          // this costs nothing extra — it was simply never forwarded, which left a
+          // signed-in user looking at the anonymous 24px blur of a home whose full gallery
+          // /properties/[id] would have shown them (gateVowDerived keeps media_urls when
+          // isAuthed). Anonymous responses take the `continue` above and never reach this.
+          thumbUrl: d.primaryImageUrl || undefined,
           closePrice: isClosed && d.ClosePrice > 0 ? d.ClosePrice : undefined,
           soldDateMs:
             typeof d.PurchaseContractDate === "number" && d.PurchaseContractDate > 0 ? d.PurchaseContractDate : undefined,

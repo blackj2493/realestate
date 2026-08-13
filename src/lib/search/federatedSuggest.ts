@@ -262,6 +262,9 @@ export async function federatedSuggest(
           livePrice: r.livePrice,
           liveTransactionType: r.liveTransactionType,
           hasPhoto: r.hasPhoto,
+          // Consumer-only; absent on an anonymous response, where the row falls back to
+          // the server-side blur.
+          thumbUrl: r.thumbUrl,
         },
       });
     }
