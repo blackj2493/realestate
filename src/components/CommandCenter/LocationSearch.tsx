@@ -23,6 +23,24 @@ import { useRouter } from "next/navigation";
 import { useOpenListing } from "@/hooks/useOpenListing";
 import { resolveSuggestionTarget, resolveTextTarget, targetToHref, type SearchTarget } from "@/lib/search/searchTarget";
 import { matchesTypedAddress, fetchAddressStatus } from "@/lib/search/federatedSuggest";
+import {
+  ROW_STATUS_CHIP,
+  ROW_STATUS_LABEL,
+  ROW_STATUS_TONE,
+  SECTION_TITLE,
+  backOnMarketLabel,
+  formatRecordDate,
+  formatRowPrice,
+  activeRowStatus,
+  listingMetaLine,
+  listingSpecs,
+  localityLabel,
+  sectionForCategory,
+  shouldProbeRecords,
+} from "@/lib/search/searchRows";
+import type { AddressRecordResponse } from "@/lib/search/types";
+import { groupByProperty } from "@/lib/search/sameProperty";
+import RecordThumb from "./search/RecordThumb";
 import { geocodeAddress } from "@/lib/search/geocodeClient";
 import { parseNlQuery } from "@/lib/search/nlParse";
 import { chipsToQueryString } from "@/lib/search/chipUrl";
@@ -44,6 +62,7 @@ interface LocationSearchProps {
 
 function SuggestionIcon({ kind }: { kind: SearchSuggestion["kind"] }) {
   if (kind === "address") return <Home className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+  if (kind === "record") return <Home className="h-3.5 w-3.5 shrink-0 text-rose-700 dark:text-rose-400/80" />;
   if (kind === "mls") return <Hash className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
   return <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
 }
@@ -53,6 +72,8 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
   neighbourhood: "Area",
   address: "Address",
   mls: "MLS",
+  // Record rows render a status chip instead of this tag — see the row body.
+  record: "Record",
 };
 
 /** Row tag that says what the row IS: a with-listing address row is a live For-Sale
@@ -60,6 +81,34 @@ const KIND_TAG: Record<SearchSuggestion["kind"], string> = {
 function tagFor(s: SearchSuggestion): string {
   if (s.kind === "address") return s.listing ? "For sale" : "Profile";
   return KIND_TAG[s.kind];
+}
+
+/** Public record meta, shown to anon too: MLS# · brokerage (TRREB §6.3(c)). */
+function recordSublabel(r: AddressRecordResponse): string | undefined {
+  // Date first — it is what separates several campaigns at one address. On a record the
+  // date is VOW, so it is simply absent for an anonymous viewer.
+  return (
+    [r.soldDateMs ? formatRecordDate(r.soldDateMs) : null, r.key, r.brokerage]
+      .filter(Boolean)
+      .join("  ·  ") || undefined
+  );
+}
+
+/**
+ * Which section a header-bar suggestion belongs in. This bar predates SuggestCategory and
+ * uses its own `kind` vocabulary, so translate first and then defer to the shared rule —
+ * the two bars must not each decide what counts as a "place".
+ */
+function sectionFor(s: SearchSuggestion) {
+  if (s.kind === "city" || s.kind === "neighbourhood") return sectionForCategory("community");
+  // An address row with coordinates and no listing IS the geocoded place row.
+  if (s.kind === "address" && !s.listing && s.geo) return sectionForCategory("geo");
+  return sectionForCategory(s.kind === "record" ? "soldAddress" : "address");
+}
+
+/** A live listing's status word comes from the feed, never from a hardcoded label. */
+function liveStatus(s: SearchSuggestion) {
+  return s.listing ? activeRowStatus(s.listing.TransactionType) : null;
 }
 
 export default function LocationSearch({
@@ -84,6 +133,15 @@ export default function LocationSearch({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Clearing the timer only cancels work that hasn't STARTED. Once a fetch is in flight a
+  // newer keystroke's answer can land first and then be overwritten by the older, slower
+  // one — the terminal bar has always guarded this (LocationSearchV2's reqId); this one
+  // didn't, so the dropdown could show rows belonging to a query the user had moved past.
+  const reqId = React.useRef(0);
+  // The record/geocode probes now run on every address-shaped query (they used to be
+  // skipped whenever an active listing matched), so cancel the previous pair rather than
+  // leaving abandoned requests to occupy the browser's per-host connection budget.
+  const abortRef = React.useRef<AbortController | null>(null);
 
   // Close the dropdown on outside click.
   React.useEffect(() => {
@@ -98,6 +156,9 @@ export default function LocationSearch({
   // Debounced autocomplete.
   React.useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Bumped before the early return too, so clearing the box also invalidates any
+    // in-flight request instead of letting it repopulate an emptied dropdown.
+    const mine = ++reqId.current;
     const q = value.trim();
     if (q.length < 2) {
       setSuggestions([]);
@@ -111,33 +172,70 @@ export default function LocationSearch({
       // typed address is NOT among the (typo-tolerant) listing matches gets a geocoded
       // address-profile row on top — fuzzy lookalikes must not swallow the typed
       // address. Navigate mode only (inplace/onPlace callers expect place labels).
-      if (mode === "navigate" && /\d+\s+[a-zA-Z]{3,}/.test(q)) {
+      if (mode === "navigate" && shouldProbeRecords(q)) {
         const covered = results.some((s) => s.kind === "address" && matchesTypedAddress(q, s.label));
-        if (!covered) {
-          // Sold-record probe alongside the geocode: an address that SOLD must say so,
-          // not "Not on the market". Status KIND only here (anon-safe, audit R24a) —
-          // the destination page carries the gated price/history. Click path is
-          // unchanged either way (the profile ladder already redirects sold keys).
-          const [hit, status] = await Promise.all([geocodeAddress(q), fetchAddressStatus(q)]);
-          if (status?.found && status.address) {
-            const kindWord =
-              status.dealKind === "leased" ? "leased" : status.dealKind === "offmarket" ? "recently off-market" : "sold";
-            results.unshift({
-              kind: "address",
-              label: status.address,
-              sublabel: `This home has ${kindWord} — view its record`,
-            });
-          } else if (hit) {
-            results.unshift({
-              kind: "address",
-              label: hit.label,
-              sublabel: "Not on the market",
-              // Coords power the explicit Map/Profile button pair on this row.
-              geo: { lat: hit.lat, lng: hit.lng },
-            });
-          }
+        // EVERY disposition at the address gets its own row, alongside a live For-Sale
+        // row — the same contract federatedSuggest gives the terminal. This used to run
+        // only when no active listing matched, and only ever rendered records[0], so a
+        // relisted home hid its own history and a second record at the address vanished.
+        abortRef.current?.abort();
+        const ctrl = new AbortController();
+        abortRef.current = ctrl;
+        // Both degrade to null when aborted, so a cancelled probe simply renders no
+        // record rows — never a throw out of the effect.
+        const [status, hit] = await Promise.all([
+          fetchAddressStatus(q, ctrl.signal),
+          geocodeAddress(q, ctrl.signal),
+        ]);
+        const records = status?.found ? status.records ?? [] : [];
+        const recordRows: SearchSuggestion[] = records.map((r) => ({
+          kind: "record",
+          label: r.address,
+          sublabel: recordSublabel(r),
+          record: r,
+        }));
+
+        // ONE HOME, ONE ROW. Records used to be unshifted onto the front as flat siblings,
+        // so a relisted home showed its dead campaign FIRST and its live listing last, with
+        // nothing saying they were the same house. Now the live listing leads and its
+        // earlier campaigns fold underneath — the same shape the terminal bar renders,
+        // via the same grouper.
+        const places = results.filter((r) => sectionFor(r) === "places");
+        const actives = results.filter((r) => sectionFor(r) !== "places");
+        // Actives lead when one genuinely matches what was typed; otherwise the actives are
+        // fuzzy lookalikes and the record IS the typed address, so it must not sit below them.
+        const ordered = covered ? [...actives, ...recordRows] : [...recordRows, ...actives];
+        const stacked = groupByProperty(ordered, (r) => r.listing?.UnparsedAddress ?? r.label)
+          .flatMap(({ lead, history }) => [lead, ...history.map((h) => ({ ...h, depth: 1 }))]);
+        results.length = 0;
+        results.push(...places, ...stacked);
+        // The PLACE row is unconditional now. It used to render only when the address was
+        // unknown to us (no record AND no active match), so the map option disappeared
+        // exactly when a home had history or was for sale — the moment you most want to
+        // see where it is.
+        if (hit) {
+          // Named from the FEED whenever we have a row for this address. The geocoder
+          // answers with its own municipal naming ("Dundas" where the feed says
+          // City=Hamilton, CityRegion=Dundas); only feed vocabulary exists in our region
+          // taxonomy and in the /address URLs already indexed, so a geocoder name here
+          // would mint a second identity for one home. (searchRows.ts)
+          const named = records[0];
+          const placeLabel = named
+            ? `${named.address.split(",")[0]}, ${localityLabel(named.city, named.cityRegion)}`
+            : hit.label;
+          results.unshift({
+            kind: "address",
+            label: placeLabel,
+            sublabel:
+              records.length === 0 && !covered
+                ? "Not on the market — centre the map here"
+                : "Centre the map here and search this area",
+            // Coords power the explicit Map/Profile button pair on this row.
+            geo: { lat: hit.lat, lng: hit.lng },
+          });
         }
       }
+      if (mine !== reqId.current) return; // a newer keystroke already answered
       setSuggestions(results);
       setHighlight(-1);
       setSearching(false);
@@ -175,8 +273,12 @@ export default function LocationSearch({
   // Apply a resolved target. navigate mode routes; inplace mode mutates the store
   // exactly as before (city → setLocation, listing → setSelectedProperty).
   const applyTarget = (t: SearchTarget) => {
-    if (t.action !== "open-listing" && onPlace) {
+    if (t.action === "set-location" && onPlace) {
       onPlace(t.label); // caller-managed region (e.g. Market Trends page)
+    } else if (t.action === "open-href") {
+      // A record's destination is whatever the server resolved — including the forward
+      // from a dead off-market campaign to the live relist. Never re-derive it here.
+      router.push(t.href);
     } else if (mode === "navigate") {
       router.push(targetToHref(t));
     } else if (t.action === "open-listing") {
@@ -325,34 +427,131 @@ export default function LocationSearch({
               No matches for “{value.trim()}”. Try a city, neighbourhood, address, or MLS#.
             </div>
           )}
-          {suggestions.map((s, i) => (
+          {suggestions.map((s, i) => {
+            const section = sectionFor(s);
+            // Header only when the section changes — keeps `suggestions` a flat array so
+            // the existing highlight/keyboard indices keep working unchanged.
+            const showHead = i === 0 || sectionFor(suggestions[i - 1]) !== section;
+            const status = liveStatus(s);
+            // Earlier campaigns at the row above's address. They sit in the same flat array
+            // (so arrow keys reach them) and are marked by depth rather than nesting.
+            const isHistory = s.depth === 1;
+            const historyCount = isHistory
+              ? suggestions.filter((x, j) => x.depth === 1 && j >= i && suggestions.slice(i, j + 1).every((y) => y.depth === 1)).length
+              : 0;
+            const startsHistory = isHistory && suggestions[i - 1]?.depth !== 1;
+            return (
+            <React.Fragment key={`${s.kind}-${s.label}-${i}`}>
+            {showHead && (
+              <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                <span>{SECTION_TITLE[section]}</span>
+                {section === "listings" && suggestions.some((x) => x.kind === "record") && (
+                  <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>
+                )}
+              </div>
+            )}
+            {startsHistory && (
+              <div className="border-l-2 border-border/70 bg-muted/30 px-3 py-1 pl-9 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                Earlier at this address — {historyCount}
+              </div>
+            )}
             <button
-              key={`${s.kind}-${s.label}-${i}`}
               type="button"
               onMouseEnter={() => setHighlight(i)}
               onClick={() => select(s)}
               className={cn(
-                "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                "flex w-full items-start gap-2.5 py-2 pr-3 text-left transition-colors",
+                isHistory ? "border-l-2 border-border/70 bg-muted/30 pl-9" : "pl-3",
                 i === highlight ? "bg-muted" : "hover:bg-muted"
               )}
             >
-              <SuggestionIcon kind={s.kind} />
+              {/* See LocationSearchV2: active photo is IDX and renders; a record's URL is
+                  VOW so it shows a locked frame; never optimized (watermark + cost). */}
+              {isHistory ? null : s.listing?.primaryImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={s.listing.primaryImageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-10 w-14 shrink-0 object-cover"
+                />
+              ) : s.kind === "record" ? (
+                <RecordThumb listingKey={s.record?.key} hasPhoto={s.record?.hasPhoto} className="h-10 w-14" />
+              ) : (
+                <SuggestionIcon kind={s.kind} />
+              )}
               <span className="flex min-w-0 flex-1 flex-col">
-                <span
-                  className="truncate font-mono text-xs text-foreground"
-                  title={s.kind === "city" || s.kind === "neighbourhood" ? s.label : undefined}
-                >
-                  {s.kind === "city" || s.kind === "neighbourhood" ? formatRegionLabel(s.label) : s.label}
+                <span className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="truncate font-mono text-xs text-foreground"
+                    title={s.kind === "city" || s.kind === "neighbourhood" ? s.label : undefined}
+                  >
+                    {isHistory ? s.record?.key : s.kind === "city" || s.kind === "neighbourhood" ? formatRegionLabel(s.label) : s.label}
+                  </span>
+                  {s.kind === "record" && s.record ? (
+                    <span
+                      className={cn(
+                        "shrink-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                        ROW_STATUS_CHIP[s.record.dealKind]
+                      )}
+                    >
+                      {ROW_STATUS_LABEL[s.record.dealKind]}
+                    </span>
+                  ) : status ? (
+                    <span className={cn("shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider", ROW_STATUS_TONE[status])}>
+                      {ROW_STATUS_LABEL[status]}
+                    </span>
+                  ) : null}
                 </span>
                 {s.sublabel && (
                   <span className="truncate text-[10px] text-muted-foreground">{s.sublabel}</span>
                 )}
+                {/* Live listing: identical spec + provenance lines to the terminal bar —
+                    "4+1 bd · 3 ba · 2 pk · Detached · $885,000" then the date, MLS# and
+                    brokerage. This bar used to show an address and nothing else. */}
+                {s.listing && (
+                  <>
+                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                      {listingSpecs(s.listing)}
+                    </span>
+                    {listingMetaLine(s.listing) && (
+                      <span className="truncate font-mono text-[10px] text-muted-foreground/80">
+                        {listingMetaLine(s.listing)}
+                      </span>
+                    )}
+                  </>
+                )}
+                {/* The relist, said out loud. A dead campaign whose home is listed again
+                    reads as a dead end without this — and for an off-market record the
+                    row now navigates to that live listing (server-resolved href). */}
+                {s.record?.closePrice ? (
+                  <span className="truncate font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                    {formatRowPrice(s.record.closePrice, s.record.dealKind === "leased")}
+                    {s.record.soldDateMs && (
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        {formatRecordDate(s.record.soldDateMs)}
+                      </span>
+                    )}
+                  </span>
+                ) : null}
+                {s.record?.liveKey && (
+                  <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    {backOnMarketLabel(s.record.livePrice, s.record.liveTransactionType)}
+                  </span>
+                )}
               </span>
-              {/* Geocoded not-listed address: the two destinations as EXPLICIT
+              {/* Property record: the same status chip the terminal bar shows (shared
+                  RECORD_KIND_* maps), plus the close price when the viewer is a VOW
+                  consumer — the anon payload simply never carries one to hide. */}
+              {/* The status chip/word now rides on line 1 with the address, so this column
+                  carries only ACTIONS and the close price. It used to hold the status too,
+                  which cost the address ~90px and truncated every row on a phone. */}
+              {s.kind === "record" ? null : /* Geocoded not-listed address: the two destinations as EXPLICIT
                   buttons (owner: nobody knew where to click) — bordered Map
                   (centered-terminal deep link, PR #155 contract) + solid Profile.
-                  Row-click still opens the profile (unchanged default). */}
-              {s.geo ? (
+                  Row-click still opens the profile (unchanged default). */
+              s.geo ? (
                 <span className="flex shrink-0 items-center gap-1.5">
                   <span
                     role="button"
@@ -383,6 +582,29 @@ export default function LocationSearch({
                     Profile
                   </span>
                 </span>
+              ) : status ? (
+                /* Map action only — always visible, never hover-gated: no touch device can
+                   reach a hover-only control. */
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {s.listing?.location && (
+                    <span
+                      role="button"
+                      tabIndex={-1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const [lat, lng] = s.listing!.location;
+                        router.push(
+                          `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=16&pin=${encodeURIComponent(s.label.split(",")[0])}`
+                        );
+                        setValue("");
+                        closeAndBlur();
+                      }}
+                      className="flex items-center gap-1 border border-cyan-500/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
+                    >
+                      <MapPin className="h-3 w-3" />
+                    </span>
+                  )}
+                </span>
               ) : (
                 <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
                   {tagFor(s)}
@@ -394,7 +616,38 @@ export default function LocationSearch({
                 </span>
               )}
             </button>
-          ))}
+            </React.Fragment>
+            );
+          })}
+          {/* Persistent map exit — the terminal bar's twin. Without it this bar had no way
+              back to the map for an address or street query, which is most of them.
+              navigate mode only: the in-place callers (FirstRunRegionPicker,
+              AnalyticsClient) are not map surfaces and have nowhere to send you. */}
+          {mode === "navigate" && suggestions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                // Prefer a coordinate already resolved for this query — the place row's,
+                // else the first listing's — so the map lands on what was searched.
+                const place = suggestions.find((x) => x.geo)?.geo;
+                const loc = suggestions.find((x) => x.listing?.location)?.listing?.location;
+                const lat = place?.lat ?? loc?.[0];
+                const lng = place?.lng ?? loc?.[1];
+                const pin = suggestions[0]?.label.split(",")[0] ?? value.trim();
+                router.push(
+                  lat != null && lng != null
+                    ? `/properties?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&z=15&pin=${encodeURIComponent(pin)}`
+                    : `/properties?city=${encodeURIComponent(value.trim())}`
+                );
+                setValue("");
+                closeAndBlur();
+              }}
+              className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-border bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+            >
+              <Layers className="h-3 w-3" />
+              See these on the map
+            </button>
+          )}
         </div>
       )}
     </div>

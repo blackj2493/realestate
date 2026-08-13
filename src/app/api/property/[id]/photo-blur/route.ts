@@ -23,14 +23,15 @@
  * same bytes can be precomputed into a column without touching the client contract.
  *
  * ACTIVE listings 404 here on purpose: their photos are IDX and public, so a blurred stand-in
- * would be a pointless round trip.
+ * would be a pointless round trip. Everything `sold_listings` knows about — sold, leased AND
+ * de-listed — is gated and gets the redaction.
  */
 
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
-import { resolveListingStatus } from "@/lib/property/listingStatus";
+import { getSoldPublicByKey } from "@/lib/sold/soldByKey";
 
 /** Small enough that no upscale recovers detail; large enough to keep the colour massing. */
 const BLUR_WIDTH = 24;
@@ -53,14 +54,20 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       .maybeSingle();
     if (!listing) return new NextResponse(null, { status: 404 });
 
-    // Only sold/leased records are gated, so only they have anything to blur. Pass no
-    // de-listed row: a Terminated/Expired listing resolves to "active" here, and its
-    // photos are still IDX — erring toward NOT minting a blur is the safe direction.
-    const status = resolveListingStatus(
-      (listing.full_payload ?? {}) as Record<string, unknown>,
-      null
-    );
-    if (status.kind === "active") return new NextResponse(null, { status: 404 });
+    // Is this a CLOSED or ENDED campaign? `sold_listings` is the authority — it is what
+    // stamps DealType (sold / leased / terminated / expired / suspended) and what every
+    // record row reads. The stored full_payload cannot answer it: a terminated listing's
+    // payload still says StandardStatus "Active" (verified on X13151222 and X12602516 —
+    // both de-listed, both carrying an Active payload), so resolving status from it
+    // classified every de-listed record as active and refused to mint a blur.
+    //
+    // That refusal rested on the premise that a terminated listing's photos are still IDX
+    // rather than VOW. Checked against a peer VOW operator (2026-08-12): signed out, a
+    // Terminated record is presented exactly like Sold and Leased — blurred photo, masked
+    // price, address withheld. So de-listed photos are gated too, and the safe-and-useful
+    // treatment is the redaction sold rows already get, not a blank frame.
+    const record = await getSoldPublicByKey(id);
+    if (!record) return new NextResponse(null, { status: 404 }); // still active → IDX photos
 
     const urls: string[] =
       Array.isArray(listing.media_urls) && listing.media_urls.length > 0

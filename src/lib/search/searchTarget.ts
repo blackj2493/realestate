@@ -11,12 +11,21 @@ import { slugify, cityHubSlug } from '@/lib/listings/listingPath';
 
 export type SearchTarget =
   | { action: 'open-listing'; listing: NonNullable<SearchSuggestion['listing']> }
+  /** A destination the server already resolved — used verbatim, never re-derived. */
+  | { action: 'open-href'; href: string; label: string }
   | { action: 'set-location'; label: string };
 
 /** A chosen suggestion: address/MLS with a listing opens it; everything else is a place. */
 export function resolveSuggestionTarget(s: SearchSuggestion): SearchTarget {
   if ((s.kind === 'address' || s.kind === 'mls') && s.listing) {
     return { action: 'open-listing', listing: s.listing };
+  }
+  // A property RECORD carries the destination /api/search/address-status resolved for it —
+  // the keyed /address page, the full report, or (for an off-market campaign whose home is
+  // listed again) the live relist. Re-deriving a URL from the label instead would drop the
+  // MLS key onto the unkeyed profile ladder and land somewhere else entirely.
+  if (s.kind === 'record' && s.record?.href) {
+    return { action: 'open-href', href: s.record.href, label: s.label.trim() };
   }
   return { action: 'set-location', label: s.label.trim() };
 }
@@ -56,5 +65,6 @@ export function soldAddressHref(address: string, city: string, key: string): str
 /** navigate-mode only: turn a target into a route into the terminal / listing / profile. */
 export function targetToHref(t: SearchTarget): string {
   if (t.action === 'open-listing') return `/properties/${t.listing.id}`;
+  if (t.action === 'open-href') return t.href;
   return addressProfileHref(t.label) ?? `/properties?city=${encodeURIComponent(t.label)}`;
 }

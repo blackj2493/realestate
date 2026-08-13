@@ -662,3 +662,75 @@ export function checkUnpriceableValues(input: {
   }
   return [];
 }
+
+/**
+ * Plausible band for the share of active listings carrying the DISTRESSED badge.
+ *
+ * Set from the live index the day the rule was rewritten (2026-08-12): 888 of 73,550
+ * actives = 1.21%. The band is deliberately wide — genuine distress moves with the market —
+ * but tight enough to catch the two ways this silently breaks.
+ */
+export const DISTRESS_RATE = { min: 0.2, max: 4.0 };
+
+/**
+ * Guard the DISTRESSED flag's population share.
+ *
+ * WHY: `isDistressed` is written by the ETL at index time, and the nightly sync only
+ * re-transforms the ModificationTimestamp delta. So the two failure modes are silent and
+ * opposite, and neither shows up as an error anywhere:
+ *
+ *  • RATE CLIMBS — the old rule (or another loose one) is back in the transformer. Its last
+ *    incarnation flagged 19% of the market: time-on-market and a bare `estate` that matched
+ *    "real estate". A red badge on one listing in five is indistinguishable from no badge.
+ *  • RATE COLLAPSES — the matcher stopped matching (a bad regex edit, or PublicRemarks going
+ *    missing from the payload). Zero distressed listings looks like a calm market, not a
+ *    broken detector.
+ *
+ * Checked as a SHARE, not a count, so it survives the active set growing or shrinking.
+ */
+export function checkDistressRate(input: { actives: number; flagged: number }): Problem[] {
+  const { actives, flagged } = input;
+  if (actives <= 0) {
+    return [
+      {
+        severity: "warn",
+        check: "distress-rate",
+        detail: "no active listings returned — cannot evaluate the DISTRESSED share (is the search index reachable?)",
+      },
+    ];
+  }
+
+  const pct = (flagged / actives) * 100;
+  const shown = `${flagged.toLocaleString()} of ${actives.toLocaleString()} actives (${pct.toFixed(2)}%)`;
+
+  if (pct > DISTRESS_RATE.max) {
+    return [
+      {
+        severity: "error",
+        check: "distress-rate",
+        detail:
+          `DISTRESSED is on ${shown}, above the ${DISTRESS_RATE.max}% ceiling — the flag is over-firing. ` +
+          "Most likely the remarks matcher has been widened, or a non-text branch (days on market, " +
+          "price cut) has been added back to calculateDerivedMetrics; time-on-market belongs to " +
+          "IsStale and price cuts to TotalPriceDrop. See src/lib/listings/distressSignals.ts, then " +
+          "re-run scripts/admin/recompute-distress-flag.ts.",
+      },
+    ];
+  }
+
+  if (pct < DISTRESS_RATE.min) {
+    return [
+      {
+        severity: "error",
+        check: "distress-rate",
+        detail:
+          `DISTRESSED is on only ${shown}, below the ${DISTRESS_RATE.min}% floor — the detector has ` +
+          "gone quiet. Check that PublicRemarks is still populated on indexed documents and that " +
+          "detectDistress still matches its fixtures, then re-run " +
+          "scripts/admin/recompute-distress-flag.ts.",
+      },
+    ];
+  }
+
+  return [];
+}

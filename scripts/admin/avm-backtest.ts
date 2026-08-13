@@ -86,6 +86,7 @@ import type { AVMInput, AVMResult } from '@/lib/avm/types';
 import { COMP_WINDOW_MO, SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_CLOSE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
 import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
+import { computeDealScore } from '@/lib/dealScore/computeDealScore';
 import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
 import type { RoomData } from '@/lib/room-utils';
 
@@ -99,6 +100,16 @@ const FIDELITY = process.argv.includes('--fidelity');
 // city-wide-pool alternative on the same leakage-safe data, so the PR can say with
 // numbers whether neighbourhood-scale comps actually earn their tighter band.
 const FSA_MODE = process.argv.includes('--fsa');
+// --dealscore: grade each held-out sale with the Deal Score a buyer would have seen just
+// before it sold (final list price, cumulative cut, final DOM, leakage-safe as-of AVM —
+// Homebuyer lens) and report the REALIZED outcome per grade: close/list, close vs as-of
+// value, DOM, % over ask. This is the track-record backtest computeDealScore's header
+// defers — the evidence gate before ever touching PERSONA_WEIGHTS. Two caveats are
+// carried in the report itself: survivorship (only sales are here, so grade→sell-through
+// is not measurable) and the mechanical TERMS↔close/list correlation (cuts and DOM sit
+// on both sides), which is why outcomes are ALSO stratified by the price-vs-value band
+// alone — the PRICE pillar's raw input, free of that circularity.
+const DEALSCORE_MODE = process.argv.includes('--dealscore');
 function numFlag(name: string, def: number): number {
   const a = process.argv.find((x) => x.startsWith(name));
   if (!a) return def;
@@ -167,6 +178,9 @@ interface PoolRow {
   exterior_tier: number | null;
   basement_tier: number | null;
   postal_code: string | null;
+  list_price: number | null;
+  original_list_price: number | null;
+  days_on_market: number | null;
 }
 
 interface Sale extends PoolRow {
@@ -200,6 +214,13 @@ interface ResultRow {
   old_estimated_value: number | null;
   old_abs_pct_error: number | null;
   old_log_error: number | null;
+  // --dealscore mode only: the as-of Homebuyer grade and the realized outcome.
+  deal_grade: string | null;
+  deal_score: number | null;
+  close_list_ratio: number | null;
+  close_avm_ratio: number | null;
+  list_avm_ratio: number | null;
+  dom_days: number | null;
 }
 
 // postal_code added 2026-08: the FSA cohort groups on it, and comps carrying it also
@@ -210,7 +231,9 @@ const SELECT_COLS =
   'listing_key, close_price, purchase_contract_date, close_date, city, city_region, ' +
   'property_sub_type, building_area_total, lot_width, lot_depth, bedrooms_above_grade, ' +
   'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier, ' +
-  'postal_code';
+  // list_price + original_list_price + days_on_market: the pre-sale state for
+  // --dealscore (100% populated on For Sale closes; flat columns, no TOAST).
+  'postal_code, list_price, original_list_price, days_on_market';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Date helpers — ISO 'YYYY-MM-DD' compares lexicographically = chronologically.
@@ -656,6 +679,37 @@ async function replaySale(
     }
   }
 
+  // ── Deal Score as-of grade + realized outcome (--dealscore) ──────────────────
+  // The grade a buyer saw just before the sale: final list price, cumulative cut,
+  // final DOM, the leakage-safe as-of AVM. expectedSalePrice/closeListRatio are
+  // deliberately omitted — equally for every sale, so the stratification is fair
+  // (TERMS runs on slightly less evidence than live, same as the terminal did pre-#319).
+  let dealGrade: string | null = null;
+  let dealScore: number | null = null;
+  let closeListRatio: number | null = null;
+  let closeAvmRatio: number | null = null;
+  let listAvmRatio: number | null = null;
+  if (DEALSCORE_MODE && s.list_price && s.list_price > 0) {
+    const ds = computeDealScore(
+      {
+        listPrice: s.list_price,
+        originalListPrice: s.original_list_price,
+        avmEstimate:
+          est !== null && result.confidence !== null
+            ? { estimatedValue: est, confidence: result.confidence as 'HIGH' | 'MEDIUM' | 'LOW' }
+            : null,
+        domDays: s.days_on_market,
+        subType: s.property_sub_type,
+      },
+      'smart'
+    );
+    dealGrade = ds.grade;
+    dealScore = ds.score;
+    closeListRatio = close / s.list_price;
+    listAvmRatio = est !== null ? s.list_price / est : null;
+    closeAvmRatio = est !== null ? close / est : null;
+  }
+
   return {
     listing_key: s.listing_key,
     city: input.city,
@@ -680,6 +734,12 @@ async function replaySale(
     old_estimated_value: oldEst,
     old_abs_pct_error: oldAbsPct,
     old_log_error: oldLogErr,
+    deal_grade: dealGrade,
+    deal_score: dealScore,
+    close_list_ratio: closeListRatio,
+    close_avm_ratio: closeAvmRatio,
+    list_avm_ratio: listAvmRatio,
+    dom_days: s.days_on_market,
   };
 }
 
@@ -747,6 +807,62 @@ function reportUntrained(rows: ResultRow[]) {
  *     for/against "fix the low confidence": if MEDIUM-labelled FSA estimates hit
  *     MEDIUM-grade error, the labels are honest as-is; if not, no relabelling is defensible.
  */
+/**
+ * --dealscore report. The claim under test: grades are PREDICTIVE — an A+ buyer
+ * realizes a better outcome than a D buyer. Outcomes per grade, then per raw
+ * price-vs-value band (the PRICE pillar's input, free of the TERMS↔close/list
+ * circularity: cuts and DOM sit on both sides of the full score).
+ *
+ * Reading close/AVM: the as-of AVM is the value yardstick, so close/AVM < 1 means the
+ * buyer paid under market value. If grades work, close/AVM rises monotonically from
+ * A+ to F. close/list is reported but is the WEAK evidence — a deep price cut both
+ * raises TERMS and mechanically lowers close/list's denominator.
+ */
+function reportDealScore(rows: ResultRow[]) {
+  const graded = rows.filter((r) => r.deal_grade !== null);
+  const withheld = rows.filter((r) => r.deal_grade === null && r.close_list_ratio !== null);
+  console.log('\n──────── DEAL SCORE TRACK RECORD (as-of grades vs realized outcomes) ────────');
+  console.log(`Sales graded: ${graded.length}   withheld (no as-of AVM): ${withheld.length}`);
+
+  const line = (label: string, sub: ResultRow[]) => {
+    if (sub.length === 0) { console.log(`  ${label.padEnd(9)} n=0`); return; }
+    const cl = sub.map((r) => r.close_list_ratio as number).filter((x) => x !== null);
+    const ca = sub.map((r) => r.close_avm_ratio).filter((x): x is number => x !== null);
+    const dom = sub.map((r) => r.dom_days).filter((x): x is number => x !== null);
+    const overAsk = cl.filter((x) => x > 1).length / (cl.length || 1);
+    console.log(
+      `  ${label.padEnd(9)} n=${String(sub.length).padEnd(6)}` +
+      `close/AVM ${ca.length ? (median(ca) * 100).toFixed(1) + '%' : '  n/a'}   ` +
+      `close/list ${(median(cl) * 100).toFixed(1)}%   ` +
+      `over-ask ${pct(overAsk)}   ` +
+      `median DOM ${dom.length ? Math.round(median(dom)) : 'n/a'}`
+    );
+  };
+
+  console.log('\nBy GRADE (Homebuyer lens):');
+  for (const g of ['A+', 'A', 'B', 'C', 'D', 'F']) line(g, graded.filter((r) => r.deal_grade === g));
+  line('withheld', withheld);
+
+  console.log('\nBy PRICE-vs-VALUE band alone (list/as-of-AVM — the PRICE pillar input):');
+  const bands: Array<[string, (x: number) => boolean]> = [
+    ['<=0.90', (x) => x <= 0.9],
+    ['0.90-0.95', (x) => x > 0.9 && x <= 0.95],
+    ['0.95-1.00', (x) => x > 0.95 && x <= 1.0],
+    ['1.00-1.05', (x) => x > 1.0 && x <= 1.05],
+    ['1.05-1.10', (x) => x > 1.05 && x <= 1.1],
+    ['>1.10', (x) => x > 1.1],
+  ];
+  for (const [label, fn] of bands) {
+    line(label, rows.filter((r) => r.list_avm_ratio !== null && fn(r.list_avm_ratio)));
+  }
+
+  console.log(
+    '\nCaveats carried, not hidden: SURVIVORSHIP (only closed sales are here — grade→sell-' +
+    'through is not measurable from this set) and the TERMS↔close/list mechanical link ' +
+    '(the price-band table is the clean read on the PRICE pillar).'
+  );
+}
+
 function reportFsa(rows: ResultRow[]) {
   const pub = rows.filter((r) => r.abs_pct_error !== null);
   console.log('\n──────── FSA-COHORT SUBSET (blank CityRegion — leakage-safe) ────────');
@@ -861,6 +977,7 @@ async function harnessNowEstimate(input: AVMInput, pool: Sale[], expanded: Map<s
     bedrooms_above_grade: input.bedroomsAboveGrade, bathrooms_total_integer: input.bathroomsTotalInteger,
     parking_total: input.parkingTotal, interior_tier: null, exterior_tier: null, basement_tier: null,
     postal_code: input.postalCode ?? null,
+    list_price: null, original_list_price: null, days_on_market: null,
     refDate: '9999-12-31', normSub: input.propertySubType, period: '9999-12-31',
   };
   const community = communityComps(input, synthetic, pool, '9999-12-31', windowStartIso);
@@ -975,7 +1092,13 @@ async function main() {
       s.normSub &&
       (FSA_MODE
         ? !(s.city_region || '').trim() && (s.city || '').trim() && fsaOf(s.postal_code)
-        : (s.city_region || '').trim())
+        : DEALSCORE_MODE
+          ? // Deal Score grades the whole book: keyed sales AND blank-region ones the
+            // FSA path now prices — plus a sane final list price to grade against.
+            ((s.city_region || '').trim() || ((s.city || '').trim() && fsaOf(s.postal_code))) &&
+            s.list_price !== null &&
+            s.list_price > 0
+          : (s.city_region || '').trim())
     )
     .sort((a, b) => (a.refDate < b.refDate ? 1 : a.refDate > b.refDate ? -1 : 0));
   if (Number.isFinite(EVAL_LIMIT)) evalSales = evalSales.slice(0, EVAL_LIMIT);
@@ -1006,6 +1129,7 @@ async function main() {
 
   reportOverall(results);
   if (FSA_MODE) reportFsa(results);
+  else if (DEALSCORE_MODE) reportDealScore(results);
   else reportUntrained(results);
 
   // Local results file (READ-ONLY on DB — nothing is written to Supabase).
