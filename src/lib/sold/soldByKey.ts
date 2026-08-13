@@ -395,6 +395,9 @@ export interface AddressRecord {
   cityRegion: string;
   dealKind: SoldPublic["dealKind"];
   brokerage: string | null;
+  /** EXISTENCE bit only — a record's photo URL is VOW and never leaves this module on the
+   *  public path. Lets a search row show a locked thumbnail rather than a false promise. */
+  hasPhoto: boolean;
 }
 
 /**
@@ -433,6 +436,7 @@ export async function getAddressRecordsLoose(parsed: ParsedAddress): Promise<Add
           cityRegion: d.CityRegion ?? "",
           dealKind: deriveDealKind(d.DealType),
           brokerage: d.ListOfficeName?.trim() || null,
+          hasPhoto: !!d.primaryImageUrl,
         },
         date: typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0,
       });
@@ -441,10 +445,68 @@ export async function getAddressRecordsLoose(parsed: ParsedAddress): Promise<Add
     if (records.length > 0) return records;
     const archive = await getSoldArchivePublicByAddress(parsed);
     return archive
-      ? [{ id: archive.id, address: archive.address, city: archive.city, cityRegion: archive.cityRegion, dealKind: archive.dealKind, brokerage: null }]
+      ? [{ id: archive.id, address: archive.address, city: archive.city, cityRegion: archive.cityRegion, dealKind: archive.dealKind, brokerage: null, hasPhoto: archive.hasPhoto }]
       : [];
   } catch (err) {
     console.error(`[soldByKey] address records lookup failed:`, err);
+    return [];
+  }
+}
+
+/**
+ * Every home on a STREET that has a record, newest campaign first — the street-name query
+ * ("cappam") that used to return nothing because the record probe demanded a civic number.
+ *
+ * Reads the `sold_listings` Typesense cache, NOT the raw_vow_sold archive. That matters:
+ * the archive holds ~2yr+ but only answers an ilike flat-column scan, which is expensive
+ * enough that streetLedger caps it at 200 rows and caches it for six hours. A typeahead
+ * cannot afford that per keystroke, so street history is deliberately limited to the
+ * rolling ~180-day cache — recent, cheap and bounded.
+ *
+ * Collapsed to ONE row per address (its newest campaign): a street query answers "which
+ * homes here have history", and the per-address ladder answers "what happened at this one".
+ */
+export async function getStreetRecordsLoose(street: string, max = 12): Promise<AddressRecord[]> {
+  const token = street.trim().toLowerCase();
+  if (token.length < 4) return [];
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: token,
+        query_by: "UnparsedAddress",
+        include_fields: `${PUBLIC_STATUS_FIELDS},ListOfficeName,PurchaseContractDate`,
+        per_page: 40,
+      });
+    const byAddress = new Map<string, { rec: AddressRecord; date: number }>();
+    for (const h of res.hits ?? []) {
+      const d = h.document as Partial<SoldListingDocument> & { ListOfficeName?: string };
+      if (!d.id || !d.UnparsedAddress) continue;
+      const cand = parseAddress(d.UnparsedAddress);
+      // The typed fragment must genuinely appear in the street name — Typesense's
+      // typo-tolerance otherwise floats unrelated streets that merely rhyme.
+      if (!cand.streetNumber || !cand.streetName.includes(token.split(/\s+/)[0])) continue;
+      const key = `${cand.streetNumber}|${cand.streetName}|${cand.postal || cand.city}`;
+      const date = typeof d.PurchaseContractDate === "number" ? d.PurchaseContractDate : 0;
+      const prev = byAddress.get(key);
+      if (prev && prev.date >= date) continue;
+      byAddress.set(key, {
+        rec: {
+          id: d.id,
+          address: d.UnparsedAddress,
+          city: d.City ?? "",
+          cityRegion: d.CityRegion ?? "",
+          dealKind: deriveDealKind(d.DealType),
+          brokerage: d.ListOfficeName?.trim() || null,
+          hasPhoto: !!d.primaryImageUrl,
+        },
+        date,
+      });
+    }
+    return [...byAddress.values()].sort((a, b) => b.date - a.date).slice(0, max).map((x) => x.rec);
+  } catch (err) {
+    console.error(`[soldByKey] street records lookup failed for "${street}":`, err);
     return [];
   }
 }

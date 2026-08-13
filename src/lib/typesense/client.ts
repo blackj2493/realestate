@@ -16,6 +16,7 @@ import { toSimpleRing } from '@/lib/geo/simplifyRing';
 import { sqftBoundsFor } from '@/lib/listings/livingAreaBands';
 import { reportSearchFailure } from '@/lib/telemetry/searchHealth';
 import { rankAddressSuggestions } from '@/lib/search/addressRank';
+import type { AddressRecordResponse } from '@/lib/search/types';
 
 // Typesense configuration.
 // NOTE: the host is intentionally hardcoded (Typesense Cloud) and is NOT read from env.
@@ -624,7 +625,7 @@ export async function searchListings(
  * so selecting one can open that property directly.
  */
 export interface SearchSuggestion {
-  kind: 'city' | 'neighbourhood' | 'address' | 'mls';
+  kind: 'city' | 'neighbourhood' | 'address' | 'mls' | 'record';
   label: string;
   sublabel?: string;            // e.g. the address under an MLS#
   count?: number;               // city / neighbourhood only
@@ -632,6 +633,12 @@ export interface SearchSuggestion {
   /** Geocoded not-listed address rows only — powers the explicit Map/Profile
    *  action pair in the header dropdown (centered-map deep link needs coords). */
   geo?: { lat: number; lng: number };
+  /** `record` rows only — one sold/leased/off-market campaign at the typed address,
+   *  exactly as /api/search/address-status resolved it (destination included). The
+   *  header bar used to flatten these into a listing-less address row and re-derive
+   *  the URL from the label, which is how it and the terminal bar ended up sending
+   *  the same click to two different pages. */
+  record?: AddressRecordResponse;
 }
 
 /**

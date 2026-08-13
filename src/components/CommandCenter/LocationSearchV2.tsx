@@ -33,6 +33,7 @@ import { rankListings, type RankBadge } from "@/lib/search/personaRank";
 import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
 import { addressProfileHref } from "@/lib/search/searchTarget";
+import { ROW_STATUS_CHIP, ROW_STATUS_LABEL, ROW_STATUS_TONE, backOnMarketLabel } from "@/lib/search/searchRows";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
 import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
@@ -42,6 +43,7 @@ import type { ListingDocument } from "@/lib/typesense/client";
 import SearchChipsRow from "./search/SearchChipsRow";
 import SearchAnswerCard from "./search/SearchAnswerCard";
 import SearchEmptyState, { type WatchedArea } from "./search/SearchEmptyState";
+import RecordThumb from "./search/RecordThumb";
 
 interface Props {
   className?: string;
@@ -121,16 +123,21 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   // Persona badges for address rows (computed from the listings already in hand).
   const badgeFor = React.useMemo(() => {
     const map = new Map<string, RankBadge[]>();
-    const addr = groups.find((g) => g.category === "address");
-    if (addr) {
-      const listings = addr.items.map((i) => i.listing!).filter(Boolean);
-      for (const r of rankListings(listings, activePersona)) map.set(r.listing.id, r.badges);
-    }
+    const listings = groups
+      .flatMap((g) => g.items)
+      .filter((i) => i.category === "address" && i.listing)
+      .map((i) => i.listing!);
+    for (const r of rankListings(listings, activePersona)) map.set(r.listing.id, r.badges);
     return map;
   }, [groups, activePersona]);
 
   // Flat list (in render order) for keyboard navigation.
-  const flatItems = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
+  // Flattened in RENDER order, nested campaign rows included — otherwise arrow-key
+  // navigation would skip a home's history entirely.
+  const flatItems = React.useMemo(
+    () => groups.flatMap((g) => g.items.flatMap((i) => [i, ...(i.children ?? [])])),
+    [groups]
+  );
 
   // Close on outside click.
   React.useEffect(() => {
@@ -361,7 +368,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
   const addrIntent = /\d/.test(value) && !parsed?.isStructured;
-  const topCommunity = groups.find((g) => g.category === "community")?.items[0];
+  const topCommunity = groups.flatMap((g) => g.items).find((i) => i.category === "community");
   // A parent city the query is reaching for (Toronto/London) whose whole-city scope
   // is reachable via the terminal's existing full-text location path — offers a
   // synthetic "all districts" row above the individual district facets.
@@ -415,7 +422,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       </form>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[440px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[520px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
           {/* Empty state */}
           {value.trim().length < SUGGEST_MIN_CHARS ? (
             <SearchEmptyState
@@ -539,28 +546,50 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               )}
 
               {groups.map((g) => (
-                <div key={g.category}>
+                <div key={g.section}>
                   <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>{g.title}</span>
-                    {(g.category === "sold" || g.category === "soldAddress") && (
-                      <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>
-                    )}
+                    {g.vow && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
                   </div>
                   {g.items.map((item) => {
                     const idx = flat(item);
                     const badges = item.listing ? badgeFor.get(item.listing.id) ?? [] : [];
                     return (
+                      <React.Fragment key={item.id}>
                       <button
                         key={item.id}
                         type="button"
                         onMouseEnter={() => setHighlight(idx)}
                         onClick={() => selectItem(item)}
                         className={cn(
-                          "group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                          "group flex w-full items-start gap-2.5 px-3 py-2 text-left transition-colors",
                           idx === highlight ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
-                        <CategoryIcon category={item.category} />
+                        {/* Thumbnail. An ACTIVE listing's photo is IDX and renders directly;
+                            a record's URL is VOW and never leaves the server, so a record
+                            with a photo shows a LOCKED frame rather than promising an image
+                            we cannot show. Never routed through the image optimizer — MLS
+                            photos carry a burned-in brokerage watermark and re-encoding them
+                            is both a cost and a TRREB problem. */}
+                        {item.thumbUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.thumbUrl}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="h-10 w-14 shrink-0 object-cover"
+                          />
+                        ) : item.category === "soldAddress" ? (
+                          <RecordThumb
+                            listingKey={item.sold?.mls}
+                            hasPhoto={item.sold?.hasPhoto}
+                            className="h-10 w-14"
+                          />
+                        ) : (
+                          <CategoryIcon category={item.category} />
+                        )}
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="line-clamp-2 font-mono text-xs text-foreground" title={item.label}>
                             {item.category === "community" ? formatRegionLabel(item.label) : item.label}
@@ -572,10 +601,32 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                                 : item.sublabel}
                             </span>
                           )}
-                          {/* Public record meta (shown to everyone): MLS# · brokerage. */}
-                          {item.category === "soldAddress" && (item.sold?.mls || item.sold?.brokerage) && (
-                            <span className="truncate font-mono text-[10px] text-muted-foreground/80" title={[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}>
-                              {[item.sold?.mls, item.sold?.brokerage].filter(Boolean).join(" · ")}
+                          {/* Provenance, public on both row kinds: date · MLS# · brokerage.
+                              The DATE is what separates several campaigns at one address —
+                              this line used to carry MLS# and brokerage only, and only on
+                              record rows. (On a record the date is VOW, so it is simply
+                              absent for an anonymous viewer.) */}
+                          {item.meta && (
+                            <span className="truncate font-mono text-[10px] text-muted-foreground/80" title={item.meta}>
+                              {item.meta}
+                            </span>
+                          )}
+                          {/* The relist, said out loud: this campaign ended but the home is
+                              listed again under a different MLS#. An OFF MARKET row also
+                              NAVIGATES there (the server resolved sold.href to the live
+                              listing) — clicking it used to dead-end on the cancelled
+                              campaign while the home sat for sale (owner, 2026-08-10). */}
+                          {/* The stitched span. A relist resets the visible clock, so this
+                              home reads as days old on every other portal; we stitch the
+                              campaigns and can say what actually happened. */}
+                          {item.spanLabel && (
+                            <span className="truncate font-mono text-[10px] font-semibold text-rose-700 dark:text-rose-300">
+                              {item.spanLabel}
+                            </span>
+                          )}
+                          {item.category === "soldAddress" && item.sold?.liveKey && (
+                            <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              {backOnMarketLabel(item.sold.livePrice, item.sold.liveTransactionType)}
                             </span>
                           )}
                           {badges.length > 0 && (
@@ -621,14 +672,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             <span
                               className={cn(
                                 "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
-                                item.sold?.kindLabel === "LEASED"
-                                  ? "border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300"
-                                  : item.sold?.kindLabel === "OFF MARKET"
-                                    ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                                    : "border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                                ROW_STATUS_CHIP[item.sold?.kind ?? "sold"]
                               )}
                             >
-                              {item.sold?.kindLabel ?? "SOLD"}
+                              {item.sold?.kindLabel ?? ROW_STATUS_LABEL.sold}
                             </span>
                             {item.sold?.priceLabel ? (
                               <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
@@ -658,10 +705,11 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => findComps(item, e)}
-                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300 group-hover:flex"
+                            title="Comparable sales"
+                            aria-label="Comparable sales"
+                            className="flex shrink-0 items-center gap-1 border border-border px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
                           >
-                            <Crosshair className="h-2.5 w-2.5" />
-                            Comparable sales
+                            <Crosshair className="h-3 w-3" />
                           </span>
                         )}
                         {/* Geocoded address (no listing anywhere) → its address-profile page
@@ -700,18 +748,107 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             </span>
                           </span>
                         )}
-                        {item.provenance && item.category !== "sold" && item.category !== "soldAddress" && item.category !== "community" && (
-                          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-muted-foreground sm:group-hover:hidden sm:block">
-                            {item.category === "address" ? "for sale" : item.provenance}
+                        {/* Live listing: MAP is the second destination — flies the map and
+                            drops a pin WITHOUT opening the report, so you can stay in the
+                            terminal. Always visible: the sibling comps action was
+                            `group-hover:flex`, which no touch device can ever trigger. */}
+                        {(item.category === "address" || item.category === "mls") && item.geo && (
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFlyTo({ lat: item.geo!.lat, lng: item.geo!.lng, zoom: item.geo!.zoom ?? 16 });
+                              setSearchPin({ lat: item.geo!.lat, lng: item.geo!.lng, label: item.label });
+                              setValue("");
+                              close();
+                              onSelect?.();
+                            }}
+                            className="flex shrink-0 items-center gap-1 border border-cyan-500/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
+                          >
+                            <MapPin className="h-2.5 w-2.5" />
+                            Map
+                          </span>
+                        )}
+                        {/* Status as a coloured word, from the feed's own TransactionType.
+                            This used to be a hardcoded "for sale" tag shown on every active
+                            row — including every lease. */}
+                        {item.status && (item.category === "address" || item.category === "mls") && (
+                          <span
+                            className={cn(
+                              "shrink-0 font-mono text-[9px] font-bold uppercase tracking-wider",
+                              ROW_STATUS_TONE[item.status]
+                            )}
+                          >
+                            {ROW_STATUS_LABEL[item.status]}
                           </span>
                         )}
                       </button>
+
+                      {/* Campaign history at this SAME address, folded under its home.
+                          Everyone else renders these as sibling rows, so a terminated
+                          campaign and its relist read as two different houses. Indented,
+                          and still reachable by arrow key (flatItems walks children). */}
+                      {item.children && item.children.length > 0 && (
+                        <div className="border-l-2 border-border/70 bg-muted/30">
+                          <div className="px-3 py-1 pl-9 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                            Earlier at this address — {item.children.length}
+                          </div>
+                          {item.children.map((child) => {
+                            const cidx = flat(child);
+                            return (
+                              <button
+                                key={child.id}
+                                type="button"
+                                onMouseEnter={() => setHighlight(cidx)}
+                                onClick={() => selectItem(child)}
+                                className={cn(
+                                  "flex w-full items-start gap-2.5 py-1.5 pl-9 pr-3 text-left transition-colors",
+                                  cidx === highlight ? "bg-muted" : "hover:bg-muted"
+                                )}
+                              >
+                                <span className="flex min-w-0 flex-1 flex-col">
+                                  {child.meta && (
+                                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                                      {child.meta}
+                                    </span>
+                                  )}
+                                  {child.sold?.liveKey && (
+                                    <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                      {backOnMarketLabel(child.sold.livePrice, child.sold.liveTransactionType)}
+                                    </span>
+                                  )}
+                                </span>
+                                {child.sold?.priceLabel && (
+                                  <span className="shrink-0 font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                                    {child.sold.priceLabel}
+                                  </span>
+                                )}
+                                <span
+                                  className={cn(
+                                    "shrink-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                                    ROW_STATUS_CHIP[child.sold?.kind ?? child.status ?? "sold"]
+                                  )}
+                                >
+                                  {child.sold?.kindLabel ?? ROW_STATUS_LABEL[child.status ?? "sold"]}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </div>
               ))}
 
-              {parsed?.isStructured && (
+              {/* Persistent map exit. This footer used to render ONLY for a structured
+                  (natural-language) query, so an address or street search had no way back
+                  to the map at all. Now every query that produced results gets one; the NL
+                  variant still applies the parsed chips, everything else searches the area
+                  the results are in. */}
+              {parsed?.isStructured ? (
                 <button
                   type="button"
                   onClick={() => applyNl()}
@@ -722,6 +859,27 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                     ? `See all ${preview.count.toLocaleString()} matches on the map`
                     : `Apply ${parsed.chips.length} filters`}
                 </button>
+              ) : (
+                groups.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Prefer a coordinate we already resolved for this query — the place
+                      // row's geo — so the map lands on what was searched rather than
+                      // wherever it happened to be sitting.
+                      const anchor = flatItems.find((i) => i.geo)?.geo;
+                      if (anchor) setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: anchor.zoom ?? 14 });
+                      else searchVisibleArea();
+                      setValue("");
+                      close();
+                      onSelect?.();
+                    }}
+                    className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-border bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                  >
+                    <Layers className="h-3 w-3" />
+                    See these on the map
+                  </button>
+                )
               )}
             </>
           )}

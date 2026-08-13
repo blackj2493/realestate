@@ -40,6 +40,46 @@ describe('resolveSuggestionTarget', () => {
     expect(resolveSuggestionTarget(s)).toEqual({ action: 'set-location', label: '40 Rampart Dr' });
   });
 
+  // The header bar used to flatten a record into a listing-less address row, which fell
+  // into the branch above and re-derived an UNKEYED profile URL — so the same click went
+  // to a different page than it did in the terminal. A record's href is authoritative.
+  it('uses the record href verbatim, including a forward to the live relist', () => {
+    const s: SearchSuggestion = {
+      kind: 'record',
+      label: '90 Osler Drive, Hamilton, ON L9H 4B5',
+      record: {
+        key: 'X12888728',
+        address: '90 Osler Drive, Hamilton, ON L9H 4B5',
+        city: 'Hamilton',
+        dealKind: 'offmarket',
+        href: '/properties/X13585448',
+        liveKey: 'X13585448',
+      },
+    };
+    const t = resolveSuggestionTarget(s);
+    expect(t).toEqual({
+      action: 'open-href',
+      href: '/properties/X13585448',
+      label: '90 Osler Drive, Hamilton, ON L9H 4B5',
+    });
+    expect(targetToHref(t)).toBe('/properties/X13585448');
+  });
+
+  it('keeps a record on its own keyed page when nothing is live at the address', () => {
+    const s: SearchSuggestion = {
+      kind: 'record',
+      label: '12 Nowhere Lane, Hamilton, ON',
+      record: {
+        key: 'X999',
+        address: '12 Nowhere Lane, Hamilton, ON',
+        city: 'Hamilton',
+        dealKind: 'sold',
+        href: '/address/on/hamilton/12-nowhere-lane-X999',
+      },
+    };
+    expect(targetToHref(resolveSuggestionTarget(s))).toBe('/address/on/hamilton/12-nowhere-lane-X999');
+  });
+
   it('trims the location label', () => {
     const s: SearchSuggestion = { kind: 'city', label: '  Hamilton  ' };
     expect(resolveSuggestionTarget(s)).toEqual({ action: 'set-location', label: 'Hamilton' });
