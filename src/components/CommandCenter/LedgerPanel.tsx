@@ -4,7 +4,7 @@
 
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2, MapPin, AlertCircle, Zap, ChevronUp, ChevronDown, ChevronsUpDown, Eye, ListFilter, GitCompareArrows, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,10 @@ import { useOpenListing } from "@/hooks/useOpenListing";
 interface LedgerPanelProps {
   className?: string;
 }
+
+// Per-tab handoff key for the rows scroll offset across the mobile
+// list → detail → Back round trip. See the restore effect below.
+const LEDGER_SCROLL_KEY = "terminalLedgerScroll";
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
   const { activePersona, searchResult, dealInputsById, setDealInputsById, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, commute, school, minDealGrade, setMinDealGrade } =
@@ -141,6 +145,42 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     () => (sort ? [...dealFiltered].sort(compareByColumn(sort.type, sort.dir)) : dealFiltered),
     [dealFiltered, sort]
   );
+
+  // Back-navigation continuity. On mobile a row tap is a full route push to
+  // /properties/[id] (useOpenListing), so returning unmounts and remounts this panel
+  // and the rows container comes back scrolled to the top — the user who was forty
+  // cards deep has to find their place again. Stash the offset at the moment of the
+  // tap and consume it on the next mount.
+  //
+  // Restoring has to wait for rows to EXIST: the remount re-runs the search, and
+  // assigning scrollTop against an empty (zero-height) container silently clamps to 0.
+  // Hence the effect keys on properties.length rather than running once on mount. It is
+  // a one-shot handoff — the key is cleared as it is read, so a later unrelated search
+  // in the same tab never inherits a stale offset.
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const scrollRestoredRef = useRef(false);
+  useEffect(() => {
+    const el = rowsRef.current;
+    if (!el || scrollRestoredRef.current || properties.length === 0) return;
+    scrollRestoredRef.current = true;
+    let saved = 0;
+    try {
+      saved = Number(sessionStorage.getItem(LEDGER_SCROLL_KEY)) || 0;
+      sessionStorage.removeItem(LEDGER_SCROLL_KEY);
+    } catch {
+      saved = 0;
+    }
+    if (saved > 0) el.scrollTop = saved;
+  }, [properties.length]);
+  const rememberScroll = useCallback(() => {
+    const el = rowsRef.current;
+    if (!el) return;
+    try {
+      sessionStorage.setItem(LEDGER_SCROLL_KEY, String(Math.round(el.scrollTop)));
+    } catch {
+      // Storage unavailable — the list simply opens at the top, as it did before.
+    }
+  }, []);
 
   // Percentile context (#1): rank each numeric cell against the FULL result set
   // (not the selection-isolated view) so "P88" is stable as the user selects rows.
@@ -397,7 +437,7 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
       </div>
 
       {/* Rows */}
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+      <div ref={rowsRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <Loader2 className="mb-3 h-8 w-8 animate-spin text-cyan-700 dark:text-cyan-400" />
@@ -432,7 +472,12 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
               dealInputs={isAuthed ? dealInputsById[property.id] : undefined}
               compact={cardMode}
               isAuthed={isAuthed}
-              onClick={() => openListing(property)}
+              onClick={() => {
+                // Save BEFORE the navigation: on mobile openListing pushes a route and
+                // this panel unmounts, so there is no later moment to read scrollTop from.
+                rememberScroll();
+                openListing(property);
+              }}
               isSelected={selectedProperty?.id === property.id}
               isHovered={hoveredId === property.id}
               onHoverChange={(hovered) => setHoveredId(hovered ? property.id : null)}
