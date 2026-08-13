@@ -31,6 +31,7 @@
 import 'dotenv/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { generatePropertyHash } from '@/lib/typesense/TemporalDistressEngine';
+import { fetchMediaForKeys } from './mediaEnrichment';
 
 const API_BASE_URL = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
 const VOW_TOKEN = (process.env.PROPTX_VOW_TOKEN || '').trim();
@@ -82,6 +83,7 @@ interface VowActiveRow {
   listing_key: string;
   property_hash: string;
   full_payload: Record<string, unknown>;
+  media_urls: string[];
   city: string | null;
   city_region: string | null;
   property_sub_type: string | null;
@@ -108,6 +110,8 @@ function toRow(raw: Record<string, unknown>, nowIso: string): VowActiveRow | nul
     listing_key: key,
     property_hash: generatePropertyHash(raw) || '',
     full_payload: raw,
+    media_urls: [], // filled by the /Media pass after the page is assembled
+
     city: str(raw.City),
     city_region: str(raw.CityRegion),
     property_sub_type: str(raw.PropertySubType),
@@ -200,6 +204,27 @@ async function runDelta(db: SupabaseClient) {
       }
       const row = toRow(raw, nowIso);
       if (row) rows.push(row);
+    }
+
+    // Photos. The teaser shown to anonymous visitors is a BLURRED thumbnail, so a
+    // listing with no media has nothing to blur and renders as a grey box. Media lives
+    // on the separate /Media resource (the Property endpoint rejects $expand=Media on
+    // this feed — ingester.ts:610), and fetchMediaForKeys already handles the chunking,
+    // watermark-size preference and per-key failure isolation. Best-effort: a media
+    // failure must never fail the ingest, so the row still lands with no photos and the
+    // next pass can fill them.
+    if (rows.length) {
+      try {
+        const { media } = await fetchMediaForKeys(rows.map((r) => r.listing_key), VOW_TOKEN);
+        for (const row of rows) {
+          const urls = (media.get(row.listing_key) ?? [])
+            .map((m) => m.MediaURL)
+            .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u));
+          if (urls.length) row.media_urls = urls;
+        }
+      } catch (err) {
+        console.warn(`  media fetch failed for this page (continuing): ${err instanceof Error ? err.message : err}`);
+      }
     }
 
     if (rows.length && !DRY) {

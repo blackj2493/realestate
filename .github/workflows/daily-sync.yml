@@ -290,6 +290,24 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/worker/enrichGeoFlags.ts --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
 
+      # VOW-only ACTIVE listings — the ~16.4k homes the VOW datafeed carries that IDX
+      # does not (measured 2026-08-09: 112,680 vs 96,275 Active). Writes ONLY to
+      # vow_active_listings, which is RLS-on-with-no-policies, so nothing ingested here
+      # can reach an anonymous surface even by mistake.
+      # SELF-SKIPS unless VOW_ACTIVES_ENABLED is "true": adding this step does NOT by
+      # itself start ingesting VOW data. The repo variable is the switch, and it should
+      # stay off until the PROPTX URL registration (audit R7) covers the production host.
+      # Additive — continue-on-error so it can never break the core sync.
+      - name: Sync VOW-only Active Listings
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          VOW_ACTIVES_ENABLED: ${{ vars.VOW_ACTIVES_ENABLED }}
+        run: npx tsx scripts/worker/vowActiveSync.ts
+
       # Email each user a digest of price drops on their watched properties, using
       # the freshly-synced Typesense index. Additive + must never break the core
       # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
