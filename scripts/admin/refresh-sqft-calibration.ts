@@ -2,9 +2,11 @@
  * Shadow MLS — Refresh avm_sqft_calibration from active listings' room dimensions.
  *
  * Precomputes the AVM's no-rooms fallback: the median grossed room-sum GLA per
- * (CityRegion, normalized sub-type, LivingAreaRange bucket). When a listing has no
- * usable room dimensions, the AVM looks this up instead of using the naive — often
- * inflated — midpoint of a coarse MLS range bucket.
+ * (calibrationRegionKey, normalized sub-type, LivingAreaRange bucket), where
+ * calibrationRegionKey = CityRegion falling back to City for the municipalities the
+ * feed ships without one (Waterloo Region, Brantford — see PR #324). When a listing
+ * has no usable room dimensions, the AVM looks this up instead of using the naive —
+ * often inflated — midpoint of a coarse MLS range bucket.
  *
  * Ground truth = grossed room-sum GLA (the only real size signal; exact
  * BuildingAreaTotal is ~never filled for houses, and raw_vow_sold stores no room
@@ -31,7 +33,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import { createClient } from '@supabase/supabase-js';
 import { median, SQFT_MIN, SQFT_MAX } from '@/lib/condo/feeStability';
 import { normalizePropertySubType } from '@/lib/avm/normalizeType';
-import { roomSumSqft, GLA_GROSSUP } from '@/lib/avm/livingArea';
+import { roomSumSqft, GLA_GROSSUP, calibrationRegionKey } from '@/lib/avm/livingArea';
 import type { RoomData } from '@/lib/room-utils';
 
 // Supabase client uses Node's native fetch (undici). We deliberately do NOT override
@@ -76,6 +78,7 @@ interface ListingRow {
   rooms: RoomData[] | null; // full_payload->rooms
   lar: string | number | null; // full_payload->LivingAreaRange
   cr: string | null; // full_payload->CityRegion
+  city: string | null; // flat column — the fallback key when CityRegion is blank
 }
 
 interface BucketAcc {
@@ -93,7 +96,7 @@ async function readPage(cursor: string, pageSize: number): Promise<ListingRow[] 
     const { data, error } = await sb
       .from('listings')
       .select(
-        'listing_key, property_sub_type, rooms:full_payload->rooms, ' +
+        'listing_key, property_sub_type, city, rooms:full_payload->rooms, ' +
           'lar:full_payload->LivingAreaRange, cr:full_payload->CityRegion'
       )
       .gt('listing_key', cursor)
@@ -150,7 +153,12 @@ async function main() {
       scanned++;
 
       const bucket = (r.lar === null || r.lar === undefined ? '' : String(r.lar)).trim();
-      const cityRegion = (r.cr || '').trim();
+      // CityRegion, falling back to City when the feed ships none (Waterloo Region,
+      // Brantford). Bare `if (!cityRegion) continue` silently excluded those
+      // municipalities from calibration entirely — the same one-line key guard that
+      // zeroed their AVM coverage (PR #324). calibrationRegionKey keeps this in
+      // lock-step with every lookup site.
+      const cityRegion = calibrationRegionKey(r.cr, r.city);
       const subType = normalizePropertySubType(r.property_sub_type);
       if (!bucket || !cityRegion || !subType) continue;
 
