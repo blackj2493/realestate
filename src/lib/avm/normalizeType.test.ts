@@ -13,7 +13,9 @@ describe('isUnpriceableType', () => {
       'Farm',
       'Rural Residential',
       'Mobile Home',
+      'MobileTrailer', // the feed's actual spelling — the refresh script's private list missed it
       'Parking Space',
+      'Locker', // was only in the refresh script's private (drifted) list; now canonical
       'Sale Of Business',
       'Triplex',
       'Fourplex',

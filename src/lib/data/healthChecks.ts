@@ -615,3 +615,50 @@ export function checkOnboardingExample(input: {
   }
   return [];
 }
+
+/**
+ * Stale-unpriceable invariant: an ACTIVE listing of a type the AVM refuses to price
+ * (isUnpriceableType — Vacant Land, Farm, commercial-class, …) must NEVER carry
+ * estimated_value > 0 in property_estimates.
+ *
+ * Replays the 2026-08-12 finding: refresh-property-estimates.ts skipped listings whose
+ * recompute produced nothing (no estimate AND no GLA), preserving whatever the table
+ * already held — 1,346 land/commercial listings kept dwelling-model values frozen in
+ * May through 12+ full recomputes, and after #319 those values were feeding Deal Score
+ * grades on vacant land. The script now clears such rows; this check catches the class
+ * (ANY writer leaving a value where the model refuses to price) rather than the instance.
+ *
+ * Error, not warn: a nonzero count is wrong data live on listing pages today, and the
+ * fix is mechanical (re-run the full recompute, which clears the rows).
+ */
+export function checkUnpriceableValues(input: {
+  count: number | null;
+  error?: string | null;
+}): Problem[] {
+  if (input.error || input.count === null) {
+    return [
+      {
+        severity: "warn",
+        check: "unpriceable-values",
+        detail:
+          `unpriceable-value count unavailable (${input.error ?? "null count"}) — ` +
+          "is migration 113 applied? The invariant is unchecked until this resolves.",
+      },
+    ];
+  }
+  if (input.count > 0) {
+    return [
+      {
+        severity: "error",
+        check: "unpriceable-values",
+        detail:
+          `${input.count} ACTIVE unpriceable-type listing(s) carry an AVM value — the dwelling ` +
+          "model has nothing valid to say about land/commercial, so these are wrong numbers on " +
+          "live pages (and Deal Score inputs since #319). A full estimates recompute " +
+          "(estimates-recompute.yml) clears them; if the count comes back, a writer is " +
+          "bypassing the empty-result row-clear in refresh-property-estimates.ts.",
+      },
+    ];
+  }
+  return [];
+}

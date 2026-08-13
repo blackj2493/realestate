@@ -40,7 +40,7 @@ import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea'
 import { estimateFromMarketData, shouldEvaluatePeers, resolveModel, type AVMMarketData } from '@/lib/avm/calculator';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
 import { type CoefficientRow } from '@/lib/avm/matrixService';
-import { normalizePropertySubType } from '@/lib/avm/normalizeType';
+import { normalizePropertySubType, isUnpriceableType } from '@/lib/avm/normalizeType';
 import type { RoomData } from '@/lib/room-utils';
 
 // Supabase client uses Node's native fetch (undici). We deliberately do NOT override
@@ -112,25 +112,14 @@ const TERMINAL_STATUSES = new Set([
   'suspended',
 ]);
 
-// PropertySubType values the AVM was never trained on — running them produces
-// noise (Parking Space estimated at $24k from a stray coefficient, etc.). For
-// these we still compute GLA/ppsf so Compare can render $/sqft when present, but
-// we leave estimated_value=null so the UI shows "Insufficient comps".
-const NON_RESIDENTIAL_SUBTYPES = new Set([
-  'parking space',
-  'locker',
-  'vacant land',
-  'mobile/trailer',
-  'sale of business',
-]);
-const NON_RESIDENTIAL_PREFIXES = ['office', 'commercial', 'industrial', 'retail'];
-
-function isNonResidentialSubType(sub: unknown): boolean {
-  const s = String(sub ?? '').toLowerCase().trim();
-  if (!s) return false;
-  if (NON_RESIDENTIAL_SUBTYPES.has(s)) return true;
-  return NON_RESIDENTIAL_PREFIXES.some((p) => s.startsWith(p));
-}
+// PropertySubType values the AVM refuses to price — the CANONICAL detector
+// (isUnpriceableType, normalizeType.ts), not a local list. This script carried its own
+// copy for ~2 months and it drifted: it missed Farm, Investment and the feed's actual
+// 'MobileTrailer' spelling (its entry said 'mobile/trailer'). The calculator's
+// suppressExotic backstop hid the drift for fresh writes, but the drifted gate is the
+// same two-sources-of-truth defect class as the close-price bug (#250). For unpriceable
+// types we still compute GLA/ppsf so Compare can render $/sqft when present, and leave
+// estimated_value=null so the UI shows "Insufficient comps".
 
 // Schema bounds for property_estimates NUMERIC columns. Used to drop rows that
 // would otherwise sink an entire 200-row upsert batch on overflow.
@@ -333,6 +322,25 @@ async function flush(rows: EstimateRow[]): Promise<{ ok: number; failed: number 
   return { ok, failed };
 }
 
+/** Clear rows for listings whose recompute produced nothing (see the delete comment in
+ *  main). PK-batched; a chunk where no rows exist is a near-free index probe. */
+async function flushDeletes(keys: string[]): Promise<{ ok: number; failed: number }> {
+  let ok = 0;
+  let failed = 0;
+  for (let i = 0; i < keys.length; i += UPSERT_CHUNK) {
+    const chunk = keys.slice(i, i + UPSERT_CHUNK);
+    const { error } = await sb.from('property_estimates').delete().in('listing_key', chunk);
+    if (error) {
+      failed += chunk.length;
+      console.warn(`   ⚠️  delete chunk @${i} failed: ${error.message}`);
+    } else {
+      ok += chunk.length;
+    }
+    await sleep(INTER_CHUNK_DELAY_MS);
+  }
+  return { ok, failed };
+}
+
 async function main() {
   console.log('========================================');
   console.log('  Refresh property_estimates ← active listings');
@@ -351,8 +359,12 @@ async function main() {
   let withGla = 0;
   let writtenOk = 0;
   let writtenFailed = 0;
+  let deletedOk = 0;
+  let deletedFailed = 0;
 
   let batch: EstimateRow[] = [];
+  let deleteBatch: string[] = [];
+  let emptyResults = 0;
   const samples: EstimateRow[] = [];
 
   while (scanned < ROW_LIMIT) {
@@ -399,7 +411,7 @@ async function main() {
       let total_adjustment_pct: number | null = null;
 
       const subType = payload['PropertySubType'];
-      const avmEligible = !isNonResidentialSubType(subType);
+      const avmEligible = !isUnpriceableType(typeof subType === 'string' ? subType : null);
 
       const avmInput = avmEligible ? mapListingToAVMInput(payload, { rooms, bucketCalibration }) : null;
       if (avmInput) {
@@ -473,8 +485,20 @@ async function main() {
       const safeGla = glaSqft !== null && glaSqft <= MAX_GLA_SQFT ? glaSqft : null;
       const safePpsf = ppsf !== null && ppsf <= MAX_PPSF ? ppsf : null;
 
-      // Skip totally-empty rows (no estimate AND no GLA) — nothing useful to cache.
-      if (estimated_value === null && safeGla === null) continue;
+      // Totally-empty result (no estimate AND no GLA): DELETE any existing row rather
+      // than skip. This used to `continue`, which preserved whatever the table already
+      // held — so a listing that once had a value and later became unpriceable (tuning
+      // change, subtype correction, comps evaporating) kept its stale number FOREVER.
+      // Measured 2026-08-12: 1,346 active land/commercial listings still carried
+      // dwelling-model values frozen in May, every one on this branch — and since #319
+      // wired estimates into Deal Score, those stale values were grading vacant land.
+      // The delete is cheap (PK lookup, almost always a no-op) and self-consistent: an
+      // empty result means "we have nothing to say", and the table must say nothing too.
+      if (estimated_value === null && safeGla === null) {
+        deleteBatch.push(r.listing_key);
+        emptyResults++;
+        continue;
+      }
 
       const row: EstimateRow = {
         listing_key: r.listing_key,
@@ -502,6 +526,12 @@ async function main() {
       writtenFailed += res.failed;
       batch = [];
     }
+    if (APPLY && deleteBatch.length >= UPSERT_CHUNK * 5) {
+      const res = await flushDeletes(deleteBatch);
+      deletedOk += res.ok;
+      deletedFailed += res.failed;
+      deleteBatch = [];
+    }
 
     if (data.length < pageSize) {
       console.log('✅ Last page.');
@@ -528,8 +558,12 @@ async function main() {
     );
   }
 
+  console.log(`Empty results:       ${emptyResults} (no estimate AND no GLA → row cleared, not preserved)`);
+
   if (!APPLY) {
-    console.log(`\n(DRY-RUN — ${batch.length} rows accumulated this run. Re-run with --apply to persist.)`);
+    console.log(
+      `\n(DRY-RUN — ${batch.length} rows accumulated, ${deleteBatch.length} row-clears pending this run. Re-run with --apply to persist.)`
+    );
     return;
   }
 
@@ -538,8 +572,13 @@ async function main() {
     writtenOk += res.ok;
     writtenFailed += res.failed;
   }
-  console.log(`\n   ✅ property_estimates: ${writtenOk} upserted, ${writtenFailed} failed`);
-  if (writtenFailed > 0) process.exitCode = 1;
+  if (deleteBatch.length > 0) {
+    const res = await flushDeletes(deleteBatch);
+    deletedOk += res.ok;
+    deletedFailed += res.failed;
+  }
+  console.log(`\n   ✅ property_estimates: ${writtenOk} upserted, ${writtenFailed} failed, ${deletedOk} cleared, ${deletedFailed} clear-failed`);
+  if (writtenFailed > 0 || deletedFailed > 0) process.exitCode = 1;
 }
 
 main().catch((e) => {
