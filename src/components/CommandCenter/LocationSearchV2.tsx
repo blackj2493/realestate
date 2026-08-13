@@ -422,7 +422,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       </form>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[440px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[520px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
           {/* Empty state */}
           {value.trim().length < SUGGEST_MIN_CHARS ? (
             <SearchEmptyState
@@ -562,7 +562,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                         onMouseEnter={() => setHighlight(idx)}
                         onClick={() => selectItem(item)}
                         className={cn(
-                          "group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                          "group flex w-full items-start gap-2.5 px-3 py-2 text-left transition-colors",
                           idx === highlight ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
@@ -705,10 +705,11 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => findComps(item, e)}
-                            className="flex shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
+                            title="Comparable sales"
+                            aria-label="Comparable sales"
+                            className="flex shrink-0 items-center gap-1 border border-border px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
                           >
-                            <Crosshair className="h-2.5 w-2.5" />
-                            Comparable sales
+                            <Crosshair className="h-3 w-3" />
                           </span>
                         )}
                         {/* Geocoded address (no listing anywhere) → its address-profile page
