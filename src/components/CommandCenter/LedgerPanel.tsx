@@ -17,6 +17,7 @@ import { passesDealGrade, MIN_GRADE_OPTIONS } from "@/lib/dealScore/gradeFilter"
 import { PERSONA_CONFIG, type ColumnType } from "@/lib/personas/personaConfig";
 import { SORTABLE_COLUMN_TYPES, DEFAULT_SORT_DIR, compareByColumn, fitLedgerColumns, dropEmptyColumns, type SortDir } from "./columnSort";
 import { makeCohortRanker } from "./cohortPercentiles";
+import { scopeAreaLabel } from "./scopeAreaLabel";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useOpenListing } from "@/hooks/useOpenListing";
@@ -26,14 +27,24 @@ interface LedgerPanelProps {
 }
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, dealInputsById, setDealInputsById, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, minDealGrade, setMinDealGrade } =
+  const { activePersona, searchResult, dealInputsById, setDealInputsById, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, commute, school, minDealGrade, setMinDealGrade } =
     useCommandCenterStore();
 
-  // Scope chip (fix #4): with no typed place and no draw area, the results are
+  // Scope chip (fix #4): with no typed place and no custom area, the results are
   // scoped to the visible map extent (first-load viewport scoping / "search this
   // map area"), not to a named place — say so explicitly rather than leaving the
   // count reading like a province-wide total.
-  const viewportScoped = Boolean(mapBounds) && !location && !drawPolygon;
+  //
+  // The guards must mirror EVERY geographic scope page.tsx can put on the query:
+  // drawClause, the commute isochrone (geoPolygon) and the target-school clause.
+  // Checking only drawPolygon made the chip claim the viewport was the sole scope
+  // while a commute area was really driving the results. school.minScore is
+  // deliberately not a guard — it filters on quality, not on where.
+  const customArea =
+    Boolean(drawPolygon) ||
+    Boolean(commute.enabled && commute.polygon && commute.polygon.length >= 3) ||
+    Boolean(school.enabled && school.targetSchool);
+  const viewportScoped = Boolean(mapBounds) && !location && !customArea;
   const isAuthed = useIsAuthed();
   // Mobile → full report; desktop → in-page Quick Look drawer.
   const openListing = useOpenListing();
@@ -77,6 +88,14 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
     [visible, isAuthed, minDealGrade, activePersona, dealInputsById]
   );
   const ms = searchResult?.processingTimeMs ?? 0;
+
+  // Name the viewport from the rows already on screen, so the scope chip answers
+  // "which area?" rather than only stating that an area is in play. Zero fetch —
+  // see scopeAreaLabel for why this isn't a server-side facet.
+  const areaLabel = useMemo(
+    () => (viewportScoped ? scopeAreaLabel(searchResult?.listings ?? []) : null),
+    [viewportScoped, searchResult]
+  );
 
   // Multi-select basket → quick actions (isolate / compare / clear) surfaced right on
   // the list, so a selection made with the row checkboxes is actionable without opening
@@ -208,10 +227,18 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         </p>
         {viewportScoped && (
           <span
-            title="Results are scoped to the visible map area. Pan or zoom the map, or search a place, to change the scope."
-            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-sm border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-700 dark:text-cyan-300"
+            title={
+              areaLabel
+                ? `Showing listings in the visible map area (${areaLabel}). Pan or zoom the map, or search a place, to change the scope.`
+                : "Results are scoped to the visible map area. Pan or zoom the map, or search a place, to change the scope."
+            }
+            // Capped + truncating rather than shrink-0: a named area is free-text from
+            // the feed ("Bridle Path-Sunnybrook-York Mills"), and the stat line beside
+            // it must keep its room on a phone.
+            className="ml-auto inline-flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-700 dark:text-cyan-300"
           >
-            <MapPin className="h-3 w-3" /> Map area
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{areaLabel ? `Map area · ${areaLabel}` : "Map area"}</span>
           </span>
         )}
       </div>
