@@ -194,51 +194,69 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
 
   return (
     <div ref={rootRef} className={cn("flex h-full flex-col border-l border-border bg-background", className)}>
-      {/* Typesense stat header */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <Zap className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
-        <p className="font-mono text-xs text-muted-foreground">
-          {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) ? (
-            <>
-              <span className="font-semibold text-cyan-700 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Comps
-              <span className="mx-1.5 text-muted-foreground">|</span>
-              {/* The de-listed fetch is capped at 90d while sold/leased go to 180d:
-                  delisted-only shows the clamped figure; a mixed view annotates both
-                  so the label never overstates the de-listed coverage. */}
-              VOW · last{" "}
-              <span className="text-cyan-700 dark:text-cyan-400">
-                {!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")
-                  ? Math.min(soldWindowDays, 90)
-                  : soldWindowDays}
-                d
-              </span>
-              {activeLayers.has("delisted") &&
-                (activeLayers.has("sold") || activeLayers.has("leased")) &&
-                soldWindowDays > 90 && <span className="text-muted-foreground"> · de-listed 90d</span>}
-            </>
-          ) : (
-            <>
-              {SEARCH_BRAND}:{" "}
-              <span className="font-semibold text-cyan-700 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
-              <span className="mx-1.5 text-muted-foreground">|</span>
-              Instant Query <span className="text-cyan-700 dark:text-cyan-400">&lt;{ms}ms</span>
-            </>
-          )}
-        </p>
+      {/* Typesense stat header. Wrapping, not capping: the stat line alone is ~350px of
+          max-content, so on a phone (and on the desktop panel dragged narrow) there is no
+          share of one row that fits both it and a named scope chip — a percentage cap just
+          truncated the chip to "MAP AREA · …", losing the one part that carries information.
+          flex-wrap drops the chip to its own full-width row instead, which matters most on
+          mobile, where there is no hover to reveal the title attribute.
+
+          The bolt + stat text are ONE flex item (flex-auto, min-w-0): as separate items the
+          stat's max-content width exceeds a phone's, so it broke to the second line and left
+          the bolt stranded alone on the first. Grouped, they wrap as a unit and only the chip
+          moves. basis-auto (not flex-1's basis-0) is what makes the chip wrap at all — with a
+          zero basis the two would just share the row and truncate again. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-border bg-card px-3 py-2">
+        <div className="flex min-w-0 flex-auto items-center gap-2">
+          <Zap className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
+          <p className="min-w-0 font-mono text-xs text-muted-foreground">
+            {(activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted")) ? (
+              <>
+                <span className="font-semibold text-cyan-700 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Comps
+                <span className="mx-1.5 text-muted-foreground">|</span>
+                {/* The de-listed fetch is capped at 90d while sold/leased go to 180d:
+                    delisted-only shows the clamped figure; a mixed view annotates both
+                    so the label never overstates the de-listed coverage. */}
+                VOW · last{" "}
+                <span className="text-cyan-700 dark:text-cyan-400">
+                  {!activeLayers.has("sold") && !activeLayers.has("leased") && activeLayers.has("delisted")
+                    ? Math.min(soldWindowDays, 90)
+                    : soldWindowDays}
+                  d
+                </span>
+                {activeLayers.has("delisted") &&
+                  (activeLayers.has("sold") || activeLayers.has("leased")) &&
+                  soldWindowDays > 90 && <span className="text-muted-foreground"> · de-listed 90d</span>}
+              </>
+            ) : (
+              <>
+                {SEARCH_BRAND}:{" "}
+                <span className="font-semibold text-cyan-700 dark:text-cyan-400">{totalCount.toLocaleString()}</span> Active Listings
+                <span className="mx-1.5 text-muted-foreground">|</span>
+                Instant Query <span className="text-cyan-700 dark:text-cyan-400">&lt;{ms}ms</span>
+              </>
+            )}
+          </p>
+        </div>
         {viewportScoped && (
           <span
+            // Hook for the mobile smoke check that asserts the label isn't clipped.
+            data-scope-chip=""
             title={
               areaLabel
                 ? `Showing listings in the visible map area (${areaLabel}). Pan or zoom the map, or search a place, to change the scope.`
                 : "Results are scoped to the visible map area. Pan or zoom the map, or search a place, to change the scope."
             }
-            // Capped + truncating rather than shrink-0: a named area is free-text from
-            // the feed ("Bridle Path-Sunnybrook-York Mills"), and the stat line beside
-            // it must keep its room on a phone.
-            className="ml-auto inline-flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-700 dark:text-cyan-300"
+            // max-w-full + truncate is the last-resort guard only: a named area is free-text
+            // from the feed and can run long ("Bridle Path-Sunnybrook-York Mills"). The row
+            // it sits on is now its own when space is tight, so the ellipsis is reached only
+            // by names wider than the whole panel, not by ordinary ones.
+            className="ml-auto inline-flex min-w-0 max-w-full items-center gap-1 rounded-sm border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-700 dark:text-cyan-300"
           >
             <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate">{areaLabel ? `Map area · ${areaLabel}` : "Map area"}</span>
+            <span data-scope-chip-label className="truncate">
+              {areaLabel ? `Map area · ${areaLabel}` : "Map area"}
+            </span>
           </span>
         )}
       </div>
