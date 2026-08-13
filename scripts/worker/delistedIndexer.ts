@@ -32,6 +32,12 @@ import { buildIdDeleteFilters } from './staleSearchDocs';
 import { resolveLocation } from './resolveLocation';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { firstMediaUrl } from '../../src/lib/sold/firstMediaUrl';
+import { fetchMediaForKeys } from './mediaEnrichment';
+
+/** VOW token — the feed still serves /Media for ended campaigns (probed 2026-08-13). */
+const VOW_TOKEN = (process.env.PROPTX_VOW_TOKEN || '').trim();
+/** `thumbs` reports by default; pass --apply to write. */
+const DRY_RUN = !process.argv.includes('--apply');
 import { partitionSupersededDelisted } from './purgeSupersededDelisted';
 
 export const DELISTED_WINDOW_DAYS = 90;
@@ -167,10 +173,18 @@ function toWindowedDoc(r: DelistedRecord, windowCutoffMs: number): SoldListingDo
 }
 
 /**
- * Best-effort: stamp each windowed doc's thumbnail from its surviving `listings`
- * row's media_urls. The delisted VOW feed carries no media (v1 cards were blank),
- * but the listings row survives with the same photos the detail page shows. The
- * terminal comp ledger is VOW-gated (consumer-only), so this exposes nothing new.
+ * Best-effort: stamp each windowed doc's thumbnail, preferring its surviving `listings`
+ * row's media_urls and falling back to the feed's /Media resource. The terminal comp
+ * ledger is VOW-gated (consumer-only), so this exposes nothing new.
+ *
+ * The /Media leg exists because the original premise here — "the delisted VOW feed
+ * carries no media (v1 cards were blank)" — is not true of the current feed. Probed
+ * 2026-08-13: /Media with the VOW token returns rows for X12919230, a terminated
+ * listing whose doc has no thumbnail. A listing's `listings` row is purged when it
+ * de-lists and its media goes with it, so the row fallback alone can only ever reach
+ * the records that de-listed recently — measured leaving ~7,300 de-listed docs
+ * (7.2% terminated / 16.9% expired / 10.2% suspended) with a permanently blank frame,
+ * while sold and leased sit at 0%.
  *
  * Non-fatal BY DESIGN: any failure just leaves the docs photo-less, exactly as
  * before — it can never break the delisted sync. Only fills docs missing a thumb.
@@ -193,8 +207,28 @@ async function enrichThumbnailsFromListings(docs: SoldListingDocument[]): Promis
       const url = firstMediaUrl(byKey.get(doc.id));
       if (url) doc.primaryImageUrl = url;
     }
+    await enrichThumbnailsFromFeed(targets.filter((d) => !d.primaryImageUrl));
   } catch (err: any) {
     console.warn(`   ⚠️  De-listed thumbnail enrich failed (non-fatal): ${err?.message || err}`);
+  }
+}
+
+/**
+ * Second leg: ask the feed directly for the records whose `listings` row is already
+ * gone. Reuses fetchMediaForKeys rather than writing a second fetcher, so it inherits
+ * its chunking, watermark-size preference and per-key failure isolation. Non-fatal.
+ */
+async function enrichThumbnailsFromFeed(targets: SoldListingDocument[]): Promise<void> {
+  const token = (process.env.PROPTX_VOW_TOKEN || '').trim();
+  if (!token || targets.length === 0) return;
+  try {
+    const { media } = await fetchMediaForKeys(targets.map((d) => d.id), token);
+    for (const doc of targets) {
+      const url = media.get(doc.id)?.find((m) => typeof m.MediaURL === 'string')?.MediaURL;
+      if (url) doc.primaryImageUrl = url;
+    }
+  } catch (err) {
+    console.warn(`   ⚠️  De-listed /Media enrich failed (non-fatal): ${err instanceof Error ? err.message : err}`);
   }
 }
 
@@ -457,6 +491,8 @@ if (invokedDirectly) {
       process.exit(0);
     }
     if (mode === 'thumbs') {
+      // Writes only with an explicit --apply. The media a de-listed record keeps is a
+      // retention question, not just an engineering one, so the default is a report.
       // One-off: stamp thumbnails onto EXISTING de-listed docs from their surviving
       // listings rows. New de-lists get thumbnails automatically via the nightly
       // (enrichThumbnailsFromListings); this repairs the ones already indexed.
@@ -476,7 +512,9 @@ if (invokedDirectly) {
         .map((l) => JSON.parse(l) as { id: string; primaryImageUrl?: string });
       const missing = rows.filter((r) => !r.primaryImageUrl).map((r) => r.id);
       console.log(`🖼️  De-listed docs missing a thumbnail: ${missing.length} / ${rows.length}`);
+      if (DRY_RUN) console.log('   DRY RUN — reporting only, nothing will be written.');
       let stamped = 0;
+      let fromFeed = 0;
       const CHUNK = 200;
       for (let i = 0; i < missing.length; i += CHUNK) {
         const keys = missing.slice(i, i + CHUNK);
@@ -491,7 +529,28 @@ if (invokedDirectly) {
         const updates = keys
           .map((id) => ({ id, primaryImageUrl: firstMediaUrl(byKey.get(id)) }))
           .filter((u): u is { id: string; primaryImageUrl: string } => !!u.primaryImageUrl);
-        if (updates.length > 0) {
+
+        // Whatever the surviving listings rows could not answer, ask the feed. These are
+        // the records whose listings row was purged when they de-listed — the ~7,300 the
+        // row fallback alone can never reach.
+        const stillMissing = keys.filter((id) => !updates.some((u) => u.id === id));
+        if (stillMissing.length > 0 && VOW_TOKEN) {
+          try {
+            const { media } = await fetchMediaForKeys(stillMissing, VOW_TOKEN);
+            for (const id of stillMissing) {
+              const url = media.get(id)?.find((m) => typeof m.MediaURL === 'string')?.MediaURL;
+              if (url) { updates.push({ id, primaryImageUrl: url }); fromFeed++; }
+            }
+          } catch (err) {
+            console.warn(
+              `   ⚠️  /Media lookup failed for this chunk (continuing): ${err instanceof Error ? err.message : err}`
+            );
+          }
+        }
+
+        if (DRY_RUN) {
+          stamped += updates.length;
+        } else if (updates.length > 0) {
           await ts
             .collections(SOLD_LISTINGS_COLLECTION)
             .documents()
@@ -500,7 +559,11 @@ if (invokedDirectly) {
         }
         console.log(`   …${Math.min(i + CHUNK, missing.length)}/${missing.length} scanned · ${stamped} stamped`);
       }
-      console.log(`✅ Thumbs backfill complete: ${stamped} de-listed thumbnails stamped from listings.`);
+      console.log(
+        DRY_RUN
+          ? `✅ Dry run complete: ${stamped} thumbnails RECOVERABLE (${fromFeed} of them only via /Media). Nothing written.`
+          : `✅ Thumbs backfill complete: ${stamped} de-listed thumbnails stamped (${fromFeed} from /Media).`
+      );
       process.exit(0);
     }
     console.error(`Unknown mode "${mode}". Use: backfill | delta | prune | thumbs`);
