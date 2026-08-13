@@ -8,6 +8,7 @@ import {
   checkDrift,
   checkEmailFailures,
   checkMediaReconcile,
+  checkDistressRate,
   checkOnboardingExample,
   checkUnpriceableValues,
   snapshotFromRows,
@@ -615,5 +616,38 @@ describe("regression: 1,346 vacant-land listings kept May dwelling-model values 
     expect(missing).toHaveLength(1);
     expect(missing[0].severity).toBe("warn");
     expect(checkUnpriceableValues({ count: null })[0].severity).toBe("warn");
+  });
+});
+
+describe("checkDistressRate", () => {
+  it("passes at the rate the rewritten rule actually produces", () => {
+    // Measured live 2026-08-12, immediately after recompute-distress-flag --apply.
+    expect(checkDistressRate({ actives: 73_550, flagged: 888 })).toEqual([]);
+  });
+
+  it("catches the 19% over-firing this canary exists to prevent", () => {
+    // The exact shape of the pre-fix index: DISTRESSED had become an age badge.
+    const out = checkDistressRate({ actives: 73_550, flagged: 13_976 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("error");
+    expect(out[0].check).toBe("distress-rate");
+    expect(out[0].detail).toMatch(/over-firing/);
+  });
+
+  it("catches a detector that has gone silent", () => {
+    const out = checkDistressRate({ actives: 73_550, flagged: 0 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("error");
+    expect(out[0].detail).toMatch(/gone quiet/);
+  });
+
+  it("warns rather than dividing by zero when the index returns nothing", () => {
+    const out = checkDistressRate({ actives: 0, flagged: 0 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warn");
+  });
+
+  it("judges the share, not the count, so a growing market stays quiet", () => {
+    expect(checkDistressRate({ actives: 150_000, flagged: 1_800 })).toEqual([]);
   });
 });

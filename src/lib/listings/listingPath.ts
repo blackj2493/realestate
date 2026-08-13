@@ -22,16 +22,30 @@ export function slugify(input: string): string {
 }
 
 /**
- * Clean municipality name for the URL. TRREB encodes Toronto as "Toronto C06" /
- * "Toronto W01" / "Toronto E04" (codes nobody searches for) and uses directional area
- * suffixes for some cities ("London South" / "North" / "East"). Strip both so each city's
- * listings consolidate under one slug (/toronto, /london). Other cities (Mississauga,
- * Brampton, …) have no suffix and pass through unchanged. No Ontario municipality ends in
- * a bare cardinal direction, so the directional strip is safe.
+ * Human-readable name for a raw TRREB City value. Strips ONLY the district code:
+ * TRREB encodes Toronto as "Toronto C06" / "Toronto W01" / "Toronto E04", codes no
+ * reader recognises. Every other city passes through byte-identical, punctuation and
+ * all ("St. Catharines", "Niagara-on-the-Lake", "Chatham-Kent").
+ *
+ * Deliberately narrower than `municipality()` below, which additionally folds
+ * directional suffixes so a city's listings share one URL. That fold must not reach a
+ * LABEL: "Quinte West", "Wellington North", "Perth East", "Perth South", "Huron East"
+ * and "Highlands East" are all real municipalities present in the feed, and rendering
+ * them as "Quinte" / "Wellington" / "Perth" / "Huron" / "Highlands" names a place that
+ * doesn't exist. Slug consolidation can absorb that; a displayed label can't.
+ */
+export function cityDisplayName(city: string): string {
+  return city.replace(/\s+[CEW]\d{2}\s*$/i, "").trim();
+}
+
+/**
+ * Clean municipality name for the URL. Applies the district-code strip above and also
+ * removes directional area suffixes for some cities ("London South" / "North" / "East"),
+ * so each city's listings consolidate under one slug (/toronto, /london). Other cities
+ * (Mississauga, Brampton, …) have no suffix and pass through unchanged.
  */
 function municipality(city: string): string {
-  return city
-    .replace(/\s+[CEW]\d{2}\s*$/i, "")
+  return cityDisplayName(city)
     .replace(/\s+(North|South|East|West)\s*$/i, "")
     .trim();
 }

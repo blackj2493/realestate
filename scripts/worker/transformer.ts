@@ -15,6 +15,7 @@ import { indexListing, deleteListing } from '@/lib/typesense/client';
 import { loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/ExtrapolatedCapRateEngine';
 import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
+import { detectDistress } from '@/lib/listings/distressSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
 import { fetchRentAVM, type RentAVMResult } from './services/rentAVM';
@@ -608,26 +609,17 @@ export function calculateDerivedMetrics(raw: any): DerivedMetrics {
     targetGrossYield = annualRent / raw.ListPrice;
   }
 
-  // 3. Is Distressed (regex on public remarks)
-  let isDistressed = false;
-  if (raw.PublicRemarks) {
-    const remarksLower = raw.PublicRemarks.toLowerCase();
-    const distressedPattern = /\b(as-is|tlc|handyman|contractor|renovator|estate)\b/;
-    isDistressed = distressedPattern.test(remarksLower);
-    
-    // Also flag as distressed if DaysOnMarket > 90
-    if (calculatedDOM !== null && calculatedDOM > 90) {
-      isDistressed = true;
-    }
-    
-    // Or if price has been reduced (PreviousListPrice exists and is higher)
-    if (raw.PreviousListPrice && raw.ListPrice && raw.PreviousListPrice > raw.ListPrice) {
-      const reductionPercent = ((raw.PreviousListPrice - raw.ListPrice) / raw.PreviousListPrice) * 100;
-      if (reductionPercent > 5) {
-        isDistressed = true;
-      }
-    }
-  }
+  // 3. Is Distressed — phrase signals in the public remarks ONLY.
+  //
+  // Time-on-market and price cuts used to flip this flag too, which turned DISTRESSED into an
+  // age badge (19% of actives, ~100% past 180 days) and suppressed the accurate STALE badge
+  // that shares the same 90-day threshold. Those two dimensions already have honest homes:
+  // `IsStale`/`TrueDom` and `TotalPriceDrop`. See src/lib/listings/distressSignals.ts.
+  //
+  // The matcher is shared with scripts/admin/recompute-distress-flag.ts — the nightly sync
+  // only re-transforms the ModificationTimestamp delta, so a second copy of this rule would
+  // leave most of the index frozen on whichever copy last wrote it.
+  const { isDistressed } = detectDistress(raw.PublicRemarks);
 
   // 4. Has Secondary Suite Potential (legacy check)
   let hasSecondarySuitePotential = false;

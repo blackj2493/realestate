@@ -43,12 +43,14 @@ import {
   checkDrift,
   checkEmailFailures,
   checkMediaReconcile,
+  checkDistressRate,
   checkOnboardingExample,
   checkUnpriceableValues,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
 } from '@/lib/data/healthChecks';
+import { searchListings } from '@/lib/typesense/client';
 import { UNPRICEABLE_EXACT, UNPRICEABLE_PATTERNS } from '@/lib/avm/normalizeType';
 import { buildAreaData, EXAMPLE_REGION } from '@/lib/alerts/onboardingData';
 
@@ -410,6 +412,43 @@ async function checkOnboardingExampleHealth(): Promise<void> {
   problems.push(...checkOnboardingExample({ region: EXAMPLE_REGION, activeCount: data.activeCount }));
 }
 
+/**
+ * DISTRESSED badge population — is the flag still on the right listings?
+ *
+ * `isDistressed` is ETL-written and the sync only re-transforms the modification delta, so a
+ * rule regression spreads silently and asymmetrically across the index. Both directions are
+ * invisible without this: at 19% (its state before 2026-08-12) the badge is noise; at 0% the
+ * detector is simply broken. Counts come from the search index, since that is the copy the
+ * badge actually renders from.
+ */
+async function checkDistressFlagHealth(): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY) {
+    problems.push({
+      severity: 'warn',
+      check: 'distress-rate',
+      detail: 'NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY not set — DISTRESSED share not checked',
+    });
+    return;
+  }
+  try {
+    const [all, flagged] = await Promise.all([
+      searchListings({ query: '*', rawFilterBy: 'TransactionType:=`For Sale`', perPage: 0 }),
+      searchListings({
+        query: '*',
+        rawFilterBy: 'TransactionType:=`For Sale` && isDistressed:=true',
+        perPage: 0,
+      }),
+    ]);
+    problems.push(...checkDistressRate({ actives: all.totalFound, flagged: flagged.totalFound }));
+  } catch (err) {
+    problems.push({
+      severity: 'warn',
+      check: 'distress-rate',
+      detail: `could not read the DISTRESSED share from Typesense: ${(err as Error)?.message ?? err}`,
+    });
+  }
+}
+
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -467,6 +506,7 @@ async function main(): Promise<void> {
     ['email delivery', checkEmailHealth],
     ['media reconcile', checkMediaReconcileHealth],
     ['onboarding example', checkOnboardingExampleHealth],
+    ['distress flag', checkDistressFlagHealth],
     ['migrations', checkMigrations],
   ] as const) {
     try {

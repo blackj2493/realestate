@@ -4,12 +4,14 @@
  */
 
 import { cn } from '@/lib/utils';
+import { detectDistress } from '@/lib/listings/distressSignals';
 
 // Badge variants based on the design spec
 export type BadgeVariant = 
   | 'income-suite'      // text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
   | 'suite-potential'   // text-blue-700 dark:text-blue-400 bg-blue-400/10 border-blue-400/20
-  | 'distressed'        // text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/20
+  | 'forced-sale'       // text-rose-700 dark:text-rose-400 bg-rose-400/10 border-rose-400/20
+  | 'needs-work'        // text-orange-700 dark:text-orange-400 bg-orange-400/10 border-orange-400/20
   | 'holding-offers'    // text-amber-700 dark:text-amber-400 bg-amber-400/10 border-amber-400/20
   | 'price-drop'        // text-emerald-700 dark:text-emerald-400 bg-emerald-400/10 border-emerald-400/20
   | 'top-school-zone'   // text-purple-600 dark:text-purple-400 bg-purple-400/10 border-purple-400/20
@@ -42,10 +44,15 @@ const badgeStyles: Record<BadgeVariant, {
     bg: 'bg-blue-500/10 dark:bg-blue-400/10',
     border: 'border-blue-600/30 dark:border-blue-400/20',
   },
-  'distressed': {
+  'forced-sale': {
     text: 'text-rose-700 dark:text-rose-400',
     bg: 'bg-rose-500/10 dark:bg-rose-400/10',
     border: 'border-rose-600/30 dark:border-rose-400/20',
+  },
+  'needs-work': {
+    text: 'text-orange-700 dark:text-orange-400',
+    bg: 'bg-orange-500/10 dark:bg-orange-400/10',
+    border: 'border-orange-600/30 dark:border-orange-400/20',
   },
   'holding-offers': {
     text: 'text-amber-700 dark:text-amber-400',
@@ -139,9 +146,14 @@ export function detectPropertyBadges(property: {
     badges.push({ variant: 'suite-potential', label: 'SUITE POTENTIAL' });
   }
 
-  // Distressed badge
-  if (property.isDistressed) {
-    badges.push({ variant: 'distressed', label: 'DISTRESSED' });
+  // Distress badges — derived from the remarks at render via the SAME matcher the ETL and
+  // the ledger's getAlphaFlag use, so the listing page can never disagree with the card. The
+  // label is the phrase that matched ("POWER OF SALE"), not a category word.
+  const distress = detectDistress(property.PublicRemarks);
+  if (distress.forcedSale) {
+    badges.push({ variant: 'forced-sale', label: distress.matched[0].toUpperCase() });
+  } else if (distress.needsWork) {
+    badges.push({ variant: 'needs-work', label: distress.matched[0].toUpperCase() });
   }
 
   // Holding Offers badge - check remarks for bidding war indicators
