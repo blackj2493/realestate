@@ -187,6 +187,9 @@ async function repairSoldChunk(raws: any[]): Promise<{ vaulted: number; anchored
 }
 
 const HEARTBEAT_TERMINAL = ['sold', 'closed', 'closed sale', 'leased', 'terminated', 'expired', 'suspended'];
+/** Keys per heartbeat UPDATE, and the per-chunk timeout. See stampLastSeenHeartbeat. */
+const HEARTBEAT_CHUNK = 5000;
+const HEARTBEAT_CHUNK_TIMEOUT = '60s';
 
 /**
  * HEARTBEAT — persist the Active snapshot to `listings.last_seen_at`.
@@ -227,8 +230,36 @@ async function stampLastSeenHeartbeat(activeKeys: string[], apply: boolean): Pro
       console.log('   (dry-run — no stamp)');
       return;
     }
-    const upd = await pg.query('UPDATE listings l SET last_seen_at = now() FROM swept s WHERE s.listing_key = l.listing_key');
-    console.log(`   ✅ heartbeat: stamped last_seen_at on ${upd.rowCount} listings row(s).`);
+    // Chunked, not one statement. A single UPDATE over the ~95k swept keys exceeded the
+    // 120s statement timeout on 2026-08-09; the throw propagated out of main() and killed
+    // the run BEFORE the ghost-deletion step, while the workflow still reported success
+    // (the `| tee` pipeline swallowed the exit code — fixed with pipefail). Stamping is a
+    // best-effort side job, so it must never be able to abort the reconcile: each chunk is
+    // committed on its own and any failure is logged and swallowed.
+    let stamped = 0;
+    let failed = 0;
+    try {
+      await pg.query(`SET statement_timeout TO '${HEARTBEAT_CHUNK_TIMEOUT}'`);
+      for (let i = 0; i < activeKeys.length; i += HEARTBEAT_CHUNK) {
+        const chunk = activeKeys.slice(i, i + HEARTBEAT_CHUNK);
+        try {
+          const upd = await pg.query(
+            'UPDATE listings SET last_seen_at = now() WHERE listing_key = ANY($1::text[])',
+            [chunk]
+          );
+          stamped += upd.rowCount ?? 0;
+        } catch (e) {
+          failed++;
+          console.warn(`   ⚠️  heartbeat chunk ${i}-${i + chunk.length} failed: ${e instanceof Error ? e.message : e}`);
+        }
+      }
+      console.log(
+        `   ✅ heartbeat: stamped last_seen_at on ${stamped} listings row(s)` +
+          (failed ? ` (${failed} chunk(s) failed — see above)` : '') + '.'
+      );
+    } catch (e) {
+      console.warn(`   ⚠️  heartbeat skipped: ${e instanceof Error ? e.message : e}`);
+    }
   } finally {
     await pg.end();
   }

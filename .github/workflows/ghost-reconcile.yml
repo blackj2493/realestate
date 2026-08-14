@@ -60,7 +60,14 @@ jobs:
           # Session-pooler URL for the last_seen_at heartbeat (stampLastSeenHeartbeat, raw pg).
           # If unset the reconcile still runs and the heartbeat step no-ops with a warning.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx scripts/worker/ghostReconcile.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+        # `set -o pipefail` is load-bearing: a bash pipeline exits with the status of its
+        # LAST command, so `tsx ... | tee` returned tee's 0 and the step went green even
+        # when the script crashed. That masked the 2026-08-09 run, where the heartbeat
+        # UPDATE hit a statement timeout, aborted ghostReconcile before the ghost-deletion
+        # step, and still reported success. Without this, any future crash is invisible.
+        run: |
+          set -o pipefail
+          npx tsx scripts/worker/ghostReconcile.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
 
       - name: Notify operator
         if: always()
