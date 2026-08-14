@@ -22,7 +22,13 @@ import { ogImageUrl } from "@/lib/og/ogImageUrl";
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
 
-const CONTACT = "support@pureproperty.ca";
+/** A named person, not an inbox. Reporters quote people, and a human who answers is the one
+ *  thing the portal competitors structurally cannot match — there is nobody to call. This
+ *  address is already the replyTo on our alert mail (src/lib/alerts/senders.ts), so it is a
+ *  real monitored mailbox rather than an alias invented for this page. */
+const CONTACT = "tanmay@pureproperty.ca";
+const CONTACT_NAME = "Tanmay Rao";
+const CONTACT_TITLE = "Founder, PureProperty.ca";
 
 const TITLE = "For Journalists — Free Ontario Housing Data | PureProperty";
 const DESCRIPTION =
@@ -161,7 +167,7 @@ export default function ForJournalistsPage() {
             <a href={`mailto:${CONTACT}`} className="underline underline-offset-4">
               {CONTACT}
             </a>{" "}
-            and we&apos;ll pull it. Same day where we can, within one business day otherwise.
+            and I&apos;ll pull it — same day where I can, within one business day otherwise.
           </p>
           <p className={P}>Things people ask for that we can usually answer:</p>
           <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground sm:text-base">
@@ -172,8 +178,8 @@ export default function ForJournalistsPage() {
             <li>The same cut a month or a year ago, where our archive reaches back that far</li>
           </ul>
           <p className={P}>
-            We&apos;ll also tell you when we think a number is too thin to publish, and say so before you run
-            it rather than after.
+            I&apos;ll also tell you when a number looks too thin to publish, and say so before you run it
+            rather than after.
           </p>
         </section>
 
@@ -221,17 +227,18 @@ export default function ForJournalistsPage() {
         <section className={SECTION}>
           <h2 className={H2}>Contact</h2>
           <p className={P}>
-            {/* TODO(owner): replace with a named person + title. A named source converts far better
-                than an inbox — it is also the one thing the portal competitors structurally cannot
-                offer, because there is nobody to call. */}
+            <strong className="text-foreground">{CONTACT_NAME}</strong>, {CONTACT_TITLE} —{" "}
             <a href={`mailto:${CONTACT}`} className="underline underline-offset-4">
               {CONTACT}
-            </a>{" "}
-            — we read this and reply. Happy to be quoted on the record, to explain how a figure is built, or
-            to be on background if you just need to sanity-check something you&apos;ve got from elsewhere.
+            </a>
           </p>
           <p className={P}>
-            If you&apos;re on deadline, say so in the subject line and we&apos;ll jump it.
+            That reaches me directly, and I reply. Happy to be quoted on the record, to explain how a figure
+            is built, or to be on background if you just want to sanity-check something you&apos;ve got from
+            elsewhere.
+          </p>
+          <p className={P}>
+            If you&apos;re on deadline, say so in the subject line and I&apos;ll jump it.
           </p>
         </section>
 
