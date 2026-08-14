@@ -2,11 +2,46 @@
 
 import { useMemo, useState } from "react";
 import { RankingTable, type RankingColumn } from "@/components/data/RankingTable";
-import { THIN_SAMPLE, type RentGroup, type RentRow } from "@/lib/data/rentBoard";
+import {
+  MOVER_MIN_SAMPLE,
+  THIN_SAMPLE,
+  type BedBand,
+  type RentGroup,
+  type RentRow,
+} from "@/lib/data/rentBoard";
 
 const DASH = "—";
 const money = (v: number) => `$${v.toLocaleString("en-CA")}`;
 const signed = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+
+const BANDS: { key: BedBand; label: string }[] = [
+  { key: "1", label: "1 bed" },
+  { key: "2", label: "2 bed" },
+  { key: "3", label: "3 bed" },
+  { key: "4", label: "4+ bed" },
+  { key: "ALL", label: "All sizes" },
+];
+
+const GROUPS: { key: RentGroup; label: string; note: string }[] = [
+  {
+    key: "House",
+    label: "Houses",
+    note: "Detached, semi, townhouse, duplex and multiplex. No other Canadian source publishes this — TRREB's rental report covers condo apartments only.",
+  },
+  {
+    key: "Condo",
+    label: "Condos",
+    note: "Condo apartments, condo townhouses and co-ops. TRREB publishes a regional quarterly average; this is by neighbourhood, nightly, and median rather than mean.",
+  },
+];
+
+function yoyClass(v: number) {
+  return v > 0
+    ? "text-[color:var(--dt-down)] dark:text-rose-400"
+    : v < 0
+      ? "text-[color:var(--dt-up)] dark:text-emerald-400"
+      : "";
+}
 
 const columns: RankingColumn<RentRow>[] = [
   {
@@ -30,50 +65,25 @@ const columns: RankingColumn<RentRow>[] = [
     render: (r) => <span className="font-semibold tabular-nums">{money(r.medianRent)}</span>,
   },
   {
-    key: "medianBedrooms",
-    label: "Typical Size",
-    align: "right",
-    // Without this the median is uninterpretable: a $2,800 median means something very
-    // different for a 4-bed house than a 1-bed condo.
-    hint: "Median bedroom count behind that figure",
-    sortValue: (r) => r.medianBedrooms,
-    render: (r) =>
-      r.medianBedrooms == null ? (
-        <span className="text-muted-foreground">{DASH}</span>
-      ) : (
-        <span className="tabular-nums">{r.medianBedrooms.toFixed(1)} bd</span>
-      ),
-  },
-  {
     key: "yoyPct",
     label: "vs Last Year",
     align: "right",
-    hint: "Change against the same 12-month window a year earlier. Blank where either period was too thin to support a percentage.",
+    hint: "Same size, same neighbourhood, against the 12 months before. Blank where either period had under 20 leases.",
     sortValue: (r) => r.yoyPct,
     render: (r) =>
       r.yoyPct == null ? (
-        <span className="text-muted-foreground" title="Not enough history yet for a reliable comparison">
+        <span className="text-muted-foreground" title="Not enough history for a reliable comparison">
           {DASH}
         </span>
       ) : (
-        <span
-          className={`font-semibold tabular-nums ${
-            r.yoyPct > 0
-              ? "text-[color:var(--dt-down)] dark:text-rose-400"
-              : r.yoyPct < 0
-                ? "text-[color:var(--dt-up)] dark:text-emerald-400"
-                : ""
-          }`}
-        >
-          {signed(r.yoyPct)}
-        </span>
+        <span className={`font-semibold tabular-nums ${yoyClass(r.yoyPct)}`}>{signed(r.yoyPct)}</span>
       ),
   },
   {
     key: "spread",
     label: "Typical Range",
     align: "right",
-    hint: "25th–75th percentile of closed rents in the area",
+    hint: "25th–75th percentile of closed rents",
     sortValue: (r) => r.p75Rent,
     render: (r) =>
       r.p25Rent == null || r.p75Rent == null ? (
@@ -88,14 +98,14 @@ const columns: RankingColumn<RentRow>[] = [
     key: "sampleCount",
     label: "Leases",
     align: "right",
-    hint: "Closed leases behind the figure over the last 12 months",
+    hint: "Closed leases behind the figure, last 12 months",
     sortValue: (r) => r.sampleCount,
-    // A thin sample is shown WITH its count rather than hidden or dashed — the reader can
-    // then judge it. Suppressing thin rows entirely would quietly erase small towns.
+    // Thin rows are shown WITH their count rather than hidden — suppressing them would
+    // quietly erase small towns — but marked so nobody reads one as solid.
     render: (r) => (
       <span
         className={`tabular-nums ${r.sampleCount < THIN_SAMPLE ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}
-        title={r.sampleCount < THIN_SAMPLE ? "Thin sample — treat as indicative only" : undefined}
+        title={r.sampleCount < THIN_SAMPLE ? "Thin sample — indicative only" : undefined}
       >
         ×{r.sampleCount}
       </span>
@@ -103,37 +113,143 @@ const columns: RankingColumn<RentRow>[] = [
   },
 ];
 
-const TABS: { key: RentGroup; label: string; note: string }[] = [
-  {
-    key: "House",
-    label: "Houses",
-    note: "Detached, semi, townhouse, duplex and multiplex. No other Canadian source publishes this — TRREB's rental report covers condo apartments only.",
-  },
-  {
-    key: "Condo",
-    label: "Condos",
-    note: "Condo apartments, condo townhouses and co-ops. TRREB publishes a regional quarterly figure; this is by neighbourhood, nightly.",
-  },
-];
+/** The one-sentence finding, before any table. */
+function Headline({ summary }: { summary: RentRow[] }) {
+  const cell = (g: RentGroup, b: BedBand) => summary.find((r) => r.group === g && r.beds === b);
+  return (
+    <div className="mb-8 overflow-x-auto rounded-xl border border-border p-4 sm:p-5">
+      <p className="terminal-font text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+        Ontario-wide · median closed rent · vs 12 months earlier
+      </p>
+      <table className="mt-3 w-full min-w-[520px] border-collapse text-sm">
+        <thead>
+          <tr>
+            <th className="pb-2 text-left font-medium text-muted-foreground" />
+            {BANDS.filter((b) => b.key !== "ALL").map((b) => (
+              <th key={b.key} className="pb-2 text-right font-medium text-muted-foreground">
+                {b.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {GROUPS.map((g) => (
+            <tr key={g.key} className="border-t border-border">
+              <td className="py-2.5 pr-3 font-semibold">{g.label}</td>
+              {BANDS.filter((b) => b.key !== "ALL").map((b) => {
+                const c = cell(g.key, b.key);
+                return (
+                  <td key={b.key} className="py-2.5 text-right">
+                    {c ? (
+                      <>
+                        <div className="font-semibold tabular-nums">{money(c.medianRent)}</div>
+                        {c.yoyPct != null && (
+                          <div className={`text-[11px] tabular-nums ${yoyClass(c.yoyPct)}`}>
+                            {signed(c.yoyPct)}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">{DASH}</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-export function RentsBoard({ rows }: { rows: RentRow[] }) {
-  // Houses first, deliberately: it is the half nobody else has.
+/**
+ * Module scope, NOT nested inside Extremes. A component declared during render is a new
+ * type on every render, so React unmounts and remounts it and any state resets — the
+ * react-hooks/component-shape rule fails the build on it.
+ */
+function ExtremeCard({
+  title,
+  list,
+  showYoy,
+}: {
+  title: string;
+  list: RentRow[];
+  showYoy?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <p className="terminal-font text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+        {title}
+      </p>
+      <ol className="mt-2.5 space-y-1.5">
+        {list.map((r) => (
+          <li key={`${r.city}|${r.area}`} className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate">{r.area}</span>
+            <span className="shrink-0 font-semibold tabular-nums">
+              {showYoy && r.yoyPct != null ? (
+                <span className={yoyClass(r.yoyPct)}>{signed(r.yoyPct)}</span>
+              ) : (
+                money(r.medianRent)
+              )}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Priciest / cheapest / biggest mover — five rows a reporter can actually print. */
+function Extremes({ rows, band, group }: { rows: RentRow[]; band: BedBand; group: RentGroup }) {
+  const solid = rows.filter((r) => r.sampleCount >= 20);
+  if (solid.length < 6) return null;
+
+  const byRent = [...solid].sort((a, b) => b.medianRent - a.medianRent);
+  // Movers demand a thicker sample than levels: "biggest faller" is the most quotable and
+  // least robust cut here, so it is held to both windows clearing MOVER_MIN_SAMPLE.
+  const movers = solid
+    .filter((r) => r.yoyPct != null && r.sampleCount >= MOVER_MIN_SAMPLE && r.priorSample >= MOVER_MIN_SAMPLE)
+    .sort((a, b) => (a.yoyPct ?? 0) - (b.yoyPct ?? 0));
+
+  const label = BANDS.find((b) => b.key === band)!.label.toLowerCase();
+  const noun = group === "House" ? "houses" : "condos";
+
+  return (
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ExtremeCard title={`Priciest ${label} ${noun}`} list={byRent.slice(0, 5)} />
+      <ExtremeCard title={`Cheapest ${label} ${noun}`} list={byRent.slice(-5).reverse()} />
+      {movers.length >= 5 && (
+        <ExtremeCard title={`Falling fastest · ${label}`} list={movers.slice(0, 5)} showYoy />
+      )}
+    </div>
+  );
+}
+
+export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRow[] }) {
+  // Houses first, deliberately: it is the half nobody else has. 3-bed is the most common
+  // family rental and the size people picture when they ask what a house costs.
   const [group, setGroup] = useState<RentGroup>("House");
+  const [band, setBand] = useState<BedBand>("3");
 
-  const shown = useMemo(() => rows.filter((r) => r.group === group), [rows, group]);
-  const active = TABS.find((t) => t.key === group)!;
+  const shown = useMemo(
+    () => rows.filter((r) => r.group === group && r.beds === band),
+    [rows, group, band]
+  );
+  const activeGroup = GROUPS.find((g) => g.key === group)!;
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {TABS.map((t) => {
-          const n = rows.filter((r) => r.group === t.key).length;
-          const on = t.key === group;
+      <Headline summary={summary} />
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {GROUPS.map((g) => {
+          const on = g.key === group;
           return (
             <button
-              key={t.key}
+              key={g.key}
               type="button"
-              onClick={() => setGroup(t.key)}
+              onClick={() => setGroup(g.key)}
               aria-pressed={on}
               className={`terminal-font rounded-md border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
                 on
@@ -141,29 +257,64 @@ export function RentsBoard({ rows }: { rows: RentRow[] }) {
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t.label}
-              <span className="ml-1.5 opacity-60">{n}</span>
+              {g.label}
             </button>
           );
         })}
       </div>
 
-      <p className="mb-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">{active.note}</p>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {BANDS.map((b) => {
+          const on = b.key === band;
+          return (
+            <button
+              key={b.key}
+              type="button"
+              onClick={() => setBand(b.key)}
+              aria-pressed={on}
+              className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                on
+                  ? "border-foreground/30 bg-foreground/10 font-semibold text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {b.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mb-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+        {activeGroup.note}
+        {band === "ALL" && (
+          <>
+            {" "}
+            <strong className="text-foreground">
+              &ldquo;All sizes&rdquo; mixes bedroom counts, so its year-over-year moves when a
+              neighbourhood&apos;s mix changes and not only when rents do — pick a size for a
+              like-for-like comparison.
+            </strong>
+          </>
+        )}
+      </p>
 
       {shown.length === 0 ? (
         <p className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
-          No neighbourhoods currently have enough closed leases to report.
+          No neighbourhoods have enough closed leases at this size to report yet.
         </p>
       ) : (
-        <RankingTable
-          columns={columns}
-          rows={shown}
-          getRowKey={(r) => `${r.city}|${r.area}|${r.group}`}
-          gridTemplate="minmax(160px,1.6fr) 110px 100px 110px 150px 90px"
-          initialSortKey="sampleCount"
-          initialSortDir="desc"
-          minWidth={780}
-        />
+        <>
+          <RankingTable
+            columns={columns}
+            rows={shown}
+            getRowKey={(r) => `${r.city}|${r.area}|${r.group}|${r.beds}`}
+            gridTemplate="minmax(160px,1.7fr) 110px 110px 150px 90px"
+            initialSortKey="medianRent"
+            initialSortDir="desc"
+            minWidth={720}
+          />
+          <Extremes rows={shown} band={band} group={group} />
+        </>
       )}
     </div>
   );

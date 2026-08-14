@@ -44,6 +44,13 @@ const MIN_YOY_SAMPLE = 20;
 /** Guards against a lease price entered as an annual figure or a sale price. */
 const RENT_FLOOR = 400;
 const RENT_CEIL = 25_000;
+/**
+ * Reserved `city` for the province-wide rollup rows that feed the page's headline strip.
+ * Not a TRREB city, so it cannot collide with a real one. Paired with area '' — the same
+ * empty-area convention Waterloo/Brantford already use, and the board filters these out of
+ * the neighbourhood table by this key.
+ */
+const PROVINCE_CITY = 'Ontario';
 
 const DATABASE_URL = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
 if (!DATABASE_URL) { console.error('No DATABASE_URL'); process.exit(1); }
@@ -82,7 +89,13 @@ WITH base AS (
     AND city IS NOT NULL AND btrim(city) <> ''
 ),
 cur AS (
-  SELECT city, area, property_group,
+  -- PROVINCE_CITY/'' rows come from the grouping sets that omit city+area, which leave both
+  -- NULL. They are the headline strip: a median-of-medians across neighbourhoods would be
+  -- statistically wrong, so the province figure is computed from the underlying leases in
+  -- the same pass rather than derived from the rows below it.
+  SELECT COALESCE(city, '${PROVINCE_CITY}') AS city,
+         COALESCE(area, '') AS area,
+         property_group,
          COALESCE(beds::text, 'ALL') AS bedrooms_band,
          count(*)::int AS sample_count,
          round(percentile_cont(0.5) WITHIN GROUP (ORDER BY rent))::int AS median_rent,
@@ -95,16 +108,22 @@ cur AS (
                FILTER (WHERE ask IS NOT NULL AND rent < ask))::int AS median_discount
     FROM base
    WHERE close_date > now() - interval '12 months'
-   GROUP BY GROUPING SETS ((city, area, property_group, beds), (city, area, property_group))
+   GROUP BY GROUPING SETS (
+     (city, area, property_group, beds), (city, area, property_group),
+     (property_group, beds), (property_group))
 ),
 prior AS (
-  SELECT city, area, property_group,
+  SELECT COALESCE(city, '${PROVINCE_CITY}') AS city,
+         COALESCE(area, '') AS area,
+         property_group,
          COALESCE(beds::text, 'ALL') AS bedrooms_band,
          count(*)::int AS prior_sample,
          percentile_cont(0.5) WITHIN GROUP (ORDER BY rent) AS prior_median
     FROM base
    WHERE close_date <= now() - interval '12 months'
-   GROUP BY GROUPING SETS ((city, area, property_group, beds), (city, area, property_group))
+   GROUP BY GROUPING SETS (
+     (city, area, property_group, beds), (city, area, property_group),
+     (property_group, beds), (property_group))
 )
 SELECT c.city, c.area, c.property_group, c.bedrooms_band,
        c.median_rent, c.p25_rent, c.p75_rent, c.median_bedrooms,

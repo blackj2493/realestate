@@ -121,7 +121,7 @@ export default async function RentsPage() {
         },
       ]}
     >
-      <RentsBoard rows={board.rows} />
+      <RentsBoard rows={board.rows} summary={board.summary} />
     </TrackerShell>
   );
 }
