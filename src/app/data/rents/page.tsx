@@ -75,6 +75,16 @@ export default async function RentsPage() {
             prior year can otherwise manufacture a dramatic-looking percentage out of noise.
           </p>
           <p>
+            One caveat on that figure, because it is the one most likely to mislead. It compares medians
+            across <em>all</em> bedroom counts, so it moves when a neighbourhood&apos;s <strong>mix</strong>{" "}
+            changes, not only when rents do. An area that leased mostly four-bedroom houses last year and
+            mostly two-bedroom ones this year will show a fall even if every individual home rented for the
+            same price. Across the board the year-over-year figures sit in a tight band — a median of −2.5%
+            for houses, with the middle half between −6.5% and +1.0% — but a handful of neighbourhoods swing
+            past ±25%, and composition is the first thing to check before quoting one of those. For a
+            like-for-like read, use the per-bedroom breakdown, and ask us if you want it cut that way.
+          </p>
+          <p>
             &ldquo;Houses&rdquo; means detached, semi-detached, townhouse, duplex and multiplex homes;
             &ldquo;Condos&rdquo; means condo apartments, condo townhouses and co-ops. The split matters:{" "}
             <strong>
