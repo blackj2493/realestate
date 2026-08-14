@@ -9,6 +9,7 @@ import {
   checkEmailFailures,
   checkMediaReconcile,
   checkDistressRate,
+  checkSoldTransactionType,
   checkOnboardingExample,
   checkUnpriceableValues,
   snapshotFromRows,
@@ -649,5 +650,41 @@ describe("checkDistressRate", () => {
 
   it("judges the share, not the count, so a growing market stays quiet", () => {
     expect(checkDistressRate({ actives: 150_000, flagged: 1_800 })).toEqual([]);
+  });
+});
+
+describe("checkSoldTransactionType", () => {
+  it("passes when every row carries a type", () => {
+    // Measured live 2026-08-14 after backfillSoldTransactionType --apply.
+    expect(checkSoldTransactionType({ total: 307_021, nullTotal: 0, nullRecent: 0 })).toEqual([]);
+  });
+
+  it("replays the August 2026 silent writer failure", () => {
+    // 10,600 accumulated over 12 days at ~1,000/night while upsertSoldListings omitted the
+    // column; 4,713 were sales, invisible to every comp pull.
+    const out = checkSoldTransactionType({ total: 307_021, nullTotal: 10_600, nullRecent: 1_136 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("error");
+    expect(out[0].check).toBe("sold-transaction-type");
+    expect(out[0].detail).toMatch(/upsertSoldListings/);
+  });
+
+  it("warns rather than pages when the backlog is old but ingestion is healthy", () => {
+    // Mid-repair: the writer is fixed, the historical rows are not yet backfilled.
+    const out = checkSoldTransactionType({ total: 307_021, nullTotal: 10_600, nullRecent: 0 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warn");
+    expect(out[0].detail).toMatch(/unrepaired backlog/);
+  });
+
+  it("escalates to error the moment a fresh row lands NULL, however few", () => {
+    const out = checkSoldTransactionType({ total: 307_021, nullTotal: 1, nullRecent: 1 });
+    expect(out[0].severity).toBe("error");
+  });
+
+  it("warns instead of dividing by zero when the table reads empty", () => {
+    const out = checkSoldTransactionType({ total: 0, nullTotal: 0, nullRecent: 0 });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe("warn");
   });
 });

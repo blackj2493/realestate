@@ -673,6 +673,77 @@ export function checkUnpriceableValues(input: {
 export const DISTRESS_RATE = { min: 0.2, max: 4.0 };
 
 /**
+ * raw_vow_sold.transaction_type must be populated on every row.
+ *
+ * The column separates sales from leases. Since PR #219 the AVM comp pulls, the region
+ * metric RPCs (migration 106) and the sold boards all filter `transaction_type = 'For Sale'`,
+ * so a NULL is not a cosmetic gap — it is a row that silently drops out of every comparable
+ * set while the page still renders a plausible number.
+ *
+ * It went NULL for 12 days in August 2026 and nothing noticed. extractSoldListingData set the
+ * field, but upsertSoldListings built its payload from a hand-maintained field list that
+ * omitted it, so every ingested row wrote without the column — ~1,000/day, 4,713 of them
+ * sales. The upsert payload is now typed as SoldListingRecord so that exact drift fails the
+ * build; this check is the backstop for the general case (a new writer, a migration, or the
+ * feed itself ceasing to send TransactionType).
+ *
+ * Split into recent vs total deliberately. A non-zero total with a zero recent count means
+ * someone is part-way through backfilling old rows — that is a warn, not a page. Only a NULL
+ * on something ingested in the last 48h means the writer is broken *now*.
+ */
+export function checkSoldTransactionType(input: {
+  total: number;
+  nullTotal: number;
+  nullRecent: number;
+}): Problem[] {
+  const { total, nullTotal, nullRecent } = input;
+
+  if (total <= 0) {
+    return [
+      {
+        severity: "warn",
+        check: "sold-transaction-type",
+        detail:
+          "raw_vow_sold returned 0 rows — cannot evaluate transaction_type coverage " +
+          "(is the service-role client reachable?)",
+      },
+    ];
+  }
+
+  if (nullRecent > 0) {
+    return [
+      {
+        severity: "error",
+        check: "sold-transaction-type",
+        detail:
+          `${nullRecent.toLocaleString()} raw_vow_sold rows ingested in the last 48h have ` +
+          `transaction_type = NULL (${nullTotal.toLocaleString()} of ${total.toLocaleString()} overall) — ` +
+          "these are invisible to the AVM comp pulls, the region RPCs (migration 106) and every sold " +
+          "board, all of which filter transaction_type = 'For Sale'. The writer has stopped populating " +
+          "it: check that the upsert payload in upsertSoldListings (scripts/worker/ingester.ts) still " +
+          "lists the column, then repair with scripts/admin/backfillSoldTransactionType.ts --apply.",
+      },
+    ];
+  }
+
+  if (nullTotal > 0) {
+    return [
+      {
+        severity: "warn",
+        check: "sold-transaction-type",
+        detail:
+          `${nullTotal.toLocaleString()} of ${total.toLocaleString()} raw_vow_sold rows have ` +
+          "transaction_type = NULL, but none were ingested in the last 48h — ingestion is healthy and " +
+          "this is an unrepaired backlog. Clear it with " +
+          "scripts/admin/backfillSoldTransactionType.ts --apply.",
+      },
+    ];
+  }
+
+  return [];
+}
+
+/**
  * Guard the DISTRESSED flag's population share.
  *
  * WHY: `isDistressed` is written by the ETL at index time, and the nightly sync only
