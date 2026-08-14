@@ -44,6 +44,7 @@ import {
   checkEmailFailures,
   checkMediaReconcile,
   checkDistressRate,
+  checkSoldTransactionType,
   checkOnboardingExample,
   checkUnpriceableValues,
   snapshotFromRows,
@@ -449,6 +450,45 @@ async function checkDistressFlagHealth(): Promise<void> {
   }
 }
 
+/**
+ * raw_vow_sold.transaction_type coverage.
+ *
+ * WHY: the column is the sale/lease separator that PR #219 put under the AVM comp pulls and
+ * the region RPCs, so a NULL row silently leaves every comparable set. In August 2026 the
+ * upsert stopped writing it for 12 days (~1,000 rows/night, 4,713 of them sales) and nothing
+ * surfaced it — the boards kept rendering plausible numbers off a quietly shrinking pool.
+ *
+ * Counted straight off the table rather than through a board function: this is about what was
+ * WRITTEN, and any read path that filters on the column cannot see the rows it is dropping.
+ */
+async function checkSoldTransactionTypeHealth(): Promise<void> {
+  try {
+    const sb = getServiceRoleClient();
+    const since = new Date(Date.now() - 48 * 3_600_000).toISOString();
+    const [total, nullTotal, nullRecent] = await Promise.all([
+      sb.from('raw_vow_sold').select('*', { count: 'exact', head: true }),
+      sb.from('raw_vow_sold').select('*', { count: 'exact', head: true }).is('transaction_type', null),
+      sb.from('raw_vow_sold').select('*', { count: 'exact', head: true })
+        .is('transaction_type', null).gte('created_at', since),
+    ]);
+    const err = total.error || nullTotal.error || nullRecent.error;
+    if (err) throw new Error(err.message);
+    problems.push(
+      ...checkSoldTransactionType({
+        total: total.count ?? 0,
+        nullTotal: nullTotal.count ?? 0,
+        nullRecent: nullRecent.count ?? 0,
+      })
+    );
+  } catch (err) {
+    problems.push({
+      severity: 'warn',
+      check: 'sold-transaction-type',
+      detail: `could not read transaction_type coverage from raw_vow_sold: ${(err as Error)?.message ?? err}`,
+    });
+  }
+}
+
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -507,6 +547,7 @@ async function main(): Promise<void> {
     ['media reconcile', checkMediaReconcileHealth],
     ['onboarding example', checkOnboardingExampleHealth],
     ['distress flag', checkDistressFlagHealth],
+    ['sold transaction_type', checkSoldTransactionTypeHealth],
     ['migrations', checkMigrations],
   ] as const) {
     try {

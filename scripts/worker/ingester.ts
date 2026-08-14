@@ -331,52 +331,58 @@ export async function upsertSoldListings(
 
   for (const record of soldRecords) {
     try {
+      // Typed as SoldListingRecord so a column present on the record but missing from
+      // this list fails the build. It is spelled out field-by-field (CLAUDE.md §6 —
+      // never spread), and a hand-maintained list silently drifts: `transaction_type`
+      // was set on the record but omitted here, so every upsert since migration 104
+      // wrote the row without it. PR #219 had just repointed the AVM, comps and the
+      // region RPCs onto that column, so ~1,000 rows/day went silently missing from
+      // every comparable set until it was noticed 12 days later.
+      const row: SoldListingRecord = {
+        // Do NOT alter the table schema — it is the immutable AVM anchor.
+        listing_key: record.listing_key,
+        property_hash: record.property_hash,
+        unparsed_address: record.unparsed_address,
+        city_region: record.city_region,
+        city: record.city,
+        postal_code: record.postal_code,
+        property_sub_type: record.property_sub_type,
+        transaction_type: record.transaction_type,
+        architectural_style: record.architectural_style,
+        approximate_age: record.approximate_age,
+        living_area_range: record.living_area_range,
+        building_area_total: record.building_area_total,
+        lot_width: record.lot_width,
+        lot_depth: record.lot_depth,
+        bedrooms_above_grade: record.bedrooms_above_grade,
+        bedrooms_below_grade: record.bedrooms_below_grade,
+        bathrooms_total_integer: record.bathrooms_total_integer,
+        rooms_above_grade: record.rooms_above_grade,
+        rooms_below_grade: record.rooms_below_grade,
+        kitchens_above_grade: record.kitchens_above_grade,
+        kitchens_below_grade: record.kitchens_below_grade,
+        parking_total: record.parking_total,
+        covered_spaces: record.covered_spaces,
+        tax_annual_amount: record.tax_annual_amount,
+        association_fee: record.association_fee,
+        list_price: record.list_price,
+        original_list_price: record.original_list_price,
+        days_on_market: record.days_on_market,
+        listing_contract_date: record.listing_contract_date,
+        close_price: record.close_price,
+        purchase_contract_date: record.purchase_contract_date,
+        close_date: record.close_date,
+        has_finished_basement: record.has_finished_basement,
+        interior_tier: record.interior_tier,
+        exterior_tier: record.exterior_tier,
+        basement_tier: record.basement_tier,
+        raw_payload: record.raw_payload,
+        photos: record.photos,
+      };
+
       const { error } = await supabase
         .from('raw_vow_sold')
-        .upsert(
-          {
-            // Field-by-field, every raw_vow_sold column (CLAUDE.md §6 — never spread).
-            // Do NOT alter the table schema — it is the immutable AVM anchor.
-            listing_key: record.listing_key,
-            property_hash: record.property_hash,
-            unparsed_address: record.unparsed_address,
-            city_region: record.city_region,
-            city: record.city,
-            postal_code: record.postal_code,
-            property_sub_type: record.property_sub_type,
-            architectural_style: record.architectural_style,
-            approximate_age: record.approximate_age,
-            living_area_range: record.living_area_range,
-            building_area_total: record.building_area_total,
-            lot_width: record.lot_width,
-            lot_depth: record.lot_depth,
-            bedrooms_above_grade: record.bedrooms_above_grade,
-            bedrooms_below_grade: record.bedrooms_below_grade,
-            bathrooms_total_integer: record.bathrooms_total_integer,
-            rooms_above_grade: record.rooms_above_grade,
-            rooms_below_grade: record.rooms_below_grade,
-            kitchens_above_grade: record.kitchens_above_grade,
-            kitchens_below_grade: record.kitchens_below_grade,
-            parking_total: record.parking_total,
-            covered_spaces: record.covered_spaces,
-            tax_annual_amount: record.tax_annual_amount,
-            association_fee: record.association_fee,
-            list_price: record.list_price,
-            original_list_price: record.original_list_price,
-            days_on_market: record.days_on_market,
-            listing_contract_date: record.listing_contract_date,
-            close_price: record.close_price,
-            purchase_contract_date: record.purchase_contract_date,
-            close_date: record.close_date,
-            has_finished_basement: record.has_finished_basement,
-            interior_tier: record.interior_tier,
-            exterior_tier: record.exterior_tier,
-            basement_tier: record.basement_tier,
-            raw_payload: record.raw_payload,
-            photos: record.photos,
-          },
-          { onConflict: 'listing_key' }
-        );
+        .upsert(row, { onConflict: 'listing_key' });
 
       if (error) {
         result.errors.push(`Failed to upsert ${record.listing_key}: ${error.message}`);
