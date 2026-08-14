@@ -163,22 +163,21 @@ function Headline({ summary }: { summary: RentRow[] }) {
   );
 }
 
-/** Priciest / cheapest / biggest mover — five rows a reporter can actually print. */
-function Extremes({ rows, band, group }: { rows: RentRow[]; band: BedBand; group: RentGroup }) {
-  const solid = rows.filter((r) => r.sampleCount >= 20);
-  if (solid.length < 6) return null;
-
-  const byRent = [...solid].sort((a, b) => b.medianRent - a.medianRent);
-  // Movers demand a thicker sample than levels: "biggest faller" is the most quotable and
-  // least robust cut here, so it is held to both windows clearing MOVER_MIN_SAMPLE.
-  const movers = solid
-    .filter((r) => r.yoyPct != null && r.sampleCount >= MOVER_MIN_SAMPLE && r.priorSample >= MOVER_MIN_SAMPLE)
-    .sort((a, b) => (a.yoyPct ?? 0) - (b.yoyPct ?? 0));
-
-  const label = BANDS.find((b) => b.key === band)!.label.toLowerCase();
-  const noun = group === "House" ? "houses" : "condos";
-
-  const Card = ({ title, list, showYoy }: { title: string; list: RentRow[]; showYoy?: boolean }) => (
+/**
+ * Module scope, NOT nested inside Extremes. A component declared during render is a new
+ * type on every render, so React unmounts and remounts it and any state resets — the
+ * react-hooks/component-shape rule fails the build on it.
+ */
+function ExtremeCard({
+  title,
+  list,
+  showYoy,
+}: {
+  title: string;
+  list: RentRow[];
+  showYoy?: boolean;
+}) {
+  return (
     <div className="rounded-lg border border-border p-4">
       <p className="terminal-font text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
         {title}
@@ -199,13 +198,29 @@ function Extremes({ rows, band, group }: { rows: RentRow[]; band: BedBand; group
       </ol>
     </div>
   );
+}
+
+/** Priciest / cheapest / biggest mover — five rows a reporter can actually print. */
+function Extremes({ rows, band, group }: { rows: RentRow[]; band: BedBand; group: RentGroup }) {
+  const solid = rows.filter((r) => r.sampleCount >= 20);
+  if (solid.length < 6) return null;
+
+  const byRent = [...solid].sort((a, b) => b.medianRent - a.medianRent);
+  // Movers demand a thicker sample than levels: "biggest faller" is the most quotable and
+  // least robust cut here, so it is held to both windows clearing MOVER_MIN_SAMPLE.
+  const movers = solid
+    .filter((r) => r.yoyPct != null && r.sampleCount >= MOVER_MIN_SAMPLE && r.priorSample >= MOVER_MIN_SAMPLE)
+    .sort((a, b) => (a.yoyPct ?? 0) - (b.yoyPct ?? 0));
+
+  const label = BANDS.find((b) => b.key === band)!.label.toLowerCase();
+  const noun = group === "House" ? "houses" : "condos";
 
   return (
     <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <Card title={`Priciest ${label} ${noun}`} list={byRent.slice(0, 5)} />
-      <Card title={`Cheapest ${label} ${noun}`} list={byRent.slice(-5).reverse()} />
+      <ExtremeCard title={`Priciest ${label} ${noun}`} list={byRent.slice(0, 5)} />
+      <ExtremeCard title={`Cheapest ${label} ${noun}`} list={byRent.slice(-5).reverse()} />
       {movers.length >= 5 && (
-        <Card title={`Falling fastest · ${label}`} list={movers.slice(0, 5)} showYoy />
+        <ExtremeCard title={`Falling fastest · ${label}`} list={movers.slice(0, 5)} showYoy />
       )}
     </div>
   );
