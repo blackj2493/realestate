@@ -94,6 +94,21 @@ export default function HomePage() {
             Browse homes by city &rarr;
           </Link>
 
+          {/* Same job as the line above, for the /data trackers. SiteFooter carries these
+              links on every other page, but NOT here: this hero is `overflow-hidden` and
+              deliberately one non-scrolling screen ("compact so the comparison cards AND the
+              CTA stay above the fold"), so an appended footer would sit in clipped overflow
+              where nobody — crawler included — ever reaches it. One anchor in the cluster
+              that already exists gets the same crawlable link from the site's
+              highest-authority page at no cost to the composition. It matters because until
+              2026-08-14 NOTHING on the site linked to /data at all. */}
+          <Link
+            href="/data"
+            className="terminal-font mt-2 text-[11px] uppercase tracking-[0.22em] text-slate-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
+          >
+            Free market data &rarr;
+          </Link>
+
           <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-slate-400 [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers
           </p>
