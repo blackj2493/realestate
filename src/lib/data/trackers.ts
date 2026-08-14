@@ -77,6 +77,20 @@ export const TRACKERS: TrackerDef[] = [
     eyebrow: "Rent or Own",
     status: "live",
   },
+  {
+    // Distinct from rent-vs-buy, which is investor maths on yield. This one is rent PRICES:
+    // what a lease actually closed at, by neighbourhood. Houses are the point — TRREB's
+    // rental report covers condo apartments only, the rental portals carry asking rents
+    // rather than signed ones, and CMHC covers purpose-built stock. Nobody publishes what a
+    // house rents for, which makes this the only tracker here with no equivalent elsewhere.
+    slug: "rents",
+    navLabel: "Rents",
+    title: "What Homes Actually Rent For",
+    tagline:
+      "Median closed rent by neighbourhood — houses and condos, what tenants actually signed, not asking prices.",
+    eyebrow: "Closed Rents",
+    status: "live",
+  },
 ];
 
 export function trackerBySlug(slug: string): TrackerDef | undefined {

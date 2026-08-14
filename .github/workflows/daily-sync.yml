@@ -150,6 +150,18 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-condo-fee-stats.ts --apply
 
+      # Closed-rent aggregates for the public /data/rents tracker (migration 119). One
+      # server-side GROUPING SETS statement over raw_vow_sold lease rows — measured ~2s for
+      # the whole table, so the 10-minute bound is generous. Uses DATABASE_URL (pg) rather
+      # than the Supabase REST creds precisely because the aggregation happens in Postgres:
+      # nothing crosses the wire but finished cells. Additive — must never break the sync.
+      - name: Refresh Rent Market Stats
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/refresh-rent-market-stats.ts --apply
+
       # Precompute base-scope market aggregates (cap rate, active/stale counts, 24mo sold
       # trend) for every curated market into market_summary (migration 048), so the
       # Submarket Leaderboard / Region Scorecard read ONE ready-made row instead of running
