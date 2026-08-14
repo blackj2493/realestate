@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { getMarketBoard, type MarketRow } from "@/lib/data/marketBoard";
 import { getCondoFeeBoard, type CondoAreaRow } from "@/lib/data/condoFeeBoard";
+import { getRentBoard, type RentRow } from "@/lib/data/rentBoard";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { EmbedTable, type EmbedColumn } from "@/components/data/EmbedTable";
 
@@ -182,12 +183,38 @@ async function buildWidget(slug: string): Promise<Widget | null> {
     };
   }
 
+  if (slug === "rents") {
+    const board = await getRentBoard();
+    // Houses only in the widget: it is the half no other Canadian source publishes, and a
+    // 25-row table has no room for a group toggle. The full table (condos included) is one
+    // click away through the source link.
+    const rows = board.rows.filter((r) => r.group === "House").slice(0, 25);
+    return {
+      rows,
+      getRowKey: (r) => `${(r as RentRow).city}|${(r as RentRow).area}`,
+      caption:
+        "Median rent that house leases actually closed at, by neighbourhood — not asking rents. " +
+        "TRREB's rental report covers condo apartments only.",
+      columns: cols<RentRow>([
+        { label: "Neighbourhood", value: (r) => r.area },
+        { label: "City", value: (r) => r.city || DASH },
+        { label: "Median rent", align: "right", lead: true, value: (r) => money0(r.medianRent) },
+        { label: "Typical size", align: "right", value: (r) => (r.medianBedrooms == null ? DASH : `${r.medianBedrooms.toFixed(1)} bd`) },
+        { label: "vs last year", align: "right", value: (r) => (r.yoyPct == null ? DASH : signed(r.yoyPct)) },
+        { label: "Leases", align: "right", value: (r) => int(r.sampleCount) },
+      ]),
+    };
+  }
+
   return null;
 }
 
 /** The "as of" date is a credibility signal for anyone citing the table. */
 async function dataAsOf(slug: string): Promise<string | null> {
-  const board = slug === "condo-fees" ? await getCondoFeeBoard() : await getMarketBoard();
+  const board =
+    slug === "condo-fees" ? await getCondoFeeBoard()
+    : slug === "rents" ? await getRentBoard()
+    : await getMarketBoard();
   return board.dataAsOf
     ? new Date(board.dataAsOf).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })
     : null;
