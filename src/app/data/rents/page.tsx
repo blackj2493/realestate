@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getRentBoard } from "@/lib/data/rentBoard";
 import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
@@ -121,7 +122,13 @@ export default async function RentsPage() {
         },
       ]}
     >
-      <RentsBoard rows={board.rows} summary={board.summary} />
+      {/* RentsBoard reads the query string (?type/&beds/&q) so every cut is linkable, and
+          useSearchParams must sit under a Suspense boundary or the page cannot prerender. */}
+      <Suspense
+        fallback={<div className="h-96 animate-pulse rounded-xl border border-border" aria-hidden />}
+      >
+        <RentsBoard rows={board.rows} summary={board.summary} />
+      </Suspense>
     </TrackerShell>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { RankingTable, type RankingColumn } from "@/components/data/RankingTable";
 import {
   MOVER_MIN_SAMPLE,
@@ -226,15 +227,66 @@ function Extremes({ rows, band, group }: { rows: RentRow[]; band: BedBand; group
   );
 }
 
+const isGroup = (v: string | null): v is RentGroup => v === "House" || v === "Condo";
+
 export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRow[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+
+  // STATE LIVES IN THE URL. Without this every view is unlinkable: the press desk promises a
+  // custom cut within a day, and the natural close is "here is the live version: <link>" —
+  // which is impossible if the only address is the top of the page plus instructions to
+  // click House, then 3 bed, then scroll. Seeded from the query string so a shared link
+  // opens on the right cut, and updated with replace() so filtering doesn't fill history.
+  //
   // Houses first, deliberately: it is the half nobody else has. 3-bed is the most common
   // family rental and the size people picture when they ask what a house costs.
-  const [group, setGroup] = useState<RentGroup>("House");
-  const [band, setBand] = useState<BedBand>("3");
+  const qpGroup = params.get("type");
+  const qpBeds = params.get("beds");
+  const [group, setGroup] = useState<RentGroup>(isGroup(qpGroup) ? qpGroup : "House");
+  const [band, setBand] = useState<BedBand>(
+    qpBeds && ["1", "2", "3", "4", "ALL"].includes(qpBeds) ? (qpBeds as BedBand) : "3"
+  );
+  const [query, setQuery] = useState(params.get("q") ?? "");
 
+  const sync = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(params.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [params, pathname, router]
+  );
+  // Thin rows are EXCLUDED from the default ranking, not merely marked. A five-lease median
+  // outranking a fifty-lease one purely because it is expensive makes the whole table read
+  // as unreliable — Rockcliffe (×5) and Niagara (×9) were sitting above neighbourhoods with
+  // ten times the evidence. They stay one click away so small towns are never erased.
+  const [showThin, setShowThin] = useState(false);
+
+  const matching = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter(
+      (r) =>
+        r.group === group &&
+        r.beds === band &&
+        // Matches city OR neighbourhood: people search "Brampton" as readily as "Churchill
+        // Meadows", and a table of 494 rows with no way in is the main reason this page was
+        // unusable for looking anything up.
+        (!q || r.area.toLowerCase().includes(q) || r.city.toLowerCase().includes(q))
+    );
+  }, [rows, group, band, query]);
+  const thinCount = useMemo(
+    () => matching.filter((r) => r.sampleCount < THIN_SAMPLE).length,
+    [matching]
+  );
   const shown = useMemo(
-    () => rows.filter((r) => r.group === group && r.beds === band),
-    [rows, group, band]
+    () => (showThin ? matching : matching.filter((r) => r.sampleCount >= THIN_SAMPLE)),
+    [matching, showThin]
   );
   const activeGroup = GROUPS.find((g) => g.key === group)!;
 
@@ -249,7 +301,10 @@ export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRo
             <button
               key={g.key}
               type="button"
-              onClick={() => setGroup(g.key)}
+              onClick={() => {
+                setGroup(g.key);
+                sync({ type: g.key });
+              }}
               aria-pressed={on}
               className={`terminal-font rounded-md border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
                 on
@@ -270,7 +325,10 @@ export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRo
             <button
               key={b.key}
               type="button"
-              onClick={() => setBand(b.key)}
+              onClick={() => {
+                setBand(b.key);
+                sync({ beds: b.key });
+              }}
               aria-pressed={on}
               className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
                 on
@@ -297,6 +355,41 @@ export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRo
           </>
         )}
       </p>
+
+      <div className="mb-4">
+        <label htmlFor="rent-search" className="sr-only">
+          Search by city or neighbourhood
+        </label>
+        <input
+          id="rent-search"
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            sync({ q: e.target.value });
+          }}
+          placeholder="Search a city or neighbourhood — Brampton, Annex, Kanata…"
+          className="w-full max-w-md rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-cyan-600/50 focus:outline-none focus:ring-1 focus:ring-cyan-600/40"
+        />
+        {query.trim() && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {matching.length} match{matching.length === 1 ? "" : "es"} for &ldquo;{query.trim()}&rdquo;
+          </p>
+        )}
+      </div>
+
+      {thinCount > 0 && (
+        <label className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={showThin}
+            onChange={(e) => setShowThin(e.target.checked)}
+            className="h-3.5 w-3.5 accent-cyan-600"
+          />
+          Include {thinCount} neighbourhood{thinCount === 1 ? "" : "s"} with fewer than {THIN_SAMPLE}{" "}
+          leases (indicative only)
+        </label>
+      )}
 
       {shown.length === 0 ? (
         <p className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
