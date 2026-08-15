@@ -162,6 +162,19 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/admin/refresh-rent-market-stats.ts --apply
 
+      # Sold-vs-asking outcomes for the public /data/over-asking tracker (migration 120). Same
+      # shape as the rent job above: one server-side GROUPING SETS statement over raw_vow_sold
+      # sale rows, ~2s for the whole table, so the 10-minute bound is generous. Without this
+      # step the tracker would freeze at whatever the backfill wrote and go on serving it with
+      # a "updated nightly" stamp — the failure mode this codebase keeps rediscovering.
+      # Additive — must never break the sync.
+      - name: Refresh Sale Competition Stats
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/refresh-sale-competition-stats.ts --apply
+
       # Precompute base-scope market aggregates (cap rate, active/stale counts, 24mo sold
       # trend) for every curated market into market_summary (migration 048), so the
       # Submarket Leaderboard / Region Scorecard read ONE ready-made row instead of running

@@ -78,6 +78,24 @@ export const TRACKERS: TrackerDef[] = [
     status: "live",
   },
   {
+    // "Sold over asking" is the most-quoted phrase in Canadian housing coverage and nobody
+    // publishes the rate: TRREB publishes average price, sales and new listings; CREA a price
+    // index; WOWA and HouseSigma city-level supply/demand ratios. Redfin's "share sold above
+    // final list price" has been one of their most-cited series for years — this is the
+    // Ontario equivalent, at neighbourhood grain.
+    //
+    // Carries NO days-on-market measure by design: days-on-market above already owns
+    // speed-of-sale with relist-adjusted True DOM, and a second differently-scoped "how fast"
+    // figure would put two answers to one question on the same site (the #250 failure).
+    slug: "over-asking",
+    navLabel: "Over Asking",
+    title: "Sold Over Asking",
+    tagline:
+      "How often homes actually sell above the seller's asking price — and by how much — for every neighbourhood.",
+    eyebrow: "Bidding Pressure",
+    status: "live",
+  },
+  {
     // Distinct from rent-vs-buy, which is investor maths on yield. This one is rent PRICES:
     // what a lease actually closed at, by neighbourhood. Houses are the point — TRREB's
     // rental report covers condo apartments only, the rental portals carry asking rents
