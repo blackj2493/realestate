@@ -5,10 +5,21 @@
  * (migration 120): what happened to a home's price relative to the seller's final ask.
  *
  * WHY THIS TRACKER EXISTS: "sold over asking" is the most-quoted phrase in Canadian housing
- * coverage and nobody publishes the rate. TRREB publishes average price, sales and new
- * listings; CREA publishes a price index; WOWA and HouseSigma carry city-level supply/demand
- * ratios. Redfin has published "share sold above final list price" for years and it is one of
- * their most-cited series — this is the Ontario equivalent, at neighbourhood grain.
+ * coverage. TRREB publishes average price, sales and new listings; CREA publishes a price
+ * index; WOWA and HouseSigma carry city-level supply/demand ratios. Redfin has published
+ * "share sold above final list price" for years and it is one of their most-cited series.
+ *
+ * PRIOR ART — DO NOT CLAIM NOVELTY (this comment previously did, and it was wrong; the claim
+ * shipped in the #358 PR title and had to be corrected 2026-08-15). Wahi has published a GTA
+ * overbid/underbid report MONTHLY since July 2022 (297 neighbourhoods, min 5 sales), and it is
+ * routinely syndicated by the Globe, CP24, blogTO and NOW Toronto. Two real distinctions,
+ * which is what to say instead:
+ *   1. DIFFERENT STATISTIC. Wahi compares a neighbourhood's median list against its median
+ *      sold — an aggregate-of-aggregates yielding one directional label. We measure the share
+ *      of INDIVIDUAL sales closing above THEIR OWN ask. A neighbourhood can read "underbid" on
+ *      median-vs-median while a third of its homes still sold over, because medians hide spread.
+ *   2. COVERAGE. Wahi is GTA-only. We run province-wide, where most neighbourhoods have no
+ *      published figure at all — that is the part that survives a prior-art search.
  *
  * SCOPE IS DELIBERATELY NARROW. No days-on-market measure lives here: /data/days-on-market
  * already owns speed-of-sale with stitched relist-adjusted True DOM, and a second

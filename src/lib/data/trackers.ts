@@ -6,6 +6,29 @@
  * cards until then, and the sitemap only emits live routes. Keeping the full slate
  * here (even before each page exists) lets the hub advertise the whole vision from
  * day one while pages light up incrementally.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PRIOR-ART GATE — required before any tracker goes `status: "live"`.
+ *
+ * Search who already publishes the metric BEFORE writing the page, and record the
+ * answer in the tracker's comment below. This is not optional and it is not the
+ * same rule as the one in the outreach docs — that one guards pitches; this one
+ * guards what we tell the public.
+ *
+ * It exists because we broke it twice on 2026-08-14, in production:
+ *   - over-asking shipped claiming "nobody in Canada publishes the rate". Wahi had
+ *     published it monthly since July 2022.
+ *   - rents shipped claiming "no equivalent elsewhere". Door Insight publishes
+ *     Toronto house rents monthly.
+ * Both were corrected 2026-08-15. A reader who knows the prior art and sees us
+ * claim novelty stops trusting every other number on the site — which costs more
+ * than the metric is worth.
+ *
+ * Rule: never write "nobody publishes", "no other source", "the only", or "the
+ * first". State the DIFFERENCE instead — statistic, coverage, cadence, source —
+ * and name who else measures it. Naming the prior art is the credibility asset;
+ * claiming novelty is the liability.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 export type TrackerStatus = "live" | "soon";
 
@@ -78,11 +101,13 @@ export const TRACKERS: TrackerDef[] = [
     status: "live",
   },
   {
-    // "Sold over asking" is the most-quoted phrase in Canadian housing coverage and nobody
-    // publishes the rate: TRREB publishes average price, sales and new listings; CREA a price
-    // index; WOWA and HouseSigma city-level supply/demand ratios. Redfin's "share sold above
-    // final list price" has been one of their most-cited series for years — this is the
-    // Ontario equivalent, at neighbourhood grain.
+    // "Sold over asking" is the most-quoted phrase in Canadian housing coverage. Redfin's
+    // "share sold above final list price" has been one of their most-cited series for years.
+    //
+    // PRIOR ART: Wahi publishes a GTA overbid/underbid report monthly since Jul 2022 — do not
+    // claim novelty here. Ours differs on statistic (share of INDIVIDUAL sales beating their
+    // own ask, vs Wahi's median-list-against-median-sold) and on coverage (province-wide vs
+    // GTA-only). See competitionBoard.ts for the full note.
     //
     // Carries NO days-on-market measure by design: days-on-market above already owns
     // speed-of-sale with relist-adjusted True DOM, and a second differently-scoped "how fast"
@@ -99,8 +124,12 @@ export const TRACKERS: TrackerDef[] = [
     // Distinct from rent-vs-buy, which is investor maths on yield. This one is rent PRICES:
     // what a lease actually closed at, by neighbourhood. Houses are the point — TRREB's
     // rental report covers condo apartments only, the rental portals carry asking rents
-    // rather than signed ones, and CMHC covers purpose-built stock. Nobody publishes what a
-    // house rents for, which makes this the only tracker here with no equivalent elsewhere.
+    // rather than signed ones, and CMHC covers purpose-built stock.
+    //
+    // PRIOR ART: Door Insight publishes monthly Toronto house-vs-condo rents; LandLord has
+    // published closed-lease medians by property type. Do not claim "no equivalent exists".
+    // Ours differs on coverage (province-wide vs Toronto-only), source (closed MLS® leases)
+    // and grain (per-bedroom bands). See rentBoard.ts for the full note.
     slug: "rents",
     navLabel: "Rents",
     title: "What Homes Actually Rent For",

@@ -88,12 +88,17 @@ export default async function RentsPage() {
           <p>
             &ldquo;Houses&rdquo; means detached, semi-detached, townhouse, duplex and multiplex homes;
             &ldquo;Condos&rdquo; means condo apartments, condo townhouses and co-ops. The split matters:{" "}
-            <strong>
-              TRREB&apos;s quarterly rental report covers condo apartments only, so there is no published
-              figure anywhere for what a house rents for.
-            </strong>{" "}
-            CMHC covers purpose-built rental buildings, and the rental portals carry asking prices. This is
-            the gap those three leave.
+            <strong>TRREB&apos;s quarterly rental report covers condo apartments only</strong>, CMHC covers
+            purpose-built rental buildings, and the rental portals carry asking prices rather than signed
+            ones.
+          </p>
+          <p>
+            <strong>Who else publishes house rents.</strong> Door Insight publishes monthly Toronto rents
+            split by house and condo, and LandLord has published closed-lease medians by property type. So
+            a house figure for Toronto does exist elsewhere, and we would rather say so than let you find
+            out afterwards. What is different here is the coverage and the source: <em>closed MLS® lease
+            prices</em> across Ontario — not only Toronto — at neighbourhood grain, rebuilt nightly, with
+            the per-bedroom bands published rather than a single blended figure.
           </p>
           <p>
             Two honest limits. Our feed is a large subset of the Ontario market rather than all of it, so

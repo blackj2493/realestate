@@ -98,6 +98,16 @@ export default async function OverAskingPage() {
             ratio.
           </p>
           <p>
+            <strong>Who else measures this.</strong> Wahi has published a GTA overbid/underbid report
+            monthly since 2022, and it is the established source for the question in the Toronto area. It
+            works differently: it compares a neighbourhood&apos;s <em>median list price</em> against its{" "}
+            <em>median sold price</em> to label the neighbourhood overbid or underbid. This page measures
+            the share of <em>individual</em> homes that closed above <em>their own</em> ask. The two can
+            disagree honestly — a neighbourhood whose medians sit below asking can still have a third of
+            its homes selling over, because a median hides the spread. Ours also runs province-wide rather
+            than GTA-only, which is where most of these neighbourhoods have no published figure at all.
+          </p>
+          <p>
             Two honest limits. Our feed is a large subset of the Ontario market rather than all of it, so
             we publish shares and medians — never counts of how many homes sold. And this page carries no
             days-on-market figure by design: <strong>speed of sale is covered on its own tracker</strong>{" "}
