@@ -87,25 +87,40 @@ function displayArea(area: string, city: string): string {
 
 const isBand = (v: string): v is BedBand => ["1", "2", "3", "4", "ALL"].includes(v);
 
+/** PostgREST hard-caps a single response at 1000 rows — must paginate. */
+const PAGE = 1000;
+
 async function computeRentBoard(): Promise<RentBoard> {
   const sb = getServiceRoleClient();
-  const { data, error } = await sb
-    .from("rent_market_stats")
-    .select(
-      "city, area, property_group, bedrooms_band, median_rent, p25_rent, p75_rent, " +
-        "median_bedrooms, yoy_pct, sample_count, prior_sample, computed_at"
-    )
-    .order("median_rent", { ascending: false });
-  if (error || !data) return { rows: [], summary: [], dataAsOf: null };
+
+  // PAGINATED, and it is not optional. The table holds ~4,900 cells; a single unpaginated
+  // select silently returned the first 1000 ordered by median_rent, i.e. ONLY the most
+  // expensive fifth of Ontario. The page rendered a headline strip that was mostly dashes
+  // (8 of 10 province rows fell outside the cap) over a table that opened on $9,650 Rosedale
+  // houses, with everything under $3,100 invisible. Nothing errored. Ordering by a stable
+  // key rather than median_rent so pages cannot overlap or skip if two rows tie.
+  const data: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await sb
+      .from("rent_market_stats")
+      .select(
+        "city, area, property_group, bedrooms_band, median_rent, p25_rent, p75_rent, " +
+          "median_bedrooms, yoy_pct, sample_count, prior_sample, computed_at"
+      )
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) return { rows: [], summary: [], dataAsOf: null };
+    if (!page || page.length === 0) break;
+    data.push(...(page as unknown as Record<string, unknown>[]));
+    if (page.length < PAGE) break;
+  }
+  if (data.length === 0) return { rows: [], summary: [], dataAsOf: null };
 
   let newest: string | null = null;
   const rows: RentRow[] = [];
   const summary: RentRow[] = [];
 
-  // Double cast, deliberately: rent_market_stats (migration 119) is not in the generated
-  // Supabase types, so supabase-js falls back to GenericStringError[] and refuses the direct
-  // assertion. Every field is re-validated through num()/String() below regardless.
-  for (const r of data as unknown as Record<string, unknown>[]) {
+  for (const r of data) {
     const medianRent = num(r.median_rent);
     const group = String(r.property_group ?? "");
     const band = String(r.bedrooms_band ?? "");

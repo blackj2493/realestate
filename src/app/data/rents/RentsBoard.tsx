@@ -231,10 +231,23 @@ export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRo
   // family rental and the size people picture when they ask what a house costs.
   const [group, setGroup] = useState<RentGroup>("House");
   const [band, setBand] = useState<BedBand>("3");
+  // Thin rows are EXCLUDED from the default ranking, not merely marked. A five-lease median
+  // outranking a fifty-lease one purely because it is expensive makes the whole table read
+  // as unreliable — Rockcliffe (×5) and Niagara (×9) were sitting above neighbourhoods with
+  // ten times the evidence. They stay one click away so small towns are never erased.
+  const [showThin, setShowThin] = useState(false);
 
-  const shown = useMemo(
+  const matching = useMemo(
     () => rows.filter((r) => r.group === group && r.beds === band),
     [rows, group, band]
+  );
+  const thinCount = useMemo(
+    () => matching.filter((r) => r.sampleCount < THIN_SAMPLE).length,
+    [matching]
+  );
+  const shown = useMemo(
+    () => (showThin ? matching : matching.filter((r) => r.sampleCount >= THIN_SAMPLE)),
+    [matching, showThin]
   );
   const activeGroup = GROUPS.find((g) => g.key === group)!;
 
@@ -297,6 +310,19 @@ export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRo
           </>
         )}
       </p>
+
+      {thinCount > 0 && (
+        <label className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={showThin}
+            onChange={(e) => setShowThin(e.target.checked)}
+            className="h-3.5 w-3.5 accent-cyan-600"
+          />
+          Include {thinCount} neighbourhood{thinCount === 1 ? "" : "s"} with fewer than {THIN_SAMPLE}{" "}
+          leases (indicative only)
+        </label>
+      )}
 
       {shown.length === 0 ? (
         <p className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
