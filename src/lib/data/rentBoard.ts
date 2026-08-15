@@ -20,7 +20,12 @@
  */
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
+import { cleanAreaName, displayArea, displayCity } from "@/lib/data/areaNames";
+
+// Re-exported because the over-asking tracker shares these helpers and both boards must
+// render the same TRREB taxonomy identically. rentBoard.test.ts imports cleanAreaName from
+// here, and that entry point stays valid.
+export { cleanAreaName };
 
 export type RentGroup = "House" | "Condo";
 /** '1' | '2' | '3' | '4' (4 = 4 or more) | 'ALL'. */
@@ -66,47 +71,6 @@ const num = (v: unknown): number | null => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
-
-/**
- * TRREB stores Toronto as district codes ("Toronto C02"), meaningless to a public reader.
- * Round-trip through the canonical hub-slug helpers so districts consolidate to their
- * municipality using the same rules as the hub tree, not a second copy of that regex.
- */
-function displayCity(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "";
-  const slug = cityHubSlug(trimmed);
-  return slug ? deslugCity(slug) : trimmed;
-}
-
-/**
- * Make a TRREB area name readable.
- *
- * 308 of 1,033 distinct areas carry an MLS district code the feed never strips, in two
- * shapes: "057 - Smithville", and Oakville/Ottawa's "1011 - MO Morrison" where a two-letter
- * district abbreviation follows the number. Neither means anything to a renter or a
- * reporter, and "1011 - MO Morrison" in a published table looks like a database leak.
- *
- * The two-letter strip is applied ONLY when a numeric prefix was present — that is what
- * marks the name as coded. Doing it unconditionally would eat the opening word of any
- * legitimately capitalised name.
- *
- * Verified against the full distinct set: nothing strips to empty, and the shortest results
- * (Carp, Glebe, Perth, Finch, Ascot, Town) are real neighbourhood names, not fragments.
- */
-export function cleanAreaName(raw: string): string {
-  const a = raw.trim();
-  const withoutCode = a.replace(/^\d{3,4}\s*-\s*/, "");
-  if (withoutCode === a) return a;
-  const withoutAbbrev = withoutCode.replace(/^[A-Z]{2}\s+(?=\S)/, "");
-  return withoutAbbrev || withoutCode || a;
-}
-
-/** Waterloo Region and Brantford arrive with no CityRegion; the city IS the area there. */
-function displayArea(area: string, city: string): string {
-  const a = cleanAreaName(area);
-  return a || `${city} (all areas)`;
-}
 
 const isBand = (v: string): v is BedBand => ["1", "2", "3", "4", "ALL"].includes(v);
 
