@@ -3,12 +3,18 @@
  * header (eyebrow / h1 / description / embed control / data-as-of stamp), the tracker
  * body, an optional methodology disclosure, an optional FAQ (with FAQPage schema), and
  * the mandatory IDX compliance notice. Server component — pages own generateMetadata.
+ *
+ * Findings that read from this tracker are linked automatically from the registry, so
+ * a new piece wires itself into its tracker with no page edit. The pairing is the
+ * point: the tracker is the current number, the finding is what it meant on a date,
+ * and each is worth much less to a reader who cannot reach the other.
  */
 import Link from "next/link";
 import type { ReactNode } from "react";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import HubFaq, { type Faq } from "@/components/seo/HubFaq";
 import { EmbedBar } from "@/components/data/EmbedBar";
+import { findingsForTracker } from "@/lib/data/findings";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -40,6 +46,7 @@ export function TrackerShell({
 }) {
   const canonical = `${SITE_URL}/data/${slug}`;
   const embedUrl = `${SITE_URL}/embed/${slug}`;
+  const relatedFindings = findingsForTracker(slug);
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -95,6 +102,27 @@ export function TrackerShell({
             <summary className="cursor-pointer font-semibold text-foreground">How this is calculated</summary>
             <div className="mt-3 space-y-2 leading-relaxed">{methodology}</div>
           </details>
+        )}
+
+        {relatedFindings.length > 0 && (
+          <section className="mt-8 rounded-md border border-border bg-card/40 p-5">
+            <p className="terminal-font text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-400">
+              {relatedFindings.length === 1 ? "Analysis from this data" : "Analyses from this data"}
+            </p>
+            <ul className="mt-3 space-y-3">
+              {relatedFindings.map((f) => (
+                <li key={f.slug}>
+                  <Link
+                    href={`/data/findings/${f.slug}`}
+                    className="font-semibold text-cyan-700 underline underline-offset-2 dark:text-cyan-400"
+                  >
+                    {f.title}
+                  </Link>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{f.standfirst}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {faqs && faqs.length > 0 && <HubFaq faqs={faqs} />}

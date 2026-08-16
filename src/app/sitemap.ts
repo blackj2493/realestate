@@ -6,6 +6,7 @@ import {
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
+import { LIVE_FINDINGS } from "@/lib/data/findings";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -113,6 +114,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...LIVE_TRACKERS.map((t) => ({
       url: `${SITE_URL}/data/${t.slug}`,
       changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+    // Findings: dated analysis built on the trackers. lastModified is the piece's own
+    // date rather than "now" — a finding is a snapshot and claiming daily freshness on
+    // static analysis is the kind of thing that gets a sitemap discounted.
+    { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },
+    ...LIVE_FINDINGS.map((f) => ({
+      url: `${SITE_URL}/data/findings/${f.slug}`,
+      lastModified: new Date(`${f.updated ?? f.published}T12:00:00Z`),
+      changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
   ];
