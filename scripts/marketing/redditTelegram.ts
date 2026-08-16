@@ -153,8 +153,24 @@ export async function sendTelegramDigest(
   const errors: string[] = [];
   let sent = 0;
 
-  for (const item of items) {
-    const { note, compliance, warmup } = policyFor(item.subreddit);
+  for (const original of items) {
+    const { note, compliance, warmup } = policyFor(original.subreddit);
+
+    // Belt and braces: the header claims warmup, so the body must actually BE
+    // product-free. A mismatch shipped once — alerts labelled "warmup mode, no
+    // brand or link" carrying the promotional template, because tsx served a
+    // stale transpile of the module that picks the draft. The failure is silent
+    // and expensive, since it invites posting promo from an account with no
+    // standing. Cheaper to check here than to trust the layer above.
+    let item = original;
+    if ((warmup ?? true) && /pureproperty|https?:\/\//i.test(item.draftPersonal)) {
+      errors.push(`${item.id}: draft labelled warmup but contains brand/link — suppressed`);
+      item = {
+        ...item,
+        draftPersonal: '[draft suppressed — promotional text reached warmup mode. Write this one yourself.]',
+      };
+    }
+
     const r = await post('sendMessage', {
       chat_id: chatId,
       text: renderTelegramMessage(item, now, note, compliance, warmup ?? true),

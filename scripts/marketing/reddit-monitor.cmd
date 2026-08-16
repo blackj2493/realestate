@@ -26,6 +26,13 @@ for %%F in ("%LOG%") do if %%~zF GTR 5000000 move /y "%LOG%" "%LOG%.1" >nul 2>&1
 echo. >> "%LOG%"
 echo ===================== %DATE% %TIME% ===================== >> "%LOG%"
 
+REM Disable tsx's transpile cache. It went stale once on redditMonitorCore.ts
+REM while the sibling modules reloaded, which shipped alerts whose header said
+REM "warmup mode, no brand or link" above a draft that named the site. A few
+REM hundred ms per run is nothing against sending promo from an account with no
+REM standing.
+set TSX_DISABLE_CACHE=1
+
 REM Call the local tsx binary rather than npx: npx re-resolves the package on
 REM every run, which is slow and needs the network for no reason.
 call "%REPO%\node_modules\.bin\tsx.cmd" scripts\marketing\redditMonitor.ts --apply >> "%LOG%" 2>&1
