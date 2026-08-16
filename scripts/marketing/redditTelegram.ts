@@ -11,11 +11,14 @@
  * find which link went with which thread, and Telegram caps a message at 4096
  * characters anyway.
  *
- * THE DRAFTS ARE FRAGMENTS ON PURPOSE. They are prompts for what to say, not text
- * to paste. Reddit readers spot generated prose easily now, and being caught
- * posting it as a business costs more than the minutes it saves. The value here is
- * that the thread was found and the number is already to hand — the sentence
- * should still be yours.
+ * THE DRAFT IS A STARTING POINT, NOT A SCRIPT. Change a few words before posting.
+ * Reddit readers spot generated prose easily now, and being caught posting it as a
+ * business costs more than the minutes it saves.
+ *
+ * The header states which mode produced the draft, because that is the difference
+ * between a comment that earns standing and one that spends standing you have not
+ * built yet. In warmup the draft names nothing and links nothing; outside it the
+ * header is flagged so a promotional draft can never be posted by reflex.
  *
  * Env: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (from @BotFather; the chat id only
  * exists once you have messaged the bot, since bots cannot open a conversation).
@@ -59,6 +62,7 @@ export function renderTelegramMessage(
   now: Date,
   policyNote: string,
   compliance?: string,
+  warmup = true,
 ): string {
   const lines: string[] = [];
 
@@ -90,7 +94,11 @@ export function renderTelegramMessage(
   }
 
   lines.push('');
-  lines.push('<b>Draft reply</b> (tap to copy, then change a few words):');
+  lines.push(
+    warmup
+      ? '<b>Draft reply</b> — warmup mode, no brand or link. Tap to copy, then change a few words:'
+      : '<b>Draft reply</b> ⚑ NAMES THE SITE — only send this if the sub and your history there both allow it:',
+  );
   // <pre> renders as a tap-to-copy block in Telegram clients, which is the whole
   // point — the draft has to be one tap from the reply box or this gets skipped.
   lines.push(`<pre>${esc(truncate(item.draftPersonal, MAX_DRAFT))}</pre>`);
@@ -134,17 +142,22 @@ export async function sendTelegramDigest(
   items: ScoredItem[],
   overflow: number,
   now: Date,
-  policyFor: (subreddit: string) => { policy: string; note: string; compliance?: string },
+  policyFor: (subreddit: string) => {
+    policy: string;
+    note: string;
+    compliance?: string;
+    warmup?: boolean;
+  },
 ): Promise<{ sent: number; errors: string[] }> {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   const errors: string[] = [];
   let sent = 0;
 
   for (const item of items) {
-    const { note, compliance } = policyFor(item.subreddit);
+    const { note, compliance, warmup } = policyFor(item.subreddit);
     const r = await post('sendMessage', {
       chat_id: chatId,
-      text: renderTelegramMessage(item, now, note, compliance),
+      text: renderTelegramMessage(item, now, note, compliance, warmup ?? true),
       parse_mode: 'HTML',
       // The preview would push the actionable text off the first screen.
       link_preview_options: { is_disabled: true },

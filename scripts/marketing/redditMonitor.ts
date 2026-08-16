@@ -40,6 +40,7 @@ import {
   SEARCHES,
   SUBREDDITS,
   TEMPLATES,
+  WARMUP_MODE,
   type SubredditConfig,
 } from './redditMonitorConfig';
 import {
@@ -224,10 +225,21 @@ async function fetchFeedRss(feed: Feed): Promise<RedditItem[]> {
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function policyFor(subreddit: string): { policy: string; note: string; compliance?: string } {
+function policyFor(subreddit: string): {
+  policy: string;
+  note: string;
+  compliance?: string;
+  warmup: boolean;
+} {
   const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === subreddit.toLowerCase());
-  if (cfg) return { policy: cfg.policy, note: cfg.note, compliance: cfg.compliance };
-  return { policy: 'careful', note: 'Unlisted sub — read its rules on self-promotion before posting.' };
+  // Mirrors pickPersonalDraft: warmup is on globally, or forced by a no-links sub.
+  const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
+  if (cfg) return { policy: cfg.policy, note: cfg.note, compliance: cfg.compliance, warmup };
+  return {
+    policy: 'careful',
+    note: 'Unlisted sub — read its rules on self-promotion before posting.',
+    warmup,
+  };
 }
 
 function draftBox(label: string, text: string): string {

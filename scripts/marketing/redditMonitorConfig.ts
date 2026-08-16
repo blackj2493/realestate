@@ -270,9 +270,29 @@ export const ONTARIO_PLACES = [
  *   - No sign-off.
  *   - Disclosure last, in parentheses, casual. Never omit it.
  */
+/**
+ * WARMUP MODE — the default, and the only mode that should be on right now.
+ *
+ * Every draft below other than `warmupVariants` names the product. That is wrong
+ * for a new account and wrong for the first weeks of an old one: Reddit's
+ * tolerance for self-promotion tracks your visible history in THAT community, not
+ * your account age. A useful comment with no link buys standing. The same comment
+ * with a link, from someone nobody recognises, spends standing you have not earned
+ * yet.
+ *
+ * So while this is true the monitor ships the product-free draft: answer the
+ * question, no brand, no link, no disclosure — because there is nothing to
+ * disclose when you are not promoting anything. It is also forced on regardless
+ * for any sub whose policy is `no-links`.
+ *
+ * Flip it with REDDIT_WARMUP=false once an account has real history in the subs it
+ * posts to. Weeks, not days.
+ */
+export const WARMUP_MODE = (process.env.REDDIT_WARMUP ?? 'true').toLowerCase() !== 'false';
+
 export const TEMPLATES: Record<
   string,
-  { personal: string; company: string; personalVariants?: string[] }
+  { personal: string; company: string; personalVariants?: string[]; warmupVariants?: string[] }
 > = {
   brand_watch: {
     personal:
@@ -301,6 +321,17 @@ export const TEMPLATES: Record<
         'sites never do. HouseSigma works fine. pureproperty.ca is what i use, it keeps the relist and termination history ' +
         'attached so you can see the full campaign instead of just the ending.\n\n(fwiw i work on pureproperty)',
     ],
+    warmupVariants: [
+      "realtor.ca won't show you solds and never will. that's a CREA rule, not the site being useless. you need what's " +
+        'called a VOW site, which just means registering a free account somewhere. HouseSigma is the one most people end ' +
+        'up on.',
+      "sold prices in ontario aren't public the way they are in the states, they sit behind a registration wall by design. " +
+        'any VOW site gets you past it with a free account. worth looking at whether the place was relisted before it sold ' +
+        'though, that usually tells you more than the final number does.',
+      'you need to register somewhere to see them, there\'s no way around that in ontario. once you can, the thing i\'d ' +
+        'actually pay attention to is the listing history rather than the sale price. a place that "sold in 5 days" on its ' +
+        'third campaign is a very different story to one that sold in 5 days flat.',
+    ],
     company:
       "Founder of pureproperty.ca here — we're a VOW site like HouseSigma, so with a free account you get sold prices plus the " +
       "full campaign history for {{city}}: relists, terminations, true days-on-market. If you look something up and the history " +
@@ -325,6 +356,17 @@ export const TEMPLATES: Record<
         "just how the board rules work. i use pureproperty.ca, HouseSigma is the more popular answer and it's a fine " +
         'one.\n\n(i work on pureproperty, flagging that upfront)',
     ],
+    warmupVariants: [
+      "depends what you're actually doing. realtor.ca is fine if you just want to see what's listed right now. anything " +
+        'involving sold prices means registering with a VOW site, HouseSigma being the obvious one. rentals are still ' +
+        'mostly facebook marketplace and patience, nobody has fixed that yet.',
+      "browsing actives, realtor.ca. sold history, you'll need to sign up somewhere since the boards don't let that out " +
+        "publicly. beyond that it depends whether you care more about the app being good or about seeing the full listing " +
+        'history, because the tools split fairly cleanly on that.',
+      "honestly for most people realtor.ca plus one VOW account covers it. the paid tools are aimed at agents and you " +
+        "probably don't need them. the one thing worth having is something that shows you a listing's history rather than " +
+        'just its current state.',
+    ],
     company:
       "Founder of pureproperty.ca — adding it as an option since this is exactly what we built it for: sold prices, full listing " +
       "history, days-on-market and neighbourhood stats for Ontario, free account. There's also a public /data page with live market " +
@@ -348,6 +390,14 @@ export const TEMPLATES: Record<
         "people get wrong here is comparing to last month rather than the same month last year, which in a seasonal market " +
         'makes almost everything look like a crash or a boom.\n\n(i build pureproperty, flagging that)',
     ],
+    warmupVariants: [
+      '[LOOK UP THE CURRENT {{city}} FIGURE AND LEAD WITH IT. No link, no site name.] worth comparing that to the same ' +
+        'month last year rather than to last month, seasonality makes month-over-month look far more dramatic than it is.',
+      "[PUT THE LIVE {{city}} NUMBER HERE. Number only, no source, no link.] i'd be careful reading much into any single " +
+        'month either way. the direction over a quarter is the part that tends to hold up.',
+      "[STATE THE CURRENT {{city}} FIGURE. No link.] the number people usually quote for this is a few months stale by " +
+        "the time it's circulating, which is most of why these threads go in circles.",
+    ],
     company:
       "We publish free public trackers for exactly this — pureproperty.ca/data has price cuts, days-on-market, inventory and " +
       "sell-through for {{city}}, updated nightly, no login. [Paste the relevant current number into the reply.] Founder here — " +
@@ -359,6 +409,15 @@ export const TEMPLATES: Record<
       "last 3–4 sales of comparable places near you (same type, similar size) and price against those. Any VOW site shows them free — " +
       "HouseSigma or pureproperty.ca (the latter also shows each comp's listing history, so you can spot which 'comps' were actually " +
       "relisted three times). Treat any single algorithmic estimate as ±5–10%, including theirs.",
+    warmupVariants: [
+      'ignore the MPAC assessment, it lags the market by years and exists for tax purposes rather than pricing. pull the ' +
+        'last three or four sales of genuinely comparable places near you and price against those instead.',
+      "any automated estimate is give or take 5-10% at the individual house level, including the good ones. they're a " +
+        'starting point, the comparable sales are the actual answer. and check whether your "comps" were relisted, because ' +
+        'a place on its third campaign is not comparable to one that sold first time.',
+      "the honest answer is nobody can tell you within 5% from a listing description. what moves the number most is " +
+        'condition and layout, and neither shows up in the data any model is using.',
+    ],
     company:
       "Founder of pureproperty.ca — a free account gets you the recent comparable solds around {{city}} plus each one's full " +
       "listing history, and our estimate alongside them. Honest caveat: no AVM should be trusted alone at the individual-house " +
@@ -371,6 +430,17 @@ export const TEMPLATES: Record<
       "numbers, not the listing agent's) and area-level rental yield data — free account. For {{city}} the useful first look is " +
       "yield by area and property type; it tells you immediately which segments even *can* cash-flow at today's rates before you " +
       "waste evenings on individual listings.",
+    warmupVariants: [
+      "the part people underrate is what you give up. buying the rental first costs you the first-time buyer stuff on the " +
+        "place you eventually live in, and the principal residence exemption is worth more over time than most spreadsheets " +
+        'admit. separate question from whether the rental itself is any good.',
+      "at current rates very little cash flows in southern ontario unless you're putting down a lot more than 20%, so the " +
+        'answer changes completely depending on your down payment. worth running it on a specific listing you would actually ' +
+        'buy rather than deciding it in the abstract.',
+      "depends whether you're optimising for cash flow or for getting on the ladder, and those pull in opposite directions " +
+        "right now. also worth checking what your lender does to your borrowing room once you carry a rental, it's usually " +
+        'less friendly than people expect.',
+    ],
     company:
       "Founder of pureproperty.ca here — we built an investor lens for exactly this: open any Ontario listing, flip to investor " +
       "mode, and you get cap rate and cash-flow with your own rate/down-payment assumptions, plus area rental-yield benchmarks. " +
@@ -382,6 +452,16 @@ export const TEMPLATES: Record<
       "pureproperty.ca (free account) shows fee stats and an annualized fee-trend per building, so a building whose fees are " +
       "climbing way faster than the area average shows up before it becomes your problem. None of that replaces reading the " +
       "status certificate — reserve fund study especially.",
+    warmupVariants: [
+      "look at how the fees have moved, not just what they are today. a low fee in a building that has been raising it 8% " +
+        'a year is worse than a higher one that has been flat. the status certificate is where the real answer is, ' +
+        'reserve fund study especially.',
+      "cheap fees are not automatically good news. underfunded reserves show up eventually as a special assessment, and " +
+        "that's the bill nobody budgets for. read the reserve fund study before you get attached to the unit.",
+      "fee per square foot is the comparison you want, since a $600 fee on 1200sqft and on 600sqft are completely " +
+        'different situations. and get the status certificate reviewed properly, it is the cheapest money you will spend ' +
+        'on the whole purchase.',
+    ],
     company:
       "Founder of pureproperty.ca — we track condo fee levels and the per-building fee *trend* (annualized, so one-off jumps " +
       "don't fake a trend) across Ontario. Free account. It's a screen, not a substitute for the status certificate — but it " +

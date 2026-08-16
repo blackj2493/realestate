@@ -13,6 +13,7 @@ import {
   ONTARIO_PLACES,
   SCORE_THRESHOLD,
   TEMPLATES,
+  WARMUP_MODE,
   type SubredditConfig,
 } from './redditMonitorConfig';
 
@@ -74,7 +75,12 @@ export function isExcludedTitle(title: string): boolean {
  * place or mention a competitor/our brand; we can't help a Calgary thread and
  * alerting on one trains the operator to ignore the digest.
  */
-export function scoreItem(item: RedditItem, sub: Pick<SubredditConfig, 'geoImplied'>): ScoredItem | null {
+// `policy` is optional so existing callers/tests passing only `geoImplied` keep
+// working; absent policy simply means the no-links override can't fire.
+export function scoreItem(
+  item: RedditItem,
+  sub: Pick<SubredditConfig, 'geoImplied'> & Partial<Pick<SubredditConfig, 'policy'>>,
+): ScoredItem | null {
   const text = `${item.title}\n${item.body}`;
   const city = detectCity(text);
 
@@ -111,9 +117,39 @@ export function scoreItem(item: RedditItem, sub: Pick<SubredditConfig, 'geoImpli
     score,
     triggers: [...new Set(triggers)],
     city,
-    draftPersonal: fillTemplate(pickVariant(tpl.personalVariants, tpl.personal, item.id), city),
+    draftPersonal: fillTemplate(pickPersonalDraft(tpl, item.id, sub), city),
     draftCompany: fillTemplate(tpl.company, city),
   };
+}
+
+/**
+ * Choose the product-free draft or the promotional one.
+ *
+ * Warmup wins whenever it is on, and a `no-links` sub forces it regardless —
+ * PersonalFinanceCanada removes self-promotion on sight, so there is no version of
+ * this where naming the site there is a judgement call.
+ *
+ * Falls back through warmup → personal variants → the plain template, so a
+ * category with no warmup phrasing written yet still produces something rather
+ * than an empty draft. When that fallback fires the alert is still promotional,
+ * which is why the Telegram message states the mode it used.
+ */
+export function pickPersonalDraft(
+  tpl: { personal: string; personalVariants?: string[]; warmupVariants?: string[] },
+  seed: string,
+  sub: (Partial<Pick<SubredditConfig, 'policy'>> | undefined),
+): string {
+  const forceWarmup = WARMUP_MODE || sub?.policy === 'no-links';
+  if (forceWarmup && tpl.warmupVariants?.length) return pickVariant(tpl.warmupVariants, tpl.personal, seed);
+  return pickVariant(tpl.personalVariants, tpl.personal, seed);
+}
+
+/** True when the draft shipped for this sub is the product-free one. */
+export function isWarmupDraft(
+  tpl: { warmupVariants?: string[] },
+  sub: (Partial<Pick<SubredditConfig, 'policy'>> | undefined),
+): boolean {
+  return Boolean((WARMUP_MODE || sub?.policy === 'no-links') && tpl.warmupVariants?.length);
 }
 
 /**

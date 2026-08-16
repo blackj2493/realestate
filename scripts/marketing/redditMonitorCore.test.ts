@@ -10,6 +10,7 @@ import {
   stripHtml,
   type RedditItem,
 } from './redditMonitorCore';
+import { TEMPLATES } from './redditMonitorConfig';
 
 const base = (over: Partial<RedditItem>): RedditItem => ({
   id: 't3_test1',
@@ -35,7 +36,10 @@ describe('scoreItem', () => {
     expect(hit).not.toBeNull();
     expect(hit!.category).toBe('sold_data');
     expect(hit!.score).toBeGreaterThanOrEqual(4);
-    expect(hit!.draftPersonal).toContain('pureproperty.ca');
+    // In warmup (the default) the personal draft must NOT name the site — the
+    // company draft is where the brand lives until an account has real history.
+    expect(hit!.draftPersonal).not.toContain('pureproperty');
+    expect(hit!.draftCompany).toContain('pureproperty.ca');
   });
 
   it('drops geography-less matches in Canada-wide subs, keeps them once a city appears', () => {
@@ -153,5 +157,51 @@ describe('stripHtml / ageHours', () => {
     const now = new Date('2026-07-21T03:00:00Z');
     expect(ageHours(base({ createdUtc: new Date('2026-07-21T01:30:00Z') }), now)).toBe(1);
     expect(ageHours(base({ createdUtc: new Date('2026-07-21T04:00:00Z') }), now)).toBe(0);
+  });
+});
+
+describe('warmup mode', () => {
+  /**
+   * The contract that matters most operationally: while warmup is on, nothing the
+   * monitor hands you may name the site or carry a link. Getting this wrong means
+   * posting promo from an account with no standing, which is the one mistake that
+   * is expensive to undo — a filtered account or a burned sub.
+   *
+   * Guards every category with warmup phrasing, so adding a new one without a
+   * product-free version fails here rather than on Reddit.
+   */
+  const PROMO = /pureproperty|https?:\/\//i;
+
+  it('no warmup draft names the site or carries a link', () => {
+    const offenders: string[] = [];
+    for (const [cat, tpl] of Object.entries(TEMPLATES)) {
+      for (const [i, v] of (tpl.warmupVariants ?? []).entries()) {
+        if (PROMO.test(v)) offenders.push(`${cat}[${i}]`);
+      }
+    }
+    expect(offenders, `warmup drafts must be product-free: ${offenders.join(', ')}`).toEqual([]);
+  });
+
+  it('ships the product-free draft for a normal sub while warmup is on', () => {
+    const hit = scoreItem(
+      base({ title: 'Where can I see what places sold for?', body: 'Toronto, realtor.ca only shows asking.' }),
+      { geoImplied: true, policy: 'careful' },
+    );
+    expect(hit).not.toBeNull();
+    expect(PROMO.test(hit!.draftPersonal)).toBe(false);
+  });
+
+  it('picks a stable draft per thread but different drafts across threads', () => {
+    const q = { title: 'How do I see sold prices?', body: 'Toronto condo.' };
+    const a1 = scoreItem(base({ ...q, id: 't3_aaa' }), GEO)!.draftPersonal;
+    const a2 = scoreItem(base({ ...q, id: 't3_aaa' }), GEO)!.draftPersonal;
+    expect(a1).toBe(a2); // same thread never changes under you
+
+    const drafts = new Set(
+      ['t3_a', 't3_b', 't3_c', 't3_d', 't3_e', 't3_f'].map(
+        (id) => scoreItem(base({ ...q, id }), GEO)!.draftPersonal,
+      ),
+    );
+    expect(drafts.size).toBeGreaterThan(1); // not one template for every thread
   });
 });
