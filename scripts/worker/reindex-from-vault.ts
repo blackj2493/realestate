@@ -245,6 +245,14 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
       doc.TotalPriceDrop = (raw.total_price_drop ?? doc.TotalPriceDrop ?? 0);
       doc.PropertyHash = record.property_hash || doc.PropertyHash || '';
       doc.TrueDom = (raw.true_dom ?? doc.TrueDom ?? 0);
+      // Rental-native LEASE-track twins (persisted into full_payload by sync.ts). Default
+      // 0 for sale listings / rows synced before migration 107.
+      doc.LeaseTrueDom = (raw.lease_true_dom ?? 0);
+      doc.LeaseTotalPriceDrop = (raw.lease_total_price_drop ?? 0);
+      // Prefer the vault's stored is_stale (60d, stitched — same source as TrueDom above);
+      // fall back to deriving it from TrueDom so it can never be the transformer's naive
+      // basicDOM>90 placeholder (BUG A: TrueDom and IsStale must agree on the same doc).
+      doc.IsStale = (raw.is_stale ?? (Number(doc.TrueDom) > 60));
 
       documents.push(doc);
     } catch (err) {

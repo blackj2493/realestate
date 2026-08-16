@@ -17,6 +17,9 @@
     "demo:fixture": "tsx scripts/demos/make-fixture.ts",
     "smoke:mobile": "tsx scripts/admin/mobileSmoke.ts"
   },
+  "overrides": {
+    "esbuild": "^0.28.2"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
     "@deck.gl/aggregation-layers": "^9.3.2",
@@ -49,11 +52,11 @@
     "react-map-gl": "^8.1.1",
     "recharts": "^2.12.7",
     "resend": "^6.12.3",
+    "sharp": "^0.35.3",
     "supercluster": "^8.0.1",
     "tailwind-merge": "^2.3.0",
     "tsx": "^4.21.0",
     "typesense": "^3.0.6",
-    "xlsx": "^0.18.5",
     "zod": "^3.23.8",
     "zustand": "^5.0.13"
   },
@@ -74,6 +77,7 @@
     "tailwindcss": "^3.4.19",
     "ts-node": "^10.9.2",
     "typescript": "5.9.3",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "xlsx": "^0.18.5"
   }
 }

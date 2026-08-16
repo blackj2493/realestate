@@ -20,10 +20,21 @@ import { getSoldPublicByAddress } from "@/lib/sold/soldByKey";
 import { parseAddress, addressesMatch } from "@/lib/watchlist/disposition";
 import { slugify, deslugCity } from "@/lib/listings/listingPath";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
+import { slugToStreetText } from "./addressSlug";
 
 export interface AddressProfile {
-  /** Display address, e.g. "142 Maplewood Avenue". */
+  /** Display address, e.g. "142 Maplewood Avenue". Never carries the unit — see `unit`. */
   address: string;
+  /**
+   * Unit from the requested slug ("86" for /address/on/mississauga/86-2945-thomas-street);
+   * null for a freehold address.
+   *
+   * Carried separately because the geocoder cannot: Mapbox resolves a unit address to the
+   * BUILDING and returns "2945 Thomas Street", silently dropping the unit. Anything that
+   * then matched on `address` alone was really matching the whole condo block, so the
+   * subject's own sale record could come from any unit in it.
+   */
+  unit: string | null;
   city: string;
   cityRegion: string | null;
   postal: string | null;
@@ -38,10 +49,8 @@ export type AddressResolution =
   | { kind: "profile"; profile: AddressProfile }
   | null;
 
-/** "142-maplewood-avenue" → "142 maplewood avenue" (lowercase working text). */
-function slugToStreetText(slug: string): string {
-  return decodeURIComponent(slug).replace(/-/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-}
+// slugToStreetText lives in ./addressSlug — pure, so it can be unit-tested without
+// dragging this module's server-only imports into the test environment.
 
 /** Title-case a street string for display ("142 maplewood avenue" → "142 Maplewood Avenue"). */
 function titleCase(s: string): string {
@@ -93,7 +102,7 @@ interface GeocodeHit {
  * persistent storage of geocode results). Accepts ONLY rooftop address features (the
  * feature must carry a civic number); a city/street-level match is not a profile.
  */
-const geocodeCached = unstable_cache(
+export const geocodeCached = unstable_cache(
   async (query: string): Promise<GeocodeHit | null> => {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token || token === "your-mapbox-token") return null;
@@ -178,6 +187,7 @@ export const resolveAddressSlug = cache(async (citySlug: string, slug: string): 
       kind: "profile",
       profile: {
         address: titleCase(geo.label || street),
+        unit: parsed.unit || null,
         city: geo.city || cityHint || "Ontario",
         cityRegion: geo.cityRegion,
         postal: geo.postal,
@@ -196,6 +206,7 @@ export const resolveAddressSlug = cache(async (citySlug: string, slug: string): 
         kind: "profile",
         profile: {
           address: titleCase(street.replace(/\s*[a-z]\d[a-z]\s?\d[a-z]\d\s*$/i, "").trim()),
+          unit: parsed.unit || null,
           city: cityHint || "Ontario",
           cityRegion: null,
           postal: parsed.postal,

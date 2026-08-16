@@ -54,6 +54,7 @@ import {
   normalizePropertySubType,
   cityRegionLookupCandidates,
   rawVariantsOf,
+  fsaOf,
 } from '@/lib/avm/normalizeType';
 import {
   aggregateTrendAndOffset,
@@ -82,15 +83,33 @@ import {
 } from '@/lib/avm/calculator';
 import type { CoefficientRow } from '@/lib/avm/matrixService';
 import type { AVMInput, AVMResult } from '@/lib/avm/types';
-import { COMP_WINDOW_MO, MIN_SALE_PRICE as DEFAULT_SALE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
+import { COMP_WINDOW_MO, SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_CLOSE_PRICE_FLOOR, MIN_PEER_NEFF } from '@/lib/avm/types';
 import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
-import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
+import { computeDealScore } from '@/lib/dealScore/computeDealScore';
+import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
 import type { RoomData } from '@/lib/room-utils';
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
 const LEAKY = process.argv.includes('--leaky');
 const FIDELITY = process.argv.includes('--fidelity');
+// --fsa: evaluate ONLY sales whose feed carries no CityRegion (Waterloo Region,
+// Brantford). These were invisible to every previous run — the eval filter below
+// requires a non-blank city_region — so the FSA-cohort path has no baseline. For each
+// sale the replay scores BOTH the FSA-cohort estimate (the shipped path) AND a
+// city-wide-pool alternative on the same leakage-safe data, so the PR can say with
+// numbers whether neighbourhood-scale comps actually earn their tighter band.
+const FSA_MODE = process.argv.includes('--fsa');
+// --dealscore: grade each held-out sale with the Deal Score a buyer would have seen just
+// before it sold (final list price, cumulative cut, final DOM, leakage-safe as-of AVM —
+// Homebuyer lens) and report the REALIZED outcome per grade: close/list, close vs as-of
+// value, DOM, % over ask. This is the track-record backtest computeDealScore's header
+// defers — the evidence gate before ever touching PERSONA_WEIGHTS. Two caveats are
+// carried in the report itself: survivorship (only sales are here, so grade→sell-through
+// is not measurable) and the mechanical TERMS↔close/list correlation (cuts and DOM sit
+// on both sides), which is why outcomes are ALSO stratified by the price-vs-value band
+// alone — the PRICE pillar's raw input, free of that circularity.
+const DEALSCORE_MODE = process.argv.includes('--dealscore');
 function numFlag(name: string, def: number): number {
   const a = process.argv.find((x) => x.startsWith(name));
   if (!a) return def;
@@ -108,7 +127,14 @@ const EVAL_LIMIT = numFlag('--limit', Infinity);
 const TREND_WINDOW_MONTHS = numFlag('--trend-window-mo', 24);
 const RUN_ID = strFlag('--run-id', `branch-eval${EVAL_MONTHS}m${LEAKY ? '-leaky' : ''}`);
 const OUT_PATH = strFlag('--out', `avm-backtest-${RUN_ID}.json`);
-const MIN_SALE_PRICE = numFlag('--min-sale-price', DEFAULT_SALE_PRICE_FLOOR);
+// Leases are excluded by transaction_type, matching production exactly — a pool
+// filtered differently would score the model on a population production never sees.
+const MIN_SALE_PRICE = numFlag('--min-sale-price', DEFAULT_CLOSE_PRICE_FLOOR);
+// --cities: restrict the POOL fetch to a comma-separated city list. Safe whenever the
+// eval set lives inside the list — comps and trend are both same-city constructs — and
+// it turns a ~289k-row stream into a few thousand. Intended for --fsa runs (the
+// blank-CityRegion population is 8 municipalities); leave unset for the global baseline.
+const CITIES = strFlag('--cities', '').split(',').map((c) => c.trim()).filter(Boolean);
 
 // ── statistical thresholds (match the live anchor / refresh job) ──────────────
 const MAX_COMPS = 500;
@@ -151,6 +177,10 @@ interface PoolRow {
   interior_tier: number | null;
   exterior_tier: number | null;
   basement_tier: number | null;
+  postal_code: string | null;
+  list_price: number | null;
+  original_list_price: number | null;
+  days_on_market: number | null;
 }
 
 interface Sale extends PoolRow {
@@ -184,12 +214,26 @@ interface ResultRow {
   old_estimated_value: number | null;
   old_abs_pct_error: number | null;
   old_log_error: number | null;
+  // --dealscore mode only: the as-of Homebuyer grade and the realized outcome.
+  deal_grade: string | null;
+  deal_score: number | null;
+  close_list_ratio: number | null;
+  close_avm_ratio: number | null;
+  list_avm_ratio: number | null;
+  dom_days: number | null;
 }
 
+// postal_code added 2026-08: the FSA cohort groups on it, and comps carrying it also
+// activate the hierarchical geo weighting live comps always had — the harness was
+// silently replaying with geo weights off (CompRow.postal_code optional, never
+// supplied), a small fidelity gap in every prior run.
 const SELECT_COLS =
   'listing_key, close_price, purchase_contract_date, close_date, city, city_region, ' +
   'property_sub_type, building_area_total, lot_width, lot_depth, bedrooms_above_grade, ' +
-  'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier';
+  'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier, ' +
+  // list_price + original_list_price + days_on_market: the pre-sale state for
+  // --dealscore (100% populated on For Sale closes; flat columns, no TOAST).
+  'postal_code, list_price, original_list_price, days_on_market';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Date helpers — ISO 'YYYY-MM-DD' compares lexicographically = chronologically.
@@ -270,14 +314,15 @@ async function loadMatricesForSnapshot(): Promise<Map<string, Matrix>> {
 async function readPoolPage(cursor: string, windowStartIso: string): Promise<PoolRow[] | null> {
   let attempt = 0;
   for (;;) {
-    const { data, error } = await sb
+    let q = sb
       .from('raw_vow_sold')
       .select(SELECT_COLS)
       .gt('listing_key', cursor)
       .gte('purchase_contract_date', windowStartIso)
-      .gte('close_price', MIN_SALE_PRICE)
-      .order('listing_key', { ascending: true })
-      .limit(READ_PAGE);
+      .eq('transaction_type', SALE_TRANSACTION_TYPE)
+      .gte('close_price', MIN_SALE_PRICE);
+    if (CITIES.length > 0) q = q.in('city', CITIES);
+    const { data, error } = await q.order('listing_key', { ascending: true }).limit(READ_PAGE);
     if (!error) return data as unknown as PoolRow[] | null;
     attempt++;
     if (attempt > MAX_READ_RETRIES) {
@@ -355,6 +400,7 @@ function toCompRow(c: Sale): CompRow {
     interior_tier: c.interior_tier,
     exterior_tier: c.exterior_tier,
     basement_tier: c.basement_tier,
+    postal_code: c.postal_code,
   };
 }
 
@@ -373,6 +419,7 @@ function inputFromSale(s: Sale): AVMInput {
     interiorTier: s.interior_tier ?? NEUTRAL_TIER,
     exteriorTier: s.exterior_tier ?? NEUTRAL_TIER,
     basementTier: s.basement_tier ?? BASEMENT_NONE_TIER,
+    postalCode: (s.postal_code || '').trim() || null,
   };
 }
 
@@ -420,6 +467,32 @@ function cityComps(input: AVMInput, s: Sale, pool: Sale[], cutoffIso: string, wi
     .map(toCompRow);
 }
 
+/** FSA-rung comps (same postal FSA + same municipality), dated < cutoff, excluding S.
+ *  Mirrors sold_fsa_comps (migration 112): the city co-filter is load-bearing for rural
+ *  FSAs (N0B spans several townships), a no-op for urban ones. */
+function fsaComps(input: AVMInput, s: Sale, pool: Sale[], cutoffIso: string, windowStartIso: string): CompRow[] {
+  const fsa = fsaOf(input.postalCode);
+  const subjCity = (input.city ?? '').trim().toLowerCase();
+  if (!fsa || !subjCity) return [];
+  const subVariants = new Set(rawVariantsOf(input.propertySubType, input.rawPropertySubType));
+  return pool
+    .filter(
+      (c) =>
+        c.listing_key !== s.listing_key &&
+        c.refDate < cutoffIso &&
+        c.refDate >= windowStartIso &&
+        fsaOf(c.postal_code) === fsa &&
+        (c.city || '').trim().toLowerCase() === subjCity &&
+        c.property_sub_type !== null &&
+        subVariants.has(c.property_sub_type) &&
+        c.close_price !== null &&
+        c.close_price > 0
+    )
+    .sort((a, b) => (a.refDate < b.refDate ? 1 : a.refDate > b.refDate ? -1 : 0))
+    .slice(0, MAX_COMPS)
+    .map(toCompRow);
+}
+
 /**
  * As-of, leakage-safe replay of THIS BRANCH's fetchPeerAnchor: community rung
  * (city_region candidates) then city-wide rung, each gated at MIN_PEER_NEFF.
@@ -438,12 +511,19 @@ function replayPeer(
   cityWide: CompRow[],
   cityRegionCandCount: number,
   trend: TrendRow[],
-  nowMs: number
+  nowMs: number,
+  // Rung 1b (anchorService.ts): FSA comps, tried ONLY when the community rung had no
+  // key at all. undefined (the default) keeps every pre-FSA replay byte-identical.
+  fsaRung?: CompRow[]
 ): AnchorResult | null | undefined {
   const cityKey = (input.city ?? input.cityRegion).trim();
   if (cityRegionCandCount === 0 && !cityKey) return undefined;
   if (cityRegionCandCount > 0) {
     const peer = peerLevelFromComps(input, community, coefficients, trend, nowMs);
+    if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
+  }
+  if (cityRegionCandCount === 0 && fsaRung && fsaRung.length > 0) {
+    const peer = peerLevelFromComps(input, fsaRung, coefficients, trend, nowMs);
     if (peer && peer.nEff >= MIN_PEER_NEFF) return peer;
   }
   if (cityKey) {
@@ -463,7 +543,11 @@ async function replaySale(
   snapshot: Snapshot
 ): Promise<ResultRow | null> {
   const cityRegion = (s.city_region || '').trim();
-  if (!cityRegion || !s.normSub || !s.close_price) return null;
+  // Mirror the live mapper guard (mapListingToAVMInput): blank CityRegion is allowed
+  // when a city + valid FSA survive. In default mode blank-region sales never reach
+  // here (the eval filter requires city_region), so the baseline is unchanged.
+  const fsaEligible = ((s.city || '').trim() && fsaOf(s.postal_code)) as string | boolean;
+  if ((!cityRegion && !fsaEligible) || !s.normSub || !s.close_price) return null;
 
   const input = inputFromSale(s);
 
@@ -485,12 +569,27 @@ async function replaySale(
   const compWindowStart = isoMinusMonths(s.refDate, COMP_WINDOW_MO);
   const community = communityComps(input, s, pool, s.refDate, compWindowStart);
   const nowMs = Date.parse(s.refDate + 'T00:00:00Z');
+  const blankRegion = !cityRegion;
+  const fsaRung = blankRegion ? fsaComps(input, s, pool, s.refDate, compWindowStart) : undefined;
 
   // anchor uses EFFECTIVE (possibly borrowed) coefficients — mirrors calculateAVM.
+  // Blank CityRegion → replay fetchGeoFallbackAnchor: FSA comps (city-wide only if the
+  // FSA is under MIN_PEER_NEFF and the city pool is bigger), NO community offset (δ_c is
+  // relative to the city mean, legitimately zero inside the city).
+  let anchorComps = community;
+  let anchorOffsets = offsets;
+  if (blankRegion) {
+    anchorComps = fsaRung ?? [];
+    if (anchorComps.length < MIN_PEER_NEFF) {
+      const cityPool = cityComps(input, s, pool, s.refDate, compWindowStart);
+      if (cityPool.length > anchorComps.length) anchorComps = cityPool;
+    }
+    anchorOffsets = [];
+  }
   const anchor = computeAnchorFromData(input, effectiveCoefficients, basePrice, {
-    comps: community,
+    comps: anchorComps,
     trend,
-    offsets,
+    offsets: anchorOffsets,
     nowMs,
   });
 
@@ -498,7 +597,7 @@ async function replaySale(
   let peer: AnchorResult | null | undefined;
   if (shouldEvaluatePeers(input, nativeCoefficients)) {
     const cityWide = cityComps(input, s, pool, s.refDate, compWindowStart);
-    peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(cityRegion)).size, trend, nowMs);
+    peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(cityRegion)).size, trend, nowMs, fsaRung);
     if (peer && borrowed) peer.basis = 'borrowed';
   }
 
@@ -526,7 +625,38 @@ async function replaySale(
   let oldEst: number | null = null;
   let oldAbsPct: number | null = null;
   let oldLogErr: number | null = null;
-  if (untrained) {
+  if (blankRegion) {
+    // Blank-region sales have no meaningful "pre-fix" estimate (the pre-fix behaviour
+    // was NO estimate at all), so old_* instead scores the CITY-WIDE alternative — the
+    // same routing anchored on the whole municipality with the FSA rung disabled. The
+    // paired comparison is the evidence for whether neighbourhood comps earn their
+    // tighter band, and reportFsa reads it from these fields.
+    const cityPool = cityComps(input, s, pool, s.refDate, compWindowStart);
+    const altAnchor = computeAnchorFromData(input, effectiveCoefficients, basePrice, {
+      comps: cityPool,
+      trend,
+      offsets: [],
+      nowMs,
+    });
+    let altPeer: AnchorResult | null | undefined;
+    if (shouldEvaluatePeers(input, nativeCoefficients)) {
+      altPeer = replayPeer(input, effectiveCoefficients, community, cityPool, 0, trend, nowMs);
+      if (altPeer && borrowed) altPeer.basis = 'borrowed';
+    }
+    const altResult = estimateFromMarketData(input, {
+      anchor: altAnchor,
+      r2,
+      basePrice,
+      coefficients: nativeCoefficients,
+      n,
+      peer: altPeer,
+    });
+    oldEst = altResult.estimatedValue > 0 ? altResult.estimatedValue : null;
+    if (oldEst !== null) {
+      oldAbsPct = Math.abs(oldEst - close) / close;
+      oldLogErr = Math.log(oldEst) - Math.log(close);
+    }
+  } else if (untrained) {
     const oldAnchor = computeAnchorFromData(input, [], basePrice, {
       comps: community,
       trend,
@@ -547,6 +677,37 @@ async function replaySale(
       oldAbsPct = Math.abs(oldEst - close) / close;
       oldLogErr = Math.log(oldEst) - Math.log(close);
     }
+  }
+
+  // ── Deal Score as-of grade + realized outcome (--dealscore) ──────────────────
+  // The grade a buyer saw just before the sale: final list price, cumulative cut,
+  // final DOM, the leakage-safe as-of AVM. expectedSalePrice/closeListRatio are
+  // deliberately omitted — equally for every sale, so the stratification is fair
+  // (TERMS runs on slightly less evidence than live, same as the terminal did pre-#319).
+  let dealGrade: string | null = null;
+  let dealScore: number | null = null;
+  let closeListRatio: number | null = null;
+  let closeAvmRatio: number | null = null;
+  let listAvmRatio: number | null = null;
+  if (DEALSCORE_MODE && s.list_price && s.list_price > 0) {
+    const ds = computeDealScore(
+      {
+        listPrice: s.list_price,
+        originalListPrice: s.original_list_price,
+        avmEstimate:
+          est !== null && result.confidence !== null
+            ? { estimatedValue: est, confidence: result.confidence as 'HIGH' | 'MEDIUM' | 'LOW' }
+            : null,
+        domDays: s.days_on_market,
+        subType: s.property_sub_type,
+      },
+      'smart'
+    );
+    dealGrade = ds.grade;
+    dealScore = ds.score;
+    closeListRatio = close / s.list_price;
+    listAvmRatio = est !== null ? s.list_price / est : null;
+    closeAvmRatio = est !== null ? close / est : null;
   }
 
   return {
@@ -573,6 +734,12 @@ async function replaySale(
     old_estimated_value: oldEst,
     old_abs_pct_error: oldAbsPct,
     old_log_error: oldLogErr,
+    deal_grade: dealGrade,
+    deal_score: dealScore,
+    close_list_ratio: closeListRatio,
+    close_avm_ratio: closeAvmRatio,
+    list_avm_ratio: listAvmRatio,
+    dom_days: s.days_on_market,
   };
 }
 
@@ -631,10 +798,122 @@ function reportUntrained(rows: ResultRow[]) {
   console.log(`  NEW basis dist:       ${Object.entries(basis).map(([k, v]) => `${k}=${v}`).join('  ')}`);
 }
 
+/**
+ * --fsa report. Two questions, in order of importance:
+ *  1. Does the FSA cohort beat the city-wide alternative on the SAME sales? (old_* holds
+ *     the city-wide estimate in this mode — see replaySale.)
+ *  2. Is each confidence label EARNED — does realised error stratify by label, and does
+ *     the band cover the close at a rate consistent with the label? This is the evidence
+ *     for/against "fix the low confidence": if MEDIUM-labelled FSA estimates hit
+ *     MEDIUM-grade error, the labels are honest as-is; if not, no relabelling is defensible.
+ */
+/**
+ * --dealscore report. The claim under test: grades are PREDICTIVE — an A+ buyer
+ * realizes a better outcome than a D buyer. Outcomes per grade, then per raw
+ * price-vs-value band (the PRICE pillar's input, free of the TERMS↔close/list
+ * circularity: cuts and DOM sit on both sides of the full score).
+ *
+ * Reading close/AVM: the as-of AVM is the value yardstick, so close/AVM < 1 means the
+ * buyer paid under market value. If grades work, close/AVM rises monotonically from
+ * A+ to F. close/list is reported but is the WEAK evidence — a deep price cut both
+ * raises TERMS and mechanically lowers close/list's denominator.
+ */
+function reportDealScore(rows: ResultRow[]) {
+  const graded = rows.filter((r) => r.deal_grade !== null);
+  const withheld = rows.filter((r) => r.deal_grade === null && r.close_list_ratio !== null);
+  console.log('\n──────── DEAL SCORE TRACK RECORD (as-of grades vs realized outcomes) ────────');
+  console.log(`Sales graded: ${graded.length}   withheld (no as-of AVM): ${withheld.length}`);
+
+  const line = (label: string, sub: ResultRow[]) => {
+    if (sub.length === 0) { console.log(`  ${label.padEnd(9)} n=0`); return; }
+    const cl = sub.map((r) => r.close_list_ratio as number).filter((x) => x !== null);
+    const ca = sub.map((r) => r.close_avm_ratio).filter((x): x is number => x !== null);
+    const dom = sub.map((r) => r.dom_days).filter((x): x is number => x !== null);
+    const overAsk = cl.filter((x) => x > 1).length / (cl.length || 1);
+    console.log(
+      `  ${label.padEnd(9)} n=${String(sub.length).padEnd(6)}` +
+      `close/AVM ${ca.length ? (median(ca) * 100).toFixed(1) + '%' : '  n/a'}   ` +
+      `close/list ${(median(cl) * 100).toFixed(1)}%   ` +
+      `over-ask ${pct(overAsk)}   ` +
+      `median DOM ${dom.length ? Math.round(median(dom)) : 'n/a'}`
+    );
+  };
+
+  console.log('\nBy GRADE (Homebuyer lens):');
+  for (const g of ['A+', 'A', 'B', 'C', 'D', 'F']) line(g, graded.filter((r) => r.deal_grade === g));
+  line('withheld', withheld);
+
+  console.log('\nBy PRICE-vs-VALUE band alone (list/as-of-AVM — the PRICE pillar input):');
+  const bands: Array<[string, (x: number) => boolean]> = [
+    ['<=0.90', (x) => x <= 0.9],
+    ['0.90-0.95', (x) => x > 0.9 && x <= 0.95],
+    ['0.95-1.00', (x) => x > 0.95 && x <= 1.0],
+    ['1.00-1.05', (x) => x > 1.0 && x <= 1.05],
+    ['1.05-1.10', (x) => x > 1.05 && x <= 1.1],
+    ['>1.10', (x) => x > 1.1],
+  ];
+  for (const [label, fn] of bands) {
+    line(label, rows.filter((r) => r.list_avm_ratio !== null && fn(r.list_avm_ratio)));
+  }
+
+  console.log(
+    '\nCaveats carried, not hidden: SURVIVORSHIP (only closed sales are here — grade→sell-' +
+    'through is not measurable from this set) and the TERMS↔close/list mechanical link ' +
+    '(the price-band table is the clean read on the PRICE pillar).'
+  );
+}
+
+function reportFsa(rows: ResultRow[]) {
+  const pub = rows.filter((r) => r.abs_pct_error !== null);
+  console.log('\n──────── FSA-COHORT SUBSET (blank CityRegion — leakage-safe) ────────');
+  console.log(`Sales evaluated:  ${rows.length}   FSA published: ${pub.length}   city-wide published: ${rows.filter((r) => r.old_abs_pct_error !== null).length}`);
+
+  const both = rows.filter((r) => r.abs_pct_error !== null && r.old_abs_pct_error !== null);
+  if (both.length > 0) {
+    const fsaAbs = both.map((r) => r.abs_pct_error as number);
+    const cityAbs = both.map((r) => r.old_abs_pct_error as number);
+    const improved = both.filter((r) => (r.abs_pct_error as number) < (r.old_abs_pct_error as number)).length;
+    console.log(`\nPaired FSA vs CITY-WIDE (${both.length} sales, same leakage-safe data):`);
+    console.log(`  CITY  median |%err|:  ${pct(median(cityAbs))}   mean ${pct(mean(cityAbs))}   bias ${mean(both.map((r) => r.old_log_error as number)).toFixed(4)}`);
+    console.log(`  FSA   median |%err|:  ${pct(median(fsaAbs))}   mean ${pct(mean(fsaAbs))}   bias ${mean(both.map((r) => r.log_error as number)).toFixed(4)}`);
+    console.log(`  % improved (FSA<CITY): ${pct(improved / both.length)}`);
+  }
+
+  console.log('\nConfidence calibration (label must EARN its error, not assert it):');
+  for (const label of ['HIGH', 'MEDIUM', 'LOW']) {
+    const sub = pub.filter((r) => r.confidence === label);
+    if (sub.length === 0) { console.log(`  ${label.padEnd(6)} n=0`); continue; }
+    const a = sub.map((r) => r.abs_pct_error as number);
+    const banded = sub.filter((r) => r.in_band !== null);
+    const cov = banded.length > 0 ? banded.filter((r) => r.in_band === true).length / banded.length : null;
+    console.log(
+      `  ${label.padEnd(6)} n=${String(sub.length).padEnd(5)} median |%err| ${pct(median(a))}   ` +
+      `mean ${pct(mean(a))}   hit ±10% ${pct(a.filter((x) => x <= 0.1).length / a.length)}   band coverage ${cov !== null ? pct(cov) : 'n/a'}`
+    );
+  }
+
+  const basis: Record<string, number> = {};
+  for (const r of pub) basis[r.basis] = (basis[r.basis] ?? 0) + 1;
+  console.log(`\nBasis dist: ${Object.entries(basis).map(([k, v]) => `${k}=${v}`).join('  ')}`);
+  const byCity = new Map<string, number[]>();
+  for (const r of pub) {
+    const arr = byCity.get(r.city ?? '?') ?? [];
+    arr.push(r.abs_pct_error as number);
+    byCity.set(r.city ?? '?', arr);
+  }
+  console.log('By city (median |%err|, n):');
+  for (const [city, a] of [...byCity.entries()].sort((x, y) => y[1].length - x[1].length).slice(0, 10)) {
+    console.log(`   ${city.padEnd(18)} ${pct(median(a))}   n=${a.length}`);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Fidelity check: NOW-dated window (no leakage filter) must match live calculateAVM.
 // ─────────────────────────────────────────────────────────────────────────────
-const FIDELITY_KEYS = ['N13229524', 'W13168260', 'N13135326'];
+// The last two are blank-CityRegion listings (Kitchener condo apt, Brantford detached)
+// — they exercise the FSA-cohort path end-to-end: live fetchGeoFallbackAnchor +
+// sold_fsa_comps RPC vs the harness's in-memory fsaComps replay.
+const FIDELITY_KEYS = ['N13229524', 'W13168260', 'N13135326', 'X12693810', 'X12401356'];
 
 async function liveAVMForKey(key: string): Promise<{ input: AVMInput; r: AVMResult } | null> {
   const { data: row } = await sb
@@ -646,7 +925,12 @@ async function liveAVMForKey(key: string): Promise<{ input: AVMInput; r: AVMResu
   const payload = row.full_payload as Record<string, unknown>;
   const rooms: RoomData[] = Array.isArray(payload?.rooms) ? (payload.rooms as RoomData[]) : [];
   let bucketCalibration: BucketCalibration | null = null;
-  const cityRegion = String(payload?.CityRegion ?? '').trim();
+  // CityRegion ?? City — mirrors getListingDetail / the build script (calibrationRegionKey)
+  // so fidelity keys the same cohort the live path does for blank-CityRegion listings.
+  const cityRegion = calibrationRegionKey(
+    typeof payload?.CityRegion === 'string' ? (payload.CityRegion as string) : null,
+    typeof payload?.City === 'string' ? (payload.City as string) : null
+  );
   const subType = String(payload?.PropertySubType ?? '').trim();
   const bucket = String(payload?.LivingAreaRange ?? '').trim();
   if (cityRegion && subType && bucket && resolveLivingArea(payload, { rooms }).source === 'range_midpoint') {
@@ -692,15 +976,32 @@ async function harnessNowEstimate(input: AVMInput, pool: Sale[], expanded: Map<s
     building_area_total: input.buildingAreaTotal, lot_width: input.lotWidth, lot_depth: input.lotDepth ?? null,
     bedrooms_above_grade: input.bedroomsAboveGrade, bathrooms_total_integer: input.bathroomsTotalInteger,
     parking_total: input.parkingTotal, interior_tier: null, exterior_tier: null, basement_tier: null,
+    postal_code: input.postalCode ?? null,
+    list_price: null, original_list_price: null, days_on_market: null,
     refDate: '9999-12-31', normSub: input.propertySubType, period: '9999-12-31',
   };
   const community = communityComps(input, synthetic, pool, '9999-12-31', windowStartIso);
 
-  const anchor = computeAnchorFromData(input, effectiveCoefficients, basePrice, { comps: community, trend, offsets, nowMs });
+  // Blank CityRegion → same fetchGeoFallbackAnchor replay as replaySale (FSA comps,
+  // city-wide only when the FSA is under MIN_PEER_NEFF, no community offset).
+  const blankRegion = !input.cityRegion.trim();
+  const fsaRung = blankRegion ? fsaComps(input, synthetic, pool, '9999-12-31', windowStartIso) : undefined;
+  let anchorComps = community;
+  let anchorOffsets = offsets;
+  if (blankRegion) {
+    anchorComps = fsaRung ?? [];
+    if (anchorComps.length < MIN_PEER_NEFF) {
+      const cityPool = cityComps(input, synthetic, pool, '9999-12-31', windowStartIso);
+      if (cityPool.length > anchorComps.length) anchorComps = cityPool;
+    }
+    anchorOffsets = [];
+  }
+
+  const anchor = computeAnchorFromData(input, effectiveCoefficients, basePrice, { comps: anchorComps, trend, offsets: anchorOffsets, nowMs });
   let peer: AnchorResult | null | undefined;
   if (shouldEvaluatePeers(input, nativeCoefficients)) {
     const cityWide = cityComps(input, synthetic, pool, '9999-12-31', windowStartIso);
-    peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(input.cityRegion)).size, trend, nowMs);
+    peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(input.cityRegion)).size, trend, nowMs, fsaRung);
     if (peer && borrowed) peer.basis = 'borrowed';
   }
   return estimateFromMarketData(input, { anchor, r2, basePrice, coefficients: nativeCoefficients, n, peer });
@@ -782,8 +1083,23 @@ async function main() {
   }
 
   // Eval set: sales in the last EVAL_MONTHS, most-recent first, capped by --limit.
+  // Default: sales WITH a community key (every prior baseline). --fsa: the exact
+  // complement — blank city_region, city + valid FSA present (the population the
+  // FSA-cohort path exists for, invisible to every previous run).
   let evalSales = pool
-    .filter((s) => s.refDate >= evalWindowStart && s.normSub && (s.city_region || '').trim())
+    .filter((s) =>
+      s.refDate >= evalWindowStart &&
+      s.normSub &&
+      (FSA_MODE
+        ? !(s.city_region || '').trim() && (s.city || '').trim() && fsaOf(s.postal_code)
+        : DEALSCORE_MODE
+          ? // Deal Score grades the whole book: keyed sales AND blank-region ones the
+            // FSA path now prices — plus a sane final list price to grade against.
+            ((s.city_region || '').trim() || ((s.city || '').trim() && fsaOf(s.postal_code))) &&
+            s.list_price !== null &&
+            s.list_price > 0
+          : (s.city_region || '').trim())
+    )
     .sort((a, b) => (a.refDate < b.refDate ? 1 : a.refDate > b.refDate ? -1 : 0));
   if (Number.isFinite(EVAL_LIMIT)) evalSales = evalSales.slice(0, EVAL_LIMIT);
   console.log(`\nEvaluating ${evalSales.length} held-out sales…`);
@@ -812,7 +1128,9 @@ async function main() {
   }
 
   reportOverall(results);
-  reportUntrained(results);
+  if (FSA_MODE) reportFsa(results);
+  else if (DEALSCORE_MODE) reportDealScore(results);
+  else reportUntrained(results);
 
   // Local results file (READ-ONLY on DB — nothing is written to Supabase).
   const summary = {

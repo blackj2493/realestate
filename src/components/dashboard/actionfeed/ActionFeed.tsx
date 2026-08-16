@@ -39,11 +39,7 @@ export default function ActionFeed({
 
   return (
     <section data-tour="dashboard-action-feed" className="space-y-2">
-      <ModuleHead
-        title="Since your last visit"
-        count={items.length}
-        icon={<Activity className="h-4 w-4" />}
-      />
+      <ModuleHead title="Since your last visit" icon={<Activity className="h-4 w-4" />} />
 
       <Panel>
         {visible.map((item) => (

@@ -29,13 +29,16 @@ import {
   ExternalLink,
   GraduationCap,
   MapPin,
+  Mail,
   MoreHorizontal,
   Pencil,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Bubble } from "@/lib/bubbles/serialize";
+import { buildFiltersSnapshot, type Bubble } from "@/lib/bubbles/serialize";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
+import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { bubbleToArea } from "@/lib/dashboard/area";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import type { BoardDef } from "@/lib/dashboard/boards";
@@ -77,6 +80,7 @@ function tagline(b: Bubble): string {
 function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
   const rename = useBubblesStore((s) => s.rename);
   const remove = useBubblesStore((s) => s.remove);
+  const updateAlertFilters = useBubblesStore((s) => s.updateAlertFilters);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -170,6 +174,36 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
           >
             <Pencil className="h-3 w-3" /> Rename
           </button>
+          {/* One-click in-place capture (owner ask): copies the Map Terminal's
+              CURRENT filters onto this bubble and switches its alerts to
+              "My filters" — no save-plus-delete dance. Open the Terminal first
+              to set the filters you want captured. */}
+          {bubble.area_type !== "city" && (
+            <button
+              type="button"
+              title="Copies the Map's current filters to this area and switches its nightly alerts to 'My filters'. Open the Map and set your filters first."
+              onClick={() => {
+                const s = useCommandCenterStore.getState();
+                void updateAlertFilters(
+                  bubble.id,
+                  buildFiltersSnapshot({
+                    activePersona: s.activePersona,
+                    filters: s.filters,
+                    location: s.location,
+                    commute: s.commute,
+                    school: s.school,
+                    universalFilters: s.universalFilters,
+                    transactionMode: s.transactionMode,
+                    propertyClass: s.propertyClass,
+                  })
+                );
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
+            >
+              <SlidersHorizontal className="h-3 w-3" /> Capture current filters
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -193,26 +227,89 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
  */
 function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
   const setAlertsEnabled = useBubblesStore((s) => s.setAlertsEnabled);
+  const setAlertScope = useBubblesStore((s) => s.setAlertScope);
   const enabled = bubble.alerts_enabled !== false;
+  // The 'filtered' scope needs a 095-era snapshot (universal basics captured at
+  // save time). Older bubbles must be re-saved in the terminal to enable it —
+  // we never guess filters the user didn't choose as alert rules.
+  const hasSnapshot = Boolean(
+    bubble.filters && "universalFilters" in bubble.filters && bubble.filters.universalFilters
+  );
+  const scope: "all" | "filtered" = bubble.alert_scope === "filtered" ? "filtered" : "all";
   return (
-    <button
-      type="button"
-      onClick={() => setAlertsEnabled(bubble.id, !enabled)}
-      aria-pressed={enabled}
-      title={
-        enabled
-          ? "New-listing alerts ON — click to mute this area"
-          : "New-listing alerts muted — click to enable"
-      }
-      className={cn(
-        "flex h-7 w-7 items-center justify-center border transition-colors",
-        enabled
-          ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
-          : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+    <>
+      {/* Always visible while alerts are on (city bells excepted — whole-city by
+          design). Hiding it on pre-095 bubbles made the feature undiscoverable
+          (owner: "I don't see it") — now "My filters" renders DISABLED with the
+          re-save instruction instead of silently not existing. */}
+      {enabled && bubble.area_type !== "city" && (
+        <div
+          className="terminal-font flex items-stretch border border-border text-[10px] uppercase tracking-wider"
+          role="group"
+          aria-label="Alert scope"
+          title="What the nightly email matches: every new listing in this area, or only ones matching the filters saved with this bubble"
+        >
+          {/* Mail glyph = this control is about the EMAIL, not the dashboard view
+              (owner: "All / My filters" alone was ambiguous). */}
+          <span className="flex items-center border-r border-border px-1.5 text-muted-foreground" aria-hidden="true">
+            <Mail className="h-3 w-3" />
+          </span>
+          {(
+            [
+              ["all", "All listings"],
+              ["filtered", "My filters only"],
+            ] as const
+          ).map(([value, label]) => {
+            const locked = value === "filtered" && !hasSnapshot;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={scope === value}
+                aria-disabled={locked}
+                title={
+                  locked
+                    ? "This area was saved before filters were captured. Open it in the Terminal, set your filters, and Save it again to enable filtered alerts."
+                    : undefined
+                }
+                onClick={() => {
+                  if (locked || scope === value) return;
+                  setAlertScope(bubble.id, value);
+                }}
+                className={cn(
+                  "px-2 py-1 transition-colors",
+                  locked
+                    ? "cursor-not-allowed text-muted-foreground/50"
+                    : scope === value
+                      ? "bg-cyan-600/15 font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
+                      : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       )}
-    >
-      {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-    </button>
+      <button
+        type="button"
+        onClick={() => setAlertsEnabled(bubble.id, !enabled)}
+        aria-pressed={enabled}
+        title={
+          enabled
+            ? "New-listing alerts ON — click to mute this area"
+            : "New-listing alerts muted — click to enable"
+        }
+        className={cn(
+          "flex h-7 w-7 items-center justify-center border transition-colors",
+          enabled
+            ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
+            : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+        )}
+      >
+        {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+      </button>
+    </>
   );
 }
 

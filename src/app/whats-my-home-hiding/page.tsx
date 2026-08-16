@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import RenovationFunnel from '@/components/reno/RenovationFunnel';
 import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
 import AppHeader from '@/components/layout/AppHeader';
+import { getServiceRoleClient } from '@/lib/supabase/client';
+import { getSeatSummary } from '@/lib/founding/seats';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,10 +19,10 @@ export async function generateMetadata({
   const where = slug ? deslugifyCommunity(slug) : null;
   const title = where
     ? `Which renovation pays you back most in ${where}?`
-    : "What's my home hiding? Renovation upside, free";
+    : 'What could a reno add to your home? Renovation payback, ranked';
   const description = where
-    ? `Find the renovation that pays back most for your ${where} home. Free, 60-second analysis.`
-    : 'Describe your home and find the renovations that pay back most in your neighbourhood. Free.';
+    ? `PureProperty Intelligence models ${where} on its own closed sales and ranks every renovation by value added per dollar spent — for your property type, in your neighbourhood. Not national reno averages.`
+    : 'PureProperty Intelligence models your neighbourhood on its own closed sales and ranks every renovation by value added per dollar spent — for your property type, on your local market. Not national reno averages.';
   const ogImage = `/api/og/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`;
 
   return {
@@ -48,30 +49,52 @@ export default async function WhatsMyHomeHidingPage({
   const resolved = slug ? resolveCommunitySlug(tree, slug) : null;
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
+  // The offer has to be visible BEFORE the address field or it can't do its job:
+  // someone arriving from a link needs a reason to start typing. The count only —
+  // the seat map and the seat number belong to the result, where they've seen
+  // something worth having. The page is force-dynamic, so this stays live.
+  const seats = await getSeatSummary(getServiceRoleClient());
+
   return (
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
       <main className="mx-auto max-w-[1200px] px-4 py-10">
-        <h1 className="mb-1 text-3xl font-bold text-white">What&apos;s my home hiding?</h1>
-        <p className="mb-3 max-w-2xl text-sm text-muted-foreground">
-          Describe your home and see the renovations that pay back the most where you are —
-          ranked by what actually sells nearby. Free.
+        <h1 className="mb-1.5 text-3xl font-bold text-foreground">
+          What could a reno add to your home{communityLabel ? ` in ${communityLabel}` : ''}?
+        </h1>
+        <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+          Renovation payback is local — what pays back in{' '}
+          {communityLabel ?? 'one neighbourhood'} is not what pays back the next one over.{' '}
+          <b className="font-semibold text-foreground">PureProperty Intelligence</b> models{' '}
+          {communityLabel ?? 'your neighbourhood'} on its own closed sales and ranks every renovation
+          by <b className="font-semibold text-foreground">value added per dollar spent</b>, for your
+          property type. Not national reno averages, not a contractor&rsquo;s estimate.
         </p>
-        <p className="mb-8 text-xs text-muted-foreground">
-          Want your home&apos;s full estimated value too?{" "}
-          <Link
-            href="/hidden-equity"
-            className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
-          >
-            Sign in for your Hidden Equity report →
-          </Link>
-        </p>
+        {/* The credibility byline: facts about the method, stated as facts. */}
+        <ul className="mb-8 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 font-mono text-[11.5px] text-muted-foreground">
+          {[
+            communityLabel ? `${communityLabel}'s own closed sales` : 'Your neighbourhood’s own closed sales',
+            'Never asking prices',
+            'Modelled per property type',
+            'Refreshed every 24h',
+            'About a minute',
+          ].map((chip) => (
+            <li key={chip} className="rounded-full border border-border bg-card px-2.5 py-1">
+              {chip}
+            </li>
+          ))}
+        </ul>
+        {/* The counter renders INSIDE the funnel, not here: the claim happens a few
+            seconds after this server render (auto-resubmit once terms are accepted),
+            so a server-only counter is permanently one behind for the person who
+            just took a seat. The funnel seeds from this value and keeps it live. */}
         <RenovationFunnel
           tree={tree}
           initialCity={resolved?.city ?? ''}
           initialCityRegion={resolved?.cityRegion ?? ''}
           communitySlug={slug ?? null}
           communityLabel={communityLabel}
+          initialSeats={seats}
         />
       </main>
     </div>

@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { axisPosition, lineupDomain } from "@/lib/avm/expectedSale";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
+import { roundToStep, ESTIMATE_DISPLAY_STEP } from "@/lib/avm/displayRounding";
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 
 interface EstimatedSaleCardProps {
@@ -116,6 +117,12 @@ export default function EstimatedSaleCard({
   const below = (deltaVsAskPct ?? 0) < 0;
   const deltaAbs = Math.abs(value - listPrice);
   const deltaPctStr = `${below ? "" : "+"}${((deltaVsAskPct ?? 0) * 100).toFixed(1)}%`;
+  // Display rounding (nearest $1,000) for the FUZZY estimate-derived figures — the likely
+  // range, the ask-delta and the comparable-value band. Rendering these to the dollar is
+  // false precision on a model output. `rc` rounds text labels only; the axis positions below
+  // stay on the raw values, and `listPrice` (a real, public MLS number) is never rounded. The
+  // headline point estimate is deliberately NOT routed through here (see below).
+  const rc = (n: number) => formatPrice(roundToStep(n, ESTIMATE_DISPLAY_STEP));
   // Compact money for the range headline/rows so two numbers fit ("$999K – $1.18M").
   const compact = (n: number) =>
     n >= 1_000_000
@@ -182,8 +189,11 @@ export default function EstimatedSaleCard({
                 <p className="text-3xl font-extrabold tracking-tight text-primary">
                   {compact(comp.rangeLow)} – {compact(comp.rangeHigh)}
                 </p>
+                {/* "near ask — above it if offers compete", not "at or above": the measured
+                    median of this bucket still closes ~1% UNDER ask, per
+                    COMPETITIVE_MEDIAN_CLOSE_RATIO — an at-or-above floor overstates it. */}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Likely to close at or above the {formatPrice(listPrice)} ask.
+                  Likely closes near the {formatPrice(listPrice)} ask — above it if offers compete.
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground/90">
                   Listed ~{Math.round(comp.belowCompsPct * 100)}% below comparable sales. Homes priced
@@ -197,9 +207,12 @@ export default function EstimatedSaleCard({
             </>
           ) : (
             <div>
+              {/* Headline point estimate stays exact — it must byte-match the same figure on
+                  the full report + terminal ledger (all now read one cached value); only the
+                  FUZZY figures around it (range, ask-delta) are display-rounded. */}
               <p className="text-4xl font-extrabold tracking-tight text-primary">{formatPrice(value)}</p>
               <p className="mt-1 text-xs font-mono text-muted-foreground">
-                Likely range {formatPrice(lowBand)} – {formatPrice(highBand)}
+                Likely range {rc(lowBand)} – {rc(highBand)}
               </p>
               {hasAsk && (
                 <p
@@ -207,7 +220,7 @@ export default function EstimatedSaleCard({
                     below ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                   }`}
                 >
-                  ≈ {formatPrice(deltaAbs)} ({deltaPctStr}) {below ? "below" : "above"} ask
+                  ≈ {rc(deltaAbs)} ({deltaPctStr}) {below ? "below" : "above"} ask
                   {below ? " · room to negotiate" : ""}
                 </p>
               )}
@@ -219,7 +232,9 @@ export default function EstimatedSaleCard({
             <span
               className={`text-xs font-medium px-2 py-0.5 border rounded ${CONFIDENCE_STYLES[confidence]}`}
             >
-              {confidence} CONFIDENCE
+              {/* Names its axis ("Estimate") — this is how sure we are of the SALE PRICE, a
+                  different question from the Deal Score card's "Deal signal · X confidence". */}
+              Estimate · {confidence} confidence
             </span>
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               {market
@@ -310,7 +325,7 @@ export default function EstimatedSaleCard({
                       <span className="text-muted-foreground">▬</span> Comparable value
                     </span>
                     <span className="font-mono text-foreground">
-                      {formatPrice(compLo!)} – {formatPrice(compHi!)}
+                      {rc(compLo!)} – {rc(compHi!)}
                     </span>
                   </li>
                 )}

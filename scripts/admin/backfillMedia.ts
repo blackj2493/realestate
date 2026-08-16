@@ -67,6 +67,7 @@ import {
   type StoredMedia,
 } from '../worker/mediaEnrichment';
 import { selectPrimaryImage, collectMediaUrls } from '../../src/lib/etl/selectPrimaryImage';
+import { photosFromRawMedia } from '../worker/ingester';
 
 dotenv.config({ path: ['.env.local', '.env'] });
 
@@ -160,28 +161,25 @@ async function updateActiveListing(
   listingKey: string,
   media: StoredMedia[]
 ): Promise<{ written: boolean; skipped: boolean }> {
-  // Patch BOTH full_payload.media (read by detail page) AND media_urls (read by
-  // dashboard cards via the Typesense doc's RawImages fallback). The WHERE
-  // guard allows re-writes when the row has NO `media` key OR when the stored
-  // `media` is an empty array (stale-empty sentinel from a prior run when
-  // AMPRE returned no records). This catches listings whose photos became
-  // available between runs — without it, the prior `media: []` blocks the
-  // refresh forever. Rows with REAL media (non-empty array) are still
-  // protected from accidental clobbering.
+  // Patches media_urls ONLY. full_payload.media is no longer stored (migration 103);
+  // writing it back here would silently re-inflate the exact thing that migration
+  // removed, at ~20 KB/row. media_urls is what every render path reads.
+  //
+  // Guard keeps the original intent: re-write when the row has NO photos, or an EMPTY
+  // array (the stale-empty sentinel a prior run leaves when AMPRE returned no records),
+  // so listings whose photos appear later are still picked up. Rows with real photos
+  // stay protected from clobbering.
   const sql = `
     UPDATE listings
-       SET full_payload = jsonb_set(full_payload, '{media}', $1::jsonb, true),
-           media_urls = $2::text[]
-     WHERE listing_key = $3
-       AND (NOT (full_payload ? 'media')
-            OR jsonb_array_length(full_payload->'media') = 0)`;
-  const mediaJson = JSON.stringify(media);
+       SET media_urls = $1::text[]
+     WHERE listing_key = $2
+       AND (media_urls IS NULL OR cardinality(media_urls) = 0)`;
   const mediaUrls = collectMediaUrls({ media });
 
   let attempt = 0;
   for (;;) {
     try {
-      const res = await pg.query(sql, [mediaJson, mediaUrls, listingKey]);
+      const res = await pg.query(sql, [mediaUrls, listingKey]);
       return { written: (res.rowCount ?? 0) > 0, skipped: (res.rowCount ?? 0) === 0 };
     } catch (err: unknown) {
       attempt++;
@@ -288,10 +286,20 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
 // ─── Sold path ───────────────────────────────────────────────────────────────
 
 /**
- * Sold read: keyset-paginate by PK only — no `WHERE NOT (raw_payload ?
- * 'media')` filter, because that detoasts ~217k JSONB rows on a single scan
- * and exhausts the Disk IO budget. Idempotency is enforced at UPDATE time
- * (per-row PK lookup, cheap).
+ * Sold read: keyset-paginate by PK, skipping rows that already have photos.
+ *
+ * That filter USED to be impossible. The only tell was `raw_payload ? 'media'`, and
+ * detoasting ~50 KB of JSONB across 217k rows blew the Disk IO budget — so the scan read
+ * everything and leaned on the UPDATE to no-op. Migration 101 changed the shape: `photos`
+ * is a separate ~3 KB column, so the same question costs a fraction of the IO and can be
+ * asked on the READ instead.
+ *
+ * It matters because the FETCH, not the write, is the expensive half. Unfiltered, a full
+ * run issues an AMPRE /Media request for all 288,963 rows in order to write ~30k of them.
+ *
+ * The predicate matches updateSoldListing's guard exactly, so behaviour is unchanged —
+ * including that an EMPTY `photos` stays eligible, which is what lets a listing whose
+ * photos only appear on AMPRE later get picked up by a re-run.
  *
  * Project `purchase_contract_date` so we can decide whether the row is inside
  * the Typesense `sold_listings` 180-day window before issuing a partial
@@ -303,6 +311,7 @@ async function readSoldPage(pg: PgClient, cursor: string, pageSize: number): Pro
     SELECT listing_key, purchase_contract_date
       FROM raw_vow_sold
      WHERE listing_key > $1
+       AND (photos IS NULL OR jsonb_array_length(photos) = 0)
      ORDER BY listing_key
      LIMIT $2`;
   const res = await pg.query<{ listing_key: string; purchase_contract_date: string | null }>(sql, [cursor, pageSize]);
@@ -317,17 +326,17 @@ async function updateSoldListing(
   listingKey: string,
   media: StoredMedia[]
 ): Promise<{ written: boolean; skipped: boolean }> {
-  // raw_vow_sold has no separate media_urls column — patch raw_payload.media
-  // only. selectPrimaryImage / collectMediaUrls read from raw_payload.media
-  // for downstream consumers. Same stale-empty handling as the active path
-  // (see updateActiveListing): allow re-writes when stored media is `[]`.
+  // Patches the `photos` column (migration 101), not raw_payload.media — migration 102
+  // removed that key, and re-adding it here would undo the strip one row at a time.
+  // photosFromRawMedia applies the same Deleted-filter / de-dupe / Order rules the
+  // nightly ingester and the SQL backfill use, so all three stay in agreement.
+  // Same stale-empty handling as the active path: re-write on NULL or [].
   const sql = `
     UPDATE raw_vow_sold
-       SET raw_payload = jsonb_set(raw_payload, '{media}', $1::jsonb, true)
+       SET photos = $1::jsonb
      WHERE listing_key = $2
-       AND (NOT (raw_payload ? 'media')
-            OR jsonb_array_length(raw_payload->'media') = 0)`;
-  const mediaJson = JSON.stringify(media);
+       AND (photos IS NULL OR jsonb_array_length(photos) = 0)`;
+  const mediaJson = JSON.stringify(photosFromRawMedia({ media }));
 
   let attempt = 0;
   for (;;) {

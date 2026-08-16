@@ -11,6 +11,7 @@ import type { PersonaType } from "@/lib/personas/personaConfig";
 import type { DiligenceFlag } from "@/lib/property/diligence";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
 import { shouldRender as hasValueAdd } from "@/components/Property/forceAppreciationView";
+import { detectCompetitive } from "@/lib/avm/salePrice";
 
 /** A clickable "show me the evidence" chip: jumps to the on-page card that proves a clause. */
 export interface EvidenceLink {
@@ -32,6 +33,10 @@ export interface TheRead {
   priceRead: string;
   grade: string | null;
   score: number | null;
+  /** Per-lens score/grade so the card's badge follows the persona tabs — without this the
+   *  badge freezes on the default persona and contradicts the Deal Score card's headline
+   *  when the user switches lens. Null when the score is gated (anon) or absent. */
+  scoreByPersona: Partial<Record<PersonaType, { score: number | null; grade: string | null }>> | null;
   links: TheReadLinks;
 }
 
@@ -58,7 +63,10 @@ const num = (v: unknown): number | null =>
 const money = (v: number): string => {
   const a = Math.abs(Math.round(v));
   const s = v < 0 ? "−" : "";
-  if (a >= 1_000_000) return `${s}$${(a / 1_000_000).toFixed(a % 1_000_000 === 0 ? 0 : 1)}M`;
+  // Two decimals in the millions, trailing zeros trimmed: one decimal collapsed the ask and
+  // the expected close into the same string ("Asking $1.2M — likely closes near $1.2M
+  // (96.8% of ask)" when the model actually said $1.16M vs a $1,199,000 ask).
+  if (a >= 1_000_000) return `${s}$${(a / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M`;
   if (a >= 1_000) return `${s}$${Math.round(a / 1_000)}K`;
   return `${s}$${a}`;
 };
@@ -189,7 +197,16 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
         ? ` Already cut ${money(drop)} from the original ask${trueDom != null ? ` over ${trueDom}d` : ``}.`
         : ``;
     const exp = view.expectedSale;
-    if (exp) {
+    // "Priced to compete" — the SAME detector the Estimated Sale card and the Suggested
+    // Move run, so this line can never tell the cohort-ratio "closes under ask" story on
+    // a listing the card calls a bidding-war setup.
+    const comp =
+      view.status?.kind === "active" && listPrice > 0
+        ? detectCompetitive(listPrice, view.estimate)
+        : null;
+    if (comp) {
+      priceRead = `Asking ${money(listPrice)} — set ~${Math.round(comp.belowCompsPct * 100)}% below comparable sales, a hold-offers pattern: ~${Math.round(comp.overAskRate * 100)}% sold over ask, median close ≈ ask. Expect ${money(comp.rangeLow)}–${money(comp.rangeHigh)} if offers compete.${c}${saleNote}`;
+    } else if (exp) {
       const gap =
         overUnderPct !== null ? ` Ask runs ${signedPct(overUnderPct)} vs comparable sales.` : ``;
       priceRead = `Asking ${money(listPrice)} — likely closes near ${money(exp.expectedPrice)} (${pct1(exp.ratio * 100)} of ask).${gap}${c}${saleNote}`;
@@ -219,7 +236,7 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   if (view.campaignHistory.campaignCount > 1 && trueDom != null) {
     negs.push({
       sev: 58,
-      text: `relisted ${view.campaignHistory.campaignCount}× — true time on market is ${trueDom}d, not the ${rawDom ?? "fresh"}d the MLS shows`,
+      text: `relisted ${view.campaignHistory.campaignCount}× — true time on market is ${trueDom}d, not the ${rawDom != null ? `${rawDom}d` : "fresh listing"} the MLS shows`,
       link: LINKS.history,
     });
   }
@@ -273,6 +290,17 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   const priceLinks: EvidenceLink[] =
     tier === "full" ? [LINKS.estimate, ...(drop > 0 || saleNote ? [LINKS.history] : [])] : [];
 
+  // Per-lens badge data — slimmed to score+grade (verdicts stay server-side).
+  const personaScores = view.dealScore.personaScores;
+  const scoreByPersona: TheRead["scoreByPersona"] = personaScores
+    ? {
+        smart: { score: personaScores.smart.score, grade: personaScores.smart.grade },
+        cashflow: { score: personaScores.cashflow.score, grade: personaScores.cashflow.grade },
+        flippers: { score: personaScores.flippers.score, grade: personaScores.flippers.grade },
+        builders: { score: personaScores.builders.score, grade: personaScores.builders.grade },
+      }
+    : null;
+
   return {
     tier,
     thesisByPersona,
@@ -280,6 +308,7 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
     priceRead,
     grade: view.dealScore.grade,
     score: view.dealScore.score,
+    scoreByPersona,
     links: { thesisByPersona: thesisLinksByPersona, catch_: catchLinks, price: priceLinks },
   };
 }

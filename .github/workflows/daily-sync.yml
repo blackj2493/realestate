@@ -60,6 +60,82 @@ jobs:
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
         run: npx tsx scripts/worker/ingester.ts sync
 
+      # Self-heal the sold_listings search collection: re-derive the last 7 days from
+      # raw_vow_sold (idempotent upserts). Query B indexes sold rows inline, but a
+      # transient per-doc import failure silently drops that row from the dashboard
+      # SOLD panel — and until 2026-07-22 the only heal was the Sun/Wed reconcile,
+      # leaving quiet multi-day gaps (the East Gwillimbury report). This bounds any
+      # inline miss to 24h. Additive — continue-on-error.
+      - name: Reindex Sold Window (7d)
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/worker/soldIndexer.ts backfill --days 7
+
+      # Recover relist SOLD closes the delta crawl (Query B) missed. A terminate-then-relist
+      # resell closes under a NEW MLS# that can enter the feed behind the sold watermark, so it
+      # never reaches raw_vow_sold — surviving only in property_campaign_history (populated by
+      # an unfiltered by-address query). This bounded backstop scans ledger rows refreshed in
+      # the last week, re-fetches the missing closes by MLS# from the VOW feed, and re-derives
+      # the comp with the exact ingester mappers. Placed BEFORE the raw_vow_sold-derived
+      # precomputes below (sale history, region/market aggregates, estimates) so they pick up
+      # the recovered comps the same night. Needs the VOW token (by-key re-fetch) + Typesense
+      # (sold_listings import). Idempotent upserts — additive, continue-on-error. The one-time
+      # historical backfill is a manual --scan --apply --archive run (see the script header).
+      - name: Reconcile Relist Sold Closes (7d)
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+        run: npx tsx scripts/admin/reconcile-sold-from-campaign-history.ts --scan --apply --since-days=7 --window-days=180
+
+      # Drop de-listed comps whose property has since SOLD. `pruneOldDelisted` only ever
+      # expires de-listed docs on AGE, so a terminate-then-relist resale left the ORIGINAL
+      # key lit on the terminal's De-listed layer for up to 90 days after the sale — while
+      # /properties/<original key> already rendered SOLD via getListingDetail's relist
+      # reconciliation (the 210 Charlton Ave E report; 7,103 of 59,730 For-Sale de-listed
+      # pins were stale when measured 2026-08-03). Both indexers now handle this inline —
+      # soldIndexer purges on close, delistedIndexer withholds a replayed de-list — so this
+      # whole-window join is only a backstop for anything they missed (e.g. a close indexed
+      # while Typesense was refusing the purge). A LEASE deliberately does NOT retire a pin:
+      # the owner still owns the property and still wanted to sell (see SUPERSEDING_DEAL_TYPES).
+      # Placed AFTER every step that writes a close so it sees tonight's full picture.
+      # Idempotent; typically deletes 0. Additive — continue-on-error.
+      - name: Sweep Superseded De-listed Comps
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/worker/purgeSupersededDelisted.ts sweep --apply
+
+      # Re-floor active True DOM to the naive current-listing age. The floor that keeps
+      # true_dom honest — GREATEST(true_dom, days-since-OriginalEntryTimestamp) — lives only
+      # in the core sync's processBatch, which runs on the ModificationTimestamp DELTA. A
+      # listing that is stable in the feed AND has no campaign-history ledger row falls out of
+      # every delta and freezes at true_dom=0 as it ages (2026-08-02: 22k active rows >60d old
+      # reading 0). The region RPCs mask this with a query-time floor, but Typesense/the flat
+      # column do not, so per-listing cards / watchlist / IsStale bubbles under-report DOM and
+      # drop STALE badges. This persists the same floor to the flat column AND pushes
+      # TrueDom/IsStale to the `properties` collection. --min-drift=3 bounds nightly churn
+      # (stable cards within 3 days; a 60d stale-line crossing is always caught immediately).
+      # Placed before the region/market precomputes so the flat column is fresh (they floor at
+      # query time regardless). Raw pg → Session-pooler DATABASE_URL + Typesense admin key.
+      # Additive — must never break the core sync, so continue-on-error. The one-time full
+      # backfill is a manual `--apply` (min-drift 1) run; see the script header.
+      - name: Re-floor Active True DOM
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/refloor-active-true-dom.ts --apply --min-drift=3
+
       # Refresh precomputed condo fee/sqft aggregates from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate condo_fee_stats table; needs
       # only the Supabase credentials (no TRREB tokens). Keeps the Fee Stability card ≤24h fresh.
@@ -73,6 +149,31 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-condo-fee-stats.ts --apply
+
+      # Closed-rent aggregates for the public /data/rents tracker (migration 119). One
+      # server-side GROUPING SETS statement over raw_vow_sold lease rows — measured ~2s for
+      # the whole table, so the 10-minute bound is generous. Uses DATABASE_URL (pg) rather
+      # than the Supabase REST creds precisely because the aggregation happens in Postgres:
+      # nothing crosses the wire but finished cells. Additive — must never break the sync.
+      - name: Refresh Rent Market Stats
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/refresh-rent-market-stats.ts --apply
+
+      # Sold-vs-asking outcomes for the public /data/over-asking tracker (migration 120). Same
+      # shape as the rent job above: one server-side GROUPING SETS statement over raw_vow_sold
+      # sale rows, ~2s for the whole table, so the 10-minute bound is generous. Without this
+      # step the tracker would freeze at whatever the backfill wrote and go on serving it with
+      # a "updated nightly" stamp — the failure mode this codebase keeps rediscovering.
+      # Additive — must never break the sync.
+      - name: Refresh Sale Competition Stats
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/refresh-sale-competition-stats.ts --apply
 
       # Precompute base-scope market aggregates (cap rate, active/stale counts, 24mo sold
       # trend) for every curated market into market_summary (migration 048), so the
@@ -89,6 +190,34 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-market-summary.ts --apply
+
+      # Precompute the FULL base-scope /analytics payload (all 11 metrics per curated
+      # market) into region_metrics (migration 081), so the default Market Trends view and
+      # the dashboard scorecard read one point lookup instead of the live RPC batch.
+      # NOTE: this step (and Capture Price Events below) previously existed ONLY in the
+      # abandoned Railway orchestrator (scripts/worker/dailySync.ts) and was never wired
+      # into this workflow — the 2026-07-22 canary freshness alert. Reads the same tables
+      # as the market-summary step; Supabase creds only. Additive — continue-on-error.
+      - name: Refresh Region Metrics
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/admin/refresh-region-metrics.ts --apply
+
+      # Multi-cut price ledger (migration 069): diff each active listing's fresh
+      # list_price against listing_price_state, append price_events on a change. Never
+      # scheduled anywhere until 2026-07-22 — price_events had ZERO rows in prod (the
+      # canary's price-ledger check now watches for exactly this). Uses raw pg, so it
+      # needs the Session-pooler DATABASE_URL secret (like the geo step), NOT the REST
+      # creds. Additive — continue-on-error.
+      - name: Capture Price Events
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/capture-price-events.ts --apply
 
       # Refresh the precomputed prior-sale ledger from the freshly-synced VOW data.
       # Reads raw_vow_sold READ-ONLY and writes the separate property_sale_history table;
@@ -156,6 +285,21 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/admin/refresh-property-estimates.ts --apply --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
 
+      # Prune orphaned estimates. property_estimates keeps ONE row per ACTIVE listing, but the
+      # refresh only WRITES active rows — a listing that has since sold/terminated/dropped out
+      # is skipped, never deleted, so its estimate lingers forever (frozen computed_at), bloats
+      # the table (Disk IO budget §12), and the freshness canary miscounts it as a stale ACTIVE
+      # estimate (2026-08-02: 24.5k such orphans). Deletes rows that are BOTH stale (>120h) AND
+      # not active-eligible by the SAME isActive predicate the refresh uses — active rows are
+      # never touched, and every estimate is regenerable, so it's non-destructive. Raw pg →
+      # Session-pooler DATABASE_URL (like Capture Price Events). Additive — continue-on-error.
+      - name: Prune Orphaned Estimates
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/admin/prune-property-estimates.ts --apply
+
       # Precompute geo "Things to Know" flags (flood now; rail/traffic later) for
       # listings synced in the last day, into listing_geo_flags. PUBLIC-records
       # PostGIS spatial joins — reads listings, writes the separate listing_geo_flags
@@ -171,6 +315,24 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/worker/enrichGeoFlags.ts --since "$(date -u -d '25 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
 
+      # VOW-only ACTIVE listings — the ~16.4k homes the VOW datafeed carries that IDX
+      # does not (measured 2026-08-09: 112,680 vs 96,275 Active). Writes ONLY to
+      # vow_active_listings, which is RLS-on-with-no-policies, so nothing ingested here
+      # can reach an anonymous surface even by mistake.
+      # SELF-SKIPS unless VOW_ACTIVES_ENABLED is "true": adding this step does NOT by
+      # itself start ingesting VOW data. The repo variable is the switch, and it should
+      # stay off until the PROPTX URL registration (audit R7) covers the production host.
+      # Additive — continue-on-error so it can never break the core sync.
+      - name: Sync VOW-only Active Listings
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PROPTX_VOW_TOKEN: ${{ secrets.PROPTX_VOW_TOKEN }}
+          VOW_ACTIVES_ENABLED: ${{ vars.VOW_ACTIVES_ENABLED }}
+        run: npx tsx scripts/worker/vowActiveSync.ts
+
       # Email each user a digest of price drops on their watched properties, using
       # the freshly-synced Typesense index. Additive + must never break the core
       # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
@@ -185,6 +347,22 @@ jobs:
           ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
         run: npx tsx scripts/worker/alerts.ts
+
+      # Onboarding drip — the milestone-gated welcome sequence (engagement plan WS1.2).
+      # Additive + continue-on-error so it can never break the core sync. Fail-closed:
+      # no-ops if RESEND_API_KEY is unset AND self-skips until migration 105
+      # (user_email_lifecycle) is applied, so it can't re-send without idempotency.
+      # Needs the search-only Typesense key for 2B's live example dashboard.
+      - name: Send Onboarding Sequence
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY: ${{ secrets.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY }}
+        run: npx tsx scripts/worker/onboarding.ts
 
       # Refresh cached listing detail for everything synced today so nightly changes
       # appear immediately instead of within the page's 1h TTL. Additive — must never

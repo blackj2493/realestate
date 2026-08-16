@@ -115,3 +115,119 @@ export function scatterColorFor(
   if (!hasMetricValue(value, sparse)) return NO_DATA_COLOR;
   return range[colorIndexFor(value, domain, range.length)];
 }
+
+// ── Representative pin selection ─────────────────────────────────────────────
+// Listings mode draws a price label for every UN-clustered listing. Left
+// unbounded that lets a few far-flung, extreme-priced listings (a lone $15M pin
+// in a sparse pocket) win most of the visible labels while ordinary inventory
+// hides inside count bubbles. To keep the individual labels spatially
+// representative, bucket the un-clustered listings into a coarse grid over THEIR
+// OWN extent (so the grid tracks where the listings actually are and is stable
+// across map pans — no per-frame re-gridding) and keep at most `perCell` per
+// occupied cell: the MEDIAN-priced one (so an outlier can never take the slot)
+// and, when a slot remains, the FRESHEST. Clusters/counts are untouched — this
+// only decides which price labels render.
+export const PIN_GRID_COLS = 8;
+export const PIN_GRID_ROWS = 6;
+export const PINS_PER_CELL = 2;
+
+/** Up to `perCell` representatives of one grid cell: median price, then freshest,
+ *  then fill outward from the price-central band. Assumes group.length > perCell. */
+function selectCellRepresentatives<T>(
+  group: T[],
+  perCell: number,
+  getPrice: (t: T) => number,
+  getFreshness?: (t: T) => number
+): T[] {
+  const byPrice = [...group].sort((a, b) => getPrice(a) - getPrice(b));
+  const chosen: T[] = [];
+  const take = (t: T | null | undefined) => {
+    if (t && !chosen.includes(t)) chosen.push(t);
+  };
+  const mid = Math.floor((byPrice.length - 1) / 2);
+  take(byPrice[mid]); // median-priced — the representative, never the outlier
+  if (chosen.length < perCell && getFreshness) {
+    let best: T | null = null;
+    let bestF = -Infinity;
+    for (const g of group) {
+      if (chosen.includes(g)) continue;
+      const f = getFreshness(g);
+      if (f > bestF) {
+        bestF = f;
+        best = g;
+      }
+    }
+    take(best);
+  }
+  // Any remaining slots: expand from the median outward (central prices first).
+  let lo = mid - 1;
+  let hi = mid + 1;
+  while (chosen.length < perCell && (lo >= 0 || hi < byPrice.length)) {
+    if (hi < byPrice.length) take(byPrice[hi++]);
+    if (chosen.length < perCell && lo >= 0) take(byPrice[lo--]);
+  }
+  return chosen;
+}
+
+/**
+ * Thin a set of point-carrying items to at most `perCell` per coarse grid cell,
+ * choosing representative (median-priced + freshest) members so extreme-priced
+ * outliers and dense pockets can't dominate the rendered labels. Returns the kept
+ * items in their original order (order is visually irrelevant for a TextLayer, but
+ * stable output keeps this deterministic + testable). Cheap enough (≤100 items) to
+ * run on every result set.
+ */
+export function pickRepresentativePins<T>(
+  items: T[],
+  opts: {
+    cols: number;
+    rows: number;
+    perCell: number;
+    getLngLat: (t: T) => [number, number];
+    getPrice: (t: T) => number;
+    getFreshness?: (t: T) => number;
+  }
+): T[] {
+  const { cols, rows, perCell, getLngLat, getPrice, getFreshness } = opts;
+  if (items.length === 0 || cols < 1 || rows < 1 || perCell < 1) return items;
+
+  let west = Infinity;
+  let east = -Infinity;
+  let south = Infinity;
+  let north = -Infinity;
+  for (const it of items) {
+    const [lng, lat] = getLngLat(it);
+    if (lng < west) west = lng;
+    if (lng > east) east = lng;
+    if (lat < south) south = lat;
+    if (lat > north) north = lat;
+  }
+  const lngSpan = east - west;
+  const latSpan = north - south;
+  const cellOf = (lng: number, lat: number): number => {
+    const cx = lngSpan > 0 ? Math.min(cols - 1, Math.floor(((lng - west) / lngSpan) * cols)) : 0;
+    const cy = latSpan > 0 ? Math.min(rows - 1, Math.floor(((north - lat) / latSpan) * rows)) : 0;
+    return cy * cols + cx;
+  };
+
+  const buckets = new Map<number, T[]>();
+  for (const it of items) {
+    const [lng, lat] = getLngLat(it);
+    const key = cellOf(lng, lat);
+    const arr = buckets.get(key);
+    if (arr) arr.push(it);
+    else buckets.set(key, [it]);
+  }
+
+  const keep = new Set<T>();
+  for (const group of buckets.values()) {
+    if (group.length <= perCell) {
+      for (const g of group) keep.add(g);
+      continue;
+    }
+    for (const g of selectCellRepresentatives(group, perCell, getPrice, getFreshness)) {
+      keep.add(g);
+    }
+  }
+  return items.filter((it) => keep.has(it));
+}

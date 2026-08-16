@@ -8,14 +8,17 @@ import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { DeltaChips } from "@/components/Property/DeltaChips";
 import { Redact } from "@/components/Property/teaserPrimitives";
+import SignInLink from "@/components/auth/SignInLink";
 import type { SimilarSoldCard } from "@/app/api/properties/[id]/similar/route";
 
 function fmtSoldDate(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
+  // Date-only value encoded as UTC midnight — without timeZone:'UTC' Ontario viewers
+  // see the previous day (audit MEDIUM-18).
   return Number.isNaN(d.getTime())
     ? ""
-    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /** A single recently-sold comp. `locked` (anonymous) blurs the VOW numbers.
@@ -23,10 +26,7 @@ function fmtSoldDate(iso: string | null): string {
 export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; locked?: boolean; leased?: boolean }) {
   if (locked) {
     return (
-      <Link
-        href="/login"
-        className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50"
-      >
+      <SignInLink className="block w-[260px] shrink-0 overflow-hidden rounded-lg border border-l-2 border-border border-l-rose-500/40 bg-card/50">
         <div className="relative aspect-[4/3] bg-muted/60">
           <span className="absolute left-2 top-2 rounded bg-rose-500/90 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-white">
             {leased ? "LEASED" : "SOLD"}
@@ -40,7 +40,7 @@ export function SoldCompCard({ card, locked, leased }: { card: SimilarSoldCard; 
           <Redact className="h-5 w-24" />
           <Redact className="h-3 w-32" />
         </div>
-      </Link>
+      </SignInLink>
     );
   }
 

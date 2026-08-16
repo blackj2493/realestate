@@ -17,6 +17,9 @@ import { type TransactionMode, type PropertyClass, priceConfig } from "@/lib/fil
 import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
 import { SCOPE_DEFAULT_PERSONA } from "@/lib/personas/resolvePersona";
+import { persistPersona } from "@/lib/personas/personaStore";
+import type { DealScoreGrade } from "@/lib/dealScore/computeDealScore";
+import type { DealInputs } from "@/lib/dealScore/fromListingDocument";
 
 export type { PersonaType } from "@/lib/personas/personaConfig";
 
@@ -179,9 +182,26 @@ export interface CommandCenterState {
   // explain the cap. Cleared on any successful add / remove / clear.
   selectionLimitHit: boolean;
 
+  // Client-side "minimum deal grade" filter (terminal-only). The Deal Score isn't indexed,
+  // so this narrows the LOADED results for the active lens — not the whole market. null =
+  // off. Consumer-gated in the UI (the grade is VOW-derived).
+  minDealGrade: DealScoreGrade | null;
+  setMinDealGrade: (grade: DealScoreGrade | null) => void;
+
   // Search results
   searchResult: SearchResult | null;
   setSearchResult: (result: SearchResult | null) => void;
+
+  /**
+   * VOW-derived Deal Score inputs per listing id, from /api/estimates/sale-price.
+   * Lives here rather than in LedgerPanel (which fetches it) because the MIN DEAL GRADE
+   * filter runs in TWO places — the ledger list and the map-pin filter in
+   * properties/page.tsx — and both must grade from the same inputs, or the map and the
+   * list disagree about which pins clear the floor. Empty until the batch resolves; a row
+   * with no entry scores null and fails any floor rather than passing one.
+   */
+  dealInputsById: Record<string, DealInputs>;
+  setDealInputsById: (byId: Record<string, DealInputs>) => void;
 
   // UI state
   isLoading: boolean;
@@ -226,6 +246,13 @@ export interface CommandCenterState {
   // consumes it (the `nonce` bumps so re-selecting the same place re-flies).
   flyTo: { lat: number; lng: number; zoom?: number; nonce: number } | null;
   setFlyTo: (target: { lat: number; lng: number; zoom?: number } | null) => void;
+  // Last settled map camera, remembered in-session so returning to the terminal
+  // restores where the user was. Mobile opens a listing via a full route push, so
+  // Back REMOUNTS this page — without this, the map falls back to the URL seed
+  // (?lat=/?city=, e.g. the onboarding market Brampton) instead of the area the user
+  // had browsed to. The store is a module singleton, so this survives the remount.
+  lastCamera: { lat: number; lng: number; zoom: number } | null;
+  setLastCamera: (cam: { lat: number; lng: number; zoom: number } | null) => void;
   // A pin dropped at a searched/geocoded address that has no active listing.
   /** A dropped map pin. For comps-on-demand it also carries the subject's constraints
    *  (type keys + ±band price) so the sold-comp fetch returns SIMILAR solds, not all. */
@@ -316,8 +343,19 @@ export interface CommandCenterState {
 }
 
 export const useCommandCenterStore = create<CommandCenterState>((set) => ({
+  // Cold-start default (Homebuyer, via SCOPE_DEFAULT_PERSONA). On mount the terminal
+  // page hydrates this from the shared config (hydrateTerminalPersona) under the
+  // ?lens= > stored > default precedence; a stable default here avoids an SSR/client
+  // hydration mismatch.
   activePersona: SCOPE_DEFAULT_PERSONA.terminal,
-  setActivePersona: (persona) => set({ activePersona: persona }),
+  // The persona is ONE shared value (dashboard config). Write terminal lens changes
+  // through so the dashboard, listing pages and this terminal never diverge — this is
+  // the single chokepoint every terminal persona switch (top bar, saved lenses,
+  // command palette) already flows through. No-op when unchanged; SSR/anon-safe.
+  setActivePersona: (persona) => {
+    set({ activePersona: persona });
+    persistPersona(persona);
+  },
 
   filters: { ...defaultTerminalFilters },
   setFilter: (key, value) =>
@@ -431,8 +469,14 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setShowSelectedOnly: (on) => set({ showSelectedOnly: on }),
   selectionLimitHit: false,
 
+  minDealGrade: null,
+  setMinDealGrade: (grade) => set({ minDealGrade: grade }),
+
   searchResult: null,
   setSearchResult: (result) => set({ searchResult: result }),
+
+  dealInputsById: {},
+  setDealInputsById: (byId) => set({ dealInputsById: byId }),
 
   isLoading: false,
   setIsLoading: (loading) => set({ isLoading: loading }),
@@ -472,6 +516,8 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
     set((state) => ({
       flyTo: target ? { ...target, nonce: (state.flyTo?.nonce ?? 0) + 1 } : null,
     })),
+  lastCamera: null,
+  setLastCamera: (lastCamera) => set({ lastCamera }),
   searchPin: null,
   setSearchPin: (pin) => set({ searchPin: pin }),
   enterComps: (pin) =>

@@ -254,27 +254,41 @@ describe('calculateDerivedMetrics', () => {
     expect(r.isDistressed).toBe(false);
   });
 
-  it('flags distressed when DOM > 90', () => {
+  // Time on market is NOT distress — it is STALE, which shares the same 90-day threshold and
+  // was being masked by the red badge on 12,291 listings. See lib/listings/distressSignals.ts.
+  it('does NOT flag distressed on DOM > 90 alone', () => {
     const r = calculateDerivedMetrics({
       ListPrice: 800_000,
       BedroomsTotal: 3,
       OriginalEntryTimestamp: new Date(Date.now() - 120 * 86_400_000).toISOString(),
       PublicRemarks: 'Bright family home.',
     });
-    expect(r.isDistressed).toBe(true);
+    expect(r.calculatedDOM).toBeGreaterThan(90); // still computed — IsStale/TrueDom consume it
+    expect(r.isDistressed).toBe(false);
   });
 
-  it("flags distressed on remarks keywords like 'as-is' / 'tlc'", () => {
+  it('flags distressed on a real forced-sale phrase', () => {
     const r = calculateDerivedMetrics({
       ListPrice: 800_000,
       BedroomsTotal: 3,
       OriginalEntryTimestamp: new Date(Date.now() - 10 * 86_400_000).toISOString(),
-      PublicRemarks: 'Estate sale, sold as-is. Needs TLC.',
+      PublicRemarks: 'Estate sale. Property needs TLC throughout.',
     });
     expect(r.isDistressed).toBe(true);
   });
 
-  it('flags distressed on a >5% price reduction', () => {
+  it('does NOT flag distressed on an as-is disclaimer alone', () => {
+    const r = calculateDerivedMetrics({
+      ListPrice: 800_000,
+      BedroomsTotal: 3,
+      OriginalEntryTimestamp: new Date(Date.now() - 10 * 86_400_000).toISOString(),
+      PublicRemarks: 'Lovely home. Appliances sold as-is, where-is.',
+    });
+    expect(r.isDistressed).toBe(false);
+  });
+
+  // Price cuts belong to TotalPriceDrop and the price_drop dashboard board.
+  it('does NOT flag distressed on a price reduction', () => {
     const r = calculateDerivedMetrics({
       ListPrice: 800_000,
       PreviousListPrice: 900_000, // ~11% cut
@@ -282,7 +296,7 @@ describe('calculateDerivedMetrics', () => {
       OriginalEntryTimestamp: new Date(Date.now() - 10 * 86_400_000).toISOString(),
       PublicRemarks: 'Nice home.',
     });
-    expect(r.isDistressed).toBe(true);
+    expect(r.isDistressed).toBe(false);
   });
 
   it('detects suite potential from KitchensTotal > 1 (legacy path)', () => {

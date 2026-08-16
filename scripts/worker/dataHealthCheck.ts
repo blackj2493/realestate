@@ -23,7 +23,8 @@
  * Env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
  *      (optional) RESEND_API_KEY + SYNC_ALERT_EMAIL to receive the email,
  *      (optional) ALERTS_FROM_EMAIL, NEXT_PUBLIC_SITE_URL,
- *      (optional) METRICS_STALE_HOURS (default 36), CONDO_STALE_DAYS (default 10).
+ *      (optional) METRICS_STALE_HOURS (default 36), CONDO_STALE_DAYS (default 10),
+ *      (optional) ESTIMATE_STALE_HOURS (default 48), ESTIMATE_MAX_AGE_HOURS (default 120).
  */
 import 'dotenv/config';
 import { Resend } from 'resend';
@@ -37,17 +38,60 @@ import {
   checkMarketRows,
   checkCondoRows,
   checkMigrationLedger,
+  checkPriceLedger,
+  checkEstimateFreshness,
   checkDrift,
+  checkEmailFailures,
+  checkMediaReconcile,
+  checkDistressRate,
+  checkSoldTransactionType,
+  checkOnboardingExample,
+  checkUnpriceableValues,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
 } from '@/lib/data/healthChecks';
+import { searchListings } from '@/lib/typesense/client';
+import { UNPRICEABLE_EXACT, UNPRICEABLE_PATTERNS } from '@/lib/avm/normalizeType';
+import { buildAreaData, EXAMPLE_REGION } from '@/lib/alerts/onboardingData';
 
 const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <support@pureproperty.ca>';
 const TO = process.env.SYNC_ALERT_EMAIL || '';
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
 const METRICS_STALE_HOURS = Number(process.env.METRICS_STALE_HOURS) || 36;
 const CONDO_STALE_DAYS = Number(process.env.CONDO_STALE_DAYS) || 10;
+// Email failures are urgent (broken transactional email) — a short window keeps the alert
+// current without re-firing on a failure that was already investigated and resolved.
+const EMAIL_FAIL_LOOKBACK_HOURS = Number(process.env.EMAIL_FAIL_LOOKBACK_HOURS) || 48;
+// 48h (vs 36 for region_metrics): state only moves when the capture RUNS, but a single
+// missed night shouldn't page — two consecutive misses should.
+const PRICE_STATE_STALE_HOURS = Number(process.env.PRICE_STATE_STALE_HOURS) || 48;
+// Estimate heartbeat: the nightly delta re-estimates every re-synced listing, so
+// max(computed_at) advances daily; 48h tolerates one missed night (the refresh step is
+// continue-on-error), two consecutive misses fire.
+const ESTIMATE_STALE_HOURS = Number(process.env.ESTIMATE_STALE_HOURS) || 48;
+// Backlog threshold: every active row is re-based by the twice-weekly full recompute (≤ ~4-day
+// cycle), so 120h (5d) sits safely above it — only rows that missed a recompute age past it.
+const ESTIMATE_MAX_AGE_HOURS = Number(process.env.ESTIMATE_MAX_AGE_HOURS) || 120;
+// Tolerance covers two benign populations: (1) the steady-state ACTIVE residual — listings
+// the refresh can't re-estimate. (Was ~1.35k when the refresh SKIPPED empty results without
+// a write; since the empty-result row-clear in refresh-property-estimates.ts those rows are
+// DELETED instead, so this component should trend toward 0 — revisit the tolerance downward
+// once observed.) And (2) a rolling ORPHAN backlog. The nightly prune
+// (prune-property-estimates.ts) only deletes an orphan once its estimate is >120h stale — the
+// SAME threshold this canary counts at — so a whole recompute cohort's sold/terminal subset
+// ages past 120h together and transiently counts as "stale" until the next daily prune clears
+// it (measured 2026-08-03: +1,674 terminal orphans → 3,033 total, a false alarm; pruned back
+// to 1,357). 4000 covers residual + a full cohort's orphan crossing with margin, while staying
+// an order of magnitude below a real under-run (a failed recompute shard ≈ 20k). A cleaner fix
+// (prune orphans promptly, or exclude them from the count) needs a whole-table listings status
+// join that trips the statement timeout — deferred; this calibrates to the real baseline.
+const ESTIMATE_STALE_TOLERANCE = Number(process.env.ESTIMATE_STALE_TOLERANCE) || 4000;
+// Empty-media listings tolerated before "the sweep scanned 0 rows" counts as a failure
+// rather than a healthy no-op. New listings legitimately land photo-less (AMPRE publishes
+// /Property before /Media), so a steady trickle is normal; 100 sits above that trickle and
+// far below a dead sweep (which parks the number in the thousands).
+const MEDIA_EMPTY_TOLERANCE = Number(process.env.MEDIA_EMPTY_TOLERANCE) || 100;
 
 const problems: Problem[] = [];
 
@@ -139,6 +183,83 @@ async function checkCondoFees(): Promise<void> {
   );
 }
 
+async function checkPriceLedgerFreshness(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const { data, error } = await sb
+    .from('listing_price_state')
+    .select('updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    problems.push({
+      severity: 'warn',
+      check: 'price-ledger',
+      detail: `listing_price_state unavailable (${error.message}) — is migration 069 applied?`,
+    });
+    return;
+  }
+  problems.push(
+    ...checkPriceLedger({
+      stateNewest: data?.length ? String((data[0] as { updated_at: string }).updated_at) : null,
+      staleHours: PRICE_STATE_STALE_HOURS,
+    })
+  );
+}
+
+/**
+ * PureProperty Estimate (property_estimates) freshness — the precompute Compare and the
+ * Command-Center batch read. Two cheap, single-table reads (no join to `listings`, whose
+ * synced_at is unindexed and would risk the very statement-timeout this guards): the newest
+ * computed_at (heartbeat) and a count of rows older than the recompute cycle (backlog). The
+ * pure rules in checkEstimateFreshness decide.
+ */
+async function checkEstimateHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const staleCutoff = new Date(Date.now() - ESTIMATE_MAX_AGE_HOURS * 3_600_000).toISOString();
+
+  const newest = await sb
+    .from('property_estimates')
+    .select('computed_at')
+    .order('computed_at', { ascending: false })
+    .limit(1);
+  if (newest.error) {
+    problems.push({
+      severity: 'warn',
+      check: 'estimate-freshness',
+      detail: `property_estimates unavailable (${newest.error.message}) — is migration 023 applied?`,
+    });
+    return;
+  }
+
+  // head:true → count only, no rows read. Both counts are over one narrow row per active
+  // listing (no full_payload TOAST), so they stay cheap for a once-daily canary.
+  const stale = await sb
+    .from('property_estimates')
+    .select('listing_key', { count: 'exact', head: true })
+    .lt('computed_at', staleCutoff);
+  const total = await sb
+    .from('property_estimates')
+    .select('listing_key', { count: 'exact', head: true });
+  if (stale.error || total.error) {
+    problems.push({
+      severity: 'warn',
+      check: 'estimate-staleness',
+      detail: `estimate backlog counts unavailable (${stale.error?.message ?? total.error?.message}) — heartbeat still checked`,
+    });
+  }
+
+  problems.push(
+    ...checkEstimateFreshness({
+      estimateNewest: newest.data?.length ? String((newest.data[0] as { computed_at: string }).computed_at) : null,
+      staleCount: stale.error ? 0 : stale.count ?? 0,
+      totalCount: total.error ? 0 : total.count ?? 0,
+      staleHours: ESTIMATE_STALE_HOURS,
+      staleMaxHours: ESTIMATE_MAX_AGE_HOURS,
+      staleTolerance: ESTIMATE_STALE_TOLERANCE,
+    })
+  );
+}
+
 async function checkMigrations(): Promise<void> {
   const dir = path.join(process.cwd(), 'supabase', 'migrations');
   let files: string[];
@@ -157,6 +278,215 @@ async function checkMigrations(): Promise<void> {
     return;
   }
   problems.push(...checkMigrationLedger(files, (data ?? []).map((r) => String((r as { filename: string }).filename))));
+}
+
+/**
+ * Transactional email health — reads email_send_failures (098). Catches a dead Vercel
+ * Resend key within a day; alerts from GitHub Actions, which works even when the web
+ * runtime's Resend credential is broken (an email alert about broken email is circular).
+ */
+async function checkEmailHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const sinceIso = new Date(Date.now() - EMAIL_FAIL_LOOKBACK_HOURS * 3_600_000).toISOString();
+  const { data, error } = await sb
+    .from('email_send_failures')
+    .select('kind, reason, occurred_at')
+    .gte('occurred_at', sinceIso)
+    .limit(500);
+  if (error) {
+    problems.push({ severity: 'warn', check: 'email-delivery', detail: `email_send_failures unavailable (${error.message}) — is migration 098 applied?` });
+    return;
+  }
+  const rows = (data ?? []).map((r) => {
+    const row = r as { kind: string; reason: string };
+    return { kind: row.kind, reason: row.reason };
+  });
+  problems.push(...checkEmailFailures(rows));
+
+  // Keep the table bounded — it is a monitoring signal, not an archive.
+  const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
+  await sb.from('email_send_failures').delete().lt('occurred_at', cutoff);
+}
+
+/**
+ * Media reconciliation health — is the nightly blank-gallery healer actually working?
+ *
+ * Counts active listings with no photos, and reads the outcome each sweep recorded in
+ * sync_state (writeReconcileOutcome in scripts/worker/ingester.ts). The rule needs both:
+ * "scanned 0" is healthy when nothing is waiting and fatal when 10k listings are. See
+ * checkMediaReconcile for the failure this replays.
+ */
+async function checkMediaReconcileHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+
+  // head+exact = a COUNT, no rows shipped. Served by idx_listings_empty_media (108).
+  const { count, error: countErr } = await sb
+    .from('listings')
+    .select('listing_key', { count: 'exact', head: true })
+    .or('media_urls.is.null,media_urls.eq.{}');
+  if (countErr) {
+    problems.push({
+      severity: 'warn',
+      check: 'media-reconcile',
+      detail: `could not count empty-media listings (${countErr.message}) — is migration 108 applied?`,
+    });
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('sync_state')
+    .select('id, records_synced, status, updated_at')
+    .in('id', ['media_reconcile_recent', 'media_reconcile_backlog']);
+  if (error) {
+    problems.push({
+      severity: 'warn',
+      check: 'media-reconcile',
+      detail: `sync_state unavailable (${error.message}) — is migration 107 applied?`,
+    });
+    return;
+  }
+
+  problems.push(
+    ...checkMediaReconcile({
+      emptyMedia: count ?? 0,
+      sweeps: (data ?? []).map((r) => {
+        const row = r as { id: string; records_synced: number | null; status: string | null; updated_at: string | null };
+        return { id: row.id, scanned: row.records_synced, status: row.status, updatedAt: row.updated_at };
+      }),
+      nowMs: Date.now(),
+      tolerance: MEDIA_EMPTY_TOLERANCE,
+    })
+  );
+}
+
+// Keep in lock-step with refresh-property-estimates.ts TERMINAL_STATUSES (which mirrors
+// migration 020's active filter) — same convention as prune-property-estimates.ts.
+const ESTIMATE_TERMINAL_STATUSES = [
+  'sold',
+  'closed',
+  'closed sale',
+  'leased',
+  'terminated',
+  'expired',
+  'suspended',
+];
+
+/**
+ * Stale-unpriceable invariant — one RPC (migration 113) counting ACTIVE unpriceable-type
+ * listings that carry an AVM value. Every predicate list is passed from the code's
+ * canonical exports so the SQL holds no drifted copy; see checkUnpriceableValues for the
+ * failure this replays.
+ */
+async function checkUnpriceableValueHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  const { data, error } = await sb.rpc('count_unpriceable_valued_estimates', {
+    p_exact: UNPRICEABLE_EXACT,
+    p_patterns: UNPRICEABLE_PATTERNS,
+    p_terminal: ESTIMATE_TERMINAL_STATUSES,
+  });
+  problems.push(
+    ...checkUnpriceableValues({
+      count: typeof data === 'number' ? data : null,
+      error: error?.message ?? null,
+    })
+  );
+}
+
+/**
+ * Onboarding example integrity — the intro email (2B) builds a live dashboard for a HARDCODED
+ * region (EXAMPLE_REGION = "Woodbridge"), which resolves only via the COMMUNITY_ALIASES
+ * expansion in area.ts. This runs the SAME resolver against live Typesense and asserts the
+ * PRIMARY example still resolves to inventory — catching a TRREB CityRegion rename that would
+ * silence the alias and ship a "0 new / 0 for sale" intro email. The email itself falls back
+ * to a whole city, so this is a WARN (fix the alias), not a user-facing outage.
+ */
+async function checkOnboardingExampleHealth(): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY) {
+    problems.push({
+      severity: 'warn',
+      check: 'onboarding-example',
+      detail: 'NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY not set — onboarding example not checked',
+    });
+    return;
+  }
+  const data = await buildAreaData(EXAMPLE_REGION);
+  problems.push(...checkOnboardingExample({ region: EXAMPLE_REGION, activeCount: data.activeCount }));
+}
+
+/**
+ * DISTRESSED badge population — is the flag still on the right listings?
+ *
+ * `isDistressed` is ETL-written and the sync only re-transforms the modification delta, so a
+ * rule regression spreads silently and asymmetrically across the index. Both directions are
+ * invisible without this: at 19% (its state before 2026-08-12) the badge is noise; at 0% the
+ * detector is simply broken. Counts come from the search index, since that is the copy the
+ * badge actually renders from.
+ */
+async function checkDistressFlagHealth(): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY) {
+    problems.push({
+      severity: 'warn',
+      check: 'distress-rate',
+      detail: 'NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY not set — DISTRESSED share not checked',
+    });
+    return;
+  }
+  try {
+    const [all, flagged] = await Promise.all([
+      searchListings({ query: '*', rawFilterBy: 'TransactionType:=`For Sale`', perPage: 0 }),
+      searchListings({
+        query: '*',
+        rawFilterBy: 'TransactionType:=`For Sale` && isDistressed:=true',
+        perPage: 0,
+      }),
+    ]);
+    problems.push(...checkDistressRate({ actives: all.totalFound, flagged: flagged.totalFound }));
+  } catch (err) {
+    problems.push({
+      severity: 'warn',
+      check: 'distress-rate',
+      detail: `could not read the DISTRESSED share from Typesense: ${(err as Error)?.message ?? err}`,
+    });
+  }
+}
+
+/**
+ * raw_vow_sold.transaction_type coverage.
+ *
+ * WHY: the column is the sale/lease separator that PR #219 put under the AVM comp pulls and
+ * the region RPCs, so a NULL row silently leaves every comparable set. In August 2026 the
+ * upsert stopped writing it for 12 days (~1,000 rows/night, 4,713 of them sales) and nothing
+ * surfaced it — the boards kept rendering plausible numbers off a quietly shrinking pool.
+ *
+ * Counted straight off the table rather than through a board function: this is about what was
+ * WRITTEN, and any read path that filters on the column cannot see the rows it is dropping.
+ */
+async function checkSoldTransactionTypeHealth(): Promise<void> {
+  try {
+    const sb = getServiceRoleClient();
+    const since = new Date(Date.now() - 48 * 3_600_000).toISOString();
+    const [total, nullTotal, nullRecent] = await Promise.all([
+      sb.from('raw_vow_sold').select('*', { count: 'exact', head: true }),
+      sb.from('raw_vow_sold').select('*', { count: 'exact', head: true }).is('transaction_type', null),
+      sb.from('raw_vow_sold').select('*', { count: 'exact', head: true })
+        .is('transaction_type', null).gte('created_at', since),
+    ]);
+    const err = total.error || nullTotal.error || nullRecent.error;
+    if (err) throw new Error(err.message);
+    problems.push(
+      ...checkSoldTransactionType({
+        total: total.count ?? 0,
+        nullTotal: nullTotal.count ?? 0,
+        nullRecent: nullRecent.count ?? 0,
+      })
+    );
+  } catch (err) {
+    problems.push({
+      severity: 'warn',
+      check: 'sold-transaction-type',
+      detail: `could not read transaction_type coverage from raw_vow_sold: ${(err as Error)?.message ?? err}`,
+    });
+  }
 }
 
 const escapeHtml = (s: string) =>
@@ -210,6 +540,14 @@ async function main(): Promise<void> {
   for (const [name, fn] of [
     ['market metrics', checkMarketMetrics],
     ['condo fees', checkCondoFees],
+    ['price ledger', checkPriceLedgerFreshness],
+    ['estimate freshness', checkEstimateHealth],
+    ['unpriceable values', checkUnpriceableValueHealth],
+    ['email delivery', checkEmailHealth],
+    ['media reconcile', checkMediaReconcileHealth],
+    ['onboarding example', checkOnboardingExampleHealth],
+    ['distress flag', checkDistressFlagHealth],
+    ['sold transaction_type', checkSoldTransactionTypeHealth],
     ['migrations', checkMigrations],
   ] as const) {
     try {

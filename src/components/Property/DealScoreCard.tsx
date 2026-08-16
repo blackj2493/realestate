@@ -13,6 +13,8 @@ import {
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 import InfoDot from "@/components/ui/InfoDot";
 import { onLensChanged, persistLens } from "@/lib/personas/lensPersistence";
+import { DEAL_PERSONA_ORDER, effectiveDealPersona, scoredDealPersonas } from "@/lib/dealScore/effectivePersona";
+import { roundToStep, OFFER_BAND_DISPLAY_STEP } from "@/lib/avm/displayRounding";
 
 /**
  * Deal Score UI — the flagship "is this a good deal — for ME?" signal.
@@ -33,7 +35,6 @@ const PERSONA_LABEL: Record<DealPersona, string> = {
   flippers: "Flipper",
   builders: "Builder",
 };
-const PERSONA_ORDER: DealPersona[] = ["smart", "cashflow", "flippers", "builders"];
 
 function gradeStyles(grade: DealScoreGrade | null): {
   text: string;
@@ -88,18 +89,23 @@ const GRADE_BADGE: Record<DealScoreGrade, { solid: string; darkOutline: string }
 export function DealScoreGradePill({
   score,
   grade,
+  size = "sm",
   className,
 }: {
   score: number | null;
   grade: DealScoreGrade | null;
+  /** "lg" for hero spots (the mobile Intelligence panel answer chip); "sm" (default) for tight spots. */
+  size?: "sm" | "lg";
   className?: string;
 }) {
   if (score === null || grade === null) return null;
   const g = GRADE_BADGE[grade];
+  const lg = size === "lg";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border border-transparent px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white",
+        "inline-flex items-center rounded-sm border border-transparent font-mono font-bold leading-none text-white",
+        lg ? "gap-1.5 px-2 py-1 text-lg" : "gap-1 px-1.5 py-0.5 text-[10px]",
         g.solid,
         "dark:border dark:bg-transparent",
         g.darkOutline,
@@ -108,7 +114,7 @@ export function DealScoreGradePill({
       title={`Deal Score ${score}/100 (grade ${grade}) — PureProperty's deterministic deal metric`}
     >
       {grade}
-      <span className="text-[9px] opacity-90">{score}</span>
+      <span className={cn("opacity-90", lg ? "text-xs" : "text-[9px]")}>{score}</span>
     </span>
   );
 }
@@ -159,16 +165,10 @@ export default function DealScoreCard({
 }) {
   const [open, setOpen] = useState(false);
   // Personas that actually scored for this listing (a lens with no applicable pillars is hidden).
-  const scoredPersonas = useMemo(
-    () => PERSONA_ORDER.filter((p) => dealScore.personaScores?.[p]?.score != null),
-    [dealScore.personaScores]
-  );
-  const defaultPersona =
-    initialPersona && scoredPersonas.includes(initialPersona)
-      ? initialPersona
-      : scoredPersonas.includes(dealScore.persona)
-        ? dealScore.persona
-        : scoredPersonas[0];
+  const scoredPersonas = useMemo(() => scoredDealPersonas(dealScore), [dealScore]);
+  // Shared with the header chip (LiveDealScoreBadge) so the two can't resolve
+  // different lenses and show different scores on the same screen.
+  const defaultPersona = effectiveDealPersona(dealScore, initialPersona);
   const [persona, setPersona] = useState<DealPersona | undefined>(defaultPersona);
 
   // Follow lens changes made in TheReadCard (persistLens broadcasts; write-through is
@@ -204,7 +204,7 @@ export default function DealScoreCard({
 
         {/* Lens switcher — the same home, scored for each investor type (grades hidden). */}
         <div className="mb-3 flex flex-wrap gap-1.5" aria-hidden="true">
-          {PERSONA_ORDER.map((p) => (
+          {DEAL_PERSONA_ORDER.map((p) => (
             <span
               key={p}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/40 px-2 py-1 text-[11px] font-medium text-muted-foreground"
@@ -312,8 +312,10 @@ export default function DealScoreCard({
           <InfoDot term="dealScore" />
         </span>
         {dealScore.confidence && (
+          // Names its axis ("Deal signal") so it can't be confused with the Estimated Sale
+          // card's separate "Estimate · X confidence" chip sitting right beside it.
           <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium tracking-normal text-muted-foreground">
-            {dealScore.confidence} confidence
+            Deal signal · {dealScore.confidence} confidence
           </span>
         )}
       </h3>
@@ -389,13 +391,21 @@ export default function DealScoreCard({
             <Target className="h-3.5 w-3.5" />
             Suggested move
           </p>
-          {band.hotMarket ? (
+          {band.competitive ? (
+            // Hold-offers setup: aggressive IS the exact ask (a real listed number — no
+            // display rounding), and an under-ask range here would contradict the
+            // Estimated Sale card's over-ask framing on the same page.
             <p className="mt-1 text-sm font-medium text-foreground">
-              Expect to compete near {formatPrice(band.likelyClose)}
+              Offer {formatPrice(band.aggressive)}+ — priced to draw competing offers
+            </p>
+          ) : band.hotMarket ? (
+            <p className="mt-1 text-sm font-medium text-foreground">
+              Expect to compete near {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>
           ) : (
             <p className="mt-1 text-sm font-medium text-foreground">
-              Offer {formatPrice(band.aggressive)}–{formatPrice(band.likelyClose)}
+              Offer {formatPrice(roundToStep(band.aggressive, OFFER_BAND_DISPLAY_STEP))}–
+              {formatPrice(roundToStep(band.likelyClose, OFFER_BAND_DISPLAY_STEP))}
             </p>
           )}
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{band.note}</p>

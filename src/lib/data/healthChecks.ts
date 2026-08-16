@@ -324,6 +324,152 @@ export function checkDrift(prev: SnapshotEntry[], curr: SnapshotEntry[]): Proble
   return out;
 }
 
+/**
+ * The price-events capture going dark — the "zero rows EVER" failure mode (2026-07-22):
+ * the nightly capture step existed only in the abandoned Railway orchestrator, so
+ * price_events sat empty for a week with nothing watching. price_events itself only grows
+ * when a price actually changes, so the liveness signal is listing_price_state: the capture
+ * job seeds/updates state rows every run (~5.5k listings/day churn guarantees movement),
+ * making its newest updated_at a reliable heartbeat for the whole pipeline.
+ */
+export function checkPriceLedger(input: {
+  /** max(listing_price_state.updated_at), or null when the table is empty. */
+  stateNewest: string | null;
+  staleHours: number;
+  now?: number;
+}): Problem[] {
+  const now = input.now ?? Date.now();
+  if (!input.stateNewest) {
+    return [
+      {
+        severity: "error",
+        check: "price-ledger",
+        detail:
+          "listing_price_state is empty — capture-price-events has never run (price_events is not accruing)",
+      },
+    ];
+  }
+  const age = hoursSince(input.stateNewest, now);
+  if (age == null) {
+    return [
+      { severity: "error", check: "price-ledger", detail: "listing_price_state.updated_at is unreadable" },
+    ];
+  }
+  if (age > input.staleHours) {
+    return [
+      {
+        severity: "error",
+        check: "price-ledger",
+        detail: `listing_price_state is ${age.toFixed(1)}h old (limit ${input.staleHours}h) — the nightly price-events capture is not landing`,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * The PureProperty Estimate (property_estimates) silently drifting stale against a moving list
+ * price. The AVM deliberately does NOT use list price as a feature, so a price change should
+ * not move the stored estimate — but the surfaces that read this precompute (Compare, the
+ * Command-Center "Estimated Sale Price" batch) render it AGAINST the current list price, so a
+ * stale row shows a wrong gap once the doc/Typesense side carries the new price. The refresh
+ * that keeps it current is `continue-on-error` with a 30-min timeout (daily-sync.yml) and the
+ * table has no is_stale/model_version/price-snapshot column, so both failure modes below are
+ * otherwise invisible — this was previously the one precompute the canary did not watch.
+ *
+ *  1. HEARTBEAT — the nightly delta re-estimates every re-synced listing (~5.5k/day churn), so
+ *     max(computed_at) must advance nightly. A stale newest timestamp ⇒ the refresh stopped
+ *     landing entirely (the whole step timed out or was dropped).
+ *
+ *  2. BACKLOG — the nastier partial case: the step bumps a few rows then times out, so the
+ *     heartbeat still looks fresh while thousands keep a days-old estimate. Every active row is
+ *     re-based by the twice-weekly full recompute (≤ ~4-day cycle), so ANY active estimate older
+ *     than `staleMaxHours` (set above that cycle) has definitively missed both the recompute and
+ *     any interim re-estimate — a growing count of them is a chronic/partial under-run.
+ */
+export function checkEstimateFreshness(input: {
+  /** max(property_estimates.computed_at), or null when the table is empty. */
+  estimateNewest: string | null;
+  /** Active estimate rows whose computed_at is older than `staleMaxHours`. */
+  staleCount: number;
+  /** Total active estimate rows (for the share in the message). */
+  totalCount: number;
+  /** Heartbeat: max(computed_at) must advance within this window (nightly delta). */
+  staleHours: number;
+  /** A row older than this is stale — set ABOVE the twice-weekly full-recompute cycle. */
+  staleMaxHours: number;
+  /** Tolerate this many straggling stale rows before erroring (a few always straddle a run). */
+  staleTolerance: number;
+  now?: number;
+}): Problem[] {
+  const now = input.now ?? Date.now();
+
+  if (!input.estimateNewest) {
+    return [
+      {
+        severity: "error",
+        check: "estimate-freshness",
+        detail:
+          "property_estimates is empty — refresh-property-estimates has never run (Compare & the Command-Center batch have no estimate to show)",
+      },
+    ];
+  }
+
+  const out: Problem[] = [];
+
+  const age = hoursSince(input.estimateNewest, now);
+  if (age == null) {
+    out.push({ severity: "error", check: "estimate-freshness", detail: "property_estimates.computed_at is unreadable" });
+    return out;
+  }
+  if (age > input.staleHours) {
+    out.push({
+      severity: "error",
+      check: "estimate-freshness",
+      detail: `property_estimates is ${age.toFixed(1)}h old (limit ${input.staleHours}h) — the nightly estimate refresh is not landing`,
+    });
+  }
+
+  if (input.staleCount > input.staleTolerance) {
+    const pct = input.totalCount > 0 ? ((input.staleCount / input.totalCount) * 100).toFixed(1) : "?";
+    out.push({
+      severity: "error",
+      check: "estimate-staleness",
+      detail:
+        `${input.staleCount} of ${input.totalCount} active estimates (${pct}%) are older than ${input.staleMaxHours}h ` +
+        `(tolerance ${input.staleTolerance}) — the estimate refresh/recompute is under-running, so those listings show a stale ` +
+        `"Estimated Sale Price" on Compare & the Command-Center batch even after a price change`,
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Transactional email failures (email_send_failures, migration 098). Exists because the
+ * welcome email silently failed for weeks when Vercel's Resend key was wrong — recording a
+ * row per miss and alerting here (from GitHub Actions, a channel that works even when the
+ * Vercel Resend credential is dead) is what turns that silence into a same-day signal.
+ *
+ * A `missing_key` is the loudest tell — the web runtime has no key at all.
+ */
+export function checkEmailFailures(failures: { kind: string; reason: string }[]): Problem[] {
+  if (failures.length === 0) return [];
+  const byKind = new Map<string, number>();
+  let missingKey = 0;
+  for (const f of failures) {
+    if (f.reason === "missing_key") missingKey++;
+    byKind.set(f.kind, (byKind.get(f.kind) ?? 0) + 1);
+  }
+  const breakdown = [...byKind.entries()].map(([k, n]) => `${k}×${n}`).join(", ");
+  const detail =
+    `${failures.length} transactional email send(s) failed recently (${breakdown})` +
+    (missingKey > 0
+      ? ` — ${missingKey} were 'missing_key' (RESEND_API_KEY absent from the web runtime — check Vercel env + redeploy)`
+      : " — check the Resend key value/status");
+  return [{ severity: "error", check: "email-delivery", detail }];
+}
+
 /** Repo migration files not recorded as applied — the migration-082 failure mode. */
 export function checkMigrationLedger(files: string[], applied: string[]): Problem[] {
   const out: Problem[] = [];
@@ -346,4 +492,316 @@ export function checkMigrationLedger(files: string[], applied: string[]): Proble
     });
   }
   return out;
+}
+
+/**
+ * The media-reconciliation sweep silently doing nothing — the failure this check exists for.
+ *
+ * From at least 2026-06-30 to 2026-08-03, reconcileMissingMedia recovered ZERO listings every
+ * night while the sync run stayed green. Its page query timed out (a planner mis-estimate sent
+ * it to a 42.7 s seq scan against an 8 s statement_timeout — see migration 108), the sweep
+ * caught the error exactly as designed, logged a non-fatal warning, and reported success.
+ * 10,751 active listings sat with a blank gallery and nothing surfaced it.
+ *
+ * The trap is that "scanned 0" is AMBIGUOUS: it is the correct, healthy answer when there is
+ * no work to do, and the signature of total failure when there is. So the rule is a JOIN of
+ * two facts the sweep alone cannot see — its own outcome, and whether work was outstanding:
+ *
+ *   status='failed'                        → error, unconditionally (the sweep knows it broke)
+ *   emptyMedia > tolerance AND scanned = 0 → error (work was waiting and nothing was looked at)
+ *   sweep row missing / stale              → warn  (the job stopped running at all)
+ *
+ * Deliberately NOT alerting on "emptyMedia is large" by itself: a legitimate bulk insert
+ * (backfill-missing-actives.ts adds ~10k photo-less rows in one run) makes that number spike
+ * for perfectly healthy reasons. What must never happen is the number being large while the
+ * sweep reports having looked at nothing.
+ */
+export function checkMediaReconcile(input: {
+  emptyMedia: number;
+  sweeps: { id: string; scanned: number | null; status: string | null; updatedAt: string | null }[];
+  nowMs: number;
+  /** Empty-media rows tolerated before "scanned 0" is treated as a failure. */
+  tolerance?: number;
+  /** Hours before a sweep row is considered stale (default 36 — one missed night is fine). */
+  staleHours?: number;
+}): Problem[] {
+  const out: Problem[] = [];
+  const tolerance = input.tolerance ?? 100;
+  const staleHours = input.staleHours ?? 36;
+
+  if (input.sweeps.length === 0) {
+    return [
+      {
+        severity: "warn",
+        check: "media-reconcile",
+        detail:
+          "no media-reconcile sweep rows in sync_state — the nightly sweep has never recorded an outcome " +
+          "(is migration 107 applied, and has daily-sync run since?)",
+      },
+    ];
+  }
+
+  const totalScanned = input.sweeps.reduce((n, s) => n + (s.scanned ?? 0), 0);
+
+  for (const s of input.sweeps) {
+    if (s.status === "failed") {
+      out.push({
+        severity: "error",
+        check: "media-reconcile",
+        detail:
+          `media sweep '${s.id}' recorded status=failed (scanned ${s.scanned ?? 0}) — its page query is erroring. ` +
+          "Check the plan first: idx_listings_empty_media (migration 108) must still match the .or() filter in sweepMissingMedia.",
+      });
+    }
+    const ageH = s.updatedAt ? (input.nowMs - new Date(s.updatedAt).getTime()) / 3_600_000 : null;
+    if (ageH === null || ageH > staleHours) {
+      out.push({
+        severity: "warn",
+        check: "media-reconcile",
+        detail:
+          `media sweep '${s.id}' last recorded an outcome ` +
+          (ageH === null ? "never" : `${ageH.toFixed(0)}h ago`) +
+          ` (>${staleHours}h) — the nightly reconcile step may have stopped running`,
+      });
+    }
+  }
+
+  if (input.emptyMedia > tolerance && totalScanned === 0) {
+    out.push({
+      severity: "error",
+      check: "media-reconcile",
+      detail:
+        `${input.emptyMedia} active listings have no photos but the media sweeps scanned 0 rows — ` +
+        "the reconcile is not doing any work. This is the 2026-06/07 silent-timeout signature (migration 108).",
+    });
+  }
+
+  return out;
+}
+
+/** Minimum live active inventory the onboarding example region must resolve to. Woodbridge
+ *  sits at ~266; 25 clears normal fluctuation but catches a break to ~0 (a CityRegion rename
+ *  that silences the COMMUNITY_ALIASES expansion), which would ship a 0/0 intro email. */
+export const ONBOARDING_EXAMPLE_MIN_ACTIVE = 25;
+
+/**
+ * The onboarding email's example dashboard (2B) is built from a HARDCODED region name
+ * (EXAMPLE_REGION = "Woodbridge"). "Woodbridge" is not a raw TRREB facet value — it resolves
+ * only through the COMMUNITY_ALIASES expansion (→ East + West Woodbridge). If TRREB ever
+ * renames those CityRegions, the alias silently yields 0 and the intro email shows "0 new /
+ * 0 for sale" (the exact bug this replays). The email itself falls back to a whole city so a
+ * user never sees the 0 — which is precisely why this WARN exists: without it the primary
+ * example could rot to the fallback unnoticed. Warn, not error: the fallback protects the
+ * user, so this is "fix the alias soon", not "page now".
+ */
+export function checkOnboardingExample(input: {
+  region: string;
+  activeCount: number | null;
+  minActive?: number;
+}): Problem[] {
+  const min = input.minActive ?? ONBOARDING_EXAMPLE_MIN_ACTIVE;
+  if (input.activeCount == null || input.activeCount < min) {
+    return [
+      {
+        severity: "warn",
+        check: "onboarding-example",
+        detail:
+          `onboarding example region "${input.region}" resolves to ` +
+          `${input.activeCount ?? "null"} active listings (< ${min}) — the CityRegion alias ` +
+          "(COMMUNITY_ALIASES in area.ts) may have drifted from TRREB's facet values. The email " +
+          "falls back to a whole city so users don't see a 0, but fix the alias.",
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Stale-unpriceable invariant: an ACTIVE listing of a type the AVM refuses to price
+ * (isUnpriceableType — Vacant Land, Farm, commercial-class, …) must NEVER carry
+ * estimated_value > 0 in property_estimates.
+ *
+ * Replays the 2026-08-12 finding: refresh-property-estimates.ts skipped listings whose
+ * recompute produced nothing (no estimate AND no GLA), preserving whatever the table
+ * already held — 1,346 land/commercial listings kept dwelling-model values frozen in
+ * May through 12+ full recomputes, and after #319 those values were feeding Deal Score
+ * grades on vacant land. The script now clears such rows; this check catches the class
+ * (ANY writer leaving a value where the model refuses to price) rather than the instance.
+ *
+ * Error, not warn: a nonzero count is wrong data live on listing pages today, and the
+ * fix is mechanical (re-run the full recompute, which clears the rows).
+ */
+export function checkUnpriceableValues(input: {
+  count: number | null;
+  error?: string | null;
+}): Problem[] {
+  if (input.error || input.count === null) {
+    return [
+      {
+        severity: "warn",
+        check: "unpriceable-values",
+        detail:
+          `unpriceable-value count unavailable (${input.error ?? "null count"}) — ` +
+          "is migration 113 applied? The invariant is unchecked until this resolves.",
+      },
+    ];
+  }
+  if (input.count > 0) {
+    return [
+      {
+        severity: "error",
+        check: "unpriceable-values",
+        detail:
+          `${input.count} ACTIVE unpriceable-type listing(s) carry an AVM value — the dwelling ` +
+          "model has nothing valid to say about land/commercial, so these are wrong numbers on " +
+          "live pages (and Deal Score inputs since #319). A full estimates recompute " +
+          "(estimates-recompute.yml) clears them; if the count comes back, a writer is " +
+          "bypassing the empty-result row-clear in refresh-property-estimates.ts.",
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Plausible band for the share of active listings carrying the DISTRESSED badge.
+ *
+ * Set from the live index the day the rule was rewritten (2026-08-12): 888 of 73,550
+ * actives = 1.21%. The band is deliberately wide — genuine distress moves with the market —
+ * but tight enough to catch the two ways this silently breaks.
+ */
+export const DISTRESS_RATE = { min: 0.2, max: 4.0 };
+
+/**
+ * raw_vow_sold.transaction_type must be populated on every row.
+ *
+ * The column separates sales from leases. Since PR #219 the AVM comp pulls, the region
+ * metric RPCs (migration 106) and the sold boards all filter `transaction_type = 'For Sale'`,
+ * so a NULL is not a cosmetic gap — it is a row that silently drops out of every comparable
+ * set while the page still renders a plausible number.
+ *
+ * It went NULL for 12 days in August 2026 and nothing noticed. extractSoldListingData set the
+ * field, but upsertSoldListings built its payload from a hand-maintained field list that
+ * omitted it, so every ingested row wrote without the column — ~1,000/day, 4,713 of them
+ * sales. The upsert payload is now typed as SoldListingRecord so that exact drift fails the
+ * build; this check is the backstop for the general case (a new writer, a migration, or the
+ * feed itself ceasing to send TransactionType).
+ *
+ * Split into recent vs total deliberately. A non-zero total with a zero recent count means
+ * someone is part-way through backfilling old rows — that is a warn, not a page. Only a NULL
+ * on something ingested in the last 48h means the writer is broken *now*.
+ */
+export function checkSoldTransactionType(input: {
+  total: number;
+  nullTotal: number;
+  nullRecent: number;
+}): Problem[] {
+  const { total, nullTotal, nullRecent } = input;
+
+  if (total <= 0) {
+    return [
+      {
+        severity: "warn",
+        check: "sold-transaction-type",
+        detail:
+          "raw_vow_sold returned 0 rows — cannot evaluate transaction_type coverage " +
+          "(is the service-role client reachable?)",
+      },
+    ];
+  }
+
+  if (nullRecent > 0) {
+    return [
+      {
+        severity: "error",
+        check: "sold-transaction-type",
+        detail:
+          `${nullRecent.toLocaleString()} raw_vow_sold rows ingested in the last 48h have ` +
+          `transaction_type = NULL (${nullTotal.toLocaleString()} of ${total.toLocaleString()} overall) — ` +
+          "these are invisible to the AVM comp pulls, the region RPCs (migration 106) and every sold " +
+          "board, all of which filter transaction_type = 'For Sale'. The writer has stopped populating " +
+          "it: check that the upsert payload in upsertSoldListings (scripts/worker/ingester.ts) still " +
+          "lists the column, then repair with scripts/admin/backfillSoldTransactionType.ts --apply.",
+      },
+    ];
+  }
+
+  if (nullTotal > 0) {
+    return [
+      {
+        severity: "warn",
+        check: "sold-transaction-type",
+        detail:
+          `${nullTotal.toLocaleString()} of ${total.toLocaleString()} raw_vow_sold rows have ` +
+          "transaction_type = NULL, but none were ingested in the last 48h — ingestion is healthy and " +
+          "this is an unrepaired backlog. Clear it with " +
+          "scripts/admin/backfillSoldTransactionType.ts --apply.",
+      },
+    ];
+  }
+
+  return [];
+}
+
+/**
+ * Guard the DISTRESSED flag's population share.
+ *
+ * WHY: `isDistressed` is written by the ETL at index time, and the nightly sync only
+ * re-transforms the ModificationTimestamp delta. So the two failure modes are silent and
+ * opposite, and neither shows up as an error anywhere:
+ *
+ *  • RATE CLIMBS — the old rule (or another loose one) is back in the transformer. Its last
+ *    incarnation flagged 19% of the market: time-on-market and a bare `estate` that matched
+ *    "real estate". A red badge on one listing in five is indistinguishable from no badge.
+ *  • RATE COLLAPSES — the matcher stopped matching (a bad regex edit, or PublicRemarks going
+ *    missing from the payload). Zero distressed listings looks like a calm market, not a
+ *    broken detector.
+ *
+ * Checked as a SHARE, not a count, so it survives the active set growing or shrinking.
+ */
+export function checkDistressRate(input: { actives: number; flagged: number }): Problem[] {
+  const { actives, flagged } = input;
+  if (actives <= 0) {
+    return [
+      {
+        severity: "warn",
+        check: "distress-rate",
+        detail: "no active listings returned — cannot evaluate the DISTRESSED share (is the search index reachable?)",
+      },
+    ];
+  }
+
+  const pct = (flagged / actives) * 100;
+  const shown = `${flagged.toLocaleString()} of ${actives.toLocaleString()} actives (${pct.toFixed(2)}%)`;
+
+  if (pct > DISTRESS_RATE.max) {
+    return [
+      {
+        severity: "error",
+        check: "distress-rate",
+        detail:
+          `DISTRESSED is on ${shown}, above the ${DISTRESS_RATE.max}% ceiling — the flag is over-firing. ` +
+          "Most likely the remarks matcher has been widened, or a non-text branch (days on market, " +
+          "price cut) has been added back to calculateDerivedMetrics; time-on-market belongs to " +
+          "IsStale and price cuts to TotalPriceDrop. See src/lib/listings/distressSignals.ts, then " +
+          "re-run scripts/admin/recompute-distress-flag.ts.",
+      },
+    ];
+  }
+
+  if (pct < DISTRESS_RATE.min) {
+    return [
+      {
+        severity: "error",
+        check: "distress-rate",
+        detail:
+          `DISTRESSED is on only ${shown}, below the ${DISTRESS_RATE.min}% floor — the detector has ` +
+          "gone quiet. Check that PublicRemarks is still populated on indexed documents and that " +
+          "detectDistress still matches its fixtures, then re-run " +
+          "scripts/admin/recompute-distress-flag.ts.",
+      },
+    ];
+  }
+
+  return [];
 }

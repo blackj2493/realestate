@@ -16,6 +16,12 @@
  * can already see in /Property.
  */
 
+// Safe against the self-containment note above: selectPrimaryImage is a pure module
+// with no env reads and no side effects at import time — the thing being avoided is
+// scripts/worker/sync.ts, which hard-throws on a missing TYPESENSE_ADMIN_API_KEY.
+// soldIndexer.ts already imports from here.
+import { storedPhotosToMediaItems, mediaUrlsToMediaItems } from '../../src/lib/etl/selectPrimaryImage';
+
 const API_BASE_URL = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
 
 const MAX_RETRIES = 3;
@@ -168,13 +174,84 @@ function dedupeMediaByObject(records: any[]): any[] {
 }
 
 /**
- * Fetches /Media for a set of ListingKeys, OR-batched into chunks and paged
- * with explicit $skip — AMPRE's /Media caps each response at 100 records and
- * does NOT emit an @odata.nextLink, so a nextLink loop would silently capture
- * only the first 100 records and drop every listing sorted past the cut.
- * Returns BOTH the media map (sorted by Order) AND the set of keys whose fetch
- * FAILED — distinct from keys that were fetched successfully but genuinely have
- * zero photos.
+ * Sizes we ask AMPRE for, in preference order — the SAME ranking as
+ * SIZE_RANK_LOCAL / selectPrimaryImage, and deliberately excluding
+ * `LargestNoWatermark` (§6.3(c): the brokerage watermark must stay visible).
+ *
+ * Only the first entry is used for the vast majority of listings. The rest are
+ * fallbacks, tried one size at a time for the keys that came back with nothing —
+ * see fetchMediaForKeys.
+ */
+const SIZE_PREFERENCE = ['Medium', 'Large', 'Largest', 'Thumbnail'] as const;
+
+/**
+ * Pages one OR-chunk of ListingKeys at ONE size variant, appending every record
+ * onto `rawByKey`. Returns false when the fetch failed (≠ "fetched, 0 photos") —
+ * the caller turns that into a failedKeys entry.
+ *
+ * Page with $skip — NOT @odata.nextLink. AMPRE's /Media caps each response at
+ * MEDIA_PAGE_SIZE (100) records and does NOT return an @odata.nextLink, so the old
+ * `while (url = nextLink)` loop ran exactly ONCE and captured only the first 100
+ * records. A 25-key OR chunk ordered by ResourceRecordKey routinely exceeds 100
+ * records (a handful of photo-heavy listings clears it), so every listing sorted
+ * after the 100th came back with ZERO media and was persisted as a false
+ * `media: []` — the root cause of the mass "NO MEDIA" gap. Explicit $skip offset
+ * paging (AMPRE honours it with a stable $orderby — verified) walks every page
+ * until a short page ends it.
+ *
+ * The ResourceName='Property' clause is REQUIRED by RESO spec — Media is a
+ * polymorphic resource also used for Office/Member records, and omitting it would
+ * mix in agent headshots and brokerage logos.
+ */
+async function fetchChunkAtSize(
+  chunk: string[],
+  size: string,
+  token: string,
+  rawByKey: Map<string, any[]>
+): Promise<boolean> {
+  const keyFilter = `(${chunk.map((k) => `ResourceRecordKey eq '${k}'`).join(' or ')})`;
+  const orFilter = `${keyFilter} and ResourceName eq 'Property' and ImageSizeDescription eq '${size}'`;
+  const encodedFilter = encodeURIComponent(orFilter);
+
+  for (let skip = 0; ; skip += MEDIA_PAGE_SIZE) {
+    const url =
+      `${API_BASE_URL}/Media?$filter=${encodedFilter}` +
+      `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}&$skip=${skip}&$count=true`;
+    const result: FetchResult<any> = await fetchWithRetry<any>(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!result.success || !result.data) {
+      console.warn(`   ⚠️  Media chunk fetch failed at size=${size} (non-fatal): ${result.error}`);
+      return false;
+    }
+    const records: any[] = result.data.value || [];
+    for (const m of records) {
+      const lk = m.ResourceRecordKey;
+      if (!lk || !m.MediaURL) continue;
+      const arr = rawByKey.get(lk);
+      if (arr) arr.push(m);
+      else rawByKey.set(lk, [m]);
+    }
+    if (records.length < MEDIA_PAGE_SIZE) break; // short page → no more rows
+    await sleep(MEDIA_REQUEST_DELAY_MS);
+  }
+  return true;
+}
+
+/** Split a key list into OR-batched chunks of MEDIA_CHUNK_SIZE. */
+function chunkKeys(keys: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < keys.length; i += MEDIA_CHUNK_SIZE) {
+    chunks.push(keys.slice(i, i + MEDIA_CHUNK_SIZE));
+  }
+  return chunks;
+}
+
+/**
+ * Fetches /Media for a set of ListingKeys. Returns BOTH the media map (sorted by
+ * Order) AND the set of keys whose fetch FAILED — distinct from keys that were
+ * fetched successfully but genuinely have zero photos.
  *
  * Why the distinction matters (the false-empty bug): callers used to treat
  * "absent from the map" as "no photos" and persist `media: []`. But a transient
@@ -183,9 +260,29 @@ function dedupeMediaByObject(records: any[]): any[] {
  * permanent false-empties. Callers MUST skip writing an empty marker for any key
  * in `failedKeys` so it stays eligible for the next run / nightly sweep.
  *
- * The ResourceName='Property' clause is REQUIRED by RESO spec — Media is a
- * polymorphic resource also used for Office/Member records, and omitting it
- * would mix in agent headshots and brokerage logos.
+ * ── Why the size filter, and why it now has a fallback ──
+ * AMPRE generates up to 5 variants per photo (Thumbnail, Medium 960×960, Large,
+ * Largest, LargestNoWatermark). Each variant gets its OWN MediaObjectID/MediaKey,
+ * so there is no shared key linking them and client-side dedup-by-ID cannot
+ * collapse a photo's variants — asking for every size would put the SAME photo in
+ * media_urls up to 4 times. So we pin ONE size server-side per request.
+ *
+ * Medium is the right default: 960×960 covers card thumbnails and the gallery, and
+ * it was verified present on the sampled listings. But "verified on a sample" is not
+ * "guaranteed on every listing" — a listing whose photos AMPRE never generated a
+ * Medium variant for returned zero records, and the caller then persisted
+ * `media: []` FOREVER (nothing ever revisits a confirmed-empty listing at a
+ * different size). That is a permanent blank gallery on a listing that has photos.
+ *
+ * So: after the Medium pass, any key that came back empty AND did not fail is
+ * retried at Large, then Largest, then Thumbnail — one size at a time, so a key
+ * still only ever collects a single variant per photo. Fallback requests are made
+ * only for the keys that need them, which in practice is a small tail.
+ *
+ * Compliance: every size in SIZE_PREFERENCE has the brokerage watermark URL-baked
+ * (the `wm:` + `wmt:` URL segments), satisfying §6.3(c). We never request
+ * LargestNoWatermark, and dedupeMediaByObject drops it defensively even if the feed
+ * volunteers one.
  */
 export async function fetchMediaForKeys(
   keys: string[],
@@ -198,70 +295,33 @@ export async function fetchMediaForKeys(
   // Accumulate raw media (with Order) so we sort per listing after grouping.
   const rawByKey = new Map<string, any[]>();
 
-  const chunks: string[][] = [];
-  for (let i = 0; i < keys.length; i += MEDIA_CHUNK_SIZE) {
-    chunks.push(keys.slice(i, i + MEDIA_CHUNK_SIZE));
+  const [primarySize, ...fallbackSizes] = SIZE_PREFERENCE;
+
+  for (const chunk of chunkKeys(keys)) {
+    // Mark every key in a failed chunk a FETCH FAILURE (≠ "fetched, 0 photos").
+    // Keys that did page in media are cleared from failedKeys after the loop
+    // (see the grouped-keys sweep below).
+    if (!(await fetchChunkAtSize(chunk, primarySize, token, rawByKey))) {
+      for (const k of chunk) failedKeys.add(k);
+    }
   }
 
-  for (const chunk of chunks) {
-    // Server-side size filter: AMPRE generates 5 variants per photo (Thumbnail,
-    // Medium 960×960, Large, Largest, LargestNoWatermark). Each variant gets its
-    // OWN MediaObjectID/MediaKey so there's no shared key linking them — client-
-    // side dedup-by-ID can't collapse a photo's 5 variants. Solution: request
-    // only the Medium variant at the server. Verified 2026-05-27 that every photo
-    // on test listing W13133990 had a Medium variant (44 photos × 5 sizes = 220
-    // total records; Medium-only returns the 44 we actually need).
-    //
-    // Compliance: Medium URLs have the brokerage watermark URL-baked (the `wm:`
-    // + `wmt:` URL segments), satisfying §6.3(c). We explicitly do NOT request
-    // LargestNoWatermark.
-    //
-    // Bandwidth: Medium = 960×960 is sufficient for card thumbnails AND for the
-    // current lightbox/gallery view. If/when the listing-detail "bento grid"
-    // (CLAUDE.md §3.C) ships, a future iteration can add a Largest fetch.
-    const keyFilter = `(${chunk.map((k) => `ResourceRecordKey eq '${k}'`).join(' or ')})`;
-    const orFilter = `${keyFilter} and ResourceName eq 'Property' and ImageSizeDescription eq 'Medium'`;
-    const encodedFilter = encodeURIComponent(orFilter);
-
-    // Page with $skip — NOT @odata.nextLink. AMPRE's /Media caps each response
-    // at MEDIA_PAGE_SIZE (100) records and does NOT return an @odata.nextLink,
-    // so the old `while (url = nextLink)` loop ran exactly ONCE and captured only
-    // the first 100 records. A 25-key OR chunk ordered by ResourceRecordKey
-    // routinely exceeds 100 Medium records (a handful of photo-heavy listings
-    // clears it), so every listing sorted after the 100th record came back with
-    // ZERO media and was persisted as a false `media: []` — the root cause of the
-    // mass "NO MEDIA" gap. Explicit $skip offset paging (AMPRE honours it with a
-    // stable $orderby — verified) walks every page until a short page ends it.
-    let chunkFailed = false;
-    for (let skip = 0; ; skip += MEDIA_PAGE_SIZE) {
-      const url =
-        `${API_BASE_URL}/Media?$filter=${encodedFilter}` +
-        `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}&$skip=${skip}&$count=true`;
-      const result: FetchResult<any> = await fetchWithRetry<any>(url, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!result.success || !result.data) {
-        console.warn(`   ⚠️  Media chunk fetch failed (non-fatal): ${result.error}`);
-        // Mark every key in this chunk a FETCH FAILURE (≠ "fetched, 0 photos").
-        // Keys that already paged in media on an earlier page are cleared from
-        // failedKeys after the loop (see the grouped-keys sweep below).
-        chunkFailed = true;
-        break;
+  // Fallback pass — ONLY the keys the primary size found nothing for, and only
+  // those we actually got a clean answer about (a failed key is "unknown", and
+  // re-probing it at another size would just burn requests on an outage).
+  for (const size of fallbackSizes) {
+    const stillEmpty = keys.filter((k) => !rawByKey.has(k) && !failedKeys.has(k));
+    if (stillEmpty.length === 0) break;
+    for (const chunk of chunkKeys(stillEmpty)) {
+      if (!(await fetchChunkAtSize(chunk, size, token, rawByKey))) {
+        // Unknown, not empty: leave the key recoverable on a later run rather
+        // than letting a mid-fallback outage manufacture a fresh false-empty.
+        for (const k of chunk) failedKeys.add(k);
       }
-      const records: any[] = result.data.value || [];
-      for (const m of records) {
-        const lk = m.ResourceRecordKey;
-        if (!lk || !m.MediaURL) continue;
-        const arr = rawByKey.get(lk);
-        if (arr) arr.push(m);
-        else rawByKey.set(lk, [m]);
-      }
-      if (records.length < MEDIA_PAGE_SIZE) break; // short page → no more rows
-      await sleep(MEDIA_REQUEST_DELAY_MS);
     }
-    if (chunkFailed) {
-      for (const k of chunk) failedKeys.add(k);
+    const recovered = stillEmpty.filter((k) => rawByKey.has(k)).length;
+    if (recovered > 0) {
+      console.log(`   🖼️  Recovered ${recovered} listing(s) with no Medium variant at size=${size}`);
     }
   }
 
@@ -323,9 +383,16 @@ export async function preserveExistingMedia(
   if (emptyKeys.length === 0) return 0;
 
   try {
-    // PostgREST JSONB sub-tree projection — same pattern soldIndexer.ts uses.
-    // No full-payload detoast: only the `media` key is read.
-    const select = `listing_key, media:${payloadColumn}->media`;
+    // Sold rows keep their photos in the flat `photos` column (migration 101), not in
+    // raw_payload->media, so the recovery source differs per table. Active rows still
+    // read the payload sub-tree. Either way this is a narrow projection — no
+    // full-payload detoast.
+    // Both tables now recover from a flat column rather than a JSONB sub-tree:
+    // sold from `photos` (migration 101), active from `media_urls` (migration 103).
+    // media_urls is what the UI renders from anyway, so restoring it is exactly what
+    // the clobber protection is there to save.
+    const fromPhotosColumn = table === 'raw_vow_sold';
+    const select = fromPhotosColumn ? 'listing_key, photos' : 'listing_key, media_urls';
     const { data, error } = await supabase
       .from(table)
       .select(select)
@@ -339,8 +406,12 @@ export async function preserveExistingMedia(
     }
 
     const existingByKey = new Map<string, StoredMedia[]>();
-    for (const row of data as Array<{ listing_key: string; media: unknown }>) {
-      const media = Array.isArray(row.media) ? (row.media as StoredMedia[]) : [];
+    for (const row of data as Array<{ listing_key: string; media_urls?: unknown; photos?: unknown }>) {
+      // Both inflate back to the feed's MediaItem shape, so downstream
+      // (collectMediaUrls / selectPrimaryImage) is unchanged either way.
+      const media = (fromPhotosColumn
+        ? storedPhotosToMediaItems(row.photos)
+        : mediaUrlsToMediaItems(row.media_urls)) as StoredMedia[];
       if (media.length > 0) existingByKey.set(row.listing_key, media);
     }
 

@@ -24,6 +24,9 @@ export interface BubbleMatches {
   /** True match count from Typesense `found` (may exceed matches.length). */
   total: number;
   matches: NewListingAlert[];
+  /** alert_scope 'filtered': the active-filter summary ("3+ Beds · Detached") the
+   *  email must show so the user can reason about what they're NOT seeing. */
+  filterLabel?: string | null;
 }
 
 export interface BubbleSection {
@@ -34,6 +37,8 @@ export interface BubbleSection {
   listings: NewListingAlert[];
   /** Bubble too noisy for rows — render a one-line count instead. */
   collapsed: boolean;
+  /** Present when the bubble alerts on its saved filters (alert_scope 'filtered'). */
+  filterLabel?: string | null;
 }
 
 export const BUBBLE_EMAIL_ROW_CAP = 6;
@@ -101,13 +106,27 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
     if (total <= 0) continue;
 
     if (total > BUBBLE_COLLAPSE_THRESHOLD) {
-      sections.push({ bubbleId: b.bubbleId, bubbleName: b.bubbleName, total, listings: [], collapsed: true });
+      sections.push({
+        bubbleId: b.bubbleId,
+        bubbleName: b.bubbleName,
+        total,
+        listings: [],
+        collapsed: true,
+        filterLabel: b.filterLabel ?? null,
+      });
       continue;
     }
 
     const rows = [...deduped].sort((a, z) => z.entryMs - a.entryMs).slice(0, BUBBLE_EMAIL_ROW_CAP);
     if (rows.length === 0) continue;
-    sections.push({ bubbleId: b.bubbleId, bubbleName: b.bubbleName, total, listings: rows, collapsed: false });
+    sections.push({
+      bubbleId: b.bubbleId,
+      bubbleName: b.bubbleName,
+      total,
+      listings: rows,
+      collapsed: false,
+      filterLabel: b.filterLabel ?? null,
+    });
   }
 
   return sections;

@@ -1,0 +1,45 @@
+{
+  "generatedForDateUtc": "2026-08-15",
+  "dataAsOf": "2026-08-15T05:01:26.385+00:00",
+  "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
+  "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
+  "angles": [
+    {
+      "kind": "price_cuts",
+      "region": "Brampton",
+      "headline": "30% of active Brampton listings have cut their asking price",
+      "figure": "30%",
+      "sampleN": 2060,
+      "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
+      "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
+      "context": "typical reduction 7.7%"
+    },
+    {
+      "kind": "days_on_market",
+      "region": "Richmond Hill",
+      "headline": "The typical active Richmond Hill listing has now sat 73 days",
+      "figure": "73 days",
+      "sampleN": 1044,
+      "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
+      "whySurprising": "Longest median true days-on-market of the markets tracked today."
+    },
+    {
+      "kind": "inventory",
+      "region": "Mississauga",
+      "headline": "Mississauga is sitting at 5.4 months of supply",
+      "figure": "5.4 months of supply",
+      "sampleN": 2708,
+      "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
+      "whySurprising": "Highest months-of-supply of the markets tracked (≈4–6 = balanced; above tilts to buyers)."
+    },
+    {
+      "kind": "rental_yield",
+      "region": "Ottawa",
+      "headline": "A 1-bed in Ottawa grosses about 7.2% rental yield",
+      "figure": "7.2% gross yield",
+      "sampleN": 3967,
+      "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
+      "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
+    }
+  ]
+}

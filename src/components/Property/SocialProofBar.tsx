@@ -12,6 +12,8 @@
 import { useEffect, useState } from "react";
 import { Eye, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { onLensChanged } from "@/lib/personas/lensPersistence";
+import type { PersonaType } from "@/lib/personas/personaConfig";
 
 const VIEWER_KEY = "pp_viewer_id";
 
@@ -36,13 +38,21 @@ export default function SocialProofBar({
   listingId,
   className,
   isLease = false,
+  persona = "smart",
 }: {
   listingId: string;
   className?: string;
   /** Lease listing → the audience is prospective tenants, so "investor" reads as "renter". */
   isLease?: boolean;
+  /** Active persona lens — the Homebuyer lens speaks to "buyers", investor lenses to
+   *  "investors". Follows the shared lens broadcast so it matches the rest of the page. */
+  persona?: PersonaType;
 }) {
-  const noun = isLease ? "renter" : "investor";
+  const [lens, setLens] = useState<PersonaType>(persona);
+  useEffect(() => onLensChanged(setLens), []);
+  // Lease audience is always renters; otherwise the Homebuyer lens reads "buyer" and
+  // the investor lenses (cashflow / flippers / builders) read "investor".
+  const noun = isLease ? "renter" : lens === "smart" ? "buyer" : "investor";
   const [stats, setStats] = useState<{ viewers: number; watchers: number } | null>(null);
 
   useEffect(() => {

@@ -13,7 +13,7 @@
  */
 
 import type { DiligenceFlag } from "@/lib/property/diligence";
-import { ACTIVE_DATASETS, buildGeoFlag } from "@/lib/property/geoDatasets";
+import { ACTIVE_DATASETS, buildGeoFlag, describeFeature } from "@/lib/property/geoDatasets";
 
 /**
  * One listing's spatial-join measurements, keyed by dataset `kind`:
@@ -26,6 +26,13 @@ import { ACTIVE_DATASETS, buildGeoFlag } from "@/lib/property/geoDatasets";
 export interface GeoSignals {
   inside?: Record<string, boolean | null | undefined>;
   distanceM?: Record<string, number | null | undefined>;
+  /**
+   * For descriptor datasets (building permits / development applications): the NEAREST
+   * matched feature's raw attributes, so the flag title can say WHAT the nearby activity is
+   * (e.g. "New building", "Zoning amendment"). Absent/unrecognized → generic title. Only
+   * consulted for datasets that declare a `descriptor` (see describeFeature).
+   */
+  nearestAttrs?: Record<string, Record<string, unknown> | null | undefined>;
 }
 
 /**
@@ -46,7 +53,10 @@ export function geoFlagsFor(sig: GeoSignals): DiligenceFlag[] {
       // The enrichment already applies ST_DWithin(meters); re-guard defensively so a
       // stray out-of-range value can't produce a flag.
       if (m != null && Number.isFinite(m) && m <= ds.predicate.meters) {
-        out.push(buildGeoFlag(ds, m));
+        // null for non-descriptor datasets (and unrecognized values) → generic title,
+        // so those flags stay byte-identical to before this feature.
+        const descriptor = describeFeature(ds.kind, sig.nearestAttrs?.[ds.kind] ?? null);
+        out.push(buildGeoFlag(ds, m, descriptor));
       }
     }
   }

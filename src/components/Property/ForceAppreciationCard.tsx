@@ -130,7 +130,7 @@ export default function ForceAppreciationCard({
 
         {(v.moreRows.length > 0 || v.suppressed.length > 0) && (
           <details open={!hasRecommended}>
-            <summary className="cursor-pointer list-none text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
+            <summary className="cursor-pointer list-none text-xs text-cyan-700 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300">
               {hasRecommended ? "Why not the others?" : "Modeled moves (none pay back here)"}
             </summary>
             <div className="mt-2 space-y-1.5">

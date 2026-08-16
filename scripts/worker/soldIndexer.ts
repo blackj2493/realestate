@@ -30,8 +30,9 @@ import {
 import { resolveLocation } from './resolveLocation';
 import { parsePostalFromAddress } from './parsePostal';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
-import { selectPrimaryImage } from '../../src/lib/etl/selectPrimaryImage';
+import { selectPrimaryImage, primaryImageFromPhotos } from '../../src/lib/etl/selectPrimaryImage';
 import { deriveDealType } from '../../src/lib/sold/dealType';
+import { purgeSupersededForCloses } from './purgeSupersededDelisted';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
 const IMPORT_CHUNK = 100;
@@ -108,20 +109,25 @@ export function toSoldDocument(
   r: SoldIndexInput,
   listOfficeName: string | null,
   /**
-   * Optional raw payload (media + images arrays) used to pick the thumbnail.
-   * The incremental path (ingester.ts Query B) has it in memory for free; the
-   * backfill path passes the JSONB-extracted slice from raw_vow_sold.
+   * Optional thumbnail source. Two shapes, because the two callers have different data:
+   *  - `{ media, images }` — the incremental path (ingester.ts Query B) holds the live
+   *    VOW feed record in memory, so it still has the full media array for free.
+   *  - `{ photos }` — the backfill path reads the stored `photos` column
+   *    (migration 101) instead of the raw_payload->media sub-tree it used to pull.
+   * Both resolve to the same URL; see primaryImageFromPhotos for why.
    */
-  rawMedia?: { media?: unknown; images?: unknown }
+  rawMedia?: { media?: unknown; images?: unknown; photos?: unknown }
 ): SoldListingDocument | null {
   if (!r.listing_key) return null;
   if (!r.purchase_contract_date) return null;
   const ms = new Date(r.purchase_contract_date).getTime();
   if (!Number.isFinite(ms)) return null;
 
-  const primaryImageUrl = rawMedia
-    ? selectPrimaryImage(rawMedia as { media?: any[]; images?: any[] })
-    : null;
+  const primaryImageUrl = !rawMedia
+    ? null
+    : rawMedia.photos !== undefined
+      ? primaryImageFromPhotos(rawMedia.photos)
+      : selectPrimaryImage(rawMedia as { media?: any[]; images?: any[] });
 
   // raw_vow_sold carries the grade split but no separate total column, so the true
   // BedroomsTotal is above + below. (Previously BedroomsTotal was set to above-grade
@@ -169,31 +175,69 @@ export function toSoldDocument(
   return doc;
 }
 
-/** Upsert a batch of sold docs into Typesense (chunked). Returns success/fail counts. */
+/**
+ * Upsert a batch of sold docs into Typesense (chunked). Returns success/fail counts.
+ * Docs that fail get ONE retry pass: a transient per-doc import error otherwise drops
+ * the row from the dashboard SOLD panel until the next window reindex — days of a
+ * quiet, plausible-looking gap (exactly the 2026-07-22 East Gwillimbury report).
+ *
+ * Indexing a CLOSE also purges any de-listed comp it supersedes (the same property's
+ * earlier terminate/expire, which relisted under a new MLS# and then sold — see
+ * purgeSupersededDelisted.ts). Hooked HERE rather than at the six call sites so every
+ * writer of a close gets it; it is a no-op for the de-listed batches delistedIndexer
+ * pushes through this same function. Best-effort — never throws, never blocks the import.
+ */
 export async function importSoldBatch(
   client: Client,
   docs: SoldListingDocument[]
 ): Promise<{ success: number; failed: number }> {
-  let success = 0;
+  const importChunks = async (input: SoldListingDocument[]) => {
+    let ok = 0;
+    const failedDocs: SoldListingDocument[] = [];
+    for (let i = 0; i < input.length; i += IMPORT_CHUNK) {
+      const chunk = input.slice(i, i + IMPORT_CHUNK);
+      if (chunk.length === 0) continue;
+      const resp = await client
+        .collections(SOLD_LISTINGS_COLLECTION)
+        .documents()
+        .import(chunk, { action: 'upsert' });
+      const results = Array.isArray(resp)
+        ? resp
+        : JSON.parse(resp as unknown as string);
+      results.forEach((res: { success: boolean; error?: string }, j: number) => {
+        if (res.success) ok++;
+        else {
+          failedDocs.push(chunk[j]);
+          console.warn(`   ⚠️  sold_listings import error (${chunk[j]?.id}): ${res.error ?? 'unknown'}`);
+        }
+      });
+    }
+    return { ok, failedDocs };
+  };
+
+  const first = await importChunks(docs);
+  let success = first.ok;
   let failed = 0;
-  for (let i = 0; i < docs.length; i += IMPORT_CHUNK) {
-    const chunk = docs.slice(i, i + IMPORT_CHUNK);
-    if (chunk.length === 0) continue;
-    const resp = await client
-      .collections(SOLD_LISTINGS_COLLECTION)
-      .documents()
-      .import(chunk, { action: 'upsert' });
-    const results = Array.isArray(resp)
-      ? resp
-      : JSON.parse(resp as unknown as string);
-    for (const res of results) {
-      if (res.success) success++;
-      else {
-        failed++;
-        console.warn(`   ⚠️  sold_listings import error: ${res.error ?? 'unknown'}`);
-      }
+  let unindexed: SoldListingDocument[] = [];
+  if (first.failedDocs.length > 0) {
+    const retry = await importChunks(first.failedDocs);
+    success += retry.ok;
+    failed = retry.failedDocs.length;
+    unindexed = retry.failedDocs;
+    if (failed > 0) {
+      console.error(
+        `   ❌ ${failed} sold doc(s) failed to index after retry — they will be invisible in the SOLD panel until the next window reindex: ${retry.failedDocs.map((d) => d.id).join(', ')}`
+      );
     }
   }
+  // AFTER the upsert, and only for docs that actually landed: a close that failed to
+  // index must not delete the de-listed pin it would have replaced, or the property
+  // would vanish from both layers until the next reindex.
+  const unindexedIds = new Set(unindexed.map((d) => d.id));
+  await purgeSupersededForCloses(
+    client,
+    unindexedIds.size === 0 ? docs : docs.filter((d) => !unindexedIds.has(d.id))
+  );
   return { success, failed };
 }
 
@@ -226,12 +270,46 @@ const BACKFILL_PAGE = 1000;
  * index on purchase_contract_date, so ordering by it sorts the whole table → statement
  * timeout. Ordering by the PK uses its index (no sort); each keyset page is ~1-2s.
  */
-async function backfill(): Promise<void> {
-  console.log(`\n🌱 sold_listings backfill — last ${SOLD_WINDOW_DAYS}d from raw_vow_sold`);
+/**
+ * Existing id → primaryImageUrl, so a re-index can never DESTROY a thumbnail.
+ *
+ * A Typesense upsert replaces the whole document, so any row whose thumbnail can no longer
+ * be derived comes back blank — and ~19% of rows in the 180-day window have no `photos`
+ * (measured 2026-07-28: 84,835 of 104,714). Without this, re-indexing to FIX thumbnails
+ * would simultaneously destroy the ones that survive from before migration 102 stripped
+ * raw_payload->media. Mirrors the clobber protection the active path already runs
+ * (mediaEnrichment.preserveExistingMedia), for the same reason.
+ *
+ * One streamed export of two fields; a failure degrades to "no protection", never a crash.
+ */
+async function exportExistingThumbnails(client: Client): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const raw: string = await client
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .export({ include_fields: 'id,primaryImageUrl' });
+    for (const line of raw.split('\n')) {
+      if (!line) continue;
+      const doc = JSON.parse(line) as { id?: string; primaryImageUrl?: string };
+      if (doc.id && doc.primaryImageUrl) map.set(doc.id, doc.primaryImageUrl);
+    }
+  } catch (err: any) {
+    console.warn(`   ⚠️  Could not export existing thumbnails (non-fatal): ${err.message}`);
+  }
+  return map;
+}
+
+async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
+  console.log(`\n🌱 sold_listings backfill — last ${days}d from raw_vow_sold`);
   const supabase = getServiceRoleClient();
   const client = getSoldAdminClient();
 
-  const cutoffISO = new Date(windowCutoffMs()).toISOString();
+  const existingThumbs = await exportExistingThumbnails(client);
+  console.log(`   🛡️  ${existingThumbs.size} existing thumbnails held as fallback`);
+  let preserved = 0;
+
+  const cutoffISO = new Date(windowCutoffMs(days)).toISOString();
   const nowISO = new Date().toISOString();
   const columns =
     'listing_key, unparsed_address, city_region, city, postal_code, property_sub_type, ' +
@@ -240,9 +318,12 @@ async function backfill(): Promise<void> {
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
     'brokerage:raw_payload->>ListOfficeName, ' +
     'mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, ' +
-    // Pull the JSONB sub-trees PostgREST-side so selectPrimaryImage() can pick a thumbnail
-    // without us streaming the whole ~50 KB raw_payload per row.
-    'media:raw_payload->media, images:raw_payload->images';
+    // Thumbnail comes from the flat `photos` column (migration 101) — already
+    // Active-only, de-duplicated and Order-sorted. This previously pulled the
+    // raw_payload->media sub-tree: ~37 eight-field objects per row, of which only the
+    // first URL was ever used. The `images` key was read here too and exists on no row
+    // (0 of 2,000 sampled), so it is dropped.
+    'photos';
 
   let lastKey = '';
   let totalSeen = 0;
@@ -273,9 +354,19 @@ async function backfill(): Promise<void> {
       const doc = toSoldDocument(
         { ...(row as any), mls_status: row.mls_status ?? null, transaction_type: row.txn_type ?? null } as SoldIndexInput,
         row.brokerage ?? null,
-        { media: row.media, images: row.images }
+        { photos: row.photos }
       );
-      if (doc) docs.push(doc);
+      if (doc) {
+        // Keep whatever the collection already had when this row can no longer supply one.
+        if (!doc.primaryImageUrl) {
+          const kept = existingThumbs.get(doc.id);
+          if (kept) {
+            doc.primaryImageUrl = kept;
+            preserved++;
+          }
+        }
+        docs.push(doc);
+      }
       else totalSkipped++;
     }
 
@@ -293,7 +384,8 @@ async function backfill(): Promise<void> {
 
   await pruneOldSold(client);
   console.log(
-    `\n✅ Backfill complete: ${totalImported} imported, ${totalFailed} failed, ${totalSkipped} skipped (no contract date).`
+    `\n✅ Backfill complete: ${totalImported} imported, ${totalFailed} failed, ${totalSkipped} skipped (no contract date).` +
+      `\n   🛡️  ${preserved} thumbnails preserved from the existing index (row had no photos).`
   );
 }
 
@@ -307,14 +399,24 @@ if (invokedDirectly) {
   (async () => {
     const mode = process.argv[2] || 'backfill';
     if (mode === 'backfill') {
-      await backfill();
+      // --days N bounds the reindex window (default: the full 180d collection window).
+      // The nightly sync runs `backfill --days 7` as a self-heal: any row the inline
+      // Query B indexing missed (transient import failure, geocode hiccup) is re-derived
+      // from the vault within 24h instead of waiting for the Sun/Wed reconcile.
+      const daysIdx = process.argv.indexOf('--days');
+      const days = daysIdx > -1 ? Number(process.argv[daysIdx + 1]) : SOLD_WINDOW_DAYS;
+      if (!Number.isFinite(days) || days < 1 || days > SOLD_WINDOW_DAYS) {
+        console.error(`--days must be 1-${SOLD_WINDOW_DAYS}, got "${process.argv[daysIdx + 1]}"`);
+        process.exit(1);
+      }
+      await backfill(days);
       process.exit(0);
     }
     if (mode === 'prune') {
       await pruneOldSold(getSoldAdminClient());
       process.exit(0);
     }
-    console.error(`Unknown mode "${mode}". Use: backfill | prune`);
+    console.error(`Unknown mode "${mode}". Use: backfill [--days N] | prune`);
     process.exit(1);
   })().catch((err) => {
     console.error('❌ soldIndexer failed:', err.message);

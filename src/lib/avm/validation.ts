@@ -4,9 +4,23 @@
 
 import { z } from 'zod';
 
+/**
+ * Place names only — letters, digits, spaces and . ' - / & ( ) , (e.g. "Toronto C01",
+ * "Bedford Park-Nortown", "St. Catharines"). Bounded at 80 chars.
+ *
+ * These values reach raw_vow_sold filters. They are now matched with equality rather
+ * than ILIKE (migration 099), so a wildcard is inert — but an unbounded, uncharacterised
+ * string still has no business being a cohort key, and before 099 a posted "%" matched
+ * all ~289k sold rows on a single request. Defence in depth.
+ */
+const PLACE_NAME = z
+  .string()
+  .max(80, 'City name too long')
+  .regex(/^[\p{L}\p{N} .'\-/&(),]*$/u, 'City contains unsupported characters');
+
 export const AVMInputSchema = z.object({
-  cityRegion: z.string().min(1, 'City/Region is required'),
-  city: z.string().nullable().optional(),
+  cityRegion: PLACE_NAME.min(1, 'City/Region is required'),
+  city: PLACE_NAME.nullable().optional(),
   propertySubType: z.string().min(1, 'Property type is required'),
   bedroomsAboveGrade: z.number().int().min(0).max(10),
   bathroomsTotalInteger: z.number().int().min(0).max(10),

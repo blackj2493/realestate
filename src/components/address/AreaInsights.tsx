@@ -21,9 +21,13 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Home, KeyRound, LineChart, Lock } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
 import { formatPrice } from "@/lib/utils";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import { getNearbyForSale, type NearbyListing } from "@/lib/address/nearbyForSale";
+import { getBestTypicalRents } from "@/lib/address/leasedRents";
+import { getBestTypicalPrices } from "@/lib/address/soldPrices";
+import MarketGrids from "@/components/address/MarketGrids";
 import { getRegionMetricsCached } from "@/lib/market/aggregates";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
 import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
@@ -133,6 +137,13 @@ export default async function AreaInsights({
 
   const areaLabel = cityRegion || cityName;
 
+  // Sell + rent grids: consumers see ACTUAL closes (VOW — structural gate in the
+  // fetchers); anon sees asking medians. Reuse the 2 km fetches above on that path.
+  const [typicalRents, typicalPrices] = await Promise.all([
+    getBestTypicalRents(lat, lng, isConsumer, lease),
+    getBestTypicalPrices(lat, lng, isConsumer, sale),
+  ]);
+
   // ── PUBLIC snapshot (active/IDX asking — anon-safe) ───────────────────
   const publicTiles: TileData[] = [];
   if (sale?.stats.medianAsking) publicTiles.push({ label: "Median asking (for sale)", value: formatPrice(sale.stats.medianAsking) });
@@ -181,6 +192,10 @@ export default async function AreaInsights({
         </section>
       )}
 
+      {/* Sale prices + rents by bedrooms × type — actual closes for consumers, asking
+          medians for anon. Prices first: this page is a sold record's home. */}
+      <MarketGrids sell={typicalPrices ?? null} rent={typicalRents ?? null} showSignInNudge={!isConsumer} />
+
       {/* Market trends — consumer sees VOW-derived sold numbers; anon a sign-up nudge. */}
       {isConsumer ? (
         (soldTiles.length > 0 || metrics) && (
@@ -205,12 +220,9 @@ export default async function AreaInsights({
           </section>
         )
       ) : (
-        <Link
-          href="/login"
-          className="flex items-center justify-center gap-2 rounded-lg border border-cyan-600/40 bg-cyan-500/5 px-4 py-2.5 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
-        >
+        <SignInLink className="flex items-center justify-center gap-2 rounded-lg border border-cyan-600/40 bg-cyan-500/5 px-4 py-2.5 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300">
           <Lock className="h-3.5 w-3.5" /> Sold prices, price trends &amp; sell-through — sign up free
-        </Link>
+        </SignInLink>
       )}
 
       {/* Nearby actives — somewhere to continue the search (IDX, anon-legal). */}

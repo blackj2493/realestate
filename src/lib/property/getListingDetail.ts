@@ -11,11 +11,12 @@
 
 import { cache as reactCache } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
 import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { calculateAVM } from "@/lib/avm/calculator";
 import { mapListingToAVMInput } from "@/lib/avm/mapListingToAVMInput";
-import { resolveLivingArea, type BucketCalibration } from "@/lib/avm/livingArea";
+import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from "@/lib/avm/livingArea";
 import { normalizePropertySubType } from "@/lib/avm/normalizeType";
 import type { AVMResult } from "@/lib/avm/types";
 import {
@@ -37,11 +38,13 @@ import { refreshCampaignHistoryForListing } from "@/lib/campaignHistory/store";
 import {
   toCampaignHistoryView,
   gateCampaignHistory,
+  latestCloseFromCampaigns,
   type CampaignHistoryView,
 } from "@/lib/campaignHistory/view";
 import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/normalize";
 import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
 import { computeExpectedSale, type ExpectedSale } from "@/lib/avm/expectedSale";
+import { detectCompetitive } from "@/lib/avm/salePrice";
 import {
   resolveListingStatus,
   fillClosePriceFromSaleHistory,
@@ -120,9 +123,20 @@ export function gateSaleHistory(sh: SaleHistory, isAuthed: boolean): SaleHistory
  * renders a blurred "Login Required" teaser. Folds in gateSaleHistory and strips the
  * VOW-stitched `true_dom` from the raw payload too (the property API ships full_payload),
  * so ONE call fully de-VOWs a ListingDetail. IDX list-price movement stays intact.
+ *
+ * PHOTOS ON SOLD/OFF-MARKET RECORDS are gated here too. They are VOW Listing Information —
+ * /address has always treated them that way ("The URL itself is a VOW field and is
+ * discarded server-side", soldByKey.ts) — but this page shipped them to anonymous users,
+ * so the two public surfaces disagreed about the same photo of the same home. The count
+ * survives as `photoTeaser` so the UI can show a blurred, locked gallery rather than an
+ * empty box: an honest "there are 17 photos here" without carrying one.
+ *
+ * ACTIVE listings are untouched. Their photos are IDX, are meant to be public, and are the
+ * main reason anyone finds the site.
  */
 export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): ListingDetail {
   if (isAuthed) return detail;
+  const vowMedia = detail.status.kind !== "active";
   const gatedPayload = { ...(detail.full_payload as Record<string, unknown>) };
   delete gatedPayload.true_dom; // VOW-stitched; raw DaysOnMarket (IDX) stays
   // Sold listings live in `listings` with their raw Closed payload (Query B), and the
@@ -139,6 +153,13 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
   return {
     ...detail,
     full_payload: gatedPayload,
+    // Withhold the URLs, keep the fact. The count is recomputed HERE from the ungated
+    // input rather than trusting `detail.photoTeaser`: this function is the one step that
+    // always runs per-request, while the detail itself arrives from unstable_cache and may
+    // predate the field (for an hour after any deploy that changes the shape). Deriving it
+    // here means a stale cache entry degrades to a correct teaser, not a blank box.
+    media_urls: vowMedia ? [] : detail.media_urls,
+    photoTeaser: vowMedia ? { count: detail.media_urls.length } : null,
     estimate: null,
     valueAdd: null,
     dealScore: EMPTY_DEAL_SCORE,
@@ -162,7 +183,19 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
 export interface ListingDetail {
   listing_key: string;
   full_payload: Record<string, unknown>;
+  /**
+   * Photo URLs. For SOLD/LEASED/off-market listings these are VOW Listing Information, and
+   * gateVowDerived empties this for anonymous users — see `photoTeaser`, which survives
+   * gating so the page can still say how many photos exist.
+   */
   media_urls: string[];
+  /**
+   * Photo EXISTENCE + COUNT — safe for anonymous users, and the whole point of the locked
+   * gallery teaser. Mirrors the rule /address already follows (soldByKey.ts `hasPhoto`):
+   * the count is not VOW Listing Information, the URLs are. Null for active listings,
+   * whose photos are IDX and shown to everyone.
+   */
+  photoTeaser: { count: number } | null;
   city: string | null;
   property_sub_type: string | null;
   synced_at: string | null;
@@ -261,6 +294,9 @@ async function fetchListingRooms(listingKey: string): Promise<RoomData[]> {
       RoomLevel: r.RoomLevel,
       RoomLength: r.RoomLength,
       RoomWidth: r.RoomWidth,
+      // Carried through so the detail page's AVM reads the feed's declared unit
+      // instead of guessing it — guessing wrong scales living area by 10.76.
+      RoomLengthWidthUnits: r.RoomLengthWidthUnits ?? null,
       RoomDimensions: r.RoomDimensions,
       RoomFeatures: r.RoomFeatures,
     }));
@@ -335,7 +371,13 @@ export const getListingDetail = cache(
       // (measured) path so we don't add a query per page.
       let bucketCalibration: BucketCalibration | null = null;
       if (resolveLivingArea(payload, { rooms }).source === "range_midpoint") {
-        const cityRegion = String(payload?.["CityRegion"] ?? "").trim();
+        // CityRegion ?? City — matches the build script's calibrationRegionKey, so
+        // blank-CityRegion municipalities (Waterloo Region, Brantford) hit their
+        // city-keyed cohort instead of the naive range midpoint.
+        const cityRegion = calibrationRegionKey(
+          typeof payload?.["CityRegion"] === "string" ? (payload["CityRegion"] as string) : null,
+          typeof payload?.["City"] === "string" ? (payload["City"] as string) : null
+        );
         const subType = normalizePropertySubType(
           typeof payload?.["PropertySubType"] === "string" ? (payload["PropertySubType"] as string) : ""
         );
@@ -544,7 +586,7 @@ export const getListingDetail = cache(
 
     // Non-disclosure fallback (own sale event only) + the accuracy receipt.
     status = fillClosePriceFromSaleHistory(status, listing.listing_key, saleHistory.events);
-    const soldAccuracy = pickSoldAccuracy({
+    let soldAccuracy = pickSoldAccuracy({
       closePrice: status.kind === "sold" ? status.closePrice : null,
       avmValue: estimate?.estimatedValue ?? null,
       expectedSalePrice: expectedSale?.expectedPrice ?? null,
@@ -582,6 +624,42 @@ export const getListingDetail = cache(
       console.error(`[getListingDetail] Campaign history failed for ${listingKey}:`, chErr);
     }
 
+    // Relist reconciliation: the viewed key may be a TERMINATED/EXPIRED original whose
+    // property was relisted under a NEW key that then SOLD. That close lives only in the
+    // address-stitched campaign history (fetched by address, not key) — never in this
+    // key's own payload or raw_vow_delisted — so status resolved to "delisted" while the
+    // property actually sold (e.g. 7 Stemford Rd: W13090288 terminated May 31, relist
+    // W13224994 sold Jun 12 $885k). Promote to SOLD when the NEWEST stitched campaign is a
+    // close on a DIFFERENT key dated at/after this key's delist. The soldAccuracy receipt
+    // is recomputed so the sold hero carries its estimate-vs-close delta.
+    //
+    // Scoped to THIS campaign's transaction type: a close of the other type is a different
+    // deal on the same bricks and must not settle this page (a terminated SALE at a
+    // property later LEASED did not sell — see latestCloseFromCampaigns).
+    if (status.kind === "delisted" && campaignHistory.events.length > 0) {
+      const close = latestCloseFromCampaigns(
+        campaignHistory.events,
+        /lease/i.test(String(payload["TransactionType"] ?? "")) ? "Lease" : "Sale"
+      );
+      if (
+        close &&
+        close.listingKey !== listing.listing_key &&
+        (status.delistedDate == null || close.closeDateISO >= status.delistedDate)
+      ) {
+        status = {
+          kind: "sold",
+          label: close.kind === "leased" ? "LEASED" : "SOLD",
+          closePrice: close.closePrice,
+          soldDate: close.closeDateISO,
+        };
+        soldAccuracy = pickSoldAccuracy({
+          closePrice: close.closePrice,
+          avmValue: estimate?.estimatedValue ?? null,
+          expectedSalePrice: expectedSale?.expectedPrice ?? null,
+        });
+      }
+    }
+
     // Price timeline — list-price movement only (IDX-class). total_price_drop / true_dom
     // are the deterministic fields the Temporal Distress Engine persisted to full_payload.
     const ledgerDrop = campaignHistory.totalPriceDrop;
@@ -610,6 +688,13 @@ export const getListingDetail = cache(
       subType: ratioSub,
       expectedSalePrice: expectedSale?.expectedPrice ?? null,
       closeListRatio: expectedSale?.ratio ?? null,
+      // "Priced to compete" — the SAME detector the Estimated Sale card runs (via
+      // resolveSalePrice in the page/API routes), so the Suggested Move can never
+      // recommend an under-ask offer on a listing the card calls a bidding-war setup.
+      competitive:
+        status.kind === "active" && typeof listPrice === "number" && listPrice > 0
+          ? detectCompetitive(listPrice, estimate)
+          : null,
     });
     const originalPrice =
       originalListPrice && listPrice && originalListPrice > listPrice
@@ -650,10 +735,21 @@ export const getListingDetail = cache(
       console.error(`[getListingDetail] Geo flags failed for ${listingKey}:`, geoErr);
     }
 
+    // `listings.media_urls` is only ever filled while a listing is ACTIVE, so a property
+    // that entered our data already-sold has an empty column while its photos sit in
+    // raw_vow_sold.photos. Recover them — one indexed PK lookup, and only on the empty
+    // path, so the 71% of sold rows that already have media pay nothing. See soldPhotos.ts.
+    let mediaUrls: string[] = listing.media_urls || [];
+    if (mediaUrls.length === 0 && status.kind === "sold") {
+      mediaUrls = await getSoldPhotoUrls(listingKey);
+    }
+
     return {
       listing_key: listing.listing_key,
       full_payload: payload,
-      media_urls: listing.media_urls || [],
+      media_urls: mediaUrls,
+      // Count only — survives gateVowDerived so anon can be told what's behind the gate.
+      photoTeaser: status.kind === "active" ? null : { count: mediaUrls.length },
       city: listing.city ?? null,
       property_sub_type: listing.property_sub_type ?? null,
       synced_at: listing.synced_at ?? null,

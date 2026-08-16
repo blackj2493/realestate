@@ -49,6 +49,13 @@ interface DiscoveryState extends DurableState {
   guideOpen: boolean;
   guideTab: GuideTab;
   run: SpotlightRun | null;
+  /**
+   * Count of open full-screen / side overlays that own their own primary CTA
+   * (e.g. the terminal FILTERS drawer + mobile filter sheet). While > 0 the
+   * floating Guide launcher hides, so it can never sit over that CTA. Ref-counted
+   * so parallel/stacked overlays compose correctly. Ephemeral — never persisted.
+   */
+  chromeBlockers: number;
 
   hydrate: () => void;
   markSeen: (ids: string | string[]) => void;
@@ -67,6 +74,10 @@ interface DiscoveryState extends DurableState {
   runNext: () => void;
   runPrev: () => void;
   endRun: () => void;
+
+  /** Hide the floating launcher while a blocking overlay is open (ref-counted). */
+  blockChrome: () => void;
+  unblockChrome: () => void;
 }
 
 const EMPTY_DURABLE: DurableState = {
@@ -115,6 +126,7 @@ export const useDiscovery = create<DiscoveryState>((set, get) => {
     guideOpen: false,
     guideTab: "page",
     run: null,
+    chromeBlockers: 0,
 
     hydrate: () => {
       if (get().hydrated) return;
@@ -195,5 +207,8 @@ export const useDiscovery = create<DiscoveryState>((set, get) => {
       if (run.isTour && run.surface) get().markTourDone(run.surface);
       set({ run: null });
     },
+
+    blockChrome: () => set({ chromeBlockers: get().chromeBlockers + 1 }),
+    unblockChrome: () => set({ chromeBlockers: Math.max(0, get().chromeBlockers - 1) }),
   };
 });

@@ -16,6 +16,7 @@ import React from "react";
 import { X, SlidersHorizontal, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
 import type { ControlDef } from "@/lib/personas/personaConfig";
 import type { FilterValue } from "@/lib/filters/types";
@@ -59,6 +60,15 @@ export default function FilterDrawer({
   const removeAddedFilter = useCommandCenterStore((s) => s.removeAddedFilter);
   const propertyClass = useCommandCenterStore((s) => s.propertyClass);
   const [q, setQ] = React.useState("");
+
+  // While this drawer is open, hide the global Guide launcher (FAB) so it can't
+  // float over the "Show N results" CTA below. Mounts only when open, so a plain
+  // mount/unmount ref-count is enough. See useDiscovery.chromeBlockers.
+  React.useEffect(() => {
+    const { blockChrome, unblockChrome } = useDiscovery.getState();
+    blockChrome();
+    return unblockChrome;
+  }, []);
 
   // Lock body scroll while open; close on Escape.
   React.useEffect(() => {

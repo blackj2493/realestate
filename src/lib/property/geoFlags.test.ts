@@ -89,6 +89,46 @@ describe("geoFlagsFor — distance (line/point) flags", () => {
   });
 });
 
+describe("geoFlagsFor — descriptor (what the nearby permit / application is)", () => {
+  it("names a major_construction permit from the nearest feature's work type", () => {
+    const flags = geoFlagsFor({
+      distanceM: { major_construction: 120 },
+      nearestAttrs: { major_construction: { WORKDESC: "Demolition" } },
+    });
+    expect(flags[0].title).toBe("Demolition permit issued ~120 m away");
+  });
+
+  it("names a dev_application from the nearest feature's application type", () => {
+    const flags = geoFlagsFor({
+      distanceM: { dev_application: 180 },
+      nearestAttrs: { dev_application: { APPL_TYPE: "Zoning By-law Amendment" } },
+    });
+    expect(flags[0].title).toBe("Zoning amendment filed ~180 m away");
+  });
+
+  it("falls back to the generic title when the nearest feature's type is unrecognized", () => {
+    const flags = geoFlagsFor({
+      distanceM: { dev_application: 180 },
+      nearestAttrs: { dev_application: { APPL_TYPE: "Some Weird Internal Code" } },
+    });
+    expect(flags[0].title).toBe("Major development application filed ~180 m away");
+  });
+
+  it("falls back to the generic title when nearestAttrs is absent (parity with pre-feature output)", () => {
+    expect(geoFlagsFor({ distanceM: { major_construction: 120 } })[0].title).toBe(
+      "Recent major construction permit issued ~120 m away",
+    );
+  });
+
+  it("ignores nearestAttrs supplied for a non-descriptor dataset", () => {
+    const flags = geoFlagsFor({
+      distanceM: { hydro: 88.6 },
+      nearestAttrs: { hydro: { WORKDESC: "New" } },
+    });
+    expect(flags[0].title).toBe("89 m from a hydro transmission corridor");
+  });
+});
+
 describe("geoFlagsFor — registry integrity", () => {
   it("never emits a flag for a disabled dataset (e.g. traffic)", () => {
     const flags = geoFlagsFor({ inside: { traffic: true }, distanceM: { traffic: 10 } });
@@ -157,6 +197,25 @@ describe("mergeDatasetFlag — single-dataset targeted refresh (enrichGeoFlags -
     expect(merged.find((f) => f.id === "dev_application")?.title).toBe(
       "Major development application filed ~90 m away",
     );
+  });
+
+  it("is byte-identical to a full recompute when the flag carries a DESCRIPTOR (no churn)", () => {
+    // The targeted refresh builds buildGeoFlag(ds, dist, descriptor) and merges it; the full
+    // sweep builds the same flag via geoFlagsFor + nearestAttrs. They must match exactly, or a
+    // weekly --dataset refresh would flip the title back and forth against the nightly sweep.
+    const attrs = { APPL_TYPE: "Draft Plan of Subdivision" };
+    const merged = mergeDatasetFlag(
+      geoFlagsFor({ inside: { flood: true } }),
+      "dev_application",
+      buildGeoFlag(devDs, 90, "Plan of subdivision"),
+    );
+    const fullRecompute = geoFlagsFor({
+      inside: { flood: true },
+      distanceM: { dev_application: 90 },
+      nearestAttrs: { dev_application: attrs },
+    });
+    expect(merged).toEqual(fullRecompute);
+    expect(merged.find((f) => f.id === "dev_application")?.title).toBe("Plan of subdivision filed ~90 m away");
   });
 
   it("preserves the asOf provenance stamped on the recomputed flag", () => {

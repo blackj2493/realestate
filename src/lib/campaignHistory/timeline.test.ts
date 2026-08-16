@@ -103,6 +103,24 @@ describe('buildSalePricePath', () => {
     expect(path[3].endStatus).toBe('Active');            // current
     expect(path[1].endStatus).toBeNull();                // mid-campaign listed point
   });
+  it('dates terminal stamps with the campaign END date (not the price event date)', () => {
+    // The point's own dateMs is the listed/changed date; without endDateMs a
+    // "✓ Sold" under a May listing point reads as sold-in-May when the close
+    // was months later (live report: 644 Dundonald, listed May, sold Jul 16).
+    expect(path[0].endDateMs).toBe(Date.parse('2025-10-15')); // 2025 Term
+    expect(path[2].endDateMs).toBe(Date.parse('2026-06-04')); // May campaign Term
+    expect(path[3].endDateMs).toBeNull();                     // Active — no end yet
+    expect(path[1].endDateMs).toBeNull();                     // mid-campaign point
+  });
+  it('sold campaign: last point carries Sold + the close date', () => {
+    const sold = buildSalePricePath(
+      [ev({ listing_key: 'X40266036', status: 'Sold', entry_date: '2026-05-27T15:00:00Z', end_date: '2026-07-16', list_price: 884900, original_list_price: 884900, close_price: 875000 })],
+      { nowMs: Date.parse('2026-07-20T00:00:00Z') }
+    );
+    expect(sold).toHaveLength(1);
+    expect(sold[0].endStatus).toBe('Sold');
+    expect(sold[0].endDateMs).toBe(Date.parse('2026-07-16'));
+  });
 });
 
 describe('buildEventRows — zero original_list_price guard (audit HIGH-4)', () => {

@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { CalendarDays } from "lucide-react";
 import WatchButton from "@/components/watchlist/WatchButton";
 import type { WatchItem } from "@/lib/watchlist/useWatchlist";
+import { useDiscovery } from "@/lib/discovery/useDiscovery";
 
 /**
  * Mobile-only (`lg:hidden`) sticky bottom bar for the full listing page, keeping the
@@ -23,6 +25,32 @@ export default function MobileActionBar({
   listingKey: string;
   canContact: boolean;
 }) {
+  // #10 FAB overlap: this sticky bar and the discovery Guide FAB both pin to the bottom
+  // (the FAB bottom-right), so on mobile they collide. Ref-count a chrome-block so the FAB
+  // hides while the bar is visible. The bar is `lg:hidden` CSS but mounts on ALL viewports,
+  // so a bare mount-effect would also hide the FAB on desktop (where the bar isn't shown) —
+  // gate the block on the same <lg breakpoint that governs the bar's visibility.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023.98px)");
+    let blocking = false;
+    const sync = () => {
+      const { blockChrome, unblockChrome } = useDiscovery.getState();
+      if (mq.matches && !blocking) {
+        blockChrome();
+        blocking = true;
+      } else if (!mq.matches && blocking) {
+        unblockChrome();
+        blocking = false;
+      }
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => {
+      mq.removeEventListener("change", sync);
+      if (blocking) useDiscovery.getState().unblockChrome();
+    };
+  }, []);
+
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-border bg-background/95 px-3 pt-2.5 backdrop-blur lg:hidden"

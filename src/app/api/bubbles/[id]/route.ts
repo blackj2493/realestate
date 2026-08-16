@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { recordActivation } from "@/lib/analytics/activation";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,8 @@ interface PatchBody {
   source?: unknown;
   /** Nightly new-listing digest toggle (migration 034). */
   alerts_enabled?: boolean;
+  /** Digest match scope: 'all' | 'filtered' (migration 095). */
+  alert_scope?: string;
 }
 
 export async function PATCH(
@@ -92,6 +95,11 @@ export async function PATCH(
       return NextResponse.json({ error: "alerts_enabled must be boolean" }, { status: 400 });
     patch.alerts_enabled = body.alerts_enabled;
   }
+  if (body.alert_scope !== undefined) {
+    if (body.alert_scope !== "all" && body.alert_scope !== "filtered")
+      return NextResponse.json({ error: "alert_scope must be 'all' or 'filtered'" }, { status: 400 });
+    patch.alert_scope = body.alert_scope;
+  }
 
   if (Object.keys(patch).length === 0)
     return NextResponse.json({ error: "no updatable fields supplied" }, { status: 400 });
@@ -105,6 +113,17 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Activation milestone (0.3) — only when the user explicitly turns an existing
+  // area's alert ON (area-create logs 'save_area'; disabling is not a milestone).
+  if (body.alerts_enabled === true) {
+    await recordActivation({
+      kind: "enable_alert",
+      userId: user.id,
+      context: { scope: "area", bubble_id: id },
+    });
+  }
+
   return NextResponse.json({ item: data });
 }
 

@@ -106,6 +106,29 @@ async function main() {
   const tToggle = await page.locator('button[aria-label*="mode"]').first().boundingBox().catch(() => null);
   check("terminal theme toggle on-screen @390px", !!tToggle && tToggle.x >= 0 && tToggle.x + tToggle.width <= 390, tToggle ? `x=${Math.round(tToggle.x)}` : "not rendered");
 
+  // Ledger scope chip: it names the viewport ("Map area · Henry Farm +7"), and a label
+  // clipped to "Map area · …" carries none of that. A phone has no hover, so the title
+  // attribute can't recover it — a clipped chip is silent content loss. Measured on the
+  // list tab, since the ledger is display:none behind the map view (0/0 would pass).
+  await page.locator('button[aria-pressed]:has-text("list")').first().click().catch(() => {});
+  await page.waitForTimeout(500);
+  const chip = await page.evaluate(() => {
+    const el = document.querySelector("[data-scope-chip-label]") as HTMLElement | null;
+    if (!el || el.clientWidth === 0) return null;
+    return { scroll: el.scrollWidth, client: el.clientWidth, text: el.textContent?.trim() ?? "" };
+  });
+  if (chip) {
+    check(
+      "ledger scope chip label is not clipped @390px",
+      chip.scroll <= chip.client + 1,
+      `"${chip.text}" scrollW ${chip.scroll} / clientW ${chip.client}`
+    );
+  } else {
+    console.log("  ⏭️  ledger scope chip not rendered (place-scoped results) — skipped");
+  }
+  await page.locator('button[aria-pressed]:has-text("map")').first().click().catch(() => {});
+  await page.waitForTimeout(500);
+
   const dialog = () => page.locator('div[role="dialog"][aria-label*="listing"]').count();
   const box = (await page.locator("canvas").first().boundingBox())!;
   const yFrom = Math.round(box.y + 35);

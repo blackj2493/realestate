@@ -15,6 +15,7 @@
  * it uses theme tokens (works in the Daylight terminal too).
  */
 
+import Link from "next/link";
 import {
   Navigation,
   GraduationCap,
@@ -25,6 +26,8 @@ import {
   Landmark,
   X,
   Check,
+  Undo2,
+  GitCompareArrows,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -33,8 +36,12 @@ import { getMapMetric } from "@/lib/personas/mapMetrics";
 export default function ActiveLensBar() {
   const isSelectMode = useCommandCenterStore((s) => s.isSelectMode);
   const setSelectMode = useCommandCenterStore((s) => s.setSelectMode);
-  const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
+  const selectedIds = useCommandCenterStore((s) => s.selectedIds);
+  const selectedCount = selectedIds.size;
   const clearSelection = useCommandCenterStore((s) => s.clearSelected);
+  // Compare opens on the persona the user was browsing in — same contract as
+  // MapComparePanel's Compare button.
+  const activePersona = useCommandCenterStore((s) => s.activePersona);
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const resetCommute = useCommandCenterStore((s) => s.resetCommute);
   const schoolEnabled = useCommandCenterStore((s) => s.school.enabled);
@@ -47,6 +54,13 @@ export default function ActiveLensBar() {
   const setDrawPolygon = useCommandCenterStore((s) => s.setDrawPolygon);
   const showZoning = useCommandCenterStore((s) => s.showZoning);
   const setShowZoning = useCommandCenterStore((s) => s.setShowZoning);
+  // In-progress draw: on phones the Tools sheet closes when a draw starts (the
+  // full-screen sheet would cover the map), so this bar IS the draw UI.
+  const isDrawing = useCommandCenterStore((s) => s.isDrawing);
+  const drawPointCount = useCommandCenterStore((s) => s.drawPoints.length);
+  const undoDrawPoint = useCommandCenterStore((s) => s.undoDrawPoint);
+  const finishDrawing = useCommandCenterStore((s) => s.finishDrawing);
+  const clearDraw = useCommandCenterStore((s) => s.clearDraw);
 
   type Chip = {
     key: string;
@@ -62,9 +76,15 @@ export default function ActiveLensBar() {
   if (isSelectMode) {
     chips.push({
       key: "select",
-      label: `Selecting${selectedCount > 0 ? ` · ${selectedCount}` : ""} — tap pins`,
+      label:
+        selectedCount === 0
+          ? "Tap pins to add"
+          : `Selecting · ${selectedCount}${selectedCount < 2 ? " — tap 1 more" : ""}`,
       icon: Scale,
-      done: true,
+      // Only offer "Done" while it is the sensible next step. Once 2+ are picked the
+      // primary action is the Compare button beside this chip, and two competing
+      // finish-ish affordances is what made "Done" read as optional.
+      done: selectedCount < 2,
       onExit: () => setSelectMode(false),
       aria: "Done adding — exit selection mode",
     });
@@ -96,10 +116,47 @@ export default function ActiveLensBar() {
   if (showZoning)
     chips.push({ key: "zoning", label: "Zoning", icon: Landmark, onExit: () => setShowZoning(false), aria: "Turn off the zoning overlay" });
 
-  if (chips.length === 0) return null;
+  if (chips.length === 0 && !isDrawing) return null;
 
   return (
     <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border bg-card px-3 py-1.5 md:hidden">
+      {isDrawing && (
+        <>
+          <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-dashed border-cyan-500/60 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
+            <Lasso className="h-3.5 w-3.5" />
+            {drawPointCount < 3 ? `Tap the map · ${drawPointCount}/3` : `${drawPointCount} points`}
+          </span>
+          <button
+            type="button"
+            onClick={undoDrawPoint}
+            disabled={drawPointCount === 0}
+            aria-label="Undo the last point"
+            className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-semibold text-foreground active:bg-muted disabled:opacity-40"
+          >
+            <Undo2 className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+            Undo
+          </button>
+          <button
+            type="button"
+            onClick={finishDrawing}
+            disabled={drawPointCount < 3}
+            aria-label="Finish the shape and filter to it"
+            className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-cyan-500 bg-cyan-500/15 px-3 text-xs font-bold text-cyan-700 disabled:opacity-40 dark:text-cyan-200"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Finish
+          </button>
+          <button
+            type="button"
+            onClick={clearDraw}
+            aria-label="Cancel drawing"
+            className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-semibold text-muted-foreground active:bg-muted"
+          >
+            <X className="h-3.5 w-3.5" />
+            Cancel
+          </button>
+        </>
+      )}
       {chips.map((c) => {
         const Icon = c.icon;
         return (
@@ -128,6 +185,26 @@ export default function ActiveLensBar() {
           </button>
         );
       })}
+      {/*
+       * The way OUT of a selection. Without it the flow dead-ended: after picking pins
+       * you got a "Selected · N" chip whose only action was to clear, and the actual
+       * comparison was reachable solely by re-opening Tools → Compare — which reads as
+       * "start over", not "view what I just built". Rendered in BOTH select mode and
+       * after it, so the destination never disappears once it is reachable.
+       */}
+      {selectedCount >= 2 && (
+        <Link
+          href={`/properties/compare?ids=${encodeURIComponent(
+            Array.from(selectedIds).join(",")
+          )}&lens=${activePersona}`}
+          onClick={() => setSelectMode(false)}
+          aria-label={`Compare the ${selectedCount} selected properties side by side`}
+          className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full bg-cyan-600 px-3.5 text-xs font-bold text-white shadow-sm transition-colors active:bg-cyan-700 dark:bg-cyan-500 dark:text-slate-950 dark:active:bg-cyan-400"
+        >
+          <GitCompareArrows className="h-3.5 w-3.5" />
+          Compare {selectedCount}
+        </Link>
+      )}
     </div>
   );
 }

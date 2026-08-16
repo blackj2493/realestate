@@ -42,6 +42,10 @@ export default function DiscoveryRoot() {
   const nudgesDone = useDiscovery((s) => s.nudgesDone);
   const startRun = useDiscovery((s) => s.startRun);
   const dismissNudge = useDiscovery((s) => s.dismissNudge);
+  // A full-screen / side drawer with its own primary CTA (the terminal FILTERS
+  // drawer + mobile filter sheet) sets this while open; the launcher hides so it
+  // can never sit over that CTA. See useDiscovery.chromeBlockers.
+  const chromeBlocked = useDiscovery((s) => s.chromeBlockers > 0);
 
   const pathname = usePathname() || "/";
   const surface = surfaceForPath(pathname);
@@ -88,6 +92,24 @@ export default function DiscoveryRoot() {
     return () => window.clearTimeout(id);
   }, [eligible, surface]);
 
+  // The nudge must never camp over the page: the first scroll on phones (where it
+  // overlaps the listing page's sticky action bar) or 15s anywhere auto-hides it,
+  // and either path counts as seen — one appearance per surface per device.
+  React.useEffect(() => {
+    if (!nudge) return;
+    const hide = () => {
+      setNudge(false);
+      dismissNudge(surface);
+    };
+    const timer = window.setTimeout(hide, 15000);
+    const onScroll = () => hide();
+    if (isMobile) window.addEventListener("scroll", onScroll, { once: true, passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      if (isMobile) window.removeEventListener("scroll", onScroll);
+    };
+  }, [nudge, isMobile, surface, dismissNudge]);
+
   const unseenNew = hydrated
     ? newFeatures().filter((f) => seen[f.id] === undefined).length
     : 0;
@@ -102,14 +124,31 @@ export default function DiscoveryRoot() {
 
   const overlayUp = guideOpen || !!run;
 
+  // Tour-nudge copy follows the active lens: the investor personas hear "how you
+  // invest"; the Homebuyer lens (and the cold-start default) hears neutral "what
+  // you're looking for", so a brand-new / anonymous visitor isn't told they invest.
+  const homebuyerLens = !hydrated || getConfig().persona === "smart";
+
   return (
     <>
       <FeatureGuide />
       <Spotlight />
 
-      {/* First-run nudge — bottom-left so it never collides with the launcher. */}
+      {/* First-run nudge — bottom-left so it never collides with the launcher.
+          `dark` is deliberate. This mounts from the ROOT layout, so it floats over every
+          page in the app; kept as a dark cyan-accented overlay (the way a tooltip or toast
+          stays one shade) rather than restyled per page, and the class stops any
+          token-driven child resolving light against this slate-900 ground. */}
       {nudge && !overlayUp && (
-        <div className="pp-fade-up fixed left-4 z-[140] w-[min(20rem,calc(100vw-2rem))] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl [bottom:max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          className={cn(
+            "dark pp-fade-up fixed left-4 z-[140] w-[min(20rem,calc(100vw-2rem))] border border-cyan-500/40 bg-slate-900 p-4 shadow-2xl",
+            // Phones: clear the listing page's sticky action bar instead of covering it.
+            isMobile
+              ? "[bottom:max(5.5rem,env(safe-area-inset-bottom))]"
+              : "[bottom:max(1rem,env(safe-area-inset-bottom))]"
+          )}
+        >
           <button
             type="button"
             onClick={() => {
@@ -126,7 +165,8 @@ export default function DiscoveryRoot() {
             <div>
               <p className="text-sm font-semibold text-slate-100">New here? Take the 30-second tour</p>
               <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-                A quick, skippable walkthrough of the tools on this screen — tailored to how you invest.
+                A quick, skippable walkthrough of the tools on this screen — tailored to{" "}
+                {homebuyerLens ? "what you're looking for" : "how you invest"}.
               </p>
             </div>
           </div>
@@ -152,14 +192,18 @@ export default function DiscoveryRoot() {
         </div>
       )}
 
-      {/* Floating launcher — hidden while an overlay is open. */}
-      {!overlayUp && (
+      {/* Floating launcher — hidden while the guide/tour is up (overlayUp) or while
+          a blocking drawer with its own primary CTA is open (chromeBlocked), so it
+          never collides with e.g. the FILTERS drawer's "Show N results" button. */}
+      {!overlayUp && !chromeBlocked && (
         <button
           type="button"
           onClick={() => openGuide("page")}
           aria-label="Open feature guide"
           className={cn(
-            "fixed right-4 z-[130] inline-flex items-center gap-2 border border-slate-700 bg-slate-900/95 px-3 py-2.5 text-slate-200 shadow-xl backdrop-blur transition-colors hover:border-cyan-500/60 hover:text-cyan-200",
+            // `dark` for the same reason as the nudge above — a root-mounted floater that
+            // stays one shade over every page.
+            "dark fixed right-4 z-[130] inline-flex items-center gap-2 border border-slate-700 bg-slate-900/95 px-3 py-2.5 text-slate-200 shadow-xl backdrop-blur transition-colors hover:border-cyan-500/60 hover:text-cyan-200",
             "[bottom:max(1.25rem,env(safe-area-inset-bottom))]"
           )}
         >

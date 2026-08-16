@@ -165,6 +165,11 @@ export interface PricePathPoint {
   dateMs: number;                 // for the date label only — NOT the x position (path is evenly spaced)
   kind: 'Listed' | 'Price Changed';
   endStatus: CampaignStatus | null; // non-null on a campaign's LAST point (its end state)
+  /** Campaign end date, set alongside a terminal endStatus. The point itself is a
+   *  price EVENT (dateMs = listed/changed), so a bare "✓ Sold" under a May point
+   *  reads as sold-in-May when the close was months later — the renderer dates
+   *  the status stamp with this instead. */
+  endDateMs: number | null;
   listingKey: string;
   offMarketBefore: boolean;       // a NON-stitched gap precedes this campaign → draw the segment dashed
   isCurrent: boolean;             // campaign overlaps the current stitched span
@@ -200,13 +205,15 @@ export function buildSalePricePath(
 
     const pts: PricePathPoint[] = [];
     if (orig != null) {
-      pts.push({ price: orig, dateMs: startMs, kind: 'Listed', endStatus: null, listingKey: e.listing_key, offMarketBefore, isCurrent: inSpan });
+      pts.push({ price: orig, dateMs: startMs, kind: 'Listed', endStatus: null, endDateMs: null, listingKey: e.listing_key, offMarketBefore, isCurrent: inSpan });
     }
     if (changed && e.list_price != null) {
-      pts.push({ price: e.list_price, dateMs: ms(e.price_change_date) ?? startMs, kind: 'Price Changed', endStatus: null, listingKey: e.listing_key, offMarketBefore: false, isCurrent: inSpan });
+      pts.push({ price: e.list_price, dateMs: ms(e.price_change_date) ?? startMs, kind: 'Price Changed', endStatus: null, endDateMs: null, listingKey: e.listing_key, offMarketBefore: false, isCurrent: inSpan });
     }
     if (pts.length > 0) {
-      pts[pts.length - 1].endStatus = e.status; // last point carries the campaign's end state
+      const last = pts[pts.length - 1];
+      last.endStatus = e.status; // last point carries the campaign's end state
+      if (e.status !== 'Active') last.endDateMs = ms(e.end_date);
       path.push(...pts);
     }
     prevEndMs = endMs;

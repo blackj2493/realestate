@@ -72,26 +72,51 @@ export default function AppHeader({
       <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-4">
         <Link href={home} className="flex shrink-0 items-center" aria-label="PureProperty.ca home">
           {/* FULL wordmark on every width (brand requirement — never truncate to
-              "PURE"). Phones get the smaller `sm` scale, and the account button
-              moves into the MobileNav drawer below md, which together keep the
-              row inside the 360-390px budget. */}
-          <span className="md:hidden">
+              "PURE"). The `sm` scale (14px) read undersized next to the 20px
+              control icons, so the `md` scale (18px) now starts at 360px — the
+              Android baseline — rather than at the md breakpoint.
+              Budget, measured on a real 360px device: the row's free space
+              between the wordmark and the first control is ~54px, and md costs
+              ~36px more than sm, so ~18px stays spare. Below 360px that slack is
+              gone (moving the account button into the MobileNav drawer is what
+              bought it), so those viewports keep `sm` — the row used to overflow
+              and clip the hamburger off-screen. */}
+          <span className="xs:hidden">
             <Logo size="sm" theme={logoTheme} />
           </span>
-          <span className="hidden md:inline-flex">
+          <span className="hidden xs:inline-flex">
             <Logo size="md" theme={logoTheme} />
           </span>
         </Link>
 
-        {/* Global search sits next to the logo on the left (collapses below lg). */}
-        {search && <LocationSearch mode="navigate" className="hidden shrink-0 lg:block lg:w-72" />}
+        {/* Global search sits next to the logo on the left (collapses below lg).
+            Elastic rather than a fixed w-72: it keeps 18rem as a FLOOR (the old
+            fixed width, so nothing can get tighter than it is today) and grows
+            into whatever the row actually has spare, up to 26rem. A fixed width
+            clipped typed addresses — "127 Via Toscana N/A, Vaughan, ON L4H 3C1"
+            measures 288px against 220px of usable box — and picking wider
+            breakpoints by hand is unsafe here, because the signed-in header
+            carries ~114px more chrome (handle + Sign out) than the signed-out
+            one, and lg is already near capacity. Letting flex do the arithmetic
+            adapts to both without a breakpoint guess. The grow factor is 10
+            against the spacer's 1 so the search claims the slack FIRST and
+            reaches its cap; sharing it evenly left the box at its floor until
+            ~1434px, which is above most laptop widths. */}
+        {search && (
+          <LocationSearch
+            mode="navigate"
+            className="hidden lg:block lg:min-w-[18rem] lg:max-w-[26rem] lg:flex-[10]"
+          />
+        )}
 
         {/* Spacer pushes the nav + right cluster to the edge. */}
         <div className="flex-1" />
 
         {/* Primary section nav — pushed to the right, before the alerts/account
-            cluster. Inline on md+, drawer below (see MobileNav). */}
-        {variant === "app" && <PrimaryNav className="hidden shrink-0 md:flex" />}
+            cluster. Inline on md+, drawer below (see MobileNav). Rendered on
+            marketing pages too (/data, /glossary, /whats-my-home-hiding) so an
+            SEO visitor always has a path into Map / Market Trends / Dashboard. */}
+        <PrimaryNav className="hidden shrink-0 md:flex" />
 
         {/* Phone width budget (360-390px): smaller full wordmark + tighter gap +
             account button relocated to the drawer keep the control set (incl. the
@@ -113,14 +138,13 @@ export default function AppHeader({
           )}
           <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" />
           <WatchlistAlertsBell />
-          {/* Sign in/out is the widest control (~90px) — on app pages below md it
-              lives in the MobileNav drawer instead, so the full wordmark fits at
-              360px. Marketing pages have no drawer, so it stays inline there
-              (they also have no search icon/burger, so the row still fits). */}
-          <div className={variant === "app" ? "hidden md:flex" : "flex"}>
+          {/* Sign in/out is the widest control (~90px) — below md it lives in the
+              MobileNav drawer instead (both variants now render that drawer), so
+              the full wordmark + controls fit a 360px viewport. */}
+          <div className="hidden md:flex">
             <AccountButton />
           </div>
-          {variant === "app" && <MobileNav className="md:hidden" />}
+          <MobileNav className="md:hidden" />
         </div>
       </div>
 

@@ -34,11 +34,72 @@ export const GLA_GROSSUP = 1.5;
 export const MIN_DIM_ROOMS = 4;
 
 /**
- * A single room edge this large only makes sense in feet (25 m ≈ 82 ft). Used to
- * auto-detect feet-valued payloads, since RoomData carries no units field (the
- * TRREB feed is metric in practice, but this stays safe if that ever changes).
+ * Median room edge above which METRES is physically impossible — 20 m is a 66 ft
+ * room, and a whole home whose *typical* room is that size is not a home.
+ *
+ * This is a safety valve for a hypothetical undeclared-imperial listing, NOT a
+ * classifier. Calibrated against the feed's own `RoomLengthWidthUnits` on 250
+ * ground-truth listings (`scripts/admin/calibrateRoomUnits.ts`):
+ *
+ *   always metric      100.0%  correct
+ *   median  > 20        99.6%  (1 wrong)
+ *   median  > 12        94.8%
+ *   max     > 25        53.6%  <- the rule this replaces
+ *
+ * Every single error, in every rule, is metric-read-as-feet — the damaging
+ * direction, because it divides the listing's living area by 10.76.
  */
-const FEET_DIMENSION_THRESHOLD = 25;
+const IMPLAUSIBLE_METRIC_MEDIAN = 20;
+
+export type DimensionUnit = 'meters' | 'feet';
+
+/** How the unit was arrived at — surfaced so a wrong call is traceable. */
+export type DimensionUnitSource = 'declared' | 'default' | 'implausible-as-metric';
+
+/**
+ * Which unit a listing's room dimensions are in.
+ *
+ * The feed declares this in `RoomLengthWidthUnits`, populated on roughly a fifth
+ * of rooms and consistent across a listing when present, so a single declaration
+ * settles the whole listing. Absent that, metres is the answer: of 250 listings
+ * that DO declare, 250 declare metres and none declare feet.
+ *
+ * What this replaces was `max(edge) > 25 => feet`, evaluated across every room in
+ * the listing. Because it keyed on the MAXIMUM, one outlier dimension flipped the
+ * entire listing and divided its living area by 10.76 — it scored 53.6% against
+ * the declared truth, i.e. worse than never guessing at all, and it was wrong on
+ * 1,109 GLA-eligible listings in production.
+ */
+export function resolveDimensionUnit(
+  rooms: RoomData[] | null | undefined
+): { unit: DimensionUnit; source: DimensionUnitSource } {
+  const declared = new Set(
+    (rooms ?? [])
+      .map((r) => String(r.RoomLengthWidthUnits ?? '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  // Exactly one declared value = authoritative. Mixed values within one listing
+  // are self-contradictory, so they fall through rather than pick a side.
+  if (declared.size === 1) {
+    const v = [...declared][0];
+    if (v.startsWith('m')) return { unit: 'meters', source: 'declared' };
+    if (v.startsWith('f')) return { unit: 'feet', source: 'declared' };
+  }
+
+  const edges = (rooms ?? [])
+    .map((r) => Math.max(Number(r.RoomLength) || 0, Number(r.RoomWidth) || 0))
+    .filter((e) => e > 0)
+    .sort((a, b) => a - b);
+  if (edges.length === 0) return { unit: 'meters', source: 'default' };
+
+  // Median, not max: no single row can move it.
+  const mid = edges.length >> 1;
+  const medianEdge = edges.length % 2 ? edges[mid] : (edges[mid - 1] + edges[mid]) / 2;
+
+  return medianEdge > IMPLAUSIBLE_METRIC_MEDIAN
+    ? { unit: 'feet', source: 'implausible-as-metric' }
+    : { unit: 'meters', source: 'default' };
+}
 
 /**
  * TRREB sometimes sends `RoomLength = 1, RoomWidth = 1` as a placeholder while
@@ -58,6 +119,26 @@ const PLACEHOLDER_DIM_THRESHOLD = 1.5;
  * sized fallback than a confidently-wrong measurement.
  */
 const ROOMS_SUM_VS_BUCKET_FLOOR = 0.5;
+
+/**
+ * The same guard in the other direction, which was missing.
+ *
+ * A room sum this far ABOVE the declared band is not a large home, it is bad
+ * dimension data — lot sizes in the room fields, acreage, or a decimal slip. The
+ * floor above caught the incomplete-room-list case; nothing caught this one, so
+ * an implausible GLA fed the AVM unchallenged.
+ *
+ * Measured over 73,862 listings with both room dimensions and a declared band:
+ *
+ *   p50  1.05   p90  1.59   p99  12.19   p99.9  51.91
+ *
+ * The believable mass sits at 1.0-1.6x (the grossup plus above-grade-only
+ * accounting), then breaks into a junk tail. 2.5x sits well clear of p90 and
+ * rejects 2,835 listings (3.8%), which fall back to the calibrated bucket exactly
+ * as the floor's rejections do — a coarse right-sized estimate instead of a
+ * confident wrong one.
+ */
+const ROOMS_SUM_VS_BUCKET_CEILING = 2.5;
 
 export type LivingAreaSource = 'exact' | 'rooms' | 'calibrated' | 'range_midpoint' | 'none';
 
@@ -98,31 +179,36 @@ function inRange(n: number): boolean {
 }
 
 /**
- * Sum above-grade room areas (RoomLength × RoomWidth) into raw sqft. Auto-detects
- * meters vs feet from dimension magnitude. Returns null when there aren't enough
- * dimensioned above-grade rooms to trust the measurement.
+ * Sum above-grade room areas (RoomLength × RoomWidth) into raw sqft. The unit
+ * comes from {@link resolveDimensionUnit} — the feed's declaration where it has
+ * one, metres otherwise. Returns null when there aren't enough dimensioned
+ * above-grade rooms to trust the measurement.
  */
 export function roomSumSqft(
   rooms: RoomData[] | null | undefined
-): { rawSqft: number; roomCount: number } | null {
+): { rawSqft: number; roomCount: number; unit: DimensionUnit; unitSource: DimensionUnitSource } | null {
   if (!Array.isArray(rooms) || rooms.length === 0) return null;
 
   const above: { l: number; w: number }[] = [];
-  let maxDim = 0;
+  const usable: RoomData[] = [];
   for (const r of rooms) {
     const l = Number(r.RoomLength);
     const w = Number(r.RoomWidth);
     if (!(l > 0) || !(w > 0)) continue;
     // Drop placeholder rows (TRREB stashes real dims in RoomDimensions string when both are 1).
     if (l <= PLACEHOLDER_DIM_THRESHOLD && w <= PLACEHOLDER_DIM_THRESHOLD) continue;
-    maxDim = Math.max(maxDim, l, w);
+    usable.push(r);
     if (isAboveGrade(r.RoomLevel)) above.push({ l, w });
   }
   if (above.length < MIN_DIM_ROOMS) return null;
 
-  const unitFactor = maxDim > FEET_DIMENSION_THRESHOLD ? 1 : SQM_TO_SQFT;
+  // Decided over the placeholder-filtered rooms, so a stray 1x1 row can't drag
+  // the median down, and — unlike the old max-based rule — no single large room
+  // can flip the listing.
+  const { unit, source } = resolveDimensionUnit(usable);
+  const unitFactor = unit === 'feet' ? 1 : SQM_TO_SQFT;
   const rawSqft = above.reduce((acc, d) => acc + d.l * d.w * unitFactor, 0);
-  return { rawSqft, roomCount: above.length };
+  return { rawSqft, roomCount: above.length, unit, unitSource: source };
 }
 
 /**
@@ -137,21 +223,24 @@ export function resolveLivingArea(
   const exact = numOrNull(payload?.['BuildingAreaTotal']);
   if (exact !== null && inRange(exact)) return { sqft: exact, source: 'exact' };
 
-  // 2. Measured GLA from room dimensions. Allowed to fall below the MLS range
-  //    in either direction, but if a LivingAreaRange bucket exists and the
-  //    rooms-sum is dramatically smaller than its midpoint, the room list is
-  //    almost certainly incomplete — fall through to calibrated rather than
-  //    publish a confidently-wrong measurement.
+  // 2. Measured GLA from room dimensions — trusted only when it is the same order
+  //    of magnitude as the seller-declared band. Too small means an incomplete
+  //    room list; too large means the dimensions are not room dimensions at all
+  //    (lot sizes, acreage, a decimal slip). Either way a coarse right-sized
+  //    fallback beats a confidently-wrong measurement, so fall through.
   const rs = roomSumSqft(opts.rooms);
   if (rs) {
     const gla = Math.round(rs.rawSqft * GLA_GROSSUP);
     if (inRange(gla)) {
       const bucketMid = parseLivingAreaRange(payload?.['LivingAreaRange']);
       const bucketSane = bucketMid !== null && inRange(bucketMid);
-      if (!bucketSane || gla >= bucketMid * ROOMS_SUM_VS_BUCKET_FLOOR) {
+      const plausible =
+        !bucketSane ||
+        (gla >= bucketMid * ROOMS_SUM_VS_BUCKET_FLOOR &&
+          gla <= bucketMid * ROOMS_SUM_VS_BUCKET_CEILING);
+      if (plausible) {
         return { sqft: gla, source: 'rooms' };
       }
-      // else: rooms sum is < 50% of the seller-declared bucket → distrust, fall through.
     }
   }
 
@@ -166,4 +255,29 @@ export function resolveLivingArea(
   if (mid !== null && inRange(mid)) return { sqft: mid, source: 'range_midpoint' };
 
   return { sqft: null, source: 'none' };
+}
+
+/**
+ * The avm_sqft_calibration cohort key: CityRegion, falling back to City when the feed
+ * ships none (all of Waterloo Region + Brantford — see the FSA-cohort fix, PR #324).
+ *
+ * Before this fallback those listings could neither CONTRIBUTE calibration samples
+ * (the build script dropped them at its key guard — the same one-line pattern that
+ * zeroed their AVM coverage) nor LOOK ONE UP, so every banded listing there resolved
+ * to the naive range midpoint. City granularity is honest for this table: the
+ * LivingAreaRange band is the dominant size signal, and the median GLA *within* a
+ * band varies far less across neighbourhoods than the band is wide.
+ *
+ * Used by BOTH the build script (refresh-sqft-calibration.ts) and every lookup site,
+ * so the two sides can never disagree about which cohort a listing belongs to. No
+ * collision: city-keyed rows only exist for cities whose listings have no CityRegion,
+ * and lookups only fall back to City for exactly those listings; municipalities where
+ * city_region equals the city name (Blue Mountains, West Grey, …) have the field
+ * POPULATED and never take the fallback.
+ */
+export function calibrationRegionKey(
+  cityRegion: string | null | undefined,
+  city: string | null | undefined
+): string {
+  return (cityRegion ?? '').trim() || (city ?? '').trim();
 }

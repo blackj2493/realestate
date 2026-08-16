@@ -26,6 +26,7 @@ import {
   CASHFLOW_CAP_FLOOR,
 } from "@/lib/dashboard/queries";
 import { regionArea } from "@/lib/dashboard/area";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { scopeKey } from "@/lib/dashboard/lensKey";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import {
@@ -94,6 +95,7 @@ const METRICS: Partial<Record<HeadlineMetricId, TileMetric>> = {
     sub: (d) => (d.specialty ? `${d.specialty.cashflowCount.toLocaleString()} ≥${CASHFLOW_CAP_FLOOR}% cap` : null),
     dir: "higherGood",
     kind: "peer",
+    glossaryKey: "cashflowGrade",
   },
   priceCutShare: {
     label: "Price-Cut Share",
@@ -271,8 +273,8 @@ export default function RegionComparisonTiles({
       {datas.map((d) => (
         <div key={d.score.region} className="space-y-1.5">
           {regions.length > 1 && (
-            <div className="terminal-font text-xs uppercase tracking-wider text-muted-foreground">
-              {d.score.region}
+            <div className="terminal-font text-xs uppercase tracking-wider text-muted-foreground" title={d.score.region}>
+              {formatRegionLabel(d.score.region)}
             </div>
           )}
           <div className="grid grid-cols-3 gap-3">

@@ -11,6 +11,7 @@
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnType, ColumnDef } from "@/lib/personas/personaConfig";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { getAlphaFlag } from "@/lib/personas/getAlphaFlag";
 
 export type SortDir = "asc" | "desc";
 
@@ -66,6 +67,68 @@ export function fitLedgerColumns(columns: ColumnDef[], width: number): ColumnDef
   }
   const keptTypes = new Set(kept.map((c) => c.type));
   return columns.filter((c) => c.type === "address" || keptTypes.has(c.type));
+}
+
+// ============================================================================
+// Adaptive empty-column hiding
+// ============================================================================
+
+/**
+ * columnHasValue — would this column render a real value for `doc`, or the "—"
+ * placeholder? Mirrors the `Cell`/`ColumnValue` renderers in LedgerRow so the
+ * two can't drift: a column we call "populated" here is one that shows content
+ * there. `isAuthed` matters because the alpha flag's VOW-derived variants
+ * (distress / stale / new) collapse to "none" for anonymous users, so a column
+ * that is all-flags for signed-in visitors is all-"—" for anon.
+ *
+ * The always-present ledger scaffolding — address, and the True DOM / Carry Cost
+ * columns, which always render a figure (a gated lock or "0d"; a computed carry
+ * estimate) rather than "—" — reports `true` unconditionally, so the general
+ * empty-column rule below can never strip a core column.
+ */
+export function columnHasValue(doc: ListingDocument, type: ColumnType, isAuthed: boolean): boolean {
+  switch (type) {
+    case "address":
+    case "trueDom":
+    case "carryCost":
+      return true;
+    case "capRate":
+      return capRateOrNull(doc.cap_rate_est) != null;
+    case "yield":
+      return grossYieldOrNull(doc.gross_yield_est) != null;
+    case "priceDrop":
+      return Boolean(doc.TotalPriceDrop);
+    case "suite":
+      return doc.SuiteStatus === "EXISTING_SUITE" || doc.SuiteStatus === "POTENTIAL_CANDIDATE";
+    case "lotDims":
+      return (doc.LotWidth ?? doc.lot_width_ft) != null;
+    case "zoning":
+      return Boolean(doc.zoning_designation);
+    case "density":
+      return Boolean(doc.is_density_ready);
+    case "alphaFlag":
+      return getAlphaFlag(doc, isAuthed).variant !== "none";
+    default:
+      return false;
+  }
+}
+
+/**
+ * dropEmptyColumns — hide any column that NO row in the current result set can
+ * populate, so an all-"—" column (most commonly Alpha Flag on the homebuyer lens
+ * or for anon) disappears instead of shipping a dash placeholder column.
+ *
+ * A general rule ("drop columns with zero populated cells"), not an Alpha-Flag
+ * special-case: `columnHasValue` reports the always-rendered scaffolding
+ * (address / True DOM / Carry Cost) as populated unconditionally, so the core
+ * columns are never at risk. The address column is also pinned explicitly, which
+ * keeps it (and therefore a non-empty grid) when `docs` is empty during loading.
+ */
+export function dropEmptyColumns(columns: ColumnDef[], docs: ListingDocument[], isAuthed: boolean): ColumnDef[] {
+  if (docs.length === 0) return [...columns]; // nothing loaded yet — keep the persona's full set
+  return columns.filter(
+    (col) => col.type === "address" || docs.some((doc) => columnHasValue(doc, col.type, isAuthed))
+  );
 }
 
 /** Monthly carrying cost — explicit field, else a deterministic 80% LTV @ 7% / 30yr estimate. */

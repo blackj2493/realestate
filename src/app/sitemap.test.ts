@@ -21,9 +21,10 @@ import { cityHubsWithInventory, COMMERCIAL_ACTIVE_FILTER } from '@/lib/listings/
 import { LIVE_TRACKERS } from '@/lib/data/trackers';
 import sitemap from './sitemap';
 
-// Non-listing routes always emitted: 3 static (/, /properties, /property) + the /data hub
-// + one route per live tracker. Derived so it stays correct as trackers ship.
-const NON_LISTING = 3 + 1 + LIVE_TRACKERS.length;
+// Non-listing routes always emitted: 3 static (/, /properties, /property) + 2 fixed /data
+// pages (the hub and /data/for-journalists) + one route per live tracker. Derived from
+// LIVE_TRACKERS so it stays correct as trackers ship.
+const NON_LISTING = 3 + 2 + LIVE_TRACKERS.length;
 
 /** Chainable stub whose range(from, to) returns a slice of `dataset`,
  *  mimicking PostgREST range pagination (then-only thenable). */

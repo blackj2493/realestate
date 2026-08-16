@@ -11,8 +11,12 @@ import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
 import { aboveGradeBedsClause } from '@/lib/filters/filterRegistry';
+import { anyTransactionPriceFloor } from '@/lib/filters/fundamentals';
 import { toSimpleRing } from '@/lib/geo/simplifyRing';
+import { sqftBoundsFor } from '@/lib/listings/livingAreaBands';
 import { reportSearchFailure } from '@/lib/telemetry/searchHealth';
+import { rankAddressSuggestions } from '@/lib/search/addressRank';
+import type { AddressRecordResponse } from '@/lib/search/types';
 
 // Typesense configuration.
 // NOTE: the host is intentionally hardcoded (Typesense Cloud) and is NOT read from env.
@@ -97,6 +101,33 @@ export async function searchHistogram(params: {
   return (res.results ?? []).map((r: { found?: number }) => r.found ?? 0);
 }
 
+/**
+ * COUNT-only results for a list of arbitrary filter fragments, in one
+ * multi_search round-trip. Generalises {@link searchHistogram} to clauses that
+ * aren't a single field's range — the sqft band control needs per-band counts
+ * (unequal-width TRREB bands) plus its certain/possible/unsized totals, and none
+ * of those are expressible as `bandFilter`.
+ *
+ * A fragment of "" counts the unfiltered base. Order in = order out.
+ */
+export async function searchClauseCounts(params: {
+  baseFilterBy: string;
+  clauses: string[];
+}): Promise<number[]> {
+  const { baseFilterBy, clauses } = params;
+  if (!clauses.length) return [];
+  const searches = clauses.map((c) => ({
+    collection: 'properties',
+    q: '*',
+    query_by: 'City',
+    filter_by: [baseFilterBy, c].filter(Boolean).join(' && '),
+    per_page: 0,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const res: any = await getTypesenseClient().multiSearch.perform({ searches } as any);
+  return (res.results ?? []).map((r: { found?: number }) => r.found ?? 0);
+}
+
 // ============================================================================
 // Type Definitions (matches updated schema with camelCase fields)
 // ============================================================================
@@ -108,7 +139,9 @@ export interface ListingDocument {
   ListPrice: number;
   UnparsedAddress?: string;
   City?: string;
-  
+  /** TRREB community ("Half Moon Bay", "Sandringham-Wellington") — the neighbourhood axis. */
+  CityRegion?: string;
+
   // Property Specs
   BedroomsTotal?: number;
   BedroomsAboveGrade?: number;
@@ -142,6 +175,10 @@ export interface ListingDocument {
   // TRREB sqft band ("2500-3000"). Stored-only display cargo; BuildingAreaTotal is
   // ~never filled for houses, so this is the sqft fallback on cards / quick-look.
   LivingAreaRange?: string;
+  // The same size as filterable interval bounds. Derived from the two fields above
+  // when absent, so every write path gets them without having to remember.
+  sqft_min?: number;
+  sqft_max?: number;
   
   // Derived Metrics
   isDistressed: boolean;
@@ -156,6 +193,9 @@ export interface ListingDocument {
   
   // Extended fields for Command Center
   TrueDom?: number;
+  // Rental-native LEASE-track twins (0 for sale listings) — back the "For Rent" boards.
+  LeaseTrueDom?: number;
+  LeaseTotalPriceDrop?: number;
   primaryImageUrl?: string;
 
   // Full deduped photo URL array (unindexed Typesense cargo `RawImages`) — used by
@@ -585,14 +625,33 @@ export async function searchListings(
  * so selecting one can open that property directly.
  */
 export interface SearchSuggestion {
-  kind: 'city' | 'neighbourhood' | 'address' | 'mls';
+  kind: 'city' | 'neighbourhood' | 'address' | 'mls' | 'record';
   label: string;
   sublabel?: string;            // e.g. the address under an MLS#
   count?: number;               // city / neighbourhood only
   listing?: ListingDocument;    // address / mls only
+  /** Geocoded not-listed address rows only — powers the explicit Map/Profile
+   *  action pair in the header dropdown (centered-map deep link needs coords). */
+  geo?: { lat: number; lng: number };
+  /** `record` rows only — one sold/leased/off-market campaign at the typed address,
+   *  exactly as /api/search/address-status resolved it (destination included). The
+   *  header bar used to flatten these into a listing-less address row and re-derive
+   *  the URL from the label, which is how it and the terminal bar ended up sending
+   *  the same click to two different pages. */
+  record?: AddressRecordResponse;
+  /** 1 = an EARLIER campaign at the row above's address. Kept in the same flat array as
+   *  its lead so arrow-key navigation reaches it without a second structure to sync. */
+  depth?: number;
 }
 
-const SALES_FLOOR = 'ListPrice:>=100000';
+/**
+ * Placeholder-price floor for the typeahead. Reads each document's own
+ * `TransactionType` rather than assuming a sale — see anyTransactionPriceFloor.
+ * This used to be a bare `ListPrice:>=100000`, which hid every lease listing
+ * (a lease's ListPrice is a monthly rent) and made searched addresses come back
+ * as unrelated streets.
+ */
+const LISTING_FLOOR = anyTransactionPriceFloor();
 // TRREB MLS keys look like a board letter + 6–9 digits (e.g. W12632618, X13162416).
 const MLS_RE = /^[A-Za-z]\d{6,9}$/;
 
@@ -655,7 +714,7 @@ export async function suggestSearch(query: string): Promise<SearchSuggestion[]> 
   // 2) Combined address-hits + place-facets. Retry place-only if address isn't indexed.
   const baseParams = {
     q,
-    filter_by: SALES_FLOOR,
+    filter_by: LISTING_FLOOR,
     facet_by: 'City,CityRegion',
     max_facet_values: 100,
     per_page: 6,
@@ -697,7 +756,11 @@ export async function suggestSearch(query: string): Promise<SearchSuggestion[]> 
       }
     }
 
-    out.push(...addresses.slice(0, 4), ...places.slice(0, 6));
+    // Re-rank by closeness to the typed string before slicing: Typesense's
+    // typo-tolerant order otherwise floats lookalikes (right civic number/wrong
+    // street, or a shared street-name word) above the typed address.
+    const rankedAddresses = rankAddressSuggestions(q, addresses, (a) => a.label);
+    out.push(...rankedAddresses.slice(0, 4), ...places.slice(0, 6));
   }
 
   if (out.length === 0) {
@@ -775,6 +838,17 @@ export async function indexListing(listing: ListingDocument): Promise<void> {
   if (listing.ParkingTotal !== undefined) document.ParkingTotal = listing.ParkingTotal;
   if (listing.BuildingAreaTotal !== undefined) document.BuildingAreaTotal = listing.BuildingAreaTotal;
   if (listing.LivingAreaRange) document.LivingAreaRange = listing.LivingAreaRange;
+  // Size bounds: honour explicit values, otherwise derive from the two fields above.
+  // Deriving here means a caller that forgets them still produces a filterable doc,
+  // rather than one that silently vanishes from every size query.
+  {
+    const s =
+      listing.sqft_min !== undefined && listing.sqft_max !== undefined
+        ? { lo: listing.sqft_min, hi: listing.sqft_max }
+        : sqftBoundsFor(listing);
+    document.sqft_min = s.lo;
+    document.sqft_max = s.hi;
+  }
   if (listing.calculatedDOM !== undefined) document.calculatedDOM = listing.calculatedDOM;
   if (listing.thumbnailUrl) document.thumbnailUrl = listing.thumbnailUrl;
   if (listing.ListOfficeName) document.ListOfficeName = listing.ListOfficeName;

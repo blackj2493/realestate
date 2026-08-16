@@ -13,22 +13,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
+import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
 import { shouldRender as hasValueAddData } from "@/components/Property/forceAppreciationView";
 import { getConsumer } from "@/lib/auth/requireConsumer";
+import SignInLink from "@/components/auth/SignInLink";
 import { logVowAccess } from "@/lib/audit/vowAccessLog";
 import { AlphaBadge, detectPropertyBadges } from "@/components/CommandCenter/AlphaBadge";
 import ListingCalculator from "@/components/Property/ListingCalculator";
 import { getCurrentMortgageRate } from "@/lib/finance/getMortgageRate";
+import { calculateCanadianMonthlyMortgage } from "@/lib/finance/canadianMortgage";
+import { DEFAULT_DOWN_PCT, DEFAULT_AMORT_YEARS } from "@/lib/finance/dealInputs";
 import RentalSnapshot from "@/components/Property/RentalSnapshot";
 import RentalGlance from "@/components/Property/RentalGlance";
 import CommercialLeaseSnapshot from "@/components/Property/CommercialLeaseSnapshot";
@@ -41,7 +45,6 @@ import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
 import { buildDatasheet } from "@/lib/property/datasheet";
 import ThingsToKnowCard from "@/components/Property/ThingsToKnowCard";
 import { buildDiligenceFlags } from "@/lib/property/diligence";
-import YourTakeCard from "@/components/Property/YourTakeCard";
 import DOMTimelineChart, { type SaleMarker } from "@/components/CommandCenter/DOMTimelineChart";
 import ListingEstimateCard from "@/components/Property/ListingEstimateCard";
 import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
@@ -52,12 +55,22 @@ import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
 import CampaignHistorySection from "@/components/Property/CampaignHistorySection";
-import DealScoreCard, { DealScoreBadge } from "@/components/Property/DealScoreCard";
+import DealScoreCard from "@/components/Property/DealScoreCard";
+import { LiveDealScoreBadge, LiveDealGrade, LiveDealGradePill } from "@/components/Property/LiveDealScore";
 import SoldOutcomeCard from "@/components/Property/SoldOutcomeCard";
+import OffMarketOutcome from "@/components/Property/OffMarketOutcome";
+import StreetLedgerCard from "@/components/address/StreetLedgerCard";
+import {
+  getStreetLedgerGated,
+  getStreetLedgerPublic,
+  type StreetLedgerGated,
+  type StreetLedgerPublic,
+} from "@/lib/address/streetLedger";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
-import IntelligencePanel from "@/components/Property/IntelligencePanel";
+import IntelligencePanel, { type IntelligenceTile } from "@/components/Property/IntelligencePanel";
+import { shouldRender as valueAddWillRender, buildView as buildValueAddView } from "@/components/Property/forceAppreciationView";
 import TheReadCard from "@/components/Property/TheReadCard";
 import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
@@ -67,8 +80,10 @@ import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
+import { Suspense } from "react";
 import NearbySchools from "./NearbySchools";
 import NearbyAmenities from "./NearbyAmenities";
+import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
 import DetailMobileNav from "./DetailMobileNav";
 import ClampText from "./ClampText";
@@ -196,12 +211,14 @@ function calculateDaysOnMarket(ts?: string): number {
   return Math.max(0, Math.ceil(diff / 86_400_000) - 1);
 }
 
-/** Format a feed date; malformed strings pass through raw instead of "Invalid Date". */
+/** Format a feed date; malformed strings pass through raw instead of "Invalid Date".
+ *  Feed dates are date-only strings that parse as UTC midnight — without timeZone:'UTC'
+ *  Ontario viewers see the previous day (audit MEDIUM-18). */
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+    : d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function cleanDescription(remarks: string | undefined, max = 155): string {
@@ -255,7 +272,11 @@ export async function generateMetadata({
   // the resolved status, not the stale payload field.
   const isActive =
     detail.status.kind === "active" && (p.StandardStatus ?? "Active") === "Active";
-  const ogImage = detail.media_urls[0];
+  // Metadata is built from the UNGATED detail (it has no viewer, and is shared by every
+  // request), so a sold listing's lead photo would be republished in the og:image tag to
+  // any scraper — around the gate the page itself now applies. Photos on a closed record
+  // are VOW Listing Information; only ACTIVE (IDX) listings get one.
+  const ogImage = isActive ? detail.media_urls[0] : undefined;
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -296,7 +317,10 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
       : "SingleFamilyResidence";
   const url = listingCanonical(id, p);
   const cityPath = cityHubPath(p, isCommercial);
-  const photos = detail.media_urls.slice(0, 8);
+  // Structured data is public by definition — emitting a closed listing's photo URLs here
+  // would hand crawlers exactly what the page now withholds from anonymous visitors. Only
+  // ACTIVE (IDX) listings carry photos into JSON-LD. Same rule as og:image above.
+  const photos = detail.status.kind === "active" ? detail.media_urls.slice(0, 8) : [];
   const availability =
     detail.status.kind === "sold"
       ? "https://schema.org/SoldOut"
@@ -461,6 +485,34 @@ export default async function PropertyPage({
   // before cityHref so the breadcrumb routes into the commercial hub tree (Phase 2).
   const isCommercial = isCommercialProperty(p.PropertyType);
   const cityHref = cityHubPath(p, isCommercial);
+  // Off-market forward-path: scope the terminal to the listing's COMMUNITY (TRREB
+  // CityRegion, e.g. "Leaside") for the tightest "homes for sale near here", falling
+  // back to the district (City) then the city SEO hub. A distinct page — never loops.
+  const nearbyHref = p.CityRegion?.trim()
+    ? `/properties?city=${encodeURIComponent(p.CityRegion.trim())}`
+    : p.City?.trim()
+      ? `/properties?city=${encodeURIComponent(p.City.trim())}`
+      : cityHref;
+
+  // v2 launchpad: "recent sales on THIS street" — embedded on off-market pages, where
+  // there is no separate /address dossier to bridge to (a surviving-row record resolves
+  // its /address URL back to this page). Distinct from the comps below (similar homes vs
+  // same street). VOW-safe by structure: the gated fetch runs ONLY in the consumer
+  // branch; an anonymous visitor gets the count + street label only, never a sale value.
+  const showStreetLedger = !isActiveListing && !isCommercial;
+  const [streetLedgerGated, streetLedgerPublic] = showStreetLedger
+    ? await Promise.all([
+        isAuthed
+          ? getStreetLedgerGated(address, detail.city ?? "", p.PostalCode ?? null)
+          : Promise.resolve<StreetLedgerGated | null>(null),
+        !isAuthed
+          ? getStreetLedgerPublic(address, detail.city ?? "", p.PostalCode ?? null)
+          : Promise.resolve<StreetLedgerPublic | null>(null),
+      ])
+    : [null, null];
+  const streetLedgerCount = isAuthed
+    ? (streetLedgerGated?.count ?? 0)
+    : (streetLedgerPublic?.count ?? 0);
   // BuildingAreaTotal in SQFT, or null when the feed quotes another unit (Acres,
   // Square Metres — common on commercial/land). Everything that does per-sqft math
   // (lease snapshots, comps area scoring) must consume THIS, never the raw field.
@@ -509,6 +561,15 @@ export default async function PropertyPage({
   const provinceCode = (p.StateOrProvince || "ON").trim().toUpperCase();
   const isOntario = provinceCode === "ON" || provinceCode === "ONTARIO";
   const isToronto = /^toronto\b/i.test(p.City ?? "");
+  // Breadcrumb shows the consumer-readable area name, keeping the raw TRREB code in
+  // parens when it differs ("Downtown & Waterfront (Toronto C01)"). The crawl href
+  // (cityHref) stays keyed to the raw p.City — display only.
+  const cityParts = p.City ? formatRegionParts(p.City) : null;
+  const cityCrumb = cityParts
+    ? cityParts.code
+      ? `${cityParts.name} (${cityParts.code})`
+      : cityParts.name
+    : p.City;
   // Live 5-yr-fixed seed (Bank-of-Canada refreshed nightly job; cached, fallback-safe).
   const mortgageRate = await getCurrentMortgageRate();
   // Which lens opens first: investor personas → the underwrite; the Homebuyer
@@ -562,6 +623,115 @@ export default async function PropertyPage({
   const stripNudge = (s: string) =>
     s.replace(" Sign in for our price estimate, Deal Score and reno-upside read.", "");
 
+  // ── Intelligence panel (mobile): each collapsed accordion row leads with a plain-
+  //    language "answer" line + a value/badge, all built from data already on the page.
+  //    Everything VOW-derived (delta, verdict, best move, the value chips) drops to a
+  //    generic line + a lock for anon — the real numbers never reach their DOM. ──
+  const compactMoney = (n: number) =>
+    n >= 1_000_000
+      ? `$${(n / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M`
+      : n >= 1_000
+        ? `$${Math.round(n / 1_000)}K`
+        : formatPrice(n);
+  const readCaption = read ? stripNudge(read.thesisByPersona[lens]) : undefined;
+
+  const estLocked = !isAuthed && (hasEstimate || hasExpectedSale);
+  const hasEstVal = !!salePrice && salePrice.value > 0;
+  const estBelow = hasEstVal && (salePrice!.deltaVsAskPct ?? 0) < 0;
+  const estCaption = estLocked
+    ? "What this home is likely to close at."
+    : hasEstVal
+      ? salePrice!.competitive
+        ? "Priced to compete — likely at or above ask."
+        : salePrice!.deltaVsAskPct !== null && price > 0
+          ? (
+              <>
+                <span
+                  className={
+                    estBelow
+                      ? "font-medium text-emerald-700 dark:text-emerald-400"
+                      : "font-medium text-rose-700 dark:text-rose-400"
+                  }
+                >
+                  {compactMoney(Math.abs(salePrice!.value - price))} ({estBelow ? "" : "+"}
+                  {((salePrice!.deltaVsAskPct ?? 0) * 100).toFixed(1)}%) {estBelow ? "below" : "above"} ask
+                </span>
+                {estBelow ? " · room to negotiate" : ""}
+              </>
+            )
+          : "What this home is likely to close at."
+      : undefined;
+  const dealCaption =
+    !isAuthed && hasDealScore
+      ? "We grade this home A–F for your buying style."
+      : hasDealScore
+        ? view.dealScore.verdict
+        : undefined;
+
+  const renoLocked = !isAuthed && hasValueAdd;
+  const renoView = valueAddWillRender(view.valueAdd) ? buildValueAddView(view.valueAdd) : null;
+  const renoInclude = renoLocked || renoView !== null;
+  const renoCaption = renoLocked
+    ? "Which renovations pay back here."
+    : renoView
+      ? renoView.recommendedRows.length > 0
+        ? `${renoView.recommendedRows.length} move${renoView.recommendedRows.length === 1 ? "" : "s"} pay back · best: ${renoView.recommendedRows[0].label}`
+        : "Modeled moves — none pay back here."
+      : undefined;
+
+  // ── Verdict header for the Intelligence panel (mobile, Proposal B): a one-line
+  //    synthesis + the headline chips, above the always-visible insight rows. VOW-safe:
+  //    the $ synthesis and the below/above-ask chip are AUTHED-ONLY; the True DOM chip
+  //    self-hides for anon (trueDom collapses to dom); the grade chip carries its own
+  //    lock. So an anon visitor sees a generic lead + a locked grade — never a number. ──
+  const estDiff = hasEstVal ? Math.abs(salePrice!.value - price) : 0;
+  const verdictLead =
+    isAuthed && hasEstVal && !salePrice!.competitive && salePrice!.deltaVsAskPct !== null && price > 0
+      ? `Priced ${compactMoney(estDiff)} ${estBelow ? "below" : "above"} ask${trueDom > dom ? ` and on the market ${trueDom} days` : ""}${estBelow ? " — room to negotiate." : "."}`
+      : isAuthed && hasEstVal && salePrice!.competitive
+        ? `Priced to compete${trueDom > dom ? `, though it's shown ${trueDom} days on market` : ""} — expect it to move near ask.`
+        : "We've priced this home, graded the deal and flagged what to check — open any card below for the numbers.";
+  const verdictNode = read ? (
+    <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
+        The verdict
+      </p>
+      <p className="mt-1.5 text-sm leading-snug text-foreground">{verdictLead}</p>
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {hasDealScore && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+            Deal grade
+            <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
+          </span>
+        )}
+        {!estLocked && hasEstVal && !salePrice!.competitive && salePrice!.deltaVsAskPct !== null && price > 0 && (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+              estBelow
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+            )}
+          >
+            {compactMoney(estDiff)} {estBelow ? "below" : "above"} ask
+          </span>
+        )}
+        {isActiveListing && trueDom > dom && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[11px] font-semibold",
+              trueDom >= 90
+                ? "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+            )}
+          >
+            <Clock className="h-3 w-3" /> True DOM {trueDom}d
+          </span>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   // Asset/Rental summary + finance card render in the rail (legacy path) or
   // inside the panel's Costs tab (panel path) — defined once, used in one spot.
   const assetSummaryCard = (
@@ -612,6 +782,25 @@ export default async function PropertyPage({
       </div>
     </div>
   );
+
+  // Headline monthly ownership cost for the "Your costs" tile — the SAME all-in figure the
+  // ListingCalculator opens to: mortgage P&I at the default 20% down / current rate / 25-yr
+  // amort, PLUS property tax and condo/HOA fees. NOT property tax alone (the old value, which
+  // even contradicted its own "property tax + your mortgage" caption). Null for leases (a
+  // renter carries no mortgage) and when there's no price to model.
+  const costBasePrice = soldPrice ?? price;
+  const monthlyOwnershipCost =
+    !isLease && costBasePrice > 0
+      ? Math.round(
+          calculateCanadianMonthlyMortgage(
+            costBasePrice * (1 - DEFAULT_DOWN_PCT / 100),
+            mortgageRate.ratePct / 100,
+            DEFAULT_AMORT_YEARS * 12
+          ) +
+            (p.TaxAnnualAmount || 0) / 12 +
+            (p.AssociationFee || 0)
+        )
+      : null;
 
   const financeCard = isLease ? (
     isCommercial ? (
@@ -665,23 +854,23 @@ export default async function PropertyPage({
         id={id}
         address={address}
         price={price}
-        thumb={detail.media_urls[0]}
+        thumb={view.media_urls[0]}
         city={detail.city ?? undefined}
         brokerage={p.ListOfficeName}
       />
 
-      <div className="mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
+      <div className="dt-lift mx-auto max-w-[1400px] px-4 pt-6 pb-28 lg:pb-6">
         {/* Breadcrumb — also the crawl link from a listing up to its city hub, when
             that hub resolves (closes the hub→listing→hub internal-link loop; §Phase 2). */}
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-          <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
-            Command Center
+          <Link href="/properties" className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-600 dark:hover:text-cyan-300">
+            Map
           </Link>
           {cityHref && p.City && (
             <>
               <span aria-hidden>/</span>
-              <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-300">
-                {isCommercial ? `Commercial properties in ${p.City}` : `Homes for sale in ${p.City}`}
+              <Link href={cityHref} className="text-cyan-700 dark:text-cyan-400 transition-colors hover:text-cyan-600 dark:hover:text-cyan-300">
+                {isCommercial ? `Commercial properties in ${cityCrumb}` : `Homes for sale in ${cityCrumb}`}
               </Link>
             </>
           )}
@@ -711,7 +900,7 @@ export default async function PropertyPage({
                     address,
                     city: detail.city ?? undefined,
                     list_price: price,
-                    thumb: detail.media_urls[0],
+                    thumb: view.media_urls[0],
                   }}
                   label="Save"
                   className="min-h-[44px] shrink-0 md:min-h-0"
@@ -749,13 +938,10 @@ export default async function PropertyPage({
                           {formatPrice(price)}
                         </span>
                         {hasSoldPrice && (
-                          <Link
-                            href="/login"
-                            className="inline-flex min-h-[40px] items-center gap-1.5 self-center rounded-lg border border-cyan-500 bg-cyan-500/10 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300"
-                          >
+                          <SignInLink className="inline-flex min-h-[40px] items-center gap-1.5 self-center rounded-lg border border-cyan-500 bg-cyan-500/10 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300">
                             <Lock className="h-4 w-4" />
                             Sign in for the {status.label === "LEASED" ? "leased" : "sold"} price — free
-                          </Link>
+                          </SignInLink>
                         )}
                       </>
                     )}
@@ -818,10 +1004,9 @@ export default async function PropertyPage({
                   </span>
                 )}
                 {isActiveListing && !isCommercial && !isLease && (
-                  <DealScoreBadge
-                    score={view.dealScore.personaScores?.[lens]?.score ?? view.dealScore.score}
-                    grade={view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
-                  />
+                  // Follows the Deal Score panel's active tab (fix #6) — the chip and
+                  // panel resolve ONE lens, so they can't disagree (91 vs 92) on screen.
+                  <LiveDealScoreBadge dealScore={view.dealScore} initialLens={lens} />
                 )}
               </div>
 
@@ -836,13 +1021,8 @@ export default async function PropertyPage({
                   {hasDealScore && (
                     <span className="inline-flex items-center gap-1">
                       Deal grade
-                      {isAuthed && (view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade) ? (
-                        <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">
-                          {view.dealScore.personaScores?.[lens]?.grade ?? view.dealScore.grade}
-                        </span>
-                      ) : (
-                        <Lock className="h-3 w-3 text-muted-foreground" aria-label="locked" />
-                      )}
+                      {/* Same active lens as the chip + panel (fix #6). */}
+                      <LiveDealGrade dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} />
                     </span>
                   )}
                   {(hasEstimate || hasExpectedSale) && (
@@ -879,13 +1059,52 @@ export default async function PropertyPage({
                   Listed by {p.ListOfficeName}
                 </p>
               )}
+
+              {/* Off-market → launchpad: surface the decoded signals the page
+                  otherwise shows only for ACTIVE listings (True DOM, + Deal Score for
+                  purchases), and offer a forward-path to live for-sale inventory in the
+                  listing's community. Covers leased off-market pages too (same dead-end +
+                  SEO traffic; the purchase-only Deal Score cell self-omits). VOW-safe —
+                  anon gets locked cells + a free sign-in (null trueDom, gated score). */}
+              {!isActiveListing && !isCommercial && (
+                <OffMarketOutcome
+                  kind={status.kind === "sold" ? "sold" : "delisted"}
+                  isLease={isLease}
+                  isAuthed={isAuthed}
+                  nearbyHref={nearbyHref}
+                  trueDom={isAuthed ? trueDom : null}
+                  hasTrueDom={trueDom > 0}
+                  dealScore={view.dealScore}
+                  hasDealScore={hasDealScore}
+                  initialLens={lens}
+                />
+              )}
             </div>
 
             {/* Gallery — leads the page: the photo is the universal triage hook (now above the
                 verdict; social proof moved down to the action cluster in the rail). */}
             <div className="mb-6">
-              <PropertyGallery images={detail.media_urls} tourUrl={tourUrl ?? undefined} />
+              <PropertyGallery
+                images={view.media_urls}
+                tourUrl={tourUrl ?? undefined}
+                listingKey={id}
+                photoTeaser={view.photoTeaser}
+                statusLabel={status.kind === "sold" ? status.label : undefined}
+              />
             </div>
+
+            {/* v2: recent sales on THIS street — off-market pages only, where the address
+                dossier isn't a separate page. Consumer sees the dated ledger; anon sees the
+                sale count + street label with a sign-in (VOW-gated inside the card). */}
+            {streetLedgerCount > 0 && (
+              <div className="mb-6">
+                <StreetLedgerCard
+                  isConsumer={isAuthed}
+                  gated={streetLedgerGated}
+                  publicLedger={streetLedgerPublic}
+                />
+              </div>
+            )}
 
             {/* Specs — 3-up on mobile (wider cells so a long basement value wraps
                 cleanly), 5-up from sm↑ where all stats sit on one row. Commercial swaps
@@ -1004,52 +1223,157 @@ export default async function PropertyPage({
                    prod card stack below instead. */}
                 <div className="lg:hidden">
                 <IntelligencePanel
-                  verdict={
-                    <div>
-                      <div className="divide-y divide-border/60">
-                        <VerdictRow label="THESIS" tone="emerald" text={stripNudge(read.thesisByPersona[lens])} />
-                        <VerdictRow label="THE CATCH" tone="amber" text={read.catch_} />
-                        <VerdictRow label="PRICE READ" tone="cyan" text={stripNudge(read.priceRead)} />
-                      </div>
-                      <div className="mt-3">
-                        <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
-                      </div>
-                    </div>
-                  }
-                  price={
-                    <div className="space-y-4">
-                      <EstimatedSaleCard
-                        salePrice={salePrice}
-                        listPrice={price}
-                        city={p.City}
-                        propertySubType={p.PropertySubType}
-                        locked={!isAuthed && (hasEstimate || hasExpectedSale)}
-                      />
-                      <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />
-                    </div>
-                  }
-                  score={
-                    <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
-                  }
-                  costs={
-                    <div className="space-y-4">
-                      {assetSummaryCard}
-                      {financeCard}
-                    </div>
+                  verdict={verdictNode}
+                  tiles={
+                    [
+                      // Estimated sale — the headline number, given the full-width tile.
+                      hasEstimate || hasExpectedSale
+                        ? {
+                            key: "estimate",
+                            label: "Estimated sale price",
+                            icon: <Tag className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                            wide: true,
+                            locked: estLocked,
+                            value: (
+                              <span className="flex items-baseline gap-2">
+                                <span className="font-mono text-2xl font-bold leading-none text-primary">
+                                  {hasEstVal ? compactMoney(salePrice!.value) : "—"}
+                                </span>
+                                {hasEstVal && (
+                                  <span
+                                    className={cn(
+                                      "border px-1 py-px font-mono text-[9px] font-semibold uppercase tracking-wide",
+                                      salePrice!.confidence === "HIGH"
+                                        ? "border-emerald-500/50 text-emerald-700 dark:text-emerald-400"
+                                        : salePrice!.confidence === "MEDIUM"
+                                          ? "border-amber-500/50 text-amber-700 dark:text-amber-400"
+                                          : "border-border text-muted-foreground"
+                                    )}
+                                  >
+                                    {salePrice!.confidence}
+                                  </span>
+                                )}
+                              </span>
+                            ),
+                            sub: estCaption,
+                            detail: (
+                              <EstimatedSaleCard
+                                salePrice={salePrice}
+                                listPrice={price}
+                                city={p.City}
+                                propertySubType={p.PropertySubType}
+                                locked={estLocked}
+                              />
+                            ),
+                          }
+                        : null,
+                      // Deal grade — VOW-gated (locked → "Sign in"; the grade pill shows for authed).
+                      hasDealScore
+                        ? {
+                            key: "score",
+                            label: "Deal grade",
+                            icon: <Gauge className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                            locked: !isAuthed,
+                            value: (
+                              <LiveDealGradePill dealScore={view.dealScore} initialLens={lens} locked={!isAuthed} size="lg" />
+                            ),
+                            sub: dealCaption,
+                            sheetTitle: "Deal grade",
+                            detail: (
+                              <DealScoreCard dealScore={view.dealScore} locked={!isAuthed && hasDealScore} initialPersona={lens} />
+                            ),
+                          }
+                        : null,
+                      // Renovation upside — self-hides when there's no priced move (renoInclude).
+                      renoInclude
+                        ? {
+                            key: "reno",
+                            label: "Renovation upside",
+                            icon: <Hammer className="h-[18px] w-[18px] text-emerald-700 dark:text-emerald-400" />,
+                            locked: renoLocked,
+                            value:
+                              renoView && renoView.headlineNet > 0 ? (
+                                <span className="font-mono text-2xl font-bold leading-none text-emerald-700 dark:text-emerald-400">
+                                  +{compactMoney(renoView.headlineNet)}
+                                </span>
+                              ) : (
+                                <span className="text-[13px] font-semibold text-muted-foreground">No payback here</span>
+                              ),
+                            sub: renoCaption,
+                            detail: <ForceAppreciationCard report={view.valueAdd} locked={!isAuthed && hasValueAdd} />,
+                          }
+                        : null,
+                      // Your costs — all-in monthly ownership estimate (mortgage + tax + fees),
+                      // matching the calculator in the sheet. Public, not VOW-gated.
+                      {
+                        key: "costs",
+                        label: "Your costs",
+                        icon: <Wallet className="h-[18px] w-[18px] text-muted-foreground" />,
+                        sheetTitle: "Your costs",
+                        value:
+                          isLease && costBasePrice > 0 ? (
+                            <span className="font-mono text-2xl font-bold leading-none text-foreground">
+                              ~{formatPrice(Math.round(costBasePrice))}
+                              <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                            </span>
+                          ) : monthlyOwnershipCost && monthlyOwnershipCost > 0 ? (
+                            <span className="font-mono text-2xl font-bold leading-none text-foreground">
+                              ~{formatPrice(monthlyOwnershipCost)}
+                              <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                            </span>
+                          ) : (
+                            <span className="text-[13px] font-semibold text-foreground">Model your costs</span>
+                          ),
+                        sub: isLease
+                          ? "Monthly rent — see terms"
+                          : monthlyOwnershipCost && monthlyOwnershipCost > 0
+                            ? "Est. mortgage, tax & fees · 20% down"
+                            : "Mortgage, tax & fees",
+                        detail: (
+                          <div className="space-y-4">
+                            {assetSummaryCard}
+                            {financeCard}
+                          </div>
+                        ),
+                      },
+                      // The read — qualitative; the thesis teases, the sheet carries the catch,
+                      // price read and things-to-know. Not VOW-gated (shown to anon).
+                      {
+                        key: "read",
+                        label: "The read",
+                        icon: <Lightbulb className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                        sheetTitle: "The read",
+                        value: (
+                          <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
+                            {readCaption}
+                          </span>
+                        ),
+                        sub: "The catch, price read & things to know",
+                        detail: (
+                          <div>
+                            <div className="divide-y divide-border/60">
+                              <VerdictRow label="THESIS" tone="emerald" text={stripNudge(read.thesisByPersona[lens])} />
+                              <VerdictRow label="THE CATCH" tone="amber" text={read.catch_} />
+                              <VerdictRow label="PRICE READ" tone="cyan" text={stripNudge(read.priceRead)} />
+                            </div>
+                            <div className="mt-3">
+                              <ThingsToKnowCard flags={diligenceFlags} geoChecked={view.geoChecked} address={address} listingId={id} />
+                            </div>
+                          </div>
+                        ),
+                      },
+                    ].filter(Boolean) as IntelligenceTile[]
                   }
                   footer={
                     !isAuthed ? (
-                      <div className="mt-3 rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 p-3">
+                      <div className="rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 p-3">
                         <p className="text-sm font-semibold text-foreground">One sign-in unlocks everything</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           Price estimate, Deal Score, sold prices &amp; full history. Free, ~20 seconds.
                         </p>
-                        <Link
-                          href="/login"
-                          className="mt-2 inline-flex min-h-[38px] items-center rounded-lg border border-cyan-500 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
-                        >
+                        <SignInLink className="mt-2 inline-flex min-h-[38px] items-center rounded-lg border border-cyan-500 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300">
                           Unlock this home
-                        </Link>
+                        </SignInLink>
                       </div>
                     ) : undefined
                   }
@@ -1112,11 +1436,11 @@ export default async function PropertyPage({
                 address={address}
                 city={detail.city ?? undefined}
                 price={price}
-                thumb={detail.media_urls[0]}
+                thumb={view.media_urls[0]}
                 statusKind={status.kind}
                 isLease={isLease}
               />
-              <SocialProofBar listingId={id} isLease={isLease} />
+              <SocialProofBar listingId={id} isLease={isLease} persona={lens} />
 
               {/* MOBILE ONLY: anon email capture BELOW the Intelligence panel and
                   CTAs — the product's brain should never rank under an email field.
@@ -1147,9 +1471,29 @@ export default async function PropertyPage({
                 </>
               )}
 
-              {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add) */}
+              {/* Compliance disclaimer for the AVM-derived figures (estimate + value-add).
+                  Desktop keeps the full prod block. Mobile COLLAPSES it — the same verbatim
+                  text is one tap away, and the mandatory §6.3(i)/(k) notice still renders
+                  un-collapsed at the page foot (<ListingComplianceNotice/> below the grid),
+                  so nothing required is hidden — the mid-scroll wall of text just isn't. */}
               {!isLease && !isCommercial && ((salePrice?.value ?? 0) > 0 || (view.estimate?.estimatedValue ?? 0) > 0) && (
-                <Disclaimers />
+                <>
+                  <div className="hidden lg:block">
+                    <Disclaimers />
+                  </div>
+                  <details className="group rounded-md border border-border bg-card/40 lg:hidden">
+                    <summary className="flex min-h-[40px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                      <span>Estimate &amp; data disclaimer</span>
+                      <ChevronDown
+                        className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180"
+                        aria-hidden
+                      />
+                    </summary>
+                    <div className="border-t border-border px-3 py-2">
+                      <Disclaimers bare />
+                    </div>
+                  </details>
+                </>
               )}
 
               {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
@@ -1164,10 +1508,13 @@ export default async function PropertyPage({
 
             {/* Remarks (the listing's own description) */}
             <Section title="Listing Description" icon={<FileText className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />}>
-              <div className="rounded-lg border border-border bg-card/30 p-4">
+              {/* Solid raised white card in light mode + darker prose so the listing's own
+                  description stands out from the grey ground. Uniform with the other content
+                  sections (lifted by the .dt-lift rule in globals.css). Dark mode unchanged. */}
+              <div className="rounded-lg border border-border bg-card p-4 dark:bg-card/30">
                 <ClampText
                   text={p.PublicRemarks || "No remarks available."}
-                  className="text-sm leading-relaxed text-muted-foreground"
+                  className="text-sm leading-relaxed text-foreground/90 dark:text-muted-foreground"
                 />
               </div>
             </Section>
@@ -1182,7 +1529,7 @@ export default async function PropertyPage({
             )}
 
             {/* Property Data Sheet — full TRREB payload, registry-driven. */}
-            <div id="details" className="scroll-mt-28">
+            <div id="details" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_720px]">
               <PropertyDataSheet groups={datasheet} />
             </div>
 
@@ -1191,7 +1538,7 @@ export default async function PropertyPage({
 
             {/* Room Dimensions — proportional, drawn-to-scale room map */}
             {rooms.length > 0 && (
-              <div id="rooms" className="scroll-mt-28">
+              <div id="rooms" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_520px]">
                 <RoomMap rooms={rooms} className="mb-6" />
               </div>
             )}
@@ -1201,28 +1548,24 @@ export default async function PropertyPage({
 
             {/* Grocery + recreation proximity */}
             <NearbyAmenities listingId={id} />
-
-            {/* Your Take — private note + personal deal-breaker auto-screen (client, localStorage). */}
-            {!isCommercial && (
-              <YourTakeCard
-                listingKey={id}
-                isLease={isLease}
-                metrics={{
-                  listPrice: price || null,
-                  capRatePct: view.capRatePct,
-                  beds: p.BedroomsTotal ?? null,
-                  trueDom,
-                }}
-              />
-            )}
           </div>
         </div>
 
-        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — history + comps. ── */}
+        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps. ── */}
         <section id="market" className="scroll-mt-28 lg:mt-6">
           <div className="lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
 
-        <section id="history" className="scroll-mt-28">
+          {/* Sell + rent grids LEAD the market zone (owner call 2026-07-24: prominent
+              placement) — actual close medians (+ middle-50% ranges on sale prices)
+              for consumers, asking for anon. Sale listings show prices first, rentals
+              rents first. Streamed; self-hides on thin samples or missing coords. */}
+          {!isCommercial && (
+            <Suspense fallback={null}>
+              <TypicalRents listingId={id} salesFirst={!isLease} />
+            </Suspense>
+          )}
+
+        <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
           {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
               Pure CSS (a peer checkbox), so it stays server-rendered — no client
               boundary, no hydration flash. Desktop (md+) always shows it and hides
@@ -1269,7 +1612,7 @@ export default async function PropertyPage({
         {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island.
              Commercial subjects use exact-subtype + area/price matching; commercial
              leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" className="scroll-mt-28">
+        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
         <SimilarProperties
           subjectId={id}
           cityRegion={p.CityRegion ?? null}
@@ -1287,9 +1630,6 @@ export default async function PropertyPage({
           // actives + DealType=leased closings — sale comps under a rental compare a
           // monthly rent against purchase prices.
           isLease={isLease}
-          // Buyer-facing "browse more homes" CTAs land on the list-first city hub
-          // (SimilarProperties ignores it for lease/commercial, which the hub doesn't cover).
-          cityHubHref={cityHref}
         />
         </div>
         </section>
@@ -1307,7 +1647,7 @@ export default async function PropertyPage({
           address,
           city: detail.city ?? undefined,
           list_price: price,
-          thumb: detail.media_urls[0],
+          thumb: view.media_urls[0],
         }}
         listingKey={id}
         canContact={isActiveListing}

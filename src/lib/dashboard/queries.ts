@@ -11,7 +11,7 @@
  */
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
-import type { BoardDef } from './boards';
+import { resolveBoardView, type BoardDef } from './boards';
 import type { BasementFilter, MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
@@ -37,11 +37,14 @@ export async function fetchBoard(
   lens: MarketActivityLens,
   perPage = 5
 ): Promise<ListingDocument[]> {
+  // In "For Rent" mode a board swaps to its rental-native metric (sort + filter);
+  // buildScopeFilter already AND-joins TransactionType:=`For Lease`.
+  const view = resolveBoardView(board, lens.transactionType);
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(buildScopeFilter(area, lens), board.rawFilterBy),
-    sortBy: board.sortBy,
-    sortOrder: board.sortOrder,
+    rawFilterBy: combine(buildScopeFilter(area, lens), view.rawFilterBy),
+    sortBy: view.sortBy,
+    sortOrder: view.sortOrder,
     perPage,
   });
   return res.listings;
@@ -183,9 +186,14 @@ function transactionClause(lens: MarketActivityLens): string {
  * every active-inventory surface AND-joins so a city or a custom bubble shows one
  * coherent slice instead of a mix of rentals, condos and 4-beds.
  */
-export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
+/**
+ * The LENS-ONLY clause set (no area, no window) — the dashboard filter semantics
+ * as one reusable fragment. Shared by buildScopeFilter below AND the nightly
+ * alerts worker (bubbleFilterClause), so a city bubble's 'filtered' alerts match
+ * exactly what the dashboard's own panels show under the same lens.
+ */
+export function buildLensClauses(lens: MarketActivityLens): string {
   return combine(
-    areaFilter(area),
     transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
     // Beds: above-grade with a total fallback — identical semantics to the For Sale
@@ -200,6 +208,10 @@ export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
     basementClause(lens.basement),
     lens.minFrontage > 0 ? `LotWidth:>=${lens.minFrontage}` : undefined
   );
+}
+
+export function buildScopeFilter(area: Area, lens: MarketActivityLens): string {
+  return combine(areaFilter(area), buildLensClauses(lens));
 }
 
 /**

@@ -79,3 +79,6 @@ scripts/admin/.backfill-*-cursor.json
 # Local scheduled-task log for the Reddit monitor
 reddit-monitor.log
 reddit-monitor.log.1
+
+# Playwright demo session state (contains auth cookies)
+scripts/demos/.auth-state.json

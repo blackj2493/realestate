@@ -39,7 +39,7 @@ export function isCanonicalSubType(normalized: string): boolean {
  * Types the comp-based dwelling AVM prices VERY poorly (backtest: 30–67% median
  * error) because they are land, non-dwelling, or income properties valued on a
  * different basis (cap rate, buildable area) than residential comps:
- *   Vacant Land, Farm, Rural Residential, Mobile/Trailer, Parking Space,
+ *   Vacant Land, Farm, Rural Residential, Mobile/Trailer, Parking Space, Locker,
  *   Sale Of Business, Triplex/Fourplex/Multiplex — plus the Commercial-class
  *   subtypes (Office, Commercial Retail, Industrial, Investment, Store W
  *   Apt/Office, Land): the model is trained on dwellings only, so a commercial
@@ -48,13 +48,22 @@ export function isCanonicalSubType(normalized: string): boolean {
  * (≈unbiased), Co-op/Co-Ownership (normalize to Condo Apartment), and Modular —
  * those are priceable and must keep publishing. Matched on the verbatim spelling.
  */
-const UNPRICEABLE_PATTERNS: readonly string[] = [
+/**
+ * EXPORTED (with UNPRICEABLE_EXACT) so callers that must express this predicate in SQL —
+ * the data-health canary's count_unpriceable_valued_estimates RPC — pass these arrays as
+ * parameters instead of keeping a drifted copy. refresh-property-estimates.ts carried its
+ * own private list for ~2 months; it missed Farm/Investment/'MobileTrailer' and that drift
+ * class is exactly how 1,346 stale dwelling-model values survived on land/commercial rows.
+ * THIS file is the single source of truth for what the AVM refuses to price.
+ */
+export const UNPRICEABLE_PATTERNS: readonly string[] = [
   'vacant',
   'farm',
   'rural resid',
   'mobile',
   'trailer',
   'parking',
+  'locker',
   'sale of business',
   'triplex',
   'fourplex',
@@ -67,12 +76,13 @@ const UNPRICEABLE_PATTERNS: readonly string[] = [
   'commercial',
 ];
 
+/** Exact-match unpriceable subtypes (substring would false-trip: Highland, Island …). */
+export const UNPRICEABLE_EXACT: readonly string[] = ['land'];
+
 export function isUnpriceableType(rawSubType: string | null | undefined): boolean {
   const s = (rawSubType ?? '').trim().toLowerCase();
   if (!s) return false;
-  // Bare "Land" (the commercial subtype) — exact match only: a substring 'land'
-  // would false-trip on Highland/Island community/style strings.
-  if (s === 'land') return true;
+  if (UNPRICEABLE_EXACT.includes(s)) return true;
   return UNPRICEABLE_PATTERNS.some((p) => s.includes(p));
 }
 
@@ -114,6 +124,28 @@ const RAW_VARIANTS: Record<NormalizedType, string[]> = {
   ],
   'Condo Apartment': ['Condo Apartment'],
 };
+
+/**
+ * Postal FSA (forward sortation area) — the first three characters, e.g. "N2H".
+ * '' when absent or malformed.
+ *
+ * This is the comp-cohort key for subjects whose feed carries NO CityRegion: all of
+ * Waterloo Region and Brantford ship it blank on BOTH the active and the sold side,
+ * so the community rung has no key to join on. The FSA is 100% populated on both
+ * sides there and is neighbourhood-scale, not municipality-scale — Kitchener's 18
+ * FSAs carry 50–347 sales each per year, denser than many Toronto communities that
+ * price fine today.
+ *
+ * MUST stay byte-identical to sold_fsa_comps' predicate (migration 112),
+ * `upper(left(btrim(postal_code), 3))`, or the RPC and its caller disagree about
+ * which cohort a subject belongs to. The shape guard is the one addition: a key that
+ * isn't letter-digit-letter is junk, and returning '' makes the caller skip the rung
+ * rather than query for garbage.
+ */
+export function fsaOf(postalCode: string | null | undefined): string {
+  const fsa = (postalCode ?? '').trim().toUpperCase().slice(0, 3);
+  return /^[A-Z]\d[A-Z]$/.test(fsa) ? fsa : '';
+}
 
 /**
  * The raw_vow_sold spellings to pool for the live anchor of a normalized type.

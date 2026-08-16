@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { makeRateLimiter, clientIpFrom } from '@/lib/rateLimit';
+import { recordActivation } from '@/lib/analytics/activation';
 
 export const runtime = 'nodejs';
 
@@ -58,6 +59,18 @@ export async function POST(req: NextRequest) {
       console.error('[onboarding/apply] insert failed:', error.message);
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
+
+    // Activation milestone (0.3) — the pre-account lead. Feeds the abandoned-signup
+    // nudge (WS5.1). Best-effort; never blocks the response.
+    const applyEmail = asString(body.email);
+    if (applyEmail) {
+      await recordActivation({
+        kind: 'apply',
+        email: applyEmail,
+        context: { regions: asArray(body.regions), objectives: asArray(body.objectives) },
+      });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';

@@ -19,8 +19,11 @@ export default function LensSelector({
           onClick={() => onChange(p.id)}
           className={cn(
             "flex min-h-[44px] items-center justify-center rounded px-2.5 py-2.5 text-xs font-medium transition-colors md:min-h-0 md:py-1",
+            // text-cyan-100 alone is a DARK-surface colour: on the compare page's light
+            // background it sat on bg-cyan-500/20 as pale-on-pale and the active lens was
+            // unreadable. Dark mode keeps the exact previous colour.
             lens === p.id
-              ? "bg-cyan-500/20 text-cyan-100"
+              ? "bg-cyan-500/20 text-cyan-800 dark:text-cyan-100"
               : "text-muted-foreground hover:text-foreground"
           )}
           title={p.label}

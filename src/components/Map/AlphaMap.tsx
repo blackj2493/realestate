@@ -17,11 +17,15 @@ import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import {
   CLUSTER_OPTIONS,
   MAP_MAX_ZOOM,
+  PIN_GRID_COLS,
+  PIN_GRID_ROWS,
+  PINS_PER_CELL,
   clusterRadiusForZoom,
   formatPriceShort,
   hasMetricValue,
   isClusterFeature,
   isValidLocation,
+  pickRepresentativePins,
   scatterColorFor,
   toDeckPosition,
 } from "./mapLogic";
@@ -38,6 +42,11 @@ interface AlphaMapProps {
   onSelectProperty?: (d: ListingDocument) => void;
   className?: string;
   currentSearchQuery?: string;
+  /** First-load viewport scoping (fix #4): on a bare cold start (no place/filters/
+   *  draw/deep-link), report the initial viewport extent as the search box so the
+   *  first result set matches the map instead of firing a province-wide query.
+   *  Self-heals — re-reports whenever the box is cleared while still unscoped. */
+  scopeToViewport?: boolean;
 }
 
 type MapDataPoint = ListingDocument & { coordinates: [number, number] };
@@ -50,6 +59,14 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
+
+// Nonce of the last flyTo we actually flew, at MODULE scope so it survives a remount.
+// The store's flyTo lingers after it's consumed (nulling it here would cancel the
+// post-fly bounds report via the effect's cleanup). On a mobile Back remount that
+// stale flyTo would otherwise replay over the restored camera; skipping an
+// already-flown nonce prevents the replay while a genuinely new flyTo (bumped nonce)
+// still flies. Resets on full page reload — the same lifetime as the camera restore.
+let consumedFlyNonce = 0;
 
 // Camera tilt per render mode: Listings reads best flat (2D scan); Heatmap
 // tilts to reveal the hex columns; 3D Explore tilts further into the cityscape.
@@ -74,13 +91,33 @@ export default function AlphaMap({
   onSelectProperty,
   className = "",
   currentSearchQuery = "",
+  scopeToViewport = false,
 }: AlphaMapProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-  const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
+  // Restore the last in-session camera (computed ONCE at mount). Mobile opens a
+  // listing via a full route push, so Back remounts this component — without a
+  // restore it would reset to INITIAL_VIEW_STATE and then re-run a URL/saved-market
+  // seed, snapping the user away from wherever they had browsed. Read the store
+  // imperatively (no subscription) so this is purely the mount-time value.
+  const initialCameraRef = useRef<{ vs: MapViewState; restored: boolean } | null>(null);
+  if (!initialCameraRef.current) {
+    const cam = useCommandCenterStore.getState().lastCamera;
+    initialCameraRef.current = cam
+      ? { vs: { longitude: cam.lng, latitude: cam.lat, zoom: cam.zoom, pitch: 0, bearing: 0 }, restored: true }
+      : { vs: INITIAL_VIEW_STATE, restored: false };
+  }
+  const { vs: initialViewState, restored: didRestore } = initialCameraRef.current;
+
+  const [viewState, setViewState] = useState<MapViewState>(initialViewState);
+  // Flips true the first time DeckGL measures a non-zero canvas — the initial
+  // bounds report (below) waits for it, since computeAndReportBounds no-ops
+  // while dims are 0 and would otherwise never retry.
+  const [dimsReady, setDimsReady] = useState(false);
   // Once the map has framed real results, keep it mounted even if a later
   // viewport-scoped query returns 0 — blanking it mid-browse would trap the user.
-  const [mapReady, setMapReady] = useState(false);
+  // A restored camera counts as "ready" so the map renders immediately on Back.
+  const [mapReady, setMapReady] = useState(didRestore);
   // Pinned, interactive popup: the card(s) at a clicked pin/stacked cluster.
   const [popup, setPopup] = useState<{ x: number; y: number; listings: ListingDocument[] } | null>(null);
   // Floating label for a hovered school catchment / proximity circle.
@@ -103,6 +140,7 @@ export default function AlphaMap({
   const commutePolygon = useCommandCenterStore((s) => s.commute.polygon);
   const commuteDestination = useCommandCenterStore((s) => s.commute.destination);
   const setMapBounds = useCommandCenterStore((s) => s.setMapBounds);
+  const mapBounds = useCommandCenterStore((s) => s.mapBounds);
   const isDrawing = useCommandCenterStore((s) => s.isDrawing);
   const drawPoints = useCommandCenterStore((s) => s.drawPoints);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
@@ -117,6 +155,7 @@ export default function AlphaMap({
   const enterComps = useCommandCenterStore((s) => s.enterComps);
   const exitComps = useCommandCenterStore((s) => s.exitComps);
   const soldCount = useCommandCenterStore((s) => s.soldCount);
+  const setLastCamera = useCommandCenterStore((s) => s.setLastCamera);
 
   // Active isochrone ring ([lng, lat] order, deck.gl-ready) — null when off.
   const commuteRing = useMemo<[number, number][] | null>(
@@ -126,7 +165,13 @@ export default function AlphaMap({
 
   const isInteracting = useRef(false);
   const lastSearchQuery = useRef(currentSearchQuery);
-  const mapInitialized = useRef(false);
+  // A restored camera is already "framed" — flag it so the results auto-fit doesn't
+  // reframe away from where the user left off the moment the first query returns.
+  const mapInitialized = useRef(didRestore);
+  // Report the restored viewport as the search box once deck reports its dimensions
+  // (mapBounds is nulled by the page's remount effect, so results would otherwise
+  // come back province-wide). One-shot; false when there's nothing to restore.
+  const pendingRestoreReport = useRef(didRestore);
   // Signature of the result set we last framed — lets the auto-fit wait for a new
   // query's data to actually arrive before reframing (results lag the query string).
   const lastFitData = useRef("");
@@ -135,7 +180,11 @@ export default function AlphaMap({
   // what's on screen (HouseSigma-style progressive reveal under the 100-cap).
   const programmaticRef = useRef(false);
   const userMovedRef = useRef(false);
-  const viewStateRef = useRef<MapViewState>(INITIAL_VIEW_STATE);
+  // Which flyTo nonce THIS component instance has flown — distinguishes a strict-mode
+  // effect re-invoke (same instance, ref set) from a genuine remount (new instance,
+  // ref null) so the stale-flyTo guard below only suppresses the true replay.
+  const flewNonceRef = useRef<number | null>(null);
+  const viewStateRef = useRef<MapViewState>(initialViewState);
   const dimsRef = useRef<{ width: number; height: number } | null>(null);
   const reportTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -196,6 +245,28 @@ export default function AlphaMap({
     return () => clearTimeout(t);
   }, [searchAreaNonce, computeAndReportBounds]);
 
+  // First-load viewport scoping (fix #4): on a bare cold start the page holds the
+  // listings query until the map reports a viewport box, so the first result set
+  // matches what's on screen instead of spilling province-wide. Report the current
+  // (initial Toronto, or a mode-tilted) viewport once the canvas is measured. Re-runs
+  // whenever the box is cleared (persona/mode reset) while still unscoped, so the
+  // scope self-heals; stops the moment a box exists or the user starts driving.
+  useEffect(() => {
+    if (!scopeToViewport || mapBounds || !dimsReady || userMovedRef.current) return;
+    computeAndReportBounds();
+  }, [scopeToViewport, mapBounds, dimsReady, computeAndReportBounds]);
+
+  // Restored session (mobile Back remounts this page): once the canvas is measured,
+  // report the RESTORED viewport as the search box so results scope to where the user
+  // returned — mapBounds was nulled by the page's remount. The bare cold-start path
+  // (scopeToViewport) already self-reports via the effect above, so only a scoped
+  // restore (a named/center/city session) needs this. One-shot.
+  useEffect(() => {
+    if (!pendingRestoreReport.current || !dimsReady) return;
+    pendingRestoreReport.current = false;
+    if (!scopeToViewport) computeAndReportBounds();
+  }, [dimsReady, scopeToViewport, computeAndReportBounds]);
+
   // Mode change re-tilts the camera (flat for Listings, pitched for Heatmap/3D)
   // with an animated transition so switching modes feels physical, not a cut.
   useEffect(() => {
@@ -244,6 +315,22 @@ export default function AlphaMap({
     const first = validProperties[0]?.id ?? "";
     const last = validProperties[validProperties.length - 1]?.id ?? "";
     const dataSig = `${validProperties.length}:${first}:${last}`;
+
+    // Viewport-scoped session (fix #4): the camera already frames the exact box the
+    // query was scoped to, so reframing to the result cluster would move the map away
+    // from the area the list was built for — the very list≠map desync we're fixing.
+    // Mark ready (clear the empty state; let drill-downs behave) and keep the camera
+    // put, but still advance the fit-tracking refs to what's shown so that later
+    // EXITING to a named search correctly detects the new query and waits for its
+    // data before fitting. Named searches (scopeToViewport false) fit as before.
+    if (scopeToViewport) {
+      setMapReady(true);
+      mapInitialized.current = true;
+      lastSearchQuery.current = currentSearchQuery;
+      lastFitData.current = dataSig;
+      return;
+    }
+
     const queryChanged = lastSearchQuery.current !== currentSearchQuery;
     if (queryChanged) {
       if (dataSig === lastFitData.current) return; // still the old query's data — wait
@@ -279,7 +366,7 @@ export default function AlphaMap({
     mapInitialized.current = true;
     setMapReady(true);
     lastFitData.current = dataSig;
-  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode]);
+  }, [validProperties, currentSearchQuery, commuteRing, markProgrammatic, mapMode, scopeToViewport]);
 
   // Fit to the commute zone whenever the isochrone changes (frames the whole
   // reachable area, even when zero listings match).
@@ -330,6 +417,15 @@ export default function AlphaMap({
   const flyNonce = flyTo?.nonce ?? 0;
   useEffect(() => {
     if (!flyTo) return;
+    // Skip a stale flyTo replay: on a mobile Back remount the store still holds the
+    // last command, and re-flying it would override the restored camera. "Already
+    // flown by a PRIOR instance" = (module-scope) consumedFlyNonce matches AND this
+    // instance (per-instance ref) hasn't flown it — true only after a genuine remount.
+    // React 18 dev strict-mode re-invokes this same instance's mount effect; there the
+    // ref already matches, so it proceeds and re-schedules the post-fly bounds report.
+    if (flewNonceRef.current !== flyTo.nonce && flyTo.nonce === consumedFlyNonce) return;
+    flewNonceRef.current = flyTo.nonce;
+    consumedFlyNonce = flyTo.nonce;
     isInteracting.current = false;
     markProgrammatic(1000);
     setViewState((vs) => ({
@@ -342,9 +438,20 @@ export default function AlphaMap({
     }));
     setMapReady(true);
     mapInitialized.current = true;
+    // Once the fly lands, report the framed viewport so the search scopes to it
+    // immediately (comps/address entry renders pins with no manual pan). Unlike
+    // auto-fit, this camera came from a user-chosen point — not from results — so
+    // re-querying it converges: the auto-fit effect early-returns afterwards
+    // (mapInitialized + unchanged query) and never moves the camera again.
+    // Seed the ref with the fly DESTINATION first: it otherwise only learns the
+    // camera via onViewStateChange, which lags a congested transition — the timer
+    // would then report the take-off viewport, not where the camera lands.
+    viewStateRef.current = { ...viewStateRef.current, longitude: flyTo.lng, latitude: flyTo.lat, zoom: flyTo.zoom ?? 14 };
+    const t = setTimeout(() => computeAndReportBounds(), 1100);
+    return () => clearTimeout(t);
     // Only re-fly when the nonce changes; flyTo carries the latest coords.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flyNonce, markProgrammatic]);
+  }, [flyNonce, markProgrammatic, computeAndReportBounds]);
 
   // A pin dropped at a searched/geocoded address (no listing) — cyan dot.
   const searchPinLayer = useMemo<Layer[]>(() => {
@@ -404,6 +511,24 @@ export default function AlphaMap({
 
   const singles = useMemo(() => clusters.filter((f) => !isClusterFeature(f)), [clusters]);
   const groups = useMemo(() => clusters.filter((f) => isClusterFeature(f)), [clusters]);
+
+  // Spatially representative price labels (fix #4): cap the UN-clustered pins to a
+  // few per coarse grid cell so extreme-priced outliers and dense pockets can't
+  // dominate the labels. Grids over the singles' own extent, so it re-thins only
+  // when the set changes (same cadence as `singles`) — not on every pan. Clusters
+  // (groups) and their counts are untouched.
+  const labelledSingles = useMemo(
+    () =>
+      pickRepresentativePins(singles, {
+        cols: PIN_GRID_COLS,
+        rows: PIN_GRID_ROWS,
+        perCell: PINS_PER_CELL,
+        getLngLat: (f) => f.geometry.coordinates as [number, number],
+        getPrice: (f) => (f.properties as PinProps).listing.ListPrice ?? 0,
+        getFreshness: (f) => (f.properties as PinProps).listing.EntryTimestamp ?? 0,
+      }),
+    [singles]
+  );
 
   const expandCluster = useCallback(
     (clusterId: number, lng: number, lat: number) => {
@@ -688,7 +813,7 @@ export default function AlphaMap({
 
     const listingPins = new TextLayer<ClusterPoint>({
       id: "listing-pins",
-      data: singles,
+      data: labelledSingles,
       getPosition: (f) => f.geometry.coordinates as [number, number],
       getText: (f) => {
         const listing = (f.properties as PinProps).listing;
@@ -749,7 +874,7 @@ export default function AlphaMap({
     });
 
     return [...commuteLayers, clusterBubbles, clusterCounts, listingPins];
-  }, [renderData, heatData, mapMode, heatAggregation, groups, singles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing, computeAndReportBounds]);
+  }, [renderData, heatData, mapMode, heatAggregation, groups, labelledSingles, colorConfig, getScatterColor, hoveredId, onSelectProperty, expandCluster, clusterIndex, setHoveredId, commuteLayers, selectedIds, isSelectMode, toggleSelected, isDrawing, computeAndReportBounds]);
 
   // Current viewport extent for the school-zone overlay — computed locally (not via
   // the store's settle-gated mapBounds) so zones paint the moment they're toggled on.
@@ -811,12 +936,17 @@ export default function AlphaMap({
     // movement (programmatic auto-fit flies are flagged and skipped → no loop).
     if (reportTimer.current) clearTimeout(reportTimer.current);
     reportTimer.current = setTimeout(() => {
+      // Remember the settled camera (user OR programmatic) so returning to the
+      // terminal restores this exact view. Not a search dependency, so writing it
+      // never triggers a re-query on its own.
+      const v = viewStateRef.current;
+      setLastCamera({ lat: v.latitude, lng: v.longitude, zoom: v.zoom });
       if (userMovedRef.current && !programmaticRef.current) {
         userMovedRef.current = false;
         computeAndReportBounds();
       }
     }, 350);
-  }, [computeAndReportBounds]);
+  }, [computeAndReportBounds, setLastCamera]);
 
   const handleDragEnd = useCallback(() => {
     setTimeout(() => {
@@ -839,7 +969,15 @@ export default function AlphaMap({
   // Show the empty state only before the map has ever framed results. Once it's
   // up (commute active or a prior search rendered), keep the map mounted even at
   // 0 in-view results so viewport browsing into sparse areas isn't a dead end.
-  if (validProperties.length === 0 && !commuteRing && !mapReady) {
+  //
+  // BUT never short-circuit while scopeToViewport is bootstrapping (fix #4): the page
+  // holds the first query until the map reports its viewport, and that report only fires
+  // from the mounted DeckGL canvas (onResize → computeAndReportBounds). If we returned the
+  // empty state here on the 0-result cold start, the canvas would never mount, bounds would
+  // never be sent, the hold would never release, and the terminal would deadlock on
+  // "scanning" forever for any visitor with no saved market. Always render the map during
+  // the bootstrap so it can report bounds; the scoped results arrive on the next tick.
+  if (validProperties.length === 0 && !commuteRing && !mapReady && !scopeToViewport) {
     return (
       <div className={`flex items-center justify-center bg-background ${className}`}>
         <div className="p-6 text-center">
@@ -863,6 +1001,8 @@ export default function AlphaMap({
         onViewStateChange={handleViewStateChange}
         onResize={({ width, height }) => {
           dimsRef.current = { width, height };
+          // First non-zero measure releases the initial-bounds report effect.
+          if (width > 0 && height > 0 && !dimsReady) setDimsReady(true);
         }}
         onDragStart={() => { setPopup(null); setCatchmentHover(null); setHexHover(null); setZoningHover(null); }}
         onDragEnd={handleDragEnd}

@@ -22,6 +22,7 @@ import {
   MapCommandPalette,
   MobileMapTools,
   ActiveLensBar,
+  LocationBoundsNotice,
 } from "@/components/CommandCenter";
 import QuickLookPanel from "@/components/CommandCenter/QuickLookPanel";
 import SaveBubbleButton from "@/components/CommandCenter/SaveBubbleButton";
@@ -40,12 +41,17 @@ import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
-import { fetchSoldComps } from "@/lib/sold/fetchSoldComps";
+import { boundsAroundPoint, fetchSoldComps } from "@/lib/sold/fetchSoldComps";
 import { queryPlan } from "@/lib/sold/layers";
 import { mergeLayers } from "@/lib/sold/mergeLayers";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
+import { getConfig } from "@/lib/dashboard/config";
+import { regionCamera } from "@/lib/dashboard/area";
+import { useIsAuthed } from "@/hooks/useIsAuthed";
+import { passesDealGrade } from "@/lib/dealScore/gradeFilter";
+import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
 
 /**
  * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
@@ -56,6 +62,31 @@ import { syncChips } from "@/lib/search/chipApply";
 const SUBTYPE_TO_DASHBOARD_KEY: ReadonlyMap<string, string> = new Map(
   PROPERTY_TYPE_OPTIONS.flatMap((opt) => opt.variants.map((v) => [v, opt.key] as [string, string]))
 );
+
+// URL/saved-market camera seeds must fire on genuine navigation but NOT re-fire when
+// the terminal merely REMOUNTS. Mobile opens a listing via a full route push, so
+// pressing Back remounts this whole page; a per-instance useRef guard resets on that
+// remount and would replay the onboarding seed, snapping the camera back to the seeded
+// market (e.g. Brampton) over wherever the user had browsed. Keying the "already
+// seeded" markers at MODULE scope (by param VALUE where there is one) makes them
+// idempotent across remounts, while a genuinely new value still seeds. AlphaMap's
+// lastCamera restore then returns the map to where the user actually left it. These
+// reset only on a full page reload — exactly the intended lifetime.
+let seededCityValue: string | null = null;
+let seededCenterKey: string | null = null;
+let savedMarketSeeded = false;
+
+// Same remount problem, second casualty: the mobile list/map toggle. It used to be
+// per-instance useState defaulting to "map", so every Back from a listing dropped the
+// user onto the MAP no matter which pane they had opened the listing from — they saw
+// the list for an instant (the browser's back-gesture paint of the old frame) and then
+// it flipped to the map once React remounted. Holding the choice at MODULE scope keeps
+// it across the remount with zero flash and no hydration risk (the server and a cold
+// client both start from the "map" default). MOBILE_VIEW_KEY mirrors it into
+// sessionStorage so the same tab also survives a real document load — e.g. the user
+// reloaded the detail page, or landed on it from a shared link, before pressing Back.
+const MOBILE_VIEW_KEY = "terminalMobileView";
+let lastMobileView: "list" | "map" = "map";
 
 // deck.gl + mapbox must load client-only
 const AlphaMap = dynamic(() => import("@/components/Map/AlphaMap"), {
@@ -100,8 +131,10 @@ const TERMINAL_EXCLUDE_FIELDS = [
 
 function CommandCenterContent() {
   const searchParams = useSearchParams();
+  const isAuthed = useIsAuthed();
   const {
     activePersona,
+    setActivePersona,
     filters,
     universalFilters,
     searchResult,
@@ -120,6 +153,8 @@ function CommandCenterContent() {
     setMapBounds,
     selectedIds,
     showSelectedOnly,
+    minDealGrade,
+    dealInputsById,
     totalCount,
     setMapMode,
     colorMetricId,
@@ -133,12 +168,15 @@ function CommandCenterContent() {
     soldLocked,
     setSoldCount,
     searchPin,
+    enterComps,
     exitComps,
     setUniversalFilter,
     setFilter,
     setSchool,
     addFilter,
     removeAddedFilter,
+    setFlyTo,
+    setSearchPin,
   } = useCommandCenterStore();
 
   // Property-open routing: mobile (≤767) → full report; desktop → Quick Look drawer.
@@ -179,11 +217,56 @@ function CommandCenterContent() {
     window.addEventListener("mouseup", onUp);
   }, []);
 
-  // Seed location from URL (?city= / ?search=)
+  // Seed location from URL (?city= / ?search=). SEEDS ONCE per distinct param — it must
+  // not re-assert itself afterwards. Re-running whenever `location` changed made the URL
+  // fight the user: clearing the search box (or tapping the out-of-bounds notice, which
+  // clears it via searchVisibleArea) set location to "", this effect saw ""  !== "Toronto"
+  // and immediately put "Toronto" back. Arriving via a ?city= link meant the place filter
+  // could never be cleared at all. Mirrors the hydratedParamsRef guard below.
   useEffect(() => {
     const cityParam = searchParams.get("city") || searchParams.get("search") || "";
-    if (cityParam && cityParam !== location) setLocation(cityParam);
-  }, [searchParams, location, setLocation]);
+    if (!cityParam || seededCityValue === cityParam) return;
+    seededCityValue = cityParam;
+    setLocation(cityParam);
+  }, [searchParams, setLocation]);
+
+  // Persona unification (fix #6): open the terminal on the ONE shared lens instead of
+  // a private in-memory state that always cold-started on Flippers. Resolve once on
+  // mount — explicit ?lens= > the persona saved in the dashboard config (or adopted
+  // from the account) > the Homebuyer default — and let setActivePersona write any
+  // change back through so the terminal, dashboard and listing pages stay in sync.
+  const personaHydratedRef = useRef(false);
+  useEffect(() => {
+    if (personaHydratedRef.current) return;
+    personaHydratedRef.current = true;
+    void hydrateTerminalPersona(searchParams.get("lens"), setActivePersona);
+  }, [searchParams, setActivePersona]);
+
+  // Center deep link (?lat=&lng=[&z=][&pin=]) — e.g. the address-profile "open the
+  // map here" link. Rides the flyTo path (which also reports the framed viewport,
+  // so results render with no manual pan) and drops the search pin so the subject
+  // address is visible among the listings. Deliberately carries NO ?city=: bounds
+  // scope the query, so feed-vs-geocoder naming (Nepean vs Barrhaven) can't hide
+  // nearby inventory. Guarded to fire once per distinct center.
+  useEffect(() => {
+    const lat = Number(searchParams.get("lat"));
+    const lng = Number(searchParams.get("lng"));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return;
+    const key = `${lat},${lng},${searchParams.get("z") ?? ""},${searchParams.get("pin") ?? ""}`;
+    if (seededCenterKey === key) return;
+    seededCenterKey = key;
+    const zRaw = Number(searchParams.get("z"));
+    const zoom = Number.isFinite(zRaw) ? Math.min(18, Math.max(8, zRaw)) : 14;
+    setFlyTo({ lat, lng, zoom });
+    const label = (searchParams.get("pin") ?? "").trim();
+    // ?comps=1 opens the SOLD comps view around that point (sold-only layer, price
+    // bounds reset) instead of dropping a plain pin — the destination for any surface
+    // that says "see all N sold near here" (the renovation tool's sold strip today).
+    // Same state the in-map "comps" affordances produce, so there is one comps mode.
+    if (searchParams.get("comps") === "1") enterComps({ lat, lng, label: label || "This area" });
+    else if (label) setSearchPin({ lat, lng, label });
+  }, [searchParams, setFlyTo, setSearchPin, enterComps]);
 
   // Hydrate the FULL filter set from a deep link (?beds=&maxPrice=&type=…). A search
   // typed anywhere — the global header on any app page — serializes its parsed chips
@@ -219,6 +302,66 @@ function CommandCenterContent() {
   ]);
 
   const persona = PERSONA_CONFIG[activePersona];
+
+  // First-load scope detector (fix #4). A "bare cold start" has none of: a typed/
+  // seeded place, a draw area, an active commute zone, a dropped pin, or a deep-link
+  // center/city/filter. Everything else is a form of explicit scope that keeps its
+  // existing behavior. ONLY the bare case holds the first query for the map's
+  // viewport box (see performSearch + the AlphaMap scopeToViewport prop) so the list
+  // matches the map instead of spilling province-wide.
+  const latParam = Number(searchParams.get("lat"));
+  const lngParam = Number(searchParams.get("lng"));
+  const hasCenterParam =
+    Number.isFinite(latParam) &&
+    Number.isFinite(lngParam) &&
+    Math.abs(latParam) <= 90 &&
+    Math.abs(lngParam) <= 180 &&
+    !(latParam === 0 && lngParam === 0);
+  const hasCityParam = Boolean(searchParams.get("city") || searchParams.get("search"));
+  const wantViewportScope =
+    !location &&
+    !drawPolygon &&
+    !commute.enabled &&
+    !searchPin &&
+    !hasCenterParam &&
+    !hasCityParam &&
+    !hasStructuredParams(searchParams);
+
+  // Signed-in initial viewport (fix #4): with no URL scope and no typed place, open
+  // the terminal on the user's first saved market (dashboard config in localStorage)
+  // instead of the generic Toronto default. Runs once, and only while the terminal is
+  // still bare (a URL place/center/filter owns the scope instead).
+  //
+  // Seed the CAMERA, not a place filter. `location` is a Typesense text query, so
+  // setLocation(region) pinned the ENTIRE terminal to that city: every listing outside it
+  // vanished and the out-of-bounds notice read "Showing Vaughan only · N more here" the
+  // instant the map opened — and it never cleared, because the user never typed the place
+  // to clear (bug report 2026-07-28). Flying the camera leaves the query unfiltered
+  // (wantViewportScope stays true), so results follow the viewport and panning past the
+  // city just works. This is the "saved-bubble-geometry fly-to" the old place-seed noted as
+  // the follow-up; see QUICK_PICK_MARKETS in area.ts for the same camera-vs-filter reasoning.
+  useEffect(() => {
+    if (savedMarketSeeded) return;
+    if (location || hasCityParam || hasCenterParam || hasStructuredParams(searchParams)) return;
+    savedMarketSeeded = true;
+    const first = getConfig().regions[0];
+    if (!first) return;
+    // regionCamera, not marketCamera: the quick-pick list holds eight whole metros, so
+    // every community-scale saved area (Barrhaven, Kanata, a Toronto district) missed it
+    // and fell through to the place filter below — reproducing the 2026-07-28 Vaughan bug
+    // on EVERY page load for those users, login included. regionCamera consults
+    // data/city-centroids.json second, which is keyed by raw feed City strings and so
+    // covers exactly those finer names.
+    const cam = regionCamera(first);
+    if (cam) {
+      setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+    } else {
+      // Neither list knows this place. Falling back to the place-scoped open is still
+      // better than guessing a camera — and the out-of-bounds notice now names the action
+      // ("Barrhaven only · Show 308 more"), so the filter is visible and escapable.
+      setLocation(first);
+    }
+  }, [location, hasCityParam, hasCenterParam, searchParams, setLocation, setFlyTo]);
 
   // Switching persona drops the map into that persona's default render mode
   // (e.g. Cashflow/Builders → Heatmap). The user can re-toggle freely after.
@@ -256,6 +399,11 @@ function CommandCenterContent() {
       commute.enabled && commute.polygon && commute.polygon.length >= 3
         ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
         : undefined;
+    // Lens-aware default sort (fix #4): the Homebuyer lens leads with FRESHNESS
+    // (newest listed first, EntryTimestamp desc); the investor lenses keep their
+    // deal-signal sort (cap rate / True DOM / lot width). The School lens still
+    // overrides both, and the basic browse modes (rent / commercial) stay on price.
+    const lensSort = activePersona === "smart" ? "EntryTimestamp" : persona.sortBy;
     return await searchListings({
       query: location || "*",
       rawFilterBy,
@@ -264,12 +412,22 @@ function CommandCenterContent() {
       perPage: MAX_LISTINGS,
       facetBy: FACET_FIELDS.join(","),
       excludeFields: TERMINAL_EXCLUDE_FIELDS,
-      sortBy: schoolField ?? (investorLayer ? persona.sortBy : BASIC_SORT),
+      sortBy: schoolField ?? (investorLayer ? lensSort : BASIC_SORT),
       sortOrder: "desc",
     });
-  }, [transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
+  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
 
   const performSearch = useCallback(async () => {
+    // First-load viewport hold (fix #4): on a bare cold start with no explicit
+    // scope, do NOT fire the province-wide unbounded query. Keep the skeleton up and
+    // wait for AlphaMap to report its settled viewport (setMapBounds) — that flips
+    // mapBounds (a dep here) and re-runs this with a bounding box, so the very first
+    // result set matches the map. Any explicit scope (place / filter / draw / pin /
+    // deep-link) makes wantViewportScope false and this branch never trips.
+    if (wantViewportScope && !mapBounds) {
+      setIsLoading(true);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     const plan = queryPlan(activeLayers);
@@ -328,11 +486,18 @@ function CommandCenterContent() {
         compFilters.maxPrice = searchPin.maxPrice || undefined;
       }
 
+      // Comps must not depend on camera timing: while the fly-to is still in
+      // transit the viewport hasn't reported yet (mapBounds null) and the old
+      // region/empty fallback returned nothing until a manual pan. With a pin
+      // anchor, query a ~zoom-14 box around it — the same few-km area the fly is
+      // about to frame; the live viewport takes over on the next bounds report.
+      const compBounds = mapBounds ?? (searchPin ? boundsAroundPoint(searchPin.lat, searchPin.lng) : null);
+
       // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
       // whichever layers are lit, in parallel; then merge into one recency-sorted list.
       const [compRes, activeRes] = await Promise.all([
         plan.comps.length
-          ? fetchSoldComps({ mapBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps, filters: compFilters })
+          ? fetchSoldComps({ mapBounds: compBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps, filters: compFilters })
           : Promise.resolve({ docs: [] as ListingDocument[], count: 0, locked: false }),
         plan.active ? runActiveSearch() : Promise.resolve(null),
       ]);
@@ -355,7 +520,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [wantViewportScope, activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount]);
 
   // Drop any stale comps/search pin when the user navigates to a NEW area (location
   // change only — NOT on layer toggles, so the pin set alongside the Sold toggle in
@@ -382,8 +547,16 @@ function CommandCenterContent() {
   }, [performSearch]);
 
   const listings = searchResult?.listings ?? [];
-  // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query).
-  const displayed = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
+  // "View Selected" collapses both panes to the chosen subset (already loaded — no re-query);
+  // the min-deal-grade filter (authed) further narrows list + map to the active-lens floor.
+  const selectedScoped = showSelectedOnly ? listings.filter((l) => selectedIds.has(l.id)) : listings;
+  // Grades from the SAME dealInputs the ledger rows render (published to the store by
+  // LedgerPanel's batch). Without them this filter scored with no PRICE pillar and kept
+  // pins the list would drop — map and list disagreeing about one floor.
+  const displayed =
+    isAuthed && minDealGrade
+      ? selectedScoped.filter((l) => passesDealGrade(l, activePersona, minDealGrade, dealInputsById[l.id]))
+      : selectedScoped;
 
   // Color precedence: an explicit "Color By" metric wins; else the School lens
   // shades by score; else the persona's default metric. The explicit metric also
@@ -403,7 +576,34 @@ function CommandCenterContent() {
   // (full-width card ledger) is one tap away. Desktop shows both panes, so the
   // control is md:hidden. The effect below nudges the map to resize whenever it's
   // shown — on first mount (map is the default) and when revealed from the list.
-  const [mobileView, setMobileView] = useState<"list" | "map">("map");
+  //
+  // Seeded from the module-scope `lastMobileView` (see the note at the top of the
+  // file) so pressing Back from a listing returns to the pane the user actually
+  // left, and written back through setMobileView so the next remount agrees.
+  const [mobileView, setMobileViewState] = useState<"list" | "map">(lastMobileView);
+  const setMobileView = useCallback((v: "list" | "map") => {
+    lastMobileView = v;
+    try {
+      sessionStorage.setItem(MOBILE_VIEW_KEY, v);
+    } catch {
+      // Private-mode / storage-disabled: the module-scope copy still carries the
+      // choice across soft navigations, which is the case that actually breaks.
+    }
+    setMobileViewState(v);
+  }, []);
+  // Cold document load: recover the pane from sessionStorage. Only when the module
+  // copy is still untouched — a soft-nav remount has already seeded the right value
+  // above and must not be second-guessed here.
+  useEffect(() => {
+    if (lastMobileView !== "map") return;
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(MOBILE_VIEW_KEY);
+    } catch {
+      saved = null;
+    }
+    if (saved === "list") setMobileView("list");
+  }, [setMobileView]);
   useEffect(() => {
     if (mobileView !== "map") return;
     const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
@@ -442,6 +642,7 @@ function CommandCenterContent() {
               heatAggregation={heatAggregation}
               onSelectProperty={openListing}
               currentSearchQuery={`${activePersona}:${location}`}
+              scopeToViewport={wantViewportScope}
               className="h-full w-full"
             />
             {/* Instrument Deck — dark control surface layered over the dark map. The
@@ -462,6 +663,9 @@ function CommandCenterContent() {
               {/* Mobile-only entry point to the rail tools (Schools, Compare, etc.),
                   which are otherwise desktop-only via MapControlRail/MapDrawer. */}
               <MobileMapTools />
+              {/* Tells the user their place filter is hiding listings that are on screen,
+                  and clears it in one tap. Self-hides the moment nothing is hidden. */}
+              <LocationBoundsNotice />
               {/* Save the current custom area as a Market Bubble. Self-hides when no
                   draw / commute / school filter is active. */}
               <div className="pointer-events-auto absolute right-3 top-3 z-30">
@@ -546,8 +750,8 @@ export default function PropertiesPage() {
       fallback={
         <div className="flex min-h-app items-center justify-center bg-slate-950">
           <div className="text-center">
-            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-cyan-400" />
-            <p className="text-slate-400">Initializing Command Center...</p>
+            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-cyan-600 dark:text-cyan-400" />
+            <p className="text-slate-400">Initializing map…</p>
           </div>
         </div>
       }

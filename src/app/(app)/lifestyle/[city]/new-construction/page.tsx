@@ -152,7 +152,7 @@ export default async function NewBuildHubPage({
           <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-muted-foreground">
             <Sparkles className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p>No newly built listings here right now.</p>
-            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-300">
+            <Link href={cityHubPath} className="mt-3 inline-block text-sm text-cyan-700 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300">
               See all homes for sale in {cityName} →
             </Link>
           </div>

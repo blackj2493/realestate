@@ -85,8 +85,8 @@ export default function MapComparePanel() {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {count === 0 ? (
           <p className="p-3 text-xs leading-relaxed text-muted-foreground">
-            No properties selected yet. Turn on “Tap map to add” and click pins, or use the
-            checkboxes in the listings panel.
+            Nothing to compare yet. Turn on “Tap map to add”, then tap pins on the map — or
+            use the checkboxes in the listings panel. Pick at least 2.
           </p>
         ) : (
           <>
@@ -145,7 +145,7 @@ export default function MapComparePanel() {
               )}
             >
               {showSelectedOnly ? <ListFilter className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {showSelectedOnly ? "Show all" : "Isolate"}
+              {showSelectedOnly ? "Show all" : "Show selected"}
             </button>
             <Link
               href={compareHref}

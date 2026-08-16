@@ -4,12 +4,14 @@
  */
 
 import type { ListingDocument } from "@/lib/typesense/client";
+import type { RowStatus, SearchSection } from "./searchRows";
 
 // ── Federated, categorized suggestions ──────────────────────────────────────
 
 export type SuggestCategory =
   | "address" // active for-sale/-rent listing matched by street address
-  | "sold" // recently-sold address (price VOW-gated)
+  | "sold" // comps-on-demand action row (lights the sold layer)
+  | "soldAddress" // THIS typed address has a sold/leased/off-market record (price VOW-gated)
   | "community" // city / neighbourhood (with live active count)
   | "school" // a rated school (proximity filter)
   | "mls" // exact MLS# → opens that listing
@@ -29,16 +31,134 @@ export interface SuggestItem {
   geo?: { lat: number; lng: number; zoom?: number };
   /** Short "why it matched" tag, e.g. "address", "community", "school". */
   provenance?: string;
+  /** Row status for a LIVE listing — for sale vs for lease, from the feed's own
+   *  TransactionType. Records carry theirs on `sold.kind` instead. */
+  status?: RowStatus;
+  /** "Jun 25, 2026 · X13491562 · ROYAL LEPAGE TEAM REALTY" — the provenance line under a
+   *  listing row. Public on both kinds; the date is what separates campaigns. */
+  meta?: string;
+  /** EARLIER campaigns at this same address, newest first. One address renders as ONE row
+   *  with its history folded underneath, rather than as sibling rows that read like
+   *  separate homes. Rendered indented; still keyboard-reachable. */
+  children?: SuggestItem[];
+  /** "250d on market across 2 campaigns" — the stitched span a relist would otherwise
+   *  hide. Only present when the relist actually reset a visible clock. */
+  spanLabel?: string;
+  /** Public thumbnail — ACTIVE listings only (IDX). Records expose `sold.hasPhoto`
+   *  instead, because their photo URL is VOW. */
+  thumbUrl?: string;
   /** Sold metadata (price intentionally absent when gated). */
-  sold?: { dateLabel?: string; priceMasked: boolean };
+  sold?: {
+    dateLabel?: string;
+    priceMasked: boolean;
+    /** "$1,625,000" — consumers only; never present on an anonymous payload. */
+    priceLabel?: string;
+    /** Destination the SERVER resolved for the record — already forwards to a relist. */
+    href?: string;
+    /** Public status kind (audit R24a) — drives the chip's label AND colour. */
+    kind?: AddressRecordResponse["dealKind"];
+    /** SOLD / LEASED / OFF MARKET — the public status kind (audit R24a). */
+    kindLabel?: string;
+    /** Relist: this address is live right now (see AddressRecordResponse.liveKey). */
+    liveKey?: string;
+    livePrice?: number;
+    liveTransactionType?: string;
+    /** A photo exists but is VOW-gated → render a locked frame, never a URL. */
+    hasPhoto?: boolean;
+    /** The record's lead photo — CONSUMERS ONLY, absent from every anonymous payload.
+     *  See AddressRecordResponse.thumbUrl for why it is safe to hand a consumer. */
+    thumbUrl?: string;
+    /** MLS# — public, shown to anon (the doc id / listing key). */
+    mls?: string;
+    /** Listing brokerage — public (TRREB §6.3(c)); shown to anon. */
+    brokerage?: string;
+  };
   /** School metadata. */
   school?: { id: string; score?: number };
 }
 
+/** One disposition (campaign) at a typed address for the multi-state dropdown. Public fields
+ *  (status kind, address, MLS#, brokerage) reach anon; the VOW fields only a consumer. */
+export interface AddressRecordResponse {
+  key: string;
+  address: string;
+  city: string;
+  /** Feed CityRegion ("Dundas" under City "Hamilton") — the finer-grained name. Present so
+   *  a place row can be labelled from the FEED rather than the geocoder's own municipal
+   *  naming, which would mint a second identity for one home. See searchRows.ts. */
+  cityRegion?: string;
+  /** Public status kind — shown to anon too (same signal /address shows, R24a). */
+  dealKind: "sold" | "leased" | "offmarket";
+  /** Listing brokerage — public (TRREB §6.3(c)). */
+  brokerage?: string;
+  href: string;
+  /**
+   * Relist join (public). MLS# of a listing that is LIVE right now at this same address —
+   * a terminated campaign and its relist share nothing but the address, so without this
+   * the record is a dead end. An active listing key + asking price are IDX data, so both
+   * reach anonymous viewers.
+   */
+  liveKey?: string;
+  livePrice?: number;
+  /** "For Sale" / "For Lease" of the live campaign — a relisted lease isn't a sale. */
+  liveTransactionType?: string;
+  /** A photo EXISTS for this record. The URL is VOW and never reaches an anon payload, so
+   *  the row shows a locked frame rather than promising an image it cannot show. */
+  hasPhoto?: boolean;
+  /**
+   * The record's lead photo URL — VOW, so present ONLY on a signed-in consumer's response
+   * (attached inside the getConsumer()-confirmed branch, alongside closePrice).
+   *
+   * Without it a consumer saw the SAME 24px blur an anonymous visitor gets, while
+   * /properties/[id] showed them the full gallery for the same home (gateVowDerived keeps
+   * media_urls when isAuthed) — two surfaces disagreeing about one photo. The blur is the
+   * anonymous redaction; a consumer is entitled to the photo and should be handed it.
+   */
+  thumbUrl?: string;
+  /** VOW fields — present ONLY on a signed-in consumer's response. */
+  closePrice?: number;
+  /** Epoch ms (UTC-midnight date-only) — render with timeZone:'UTC' (MEDIUM-18). */
+  soldDateMs?: number;
+  beds?: number;
+  baths?: number;
+  subType?: string;
+}
+
+/**
+ * /api/search/address-status response — the dropdown's sold-record probe.
+ * `records` carries ALL dispositions at the typed address (HouseSigma-style, newest-first).
+ * The flat primary-record fields mirror records[0] and are kept for the header bar's simpler
+ * kind-aware label (LocationSearch.tsx), which only needs found/address/dealKind.
+ */
+export interface AddressStatusResponse {
+  found: boolean;
+  /** All dispositions at the address, newest-first — the multi-state dropdown reads this. */
+  records?: AddressRecordResponse[];
+  // ── flat primary (= records[0]) for the header bar's kind-aware label ──
+  key?: string;
+  address?: string;
+  city?: string;
+  dealKind?: "sold" | "leased" | "offmarket";
+  brokerage?: string;
+  href?: string;
+  closePrice?: number;
+  soldDateMs?: number;
+  beds?: number;
+  baths?: number;
+  subType?: string;
+}
+
+/**
+ * A rendered section. Grouped by what results ARE (a place vs a listing), never by what
+ * state they're in — status rides on each row instead (see searchRows.ts). `category`
+ * stays on the ITEM and keeps deciding what a click does.
+ */
 export interface SuggestGroup {
-  category: SuggestCategory;
+  section: SearchSection;
   title: string;
   items: SuggestItem[];
+  /** Section can carry VOW-gated figures → the dropdown shows the VOW marker. */
+  vow?: boolean;
 }
 
 // ── Natural-language → editable chips ───────────────────────────────────────

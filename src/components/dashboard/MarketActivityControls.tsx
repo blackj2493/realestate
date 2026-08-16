@@ -114,7 +114,10 @@ function StepperPopover({
                   STEP_LABEL,
                   "px-2 py-0.5 transition-colors",
                   exact === m.exact
-                    ? "bg-cyan-500/10 text-cyan-300"
+                    // cyan-300 over a 10% tint is fainter than the INACTIVE
+                    // muted-foreground on the light panel — the selected chip has to be
+                    // the more prominent one, so light takes cyan-700.
+                    ? "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -132,7 +135,7 @@ function StepperPopover({
               className={cn(
                 "h-7 w-9 border text-xs font-semibold transition-colors",
                 value === n
-                  ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-300"
+                  ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                   : "border-border bg-card text-muted-foreground hover:border-border"
               )}
             >

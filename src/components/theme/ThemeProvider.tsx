@@ -8,16 +8,24 @@ import type { ComponentProps } from "react";
  *
  * - `attribute="class"` pairs with Tailwind `darkMode:["class"]` and the CSS tokens
  *   (light on `:root`, dark under `.dark`) in globals.css.
- * - `defaultTheme="dark"` keeps the app visually UNCHANGED for everyone until they
- *   opt into light. Flip to "system" once the consumer light migration (Phase 2) is
- *   complete so light-preferring users get light automatically.
+ * - `defaultTheme="light"` makes light the app-wide default (consumer light
+ *   migration, Phase 2): a first-time / no-JS visitor lands on the pale Daylight
+ *   ground. Dark is fully preserved as an opt-in via the toggle (the `.dark`
+ *   palette in globals.css is unchanged), so power users keep the terminal look.
  * - `enableSystem` makes the OS preference an available choice via the toggle.
+ *
+ * NOTE: the plan doc recommends `"system"` here once Phase 2 lands. We deliberately chose
+ * hard `"light"` instead: light is the intended first impression for every new visitor,
+ * including one whose OS is set to dark. `enableSystem` stays on so "system" remains
+ * selectable from the toggle — it's just not the default. Because dark is now reachable only
+ * by choice, the toggle has to be present on the signed-out surfaces too (TopNav on the
+ * landing page and /login have their own headers rather than AppHeader's).
  */
 export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="dark"
+      defaultTheme="light"
       enableSystem
       disableTransitionOnChange
       {...props}

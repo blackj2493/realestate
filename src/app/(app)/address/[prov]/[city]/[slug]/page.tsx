@@ -31,7 +31,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
-import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, type SoldPublic } from "@/lib/sold/soldByKey";
+import { cityHrefOrMap } from "@/lib/listings/cityHubs";
+import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, hasFullListingRow, type SoldPublic } from "@/lib/sold/soldByKey";
+import { getSaleRecordByKeyGated } from "@/lib/address/saleRecord";
+import SaleRecordCard from "@/components/address/SaleRecordCard";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
 import AddressProfileView from "@/components/address/AddressProfileView";
 import AreaInsights from "@/components/address/AreaInsights";
@@ -111,17 +114,29 @@ function GatedSection({ soldKey }: { soldKey: string }) {
 
 /** Rendered ONLY for a signed-in consumer — fetches + shows VOW Listing Information. */
 async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
-  const d = await getSoldGatedByKey(soldKey);
+  // The sale record (hero + full campaign ledger) is best-effort: when the vault/ledger
+  // has nothing for this key, `record` is null and the render below degrades to the
+  // original flat "Sale history" card unchanged.
+  const [d, record] = await Promise.all([getSoldGatedByKey(soldKey), getSaleRecordByKeyGated(soldKey)]);
   if (!d) return null;
   const fmt = (n?: number) => (typeof n === "number" && n > 0 ? `$${Math.round(n).toLocaleString()}` : "—");
   const soldDate =
     typeof d.PurchaseContractDate === "number" && d.PurchaseContractDate > 0
-      ? new Date(d.PurchaseContractDate).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })
+      ? // Epoch encodes a date-only value at UTC midnight — timeZone:'UTC' keeps the
+        // rendered day server-TZ-independent (audit MEDIUM-18).
+        new Date(d.PurchaseContractDate).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
       : null;
   const isSold = !d.DealType || d.DealType === "sold" || d.DealType === "leased";
+  // With the hero card rendering the price/date story, the flat card carries only the
+  // physical facts; without it (no record), it keeps its original price/date rows.
+  const hasHero = !!record?.latestSale;
   const rows: [string, string][] = [
-    [d.DealType === "leased" ? "Leased price" : isSold ? "Sold price" : "Last list price", fmt(isSold ? d.ClosePrice : d.OriginalListPrice ?? d.ListPrice)],
-    [d.DealType === "leased" ? "Leased on" : isSold ? "Sold on" : "Removed on", soldDate ?? "—"],
+    ...(hasHero
+      ? []
+      : ([
+          [d.DealType === "leased" ? "Leased price" : isSold ? "Sold price" : "Last list price", fmt(isSold ? d.ClosePrice : d.OriginalListPrice ?? d.ListPrice)],
+          [d.DealType === "leased" ? "Leased on" : isSold ? "Sold on" : "Removed on", soldDate ?? "—"],
+        ] as [string, string][])),
     ["Beds", d.BedroomsTotal ? String(d.BedroomsTotal) : "—"],
     ["Baths", d.BathroomsTotalInteger ? String(d.BathroomsTotalInteger) : "—"],
     ["Size", d.BuildingAreaTotal ? `${Math.round(d.BuildingAreaTotal).toLocaleString()} sqft` : "—"],
@@ -133,9 +148,14 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
   const media = await getSoldMediaByKey(soldKey, d.primaryImageUrl);
   return (
     <div className="mb-6 space-y-4">
-      {media.length > 0 && <PropertyGallery images={media} />}
+      {/* Consumer-gated branch: `media` is the real gallery, so no locked teaser applies —
+          the anonymous path renders AnonLocked and never reaches here. */}
+      {media.length > 0 && <PropertyGallery images={media} listingKey={soldKey} />}
+      <SaleRecordCard record={record} />
       <section className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Sale history</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+          {hasHero ? "Property facts" : "Sale history"}
+        </h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
           {rows.map(([k, v]) => (
             <div key={k}>
@@ -243,24 +263,37 @@ export default async function AddressPage({
     if (resolved?.kind === "active") redirect(`/properties/${resolved.id}`);
     if (resolved?.kind === "sold") redirect(`/address/${prov.toLowerCase()}/${city}/${resolved.slug}`);
     if (resolved?.kind === "profile") {
+      // Server-side auth decision — the profile page is auth-aware (a signed-in
+      // consumer gets real sold-side data and no sign-up CTAs; the old render
+      // showed "Members" walls to everyone, including members).
+      const { isConsumer } = await getConsumer();
       return (
         <AddressProfileView
           profile={resolved.profile}
           provSlug={prov}
           citySlug={city}
           canonical={`${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`}
+          isConsumer={isConsumer}
         />
       );
     }
     notFound();
   }
 
+  // Owner decision (2026-07-23): the FULL sold report (/properties/{key} — sold hero,
+  // analytics, tour) ALWAYS wins while its listings row renders. This keyed /address
+  // view only serves records beyond that archive, so every arrival path (search,
+  // header bar, sitemap, old links, profile chips) redirects to the full report.
+  if (await hasFullListingRow(pub.id)) redirect(`/properties/${pub.id}`);
+
   // Server-side auth decision. The VOW fetch is gated behind this.
   const { isConsumer } = await getConsumer();
 
   const cityName = pub.city || deslugCity(city);
   const provLabel = prov.toUpperCase();
-  const cityHref = `/property/${prov.toLowerCase()}/${cityHubSlug(pub.city) || city}`;
+  // Hub link only when a real hub holds inventory; else the map terminal centered on
+  // this home (owner call 2026-07-24 — an empty hub shell is a dead-end click).
+  const { href: cityHref, isHub: cityIsHub } = await cityHrefOrMap(cityName, prov, pub.location);
   const canonical = `${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`;
   const ctx = publicContext(pub.location);
 
@@ -275,11 +308,13 @@ export default async function AddressPage({
       },
       {
         "@type": "BreadcrumbList",
+        // City row only when a real hub backs it — never point crawlers at the
+        // map-terminal fallback (a query URL).
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
           { "@type": "ListItem", position: 2, name: "Properties", item: `${SITE_URL}/properties` },
-          { "@type": "ListItem", position: 3, name: `${cityName}, ${provLabel}`, item: `${SITE_URL}${cityHref}` },
-          { "@type": "ListItem", position: 4, name: pub.address, item: canonical },
+          ...(cityIsHub ? [{ "@type": "ListItem", position: 3, name: `${cityName}, ${provLabel}`, item: `${SITE_URL}${cityHref}` }] : []),
+          { "@type": "ListItem", position: cityIsHub ? 4 : 3, name: pub.address, item: canonical },
         ],
       },
     ],
@@ -364,17 +399,23 @@ export default async function AddressPage({
           </section>
         )}
 
-        {/* Public exploration links (internal-link value + crawl path). */}
+        {/* Public exploration links (internal-link value + crawl path). Hub-derived
+            pills hide when no real hub backs this city name; the first pill then
+            points at the map terminal instead of a dead shell. */}
         <section className="mb-8 flex flex-wrap gap-2">
-          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Homes for sale in {cityName} →
+          <Link href={cityHref} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300">
+            Homes for sale {cityIsHub ? `in ${cityName}` : "near this home"} →
           </Link>
-          <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Top-rated schools in {cityName} →
-          </Link>
-          <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-300">
-            Most walkable homes in {cityName} →
-          </Link>
+          {cityIsHub && (
+            <>
+              <Link href={`/family/${cityHubSlug(pub.city) || city}/top-rated-schools`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300">
+                Top-rated schools in {cityName} →
+              </Link>
+              <Link href={`/lifestyle/${cityHubSlug(pub.city) || city}/most-walkable`} className="rounded-full border border-border bg-card/40 px-3 py-1.5 text-sm text-foreground hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300">
+                Most walkable homes in {cityName} →
+              </Link>
+            </>
+          )}
         </section>
 
         <ListingComplianceNotice />

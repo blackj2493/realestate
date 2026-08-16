@@ -22,7 +22,11 @@ const DEFAULT_GATE = { lines: 85, functions: 85, statements: 85, branches: 80 };
 
 export default defineConfig({
   resolve: {
+    // Mirrors tsconfig `paths`. '@/data' MUST come first: aliases match by prefix in
+    // order, so a leading '@' → src would swallow '@/data/x.json' into src/data/x.json
+    // and fail to resolve.
     alias: {
+      '@/data': path.resolve(__dirname, 'data'),
       '@': path.resolve(__dirname, 'src'),
     },
   },

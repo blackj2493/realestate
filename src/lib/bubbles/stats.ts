@@ -28,13 +28,23 @@ import Typesense, { Client } from "typesense";
 import type { Bubble } from "./serialize";
 import { CAP_RATE_BAND } from "@/lib/metrics/sanityBand";
 import { areaFilter } from "@/lib/dashboard/area";
+import { buildTransactionClause, SALE_PRICE_FLOOR } from "@/lib/filters/fundamentals";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
 const PROPERTIES_COLLECTION = "properties";
 
-/** Excludes rental noise that occasionally leaks into the active feed. */
-const SALES_FLOOR = "ListPrice:>=100000";
+/**
+ * Bubble stats are SALE stats (median/min/max asking price, cap rate), so leases
+ * must be excluded — a monthly rent averaged into a median sale price is garbage.
+ *
+ * Scoped by the feed's own `TransactionType` plus the sale placeholder floor,
+ * rather than by price alone. Price alone was doing two jobs badly: it inferred
+ * "this is a sale" from "this costs a lot", so a commercial lease quoted annually
+ * (there is one at ≥$100k today) leaked straight into the sale medians, while the
+ * floor's real job — dropping $1 placeholder rows — got no clearer for it.
+ */
+const SALES_FLOOR = `${buildTransactionClause("sale")} && ListPrice:>=${SALE_PRICE_FLOOR}`;
 /** Max rows pulled in the count+sample search; above this we re-query for the median. */
 const MEDIAN_SAMPLE_CAP = 250;
 

@@ -46,7 +46,7 @@ import { estimateFromMarketData, shouldEvaluatePeers } from '@/lib/avm/calculato
 import { pickSibling } from '@/lib/avm/siblingModel';
 import type { CoefficientRow } from '@/lib/avm/matrixService';
 import type { AVMInput, AVMResult, AvmTuning } from '@/lib/avm/types';
-import { COMP_WINDOW_MO, MIN_SALE_PRICE as DEFAULT_SALE_PRICE_FLOOR, MIN_PEER_NEFF, DEFAULT_TUNING, LEGACY_TUNING } from '@/lib/avm/types';
+import { COMP_WINDOW_MO, SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_SALE_PRICE_FLOOR, MIN_PEER_NEFF, DEFAULT_TUNING, LEGACY_TUNING } from '@/lib/avm/types';
 import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
@@ -544,6 +544,7 @@ async function main() {
         .select(SELECT_COLS)
         .gt('listing_key', cursor)
         .gte('purchase_contract_date', poolWindowStart)
+        .eq('transaction_type', SALE_TRANSACTION_TYPE)
         .gte('close_price', MIN_SALE_PRICE)
         .order('listing_key', { ascending: true })
         .limit(READ_PAGE);

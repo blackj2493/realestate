@@ -11,6 +11,7 @@
  */
 
 import { cn } from "@/lib/utils";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 export default function RegionSwitcher({
   regions,
@@ -39,14 +40,15 @@ export default function RegionSwitcher({
             type="button"
             onClick={() => onSelect(r)}
             aria-pressed={on}
+            title={r}
             className={cn(
-              "terminal-font border-r border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0",
+              "terminal-font max-w-[12rem] truncate border-r border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors last:border-r-0",
               on
                 ? "bg-[color:var(--dt-sig)] text-white dark:bg-cyan-500/20 dark:text-cyan-300"
                 : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             )}
           >
-            {r}
+            {formatRegionLabel(r)}
           </button>
         );
       })}

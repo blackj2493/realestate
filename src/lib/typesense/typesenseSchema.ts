@@ -69,6 +69,16 @@ export const indexedFields: IndexedField[] = [
   { name: 'LotDepth', type: 'float', facet: false, sort: true },
   { name: 'LotSqftTotal', type: 'float', facet: false, sort: true },
 
+  // Interior size as an INTERVAL, not a number. TRREB publishes a band for
+  // residential ("1100-1500") and an exact value essentially only for commercial,
+  // so filtering on a collapsed midpoint asserts a precision the feed does not
+  // have. Indexing both bounds lets the query separate a certain match
+  // (band contained in the range) from a possible one (band merely overlaps it).
+  // Range fields, so sortable but never faceted — see RAM POLICY above.
+  // -1 on both = the listing reports no size at all.
+  { name: 'sqft_min', type: 'int32', facet: false, sort: true, optional: true },
+  { name: 'sqft_max', type: 'int32', facet: false, sort: true, optional: true },
+
   // Maintenance/condo fee — range slider (filter + histogram), not a facet.
   { name: 'AssociationFee', type: 'float', facet: false, sort: true, optional: true },
 
@@ -89,6 +99,11 @@ export const indexedFields: IndexedField[] = [
   { name: 'TrueDom', type: 'int32', facet: false, sort: true },
   { name: 'TotalPriceDrop', type: 'int32', sort: true },
   { name: 'IsStale', type: 'bool', facet: true },
+  // Rental-native twins of TrueDom/TotalPriceDrop — the LEASE campaign's DOM + rent
+  // reduction, for the "For Rent" dashboard boards. 0 for sale listings. Kept
+  // SEPARATE from the sale fields so the region RPCs / analytics stay untouched.
+  { name: 'LeaseTrueDom', type: 'int32', facet: false, sort: true },
+  { name: 'LeaseTotalPriceDrop', type: 'int32', sort: true },
   { name: 'IsSold', type: 'bool', facet: true },
 
   // ─── Suite Analysis (Phase 5) — status enum is a facet, score is a slider ─
@@ -227,6 +242,12 @@ export const typesenseSchema = {
     { name: 'LotWidth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotDepth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotSqftTotal', type: 'float' as const, facet: false, sort: true },
+    // Interior size as an INTERVAL — see the note in `indexedFields` above.
+    // sqft_min/sqft_max carry the band's real bounds (or an exact value collapsed
+    // to a one-wide interval), so "definitely ≥ 1,800" and "might be ≥ 1,800" are
+    // separable. optional: added 2026-07-30, backfilled in-place on existing docs.
+    { name: 'sqft_min', type: 'int32' as const, facet: false, sort: true, optional: true },
+    { name: 'sqft_max', type: 'int32' as const, facet: false, sort: true, optional: true },
     // Maintenance/condo fee — indexed (filter + sort + slider histogram). NOT a
     // facet: it's a numeric range, so per-value facet maps would waste RAM (RAM
     // POLICY above). optional: the field predates indexing on existing docs.
@@ -254,6 +275,9 @@ export const typesenseSchema = {
     { name: 'TrueDom', type: 'int32' as const, facet: false, sort: true },
     { name: 'TotalPriceDrop', type: 'int32' as const, sort: true },
     { name: 'IsStale', type: 'bool' as const, facet: true },
+    // Rental-native twins (LEASE campaign DOM + rent reduction); 0 for sale listings.
+    { name: 'LeaseTrueDom', type: 'int32' as const, facet: false, sort: true },
+    { name: 'LeaseTotalPriceDrop', type: 'int32' as const, sort: true },
 
     // ─── Persona 2: Cashflow Investor — range sliders ──────────────────────
     { name: 'cap_rate_est', type: 'float' as const, facet: false, sort: true },
@@ -308,7 +332,9 @@ export const typesenseSchema = {
     { name: 'isDistressed', type: 'bool' as const, facet: true },
     { name: 'hasSecondarySuitePotential', type: 'bool' as const, facet: true },
     { name: 'calculatedDOM', type: 'int32' as const, facet: false, sort: true, optional: true },
-    // BuildingAreaTotal and price_discovery_flag are deliberately stored-only (display cargo).
+    // BuildingAreaTotal, LivingAreaRange and price_discovery_flag stay stored-only
+    // (display cargo). Size FILTERING goes through sqft_min/sqft_max above — the raw
+    // band string and the ~residential-empty exact value are for rendering only.
 
     // ─── Unindexed Cargo ────────────────────────────────────────────────────
     { name: 'PublicRemarks', type: 'string' as const, index: false, facet: false },
@@ -374,7 +400,12 @@ export interface TypesensePropertyDocument {
   LotWidth: number;
   LotDepth: number;
   LotSqftTotal: number;
-  
+
+  /** Interior size bounds, half-open [sqft_min, sqft_max). Both -1 when the
+   *  listing reports no size. See @/lib/listings/livingAreaBands. */
+  sqft_min?: number;
+  sqft_max?: number;
+
   // Status & Age
   Status: string | null;
   ApproximateAge: string | null;
@@ -460,6 +491,10 @@ export interface TypesensePropertyDocument {
   TotalPriceDrop: number;
   /** True if TrueDom > 60 days - stale inventory indicator (STALE_THRESHOLD_DAYS) */
   IsStale: boolean;
+  /** LEASE-track True DOM — rental days-on-market (0 for sale listings). */
+  LeaseTrueDom: number;
+  /** LEASE-track rent reduction $ (0 for sale listings). */
+  LeaseTotalPriceDrop: number;
   
   // ─── ADU/Suite Potential (Phase 2) ──────────────────────────────────────
   // Distress Analysis

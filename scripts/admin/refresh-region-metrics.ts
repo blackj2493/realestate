@@ -65,6 +65,13 @@ async function main() {
 
   const rows: MetricsRow[] = [];
   const failures: string[] = [];
+  // computeAnalyticsInitial swallows per-slice rejections into nulls (Promise.allSettled),
+  // so a region can print "ok" while a slice silently vanished — exactly how Ottawa's
+  // outcomes went null on 2026-07-26 with "failures: 0". Name the null slices in the log.
+  const SLICES = [
+    'trend', 'stats', 'dom', 'cuts', 'dynamics', 'rental',
+    'avm', 'inventory', 'seasonality', 'outcomes', 'ledger',
+  ] as const;
 
   for (const region of MARKETS) {
     const t = Date.now();
@@ -75,7 +82,10 @@ async function main() {
         console.warn(`   ⚠️  ${region} produced no metrics — skipped`);
       } else {
         rows.push({ region, payload, computed_at: new Date().toISOString() });
-        console.log(`   ${region.padEnd(16)} ok  (${((Date.now() - t) / 1000).toFixed(1)}s)`);
+        const nullSlices = SLICES.filter((s) => (payload as unknown as Record<string, unknown>)[s] == null);
+        const note = nullSlices.length ? `  ⚠️ null slices: ${nullSlices.join(', ')}` : '';
+        console.log(`   ${region.padEnd(16)} ok  (${((Date.now() - t) / 1000).toFixed(1)}s)${note}`);
+        if (nullSlices.length) failures.push(`${region}: null slices (${nullSlices.join(', ')})`);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

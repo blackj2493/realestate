@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import {
   getConfig,
   saveConfig,
+  normalizeConfig,
   getProfile,
   stampVisit,
   DEFAULT_ACTIVITY_LENS,
@@ -14,6 +14,7 @@ import {
   type DashboardConfig,
   type MarketActivityLens,
 } from "@/lib/dashboard/config";
+import { fetchServerConfig, pushConfig } from "@/lib/dashboard/configSync";
 import { BOARDS } from "@/lib/dashboard/boards";
 import { orderBoardsForPersona } from "@/lib/dashboard/personaDashboard";
 import MissionControlHeader from "@/components/dashboard/MissionControlHeader";
@@ -23,6 +24,7 @@ import MarketActivityControls from "@/components/dashboard/MarketActivityControl
 import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
 import RecentlyViewed from "@/components/dashboard/RecentlyViewed";
 import MarketPulse from "@/components/dashboard/MarketPulse";
+import NeighbourhoodLeaderboard from "@/components/dashboard/NeighbourhoodLeaderboard";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles";
 import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
@@ -33,23 +35,12 @@ import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { ModuleHead } from "@/components/daylight/primitives";
 import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
-import { regionArea } from "@/lib/dashboard/area";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { regionArea, defaultAlertScopeForRegion } from "@/lib/dashboard/area";
+import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-// deck.gl + mapbox touch the DOM at module load → client-only, no SSR.
-const DashboardHeatTile = dynamic(
-  () => import("@/components/dashboard/DashboardHeatTile"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-64 items-center justify-center border border-border bg-background">
-        <p className="terminal-font text-xs text-muted-foreground">Loading map…</p>
-      </div>
-    ),
-  }
-);
 
 export default function DashboardClient() {
   const [ready, setReady] = useState(false);
@@ -74,8 +65,9 @@ export default function DashboardClient() {
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
 
-  // The server page (page.tsx) already enforced an authenticated session, so we
-  // just hydrate the localStorage-backed config/profile and enter.
+  // Hydrate localStorage-first (instant paint), then reconcile with the server
+  // copy (dashboard_prefs, migration 096) so the config follows the ACCOUNT, not
+  // the browser. Server wins on load; edits are last-writer-wins via pushConfig.
   useEffect(() => {
     const cfg = getConfig();
     setConfig(cfg);
@@ -84,28 +76,99 @@ export default function DashboardClient() {
     setSinceVisit(previous ?? Date.now() - SEVEN_DAYS_MS);
     setPickerOpen(cfg.regions.length === 0); // first run → open the live setup card
     setReady(true);
+
+    let cancelled = false;
+    (async () => {
+      const server = await fetchServerConfig();
+      if (cancelled || server.unavailable) return; // signed-out/offline → local-only
+      if (server.config) {
+        const merged = normalizeConfig(server.config);
+        // The action-feed cutoff should honour visits from OTHER devices too.
+        const serverPrev = merged.lastVisitAt;
+        if (serverPrev !== null && (previous === null || serverPrev > previous)) {
+          setSinceVisit(serverPrev);
+        }
+        merged.lastVisitAt = Date.now(); // re-stamp this visit on the merged copy
+        setConfig(merged);
+        saveConfig(merged);
+        pushConfig(merged);
+        setPickerOpen(merged.regions.length === 0);
+      } else {
+        // Signed in but never synced — seed the server from this device.
+        pushConfig({ ...cfg, lastVisitAt: Date.now() });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const update = (c: DashboardConfig) => {
     setConfig(c);
     saveConfig(c);
+    pushConfig(c);
   };
 
   // Auto-apply: add/remove a single region live so its dashboard sections appear/disappear
   // instantly. Functional updates keep rapid clicks from racing on a stale `config`.
-  const addRegion = (area: string) =>
+  const addRegion = (area: string) => {
+    let added = false;
     setConfig((prev) => {
       if (!area || prev.regions.includes(area)) return prev;
+      added = true;
       const next = { ...prev, regions: [...prev.regions, area] };
       saveConfig(next);
+      pushConfig(next);
       return next;
     });
-  const removeRegion = (area: string) =>
+    // Tiered default-ON alerts (§176): materialize the area's new-listing alert as a
+    // city bubble the nightly worker can deliver against, so "add an area" also turns on
+    // its email. Whole cities default to 'filtered' (the current dashboard lens) to avoid
+    // a city-wide firehose; communities/neighbourhoods default to 'all'. Best-effort —
+    // never blocks the (local, instant) region add; the section bell is the manual fallback.
+    if (added) void ensureAreaAlert(area);
+  };
+  const removeRegion = (area: string) => {
     setConfig((prev) => {
       const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
       saveConfig(next);
+      pushConfig(next);
       return next;
     });
+    // Keep alerts from outliving the visible area: removing a region also removes its
+    // auto-created city alert (its bell lives on the section that just disappeared).
+    // Drawn/school bubbles are unaffected. Re-adding the area re-creates the alert.
+    void removeAreaAlert(area);
+  };
+
+  // Find this region's materialized city-alert bubble in the store, if any.
+  const findCityAlert = (area: string) =>
+    Object.values(useBubblesStore.getState().items).find(
+      (b) => b.area_type === "city" && b.source.kind === "city" && b.source.city === area
+    );
+
+  const ensureAreaAlert = async (area: string) => {
+    await useBubblesStore.getState().init(); // idempotent; sets signedIn + loads rows
+    const store = useBubblesStore.getState();
+    if (!store.signedIn || findCityAlert(area)) return;
+    const scope = defaultAlertScopeForRegion(area);
+    await store.create({
+      name: area,
+      area_type: "city",
+      polygon: [],
+      source: { kind: "city", city: area },
+      filters: scope === "filtered" ? { lens: config.marketActivity } : null,
+      alert_scope: scope,
+    });
+  };
+
+  const removeAreaAlert = async (area: string) => {
+    await useBubblesStore.getState().init();
+    const store = useBubblesStore.getState();
+    if (!store.signedIn) return;
+    const existing = findCityAlert(area);
+    if (existing) await store.remove(existing.id);
+  };
 
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
@@ -113,10 +176,15 @@ export default function DashboardClient() {
   if (!ready) return <div className="min-h-app bg-background" aria-busy="true" />;
 
   // Persona reorders which boards lead (non-destructive — config.boards stays the
-  // user's enable/disable set).
+  // user's enable/disable set). The lens then hides boards that don't apply to the
+  // current transaction mode — the sale-only investor boards (cap rate, capital burn,
+  // suite) drop out in "For Rent" mode, where the rental-native boards adapt in place.
+  // This one array feeds both the built-in city sections and the saved bubble sections.
+  const lensScope = config.marketActivity.transactionType;
   const enabledBoards = orderBoardsForPersona(config.persona, config.boards)
     .map((id) => BOARDS[id])
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((b) => b.scopes.includes(lensScope));
   const hasRegions = config.regions.length > 0;
   // Effective focus city for the intelligence tiles: the user's pick if it's still
   // a configured region, else the first region.
@@ -184,6 +252,21 @@ export default function DashboardClient() {
             minGarage={config.marketActivity.minGarage}
             minFrontage={config.marketActivity.minFrontage}
             basement={config.marketActivity.basement}
+            // Clear only the property filters; keep the chosen time window and sale/lease.
+            onClearFilters={() =>
+              updateLens({
+                ...config.marketActivity,
+                propertyTypes: [],
+                minBeds: 0,
+                bedsExact: false,
+                minBaths: 0,
+                bathsExact: false,
+                minGarage: 0,
+                garageExact: false,
+                basement: "any",
+                minFrontage: 0,
+              })
+            }
           />
         )}
 
@@ -209,7 +292,7 @@ export default function DashboardClient() {
               // The bell mirrors the per-bubble alert toggle: city sections are
               // localStorage-only, so it materializes an area_type 'city' bubble row
               // the nightly worker can deliver against (see CityAlertBell).
-              <RegionDrilldown key={loc} title={loc} actions={<CityAlertBell city={loc} />}>
+              <RegionDrilldown key={loc} title={formatRegionLabel(loc)} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (
@@ -232,10 +315,10 @@ export default function DashboardClient() {
             );
           })}
 
-        {/* Region intelligence: neighbourhood heat + price trend. A shared city
+        {/* Region intelligence: neighbourhood leaderboard + price trend. A shared city
             switcher (rendered inside each tile when >1 region) keeps them in sync. */}
         {hasRegions && (
-          <DashboardHeatTile
+          <NeighbourhoodLeaderboard
             regions={config.regions}
             selected={intelActive}
             onSelect={setIntelRegion}

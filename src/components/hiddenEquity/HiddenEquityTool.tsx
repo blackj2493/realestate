@@ -120,17 +120,17 @@ export default function HiddenEquityTool() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* LEFT — form + controls */}
-      <Card className="p-6 bg-gray-900/50 border-gray-800">
+      <Card className="p-6">
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-mono text-gray-100 mb-1">HIDDEN EQUITY ANALYSIS</h2>
-            <p className="text-xs text-gray-500">
+            <h2 className="text-lg font-mono text-foreground mb-1">HIDDEN EQUITY ANALYSIS</h2>
+            <p className="text-xs text-muted-foreground">
               Model your home&apos;s untapped value based on neighbourhood comps
             </p>
           </div>
 
           {treeLoading ? (
-            <p className="text-sm text-gray-500">Loading neighbourhoods…</p>
+            <p className="text-sm text-muted-foreground">Loading neighbourhoods…</p>
           ) : treeError ? (
             <p className="text-sm text-red-700 dark:text-red-400">{treeError}</p>
           ) : (
@@ -154,17 +154,17 @@ export default function HiddenEquityTool() {
       </Card>
 
       {/* RIGHT — report or placeholder */}
-      <Card className="p-6 bg-gray-900/50 border-gray-800">
+      <Card className="p-6">
         <div ref={resultRef} className="space-y-6">
           <div>
-            <h2 className="text-lg font-mono text-gray-100 mb-1">EQUITY REPORT</h2>
-            <p className="text-xs text-gray-500">Estimated value + renovation uplift potential</p>
+            <h2 className="text-lg font-mono text-foreground mb-1">EQUITY REPORT</h2>
+            <p className="text-xs text-muted-foreground">Estimated value + renovation uplift potential</p>
           </div>
 
           {result ? (
             <HiddenEquityReport estimate={result.estimate} report={result.report} />
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Pick your neighbourhood and home details, then reveal your hidden equity.
             </p>
           )}

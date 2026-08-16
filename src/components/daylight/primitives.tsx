@@ -18,21 +18,23 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
 /* ── ModuleHead ────────────────────────────────────────────────────────────
    The mono "channel label" that heads every module: teal channel ticks (light)
-   / section glyph (dark) · title · zero-padded count · right-aligned meta, with
-   a tick-rule beneath in light or a hairline in dark. */
+   / section glyph (dark) · title · right-aligned meta, with a tick-rule beneath
+   in light or a hairline in dark.
+
+   No item count. There used to be a zero-padded `count` here rendered as `[03]`,
+   which reads as an ID or channel number rather than a quantity — and at every
+   call site the number was already on screen anyway (the watchlist's own SAVED
+   tile, the rows you can see, the "show N more" button). Don't add it back; if a
+   module needs to state a quantity, label it in words where it belongs. */
 export function ModuleHead({
   title,
-  count,
   right,
   icon,
   className,
 }: {
   title: ReactNode;
-  count?: number;
   right?: ReactNode;
   /** Section glyph shown in DARK only (light uses the teal channel ticks). */
   icon?: ReactNode;
@@ -54,9 +56,6 @@ export function ModuleHead({
         <h2 className="terminal-font text-[13px] font-bold uppercase tracking-[0.14em] text-foreground">
           {title}
         </h2>
-        {count != null && (
-          <span className="terminal-font text-[11px] text-muted-foreground">[{pad2(count)}]</span>
-        )}
         {right && (
           <span className="terminal-font ml-auto text-[10.5px] uppercase tracking-[0.04em] text-muted-foreground">
             {right}
@@ -182,7 +181,9 @@ const STATUS_TONE: Record<StatusTone, { bg: string; dark: string }> = {
   new: { bg: "bg-[color:var(--dt-up)]", dark: "dark:bg-cyan-400/10 dark:text-cyan-400 dark:border-cyan-400/30" },
   off: { bg: "bg-[color:var(--dt-warn)]", dark: "dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/30" },
   sold: { bg: "bg-[color:var(--dt-down)]", dark: "dark:bg-rose-400/10 dark:text-rose-400 dark:border-rose-400/30" },
-  stale: { bg: "bg-[color:var(--dt-down)]", dark: "dark:bg-rose-400/10 dark:text-rose-400 dark:border-rose-400/30" },
+  // NOT --dt-down/rose — that is SOLD. A stale listing is still for sale, so it
+  // takes the one desaturated tone in the set and never competes with an outcome.
+  stale: { bg: "bg-[color:var(--dt-stale)]", dark: "dark:bg-slate-400/10 dark:text-slate-300 dark:border-slate-400/40" },
   leased: { bg: "bg-[color:var(--dt-violet)]", dark: "dark:bg-violet-400/10 dark:text-violet-400 dark:border-violet-400/30" },
   drop: { bg: "bg-[color:var(--dt-up)]", dark: "dark:bg-emerald-400/10 dark:text-emerald-400 dark:border-emerald-400/30" },
 };

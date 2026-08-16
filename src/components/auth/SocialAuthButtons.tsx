@@ -106,7 +106,7 @@ export default function SocialAuthButtons({
         </button>
       )}
 
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <p className="text-xs text-rose-700 dark:text-rose-400">{error}</p>}
 
       {/* Divider between one-click options and the email-code fallback */}
       <div className="flex items-center gap-3 pt-1">

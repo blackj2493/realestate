@@ -16,6 +16,8 @@
 
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import SignInLink from "@/components/auth/SignInLink";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { MetricContext } from "@/lib/compare/compareMetricsConfig";
 import { formatPrice } from "@/lib/utils";
 
@@ -26,7 +28,6 @@ const C = {
   grid: "#1e293b",
   divider: "#334155",
   axis: "#64748b",
-  label: "#e2e8f0",
   sub: "#94a3b8",
 };
 
@@ -59,6 +60,9 @@ export default function CompareValuePlot({
 }: {
   contexts: MetricContext[];
 }) {
+  // Before the gated / too-few-points early returns below: hooks must run in the
+  // same order on every render. Only consumed by the geometry further down.
+  const isMobile = useIsMobile(767);
   const isAuthed = contexts[0]?.isAuthed ?? false;
 
   const points: PlotPoint[] = contexts
@@ -87,12 +91,14 @@ export default function CompareValuePlot({
           It maps each home against our comp value — what recent comparable sales support — a
           VOW-derived figure we only show to signed-in members. The table works either way.
         </p>
-        <Link
-          href="/login"
-          className="inline-flex min-h-[40px] items-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/30"
+        <SignInLink
+          // The shortlist lives entirely in ?ids=, which usePathname() drops — without
+          // this the user signs in and returns to an empty comparison.
+          next={`/properties/compare?ids=${contexts.map((c) => c.listing.id).join(",")}`}
+          className="inline-flex min-h-[40px] items-center rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-800 hover:bg-cyan-500/30 dark:text-cyan-100"
         >
           Sign in — free
-        </Link>
+        </SignInLink>
       </Panel>
     );
   }
@@ -110,8 +116,24 @@ export default function CompareValuePlot({
   }
 
   // ── geometry ───────────────────────────────────────────────────────────────
-  const W = 720, H = 460;
-  const PAD = { l: 56, r: 26, t: 40, b: 54 };
+  //
+  // The viewBox is the whole story on phones. An SVG with viewBox="0 0 720 460"
+  // and w-full scales UNIFORMLY to its container, so in a ~350px-wide phone card
+  // every length is multiplied by 350/720 = 0.486 — including font sizes. The
+  // 11.5px quadrant titles landed at 5.6px and the axis captions at 5.3px, which
+  // is the "not visible" report: the chart was not faint, it was rendered at
+  // half size. The same scaling capped the plot at 224px tall on a ~940px screen,
+  // hence "too small compared to the screen".
+  //
+  // Fix: a phone-sized viewBox instead of a shrunken desktop one. At W=360 the
+  // scale is ~0.97, so 11.5px type renders at ~11px, and the portrait H=440 uses
+  // the vertical space a phone actually has. Desktop keeps its exact numbers.
+  // (isMobile is read at the top of the component — hooks can't run after the
+  // early returns above.)
+  const W = isMobile ? 360 : 720;
+  const H = isMobile ? 440 : 460;
+  // Left pad holds the rotated CAP RATE caption; bottom holds the price caption.
+  const PAD = isMobile ? { l: 44, r: 16, t: 34, b: 44 } : { l: 56, r: 26, t: 40, b: 54 };
   const X0 = PAD.l, X1 = W - PAD.r, Y0 = H - PAD.b, Y1 = PAD.t;
 
   const discounts = points.map((p) => p.discount);
@@ -131,7 +153,9 @@ export default function CompareValuePlot({
     d >= 0 ? `${d.toFixed(0)}% under comps` : `${Math.abs(d).toFixed(0)}% over comps`;
 
   return (
-    <div className="rounded-lg border border-border bg-card/40 p-4">
+    // p-2 on phones: the card's own 16px gutters were costing the plot ~32px of
+    // width, which the uniform viewBox scaling then charged against every label.
+    <div className="rounded-lg border border-border bg-card/40 p-2 sm:p-4">
       <p className="mb-3 text-center text-xs text-muted-foreground">
         Each dot is one shortlisted home. <b className="text-foreground">Up = higher yield, right = better value</b>{" "}
         (listed under comp value). The top-right corner is the sweet spot.
@@ -149,26 +173,37 @@ export default function CompareValuePlot({
           {/* frame */}
           <rect x={X0} y={Y1} width={X1 - X0} height={Y0 - Y1} fill="none" stroke={C.grid} />
 
-          {/* corner labels */}
-          <QLabel x={X1 - 8} y={Y1 + 16} anchor="end" color={C.best} title="BEST VALUE" sub="cheaper + higher yield" />
-          <QLabel x={X0 + 8} y={Y1 + 16} anchor="start" color={C.sub} title="PREMIUM" sub="pricey, still yields" />
-          <QLabel x={X1 - 8} y={Y0 - 20} anchor="end" color={C.sub} title="CHEAP, LOW YIELD" sub="price is right, return isn’t" />
-          <QLabel x={X0 + 8} y={Y0 - 20} anchor="start" color={C.over} title="OVERPRICED" sub="over comp value + low yield" />
+          {/* corner labels — the sub-lines are dropped on phones: at 300px of plot
+              width the opposing pairs ("over comp value + low yield" vs "price is
+              right, return isn’t") would collide mid-axis. The titles alone still
+              orient the reader, and the sentence above the chart carries the rest. */}
+          <QLabel x={X1 - 8} y={Y1 + 16} anchor="end" color={C.best} title="BEST VALUE" sub={isMobile ? undefined : "cheaper + higher yield"} />
+          <QLabel x={X0 + 8} y={Y1 + 16} anchor="start" color={C.sub} title="PREMIUM" sub={isMobile ? undefined : "pricey, still yields"} />
+          <QLabel x={X1 - 8} y={Y0 - 20} anchor="end" color={C.sub} title={isMobile ? "LOW YIELD" : "CHEAP, LOW YIELD"} sub={isMobile ? undefined : "price is right, return isn’t"} />
+          <QLabel x={X0 + 8} y={Y0 - 20} anchor="start" color={C.over} title="OVERPRICED" sub={isMobile ? undefined : "over comp value + low yield"} />
 
           {/* axis captions */}
-          <text x={(X0 + X1) / 2} y={H - 16} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.axis}>
-            ◄ over comp value &nbsp;&nbsp; PRICE vs COMPS &nbsp;&nbsp; under comp value ►
+          <text x={(X0 + X1) / 2} y={H - (isMobile ? 14 : 16)} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.axis}>
+            {isMobile ? (
+              <>◄ over comps &nbsp; PRICE vs COMPS &nbsp; under ►</>
+            ) : (
+              <>◄ over comp value &nbsp;&nbsp; PRICE vs COMPS &nbsp;&nbsp; under comp value ►</>
+            )}
           </text>
           <text
-            x={16}
+            x={isMobile ? 13 : 16}
             y={(Y0 + Y1) / 2}
             textAnchor="middle"
             fontSize={11}
             fontWeight={600}
             fill={C.axis}
-            transform={`rotate(-90 16 ${(Y0 + Y1) / 2})`}
+            transform={`rotate(-90 ${isMobile ? 13 : 16} ${(Y0 + Y1) / 2})`}
           >
-            ▼ lower yield &nbsp;&nbsp; CAP RATE &nbsp;&nbsp; higher yield ▲
+            {isMobile ? (
+              <>▼ lower &nbsp; CAP RATE &nbsp; higher ▲</>
+            ) : (
+              <>▼ lower yield &nbsp;&nbsp; CAP RATE &nbsp;&nbsp; higher yield ▲</>
+            )}
           </text>
 
           {/* dots */}
@@ -178,7 +213,18 @@ export default function CompareValuePlot({
             return (
               <g key={p.n}>
                 <circle cx={cx} cy={cy} r={14} fill={col} fillOpacity={0.22} stroke={col} strokeWidth={2} />
-                <text x={cx} y={cy + 4} textAnchor="middle" fontSize={12} fontWeight={700} fill={C.label}>
+                {/* Theme-aware: the dot number must contrast on the light-tinted circle in BOTH
+                    themes. A hardcoded light fill vanished in light mode — currentColor +
+                    text-foreground makes it dark-on-light / light-on-dark. */}
+                <text
+                  x={cx}
+                  y={cy + 4}
+                  textAnchor="middle"
+                  fontSize={12}
+                  fontWeight={700}
+                  className="text-foreground"
+                  fill="currentColor"
+                >
                   {p.n}
                 </text>
               </g>
@@ -199,7 +245,7 @@ export default function CompareValuePlot({
                   {p.n}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/properties/${p.ctx.listing.id}`} className="block truncate text-xs font-medium text-foreground hover:text-cyan-300">
+                  <Link href={`/properties/${p.ctx.listing.id}`} className="block truncate text-xs font-medium text-foreground hover:text-cyan-700 dark:hover:text-cyan-300">
                     {p.addr}
                   </Link>
                   <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
@@ -222,15 +268,17 @@ export default function CompareValuePlot({
   );
 }
 
-function QLabel({ x, y, anchor, color, title, sub }: { x: number; y: number; anchor: "start" | "end"; color: string; title: string; sub: string }) {
+function QLabel({ x, y, anchor, color, title, sub }: { x: number; y: number; anchor: "start" | "end"; color: string; title: string; sub?: string }) {
   return (
     <>
       <text x={x} y={y} textAnchor={anchor} fontSize={11.5} fontWeight={800} letterSpacing="0.04em" fill={color}>
         {title}
       </text>
-      <text x={x} y={y + 14} textAnchor={anchor} fontSize={10} fill={C.sub}>
-        {sub}
-      </text>
+      {sub && (
+        <text x={x} y={y + 14} textAnchor={anchor} fontSize={10} fill={C.sub}>
+          {sub}
+        </text>
+      )}
     </>
   );
 }

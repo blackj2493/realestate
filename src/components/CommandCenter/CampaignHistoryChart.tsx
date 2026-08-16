@@ -43,8 +43,19 @@ function monthLabel(t: number): string {
   return d.getMonth() === 0 ? `${m}'${String(d.getFullYear()).slice(2)}` : m;
 }
 function shortDate(t: number): string {
+  // end_date is date-only (UTC midnight) — without timeZone:'UTC' a Jul-1 close
+  // labels as Jun for Ontario viewers (MEDIUM-18 class).
   const d = new Date(t);
-  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }).replace(" ", "'");
+  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }).replace(" ", "'");
+}
+/** "✓ Sold Jul'26" — terminal stamps carry the campaign END month when it differs
+ *  from the price event's month (the point's own date is the listed/changed date). */
+function statusStamp(p: PricePathPoint): string | null {
+  if (!p.endStatus) return null;
+  const label = STATUS_LABEL[p.endStatus];
+  return p.endDateMs != null && shortDate(p.endDateMs) !== shortDate(p.dateMs)
+    ? `${label} ${shortDate(p.endDateMs)}`
+    : label;
 }
 const STATUS_LABEL: Record<CampaignStatus, string> = {
   Active: "● Active", Terminated: "✕ Term", Expired: "Exp", Suspended: "Susp", Sold: "✓ Sold",
@@ -117,7 +128,7 @@ function PricePathLane({ path }: { path: PricePathPoint[] }) {
             <text x={x(i)} y={122} style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={10.5} textAnchor="middle" fontFamily={MONO}>{shortDate(p.dateMs)}</text>
             {p.endStatus && (
               <text x={x(i)} y={136} fill={statusColor(p.endStatus)} fontSize={9.5} textAnchor="middle" fontFamily={MONO}>
-                {STATUS_LABEL[p.endStatus]}
+                {statusStamp(p)}
               </text>
             )}
           </g>
@@ -250,7 +261,7 @@ function MobilePricePathLane({ path }: { path: PricePathPoint[] }) {
                 <text x={x(i)} y={y(p.price) - 11} fill={fill} fontSize={12.5} fontWeight={700} textAnchor={anchor} fontFamily={MONO}>{compactPrice(p.price)}</text>
                 <text x={x(i)} y={132} style={{ fill: "hsl(var(--muted-foreground))" }} fontSize={11.5} textAnchor={anchor} fontFamily={MONO}>{shortDate(p.dateMs)}</text>
                 {p.endStatus && (
-                  <text x={x(i)} y={148} fill={statusColor(p.endStatus)} fontSize={10.5} textAnchor={anchor} fontFamily={MONO}>{STATUS_LABEL[p.endStatus]}</text>
+                  <text x={x(i)} y={148} fill={statusColor(p.endStatus)} fontSize={10.5} textAnchor={anchor} fontFamily={MONO}>{statusStamp(p)}</text>
                 )}
               </>
             )}

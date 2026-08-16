@@ -6,9 +6,16 @@
    Design tokens — shadcn/ui theme variables.
    tailwind.config.ts maps colors to hsl(var(--token)); without these the
    ui/ primitives (Button, Card, Slider, Input, Select) render colorless.
-   LIGHT palette on :root (default); DARK palette under `.dark`, applied by
-   next-themes toggling the `dark` class on <html> (defaultTheme:"dark", so the
-   app is UNCHANGED until a user opts into light). See LIGHT_DARK_THEME_PLAN.
+   LIGHT palette on :root (the app default); DARK palette under `.dark`, applied by
+   next-themes toggling the `dark` class on <html>. defaultTheme is "light", so a
+   first-time visitor lands light and dark is a stored opt-in via the toggle.
+
+   A bare `dark` class ALSO pins a subtree dark regardless of the app theme. Deliberate
+   islands: the LANDING PAGE `/` (the brand's first impression — /apply and /login past
+   it are light), /commercial, the AppHeader brand band, the terminal's map control deck,
+   and the root-mounted discovery floaters. An island is a decision, not a surface the
+   migration missed — anything dark WITHOUT this class is a bug.
+   See LIGHT_DARK_THEME_PLAN.
    ============================================================================ */
 @layer base {
   :root {
@@ -51,6 +58,11 @@
     --dt-warn: #b3730f; /* amber — off-market / warm market */
     --dt-cold: #3061c7; /* blue — relisted / cold market */
     --dt-violet: #7c4dc4; /* leased */
+    /* slate — "still live, just sitting". Deliberately the only DESATURATED status
+       hue: stale is a condition of an active listing, not a status change, so it
+       must not read as an event. Every saturated hue above is already spoken for,
+       and reusing --dt-down made STALE indistinguishable from SOLD. */
+    --dt-stale: #5b6b7c;
     --dt-gold: #c47d10; /* persona lens */
     --dt-gold-line: #a86a0c;
     --dt-sh: 0 1px 1px rgba(10, 24, 40, 0.03), 0 5px 14px -6px rgba(10, 24, 40, 0.12); /* instrument-panel lift */
@@ -71,6 +83,16 @@
     --pp-text-primary-light: #0a1828;
     --pp-text-secondary-light: #4a6378;
     --pp-text-tertiary-light: #6b7e92;
+
+    /* Theme-following logo tokens — consumed by <Logo theme="auto">, for the
+       wordmark on surfaces that actually FLIP with the theme (e.g. the MobileNav
+       drawer, which is bg-background). The fixed dark/light theme props stay for
+       surfaces that are permanently one shade (the .dt-header brand band, the
+       hero, legal/share pages). These are the ON-LIGHT values; `.dark` below
+       flips them to the on-dark set. */
+    --pp-logo-primary: #0a1828;
+    --pp-logo-secondary: #4a6378;
+    --pp-logo-tertiary: #6b7e92;
 
     /* ------------------------------------------------------------------
        Design-system tokens (additive — see PUREPROPERTY_DESIGN_SPEC).
@@ -154,6 +176,12 @@
     --input: 215 28% 17%; /* slate-800 */
     --ring: 189 94% 43%; /* cyan-500 */
     color-scheme: dark; /* native scrollbars/controls dark to match the UI */
+
+    /* On-dark wordmark for <Logo theme="auto">. Also applies inside the
+       `.dt-header dark` brand band, which carries the class explicitly. */
+    --pp-logo-primary: #ffffff;
+    --pp-logo-secondary: #8fa4b8;
+    --pp-logo-tertiary: #6b7e92;
   }
 
   /* Light-mode elevation — dark separates surfaces via contrast; light needs real
@@ -179,6 +207,23 @@
 
 /* Gate: decorative markup wrapped in .dt-light shows in light, vanishes in dark. */
 .dark .dt-light { display: none !important; }
+
+/* Listing-page card lift (LIGHT MODE ONLY). The content sections use bg-card/NN — white at
+   a low opacity, which was tuned for dark (slate-900 over slate-950 reads as a subtle raised
+   panel). On the daylight grey-slate ground (--background #e9edf4) that same translucency
+   washes out to a flat grey tint, so sections blur into one another (esp. the description vs
+   the data sheet vs the comps). Inside `.dt-lift` (the listing content wrapper) promote those
+   washed cards to a SOLID white card in light mode only, so the intended "white card = raised"
+   depth returns. Dark mode is untouched (rule gated to :root:not(.dark)); the hero gallery has
+   its own styles and carries no bg-card/NN, so over-photo chrome is unaffected. Higher
+   specificity than the Tailwind utility, so no !important needed. */
+:root:not(.dark) .dt-lift .bg-card\/20,
+:root:not(.dark) .dt-lift .bg-card\/30,
+:root:not(.dark) .dt-lift .bg-card\/40,
+:root:not(.dark) .dt-lift .bg-card\/50,
+:root:not(.dark) .dt-lift .bg-card\/60 {
+  background-color: hsl(var(--card));
+}
 
 /* Device 1 — tick-rule: a measured graticule strip under each module heading. */
 .dt-rule {
@@ -436,10 +481,18 @@ table,
 
 /* Grid line background pattern */
 .grid-pattern {
-  background-image: 
+  background-image:
     linear-gradient(rgba(30, 41, 59, 0.3) 1px, transparent 1px),
     linear-gradient(90deg, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* The grid lines are slate-800 — near-invisible texture on the dark ground they
+   were drawn for, but a hard graph-paper overlay on the light one. Drop them in
+   light mode everywhere the class is used (HeroBackground on / and /apply, and
+   the auth page's CSS-only background). */
+:root:not(.dark) .grid-pattern {
+  background-image: none;
 }
 
 /* Blinking cursor animation */
@@ -584,4 +637,66 @@ table,
 .px-safe {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+/* ============================================================================
+   Home Pulse (address-profile) animations — see components/address/*.
+   - pp-tape: seamless activity-ticker marquee (content is duplicated once, so
+     -50% loops cleanly). Pauses on hover; disabled under reduced motion.
+   - pp-arc-in: pulse-ring draw-in. The keyframe declares only `from` (the full
+     circumference), so each ring animates to its own inline stroke-dashoffset.
+   - pp-grow-y: histogram bars growing from the baseline.
+   ============================================================================ */
+@keyframes pp-tape {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.pp-tape {
+  animation: pp-tape 36s linear infinite;
+}
+.pp-tape:hover {
+  animation-play-state: paused;
+}
+@keyframes pp-arc-in {
+  from {
+    stroke-dashoffset: 327;
+  }
+}
+.pp-arc {
+  animation: pp-arc-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s backwards;
+}
+@keyframes pp-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+.pp-grow {
+  transform-origin: bottom;
+  animation: pp-grow-y 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 0.25s backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-tape,
+  .pp-arc,
+  .pp-grow {
+    animation: none;
+  }
+}
+
+/* PulseLoader (components/ui/PulseLoader) — a 40-unit dash sweeping through the
+   pathLength-100 pulse line (period 140 → seamless loop). Reduced motion shows
+   the full static line instead. */
+@keyframes pp-ekg {
+  to {
+    stroke-dashoffset: -140;
+  }
+}
+.pp-ekg {
+  stroke-dasharray: 40 100;
+  animation: pp-ekg 1.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-ekg {
+    animation: none;
+    stroke-dasharray: none;
+  }
 }

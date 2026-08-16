@@ -164,12 +164,24 @@ export const BW_SQFT = 0.25;
 export const OUTLIER_Z = 1.5;
 
 /**
- * Minimum close_price for a row to count as a SALE comp. raw_vow_sold mixes sold
- * records with LEASED ones (close_price = monthly rent, e.g. $3,250); there is no
- * scalar transaction_type to filter on. Residential rents never approach this, so
- * the floor cleanly excludes leases without dropping legitimate low-end sales. Tunable.
+ * The feed's own value for a sale. raw_vow_sold mixes sold records with LEASED
+ * ones (close_price = a monthly rent, e.g. $3,250), and this is how they are told
+ * apart — see `transaction_type` (migration 104).
+ *
+ * This replaced a `close_price >= 50_000` floor, which inferred the category from
+ * magnitude. That proxy leaked nothing in practice, because no lease had yet
+ * closed above $50k, but it excluded 482 genuine sales — vacant land, mobile
+ * homes, rural residential — and rested on an assumption nothing enforced. The
+ * active index already carries a lease listed above $100k.
  */
-export const MIN_SALE_PRICE = 50_000;
+export const SALE_TRANSACTION_TYPE = 'For Sale';
+
+/**
+ * Placeholder guard, NOT a category test: a $0 close is a stub row, not a cheap
+ * sale. With the transaction type doing the categorising, this only has to keep
+ * zero-price rows out of the median maths.
+ */
+export const MIN_CLOSE_PRICE = 1;
 
 /**
  * Tunable knobs for the estimate math, injectable so the backtest harness can A/B

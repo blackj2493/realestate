@@ -107,6 +107,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // regardless of DB state (like the static routes).
   const dataRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/data`, changeFrequency: "daily", priority: 0.8 },
+    // The press desk. Rarely changes, but it is the page we point every outreach email at,
+    // so it must be indexable and discoverable rather than a hidden landing page.
+    { url: `${SITE_URL}/data/for-journalists`, changeFrequency: "monthly", priority: 0.6 },
     ...LIVE_TRACKERS.map((t) => ({
       url: `${SITE_URL}/data/${t.slug}`,
       changeFrequency: "daily" as const,

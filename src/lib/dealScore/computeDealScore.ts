@@ -60,7 +60,9 @@ export interface DealScoreComponent {
 
 /** A suggested-offer band derived from the list-anchored expected close + comps + motivation. */
 export interface OfferBand {
-  /** Low end of a defensible offer (motivation-nudged below the likely close). */
+  /** Low end of a defensible offer (motivation-nudged below the likely close). On a
+   *  competitive (hold-offers) listing this is the ASK — under-ask bids there are a bet
+   *  against ~40% over-ask odds, so the UI renders "Offer $X+" instead of a range. */
   aggressive: number;
   /** What the listing will most likely close at (list-anchored Expected Sale). */
   likelyClose: number;
@@ -70,6 +72,9 @@ export interface OfferBand {
   note: string;
   /** Cohort closes ABOVE ask → the band shifts up and the copy says "expect to compete". */
   hotMarket: boolean;
+  /** Hold-offers setup (threshold ask below comps — see DealScoreInput.competitive):
+   *  the band floors at the ask and the UI renders "Offer $X+", never an under-ask range. */
+  competitive: boolean;
   /**
    * Provenance of `likelyClose`: the list-anchored Expected Sale model (~2% median
    * |%err|, carries close-rate data) vs the AVM fallback (~11%, NO close-rate signal).
@@ -117,6 +122,20 @@ export interface DealScoreInput {
   expectedSalePrice?: number | null;
   /** Cohort close/list ratio (e.g. 0.985) — market softness + hot-market detection. */
   closeListRatio?: number | null;
+  /**
+   * "Priced to compete" signal (detectCompetitive in avm/salePrice): a threshold-shaped
+   * ask deliberately set below the comp band. When present, the offer band floors at the
+   * ask instead of quoting the cohort-ratio under-ask figure — that ratio does not apply
+   * to hold-offers listings, and quoting it made the Suggested Move contradict the
+   * Estimated Sale card's over-ask framing on the same page.
+   */
+  competitive?: {
+    belowCompsPct: number;
+    overAskRate: number;
+    rangeLow: number;
+    rangeHigh: number;
+    medianCloseRatio: number;
+  } | null;
   /** Upside signals (builders / value-add). All optional. */
   lotSqft?: number | null;
   suitePotential?: boolean | null;
@@ -242,13 +261,20 @@ const OFFER_NUDGE_CEIL = 85; // Terms ≥ 85 → full nudge
 
 // ── Grade bands (provisional hand-calibration; replace with the population curve job) ─
 // Tuned so a fairly-priced listing (~50 blended) lands a C, not an F.
+//
+// The verdict is a persona-BLENDED grade over all four pillars, so it must NOT claim a
+// single-axis price position (e.g. "priced below…") — that both over-attributes a yield- or
+// upside-driven score to price AND collides with the Estimated Sale card's ask-relative line
+// ("−5.7% below ask · room to negotiate"), so the two read as if they disagree. These
+// phrasings describe the grade itself ("across the signals we track"); the specific
+// price-vs-comps read lives in the expandable breakdown + The Read, not here.
 const GRADE_BANDS: Array<[number, DealScoreGrade, string]> = [
-  [80, "A+", "Exceptional — priced well below the signals we track."],
-  [70, "A", "Strong deal — multiple metrics favor the buyer."],
-  [58, "B", "Solid opportunity with real room to negotiate."],
+  [80, "A+", "Exceptional — scores at the top of the signals we track."],
+  [70, "A", "Strong deal — the signals we track favor the buyer."],
+  [58, "B", "Solid — most of the signals we track favor the buyer."],
   [40, "C", "Fairly priced for the area — a normal deal, no red flags."],
-  [28, "D", "Priced a bit ahead of the fundamentals."],
-  [0, "F", "Overpriced on the metrics we track."],
+  [28, "D", "Underwhelming on the signals we track."],
+  [0, "F", "Weak across the signals we track."],
 ];
 
 /** Direction thresholds: how a sub-score maps to an arrow. */
@@ -461,13 +487,41 @@ function computeOfferBand(
   // When AVM-based there is no close-rate signal, so the copy must NOT claim comps support.
   const basis: "expected-sale" | "avm" = expected !== null ? "expected-sale" : "avm";
 
+  // "Priced to compete" (threshold ask below comps): the cohort close/list ratio is the
+  // wrong anchor here — this bucket's measured median closes ≈1% under ask with a ~40%
+  // over-ask rate (scripts/admin/_thresholdPriceLift.ts), so an under-ask band would both
+  // advise losing on offer night AND contradict the Estimated Sale card's over-ask range
+  // on the same page. Floor at the ask; keep the cohort figure as the quiet-night aside.
+  const comp = input.competitive ?? null;
+  if (comp) {
+    const medianClose = Math.round(listPrice * comp.medianCloseRatio);
+    const compLikely = Math.max(medianClose, expected ?? 0);
+    const medianPct = Math.round((1 - comp.medianCloseRatio) * 100);
+    const quiet =
+      expected !== null && expected < listPrice
+        ? ` A quiet offer night could land near ${fmtMoney(expected)}; overpaying`
+        : ` Overpaying`;
+    return {
+      aggressive: listPrice,
+      likelyClose: compLikely,
+      ceiling,
+      note:
+        `Set ~${Math.round(comp.belowCompsPct * 100)}% below comparable sales — homes like this sold over ask ` +
+        `~${Math.round(comp.overAskRate * 100)}% of the time (median ≈ ${medianPct > 0 ? `${medianPct}% under ` : ``}ask).` +
+        `${quiet} above ~${fmtMoney(ceiling)}.`,
+      hotMarket,
+      competitive: true,
+      basis,
+    };
+  }
+
   const note = hotMarket
     ? `Homes here close above ask — expect to compete near ${fmtMoney(likelyClose)}.`
     : basis === "expected-sale"
       ? `Comparable closings support ${fmtMoney(Math.min(aggressive, likelyClose))}–${fmtMoney(likelyClose)}; overpaying above ~${fmtMoney(ceiling)}.`
       : `Our comparable-sales estimate (no recent close-rate data) — treat ${fmtMoney(Math.min(aggressive, likelyClose))}–${fmtMoney(likelyClose)} as indicative; above ~${fmtMoney(ceiling)} looks rich.`;
 
-  return { aggressive: Math.min(aggressive, likelyClose), likelyClose, ceiling, note, hotMarket, basis };
+  return { aggressive: Math.min(aggressive, likelyClose), likelyClose, ceiling, note, hotMarket, competitive: false, basis };
 }
 
 /**

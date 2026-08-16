@@ -10,7 +10,7 @@ import { fetchAuditInfo } from '../auditService';
 import { fetchCoefficients } from '../matrixService';
 import { effectiveStd, MIN_COHORT_N, CEILING_STD, capValueAdd, featureGate, SCORE_K } from './calibration';
 import { formatPrice } from '@/lib/utils';
-import { MOVE_CATALOG } from './moveCatalog';
+import { MOVE_CATALOG, isMoveFeasibleForType } from './moveCatalog';
 import type { FeatureDelta, MoveSpec, ValueAddMove, SuppressReason, ValueAddReport, MoveKey } from './types';
 
 /** Apply a move's field deltas to a copy of the input (set = absolute, add = increment). */
@@ -77,6 +77,16 @@ export function evaluateMove(
   market: AVMMarketData,
   subjectEstimate: number
 ): ValueAddMove {
+  // Feasibility gate FIRST — it is the only gate that doesn't depend on the data.
+  // Every check below asks "is this coefficient trustworthy?", which is a different
+  // question from "can this owner actually do this?". Condo basement moves were
+  // being caught only because condo cohorts happen to carry a degenerate basement
+  // column, while building_area_total and parking_total are perfectly healthy — so
+  // apartments were quoted a priced 400 sq ft addition and a detached garage.
+  if (!isMoveFeasibleForType(move, input.rawPropertySubType ?? input.propertySubType)) {
+    return suppressed(move, 'not_applicable_to_type');
+  }
+
   // Cohort gate: enough recent local sales to fit a model. R² is NOT a hard gate —
   // weaker cohorts price with LOW confidence (set below) rather than being hidden.
   if (market.n === null || market.n === undefined || market.n < MIN_COHORT_N) {
@@ -154,6 +164,7 @@ function unavailableReport(input: AVMInput, _market: AVMMarketData): ValueAddRep
     valueAddScore: 0,
     moves: MOVE_CATALOG.map((m) => suppressed(m, 'no_estimate')),
     neighbourhoodInsight: 'Not enough recent sales here to model renovation value yet.',
+    salesAnalyzed: null,
     basis: `${input.cityRegion} · ${input.propertySubType}`,
     disclaimer: DISCLAIMER,
     confidence: 'LOW',
@@ -225,6 +236,7 @@ export function buildValueAddReport(input: AVMInput, market: AVMMarketData, opts
     valueAddScore,
     moves,
     neighbourhoodInsight: neighbourhoodInsight(input, market, moves),
+    salesAnalyzed: typeof market.n === 'number' && market.n > 0 ? market.n : null,
     basis: `Based on ${market.n ?? 'recent'} ${input.cityRegion} ${input.propertySubType} sales`,
     disclaimer: DISCLAIMER,
     confidence: reportConfidence(market.r2),

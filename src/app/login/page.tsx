@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import MagicLinkForm from "@/components/auth/MagicLinkForm";
 import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
 
@@ -34,8 +35,11 @@ export default async function LoginPage({
               "radial-gradient(80% 50% at 50% 0%, rgba(16,185,129,0.10) 0%, transparent 60%)",
           }}
         />
+        {/* Vignette scrim — dark mode only. It exists to darken a dark page toward
+            the edges; painted over the light ground it just greys the whole page
+            out (#e9edf4 → #9fa3ad centre, #5e626f edges) and washes out the type. */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 hidden dark:block"
           style={{
             background:
               "radial-gradient(115% 95% at 50% 35%, rgba(2,6,23,0.32) 0%, rgba(2,6,23,0.6) 100%)",
@@ -45,29 +49,37 @@ export default async function LoginPage({
 
       <div className="relative z-10 flex min-h-app flex-col">
         {/* Header — logo size/padding match the apply page's TopNav */}
-        <header className="relative z-10 flex items-center px-6 py-5 md:px-12 md:py-7">
+        <header className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12 md:py-7">
           <Link
             href="/"
             className="flex items-center"
             aria-label="PureProperty.ca home"
           >
-            <Logo size="lg" theme="dark" />
+            {/* "auto" follows the app theme — this header sits on the page ground,
+                which flips, not on a permanently-dark band. */}
+            <Logo size="lg" theme="auto" />
           </Link>
+          {/* Dark is now reachable only by explicit choice, and this page renders its own
+              header rather than AppHeader's — so without a toggle here a signed-out visitor
+              has no way back to the terminal look. Same reasoning as TopNav. */}
+          <ThemeToggle className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 dark:hover:text-emerald-400 [touch-action:manipulation]" />
         </header>
 
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">
           {/* Title — scale matches the apply page hero heading */}
           <div className="text-center">
-            <h1 className="text-4xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
-              Terminal Access
+            {/* Both the white fill and the heavy black glow assume a dark ground —
+                scoped to dark so light mode gets dark type and no smudge. */}
+            <h1 className="text-4xl font-black uppercase tracking-tight text-slate-900 md:text-6xl dark:text-white dark:[text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
+              Sign in
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-foreground dark:[text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               Sign in to sync your watchlist across devices and receive market alerts.
             </p>
           </div>
 
           {/* Card — translucent + blur to match the apply page form card */}
-          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-border bg-card/70 p-6 backdrop-blur-md md:p-8">
+          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-border bg-card p-6 backdrop-blur-md dark:bg-card/70 md:p-8">
             <div className="mb-5">
               <SocialAuthButtons next={safeNext} />
             </div>
@@ -75,8 +87,8 @@ export default async function LoginPage({
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
               New here? Enter your email above — first sign-in creates your account.{" "}
-              <Link href="/apply" className="text-cyan-400 underline">
-                Learn about Terminal Access
+              <Link href="/apply" className="text-cyan-700 dark:text-cyan-400 underline">
+                Learn more
               </Link>
               .
             </p>
@@ -92,11 +104,11 @@ export default async function LoginPage({
               </p>
               <p className="mt-2">
                 See our{" "}
-                <Link href="/terms" className="text-cyan-400 hover:underline">
+                <Link href="/terms" className="text-cyan-700 dark:text-cyan-400 hover:underline">
                   Terms of Use
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-cyan-400 hover:underline">
+                <Link href="/privacy" className="text-cyan-700 dark:text-cyan-400 hover:underline">
                   Privacy Policy
                 </Link>
                 .

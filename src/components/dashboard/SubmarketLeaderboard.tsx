@@ -16,6 +16,8 @@ import Link from "next/link";
 import { Trophy, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModuleHead, Panel } from "@/components/daylight/primitives";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { regionMapHref } from "@/lib/dashboard/area";
 
 /** One row of the batched /api/market/leaderboard payload. */
 interface LeaderboardRow {
@@ -27,10 +29,35 @@ interface LeaderboardRow {
 
 type RankKey = "yield" | "leverage" | "inventory";
 
-const RANK_OPTIONS: { key: RankKey; label: string; hint: string; field: keyof LeaderboardRow }[] = [
-  { key: "yield", label: "Yield", hint: "median cap rate", field: "medianCapRate" },
-  { key: "leverage", label: "Buyer leverage", hint: "% stale (60d+ True DOM)", field: "stalePct" },
-  { key: "inventory", label: "Inventory", hint: "active listings", field: "activeCount" },
+const RANK_OPTIONS: {
+  key: RankKey;
+  label: string;
+  hint: string;
+  /** Hover definition — a plain, literal description of exactly what the metric measures. */
+  tip: string;
+  field: keyof LeaderboardRow;
+}[] = [
+  {
+    key: "yield",
+    label: "Rental return",
+    hint: "rental return",
+    tip: "A year's rent as a share of the home's price (also called the cap rate).",
+    field: "medianCapRate",
+  },
+  {
+    key: "leverage",
+    label: "Sitting 60+ days",
+    hint: "share of homes sitting 60+ days",
+    tip: "The share of homes for sale that have been on the market 60 days or more.",
+    field: "stalePct",
+  },
+  {
+    key: "inventory",
+    label: "Homes for sale",
+    hint: "number of homes for sale",
+    tip: "How many homes are currently for sale in the market.",
+    field: "activeCount",
+  },
 ];
 
 export default function SubmarketLeaderboard() {
@@ -88,7 +115,6 @@ export default function SubmarketLeaderboard() {
       <section className="space-y-2">
         <ModuleHead
           title="Submarket Leaderboard"
-          count={scores.length || undefined}
           icon={<Trophy className="h-4 w-4" />}
           right={
             <span className="inline-flex overflow-hidden border border-border align-middle">
@@ -98,6 +124,7 @@ export default function SubmarketLeaderboard() {
                   type="button"
                   onClick={() => setRankBy(o.key)}
                   aria-pressed={rankBy === o.key}
+                  title={o.tip}
                   className={cn(
                     "terminal-font border-l border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors first:border-l-0",
                     rankBy === o.key
@@ -113,7 +140,7 @@ export default function SubmarketLeaderboard() {
         />
 
         <p className="text-[11px] text-muted-foreground">
-          {scores.length ? `${scores.length} ` : ""}GTA markets ranked by {opt.hint} — all active inventory. Click a market to open it in the terminal.
+          {scores.length ? `All ${scores.length} ` : "All "}GTA markets we cover, ranked by {opt.hint} — using every home currently for sale. Click a market to see its listings.
         </p>
 
         <Panel className="divide-y divide-border/60">
@@ -125,7 +152,7 @@ export default function SubmarketLeaderboard() {
             </p>
           ) : ranked.length === 0 ? (
             <p className="px-3 py-8 text-center text-xs text-muted-foreground">
-              No ranked markets right now — check back after the next daily sync.
+              No markets to rank right now — check back tomorrow.
             </p>
           ) : (
             ranked.map(({ s, v }, i) => (
@@ -133,17 +160,33 @@ export default function SubmarketLeaderboard() {
                   <span className={cn("w-6 shrink-0 text-center font-mono text-sm font-bold", i === 0 ? "text-[color:var(--dt-sig)] dark:text-cyan-300" : "text-muted-foreground")}>
                     {i + 1}
                   </span>
+                  {/* Camera-based open — see regionMapHref. */}
                   <Link
-                    href={`/properties?city=${encodeURIComponent(s.region)}`}
+                    href={regionMapHref(s.region)}
                     className="terminal-font min-w-0 flex-1 truncate text-sm font-semibold text-foreground hover:text-[color:var(--dt-sig)] dark:hover:text-cyan-300"
+                    title={s.region}
                   >
-                    {s.region}
+                    {formatRegionLabel(s.region)}
                     <ArrowUpRight className="ml-1 inline h-3 w-3 text-muted-foreground" />
                   </Link>
+                  {/* The ranked metric shows once, as the right-aligned bold value; the
+                      inline stats carry only the OTHER two so the row never repeats itself. */}
                   <div className="hidden gap-4 font-mono text-xs text-muted-foreground sm:flex">
-                    <span title="median cap rate">{s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% cap` : "— cap"}</span>
-                    <span title="% stale (60d+ True DOM)">{s.stalePct != null ? `${s.stalePct.toFixed(0)}% stale` : "— stale"}</span>
-                    <span title="active listings">{s.activeCount != null ? `${s.activeCount.toLocaleString()} active` : "—"}</span>
+                    {opt.field !== "medianCapRate" && (
+                      <span title="Typical rental return — a year's rent ÷ the price (the cap rate)">
+                        {s.medianCapRate != null ? `${s.medianCapRate.toFixed(1)}% return` : "— return"}
+                      </span>
+                    )}
+                    {opt.field !== "stalePct" && (
+                      <span title="Share of homes that have sat on the market 60+ days">
+                        {s.stalePct != null ? `${s.stalePct.toFixed(0)}% sitting 60d+` : "— sitting 60d+"}
+                      </span>
+                    )}
+                    {opt.field !== "activeCount" && (
+                      <span title="Homes currently for sale">
+                        {s.activeCount != null ? `${s.activeCount.toLocaleString()} for sale` : "—"}
+                      </span>
+                    )}
                   </div>
                   {/* Daylight yield bar (light only) — magnitude at a glance. */}
                   {v != null && (
@@ -162,8 +205,9 @@ export default function SubmarketLeaderboard() {
         </Panel>
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Full-population aggregates over current active inventory (no 100-row sampling). Median cap requires ≥5 priced
-          active listings; “stale” = 60d+ True DOM. Deterministic, no AI (§4).
+          Based on every home currently for sale in each market — not a sample. Rental return only shows where at least 5
+          priced homes are listed. “Sitting 60+ days” counts real days on the market — re-listing a home doesn’t reset the
+          clock. Updated daily.
         </p>
       </section>
     </div>

@@ -7,6 +7,12 @@
  * syntax in the repo, smoke-tested live 2026-07-18 (Typesense returns
  * `geo_distance_meters` per hit when sorting by distance).
  *
+ * Home Pulse (2026-07-23) additions — still 100% asking-side/IDX:
+ *  - per-listing coords + entry date + DOM + total price drop (radar pins, feed events)
+ *  - per-type asking band (p25-p75) + the nearest live listing of each type
+ *    (the "if it listed today" range + next-door anchor)
+ *  - a merged NEW/CUT event list for the activity feed & ticker
+ *
  * Search-only key; runs in server components. Per-query cap far below the 100-listing
  * display limit (CLAUDE.md §4).
  */
@@ -24,6 +30,15 @@ export interface NearbyListing {
   /** Mandatory display (CLAUDE.md §4) — null renders the "Brokerage unavailable" fallback. */
   brokerage: string | null;
   distanceM: number | null;
+  /** Coords for the street-radar pins (public IDX docs carry their geopoint). */
+  lat: number | null;
+  lng: number | null;
+  /** Campaign entry as epoch ms; null when the doc lacks it. */
+  entryMs: number | null;
+  /** Days listed (this campaign — not stitched True DOM, which is gated). */
+  dom: number | null;
+  /** Total price cut this campaign ($); 0 = never cut. */
+  dropAmount: number;
 }
 
 /** Anonymous-safe market context computed from IDX ACTIVES only (asking prices +
@@ -42,11 +57,16 @@ export interface AskingHistogram {
   buckets: number[];
 }
 
-/** Per-property-type slice of the live inventory (count + median asking). */
+/** Per-property-type slice of the live inventory (count + asking band + nearest comp). */
 export interface TypeSlice {
   label: string;
   count: number;
   medianAsking: number | null;
+  /** 25th/75th-percentile asking — the "homes like this ask $X–$Y" band (n≥3 only). */
+  p25: number | null;
+  p75: number | null;
+  /** Nearest live listing of this type — the "your next-door comp" anchor card. */
+  nearest: NearbyListing | null;
 }
 
 /** Momentum signals — ALL derived from the active IDX feed (campaign price cuts,
@@ -62,6 +82,14 @@ export interface MomentumStats {
   sitting30: number;
 }
 
+/** One asking-side feed event. `new` = listed within the event window (dated by entry);
+ *  `cut` = live listing with a price drop (cuts carry no event date in the feed doc, so
+ *  the row shows "-$X · Nd on market" and sorts on campaign entry — conservative). */
+export interface ActiveEvent {
+  kind: "new" | "cut";
+  listing: NearbyListing;
+}
+
 export interface NearbyForSale {
   listings: NearbyListing[];
   totalFound: number;
@@ -71,16 +99,290 @@ export interface NearbyForSale {
   /** Property-type breakdown of the fetched actives, largest first. */
   typeMix: TypeSlice[];
   momentum: MomentumStats;
+  /** NEW (≤30d) + CUT events for the activity feed/ticker, feed-ready order. */
+  events: ActiveEvent[];
+  /** All fetched actives with coords — the street-radar pin set (≤100 by construction).
+   *  Carries id/address/price so the radar pins are tappable (IDX = public data). */
+  pins: RadarPinData[];
+  /** Median asking by bedrooms × property type over ALL fetched actives — the
+   *  "typical rents" grid on lease queries. Null when the sample is too thin. */
+  bedsTypeMatrix: AskingMatrix | null;
+}
+
+/** One cell of the beds × type asking grid. Median hides below MIN_CELL_SAMPLES. */
+export interface AskingMatrixCell {
+  median: number | null;
+  count: number;
+  /** Middle-50% band (25th/75th pct of the kept prices) — set only when the cell holds
+   *  ≥ RANGE_MIN_N points, where quartiles stop being noise. Sale-price cells render it
+   *  (owner call 2026-07-24: heterogeneous stock makes a bare sale median falsely
+   *  precise — downtown condo 2bd IQR measured at 36% of median vs 4–11% suburban). */
+  p25?: number | null;
+  p75?: number | null;
+}
+
+export interface AskingMatrix {
+  /** Bedroom columns present in the data; 0 renders as "Studio", 6 as "6+". */
+  bedCols: number[];
+  /** Top property types by inventory, each with one cell per bed column. */
+  rows: Array<{ label: string; cells: AskingMatrixCell[]; count: number }>;
+  /** Listings that entered the grid (beds + type + price all present). */
+  sample: number;
+}
+
+// Owner calls (2026-07-24): a single real data point beats a dash — every cell with
+// data shows its median WITH its sample count (the count is the honesty device), and
+// the grid renders from 3 usable listings up. MEDIAN (not mean) throughout: rent
+// distributions are right-skewed (audited live: Detached 5bd near Beckett — median
+// $3,900 vs mean $4,167, one $6,000 lease dragging the mean 7% high).
+const MIN_CELL_SAMPLES = 1;
+const MIN_MATRIX_SAMPLE = 3;
+const MAX_MATRIX_ROWS = 6;
+/** Beds bucket cap: 0 (studio) and 1–5 render as-is; 6 means "6+". */
+const BEDS_BUCKET_CAP = 6;
+
+/** Below this many rentals, the 2 km grid is mostly "—" cells — widen the net. */
+const RENT_TARGET_SAMPLE = 12;
+const WIDE_RENT_RADIUS_KM = 5;
+
+export interface TypicalRents {
+  matrix: AskingMatrix;
+  radiusKm: number;
+}
+
+/** Prefer the local grid when it's dense enough; else the widest usable one. Pure — exported for tests. */
+export function pickRentMatrix(
+  near: AskingMatrix | null,
+  nearRadiusKm: number,
+  wide: AskingMatrix | null,
+  wideRadiusKm: number
+): TypicalRents | null {
+  if (near && near.sample >= RENT_TARGET_SAMPLE) return { matrix: near, radiusKm: nearRadiusKm };
+  if (wide && (!near || wide.sample > near.sample)) return { matrix: wide, radiusKm: wideRadiusKm };
+  return near ? { matrix: near, radiusKm: nearRadiusKm } : null;
+}
+
+/**
+ * Typical-rents grid with an ADAPTIVE radius: suburban pockets rarely hold enough
+ * live rentals within 2 km to fill the beds × type cells (Barrhaven: 11), so a thin
+ * local grid re-queries at 5 km and the denser result wins. `first` lets callers
+ * that already fetched the 2 km lease pass it in (no duplicate query on the dense
+ * path); pass null to have both radii fetched here.
+ */
+export async function getTypicalRents(
+  lat: number,
+  lng: number,
+  first?: NearbyForSale | null
+): Promise<TypicalRents | null> {
+  const near = first !== undefined ? first : await getNearbyForSale(lat, lng, { transactionType: "lease" });
+  const nearMatrix = near?.bedsTypeMatrix ?? null;
+  if (nearMatrix && nearMatrix.sample >= RENT_TARGET_SAMPLE) {
+    return { matrix: nearMatrix, radiusKm: near!.radiusKm };
+  }
+  const wide = await getNearbyForSale(lat, lng, { transactionType: "lease", radiusKm: WIDE_RENT_RADIUS_KM });
+  return pickRentMatrix(nearMatrix, near?.radiusKm ?? 2, wide?.bedsTypeMatrix ?? null, wide?.radiusKm ?? WIDE_RENT_RADIUS_KM);
+}
+
+/**
+ * In-home rental unit detector (owner-reported contamination 2026-07-24: Brampton's
+ * "Detached 3bd" median was $1,975 — basements listed AS Detached: "41 Eberly Woods
+ * Drive Basement $2,000", "6 Sweet Briar Lane Bsmt $1,700", "106 Benadir Avenue
+ * #bsmnt $1,900"). Address markers, tuned against real feed strings:
+ *  - "basement"/"bsmt"/"#bsmnt"/"walk-out" anywhere (never street names);
+ *  - lower/upper/main ONLY in unit positions — parenthesized "(Lower Unit)", after a
+ *    dash "B - Upper", before level/floor/unit/apt/suite, or trailing ("… St Upper")
+ *    — so "Upper Canada Drive", "Lower Base Line" and "Main Street" never match.
+ * Known miss: bare numeric units ("3407 Woodroffe Avenue 2") — no safe signal.
+ */
+const PARTIAL_UNIT_RE = new RegExp(
+  [
+    /\b(?:bsmn?t|basement|walk\s*-?\s*out)\b/.source,
+    /#\s*(?:bsmn?t|basement)/.source,
+    /\([^)]*\b(?:lower|upper|main|bsmn?t|basement)\b[^)]*\)/.source,
+    /-\s*(?:lower|upper|main)\b/.source,
+    /\b(?:lower|upper|main)\s+(?:level|floor|unit|apt|apartment|suite)\b/.source,
+    /\b(?:lower|upper|main)\s*(?:$|,)/.source,
+  ].join("|"),
+  "i"
+);
+
+/** Whole-listing subtypes that ARE in-home units — folded into the same row. */
+const IN_HOME_SUBTYPES = new Set(["lower level", "upper level"]);
+
+export const IN_HOME_UNIT_LABEL = "Basement / in-home unit";
+
+/** True when a rental is a PART of a house (basement/upper/main-floor unit). Exported for tests. */
+export function isPartialUnitRental(address: string | null | undefined, subType?: string | null): boolean {
+  if (subType && IN_HOME_SUBTYPES.has(subType.trim().toLowerCase())) return true;
+  return !!address && PARTIAL_UNIT_RE.test(address);
+}
+
+// ── Outlier handling (owner decision 2026-07-24: "if it's an obvious outlier, we
+// leave it out") ─────────────────────────────────────────────────────────────────
+// Rule A — cell trim: in a cell with ≥4 points, anything outside 0.5×–2× of the
+// cell's own median is dropped before the final median (the ×n count reflects what
+// was kept). Rule B — unmarked basements: a 0–2 bd item in a HOUSE row priced under
+// 70% of that row's own ≥3 bd whole-home median is reclassified to the in-home row
+// (catches the address-marker misses; a legit whole 2 bd at ~80% stays). Condo rows
+// are exempt from Rule B — a cheap condo 1 bd is normal, not a basement.
+const TRIM_MIN_N = 4;
+const TRIM_LO = 0.5;
+const TRIM_HI = 2.0;
+const HOUSE_ANCHOR_MIN_N = 3;
+const RECLASS_FRACTION = 0.7;
+/** Quartiles below this many kept points are noise — the cell shows median-only. */
+const RANGE_MIN_N = 5;
+
+/** House-style types whose low-bed cheap items are almost always unmarked in-home units. */
+function isHouseType(label: string): boolean {
+  return !/condo|apartment|co-?op|room|other|lower|upper|duplex|triplex|multiplex/i.test(label);
+}
+
+/**
+ * Median rent by bedrooms (Studio/1/2/3/4/5/6+) × property type. Pure — exported for
+ * tests. Every cell with data shows its median plus the sample count; a grid under
+ * MIN_MATRIX_SAMPLE listings returns null so the panel self-hides (silent-null
+ * convention). Beds 0 is a real bucket (bachelor/basement studios lease constantly).
+ * In-home units (basement/upper/main-floor rentals filed under the HOUSE's type) are
+ * routed to their own row so they never drag a whole-home median down; obvious
+ * outliers are trimmed per the rules above.
+ *
+ * mode "sale" (the sell-side grid): homes are never SOLD as a basement unit, so the
+ * in-home classifier and Rule B are rent-only logic there — a cheap 2 bd detached is
+ * a small bungalow, not an unmarked basement. Rule A (cell trim) applies to both.
+ */
+export function buildBedsTypeMatrix(
+  items: Array<{ beds: number | null; subType: string | null; price: number; address?: string | null }>,
+  opts: { mode?: "rent" | "sale" } = {}
+): AskingMatrix | null {
+  const isRent = (opts.mode ?? "rent") === "rent";
+  const usable = items.filter((i) => i.beds !== null && i.beds >= 0 && i.subType && i.price > 0);
+  if (usable.length < MIN_MATRIX_SAMPLE) return null;
+
+  // Pass 1 — initial (label, bucket, price) assignment via the address classifier.
+  const assigned = usable.map((i) => ({
+    label: isRent && isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim(),
+    bucket: Math.min(BEDS_BUCKET_CAP, i.beds as number),
+    price: i.price,
+  }));
+
+  // Pass 2 (Rule B, rent only) — per house row, anchor on its ≥3 bd whole-home median
+  // and move implausibly cheap 0–2 bd items to the in-home row.
+  if (isRent) {
+    const anchors = new Map<string, number | null>();
+    for (const a of assigned) {
+      if (a.label === IN_HOME_UNIT_LABEL || !isHouseType(a.label) || anchors.has(a.label)) continue;
+      const bigBeds = assigned.filter((x) => x.label === a.label && x.bucket >= 3).map((x) => x.price);
+      anchors.set(a.label, bigBeds.length >= HOUSE_ANCHOR_MIN_N ? median(bigBeds) : null);
+    }
+    for (const a of assigned) {
+      const anchor = anchors.get(a.label);
+      if (anchor && a.bucket <= 2 && a.price < anchor * RECLASS_FRACTION) a.label = IN_HOME_UNIT_LABEL;
+    }
+  }
+
+  const byType = new Map<string, Map<number, number[]>>();
+  const colsSeen = new Set<number>();
+  for (const a of assigned) {
+    colsSeen.add(a.bucket);
+    const cols = byType.get(a.label) ?? new Map<number, number[]>();
+    const prices = cols.get(a.bucket) ?? [];
+    prices.push(a.price);
+    cols.set(a.bucket, prices);
+    byType.set(a.label, cols);
+  }
+
+  // Rule A — trim obvious outliers inside well-sampled cells.
+  const trimCell = (prices: number[]): number[] => {
+    if (prices.length < TRIM_MIN_N) return prices;
+    const m = median(prices)!;
+    const kept = prices.filter((p) => p >= m * TRIM_LO && p <= m * TRIM_HI);
+    return kept.length ? kept : prices;
+  };
+
+  const bedCols = [...colsSeen].sort((a, b) => a - b);
+  const rows = [...byType.entries()]
+    .map(([label, cols]) => {
+      let count = 0;
+      const cells: AskingMatrixCell[] = bedCols.map((b) => {
+        const prices = trimCell(cols.get(b) ?? []);
+        count += prices.length;
+        const showRange = prices.length >= RANGE_MIN_N;
+        const sorted = showRange ? [...prices].sort((x, y) => x - y) : null;
+        return {
+          median: prices.length >= MIN_CELL_SAMPLES ? median(prices) : null,
+          count: prices.length,
+          p25: sorted ? percentile(sorted, 0.25) : null,
+          p75: sorted ? percentile(sorted, 0.75) : null,
+        };
+      });
+      return { label, cells, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MAX_MATRIX_ROWS)
+    // A row whose every median hid (all lone samples) says nothing — drop it.
+    .filter((r) => r.cells.some((c) => c.median !== null));
+  if (!rows.length) return null;
+
+  return { bedCols, rows, sample: usable.length };
+}
+
+/** One tappable street-radar pin — public IDX fields only. */
+export interface RadarPinData {
+  id: string;
+  address: string;
+  price: number;
+  lat: number;
+  lng: number;
+  cut: boolean;
+  dropAmount: number;
+  distanceM: number | null;
 }
 
 const FIELDS =
-  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp";
+  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp,location";
+
+const NEW_EVENT_DAYS = 30;
+const MAX_NEW_EVENTS = 8;
+const MAX_CUT_EVENTS = 6;
 
 function median(xs: number[]): number | null {
   if (!xs.length) return null;
   const s = [...xs].sort((a, b) => a - b);
   const mid = s.length >> 1;
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function percentile(sorted: number[], p: number): number {
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * p)));
+  return sorted[idx];
+}
+
+function toListing(d: Record<string, unknown>, dist: number | undefined): NearbyListing {
+  const loc = Array.isArray(d.location) && d.location.length === 2 ? (d.location as [number, number]) : null;
+  const entry = typeof d.EntryTimestamp === "number" ? d.EntryTimestamp : 0;
+  // EntryTimestamp is epoch ms; tolerate a seconds-scale value defensively.
+  const entryMs = entry > 1e12 ? entry : entry > 0 ? entry * 1000 : null;
+  const dom = typeof d.calculatedDOM === "number" && d.calculatedDOM >= 0 ? d.calculatedDOM : null;
+  return {
+    id: String(d.id ?? ""),
+    address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
+    cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
+    price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
+    // 0 is a REAL value (bachelor/basement studio) — every card guard is truthy
+    // (`l.beds ? …`), so 0 stays hidden in card metas but reaches the rents grid.
+    beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal >= 0 ? d.BedroomsTotal : null,
+    baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
+    subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
+    imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
+    brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
+    distanceM: typeof dist === "number" ? Math.round(dist) : null,
+    lat: loc ? loc[0] : null,
+    lng: loc ? loc[1] : null,
+    entryMs,
+    dom,
+    dropAmount: typeof d.TotalPriceDrop === "number" && d.TotalPriceDrop > 0 ? d.TotalPriceDrop : 0,
+  };
 }
 
 export async function getNearbyForSale(
@@ -111,23 +413,16 @@ export async function getNearbyForSale(
         include_fields: FIELDS,
         per_page: 100,
       });
-    const docs = (res.hits ?? []).map((h) => ({
-      d: h.document as Record<string, unknown>,
-      dist: (h as { geo_distance_meters?: { location?: number } }).geo_distance_meters?.location,
-    }));
+    const all: NearbyListing[] = (res.hits ?? [])
+      .map((h) =>
+        toListing(
+          h.document as Record<string, unknown>,
+          (h as { geo_distance_meters?: { location?: number } }).geo_distance_meters?.location
+        )
+      )
+      .filter((l) => l.id);
 
-    const listings: NearbyListing[] = docs.slice(0, limit).map(({ d, dist }) => ({
-      id: String(d.id ?? ""),
-      address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
-      cityRegion: typeof d.CityRegion === "string" && d.CityRegion ? d.CityRegion : null,
-      price: typeof d.ListPrice === "number" ? d.ListPrice : 0,
-      beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal > 0 ? d.BedroomsTotal : null,
-      baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
-      subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
-      imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,
-      brokerage: typeof d.ListOfficeName === "string" && d.ListOfficeName ? d.ListOfficeName : null,
-      distanceM: typeof dist === "number" ? Math.round(dist) : null,
-    }));
+    const listings = all.slice(0, limit);
 
     // Asking stats over ALL fetched actives (IDX only): price always; $/sqft and
     // days-listed only from listings that carry the field.
@@ -135,31 +430,28 @@ export async function getNearbyForSale(
     const psfs: number[] = [];
     const doms: number[] = [];
     const cuts: number[] = [];
-    const typePrices = new Map<string, number[]>();
+    const byType = new Map<string, NearbyListing[]>();
     let newThisWeek = 0;
     let sitting30 = 0;
     const weekAgoMs = Date.now() - 7 * 86_400_000;
-    for (const { d } of docs) {
+    for (const l of all) {
+      if (l.price > 0) prices.push(l.price);
+      if (l.dom !== null) doms.push(l.dom);
+      if (l.dom !== null && l.dom >= 30) sitting30++;
+      if (l.dropAmount > 0) cuts.push(l.dropAmount);
+      if (l.entryMs !== null && l.entryMs >= weekAgoMs) newThisWeek++;
+      if (l.subType) {
+        const arr = byType.get(l.subType.trim()) ?? [];
+        arr.push(l);
+        byType.set(l.subType.trim(), arr);
+      }
+    }
+    // $/sqft from the raw hits (BuildingAreaTotal isn't kept on NearbyListing).
+    for (const h of res.hits ?? []) {
+      const d = h.document as Record<string, unknown>;
       const price = typeof d.ListPrice === "number" ? d.ListPrice : 0;
-      if (price > 0) prices.push(price);
       const sqft = typeof d.BuildingAreaTotal === "number" ? d.BuildingAreaTotal : 0;
       if (price > 0 && sqft >= 200) psfs.push(price / sqft);
-      const dom = typeof d.calculatedDOM === "number" ? d.calculatedDOM : -1;
-      if (dom >= 0) doms.push(dom);
-      if (dom >= 30) sitting30++;
-      const drop = typeof d.TotalPriceDrop === "number" ? d.TotalPriceDrop : 0;
-      if (drop > 0) cuts.push(drop);
-      const entry = typeof d.EntryTimestamp === "number" ? d.EntryTimestamp : 0;
-      // EntryTimestamp is epoch ms; tolerate a seconds-scale value defensively.
-      const entryMs = entry > 1e12 ? entry : entry * 1000;
-      if (entryMs >= weekAgoMs) newThisWeek++;
-      const t = typeof d.PropertySubType === "string" ? d.PropertySubType.trim() : "";
-      if (t) {
-        const arr = typePrices.get(t) ?? [];
-        if (price > 0) arr.push(price);
-        else arr.push(0); // keep the count even when the price is unusable
-        typePrices.set(t, arr);
-      }
     }
 
     // Price histogram: 8 equal-width buckets, percentile-clipped against outliers.
@@ -179,8 +471,40 @@ export async function getNearbyForSale(
       }
     }
 
+    // Per-type slice: count + median + p25-p75 band + the nearest listing of that type
+    // (docs arrive distance-sorted, so byType arrays are nearest-first already).
+    const typeMix: TypeSlice[] = [...byType.entries()]
+      .map(([label, ls]) => {
+        const ps = ls.map((l) => l.price).filter((p) => p > 0).sort((a, b) => a - b);
+        return {
+          label,
+          count: ls.length,
+          medianAsking: median(ps),
+          p25: ps.length >= 3 ? percentile(ps, 0.25) : null,
+          p75: ps.length >= 3 ? percentile(ps, 0.75) : null,
+          nearest: ls[0] ?? null,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Feed events: NEW (entered ≤30d, newest first) then CUT (biggest cut first —
+    // cuts have no event date on the doc, so they sort below the dated rows).
+    const newCutoff = Date.now() - NEW_EVENT_DAYS * 86_400_000;
+    const newEvents: ActiveEvent[] = all
+      .filter((l) => l.entryMs !== null && l.entryMs >= newCutoff)
+      .sort((a, b) => (b.entryMs ?? 0) - (a.entryMs ?? 0))
+      .slice(0, MAX_NEW_EVENTS)
+      .map((listing) => ({ kind: "new" as const, listing }));
+    const newIds = new Set(newEvents.map((e) => e.listing.id));
+    const cutEvents: ActiveEvent[] = all
+      .filter((l) => l.dropAmount > 0 && !newIds.has(l.id))
+      .sort((a, b) => b.dropAmount - a.dropAmount)
+      .slice(0, MAX_CUT_EVENTS)
+      .map((listing) => ({ kind: "cut" as const, listing }));
+
     return {
-      listings: listings.filter((l) => l.id),
+      listings,
       totalFound: res.found ?? listings.length,
       radiusKm,
       stats: {
@@ -189,21 +513,29 @@ export async function getNearbyForSale(
         medianDaysListed: median(doms),
       },
       histogram,
-      typeMix: [...typePrices.entries()]
-        .map(([label, ps]) => ({
-          label,
-          count: ps.length,
-          medianAsking: median(ps.filter((p) => p > 0)),
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5),
+      typeMix,
       momentum: {
         cutCount: cuts.length,
-        cutShare: docs.length ? cuts.length / docs.length : 0,
+        cutShare: all.length ? cuts.length / all.length : 0,
         medianCut: median(cuts),
         newThisWeek,
         sitting30,
       },
+      events: [...newEvents, ...cutEvents],
+      // Sale-side matrices use sale mode: no basement classifier / Rule B (rent logic).
+      bedsTypeMatrix: buildBedsTypeMatrix(all, { mode: isLease ? "rent" : "sale" }),
+      pins: all
+        .filter((l) => l.lat !== null && l.lng !== null)
+        .map((l) => ({
+          id: l.id,
+          address: l.address,
+          price: l.price,
+          lat: l.lat as number,
+          lng: l.lng as number,
+          cut: l.dropAmount > 0,
+          dropAmount: l.dropAmount,
+          distanceM: l.distanceM,
+        })),
     };
   } catch (err) {
     console.error("[nearbyForSale] search failed:", err);

@@ -58,10 +58,24 @@ export default async function DaysOnMarketPage() {
             <strong>25–75% range</strong> shows how spread-out that is.
           </p>
           <p>
-            <strong>Active Listing Age</strong> and <strong>Sitting 90+ Days</strong> describe the current
-            unsold inventory — the median age of listings on the market now, and the share that have been
-            listed 90+ days. A market can sell its fresh listings quickly while a tail of stale inventory
-            lingers, so the two tell different halves of the story. Sold figures come from the MLS® VOW feed
+            <strong>Reported Listing Age</strong> is the median age of the homes on the market now, measured
+            the way the boards measure it — from the current listing&rsquo;s start date. When a home is
+            withdrawn and re-listed it gets a new MLS® number, and that clock restarts at zero.{" "}
+            <strong>Real Listing Age</strong> is the same set of homes with those relist chains stitched back
+            together: consecutive sale campaigns on one property are joined when the gap between one ending
+            and the next beginning is 35 days or less, so the clock keeps running across the break.{" "}
+            <strong>Hidden Days</strong> is the difference — how much longer these homes have actually been
+            for sale than the reported figure shows.
+          </p>
+          <p>
+            The 35-day join is deliberately conservative. A longer gap is treated as a genuinely new
+            marketing effort and is <em>not</em> stitched, and a campaign whose end date the feed never
+            supplied is never stitched across at all. Both choices push the real figure down, not up.
+          </p>
+          <p>
+            <strong>Sitting 90+ Days</strong> is the share of current listings whose real age is 90 days or
+            more. A market can sell its fresh listings quickly while a tail of stale inventory lingers, so
+            these measures tell different halves of the story. Sold figures come from the MLS® VOW feed
             (comprehensive but not exhaustive); refreshed nightly.
           </p>
         </>
@@ -72,12 +86,16 @@ export default async function DaysOnMarketPage() {
           a: "It's the median number of days a home that recently sold had been listed before going firm — a measure of how quickly the market is absorbing homes. Lower is faster.",
         },
         {
-          q: "Why is 'active listing age' higher than 'days to sell'?",
-          a: "Days to sell only counts homes that sold; active listing age counts everything still on the market, which is dragged up by a tail of harder-to-sell listings that haven't found a buyer yet.",
+          q: "Why is 'real listing age' higher than 'reported listing age'?",
+          a: "Because a re-listed home starts a fresh clock. When a property is withdrawn and put back on the market it is issued a new MLS® number, and days-on-market resets to zero — so a home showing '3 days' may have been for sale for months. We stitch consecutive campaigns on the same property back together (joining gaps of 35 days or less), which is why our figure is higher. The gap between the two columns is the part the reset hides.",
+        },
+        {
+          q: "Why is 'listing age' higher than 'days to sell'?",
+          a: "Days to sell only counts homes that sold; listing age counts everything still on the market, which is dragged up by a tail of harder-to-sell listings that haven't found a buyer yet.",
         },
         {
           q: "How is this different from the number my agent quotes?",
-          a: "Many sources reset days-on-market to zero when a listing is withdrawn and relisted, understating the true time on market. We stitch relists back together, so our figure reflects the real clock.",
+          a: "Most sources quote the reported figure — the one that resets on relist. Both are shown here side by side so you can see the difference for yourself, market by market.",
         },
         {
           q: "Which markets are covered?",

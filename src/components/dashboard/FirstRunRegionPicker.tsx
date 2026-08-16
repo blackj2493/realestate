@@ -3,6 +3,8 @@
 import { Check, Plus, ArrowRight, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LocationSearch from "@/components/CommandCenter/LocationSearch";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { QUICK_PICK_MARKETS } from "@/lib/dashboard/area";
 
 /**
  * First-run market-area picker. Shown on the dashboard when the user has no saved
@@ -16,21 +18,10 @@ import LocationSearch from "@/components/CommandCenter/LocationSearch";
  * the dashboard stayed empty — see PostHog). "Done" just collapses this setup card; the
  * areas are already live.
  */
-// One-tap markets. Every entry must map to real inventory via areaFilter (see CITY_GROUPS
-// in @/lib/dashboard/area). "Toronto" and "Ottawa" are GROUPS — TRREB has no single City
-// value for them (Toronto = ~36 district codes; Ottawa = ~51 OREB area names), so areaFilter
-// expands them to a city-wide section. A user wanting a smaller slice (e.g. just Orleans or
-// Kanata) adds that area via the search box, which gets its own focused section.
-const QUICK_PICKS = [
-  "Toronto",
-  "Ottawa",
-  "Mississauga",
-  "Brampton",
-  "Vaughan",
-  "Markham",
-  "Oakville",
-  "Hamilton",
-];
+// One-tap markets — shared with the /welcome first-run seed so both surfaces offer the
+// same starting areas. See QUICK_PICK_MARKETS for why Toronto/Ottawa are groups. Only
+// the names matter here; the cameras on those entries are for the terminal's ?near= seed.
+const QUICK_PICKS = QUICK_PICK_MARKETS.map((m) => m.name);
 
 export default function FirstRunRegionPicker({
   selected,
@@ -98,12 +89,13 @@ export default function FirstRunRegionPicker({
             <span
               key={area}
               className="inline-flex items-center gap-1.5 rounded-md border border-cyan-600/50 bg-cyan-600/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100"
+              title={area}
             >
-              {area}
+              {formatRegionLabel(area)}
               <button
                 type="button"
                 onClick={() => onRemove(area)}
-                aria-label={`Remove ${area}`}
+                aria-label={`Remove ${formatRegionLabel(area)}`}
                 className="inline-flex h-4 w-4 items-center justify-center rounded-full text-cyan-700/70 transition-colors hover:bg-cyan-600/15 hover:text-cyan-900 dark:text-cyan-300/70 dark:hover:bg-cyan-500/25 dark:hover:text-cyan-50"
               >
                 <X className="h-3 w-3" />
@@ -111,6 +103,15 @@ export default function FirstRunRegionPicker({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Tell users what adding an area does for email — alerts are on by default now
+          (§176), controlled by the bell on each area's section below. */}
+      {has && (
+        <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
+          New-listing emails are on for each area you add. Mute or fine-tune any of them
+          with the alert bell on its section below.
+        </p>
       )}
 
       {/* "Done" just collapses this card — the areas are already live in the dashboard. */}

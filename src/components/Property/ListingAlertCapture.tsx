@@ -138,7 +138,7 @@ export default function ListingAlertCapture({
         <button
           type="submit"
           disabled={state === "loading"}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/30 disabled:opacity-60"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-800 transition-colors dark:text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-60"
         >
           {state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Alert me"}
         </button>

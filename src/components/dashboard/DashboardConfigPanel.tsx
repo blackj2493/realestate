@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { suggestSearch, type SearchSuggestion } from "@/lib/typesense/client";
 import { BOARDS, DEFAULT_BOARD_ORDER, type BoardId } from "@/lib/dashboard/boards";
 import type { DashboardConfig } from "@/lib/dashboard/config";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 export default function DashboardConfigPanel({
   config,
@@ -68,13 +69,14 @@ export default function DashboardConfigPanel({
             {config.regions.map((r) => (
               <span
                 key={r}
+                title={r}
                 className="inline-flex items-center gap-1.5 border border-cyan-600/50 bg-cyan-600/10 px-2.5 py-1 text-xs text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200"
               >
-                {r}
+                {formatRegionLabel(r)}
                 <button
                   type="button"
                   onClick={() => removeRegion(r)}
-                  aria-label={`Remove ${r}`}
+                  aria-label={`Remove ${formatRegionLabel(r)}`}
                   className="text-cyan-700/70 hover:text-rose-600 dark:text-cyan-300/70 dark:hover:text-rose-400"
                 >
                   <X className="h-3 w-3" />
@@ -106,7 +108,7 @@ export default function DashboardConfigPanel({
                     >
                       <span className="flex items-center gap-2">
                         <Plus className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
-                        {s.label}
+                        {formatRegionLabel(s.label)}
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           {s.kind}
                         </span>

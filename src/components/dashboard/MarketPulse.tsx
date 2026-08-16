@@ -14,6 +14,7 @@ import {
 import { smoothedYoY } from "@/lib/dashboard/marketAggregates";
 import VowGateOverlay from "@/components/auth/VowGateOverlay";
 import { useChartTheme } from "@/lib/theme/useChartTheme";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import RegionSwitcher from "./RegionSwitcher";
 
 interface TrendPoint {
@@ -83,7 +84,7 @@ export default function MarketPulse({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex flex-wrap items-center gap-2.5">
           <h3 className="terminal-font text-[11px] font-bold uppercase tracking-wider text-foreground">
-            Market Pulse{regions.length > 1 ? "" : ` — ${selected}`}
+            Market Pulse{regions.length > 1 ? "" : ` — ${formatRegionLabel(selected)}`}
           </h3>
           {regions.length > 1 && (
             <RegionSwitcher regions={regions} selected={selected} onSelect={onSelect} />
@@ -122,8 +123,17 @@ export default function MarketPulse({
               );
             })}
           </div>
-          <span className="terminal-font hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">
-            Sold · 24mo
+          {/* Micro-legend — nothing else tells a viewer which axis belongs to what. */}
+          <span className="terminal-font hidden items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground sm:flex">
+            <span className="flex items-center gap-1">
+              <span className="h-0.5 w-4 rounded" style={{ background: chart.line }} />
+              {isPrice ? "Median" : "$/sqft"}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2 rounded-sm" style={{ background: chart.bar, opacity: 0.55 }} />
+              Sales
+            </span>
+            <span>· 24mo</span>
           </span>
         </div>
       </div>
@@ -131,8 +141,13 @@ export default function MarketPulse({
       <div className="relative h-56 p-3">
         {locked && (
           <div className="relative h-full w-full">
+            {/* Stand-in for the chart the gate is hiding: a wash rising off the floor, so the
+                lock reads as covering something. It has to invert per theme — the dark values
+                lift OFF the slate-900 card, and on the white light card that same slate is a
+                grey smudge, so light darkens instead (same idiom as RenoMarketBridge's
+                `bg-black/5 dark:bg-white/10`). Dark keeps its exact previous values. */}
             <div
-              className="h-full w-full rounded bg-gradient-to-t from-slate-800/50 to-slate-900/10 blur-sm"
+              className="h-full w-full rounded bg-gradient-to-t from-black/10 to-transparent blur-sm dark:from-slate-800/50 dark:to-slate-900/10"
               aria-hidden="true"
             />
             <VowGateOverlay message="Sign in to view sold-price trends" />
@@ -162,15 +177,22 @@ export default function MarketPulse({
                 stroke={chart.axisLine}
                 minTickGap={24}
               />
-              {/* Left axis: price / $sqft */}
+              {/* Left axis: price / $sqft — scaled to the DATA, not zero-based, so a
+                  few-percent move actually has a visible shape (a zero-based axis
+                  rendered a 3.7% YoY decline as a flat line). */}
               <YAxis
                 yAxisId="left"
                 tickFormatter={lineFmt}
                 tick={{ fill: chart.axisText, fontSize: 10 }}
                 stroke={chart.axisLine}
                 width={48}
+                domain={[
+                  (dataMin: number) => Math.floor(dataMin * 0.96),
+                  (dataMax: number) => Math.ceil(dataMax * 1.02),
+                ]}
               />
-              {/* Right axis: sold volume */}
+              {/* Right axis: sold volume. Headroom (×1.5) keeps the bars in the lower
+                  band so they read as context under the price line, not the headline. */}
               <YAxis
                 yAxisId="right"
                 orientation="right"
@@ -178,6 +200,7 @@ export default function MarketPulse({
                 stroke={chart.axisLine}
                 width={32}
                 allowDecimals={false}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.5)]}
               />
               <Tooltip
                 contentStyle={{ background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, fontSize: 12 }}
@@ -191,27 +214,35 @@ export default function MarketPulse({
                   ];
                 }}
               />
-              <Bar yAxisId="right" dataKey="sales" fill={chart.bar} radius={[2, 2, 0, 0]} />
+              <Bar yAxisId="right" dataKey="sales" fill={chart.bar} fillOpacity={0.55} radius={[2, 2, 0, 0]} />
               <Line
                 yAxisId="left"
                 type="monotone"
                 dataKey={lineKey}
                 stroke={chart.line}
                 strokeWidth={2}
-                // Teal "live" dot on the latest plotted point — the instrument endpoint.
-                dot={(p: { cx?: number; cy?: number; index?: number; key?: string }) =>
+                // Teal "live" dot + printed value on the latest plotted point — the
+                // endpoint is the number the whole chart exists to deliver.
+                dot={(p: { cx?: number; cy?: number; index?: number; key?: string; value?: number }) =>
                   p.cx == null || p.cy == null || p.index !== points.length - 1 ? (
                     <g key={p.key ?? p.index} />
                   ) : (
-                    <circle
-                      key={p.key ?? p.index}
-                      cx={p.cx}
-                      cy={p.cy}
-                      r={4}
-                      fill={chart.endpoint}
-                      stroke={chart.surface}
-                      strokeWidth={1.6}
-                    />
+                    <g key={p.key ?? p.index}>
+                      <circle cx={p.cx} cy={p.cy} r={4} fill={chart.endpoint} stroke={chart.surface} strokeWidth={1.6} />
+                      {p.value != null && (
+                        <text
+                          x={p.cx - 9}
+                          y={p.cy - 9}
+                          textAnchor="end"
+                          fill={chart.endpoint}
+                          fontSize={11}
+                          fontWeight={700}
+                          fontFamily="ui-monospace, monospace"
+                        >
+                          {lineFmt(p.value)}
+                        </text>
+                      )}
+                    </g>
                   )
                 }
                 connectNulls={false}

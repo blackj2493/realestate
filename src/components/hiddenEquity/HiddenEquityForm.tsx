@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import RenoAddressField from '@/components/reno/RenoAddressField';
 
 // Mirror AVMPropertyForm label arrays exactly
 // Human-readable condition labels (no cryptic tier numbers shown to the user).
@@ -109,11 +110,30 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
   return (
     <div className="space-y-4">
+      {/* ── Address-first entry — resolves city + community into the tree, best-effort ── */}
+      <RenoAddressField
+        tree={tree}
+        onResolve={(r) =>
+          onChange({
+            ...value,
+            city: r.city || value.city,
+            cityRegion: r.cityRegion,
+            propertySubType: '',
+          })
+        }
+      />
+
+      <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <span className="h-px flex-1 bg-border" aria-hidden />
+        or pick manually
+        <span className="h-px flex-1 bg-border" aria-hidden />
+      </div>
+
       {/* ── Location cascades ── */}
       <div className="grid grid-cols-1 gap-4">
         {/* City — self-owned filtered combobox (no <datalist>: unreliable on iOS) */}
         <div className="relative space-y-2">
-          <Label className="text-xs text-gray-400" htmlFor="he-city-input">
+          <Label className="text-xs text-muted-foreground" htmlFor="he-city-input">
             CITY
           </Label>
           <Input
@@ -142,13 +162,13 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
               }, 120);
             }}
             placeholder="Type your city (e.g. Vaughan)"
-            className="h-11 border-gray-700 bg-black/20 text-base text-gray-100"
+            className="h-11 text-base"
           />
           {cityOpen && citySuggestions.length > 0 && (
             <ul
               id="he-city-listbox"
               role="listbox"
-              className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900 py-1 shadow-lg"
+              className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-lg"
             >
               {citySuggestions.map((c) => (
                 <li key={c} role="option" aria-selected={c === value.city}>
@@ -160,7 +180,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
                       if (blurTimer.current) clearTimeout(blurTimer.current);
                       commitCity(c);
                     }}
-                    className="flex min-h-[44px] w-full items-center px-3 text-left text-sm text-gray-200 hover:bg-gray-800 active:bg-gray-800"
+                    className="flex min-h-[44px] w-full items-center px-3 text-left text-sm hover:bg-accent hover:text-accent-foreground active:bg-accent"
                   >
                     {c}
                   </button>
@@ -172,7 +192,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Community */}
         <div className="space-y-2">
-          <Label className="text-xs text-gray-400">COMMUNITY</Label>
+          <Label className="text-xs text-muted-foreground">COMMUNITY</Label>
           <Select
             value={value.cityRegion}
             onValueChange={(cityRegion) =>
@@ -180,10 +200,10 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             }
             disabled={!value.city}
           >
-            <SelectTrigger className="h-11 border-gray-700 bg-black/20 text-gray-100 disabled:opacity-40 sm:h-10">
+            <SelectTrigger className="h-11 disabled:opacity-40 sm:h-10">
               <SelectValue placeholder="Select community" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent>
               {communities.map((c) => (
                 <SelectItem key={c.cityRegion} value={c.cityRegion}>
                   {c.community}
@@ -195,16 +215,16 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Property type */}
         <div className="space-y-2">
-          <Label className="text-xs text-gray-400">PROPERTY TYPE</Label>
+          <Label className="text-xs text-muted-foreground">PROPERTY TYPE</Label>
           <Select
             value={value.propertySubType}
             onValueChange={(propertySubType) => onChange({ ...value, propertySubType })}
             disabled={!value.cityRegion}
           >
-            <SelectTrigger className="h-11 border-gray-700 bg-black/20 text-gray-100 disabled:opacity-40 sm:h-10">
+            <SelectTrigger className="h-11 disabled:opacity-40 sm:h-10">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent>
               {types.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
@@ -219,15 +239,15 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
       <div className="grid grid-cols-3 gap-2">
         {/* Bedrooms */}
         <div className="space-y-2">
-          <Label className="text-xs text-gray-400">BEDROOMS</Label>
+          <Label className="text-xs text-muted-foreground">BEDROOMS</Label>
           <Select
             value={String(value.bedroomsAboveGrade)}
             onValueChange={(v) => onChange({ ...value, bedroomsAboveGrade: Number(v) })}
           >
-            <SelectTrigger className="h-11 bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
@@ -239,15 +259,15 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Bathrooms */}
         <div className="space-y-2">
-          <Label className="text-xs text-gray-400">BATHROOMS</Label>
+          <Label className="text-xs text-muted-foreground">BATHROOMS</Label>
           <Select
             value={String(value.bathroomsTotalInteger)}
             onValueChange={(v) => onChange({ ...value, bathroomsTotalInteger: Number(v) })}
           >
-            <SelectTrigger className="h-11 bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
@@ -259,15 +279,15 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
         {/* Parking */}
         <div className="space-y-2">
-          <Label className="text-xs text-gray-400">PARKING</Label>
+          <Label className="text-xs text-muted-foreground">PARKING</Label>
           <Select
             value={String(value.parkingTotal)}
             onValueChange={(v) => onChange({ ...value, parkingTotal: Number(v) })}
           >
-            <SelectTrigger className="h-11 bg-black/20 border-gray-700 text-gray-100">
+            <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
@@ -280,20 +300,20 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
       {/* ── Condition assessment ── */}
       <div className="space-y-3">
-        <Label className="text-xs text-gray-400">CONDITION ASSESSMENT</Label>
+        <Label className="text-xs text-muted-foreground">CONDITION ASSESSMENT</Label>
 
         {/* Interior */}
         <div className="space-y-2">
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-            <Label className="text-sm text-gray-300">Interior</Label>
+            <Label className="text-sm text-foreground">Interior</Label>
             <Select
               value={String(value.interiorTier)}
               onValueChange={(v) => onChange({ ...value, interiorTier: Number(v) })}
             >
-              <SelectTrigger className="h-11 w-full border-gray-700 bg-black/20 text-gray-100 sm:h-10 sm:w-40">
+              <SelectTrigger className="h-11 w-full sm:h-10 sm:w-40">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectContent>
                 {[1, 2, 3, 4, 5].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {INTERIOR_LABELS[t]}
@@ -307,15 +327,15 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
         {/* Exterior */}
         <div className="space-y-2">
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-            <Label className="text-sm text-gray-300">Exterior</Label>
+            <Label className="text-sm text-foreground">Exterior</Label>
             <Select
               value={String(value.exteriorTier)}
               onValueChange={(v) => onChange({ ...value, exteriorTier: Number(v) })}
             >
-              <SelectTrigger className="h-11 w-full border-gray-700 bg-black/20 text-gray-100 sm:h-10 sm:w-40">
+              <SelectTrigger className="h-11 w-full sm:h-10 sm:w-40">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectContent>
                 {[1, 2, 3, 4, 5].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {EXTERIOR_LABELS[t]}
@@ -329,15 +349,15 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
         {/* Basement */}
         <div className="space-y-2">
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-            <Label className="text-sm text-gray-300">Basement</Label>
+            <Label className="text-sm text-foreground">Basement</Label>
             <Select
               value={String(value.basementTier)}
               onValueChange={(v) => onChange({ ...value, basementTier: Number(v) })}
             >
-              <SelectTrigger className="h-11 w-full border-gray-700 bg-black/20 text-gray-100 sm:h-10 sm:w-40">
+              <SelectTrigger className="h-11 w-full sm:h-10 sm:w-40">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectContent>
                 {[1, 3, 5, 7, 9].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {BASEMENT_LABELS[t]}
@@ -351,7 +371,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
 
       {/* ── Optional square footage ── */}
       <div className="space-y-2">
-        <Label className="text-xs text-gray-400">
+        <Label className="text-xs text-muted-foreground">
           SQUARE FOOTAGE (OPTIONAL — IMPROVES ACCURACY)
         </Label>
         <Input
@@ -372,7 +392,7 @@ export default function HiddenEquityForm({ tree, value, onChange }: HiddenEquity
             });
           }}
           placeholder="e.g. 1800"
-          className="h-11 border-gray-700 bg-black/20 text-base text-gray-100 sm:h-10"
+          className="h-11 text-base sm:h-10"
         />
       </div>
     </div>

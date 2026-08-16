@@ -4,7 +4,7 @@
 // AVM, reads NO VOW data, and exposes NO value-add dollars. The blurred hero on
 // the reveal is a pure UI placeholder — no number is sent here. This is the
 // anonymous half of the soft-gated /api/avm/hidden-equity route.
-import { MOVE_CATALOG } from './moveCatalog';
+import { MOVE_CATALOG, isMoveFeasibleForType } from './moveCatalog';
 import type { MoveSpec, MoveField, MoveKey } from './types';
 
 /** The only home attributes move-applicability depends on (all non-VOW). */
@@ -16,6 +16,13 @@ export interface AnonCatalogInput {
   bedroomsAboveGrade: number;
   parkingTotal: number;
   buildingAreaTotal: number | null;
+  /**
+   * Required, not optional: this used to be absent entirely, so the teaser had no
+   * idea what kind of home it was describing and offered apartment owners a
+   * basement to finish and a detached garage to build. Making it mandatory means
+   * a caller cannot quietly drop it again.
+   */
+  propertySubType: string | null;
 }
 
 export interface AnonCatalogItem {
@@ -53,6 +60,10 @@ function currentValue(field: MoveField, input: AnonCatalogInput): number | null 
  * Mirrors the engine's 'already_present' suppression — without any VOW math.
  */
 export function isMoveApplicable(move: MoveSpec, input: AnonCatalogInput): boolean {
+  // Feasibility first: no amount of "this would improve the home" matters if the
+  // owner physically cannot do it. Same predicate the priced engine uses, so the
+  // free teaser and the signed-in report can never contradict each other.
+  if (!isMoveFeasibleForType(move, input.propertySubType)) return false;
   return move.deltas.some((d) => {
     if (d.op === 'add') return d.value !== 0;
     const cur = currentValue(d.field, input); // 'set'

@@ -26,6 +26,9 @@ import type {
   PersonaType,
   TerminalFilterState,
 } from "@/lib/personas/personaConfig";
+import type { UniversalFilterState } from "@/lib/filters/types";
+import type { TransactionMode, PropertyClass } from "@/lib/filters/fundamentals";
+import type { MarketActivityLens } from "@/lib/dashboard/config";
 
 export type BubbleAreaType = "draw" | "commute" | "school" | "city";
 
@@ -38,7 +41,24 @@ export interface BubbleFiltersSnapshot {
   commute: Omit<CommuteState, "polygon">;
   /** school WITHOUT enabled flag (re-enabled on rehydrate). */
   school: SchoolState;
+  /** Universal basics (price band, beds, baths, types, …) — captured since
+   *  alert_scope 'filtered' (095). Optional: pre-095 bubbles never saved them,
+   *  which is why the 'filtered' toggle requires a re-save on old bubbles. */
+  universalFilters?: UniversalFilterState;
+  /** Captured for honest clause translation in the alerts worker. */
+  transactionMode?: TransactionMode;
+  propertyClass?: PropertyClass;
 }
+
+/** City alert rows' filter variant: the DASHBOARD lens captured when the user
+ *  switched the city to 'filtered' alerts (translated by buildLensClauses —
+ *  the email matches what the dashboard shows). Terminal snapshots and lens
+ *  captures share the same jsonb column; bubbleAlertFilter branches on shape. */
+export interface CityLensFilters {
+  lens: MarketActivityLens;
+}
+
+export type BubbleFilters = BubbleFiltersSnapshot | CityLensFilters;
 
 export interface BubbleSourceDraw {
   /** Raw clicked points in [lng, lat] order. */
@@ -77,8 +97,12 @@ export interface BubblePayload {
   /** [lat, lng]; empty for area_type 'city' (alert-carrier rows have no polygon). */
   polygon: [number, number][];
   source: BubbleSource;
-  /** null for city alert rows — they're created from the dashboard, not the terminal. */
-  filters: BubbleFiltersSnapshot | null;
+  /** Terminal snapshot, city-lens capture, or null (city rows start without one). */
+  filters: BubbleFilters | null;
+  /** Digest match scope (migration 095). Omitted → DB default 'all'. Set at create
+   *  time by the tiered default-ON add-area flow (§176): whole city → 'filtered'
+   *  (carries a { lens } filters), community/drawn → 'all'. */
+  alert_scope?: "all" | "filtered";
 }
 
 /** As returned by GET /api/bubbles. */
@@ -89,6 +113,8 @@ export interface Bubble extends BubblePayload {
   /** Nightly new-listing digest toggle (default ON; migration 034). Optional so
    *  pre-034 API payloads stay assignable. */
   alerts_enabled?: boolean;
+  /** Digest match scope (migration 095): 'all' (default) | 'filtered'. */
+  alert_scope?: "all" | "filtered";
   notify_since?: string | null;
 }
 
@@ -138,14 +164,41 @@ export function synthesizeCirclePolygon(
   return out;
 }
 
-interface StoreSliceForSave {
+/** The store slice a filter snapshot is built from (no area/polygon fields). */
+export interface StoreSliceForSnapshot {
   activePersona: PersonaType;
   filters: TerminalFilterState;
   location: string;
   commute: CommuteState;
   school: SchoolState;
+  universalFilters: UniversalFilterState;
+  transactionMode: TransactionMode;
+  propertyClass: PropertyClass;
+}
+
+interface StoreSliceForSave extends StoreSliceForSnapshot {
   drawPolygon: [number, number][] | null;
   drawPoints: [number, number][];
+}
+
+/** Snapshot of the terminal's CURRENT filter state — used at bubble save time
+ *  AND by the dashboard's "Capture current filters" action (in-place update). */
+export function buildFiltersSnapshot(store: StoreSliceForSnapshot): BubbleFiltersSnapshot {
+  return {
+    activePersona: store.activePersona,
+    filters: store.filters,
+    location: store.location,
+    commute: {
+      enabled: store.commute.enabled,
+      destination: store.commute.destination,
+      mode: store.commute.mode,
+      minutes: store.commute.minutes,
+    },
+    school: store.school,
+    universalFilters: store.universalFilters,
+    transactionMode: store.transactionMode,
+    propertyClass: store.propertyClass,
+  };
 }
 
 /**
@@ -162,18 +215,7 @@ export function buildBubblePayload(
     school?: { key: string; name: string; point: [number, number]; radiusKm?: number };
   }
 ): BubblePayload {
-  const filtersSnapshot: BubbleFiltersSnapshot = {
-    activePersona: store.activePersona,
-    filters: store.filters,
-    location: store.location,
-    commute: {
-      enabled: store.commute.enabled,
-      destination: store.commute.destination,
-      mode: store.commute.mode,
-      minutes: store.commute.minutes,
-    },
-    school: store.school,
-  };
+  const filtersSnapshot = buildFiltersSnapshot(store);
 
   if (opts.area_type === "draw") {
     if (!store.drawPolygon || store.drawPolygon.length < 3) {
@@ -235,6 +277,9 @@ export function buildBubblePayload(
 export interface StoreSettersForLoad {
   setActivePersona: (p: PersonaType) => void;
   setFilters: (f: TerminalFilterState) => void;
+  /** Restores the universal basics captured since 095; pre-095 bubbles skip it.
+   *  Optional so existing callers stay assignable. */
+  setUniversalFilter?: (key: string, value: UniversalFilterState[string]) => void;
   setLocation: (loc: string) => void;
   setCommute: (patch: Partial<CommuteState>) => void;
   setCommutePolygon: (polygon: [number, number][] | null) => void;
@@ -254,9 +299,20 @@ export function applyBubbleToStore(
   setters: StoreSettersForLoad
 ): void {
   const f = bubble.filters;
-  if (!f) return; // city alert rows carry no filter snapshot and never rehydrate the terminal
+  // City alert rows carry no snapshot (or a dashboard-lens capture, which has no
+  // terminal state to restore) — only real terminal snapshots rehydrate.
+  if (!f || !("activePersona" in f)) return;
   setters.setActivePersona(f.activePersona);
   setters.setFilters(f.filters);
+  // Universal basics (beds/price/types…) — captured since 095. Restored per key so
+  // unknown/renamed keys degrade to no-ops. transactionMode/propertyClass are NOT
+  // restored: mode derives from the active layer tabs (transactionModeForLayers)
+  // and forcing it here would desync them — they're captured for the alerts worker.
+  if (f.universalFilters && setters.setUniversalFilter) {
+    for (const [key, value] of Object.entries(f.universalFilters)) {
+      setters.setUniversalFilter(key, value);
+    }
+  }
   setters.setLocation(f.location ?? "");
 
   // Clear all three area sources first, then populate the one this bubble owns.

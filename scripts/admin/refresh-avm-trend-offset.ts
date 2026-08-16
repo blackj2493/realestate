@@ -40,7 +40,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { createClient } from '@supabase/supabase-js';
 import { normalizePropertySubType, cityRegionLookupCandidates } from '@/lib/avm/normalizeType';
-import { MIN_SALE_PRICE } from '@/lib/avm/types';
+import { SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE } from '@/lib/avm/types';
 
 // Supabase client uses Node's native fetch (undici). We deliberately do NOT override
 // global.fetch with cross-fetch/node-fetch: node-fetch throws `FetchError: … Premature
@@ -270,11 +270,12 @@ async function readPage(cursor: string, pageSize: number, windowStartIso: string
       .gt('listing_key', cursor)
       .gte('close_date', windowStartIso)
       // raw_vow_sold mixes SOLD rows with LEASED ones (close_price = monthly rent,
-      // ~$1.4k–$6k). Match the live anchor query's MIN_SALE_PRICE floor so leases
-      // never enter the trend/offset medians — without it, the still-filling current
-      // half-year bucket (few sales, many leases) flips to a lease-level median and
-      // poisons g(now) for the whole cohort. (See anchorService.ts / types.ts.)
-      .gte('close_price', MIN_SALE_PRICE)
+      // ~$1.4k–$6k). Leases must never enter the trend/offset medians: without the
+      // exclusion the still-filling current half-year bucket (few sales, many
+      // leases) flips to a lease-level median and poisons g(now) for the whole
+      // cohort. Matches the live anchor query exactly — see anchorService.ts.
+      .eq('transaction_type', SALE_TRANSACTION_TYPE)
+      .gte('close_price', MIN_CLOSE_PRICE)
       .order('listing_key', { ascending: true })
       .limit(pageSize);
 

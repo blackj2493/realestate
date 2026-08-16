@@ -44,10 +44,13 @@ describe('evaluateMove — Erin Mills Condo (broken-feature cohort)', () => {
     buildingAreaTotal: 1169, bathroomsTotalInteger: 2, bedroomsAboveGrade: 2,
     parkingTotal: 1, basementTier: 5, interiorTier: 3, exteriorTier: 3,
   });
-  it('suppresses the placeholder-basement move', () => {
+  it('suppresses the basement move on feasibility, not on a lucky placeholder', () => {
+    // Was asserting 'placeholder' — true, but only because this cohort happens to
+    // carry a degenerate basement column. The reason an apartment can't finish a
+    // basement is that it doesn't have one, and that must not depend on the data.
     const r = evaluateMove(condoHome, move('finish_basement'), ERIN_MILLS_CONDO, P0);
     expect(r.status).toBe('suppressed');
-    expect(r.suppressReason).toBe('placeholder');
+    expect(r.suppressReason).toBe('not_applicable_to_type');
     expect(r.valueAddTyp).toBe(0);
   });
   it('suppresses the negative-beta bedroom move (never shows −$34k)', () => {
@@ -56,11 +59,24 @@ describe('evaluateMove — Erin Mills Condo (broken-feature cohort)', () => {
     expect(r.suppressReason).toBe('negative_beta');
     expect(r.valueAddTyp).toBe(0);
   });
-  it('caps the runaway-beta addition well below the naive +$212k', () => {
+  it('never prices an addition on an apartment, capped or not', () => {
+    // This previously asserted status 'priced' with a capped figure — i.e. it locked
+    // in telling a 12th-floor owner to build 400 sq ft. building_area_total is a
+    // perfectly healthy feature for condos, so no statistical gate would ever catch
+    // it; only feasibility does.
     const r = evaluateMove(condoHome, move('build_addition'), ERIN_MILLS_CONDO, P0);
-    expect(r.status).toBe('priced');
-    expect(r.valueAddTyp).toBeLessThanOrEqual(Math.round(0.12 * P0)); // ≤ %-of-home cap
-    expect(r.valueAddTyp).toBeLessThan(100000);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('not_applicable_to_type');
+    expect(r.valueAddTyp).toBe(0);
+  });
+  it('never prices a detached garage on an apartment', () => {
+    const r = evaluateMove(condoHome, move('build_garage'), ERIN_MILLS_CONDO, P0);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('not_applicable_to_type');
+  });
+  it('still prices the interior move — the one an apartment owner can actually make', () => {
+    const r = evaluateMove(condoHome, move('interior_excellent'), ERIN_MILLS_CONDO, P0);
+    expect(r.suppressReason).not.toBe('not_applicable_to_type');
   });
   it('caps the tiny-std bathroom below the naive +$94k', () => {
     const r = evaluateMove(condoHome, move('add_bathroom'), ERIN_MILLS_CONDO, P0);
@@ -146,14 +162,31 @@ describe('evaluateMove — gate coverage', () => {
     expect(r.valueAddTyp).toBeGreaterThan(0);
   });
 
-  // 5. legal_suite suppressed: Erin Mills Condo basement_score is placeholder stub
-  it('legal_suite suppressed: Erin Mills Condo basement_score is placeholder → suppressed', () => {
+  // 5a. legal_suite on an apartment: feasibility gate fires FIRST, ahead of the
+  // statistical ones. It used to report 'placeholder' — correct by accident, since
+  // this cohort's basement column happens to be a degenerate stub. An apartment has
+  // no basement whatever the coefficients look like, so the reason must not be data.
+  it('legal_suite on an apartment → not_applicable_to_type (feasibility precedes the stat gates)', () => {
     const condoHome = subject({
       propertySubType: 'Condo Apartment', rawPropertySubType: 'Condo Apartment',
       buildingAreaTotal: 1169, bathroomsTotalInteger: 2, bedroomsAboveGrade: 2,
       parkingTotal: 1, basementTier: 5, interiorTier: 3, exteriorTier: 3,
     });
     const r = evaluateMove(condoHome, move('legal_suite'), ERIN_MILLS_CONDO, P0);
+    expect(r.status).toBe('suppressed');
+    expect(r.suppressReason).toBe('not_applicable_to_type');
+  });
+
+  // 5b. The placeholder gate itself still needs cover. Same degenerate basement
+  // column, but a dwelling type feasibility does NOT gate, so the stub is what
+  // rejects the move — which is exactly the branch 5a no longer reaches.
+  it('legal_suite suppressed on a degenerate basement column → placeholder', () => {
+    const townHome = subject({
+      propertySubType: 'Townhouse', rawPropertySubType: 'Att/Row/Townhouse',
+      buildingAreaTotal: 1169, bathroomsTotalInteger: 2, bedroomsAboveGrade: 2,
+      parkingTotal: 1, basementTier: 5, interiorTier: 3, exteriorTier: 3,
+    });
+    const r = evaluateMove(townHome, move('legal_suite'), ERIN_MILLS_CONDO, P0);
     expect(r.status).toBe('suppressed');
     expect(r.suppressReason).toBe('placeholder');
   });

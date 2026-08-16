@@ -7,16 +7,25 @@
 
 import type { SearchSuggestion } from '@/lib/typesense/client';
 import { parseAddress } from '@/lib/watchlist/disposition';
-import { slugify } from '@/lib/listings/listingPath';
+import { slugify, cityHubSlug } from '@/lib/listings/listingPath';
 
 export type SearchTarget =
   | { action: 'open-listing'; listing: NonNullable<SearchSuggestion['listing']> }
+  /** A destination the server already resolved — used verbatim, never re-derived. */
+  | { action: 'open-href'; href: string; label: string }
   | { action: 'set-location'; label: string };
 
 /** A chosen suggestion: address/MLS with a listing opens it; everything else is a place. */
 export function resolveSuggestionTarget(s: SearchSuggestion): SearchTarget {
   if ((s.kind === 'address' || s.kind === 'mls') && s.listing) {
     return { action: 'open-listing', listing: s.listing };
+  }
+  // A property RECORD carries the destination /api/search/address-status resolved for it —
+  // the keyed /address page, the full report, or (for an off-market campaign whose home is
+  // listed again) the live relist. Re-deriving a URL from the label instead would drop the
+  // MLS key onto the unkeyed profile ladder and land somewhere else entirely.
+  if (s.kind === 'record' && s.record?.href) {
+    return { action: 'open-href', href: s.record.href, label: s.label.trim() };
   }
   return { action: 'set-location', label: s.label.trim() };
 }
@@ -42,8 +51,20 @@ export function addressProfileHref(label: string): string | null {
   return `/address/on/${citySlug}/${streetSlug}`;
 }
 
+/**
+ * Canonical KEYED /address URL for a sold/off-market record — the same shape the
+ * addresses sitemap and the profile ladder's sold redirect emit, so every surface
+ * lands on one URL per record.
+ */
+export function soldAddressHref(address: string, city: string, key: string): string {
+  const citySlug = cityHubSlug(city) || slugify(city) || 'ontario';
+  const streetSlug = slugify((address || '').split(',')[0]);
+  return `/address/on/${citySlug}/${streetSlug ? `${streetSlug}-${key}` : key}`;
+}
+
 /** navigate-mode only: turn a target into a route into the terminal / listing / profile. */
 export function targetToHref(t: SearchTarget): string {
   if (t.action === 'open-listing') return `/properties/${t.listing.id}`;
+  if (t.action === 'open-href') return t.href;
   return addressProfileHref(t.label) ?? `/properties?city=${encodeURIComponent(t.label)}`;
 }

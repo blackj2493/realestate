@@ -15,16 +15,16 @@ import React from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
-import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
+import { moreFiltersForClass, cloneFilterValue } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 import FundamentalToggle from "./FundamentalToggle";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
-const freshDefault = (v: FilterValue): FilterValue =>
-  Array.isArray(v) ? ([...v] as FilterValue) : v;
+const freshDefault = cloneFilterValue;
 
 export interface FilterItem {
   def: FilterDef;
@@ -70,6 +70,15 @@ export default function MobileFilterSheet({
   const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
   const addFilter = useCommandCenterStore((s) => s.addFilter);
   const removeAddedFilter = useCommandCenterStore((s) => s.removeAddedFilter);
+
+  // While this sheet is open, hide the global Guide launcher (FAB) so it can't
+  // float over the "Show N results" CTA below. Mounts only when open, so a plain
+  // mount/unmount ref-count is enough. See useDiscovery.chromeBlockers.
+  React.useEffect(() => {
+    const { blockChrome, unblockChrome } = useDiscovery.getState();
+    blockChrome();
+    return unblockChrome;
+  }, []);
 
   // Lock body scroll while open; close on Escape.
   React.useEffect(() => {
@@ -192,7 +201,7 @@ export default function MobileFilterSheet({
               onClick={clearAll}
               className={cn(
                 "min-h-[44px] flex-1 border border-border px-4 font-mono text-xs font-semibold uppercase tracking-wider text-foreground",
-                "transition-colors hover:border-cyan-500/50 hover:text-cyan-300 active:bg-muted"
+                "transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300 active:bg-muted"
               )}
             >
               Clear all

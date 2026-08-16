@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import TopNav from "@/components/hero/TopNav";
 import HeroBackground from "@/components/hero/HeroBackground";
 import {
@@ -14,44 +13,17 @@ import {
   type ApplyProfile,
 } from "@/lib/dashboard/config";
 
+// Themed rather than pinned slate: /apply is a LIGHT page now (only the landing page stays
+// dark), so the field has to read on a white card as well as a slate one. Tokens for the
+// light side, the previous slate values kept verbatim behind `dark:` so dark is unchanged.
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-900/60 px-3.5 py-2.5 text-base text-slate-100 placeholder:text-slate-600 outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40";
+  "w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-base text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/40 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-600";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       {children}
     </label>
-  );
-}
-
-function CheckRow({
-  checked,
-  onToggle,
-  children,
-}: {
-  checked: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-start gap-3 text-left"
-    >
-      <span
-        className={cn(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
-          checked
-            ? "border-emerald-500 bg-emerald-500 text-slate-950"
-            : "border-slate-600 bg-slate-900"
-        )}
-      >
-        {checked && <Check className="h-3.5 w-3.5" />}
-      </span>
-      <span className="text-sm leading-snug text-slate-300">{children}</span>
-    </button>
   );
 }
 
@@ -62,16 +34,11 @@ export default function ApplyPage() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [attestNotAgent, setAttestNotAgent] = useState(false);
-  const [attestBonaFide, setAttestBonaFide] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
 
   const validate = (): string => {
     if (!fullName.trim()) return "Enter your full name.";
     // Strict shape: one @, a dot in domain, ≥2-char TLD (mirrors /api/viewing-requests EMAIL_RE).
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return "Enter a valid email address.";
-    if (!attestNotAgent || !attestBonaFide || !agreeTerms)
-      return "All three confirmations are required to continue.";
     return "";
   };
 
@@ -96,16 +63,19 @@ export default function ApplyPage() {
     };
 
     // Best-effort lead capture — never block access on a Supabase hiccup.
+    //
+    // The three VOW attestations are deliberately NOT collected here any more. They were
+    // asked twice: once on this pre-account form and again on /welcome, word for word.
+    // Only the /welcome set is the compliance boundary — the gate reads
+    // profiles.terms_accepted_at + bona_fide_attested (lib/auth/terms.ts), which requires
+    // a registered Consumer and therefore an authenticated account this form does not yet
+    // have. The onboarding row's attest_* columns are write-only; nothing reads them for
+    // access. So this stays lead capture, and the attestation happens once, where it binds.
     try {
       await fetch("/api/onboarding/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...profile,
-          attestNotAgent,
-          attestBonaFide,
-          agreeTerms,
-        }),
+        body: JSON.stringify(profile),
       });
     } catch (e) {
       console.warn("[apply] persist failed (granting access anyway):", e);
@@ -116,13 +86,19 @@ export default function ApplyPage() {
     // compliance, §3A) — the full VOW terms attestation is enforced again at /welcome.
     saveProfile(profile);
     saveConfig(seedConfigFromProfile(profile));
-    // Carry the captured email across the wall so /login can pre-fill it —
-    // no re-typing at the funnel's most fragile point.
-    router.push(`/login?next=/dashboard&email=${encodeURIComponent(email.trim())}`);
+    // Carry the captured email across the wall so /login can pre-fill it — no re-typing
+    // at the funnel's most fragile point. Deliberately NO `next`: pinning /dashboard here
+    // made every applicant look like an intentional navigation, which suppressed the
+    // first-run terminal routing at /welcome. Since profiling was dropped, the seed above
+    // carries NO regions — so /welcome asks for one market and opens the terminal there.
+    router.push(`/login?email=${encodeURIComponent(email.trim())}`);
   };
 
   return (
-    <div className="relative min-h-app overflow-hidden bg-slate-950 text-slate-100">
+    // Themed, NOT a dark island. Only the landing page keeps the terminal look; the funnel
+    // past it follows the app theme, so this matches /login rather than `/`. No `dark` class
+    // and no forceDark — HeroBackground resolves its own basemap and scrim from the theme.
+    <div className="relative min-h-app overflow-hidden bg-background text-foreground">
       <HeroBackground variant="form" />
       <div className="relative z-10 flex min-h-app flex-col">
         <TopNav />
@@ -130,10 +106,10 @@ export default function ApplyPage() {
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-6 md:px-10 md:py-10">
           {/* Title */}
           <div className="text-center">
-            <h1 className="text-3xl font-black uppercase tracking-tight text-white md:text-6xl [text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
-              Terminal Access
+            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 md:text-6xl dark:text-white dark:[text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
+              Create your account
             </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:mt-4 [text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground md:mt-4 dark:text-slate-300 dark:[text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
               {
                 "Built for principals and analysts — not agents prospecting for clients. Confirm a couple of details and the terminal opens."
               }
@@ -142,9 +118,9 @@ export default function ApplyPage() {
 
           {/* Body: form + rail */}
           <div className="mt-8 grid gap-8 md:mt-10 lg:grid-cols-[minmax(0,1fr)_260px]">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5 md:p-8">
+            <div className="rounded-xl border border-border bg-card/70 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 p-5 md:p-8">
               {error && (
-                <div className="mb-6 rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                <div className="mb-6 rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
                   {error}
                 </div>
               )}
@@ -178,36 +154,17 @@ export default function ApplyPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 border-t border-slate-800 pt-6">
-                  <CheckRow
-                    checked={attestNotAgent}
-                    onToggle={() => setAttestNotAgent((v) => !v)}
-                  >
-                    {
-                      "I am applying as a principal/investor deploying my own capital — not as a licensed agent prospecting for clients."
-                    }
-                  </CheckRow>
-                  <CheckRow
-                    checked={attestBonaFide}
-                    onToggle={() => setAttestBonaFide((v) => !v)}
-                  >
-                    {
-                      "I certify that I have a bona fide interest in the purchase, sale, or lease of real estate."
-                    }
-                  </CheckRow>
-                  <CheckRow
-                    checked={agreeTerms}
-                    onToggle={() => setAgreeTerms((v) => !v)}
-                  >
-                    {"I agree to the Terms of Service and Privacy Policy."}
-                  </CheckRow>
-                  <p className="text-xs leading-snug text-slate-500">
-                    Read our{" "}
-                    <Link href="/terms" className="text-cyan-400 hover:underline">
+                <div className="space-y-4 border-t border-border pt-6 dark:border-slate-800">
+                  {/* The VOW attestations used to sit here as well as on /welcome, asking
+                      the same three things twice. They live on /welcome only — that is
+                      where they bind, against a real account. */}
+                  <p className="text-xs leading-snug text-muted-foreground">
+                    Next you&rsquo;ll confirm the VOW access terms, then the terminal opens. Read our{" "}
+                    <Link href="/terms" className="text-cyan-700 hover:underline dark:text-cyan-400">
                       Terms of Service
                     </Link>{" "}
                     and{" "}
-                    <Link href="/privacy" className="text-cyan-400 hover:underline">
+                    <Link href="/privacy" className="text-cyan-700 hover:underline dark:text-cyan-400">
                       Privacy Policy
                     </Link>
                     .
@@ -236,17 +193,17 @@ export default function ApplyPage() {
 
             {/* Right rail */}
             <aside className="hidden lg:block">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5">
+              <div className="rounded-xl border border-border bg-card/70 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 p-5">
                 <p className="terminal-font text-[10px] uppercase tracking-[0.2em] text-emerald-400/80">
                   Access protocol
                 </p>
-                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                   {
                     "Built for principals and analysts, not agents prospecting for clients."
                   }
                 </p>
-                <div className="my-4 h-px bg-slate-800" />
-                <p className="text-xs leading-relaxed text-slate-500">
+                <div className="my-4 h-px bg-border dark:bg-slate-800" />
+                <p className="text-xs leading-relaxed text-muted-foreground">
                   {
                     "You're in as soon as you confirm your email — no waiting, no gatekeeping."
                   }

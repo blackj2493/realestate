@@ -15,6 +15,7 @@ import { indexListing, deleteListing } from '@/lib/typesense/client';
 import { loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/ExtrapolatedCapRateEngine';
 import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
+import { detectDistress } from '@/lib/listings/distressSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
 import { fetchRentAVM, type RentAVMResult } from './services/rentAVM';
@@ -27,12 +28,28 @@ import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 import { deriveBasementTier } from '@/lib/avm/conditionScoring';
 import { normalizeDirectionFaces } from '@/lib/listings/directionFaces';
+import { sqftBoundsFor } from '@/lib/listings/livingAreaBands';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 const BASELINE_RENT = 1200;  // Monthly rent placeholder per bedroom
+
+/**
+ * Drop the `media` array before a listing record is persisted to
+ * listings.full_payload (migration 103).
+ *
+ * Returns a shallow copy — the caller's `raw` keeps its media, because sync.ts still
+ * builds the Typesense doc from it and mediaUrls/primaryThumbnailUrl are derived from
+ * it here. Only what lands in Postgres is slimmed; media_urls carries the photos.
+ */
+function stripStoredMedia(raw: Record<string, unknown>): Record<string, unknown> {
+  if (!('media' in raw)) return raw;
+  const out = { ...raw };
+  delete out.media;
+  return out;
+}
 
 /** Coerce a raw RESO scalar to a finite number, else 0 — used for the flat dimension
  *  columns (migration 045). 0 = missing, matching the Typesense extraction so a stored
@@ -592,26 +609,17 @@ export function calculateDerivedMetrics(raw: any): DerivedMetrics {
     targetGrossYield = annualRent / raw.ListPrice;
   }
 
-  // 3. Is Distressed (regex on public remarks)
-  let isDistressed = false;
-  if (raw.PublicRemarks) {
-    const remarksLower = raw.PublicRemarks.toLowerCase();
-    const distressedPattern = /\b(as-is|tlc|handyman|contractor|renovator|estate)\b/;
-    isDistressed = distressedPattern.test(remarksLower);
-    
-    // Also flag as distressed if DaysOnMarket > 90
-    if (calculatedDOM !== null && calculatedDOM > 90) {
-      isDistressed = true;
-    }
-    
-    // Or if price has been reduced (PreviousListPrice exists and is higher)
-    if (raw.PreviousListPrice && raw.ListPrice && raw.PreviousListPrice > raw.ListPrice) {
-      const reductionPercent = ((raw.PreviousListPrice - raw.ListPrice) / raw.PreviousListPrice) * 100;
-      if (reductionPercent > 5) {
-        isDistressed = true;
-      }
-    }
-  }
+  // 3. Is Distressed — phrase signals in the public remarks ONLY.
+  //
+  // Time-on-market and price cuts used to flip this flag too, which turned DISTRESSED into an
+  // age badge (19% of actives, ~100% past 180 days) and suppressed the accurate STALE badge
+  // that shares the same 90-day threshold. Those two dimensions already have honest homes:
+  // `IsStale`/`TrueDom` and `TotalPriceDrop`. See src/lib/listings/distressSignals.ts.
+  //
+  // The matcher is shared with scripts/admin/recompute-distress-flag.ts — the nightly sync
+  // only re-transforms the ModificationTimestamp delta, so a second copy of this rule would
+  // leave most of the index frozen on whichever copy last wrote it.
+  const { isDistressed } = detectDistress(raw.PublicRemarks);
 
   // 4. Has Secondary Suite Potential (legacy check)
   let hasSecondarySuitePotential = false;
@@ -712,6 +720,9 @@ export interface TransformResult {
     CoveredSpaces?: number;
     BuildingAreaTotal?: number;
     LivingAreaRange?: string;
+    /** Interior size as half-open interval bounds; both -1 when unreported. */
+    sqft_min?: number;
+    sqft_max?: number;
     isDistressed: boolean;
     targetGrossYield?: number;
     hasSecondarySuitePotential: boolean;
@@ -736,6 +747,8 @@ export interface TransformResult {
     PropertyHash?: string;
     TrueDom?: number;
     TotalPriceDrop?: number;
+    LeaseTrueDom?: number;
+    LeaseTotalPriceDrop?: number;
     IsStale?: boolean;
     IsSold?: boolean;
     // Suite Analysis fields
@@ -925,7 +938,12 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // Build Supabase payload (full document)
   const supabasePayload = {
     listing_key: raw.ListingKey,
-    full_payload: raw,
+    // `media` is stripped before storing (migration 103). It was ~20 KB/row of photo
+    // objects duplicating media_urls below, which is what every render path actually
+    // reads — and the largest single thing in the database. `raw` is NOT mutated:
+    // mediaUrls/primaryThumbnailUrl above are already derived from it, and the caller
+    // (sync.ts) still needs raw.media for the Typesense doc.
+    full_payload: stripStoredMedia(raw),
     media_urls: mediaUrls,
     derived_metrics: metrics,
     carry_cost: carryCost,
@@ -997,6 +1015,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // the real chain delta after the historical lookup, but we emit a 0
     // placeholder here so the schema contract holds for any other caller.
     TotalPriceDrop: 0,
+    // LEASE-track twins (rental-native metrics) — same contract as TotalPriceDrop:
+    // required int32s that sync.ts overwrites from the campaign stitch. 0 placeholder.
+    LeaseTrueDom: 0,
+    LeaseTotalPriceDrop: 0,
     IsStale: trueDOM.isStale,
     // IsSold: defaults to false, sync.ts will set true for sold listings
     IsSold: false,
@@ -1042,6 +1064,14 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // BuildingAreaTotal): undeclared in the schema, so returned but not filter/sortable.
   // BuildingAreaTotal is ~never filled for houses, so this is the headline sqft fallback.
   typesensePayload.LivingAreaRange = raw.LivingAreaRange || '';
+  // …and the same size as a filterable INTERVAL. Residential sqft is 100% banded
+  // (measured 2026-07-30: 81,555/81,570 houses and 37,932/37,933 condos carry a
+  // band, zero carry an exact value), so collapsing to a midpoint would make every
+  // size query assert a precision the feed cannot support. Indexing both bounds
+  // keeps "definitely in range" and "might be in range" separable.
+  const sqft = sqftBoundsFor(raw);
+  typesensePayload.sqft_min = sqft.lo;
+  typesensePayload.sqft_max = sqft.hi;
   // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;
   typesensePayload.primaryImageUrl = primaryThumbnailUrl || '';

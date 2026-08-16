@@ -150,6 +150,37 @@ export function getProfile(): ApplyProfile | null {
   }
 }
 
+/**
+ * Wipe the locally-stored workspace — the applicant profile and the dashboard config.
+ *
+ * These live in localStorage, NOT in Supabase, so they outlive the account that created
+ * them: deleting a user server-side leaves them untouched, and so does signing out. On a
+ * shared browser that means the next person to create an account inherits the previous
+ * one's saved cities, persona, boards and market lens — and, because DashboardClient
+ * greets the user with getProfile()?.fullName, is greeted by the previous person's NAME.
+ *
+ * Call this when a brand-new account is being set up (see AcceptTermsForm's first-run
+ * path) so a new account always starts from a clean workspace on this device.
+ */
+export function resetLocalWorkspace(): void {
+  if (!hasWindow()) return;
+  window.localStorage.removeItem(PROFILE_KEY);
+  window.localStorage.removeItem(CONFIG_KEY);
+}
+
+/**
+ * Whether the stored workspace must belong to a DIFFERENT account than one that is only
+ * now accepting terms for the first time.
+ *
+ * The tell is saved regions. /apply — the only pre-account writer — always stores
+ * `regions: []` (profiling was dropped from signup), and nothing else writes regions
+ * until a user picks them from inside the app. So on a first-ever acceptance any
+ * non-empty regions list can only have come from a previous account on this browser.
+ */
+export function hasForeignWorkspace(): boolean {
+  return getConfig().regions.length > 0;
+}
+
 // ── Region → city mapping ────────────────────────────────────────────────────
 export function citiesFromRegions(regions: string[]): string[] {
   const out: string[] = [];
@@ -213,8 +244,57 @@ function mergeLens(raw: unknown): MarketActivityLens {
   };
 }
 
+/** True when THIS device already has a saved dashboard config (i.e. an explicit
+ *  choice exists). Lets the account-metadata adopt path stay local-first. SSR-safe. */
+export function hasStoredConfig(): boolean {
+  if (!hasWindow()) return false;
+  try {
+    return window.localStorage.getItem(CONFIG_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function saveConfig(c: DashboardConfig): void {
-  if (hasWindow()) window.localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
+  if (!hasWindow()) return;
+  // Mirror a CHANGED persona to the signed-in user's account metadata so the lens
+  // follows the account across devices + surfaces (the terminal, dashboard and
+  // listing pages all read this one store). localStorage stays the source of truth;
+  // this is a best-effort fire-and-forget. Gated on an actual persona change so
+  // region/board edits and per-visit lastVisitAt stamps never trigger an auth write.
+  // The Supabase browser client is dynamically imported so it never lands in a
+  // server bundle that happens to import this (SSR-safe) config module.
+  let personaChanged = false;
+  try {
+    personaChanged = getConfig().persona !== c.persona;
+  } catch {
+    personaChanged = true;
+  }
+  window.localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
+  if (personaChanged) {
+    void import("@/lib/personas/personaAccount")
+      .then((m) => m.mirrorPersonaToAccount(c.persona))
+      .catch(() => {});
+  }
+}
+
+/**
+ * Shape-guard an untyped config blob (localStorage OR the dashboard_prefs jsonb —
+ * migration 096) onto the current DashboardConfig shape. Single normalizer so
+ * server and local storage can never drift in how they degrade.
+ */
+export function normalizeConfig(raw: unknown): DashboardConfig {
+  const parsed = (raw ?? {}) as Partial<DashboardConfig>;
+  return {
+    regions: Array.isArray(parsed.regions) ? parsed.regions : [],
+    boards:
+      Array.isArray(parsed.boards) && parsed.boards.length
+        ? parsed.boards
+        : [...DEFAULT_BOARD_ORDER],
+    marketActivity: mergeLens(parsed.marketActivity),
+    persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
+    lastVisitAt: typeof parsed.lastVisitAt === 'number' ? parsed.lastVisitAt : null,
+  };
 }
 
 /** Stored config, else seeded from the profile, else a sensible empty default. */
@@ -222,20 +302,7 @@ export function getConfig(): DashboardConfig {
   if (hasWindow()) {
     try {
       const raw = window.localStorage.getItem(CONFIG_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<DashboardConfig>;
-        return {
-          regions: Array.isArray(parsed.regions) ? parsed.regions : [],
-          boards:
-            Array.isArray(parsed.boards) && parsed.boards.length
-              ? parsed.boards
-              : [...DEFAULT_BOARD_ORDER],
-          marketActivity: mergeLens(parsed.marketActivity),
-          persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
-          lastVisitAt:
-            typeof parsed.lastVisitAt === 'number' ? parsed.lastVisitAt : null,
-        };
-      }
+      if (raw) return normalizeConfig(JSON.parse(raw));
     } catch {
       /* fall through to seed */
     }

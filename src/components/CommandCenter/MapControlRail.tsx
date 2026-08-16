@@ -16,6 +16,7 @@ import React from "react";
 import { Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Landmark, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
+import { useIsMac, formatShortcut } from "@/hooks/useIsMac";
 
 type RailTile =
   | { kind: "drawer"; module: RailModule; label: string; description: string; icon: LucideIcon; dataActive?: boolean; badge?: number; tourId?: string }
@@ -101,6 +102,11 @@ export default function MapControlRail() {
   const togglePalette = useCommandCenterStore((s) => s.togglePalette);
   const showZoning = useCommandCenterStore((s) => s.showZoning);
   const setShowZoning = useCommandCenterStore((s) => s.setShowZoning);
+
+  // Show the ⌘K hint on Mac, "Ctrl K" everywhere else (the palette handler already
+  // accepts both). SSR-safe: renders non-Mac on the server, corrects after mount.
+  const isMac = useIsMac();
+  const paletteShortcut = formatShortcut("⌘K", isMac);
 
   // Group 1 — map layers: tools that shape or visualize the search on the map.
   const layerTiles: RailTile[] = [
@@ -194,7 +200,7 @@ export default function MapControlRail() {
       kind: "action",
       id: "palette",
       label: "Quick Jump",
-      description: "Jump to a city, persona, map mode or tool (⌘K)",
+      description: `Jump to a city, persona, map mode or tool (${paletteShortcut})`,
       icon: Zap,
       onClick: togglePalette,
       tourId: "command-palette",

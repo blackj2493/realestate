@@ -16,7 +16,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair } from "lucide-react";
+import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -24,6 +24,7 @@ import { useOpenListing } from "@/hooks/useOpenListing";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { priceConfig } from "@/lib/filters/fundamentals";
 import { federatedSuggest } from "@/lib/search/federatedSuggest";
+import { resolveCityCamera } from "@/lib/search/cityCamera";
 import { fetchChipPreview, type ChipPreview } from "@/lib/search/chipPreview";
 import { schoolScoreField } from "@/lib/schools/schoolLens";
 import { parseNlQuery } from "@/lib/search/nlParse";
@@ -32,6 +33,9 @@ import { rankListings, type RankBadge } from "@/lib/search/personaRank";
 import { compsAnchorForListing } from "@/lib/comps/compsAnchor";
 import { getRecents, pushRecent, clearRecents, type RecentSearch } from "@/lib/search/recents";
 import { addressProfileHref } from "@/lib/search/searchTarget";
+import { ROW_STATUS_CHIP, ROW_STATUS_LABEL, ROW_STATUS_TONE, backOnMarketLabel } from "@/lib/search/searchRows";
+import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
+import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
 import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
 import { recordParse, parseMissRate } from "@/lib/search/parseMetrics";
 import type { SuggestGroup, SuggestItem, ParsedQuery } from "@/lib/search/types";
@@ -39,10 +43,13 @@ import type { ListingDocument } from "@/lib/typesense/client";
 import SearchChipsRow from "./search/SearchChipsRow";
 import SearchAnswerCard from "./search/SearchAnswerCard";
 import SearchEmptyState, { type WatchedArea } from "./search/SearchEmptyState";
+import RecordThumb from "./search/RecordThumb";
 
 interface Props {
   className?: string;
   placeholder?: string;
+  /** Called after any suggestion is selected — lets the mobile search overlay close. */
+  onSelect?: () => void;
 }
 
 const TONE: Record<RankBadge["tone"], string> = {
@@ -63,10 +70,11 @@ function CategoryIcon({ category }: { category: SuggestItem["category"] }) {
   if (category === "community") return <MapPin className={cn(cls, "text-cyan-700 dark:text-cyan-400/80")} />;
   if (category === "school") return <GraduationCap className={cn(cls, "text-amber-700 dark:text-amber-400/80")} />;
   if (category === "geo") return <Navigation className={cn(cls, "text-cyan-700 dark:text-cyan-400")} />;
+  if (category === "soldAddress") return <Home className={cn(cls, "text-rose-700 dark:text-rose-400/80")} />;
   return <span className="block h-2 w-2 shrink-0 rounded-full bg-rose-400" />; // sold
 }
 
-export default function LocationSearchV2({ className, placeholder: placeholderProp }: Props) {
+export default function LocationSearchV2({ className, placeholder: placeholderProp, onSelect }: Props) {
   const router = useRouter();
   const location = useCommandCenterStore((s) => s.location);
   const setLocation = useCommandCenterStore((s) => s.setLocation);
@@ -115,16 +123,21 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   // Persona badges for address rows (computed from the listings already in hand).
   const badgeFor = React.useMemo(() => {
     const map = new Map<string, RankBadge[]>();
-    const addr = groups.find((g) => g.category === "address");
-    if (addr) {
-      const listings = addr.items.map((i) => i.listing!).filter(Boolean);
-      for (const r of rankListings(listings, activePersona)) map.set(r.listing.id, r.badges);
-    }
+    const listings = groups
+      .flatMap((g) => g.items)
+      .filter((i) => i.category === "address" && i.listing)
+      .map((i) => i.listing!);
+    for (const r of rankListings(listings, activePersona)) map.set(r.listing.id, r.badges);
     return map;
   }, [groups, activePersona]);
 
   // Flat list (in render order) for keyboard navigation.
-  const flatItems = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
+  // Flattened in RENDER order, nested campaign rows included — otherwise arrow-key
+  // navigation would skip a home's history entirely.
+  const flatItems = React.useMemo(
+    () => groups.flatMap((g) => g.items.flatMap((i) => [i, ...(i.children ?? [])])),
+    [groups]
+  );
 
   // Close on outside click.
   React.useEffect(() => {
@@ -207,6 +220,13 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       case "community":
         setLocation(item.label);
         remember(item.label, "place");
+        // Fly the map to the city so it never stays on a stale viewport. A city carries no
+        // coordinates in the suggestion, so resolve a centroid (instant for markets, else a
+        // quick query over the city's listings) and use the robust setFlyTo path — auto-fit
+        // alone silently fails on mobile (map hidden behind the search overlay / list view).
+        void resolveCityCamera(item.label).then((cam) => {
+          if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+        });
         break;
       case "geo":
         if (item.geo) {
@@ -219,9 +239,16 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
         // Comp-on-demand entry: light up the sold layer so comps render on the map.
         if (!activeLayers.has("sold")) toggleLayer("sold");
         break;
+      case "soldAddress":
+        // This exact address has a sale record → its keyed /address page (sale hero +
+        // property history). The href is server-built; fall back to the profile ladder.
+        router.push(item.sold?.href ?? addressProfileHref(item.label) ?? "/properties");
+        remember(item.label, "address");
+        break;
     }
     setValue("");
     close();
+    onSelect?.();
   };
 
   // Comp-on-demand from a specific address row.
@@ -241,6 +268,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     }
     setValue("");
     close();
+    onSelect?.();
   };
 
   // "3 bd · 4 ba · Townhouse · $1,599,000" line under a preview sample.
@@ -285,10 +313,17 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     } else if (parsed?.isStructured) {
       applyNl();
     } else if (value.trim()) {
-      setLocation(value.trim());
-      remember(value.trim(), "place");
+      const q = value.trim();
+      setLocation(q);
+      remember(q, "place");
+      // Same as picking a city suggestion: fly the map to it + close the mobile sheet, so a
+      // typed-then-Enter search doesn't leave the map on a stale viewport / the sheet open.
+      void resolveCityCamera(q).then((cam) => {
+        if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+      });
       setValue("");
       close();
+      onSelect?.();
     }
   };
 
@@ -327,13 +362,17 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
     (location
       ? `${location}, ON  |  Search ${fmt} listings…`
       : totalCount > 0
-        ? `Search ${fmt} listings — or describe it…`
-        : "Search address, community, school, MLS# — or describe it…");
+        ? `Search ${fmt} listings…`
+        : "Search an address, community, school, or MLS#…");
 
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
   const addrIntent = /\d/.test(value) && !parsed?.isStructured;
-  const topCommunity = groups.find((g) => g.category === "community")?.items[0];
+  const topCommunity = groups.flatMap((g) => g.items).find((i) => i.category === "community");
+  // A parent city the query is reaching for (Toronto/London) whose whole-city scope
+  // is reachable via the terminal's existing full-text location path — offers a
+  // synthetic "all districts" row above the individual district facets.
+  const cityGroup = expandableCityGroupFor(value);
   const locationChip = parsed?.chips.find((c) => c.kind === "location");
   const showAnswer = addrIntent || Boolean(topCommunity) || Boolean(locationChip);
   const answerArea =
@@ -383,7 +422,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       </form>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[384px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-[28rem] w-[520px] max-w-[92vw] overflow-y-auto border border-border bg-card shadow-2xl">
           {/* Empty state */}
           {value.trim().length < SUGGEST_MIN_CHARS ? (
             <SearchEmptyState
@@ -428,6 +467,37 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               )}
               {parsed?.isStructured && <SearchChipsRow chips={parsed.chips} onRemove={removeChip} />}
 
+              {/* Synthetic "whole city" row — TRREB has no single value for Toronto/London,
+                  so this scopes the map to every district at once via the existing full-text
+                  location path (setLocation of the parent name). Deliberately carries NO
+                  per-community stats: it stands in for the group, not a single community. */}
+              {cityGroup && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocation(cityGroup);
+                    remember(cityGroup, "place");
+                    // Fly to the whole city + close the mobile sheet, like any other pick.
+                    void resolveCityCamera(cityGroup).then((cam) => {
+                      if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+                    });
+                    setValue("");
+                    close();
+                    onSelect?.();
+                  }}
+                  className="flex w-full items-center gap-2.5 border-b border-border/60 px-3 py-2 text-left transition-colors hover:bg-muted"
+                >
+                  <Layers className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-mono text-xs text-foreground">{cityGroup} — all districts</span>
+                    <span className="truncate text-[10px] text-muted-foreground">Every district across the whole city</span>
+                  </span>
+                  <span className="shrink-0 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                    City-wide
+                  </span>
+                </button>
+              )}
+
               {showAnswer && <SearchAnswerCard area={answerArea} activeCount={topCommunity?.count} />}
 
               {/* Structured query → a PEEK at the real filtered matches (these honour the
@@ -455,7 +525,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                       >
                         <Home className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-400/80" />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-foreground">
+                          <span className="line-clamp-2 font-mono text-xs text-foreground" title={listing.UnparsedAddress || undefined}>
                             {listing.UnparsedAddress || "—"}
                           </span>
                           <span className="truncate text-[10px] text-muted-foreground">{previewMeta(listing)}</span>
@@ -476,33 +546,89 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               )}
 
               {groups.map((g) => (
-                <div key={g.category}>
+                <div key={g.section}>
                   <div className="flex items-center justify-between px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span>{g.title}</span>
-                    {g.category === "sold" && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
+                    {g.vow && <span className="text-cyan-700 dark:text-cyan-400/80">VOW</span>}
                   </div>
                   {g.items.map((item) => {
                     const idx = flat(item);
                     const badges = item.listing ? badgeFor.get(item.listing.id) ?? [] : [];
                     return (
+                      <React.Fragment key={item.id}>
                       <button
                         key={item.id}
                         type="button"
                         onMouseEnter={() => setHighlight(idx)}
                         onClick={() => selectItem(item)}
                         className={cn(
-                          "group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                          "group flex w-full items-start gap-2.5 px-3 py-2 text-left transition-colors",
                           idx === highlight ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
-                        <CategoryIcon category={item.category} />
+                        {/* Thumbnail. An ACTIVE listing's photo is IDX and renders directly.
+                            A record's photo is VOW: a signed-in consumer is handed the URL
+                            and sees it (same photo /properties/[id] already shows them),
+                            while an anonymous visitor gets only the existence bit and a
+                            server-side blur. Never routed through the image optimizer — MLS
+                            photos carry a burned-in brokerage watermark and re-encoding them
+                            is both a cost and a TRREB problem. */}
+                        {item.thumbUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.thumbUrl}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="h-10 w-14 shrink-0 object-cover"
+                          />
+                        ) : item.category === "soldAddress" ? (
+                          <RecordThumb
+                            listingKey={item.sold?.mls}
+                            hasPhoto={item.sold?.hasPhoto}
+                            photoUrl={item.sold?.thumbUrl}
+                            className="h-10 w-14"
+                          />
+                        ) : (
+                          <CategoryIcon category={item.category} />
+                        )}
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-mono text-xs text-foreground">{item.label}</span>
+                          <span className="line-clamp-2 font-mono text-xs text-foreground" title={item.label}>
+                            {item.category === "community" ? formatRegionLabel(item.label) : item.label}
+                          </span>
                           {item.sublabel && (
                             <span className="truncate text-[10px] text-muted-foreground">
                               {item.category === "sold" && authed
                                 ? "See recent comparable sales on the map"
                                 : item.sublabel}
+                            </span>
+                          )}
+                          {/* Provenance, public on both row kinds: date · MLS# · brokerage.
+                              The DATE is what separates several campaigns at one address —
+                              this line used to carry MLS# and brokerage only, and only on
+                              record rows. (On a record the date is VOW, so it is simply
+                              absent for an anonymous viewer.) */}
+                          {item.meta && (
+                            <span className="truncate font-mono text-[10px] text-muted-foreground/80" title={item.meta}>
+                              {item.meta}
+                            </span>
+                          )}
+                          {/* The relist, said out loud: this campaign ended but the home is
+                              listed again under a different MLS#. An OFF MARKET row also
+                              NAVIGATES there (the server resolved sold.href to the live
+                              listing) — clicking it used to dead-end on the cancelled
+                              campaign while the home sat for sale (owner, 2026-08-10). */}
+                          {/* The stitched span. A relist resets the visible clock, so this
+                              home reads as days old on every other portal; we stitch the
+                              campaigns and can say what actually happened. */}
+                          {item.spanLabel && (
+                            <span className="truncate font-mono text-[10px] font-semibold text-rose-700 dark:text-rose-300">
+                              {item.spanLabel}
+                            </span>
+                          )}
+                          {item.category === "soldAddress" && item.sold?.liveKey && (
+                            <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              {backOnMarketLabel(item.sold.livePrice, item.sold.liveTransactionType)}
                             </span>
                           )}
                           {badges.length > 0 && (
@@ -537,6 +663,40 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             )}
                           </span>
                         )}
+                        {/* Sold-record row: status chip + (consumer) close price/date. When
+                            no price is attached — an OFF MARKET record never closed, or the
+                            viewer isn't a VOW consumer — an authed user gets a neutral "View"
+                            (never an anon sign-in nudge), anon gets the sign-in CTA. The anon
+                            payload never carried a price or date, so there is nothing to mask,
+                            only to advertise (audit R24a). */}
+                        {item.category === "soldAddress" && (
+                          <span className="flex shrink-0 flex-col items-end gap-0.5">
+                            <span
+                              className={cn(
+                                "border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                                ROW_STATUS_CHIP[item.sold?.kind ?? "sold"]
+                              )}
+                            >
+                              {item.sold?.kindLabel ?? ROW_STATUS_LABEL.sold}
+                            </span>
+                            {item.sold?.priceLabel ? (
+                              <span className="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                                {item.sold.priceLabel}
+                                {item.sold.dateLabel && (
+                                  <span className="ml-1 font-normal text-muted-foreground">{item.sold.dateLabel}</span>
+                                )}
+                              </span>
+                            ) : authed ? (
+                              <span className="border border-cyan-500/40 bg-cyan-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                                View
+                              </span>
+                            ) : (
+                              <span className="bg-cyan-500 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-950">
+                                Sign in for price
+                              </span>
+                            )}
+                          </span>
+                        )}
                         {item.category === "community" && item.count !== undefined && (
                           <span className="shrink-0 font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
                             {item.count.toLocaleString()}
@@ -547,43 +707,150 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => findComps(item, e)}
-                            className="hidden shrink-0 items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-300 group-hover:flex"
+                            title="Comparable sales"
+                            aria-label="Comparable sales"
+                            className="flex shrink-0 items-center gap-1 border border-border px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
                           >
-                            <Crosshair className="h-2.5 w-2.5" />
-                            Comparable sales
+                            <Crosshair className="h-3 w-3" />
                           </span>
                         )}
                         {/* Geocoded address (no listing anywhere) → its address-profile page
-                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action.
-                            Always visible (not hover-gated): this chip is the only touch-
-                            reachable path to the profile from the terminal. */}
+                            (ADDRESS_PROFILES_PLAN P4). Fly-to+pin stays the primary action
+                            (the row itself). Rendered as a SOLID button with an action verb —
+                            the old ghost "Profile" chip read as a status tag and nobody
+                            realized it was clickable (owner, 2026-07-24). Always visible
+                            (not hover-gated): it's the only touch-reachable path to the
+                            profile from the terminal. */}
                         {item.category === "geo" && addressProfileHref(item.label) && (
+                          <span className="flex shrink-0 items-center gap-1.5">
+                            {/* Bordered Map button deliberately does NOT stop propagation —
+                                it labels the row's own fly-to action rather than duplicating
+                                it. Same visual pair as the header dropdown (owner: make the
+                                two destinations unmistakable). */}
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              className="flex items-center gap-1 border border-cyan-500/50 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-700 transition-colors hover:border-cyan-400 hover:bg-cyan-500/10 dark:text-cyan-300"
+                            >
+                              <MapPin className="h-3 w-3" />
+                              Map
+                            </span>
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const href = addressProfileHref(item.label);
+                                if (href) router.push(href);
+                              }}
+                              className="flex items-center gap-1 bg-cyan-500 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                            >
+                              <Home className="h-3 w-3" />
+                              Profile
+                            </span>
+                          </span>
+                        )}
+                        {/* Live listing: MAP is the second destination — flies the map and
+                            drops a pin WITHOUT opening the report, so you can stay in the
+                            terminal. Always visible: the sibling comps action was
+                            `group-hover:flex`, which no touch device can ever trigger. */}
+                        {(item.category === "address" || item.category === "mls") && item.geo && (
                           <span
                             role="button"
                             tabIndex={-1}
                             onClick={(e) => {
                               e.stopPropagation();
-                              const href = addressProfileHref(item.label);
-                              if (href) router.push(href);
+                              setFlyTo({ lat: item.geo!.lat, lng: item.geo!.lng, zoom: item.geo!.zoom ?? 16 });
+                              setSearchPin({ lat: item.geo!.lat, lng: item.geo!.lng, label: item.label });
+                              setValue("");
+                              close();
+                              onSelect?.();
                             }}
-                            className="flex shrink-0 items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-cyan-700 transition-colors hover:border-cyan-400 hover:text-cyan-200 dark:text-cyan-300"
+                            className="flex shrink-0 items-center gap-1 border border-cyan-500/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300"
                           >
-                            <Home className="h-2.5 w-2.5" />
-                            Profile
+                            <MapPin className="h-2.5 w-2.5" />
+                            Map
                           </span>
                         )}
-                        {item.provenance && item.category !== "sold" && item.category !== "community" && (
-                          <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-wider text-muted-foreground sm:group-hover:hidden sm:block">
-                            {item.category === "address" ? "for sale" : item.provenance}
+                        {/* Status as a coloured word, from the feed's own TransactionType.
+                            This used to be a hardcoded "for sale" tag shown on every active
+                            row — including every lease. */}
+                        {item.status && (item.category === "address" || item.category === "mls") && (
+                          <span
+                            className={cn(
+                              "shrink-0 font-mono text-[9px] font-bold uppercase tracking-wider",
+                              ROW_STATUS_TONE[item.status]
+                            )}
+                          >
+                            {ROW_STATUS_LABEL[item.status]}
                           </span>
                         )}
                       </button>
+
+                      {/* Campaign history at this SAME address, folded under its home.
+                          Everyone else renders these as sibling rows, so a terminated
+                          campaign and its relist read as two different houses. Indented,
+                          and still reachable by arrow key (flatItems walks children). */}
+                      {item.children && item.children.length > 0 && (
+                        <div className="border-l-2 border-border/70 bg-muted/30">
+                          <div className="px-3 py-1 pl-9 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                            Earlier at this address — {item.children.length}
+                          </div>
+                          {item.children.map((child) => {
+                            const cidx = flat(child);
+                            return (
+                              <button
+                                key={child.id}
+                                type="button"
+                                onMouseEnter={() => setHighlight(cidx)}
+                                onClick={() => selectItem(child)}
+                                className={cn(
+                                  "flex w-full items-start gap-2.5 py-1.5 pl-9 pr-3 text-left transition-colors",
+                                  cidx === highlight ? "bg-muted" : "hover:bg-muted"
+                                )}
+                              >
+                                <span className="flex min-w-0 flex-1 flex-col">
+                                  {child.meta && (
+                                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                                      {child.meta}
+                                    </span>
+                                  )}
+                                  {child.sold?.liveKey && (
+                                    <span className="truncate font-mono text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                      {backOnMarketLabel(child.sold.livePrice, child.sold.liveTransactionType)}
+                                    </span>
+                                  )}
+                                </span>
+                                {child.sold?.priceLabel && (
+                                  <span className="shrink-0 font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-400">
+                                    {child.sold.priceLabel}
+                                  </span>
+                                )}
+                                <span
+                                  className={cn(
+                                    "shrink-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider",
+                                    ROW_STATUS_CHIP[child.sold?.kind ?? child.status ?? "sold"]
+                                  )}
+                                >
+                                  {child.sold?.kindLabel ?? ROW_STATUS_LABEL[child.status ?? "sold"]}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </div>
               ))}
 
-              {parsed?.isStructured && (
+              {/* Persistent map exit. This footer used to render ONLY for a structured
+                  (natural-language) query, so an address or street search had no way back
+                  to the map at all. Now every query that produced results gets one; the NL
+                  variant still applies the parsed chips, everything else searches the area
+                  the results are in. */}
+              {parsed?.isStructured ? (
                 <button
                   type="button"
                   onClick={() => applyNl()}
@@ -594,6 +861,27 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                     ? `See all ${preview.count.toLocaleString()} matches on the map`
                     : `Apply ${parsed.chips.length} filters`}
                 </button>
+              ) : (
+                groups.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Prefer a coordinate we already resolved for this query — the place
+                      // row's geo — so the map lands on what was searched rather than
+                      // wherever it happened to be sitting.
+                      const anchor = flatItems.find((i) => i.geo)?.geo;
+                      if (anchor) setFlyTo({ lat: anchor.lat, lng: anchor.lng, zoom: anchor.zoom ?? 14 });
+                      else searchVisibleArea();
+                      setValue("");
+                      close();
+                      onSelect?.();
+                    }}
+                    className="sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-border bg-cyan-500 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-950 transition-colors hover:bg-cyan-400"
+                  >
+                    <Layers className="h-3 w-3" />
+                    See these on the map
+                  </button>
+                )
               )}
             </>
           )}

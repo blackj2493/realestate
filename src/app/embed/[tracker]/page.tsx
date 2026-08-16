@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { getMarketBoard, type MarketRow } from "@/lib/data/marketBoard";
 import { getCondoFeeBoard, type CondoAreaRow } from "@/lib/data/condoFeeBoard";
+import { getRentBoard, type RentRow } from "@/lib/data/rentBoard";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { EmbedTable, type EmbedColumn } from "@/components/data/EmbedTable";
 
@@ -182,12 +183,44 @@ async function buildWidget(slug: string): Promise<Widget | null> {
     };
   }
 
+  if (slug === "rents") {
+    const board = await getRentBoard();
+    // THREE-BED HOUSES specifically, not "houses". board.rows carries every bedroom band, so
+    // an unfiltered take would stack 1/2/3/4-bed and the mixed 'ALL' rollup into one table
+    // and the column would compare nothing to nothing. A single size also makes the widget
+    // readable without a caveat: 3-bed is the most common family rental, and it is the size
+    // people picture when they ask what a house costs.
+    const rows = board.rows
+      .filter((r) => r.group === "House" && r.beds === "3" && r.sampleCount >= 20)
+      .sort((a, b) => b.medianRent - a.medianRent)
+      .slice(0, 25);
+    return {
+      rows,
+      getRowKey: (r) => `${(r as RentRow).city}|${(r as RentRow).area}`,
+      caption:
+        "Median rent a THREE-BEDROOM house lease actually closed at, by neighbourhood — not asking " +
+        "rents. TRREB's rental report covers condo apartments only, so there is no published figure " +
+        "for what a house rents for.",
+      columns: cols<RentRow>([
+        { label: "Neighbourhood", value: (r) => r.area },
+        { label: "City", value: (r) => r.city || DASH },
+        { label: "Median rent", align: "right", lead: true, value: (r) => money0(r.medianRent) },
+        { label: "vs last year", align: "right", value: (r) => (r.yoyPct == null ? DASH : signed(r.yoyPct)) },
+        { label: "Typical range", align: "right", value: (r) => (r.p25Rent == null || r.p75Rent == null ? DASH : `${money0(r.p25Rent)}–${money0(r.p75Rent)}`) },
+        { label: "Leases", align: "right", value: (r) => int(r.sampleCount) },
+      ]),
+    };
+  }
+
   return null;
 }
 
 /** The "as of" date is a credibility signal for anyone citing the table. */
 async function dataAsOf(slug: string): Promise<string | null> {
-  const board = slug === "condo-fees" ? await getCondoFeeBoard() : await getMarketBoard();
+  const board =
+    slug === "condo-fees" ? await getCondoFeeBoard()
+    : slug === "rents" ? await getRentBoard()
+    : await getMarketBoard();
   return board.dataAsOf
     ? new Date(board.dataAsOf).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })
     : null;

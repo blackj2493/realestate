@@ -4,14 +4,17 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { TRACKERS } from "@/lib/data/trackers";
+import { getCompetitionBoard } from "@/lib/data/competitionBoard";
+import { getRentBoard } from "@/lib/data/rentBoard";
+import { getCondoFeeBoard } from "@/lib/data/condoFeeBoard";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
 
-const TITLE = "Toronto & GTA Real Estate Data Trackers | PureProperty";
+const TITLE = "Ontario Housing Market Statistics — Free, by Neighbourhood | PureProperty";
 const DESCRIPTION =
-  "Free, neighbourhood-level real-estate data for Toronto, Ottawa and the GTA — price cuts, condo fees, days on market, market temperature and more. Updated nightly from live MLS® data. Free to cite and embed.";
+  "Free Ontario housing statistics by neighbourhood: how often homes sell over asking, what houses actually rent for, condo fee trends, price cuts and days on market. Toronto, Ottawa and the whole province, updated nightly from MLS® data. Free to cite and embed.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -27,14 +30,114 @@ export const metadata: Metadata = {
     images: [
       ogImageUrl({
         eyebrow: "Market Data",
-        title: "GTA Real Estate Trackers",
-        subtitle: "Price cuts, condo fees, days on market & more.",
+        title: "Ontario Housing Market Statistics",
+        subtitle: "Over-asking, rents, condo fees & more — by neighbourhood.",
       }),
     ],
   },
 };
 
-export default function DataHubPage() {
+/**
+ * Headline figures for the hub.
+ *
+ * WHY THIS EXISTS: the hub shipped as a card grid with no numbers on it, while being
+ * the /data URL linked from the homepage and every footer. Nobody cites a table of
+ * contents — a reporter links the page carrying the figure they quoted. A statistics
+ * page needs statistics on it.
+ *
+ * Over-ask and rent figures come from the PRECOMPUTED province-wide rollups the
+ * refresh jobs write (city = "Ontario"), so nothing is aggregated here. The condo-fee
+ * figure has no such rollup, so it is a median across covered neighbourhoods and is
+ * labelled as exactly that rather than dressed up as a provincial average.
+ */
+interface KeyFigure {
+  value: string;
+  label: string;
+  scope: string;
+  href: string;
+}
+
+function median(xs: number[]): number | null {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/**
+ * Best-effort: a board that fails is omitted, never rendered as a dash or a zero.
+ * A missing figure should look missing, not look like the market moved to 0% —
+ * the silent-null failure this codebase has been bitten by before.
+ */
+async function keyFigures(): Promise<KeyFigure[]> {
+  const [comp, rent, condo] = await Promise.allSettled([
+    getCompetitionBoard(),
+    getRentBoard(),
+    getCondoFeeBoard(),
+  ]);
+
+  const out: KeyFigure[] = [];
+
+  if (comp.status === "fulfilled") {
+    const houses = comp.value.summary.find((r) => r.group === "House");
+    if (houses) {
+      out.push({
+        value: `${houses.pctOverAsk.toFixed(1)}%`,
+        label: "of houses sold over asking",
+        scope: "Ontario · last 12 months",
+        href: "/data/over-asking",
+      });
+    }
+  }
+
+  if (rent.status === "fulfilled") {
+    const threeBed = rent.value.summary.find((r) => r.group === "House" && r.beds === "3");
+    if (threeBed) {
+      out.push({
+        value: `$${threeBed.medianRent.toLocaleString("en-CA")}`,
+        label: "median rent, 3-bedroom house",
+        scope: "Ontario · closed leases",
+        href: "/data/rents",
+      });
+    }
+  }
+
+  if (condo.status === "fulfilled") {
+    const trend = median(condo.value.rows.map((r) => r.annualPct).filter((n): n is number => n != null));
+    if (trend != null) {
+      out.push({
+        value: `${trend >= 0 ? "+" : "−"}${Math.abs(trend).toFixed(1)}%`,
+        label: "condo fees per year",
+        scope: "median Ontario neighbourhood",
+        href: "/data/condo-fees",
+      });
+    }
+    // Coverage is the differentiator worth stating plainly: the monthly reports that
+    // circulate on these metrics are GTA-only, so most of these areas have no
+    // published figure anywhere else.
+    const areas = new Set(condo.value.rows.map((r) => `${r.city}|${r.area}`));
+    if (comp.status === "fulfilled") {
+      for (const r of comp.value.rows) areas.add(`${r.city}|${r.area}`);
+    }
+    if (rent.status === "fulfilled") {
+      for (const r of rent.value.rows) areas.add(`${r.city}|${r.area}`);
+    }
+    if (areas.size > 0) {
+      out.push({
+        value: areas.size.toLocaleString("en-CA"),
+        label: "neighbourhoods covered",
+        scope: "province-wide, not just the GTA",
+        href: "/data/for-journalists",
+      });
+    }
+  }
+
+  return out;
+}
+
+export default async function DataHubPage() {
+  const figures = await keyFigures();
+
   const collection = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -61,14 +164,45 @@ export default function DataHubPage() {
             Market Data
           </p>
           <h1 className="mt-1 text-3xl font-bold text-foreground sm:text-4xl">
-            GTA &amp; Ottawa Real Estate Data Trackers
+            Ontario Housing Market Statistics
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Free, always-current market data for Toronto, Ottawa and the Greater Toronto Area — cut deeper
-            than the board headlines. Every figure is a full-population aggregate from live MLS® data. Free to
-            cite and embed.
+            Free, always-current market data for Toronto, Ottawa and every Ontario market we cover — cut
+            deeper than the board headlines and broken out by neighbourhood rather than region. Every
+            figure is an aggregate from live MLS® data, rebuilt nightly. Free to cite and embed.
           </p>
         </header>
+
+        {figures.length > 0 && (
+          <section className="mb-10" aria-labelledby="key-figures">
+            <h2
+              id="key-figures"
+              className="terminal-font text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground"
+            >
+              Where the market stands
+            </h2>
+            <div className="mt-3 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+              {figures.map((f) => (
+                <Link
+                  key={f.href + f.label}
+                  href={f.href}
+                  className="group bg-card/60 p-4 transition-colors hover:bg-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500"
+                >
+                  <span className="block text-2xl font-bold tabular-nums text-foreground">{f.value}</span>
+                  <span className="mt-1 block text-sm leading-snug text-foreground/80">{f.label}</span>
+                  <span className="mt-1.5 block text-[11px] leading-snug text-muted-foreground">
+                    {f.scope}
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <p className="mt-2.5 text-xs text-muted-foreground">
+              Free to quote with a credit and a link. Shares and medians only — we publish proportions
+              rather than counts of homes sold, because our feed is a large subset of the market rather
+              than all of it.
+            </p>
+          </section>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           {TRACKERS.map((t) => {

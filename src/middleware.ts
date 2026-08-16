@@ -1,12 +1,43 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { extractListingKey } from '@/lib/listings/listingPath';
+import { decideHost, parseAllowedHosts } from '@/lib/security/allowedHosts';
 
 // NOTE: this file MUST live at src/middleware.ts (NOT the project root). The app is
 // under src/, so Next.js only picks up middleware from src/ — a root middleware.ts is
 // silently ignored (which is why session-refresh + the rewrite below never ran before).
 
 export async function middleware(request: NextRequest) {
+  // ── Registered-host gate (compliance audit R7) ────────────────────────────────
+  // IDX §6.3(g) requires every URL displaying board data to be pre-registered. Without
+  // this, every Vercel preview deployment serves the whole product — real IDX/VOW data —
+  // on a host PROPTX has never seen. Runs FIRST and covers /api too (see matcher): the
+  // data routes are the ones that actually hand out listings.
+  // No-op until ALLOWED_HOSTS is set.
+  const allowlist = parseAllowedHosts(process.env.ALLOWED_HOSTS);
+  const decision = decideHost(request.headers.get('host') ?? request.nextUrl.host, allowlist);
+  if (!decision.allowed) {
+    // 404, not 403: an unregistered host should not learn that anything is here.
+    return new NextResponse(null, { status: 404 });
+  }
+
+  // Make the gate OBSERVABLE. A safety control you cannot tell is switched on is not a
+  // control — and this one is invisible from outside by construction, because a correctly
+  // configured allowlist and a completely inert one look identical from a browser on the
+  // right host. It is also easy to be wrong here without knowing: Next.js can inline
+  // process.env at build time, so setting the variable in the dashboard without a
+  // redeploy can leave the gate off while looking on.
+  // Reveals nothing an attacker can use: only that a gate exists, and only to a host
+  // already allowed through it.
+  const stamp = (res: NextResponse) => {
+    res.headers.set('x-host-gate', allowlist.length ? 'enforced' : 'off');
+    return res;
+  };
+
+  // API routes get the host gate and nothing else — they read cookies directly and must
+  // not go through updateSession or the listing-URL rewrites below.
+  if (request.nextUrl.pathname.startsWith('/api')) return stamp(NextResponse.next());
+
   // Phase 1c — descriptive listing URLs. /property/{prov}/{city}/{address}-{KEY}
   // rewrites INTERNALLY to the existing /properties/{KEY} route: the URL bar stays
   // descriptive (and the page sets its canonical to this descriptive path), while the
@@ -19,7 +50,7 @@ export async function middleware(request: NextRequest) {
   if (plural) {
     const url = request.nextUrl.clone();
     url.pathname = `/property/${plural[1]}`;
-    return NextResponse.redirect(url, 308);
+    return stamp(NextResponse.redirect(url, 308));
   }
 
   const m = /^\/property\/[^/]+\/[^/]+\/([^/]+)\/?$/.exec(request.nextUrl.pathname);
@@ -28,22 +59,25 @@ export async function middleware(request: NextRequest) {
     if (key) {
       const url = request.nextUrl.clone();
       url.pathname = `/properties/${key}`;
-      return NextResponse.rewrite(url);
+      return stamp(NextResponse.rewrite(url));
     }
     // Descriptive path with no parseable KEY → fall through and let it 404 normally.
   }
 
-  return await updateSession(request);
+  return stamp(await updateSession(request));
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all page routes EXCEPT:
-     * - api          (hot data routes; they read cookies directly when needed)
-     * - _next/static, _next/image (build assets)
-     * - favicon and common image files
+     * Match all routes EXCEPT build assets and static images.
+     *
+     * `api` used to be excluded here. It no longer is: the host gate has to cover the
+     * data routes, which are precisely the ones that hand out listing information — a
+     * gate on pages alone would leave `/api/...` answering on any host. The handler
+     * early-returns for /api immediately after the gate, so those routes still skip
+     * updateSession and the listing-URL rewrites exactly as before.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
