@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
+import FooterSection from "./FooterSection";
 
 /**
  * Site-wide footer.
@@ -22,6 +23,9 @@ import { LIVE_TRACKERS } from "@/lib/data/trackers";
  * /properties terminal (own full-height chrome), or /embed/* (must stay chrome-free for
  * iframing). It renders on the (app) group and the /data tree, which is every page with
  * ordinary document flow.
+ *
+ * On a phone the four columns become closed disclosures — see FooterSection for why the
+ * links stay in the markup regardless. Desktop keeps the four-column grid unchanged.
  */
 
 const COMPANY = [
@@ -31,8 +35,6 @@ const COMPANY = [
   { label: "Glossary", href: "/glossary" },
 ];
 
-const headingCls =
-  "terminal-font text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground";
 const linkCls =
   "text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline";
 
@@ -40,81 +42,69 @@ export default function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-border bg-background">
-      <div className="mx-auto max-w-[1100px] px-4 py-10">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <h2 className={headingCls}>Free Market Data</h2>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link href="/data" className={linkCls}>
-                  All data trackers
+    <footer className="mt-12 border-t border-border bg-background sm:mt-16">
+      <div className="mx-auto max-w-[1100px] px-4 py-4 sm:py-10">
+        <div className="grid gap-0 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
+          <FooterSection title="Free Market Data">
+            <li>
+              <Link href="/data" className={linkCls}>
+                All data trackers
+              </Link>
+            </li>
+            {LIVE_TRACKERS.map((t) => (
+              <li key={t.slug}>
+                <Link href={`/data/${t.slug}`} className={linkCls}>
+                  {t.navLabel}
                 </Link>
               </li>
-              {LIVE_TRACKERS.map((t) => (
-                <li key={t.slug}>
-                  <Link href={`/data/${t.slug}`} className={linkCls}>
-                    {t.navLabel}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+            ))}
+          </FooterSection>
 
-          <div>
-            <h2 className={headingCls}>For Media</h2>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link href="/data/for-journalists" className={linkCls}>
-                  For journalists
-                </Link>
-              </li>
-              <li>
-                {/* The press desk promises a custom pull within one business day; a mailto
-                    here is the shortest path from "I need a number" to asking for it. */}
-                <a href="mailto:tanmay@pureproperty.ca" className={linkCls}>
-                  Request a custom cut
-                </a>
-              </li>
-            </ul>
-          </div>
+          <FooterSection title="For Media">
+            <li>
+              <Link href="/data/for-journalists" className={linkCls}>
+                For journalists
+              </Link>
+            </li>
+            <li>
+              {/* The press desk promises a custom pull within one business day; a mailto
+                  here is the shortest path from "I need a number" to asking for it. */}
+              <a href="mailto:tanmay@pureproperty.ca" className={linkCls}>
+                Request a custom cut
+              </a>
+            </li>
+          </FooterSection>
 
-          <div>
-            <h2 className={headingCls}>Explore</h2>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link href="/properties" className={linkCls}>
-                  Map search
-                </Link>
-              </li>
-              <li>
-                <Link href="/analytics" className={linkCls}>
-                  Market trends
-                </Link>
-              </li>
-              <li>
-                <Link href="/whats-my-home-hiding" className={linkCls}>
-                  Reno upside
-                </Link>
-              </li>
-            </ul>
-          </div>
+          <FooterSection title="Explore">
+            <li>
+              <Link href="/properties" className={linkCls}>
+                Map search
+              </Link>
+            </li>
+            <li>
+              <Link href="/analytics" className={linkCls}>
+                Market trends
+              </Link>
+            </li>
+            <li>
+              <Link href="/whats-my-home-hiding" className={linkCls}>
+                Reno upside
+              </Link>
+            </li>
+          </FooterSection>
 
-          <div>
-            <h2 className={headingCls}>Company</h2>
-            <ul className="mt-3 space-y-2">
-              {COMPANY.map((c) => (
-                <li key={c.href}>
-                  <Link href={c.href} className={linkCls}>
-                    {c.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <FooterSection title="Company">
+            {COMPANY.map((c) => (
+              <li key={c.href}>
+                <Link href={c.href} className={linkCls}>
+                  {c.label}
+                </Link>
+              </li>
+            ))}
+          </FooterSection>
         </div>
 
-        <div className="mt-10 border-t border-border pt-6">
+        <div className="mt-6 border-t border-border pt-5 sm:mt-10 sm:pt-6">
           <p className="text-xs leading-relaxed text-muted-foreground">
             © {year} PureProperty.ca. Market statistics on this site are aggregates derived from
             MLS® data, deemed reliable but not guaranteed accurate. Figures are medians unless
