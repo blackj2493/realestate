@@ -10,7 +10,8 @@ import {
   stripHtml,
   type RedditItem,
 } from './redditMonitorCore';
-import { TEMPLATES } from './redditMonitorConfig';
+import { TEMPLATES, SUBREDDITS } from './redditMonitorConfig';
+import { buildPrompt } from './redditDraftLLM';
 
 const base = (over: Partial<RedditItem>): RedditItem => ({
   id: 't3_test1',
@@ -203,5 +204,58 @@ describe('warmup mode', () => {
       ),
     );
     expect(drafts.size).toBeGreaterThan(1); // not one template for every thread
+  });
+});
+
+describe('LLM draft prompt', () => {
+  /**
+   * The generated draft is only as safe as the prompt that produced it. Three
+   * things must always reach the model, because each one has a real cost if it
+   * doesn't: the sub's hard compliance wall (a feed-agreement breach), the warmup
+   * rule (promo from an account with no standing), and the no-invented-numbers
+   * rule (a hallucinated market stat posted under a licensed realtor's name).
+   */
+  const item = {
+    id: 't3_p',
+    kind: 'post' as const,
+    subreddit: 'HouseSigmaBlunders',
+    author: 'u',
+    title: 'Bought 2022, just sold at a loss',
+    body: 'Detached in Brampton. How common is this?',
+    permalink: '',
+    createdUtc: new Date(),
+    category: 'market_pulse',
+    categoryLabel: 'Market data argument',
+    score: 8,
+    triggers: [],
+    city: 'Brampton',
+    draftPersonal: '',
+    draftCompany: '',
+  };
+  const blunders = SUBREDDITS.find((s) => s.name === 'HouseSigmaBlunders')!;
+
+  it("carries the sub's compliance wall verbatim", () => {
+    const p = buildPrompt(item, blunders, true);
+    expect(p).toContain('VOW WALL');
+    expect(p).toContain('HARD CONSTRAINT');
+  });
+
+  it('forbids naming the site in warmup, and permits it conditionally outside warmup', () => {
+    expect(buildPrompt(item, blunders, true)).toContain('WARMUP MODE IS ON');
+    expect(buildPrompt(item, blunders, false)).toContain('only if');
+  });
+
+  it('always forbids inventing figures and demands a placeholder instead', () => {
+    for (const warmup of [true, false]) {
+      const p = buildPrompt(item, blunders, warmup);
+      expect(p).toContain('NO access to live market data');
+      expect(p).toContain('placeholder');
+    }
+  });
+
+  it('includes the actual thread text, which is the entire point', () => {
+    const p = buildPrompt(item, blunders, true);
+    expect(p).toContain('Bought 2022, just sold at a loss');
+    expect(p).toContain('Detached in Brampton');
   });
 });

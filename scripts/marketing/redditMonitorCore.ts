@@ -40,6 +40,12 @@ export interface ScoredItem extends RedditItem {
   city: string | null;
   draftPersonal: string;
   draftCompany: string;
+  /** Set when redditDraftLLM rewrote the draft from the thread itself. */
+  draftReason?: string;
+  /** True when the model judged the thread not worth replying to. */
+  draftSkip?: boolean;
+  /** True when drafting failed and draftPersonal is the template fallback. */
+  draftFailed?: boolean;
 }
 
 const PLACE_PATTERNS = ONTARIO_PLACES.map((p) => ({

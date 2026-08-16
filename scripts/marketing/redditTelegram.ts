@@ -94,14 +94,31 @@ export function renderTelegramMessage(
   }
 
   lines.push('');
-  lines.push(
-    warmup
-      ? '<b>Draft reply</b> — warmup mode, no brand or link. Tap to copy, then change a few words:'
-      : '<b>Draft reply</b> ⚑ NAMES THE SITE — only send this if the sub and your history there both allow it:',
-  );
-  // <pre> renders as a tap-to-copy block in Telegram clients, which is the whole
-  // point — the draft has to be one tap from the reply box or this gets skipped.
-  lines.push(`<pre>${esc(truncate(item.draftPersonal, MAX_DRAFT))}</pre>`);
+
+  // A skip is a real answer, not a failure — most threads don't need us, and
+  // saying so is what keeps the alert stream worth reading. The thread still
+  // arrives so the judgement can be overruled.
+  if (item.draftSkip) {
+    lines.push(`💤 <b>Probably skip:</b> ${esc(item.draftReason ?? 'nothing useful to add')}`);
+    lines.push('');
+    lines.push('<i>Open it anyway if you disagree — the read is a guess, the thread is real.</i>');
+  } else {
+    if (item.draftReason && !item.draftFailed) {
+      lines.push(`💡 <b>Why:</b> ${esc(item.draftReason)}`);
+      lines.push('');
+    }
+    lines.push(
+      warmup
+        ? '<b>Draft reply</b> — warmup mode, no brand or link. Tap to copy, then change a few words:'
+        : '<b>Draft reply</b> ⚑ NAMES THE SITE — only send this if the sub and your history there both allow it:',
+    );
+    // <pre> renders as a tap-to-copy block in Telegram clients, which is the whole
+    // point — the draft has to be one tap from the reply box or this gets skipped.
+    lines.push(`<pre>${esc(truncate(item.draftPersonal, MAX_DRAFT))}</pre>`);
+    if (item.draftFailed) {
+      lines.push(`⚠️ <i>Generic fallback — ${esc(item.draftReason ?? 'drafting failed')}</i>`);
+    }
+  }
 
   lines.push('');
   lines.push(`<a href="${esc(item.permalink)}">Open thread →</a>`);

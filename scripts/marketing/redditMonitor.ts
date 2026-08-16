@@ -33,6 +33,7 @@ import { Resend } from 'resend';
 import dotenv from 'dotenv';
 import * as fs from 'fs';
 import { sendTelegramDigest, telegramConfigured } from './redditTelegram';
+import { draftLLMConfigured, draftReply } from './redditDraftLLM';
 import {
   CATEGORIES,
   LOOKBACK_HOURS,
@@ -443,6 +444,32 @@ async function main(): Promise<void> {
   if (emailItems.length === 0) {
     console.log('✅ nothing new this cycle — no digest sent.');
     return;
+  }
+
+  // 3b) Rewrite each draft from the actual thread.
+  //
+  // Runs AFTER dedupe and the per-digest cap, so cost tracks alerts delivered
+  // rather than candidates scored — a sweep that finds 40 already-seen threads
+  // spends nothing. Failures fall back to the template draft rather than dropping
+  // the alert.
+  if (draftLLMConfigured()) {
+    let rewritten = 0;
+    let skipped = 0;
+    for (const item of emailItems) {
+      const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === item.subreddit.toLowerCase());
+      const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
+      const r = await draftReply(item, cfg, warmup, item.draftPersonal);
+      item.draftPersonal = r.draft;
+      item.draftReason = r.reason;
+      item.draftSkip = r.skip;
+      item.draftFailed = r.failed;
+      if (r.failed) console.log(`  (draft) ${item.id} fell back: ${r.reason}`);
+      else if (r.skip) skipped++;
+      else rewritten++;
+    }
+    console.log(`  drafts: ${rewritten} written · ${skipped} judged not worth replying to`);
+  } else {
+    console.log('  no ANTHROPIC_API_KEY — shipping template drafts (generic; see redditDraftLLM.ts)');
   }
 
   // 4) Deliver.
