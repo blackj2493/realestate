@@ -1,0 +1,81 @@
+name: Reddit Opportunity Monitor
+
+# Watches Ontario housing subreddits for posts/comments where a PureProperty
+# reply would land (sold-price questions, tool-recommendation threads, market
+# data arguments, competitor/brand mentions) and emails the operator a digest
+# with draft replies. NOTHING is posted automatically — a human reads, edits,
+# posts. Playbook: docs/strategy/reddit-engagement-playbook.md
+#
+# Emails: the digest itself is the success signal (sent only when there are
+# NEW matches), so the notify step here fires on FAILURE only — a 2-hourly
+# "ran OK, found nothing" email would train the operator to ignore the sender.
+# A broken run (Reddit auth dead, table missing) exits non-zero → red run +
+# failure email; it cannot quietly rot.
+#
+# CADENCE: every 2h at :20. Reddit replies land best within a few hours of the
+# post; 2h keeps us in that window at ~12 cheap runs/day (~20 API calls each,
+# against Reddit's 100/min free allowance).
+#
+# NOTE (new-workflow gotcha): scheduled triggers only start once this file is on
+# the DEFAULT branch. Until then, use the "Run workflow" button (workflow_dispatch).
+#
+# Required secrets beyond the usual Supabase/Resend set:
+#   REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET — free "script" app from
+#   https://www.reddit.com/prefs/apps (any account; application-only OAuth,
+#   read-only). Without them the script falls back to public RSS, which Reddit
+#   rate-limits into uselessness from datacenter IPs — treat them as required.
+#   MARKETING_ALERT_EMAIL — digest recipient (falls back to SYNC_ALERT_EMAIL).
+on:
+  schedule:
+    - cron: '20 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reddit-monitor
+  cancel-in-progress: false
+
+jobs:
+  reddit-monitor:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: reddit-monitor-run.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Scan Reddit + email digest
+        timeout-minutes: 15
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          MARKETING_ALERT_EMAIL: ${{ secrets.MARKETING_ALERT_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/marketing/redditMonitor.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      - name: Notify operator (failures only)
+        if: failure()
+        env:
+          JOB_NAME: Reddit Opportunity Monitor
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts

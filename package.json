@@ -21,6 +21,7 @@
     "esbuild": "^0.28.2"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "@deck.gl/aggregation-layers": "^9.3.2",
     "@deck.gl/layers": "^9.3.2",
     "@deck.gl/react": "^9.3.2",
