@@ -11,7 +11,8 @@ import {
   type RedditItem,
 } from './redditMonitorCore';
 import { TEMPLATES, SUBREDDITS } from './redditMonitorConfig';
-import { buildPrompt } from './redditDraftLLM';
+import { buildPrompt, draftTransport } from './redditDraftLLM';
+import { cliArgs, __setClaudeCliForTests } from './redditDraftCLI';
 
 const base = (over: Partial<RedditItem>): RedditItem => ({
   id: 't3_test1',
@@ -257,5 +258,54 @@ describe('LLM draft prompt', () => {
     const p = buildPrompt(item, blunders, true);
     expect(p).toContain('Bought 2022, just sold at a loss');
     expect(p).toContain('Detached in Brampton');
+  });
+});
+
+describe('claude CLI draft transport', () => {
+  const ARGS = cliArgs('claude-opus-5', 'medium', 'sys prompt', { type: 'object' });
+  const flag = (name: string) => ARGS[ARGS.indexOf(name) + 1];
+
+  it('never passes --bare, which would refuse the subscription login', () => {
+    // --bare reads auth "strictly [from] ANTHROPIC_API_KEY or apiKeyHelper; OAuth
+    // and keychain are never read". It would defeat the whole reason this
+    // transport exists, and it would fail as an auth error rather than an
+    // obviously-wrong one.
+    expect(ARGS).not.toContain('--bare');
+  });
+
+  it('strips the harness that would otherwise burn ~33k tokens of rate limit per draft', () => {
+    expect(flag('--tools')).toBe('');
+    expect(ARGS).toContain('--system-prompt');
+    expect(ARGS).toContain('--strict-mcp-config');
+  });
+
+  it("runs safe-mode so the user's ASD-STE100 CLAUDE.md cannot rewrite the drafts", () => {
+    // The global CLAUDE.md mandates Simplified Technical English. Applied to a
+    // Reddit comment it produces exactly the register we are trying to avoid, and
+    // it would apply silently.
+    expect(ARGS).toContain('--safe-mode');
+  });
+
+  it('sends a schema the CLI can actually parse', () => {
+    expect(() => JSON.parse(flag('--json-schema'))).not.toThrow();
+  });
+
+  it('prefers the API key when present, else the CLI, else nothing', () => {
+    const saved = process.env.ANTHROPIC_API_KEY;
+    try {
+      process.env.ANTHROPIC_API_KEY = 'sk-test';
+      __setClaudeCliForTests('C:/fake/claude.exe');
+      expect(draftTransport()).toBe('api');
+
+      delete process.env.ANTHROPIC_API_KEY;
+      expect(draftTransport()).toBe('cli');
+
+      __setClaudeCliForTests(null);
+      expect(draftTransport()).toBe('none');
+    } finally {
+      if (saved === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = saved;
+      __setClaudeCliForTests(undefined);
+    }
   });
 });

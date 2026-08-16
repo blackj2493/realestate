@@ -20,6 +20,7 @@
  *
  * Usage:
  *   npx tsx scripts/marketing/redditMonitor.ts                  # dry-run: fetch+score, print, no DB/email
+ *   npx tsx scripts/marketing/redditMonitor.ts --drafts         # dry-run + generate real drafts to the console
  *   npx tsx scripts/marketing/redditMonitor.ts --apply          # record in DB + email new matches
  *   npx tsx scripts/marketing/redditMonitor.ts --preview d.html # also write the digest HTML to a file
  *   npx tsx scripts/marketing/redditMonitor.ts --subs TorontoRealEstate --rss   # local smoke test
@@ -33,7 +34,7 @@ import { Resend } from 'resend';
 import dotenv from 'dotenv';
 import * as fs from 'fs';
 import { sendTelegramDigest, telegramConfigured } from './redditTelegram';
-import { draftLLMConfigured, draftReply } from './redditDraftLLM';
+import { draftReply, draftTransport } from './redditDraftLLM';
 import {
   CATEGORIES,
   LOOKBACK_HOURS,
@@ -59,6 +60,8 @@ dotenv.config({ path: ['.env.local', '.env'] });
 
 const APPLY = process.argv.includes('--apply');
 const FORCE_RSS = process.argv.includes('--rss');
+/** Dry-run only: generate real drafts and print them, without DB or Telegram. */
+const DRAFTS = process.argv.includes('--drafts');
 const argAfter = (flag: string): string | undefined => {
   const i = process.argv.indexOf(flag);
   return i >= 0 ? process.argv[i + 1] : undefined;
@@ -294,6 +297,44 @@ function renderDigestText(items: ScoredItem[], overflow: number, now: Date): str
   return lines.join('\n\n====================\n\n') + (overflow > 0 ? `\n\n(+${overflow} more over the digest cap)` : '');
 }
 
+/**
+ * Rewrite each item's draft from its own thread text, in place.
+ *
+ * Shared by the live path and `--drafts`, so what you preview is exactly what
+ * would be sent. Mutates the items rather than returning copies because the
+ * delivery layer already holds these references.
+ */
+async function applyDrafts(items: ScoredItem[]): Promise<void> {
+  const transport = draftTransport();
+  if (transport === 'none') {
+    console.log(
+      '  no draft transport (no ANTHROPIC_API_KEY and no claude CLI found) — shipping template drafts (generic; see redditDraftLLM.ts)',
+    );
+    return;
+  }
+
+  // Named in the log because the two paths bill differently — 'cli' runs on the
+  // Claude subscription, 'api' on API credits — and a silent switch between them
+  // is the kind of thing you only notice on an invoice.
+  console.log(`  drafting ${items.length} via ${transport === 'cli' ? 'Claude CLI (subscription)' : 'Anthropic API (credits)'}`);
+
+  let rewritten = 0;
+  let skipped = 0;
+  for (const item of items) {
+    const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === item.subreddit.toLowerCase());
+    const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
+    const r = await draftReply(item, cfg, warmup, item.draftPersonal);
+    item.draftPersonal = r.draft;
+    item.draftReason = r.reason;
+    item.draftSkip = r.skip;
+    item.draftFailed = r.failed;
+    if (r.failed) console.log(`  (draft) ${item.id} fell back: ${r.reason}`);
+    else if (r.skip) skipped++;
+    else rewritten++;
+  }
+  console.log(`  drafts: ${rewritten} written · ${skipped} judged not worth replying to`);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -366,6 +407,29 @@ async function main(): Promise<void> {
   }
 
   if (!APPLY) {
+    // A dry run that skipped drafting was previewing the least interesting half
+    // of the job: which threads got found, but not what would be said on them.
+    // --drafts generates for real and prints to the console, so the prompt can be
+    // tuned (mainly the skip rate) without spending Telegram messages, marking
+    // anything seen, or burning the dedupe on threads you have not read yet.
+    if (DRAFTS) {
+      const preview = scored.slice(0, MAX_DIGEST);
+      await applyDrafts(preview);
+      for (const item of preview) {
+        const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === item.subreddit.toLowerCase());
+        const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
+        console.log(`\n${'─'.repeat(72)}`);
+        console.log(`r/${item.subreddit} · ${item.categoryLabel} · ${item.score}pts · warmup=${warmup}`);
+        console.log(`TITLE: ${item.title.slice(0, 120)}`);
+        if (item.draftSkip) console.log(`SKIP:  ${item.draftReason}`);
+        else {
+          if (item.draftReason) console.log(`WHY:   ${item.draftReason}`);
+          console.log(`DRAFT: ${item.draftPersonal}`);
+        }
+        if (item.draftFailed) console.log(`FAILED: ${item.draftReason}`);
+      }
+      console.log(`\n${'─'.repeat(72)}`);
+    }
     console.log('  dry-run: no DB writes, no email (DB dedupe not consulted — counts above include already-seen items). Re-run with --apply.');
     return;
   }
@@ -452,25 +516,7 @@ async function main(): Promise<void> {
   // rather than candidates scored — a sweep that finds 40 already-seen threads
   // spends nothing. Failures fall back to the template draft rather than dropping
   // the alert.
-  if (draftLLMConfigured()) {
-    let rewritten = 0;
-    let skipped = 0;
-    for (const item of emailItems) {
-      const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === item.subreddit.toLowerCase());
-      const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
-      const r = await draftReply(item, cfg, warmup, item.draftPersonal);
-      item.draftPersonal = r.draft;
-      item.draftReason = r.reason;
-      item.draftSkip = r.skip;
-      item.draftFailed = r.failed;
-      if (r.failed) console.log(`  (draft) ${item.id} fell back: ${r.reason}`);
-      else if (r.skip) skipped++;
-      else rewritten++;
-    }
-    console.log(`  drafts: ${rewritten} written · ${skipped} judged not worth replying to`);
-  } else {
-    console.log('  no ANTHROPIC_API_KEY — shipping template drafts (generic; see redditDraftLLM.ts)');
-  }
+  await applyDrafts(emailItems);
 
   // 4) Deliver.
   //

@@ -22,12 +22,21 @@
  * alert still arrives with the thread and the reason — the finding is the value,
  * the draft is a convenience.
  *
- * Falls back to the template draft on any API failure: a worse draft beats a lost
+ * TWO TRANSPORTS, SAME PROMPT. With ANTHROPIC_API_KEY set this calls the Messages
+ * API. Without one it drives the local Claude Code CLI in headless mode, which
+ * authenticates against the Claude Max subscription already being paid for — same
+ * model, no second bill. The CLI path is the normal one here; see
+ * redditDraftCLI.ts for the flags that make it behave like a plain model call.
+ * Both build the identical prompt and share finalize(), so the warmup contract
+ * and the numbers rule cannot hold on one path and lapse on the other.
+ *
+ * Falls back to the template draft on any failure: a worse draft beats a lost
  * lead, and the alert must go out either way.
  */
 import Anthropic from '@anthropic-ai/sdk';
 import type { ScoredItem } from './redditMonitorCore';
 import type { SubredditConfig } from './redditMonitorConfig';
+import { resolveClaudeCli, runClaudeCli } from './redditDraftCLI';
 
 /**
  * Opus 5 rather than a cheaper tier: this runs a handful of times an hour on
@@ -43,8 +52,24 @@ const MAX_TOKENS = 2000;
 /** One thread's worth of input is small; this only guards a pathological post. */
 const MAX_BODY_CHARS = 4000;
 
+/**
+ * Which transport will run.
+ *
+ * The API key wins when present because it is faster (~3s against ~8s) and takes
+ * a real structured-output request rather than a subprocess. The CLI is the
+ * default in practice: it runs on the Claude Max seat that is already paid for,
+ * so drafting costs rate limit rather than a second invoice. See redditDraftCLI.ts.
+ */
+export type DraftTransport = 'api' | 'cli' | 'none';
+
+export function draftTransport(): DraftTransport {
+  if (process.env.ANTHROPIC_API_KEY) return 'api';
+  if (resolveClaudeCli()) return 'cli';
+  return 'none';
+}
+
 export function draftLLMConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return draftTransport() !== 'none';
 }
 
 const HOUSE_STYLE = `
@@ -68,6 +93,11 @@ licensed realtor's name.
 If the reply genuinely needs a figure, write a bracketed placeholder in caps
 saying exactly what to look up, e.g. [CHECK THE CURRENT BRAMPTON OVER-ASK RATE].
 A draft that looks unfinished is correct; a draft with an invented number is not.
+
+Do NOT build a sentence around a placeholder that asserts a trend you made up —
+"around [X]% of sales close in the fall" is still a fabricated claim, it just
+hides the number. If a point only works with a statistic you do not have, make a
+different point instead.
 
 General, non-numeric domain knowledge is fine — how VOW rules work, what a status
 certificate is, what the FHSA affects.
@@ -158,17 +188,49 @@ rather discuss.`,
 }
 
 /**
- * Generate one draft. Never throws — a failure returns the caller's fallback with
- * failed=true, because losing the alert is worse than shipping a weaker draft.
+ * Replaces Claude Code's own system prompt on the CLI path. Deliberately terse:
+ * the instructions all live in the user turn (buildPrompt) so both transports
+ * send the same words to the same model, and the prompt tests cover both.
  */
-export async function draftReply(
-  item: ScoredItem,
-  sub: SubredditConfig | undefined,
-  warmup: boolean,
-  fallback: string,
-): Promise<DraftResult> {
-  const client = new Anthropic();
+const CLI_SYSTEM_PROMPT =
+  'You draft Reddit replies for a licensed Ontario realtor to review before posting. ' +
+  'Follow the instructions in the message exactly. Return only the JSON object.';
 
+/**
+ * Validate and post-process a model response. Shared by both transports so the
+ * warmup contract cannot hold on one path and not the other.
+ */
+function finalize(raw: unknown, warmup: boolean, fallback: string): DraftResult {
+  if (!raw || typeof raw !== 'object') {
+    return { draft: fallback, skip: false, reason: 'draft was not an object', failed: true };
+  }
+  const r = raw as { skip?: unknown; reason?: unknown; draft?: unknown };
+  const draft = typeof r.draft === 'string' ? r.draft.trim() : '';
+  const reason = typeof r.reason === 'string' ? r.reason.trim() : '';
+  const skip = r.skip === true;
+
+  // Enforced here as well as in the prompt and again in the sender: a model can
+  // ignore an instruction, and a draft that names the site during warmup must
+  // never reach the phone looking postable.
+  if (warmup && /pureproperty|https?:\/\//i.test(draft)) {
+    return {
+      draft: '[draft discarded — model named the site during warmup. Write this one yourself.]',
+      skip: false,
+      reason: 'warmup violation in generated draft',
+      failed: true,
+    };
+  }
+
+  // An empty draft with skip=false is a malformed response, not a judgement.
+  if (!skip && !draft) {
+    return { draft: fallback, skip: false, reason: reason || 'model returned an empty draft', failed: true };
+  }
+
+  return { draft, skip, reason };
+}
+
+async function draftViaApi(prompt: string, warmup: boolean, fallback: string): Promise<DraftResult> {
+  const client = new Anthropic();
   try {
     const res = await client.messages.create({
       model: MODEL,
@@ -177,7 +239,7 @@ export async function draftReply(
         effort: EFFORT,
         format: { type: 'json_schema', schema: SCHEMA },
       },
-      messages: [{ role: 'user', content: buildPrompt(item, sub, warmup) }],
+      messages: [{ role: 'user', content: prompt }],
     });
 
     if (res.stop_reason === 'refusal') {
@@ -189,21 +251,7 @@ export async function draftReply(
       return { draft: fallback, skip: false, reason: 'no text block returned', failed: true };
     }
 
-    const parsed = JSON.parse(text.text) as { skip: boolean; reason: string; draft: string };
-
-    // The warmup contract is enforced here as well as in the sender: a model can
-    // ignore an instruction, and a draft that names the site in warmup must never
-    // reach the phone looking postable.
-    if (warmup && /pureproperty|https?:\/\//i.test(parsed.draft)) {
-      return {
-        draft: '[draft discarded — model named the site during warmup. Write this one yourself.]',
-        skip: false,
-        reason: 'warmup violation in generated draft',
-        failed: true,
-      };
-    }
-
-    return { draft: parsed.draft.trim(), skip: parsed.skip, reason: parsed.reason.trim() };
+    return finalize(JSON.parse(text.text), warmup, fallback);
   } catch (e) {
     return {
       draft: fallback,
@@ -211,5 +259,32 @@ export async function draftReply(
       reason: `draft API failed: ${e instanceof Error ? e.message : String(e)}`,
       failed: true,
     };
+  }
+}
+
+async function draftViaCli(prompt: string, warmup: boolean, fallback: string): Promise<DraftResult> {
+  const res = await runClaudeCli(prompt, SCHEMA, MODEL, EFFORT, CLI_SYSTEM_PROMPT);
+  if (!res.ok) return { draft: fallback, skip: false, reason: `draft CLI failed: ${res.error}`, failed: true };
+  return finalize(res.data, warmup, fallback);
+}
+
+/**
+ * Generate one draft. Never throws — a failure returns the caller's fallback with
+ * failed=true, because losing the alert is worse than shipping a weaker draft.
+ */
+export async function draftReply(
+  item: ScoredItem,
+  sub: SubredditConfig | undefined,
+  warmup: boolean,
+  fallback: string,
+): Promise<DraftResult> {
+  const prompt = buildPrompt(item, sub, warmup);
+  switch (draftTransport()) {
+    case 'api':
+      return draftViaApi(prompt, warmup, fallback);
+    case 'cli':
+      return draftViaCli(prompt, warmup, fallback);
+    default:
+      return { draft: fallback, skip: false, reason: 'no draft transport available', failed: true };
   }
 }
