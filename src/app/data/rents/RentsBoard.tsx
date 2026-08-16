@@ -27,7 +27,7 @@ const GROUPS: { key: RentGroup; label: string; note: string }[] = [
   {
     key: "House",
     label: "Houses",
-    note: "Detached, semi, townhouse, duplex and multiplex. No other Canadian source publishes this — TRREB's rental report covers condo apartments only.",
+    note: "Detached, semi, townhouse, duplex and multiplex. TRREB's rental report covers condo apartments only; Door Insight publishes Toronto house rents. This is closed MLS® house leases across Ontario, by neighbourhood.",
   },
   {
     key: "Condo",
@@ -240,8 +240,9 @@ export function RentsBoard({ rows, summary }: { rows: RentRow[]; summary: RentRo
   // click House, then 3 bed, then scroll. Seeded from the query string so a shared link
   // opens on the right cut, and updated with replace() so filtering doesn't fill history.
   //
-  // Houses first, deliberately: it is the half nobody else has. 3-bed is the most common
-  // family rental and the size people picture when they ask what a house costs.
+  // Houses first, deliberately: it is the half the board reports don't cover (TRREB is condo
+  // apartments only). 3-bed is the most common family rental and the size people picture when
+  // they ask what a house costs.
   const qpGroup = params.get("type");
   const qpBeds = params.get("beds");
   const [group, setGroup] = useState<RentGroup>(isGroup(qpGroup) ? qpGroup : "House");

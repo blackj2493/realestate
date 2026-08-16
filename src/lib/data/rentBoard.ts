@@ -5,9 +5,16 @@
  * (migration 119) from CLOSED lease prices — what a tenant actually signed, not what a
  * landlord asked.
  *
- * WHY THIS TRACKER EXISTS: no Canadian source publishes what a HOUSE rents for. TRREB's
- * quarterly rental report is condo apartments only; Zumper/PadMapper/RentCafe carry asking
- * rents; CMHC covers purpose-built stock annually. Houses closing on MLS® are the gap.
+ * WHY THIS TRACKER EXISTS: TRREB's quarterly rental report is condo apartments only;
+ * Zumper/PadMapper/RentCafe carry asking rents; CMHC covers purpose-built stock annually.
+ * Houses closing on MLS® are the gap those three leave.
+ *
+ * PRIOR ART — DO NOT CLAIM "no equivalent exists" (this comment previously did, and it was
+ * wrong; corrected 2026-08-15). Door Insight publishes monthly Toronto rents split house vs
+ * condo, and LandLord has published closed-lease medians by property type. A Toronto house
+ * figure DOES exist elsewhere. What is actually ours: closed MLS® lease prices province-wide
+ * rather than Toronto-only, at neighbourhood grain, nightly, with per-bedroom bands published
+ * instead of one blended number.
  *
  * SHAPED FOR A READER, NOT FOR COVERAGE. The first version returned one row per
  * neighbourhood sorted by sample_count — an internal quality metric leaking into the

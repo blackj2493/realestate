@@ -107,8 +107,15 @@ export default function ForJournalistsPage() {
         <section className={SECTION}>
           <h2 className={H2}>What&apos;s available</h2>
           <p className={P}>
-            Every tracker below covers Toronto, Ottawa, Hamilton, Mississauga and the wider GTA, broken out
-            by neighbourhood rather than region, and is rebuilt nightly.
+            Every tracker below runs province-wide — Toronto, Ottawa, Hamilton and the GTA, but also
+            Waterloo, Windsor, Kingston, Sudbury, North Bay and the smaller markets — broken out by
+            neighbourhood rather than region, and rebuilt nightly.
+          </p>
+          <p className={P}>
+            <strong>If you cover a market outside the GTA, that last part is the useful bit.</strong> The
+            monthly reports that circulate on price cuts, over-asking and rents are Toronto-area only, so
+            for most Ontario towns there is no published figure for these at all. Ask and we&apos;ll cut
+            your market.
           </p>
           <ul className="mt-4 space-y-3">
             {live.map((t) => (
@@ -145,16 +152,30 @@ export default function ForJournalistsPage() {
           <p className={P}>
             Every tracker has an embeddable version that updates itself, so a piece published today still
             shows current numbers next month. It is deliberately plain — it should read as part of your
-            article, not as an ad — and it carries a small source line back to us.
+            article, not as an ad.
+          </p>
+          <p className={P}>
+            Paste both lines. The caption underneath is the credit line, and it needs to sit outside the
+            frame to be visible to readers on any device and to search engines — a link inside an iframe
+            is not readable as a credit by either.
           </p>
           <Code>{`<iframe
   src="https://www.pureproperty.ca/embed/days-on-market"
   width="100%" height="620" loading="lazy"
   style="border:1px solid #e5e7eb;border-radius:12px"
   title="Days-on-Market Leaderboard — PureProperty"
-></iframe>`}</Code>
+></iframe>
+<p style="font:12px/1.5 system-ui,sans-serif;color:#64748b;margin:6px 0 0">
+  Source: <a href="https://www.pureproperty.ca/data/days-on-market">Days-on-Market
+  Leaderboard — PureProperty.ca</a>
+</p>`}</Code>
           <p className={P}>
-            Swap <code className="rounded bg-muted px-1">days-on-market</code> for any tracker slug above.
+            Swap <code className="rounded bg-muted px-1">days-on-market</code> for any tracker slug above,
+            in both the frame and the caption link.
+          </p>
+          <p className={P}>
+            <strong>If your CMS strips iframes</strong> — many do — email us and we&apos;ll send a dated PNG
+            of the same chart. All we ask is the same credit line under it, linking to the tracker.
           </p>
         </section>
 
