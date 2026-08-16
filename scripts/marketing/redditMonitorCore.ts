@@ -111,9 +111,35 @@ export function scoreItem(item: RedditItem, sub: Pick<SubredditConfig, 'geoImpli
     score,
     triggers: [...new Set(triggers)],
     city,
-    draftPersonal: fillTemplate(tpl.personal, city),
+    draftPersonal: fillTemplate(pickVariant(tpl.personalVariants, tpl.personal, item.id), city),
     draftCompany: fillTemplate(tpl.company, city),
   };
+}
+
+/**
+ * Deterministic string hash (FNV-1a). Same thread always gets the same draft, so
+ * re-running the monitor never changes a reply you already half-wrote — but two
+ * different threads in the same category get different wording.
+ */
+function hashString(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/**
+ * Rotate through the category's phrasings so no two replies read identically.
+ *
+ * The risk this addresses isn't that a draft sounds robotic — it's that posting
+ * the same paragraph on five threads gets them lined up side by side, and then
+ * the account reads as a bot regardless of how good the writing was.
+ */
+export function pickVariant(variants: string[] | undefined, fallback: string, seed: string): string {
+  if (!variants || variants.length === 0) return fallback;
+  return variants[hashString(seed) % variants.length];
 }
 
 /** Replace {{city}} with the detected place (or a neutral fallback). */

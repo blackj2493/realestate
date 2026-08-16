@@ -32,6 +32,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import dotenv from 'dotenv';
 import * as fs from 'fs';
+import { sendTelegramDigest, telegramConfigured } from './redditTelegram';
 import {
   CATEGORIES,
   LOOKBACK_HOURS,
@@ -223,9 +224,9 @@ async function fetchFeedRss(feed: Feed): Promise<RedditItem[]> {
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function policyFor(subreddit: string): { policy: string; note: string } {
+function policyFor(subreddit: string): { policy: string; note: string; compliance?: string } {
   const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === subreddit.toLowerCase());
-  if (cfg) return { policy: cfg.policy, note: cfg.note };
+  if (cfg) return { policy: cfg.policy, note: cfg.note, compliance: cfg.compliance };
   return { policy: 'careful', note: 'Unlisted sub — read its rules on self-promotion before posting.' };
 }
 
@@ -432,27 +433,72 @@ async function main(): Promise<void> {
     return;
   }
 
-  // 4) Send the digest.
-  if (!process.env.RESEND_API_KEY || !TO) {
-    die('new opportunities found but RESEND_API_KEY / MARKETING_ALERT_EMAIL (or SYNC_ALERT_EMAIL) unset — refusing to mark them emailed');
+  // 4) Deliver.
+  //
+  // Telegram is the primary channel and email the optional second. A Reddit reply
+  // is worth most inside the first couple of hours, and a phone notification gets
+  // acted on where a digest buried in the inbox gets read the next morning.
+  //
+  // Either channel alone is enough to consider the batch delivered. What is NOT
+  // allowed is marking rows delivered when nothing actually went out — the dedupe
+  // table's whole job is that a lead is never shown twice, and never dropped once.
+  const useTelegram = telegramConfigured();
+  const useEmail = Boolean(process.env.RESEND_API_KEY && TO);
+
+  if (!useTelegram && !useEmail) {
+    die(
+      'new opportunities found but no delivery channel configured — set TELEGRAM_BOT_TOKEN + ' +
+        'TELEGRAM_CHAT_ID, or RESEND_API_KEY + MARKETING_ALERT_EMAIL. Refusing to mark them sent.',
+    );
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const { error: mailErr } = await resend.emails.send({
-    from: FROM,
-    to: TO,
-    subject: `🎯 PureProperty · ${emailItems.length} Reddit ${emailItems.length === 1 ? 'opportunity' : 'opportunities'}`,
-    html: renderDigestHtml(emailItems, overflow.length, now),
-    text: renderDigestText(emailItems, overflow.length, now),
-  });
-  if (mailErr) die(`digest email failed: ${mailErr.message} — rows stay status 'new' and will retry next run`);
+
+  let delivered = false;
+
+  if (useTelegram) {
+    const { sent, errors } = await sendTelegramDigest(emailItems, overflow.length, now, policyFor);
+    if (sent > 0) delivered = true;
+    if (errors.length) {
+      console.log(`  (telegram) ${errors.length} message(s) failed: ${errors.slice(0, 3).join(' | ')}`);
+    }
+    console.log(`  telegram: ${sent}/${emailItems.length} sent`);
+    // A partial send must not mark the unsent ones delivered, so on any failure we
+    // keep the whole batch pending and let the next run retry. Re-showing a couple
+    // of already-seen threads is a far cheaper error than silently losing leads.
+    if (sent < emailItems.length) {
+      die(
+        `telegram delivered only ${sent}/${emailItems.length} — rows stay status 'new' and will retry next run`,
+      );
+    }
+  }
+
+  if (useEmail) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { error: mailErr } = await resend.emails.send({
+      from: FROM,
+      to: TO,
+      subject: `🎯 PureProperty · ${emailItems.length} Reddit ${emailItems.length === 1 ? 'opportunity' : 'opportunities'}`,
+      html: renderDigestHtml(emailItems, overflow.length, now),
+      text: renderDigestText(emailItems, overflow.length, now),
+    });
+    if (mailErr) {
+      // Only fatal when email is the ONLY channel; otherwise Telegram already
+      // delivered and failing the run would re-notify everything next cycle.
+      if (!delivered) die(`digest email failed: ${mailErr.message} — rows stay status 'new' and will retry next run`);
+      console.log(`  (non-fatal) digest email failed: ${mailErr.message}`);
+    } else {
+      delivered = true;
+    }
+  }
+
+  if (!delivered) die('no channel delivered — rows stay status \'new\' and will retry next run');
 
   const { error: markErr } = await sb
     .from('reddit_opportunities')
     .update({ status: 'emailed', emailed_at: now.toISOString() })
     .in('id', emailItems.map((s) => s.id));
-  if (markErr) console.log(`  (non-fatal) emailed-status update failed: ${markErr.message}`);
+  if (markErr) console.log(`  (non-fatal) sent-status update failed: ${markErr.message}`);
 
-  console.log(`✅ digest sent to ${TO} — ${emailItems.length} opportunities.`);
+  console.log(`✅ ${emailItems.length} opportunities delivered.`);
 }
 
 main().catch((e) => die(e instanceof Error ? e.message : String(e)));

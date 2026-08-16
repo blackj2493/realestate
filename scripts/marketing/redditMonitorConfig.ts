@@ -34,6 +34,15 @@ export interface SubredditConfig {
    * ping on Calgary threads we can't help with.
    */
   geoImplied: boolean;
+  /**
+   * Constraints that change WHAT MAY BE SAID, not merely the tone — rendered
+   * above the draft in every alert rather than beside the policy chip, because a
+   * line at the top of a notification is the line that gets skimmed past.
+   *
+   * Only set this where getting it wrong has a cost beyond a bad reply: a feed-
+   * agreement breach, a ban, or a thread turning on you.
+   */
+  compliance?: string;
 }
 
 export const SUBREDDITS: SubredditConfig[] = [
@@ -46,11 +55,19 @@ export const SUBREDDITS: SubredditConfig[] = [
   { name: 'CanadaHousing', posts: true, comments: false, policy: 'careful', geoImplied: false,
     note: 'Politics-heavy; answer data questions with data, skip the ideology threads.' },
   { name: 'CanadaHousing2', posts: true, comments: true, policy: 'careful', geoImplied: false,
-    note: 'Doomer-leaning; price-cut / inventory trackers land well, salesy tone does not.' },
+    note: 'Doomer-leaning; price-cut / inventory trackers land well, salesy tone does not.',
+    compliance:
+      'OPENLY HOSTILE TO REALTORS. Disclose anyway — being caught hiding it is far worse than ' +
+      'being downvoted for it. Never sound bullish here; a falling number posted plainly will ' +
+      'be believed, the same number framed optimistically will not.' },
   { name: 'OntarioLandlord', posts: true, comments: true, policy: 'careful', geoImplied: true,
     note: 'Investor lane — rental yield / cap-rate answers; landlord-tenant law threads are off-topic for us.' },
   { name: 'PersonalFinanceCanada', posts: true, comments: false, policy: 'no-links', geoImplied: false,
-    note: 'STRICT no self-promo. Answer with the method/number only; name the site ONLY if someone asks where the data is from.' },
+    note: 'STRICT no self-promo. Answer with the method/number only; name the site ONLY if someone asks where the data is from.',
+    compliance:
+      'NO LINK, NO BRAND — strip both from the draft before posting. This sub removes ' +
+      'self-promotion on sight and the mods do not negotiate. Give the number and the method ' +
+      'and nothing else; name the site only if somebody directly asks where it came from.' },
   { name: 'askTO', posts: true, comments: false, policy: 'careful', geoImplied: true,
     note: 'General-city sub — only reply to explicit housing-data questions, one link max.' },
   { name: 'ottawa', posts: true, comments: false, policy: 'careful', geoImplied: true,
@@ -63,6 +80,20 @@ export const SUBREDDITS: SubredditConfig[] = [
     note: 'General-city sub — housing threads only.' },
   { name: 'mississauga', posts: true, comments: false, policy: 'careful', geoImplied: true,
     note: 'General-city sub — housing threads only.' },
+  // Competitor-branded, but user-run (mods u/khnhk + u/Mother-Bug2191, since Jun 2022),
+  // NOT operated by HouseSigma. That distinction is the whole reason it can exist: the
+  // "bought high, sold low" genre needs sold prices, which are VOW-gated in Ontario. A
+  // sub full of USERS re-posting screenshots is ambient leakage nobody is liable for.
+  // The same post from us would be a feed-agreement breach. See launch-marketing-strategy
+  // §R.3a — this is the sharpest compliance edge anywhere in the monitor.
+  { name: 'HouseSigmaBlunders', posts: true, comments: true, policy: 'careful', geoImplied: true,
+    note: 'Competitor-branded sub, user-run. You are a guest — contribute the CONTEXT nobody else can, never more sold data.',
+    compliance:
+      'VOW WALL — this changes what you may post, not how you say it. NEVER post a sold price, ' +
+      'a sold-vs-purchase loss, or a relist chain for a named listing. That is a breach of the ' +
+      'feed agreement, not a style call, and it is the one TRREB can pull the data over. ' +
+      'SAFE: a single listing\'s own asking-price cuts, aggregates over 5+ sales, or anything ' +
+      'already public in the news. And never bash HouseSigma — you are in their house.' },
 ];
 
 /** Site-wide post searches (competitor + brand watch), run every cycle. */
@@ -217,7 +248,32 @@ export const ONTARIO_PLACES = [
  * [Square-bracket notes] are instructions to YOU — replace or delete before
  * posting. {{city}} is auto-filled when a city was detected.
  */
-export const TEMPLATES: Record<string, { personal: string; company: string }> = {
+/**
+ * Draft replies, per category.
+ *
+ * `personal` is the fallback. `personalVariants`, where present, is what actually
+ * ships: the monitor picks one deterministically from the thread id.
+ *
+ * WHY VARIANTS: a fixed template is a bigger risk than a clumsy sentence. Post the
+ * same paragraph on five threads and somebody eventually lines them up side by
+ * side, and at that point you are not a helpful regular, you are a bot. Rotating
+ * phrasings means no two replies ever match.
+ *
+ * HOUSE STYLE for anything in `personalVariants` — these are meant to survive a
+ * reader asking "did a person write this?":
+ *   - Two to four sentences. Long replies read as marketing whoever wrote them.
+ *   - Contractions. Lowercase sentence starts are fine. Fragments are fine.
+ *   - No em-dashes, no bullet lists, no bold. All three read as generated now.
+ *   - Answer ONE thing well instead of covering every angle. Completeness is the
+ *     single biggest tell that a machine wrote it.
+ *   - Have an opinion. Hedging everything reads as fake.
+ *   - No sign-off.
+ *   - Disclosure last, in parentheses, casual. Never omit it.
+ */
+export const TEMPLATES: Record<
+  string,
+  { personal: string; company: string; personalVariants?: string[] }
+> = {
   brand_watch: {
     personal:
       "[You were mentioned — read the thread first. If it's praise, an upvote from the personal account is often enough; " +
@@ -233,6 +289,18 @@ export const TEMPLATES: Record<string, { personal: string; company: string }> = 
       "I've mostly switched to pureproperty.ca — free account too, and it shows the full listing history: relists, terminations, " +
       "what it actually sat at before 'selling in 5 days'. That history is usually more telling than the sold price itself.\n\n" +
       '[optional disclosure — recommended:] (disclosure: I work on pureproperty, but HouseSigma is solid too — use either)',
+    personalVariants: [
+      "realtor.ca won't ever show you solds, that's a CREA rule rather than a website being unhelpful. you need a VOW site " +
+        'with a free account. HouseSigma is the one most people land on. i use pureproperty.ca, mainly because it shows the ' +
+        "whole listing history, so you can tell when something \"sold in 5 days\" after being relisted twice.\n\n" +
+        '(i work on pureproperty, so take that with the appropriate salt)',
+      'free account on any VOW site gets you this, HouseSigma or pureproperty.ca both do it. honestly the sold price on its ' +
+        'own is the less useful half. what i look at is whether it was relisted first, because a place on its third campaign ' +
+        "tells you something the final number doesn't.\n\n(disclosure: i work on pureproperty)",
+      "you're looking for a VOW site. the boards make you register before they'll show sold data, which is why the public " +
+        'sites never do. HouseSigma works fine. pureproperty.ca is what i use, it keeps the relist and termination history ' +
+        'attached so you can see the full campaign instead of just the ending.\n\n(fwiw i work on pureproperty)',
+    ],
     company:
       "Founder of pureproperty.ca here — we're a VOW site like HouseSigma, so with a free account you get sold prices plus the " +
       "full campaign history for {{city}}: relists, terminations, true days-on-market. If you look something up and the history " +
@@ -246,6 +314,17 @@ export const TEMPLATES: Record<string, { personal: string; company: string }> = 
       "shows relist chains and real days-on-market, plus public market trackers you can check without signing in).\n" +
       "- **Rentals:** honestly still Facebook Marketplace and luck.\n\n" +
       '[optional disclosure — recommended:] (fwiw I work on pureproperty — biased, but the free tier genuinely covers all of this)',
+    personalVariants: [
+      "depends what you actually need. realtor.ca is fine if you just want to browse what's listed. for sold prices and " +
+        "listing history you need a VOW site, so HouseSigma or pureproperty.ca. rentals are still mostly Facebook " +
+        'Marketplace and patience, nothing has fixed that yet.\n\n(i work on pureproperty, so obviously biased)',
+      "HouseSigma if you want the app, pureproperty.ca if you'd rather work on a desktop. both free with an account, both " +
+        'pull the same board data. the difference is what they show you around the sale rather than the sale itself.' +
+        '\n\n(disclosure: i work on pureproperty)',
+      "for actives realtor.ca does the job. for anything involving sold prices you'll need to register somewhere, that's " +
+        "just how the board rules work. i use pureproperty.ca, HouseSigma is the more popular answer and it's a fine " +
+        'one.\n\n(i work on pureproperty, flagging that upfront)',
+    ],
     company:
       "Founder of pureproperty.ca — adding it as an option since this is exactly what we built it for: sold prices, full listing " +
       "history, days-on-market and neighbourhood stats for Ontario, free account. There's also a public /data page with live market " +
@@ -257,6 +336,18 @@ export const TEMPLATES: Record<string, { personal: string; company: string }> = 
       "(price cuts, days-on-market, inventory, sell-through; no account needed). [Open the {{city}} tracker, paste the actual " +
       "current number here — a reply with a real figure in it wins the thread.] The direction over the last couple months is " +
       "what matters, not any single week.",
+    personalVariants: [
+      "there's an actual number for this rather than everyone guessing. [PASTE THE LIVE {{city}} FIGURE HERE from " +
+        'pureproperty.ca/data before posting.] worth looking at the trend over a couple of months instead of any single ' +
+        "week though, weekly moves in this market are mostly noise.\n\n(i work on pureproperty, the /data pages are free " +
+        'and need no login)',
+      "[PULL THE CURRENT {{city}} NUMBER from pureproperty.ca/data and lead with it.] that's the figure, for whatever it's " +
+        "worth. i'd be careful reading much into one month either way, the direction over a quarter is the part that " +
+        "actually holds up.\n\n(disclosure: i work on pureproperty. the data pages are free, no account)",
+      "you can check this instead of arguing it. [INSERT LIVE {{city}} FIGURE from pureproperty.ca/data.] the thing most " +
+        "people get wrong here is comparing to last month rather than the same month last year, which in a seasonal market " +
+        'makes almost everything look like a crash or a boom.\n\n(i build pureproperty, flagging that)',
+    ],
     company:
       "We publish free public trackers for exactly this — pureproperty.ca/data has price cuts, days-on-market, inventory and " +
       "sell-through for {{city}}, updated nightly, no login. [Paste the relevant current number into the reply.] Founder here — " +
