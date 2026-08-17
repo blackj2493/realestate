@@ -104,6 +104,15 @@ describe('content routine contract', () => {
     }
   });
 
+  it('is discoverable from CLAUDE.md, which is how the routine finds it at all', () => {
+    // Claude Code auto-loads the repo-root CLAUDE.md, so this pointer is what makes
+    // the contract apply without anyone editing the cloud schedule. Delete the pointer
+    // and the routine silently falls back to whatever stale instructions its schedule
+    // still carries — no error, just yesterday's rules.
+    const claudeMd = readFileSync(path.join(process.cwd(), 'CLAUDE.md'), 'utf8');
+    expect(claudeMd).toContain('content-queue/ROUTINE.md');
+  });
+
   it('tells the routine to flag rather than fudge an angle it cannot draft honestly', () => {
     // This is what caught the months-of-supply direction bug before it posted.
     expect(lower).toMatch(/anomaly note/);
