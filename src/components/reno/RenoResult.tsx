@@ -18,26 +18,13 @@ import RenoMarketBridge from './RenoMarketBridge';
 import RenoCarousels from './RenoCarousels';
 import ShareChallengeButton from './ShareChallengeButton';
 import { RenoGuidePanel } from './RenoPanels';
-import { FoundingSeatsOffer, FoundingSeatHeld } from './FoundingSeats';
-import { FOUNDING_SEAT_TOTAL, shouldShowSeats, type SeatSummary } from '@/lib/founding/seats';
 
-/**
- * Seat fields are REQUIRED-but-nullable, deliberately. As `seats?:` they were
- * optional, so a caller that built a result without them type-checked fine — and
- * that is exactly what happened: the funnel dropped both, and the offer strip and
- * the seat confirmation silently never rendered while everything compiled clean.
- * Required means forgetting them is a compile error; `| null` still allows "we
- * genuinely have no count".
- */
 export type RenoResultData =
-  | { locked: true; catalog: AnonCatalogItem[]; seats: SeatSummary | null }
+  | { locked: true; catalog: AnonCatalogItem[] }
   | {
       locked: false;
       estimate: AVMResult | null;
       report: ValueAddReport | null;
-      seats: SeatSummary | null;
-      /** This user's founding seat, taken during this very request. */
-      seat: number | null;
     };
 
 export default function RenoResult({
@@ -215,13 +202,6 @@ export default function RenoResult({
           go straight to the ranked cards; the old 3-card insight strip repeated them. */}
       {result.locked && <RenoInsightStrip where={where} unlockHref={unlockHref} onUnlock={onUnlock} />}
 
-      {/* The seat they just took, in the slot the anon-only insight strip vacates.
-          It was granted server-side during this request — they never pressed a
-          claim button, so this is a confirmation and not another ask. */}
-      {!result.locked && result.seat != null && (
-        <FoundingSeatHeld seat={result.seat} total={FOUNDING_SEAT_TOTAL} />
-      )}
-
       {/* CREDIBILITY — the engine's own diagnostics, collapsed by default. */}
       <RenoMethodNote
         locked={result.locked}
@@ -272,10 +252,6 @@ export default function RenoResult({
 
           {result.locked ? (
             <>
-              {/* Above the CTA, never replacing it: the button already promises the
-                  thing they came for, and the seat is a second reason to press it
-                  rather than a competing ask. */}
-              {shouldShowSeats(result.seats) && <FoundingSeatsOffer seats={result.seats} />}
               <Link
                 href={unlockHref}
                 onClick={onUnlock}
