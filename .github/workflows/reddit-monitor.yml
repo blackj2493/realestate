@@ -12,22 +12,42 @@ name: Reddit Opportunity Monitor
 # A broken run (Reddit auth dead, table missing) exits non-zero → red run +
 # failure email; it cannot quietly rot.
 #
-# CADENCE: every 2h at :20. Reddit replies land best within a few hours of the
-# post; 2h keeps us in that window at ~12 cheap runs/day (~20 API calls each,
-# against Reddit's 100/min free allowance).
+# SCHEDULE DISABLED 2026-08-17 — manual dispatch only. Read this before re-enabling.
 #
-# NOTE (new-workflow gotcha): scheduled triggers only start once this file is on
-# the DEFAULT branch. Until then, use the "Run workflow" button (workflow_dispatch).
+# The local Windows scheduled task (scripts/marketing/reddit-monitor.cmd) is the real
+# runner now, and it is strictly better on every axis that matters:
 #
-# Required secrets beyond the usual Supabase/Resend set:
-#   REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET — free "script" app from
-#   https://www.reddit.com/prefs/apps (any account; application-only OAuth,
-#   read-only). Without them the script falls back to public RSS, which Reddit
-#   rate-limits into uselessness from datacenter IPs — treat them as required.
+#   - It drafts each reply from the thread itself via the Claude CLI on the Max plan.
+#     This job has no ANTHROPIC_API_KEY and no CLI, so it can only ship the generic
+#     category templates the drafter replaced.
+#   - It delivers to Telegram. This job has no TELEGRAM_* secrets, so it emails —
+#     a second inbox for one queue.
+#   - It runs every 30 min against this job's 2h.
+#
+# And both write --apply to the SAME reddit_opportunities dedupe table, so a lead is
+# claimed by whichever fires first and the other never sees it. That makes this job a
+# race the good runner can lose: when it wins, the alert arrives as a template draft
+# in the wrong inbox.
+#
+# It was not adding coverage either. Measured on the 22:40 UTC run of 2026-08-16:
+# 13 minutes, 1,168 items fetched, 11 candidates, 0 delivered — every one already
+# claimed by the local task. Twelve of those a day.
+#
+# BEFORE RE-ENABLING, give it what it lacks, or it will quietly degrade the queue:
+#   - TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, so alerts land in one place.
+#   - A drafting transport (ANTHROPIC_API_KEY), or accept template drafts knowingly.
+#   - REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET, a free read-only "script" app from
+#     https://www.reddit.com/prefs/apps. Without them this falls back to public RSS,
+#     which Reddit rate-limits hard from datacenter IPs (see the 429s in any old run).
+#
+# Manual dispatch is kept deliberately as the backstop for a long stretch with the
+# local machine off. It still honours vars.REDDIT_WARMUP, so a manual run cannot
+# disagree with local on what may be promoted.
+#
 #   MARKETING_ALERT_EMAIL — digest recipient (falls back to SYNC_ALERT_EMAIL).
 on:
-  schedule:
-    - cron: '20 */2 * * *'
+  # schedule:
+  #   - cron: '20 */2 * * *'
   workflow_dispatch:
 
 permissions:
