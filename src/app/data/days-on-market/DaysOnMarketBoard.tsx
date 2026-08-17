@@ -37,6 +37,7 @@ const columns: RankingColumn<MarketRow>[] = [
     key: "soldMedianDom",
     label: "Median Days to Sell",
     align: "right",
+    group: "Homes that sold",
     hint: "Median days a recently-sold home spent listed (relist-adjusted)",
     sortValue: (r) => r.soldMedianDom,
     render: (r) => (
@@ -45,9 +46,12 @@ const columns: RankingColumn<MarketRow>[] = [
   },
   {
     key: "range",
-    label: "Fast → Slow (25–75%)",
+    label: "Middle Half Took",
     align: "right",
-    hint: "25th to 75th percentile of days-to-sell",
+    group: "Homes that sold",
+    // Plain label, precise term in the tooltip — the /analytics convention. "Fast to
+    // Slow (25-75%)" made the reader do the statistics before they could read the row.
+    hint: "Interquartile range: a quarter of sales were faster than the first figure and a quarter slower than the second, so half landed between them",
     sortValue: (r) => r.soldP75Dom,
     render: (r) =>
       r.soldP25Dom == null || r.soldP75Dom == null ? DASH : `${r.soldP25Dom}–${r.soldP75Dom}d`,
@@ -56,6 +60,7 @@ const columns: RankingColumn<MarketRow>[] = [
     key: "reportedAge",
     label: "Reported Listing Age",
     align: "right",
+    group: "Homes still listed",
     hint: "Median age of active listings using the board clock, which restarts at zero each time a home is relisted",
     sortValue: (r) => r.medianNaiveDom,
     render: (r) => days(r.medianNaiveDom),
@@ -64,6 +69,7 @@ const columns: RankingColumn<MarketRow>[] = [
     key: "activeAge",
     label: "Real Listing Age",
     align: "right",
+    group: "Homes still listed",
     hint: "The same listings, with relist chains stitched back together so the clock keeps running",
     sortValue: (r) => r.trueDom,
     render: (r) => (
@@ -74,6 +80,7 @@ const columns: RankingColumn<MarketRow>[] = [
     key: "hidden",
     label: "Hidden Days",
     align: "right",
+    group: "Homes still listed",
     hint: "How much longer homes have really been for sale than the reported figure shows",
     sortValue: (r) => hiddenDays(r),
     render: (r) => {
@@ -87,6 +94,7 @@ const columns: RankingColumn<MarketRow>[] = [
     key: "stale90",
     label: "Sitting 90+ Days",
     align: "right",
+    group: "Homes still listed",
     hint: "Share of active listings on market 90+ days",
     sortValue: (r) => stale90(r.domBuckets),
     render: (r) => {
@@ -126,11 +134,25 @@ export function DaysOnMarketBoard({ rows, embed = false }: { rows: MarketRow[]; 
             }
           />
           <ReadoutCell
-            label="Slowest market"
+            label="Slowest to sell"
             value={slowest ? slowest.region : DASH}
-            sub={slowest?.soldMedianDom != null ? `${slowest.soldMedianDom} days to sell` : undefined}
+            sub={slowest?.soldMedianDom != null ? `median ${slowest.soldMedianDom} days, homes that sold` : undefined}
           />
         </Readout>
+      )}
+      {/* The single sentence that stops this table being misread. Two columns describe
+          homes that sold and four describe homes that have not; side by side those look
+          contradictory — 24 days next to 73 days — until you know they are different
+          houses. The gap between them IS the finding, so it is worth stating in the open
+          rather than leaving to a tooltip nobody hovers before concluding. */}
+      {!embed && (
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Two different sets of homes here.{" "}
+          <strong className="text-foreground">Days to sell</strong> is measured on homes that{" "}
+          <em>sold</em>. <strong className="text-foreground">Listing age</strong> is measured on homes{" "}
+          <em>still for sale</em>. When the second is far larger than the first, the homes that sell are
+          going quickly while everything else piles up — which is what a slow market actually looks like.
+        </p>
       )}
       <RankingTable
         columns={columns}

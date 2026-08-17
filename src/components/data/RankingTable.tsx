@@ -24,6 +24,19 @@ export interface RankingColumn<T> {
   render: (row: T) => ReactNode;
   /** Optional header tooltip. */
   hint?: string;
+  /**
+   * Optional band rendered above the column headers, spanning every consecutive
+   * column that shares the same string.
+   *
+   * Exists because a table can silently describe two different POPULATIONS. The
+   * days-on-market board puts "median days to sell" (measured on homes that sold)
+   * next to "real listing age" (measured on homes still listed), and read as one row
+   * those look like a contradiction — 24 days beside 73 days — when they are simply
+   * different houses. A tooltip does not fix that: nobody hovers before they conclude.
+   * The band states the population where it cannot be missed, including in a
+   * screenshot.
+   */
+  group?: string;
 }
 
 interface Props<T> {
@@ -83,9 +96,41 @@ export function RankingTable<T>({
     }
   };
 
+  // Collapse consecutive columns sharing a group into one spanning cell. Ungrouped
+  // columns still take a (blank) cell so the grid stays aligned with the header row.
+  const groupRuns: { group?: string; span: number }[] = [];
+  for (const c of columns) {
+    const last = groupRuns[groupRuns.length - 1];
+    if (last && last.group === c.group) last.span += 1;
+    else groupRuns.push({ group: c.group, span: 1 });
+  }
+  const hasGroups = columns.some((c) => c.group);
+
   return (
     <div className="dt-panel dt-reg relative overflow-x-auto border border-border bg-card dark:bg-transparent">
       <div style={{ minWidth }}>
+        {hasGroups && (
+          <div
+            className="grid border-b border-border bg-card/60"
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
+            {groupRuns.map((run, i) => (
+              <div
+                key={`${run.group ?? "none"}-${i}`}
+                style={{ gridColumn: `span ${run.span}` }}
+                className={cn(
+                  "terminal-font px-2 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground",
+                  // A rule at the boundary so the eye reads two blocks rather than
+                  // seven columns with a caption floating over them.
+                  i > 0 && run.group && "border-l border-border"
+                )}
+              >
+                {run.group ?? ""}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div
           className="grid border-b border-border bg-card/60"
           style={{ gridTemplateColumns: gridTemplate }}
