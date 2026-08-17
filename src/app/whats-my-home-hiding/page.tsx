@@ -3,8 +3,6 @@ import RenovationFunnel from '@/components/reno/RenovationFunnel';
 import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
 import AppHeader from '@/components/layout/AppHeader';
-import { getServiceRoleClient } from '@/lib/supabase/client';
-import { getSeatSummary } from '@/lib/founding/seats';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,12 +47,6 @@ export default async function WhatsMyHomeHidingPage({
   const resolved = slug ? resolveCommunitySlug(tree, slug) : null;
   const communityLabel = resolved ? deslugifyCommunity(slug!) : null;
 
-  // The offer has to be visible BEFORE the address field or it can't do its job:
-  // someone arriving from a link needs a reason to start typing. The count only —
-  // the seat map and the seat number belong to the result, where they've seen
-  // something worth having. The page is force-dynamic, so this stays live.
-  const seats = await getSeatSummary(getServiceRoleClient());
-
   return (
     <div className="min-h-app bg-background text-foreground">
       <AppHeader variant="marketing" />
@@ -84,17 +76,12 @@ export default async function WhatsMyHomeHidingPage({
             </li>
           ))}
         </ul>
-        {/* The counter renders INSIDE the funnel, not here: the claim happens a few
-            seconds after this server render (auto-resubmit once terms are accepted),
-            so a server-only counter is permanently one behind for the person who
-            just took a seat. The funnel seeds from this value and keeps it live. */}
         <RenovationFunnel
           tree={tree}
           initialCity={resolved?.city ?? ''}
           initialCityRegion={resolved?.cityRegion ?? ''}
           communitySlug={slug ?? null}
           communityLabel={communityLabel}
-          initialSeats={seats}
         />
       </main>
     </div>

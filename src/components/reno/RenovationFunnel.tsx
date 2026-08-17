@@ -15,8 +15,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import RenoAddressField from './RenoAddressField';
 import RenoResult, { type RenoResultData } from './RenoResult';
-import { FoundingSeatsBanner } from './FoundingSeats';
-import { shouldShowSeats, type SeatSummary } from '@/lib/founding/seats';
 import type { HEFormState } from '@/components/hiddenEquity/HiddenEquityForm';
 import type { CohortTree } from '@/lib/avm/cohorts';
 import { normalizeCityRegion } from '@/lib/avm/cohorts';
@@ -47,15 +45,12 @@ export default function RenovationFunnel({
   initialCityRegion,
   communitySlug,
   communityLabel,
-  initialSeats,
 }: {
   tree: CohortTree;
   initialCity: string;
   initialCityRegion: string;
   communitySlug: string | null;
   communityLabel: string | null;
-  /** Server-rendered seat count; kept live from each API response. */
-  initialSeats: SeatSummary;
 }) {
   const [form, setForm] = useState<HEFormState>({
     city: initialCity,
@@ -67,7 +62,6 @@ export default function RenovationFunnel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [seats, setSeats] = useState<SeatSummary>(initialSeats);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const autoTried = useRef(false);
   const inputRef = useRef<HTMLDivElement>(null);
@@ -86,12 +80,6 @@ export default function RenovationFunnel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // Campaign tag, so a founding seat can be traced back to the send that
-          // earned it. AVMInputSchema strips it; the route reads the raw body.
-          source:
-            typeof window !== 'undefined'
-              ? new URLSearchParams(window.location.search).get('ref')
-              : null,
           cityRegion: f.cityRegion,
           city: f.city,
           propertySubType: f.propertySubType,
@@ -109,21 +97,13 @@ export default function RenovationFunnel({
         setError(json.error ?? 'Something went wrong. Please try again.');
         return;
       }
-      // Carry the seat data into the result — without this the offer strip and the
-      // "your seat is #N" confirmation silently never render, because both fields
-      // are optional on RenoResultData and so nothing type-errors when they're
-      // dropped. The API returns `seats` on BOTH branches, and the count it returns
-      // on the consumer branch is post-claim, so the banner below stays live too.
-      if (json.seats) setSeats(json.seats);
       if (json.locked) {
-        setResult({ locked: true, catalog: json.catalog ?? [], seats: json.seats ?? null });
+        setResult({ locked: true, catalog: json.catalog ?? [] });
       } else {
         setResult({
           locked: false,
           estimate: json.estimate ?? null,
           report: json.valueAdd ?? null,
-          seats: json.seats ?? null,
-          seat: json.seat ?? null,
         });
       }
     } catch {
@@ -202,8 +182,6 @@ export default function RenovationFunnel({
 
   return (
     <div className="space-y-6">
-      {shouldShowSeats(seats) && <FoundingSeatsBanner seats={seats} />}
-
       {/* ── INPUT ── */}
       <Card ref={inputRef} className="p-5">
         <div className="space-y-4">
