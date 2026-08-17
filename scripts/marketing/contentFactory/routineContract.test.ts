@@ -124,6 +124,16 @@ describe('content routine contract', () => {
     expect(x.toLowerCase()).toMatch(/cannot make the image|specify it/);
   });
 
+  it('makes the routine choose one post rather than hand over a menu', () => {
+    // The failure this prevents already happened: two weeks of runs produced fourteen
+    // unreviewed PRs and zero posts. The drafts were fine — thirteen options a day
+    // against a capacity of two or three is what stopped anything shipping. If this
+    // section goes, the file reverts to a menu and the operator reverts to skipping it.
+    expect(CONTRACT).toContain('Post this one today');
+    expect(CONTRACT.toLowerCase()).toMatch(/menu, not a queue/);
+    expect(CONTRACT.toLowerCase()).toMatch(/do not hand over options/);
+  });
+
   it('is discoverable from CLAUDE.md, which is how the routine finds it at all', () => {
     // Claude Code auto-loads the repo-root CLAUDE.md, so this pointer is what makes
     // the contract apply without anyone editing the cloud schedule. Delete the pointer

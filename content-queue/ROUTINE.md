@@ -216,21 +216,53 @@ draft is.
 
 # Output format
 
+## Lead with the pick. This is the most important part of the file.
+
+**The first thing in the file is one post to publish today, chosen by you.**
+
+Four angles across four platforms is about thirteen drafts a day, against a
+realistic capacity of two or three. That is a menu, not a queue — and a menu of
+thirteen is why the first two weeks of this routine produced fourteen unreviewed
+PRs and zero posts. Choice paralysis is the failure mode that actually happened
+here, not bad drafts.
+
+So do not hand over options. Decide, and say why in one line. The operator's
+morning should be "read the top of the file, post it", not "evaluate thirteen
+things before coffee".
+
+The section is titled `## ⭐ Post this one today` and contains, in this order:
+
+1. **Which platform**, and why this angle over the others — one sentence. Usually
+   X, because that is the daily cadence; LinkedIn on the two days a week its
+   rotation comes up.
+2. **The chart spec**, complete, so nothing has to be looked up.
+3. **The post text**, final, ready to paste.
+4. **The alt text.**
+5. **One line on what to check before posting** — the figure against the live
+   tracker, and whether the thread or timing still makes sense.
+
+Pick the angle a stranger would find most surprising, not the one with the biggest
+sample or the tidiest number. Everything else in the file stays exactly as it is,
+below this section, as optional material.
+
+## The rest of the file
+
 Write `content-queue/YYYY-MM-DD.md` containing:
 
-1. A header naming the source file and its `dataAsOf`, and stating that nothing posts
+1. The `## ⭐ Post this one today` section above, first, before anything else.
+2. A header naming the source file and its `dataAsOf`, and stating that nothing posts
    automatically.
-2. The founder disclosure line, once, verbatim.
-3. A small-sample note if any angle is thin.
-4. One section per angle: the verbatim figure, region, sample, source URL, why it is
+3. The founder disclosure line, once, verbatim.
+4. A small-sample note if any angle is thin.
+5. One section per angle: the verbatim figure, region, sample, source URL, why it is
    surprising, then the drafts — `(a)` Reddit, `(b)` X, `(c)` video, and `(d)`
    LinkedIn on the one angle that gets it, labelled with its type.
    The X draft carries **two** parts under `(b)`: the **chart spec** (capture,
    highlight, overlay title, watermark) and then the post text with its alt text.
    A post with no chart spec is an incomplete draft — the operator cannot ship it
    without going back to work out what to screenshot.
-5. A self-score out of 100 per draft with one line of reasoning.
-6. An anomaly note at the bottom for any angle deliberately left undrafted, and why.
+6. A self-score out of 100 per draft with one line of reasoning.
+7. An anomaly note at the bottom for any angle deliberately left undrafted, and why.
 
 The PR body should summarise the angles drafted, flag anything left out, and list what
 the reviewer must check before posting.
