@@ -82,3 +82,10 @@ reddit-monitor.log.1
 
 # Playwright demo session state (contains auth cookies)
 scripts/demos/.auth-state.json
+
+# Outreach docs holding contact data for named individuals. This repo is PUBLIC.
+# The reviewable half (method, guardrails, prior-art gate) is data-outreach-playbook.md,
+# which is committed. These three are local-only and must stay that way.
+docs/strategy/data-outreach-contacts.md
+docs/strategy/data-outreach-ready-to-send.md
+docs/strategy/data-outreach-send-log.md
