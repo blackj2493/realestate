@@ -80,10 +80,65 @@ Target sub is named per angle. A real body, not a one-liner. Open with the figur
 be honest about the sample, close with a genuine question or an AMA line. Disclosure
 required, one line, not a paragraph.
 
-## X
+## X — chart first, not thread first
 
-Two to four tweets. Figure in the first. Sample caveat mid-thread. Disclosure and
-link last.
+**One chart, one claim, one caveat, one link.** Not a thread. Threads are for a
+multi-step argument; we have data, and on X the unit that travels is an image.
+
+### Why the chart carries the attribution
+
+A chart gets screenshotted and re-posted **detached from the tweet**. By the third
+share nobody can see the account that made it, and a figure with no source attached
+is a figure someone else gets credited for. That is the whole channel working against
+us, and the fix is one line in the chart spec:
+
+> **The pureproperty.ca URL must be inside the image.** Bottom-right, small, always.
+
+This is not branding. It is the only backlink mechanism X has — links in posts are
+nofollow and screenshots carry no link at all, so a watermarked chart is the one
+artefact that still points home after it has left our account.
+
+### You cannot make the image — specify it
+
+You run sandboxed with no egress and cannot open the site, so **never describe a
+chart as though you produced it**. Write a spec precise enough that a human can
+capture it in under a minute, the same way the video section names shots:
+
+- **Capture:** the exact `sourceUrl`, and which view/filter/row to put on screen.
+- **Highlight:** the single row or bar the claim is about.
+- **Title to overlay:** a short declarative line, the claim itself.
+- **Watermark:** `pureproperty.ca/data/<tracker>` bottom-right.
+
+### The post
+
+- Two to four short lines. Blank line between them. No hook-and-cliffhanger.
+- The verbatim figure in the first line.
+- The caveat in its own line — sample size when thin, or what the number does not
+  mean. On X a sceptic becomes a critic when the caveat is missing, and a wrong or
+  overstated figure here is permanent and quote-tweetable in a way it is not
+  elsewhere.
+- The `sourceUrl` in the post body. Not in a reply — the "link in the first comment"
+  trick is transparent, and for a data account the link is the point.
+- **Alt text is required.** Write it as a sentence stating the figure, not "chart of
+  price cuts". It is read aloud, it is indexed, and it survives when the image
+  does not load.
+- Compressed disclosure inline, because the full founder line eats the post:
+  `(I'm a licensed Ontario realtor; I built the free tracker this comes from.)`
+  Use the full disclosure only in a self-reply, or when the post is short enough to
+  carry it.
+
+### Never
+
+- No engagement bait, no "a thread 🧵" on a single-chart post, no fake cliffhanger.
+- Never argue in replies. Post the number and leave. A licensed professional in a
+  public fight is a conduct exposure, not just a bad look, and the audience already
+  saw the figure.
+
+### Thread exception
+
+Draft a thread only when the angle genuinely needs several steps to hold up — a
+method explainer, or a finding with more than one table behind it. Expect that
+roughly monthly, not daily. When you do, the first tweet still carries a chart.
 
 ## Video (9:16)
 
@@ -170,6 +225,10 @@ Write `content-queue/YYYY-MM-DD.md` containing:
 4. One section per angle: the verbatim figure, region, sample, source URL, why it is
    surprising, then the drafts — `(a)` Reddit, `(b)` X, `(c)` video, and `(d)`
    LinkedIn on the one angle that gets it, labelled with its type.
+   The X draft carries **two** parts under `(b)`: the **chart spec** (capture,
+   highlight, overlay title, watermark) and then the post text with its alt text.
+   A post with no chart spec is an incomplete draft — the operator cannot ship it
+   without going back to work out what to screenshot.
 5. A self-score out of 100 per draft with one line of reasoning.
 6. An anomaly note at the bottom for any angle deliberately left undrafted, and why.
 

@@ -104,6 +104,26 @@ describe('content routine contract', () => {
     }
   });
 
+  it('keeps X chart-first, with the URL inside the image', () => {
+    // The watermark is the load-bearing line in the whole X section. A chart gets
+    // screenshotted and re-posted detached from the tweet, links on X are nofollow,
+    // and a screenshot carries no link at all — so the URL burned into the image is
+    // the ONLY thing still pointing home after the chart leaves our account. Lose
+    // this instruction and the channel produces reach with no attribution.
+    const x = CONTRACT.slice(CONTRACT.indexOf('## X'), CONTRACT.indexOf('## Video'));
+    expect(x.toLowerCase()).toContain('inside the image');
+    expect(x).toContain('pureproperty.ca');
+    expect(x.toLowerCase()).toMatch(/one chart, one claim/);
+    expect(x.toLowerCase()).toContain('alt text');
+  });
+
+  it('reminds the routine it cannot make the image, only specify it', () => {
+    // It runs sandboxed with no egress. Without this it writes "chart showing…" as
+    // though it had produced one, and the operator gets a post with no asset.
+    const x = CONTRACT.slice(CONTRACT.indexOf('## X'), CONTRACT.indexOf('## Video'));
+    expect(x.toLowerCase()).toMatch(/cannot make the image|specify it/);
+  });
+
   it('is discoverable from CLAUDE.md, which is how the routine finds it at all', () => {
     // Claude Code auto-loads the repo-root CLAUDE.md, so this pointer is what makes
     // the contract apply without anyone editing the cloud schedule. Delete the pointer
