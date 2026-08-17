@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ageHours,
   detectCity,
@@ -6,6 +6,7 @@ import {
   isExcludedAuthor,
   isExcludedTitle,
   parseAtomFeed,
+  isProductFree,
   scoreItem,
   stripHtml,
   type RedditItem,
@@ -193,6 +194,10 @@ describe('warmup mode', () => {
     expect(PROMO.test(hit!.draftPersonal)).toBe(false);
   });
 
+  it('treats an unlisted sub as strict even while warmup is on', () => {
+    expect(isProductFree(undefined)).toBe(true);
+  });
+
   it('picks a stable draft per thread but different drafts across threads', () => {
     const q = { title: 'How do I see sold prices?', body: 'Toronto condo.' };
     const a1 = scoreItem(base({ ...q, id: 't3_aaa' }), GEO)!.draftPersonal;
@@ -306,6 +311,56 @@ describe('claude CLI draft transport', () => {
       if (saved === undefined) delete process.env.ANTHROPIC_API_KEY;
       else process.env.ANTHROPIC_API_KEY = saved;
       __setClaudeCliForTests(undefined);
+    }
+  });
+});
+
+/**
+ * The promo gate with warmup OFF — the state the monitor runs in once an account has
+ * real history. WARMUP_MODE is read from env at module load, so these reload the
+ * module graph rather than trying to mutate a frozen const.
+ *
+ * This block exists because turning the flag off is a one-character change that
+ * silently rewrites what every alert tells you to post. Before isProductFree existed
+ * the rule was spelled out in four places and every copy read
+ * `WARMUP_MODE || sub?.policy === 'no-links'`, which is false for an unlisted sub —
+ * so flipping the flag would have shipped promotional drafts into subreddits nobody
+ * had ever checked the rules for, under a header saying it was fine to post. The
+ * brand and competitor search feeds return threads from arbitrary subs daily, so that
+ * path is ordinary traffic, not an edge case.
+ */
+describe('promo gate with warmup off', () => {
+  async function coreWithWarmupOff() {
+    vi.resetModules();
+    vi.stubEnv('REDDIT_WARMUP', 'false');
+    return import('./redditMonitorCore');
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('still forces product-free on a no-links sub', async () => {
+    const { isProductFree: gate } = await coreWithWarmupOff();
+    expect(gate({ policy: 'no-links' })).toBe(true);
+  });
+
+  it('FAILS CLOSED on an unlisted sub — the whole point of the helper', async () => {
+    const { isProductFree: gate } = await coreWithWarmupOff();
+    expect(gate(undefined)).toBe(true);
+  });
+
+  it('allows the promotional draft only on a sub someone has actually vetted', async () => {
+    const { isProductFree: gate } = await coreWithWarmupOff();
+    expect(gate({ policy: 'careful' })).toBe(false);
+  });
+
+  it('every configured sub resolves to a deliberate answer', async () => {
+    const { isProductFree: gate } = await coreWithWarmupOff();
+    const { SUBREDDITS: subs } = await import('./redditMonitorConfig');
+    for (const s of subs) {
+      expect(gate(s), `${s.name} must resolve from its policy`).toBe(s.policy === 'no-links');
     }
   });
 });

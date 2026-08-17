@@ -42,7 +42,6 @@ import {
   SEARCHES,
   SUBREDDITS,
   TEMPLATES,
-  WARMUP_MODE,
   type SubredditConfig,
 } from './redditMonitorConfig';
 import {
@@ -50,6 +49,7 @@ import {
   fillTemplate,
   isExcludedAuthor,
   isExcludedTitle,
+  isProductFree,
   parseAtomFeed,
   scoreItem,
   type RedditItem,
@@ -236,12 +236,14 @@ function policyFor(subreddit: string): {
   warmup: boolean;
 } {
   const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === subreddit.toLowerCase());
-  // Mirrors pickPersonalDraft: warmup is on globally, or forced by a no-links sub.
-  const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
+  // isProductFree is the single source of this rule — do not re-derive it here. It
+  // treats an unlisted sub as strict, which is why the note below and the draft the
+  // operator sees now agree with each other.
+  const warmup = isProductFree(cfg);
   if (cfg) return { policy: cfg.policy, note: cfg.note, compliance: cfg.compliance, warmup };
   return {
-    policy: 'careful',
-    note: 'Unlisted sub — read its rules on self-promotion before posting.',
+    policy: 'no-links',
+    note: 'Unlisted sub — nobody has checked its self-promo rules, so the draft is product-free. Read the rules before posting, and add it to SUBREDDITS if it is worth watching.',
     warmup,
   };
 }
@@ -322,8 +324,7 @@ async function applyDrafts(items: ScoredItem[]): Promise<void> {
   let skipped = 0;
   for (const item of items) {
     const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === item.subreddit.toLowerCase());
-    const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
-    const r = await draftReply(item, cfg, warmup, item.draftPersonal);
+    const r = await draftReply(item, cfg, isProductFree(cfg), item.draftPersonal);
     item.draftPersonal = r.draft;
     item.draftReason = r.reason;
     item.draftSkip = r.skip;
@@ -417,7 +418,7 @@ async function main(): Promise<void> {
       await applyDrafts(preview);
       for (const item of preview) {
         const cfg = SUBREDDITS.find((s) => s.name.toLowerCase() === item.subreddit.toLowerCase());
-        const warmup = WARMUP_MODE || cfg?.policy === 'no-links';
+        const warmup = isProductFree(cfg);
         console.log(`\n${'─'.repeat(72)}`);
         console.log(`r/${item.subreddit} · ${item.categoryLabel} · ${item.score}pts · warmup=${warmup}`);
         console.log(`TITLE: ${item.title.slice(0, 120)}`);

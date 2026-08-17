@@ -287,8 +287,22 @@ export const ONTARIO_PLACES = [
  *
  * Flip it with REDDIT_WARMUP=false once an account has real history in the subs it
  * posts to. Weeks, not days.
+ *
+ * READ LAZILY, ON PURPOSE. This was `export const WARMUP_MODE = process.env...`
+ * evaluated at module load, which made it unsettable from .env.local and silently so.
+ * ES imports are hoisted: redditMonitor.ts imports this module at line 46 and only
+ * calls dotenv.config() at line 59, so the const was fixed at its default before the
+ * env file was ever read. Setting REDDIT_WARMUP=false in .env.local appeared to work
+ * and changed nothing — the failure mode being that you believe you are promoting and
+ * are not, with no error anywhere to tell you.
+ *
+ * A function reads process.env at call time, after dotenv has run, so the env file
+ * governs regardless of import order. Same fix as the refresh scripts that have to
+ * dynamic-import after dotenv.
  */
-export const WARMUP_MODE = (process.env.REDDIT_WARMUP ?? 'true').toLowerCase() !== 'false';
+export function warmupMode(): boolean {
+  return (process.env.REDDIT_WARMUP ?? 'true').toLowerCase() !== 'false';
+}
 
 export const TEMPLATES: Record<
   string,

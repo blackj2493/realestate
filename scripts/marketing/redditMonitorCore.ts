@@ -13,7 +13,7 @@ import {
   ONTARIO_PLACES,
   SCORE_THRESHOLD,
   TEMPLATES,
-  WARMUP_MODE,
+  warmupMode,
   type SubredditConfig,
 } from './redditMonitorConfig';
 
@@ -129,11 +129,32 @@ export function scoreItem(
 }
 
 /**
- * Choose the product-free draft or the promotional one.
+ * Should this sub get the product-free draft?
  *
- * Warmup wins whenever it is on, and a `no-links` sub forces it regardless —
- * PersonalFinanceCanada removes self-promotion on sight, so there is no version of
- * this where naming the site there is a judgement call.
+ * THE SINGLE SOURCE OF THIS RULE. It was previously written out three times — here,
+ * in isWarmupDraft, and in the monitor's policyFor — and every copy read
+ * `WARMUP_MODE || sub?.policy === 'no-links'`, which fails OPEN on an unlisted sub:
+ * `undefined?.policy === 'no-links'` is false, so with warmup off an unknown sub got
+ * the promotional draft under a header telling the operator it was fine to post.
+ *
+ * That is not a hypothetical path. The brand and competitor search feeds pull threads
+ * from ANY subreddit, not just the configured list, so "unlisted" is a normal daily
+ * occurrence rather than an edge case. The one place we know nothing about a sub's
+ * rules is the one place we must not promote.
+ *
+ * So: warmup wins whenever it is on; a `no-links` sub forces it regardless
+ * (PersonalFinanceCanada removes self-promotion on sight and the mods do not
+ * negotiate); and an unlisted sub is treated as strict until somebody adds it to
+ * SUBREDDITS with a policy and a note.
+ */
+export function isProductFree(sub: Partial<Pick<SubredditConfig, 'policy'>> | undefined): boolean {
+  if (warmupMode()) return true;
+  if (!sub) return true; // unlisted — fail closed, never open
+  return sub.policy === 'no-links';
+}
+
+/**
+ * Choose the product-free draft or the promotional one.
  *
  * Falls back through warmup → personal variants → the plain template, so a
  * category with no warmup phrasing written yet still produces something rather
@@ -145,8 +166,9 @@ export function pickPersonalDraft(
   seed: string,
   sub: (Partial<Pick<SubredditConfig, 'policy'>> | undefined),
 ): string {
-  const forceWarmup = WARMUP_MODE || sub?.policy === 'no-links';
-  if (forceWarmup && tpl.warmupVariants?.length) return pickVariant(tpl.warmupVariants, tpl.personal, seed);
+  if (isProductFree(sub) && tpl.warmupVariants?.length) {
+    return pickVariant(tpl.warmupVariants, tpl.personal, seed);
+  }
   return pickVariant(tpl.personalVariants, tpl.personal, seed);
 }
 
@@ -155,7 +177,7 @@ export function isWarmupDraft(
   tpl: { warmupVariants?: string[] },
   sub: (Partial<Pick<SubredditConfig, 'policy'>> | undefined),
 ): boolean {
-  return Boolean((WARMUP_MODE || sub?.policy === 'no-links') && tpl.warmupVariants?.length);
+  return Boolean(isProductFree(sub) && tpl.warmupVariants?.length);
 }
 
 /**

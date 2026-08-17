@@ -57,6 +57,18 @@ jobs:
       - name: Scan Reddit + email digest
         timeout-minutes: 15
         env:
+          # MUST match the local scheduled run's REDDIT_WARMUP. Both runners write to the
+          # same reddit_opportunities dedupe table, so each item is claimed by whichever
+          # fires first and the other never sees it. If the two disagree on this flag,
+          # roughly half your leads arrive product-free and half arrive promotional, with
+          # nothing in the alert to explain why.
+          # Unset → 'true', because the safe default is to promote nothing.
+          # To match a local warmup-off run:  gh variable set REDDIT_WARMUP --body false
+          REDDIT_WARMUP: ${{ vars.REDDIT_WARMUP || 'true' }}
+          # Optional. Without these, CI delivers by email while the local run delivers to
+          # Telegram — two inboxes for one queue. Set them and both land in the same chat.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
