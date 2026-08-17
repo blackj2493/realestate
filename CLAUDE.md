@@ -131,3 +131,14 @@ Read these on demand (do NOT assume field names from memory — the feeds are ca
   - `DIRECT_DB_URL` = the **direct** host `db.<ref>.supabase.co:5432`. It is **IPv6-only** and does **not** resolve from local dev / CI here — it fails with `getaddrinfo ENOENT`. Having it defined is NOT enough; it cannot be used to run scripts from this environment. (It does contain the password + project ref, but the pooler host/region is NOT derivable from it.)
   - To actually run these scripts, set **`DATABASE_URL` to the Supabase Session pooler string** (Dashboard → Settings → Database → Connection string → **Session pooler**, port **5432** — *not* the Transaction pooler on 6543; our scripts use a session-level `SET statement_timeout` and run DDL, which transaction mode drops). The pooler is IPv4-reachable. Put it in `.env.local` (never commit it).
   - **SQL editor caveat:** instant DDL (ADD COLUMN, CREATE FUNCTION) is fine to paste into the Supabase SQL editor, but heavy ops — full-table `UPDATE`s and partial indexes whose predicate detoasts `full_payload` JSONB across ~112k rows — exceed the editor's gateway timeout ("upstream timeout"). Those belong in a pooler-connected script that runs `SET statement_timeout TO '0'` and batches by id cursor (pattern: migration `020_region_aggregates.sql` = slim DDL; `scripts/admin/backfill020.ts` = batched backfill + index builds).
+
+## 13. Marketing content routine (daily drafts)
+
+**If you are drafting marketing content, read `content-queue/ROUTINE.md` first and follow it exactly.** It is the editorial contract: platforms, voice, the founder disclosure, the compliance walls, the prior-art rule, and the output format. It supersedes any older instructions carried in a schedule config or a prompt — if they disagree, the file wins, because the file is the version anyone can review in a PR.
+
+Why it is a file rather than a prompt: the routine's rules used to live only inside a cloud schedule, where nothing could diff them and nothing scanned them. A finding drafted under that arrangement claimed no Canadian source published the over-ask rate — false, and already corrected in production two days earlier. `scripts/marketing/contentFactory/routineContract.test.ts` now holds the file to its own rules.
+
+The daily flow:
+1. `.github/workflows/content-data-snapshot.yml` (09:00 UTC) runs `snapshotPublicData.ts` in Actions, where the Supabase secret lives, and commits public-safe aggregates to `content-queue/data/latest.json`.
+2. The scheduled routine (10:00 UTC, sandboxed, no secrets, egress blocked) reads that file from its checkout — it cannot reach the DB or the live site, so **every figure must be cited verbatim from the snapshot**.
+3. It writes `content-queue/YYYY-MM-DD.md` and opens a PR. **Nothing posts automatically.**
