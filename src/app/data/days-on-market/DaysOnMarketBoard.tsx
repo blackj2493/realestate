@@ -46,12 +46,17 @@ const columns: RankingColumn<MarketRow>[] = [
   },
   {
     key: "range",
-    label: "Middle Half Took",
+    label: "Half Sold Between",
     align: "right",
     group: "Homes that sold",
-    // Plain label, precise term in the tooltip — the /analytics convention. "Fast to
-    // Slow (25-75%)" made the reader do the statistics before they could read the row.
-    hint: "Interquartile range: a quarter of sales were faster than the first figure and a quarter slower than the second, so half landed between them",
+    // The header is written to form a sentence with its own cell: "Half sold between
+    // 13-45d". That is what makes an interquartile range readable without stats
+    // vocabulary, and it is exactly true rather than an approximation — 50% of sales
+    // fall between p25 and p75. Rejected "Typical Range": friendlier, but it reads as
+    // the FULL range, which is much wider, and understating our own spread is worse
+    // than a header that takes half a second longer.
+    // Plain label, precise term in the tooltip — the /analytics convention.
+    hint: "Interquartile range. A quarter of sales were faster than the first figure and a quarter slower than the second, so exactly half landed between them — it shows how consistent a market is, not just how fast",
     sortValue: (r) => r.soldP75Dom,
     render: (r) =>
       r.soldP25Dom == null || r.soldP75Dom == null ? DASH : `${r.soldP25Dom}–${r.soldP75Dom}d`,
@@ -151,7 +156,10 @@ export function DaysOnMarketBoard({ rows, embed = false }: { rows: MarketRow[]; 
           <strong className="text-foreground">Days to sell</strong> is measured on homes that{" "}
           <em>sold</em>. <strong className="text-foreground">Listing age</strong> is measured on homes{" "}
           <em>still for sale</em>. When the second is far larger than the first, the homes that sell are
-          going quickly while everything else piles up — which is what a slow market actually looks like.
+          going quickly while everything else piles up — which is what a slow market actually looks like.{" "}
+          <strong className="text-foreground">Half sold between</strong> is the middle half: a quarter went
+          faster than the low figure, a quarter slower than the high one, so it shows how consistent a
+          market is rather than just how fast.
         </p>
       )}
       <RankingTable
