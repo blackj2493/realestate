@@ -46,16 +46,14 @@ const columns: RankingColumn<MarketRow>[] = [
   },
   {
     key: "range",
-    label: "Half Sold Between",
+    label: "Typical Sale Window",
     align: "right",
     group: "Homes that sold",
-    // The header is written to form a sentence with its own cell: "Half sold between
-    // 13-45d". That is what makes an interquartile range readable without stats
-    // vocabulary, and it is exactly true rather than an approximation — 50% of sales
-    // fall between p25 and p75. Rejected "Typical Range": friendlier, but it reads as
-    // the FULL range, which is much wider, and understating our own spread is worse
-    // than a header that takes half a second longer.
-    // Plain label, precise term in the tooltip — the /analytics convention.
+    // "Typical Sale Window" is the plain label; the precision lives in the tooltip and
+    // in the sentence above the table, both of which state that this is the MIDDLE HALF.
+    // That matters: read casually, a "window" can be taken for the full range, which is
+    // far wider — so the two supporting explanations are load-bearing here rather than
+    // decorative. Do not remove them while keeping this label.
     hint: "Interquartile range. A quarter of sales were faster than the first figure and a quarter slower than the second, so exactly half landed between them — it shows how consistent a market is, not just how fast",
     sortValue: (r) => r.soldP75Dom,
     render: (r) =>
@@ -72,7 +70,7 @@ const columns: RankingColumn<MarketRow>[] = [
   },
   {
     key: "activeAge",
-    label: "Real Listing Age",
+    label: "True Days on Market",
     align: "right",
     group: "Homes still listed",
     hint: "The same listings, with relist chains stitched back together so the clock keeps running",
@@ -154,12 +152,13 @@ export function DaysOnMarketBoard({ rows, embed = false }: { rows: MarketRow[]; 
         <p className="text-sm leading-relaxed text-muted-foreground">
           Two different sets of homes here.{" "}
           <strong className="text-foreground">Days to sell</strong> is measured on homes that{" "}
-          <em>sold</em>. <strong className="text-foreground">Listing age</strong> is measured on homes{" "}
+          <em>sold</em>. <strong className="text-foreground">Listing age</strong> and{" "}
+          <strong className="text-foreground">true days on market</strong> are measured on homes{" "}
           <em>still for sale</em>. When the second is far larger than the first, the homes that sell are
           going quickly while everything else piles up — which is what a slow market actually looks like.{" "}
-          <strong className="text-foreground">Half sold between</strong> is the middle half: a quarter went
-          faster than the low figure, a quarter slower than the high one, so it shows how consistent a
-          market is rather than just how fast.
+          <strong className="text-foreground">Typical sale window</strong> is the middle half of sales — a
+          quarter went faster than the low figure and a quarter slower than the high one, so it shows how
+          consistent a market is rather than just how fast.
         </p>
       )}
       <RankingTable
