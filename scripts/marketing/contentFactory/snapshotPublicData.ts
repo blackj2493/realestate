@@ -116,18 +116,44 @@ function buildAngles(rows: MarketRow[]): Angle[] {
     });
   }
 
-  // 3) INVENTORY GLUT — highest months-of-supply (≈4–6 balanced; above = buyer's market).
-  const moi = pickExtreme(rows, (r) => r.monthsOfSupply, (r) => r.activeCount, 'max');
+  // 3) INVENTORY — months of supply, framed by WHAT THE NUMBER ACTUALLY SAYS.
+  //
+  //    This shipped as a fixed "inventory glut" angle: it took the max months-of-supply
+  //    and always described it as "highest… above tilts to buyers". On 2026-08-16 the
+  //    max across the tracked markets was Brampton at 0.2 months — an extremely tight
+  //    SELLER's market — and the angle went out describing it as the buyer's-market
+  //    extreme. The drafting routine caught the contradiction and refused to write it,
+  //    which is the only reason it never posted.
+  //
+  //    Two faults, both worth naming. The description was hardcoded to one direction
+  //    regardless of the value. And "highest of the tracked markets" is a glut story
+  //    only when the highest is actually high — a max over a set where most rows are
+  //    null is just the one row that survived, not an extreme.
+  //
+  //    So: pick the end that is genuinely notable, and let the value choose the framing.
+  //    A middling reading is not an angle and is omitted rather than dressed up.
+  const BALANCED_LO = 4; // ≈4–6 months is the conventional balanced band
+  const BALANCED_HI = 6;
+  const glut = pickExtreme(rows, (r) => r.monthsOfSupply, (r) => r.activeCount, 'max');
+  const tight = pickExtreme(rows, (r) => r.monthsOfSupply, (r) => r.activeCount, 'min');
+  const moi =
+    glut && glut.value > BALANCED_HI
+      ? { pick: glut, buyers: true }
+      : tight && tight.value < BALANCED_LO
+        ? { pick: tight, buyers: false }
+        : null;
   if (moi) {
-    const m = moi.value.toFixed(1);
+    const m = moi.pick.value.toFixed(1);
     angles.push({
       kind: 'inventory',
-      region: moi.row.region,
-      headline: `${moi.row.region} is sitting at ${m} months of supply`,
+      region: moi.pick.row.region,
+      headline: `${moi.pick.row.region} is sitting at ${m} months of supply`,
       figure: `${m} months of supply`,
-      sampleN: moi.sampleN,
+      sampleN: moi.pick.sampleN,
       sourceUrl: `${SITE}/data/market-temperature`,
-      whySurprising: `Highest months-of-supply of the markets tracked (≈4–6 = balanced; above tilts to buyers).`,
+      whySurprising: moi.buyers
+        ? `Most inventory of the ${nMarkets} markets tracked today — ≈4–6 months is balanced, and above that tilts toward buyers.`
+        : `Least inventory of the ${nMarkets} markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers.`,
     });
   }
 
