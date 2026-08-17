@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { TRACKERS } from "@/lib/data/trackers";
+import { LIVE_FINDINGS } from "@/lib/data/findings";
 import { getCompetitionBoard } from "@/lib/data/competitionBoard";
 import { getRentBoard } from "@/lib/data/rentBoard";
 import { getCondoFeeBoard } from "@/lib/data/condoFeeBoard";
@@ -245,6 +246,41 @@ export default async function DataHubPage() {
             );
           })}
         </div>
+
+        {LIVE_FINDINGS.length > 0 && (
+          <section className="mt-10" aria-labelledby="findings">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="findings" className="text-lg font-bold text-foreground">
+                Findings
+              </h2>
+              <Link
+                href="/data/findings"
+                className="text-sm font-medium text-cyan-700 hover:underline dark:text-cyan-400"
+              >
+                All findings →
+              </Link>
+            </div>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              The trackers above hold the current numbers. These are the moments they said something
+              worth arguing — dated, with the method and the limits shown.
+            </p>
+            <ul className="mt-4 space-y-3">
+              {LIVE_FINDINGS.slice(0, 3).map((f) => (
+                <li key={f.slug}>
+                  <Link
+                    href={`/data/findings/${f.slug}`}
+                    className="group block rounded-lg border border-border bg-card/40 p-5 transition-colors hover:border-cyan-500/50"
+                  >
+                    <h3 className="text-base font-bold text-foreground group-hover:text-cyan-700 dark:group-hover:text-cyan-400">
+                      {f.title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{f.standfirst}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="mt-10">
           <ListingComplianceNotice />

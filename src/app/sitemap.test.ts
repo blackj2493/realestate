@@ -19,12 +19,13 @@ vi.mock('@/lib/listings/cityHubs', async (importOriginal) => {
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { cityHubsWithInventory, COMMERCIAL_ACTIVE_FILTER } from '@/lib/listings/cityHubs';
 import { LIVE_TRACKERS } from '@/lib/data/trackers';
+import { LIVE_FINDINGS } from '@/lib/data/findings';
 import sitemap from './sitemap';
 
-// Non-listing routes always emitted: 3 static (/, /properties, /property) + 2 fixed /data
-// pages (the hub and /data/for-journalists) + one route per live tracker. Derived from
-// LIVE_TRACKERS so it stays correct as trackers ship.
-const NON_LISTING = 3 + 2 + LIVE_TRACKERS.length;
+// Non-listing routes always emitted: 3 static (/, /properties, /property) + 3 fixed /data
+// pages (the hub, /data/for-journalists, /data/findings) + one route per live tracker and
+// one per live finding. Derived from the registries so it stays correct as pages ship.
+const NON_LISTING = 3 + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length;
 
 /** Chainable stub whose range(from, to) returns a slice of `dataset`,
  *  mimicking PostgREST range pagination (then-only thenable). */
