@@ -15,6 +15,8 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import HubFaq, { type Faq } from "@/components/seo/HubFaq";
 import { EmbedBar } from "@/components/data/EmbedBar";
 import { findingsForTracker } from "@/lib/data/findings";
+import { TrackerAttributionProvider } from "@/components/data/TrackerAttribution";
+import { attributionLabel } from "@/lib/data/attribution";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -59,6 +61,13 @@ export function TrackerShell({
   };
   const asOf = dataAsOf ? new Date(dataAsOf) : null;
 
+  // Formatted here, on the server, and handed to the client strip as a string. The
+  // same date rendered client-side would risk a locale/timezone hydration mismatch on
+  // every tracker page.
+  const asOfLabel = asOf
+    ? asOf.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })
+    : null;
+
   return (
     <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
@@ -95,7 +104,13 @@ export function TrackerShell({
           </div>
         </header>
 
-        {children}
+        {/* Every RankingTable inside renders the source line under its column headers,
+            so a screenshot of the table carries the URL and the date wherever it goes. */}
+        <TrackerAttributionProvider
+          value={{ label: attributionLabel(SITE_URL, slug), asOfLabel }}
+        >
+          {children}
+        </TrackerAttributionProvider>
 
         {methodology && (
           <details className="mt-8 rounded-md border border-border bg-card/40 p-4 text-sm text-muted-foreground">

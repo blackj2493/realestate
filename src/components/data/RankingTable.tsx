@@ -6,10 +6,14 @@
  * row, header buttons toggle sort, nulls always sort last. Column `render` fns live
  * in client components (they can't cross the server→client boundary), so each tracker
  * defines its own columns and feeds this plain-data rows.
+ *
+ * Renders an attribution line directly under the column headers when a tracker page
+ * provides one — see TrackerAttribution.tsx for why that exact position.
  */
 import { useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AttributionStrip } from "@/components/data/TrackerAttribution";
 
 export interface RankingColumn<T> {
   key: string;
@@ -111,6 +115,8 @@ export function RankingTable<T>({
             );
           })}
         </div>
+
+        <AttributionStrip />
 
         {sorted.map((row) => (
           <div
