@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useOpenListing } from "@/hooks/useOpenListing";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { readLastCamera } from "@/lib/map/lastCamera";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
@@ -47,8 +48,6 @@ import { mergeLayers } from "@/lib/sold/mergeLayers";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { paramsToChips, hasStructuredParams } from "@/lib/search/chipUrl";
 import { syncChips } from "@/lib/search/chipApply";
-import { getConfig } from "@/lib/dashboard/config";
-import { regionCamera } from "@/lib/dashboard/area";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { passesDealGrade } from "@/lib/dealScore/gradeFilter";
 import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
@@ -74,7 +73,6 @@ const SUBTYPE_TO_DASHBOARD_KEY: ReadonlyMap<string, string> = new Map(
 // reset only on a full page reload — exactly the intended lifetime.
 let seededCityValue: string | null = null;
 let seededCenterKey: string | null = null;
-let savedMarketSeeded = false;
 
 // Same remount problem, second casualty: the mobile list/map toggle. It used to be
 // per-instance useState defaulting to "map", so every Back from a listing dropped the
@@ -341,41 +339,41 @@ function CommandCenterContent() {
     !hasCityParam &&
     !hasStructuredParams(searchParams);
 
-  // Signed-in initial viewport (fix #4): with no URL scope and no typed place, open
-  // the terminal on the user's first saved market (dashboard config in localStorage)
-  // instead of the generic Toronto default. Runs once, and only while the terminal is
-  // still bare (a URL place/center/filter owns the scope instead).
+  // NO saved-market seed here. Opening the terminal on the user's first saved dashboard
+  // area sounded personal and behaved badly: regionCamera could place only 37 of 486 active
+  // cities, so 63.5% of listings fell through to setLocation(area) — a Typesense TEXT query
+  // that pinned the whole terminal to that string. Saving "Maple" also matched "Mapleton"
+  // 130km away, and the map arrived carrying a "Maple only - Show N more" bar the user had
+  // to notice and clear. Widening the lookup table would only have made the bad fallback
+  // rarer.
   //
-  // Seed the CAMERA, not a place filter. `location` is a Typesense text query, so
-  // setLocation(region) pinned the ENTIRE terminal to that city: every listing outside it
-  // vanished and the out-of-bounds notice read "Showing Vaughan only · N more here" the
-  // instant the map opened — and it never cleared, because the user never typed the place
-  // to clear (bug report 2026-07-28). Flying the camera leaves the query unfiltered
-  // (wantViewportScope stays true), so results follow the viewport and panning past the
-  // city just works. This is the "saved-bubble-geometry fly-to" the old place-seed noted as
-  // the follow-up; see QUICK_PICK_MARKETS in area.ts for the same camera-vs-filter reasoning.
+  // "Where you last looked" is a better answer and needs no table: AlphaMap restores the
+  // persisted camera at mount (lib/map/lastCamera), falling back to INITIAL_VIEW_STATE on a
+  // first-ever visit. A camera leaves `location` empty, so wantViewportScope stays true and
+  // results follow the map — panning out of the restored area just works.
+  //
+  // Saved areas still drive alerts, the scorecard and the leaderboards, and the dashboard's
+  // explicit "open this area on the map" links still fly the camera via regionMapHref. They
+  // are simply no longer an implicit scope applied on every load.
+
+  // Reopen where the user last left the map. Lives HERE, beside the URL-scope guards,
+  // rather than inside AlphaMap's mount: a deep link (?lat/?lng, ?city=, chips) must always
+  // win, and this is the one place that already knows about all of them. Restoring inside
+  // AlphaMap instead broke exactly that — it made the mount-time camera survive a full page
+  // load, which silently violated the "same lifetime as the camera restore" invariant the
+  // flyTo nonce guard is written against, and a ?lat/?lng deep link stopped flying.
+  //
+  // Skipped when the store already holds a camera: that is AlphaMap's in-session restore
+  // (mobile Back), which is more current than anything on disk. The two must not fight.
+  const restoredCameraRef = useRef(false);
   useEffect(() => {
-    if (savedMarketSeeded) return;
+    if (restoredCameraRef.current) return;
     if (location || hasCityParam || hasCenterParam || hasStructuredParams(searchParams)) return;
-    savedMarketSeeded = true;
-    const first = getConfig().regions[0];
-    if (!first) return;
-    // regionCamera, not marketCamera: the quick-pick list holds eight whole metros, so
-    // every community-scale saved area (Barrhaven, Kanata, a Toronto district) missed it
-    // and fell through to the place filter below — reproducing the 2026-07-28 Vaughan bug
-    // on EVERY page load for those users, login included. regionCamera consults
-    // data/city-centroids.json second, which is keyed by raw feed City strings and so
-    // covers exactly those finer names.
-    const cam = regionCamera(first);
-    if (cam) {
-      setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
-    } else {
-      // Neither list knows this place. Falling back to the place-scoped open is still
-      // better than guessing a camera — and the out-of-bounds notice now names the action
-      // ("Barrhaven only · Show 308 more"), so the filter is visible and escapable.
-      setLocation(first);
-    }
-  }, [location, hasCityParam, hasCenterParam, searchParams, setLocation, setFlyTo]);
+    restoredCameraRef.current = true;
+    if (useCommandCenterStore.getState().lastCamera) return;
+    const cam = readLastCamera();
+    if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
+  }, [location, hasCityParam, hasCenterParam, searchParams, setFlyTo]);
 
   // Switching persona drops the map into that persona's default render mode
   // (e.g. Cashflow/Builders → Heatmap). The user can re-toggle freely after.
