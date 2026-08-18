@@ -82,10 +82,15 @@ let savedMarketSeeded = false;
 // the list for an instant (the browser's back-gesture paint of the old frame) and then
 // it flipped to the map once React remounted. Holding the choice at MODULE scope keeps
 // it across the remount with zero flash and no hydration risk (the server and a cold
-// client both start from the "map" default). MOBILE_VIEW_KEY mirrors it into
-// sessionStorage so the same tab also survives a real document load — e.g. the user
-// reloaded the detail page, or landed on it from a shared link, before pressing Back.
-const MOBILE_VIEW_KEY = "terminalMobileView";
+// client both start from the "map" default).
+//
+// Deliberately NOT mirrored into sessionStorage. Doing so let a COLD document load open
+// straight into the list, where the map pane is display:none and its canvas measures
+// 0×0 — so DeckGL never fires a non-zero onResize, AlphaMap never reports a viewport
+// box, and the first-load hold in performSearch waited on a report that could not
+// arrive (the ledger stuck on "SCANNING MARKET DATA…"). Module scope only means a cold
+// load always opens on the map, which measures itself, and this survives exactly the
+// case that was reported: the soft-nav Back from a listing.
 let lastMobileView: "list" | "map" = "map";
 
 // deck.gl + mapbox must load client-only
@@ -182,6 +187,15 @@ function CommandCenterContent() {
   // Property-open routing: mobile (≤767) → full report; desktop → Quick Look drawer.
   const openListing = useOpenListing();
   const isMobile = useIsMobile(767);
+
+  // Is the map pane actually rendered (and therefore able to measure itself and report
+  // a viewport box)? Desktop always shows it; on a phone only the map half of the
+  // toggle does. Read by performSearch's first-load hold below. A ref, not a dep —
+  // toggling panes must not invalidate performSearch and fire a redundant re-query;
+  // when the map does become visible it reports bounds, and mapBounds IS a dep.
+  // Starts true: the map is the default pane, so the hold behaves as before on a cold
+  // start, and the effect beside the mobileView state keeps it honest after that.
+  const mapPaneVisibleRef = useRef(true);
 
   // Fetch the commute isochrone polygon when destination/mode/minutes change.
   useCommuteIsochrone();
@@ -424,7 +438,15 @@ function CommandCenterContent() {
     // mapBounds (a dep here) and re-runs this with a bounding box, so the very first
     // result set matches the map. Any explicit scope (place / filter / draw / pin /
     // deep-link) makes wantViewportScope false and this branch never trips.
-    if (wantViewportScope && !mapBounds) {
+    //
+    // Only hold while the map pane is actually on screen. A hidden map is display:none,
+    // so DeckGL measures 0×0, dimsReady never flips and computeAndReportBounds() bails
+    // (AlphaMap:207) — the report we are waiting for cannot arrive, and the hold becomes
+    // a permanent "SCANNING MARKET DATA…". Reachable today by tapping List during the
+    // first second of a cold load, before the map has measured itself. Running the
+    // unscoped query is a worse result set but a recoverable one; the moment the map is
+    // shown it reports a box and this re-runs scoped.
+    if (wantViewportScope && !mapBounds && mapPaneVisibleRef.current) {
       setIsLoading(true);
       return;
     }
@@ -532,7 +554,21 @@ function CommandCenterContent() {
   // A fresh search (new area/persona/commute) should frame the whole zone first,
   // then let the user drill in — so clear the viewport box. Filters are excluded
   // on purpose: tweaking a filter re-queries in place at the current zoom.
+  //
+  // Skipped on the FIRST run, which is the mount — and mobile Back remounts this whole
+  // page (see the note at the top of the file). Nulling the box there threw away the
+  // viewport the user was searching in and forced a fresh report from AlphaMap; if they
+  // returned to the LIST pane the map was display:none, its canvas measured 0×0, and
+  // that report could never come — so the first-load hold below never released and the
+  // ledger sat on "SCANNING MARKET DATA…" until the user bounced through Map and back.
+  // Keeping the box makes the restore instant and independent of which pane is showing.
+  // On a genuine cold start mapBounds is already null, so skipping the mount is a no-op.
+  const boundsResetArmedRef = useRef(false);
   useEffect(() => {
+    if (!boundsResetArmedRef.current) {
+      boundsResetArmedRef.current = true;
+      return;
+    }
     setMapBounds(null);
   }, [location, activePersona, transactionMode, propertyClass, activeLayers, commute.enabled, commute.polygon, school.enabled, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, setMapBounds]);
 
@@ -583,27 +619,11 @@ function CommandCenterContent() {
   const [mobileView, setMobileViewState] = useState<"list" | "map">(lastMobileView);
   const setMobileView = useCallback((v: "list" | "map") => {
     lastMobileView = v;
-    try {
-      sessionStorage.setItem(MOBILE_VIEW_KEY, v);
-    } catch {
-      // Private-mode / storage-disabled: the module-scope copy still carries the
-      // choice across soft navigations, which is the case that actually breaks.
-    }
     setMobileViewState(v);
   }, []);
-  // Cold document load: recover the pane from sessionStorage. Only when the module
-  // copy is still untouched — a soft-nav remount has already seeded the right value
-  // above and must not be second-guessed here.
   useEffect(() => {
-    if (lastMobileView !== "map") return;
-    let saved: string | null = null;
-    try {
-      saved = sessionStorage.getItem(MOBILE_VIEW_KEY);
-    } catch {
-      saved = null;
-    }
-    if (saved === "list") setMobileView("list");
-  }, [setMobileView]);
+    mapPaneVisibleRef.current = !isMobile || mobileView === "map";
+  }, [isMobile, mobileView]);
   useEffect(() => {
     if (mobileView !== "map") return;
     const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
