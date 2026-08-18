@@ -21,6 +21,7 @@
 import { CircleDollarSign, KeyRound } from "lucide-react";
 import SignInLink from "@/components/auth/SignInLink";
 import { IN_HOME_UNIT_LABEL, type AskingMatrix } from "@/lib/address/nearbyForSale";
+import { bedKeyLabel } from "@/lib/listings/bedSplit";
 
 /** Compact money for sale prices: $620k, $1.24M — full figures don't fit the grid. */
 const fmtPrice = (n: number) => {
@@ -34,7 +35,8 @@ const fmtPrice = (n: number) => {
 /** Full figure for monthly rents: $2,800. */
 const fmtRent = (n: number) => `$${Math.round(n).toLocaleString("en-CA")}`;
 
-const bedLabel = (b: number) => (b === 0 ? "Studio" : b >= 6 ? "6+ bd" : `${b} bd`);
+/** Column headers come from the bed classifier so "1+1" and its label never drift. */
+const bedLabel = bedKeyLabel;
 
 /** Canonical display order — shared by both cards so stacked grids align. */
 const TYPE_RANK = new Map<string, number>([

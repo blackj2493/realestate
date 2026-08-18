@@ -21,6 +21,7 @@ import { useState } from "react";
 import { CircleDollarSign, KeyRound } from "lucide-react";
 import SignInLink from "@/components/auth/SignInLink";
 import { IN_HOME_UNIT_LABEL, type AskingMatrix } from "@/lib/address/nearbyForSale";
+import { bedKeyLabel } from "@/lib/listings/bedSplit";
 
 /** Compact money for sale prices: $620k, $1.24M. */
 const fmtPrice = (n: number) => {
@@ -31,7 +32,8 @@ const fmtPrice = (n: number) => {
   return `$${Math.round(n / 1000)}k`;
 };
 const fmtRent = (n: number) => `$${Math.round(n).toLocaleString("en-CA")}`;
-const bedLabel = (b: number) => (b === 0 ? "Studio" : b >= 6 ? "6+ bd" : `${b} bd`);
+/** Column headers come from the bed classifier so "1+1" and its label never drift. */
+const bedLabel = bedKeyLabel;
 
 /** Cells at/above this kept-sample size get the flavor tint (matches MarketGridCard). */
 const DENSE_N = 5;
