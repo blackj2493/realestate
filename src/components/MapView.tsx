@@ -360,8 +360,10 @@ export default function MapView({
                   </div>
                 )}
                 
-                {/* Days on Market Badge */}
-                {selectedProperty.DaysOnMarket && (
+                {/* Days on Market Badge. Guard with `> 0`, never the bare number: a
+                    listing posted today has DaysOnMarket 0, and `{0 && …}` puts a
+                    literal "0" on the photo instead of hiding the badge. */}
+                {(selectedProperty.DaysOnMarket ?? 0) > 0 && (
                   <div className="absolute top-3 left-3 px-2.5 py-1 bg-background/90 backdrop-blur-sm text-foreground text-xs font-semibold rounded-md shadow-sm">
                     {selectedProperty.DaysOnMarket} Days on Market
                   </div>
@@ -401,10 +403,13 @@ export default function MapView({
                     <span className="font-medium">{selectedProperty.BathroomsTotalInteger || 0}</span>
                     <span className="text-muted-foreground">bath</span>
                   </div>
-                  {selectedProperty.BuildingAreaTotal && (
+                  {/* TRREB reports sqft as a band, so BuildingAreaTotal is 0 on most
+                      listings — the bare-number guard printed a stray "0" next to the
+                      bath count in the popup. */}
+                  {(selectedProperty.BuildingAreaTotal ?? 0) > 0 && (
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-4 w-4" />
-                      <span className="font-medium">{selectedProperty.BuildingAreaTotal.toLocaleString()}</span>
+                      <span className="font-medium">{selectedProperty.BuildingAreaTotal!.toLocaleString()}</span>
                       <span className="text-muted-foreground">sqft</span>
                     </div>
                   )}
