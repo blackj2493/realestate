@@ -75,9 +75,20 @@ export function PropertyCard({
   showSaveButton = true,
   variant = "default",
 }: PropertyCardProps) {
-  // Determine if price was reduced
-  const priceReduced = property.previousPrice && property.previousPrice > property.price;
+  // Determine if price was reduced.
+  //
+  // Must be a BOOLEAN, not `previousPrice && …`. That form evaluates to the number
+  // itself when the number is 0, and `{0 && <Badge/>}` renders a literal "0" into the
+  // card rather than nothing — JSX only swallows false/null/undefined. Feed every one
+  // of these guards a comparison, never a bare number.
+  const priceReduced = property.previousPrice != null && property.previousPrice > property.price;
   const priceDiff = priceReduced ? (property.previousPrice ?? 0) - property.price : 0;
+
+  // Coalesce ONCE, here, so every guard below compares a real number. Both fields are
+  // routinely 0 rather than absent — a freehold house has no association fee, and TRREB
+  // reports sqft as a band, leaving BuildingAreaTotal at 0 on most listings.
+  const maintenance = property.maintenance ?? 0;
+  const squareFeet = property.squareFeet ?? 0;
 
   // Walkability badge label (0 is a valid distance; 99 is the "none nearby" sentinel).
   // Sub-km distances are floored/rounded to the nearest 50 m to avoid false precision
@@ -275,9 +286,12 @@ export function PropertyCard({
             <span className="text-2xl font-bold text-primary">
               {formatPrice(property.price)}
             </span>
-            {property.maintenance && property.maintenance > 0 && (
+            {/* A freehold house carries AssociationFee 0, not undefined, so the old
+                `maintenance && maintenance > 0` short-circuited to 0 and printed a
+                stray "0" right after the price on every non-condo card. */}
+            {maintenance > 0 && (
               <span className="text-sm text-muted-foreground ml-1">
-                + {formatPrice(property.maintenance)}/mo
+                + {formatPrice(maintenance)}/mo
               </span>
             )}
           </div>
@@ -317,10 +331,13 @@ export function PropertyCard({
                 <span className="text-xs">bath</span>
               </div>
             )}
-            {property.squareFeet && property.squareFeet > 0 && (
+            {/* TRREB reports sqft as a BAND, so BuildingAreaTotal is 0 on most listings
+                — the same 0-renders-as-"0" trap as the maintenance fee above, which is
+                why a stray "0" trailed the bath count on nearly every card. */}
+            {squareFeet > 0 && (
               <div className="flex items-center gap-1.5">
                 <Square className="h-4 w-4" />
-                <span className="font-medium">{property.squareFeet.toLocaleString()}</span>
+                <span className="font-medium">{squareFeet.toLocaleString()}</span>
                 <span className="text-xs">sqft</span>
               </div>
             )}
