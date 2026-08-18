@@ -18,6 +18,7 @@ import { SOLD_DISPLAY_MAX_DAYS } from "@/lib/sold/config";
 import { type LayerKey, transactionModeForLayers, toggleLayer as applyLayerToggle } from "@/lib/sold/layers";
 import { SCOPE_DEFAULT_PERSONA } from "@/lib/personas/resolvePersona";
 import { persistPersona } from "@/lib/personas/personaStore";
+import { writeLastCamera } from "@/lib/map/lastCamera";
 import type { DealScoreGrade } from "@/lib/dealScore/computeDealScore";
 import type { DealInputs } from "@/lib/dealScore/fromListingDocument";
 
@@ -517,7 +518,13 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       flyTo: target ? { ...target, nonce: (state.flyTo?.nonce ?? 0) + 1 } : null,
     })),
   lastCamera: null,
-  setLastCamera: (lastCamera) => set({ lastCamera }),
+  // Persisted as well as held in state, so reopening the terminal in a NEW session
+  // restores where you were rather than guessing. Writing here rather than at the call
+  // site means a future camera source cannot forget to persist. See lib/map/lastCamera.
+  setLastCamera: (lastCamera) => {
+    set({ lastCamera });
+    if (lastCamera) writeLastCamera(lastCamera);
+  },
   searchPin: null,
   setSearchPin: (pin) => set({ searchPin: pin }),
   enterComps: (pin) =>
