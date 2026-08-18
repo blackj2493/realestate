@@ -15,6 +15,7 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import HubFaq, { type Faq } from "@/components/seo/HubFaq";
 import { EmbedBar } from "@/components/data/EmbedBar";
 import { findingsForTracker } from "@/lib/data/findings";
+import { LIVE_TRACKERS } from "@/lib/data/trackers";
 import { TrackerAttributionProvider } from "@/components/data/TrackerAttribution";
 import { attributionLabel } from "@/lib/data/attribution";
 
@@ -49,6 +50,7 @@ export function TrackerShell({
   const canonical = `${SITE_URL}/data/${slug}`;
   const embedUrl = `${SITE_URL}/embed/${slug}`;
   const relatedFindings = findingsForTracker(slug);
+  const siblings = LIVE_TRACKERS.filter((t) => t.slug !== slug);
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -111,6 +113,32 @@ export function TrackerShell({
         >
           {children}
         </TrackerAttributionProvider>
+
+        {/* Sibling trackers. Until this shipped, the only route from one tracker to
+            another was the site footer — below the table, the methodology, the findings,
+            the FAQ and the compliance notice. On a phone that is a very long scroll, so a
+            visitor arriving from a shared link read one table and left without learning
+            the other seven existed. Derived from LIVE_TRACKERS, so a new tracker joins
+            every strip with no page edit. */}
+        {siblings.length > 0 && (
+          <nav aria-label="Other data trackers" className="mt-8 border-t border-border pt-5">
+            <p className="terminal-font text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+              More Ontario housing data
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {siblings.map((t) => (
+                <li key={t.slug}>
+                  <Link
+                    href={`/data/${t.slug}`}
+                    className="terminal-font block border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-cyan-600 hover:text-cyan-700 dark:hover:border-cyan-400 dark:hover:text-cyan-400"
+                  >
+                    {t.navLabel}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
 
         {methodology && (
           <details className="mt-8 rounded-md border border-border bg-card/40 p-4 text-sm text-muted-foreground">

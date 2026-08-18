@@ -1,9 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { Readout, ReadoutCell } from "@/components/daylight/primitives";
 import { RankingTable, type RankingColumn } from "@/components/data/RankingTable";
 import { fmtPercent } from "@/lib/format";
+import { cityHubSlug } from "@/lib/listings/listingPath";
 import type { MarketRow } from "@/lib/data/marketBoard";
+
+/**
+ * Where a market name sends you: the map terminal, seeded with that city.
+ *
+ * `city` is chipUrl's existing place param — a plain place link with no structured
+ * filters, documented there as a stable contract. Verified live 2026-08-17:
+ * `?city=Toronto` returns 9,336 active listings and `?city=Richmond+Hill` returns 984,
+ * so the TRREB district-code split ("Toronto C06") is already handled on this path.
+ *
+ * The map rather than the /property/{prov}/{city} hub, deliberately. The hub is a static
+ * list; the map carries the same True DOM this table is about, per listing, with the
+ * reported figure struck through beside it. A reader who has just learned that Richmond
+ * Hill listings sit 73 days lands on the individual homes doing the sitting. The hub is
+ * still linked below the table, where it does the crawl job the map cannot.
+ */
+const mapHref = (region: string) => `/properties?city=${encodeURIComponent(region)}`;
 
 const DASH = "—";
 const days = (n: number | null) => (n == null ? DASH : `${n}d`);
@@ -31,7 +49,14 @@ const columns: RankingColumn<MarketRow>[] = [
     label: "Market",
     align: "left",
     sortValue: (r) => r.region,
-    render: (r) => <span className="font-semibold">{r.region}</span>,
+    render: (r) => (
+      <Link
+        href={mapHref(r.region)}
+        className="font-semibold text-[color:var(--dt-sig)] underline decoration-[color:var(--dt-sig)]/40 underline-offset-2 hover:decoration-[color:var(--dt-sig)] dark:text-cyan-400 dark:decoration-cyan-400/40 dark:hover:decoration-cyan-400"
+      >
+        {r.region}
+      </Link>
+    ),
   },
   {
     key: "soldMedianDom",
@@ -119,6 +144,17 @@ export function DaysOnMarketBoard({ rows, embed = false }: { rows: MarketRow[]; 
   const toronto = rows.find((r) => r.region === "Toronto");
   const torontoHidden = toronto ? hiddenDays(toronto) : null;
 
+  // Dedupe by slug: TRREB splits some markets into district codes that collapse to one
+  // hub, so a raw map would emit the same href twice.
+  const hubLinks = Array.from(
+    new Map(
+      sellable
+        .map((r) => ({ region: r.region, slug: cityHubSlug(r.region) }))
+        .filter((h) => h.slug.length > 0)
+        .map((h) => [h.slug, h])
+    ).values()
+  );
+
   return (
     <div className="space-y-5">
       {!embed && (
@@ -171,6 +207,29 @@ export function DaysOnMarketBoard({ rows, embed = false }: { rows: MarketRow[]; 
         minWidth={640}
         isFeatured={(r) => r.region === "Toronto"}
       />
+      {/* The crawl path. The market names above go to the map, which is the better
+          destination for a person and a dead end for a crawler — the terminal is a
+          client-only WebGL surface, which is the reason the /property/{prov}/{city} hubs
+          were built in the first place.
+          This page is an outreach target: the whole point of earning links into it is
+          authority flowing onward to indexable pages. Un-linked, that stops here. So the
+          hubs get a plain crawlable row, and readers get the map. */}
+      {!embed && hubLinks.length > 0 && (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          <span className="terminal-font uppercase tracking-wider">Homes for sale:</span>{" "}
+          {hubLinks.map((h, i) => (
+            <span key={h.slug}>
+              {i > 0 && <span aria-hidden="true"> · </span>}
+              <Link
+                href={`/property/on/${h.slug}`}
+                className="underline decoration-border underline-offset-2 hover:text-cyan-700 hover:decoration-current dark:hover:text-cyan-400"
+              >
+                {h.region}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
     </div>
   );
 }
