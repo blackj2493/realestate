@@ -238,6 +238,10 @@ async function stampLastSeenHeartbeat(activeKeys: string[], apply: boolean): Pro
     // committed on its own and any failure is logged and swallowed.
     let stamped = 0;
     let failed = 0;
+    // Recorded as the sweep time on success. Taken BEFORE the first chunk: every row the
+    // loop stamps gets now() >= this, so a floor derived from it can never exclude a row
+    // this very sweep just confirmed.
+    const sweepStartedAt = new Date().toISOString();
     try {
       await pg.query(`SET statement_timeout TO '${HEARTBEAT_CHUNK_TIMEOUT}'`);
       for (let i = 0; i < activeKeys.length; i += HEARTBEAT_CHUNK) {
@@ -257,6 +261,44 @@ async function stampLastSeenHeartbeat(activeKeys: string[], apply: boolean): Pro
         `   ✅ heartbeat: stamped last_seen_at on ${stamped} listings row(s)` +
           (failed ? ` (${failed} chunk(s) failed — see above)` : '') + '.'
       );
+
+      // Publish the sweep so region_active_aggregates / region_dom_distribution /
+      // region_price_cuts can measure liveness from it (migration 121,
+      // public.feed_liveness_floor). They previously inferred the sweep from
+      // max(listings.last_seen_at), which is NOT the sweep: a new row keeps the column
+      // default now(), so that watermark tracked the newest row CREATED and always read
+      // as "today". The 36h gate then slid off this weekly stamp within a day and the
+      // active set collapsed to ~2% (Toronto served 222 of 20,734 on 2026-08-18).
+      //
+      // ONLY on a clean run. A partial sweep leaves live rows unstamped, so advancing the
+      // heartbeat after one would tell the gate to discard exactly those rows — turning a
+      // dropped chunk into a silently shrunken market. Keeping the previous timestamp
+      // degrades to a slightly stale floor, which admits too much rather than too little.
+      // Fail toward showing listings.
+      if (failed === 0 && stamped > 0) {
+        try {
+          await pg.query(
+            `INSERT INTO sync_state (id, last_sync_timestamp, sync_type, records_synced, status, updated_at)
+             VALUES ('last_seen_heartbeat', $1, 'full', $2, 'completed', now())
+             ON CONFLICT (id) DO UPDATE
+               SET last_sync_timestamp = EXCLUDED.last_sync_timestamp,
+                   records_synced      = EXCLUDED.records_synced,
+                   status              = EXCLUDED.status,
+                   updated_at          = now()`,
+            [sweepStartedAt, stamped]
+          );
+          console.log(`   ✅ recorded sweep in sync_state(last_seen_heartbeat) at ${sweepStartedAt}`);
+        } catch (e) {
+          // Never fatal: the gate fails open on a missing or stale row, so the worst case
+          // is a wider active set for a week, not an empty one.
+          console.warn(`   ⚠️  could not record sweep in sync_state: ${e instanceof Error ? e.message : e}`);
+        }
+      } else if (stamped > 0) {
+        console.warn(
+          `   ⚠️  sweep NOT recorded (${failed} chunk(s) failed) — the liveness floor keeps the ` +
+            'previous sweep so unstamped-but-live rows are not discarded.'
+        );
+      }
     } catch (e) {
       console.warn(`   ⚠️  heartbeat skipped: ${e instanceof Error ? e.message : e}`);
     }
