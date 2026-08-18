@@ -9,6 +9,11 @@
  *
  * Renders an attribution line directly under the column headers when a tracker page
  * provides one — see TrackerAttribution.tsx for why that exact position.
+ *
+ * The FIRST column is pinned while the rest scrolls horizontally. Every board here is
+ * wider than a phone (620–760px against a ~390px viewport), so on mobile the label
+ * column used to scroll away with everything else — leaving you looking at "+30d" with
+ * no idea which market it belonged to. The numbers still scroll; only the name holds.
  */
 import { useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
@@ -52,6 +57,23 @@ interface Props<T> {
   /** Subtly highlight a row (e.g. the flagship market). */
   isFeatured?: (row: T) => boolean;
 }
+
+/**
+ * Pinned first column. The cell must be OPAQUE or the scrolling numbers slide visibly
+ * underneath it. Light mode: the panel paints `bg-card`. Dark mode: the panel is
+ * `dark:bg-transparent`, so what shows through is the page's `bg-background` — hence the
+ * two different tokens rather than one.
+ */
+const PIN = "sticky left-0 z-10 bg-card dark:bg-background";
+
+/**
+ * The featured-row tint again, as a background-IMAGE so it layers over the opaque
+ * background-COLOR above. Painting the tint as a background-color instead would replace
+ * the opaque base and let the numbers show through on exactly one row — the flagship one.
+ */
+const PIN_FEAT =
+  "bg-[image:linear-gradient(rgba(6,182,212,0.06),rgba(6,182,212,0.06))] " +
+  "dark:bg-[image:linear-gradient(rgba(34,211,238,0.06),rgba(34,211,238,0.06))]";
 
 export function RankingTable<T>({
   columns,
@@ -122,7 +144,11 @@ export function RankingTable<T>({
                   "terminal-font px-2 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground",
                   // A rule at the boundary so the eye reads two blocks rather than
                   // seven columns with a caption floating over them.
-                  i > 0 && run.group && "border-l border-border"
+                  i > 0 && run.group && "border-l border-border",
+                  // Pin only when the first run is exactly the label column. A board that
+                  // groups its leading column WITH others would otherwise pin the whole
+                  // run, freezing columns that are meant to scroll.
+                  i === 0 && run.span === 1 && PIN
                 )}
               >
                 {run.group ?? ""}
@@ -135,7 +161,7 @@ export function RankingTable<T>({
           className="grid border-b border-border bg-card/60"
           style={{ gridTemplateColumns: gridTemplate }}
         >
-          {columns.map((c) => {
+          {columns.map((c, i) => {
             const active = sortKey === c.key;
             const sortable = !!c.sortValue;
             return (
@@ -148,6 +174,7 @@ export function RankingTable<T>({
                 className={cn(
                   "terminal-font flex items-center gap-1 px-2 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors",
                   c.align === "right" ? "justify-end" : "justify-start",
+                  i === 0 && PIN,
                   sortable
                     ? "cursor-pointer hover:text-cyan-700 dark:hover:text-cyan-300"
                     : "cursor-default",
@@ -163,28 +190,33 @@ export function RankingTable<T>({
 
         <AttributionStrip />
 
-        {sorted.map((row) => (
-          <div
-            key={getRowKey(row)}
-            className={cn(
-              "grid border-b border-border/70 last:border-0",
-              isFeatured?.(row) && "bg-cyan-500/[0.06] dark:bg-cyan-400/[0.06]"
-            )}
-            style={{ gridTemplateColumns: gridTemplate }}
-          >
-            {columns.map((c) => (
-              <div
-                key={c.key}
-                className={cn(
-                  "terminal-font px-2 py-3 text-[13px] text-foreground",
-                  c.align === "right" ? "text-right" : "text-left"
-                )}
-              >
-                {c.render(row)}
-              </div>
-            ))}
-          </div>
-        ))}
+        {sorted.map((row) => {
+          const feat = isFeatured?.(row) ?? false;
+          return (
+            <div
+              key={getRowKey(row)}
+              className={cn(
+                "grid border-b border-border/70 last:border-0",
+                feat && "bg-cyan-500/[0.06] dark:bg-cyan-400/[0.06]"
+              )}
+              style={{ gridTemplateColumns: gridTemplate }}
+            >
+              {columns.map((c, i) => (
+                <div
+                  key={c.key}
+                  className={cn(
+                    "terminal-font px-2 py-3 text-[13px] text-foreground",
+                    c.align === "right" ? "text-right" : "text-left",
+                    i === 0 && PIN,
+                    i === 0 && feat && PIN_FEAT
+                  )}
+                >
+                  {c.render(row)}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

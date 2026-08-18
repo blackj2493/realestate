@@ -55,14 +55,16 @@ export default async function DaysOnMarketPage() {
             <strong>Median Days to Sell</strong> is the median number of days a recently-sold home spent on
             the market, computed from MLS® sales over the trailing period and adjusted for relists (a
             withdrawn-and-relisted home keeps its true clock rather than resetting to zero). The{" "}
-            <strong>25–75% range</strong> shows how spread-out that is.
+            <strong>Typical Sale Window</strong> shows how spread-out that is: a quarter of sales were
+            faster than the first figure and a quarter slower than the second, so exactly half landed
+            between them.
           </p>
           <p>
             <strong>Reported Listing Age</strong> is the median age of the homes on the market now, measured
             the way the boards measure it — from the current listing&rsquo;s start date. When a home is
             withdrawn and re-listed it gets a new MLS® number, and that clock restarts at zero.{" "}
-            <strong>Real Listing Age</strong> is the same set of homes with those relist chains stitched back
-            together: consecutive sale campaigns on one property are joined when the gap between one ending
+            <strong>True Days on Market</strong> is the same set of homes with those relist chains stitched
+            back together: consecutive sale campaigns on one property are joined when the gap between one ending
             and the next beginning is 35 days or less, so the clock keeps running across the break.{" "}
             <strong>Hidden Days</strong> is the difference — how much longer these homes have actually been
             for sale than the reported figure shows.
@@ -73,7 +75,7 @@ export default async function DaysOnMarketPage() {
             supplied is never stitched across at all. Both choices push the real figure down, not up.
           </p>
           <p>
-            <strong>Sitting 90+ Days</strong> is the share of current listings whose real age is 90 days or
+            <strong>Sitting 90+ Days</strong> is the share of current listings whose true days on market is 90 or
             more. A market can sell its fresh listings quickly while a tail of stale inventory lingers, so
             these measures tell different halves of the story. Sold figures come from the MLS® VOW feed
             (comprehensive but not exhaustive); refreshed nightly.
@@ -82,16 +84,16 @@ export default async function DaysOnMarketPage() {
       }
       faqs={[
         {
-          q: "What does 'days to sell' mean?",
+          q: "What does 'median days to sell' mean?",
           a: "It's the median number of days a home that recently sold had been listed before going firm — a measure of how quickly the market is absorbing homes. Lower is faster.",
         },
         {
-          q: "Why is 'real listing age' higher than 'reported listing age'?",
+          q: "Why is 'true days on market' higher than 'reported listing age'?",
           a: "Because a re-listed home starts a fresh clock. When a property is withdrawn and put back on the market it is issued a new MLS® number, and days-on-market resets to zero — so a home showing '3 days' may have been for sale for months. We stitch consecutive campaigns on the same property back together (joining gaps of 35 days or less), which is why our figure is higher. The gap between the two columns is the part the reset hides.",
         },
         {
-          q: "Why is 'listing age' higher than 'days to sell'?",
-          a: "Days to sell only counts homes that sold; listing age counts everything still on the market, which is dragged up by a tail of harder-to-sell listings that haven't found a buyer yet.",
+          q: "Why is 'true days on market' higher than 'median days to sell'?",
+          a: "Median days to sell only counts homes that sold; true days on market counts everything still for sale, which is dragged up by a tail of harder-to-sell listings that haven't found a buyer yet. They are two different sets of houses, which is why the table groups them separately.",
         },
         {
           q: "How is this different from the number my agent quotes?",

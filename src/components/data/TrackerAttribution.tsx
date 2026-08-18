@@ -64,7 +64,11 @@ export function AttributionStrip() {
 
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-border bg-card/40 px-2 py-1">
-      <span className="terminal-font text-[10px] font-medium tracking-wide text-muted-foreground">
+      {/* Pinned like the label column beside it. Every board is wider than a phone, so
+          an un-pinned source line scrolls off to the left the moment a reader drags the
+          numbers sideways — and a screenshot taken in that state carries no URL at all,
+          which is the one thing this line exists to prevent. */}
+      <span className="terminal-font sticky left-0 bg-card px-2 py-1 -mx-2 -my-1 text-[10px] font-medium tracking-wide text-muted-foreground dark:bg-background">
         {attribution.label}
       </span>
       {attribution.asOfLabel && (
