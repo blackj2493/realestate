@@ -148,6 +148,88 @@ function StepperPopover({
   );
 }
 
+/**
+ * Multi-select property-type panel. Rendered only while its Popover is open, so
+ * it mounts fresh on each open — that mount is what seeds `draft` from the
+ * committed lens, replacing the old explicit reset-on-open. Nothing commits
+ * until Save.
+ */
+function TypePanel({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial: string[];
+  onSave: (next: string[]) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState<string[]>(initial);
+  const toggle = (key: string) =>
+    setDraft((d) => (d.includes(key) ? d.filter((k) => k !== key) : [...d, key]));
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setDraft([])}
+        className={cn(
+          "mb-1 flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs",
+          draft.length === 0 ? "text-cyan-700 dark:text-cyan-300" : "text-foreground"
+        )}
+      >
+        <span
+          className={cn(
+            "flex h-4 w-4 items-center justify-center border",
+            draft.length === 0 ? "border-cyan-500 bg-cyan-500 text-slate-950" : "border-border"
+          )}
+        >
+          {draft.length === 0 && <span className="text-[9px] font-black">✓</span>}
+        </span>
+        All property types
+      </button>
+      <div className="max-h-56 overflow-auto">
+        {PROPERTY_TYPE_OPTIONS.map((o) => {
+          const on = draft.includes(o.key);
+          return (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => toggle(o.key)}
+              className="flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs text-foreground hover:text-foreground"
+            >
+              <span
+                className={cn(
+                  "flex h-4 w-4 items-center justify-center border",
+                  on ? "border-cyan-500 bg-cyan-500 text-slate-950" : "border-border"
+                )}
+              >
+                {on && <span className="text-[9px] font-black">✓</span>}
+              </span>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="border border-border px-3 py-1 text-xs text-foreground hover:bg-muted"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => onSave(draft)}
+          className="border border-cyan-600 bg-cyan-600 px-3 py-1 text-xs text-white hover:bg-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-200 dark:hover:bg-cyan-500/30"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MarketActivityControls({
   lens,
   onChange,
@@ -155,21 +237,7 @@ export default function MarketActivityControls({
   lens: MarketActivityLens;
   onChange: (lens: MarketActivityLens) => void;
 }) {
-  const [typeOpen, setTypeOpen] = useState(false);
-  const [draftTypes, setDraftTypes] = useState<string[]>(lens.propertyTypes);
-
   const set = (patch: Partial<MarketActivityLens>) => onChange({ ...lens, ...patch });
-
-  const openTypes = () => {
-    setDraftTypes(lens.propertyTypes);
-    setTypeOpen(true);
-  };
-  const toggleDraft = (key: string) =>
-    setDraftTypes((d) => (d.includes(key) ? d.filter((k) => k !== key) : [...d, key]));
-  const saveTypes = () => {
-    set({ propertyTypes: draftTypes });
-    setTypeOpen(false);
-  };
 
   const typeSummary =
     lens.propertyTypes.length === 0
@@ -247,83 +315,38 @@ export default function MarketActivityControls({
           </div>
         </div>
 
-        {/* Property type popover */}
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => (typeOpen ? setTypeOpen(false) : openTypes())}
-            className="flex items-center gap-1.5 border border-border bg-card/60 px-2.5 py-1 text-xs text-foreground hover:border-cyan-500/60"
-          >
-            <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
-              Type
+        {/* Property type — portaled Popover (see TypePanel) so the panel escapes
+            the bar's horizontal-scroll clip on mobile, like the steppers do. */}
+        <Popover
+          className="w-60"
+          trigger={
+            <span
+              className={cn(
+                "flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border px-2.5 py-1 text-xs transition-colors",
+                lens.propertyTypes.length > 0
+                  ? "border-cyan-600/60 bg-cyan-600/10 text-cyan-700 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200"
+                  : "border-border bg-card/60 text-foreground hover:border-cyan-500/60"
+              )}
+            >
+              <span className="terminal-font text-[10px] uppercase tracking-wider text-muted-foreground">
+                Type
+              </span>
+              {typeSummary}
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </span>
-            {typeSummary}
-            <ChevronDown className="h-3 w-3 text-muted-foreground" />
-          </button>
-          {typeOpen && (
-            <div className="absolute z-20 mt-1 w-60 border border-border bg-card p-3 shadow-xl">
-              <button
-                type="button"
-                onClick={() => setDraftTypes([])}
-                className={cn(
-                  "mb-1 flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs",
-                  draftTypes.length === 0 ? "text-cyan-700 dark:text-cyan-300" : "text-foreground"
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex h-4 w-4 items-center justify-center border",
-                    draftTypes.length === 0
-                      ? "border-cyan-500 bg-cyan-500 text-slate-950"
-                      : "border-border"
-                  )}
-                >
-                  {draftTypes.length === 0 && <span className="text-[9px] font-black">✓</span>}
-                </span>
-                All property types
-              </button>
-              <div className="max-h-56 overflow-auto">
-                {PROPERTY_TYPE_OPTIONS.map((o) => {
-                  const on = draftTypes.includes(o.key);
-                  return (
-                    <button
-                      key={o.key}
-                      type="button"
-                      onClick={() => toggleDraft(o.key)}
-                      className="flex w-full items-center gap-2 px-1 py-1.5 text-left text-xs text-foreground hover:text-foreground"
-                    >
-                      <span
-                        className={cn(
-                          "flex h-4 w-4 items-center justify-center border",
-                          on ? "border-cyan-500 bg-cyan-500 text-slate-950" : "border-border"
-                        )}
-                      >
-                        {on && <span className="text-[9px] font-black">✓</span>}
-                      </span>
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTypeOpen(false)}
-                  className="border border-border px-3 py-1 text-xs text-foreground hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveTypes}
-                  className="border border-cyan-600 bg-cyan-600 px-3 py-1 text-xs text-white hover:bg-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/20 dark:text-cyan-200 dark:hover:bg-cyan-500/30"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
+          }
+        >
+          {(close) => (
+            <TypePanel
+              initial={lens.propertyTypes}
+              onCancel={close}
+              onSave={(next) => {
+                set({ propertyTypes: next });
+                close();
+              }}
+            />
           )}
-        </div>
+        </Popover>
 
         {/* Count steppers (Min/Exact) — mirror the terminal's beds/baths/parking */}
         <StepperPopover
