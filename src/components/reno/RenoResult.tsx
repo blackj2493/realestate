@@ -128,11 +128,44 @@ export default function RenoResult({
   })();
 
   const movesHeader = (
-    <div className="flex items-center justify-between">
-      <h2 className="flex items-center gap-2 text-[15px] font-bold text-foreground">
-        <TrendingUp className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" aria-hidden /> Every dollar, ranked
-      </h2>
-      <span className="font-mono text-[11.5px] text-muted-foreground">for a typical {typeLabel.toLowerCase()}</span>
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-[15px] font-bold text-foreground">
+          <TrendingUp className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" aria-hidden /> Every dollar, ranked
+        </h2>
+        <span className="font-mono text-[11.5px] text-muted-foreground">for a typical {typeLabel.toLowerCase()}</span>
+      </div>
+      {/* Say the withheld thing out loud, with a COUNT. "Every dollar, ranked" over an
+          unranked grey list is a promise the anon view visibly fails to keep, and the
+          per-card locks are too quiet to explain why. The count is derived from the home's
+          own attributes (buildAnonCatalog), never from sold data, so it is honest to show
+          a signed-out visitor — and a specific number is a better reason to sign in than
+          a padlock. */}
+      {result.locked && moves.length > 0 && (
+        <>
+          <p className="mt-1.5 text-[13px] text-muted-foreground">
+            <span className="font-semibold text-foreground">
+              {moves.length} move{moves.length === 1 ? '' : 's'} appl{moves.length === 1 ? 'ies' : 'y'} to this home.
+            </span>{' '}
+            The payback on every one is hidden.
+          </p>
+          {/* The same unlock, repeated at the top of the list ON PHONES ONLY. The hero CTA
+              has scrolled away by the time the cards are in view, and the one below the list
+              is up to nine cards further down — so the moment the gate becomes obvious was
+              also the moment with nothing to press. Desktop keeps a single CTA: the hero and
+              the rail are both still on screen there.
+              NOT a fixed bottom bar: the feature-guide launcher is fixed bottom-right at
+              z-[130] (DiscoveryRoot), so a full-width bar would sit under it on exactly the
+              viewport this is meant to help. */}
+          <Link
+            href={unlockHref}
+            onClick={onUnlock}
+            className="mt-2.5 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700 [touch-action:manipulation] sm:hidden"
+          >
+            <Lock className="h-4 w-4" aria-hidden /> Unlock all {moves.length} &mdash; free &rarr;
+          </Link>
+        </>
+      )}
     </div>
   );
 
