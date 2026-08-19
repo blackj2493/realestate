@@ -437,6 +437,7 @@ function blankBreakdown(): AVMAdjustmentBreakdown {
     buildingAreaAdjustment: 0,
     lotWidthAdjustment: 0,
     bedroomsAdjustment: 0,
+    plusRoomAdjustment: 0,
     bathroomsAdjustment: 0,
     parkingAdjustment: 0,
     interiorAdjustment: 0,

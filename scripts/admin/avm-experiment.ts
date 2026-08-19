@@ -154,6 +154,7 @@ interface PoolRow {
   lot_width: number | null;
   lot_depth: number | null;
   bedrooms_above_grade: number | null;
+  bedrooms_below_grade: number | null;
   bathrooms_total_integer: number | null;
   parking_total: number | null;
   interior_tier: number | null;
@@ -191,7 +192,7 @@ interface ResultRow {
 
 const SELECT_COLS =
   'listing_key, close_price, purchase_contract_date, close_date, city, city_region, ' +
-  'property_sub_type, postal_code, pcfull:raw_payload->>PostalCode, building_area_total, lot_width, lot_depth, bedrooms_above_grade, ' +
+  'property_sub_type, postal_code, pcfull:raw_payload->>PostalCode, building_area_total, lot_width, lot_depth, bedrooms_above_grade, bedrooms_below_grade, ' +
   'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -379,6 +380,7 @@ function toCompRow(c: Sale): CompRow {
     lot_width: c.lot_width,
     lot_depth: c.lot_depth,
     bedrooms_above_grade: c.bedrooms_above_grade,
+    bedrooms_below_grade: c.bedrooms_below_grade,
     bathrooms_total_integer: c.bathrooms_total_integer,
     parking_total: c.parking_total,
     interior_tier: c.interior_tier,
@@ -399,6 +401,7 @@ function inputFromSale(s: Sale): AVMInput {
     lotWidth: s.lot_width !== null && s.lot_width > 0 ? s.lot_width : null,
     lotDepth: s.lot_depth !== null && s.lot_depth > 0 ? s.lot_depth : null,
     bedroomsAboveGrade: s.bedrooms_above_grade,
+    bedroomsBelowGrade: s.bedrooms_below_grade,
     bathroomsTotalInteger: s.bathrooms_total_integer,
     parkingTotal: s.parking_total,
     interiorTier: s.interior_tier ?? NEUTRAL_TIER,

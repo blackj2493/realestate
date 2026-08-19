@@ -21,7 +21,7 @@ const typicalInput: AVMInput = {
   rawPropertySubType: 'Detached',
   buildingAreaTotal: 2_000,
   lotWidth: 40,
-  bedroomsAboveGrade: 4,
+  bedroomsAboveGrade: 4, bedroomsBelowGrade: 0,
   bathroomsTotalInteger: 3,
   parkingTotal: 4,
   interiorTier: 3,
@@ -32,7 +32,7 @@ const outlierInput: AVMInput = {
   ...typicalInput,
   buildingAreaTotal: null,
   lotWidth: 50,
-  bedroomsAboveGrade: 6,
+  bedroomsAboveGrade: 6, bedroomsBelowGrade: 0,
   bathroomsTotalInteger: 5,
   parkingTotal: 8,
 };

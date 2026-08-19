@@ -63,6 +63,11 @@ export interface CompRow {
   lot_width: number | null;
   lot_depth: number | null;
   bedrooms_above_grade: number | null;
+  /** Den / below-grade bedrooms. MUST be selected and MUST appear in
+   *  adjustedLogPrice's feature list: the subject premium includes the plus-room
+   *  term, so a comp neutralized without it leaves the difference sitting in the
+   *  anchor and biases every estimate that uses these comps. */
+  bedrooms_below_grade: number | null;
   bathrooms_total_integer: number | null;
   parking_total: number | null;
   interior_tier: number | null;
@@ -78,7 +83,7 @@ export interface CompRow {
  *  unlock full block/building-level geo weighting (see geoMatchWeight). */
 const COMP_SELECT =
   'close_price, purchase_contract_date, close_date, building_area_total, ' +
-  'lot_width, lot_depth, bedrooms_above_grade, bathrooms_total_integer, parking_total, ' +
+  'lot_width, lot_depth, bedrooms_above_grade, bedrooms_below_grade, bathrooms_total_integer, parking_total, ' +
   'interior_tier, exterior_tier, basement_tier, postal_code';
 
 /** Normalize a postal code to compact uppercase (no spaces). */
@@ -515,6 +520,7 @@ function adjustedLogPrice(
     ['building_area_total', c.building_area_total],
     ['lot_width', c.lot_width !== null && c.lot_width > 0 ? c.lot_width : null],
     ['bedrooms_above_grade', c.bedrooms_above_grade],
+    ['bedrooms_below_grade', c.bedrooms_below_grade],
     ['bathrooms_total_integer', c.bathrooms_total_integer],
     ['parking_total', c.parking_total],
     ['basement_score', basementScore],

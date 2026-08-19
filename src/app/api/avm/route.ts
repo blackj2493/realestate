@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       buildingAreaTotal: null,
       lotWidth: null,
       bedroomsAboveGrade: v.bedroomsAboveGrade,
+      bedroomsBelowGrade: v.bedroomsBelowGrade ?? 0,
       bathroomsTotalInteger: v.bathroomsTotalInteger,
       parkingTotal: v.parkingTotal,
       interiorTier: v.interiorTier,

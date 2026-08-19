@@ -23,14 +23,14 @@ const input: AVMInput = {
   rawPropertySubType: 'Detached',
   buildingAreaTotal: 2_000,
   lotWidth: 40,
-  bedroomsAboveGrade: 4,
+  bedroomsAboveGrade: 4, bedroomsBelowGrade: 0,
   bathroomsTotalInteger: 3,
   parkingTotal: 4,
   interiorTier: 3,
   exteriorTier: 3,
   basementTier: 3,
 };
-const outlierInput: AVMInput = { ...input, buildingAreaTotal: null, bedroomsAboveGrade: 6, bathroomsTotalInteger: 5, parkingTotal: 8 };
+const outlierInput: AVMInput = { ...input, buildingAreaTotal: null, bedroomsAboveGrade: 6, bedroomsBelowGrade: 0, bathroomsTotalInteger: 5, parkingTotal: 8 };
 const strongCoeffs: CoefficientRow[] = [
   { featureName: 'bedrooms_above_grade', beta: 0.18, mean: 3, std: 1 },
   { featureName: 'bathrooms_total_integer', beta: 0.12, mean: 2.5, std: 1 },
@@ -45,7 +45,7 @@ describe('PRODUCTION — predictive band (calibration fix)', () => {
     const prices = [600_000, 700_000, 800_000, 900_000, 1_000_000, 1_100_000, 1_200_000, 1_300_000];
     const comps: CompRow[] = prices.map((p) => ({
       close_price: p, purchase_contract_date: '2026-04-01', close_date: '2026-04-01',
-      building_area_total: 2000, lot_width: 40, lot_depth: 110, bedrooms_above_grade: 4,
+      building_area_total: 2000, lot_width: 40, lot_depth: 110, bedrooms_above_grade: 4, bedrooms_below_grade: 0,
       bathrooms_total_integer: 3, parking_total: 4, interior_tier: 3, exterior_tier: 3, basement_tier: 3,
     }));
     const data: AnchorInputData = { comps, trend: [], offsets: [], nowMs: NOW };

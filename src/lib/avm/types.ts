@@ -26,6 +26,10 @@ export interface AVMInput {
    * coefficient), so adding it never changes the normal-path estimate. Optional. */
   lotDepth?: number | null;
   bedroomsAboveGrade: number | null;
+  /** BedroomsBelowGrade — a den in a condo, a basement bedroom in a house. Measured
+   *  worth 5-7% of close price with neighbourhood, sub-type, above-grade beds and
+   *  banded sqft all held fixed, so it is priced, not decorative. */
+  bedroomsBelowGrade: number | null;
   bathroomsTotalInteger: number | null;
   parkingTotal: number | null;
   interiorTier: number; // 1-5
@@ -75,6 +79,8 @@ export interface AVMAdjustmentBreakdown {
   buildingAreaAdjustment: number;
   lotWidthAdjustment: number;
   bedroomsAdjustment: number;
+  /** The "+1" room's own contribution, separate from whole bedrooms. */
+  plusRoomAdjustment: number;
   bathroomsAdjustment: number;
   parkingAdjustment: number;
   interiorAdjustment: number;

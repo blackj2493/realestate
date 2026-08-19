@@ -31,7 +31,7 @@ function soldRow(overrides: Partial<SoldFeatures> = {}): SoldFeatures {
     close_price: 1_000_000,
     building_area_total: null,
     lot_width: null,
-    bedrooms_above_grade: null,
+    bedrooms_above_grade: null, bedrooms_below_grade: 0,
     bathrooms_total_integer: null,
     parking_total: null,
     interior_tier: null,
@@ -114,7 +114,7 @@ describe('adjustedLogPrice', () => {
       bathrooms_total_integer: { beta: 0, mean: 2, std: 1 }, // beta 0 → skip
       lot_width: { beta: 0.2, mean: 30, std: 10 }, // present in matrix but row lot_width=null → skip
     });
-    const l = adjustedLogPrice(soldRow({ bedrooms_above_grade: 5, bathrooms_total_integer: 4 }), m);
+    const l = adjustedLogPrice(soldRow({ bedrooms_above_grade: 5, bedrooms_below_grade: 0, bathrooms_total_integer: 4 }), m);
     expect(l).toBeCloseTo(Math.log(1_000_000), 10); // nothing applied
   });
 

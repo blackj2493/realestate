@@ -6,15 +6,15 @@ import type { CoefficientRow } from './matrixService';
 const baseInput: AVMInput = {
   cityRegion: 'Test', city: null, propertySubType: 'Detached', rawPropertySubType: 'Detached',
   buildingAreaTotal: 2000, lotWidth: 40, lotDepth: 100,
-  bedroomsAboveGrade: 4, bathroomsTotalInteger: 3, parkingTotal: 2,
+  bedroomsAboveGrade: 4, bedroomsBelowGrade: 0, bathroomsTotalInteger: 3, parkingTotal: 2,
   interiorTier: 2, exteriorTier: 2, basementTier: 4,
 };
 
 describe('FEATURE_SPECS', () => {
-  it('exposes all 8 model features with matrix names + breakdown keys', () => {
+  it('exposes all 9 model features with matrix names + breakdown keys', () => {
     const names = FEATURE_SPECS.map((s) => s.name);
     expect(names).toEqual([
-      'building_area_total', 'lot_width', 'bedrooms_above_grade',
+      'building_area_total', 'lot_width', 'bedrooms_above_grade', 'bedrooms_below_grade',
       'bathrooms_total_integer', 'parking_total', 'basement_score',
       'interior_score', 'exterior_score',
     ]);

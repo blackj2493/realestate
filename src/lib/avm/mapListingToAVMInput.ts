@@ -73,6 +73,7 @@ export function mapListingToAVMInput(
     lotWidth,
     lotDepth,
     bedroomsAboveGrade: numOrNull(payload.BedroomsAboveGrade),
+    bedroomsBelowGrade: numOrNull(payload.BedroomsBelowGrade),
     bathroomsTotalInteger: numOrNull(payload.BathroomsTotalInteger),
     parkingTotal: numOrNull(payload.ParkingTotal),
     interiorTier: deriveInteriorTier(payload),

@@ -41,6 +41,10 @@ export interface SoldFeatures {
   building_area_total: number | null;
   lot_width: number | null;
   bedrooms_above_grade: number | null;
+  /** Den / below-grade bedrooms. Kept in step with anchorService: once the champion
+   *  matrix carries a bedrooms_below_grade beta, a neutralizer that skips it disagrees
+   *  with the one that does not. */
+  bedrooms_below_grade: number | null;
   bathrooms_total_integer: number | null;
   parking_total: number | null;
   interior_tier: number | null;
@@ -139,6 +143,7 @@ export function adjustedLogPrice(row: SoldFeatures, matrix: Matrix): number | nu
     ['building_area_total', row.building_area_total],
     ['lot_width', row.lot_width !== null && row.lot_width > 0 ? row.lot_width : null],
     ['bedrooms_above_grade', row.bedrooms_above_grade],
+    ['bedrooms_below_grade', row.bedrooms_below_grade],
     ['bathrooms_total_integer', row.bathrooms_total_integer],
     ['parking_total', row.parking_total],
     ['basement_score', basementScore],

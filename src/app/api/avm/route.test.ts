@@ -29,7 +29,7 @@ function post(body: unknown): Promise<Response> {
 const VALID_BODY = {
   cityRegion: 'Brampton',
   propertySubType: 'Detached',
-  bedroomsAboveGrade: 4,
+  bedroomsAboveGrade: 4, bedroomsBelowGrade: 0,
   bathroomsTotalInteger: 3,
   parkingTotal: 2,
   interiorTier: 3,
@@ -48,7 +48,7 @@ beforeEach(() => {
     breakdown: {
       buildingAreaAdjustment: 0,
       lotWidthAdjustment: 0,
-      bedroomsAdjustment: 0,
+      bedroomsAdjustment: 0, plusRoomAdjustment: 0,
       bathroomsAdjustment: 0,
       parkingAdjustment: 0,
       interiorAdjustment: 0,

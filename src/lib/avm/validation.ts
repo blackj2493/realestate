@@ -23,6 +23,9 @@ export const AVMInputSchema = z.object({
   city: PLACE_NAME.nullable().optional(),
   propertySubType: z.string().min(1, 'Property type is required'),
   bedroomsAboveGrade: z.number().int().min(0).max(10),
+  /** Den / below-grade bedrooms. Optional so existing callers keep working; absent
+   *  means none, which is how the feed itself encodes zero. */
+  bedroomsBelowGrade: z.number().int().min(0).max(10).optional().default(0),
   bathroomsTotalInteger: z.number().int().min(0).max(10),
   parkingTotal: z.number().int().min(0).max(10),
   interiorTier: z.number().int().min(1).max(5),
