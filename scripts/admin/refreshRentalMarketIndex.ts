@@ -36,6 +36,8 @@ async function main() {
             property_sub_type,
             full_payload->>'TransactionType'        AS transaction_type,
             full_payload->>'BedroomsTotal'          AS bedrooms_total,
+            full_payload->>'BedroomsAboveGrade'     AS bedrooms_above,
+            full_payload->>'BedroomsBelowGrade'     AS bedrooms_below,
             full_payload->>'BathroomsTotalInteger'  AS bathrooms_total
        FROM listings
       WHERE lower(coalesce(full_payload->>'TransactionType', '')) ~ '(leas|rent)'`,
@@ -49,13 +51,26 @@ async function main() {
       cityRegion: r.city_region,
       propertySubType: r.property_sub_type,
       bedroomsTotal: r.bedrooms_total != null ? parseInt(r.bedrooms_total, 10) : null,
+      // The feed OMITS BedroomsBelowGrade when it is zero (present on 23,356 of
+      // 94,356 active leases, non-zero on 21,234 of those), so null here means "no
+      // plus-room" rather than "unknown".
+      bedroomsAboveGrade: /^[0-9]+$/.test(r.bedrooms_above ?? '') ? parseInt(r.bedrooms_above, 10) : null,
+      bedroomsBelowGrade: /^[0-9]+$/.test(r.bedrooms_below ?? '') ? parseInt(r.bedrooms_below, 10) : null,
       // Real bath count — replaces the bogus WashroomsType1Pcs piece-count key.
       bathroomsTotal: /^[0-9]+$/.test(r.bathrooms_total ?? '') ? parseInt(r.bathrooms_total, 10) : null,
     });
   }
 
   const indexRows: RentalIndexRow[] = acc.finalize();
+  const splitRows = indexRows.filter((r) => r.bedrooms_above !== null).length;
   console.log(`Read ${rows.length} active for-lease listings -> ${indexRows.length} cohorts (min-N met).`);
+  console.log(`  plus-room split cohorts: ${splitRows}   merged fallback cohorts: ${indexRows.length - splitRows}`);
+  if (splitRows === 0) {
+    throw new Error(
+      'No plus-room cohorts survived — BedroomsAboveGrade/BelowGrade are probably absent ' +
+      'from full_payload. Refusing to publish a merged-only index (see migration 122).',
+    );
+  }
   console.log('Sample:', indexRows.slice(0, 5));
 
   if (DRY) {
@@ -67,16 +82,19 @@ async function main() {
   await client.query('TRUNCATE rental_market_index');
   for (let i = 0; i < indexRows.length; i += WRITE_CHUNK) {
     const batch = indexRows.slice(i, i + WRITE_CHUNK);
+    const COLS = 11;
     const params: (string | number | null)[] = [];
     const tuples = batch.map((row, j) => {
-      const b = j * 9;
+      const b = j * COLS;
       params.push(row.match_tier, row.city_region, row.city, row.property_sub_type,
-        row.bedrooms_total, row.bathrooms, row.avg_rent, row.p10_rent, row.sample_count);
-      return `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7}, $${b + 8}, $${b + 9})`;
+        row.bedrooms_total, row.bedrooms_above, row.den, row.bathrooms,
+        row.avg_rent, row.p10_rent, row.sample_count);
+      return `(${Array.from({ length: COLS }, (_, k) => `$${b + k + 1}`).join(', ')})`;
     });
     await client.query(
       `INSERT INTO rental_market_index
-         (match_tier, city_region, city, property_sub_type, bedrooms_total, bathrooms, avg_rent, p10_rent, sample_count)
+         (match_tier, city_region, city, property_sub_type, bedrooms_total,
+          bedrooms_above, den, bathrooms, avg_rent, p10_rent, sample_count)
        VALUES ${tuples.join(',')}`,
       params,
     );
