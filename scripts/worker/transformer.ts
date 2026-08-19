@@ -872,6 +872,11 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       cityRegion: raw.CityRegion || raw.City || '',
       propertySubType: raw.PropertySubType || '',
       bedroomsTotal: raw.BedroomsTotal || 0,
+      // The plus-room split (migration 122): a 1+den is not a 2 bedroom and leases
+      // ~$500/mo below one. Passing these picks the split cohort; omitting them
+      // silently degrades to the merged one.
+      bedroomsAboveGrade: raw.BedroomsAboveGrade,
+      bedroomsBelowGrade: raw.BedroomsBelowGrade,
       // Real bath count drives the tiered rent lookup (replaces WashroomsType1Pcs).
       bathroomsTotal: raw.BathroomsTotalInteger || 0,
       isSuiteCandidate,

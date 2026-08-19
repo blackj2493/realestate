@@ -87,7 +87,12 @@ describe('buildRentalIndexRows (tiered)', () => {
 
   it('a lease missing bath count still feeds the city (baths-relaxed) tier only', () => {
     const rows = buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r, { bathroomsTotal: null })));
-    expect(rows.map((r) => r.match_tier)).toEqual(['city']);
+    // Every tier now emits TWO cohorts — the plus-room split and the merged fallback
+    // it degrades to (migration 122) — so the city tier is the only tier, twice.
+    expect(new Set(rows.map((r) => r.match_tier))).toEqual(new Set(['city']));
+    expect(rows).toHaveLength(2);
+    expect(rows.filter((r) => r.bedrooms_above !== null)).toHaveLength(1);
+    expect(rows.filter((r) => r.bedrooms_above === null)).toHaveLength(1);
   });
 
   it('drops thin cohorts (< MIN_COHORT_SAMPLES) and ignores sale/out-of-band rows', () => {
@@ -104,5 +109,61 @@ describe('buildRentalIndexRows (tiered)', () => {
     const acc = createRentAccumulator();
     [2000, 2100, 2200, 2300, 2400].forEach((r) => acc.add(lease(r)));
     expect(acc.finalize()).toEqual(buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r))));
+  });
+});
+
+describe('plus-room split cohorts (migration 122)', () => {
+  const lease = (over: Partial<RawLeaseInput>): RawLeaseInput => ({
+    transactionType: 'For Lease', listPrice: 2500, city: 'Toronto C01',
+    cityRegion: 'Waterfront Communities', propertySubType: 'Condo Apartment',
+    bathroomsTotal: 1, ...over,
+  });
+  const five = (over: Partial<RawLeaseInput>) => [...Array(5)].map(() => lease(over));
+
+  it('keys a 1+den apart from a true 2 bedroom', () => {
+    const rows = buildRentalIndexRows([
+      ...five({ bedroomsTotal: 2, bedroomsAboveGrade: 1, bedroomsBelowGrade: 1, listPrice: 2450 }),
+      ...five({ bedroomsTotal: 2, bedroomsAboveGrade: 2, bedroomsBelowGrade: 0, listPrice: 2950 }),
+    ]);
+    const nbhd = rows.filter((r) => r.match_tier === 'nbhd');
+    const den = nbhd.find((r) => r.bedrooms_above === 1 && r.den === 1);
+    const true2 = nbhd.find((r) => r.bedrooms_above === 2 && r.den === 0);
+    expect(den?.avg_rent).toBe(2450);
+    expect(true2?.avg_rent).toBe(2950);
+  });
+
+  it('ALSO emits the merged cohort so a thin split never leaves a listing with no data', () => {
+    const rows = buildRentalIndexRows([
+      ...five({ bedroomsTotal: 2, bedroomsAboveGrade: 1, bedroomsBelowGrade: 1, listPrice: 2450 }),
+      ...five({ bedroomsTotal: 2, bedroomsAboveGrade: 2, bedroomsBelowGrade: 0, listPrice: 2950 }),
+    ]);
+    const merged = rows.find((r) => r.match_tier === 'nbhd' && r.bedrooms_above === null);
+    expect(merged).toBeDefined();
+    expect(merged!.bedrooms_total).toBe(2);
+    expect(merged!.sample_count).toBe(10);       // both halves pooled
+    expect(merged!.avg_rent).toBe(2700);         // the old, blended number
+  });
+
+  it('treats an ABSENT below-grade field as no plus-room (the feed omits its zeros)', () => {
+    const rows = buildRentalIndexRows(five({ bedroomsTotal: 1, bedroomsAboveGrade: 1, listPrice: 2200 }));
+    const split = rows.find((r) => r.match_tier === 'nbhd' && r.bedrooms_above !== null);
+    expect(split).toMatchObject({ bedrooms_above: 1, den: 0 });
+  });
+
+  it('recovers above-grade when the feed leaves it empty and the total carries the sum', () => {
+    const rows = buildRentalIndexRows(
+      five({ bedroomsTotal: 3, bedroomsAboveGrade: null, bedroomsBelowGrade: 1, listPrice: 3265 }));
+    const split = rows.find((r) => r.match_tier === 'nbhd' && r.bedrooms_above !== null);
+    expect(split).toMatchObject({ bedrooms_above: 2, den: 1 });   // 2+1, not 3+1
+  });
+
+  it('does not fragment a sub-type the feed ships with a trailing space', () => {
+    const rows = buildRentalIndexRows([
+      ...five({ propertySubType: 'Semi-Detached ', bedroomsTotal: 2, bedroomsAboveGrade: 2 }),
+      ...five({ propertySubType: 'Semi-Detached', bedroomsTotal: 2, bedroomsAboveGrade: 2 }),
+    ]);
+    const semis = rows.filter((r) => r.match_tier === 'nbhd' && r.property_sub_type === 'Semi-Detached');
+    expect(semis).toHaveLength(2);                       // one split cohort + one merged
+    expect(semis.every((r) => r.sample_count === 10)).toBe(true);
   });
 });

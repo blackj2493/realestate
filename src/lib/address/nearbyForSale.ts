@@ -17,13 +17,21 @@
  * display limit (CLAUDE.md §4).
  */
 import { getTypesenseClient } from "@/lib/typesense/client";
+import { bedSplit, bedKey, bedKeyOrder, BED_ABOVE_CAP, type BedCountsRaw } from "@/lib/listings/bedSplit";
 
 export interface NearbyListing {
   id: string;
   address: string;
   cityRegion: string | null;
   price: number;
+  /** BedroomsTotal — the SUM of above- and below-grade. Display only; never bucket on it. */
   beds: number | null;
+  /** Whole bedrooms above grade — the grid's bedroom axis. */
+  bedsAbove: number | null;
+  /** Capped plus-room flag ("+1"). A den in a condo, a basement bedroom in a house. */
+  bedsDen: 0 | 1;
+  /** False when the doc omitted BedroomsBelowGrade entirely — absent is not zero. */
+  bedsDenKnown: boolean;
   baths: number | null;
   subType: string | null;
   imageUrl: string | null;
@@ -122,8 +130,13 @@ export interface AskingMatrixCell {
 }
 
 export interface AskingMatrix {
-  /** Bedroom columns present in the data; 0 renders as "Studio", 6 as "6+". */
-  bedCols: number[];
+  /**
+   * Bedroom column KEYS present in the data — "0", "1", "1+1", "2", "2+1", … Render
+   * them with `bedKeyLabel`; never parse them as integers. A "+1" column is a home
+   * with a plus-room (a den in a condo, a basement bedroom in a house), which the
+   * feed folds into `BedroomsTotal` and the market prices separately.
+   */
+  bedCols: string[];
   /** Top property types by inventory, each with one cell per bed column. */
   rows: Array<{ label: string; cells: AskingMatrixCell[]; count: number }>;
   /** Listings that entered the grid (beds + type + price all present). */
@@ -138,8 +151,9 @@ export interface AskingMatrix {
 const MIN_CELL_SAMPLES = 1;
 const MIN_MATRIX_SAMPLE = 3;
 const MAX_MATRIX_ROWS = 6;
-/** Beds bucket cap: 0 (studio) and 1–5 render as-is; 6 means "6+". */
-const BEDS_BUCKET_CAP = 6;
+/** Beds bucket cap: 0 (studio) and 1–5 render as-is; 6 means "6+". Shared with the
+ *  bed classifier so the column keys and their labels cannot drift apart. */
+const BEDS_BUCKET_CAP = BED_ABOVE_CAP;
 
 /** Below this many rentals, the 2 km grid is mostly "—" cells — widen the net. */
 const RENT_TARGET_SAMPLE = 12;
@@ -232,6 +246,9 @@ const HOUSE_ANCHOR_MIN_N = 3;
 const RECLASS_FRACTION = 0.7;
 /** Quartiles below this many kept points are noise — the cell shows median-only. */
 const RANGE_MIN_N = 5;
+/** Sale-side floor for standing a "+1" column on its own. Measured crossover, not a
+ *  guess — see the backtest table in buildBedsTypeMatrix. */
+const SPLIT_MIN_N = 5;
 
 /** House-style types whose low-bed cheap items are almost always unmarked in-home units. */
 function isHouseType(label: string): boolean {
@@ -252,19 +269,58 @@ function isHouseType(label: string): boolean {
  * a small bungalow, not an unmarked basement. Rule A (cell trim) applies to both.
  */
 export function buildBedsTypeMatrix(
-  items: Array<{ beds: number | null; subType: string | null; price: number; address?: string | null }>,
+  items: Array<{
+    beds: number | null;
+    /** REQUIRED, not optional, so a caller that forgets the split fails to compile
+     *  rather than quietly publishing merged medians again. */
+    bedsAbove: number | null;
+    bedsDen: 0 | 1;
+    subType: string | null;
+    price: number;
+    address?: string | null;
+  }>,
   opts: { mode?: "rent" | "sale" } = {}
 ): AskingMatrix | null {
   const isRent = (opts.mode ?? "rent") === "rent";
-  const usable = items.filter((i) => i.beds !== null && i.beds >= 0 && i.subType && i.price > 0);
+  const usable = items.filter((i) => i.bedsAbove !== null && i.bedsAbove >= 0 && i.subType && i.price > 0);
   if (usable.length < MIN_MATRIX_SAMPLE) return null;
 
   // Pass 1 — initial (label, bucket, price) assignment via the address classifier.
   const assigned = usable.map((i) => ({
     label: isRent && isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim(),
-    bucket: Math.min(BEDS_BUCKET_CAP, i.beds as number),
+    bucket: bedKey({ above: i.bedsAbove as number, den: i.bedsDen }, BEDS_BUCKET_CAP),
+    // Where this item lands if its "+1" column turns out too thin to stand alone.
+    mergedBucket: bedKey({ above: (i.bedsAbove as number) + i.bedsDen, den: 0 }, BEDS_BUCKET_CAP),
+    den: i.bedsDen,
     price: i.price,
   }));
+
+  // Pass 1b (SALE only) — collapse a "+1" column back into its whole-bedroom column
+  // when it is too thin to beat the merged one.
+  //
+  // Backtested out-of-time over 44,663 sales and 56,228 leases (train to 2026-02,
+  // test 2026-03..08), scoring each home against its cohort median:
+  //
+  //   SALE   cell 1-2  merged 16.90%  split 19.18%   <- split LOSES by 2.3pp
+  //          cell 3-4  merged 14.25%  split 14.51%
+  //          cell 5-6  merged 13.49%  split 13.50%   <- crossover
+  //          cell 25+  merged 13.17%  split 12.71%
+  //   LEASE  split wins at EVERY depth, 1-2 included (9.17% vs 11.32%)
+  //
+  // Sale prices scatter within a cell (floor, view, renovation) so a 2-sale split
+  // median is noise and the merged cell's extra depth is worth more than its bias.
+  // Rents are tight enough that the den gap dominates from the first sample, which
+  // is why rent never collapses. Gating sales this way scored 13.09% against 13.41%
+  // merged and 13.18% always-split — better than either alone.
+  if (!isRent) {
+    const denCount = new Map<string, number>();
+    for (const a of assigned) {
+      if (a.den > 0) denCount.set(a.bucket, (denCount.get(a.bucket) ?? 0) + 1);
+    }
+    for (const a of assigned) {
+      if (a.den > 0 && (denCount.get(a.bucket) ?? 0) < SPLIT_MIN_N) a.bucket = a.mergedBucket;
+    }
+  }
 
   // Pass 2 (Rule B, rent only) — per house row, anchor on its ≥3 bd whole-home median
   // and move implausibly cheap 0–2 bd items to the in-home row.
@@ -272,20 +328,23 @@ export function buildBedsTypeMatrix(
     const anchors = new Map<string, number | null>();
     for (const a of assigned) {
       if (a.label === IN_HOME_UNIT_LABEL || !isHouseType(a.label) || anchors.has(a.label)) continue;
-      const bigBeds = assigned.filter((x) => x.label === a.label && x.bucket >= 3).map((x) => x.price);
+      const bigBeds = assigned
+        .filter((x) => x.label === a.label && bedKeyOrder(x.bucket) >= bedKeyOrder("3"))
+        .map((x) => x.price);
       anchors.set(a.label, bigBeds.length >= HOUSE_ANCHOR_MIN_N ? median(bigBeds) : null);
     }
     for (const a of assigned) {
       const anchor = anchors.get(a.label);
-      if (anchor && a.bucket <= 2 && a.price < anchor * RECLASS_FRACTION) a.label = IN_HOME_UNIT_LABEL;
+      if (anchor && bedKeyOrder(a.bucket) <= bedKeyOrder("2") && a.price < anchor * RECLASS_FRACTION)
+        a.label = IN_HOME_UNIT_LABEL;
     }
   }
 
-  const byType = new Map<string, Map<number, number[]>>();
-  const colsSeen = new Set<number>();
+  const byType = new Map<string, Map<string, number[]>>();
+  const colsSeen = new Set<string>();
   for (const a of assigned) {
     colsSeen.add(a.bucket);
-    const cols = byType.get(a.label) ?? new Map<number, number[]>();
+    const cols = byType.get(a.label) ?? new Map<string, number[]>();
     const prices = cols.get(a.bucket) ?? [];
     prices.push(a.price);
     cols.set(a.bucket, prices);
@@ -300,7 +359,8 @@ export function buildBedsTypeMatrix(
     return kept.length ? kept : prices;
   };
 
-  const bedCols = [...colsSeen].sort((a, b) => a - b);
+  // Order 0, 0+1, 1, 1+1, 2, 2+1 … so each plus-room column sits beside its base.
+  const bedCols = [...colsSeen].sort((a, b) => bedKeyOrder(a) - bedKeyOrder(b));
   const rows = [...byType.entries()]
     .map(([label, cols]) => {
       let count = 0;
@@ -339,8 +399,11 @@ export interface RadarPinData {
   distanceM: number | null;
 }
 
-const FIELDS =
-  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp,location";
+// BedroomsAboveGrade/BelowGrade are LOAD-BEARING for the beds x type grid, not extras:
+// drop them and every active reads as "no plus-room", which silently folds 1+den units
+// back into the 2 bedroom column. The grid looks healthy and is wrong.
+export const FIELDS =
+  "id,UnparsedAddress,City,CityRegion,ListPrice,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,BathroomsTotalInteger,PropertySubType,primaryImageUrl,ListOfficeName,BuildingAreaTotal,calculatedDOM,TotalPriceDrop,EntryTimestamp,location";
 
 const NEW_EVENT_DAYS = 30;
 const MAX_NEW_EVENTS = 8;
@@ -364,6 +427,7 @@ function toListing(d: Record<string, unknown>, dist: number | undefined): Nearby
   // EntryTimestamp is epoch ms; tolerate a seconds-scale value defensively.
   const entryMs = entry > 1e12 ? entry : entry > 0 ? entry * 1000 : null;
   const dom = typeof d.calculatedDOM === "number" && d.calculatedDOM >= 0 ? d.calculatedDOM : null;
+  const split = bedSplit(d as BedCountsRaw);
   return {
     id: String(d.id ?? ""),
     address: typeof d.UnparsedAddress === "string" ? d.UnparsedAddress.split(",")[0] : "",
@@ -372,6 +436,9 @@ function toListing(d: Record<string, unknown>, dist: number | undefined): Nearby
     // 0 is a REAL value (bachelor/basement studio) — every card guard is truthy
     // (`l.beds ? …`), so 0 stays hidden in card metas but reaches the rents grid.
     beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal >= 0 ? d.BedroomsTotal : null,
+    bedsAbove: split ? split.above : null,
+    bedsDen: split ? split.den : 0,
+    bedsDenKnown: split ? split.denKnown : false,
     baths: typeof d.BathroomsTotalInteger === "number" && d.BathroomsTotalInteger > 0 ? d.BathroomsTotalInteger : null,
     subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
     imageUrl: typeof d.primaryImageUrl === "string" && d.primaryImageUrl ? d.primaryImageUrl : null,

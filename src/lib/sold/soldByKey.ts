@@ -19,6 +19,7 @@ import { parseAddress, addressesMatch, streetNamesMatchPrefix, unitsMatch, type 
 import { deriveDealType } from "@/lib/sold/dealType";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
 import { primaryImageFromPhotos } from "@/lib/etl/selectPrimaryImage";
+import { bedSplit } from "@/lib/listings/bedSplit";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -574,7 +575,14 @@ export async function getSoldGatedByKey(key: string): Promise<SoldListingDocumen
 /** One closed deal near a point — the actual close price (VOW). Shared by the leased
  *  (monthly rent) and sold (sale price) fetchers; same shape, different price scale. */
 export interface LeasedRentItem {
+  /** BedroomsTotal — the SUM of above- and below-grade. Display only; never bucket on it. */
   beds: number | null;
+  /** Whole bedrooms above grade — the grid's bedroom axis. */
+  bedsAbove: number | null;
+  /** Capped plus-room flag ("+1"). A den in a condo, a basement bedroom in a house. */
+  bedsDen: 0 | 1;
+  /** False when the doc omitted BedroomsBelowGrade entirely — absent is not zero. */
+  bedsDenKnown: boolean;
   subType: string | null;
   /** ClosePrice = what the home ACTUALLY leased/sold for. */
   price: number;
@@ -589,6 +597,17 @@ export interface LeasedRentItem {
  * garbage out of the medians. 250 docs max — with q:"*" Typesense orders on the
  * collection's default sorting field, so a dense downtown cell samples recent deals.
  */
+/**
+ * Fields the beds x type grid needs from a closed-deal doc.
+ *
+ * BedroomsAboveGrade/BelowGrade are LOAD-BEARING, not extras. Drop either one and
+ * every doc reads as "no plus-room", which silently folds 1+den units back into the
+ * 2 bedroom median — the exact bug the split exists to fix, and one that leaves the
+ * grid looking perfectly healthy. `soldByKey.fields.test.ts` guards this list.
+ */
+export const CLOSED_NEAR_POINT_FIELDS =
+  "ClosePrice,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,PropertySubType,UnparsedAddress";
+
 async function getClosedNearPoint(
   lat: number,
   lng: number,
@@ -605,13 +624,17 @@ async function getClosedNearPoint(
         q: "*",
         query_by: "UnparsedAddress",
         filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=${deal} && ClosePrice:>=${priceMin} && ClosePrice:<=${priceMax}`,
-        include_fields: "ClosePrice,BedroomsTotal,PropertySubType,UnparsedAddress",
+        include_fields: CLOSED_NEAR_POINT_FIELDS,
         per_page: 250,
       });
     return (res.hits ?? []).map((h) => {
       const d = h.document as Partial<SoldListingDocument>;
+      const split = bedSplit(d);
       return {
         beds: typeof d.BedroomsTotal === "number" && d.BedroomsTotal >= 0 ? d.BedroomsTotal : null,
+        bedsAbove: split ? split.above : null,
+        bedsDen: split ? split.den : 0,
+        bedsDenKnown: split ? split.denKnown : false,
         subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
         price: typeof d.ClosePrice === "number" ? d.ClosePrice : 0,
         address: typeof d.UnparsedAddress === "string" && d.UnparsedAddress ? d.UnparsedAddress : null,

@@ -4,7 +4,7 @@ import { IN_HOME_UNIT_LABEL, type AskingMatrix } from '@/lib/address/nearbyForSa
 
 /** Leased grid shaped like the live Northwest Brampton one (1 bd $1,350 ×6, 2 bd $1,700 ×13). */
 const RENTS: AskingMatrix = {
-  bedCols: [1, 2, 3],
+  bedCols: ['1', '2', '3'],
   rows: [
     {
       label: 'Condo Apartment',
@@ -29,7 +29,7 @@ const RENTS: AskingMatrix = {
 };
 
 const SALES: AskingMatrix = {
-  bedCols: [3, 4],
+  bedCols: ['3', '4'],
   rows: [
     { label: 'Detached', count: 40, cells: [{ median: 905_000, count: 18 }, { median: 1_050_000, count: 22 }] },
     { label: 'Duplex', count: 3, cells: [{ median: 1_100_000, count: 2 }, { median: 1_250_000, count: 1 }] },

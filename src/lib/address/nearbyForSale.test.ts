@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { buildBedsTypeMatrix, pickRentMatrix, isPartialUnitRental, IN_HOME_UNIT_LABEL } from "./nearbyForSale";
 
-const r = (beds: number | null, subType: string | null, price: number) => ({ beds, subType, price });
+// `beds` here means WHOLE bedrooms above grade (no plus-room). Use `rDen` for a "+1".
+const r = (beds: number | null, subType: string | null, price: number) => ({
+  beds, bedsAbove: beds, bedsDen: 0 as const, subType, price,
+});
+/** A home with a plus-room: `above` whole bedrooms plus a den / basement bedroom. */
+const rDen = (above: number, subType: string | null, price: number) => ({
+  beds: above + 1, bedsAbove: above, bedsDen: 1 as const, subType, price,
+});
 
 describe("buildBedsTypeMatrix", () => {
   it("builds beds × type medians from live rentals", () => {
@@ -15,7 +22,7 @@ describe("buildBedsTypeMatrix", () => {
     ]);
     expect(m).not.toBeNull();
     expect(m!.sample).toBe(6);
-    expect(m!.bedCols).toEqual([1, 2, 3]);
+    expect(m!.bedCols).toEqual(["1", "2", "3"]);
     const condo = m!.rows.find((x) => x.label === "Condo Apartment")!;
     expect(condo.cells[0].median).toBe(2000); // 1 bd
     expect(condo.cells[1].median).toBe(2450); // 2 bd
@@ -33,7 +40,7 @@ describe("buildBedsTypeMatrix", () => {
       r(1, "Condo Apartment", 2100),
     ]);
     const condo = m!.rows[0];
-    const threeBd = condo.cells[m!.bedCols.indexOf(3)];
+    const threeBd = condo.cells[m!.bedCols.indexOf("3")];
     expect(threeBd.median).toBe(2600);
     expect(threeBd.count).toBe(1);
   });
@@ -49,11 +56,11 @@ describe("buildBedsTypeMatrix", () => {
       r(2, "Condo Apartment", 2400),
       r(2, "Condo Apartment", 2500),
     ]);
-    expect(m!.bedCols).toEqual([2, 4, 5, 6]); // 7 beds buckets into 6+
+    expect(m!.bedCols).toEqual(["2", "4", "5", "6"]); // 7 beds buckets into 6+
     const det = m!.rows.find((x) => x.label === "Detached")!;
-    expect(det.cells[m!.bedCols.indexOf(4)].median).toBe(4200);
-    expect(det.cells[m!.bedCols.indexOf(5)].median).toBe(4800);
-    expect(det.cells[m!.bedCols.indexOf(6)].median).toBe(5000);
+    expect(det.cells[m!.bedCols.indexOf("4")].median).toBe(4200);
+    expect(det.cells[m!.bedCols.indexOf("5")].median).toBe(4800);
+    expect(det.cells[m!.bedCols.indexOf("6")].median).toBe(5000);
     expect(m!.sample).toBe(5);
   });
 
@@ -63,7 +70,7 @@ describe("buildBedsTypeMatrix", () => {
       r(0, "Detached", 1300),
       r(2, "Detached", 1850),
     ]);
-    expect(m!.bedCols).toEqual([0, 2]);
+    expect(m!.bedCols).toEqual(["0", "2"]);
     expect(m!.rows[0].cells[0].median).toBe(1275);
   });
 
@@ -85,8 +92,116 @@ describe("buildBedsTypeMatrix", () => {
   });
 });
 
+describe("plus-room (\"+1\") columns — the den split", () => {
+  it("keeps a 1+den OUT of the 2 bedroom column", () => {
+    // Measured on Toronto condo apartments (24mo): the pooled "2 bed" lease cell was
+    // 52.6% plus-den units, and the halves sit $500/mo apart. Merging them published
+    // a number that described neither home.
+    const m = buildBedsTypeMatrix([
+      rDen(1, "Condo Apartment", 2450),
+      rDen(1, "Condo Apartment", 2450),
+      r(2, "Condo Apartment", 2950),
+      r(2, "Condo Apartment", 2950),
+    ])!;
+    expect(m.bedCols).toEqual(["1+1", "2"]);
+    const condo = m.rows.find((x) => x.label === "Condo Apartment")!;
+    expect(condo.cells[m.bedCols.indexOf("1+1")].median).toBe(2450);
+    expect(condo.cells[m.bedCols.indexOf("2")].median).toBe(2950);
+  });
+
+  it("orders each plus-room column beside its base, not at the end", () => {
+    const m = buildBedsTypeMatrix([
+      r(3, "Condo Apartment", 3700),
+      rDen(2, "Condo Apartment", 3265),
+      r(2, "Condo Apartment", 2950),
+      rDen(1, "Condo Apartment", 2450),
+      r(1, "Condo Apartment", 2200),
+    ])!;
+    expect(m.bedCols).toEqual(["1", "1+1", "2", "2+1", "3"]);
+  });
+
+  it("splits a studio+den off the 1 bedroom column", () => {
+    const m = buildBedsTypeMatrix([
+      rDen(0, "Condo Apartment", 1950),
+      r(1, "Condo Apartment", 2200),
+      r(1, "Condo Apartment", 2200),
+    ])!;
+    expect(m.bedCols).toEqual(["0+1", "1"]);
+  });
+
+  it("folds the plus-room into the capped 6+ column instead of emitting 6++1", () => {
+    const m = buildBedsTypeMatrix([
+      rDen(7, "Detached", 9000),
+      r(7, "Detached", 9500),
+      r(2, "Detached", 3000),
+    ])!;
+    expect(m.bedCols).toEqual(["2", "6"]);
+    expect(m.bedCols.some((c) => c.includes("++"))).toBe(false);
+  });
+
+  it("SALE: collapses a thin +1 column back into its whole-bedroom column", () => {
+    // Only 2 plus-room sales here — under SPLIT_MIN_N, and the backtest says a
+    // 2-sale split median is worse than the merged one (19.18% vs 16.90%).
+    const m = buildBedsTypeMatrix([
+      rDen(2, "Condo Apartment", 900_000),
+      rDen(2, "Condo Apartment", 910_000),
+      r(3, "Condo Apartment", 700_000),
+      r(3, "Condo Apartment", 700_000),
+    ], { mode: "sale" })!;
+    expect(m.bedCols).toEqual(["3"]);            // 2+1 folded into its total, 3
+    const condo = m.rows.find((x) => x.label === "Condo Apartment")!;
+    expect(condo.cells[0].count).toBe(4);
+  });
+
+  it("SALE: keeps the +1 column once it clears the floor", () => {
+    const m = buildBedsTypeMatrix([
+      ...[...Array(5)].map(() => rDen(2, "Condo Apartment", 900_000)),
+      ...[...Array(3)].map(() => r(3, "Condo Apartment", 700_000)),
+    ], { mode: "sale" })!;
+    expect(m.bedCols).toEqual(["2+1", "3"]);
+    const condo = m.rows.find((x) => x.label === "Condo Apartment")!;
+    expect(condo.cells[m.bedCols.indexOf("2+1")].median).toBe(900_000);
+    expect(condo.cells[m.bedCols.indexOf("3")].median).toBe(700_000);
+  });
+
+  it("RENT: never collapses — the split wins at every depth on leases", () => {
+    // Lease backtest: split beat merged even on 1-2 samples (9.17% vs 11.32%).
+    const m = buildBedsTypeMatrix([
+      rDen(1, "Condo Apartment", 2450),
+      r(2, "Condo Apartment", 2950),
+      r(2, "Condo Apartment", 2950),
+    ])!;
+    expect(m.bedCols).toEqual(["1+1", "2"]);
+  });
+
+  it("splits houses too — a 4+1 is not a 5 bedroom", () => {
+    // 37.1% of sold Detached carry a below-grade bedroom. Same arithmetic, and the
+    // market quotes it "4+1" exactly like a condo den.
+    const m = buildBedsTypeMatrix([
+      ...[...Array(5)].map(() => rDen(4, "Detached", 1_200_000)),
+      r(5, "Detached", 1_450_000),
+      r(5, "Detached", 1_450_000),
+    ], { mode: "sale" })!;
+    expect(m.bedCols).toEqual(["4+1", "5"]);
+    const det = m.rows.find((x) => x.label === "Detached")!;
+    expect(det.cells[m.bedCols.indexOf("4+1")].median).toBe(1_200_000);
+    expect(det.cells[m.bedCols.indexOf("5")].median).toBe(1_450_000);
+  });
+
+  it("drops a row with no above-grade count rather than banking it into a column", () => {
+    const m = buildBedsTypeMatrix([
+      { beds: 2, bedsAbove: null, bedsDen: 0 as const, subType: "Condo Apartment", price: 2600 },
+      r(1, "Condo Apartment", 2200),
+      r(1, "Condo Apartment", 2200),
+      r(1, "Condo Apartment", 2200),
+    ])!;
+    expect(m.sample).toBe(3);
+    expect(m.bedCols).toEqual(["1"]);
+  });
+});
+
 describe("pickRentMatrix", () => {
-  const m = (sample: number) => ({ bedCols: [2], rows: [{ label: "Detached", cells: [{ median: 3000, count: sample }], count: sample }], sample });
+  const m = (sample: number) => ({ bedCols: ["2"], rows: [{ label: "Detached", cells: [{ median: 3000, count: sample }], count: sample }], sample });
 
   it("keeps the local grid when dense enough", () => {
     expect(pickRentMatrix(m(12), 2, m(40), 5)!.radiusKm).toBe(2);
@@ -137,27 +252,27 @@ describe("isPartialUnitRental", () => {
 
   it("routes in-home units to their own row so whole-home medians stay clean", () => {
     const m = buildBedsTypeMatrix([
-      { beds: 3, subType: "Detached", price: 3300, address: "134 Petch Avenue" },
-      { beds: 3, subType: "Detached", price: 3400, address: "45 Daisy Meadow Crescent" },
-      { beds: 3, subType: "Detached", price: 2000, address: "41 Eberly Woods Drive Basement" },
-      { beds: 3, subType: "Detached", price: 1700, address: "6 Sweet Briar Lane Bsmt" },
-      { beds: 2, subType: "Lower Level", price: 1950, address: "10 Anywhere St" },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 3300, address: "134 Petch Avenue" },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 3400, address: "45 Daisy Meadow Crescent" },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 2000, address: "41 Eberly Woods Drive Basement" },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 1700, address: "6 Sweet Briar Lane Bsmt" },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Lower Level", price: 1950, address: "10 Anywhere St" },
     ]);
     const det = m!.rows.find((r) => r.label === "Detached")!;
-    expect(det.cells[m!.bedCols.indexOf(3)].median).toBe(3350); // basements no longer drag it
+    expect(det.cells[m!.bedCols.indexOf("3")].median).toBe(3350); // basements no longer drag it
     const inHome = m!.rows.find((r) => r.label === IN_HOME_UNIT_LABEL)!;
-    expect(inHome.cells[m!.bedCols.indexOf(3)].median).toBe(1850);
-    expect(inHome.cells[m!.bedCols.indexOf(2)].median).toBe(1950); // Lower Level folded in
+    expect(inHome.cells[m!.bedCols.indexOf("3")].median).toBe(1850);
+    expect(inHome.cells[m!.bedCols.indexOf("2")].median).toBe(1950); // Lower Level folded in
   });
 });
 
 describe("outlier rules", () => {
   it("Rule A: trims points outside 0.5-2x of a well-sampled cell's median", () => {
     const m = buildBedsTypeMatrix([
-      { beds: 2, subType: "Condo Apartment", price: 2400, address: null },
-      { beds: 2, subType: "Condo Apartment", price: 2450, address: null },
-      { beds: 2, subType: "Condo Apartment", price: 2500, address: null },
-      { beds: 2, subType: "Condo Apartment", price: 9800, address: null }, // obvious outlier
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 2400, address: null },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 2450, address: null },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 2500, address: null },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 9800, address: null }, // obvious outlier
     ]);
     const cell = m!.rows[0].cells[0];
     expect(cell.median).toBe(2450);
@@ -166,28 +281,28 @@ describe("outlier rules", () => {
 
   it("Rule A: never trims tiny cells (under 4 points the median IS the data)", () => {
     const m = buildBedsTypeMatrix([
-      { beds: 2, subType: "Condo Apartment", price: 2400, address: null },
-      { beds: 2, subType: "Condo Apartment", price: 2450, address: null },
-      { beds: 2, subType: "Condo Apartment", price: 9800, address: null },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 2400, address: null },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 2450, address: null },
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Condo Apartment", price: 9800, address: null },
     ]);
     expect(m!.rows[0].cells[0].count).toBe(3);
   });
 
   it("Rule B: implausibly cheap low-bed HOUSE items reclassify as in-home units", () => {
     const m = buildBedsTypeMatrix([
-      { beds: 3, subType: "Detached", price: 2800, address: "1 A St" },
-      { beds: 3, subType: "Detached", price: 3000, address: "2 A St" },
-      { beds: 4, subType: "Detached", price: 3000, address: "3 A St" },
-      { beds: 1, subType: "Detached", price: 1350, address: "4 A St" }, // unmarked basement (45% of anchor)
-      { beds: 2, subType: "Detached", price: 1825, address: "5 A St" }, // unmarked basement (61%)
-      { beds: 2, subType: "Detached", price: 2400, address: "6 A St" }, // legit whole 2bd (80%) - stays
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 2800, address: "1 A St" },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 3000, address: "2 A St" },
+      { beds: 4, bedsAbove: 4, bedsDen: 0 as const, subType: "Detached", price: 3000, address: "3 A St" },
+      { beds: 1, bedsAbove: 1, bedsDen: 0 as const, subType: "Detached", price: 1350, address: "4 A St" }, // unmarked basement (45% of anchor)
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Detached", price: 1825, address: "5 A St" }, // unmarked basement (61%)
+      { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Detached", price: 2400, address: "6 A St" }, // legit whole 2bd (80%) - stays
     ]);
     const det = m!.rows.find((r) => r.label === "Detached")!;
-    expect(det.cells[m!.bedCols.indexOf(1)].count).toBe(0);
-    expect(det.cells[m!.bedCols.indexOf(2)].median).toBe(2400);
+    expect(det.cells[m!.bedCols.indexOf("1")].count).toBe(0);
+    expect(det.cells[m!.bedCols.indexOf("2")].median).toBe(2400);
     const inHome = m!.rows.find((r) => r.label === IN_HOME_UNIT_LABEL)!;
-    expect(inHome.cells[m!.bedCols.indexOf(1)].median).toBe(1350);
-    expect(inHome.cells[m!.bedCols.indexOf(2)].median).toBe(1825);
+    expect(inHome.cells[m!.bedCols.indexOf("1")].median).toBe(1350);
+    expect(inHome.cells[m!.bedCols.indexOf("2")].median).toBe(1825);
   });
 
   it("cells with 5+ kept points carry the middle-50% band; thinner cells stay median-only", () => {
@@ -202,11 +317,11 @@ describe("outlier rules", () => {
       r(3, "Condo Apartment", 740_000),
     ]);
     const condo = m!.rows[0];
-    const twoBd = condo.cells[m!.bedCols.indexOf(2)];
+    const twoBd = condo.cells[m!.bedCols.indexOf("2")];
     expect(twoBd.median).toBe(540_000);
     expect(twoBd.p25).toBe(520_000);
     expect(twoBd.p75).toBe(560_000);
-    const threeBd = condo.cells[m!.bedCols.indexOf(3)];
+    const threeBd = condo.cells[m!.bedCols.indexOf("3")];
     expect(threeBd.median).toBe(720_000);
     expect(threeBd.p25).toBeNull();
     expect(threeBd.p75).toBeNull();
@@ -231,29 +346,29 @@ describe("outlier rules", () => {
   it("sale mode: no basement classifier and no Rule B — a cheap 2bd detached is a bungalow, not a basement", () => {
     const m = buildBedsTypeMatrix(
       [
-        { beds: 3, subType: "Detached", price: 900_000, address: "1 A St" },
-        { beds: 3, subType: "Detached", price: 920_000, address: "2 A St" },
-        { beds: 4, subType: "Detached", price: 950_000, address: "3 A St" },
-        { beds: 2, subType: "Detached", price: 600_000, address: "4 A St" }, // 65% of anchor — stays put in sale mode
-        { beds: 3, subType: "Detached", price: 880_000, address: "41 Eberly Woods Drive Basement" }, // marker ignored in sale mode
+        { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 900_000, address: "1 A St" },
+        { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 920_000, address: "2 A St" },
+        { beds: 4, bedsAbove: 4, bedsDen: 0 as const, subType: "Detached", price: 950_000, address: "3 A St" },
+        { beds: 2, bedsAbove: 2, bedsDen: 0 as const, subType: "Detached", price: 600_000, address: "4 A St" }, // 65% of anchor — stays put in sale mode
+        { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Detached", price: 880_000, address: "41 Eberly Woods Drive Basement" }, // marker ignored in sale mode
       ],
       { mode: "sale" }
     );
     expect(m!.rows.find((x) => x.label === IN_HOME_UNIT_LABEL)).toBeUndefined();
     const det = m!.rows.find((x) => x.label === "Detached")!;
-    expect(det.cells[m!.bedCols.indexOf(2)].median).toBe(600_000);
-    expect(det.cells[m!.bedCols.indexOf(3)].count).toBe(3);
+    expect(det.cells[m!.bedCols.indexOf("2")].median).toBe(600_000);
+    expect(det.cells[m!.bedCols.indexOf("3")].count).toBe(3);
   });
 
   it("Rule B: condo rows are exempt (a cheap condo 1bd is normal) and rows without an anchor untouched", () => {
     const m = buildBedsTypeMatrix([
-      { beds: 3, subType: "Condo Apartment", price: 3000, address: null },
-      { beds: 3, subType: "Condo Apartment", price: 3100, address: null },
-      { beds: 3, subType: "Condo Apartment", price: 3200, address: null },
-      { beds: 1, subType: "Condo Apartment", price: 1800, address: null }, // 58% of anchor - stays put
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Condo Apartment", price: 3000, address: null },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Condo Apartment", price: 3100, address: null },
+      { beds: 3, bedsAbove: 3, bedsDen: 0 as const, subType: "Condo Apartment", price: 3200, address: null },
+      { beds: 1, bedsAbove: 1, bedsDen: 0 as const, subType: "Condo Apartment", price: 1800, address: null }, // 58% of anchor - stays put
     ]);
     const condo = m!.rows.find((r) => r.label === "Condo Apartment")!;
-    expect(condo.cells[m!.bedCols.indexOf(1)].median).toBe(1800);
+    expect(condo.cells[m!.bedCols.indexOf("1")].median).toBe(1800);
     expect(m!.rows.find((r) => r.label === IN_HOME_UNIT_LABEL)).toBeUndefined();
   });
 });

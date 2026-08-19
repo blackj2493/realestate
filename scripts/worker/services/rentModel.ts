@@ -2,8 +2,13 @@
  * Rent-model aggregation helpers (pure, no I/O).
  * Source: leased rows in raw_vow_sold (sold + leased are mixed; a lease carries
  * its monthly rent in close_price/list_price, NOT a sale price). We compute
- * median + p10 monthly rent per cohort for rental_market_index (migration 006).
+ * median + p10 monthly rent per cohort for rental_market_index (migrations 006/030/122).
+ *
+ * Cohorts are keyed TWICE since 122 — once on the plus-room split (a 1+den is not a
+ * 2 bedroom; backtested at 6.67% median error vs 7.69% merged over 56,228 leases)
+ * and once on the old merged total, which survives purely as the coverage fallback.
  */
+import { bedSplit } from '@/lib/listings/bedSplit';
 
 export const MIN_MONTHLY_RENT = 500;
 export const MAX_MONTHLY_RENT = 25000;
@@ -20,6 +25,12 @@ export interface RawLeaseInput {
   cityRegion?: string | null;
   propertySubType?: string | null;
   bedroomsTotal?: number | null;
+  /** BedroomsAboveGrade. Absent/0 is recovered from the total — see bedSplit. */
+  bedroomsAboveGrade?: number | null;
+  /** BedroomsBelowGrade. The feed OMITS this when it is zero (measured: present on
+   *  23,356 of 94,356 active leases, and non-zero on 21,234 of those), so an absent
+   *  value means "no plus-room", not "unknown". */
+  bedroomsBelowGrade?: number | null;
   bathroomsTotal?: number | null; // real bath count (BathroomsTotalInteger)
 }
 
@@ -55,6 +66,10 @@ export interface RentalIndexRow {
   city: string | null;
   property_sub_type: string;
   bedrooms_total: number;
+  /** Whole bedrooms above grade. NULL marks a MERGED cohort keyed on bedrooms_total. */
+  bedrooms_above: number | null;
+  /** Capped plus-room flag. NULL marks a merged cohort. */
+  den: 0 | 1 | null;
   bathrooms: number | null;
   avg_rent: number;   // median monthly rent
   p10_rent: number;   // 10th-percentile monthly rent
@@ -77,25 +92,45 @@ export function createRentAccumulator() {
       if (rent == null) return;
       const cr = (r.cityRegion ?? '').trim();
       const city = (r.city ?? '').trim();
+      // btrim: the feed ships "Semi-Detached " with a trailing space, which would
+      // otherwise fragment every cohort for that sub-type into two.
       const st = (r.propertySubType ?? '').trim();
       const beds = r.bedroomsTotal;
       const bath = r.bathroomsTotal;
       if (!st || beds == null) return;
 
-      // Tier 1 — neighbourhood + baths (most precise)
-      if (cr && bath != null) {
-        bump(`nbhd|${cr.toLowerCase()}|${st.toLowerCase()}|${beds}|${bath}`,
-          { match_tier: 'nbhd', city_region: cr, city: city || null, property_sub_type: st, bedrooms_total: beds, bathrooms: bath }, rent);
-      }
-      // Tier 2 — city + baths
-      if (city && bath != null) {
-        bump(`cb|${city.toLowerCase()}|${st.toLowerCase()}|${beds}|${bath}`,
-          { match_tier: 'city_bath', city_region: null, city, property_sub_type: st, bedrooms_total: beds, bathrooms: bath }, rent);
-      }
-      // Tier 3 — city, baths relaxed (last resort)
-      if (city) {
-        bump(`c|${city.toLowerCase()}|${st.toLowerCase()}|${beds}`,
-          { match_tier: 'city', city_region: null, city, property_sub_type: st, bedrooms_total: beds, bathrooms: null }, rent);
+      const split = bedSplit({
+        BedroomsAboveGrade: r.bedroomsAboveGrade,
+        BedroomsBelowGrade: r.bedroomsBelowGrade,
+        BedroomsTotal: beds,
+      });
+
+      // Every lease lands in BOTH keyings — the split cohort it belongs to, and the
+      // merged cohort it has always fed. The lookup prefers the split row; the merged
+      // row is what keeps a listing from going null when its split cohort is too thin
+      // (measured: split-only costs 1,830 of 76,869 covered listings).
+      const dims: Array<{ above: number | null; den: 0 | 1 | null; tag: string }> = [
+        { above: null, den: null, tag: `t${beds}` },
+      ];
+      if (split) dims.push({ above: split.above, den: split.den, tag: `s${split.above}_${split.den}` });
+
+      for (const d of dims) {
+        const meta = { property_sub_type: st, bedrooms_total: beds, bedrooms_above: d.above, den: d.den };
+        // Tier 1 — neighbourhood + baths (most precise)
+        if (cr && bath != null) {
+          bump(`nbhd|${cr.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}`,
+            { match_tier: 'nbhd', city_region: cr, city: city || null, ...meta, bathrooms: bath }, rent);
+        }
+        // Tier 2 — city + baths
+        if (city && bath != null) {
+          bump(`cb|${city.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}`,
+            { match_tier: 'city_bath', city_region: null, city, ...meta, bathrooms: bath }, rent);
+        }
+        // Tier 3 — city, baths relaxed (last resort)
+        if (city) {
+          bump(`c|${city.toLowerCase()}|${st.toLowerCase()}|${d.tag}`,
+            { match_tier: 'city', city_region: null, city, ...meta, bathrooms: null }, rent);
+        }
       }
     },
     finalize(): RentalIndexRow[] {
