@@ -51,6 +51,24 @@ const Z_CLAMP = 3; // matches types.Z_CLAMP
 // stored beta. bedrooms_below_grade joined last (see features.ts for its measured
 // 5-7% premium); champion matrices fitted before it simply have no row for it, and
 // featureContributions skips a missing coefficient, so the two coexist safely.
+/** A feature whose beta is 0 in every single cohort was not really trained — the
+ *  usual cause is the SELECT above not fetching its column, which leaves the value
+ *  undefined, std 0, and the ridge fit with nothing to weigh. That state is invisible
+ *  downstream: the challenger still backtests, still clears the promotion gate on the
+ *  strength of a fresher training window, and ships a feature that does nothing.
+ *  Measured for real on 2026-08-18 — bedrooms_below_grade came back 0.0000 across all
+ *  1,661 cohorts. Fail the run instead. */
+function assertFeaturesTrained(models: Array<{ betas: number[] }>): void {
+  if (models.length === 0) return;
+  const dead = FEATURES.filter((_, i) => models.every((m) => m.betas[i] === 0));
+  if (dead.length > 0) {
+    throw new Error(
+      `Feature(s) never trained (beta 0 in all ${models.length} cohorts): ${dead.join(', ')}. ` +
+      'Check that the raw_vow_sold SELECT fetches the underlying column.',
+    );
+  }
+}
+
 const FEATURES = [
   'building_area_total', 'lot_width', 'bedrooms_above_grade', 'bathrooms_total_integer',
   'parking_total', 'interior_score', 'exterior_score', 'basement_score',
@@ -218,6 +236,7 @@ async function main(): Promise<void> {
               building_area_total::float8       AS building_area_total,
               lot_width::float8                 AS lot_width,
               bedrooms_above_grade::float8      AS bedrooms_above_grade,
+              bedrooms_below_grade::float8      AS bedrooms_below_grade,
               bathrooms_total_integer::float8   AS bathrooms_total_integer,
               parking_total::float8             AS parking_total,
               interior_tier::float8             AS interior_tier,
@@ -251,6 +270,7 @@ async function main(): Promise<void> {
     if (m) models.push(m);
   }
   models.sort((a, b) => b.n - a.n);
+  assertFeaturesTrained(models);
   const trainedR2 = models.filter((m) => m.r2 >= 0.5).length;
   console.log(`   trained ${models.length.toLocaleString()} cohorts (≥${MIN_SAMPLES} sales); ${trainedR2} with R²≥0.50 (coefficient-mode eligible)`);
   console.log('   top cohorts by n:');
