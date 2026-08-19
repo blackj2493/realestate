@@ -139,12 +139,46 @@ describe("plus-room (\"+1\") columns — the den split", () => {
     expect(m.bedCols.some((c) => c.includes("++"))).toBe(false);
   });
 
+  it("SALE: collapses a thin +1 column back into its whole-bedroom column", () => {
+    // Only 2 plus-room sales here — under SPLIT_MIN_N, and the backtest says a
+    // 2-sale split median is worse than the merged one (19.18% vs 16.90%).
+    const m = buildBedsTypeMatrix([
+      rDen(2, "Condo Apartment", 900_000),
+      rDen(2, "Condo Apartment", 910_000),
+      r(3, "Condo Apartment", 700_000),
+      r(3, "Condo Apartment", 700_000),
+    ], { mode: "sale" })!;
+    expect(m.bedCols).toEqual(["3"]);            // 2+1 folded into its total, 3
+    const condo = m.rows.find((x) => x.label === "Condo Apartment")!;
+    expect(condo.cells[0].count).toBe(4);
+  });
+
+  it("SALE: keeps the +1 column once it clears the floor", () => {
+    const m = buildBedsTypeMatrix([
+      ...[...Array(5)].map(() => rDen(2, "Condo Apartment", 900_000)),
+      ...[...Array(3)].map(() => r(3, "Condo Apartment", 700_000)),
+    ], { mode: "sale" })!;
+    expect(m.bedCols).toEqual(["2+1", "3"]);
+    const condo = m.rows.find((x) => x.label === "Condo Apartment")!;
+    expect(condo.cells[m.bedCols.indexOf("2+1")].median).toBe(900_000);
+    expect(condo.cells[m.bedCols.indexOf("3")].median).toBe(700_000);
+  });
+
+  it("RENT: never collapses — the split wins at every depth on leases", () => {
+    // Lease backtest: split beat merged even on 1-2 samples (9.17% vs 11.32%).
+    const m = buildBedsTypeMatrix([
+      rDen(1, "Condo Apartment", 2450),
+      r(2, "Condo Apartment", 2950),
+      r(2, "Condo Apartment", 2950),
+    ])!;
+    expect(m.bedCols).toEqual(["1+1", "2"]);
+  });
+
   it("splits houses too — a 4+1 is not a 5 bedroom", () => {
     // 37.1% of sold Detached carry a below-grade bedroom. Same arithmetic, and the
     // market quotes it "4+1" exactly like a condo den.
     const m = buildBedsTypeMatrix([
-      rDen(4, "Detached", 1_200_000),
-      rDen(4, "Detached", 1_200_000),
+      ...[...Array(5)].map(() => rDen(4, "Detached", 1_200_000)),
       r(5, "Detached", 1_450_000),
       r(5, "Detached", 1_450_000),
     ], { mode: "sale" })!;

@@ -246,6 +246,9 @@ const HOUSE_ANCHOR_MIN_N = 3;
 const RECLASS_FRACTION = 0.7;
 /** Quartiles below this many kept points are noise — the cell shows median-only. */
 const RANGE_MIN_N = 5;
+/** Sale-side floor for standing a "+1" column on its own. Measured crossover, not a
+ *  guess — see the backtest table in buildBedsTypeMatrix. */
+const SPLIT_MIN_N = 5;
 
 /** House-style types whose low-bed cheap items are almost always unmarked in-home units. */
 function isHouseType(label: string): boolean {
@@ -286,8 +289,38 @@ export function buildBedsTypeMatrix(
   const assigned = usable.map((i) => ({
     label: isRent && isPartialUnitRental(i.address, i.subType) ? IN_HOME_UNIT_LABEL : (i.subType as string).trim(),
     bucket: bedKey({ above: i.bedsAbove as number, den: i.bedsDen }, BEDS_BUCKET_CAP),
+    // Where this item lands if its "+1" column turns out too thin to stand alone.
+    mergedBucket: bedKey({ above: (i.bedsAbove as number) + i.bedsDen, den: 0 }, BEDS_BUCKET_CAP),
+    den: i.bedsDen,
     price: i.price,
   }));
+
+  // Pass 1b (SALE only) — collapse a "+1" column back into its whole-bedroom column
+  // when it is too thin to beat the merged one.
+  //
+  // Backtested out-of-time over 44,663 sales and 56,228 leases (train to 2026-02,
+  // test 2026-03..08), scoring each home against its cohort median:
+  //
+  //   SALE   cell 1-2  merged 16.90%  split 19.18%   <- split LOSES by 2.3pp
+  //          cell 3-4  merged 14.25%  split 14.51%
+  //          cell 5-6  merged 13.49%  split 13.50%   <- crossover
+  //          cell 25+  merged 13.17%  split 12.71%
+  //   LEASE  split wins at EVERY depth, 1-2 included (9.17% vs 11.32%)
+  //
+  // Sale prices scatter within a cell (floor, view, renovation) so a 2-sale split
+  // median is noise and the merged cell's extra depth is worth more than its bias.
+  // Rents are tight enough that the den gap dominates from the first sample, which
+  // is why rent never collapses. Gating sales this way scored 13.09% against 13.41%
+  // merged and 13.18% always-split — better than either alone.
+  if (!isRent) {
+    const denCount = new Map<string, number>();
+    for (const a of assigned) {
+      if (a.den > 0) denCount.set(a.bucket, (denCount.get(a.bucket) ?? 0) + 1);
+    }
+    for (const a of assigned) {
+      if (a.den > 0 && (denCount.get(a.bucket) ?? 0) < SPLIT_MIN_N) a.bucket = a.mergedBucket;
+    }
+  }
 
   // Pass 2 (Rule B, rent only) — per house row, anchor on its ≥3 bd whole-home median
   // and move implausibly cheap 0–2 bd items to the in-home row.
