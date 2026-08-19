@@ -768,6 +768,10 @@ function SoldDynamicsPanel({ d, loading }: { d: SoldDynamicsData | null; loading
 }
 
 /** Phase-2 "Rent & Gross Yield" — per-bedroom typical rent + gross yield bars. */
+/** Below this many leases a row is thin enough to mark — it is still shown, because a
+ *  real number with its count beats a dash. */
+const THIN_RENT_N = 100;
+
 function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loading: boolean }) {
   const withYield = rows.filter((r) => r.grossYieldPct != null);
   const maxYield = Math.max(6, ...withYield.map((r) => r.grossYieldPct ?? 0));
@@ -792,7 +796,7 @@ function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loadi
         <div className="mt-4">
           <div className="grid grid-cols-[3rem_1fr_1fr_2fr] gap-x-3 border-b border-border pb-2 terminal-font text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <span>Beds</span>
-            <span className="text-right">Rent / mo</span>
+            <span className="text-right">Rent / mo · leases</span>
             <span className="text-right">Med. price</span>
             <span className="pl-3">Rental return</span>
           </div>
@@ -801,7 +805,16 @@ function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loadi
             return (
               <div key={r.beds} className="grid grid-cols-[3rem_1fr_1fr_2fr] items-center gap-x-3 border-b border-border/60 py-2 text-xs">
                 <span className="font-mono font-bold text-foreground">{r.beds}BR</span>
-                <span className="text-right font-mono text-foreground">{fmtRent(r.typicalRent)}</span>
+                <span className="text-right font-mono text-foreground">
+                  {fmtRent(r.typicalRent)}
+                  {/* Sample count, same ×n convention as the beds × type grid. Since the
+                      axis moved to above-grade bedrooms (migration 123) the top rows are
+                      genuinely thin — a 4+1 no longer pads the 5BR bucket — so the row has
+                      to declare what it is standing on rather than read as settled. */}
+                  <span className={`ml-1 text-[10px] ${r.rentSample < THIN_RENT_N ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                    ×{r.rentSample.toLocaleString()}
+                  </span>
+                </span>
                 <span className="text-right font-mono text-muted-foreground">
                   {r.medianPrice != null ? fmtPrice(r.medianPrice) : "—"}
                 </span>
@@ -824,6 +837,11 @@ function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loadi
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
         beds counts full bedrooms — a 2-bedroom-plus-den sits in 2BR, on both the rent and the price side
       </p>
+      {rows.some((r) => r.rentSample < THIN_RENT_N) && (
+        <p className="terminal-font mt-1 text-[10px] text-amber-600 dark:text-amber-400">
+          amber counts are thin samples — treat those rows as indicative, not settled
+        </p>
+      )}
       <p className="terminal-font mt-1 text-[10px] text-muted-foreground">
         source · rental index rent × 12 ÷ 12-month median sold price · yields are approximate
       </p>
