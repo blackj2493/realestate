@@ -83,8 +83,13 @@ export function Panel({ children, className }: { children: ReactNode; className?
 /* ── Readout ───────────────────────────────────────────────────────────────
    The graticule KPI strip — connected cells with faint dividers, register
    marks, and mono figures. `cols` controls the desktop column count. */
+// Every variant drops to 2-up on mobile. `3` additionally spans its last cell
+// across both columns so the odd cell out fills the row instead of leaving a
+// hole in the connected light panel (all seven cols={3} callers pass exactly
+// three cells). Three columns on a 390px phone left ~87px of text width, which
+// truncated even "43 days" — never mind a region name like "Richmond Hill".
 const READOUT_COLS: Record<3 | 4 | 6, string> = {
-  3: "grid-cols-3",
+  3: "grid-cols-2 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1",
   4: "grid-cols-2 sm:grid-cols-4",
   6: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
 };
@@ -145,7 +150,9 @@ export function ReadoutCell({
       </div>
       <div
         className={cn(
-          "terminal-font mt-1.5 truncate text-2xl font-semibold tracking-tight dark:mt-0 dark:text-lg dark:font-bold",
+          // `break-words`, not `truncate`: a hidden figure is worse than a wrapped
+          // one — region names are values here, and an ellipsis silently ate them.
+          "terminal-font mt-1.5 break-words text-xl font-semibold tracking-tight sm:text-2xl dark:mt-0 dark:text-lg dark:font-bold",
           READOUT_TONE[tone]
         )}
       >
