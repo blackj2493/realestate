@@ -178,6 +178,7 @@ export function AVMResultDisplay() {
         <div className="space-y-2 pt-4 border-t border-border dark:border-gray-700">
           <Label className="text-xs text-muted-foreground dark:text-gray-400">ADJUSTMENT BREAKDOWN</Label>
           <BreakdownRow label="Bedrooms" value={result.breakdown.bedroomsAdjustment} />
+          <BreakdownRow label="Den / extra room" value={result.breakdown.plusRoomAdjustment} />
           <BreakdownRow label="Bathrooms" value={result.breakdown.bathroomsAdjustment} />
           <BreakdownRow label="Parking" value={result.breakdown.parkingAdjustment} />
           <BreakdownRow label="Interior" value={result.breakdown.interiorAdjustment} />

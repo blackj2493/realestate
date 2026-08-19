@@ -23,7 +23,7 @@ const subject: AVMInput = {
   buildingAreaTotal: null,
   lotWidth: 50,
   lotDepth: 197,
-  bedroomsAboveGrade: 6,
+  bedroomsAboveGrade: 6, bedroomsBelowGrade: 0,
   bathroomsTotalInteger: 5,
   parkingTotal: 8,
   interiorTier: 3,
@@ -44,7 +44,7 @@ function comp(over: Partial<CompRow>): CompRow {
     building_area_total: null,
     lot_width: 50,
     lot_depth: 197,
-    bedrooms_above_grade: 6,
+    bedrooms_above_grade: 6, bedrooms_below_grade: 0,
     bathrooms_total_integer: 5,
     parking_total: 8,
     interior_tier: 3,
@@ -76,10 +76,10 @@ describe('peerLevelFromComps', () => {
     // Σβ·Δz = 0.18·(3−1) + 0.12·(2.5−0.5) = 0.36 + 0.24 = 0.60 → exp(0.60)=1.82×,
     // which exceeds the clamp ceiling exp(0.4)=1.49×. Proves the grid is uncapped.
     const comps = [
-      comp({ close_price: 1_500_000, bedrooms_above_grade: 4, bathrooms_total_integer: 3, lot_width: 40, lot_depth: 110 }),
-      comp({ close_price: 1_480_000, bedrooms_above_grade: 4, bathrooms_total_integer: 3, lot_width: 40, lot_depth: 110 }),
-      comp({ close_price: 1_520_000, bedrooms_above_grade: 4, bathrooms_total_integer: 3, lot_width: 42, lot_depth: 115 }),
-      comp({ close_price: 1_500_000, bedrooms_above_grade: 4, bathrooms_total_integer: 3, lot_width: 40, lot_depth: 112 }),
+      comp({ close_price: 1_500_000, bedrooms_above_grade: 4, bedrooms_below_grade: 0, bathrooms_total_integer: 3, lot_width: 40, lot_depth: 110 }),
+      comp({ close_price: 1_480_000, bedrooms_above_grade: 4, bedrooms_below_grade: 0, bathrooms_total_integer: 3, lot_width: 40, lot_depth: 110 }),
+      comp({ close_price: 1_520_000, bedrooms_above_grade: 4, bedrooms_below_grade: 0, bathrooms_total_integer: 3, lot_width: 42, lot_depth: 115 }),
+      comp({ close_price: 1_500_000, bedrooms_above_grade: 4, bedrooms_below_grade: 0, bathrooms_total_integer: 3, lot_width: 40, lot_depth: 112 }),
     ];
     const r = peerLevelFromComps(subject, comps, coeffs, [], NOW);
     expect(r).not.toBeNull();
@@ -128,7 +128,7 @@ describe('peerLevelFromComps', () => {
 
 describe('cohortOutlierScore — coefficient-free, market-relative atypicality', () => {
   const cohortComp = (over: Partial<CompRow>): CompRow =>
-    comp({ bedrooms_above_grade: 3, bathrooms_total_integer: 2, lot_width: 30, lot_depth: 100, ...over });
+    comp({ bedrooms_above_grade: 3, bedrooms_below_grade: 0, bathrooms_total_integer: 2, lot_width: 30, lot_depth: 100, ...over });
 
   it('flags a subject far above the cohort (5 baths vs a 2-bath cohort)', () => {
     const cohort = [
@@ -138,7 +138,7 @@ describe('cohortOutlierScore — coefficient-free, market-relative atypicality',
       cohortComp({ bathrooms_total_integer: 2 }),
       cohortComp({ bathrooms_total_integer: 3 }),
     ];
-    const big: AVMInput = { ...subject, bedroomsAboveGrade: 4, bathroomsTotalInteger: 5, lotWidth: 50 };
+    const big: AVMInput = { ...subject, bedroomsAboveGrade: 4, bedroomsBelowGrade: 0, bathroomsTotalInteger: 5, lotWidth: 50 };
     expect(cohortOutlierScore(big, cohort)).toBeGreaterThan(OUTLIER_Z);
   });
 
@@ -152,7 +152,7 @@ describe('cohortOutlierScore — coefficient-free, market-relative atypicality',
     ];
     const typical: AVMInput = {
       ...subject,
-      bedroomsAboveGrade: 3,
+      bedroomsAboveGrade: 3, bedroomsBelowGrade: 0,
       bathroomsTotalInteger: 2,
       lotWidth: 30,
       lotDepth: 100,

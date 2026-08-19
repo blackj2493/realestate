@@ -46,10 +46,15 @@ const SALE_TRANSACTION_TYPE = 'For Sale';
 const MIN_CLOSE_PRICE = 1; // matches types.MIN_CLOSE_PRICE
 const Z_CLAMP = 3; // matches types.Z_CLAMP
 
-// The 8 trained features, in a fixed column order.
+// The 9 trained features, in a fixed column order. APPEND only — the order is the
+// column order of the design matrix, so inserting mid-list silently remaps every
+// stored beta. bedrooms_below_grade joined last (see features.ts for its measured
+// 5-7% premium); champion matrices fitted before it simply have no row for it, and
+// featureContributions skips a missing coefficient, so the two coexist safely.
 const FEATURES = [
   'building_area_total', 'lot_width', 'bedrooms_above_grade', 'bathrooms_total_integer',
   'parking_total', 'interior_score', 'exterior_score', 'basement_score',
+  'bedrooms_below_grade',
 ] as const;
 const P = FEATURES.length;
 
@@ -60,6 +65,7 @@ interface SoldRow {
   building_area_total: number | null;
   lot_width: number | null;
   bedrooms_above_grade: number | null;
+  bedrooms_below_grade: number | null;
   bathrooms_total_integer: number | null;
   parking_total: number | null;
   interior_tier: number | null;
@@ -73,6 +79,7 @@ function featureVec(r: SoldRow): (number | null)[] {
   return [
     r.building_area_total, r.lot_width, r.bedrooms_above_grade, r.bathrooms_total_integer,
     r.parking_total, score(r.interior_tier, 6), score(r.exterior_tier, 5), score(r.basement_tier, 10),
+    r.bedrooms_below_grade,
   ];
 }
 

@@ -114,6 +114,10 @@ export default async function RentsPage() {
           a: "The rent actually paid. Each figure comes from a completed MLS® lease record, so it reflects the signed price rather than the advertised one. Rental listing sites generally show asking rents.",
         },
         {
+          q: "Does a den count as a bedroom?",
+          a: "No. A 1-bedroom-plus-den is counted as a 1 bedroom, and a 2-bedroom-plus-den as 2 bedrooms. MLS® adds the den into its bedroom total, which would put a 1-plus-den on the 2-bedroom page — and dens rent for meaningfully less than a real second bedroom, so that pulled the 2-bedroom figure down. We count whole bedrooms instead.",
+        },
+        {
           q: "Why does this differ from TRREB's rental report?",
           a: "TRREB publishes average rents for condo apartments, quarterly, at region level. This covers houses as well as condos, uses medians rather than averages, breaks down by neighbourhood, and updates nightly. Different population and different statistic — not a correction of theirs.",
         },

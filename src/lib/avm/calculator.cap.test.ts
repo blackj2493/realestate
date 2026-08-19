@@ -5,7 +5,7 @@ import type { AVMInput } from "./types";
 const SUBJECT: AVMInput = {
   cityRegion: "Aurora Estates", city: "Aurora", propertySubType: "Detached",
   rawPropertySubType: "Detached", buildingAreaTotal: 2226, lotWidth: 30, lotDepth: 132,
-  bedroomsAboveGrade: 4, bathroomsTotalInteger: 3, parkingTotal: 2,
+  bedroomsAboveGrade: 4, bedroomsBelowGrade: 0, bathroomsTotalInteger: 3, parkingTotal: 2,
   interiorTier: 3, exteriorTier: 3, basementTier: 5,
 };
 

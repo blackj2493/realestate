@@ -18,7 +18,7 @@ export function clamp(n: number, lo: number, hi: number): number {
 }
 
 /**
- * Single registry of the 8 standardized model features. `valueOf` returns the
+ * Single registry of the 9 standardized model features. `valueOf` returns the
  * standardized model value from an AVMInput (the SCORE for tier features, via
  * 6−interiorTier / 5−exteriorTier / 10−basementTier), or null when the field is
  * absent. Consumed by featureContributions (AVM) and the valueAdd engine so the
@@ -39,6 +39,13 @@ export const FEATURE_SPECS: FeatureSpec[] = [
   { inputField: 'buildingAreaTotal', name: 'building_area_total', key: 'buildingAreaAdjustment', valueOf: (i) => i.buildingAreaTotal },
   { inputField: 'lotWidth', name: 'lot_width', key: 'lotWidthAdjustment', valueOf: (i) => i.lotWidth },
   { inputField: 'bedroomsAboveGrade', name: 'bedrooms_above_grade', key: 'bedroomsAdjustment', valueOf: (i) => i.bedroomsAboveGrade },
+  // The plus-room is its own feature, NOT folded into the bedroom count. Held against
+  // neighbourhood x sub-type x above-grade beds x banded sqft, a den commands a
+  // median 7.12% premium and is the dearer home in 67 of 73 well-sampled strata
+  // (Detached 6.47%, Condo Apartment 5.46%, Semi 5.30%, Townhouse 2.76%). Adding it
+  // to bedrooms_above_grade instead would price a 2+1 as a 3 bedroom, which is the
+  // error the grids were fixed for.
+  { inputField: 'bedroomsBelowGrade', name: 'bedrooms_below_grade', key: 'plusRoomAdjustment', valueOf: (i) => i.bedroomsBelowGrade },
   { inputField: 'bathroomsTotalInteger', name: 'bathrooms_total_integer', key: 'bathroomsAdjustment', valueOf: (i) => i.bathroomsTotalInteger },
   { inputField: 'parkingTotal', name: 'parking_total', key: 'parkingAdjustment', valueOf: (i) => i.parkingTotal },
   { inputField: 'basementTier', name: 'basement_score', key: 'basementAdjustment', valueOf: (i) => 10 - i.basementTier },

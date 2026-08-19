@@ -66,8 +66,21 @@ const GROUP_EXPR = `CASE
 
 /** 4 means "4 or more" — past four bedrooms the sample thins and the distinction stops
  *  mattering to a renter. Floored at 1 so a missing/zero bedroom count lands in the 1-bed
- *  band rather than creating a phantom 0-bed cohort. */
-const BEDS_EXPR = `LEAST(GREATEST(COALESCE(bedrooms_above_grade,0) + COALESCE(bedrooms_below_grade,0), 1), 4)`;
+ *  band rather than creating a phantom 0-bed cohort.
+ *
+ *  WHOLE BEDROOMS ONLY. This used to read `bedrooms_above_grade + bedrooms_below_grade`,
+ *  which is how the feed defines BedroomsTotal — so every 1-bed-plus-den was published
+ *  on the "2 bedroom" page. Downtown that is not a rounding error: Bay Street Corridor
+ *  showed $2,899 when true 2-bedrooms were leasing at $3,500, and Waterfront C1 showed
+ *  $2,800 against $3,300. A renter reading the 2-bedroom page was quoted den money.
+ *
+ *  Banding on above-grade alone rather than adding "+1" bands is deliberate. Measured
+ *  over 12 months: above-grade keeps 3,360 cells covering 144,240 leases, while split
+ *  bands drop 4,151 leases below MIN_SAMPLE — and the band values are public, indexed,
+ *  and shared as ?beds= links. A 2+den still belongs on the 2-bedroom page; it has two
+ *  bedrooms. The finer den split lives on the listing-page grid, which does not have to
+ *  hold a URL contract. */
+const BEDS_EXPR = `LEAST(GREATEST(COALESCE(bedrooms_above_grade,0), 1), 4)`;
 
 const SQL = `
 WITH base AS (

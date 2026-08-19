@@ -28,7 +28,7 @@ export function subject(over: Partial<AVMInput>): AVMInput {
   return {
     cityRegion: 'Test', city: null, propertySubType: 'Detached', rawPropertySubType: 'Detached',
     buildingAreaTotal: null, lotWidth: null, lotDepth: null,
-    bedroomsAboveGrade: null, bathroomsTotalInteger: null, parkingTotal: null,
+    bedroomsAboveGrade: null, bedroomsBelowGrade: 0, bathroomsTotalInteger: null, parkingTotal: null,
     interiorTier: 3, exteriorTier: 3, basementTier: 5,
     ...over,
   };

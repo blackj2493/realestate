@@ -16,6 +16,8 @@ const money = (v: number) => `$${v.toLocaleString("en-CA")}`;
 const signed = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
 
 const BANDS: { key: BedBand; label: string }[] = [
+  // Whole bedrooms — a den does NOT promote a home into the next band. See BEDS_EXPR
+  // in refresh-rent-market-stats.ts for why, and the FAQ entry that says so publicly.
   { key: "1", label: "1 bed" },
   { key: "2", label: "2 bed" },
   { key: "3", label: "3 bed" },
