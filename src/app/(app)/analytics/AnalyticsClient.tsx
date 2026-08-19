@@ -822,6 +822,9 @@ function RentalYieldPanel({ rows, loading }: { rows: RentalYieldRowData[]; loadi
       )}
 
       <p className="terminal-font mt-3 text-[10px] text-muted-foreground">
+        beds counts full bedrooms — a 2-bedroom-plus-den sits in 2BR, on both the rent and the price side
+      </p>
+      <p className="terminal-font mt-1 text-[10px] text-muted-foreground">
         source · rental index rent × 12 ÷ 12-month median sold price · yields are approximate
       </p>
     </div>
