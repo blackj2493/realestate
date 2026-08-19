@@ -64,7 +64,10 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
     <div
       className={cn(
         'flex items-start gap-3.5 rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-border/70',
-        tier?.rule,
+        // A locked card keeps the rule in a neutral shade rather than losing it: the
+        // COLOUR is the withheld signal (emerald pays back, amber does not), so an absent
+        // rule hides that a verdict exists at all.
+        tier?.rule ?? (m.locked ? 'border-l-[3px] border-l-border' : undefined),
       )}
     >
       <span
@@ -79,7 +82,11 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
 
       <div className="min-w-0 flex-1">
         {/* title + the hero multiple */}
-        <div className="flex items-start justify-between gap-3">
+        {/* On a phone the title and the figure fight for one line: a 17px title wraps to
+            two lines and the redaction is squeezed against it. Stacking puts the hidden
+            value on its own row under a hairline, where it reads as a distinct fact. From
+            the sm breakpoint up this is the original single row, unchanged. */}
+        <div className="flex flex-col gap-0 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="text-[17px] font-semibold leading-snug text-foreground">{m.label}</span>
@@ -98,10 +105,33 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
             </div>
           </div>
 
-          <span className="shrink-0 text-right leading-none">
+          <span className="leading-none sm:shrink-0 sm:text-right">
             {m.locked ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                <Lock className="h-4 w-4" aria-hidden /> payback
+              /* REDACT, DO NOT REMOVE. Deliberately the size and position of the unlocked
+                 figure below, caption included, so a signed-out card reads as a value
+                 WITHHELD rather than a card that simply has no number. The old treatment —
+                 a 12px grey "payback" chip — was the quietest thing on a card whose title
+                 is 17px bold, so nobody registered anything was missing; owners reported
+                 believing they had already been given the answer.
+                 Uses the shared .redact-skeleton the VOW teasers already use (address
+                 ledger, activity feed), so "withheld" looks the same everywhere and the
+                 reduced-motion and dark-ground handling come for free.
+                 A PLACEHOLDER, never a blurred figure: no payback number is sent to a
+                 signed-out browser (see buildAnonCatalog), so rendering one — even blurred
+                 — would be inventing data the server deliberately withheld. */
+              <span
+                className="mt-2.5 flex items-center gap-2.5 border-t border-border/70 pt-2.5 sm:mt-0 sm:block sm:border-0 sm:pt-0"
+                aria-label="Payback hidden until you sign in"
+              >
+                <span
+                  className="redact-skeleton flex h-7 w-[82px] shrink-0 items-center justify-center rounded-md text-foreground/70"
+                  aria-hidden
+                >
+                  <Lock className="h-[15px] w-[15px]" />
+                </span>
+                <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground sm:mt-1 sm:block" aria-hidden>
+                  for every $1
+                </span>
               </span>
             ) : hasRoi ? (
               <>
@@ -129,7 +159,21 @@ export default function RenoMoveCard({ m }: { m: RenoMoveDisplay }) {
               <span className="text-border" aria-hidden>|</span>
             </>
           )}
-          <span className="font-mono">{formatPrice(m.costLow)}–{formatPrice(m.costHigh)} cost</span>
+          {/* The number they came for, shown as missing IN THE SLOT IT WILL OCCUPY. Without
+              it the cost below is the only figure on the card, and a confident dollar
+              amount reads as the answer to a question they never asked. */}
+          {m.locked && (
+            <>
+              <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+                <span className="redact-skeleton inline-block h-3.5 w-[74px] rounded-sm" aria-hidden />
+                value added
+              </span>
+              <span className="text-border" aria-hidden>|</span>
+            </>
+          )}
+          {/* "costs X to do", not "X cost": names it as the price of the work, so it cannot
+              be mistaken for what the work is worth. */}
+          <span>costs <span className="font-mono">{formatPrice(m.costLow)}–{formatPrice(m.costHigh)}</span> to do</span>
           <span className="text-border" aria-hidden>|</span>
           <span>{meta.timeline}</span>
           <span className="text-border" aria-hidden>|</span>
