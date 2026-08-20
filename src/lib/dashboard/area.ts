@@ -127,8 +127,8 @@ export interface QuickPickMarket {
 /**
  * One-tap markets offered wherever we ask a user to choose a starting area — the
  * /welcome first-run seed and the dashboard's FirstRunRegionPicker. Every name must
- * resolve to real inventory through areaFilter above, so "Toronto" and "Ottawa" are
- * GROUPS (TRREB has no single City value for either) that expand to their whole
+ * resolve to real inventory through areaFilter above, so "Toronto", "Ottawa" and "London"
+ * are GROUPS (TRREB has no single City value for any of them) that expand to their whole
  * City-group. Anything finer (Orleans, Kanata) is reached via location search, not here.
  * Keep this list short — it is a starting point the user edits later, not a taxonomy.
  *
@@ -154,6 +154,17 @@ export const QUICK_PICK_MARKETS: readonly QuickPickMarket[] = [
   { name: "Markham", lat: 43.8599, lng: -79.335, zoom: 11.5 },
   { name: "Oakville", lat: 43.4675, lng: -79.6877, zoom: 12 },
   { name: "Hamilton", lat: 43.2557, lng: -79.8711, zoom: 11.5 },
+  // Added 2026-08-20 from the live City facet rolled up through CITY_GROUPS, cross-checked
+  // against what users actually save in dashboard_prefs. London was the 6th-largest market
+  // (2,165 for-sale) with no chip at all — its CITY_GROUPS entry exists precisely so the
+  // bare name resolves, and nothing offered it. Richmond Hill was the only top-10 market
+  // missing. Burlington had MORE real saves (3) than Ottawa or Hamilton, which were already
+  // here. Cameras are the median coordinate of each market's live for-sale listings, not the
+  // municipal centroid: Burlington's inventory sits ~4 km north of its centre (the south
+  // edge is lakeshore), so the centroid framed half a map of water.
+  { name: "London", lat: 42.9828, lng: -81.2494, zoom: 11.5 },
+  { name: "Richmond Hill", lat: 43.8764, lng: -79.4381, zoom: 12 },
+  { name: "Burlington", lat: 43.3636, lng: -79.8075, zoom: 12 },
 ];
 
 /** Camera for a market name, or null if it isn't one of the quick picks. */

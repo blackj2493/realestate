@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, Plus, ArrowRight, MapPin, X } from "lucide-react";
+import { useState } from "react";
+import { Check, Plus, ArrowRight, MapPin, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LocationSearch from "@/components/CommandCenter/LocationSearch";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { QUICK_PICK_MARKETS } from "@/lib/dashboard/area";
+import { regionResolves } from "@/lib/dashboard/regionResolves";
 
 /**
  * First-run market-area picker. Shown on the dashboard when the user has no saved
@@ -37,6 +39,23 @@ export default function FirstRunRegionPicker({
   onDone: () => void;
 }) {
   const has = selected.length > 0;
+  // Typed-search adds are verified before they are saved; quick picks are curated, so
+  // they stay instant. LocationSearch's Enter path hands us ANY string the user typed
+  // (resolveTextTarget), including a street address — saved raw, that becomes a section
+  // that can never fill. See regionResolves for why the check is a count, not a regex.
+  const [checking, setChecking] = useState(false);
+  const [rejected, setRejected] = useState<string | null>(null);
+
+  const addSearched = async (label: string) => {
+    setRejected(null);
+    setChecking(true);
+    try {
+      if (await regionResolves(label)) onAdd(label);
+      else setRejected(label);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <div className="border border-dashed border-border bg-card/40 px-6 py-8 text-center">
@@ -48,13 +67,27 @@ export default function FirstRunRegionPicker({
         below the moment you add it.
       </p>
 
-      {/* Typeahead for any city/neighbourhood. onPlace adds it live. */}
+      {/* Typeahead for any city/neighbourhood. onPlace adds it live, once it resolves. */}
       <div className="mx-auto mt-6 max-w-md text-left">
         <LocationSearch
           mode="inplace"
-          onPlace={onAdd}
+          onPlace={(label) => void addSearched(label)}
           placeholder="Search a city or neighbourhood…"
         />
+        {checking && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Checking that area…
+          </p>
+        )}
+        {rejected && !checking && (
+          // Name what was rejected: the usual cause is a full street address typed into a
+          // market box, and the user cannot tell that from a generic failure.
+          <p role="status" className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            We have no listings filed under &ldquo;{rejected}&rdquo;. Market areas are cities
+            and neighbourhoods — for one address, search it from the map instead.
+          </p>
+        )}
       </div>
 
       {/* One-tap quick picks — toggle add/remove live. */}
