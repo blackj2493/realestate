@@ -1,7 +1,16 @@
 name: Refresh Rental Market Index
 
-# Rebuilds rental_market_index (tiered avg / p10 asking-rent cohorts) from the ACTIVE
-# for-lease inventory. Powers rent estimates / rent comps on listing pages.
+# TWO steps, and they belong together:
+#   1. Rebuild rental_market_index (tiered avg / p10 asking-rent cohorts) from the ACTIVE
+#      for-lease inventory.
+#   2. Push the result through to the listings — recompute cap_rate_est / gross_yield_est /
+#      net_monthly_cashflow and patch Postgres + Typesense.
+#
+# Step 1 alone changes nothing anyone can see. The cohorts are an input; the numbers users
+# read are written onto each listing at index time, and the scheduled sync only re-transforms
+# the ModificationTimestamp delta. A feed-stable listing therefore keeps its old cap rate
+# forever while the cohort under it moves — fresh input, frozen output, served as current.
+# Splitting these two steps across different jobs is what let that gap exist.
 #
 # WHY THIS EXISTS: this table was previously populated MANUALLY (no schedule), so the rent
 # cohorts drifted from the live for-lease market between ad-hoc runs. Unlike the other frozen
@@ -11,8 +20,14 @@ name: Refresh Rental Market Index
 # inventory). Cohort averages are stable week to week, so weekly keeps them current without
 # churn. Trigger manually anytime from the Actions tab.
 #
-# NOTE: the script TRUNCATEs + repopulates rental_market_index (brief inconsistency window on
-# this rarely-read table). DATABASE_URL only (raw pg, Session pooler — CLAUDE.md §12).
+# RUNTIME: step 1 is ~1 minute over ~96k leases. Step 2 walks ~125k active listings through
+# the real rent-lookup ladder and takes a couple of hours — the job bound is sized for that,
+# not for step 1.
+#
+# NOTE: step 1 TRUNCATEs + repopulates rental_market_index (brief inconsistency window on
+# this rarely-read table). It needs DATABASE_URL only (raw pg, Session pooler — CLAUDE.md
+# §12); step 2 also needs the Supabase and Typesense keys, since it re-runs the ETL's own
+# lookup path and patches the search index.
 on:
   schedule:
     - cron: '0 5 * * 1'
@@ -28,6 +43,9 @@ concurrency:
 jobs:
   refresh-rental-index:
     runs-on: ubuntu-latest
+    # Sized for the recompute, not the rebuild. Below the 6h GitHub default so a hung
+    # run is killed and reported rather than silently eating the runner budget.
+    timeout-minutes: 300
     env:
       SUMMARY_FILE: rental-run.log
     steps:
@@ -43,9 +61,40 @@ jobs:
         run: npm ci
 
       - name: Rebuild rental market index
+        timeout-minutes: 30
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/admin/refreshRentalMarketIndex.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Rebuilding the cohorts above changes nothing a user can see, on its own.
+      # cap_rate_est / gross_yield_est / net_monthly_cashflow are written onto each
+      # listing by the ETL at index time, and the scheduled sync only re-transforms the
+      # `ModificationTimestamp gt cursor` DELTA — so a listing that is stable in the feed
+      # keeps whatever value it was indexed with, indefinitely. Without this step the two
+      # halves drift apart every Monday: fresh cohorts here, frozen cap rates there,
+      # still served as current. That is the split-brain this codebase keeps
+      # rediscovering (see the distress-flag and True-DOM recomputes).
+      #
+      # --all, not the default scope. The default only revisits listings that have no
+      # value yet; the whole point here is that an EXISTING value went stale when its
+      # cohort moved, and only a full pass catches that.
+      #
+      # NOT --resync-index. That flag ignores the drift test and repatches every scanned
+      # row — a repair tool for an index that has diverged from Postgres, not a weekly
+      # habit. Left off, the job stays idempotent: a week with little cohort movement
+      # writes little, so the row count in the log is a real signal rather than noise.
+      #
+      # NOT continue-on-error. If this fails, the cohorts are fresh and the listings are
+      # not, which is worse than either alone — the operator should hear about it, and
+      # notifyRun below reads job.status.
+      - name: Recompute rent-derived metrics onto listings
+        timeout-minutes: 240
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --apply --samples=0 2>&1 | tee -a "$SUMMARY_FILE"
 
       - name: Notify operator
         if: always()
