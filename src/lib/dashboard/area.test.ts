@@ -88,6 +88,24 @@ describe("regionCamera — a saved region must open by camera, not a place filte
     expect(regionCamera("")).toBeNull();
   });
 
+  it("London is a GROUP pick — the chip must expand, not exact-match a City that isn't there", () => {
+    // The whole reason London earned a chip: CITY_GROUPS already carried it (TRREB files
+    // London only as London North/South/East/West), so the plumbing existed and nothing
+    // offered it. A future refactor that drops the group turns this chip into 0 listings.
+    expect(QUICK_PICK_MARKETS.some((m) => m.name === "London")).toBe(true);
+    const f = areaFilter(regionArea("London"));
+    expect(f.startsWith("City:=[")).toBe(true);
+    expect(f).toContain("`London South`");
+    expect(f).not.toContain("||");
+  });
+
+  it("Richmond Hill and Burlington are single-value cities — exact match, no group", () => {
+    for (const name of ["Richmond Hill", "Burlington"]) {
+      expect(QUICK_PICK_MARKETS.some((m) => m.name === name), `${name} is a quick pick`).toBe(true);
+      expect(areaFilter(regionArea(name))).toBe(`(City:=\`${name}\` || CityRegion:=\`${name}\`)`);
+    }
+  });
+
   it("every quick-pick market resolves (the list and the resolver can't drift apart)", () => {
     for (const m of QUICK_PICK_MARKETS) {
       expect(regionCamera(m.name), `${m.name} must resolve`).not.toBeNull();
