@@ -189,7 +189,22 @@ async function mapPool<T, R>(items: T[], n: number, worker: (t: T) => Promise<R>
   return out;
 }
 
-async function pushTypesense(rows: Drift[]): Promise<{ updated: number; failed: number }> {
+/**
+ * Patch one chunk, classifying the outcome three ways.
+ *
+ * ABSENT is not a failure. This job's scope comes from Postgres `listings`, and that
+ * table holds rows the live index does not: measured on the first 40 candidates, 16
+ * were absent from Typesense — de-listed or closed stock whose `standard_status` in
+ * Postgres has drifted from what the index actually serves. Typesense answers those
+ * with a 404 "Could not find a document with id". Counting them as failures buries a
+ * REAL failure in noise, which is how a half-applied patch gets read as a finished
+ * one. The Postgres write still happens for those rows: listings.cap_rate_est feeds
+ * region_active_aggregates, and clearing a fabricated negative there is right whether
+ * or not the row is currently indexed.
+ */
+async function pushTypesense(
+  rows: Drift[]
+): Promise<{ updated: number; absent: number; failed: number; errors: string[] }> {
   const body = rows
     .map((r) => JSON.stringify({
       id: r.key,
@@ -207,17 +222,25 @@ async function pushTypesense(rows: Drift[]): Promise<{ updated: number; failed: 
   );
   const text = await res.text();
   let updated = 0;
-  let failed = 0;
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
+  let absent = 0;
+  const errors: string[] = [];
+  // Typesense returns one result line per submitted document, in order, so the index
+  // maps straight back to the row that produced it.
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const who = rows[i]?.key ?? '?';
     try {
-      if (JSON.parse(line).success) updated++;
-      else failed++;
+      const r = JSON.parse(line) as { success?: boolean; error?: string };
+      if (r.success) updated++;
+      else if (/could not find a document/i.test(r.error ?? '')) absent++;
+      else errors.push(`${who}: ${r.error ?? line.slice(0, 120)}`);
     } catch {
-      failed++;
+      errors.push(`${who}: unparseable response — ${line.slice(0, 120)}`);
     }
   }
-  return { updated, failed };
+  return { updated, absent, failed: errors.length, errors };
 }
 
 async function main() {
@@ -372,14 +395,30 @@ async function main() {
 
   console.log(`\n📤 Typesense: patching ${drifted.length.toLocaleString()} document(s)…`);
   let updated = 0;
+  let absent = 0;
   let failed = 0;
+  const firstErrors: string[] = [];
   for (let i = 0; i < drifted.length; i += TS_CHUNK) {
     const r = await pushTypesense(drifted.slice(i, i + TS_CHUNK));
     updated += r.updated;
+    absent += r.absent;
     failed += r.failed;
-    console.log(`   … ${Math.min(i + TS_CHUNK, drifted.length)}/${drifted.length} (updated ${updated}, failed ${failed})`);
+    if (firstErrors.length < 10) firstErrors.push(...r.errors.slice(0, 10 - firstErrors.length));
+    console.log(
+      `   … ${Math.min(i + TS_CHUNK, drifted.length)}/${drifted.length} ` +
+      `(updated ${updated}, not indexed ${absent}, failed ${failed})`
+    );
   }
-  console.log(`\n✅ Typesense: ${updated.toLocaleString()} updated, ${failed.toLocaleString()} failed.`);
+  console.log(`\n✅ Typesense: ${updated.toLocaleString()} updated.`);
+  console.log(`   ${absent.toLocaleString()} not in the index (de-listed/closed stock — expected, Postgres still updated).`);
+  if (failed) {
+    // A real failure, as opposed to an absent document. Print it: a bare count is how
+    // a half-applied patch gets read as a finished one.
+    console.log(`   ❌ ${failed.toLocaleString()} REAL failure(s):`);
+    for (const e of firstErrors) console.log(`      ${e}`);
+  } else {
+    console.log('   0 real failures.');
+  }
 }
 
 main().catch((err) => {
