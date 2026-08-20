@@ -164,6 +164,28 @@ describe("plus-room (\"+1\") columns — the den split", () => {
     expect(condo.cells[m.bedCols.indexOf("3")].median).toBe(700_000);
   });
 
+  it("SALE: the floor counts the PUBLISHED cell, so a deep condo column can't carry a thin house one", () => {
+    // Markham L3P, 2026-08: the grid served "Detached 2+1 $923k x2" — the midpoint of
+    // a $750k and a $1.095M sale — because 11 Condo Apartment 2+1 sales held the 2+1
+    // column open. The backtest scores cohorts, and the cohort is the type x bucket
+    // cell, so each cell must clear SPLIT_MIN_N on its own sales.
+    const m = buildBedsTypeMatrix([
+      ...[...Array(11)].map(() => rDen(2, "Condo Apartment", 755_000)),
+      rDen(2, "Detached", 750_000),
+      rDen(2, "Detached", 1_095_000),
+      ...[...Array(9)].map(() => r(3, "Detached", 1_010_000)),
+    ], { mode: "sale" })!;
+
+    expect(m.bedCols).toEqual(["2+1", "3"]);     // the condo column still clears the floor
+    const condo = m.rows.find((x) => x.label === "Condo Apartment")!;
+    expect(condo.cells[m.bedCols.indexOf("2+1")].count).toBe(11);
+
+    const det = m.rows.find((x) => x.label === "Detached")!;
+    expect(det.cells[m.bedCols.indexOf("2+1")].count).toBe(0);
+    expect(det.cells[m.bedCols.indexOf("3")].count).toBe(11);
+    expect(det.cells[m.bedCols.indexOf("3")].median).toBe(1_010_000);
+  });
+
   it("RENT: never collapses — the split wins at every depth on leases", () => {
     // Lease backtest: split beat merged even on 1-2 samples (9.17% vs 11.32%).
     const m = buildBedsTypeMatrix([
