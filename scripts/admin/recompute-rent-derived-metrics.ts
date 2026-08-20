@@ -44,6 +44,9 @@
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --apply
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --limit=2000   # bound the scan
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all          # rescan positives too
+ *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --resync-index
+ *        # also repatch rows the Postgres-drift test skips. Use when the index has
+ *        # diverged from Postgres — a Postgres-only comparison cannot see that.
  * Env: DATABASE_URL (Session pooler — CLAUDE.md §12), SUPABASE_* for the AVM lookups,
  *      TYPESENSE_ADMIN_API_KEY for the partial update.
  */
@@ -246,6 +249,7 @@ async function pushTypesense(
 async function main() {
   const apply = process.argv.includes('--apply');
   const all = process.argv.includes('--all');
+  const resyncIndex = process.argv.includes('--resync-index');
   const limitArg = process.argv.find((a) => a.startsWith('--limit='));
   const sampleArg = process.argv.find((a) => a.startsWith('--samples='));
   const limit = limitArg ? Number(limitArg.split('=')[1]) : null;
@@ -255,7 +259,8 @@ async function main() {
   console.log('\n💰 Recompute rent-derived metrics (cap rate / gross yield / cashflow)');
   console.log(
     `  ${apply ? 'APPLY' : 'DRY-RUN'}${limit ? ` · limit ${limit}` : ''}` +
-    `${all ? ' · scanning ALL actives' : ' · scanning non-positive only'}\n`
+    `${all ? ' · scanning ALL actives' : ' · scanning non-positive only'}` +
+    `${resyncIndex ? ' · RESYNC INDEX (patch every scanned row)' : ''}\n`
   );
 
   const url = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
@@ -312,7 +317,14 @@ async function main() {
       // whose stored rung is absent or stale would otherwise keep comp-grade
       // presentation forever — 124 introduced the column, so every row needs one pass.
       const tierSame = (r.rent_match_tier ?? '') === tier;
-      if (capSame && tierSame) continue;
+      // The skip is keyed on POSTGRES, which assumes the index agrees with it. Measured
+      // after the first full run, 1,422 residential for-sale documents still held a
+      // fabricated negative: Postgres already read NULL (so "no drift", skipped) while
+      // Typesense carried a stale value from an older sync. --resync-index ignores the
+      // skip and patches the index for every scanned row, to reconcile a divergence a
+      // Postgres-only comparison cannot see. Idempotence is the reason this is a flag
+      // and not the default: without it a converged re-run writes nothing.
+      if (capSame && tierSame && !resyncIndex) continue;
       drifted.push({
         key: r.listing_key,
         address: String((r.full_payload as { UnparsedAddress?: string }).UnparsedAddress ?? '(no address)'),
