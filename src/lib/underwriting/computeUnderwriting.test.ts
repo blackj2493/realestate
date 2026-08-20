@@ -47,6 +47,28 @@ describe("computeUnderwriting — Gross Yield (audit MEDIUM-12)", () => {
     expect(result.grossMonthlyIncome).toBe(4500);
   });
 
+  // The consequence of the two tests above, stated outright. It is the reason the
+  // sandbox tiles carry an "incl. other income" qualifier: on screen this pair reads as
+  // impossible, because NOI is normally rent minus costs, so a cap rate sits BELOW the
+  // gross yield. A reader with no sight of the Other Income slider (it lives under
+  // "Advanced", collapsed) has nothing to explain the inversion.
+  it("cap rate can EXCEED gross yield once other income is underwritten", () => {
+    const withSuite = computeUnderwriting(
+      baseAssumptions({ purchasePrice: 1_000_000, monthlyRent: 3000, otherMonthlyIncome: 1500 })
+    );
+    expect(withSuite.capRatePct).toBeGreaterThan(withSuite.grossYieldPct);
+  });
+
+  it("cap rate stays BELOW gross yield on rent alone — the normal relationship", () => {
+    const rentOnly = computeUnderwriting(
+      baseAssumptions({
+        purchasePrice: 1_000_000, monthlyRent: 3000, otherMonthlyIncome: 0,
+        annualTaxes: 6000, opexPct: 8, vacancyPct: 5,
+      })
+    );
+    expect(rentOnly.capRatePct).toBeLessThan(rentOnly.grossYieldPct);
+  });
+
   it("returns 0 grossYieldPct when price is 0 (no division by zero)", () => {
     const result = computeUnderwriting(baseAssumptions({ purchasePrice: 0, monthlyRent: 3000 }));
     expect(result.grossYieldPct).toBe(0);
