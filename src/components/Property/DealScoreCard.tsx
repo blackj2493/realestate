@@ -8,6 +8,7 @@ import {
   type DealScoreResult,
   type DealScoreGrade,
   type DealScoreComponent,
+  type DealPillar,
   type DealPersona,
 } from "@/lib/dealScore/computeDealScore";
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
@@ -69,6 +70,43 @@ function barColor(points: number): string {
   if (points >= 60) return "bg-emerald-500";
   if (points >= 40) return "bg-amber-500";
   return "bg-rose-500";
+}
+
+/**
+ * One pillar row in the "Why this score" breakdown. Shared by the scored pillars and
+ * the context ones below the line, so the two lists cannot drift apart in shape —
+ * only in emphasis. `muted` dims the label and fades the bar: the reader should be able
+ * to tell at a glance that the row carried no weight, without reading the heading.
+ */
+function PillarRow({ pillar, muted = false }: { pillar: DealPillar; muted?: boolean }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            "flex items-center gap-1.5 text-xs font-medium",
+            muted ? "text-muted-foreground" : "text-foreground"
+          )}
+        >
+          <DirectionIcon direction={pillar.direction} />
+          {pillar.label}
+        </span>
+        <span className="font-mono text-xs text-muted-foreground">{Math.round(pillar.points)}</span>
+      </div>
+      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn("h-full rounded-full", barColor(pillar.points), muted && "opacity-50")}
+          style={{ width: `${Math.round(pillar.points)}%` }}
+        />
+      </div>
+      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+        {pillar.detail}
+        {pillar.compValue ? (
+          <span className="text-muted-foreground"> · comp value {formatPrice(pillar.compValue)}</span>
+        ) : null}
+      </p>
+    </div>
+  );
 }
 
 // Deal Score is a flagship USP signal, so in LIGHT its grade chips are SOLID,
@@ -301,6 +339,17 @@ export default function DealScoreCard({
   // Pillars that count for the selected lens (points are persona-independent; weight isn't).
   const weights = PERSONA_WEIGHTS[persona];
   const lensPillars = dealScore.pillars.filter((p) => weights[p.key] > 0);
+  // ...and the ones this lens deliberately ignores. Weighting a pillar at 0 is right —
+  // it is what stops a fairly-priced family home scoring F on a cap rate its buyer does
+  // not care about — but weighting is not the same as HIDING. These were computed,
+  // benchmarked against their asset class, and handed a finished sentence, then dropped
+  // on the floor. On a suite-potential listing the Yield pillar can score a capped 100
+  // while the Homebuyer lens renders it nowhere, which is how the card ends up
+  // advertising "Cashflow A" on a neighbouring chip and refusing to say why.
+  // Shown as CONTEXT, below the line, carrying no points into the score.
+  // It cuts both ways: a Cashflow reader was likewise never shown the Price pillar their
+  // grade partly rests on, even when the ask sits above comps.
+  const contextPillars = dealScore.pillars.filter((p) => weights[p.key] === 0);
   const band = dealScore.offerBand;
 
   return (
@@ -424,31 +473,30 @@ export default function DealScoreCard({
       </button>
 
       {open && (
-        <div className="mt-3 space-y-3">
-          {lensPillars.map((c) => (
-            <div key={c.key}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <DirectionIcon direction={c.direction} />
-                  {c.label}
-                </span>
-                <span className="font-mono text-xs text-muted-foreground">{Math.round(c.points)}</span>
-              </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn("h-full rounded-full", barColor(c.points))}
-                  style={{ width: `${Math.round(c.points)}%` }}
-                />
-              </div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                {c.detail}
-                {c.compValue ? (
-                  <span className="text-muted-foreground"> · comp value {formatPrice(c.compValue)}</span>
-                ) : null}
+        <>
+          <div className="mt-3 space-y-3">
+            {lensPillars.map((c) => (
+              <PillarRow key={c.key} pillar={c} />
+            ))}
+          </div>
+
+          {/* Below the line: computed, benchmarked, but carrying no weight on this lens.
+              Subordinate by construction — dashed rule, muted label, faded bar — so it
+              cannot be mistaken for something that moved the score. */}
+          {contextPillars.length > 0 && (
+            <div className="mt-3 border-t border-dashed border-border pt-3">
+              <p className="mb-2 flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                <span>Not scored on this lens</span>
+                <span className="rounded border border-border px-1.5 py-px font-medium">context</span>
               </p>
+              <div className="space-y-3">
+                {contextPillars.map((c) => (
+                  <PillarRow key={c.key} pillar={c} muted />
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       <p className="mt-3 text-[10px] leading-snug text-muted-foreground">

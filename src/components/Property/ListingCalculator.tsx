@@ -15,7 +15,8 @@
  * carry-only sandbox exactly as before — no behaviour change there.
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { onLensChanged } from "@/lib/personas/lensPersistence";
 import { ArrowLeft } from "lucide-react";
 import UnderwritingSandbox from "./UnderwritingSandbox";
 import BuyerLens from "./BuyerLens";
@@ -57,6 +58,21 @@ export default function ListingCalculator({
   });
   const [lens, setLens] = useState<CalculatorLens>(defaultLens);
   const [firstTimeBuyer, setFirstTimeBuyer] = useState(false);
+
+  // Follow the page lens. `defaultLens` only seeds the FIRST render (the server resolves
+  // it from ?lens= / the cookie), so without this the calculator sat where it was born
+  // while every other picker moved. A reader who tapped "Cashflow A" on the Deal Score
+  // got the score they asked for and a buyer calculator underneath it — the cap rate
+  // behind that grade was two unrelated controls away. persistLens already broadcasts on
+  // every chip click; three other components were listening and this one was not.
+  //
+  // Only the buyer/investor split is meaningful here, so every investor persona maps to
+  // the underwrite and the homebuyer maps back to the buyer view. Non-income parcels
+  // return before this matters — they have no split to switch.
+  useEffect(
+    () => onLensChanged((p) => setLens(incomeApplicable && p !== "smart" ? "investor" : "buyer")),
+    [incomeApplicable]
+  );
 
   // Non-income properties (land/commercial) skip the buyer split — carry-only
   // sandbox, identical to the prior behaviour.
