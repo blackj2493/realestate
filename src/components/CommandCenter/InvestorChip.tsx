@@ -9,7 +9,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { type ControlDef } from "@/lib/personas/personaConfig";
 import { useRangeHistogram } from "@/hooks/useRangeHistogram";
 import { supportsHistogram, HISTOGRAM_BANDS } from "@/lib/filters/histogram";
-import { isControlActive, investorChipLabel, resetControlToDefault } from "./investorControls";
+import { isControlActive, investorChipLabel, resetControlToDefault, snapToActiveFloor } from "./investorControls";
 import RangeHistogram from "./RangeHistogram";
 import NumberInput from "./NumberInput";
 import InfoDot from "@/components/ui/InfoDot";
@@ -96,6 +96,13 @@ function InvestorControlInner({
     excludePersona: true,
   });
 
+  // Slider + typed input share one write path so the floor snap can't drift
+  // between them. No-op for a control without `minActive`.
+  const commit = (v: number) => {
+    if (control.kind === "range") return;
+    setFilter(control.key, snapToActiveFloor(control.minActive, v, filters[control.key]));
+  };
+
   const valueText =
     control.kind === "range"
       ? `${control.format(filters[control.minKey])}–${control.format(filters[control.maxKey])}`
@@ -162,7 +169,7 @@ function InvestorControlInner({
             step={step}
             ariaLabel={control.label}
             getAriaValueText={(v) => control.format(v)}
-            onValueChange={([v]) => setFilter(control.key, v)}
+            onValueChange={([v]) => commit(v)}
           />
           <div className="flex items-center gap-1.5">
             <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -172,7 +179,7 @@ function InvestorControlInner({
               value={filters[control.key]}
               min={min}
               max={max}
-              onCommit={(n) => setFilter(control.key, n)}
+              onCommit={(n) => commit(n)}
             />
           </div>
         </>

@@ -26,7 +26,7 @@
 
 import { DollarSign, TrendingUp, Home, Hammer, type LucideIcon } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
-import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { CAP_RATE_BAND, capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 import type { GlossaryKey } from "@/lib/glossary";
 
 export type PersonaType = "smart" | "cashflow" | "flippers" | "builders";
@@ -99,6 +99,14 @@ export type ControlDef =
       min: number;
       max: number;
       step: number;
+      /**
+       * Smallest value the query can actually honour, when that is above `min`
+       * (which stays the "off" position). Some metrics are only trustworthy above
+       * a floor — a cap rate under CAP_RATE_BAND.min is indistinguishable from "no
+       * estimate" — so the clause clamps there. Declaring the floor here lets the
+       * chip snap the value too, instead of showing a threshold the query ignores.
+       */
+      minActive?: number;
       format: (v: number) => string;
       /** Typesense numeric field for the distribution histogram (optional). */
       field?: string;
@@ -259,11 +267,21 @@ const join = (parts: string[]) => parts.filter(Boolean).join(" && ");
 // ============================================================================
 
 /** Cap rate (cap_rate_est). One canonical control — previously Smart exposed the
- *  same field under the "Target Gross Yield" label, which read as a second metric. */
+ *  same field under the "Target Gross Yield" label, which read as a second metric.
+ *
+ *  The clause is bounded by CAP_RATE_BAND on BOTH ends, the same band the cells
+ *  render through: outside it a cap rate is noise, and ~46% of for-sale docs carry
+ *  a fabricated negative because the metric writes 0 revenue when no rent estimate
+ *  exists. `minActive` publishes that floor to the chip, so a slider stop the query
+ *  cannot honour snaps instead of quietly reading back as a stricter threshold. */
 const C_CAP_RATE: ControlDef = {
   kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥",
-  min: 0, max: 12, step: 0.5, format: fmtPct, field: "cap_rate_est", glossaryKey: "capRate",
-  buildClause: (f) => (f.minCapRate > 0 ? `cap_rate_est:>=${Math.max(f.minCapRate, 1)} && cap_rate_est:<=15` : null),
+  min: 0, max: 12, step: 0.5, minActive: CAP_RATE_BAND.min,
+  format: fmtPct, field: "cap_rate_est", glossaryKey: "capRate",
+  buildClause: (f) =>
+    f.minCapRate > 0
+      ? `cap_rate_est:>=${Math.max(f.minCapRate, CAP_RATE_BAND.min)} && cap_rate_est:<=${CAP_RATE_BAND.max}`
+      : null,
 };
 const C_TRUE_DOM: ControlDef = {
   kind: "range", minKey: "trueDomMin", maxKey: "trueDomMax", label: "True DOM", short: "True DOM",

@@ -41,6 +41,26 @@ export function investorChipLabel(c: ControlDef, f: TerminalFilterState): string
   return `${name} ≤ ${c.format(hi)}`;
 }
 
+/**
+ * Resolve a slider value that lands in the dead zone between "off" (0) and the
+ * control's `minActive` floor. A cap rate under CAP_RATE_BAND.min reads the same as
+ * "no estimate", so the query clamps to the floor — without this snap the chip
+ * showed "Cap Rate ≥ 0.5%" while Typesense answered ≥1%, and 1,241 listings dropped
+ * out with nothing on screen to explain it.
+ *
+ * The dead zone resolves in the DIRECTION OF TRAVEL: a drag up from off lands on
+ * the floor, a drag down from an active value lands on off. A single sticky floor
+ * would trap the user above "off" with no way back by drag.
+ */
+export function snapToActiveFloor(
+  minActive: number | undefined,
+  next: number,
+  prev: number
+): number {
+  if (minActive === undefined || next <= 0 || next >= minActive) return next;
+  return prev >= minActive ? 0 : minActive;
+}
+
 /** True when any of a persona's controls is non-default. */
 export function anyControlActive(controls: ControlDef[], f: TerminalFilterState): boolean {
   return controls.some((c) => isControlActive(c, f));
