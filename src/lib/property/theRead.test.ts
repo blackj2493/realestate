@@ -141,6 +141,55 @@ describe("buildTheRead", () => {
     expect(r.priceRead).not.toMatch(/likely closes near/);
   });
 
+  it("competitive listing: the THESIS drops the under-ask framing too, not just the price line", () => {
+    const noSuite = {
+      ListPrice: 899000,          // threshold-shaped
+      OriginalListPrice: 929000,
+      KitchensBelowGrade: 0,      // no suite, so the smart thesis reaches the price branch
+      LotWidth: 33,
+      DaysOnMarket: 11,
+      PropertySubType: "Semi-Detached House",
+    };
+    const r = buildTheRead(
+      base({
+        status: { kind: "active", label: "FOR SALE" },
+        full_payload: noSuite,
+        estimate: { estimatedValue: 1_010_000, confidence: "HIGH", lowBand: 940_000, highBand: 1_080_000 },
+      } as unknown as Partial<ListingDetail>),
+    );
+    // Homebuyer lens. detectCompetitive needs the comp mid to clear the ask by 5%, which
+    // forces overUnderPct <= -4.8%, so the old "< -1" branch fired on EVERY hold-offers
+    // listing and printed "a fair entry without a bidding war" above a price line
+    // promising competing offers.
+    expect(r.thesisByPersona.smart).toMatch(/~11% below comparable sales to draw offers/);
+    expect(r.thesisByPersona.smart).toMatch(/budget to compete, not to negotiate/);
+    expect(r.thesisByPersona.smart).not.toMatch(/without a bidding war/);
+    // Flipper lens: the $30K cut is still stated, but a cut on a hold-offers ask is not
+    // leverage — the fact stays, the conclusion drawn from it does not.
+    expect(r.thesisByPersona.flippers).toMatch(/the ask is a floor, not a starting point/);
+    expect(r.thesisByPersona.flippers).not.toMatch(/negotiating leverage/);
+    // The price line still reads compete — all three clauses agree.
+    expect(r.priceRead).toMatch(/hold-offers pattern/);
+  });
+
+  it("non-competitive listing keeps the below-comps thesis — the guard is scoped, not a blanket mute", () => {
+    const r = buildTheRead(
+      base({
+        status: { kind: "active", label: "FOR SALE" },
+        full_payload: {
+          ListPrice: 1_250_000,   // mid-band ask, so detectCompetitive cannot fire
+          OriginalListPrice: 1_280_000,
+          KitchensBelowGrade: 0,
+          DaysOnMarket: 11,
+          PropertySubType: "Semi-Detached House",
+        },
+        estimate: { estimatedValue: 1_310_000, confidence: "HIGH", lowBand: 1_240_000, highBand: 1_380_000 },
+      } as unknown as Partial<ListingDetail>),
+    );
+    expect(r.thesisByPersona.smart).toMatch(/a fair entry without a bidding war/);
+    expect(r.thesisByPersona.flippers).toMatch(/negotiating leverage/);
+  });
+
   it("exposes per-lens scores for the badge when personaScores are present", () => {
     const r = buildTheRead(
       base({

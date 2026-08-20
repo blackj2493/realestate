@@ -194,10 +194,19 @@ describe('computeDealScore (v2 pillar/persona)', () => {
     expect(band.likelyClose).toBe(Math.round(1_199_000 * 0.99)); // bucket median, not the cohort ratio
     expect(band.ceiling).toBe(1_264_906); // overpaying line = comps, unchanged
     expect(band.note).toMatch(/sold over ask ~40% of the time/);
-    expect(band.note).toMatch(/median ≈ 1% under ask/);
-    // The cohort figure survives as the quiet-night aside, not the recommendation.
-    expect(band.note).toMatch(/quiet offer night could land near \$1,160,199/);
-    expect(band.note).toMatch(/overpaying above ~\$1,264,906/);
+    // Same phrasing The Read's price line uses for COMPETITIVE_MEDIAN_CLOSE_RATIO, so the
+    // two surfaces render the same constant identically.
+    expect(band.note).toMatch(/median close ≈ ask/);
+    expect(band.note).toMatch(/Overpaying above ~\$1,264,906/);
+
+    // THE INVARIANT: a "priced to compete" note may not put ANY number under the ask in
+    // front of the buyer. It used to carry the cohort-ratio figure as a "quiet offer
+    // night" aside, which reads as the instruction and loses on offer night.
+    expect(band.note).not.toMatch(/quiet offer night/);
+    expect(band.note).not.toContain('$1,160,199');
+    const quoted = [...band.note.matchAll(/\$([\d,]+)/g)].map((m) => Number(m[1].replace(/,/g, '')));
+    expect(quoted.length).toBeGreaterThan(0);
+    expect(quoted.filter((n) => n < 1_199_000)).toEqual([]);
   });
 
   it('offer band: without the competitive signal the same inputs still quote the cohort ratio', () => {
