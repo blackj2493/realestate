@@ -12,7 +12,8 @@
  * gross_yield_est = rent/price*100), per financialMetrics.ts.
  *
  * Compliance (spec §3): IDX-only metric (own list price × active for-lease asking
- * rents), shipped at the rent index's N≥5 floor. Not VOW-derived.
+ * rents), published at the rent index's MIN_COHORT_SAMPLES floor (rentModel.ts, now 3
+ * leases per cohort — see the backtest table there). Not VOW-derived.
  */
 export const CAP_RATE_BAND = { min: 1, max: 15 } as const; // percent
 export const GROSS_YIELD_BAND = { min: 1.5, max: 18 } as const; // percent

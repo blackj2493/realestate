@@ -16,6 +16,7 @@ import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { winnerIndices, bestValue, type WinnerDirection } from "./winner";
 import { rowIsIdentical } from "./diff";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
+import { rentTierConfidence } from "@/lib/metrics/rentTier";
 
 export type CompareGroupId =
   | "valuationDeal"
@@ -163,8 +164,16 @@ export const COMPARE_METRICS: CompareMetric[] = [
   { key: "capRateUw", label: "Cap Rate", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.capRatePct ?? null, format: fmtPct1, winner: "high",
     tag: () => "est", glossaryKey: "capRate" },
+  // Suppressed when the rent behind it is an area average (city / city_family / county
+  // rungs, 13-15% median error vs 5.6% for a neighbourhood comp). A compare table picks
+  // a WINNER, and crowning one listing over another on a number that loose is a
+  // false precision the "est" tag does not communicate. The live-underwritten cap rate
+  // above it still shows for every row.
   { key: "capRateVA", label: "Est. Cap Rate", group: "cashflowCarry", cellKind: "numeric",
-    get: (c) => capRateOrNull(c.listing.cap_rate_est), format: fmtPct1, winner: "high",
+    get: (c) => (rentTierConfidence(c.listing.rent_match_tier) === "area"
+      ? null
+      : capRateOrNull(c.listing.cap_rate_est)),
+    format: fmtPct1, winner: "high",
     tag: () => "est", glossaryKey: "capRate" },
   { key: "cashflow", label: "Monthly Cashflow", group: "cashflowCarry", cellKind: "numeric",
     get: (c) => c.underwriting?.monthlyCashflow ?? null, format: fmtSignedPerMo, winner: "high",

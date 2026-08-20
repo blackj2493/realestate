@@ -161,24 +161,37 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   const annualOpexFloor = taxes + (insurance * 1.2) + (maintenance * 1.5) + hoa + managementFeeFloor + utilities;
 
   // === CAP RATE ===
+  // NO-RENT GUARD. Without a rent comp `annualRevenue` is 0, so NOI collapses to
+  // -annualOpex and the cap rate comes out NEGATIVE — an expense ratio wearing a cap
+  // rate's name. It measured 41,767 of 124,924 active for-sale listings, and only 653
+  // of those negatives were real (a rent comp exists and the fees genuinely eat it).
+  // "No comp" is not "loses money": emit the 0 sentinel every other guard in this file
+  // already uses, which hasRentEstimate() and CAP_RATE_BAND both read as "no estimate".
   const annualNOI = grossRentNetVacancy - annualOpex;
   const annualNOIFloor = grossRentNetVacancyFloor - annualOpexFloor;
-  const capRateEst = price > 0 ? (annualNOI / price) * 100 : 0;
-  const capRateFloor = price > 0 ? (annualNOIFloor / price) * 100 : 0;
+  const capRateEst = has_rent_data && price > 0 ? (annualNOI / price) * 100 : 0;
+  const capRateFloor = has_rent_data && price > 0 ? (annualNOIFloor / price) * 100 : 0;
 
   // === GROSS YIELD ===
-  const grossYieldEst = price > 0 ? (annualRevenue / price) * 100 : 0;
+  const grossYieldEst = has_rent_data && price > 0 ? (annualRevenue / price) * 100 : 0;
 
   // === MONTHLY CASHFLOW ===
   // Mortgage: 80% LTV, 4.04%, 360 months under Canadian semi-annual compounding.
   const loanAmount = listPrice * 0.80;
   const mortgageMonthly = calculateCanadianMonthlyMortgage(loanAmount, 0.0404, 360);
 
-  // Monthly cashflow
+  // Monthly cashflow. Same no-rent guard as the cap rate: with 0 revenue this is just
+  // -(mortgage + opex), which reads as a deeply cash-negative property rather than one
+  // we cannot underwrite. It measured 57,621 of the active set negative, 29,503 of them
+  // for want of a comp alone.
   const monthlyGrossRent = annualRevenue / 12;
   // Insurance is already inside annualOpex / annualOpexFloor — deduct it exactly once (audit HIGH-8).
-  const netMonthlyCashflow = (monthlyGrossRent * 0.96) - (mortgageMonthly + (annualOpex / 12));
-  const netMonthlyCashflowFloor = ((annualRevenueP10 / 12) * 0.92) - (mortgageMonthly + (annualOpexFloor / 12));
+  const netMonthlyCashflow = has_rent_data
+    ? (monthlyGrossRent * 0.96) - (mortgageMonthly + (annualOpex / 12))
+    : 0;
+  const netMonthlyCashflowFloor = has_rent_data
+    ? ((annualRevenueP10 / 12) * 0.92) - (mortgageMonthly + (annualOpexFloor / 12))
+    : 0;
 
   // === TAX BURDEN RATIO ===
   const taxBurdenRatio = price > 0 ? (taxes / price) * 100 : 0;

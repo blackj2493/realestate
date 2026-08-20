@@ -9,6 +9,8 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { bedSplit } from '@/lib/listings/bedSplit';
+import { subTypeFamily } from '@/lib/listings/subTypeFamily';
+import type { MatchTier } from './rentModel';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +21,11 @@ export interface RentAVMResult {
   annual_rent: number;
   annual_rent_p10: number;
   has_data: boolean;
-  match_tier: 'nbhd' | 'city_bath' | 'city' | null; // confidence signal (Plan 2 surfaces it)
+  /** Which rung answered, or null when nothing did. This is the CONFIDENCE SIGNAL:
+   *  error runs 5.56% at 'nbhd' and 14.49% at 'county', so a surface that shows both
+   *  identically overstates the coarse one. Written to the document as
+   *  `rent_match_tier` and read back by rentTierConfidence(). */
+  match_tier: MatchTier | null;
   /** True when the cohort separated "+1" homes; false when it fell back to the
    *  merged whole-bedroom cohort, which mixes a 1+den in with true 2 bedrooms. */
   plus_room_aware?: boolean;
@@ -35,9 +41,25 @@ export async function fetchRentAVM(params: {
   bedroomsAboveGrade?: number | null;
   bedroomsBelowGrade?: number | null;
   bathroomsTotal?: number;
+  /** CountyOrParish. Without it the ladder simply stops one rung earlier (124). */
+  county?: string | null;
   isSuiteCandidate: boolean;
 }): Promise<RentAVMResult> {
-  const { city, cityRegion, propertySubType, bedroomsTotal, bathroomsTotal = 0, isSuiteCandidate } = params;
+  const { bedroomsTotal, bathroomsTotal = 0, isSuiteCandidate } = params;
+
+  // TRIM BOTH SIDES. rentModel btrims city / city_region / property_sub_type before it
+  // keys a cohort, because the feed ships "Semi-Detached " with a trailing space. The
+  // lookup used the RAW feed value against an exact .eq, so every for-sale semi asked
+  // for "Semi-Detached " and matched a stored "Semi-Detached" never — 4,775 active
+  // listings, all silently handed no rent data. Normalise here, not at each call site,
+  // so a new caller cannot reintroduce the asymmetry.
+  const city = (params.city ?? '').trim();
+  const cityRegion = (params.cityRegion ?? '').trim();
+  const propertySubType = (params.propertySubType ?? '').trim();
+  const county = (params.county ?? '').trim();
+  // null for land / commercial — those skip the pooled rung entirely (124).
+  const family = subTypeFamily(propertySubType);
+
   const sel = () => supabase.from('rental_market_index').select('avg_rent, p10_rent');
 
   const split = bedSplit({
@@ -89,12 +111,30 @@ export async function fetchRentAVM(params: {
         .eq('property_sub_type', propertySubType).eq('bathrooms', bathroomsTotal), d);
       if (data) { row = data; tier = 'city_bath'; plusRoomAware = d.aware; }
     }
-    // Tier 3 — city, baths relaxed (last resort)
+    // Tier 3 — city, baths relaxed
     if (!row && city) {
       const data = await probe((q) => q
         .eq('match_tier', 'city').eq('city', city)
         .eq('property_sub_type', propertySubType), d);
       if (data) { row = data; tier = 'city'; plusRoomAware = d.aware; }
+    }
+    // Tier 4 (124) — city held, sub-type relaxed to its family. Above `county`
+    // because location dominates rent: the right city with a pooled type beats the
+    // right type two counties away (13.17% vs 14.49% measured).
+    if (!row && city && family) {
+      const data = await probe((q) => q
+        .eq('match_tier', 'city_family').eq('city', city)
+        .eq('sub_type_family', family), d);
+      if (data) { row = data; tier = 'city_family'; plusRoomAware = d.aware; }
+    }
+    // Tier 5 (124) — exact sub-type held, geography widened to the county. Last rung:
+    // below this the answer is no estimate, which is the correct answer for a
+    // township with no rental market at all.
+    if (!row && county) {
+      const data = await probe((q) => q
+        .eq('match_tier', 'county').eq('county', county)
+        .eq('property_sub_type', propertySubType), d);
+      if (data) { row = data; tier = 'county'; plusRoomAware = d.aware; }
     }
     if (row) break;
   }

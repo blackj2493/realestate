@@ -9,12 +9,44 @@
  * and once on the old merged total, which survives purely as the coverage fallback.
  */
 import { bedSplit } from '@/lib/listings/bedSplit';
+import { subTypeFamily } from '@/lib/listings/subTypeFamily';
 
 export const MIN_MONTHLY_RENT = 500;
 export const MAX_MONTHLY_RENT = 25000;
-export const MIN_COHORT_SAMPLES = 5; // suppress thin cohorts (noise + min-N hygiene)
+/**
+ * Minimum leases a cohort needs before it publishes a rent.
+ *
+ * Lowered 5 -> 3 on measured evidence. Leave-one-out backtest over 84,496 active
+ * leases, predicting each one from its own lookup ladder with itself removed:
+ *
+ *   floor | cohorts | active for-sale covered | median err | err of the cohorts ADDED
+ *     5   |  14,782 |   76,866  (61.5%)       |   6.06%    |  —
+ *     4   |  18,459 |   79,354  (63.5%)       |   6.06%    |  median 7.69%, p90 29.3%
+ *     3   |  24,769 |   82,461  (66.0%)       |   6.06%    |  median 8.17%, p90 30.9%
+ *     2   |  37,240 |   86,963  (69.6%)       |   6.00%    |  median 8.00%, p90 33.4%
+ *
+ * 3 buys 5,595 more covered listings for ~2 points of median error on the newly
+ * covered ones, and the blended median does not move. It is also the smallest
+ * honest median: at n=2 the "median" is the mean of two, so one outlier moves it
+ * 50%, and at n=1 the leave-one-out set is empty — the estimate would be the
+ * listing's own asking rent, which is circular, not a comp. Do not go below 3.
+ *
+ * Every consumer must still pass the value through CAP_RATE_BAND / GROSS_YIELD_BAND
+ * (src/lib/metrics/sanityBand.ts), which is what catches the widened p90 tail.
+ */
+export const MIN_COHORT_SAMPLES = 3;
 
-export type MatchTier = 'nbhd' | 'city_bath' | 'city';
+/**
+ * Lookup rungs, MOST PRECISE FIRST. The order is the accuracy order measured by
+ * leave-one-out over the lease book, and the lookup walks it top to bottom:
+ *
+ *   nbhd        5.56%   city_bath  8.22%   city  13.73%
+ *   city_family 13.17%  county    14.49%                (migration 124)
+ *
+ * `city_family` sits above `county` because location dominates rent: relaxing the
+ * sub-type inside the right city beats keeping the sub-type two counties away.
+ */
+export type MatchTier = 'nbhd' | 'city_bath' | 'city' | 'city_family' | 'county';
 
 export interface RawLeaseInput {
   status?: string | null;
@@ -32,6 +64,8 @@ export interface RawLeaseInput {
    *  value means "no plus-room", not "unknown". */
   bedroomsBelowGrade?: number | null;
   bathroomsTotal?: number | null; // real bath count (BathroomsTotalInteger)
+  /** CountyOrParish — the parent geography for the `county` rung (migration 124). */
+  county?: string | null;
 }
 
 const LEASE_STATUS = new Set(['leased', 'lease', 'for lease', 'rented', 'rental']);
@@ -64,7 +98,12 @@ export interface RentalIndexRow {
   match_tier: MatchTier;
   city_region: string | null;
   city: string | null;
-  property_sub_type: string;
+  /** CountyOrParish. Set only on `county` rows, where city is NULL. */
+  county: string | null;
+  /** NULL on rungs that pool sub-types, where sub_type_family carries the key instead. */
+  property_sub_type: string | null;
+  /** Pooled family ('condo'|'freehold'). Set only on `city_family` rows. */
+  sub_type_family: string | null;
   bedrooms_total: number;
   /** Whole bedrooms above grade. NULL marks a MERGED cohort keyed on bedrooms_total. */
   bedrooms_above: number | null;
@@ -95,6 +134,9 @@ export function createRentAccumulator() {
       // btrim: the feed ships "Semi-Detached " with a trailing space, which would
       // otherwise fragment every cohort for that sub-type into two.
       const st = (r.propertySubType ?? '').trim();
+      const cty = (r.county ?? '').trim();
+      // null for land / commercial: those must never receive a pooled rent.
+      const fam = subTypeFamily(st);
       const beds = r.bedroomsTotal;
       const bath = r.bathroomsTotal;
       if (!st || beds == null) return;
@@ -115,7 +157,10 @@ export function createRentAccumulator() {
       if (split) dims.push({ above: split.above, den: split.den, tag: `s${split.above}_${split.den}` });
 
       for (const d of dims) {
-        const meta = { property_sub_type: st, bedrooms_total: beds, bedrooms_above: d.above, den: d.den };
+        const meta = {
+          property_sub_type: st, sub_type_family: null, county: null,
+          bedrooms_total: beds, bedrooms_above: d.above, den: d.den,
+        };
         // Tier 1 — neighbourhood + baths (most precise)
         if (cr && bath != null) {
           bump(`nbhd|${cr.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}`,
@@ -126,10 +171,23 @@ export function createRentAccumulator() {
           bump(`cb|${city.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}`,
             { match_tier: 'city_bath', city_region: null, city, ...meta, bathrooms: bath }, rent);
         }
-        // Tier 3 — city, baths relaxed (last resort)
+        // Tier 3 — city, baths relaxed
         if (city) {
           bump(`c|${city.toLowerCase()}|${st.toLowerCase()}|${d.tag}`,
             { match_tier: 'city', city_region: null, city, ...meta, bathrooms: null }, rent);
+        }
+        // Tier 4 (124) — city held, sub-type relaxed to its family. Skipped entirely
+        // for land / commercial, so a vacant lot can never inherit a house's rent.
+        if (city && fam) {
+          bump(`cf|${city.toLowerCase()}|${fam}|${d.tag}`,
+            { match_tier: 'city_family', city_region: null, city, ...meta,
+              property_sub_type: null, sub_type_family: fam, bathrooms: null }, rent);
+        }
+        // Tier 5 (124) — exact sub-type held, geography widened to the county.
+        if (cty) {
+          bump(`y|${cty.toLowerCase()}|${st.toLowerCase()}|${d.tag}`,
+            { match_tier: 'county', city_region: null, city: null, ...meta,
+              county: cty, bathrooms: null }, rent);
         }
       }
     },

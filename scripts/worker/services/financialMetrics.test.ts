@@ -135,6 +135,52 @@ describe('calculateFinancialMetrics', () => {
   });
 });
 
+describe('no-rent guard (a sale listing with no rent comp)', () => {
+  // Without a comp, annualRevenue is 0 and NOI collapses to -opex, so the cap rate came
+  // out NEGATIVE — an expense ratio wearing a cap rate's name. It sat on 41,767 of
+  // 124,924 active for-sale listings, and only 653 of those negatives were real. The
+  // 0 sentinel is what hasRentEstimate() and CAP_RATE_BAND already read as "no estimate".
+  const noComp: FinancialMetricsInput = {
+    ...baseInput,
+    transactionType: 'For Sale',
+    annual_rent: 0,
+    annual_rent_p10: 0,
+    has_rent_data: false,
+  };
+
+  it('emits 0, never a negative, for every income-derived metric', () => {
+    const r = calculateFinancialMetrics(noComp);
+    expect(r.cap_rate_est).toBe(0);
+    expect(r.cap_rate_floor).toBe(0);
+    expect(r.gross_yield_est).toBe(0);
+    expect(r.net_monthly_cashflow).toBe(0);
+    expect(r.cashflow_floor).toBe(0);
+  });
+
+  it('keeps the COST side, which needs no rent comp', () => {
+    const r = calculateFinancialMetrics(noComp);
+    expect(r.annual_opex).toBeGreaterThan(0);
+    expect(r.tax_burden_ratio).toBeGreaterThan(0);
+    expect(r.mortgage_monthly).toBeGreaterThan(0);
+  });
+
+  it('still reports a REAL negative cap rate when a comp exists and the fees eat it', () => {
+    // High-fee condo: a genuine negative NOI. This is the 653-listing case and it must
+    // survive — the guard keys on the absence of a comp, not on the sign of the answer.
+    const r = calculateFinancialMetrics({
+      ...baseInput,
+      transactionType: 'For Sale',
+      annual_rent: 24_000,
+      annual_rent_p10: 20_000,
+      has_rent_data: true,
+      associationFee: 2_400,   // $28.8k/yr of fees against $24k of rent
+      isCondo: true,
+    });
+    expect(r.gross_yield_est).toBeGreaterThan(0);
+    expect(r.cap_rate_est).toBeLessThan(0);
+  });
+});
+
 describe('transaction-type guard (a for-lease listing has no purchase price)', () => {
   // On a for-lease listing, ListPrice is the MONTHLY RENT, not a sale price. Dividing
   // an annual-rent estimate by it yields absurd 1000%+ cap rates (the real defect that
