@@ -71,12 +71,15 @@ function Metric({
   value,
   tone = "neutral",
   term,
+  note,
 }: {
   label: string;
   value: string;
   tone?: "neutral" | "good" | "bad";
   /** Optional glossary key — renders a ⓘ next to the label explaining the term. */
   term?: GlossaryKey;
+  /** Optional qualifier under the value, naming an assumption the number rests on. */
+  note?: string | null;
 }) {
   return (
     <div className="bg-muted/50 rounded p-2">
@@ -94,6 +97,7 @@ function Metric({
       >
         {value}
       </p>
+      {note && <span className="text-[9px] leading-tight text-muted-foreground">{note}</span>}
     </div>
   );
 }
@@ -153,6 +157,11 @@ export default function UnderwritingSandbox({
 
   const cashflowTone = result.monthlyCashflow >= 0 ? "good" : "bad";
 
+  // Set only when the user is actually underwriting extra income, so the default view
+  // stays clean and the qualifier means something when it does appear.
+  const otherIncomeNote =
+    a.otherMonthlyIncome > 0 ? `incl. ${formatPrice(a.otherMonthlyIncome)}/mo other income` : null;
+
   return (
     <div data-tour="listing-underwriting" className={cn("bg-card rounded-lg border border-border p-4", className)}>
       {/* Header */}
@@ -198,9 +207,18 @@ export default function UnderwritingSandbox({
             </span>
           </div>
 
-          {/* Key metrics */}
+          {/* Key metrics.
+              NOI counts Other Income (a hypothetical suite); Gross Yield deliberately
+              does not — it is rent / price by the industry definition, so hypothetical
+              income cannot inflate the headline yield (audit MEDIUM-12). Correct, but it
+              lets Cap Rate print ABOVE Gross Yield, which reads as impossible to anyone
+              who knows the definitions: NOI is rent minus costs, so the cap rate should
+              sit below the yield. Nothing on screen explains the gap, because the Other
+              Income slider lives under "Advanced" and starts collapsed.
+              So the tiles that carry that income say so. The reader can then see that
+              the cap rate is a suite scenario, not the as-is return. */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Metric label="Cap Rate" value={pct(result.capRatePct)} term="capRate" />
+            <Metric label="Cap Rate" value={pct(result.capRatePct)} term="capRate" note={otherIncomeNote} />
             <Metric
               label="Cash-on-Cash"
               value={pct(result.cashOnCashPct)}
@@ -208,7 +226,12 @@ export default function UnderwritingSandbox({
               term="cashOnCash"
             />
             <Metric label="Monthly Carry" value={`${formatPrice(result.monthlyCarry)}/mo`} term="carry" />
-            <Metric label="Monthly NOI" value={`${formatPrice(result.monthlyNOI)}/mo`} term="noi" />
+            <Metric
+              label="Monthly NOI"
+              value={`${formatPrice(result.monthlyNOI)}/mo`}
+              term="noi"
+              note={otherIncomeNote}
+            />
             <Metric label="Gross Yield (rent)" value={pct(result.grossYieldPct)} term="grossYield" />
             <Metric label="DSCR" value={result.dscr === null ? "—" : result.dscr.toFixed(2)} term="dscr" />
           </div>
