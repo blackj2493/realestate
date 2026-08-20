@@ -312,13 +312,20 @@ export function buildBedsTypeMatrix(
   // Rents are tight enough that the den gap dominates from the first sample, which
   // is why rent never collapses. Gating sales this way scored 13.09% against 13.41%
   // merged and 13.18% always-split — better than either alone.
+  //
+  // COUNT THE PUBLISHED CELL, NOT THE COLUMN. The grid publishes one median per
+  // type x bucket, so a bucket-wide count lets a deep row carry a thin one past the
+  // floor: Markham L3P served Detached 2+1 on 2 sales ($750k and $1.095M, median
+  // $923k) purely because 11 condo apartment 2+1 sales kept that column open. The
+  // backtest above measures cohorts, and the cohort IS the cell.
   if (!isRent) {
+    const cellKey = (a: { label: string; bucket: string }) => `${a.label}|${a.bucket}`;
     const denCount = new Map<string, number>();
     for (const a of assigned) {
-      if (a.den > 0) denCount.set(a.bucket, (denCount.get(a.bucket) ?? 0) + 1);
+      if (a.den > 0) denCount.set(cellKey(a), (denCount.get(cellKey(a)) ?? 0) + 1);
     }
     for (const a of assigned) {
-      if (a.den > 0 && (denCount.get(a.bucket) ?? 0) < SPLIT_MIN_N) a.bucket = a.mergedBucket;
+      if (a.den > 0 && (denCount.get(cellKey(a)) ?? 0) < SPLIT_MIN_N) a.bucket = a.mergedBucket;
     }
   }
 
