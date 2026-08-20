@@ -12,10 +12,12 @@
  * generic per-region playlist rows.
  *
  * Data-gap pieces handled by the downstream components:
- *   - SOLD column of MarketActivityPanel degrades to a placeholder for non-
- *     region areas (see supportsSold() in src/lib/dashboard/area.ts).
  *   - MarketPulse (24-month price trend) is skipped entirely for bubbles —
  *     not rendered here. Phase 2C will add a polygon-aware variant.
+ *
+ * The SOLD column no longer degrades for polygon/school areas: Phase 2B gave the
+ * sold_listings collection both `location` and `NearbySchools` (soldListingsSchema.ts),
+ * so every area kind answers and there is no `supportsSold` gate to respect.
  */
 
 "use client";
@@ -45,7 +47,7 @@ import type { BoardDef } from "@/lib/dashboard/boards";
 import MarketActivityPanel from "./MarketActivityPanel";
 import RegionStatTiles from "./RegionStatTiles";
 import PlaylistBoard from "./PlaylistBoard";
-import RegionDrilldown from "./RegionDrilldown";
+import RegionDrilldown, { sectionSummary } from "./RegionDrilldown";
 
 interface Props {
   bubble: Bubble;
@@ -331,6 +333,10 @@ export default function BubbleMarketSection({
       )}
       // Deep-linked bubble (?bubble=<id>) opens expanded so the flash lands on data.
       defaultExpanded={highlight}
+      persistKey={`bubble:${bubble.id}`}
+      // Counts props already in hand — the peek costs no request, which is the whole
+      // point of keeping the section collapsed until asked.
+      summary={sectionSummary(lens, enabledBoards.length)}
       icon={
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-600/15 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
           <Icon className="h-4 w-4" />

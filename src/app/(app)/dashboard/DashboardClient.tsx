@@ -27,7 +27,7 @@ import MarketPulse from "@/components/dashboard/MarketPulse";
 import NeighbourhoodLeaderboard from "@/components/dashboard/NeighbourhoodLeaderboard";
 import RegionScorecard from "@/components/dashboard/RegionScorecard";
 import RegionComparisonTiles from "@/components/dashboard/RegionComparisonTiles";
-import RegionDrilldown from "@/components/dashboard/RegionDrilldown";
+import RegionDrilldown, { sectionSummary } from "@/components/dashboard/RegionDrilldown";
 import WatchlistSection from "@/components/dashboard/WatchlistSection";
 import BubbleSections from "@/components/dashboard/BubbleSections";
 import CityAlertBell from "@/components/dashboard/CityAlertBell";
@@ -292,7 +292,13 @@ export default function DashboardClient() {
               // The bell mirrors the per-bubble alert toggle: city sections are
               // localStorage-only, so it materializes an area_type 'city' bubble row
               // the nightly worker can deliver against (see CityAlertBell).
-              <RegionDrilldown key={loc} title={formatRegionLabel(loc)} actions={<CityAlertBell city={loc} lens={config.marketActivity} />}>
+              <RegionDrilldown
+                key={loc}
+                title={formatRegionLabel(loc)}
+                persistKey={`city:${loc}`}
+                summary={sectionSummary(config.marketActivity, enabledBoards.length)}
+                actions={<CityAlertBell city={loc} lens={config.marketActivity} />}
+              >
                 <MarketActivityPanel area={area} lens={config.marketActivity} />
 
                 {enabledBoards.length === 0 ? (
