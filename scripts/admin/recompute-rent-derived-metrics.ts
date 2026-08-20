@@ -71,6 +71,7 @@ const CLOSED_STATUSES = [
 interface Row {
   listing_key: string;
   cap_rate_est: string | number | null;
+  rent_match_tier: string | null;
   full_payload: Record<string, unknown>;
 }
 
@@ -81,6 +82,7 @@ interface Drift {
   to: number;
   yieldTo: number;
   cashflowTo: number;
+  tierTo: string;
   hadComp: boolean;
 }
 
@@ -132,6 +134,7 @@ async function recompute(raw: any) {
     bedroomsAboveGrade: raw.BedroomsAboveGrade,
     bedroomsBelowGrade: raw.BedroomsBelowGrade,
     bathroomsTotal: raw.BathroomsTotalInteger || 0,
+    county: raw.CountyOrParish,
     isSuiteCandidate,
   }));
 
@@ -168,7 +171,7 @@ async function recompute(raw: any) {
     multiUnitStatus: multiUnit.multi_unit_status,
     isCondo: !!(raw.PropertyType?.includes('Condo') || raw.CondoCorpNumber),
   });
-  return { metrics, hadComp: rentAVM.has_data };
+  return { metrics, hadComp: rentAVM.has_data, tier: rentAVM.has_data ? (rentAVM.match_tier ?? '') : '' };
 }
 
 /** Run `worker` over `items` with a bounded number in flight. */
@@ -193,6 +196,9 @@ async function pushTypesense(rows: Drift[]): Promise<{ updated: number; failed: 
       cap_rate_est: r.to,
       gross_yield_est: r.yieldTo,
       net_monthly_cashflow: r.cashflowTo,
+      // Patched in the SAME document as the numbers it qualifies. Splitting them would
+      // leave a repaired cap rate sitting next to a stale confidence signal.
+      rent_match_tier: r.tierTo,
     }))
     .join('\n');
   const res = await fetch(
@@ -254,7 +260,8 @@ async function main() {
 
   for (let offset = 0; offset < total; offset += READ_PAGE) {
     const { rows } = await client.query<Row>(
-      `SELECT listing_key, cap_rate_est, full_payload ${scopeSql} ORDER BY listing_key LIMIT $2 OFFSET $3`,
+      `SELECT listing_key, cap_rate_est, rent_match_tier, full_payload ${scopeSql}
+        ORDER BY listing_key LIMIT $2 OFFSET $3`,
       [CLOSED_STATUSES, Math.min(READ_PAGE, total - offset), offset]
     );
     if (rows.length === 0) break;
@@ -271,13 +278,18 @@ async function main() {
     for (const res of results) {
       if (!res) continue;
       scanned++;
-      const { r, metrics, hadComp } = res;
+      const { r, metrics, hadComp, tier } = res;
       const stored = r.cap_rate_est == null ? null : Number(r.cap_rate_est);
       if (hadComp) gainedComp++;
       if (stored != null && stored < 0 && metrics.cap_rate_est >= 0) clearedNegative++;
       // Postgres stores NULL where the Typesense payload writes the 0 sentinel (the
       // transformer uses `|| null`), so compare on the sentinel-normalised value.
-      if (Math.abs((stored ?? 0) - metrics.cap_rate_est) < 0.005) continue;
+      const capSame = Math.abs((stored ?? 0) - metrics.cap_rate_est) < 0.005;
+      // The TIER counts as drift too. A listing whose cap rate is already correct but
+      // whose stored rung is absent or stale would otherwise keep comp-grade
+      // presentation forever — 124 introduced the column, so every row needs one pass.
+      const tierSame = (r.rent_match_tier ?? '') === tier;
+      if (capSame && tierSame) continue;
       drifted.push({
         key: r.listing_key,
         address: String((r.full_payload as { UnparsedAddress?: string }).UnparsedAddress ?? '(no address)'),
@@ -285,6 +297,7 @@ async function main() {
         to: metrics.cap_rate_est,
         yieldTo: metrics.gross_yield_est,
         cashflowTo: metrics.net_monthly_cashflow,
+        tierTo: tier,
         hadComp,
       });
     }
@@ -298,6 +311,16 @@ async function main() {
   console.log(`   now resolve to a rent comp:  ${gainedComp.toLocaleString()} (${pct(gainedComp)})`);
   console.log(`   fabricated negative cleared: ${clearedNegative.toLocaleString()} (${pct(clearedNegative)})`);
   console.log(`   values to write:             ${drifted.length.toLocaleString()}`);
+  const tierMix = drifted.reduce<Record<string, number>>((a, d) => {
+    const k = d.tierTo || '(no comp)';
+    a[k] = (a[k] ?? 0) + 1;
+    return a;
+  }, {});
+  console.log('');
+  console.log('   rung mix of the rewritten values:');
+  for (const t of ['nbhd', 'city_bath', 'city', 'city_family', 'county', '(no comp)']) {
+    if (tierMix[t]) console.log(`      ${t.padEnd(12)} ${tierMix[t].toLocaleString().padStart(7)}`);
+  }
 
   if (drifted.length) {
     console.log(`\n   Sample (first ${Math.min(sampleCount, drifted.length)}):`);
@@ -328,12 +351,18 @@ async function main() {
   for (let i = 0; i < drifted.length; i += PG_CHUNK) {
     const chunk = drifted.slice(i, i + PG_CHUNK);
     const res = await client.query(
-      `UPDATE listings AS l SET cap_rate_est = v.cap
-         FROM (SELECT unnest($1::text[]) AS key, unnest($2::numeric[]) AS cap) AS v
+      `UPDATE listings AS l SET cap_rate_est = v.cap, rent_match_tier = v.tier
+         FROM (SELECT unnest($1::text[]) AS key, unnest($2::numeric[]) AS cap,
+                      unnest($3::text[]) AS tier) AS v
         WHERE l.listing_key = v.key`,
-      // The transformer writes `metrics3.cap_rate_est || null`, so 0 must land as NULL
-      // here too, or this column would disagree with a freshly-transformed row.
-      [chunk.map((d) => d.key), chunk.map((d) => (d.to === 0 ? null : d.to))]
+      // The transformer writes `metrics3.cap_rate_est || null` and a null tier when no
+      // comp exists, so both must land as NULL here or this row would disagree with a
+      // freshly-transformed one.
+      [
+        chunk.map((d) => d.key),
+        chunk.map((d) => (d.to === 0 ? null : d.to)),
+        chunk.map((d) => d.tierTo || null),
+      ]
     );
     pgUpdated += res.rowCount ?? 0;
     console.log(`   … ${Math.min(i + PG_CHUNK, drifted.length)}/${drifted.length}`);

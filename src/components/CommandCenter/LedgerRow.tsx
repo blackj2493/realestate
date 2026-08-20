@@ -21,6 +21,7 @@ import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "./ListingCardBody";
 import { carryFor } from "./columnSort";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { rentTierConfidence, rentTierExplainer } from "@/lib/metrics/rentTier";
 import type { CohortRanker } from "./cohortPercentiles";
 
 interface LedgerRowProps {
@@ -121,10 +122,18 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
     }
     case "capRate": {
       const v = capRateOrNull(doc.cap_rate_est);
+      // An AREA-grade rent (city / city_family / county rungs) carries 13-15% median
+      // error against 5.6% for a neighbourhood comp, and that amplifies through NOI.
+      // Show it as approximate and drop the percentile rank — ranking a cohort on a
+      // number that loose reads as precision the figure does not have.
+      const area = rentTierConfidence(doc.rent_match_tier) === "area";
       return (
-        <span className="text-cyan-700 dark:text-cyan-400">
-          {v != null ? `${v.toFixed(1)}%` : "—"}
-          {v != null && <PctTag p={ranker?.("capRate", v)} />}
+        <span
+          className={area ? "text-cyan-700/70 dark:text-cyan-400/70" : "text-cyan-700 dark:text-cyan-400"}
+          title={area ? rentTierExplainer(doc.rent_match_tier) ?? undefined : undefined}
+        >
+          {v != null ? `${area ? "≈" : ""}${v.toFixed(1)}%` : "—"}
+          {v != null && !area && <PctTag p={ranker?.("capRate", v)} />}
         </span>
       );
     }

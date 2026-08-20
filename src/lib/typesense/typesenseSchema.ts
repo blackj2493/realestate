@@ -112,6 +112,9 @@ export const indexedFields: IndexedField[] = [
 
   // ─── Persona 2: Cashflow Investor — all numerics are sliders ──────────────
   { name: 'cap_rate_est', type: 'float', facet: false, sort: true },
+  // Which rung of the rent ladder produced cap_rate_est / gross_yield_est.
+  // optional: pre-124 documents carry no value until they are re-transformed.
+  { name: 'rent_match_tier', type: 'string', facet: false, optional: true },
   { name: 'cap_rate_floor', type: 'float', facet: false, sort: true },
   { name: 'gross_yield_est', type: 'float', facet: false, sort: true },
   { name: 'net_monthly_cashflow', type: 'int32', facet: false, sort: true },
@@ -281,6 +284,7 @@ export const typesenseSchema = {
 
     // ─── Persona 2: Cashflow Investor — range sliders ──────────────────────
     { name: 'cap_rate_est', type: 'float' as const, facet: false, sort: true },
+    { name: 'rent_match_tier', type: 'string' as const, facet: false, optional: true },
     { name: 'cap_rate_floor', type: 'float' as const, facet: false, sort: true },
     { name: 'gross_yield_est', type: 'float' as const, facet: false, sort: true },
     { name: 'net_monthly_cashflow', type: 'int32' as const, facet: false, sort: true },
@@ -448,6 +452,8 @@ export interface TypesensePropertyDocument {
   // Derived Financial Metrics
   /** Estimated cap rate using market rent (e.g., 4.63 for 4.63%) */
   cap_rate_est: number;
+  /** Rung that produced the rent behind cap_rate_est. See src/lib/metrics/rentTier.ts. */
+  rent_match_tier?: string;
   /** Cap rate floor using P10 rent + 8% vacancy (conservative scenario) */
   cap_rate_floor: number;
   /** Estimated gross yield: Annual Rent / ListPrice */

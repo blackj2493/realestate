@@ -238,6 +238,9 @@ export interface ListingDocument {
 
   // ─── Cap Rate / Yield (Phase 5 estimates) ────────────────────────────
   cap_rate_est?: number;
+  /** Rung of the rent ladder behind cap_rate_est / gross_yield_est — the confidence
+   *  signal. Absent on documents not re-transformed since migration 124. */
+  rent_match_tier?: string;
   gross_yield_est?: number;
 
   // ─── Builder / Density / Zoning ──────────────────────────────────────

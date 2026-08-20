@@ -669,6 +669,7 @@ export interface TransformResult {
     list_price: number;
     extrapolated_cap_rate: number;
     cap_rate_est: number | null;
+    rent_match_tier: string | null;
     property_hash: string;
     // Flat dimension columns (migration 045) — let region_active_aggregates floor on
     // beds/baths/parking/frontage/basement WITHOUT detoasting full_payload. Mirror the
@@ -773,6 +774,9 @@ export interface TransformResult {
     cashflow_floor?: number;
     tax_burden_ratio?: number;
     assessment_status?: string;
+    /** Which rung of the rent ladder produced cap_rate_est / gross_yield_est. Drives
+     *  rentTierConfidence() — see src/lib/metrics/rentTier.ts. '' = no rent comp. */
+    rent_match_tier?: string;
     price_discovery_flag?: boolean;
     // Basement field for suite analysis
     BasementType?: string[];
@@ -879,6 +883,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       bedroomsBelowGrade: raw.BedroomsBelowGrade,
       // Real bath count drives the tiered rent lookup (replaces WashroomsType1Pcs).
       bathroomsTotal: raw.BathroomsTotalInteger || 0,
+      // Parent geography for the county rung (124). Omit it and the ladder just stops
+      // one rung earlier, so this is additive, never a regression.
+      county: raw.CountyOrParish,
       isSuiteCandidate,
     });
   } catch (err) {
@@ -962,6 +969,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // RPC excludes it rather than averaging a 0. extrapolated_cap_rate stays until the
     // engine is retired (§9); region_active_aggregates reads only cap_rate_est.
     cap_rate_est: metrics3?.cap_rate_est || null,
+    // Stored beside the value it qualifies so the recompute job can re-check it (124).
+    rent_match_tier: rentAVM.has_data ? (rentAVM.match_tier ?? null) : null,
     property_hash: trueDOM.propertyHash,
     // Flat dimension columns (migration 045). Same extraction as the Typesense payload
     // below (0 = missing, mirrors that path) so the region RPC never has to detoast
@@ -1114,6 +1123,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     typesensePayload.cashflow_floor = metrics3.cashflow_floor ?? 0;
     typesensePayload.tax_burden_ratio = metrics3.tax_burden_ratio ?? 0;
     typesensePayload.assessment_status = metrics3.assessment_status || 'MARKET_AVERAGE';
+    // The rung that produced the rent, written NEXT TO the numbers it qualifies so the
+    // two can never be read apart. Error spans 5.56% ('nbhd') to 14.49% ('county') and
+    // CAP_RATE_BAND cannot tell them apart — a wrong 4.2% looks like a right one.
+    typesensePayload.rent_match_tier = rentAVM.has_data ? (rentAVM.match_tier ?? '') : '';
   }
 
   // Price discovery flag from TrueValue service

@@ -38,7 +38,8 @@ async function main() {
             full_payload->>'BedroomsTotal'          AS bedrooms_total,
             full_payload->>'BedroomsAboveGrade'     AS bedrooms_above,
             full_payload->>'BedroomsBelowGrade'     AS bedrooms_below,
-            full_payload->>'BathroomsTotalInteger'  AS bathrooms_total
+            full_payload->>'BathroomsTotalInteger'  AS bathrooms_total,
+            full_payload->>'CountyOrParish'          AS county
        FROM listings
       WHERE lower(coalesce(full_payload->>'TransactionType', '')) ~ '(leas|rent)'`,
   );
@@ -58,6 +59,8 @@ async function main() {
       bedroomsBelowGrade: /^[0-9]+$/.test(r.bedrooms_below ?? '') ? parseInt(r.bedrooms_below, 10) : null,
       // Real bath count — replaces the bogus WashroomsType1Pcs piece-count key.
       bathroomsTotal: /^[0-9]+$/.test(r.bathrooms_total ?? '') ? parseInt(r.bathrooms_total, 10) : null,
+      // Parent geography for the `county` rung (124). 100% populated in the feed.
+      county: r.county,
     });
   }
 
@@ -65,6 +68,15 @@ async function main() {
   const splitRows = indexRows.filter((r) => r.bedrooms_above !== null).length;
   console.log(`Read ${rows.length} active for-lease listings -> ${indexRows.length} cohorts (min-N met).`);
   console.log(`  plus-room split cohorts: ${splitRows}   merged fallback cohorts: ${indexRows.length - splitRows}`);
+  // Per-rung counts: a rung that silently drops to zero is the failure mode here, and
+  // it would only show up later as listings falling through to no estimate at all.
+  const byTier = indexRows.reduce<Record<string, number>>((a, r) => {
+    a[r.match_tier] = (a[r.match_tier] ?? 0) + 1;
+    return a;
+  }, {});
+  for (const t of ['nbhd', 'city_bath', 'city', 'city_family', 'county'] as const) {
+    console.log(`  ${t.padEnd(12)} ${(byTier[t] ?? 0).toLocaleString().padStart(7)} cohorts`);
+  }
   if (splitRows === 0) {
     throw new Error(
       'No plus-room cohorts survived — BedroomsAboveGrade/BelowGrade are probably absent ' +
@@ -82,19 +94,21 @@ async function main() {
   await client.query('TRUNCATE rental_market_index');
   for (let i = 0; i < indexRows.length; i += WRITE_CHUNK) {
     const batch = indexRows.slice(i, i + WRITE_CHUNK);
-    const COLS = 11;
+    const COLS = 13; // keep in lockstep with the INSERT column list + params.push below
     const params: (string | number | null)[] = [];
     const tuples = batch.map((row, j) => {
       const b = j * COLS;
       params.push(row.match_tier, row.city_region, row.city, row.property_sub_type,
         row.bedrooms_total, row.bedrooms_above, row.den, row.bathrooms,
-        row.avg_rent, row.p10_rent, row.sample_count);
+        row.avg_rent, row.p10_rent, row.sample_count,
+        row.county, row.sub_type_family);
       return `(${Array.from({ length: COLS }, (_, k) => `$${b + k + 1}`).join(', ')})`;
     });
     await client.query(
       `INSERT INTO rental_market_index
          (match_tier, city_region, city, property_sub_type, bedrooms_total,
-          bedrooms_above, den, bathrooms, avg_rent, p10_rent, sample_count)
+          bedrooms_above, den, bathrooms, avg_rent, p10_rent, sample_count,
+          county, sub_type_family)
        VALUES ${tuples.join(',')}`,
       params,
     );

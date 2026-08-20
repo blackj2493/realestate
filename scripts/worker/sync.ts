@@ -236,6 +236,7 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       list_price: p.list_price,
       extrapolated_cap_rate: p.extrapolated_cap_rate,
       cap_rate_est: p.cap_rate_est,
+      rent_match_tier: p.rent_match_tier,
       property_hash: metrics?.property_hash || '',
       // Flat dimension columns (migration 045) — region RPC floors without detoast
       bedrooms_total: p.bedrooms_total,

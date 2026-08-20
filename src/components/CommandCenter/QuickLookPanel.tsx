@@ -43,6 +43,7 @@ import InfoDot from "@/components/ui/InfoDot";
 import type { GlossaryKey } from "@/lib/glossary";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { rentTierConfidence, rentTierExplainer } from "@/lib/metrics/rentTier";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
@@ -153,6 +154,9 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const domColor = dom > 45 ? "text-emerald-700 dark:text-emerald-400" : dom >= 14 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground";
   const yieldEst = grossYieldOrNull(property.gross_yield_est);
   const capRate = capRateOrNull(property.cap_rate_est);
+  // Area-grade rungs carry 13-15% median rent error vs 5.6% for a neighbourhood comp,
+  // and that amplifies through NOI. Mark it rather than show both the same way.
+  const capRateArea = rentTierConfidence(property.rent_match_tier) === "area";
   const hero = property.primaryImageUrl || property.thumbnailUrl;
   const sqft = property.BuildingAreaTotal && property.BuildingAreaTotal > 0
     ? property.BuildingAreaTotal.toLocaleString()
@@ -319,7 +323,13 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
             <div className="mb-4 grid grid-cols-3 gap-2">
               <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
               <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-700 dark:text-emerald-400" term="grossYield" />
-              <Tile label="Cap Rate" value={pct(capRate)} valueClass="text-foreground" term="capRate" />
+              <Tile
+                label="Cap Rate"
+                value={capRate != null && capRateArea ? `≈${pct(capRate)}` : pct(capRate)}
+                valueClass="text-foreground"
+                term="capRate"
+                approxHint={capRateArea ? rentTierExplainer(property.rent_match_tier) : null}
+              />
             </div>
           ) : (
             <div className="mb-4 grid grid-cols-1 gap-2">
@@ -399,14 +409,21 @@ function Tile({
   value,
   valueClass,
   term,
+  /** Set when the figure is an area average rather than a property-level comp. The
+   *  text becomes the tile's tooltip and the value renders with a ≈. */
+  approxHint,
 }: {
   label: string;
   value: string;
   valueClass?: string;
   term?: GlossaryKey;
+  approxHint?: string | null;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-2.5 text-center">
+    <div
+      className="rounded-lg border border-border bg-card/50 p-2.5 text-center"
+      title={approxHint ?? undefined}
+    >
       <div className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-wide text-muted-foreground">
         {label}
         {term && <InfoDot term={term} />}

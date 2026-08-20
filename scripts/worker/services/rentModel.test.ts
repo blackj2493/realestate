@@ -54,14 +54,15 @@ describe('percentile', () => {
 const lease = (rent: number, over: Partial<RawLeaseInput> = {}): RawLeaseInput => ({
   status: 'Leased', closePrice: rent,
   city: 'Toronto', cityRegion: 'Willowdale East', propertySubType: 'Condo Apartment',
-  bedroomsTotal: 2, bathroomsTotal: 2, ...over,
+  county: 'Toronto', bedroomsTotal: 2, bathroomsTotal: 2, ...over,
 });
 
 describe('buildRentalIndexRows (tiered)', () => {
-  it('emits all three tiers for a fully-specified cohort once it meets MIN_COHORT_SAMPLES', () => {
+  it('emits every rung for a fully-specified cohort once it meets MIN_COHORT_SAMPLES', () => {
     const rows = buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r)));
     const byTier = Object.fromEntries(rows.map((r) => [r.match_tier, r]));
-    expect(new Set(rows.map((r) => r.match_tier))).toEqual(new Set(['nbhd', 'city_bath', 'city']));
+    expect(new Set(rows.map((r) => r.match_tier)))
+      .toEqual(new Set(['nbhd', 'city_bath', 'city', 'city_family', 'county']));
 
     expect(byTier.nbhd).toMatchObject({
       city_region: 'Willowdale East', city: 'Toronto', property_sub_type: 'Condo Apartment',
@@ -104,14 +105,65 @@ describe('buildRentalIndexRows (tiered)', () => {
     expect(MIN_COHORT_SAMPLES).toBeGreaterThanOrEqual(3);
   });
 
-  it('a lease missing bath count still feeds the city (baths-relaxed) tier only', () => {
-    const rows = buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r, { bathroomsTotal: null })));
-    // Every tier now emits TWO cohorts — the plus-room split and the merged fallback
-    // it degrades to (migration 122) — so the city tier is the only tier, twice.
-    expect(new Set(rows.map((r) => r.match_tier))).toEqual(new Set(['city']));
-    expect(rows).toHaveLength(2);
-    expect(rows.filter((r) => r.bedrooms_above !== null)).toHaveLength(1);
-    expect(rows.filter((r) => r.bedrooms_above === null)).toHaveLength(1);
+  it('a lease missing bath count feeds only the baths-relaxed rungs', () => {
+    const rows = buildRentalIndexRows(
+      [2000, 2100, 2200, 2300, 2400].map((r) => lease(r, { bathroomsTotal: null, county: null }))
+    );
+    // Every rung emits TWO cohorts — the plus-room split and the merged fallback it
+    // degrades to (122) — so two baths-relaxed rungs give four rows.
+    expect(new Set(rows.map((r) => r.match_tier))).toEqual(new Set(['city', 'city_family']));
+    expect(rows).toHaveLength(4);
+    expect(rows.filter((r) => r.bedrooms_above !== null)).toHaveLength(2);
+    expect(rows.filter((r) => r.bedrooms_above === null)).toHaveLength(2);
+  });
+
+  // ── migration 124 — the two fallback rungs ──────────────────────────────────────
+  it('city_family pools the sub-type and leaves property_sub_type null', () => {
+    const rows = buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r)));
+    const fam = rows.filter((r) => r.match_tier === 'city_family');
+    expect(fam.length).toBeGreaterThan(0);
+    for (const r of fam) {
+      expect(r.property_sub_type).toBeNull();   // the rung does not key on one sub-type
+      expect(r.sub_type_family).toBe('condo');  // Condo Apartment pools into condo
+      expect(r.city).toBe('Toronto');           // geography is held exact
+      expect(r.county).toBeNull();
+    }
+  });
+
+  it('county holds the exact sub-type and drops the city', () => {
+    const rows = buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r)));
+    const cty = rows.filter((r) => r.match_tier === 'county');
+    expect(cty.length).toBeGreaterThan(0);
+    for (const r of cty) {
+      expect(r.county).toBe('Toronto');
+      expect(r.city).toBeNull();                       // county rows are not city rows
+      expect(r.property_sub_type).toBe('Condo Apartment');
+      expect(r.sub_type_family).toBeNull();
+    }
+  });
+
+  it('emits no county rung when the feed carries no county', () => {
+    const rows = buildRentalIndexRows([2000, 2100, 2200, 2300, 2400].map((r) => lease(r, { county: null })));
+    expect(rows.some((r) => r.match_tier === 'county')).toBe(false);
+    expect(rows.some((r) => r.match_tier === 'city')).toBe(true); // the rest still build
+  });
+
+  it('NEVER pools a non-rentable sub-type — a vacant lot cannot inherit a house rent', () => {
+    const rows = buildRentalIndexRows(
+      [2000, 2100, 2200, 2300, 2400].map((r) => lease(r, { propertySubType: 'Vacant Land' }))
+    );
+    expect(rows.some((r) => r.match_tier === 'city_family')).toBe(false);
+    // The exact-sub-type rungs still build: those can only ever match another vacant lot.
+    expect(rows.some((r) => r.match_tier === 'city')).toBe(true);
+  });
+
+  it('btrims the sub-type before pooling, so "Semi-Detached " lands in freehold', () => {
+    const rows = buildRentalIndexRows(
+      [2000, 2100, 2200, 2300, 2400].map((r) => lease(r, { propertySubType: 'Semi-Detached ' }))
+    );
+    const fam = rows.find((r) => r.match_tier === 'city_family');
+    expect(fam?.sub_type_family).toBe('freehold');
+    expect(rows.find((r) => r.match_tier === 'city')?.property_sub_type).toBe('Semi-Detached');
   });
 
   it('drops thin cohorts (< MIN_COHORT_SAMPLES) and ignores sale/out-of-band rows', () => {
