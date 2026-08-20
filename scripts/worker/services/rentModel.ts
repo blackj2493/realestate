@@ -12,7 +12,28 @@ import { bedSplit } from '@/lib/listings/bedSplit';
 
 export const MIN_MONTHLY_RENT = 500;
 export const MAX_MONTHLY_RENT = 25000;
-export const MIN_COHORT_SAMPLES = 5; // suppress thin cohorts (noise + min-N hygiene)
+/**
+ * Minimum leases a cohort needs before it publishes a rent.
+ *
+ * Lowered 5 -> 3 on measured evidence. Leave-one-out backtest over 84,496 active
+ * leases, predicting each one from its own lookup ladder with itself removed:
+ *
+ *   floor | cohorts | active for-sale covered | median err | err of the cohorts ADDED
+ *     5   |  14,782 |   76,866  (61.5%)       |   6.06%    |  —
+ *     4   |  18,459 |   79,354  (63.5%)       |   6.06%    |  median 7.69%, p90 29.3%
+ *     3   |  24,769 |   82,461  (66.0%)       |   6.06%    |  median 8.17%, p90 30.9%
+ *     2   |  37,240 |   86,963  (69.6%)       |   6.00%    |  median 8.00%, p90 33.4%
+ *
+ * 3 buys 5,595 more covered listings for ~2 points of median error on the newly
+ * covered ones, and the blended median does not move. It is also the smallest
+ * honest median: at n=2 the "median" is the mean of two, so one outlier moves it
+ * 50%, and at n=1 the leave-one-out set is empty — the estimate would be the
+ * listing's own asking rent, which is circular, not a comp. Do not go below 3.
+ *
+ * Every consumer must still pass the value through CAP_RATE_BAND / GROSS_YIELD_BAND
+ * (src/lib/metrics/sanityBand.ts), which is what catches the widened p90 tail.
+ */
+export const MIN_COHORT_SAMPLES = 3;
 
 export type MatchTier = 'nbhd' | 'city_bath' | 'city';
 

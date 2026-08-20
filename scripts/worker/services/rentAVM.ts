@@ -37,7 +37,18 @@ export async function fetchRentAVM(params: {
   bathroomsTotal?: number;
   isSuiteCandidate: boolean;
 }): Promise<RentAVMResult> {
-  const { city, cityRegion, propertySubType, bedroomsTotal, bathroomsTotal = 0, isSuiteCandidate } = params;
+  const { bedroomsTotal, bathroomsTotal = 0, isSuiteCandidate } = params;
+
+  // TRIM BOTH SIDES. rentModel btrims city / city_region / property_sub_type before it
+  // keys a cohort, because the feed ships "Semi-Detached " with a trailing space. The
+  // lookup used the RAW feed value against an exact .eq, so every for-sale semi asked
+  // for "Semi-Detached " and matched a stored "Semi-Detached" never — 4,775 active
+  // listings, all silently handed no rent data. Normalise here, not at each call site,
+  // so a new caller cannot reintroduce the asymmetry.
+  const city = (params.city ?? '').trim();
+  const cityRegion = (params.cityRegion ?? '').trim();
+  const propertySubType = (params.propertySubType ?? '').trim();
+
   const sel = () => supabase.from('rental_market_index').select('avg_rent, p10_rent');
 
   const split = bedSplit({

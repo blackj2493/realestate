@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isLeaseRecord, extractMonthlyRent, percentile,
   createRentAccumulator, buildRentalIndexRows,
-  MIN_MONTHLY_RENT, MAX_MONTHLY_RENT,
+  MIN_MONTHLY_RENT, MAX_MONTHLY_RENT, MIN_COHORT_SAMPLES,
   type RawLeaseInput, type RentalIndexRow,
 } from './rentModel';
 
@@ -72,17 +72,36 @@ describe('buildRentalIndexRows (tiered)', () => {
   });
 
   it('pools different bath counts into the city (baths-relaxed) tier', () => {
-    // Three 1-bath + two 2-bath leases: neither bath-specific bucket clears min-5,
-    // but the baths-relaxed city tier pools all five.
+    // Neither bath-specific bucket clears the floor on its own, but the baths-relaxed
+    // city tier pools them. Sized off MIN_COHORT_SAMPLES so a future floor change
+    // re-sizes the fixture instead of breaking the test.
+    const perBath = MIN_COHORT_SAMPLES - 1;
     const recs = [
-      ...[2000, 2100, 2200].map((r) => lease(r, { bathroomsTotal: 1 })),
-      ...[2600, 2800].map((r) => lease(r, { bathroomsTotal: 2 })),
+      ...Array.from({ length: perBath }, (_, i) => lease(2000 + i * 100, { bathroomsTotal: 1 })),
+      ...Array.from({ length: perBath }, (_, i) => lease(2600 + i * 100, { bathroomsTotal: 2 })),
     ];
     const rows = buildRentalIndexRows(recs);
-    expect(rows.find((r) => r.match_tier === 'city_bath')).toBeUndefined(); // 3 and 2 < 5
+    expect(rows.find((r) => r.match_tier === 'city_bath')).toBeUndefined();
     const city = rows.find((r) => r.match_tier === 'city') as RentalIndexRow;
-    expect(city.sample_count).toBe(5);
+    expect(city.sample_count).toBe(perBath * 2);
     expect(city.bathrooms).toBeNull();
+  });
+
+  it('publishes a cohort at exactly MIN_COHORT_SAMPLES and suppresses one below it', () => {
+    const atFloor = buildRentalIndexRows(
+      Array.from({ length: MIN_COHORT_SAMPLES }, (_, i) => lease(2000 + i * 100))
+    );
+    expect(atFloor.length).toBeGreaterThan(0);
+    const belowFloor = buildRentalIndexRows(
+      Array.from({ length: MIN_COHORT_SAMPLES - 1 }, (_, i) => lease(2000 + i * 100))
+    );
+    expect(belowFloor).toEqual([]);
+  });
+
+  it('never drops to a cohort of 1 — that would be the listing quoting itself', () => {
+    // A single-lease cohort has an empty leave-one-out set, so its "estimate" is the
+    // subject's own asking rent. See the backtest table on MIN_COHORT_SAMPLES.
+    expect(MIN_COHORT_SAMPLES).toBeGreaterThanOrEqual(3);
   });
 
   it('a lease missing bath count still feeds the city (baths-relaxed) tier only', () => {
