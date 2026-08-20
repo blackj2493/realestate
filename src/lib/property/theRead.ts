@@ -108,14 +108,28 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   const motivated = view.campaignHistory.campaignCount > 1 || drop > 0;
   const nudge = tier === "lite" ? " Sign in for our price estimate, Deal Score and reno-upside read." : "";
 
+  // "Priced to compete" — the SAME detector the Estimated Sale card and the Suggested Move
+  // run. Hoisted ABOVE the thesis, not just the price line, because THE THESIS IS WHAT
+  // LEAKED: detectCompetitive needs the comp mid to clear the ask by COMPETITIVE_COMP_MARGIN
+  // (5%), which forces overUnderPct <= -4.8%, so the "< -1" branch below fired on EVERY
+  // hold-offers listing and led with "a fair entry without a bidding war" directly above a
+  // price line promising competing offers. Any new persona clause that reads overUnderPct
+  // must branch on this first.
+  const comp =
+    view.status?.kind === "active" && listPrice > 0
+      ? detectCompetitive(listPrice, view.estimate)
+      : null;
+
   // ── THESIS per persona (null-guarded clauses degrade cleanly in lite) ──
   const thesisByPersona: Record<PersonaType, string> = {
     smart:
       suite
         ? `Starter you don't carry alone — a basement suite can offset the mortgage; run the sandbox for your all-in.`
-        : overUnderPct !== null && overUnderPct < -1
-          ? `Priced ${signedPct(overUnderPct)} vs comparable sales — a fair entry without a bidding war.`
-          : `Conventional ${subType?.toLowerCase() ?? "home"} — value is in condition and location; verify both in person.`,
+        : comp
+          ? `Priced ~${Math.round(comp.belowCompsPct * 100)}% below comparable sales to draw offers — budget to compete, not to negotiate.`
+          : overUnderPct !== null && overUnderPct < -1
+            ? `Priced ${signedPct(overUnderPct)} vs comparable sales — a fair entry without a bidding war.`
+            : `Conventional ${subType?.toLowerCase() ?? "home"} — value is in condition and location; verify both in person.`,
     cashflow:
       income && capRatePct !== null
         ? `${pct1(capRatePct)} cap as-is${suite ? `, with second-unit upside the sandbox can model` : ``} — size it against your carry.`
@@ -125,9 +139,13 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
             ? `Not an income property — there's no rent to underwrite here.`
             : `Thin as-is yield — this one only pencils with the value-add.`,
     flippers: (() => {
-      const lev = motivated
-        ? `${dom != null ? `${dom}d True DOM` : `time on market`}${drop > 0 ? ` and a ${money(drop)} cut` : ``} — real negotiating leverage`
-        : `little distress signal`;
+      // A hold-offers ask is a floor, so time on market and a cut are NOT leverage here —
+      // the facts stay, the conclusion drawn from them does not.
+      const lev = comp
+        ? `priced under comps to draw offers${drop > 0 ? ` despite a ${money(drop)} cut` : ``} — the ask is a floor, not a starting point`
+        : motivated
+          ? `${dom != null ? `${dom}d True DOM` : `time on market`}${drop > 0 ? ` and a ${money(drop)} cut` : ``} — real negotiating leverage`
+          : `little distress signal`;
       const up = netUpside > 0 ? ` ~${money(netUpside)} net reno upside modeled.` : ``;
       return `${cap1(lev)}.${up}`.trim();
     })(),
@@ -197,13 +215,8 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
         ? ` Already cut ${money(drop)} from the original ask${trueDom != null ? ` over ${trueDom}d` : ``}.`
         : ``;
     const exp = view.expectedSale;
-    // "Priced to compete" — the SAME detector the Estimated Sale card and the Suggested
-    // Move run, so this line can never tell the cohort-ratio "closes under ask" story on
-    // a listing the card calls a bidding-war setup.
-    const comp =
-      view.status?.kind === "active" && listPrice > 0
-        ? detectCompetitive(listPrice, view.estimate)
-        : null;
+    // `comp` is the hoisted detector result (see above), so this line can never tell the
+    // cohort-ratio "closes under ask" story on a listing the card calls a bidding-war setup.
     if (comp) {
       priceRead = `Asking ${money(listPrice)} — set ~${Math.round(comp.belowCompsPct * 100)}% below comparable sales, a hold-offers pattern: ~${Math.round(comp.overAskRate * 100)}% sold over ask, median close ≈ ask. Expect ${money(comp.rangeLow)}–${money(comp.rangeHigh)} if offers compete.${c}${saleNote}`;
     } else if (exp) {

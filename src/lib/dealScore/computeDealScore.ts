@@ -496,19 +496,20 @@ function computeOfferBand(
   if (comp) {
     const medianClose = Math.round(listPrice * comp.medianCloseRatio);
     const compLikely = Math.max(medianClose, expected ?? 0);
-    const medianPct = Math.round((1 - comp.medianCloseRatio) * 100);
-    const quiet =
-      expected !== null && expected < listPrice
-        ? ` A quiet offer night could land near ${fmtMoney(expected)}; overpaying`
-        : ` Overpaying`;
+    // NO UNDER-ASK NUMBER IN THIS NOTE. It used to carry a "quiet offer night could land
+    // near ${expected}" aside — the cohort-ratio figure, 3% under ask on a listing the
+    // headline right above calls "priced to draw competing offers". A buyer reading the
+    // aside as the instruction bids under a hold-offers ask and loses on offer night.
+    // "median close ≈ ask" is the same phrasing The Read's price line uses, so the two
+    // surfaces now render COMPETITIVE_MEDIAN_CLOSE_RATIO identically.
     return {
       aggressive: listPrice,
       likelyClose: compLikely,
       ceiling,
       note:
         `Set ~${Math.round(comp.belowCompsPct * 100)}% below comparable sales — homes like this sold over ask ` +
-        `~${Math.round(comp.overAskRate * 100)}% of the time (median ≈ ${medianPct > 0 ? `${medianPct}% under ` : ``}ask).` +
-        `${quiet} above ~${fmtMoney(ceiling)}.`,
+        `~${Math.round(comp.overAskRate * 100)}% of the time (median close ≈ ask). ` +
+        `Overpaying above ~${fmtMoney(ceiling)}.`,
       hotMarket,
       competitive: true,
       basis,
