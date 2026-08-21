@@ -51,6 +51,13 @@ export interface UnderwritingAssumptions {
   opexPct: number;
   insuranceMonthly: number;
   closingCostPct: number;
+  /**
+   * One-time capital to CREATE a suite. Optional and zero on every strategy but
+   * "Add a suite" — it enters totalCashInvested, so cash-on-cash reflects money that
+   * has to be spent before the income arrives. Showing suite rent without it is the
+   * same fabrication as the $1,500 constant, one step later.
+   */
+  suiteCapex?: number;
 }
 
 export interface UnderwritingResult {
@@ -122,7 +129,8 @@ export function computeUnderwriting(input: UnderwritingAssumptions): Underwritin
   const annualCashflow = monthlyCashflow * 12;
 
   const annualDebtService = monthlyMortgage * 12;
-  const totalCashInvested = downPayment + price * (closingCostPct / 100);
+  const suiteCapex = Math.max(0, num(input.suiteCapex ?? 0));
+  const totalCashInvested = downPayment + price * (closingCostPct / 100) + suiteCapex;
 
   const capRatePct = price > 0 ? (annualNOI / price) * 100 : 0;
   const cashOnCashPct = totalCashInvested > 0 ? (annualCashflow / totalCashInvested) * 100 : 0;
@@ -154,13 +162,52 @@ export function computeUnderwriting(input: UnderwritingAssumptions): Underwritin
   };
 }
 
+/**
+ * How the reader intends to run the property. Each one is a different business, and
+ * the sandbox used to mix two of them: it took the whole-home comp AND added a flat
+ * $1,500 of "other income", which charges for the basement twice.
+ *
+ *   whole-home  one tenant, the entire house. Suite income zero.
+ *   split       main unit + in-home suite, both from comps. What an investor buying a
+ *               home with a second kitchen actually does — it beats the whole-home
+ *               lease on 94.5% of them, median +31.9%.
+ *   add-suite   there is no suite yet. Suite rent from comps, MINUS the conversion
+ *               cost, which lands in cash invested rather than being waved away.
+ */
+export type UnderwritingStrategy = "whole-home" | "split" | "add-suite";
+
+/**
+ * Cost to build a legal secondary suite, from the value-add move catalog
+ * (src/lib/avm/valueAdd/moveCatalog.ts — costLow 50k / costTyp 75k / costHigh 120k).
+ * The sandbox seeds the TYPICAL figure and shows the range, because a point estimate
+ * on a renovation is a fiction: $50k and $120k are different decisions.
+ */
+export const SUITE_CONVERSION_COST = { low: 50_000, typical: 75_000, high: 120_000 } as const;
+
 export interface SeedInput {
   listPrice?: number | null;
   annualTaxes?: number | null;
   monthlyFees?: number | null;
   hasSuitePotential?: boolean;
-  /** Rent from the comp ladder (src/lib/metrics/compRent.ts). Null when no comp exists. */
+  /** Rent from the comp ladder (src/lib/metrics/compRent.ts). Null when no comp exists.
+   *  Where a suite is observed this is already the MAIN-UNIT comp, not the whole home. */
   compMonthlyRent?: number | null;
+  /** Measured in-home suite rent (125). Null when no suite is observed or no cohort. */
+  suiteMonthlyRent?: number | null;
+  /** Which business this seed is for. Defaults to the one the home already runs. */
+  strategy?: UnderwritingStrategy;
+}
+
+/**
+ * Which strategy a listing opens on.
+ *
+ * A home with a second kitchen opens on the SPLIT, because that is what the property
+ * is — and the reader is in the investor lens by definition. Everything else opens
+ * whole-home. "Add a suite" is never a default: it costs $50k-$120k and a permit, and
+ * defaulting to it would publish a return on capital nobody has spent.
+ */
+export function defaultStrategy(suiteMonthlyRent?: number | null): UnderwritingStrategy {
+  return typeof suiteMonthlyRent === "number" && suiteMonthlyRent > 0 ? "split" : "whole-home";
 }
 
 /** Which anchor the Monthly Rent field got — the UI must say, they differ a lot. */
@@ -190,6 +237,15 @@ export function seedMonthlyRent(price: number, compMonthlyRent?: number | null):
   return Math.min(RENT_SEED_MAX, Math.max(RENT_SEED_MIN, anchor || RENT_SEED_MIN));
 }
 
+/** Suite income for a strategy. Whole-home earns none; the other two earn the comp. */
+export function suiteIncomeFor(
+  strategy: UnderwritingStrategy,
+  suiteMonthlyRent?: number | null
+): number {
+  if (strategy === "whole-home") return 0;
+  return typeof suiteMonthlyRent === "number" && suiteMonthlyRent > 0 ? Math.round(suiteMonthlyRent) : 0;
+}
+
 /** Did this listing's rent seed come from comps, or from the price rule? */
 export function rentSeedBasis(compMonthlyRent?: number | null): RentSeedBasis {
   return typeof compMonthlyRent === "number" && Number.isFinite(compMonthlyRent) && compMonthlyRent > 0
@@ -203,6 +259,7 @@ export function rentSeedBasis(compMonthlyRent?: number | null): RentSeedBasis {
  */
 export function seedAssumptions(listing: SeedInput): UnderwritingAssumptions {
   const purchasePrice = Math.max(0, num(Number(listing.listPrice)));
+  const strategy = listing.strategy ?? defaultStrategy(listing.suiteMonthlyRent);
   return {
     purchasePrice,
     downPaymentPct: UW_DEFAULTS.downPaymentPct,
@@ -211,7 +268,12 @@ export function seedAssumptions(listing: SeedInput): UnderwritingAssumptions {
     annualTaxes: Math.max(0, num(Number(listing.annualTaxes))),
     monthlyFees: Math.max(0, num(Number(listing.monthlyFees))),
     monthlyRent: seedMonthlyRent(purchasePrice, listing.compMonthlyRent),
-    otherMonthlyIncome: listing.hasSuitePotential ? SUITE_INCOME_DEFAULT : UW_DEFAULTS.otherMonthlyIncome,
+    // Suite income is a MEASURED comp or nothing. The SUITE_INCOME_DEFAULT constant
+    // that used to sit here was $1,500 flat on every listing in Ontario, switched on
+    // by KitchensBelowGrade alone: measured 21% off the local median, and more than
+    // 25% off on 143 of 331 city cohorts.
+    otherMonthlyIncome: suiteIncomeFor(strategy, listing.suiteMonthlyRent),
+    suiteCapex: strategy === "add-suite" ? SUITE_CONVERSION_COST.typical : 0,
     vacancyPct: UW_DEFAULTS.vacancyPct,
     opexPct: UW_DEFAULTS.opexPct,
     insuranceMonthly: UW_DEFAULTS.insuranceMonthly,

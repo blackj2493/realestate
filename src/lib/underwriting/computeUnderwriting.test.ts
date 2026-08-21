@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { computeUnderwriting, type UnderwritingAssumptions } from "./computeUnderwriting";
+import {
+  computeUnderwriting,
+  seedAssumptions,
+  defaultStrategy,
+  SUITE_CONVERSION_COST,
+  type UnderwritingAssumptions,
+} from "./computeUnderwriting";
 
 /** Minimal assumption set — only override what the test cares about. */
 function baseAssumptions(overrides: Partial<UnderwritingAssumptions> = {}): UnderwritingAssumptions {
@@ -72,5 +78,72 @@ describe("computeUnderwriting — Gross Yield (audit MEDIUM-12)", () => {
   it("returns 0 grossYieldPct when price is 0 (no division by zero)", () => {
     const result = computeUnderwriting(baseAssumptions({ purchasePrice: 0, monthlyRent: 3000 }));
     expect(result.grossYieldPct).toBe(0);
+  });
+});
+
+// ── Rental strategy (migration 125) ─────────────────────────────────────────────
+describe('rental strategy', () => {
+  const listing = { listPrice: 900_000, annualTaxes: 5_400, monthlyFees: 0, compMonthlyRent: 3_000 };
+
+  it('opens on the split when a suite is observed', () => {
+    expect(defaultStrategy(1_500)).toBe('split');
+  });
+
+  it('never opens on add-suite — it costs money nobody has spent', () => {
+    expect(defaultStrategy(null)).toBe('whole-home');
+    expect(defaultStrategy(0)).toBe('whole-home');
+  });
+
+  it('gives the whole-home strategy no suite income, even when a comp exists', () => {
+    const a = seedAssumptions({ ...listing, suiteMonthlyRent: 1_500, strategy: 'whole-home' });
+    expect(a.otherMonthlyIncome).toBe(0);
+    expect(a.suiteCapex).toBe(0);
+  });
+
+  it('seeds the split from the measured suite comp, not a constant', () => {
+    const a = seedAssumptions({ ...listing, suiteMonthlyRent: 1_875, strategy: 'split' });
+    expect(a.otherMonthlyIncome).toBe(1_875);
+    expect(a.suiteCapex).toBe(0);
+  });
+
+  it('earns nothing on the split when no suite comp answered', () => {
+    // "No cohort" must look exactly like "no suite" — the $1,500 constant is what
+    // filling that hole with a guess produced.
+    expect(seedAssumptions({ ...listing, suiteMonthlyRent: null, strategy: 'split' }).otherMonthlyIncome).toBe(0);
+  });
+
+  it('puts the conversion cost into cash invested on add-suite', () => {
+    // Cashflow-positive on purpose — see the next test for why the sign matters.
+    const cheap = { listPrice: 400_000, annualTaxes: 3_200, monthlyFees: 0, compMonthlyRent: 3_000 };
+    const a = seedAssumptions({ ...cheap, suiteMonthlyRent: 1_500, strategy: 'add-suite' });
+    expect(a.suiteCapex).toBe(SUITE_CONVERSION_COST.typical);
+
+    const built = computeUnderwriting(a);
+    const free = computeUnderwriting({ ...a, suiteCapex: 0 });
+    expect(built.monthlyCashflow).toBeGreaterThan(0);
+    expect(built.totalCashInvested - free.totalCashInvested).toBe(SUITE_CONVERSION_COST.typical);
+    // Same income, more capital in — the return must fall, not stay put.
+    expect(built.cashOnCashPct).toBeLessThan(free.cashOnCashPct);
+    expect(built.monthlyCashflow).toBe(free.monthlyCashflow);
+  });
+
+  it('documents the sign trap: on a cash-NEGATIVE deal, more capital RAISES cash-on-cash', () => {
+    // -$727/mo over $198k reads -4.41%; the same loss over $273k reads -3.20%. The
+    // ratio improves while the deal does not. Pinned so nobody "fixes" it into a
+    // guarantee that capex always lowers the number, and so any surface that ranks on
+    // cash-on-cash knows it must not do so across the sign.
+    const a = seedAssumptions({ ...listing, suiteMonthlyRent: 1_500, strategy: 'add-suite' });
+    const built = computeUnderwriting(a);
+    const free = computeUnderwriting({ ...a, suiteCapex: 0 });
+    expect(built.monthlyCashflow).toBeLessThan(0);
+    expect(built.cashOnCashPct).toBeGreaterThan(free.cashOnCashPct);
+  });
+
+  it('leaves capex out of the mortgage and the cap rate', () => {
+    const a = seedAssumptions({ ...listing, suiteMonthlyRent: 1_500, strategy: 'add-suite' });
+    const built = computeUnderwriting(a);
+    const free = computeUnderwriting({ ...a, suiteCapex: 0 });
+    expect(built.capRatePct).toBe(free.capRatePct);
+    expect(built.monthlyMortgage).toBe(free.monthlyMortgage);
   });
 });
