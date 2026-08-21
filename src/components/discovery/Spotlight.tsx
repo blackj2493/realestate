@@ -54,9 +54,10 @@ function useTargetBox(selector: string | undefined, stepKey: string): Box | null
     };
 
     const tick = () => {
-      // Responsive anchors can exist twice (e.g. MapModeDock's phone + desktop
-      // variants share one data-tour) — spotlight the one that's actually
-      // rendered at this breakpoint, not just the first in DOM order.
+      // One data-tour can sit on more than one element — a component with
+      // separate phone and desktop variants, or a card with mutually exclusive
+      // branches (ThingsToKnowCard). Spotlight the one actually rendered at this
+      // breakpoint, not just the first in DOM order.
       const matches = Array.from(document.querySelectorAll<HTMLElement>(selector));
       el =
         matches.find((m) => {
