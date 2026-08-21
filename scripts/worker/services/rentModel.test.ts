@@ -238,3 +238,86 @@ describe('plus-room split cohorts (migration 122)', () => {
     expect(semis.every((r) => r.sample_count === 10)).toBe(true);
   });
 });
+
+// ── In-home units and the suite rungs (migration 125) ────────────────────────────
+describe('in-home unit routing', () => {
+  const lease = (over: Partial<RawLeaseInput> = {}): RawLeaseInput => ({
+    transactionType: 'For Lease',
+    listPrice: 3000,
+    city: 'Toronto',
+    cityRegion: 'Toronto C07',
+    propertySubType: 'Detached',
+    bedroomsTotal: 3,
+    bedroomsAboveGrade: 3,
+    bathroomsTotal: 2,
+    county: 'Toronto',
+    ...over,
+  });
+
+  const tiers = (rows: RentalIndexRow[]) => new Set(rows.map((r) => r.match_tier));
+
+  it('keeps a basement lease OUT of every whole-home cohort', () => {
+    const acc = createRentAccumulator();
+    // Enough to clear MIN_COHORT_SAMPLES on their own, so any whole-home row that
+    // appears can only have come from these.
+    for (let i = 0; i < 5; i++) {
+      acc.add(lease({ unparsedAddress: '41 Eberly Woods Drive Basement, Caledon, ON', listPrice: 2000 }));
+    }
+    const rows = acc.finalize();
+    expect(tiers(rows)).toEqual(new Set(['suite_nbhd', 'suite_city']));
+    expect(rows.every((r) => r.property_sub_type === null)).toBe(true);
+    expect(rows.every((r) => r.sub_type_family === 'in_home_unit')).toBe(true);
+  });
+
+  it('does not let a basement lease move the whole-home median', () => {
+    const acc = createRentAccumulator();
+    for (let i = 0; i < 4; i++) acc.add(lease({ listPrice: 4000 }));
+    // A $1,200 basement in the same area, sub-type and bed count.
+    for (let i = 0; i < 3; i++) {
+      acc.add(lease({ listPrice: 1200, unparsedAddress: '6 Sweet Briar Lane Bsmt, Toronto, ON' }));
+    }
+    // Two nbhd rows, by design: every lease feeds the split cohort AND the merged
+    // fallback (see the dims loop). Neither may see the basement.
+    const whole = acc.finalize().filter((r) => r.match_tier === 'nbhd');
+    expect(whole).toHaveLength(2);
+    for (const row of whole) {
+      expect(row.avg_rent).toBe(4000);
+      expect(row.sample_count).toBe(4);
+    }
+  });
+
+  it('caps suite bedrooms and keeps split/bath keys null', () => {
+    const acc = createRentAccumulator();
+    for (let i = 0; i < 3; i++) {
+      acc.add(lease({ bedroomsTotal: 5, unparsedAddress: '9 Test Street Basement, Toronto, ON' }));
+    }
+    const row = acc.finalize().find((r) => r.match_tier === 'suite_city');
+    expect(row).toBeDefined();
+    expect(row!.bedrooms_total).toBe(3); // SUITE_BED_CAP
+    expect(row!.bedrooms_above).toBeNull();
+    expect(row!.den).toBeNull();
+    expect(row!.bathrooms).toBeNull();
+  });
+
+  it('treats an "Upper Level" sub-type as an in-home unit even without an address tell', () => {
+    const acc = createRentAccumulator();
+    for (let i = 0; i < 3; i++) acc.add(lease({ propertySubType: 'Upper Level' }));
+    expect(tiers(acc.finalize())).toEqual(new Set(['suite_nbhd', 'suite_city']));
+  });
+
+  it('leaves whole-home behaviour identical when no address is supplied', () => {
+    const acc = createRentAccumulator();
+    for (let i = 0; i < 3; i++) acc.add(lease());
+    const rows = acc.finalize();
+    expect(rows.some((r) => r.match_tier === 'nbhd')).toBe(true);
+    expect(rows.some((r) => String(r.match_tier).startsWith('suite_'))).toBe(false);
+  });
+
+  it('does not mistake a street named Upper/Main/Lower for a unit', () => {
+    const acc = createRentAccumulator();
+    for (const a of ['12 Upper Canada Drive, Toronto', '80 Lower Base Line, Milton', '5 Main Street, Ajax']) {
+      for (let i = 0; i < 3; i++) acc.add(lease({ unparsedAddress: a }));
+    }
+    expect(acc.finalize().some((r) => String(r.match_tier).startsWith('suite_'))).toBe(false);
+  });
+});

@@ -18,7 +18,8 @@ import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage
 import { detectDistress } from '@/lib/listings/distressSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
-import { fetchRentAVM, type RentAVMResult } from './services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent, type RentAVMResult, type SuiteRentResult } from './services/rentAVM';
+import { hasObservedSuite } from '@/lib/listings/observedSuite';
 import { resolveRatioPrice, fetchMillRate } from './services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
@@ -670,6 +671,8 @@ export interface TransformResult {
     extrapolated_cap_rate: number;
     cap_rate_est: number | null;
     rent_match_tier: string | null;
+    suite_rent_est: number | null;
+    suite_rent_tier: string | null;
     property_hash: string;
     // Flat dimension columns (migration 045) — let region_active_aggregates floor on
     // beds/baths/parking/frontage/basement WITHOUT detoasting full_payload. Mirror the
@@ -777,6 +780,8 @@ export interface TransformResult {
     /** Which rung of the rent ladder produced cap_rate_est / gross_yield_est. Drives
      *  rentTierConfidence() — see src/lib/metrics/rentTier.ts. '' = no rent comp. */
     rent_match_tier?: string;
+    suite_rent_est?: number;
+    suite_rent_tier?: string;
     price_discovery_flag?: boolean;
     // Basement field for suite analysis
     BasementType?: string[];
@@ -868,8 +873,14 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   const parkingResult = calculateSurplusParking(raw);
 
   // === Phase 3: Rent AVM (async Supabase lookup) ===
-  const isSuiteCandidate = ['EXISTING_MULTI_UNIT', 'PRIME_CANDIDATE', 'MARGINAL_CANDIDATE'].includes(multiUnitResult.multi_unit_status);
+  //
+  // There was an `isSuiteCandidate` flag here that switched on a 1.6x rent multiplier
+  // inside fetchRentAVM. It covered EXISTING_MULTI_UNIT, PRIME_CANDIDATE and
+  // MARGINAL_CANDIDATE — 102,285 active listings, 54.1% of the book, of which 83,882
+  // have no second kitchen. Retired in 125; suite income is now measured, and only for
+  // homes where a suite is OBSERVED (hasObservedSuite below).
   let rentAVM: RentAVMResult = { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null };
+  let suiteRent: SuiteRentResult = { monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null };
   try {
     rentAVM = await fetchRentAVM({
       city: raw.City || '',
@@ -886,10 +897,28 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       // Parent geography for the county rung (124). Omit it and the ladder just stops
       // one rung earlier, so this is additive, never a regression.
       county: raw.CountyOrParish,
-      isSuiteCandidate,
     });
   } catch (err) {
     console.warn('[Transformer] Rent AVM lookup failed:', err);
+  }
+
+  // Suite rent, only where the feed OBSERVES a suite. hasObservedSuite excludes the
+  // scored candidates and the plex sub-types (whose whole-home comp already IS the
+  // plex) — see src/lib/listings/observedSuite.ts for the reasoning and the counts.
+  const observedSuite = hasObservedSuite(raw);
+  if (observedSuite) {
+    try {
+      suiteRent = await fetchSuiteRent({
+        city: raw.City || '',
+        cityRegion: raw.CityRegion || raw.City || '',
+        // How many bedrooms the suite has. The feed omits this when it is zero, and a
+        // kitchen-only basement still leases as a small unit, so fetchSuiteRent reads
+        // an absent value as a 1-bed rather than as no suite.
+        bedroomsBelowGrade: raw.BedroomsBelowGrade,
+      });
+    } catch (err) {
+      console.warn('[Transformer] Suite rent lookup failed:', err);
+    }
   }
 
   // === Phase 3: Ratio-price basis & Mill Rate (async Supabase lookups) ===
@@ -926,8 +955,11 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     maintenanceExpense: raw.MaintenanceExpense ?? null,
     insuranceExpense: raw.InsuranceExpense ?? null,
     baseMillRate: millRate.base_mill_rate,
-    multiUnitStatus: multiUnitResult.multi_unit_status,
     isCondo,
+    // Measured suite income (125). Zero unless the feed observes a suite AND a real
+    // cohort answered, so "no data" can never become an assumed uplift.
+    suite_monthly_rent: suiteRent.has_data ? suiteRent.monthly_rent : 0,
+    suite_monthly_rent_p10: suiteRent.has_data ? suiteRent.monthly_rent_p10 : 0,
   });
 
   // === Phase 4: Builder/Land Development Metrics ===
@@ -971,6 +1003,11 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     cap_rate_est: metrics3?.cap_rate_est || null,
     // Stored beside the value it qualifies so the recompute job can re-check it (124).
     rent_match_tier: rentAVM.has_data ? (rentAVM.match_tier ?? null) : null,
+    // Measured suite rent (125), monthly. NULL when the feed observes no suite or no
+    // cohort answered — the two must be indistinguishable downstream, because an
+    // assumed suite is precisely the bug this replaced.
+    suite_rent_est: suiteRent.has_data ? suiteRent.monthly_rent : null,
+    suite_rent_tier: suiteRent.has_data ? (suiteRent.match_tier ?? null) : null,
     property_hash: trueDOM.propertyHash,
     // Flat dimension columns (migration 045). Same extraction as the Typesense payload
     // below (0 = missing, mirrors that path) so the region RPC never has to detoast
@@ -1127,6 +1164,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // two can never be read apart. Error spans 5.56% ('nbhd') to 14.49% ('county') and
     // CAP_RATE_BAND cannot tell them apart — a wrong 4.2% looks like a right one.
     typesensePayload.rent_match_tier = rentAVM.has_data ? (rentAVM.match_tier ?? '') : '';
+    typesensePayload.suite_rent_est = suiteRent.has_data ? suiteRent.monthly_rent : 0;
+    typesensePayload.suite_rent_tier = suiteRent.has_data ? (suiteRent.match_tier ?? '') : '';
   }
 
   // Price discovery flag from TrueValue service

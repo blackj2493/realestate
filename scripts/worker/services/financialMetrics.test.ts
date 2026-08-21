@@ -17,7 +17,6 @@ const baseInput: FinancialMetricsInput = {
   maintenanceExpense: null,
   insuranceExpense: null,
   baseMillRate: 0.009,
-  multiUnitStatus: 'NONE',
   isCondo: false,
 };
 
@@ -245,7 +244,6 @@ const BASE: FinancialMetricsInput = {
   maintenanceExpense: null,
   insuranceExpense: null,
   baseMillRate: 0.008,
-  multiUnitStatus: 'NONE',
   isCondo: false,
 };
 

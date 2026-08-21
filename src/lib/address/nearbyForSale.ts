@@ -18,6 +18,7 @@
  */
 import { getTypesenseClient } from "@/lib/typesense/client";
 import { bedSplit, bedKey, bedKeyOrder, BED_ABOVE_CAP, type BedCountsRaw } from "@/lib/listings/bedSplit";
+import { isPartialUnitRental, IN_HOME_UNIT_LABEL } from "@/lib/listings/inHomeUnit";
 
 export interface NearbyListing {
   id: string;
@@ -198,38 +199,11 @@ export async function getTypicalRents(
 }
 
 /**
- * In-home rental unit detector (owner-reported contamination 2026-07-24: Brampton's
- * "Detached 3bd" median was $1,975 — basements listed AS Detached: "41 Eberly Woods
- * Drive Basement $2,000", "6 Sweet Briar Lane Bsmt $1,700", "106 Benadir Avenue
- * #bsmnt $1,900"). Address markers, tuned against real feed strings:
- *  - "basement"/"bsmt"/"#bsmnt"/"walk-out" anywhere (never street names);
- *  - lower/upper/main ONLY in unit positions — parenthesized "(Lower Unit)", after a
- *    dash "B - Upper", before level/floor/unit/apt/suite, or trailing ("… St Upper")
- *    — so "Upper Canada Drive", "Lower Base Line" and "Main Street" never match.
- * Known miss: bare numeric units ("3407 Woodroffe Avenue 2") — no safe signal.
+ * In-home unit classifier — now shared with the rent-ladder ETL, which had no way to
+ * reach it while it lived here. Re-exported so the existing tests and callers of this
+ * module keep working unchanged. See src/lib/listings/inHomeUnit.ts.
  */
-const PARTIAL_UNIT_RE = new RegExp(
-  [
-    /\b(?:bsmn?t|basement|walk\s*-?\s*out)\b/.source,
-    /#\s*(?:bsmn?t|basement)/.source,
-    /\([^)]*\b(?:lower|upper|main|bsmn?t|basement)\b[^)]*\)/.source,
-    /-\s*(?:lower|upper|main)\b/.source,
-    /\b(?:lower|upper|main)\s+(?:level|floor|unit|apt|apartment|suite)\b/.source,
-    /\b(?:lower|upper|main)\s*(?:$|,)/.source,
-  ].join("|"),
-  "i"
-);
-
-/** Whole-listing subtypes that ARE in-home units — folded into the same row. */
-const IN_HOME_SUBTYPES = new Set(["lower level", "upper level"]);
-
-export const IN_HOME_UNIT_LABEL = "Basement / in-home unit";
-
-/** True when a rental is a PART of a house (basement/upper/main-floor unit). Exported for tests. */
-export function isPartialUnitRental(address: string | null | undefined, subType?: string | null): boolean {
-  if (subType && IN_HOME_SUBTYPES.has(subType.trim().toLowerCase())) return true;
-  return !!address && PARTIAL_UNIT_RE.test(address);
-}
+export { isPartialUnitRental, IN_HOME_UNIT_LABEL };
 
 // ── Outlier handling (owner decision 2026-07-24: "if it's an obvious outlier, we
 // leave it out") ─────────────────────────────────────────────────────────────────

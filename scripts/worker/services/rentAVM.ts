@@ -10,7 +10,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily } from '@/lib/listings/subTypeFamily';
-import type { MatchTier } from './rentModel';
+import { IN_HOME_UNIT_FAMILY, SUITE_BED_CAP, type MatchTier, type SuiteMatchTier } from './rentModel';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,9 +43,8 @@ export async function fetchRentAVM(params: {
   bathroomsTotal?: number;
   /** CountyOrParish. Without it the ladder simply stops one rung earlier (124). */
   county?: string | null;
-  isSuiteCandidate: boolean;
 }): Promise<RentAVMResult> {
-  const { bedroomsTotal, bathroomsTotal = 0, isSuiteCandidate } = params;
+  const { bedroomsTotal, bathroomsTotal = 0 } = params;
 
   // TRIM BOTH SIDES. rentModel btrims city / city_region / property_sub_type before it
   // keys a cohort, because the feed ships "Semi-Detached " with a trailing space. The
@@ -141,16 +140,99 @@ export async function fetchRentAVM(params: {
 
   if (!row) return { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null, plus_room_aware: false };
 
-  let annualRent = (row.avg_rent || 0) * 12;
-  let annualRentP10 = (row.p10_rent || 0) * 12;
-
-  // Suite Multiplier: secondary-suite uplift (unchanged)
-  if (isSuiteCandidate) {
-    annualRent *= 1.6;
-    annualRentP10 *= 1.6;
-  }
+  // THE WHOLE-HOME RENT, AND NOTHING ELSE (125).
+  //
+  // There was a 1.6x "suite multiplier" here, applied whenever the multi-unit scorer
+  // returned EXISTING_MULTI_UNIT | PRIME_CANDIDATE | MARGINAL_CANDIDATE. Measured
+  // against production 2026-08-21 that was 102,285 active for-sale listings — 54.1% of
+  // the book — and 83,882 of them have no second kitchen anywhere: PRIME and MARGINAL
+  // are SCORED, not observed. The uplift flowed into gross_yield_est, cap_rate_est and
+  // net_monthly_cashflow, so more than half the book published a rent for a suite that
+  // in most cases did not exist.
+  //
+  // Even where a suite DOES exist the constant was wrong: against real suite comps on
+  // 13,003 comparable listings it overstated the honest split underwrite on 93.8% of
+  // them, median +20.6%. The multiplier the real economics imply is 1.32x, not 1.60x.
+  //
+  // Suite income is now a MEASURED line from a real cohort — see fetchSuiteRent below,
+  // and financialMetrics.ts for who is allowed to receive it.
+  const annualRent = (row.avg_rent || 0) * 12;
+  const annualRentP10 = (row.p10_rent || 0) * 12;
 
   return { annual_rent: annualRent, annual_rent_p10: annualRentP10, has_data: true, match_tier: tier, plus_room_aware: plusRoomAware };
+}
+
+// ── Suite rent (125) ─────────────────────────────────────────────────────────────
+
+export interface SuiteRentResult {
+  /** MONTHLY, not annual — it is presented per month everywhere it appears. */
+  monthly_rent: number;
+  monthly_rent_p10: number;
+  has_data: boolean;
+  match_tier: SuiteMatchTier | null;
+}
+
+const NO_SUITE: SuiteRentResult = {
+  monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null,
+};
+
+/**
+ * Rent for an in-home suite, from the leases the whole-home ladder deliberately
+ * excludes: 10,756 basement / upper / main-floor units, 12.0% of the active for-lease
+ * book. Two rungs only — neighbourhood then city — because a suite's rent is set by
+ * its immediate area and there is no sub-type or bath count to relax.
+ *
+ * Coverage measured at 84.3% of the listings that qualify for one.
+ *
+ * The CALLER decides who qualifies. This function answers "what does a suite rent for
+ * around here", not "does this home have a suite" — mixing the two is how the 1.6x
+ * multiplier came to be applied to 83,882 homes without a second kitchen.
+ */
+export async function fetchSuiteRent(params: {
+  city: string;
+  cityRegion: string;
+  /** BedroomsBelowGrade. Absent or 0 underwrites as a 1-bed, the commonest basement
+   *  unit — a suite with no separate bedroom still leases as a small unit, not as
+   *  nothing. Capped at SUITE_BED_CAP. */
+  bedroomsBelowGrade?: number | null;
+}): Promise<SuiteRentResult> {
+  const city = (params.city ?? '').trim();
+  const cityRegion = (params.cityRegion ?? '').trim();
+  const raw = params.bedroomsBelowGrade;
+  const beds = Math.min(SUITE_BED_CAP, typeof raw === 'number' && raw > 0 ? Math.trunc(raw) : 1);
+
+  const sel = () =>
+    supabase
+      .from('rental_market_index')
+      .select('avg_rent, p10_rent')
+      .eq('sub_type_family', IN_HOME_UNIT_FAMILY);
+
+  // Geography first, then bed count — the same ordering principle as the whole-home
+  // ladder (124): the right neighbourhood at the wrong size beats the right size in
+  // the wrong city.
+  const probes: Array<{ tier: SuiteMatchTier; run: () => ReturnType<typeof sel> }> = [];
+  if (cityRegion) {
+    probes.push({ tier: 'suite_nbhd', run: () => sel().eq('match_tier', 'suite_nbhd').eq('city_region', cityRegion).eq('bedrooms_total', beds) });
+    if (beds !== 1) probes.push({ tier: 'suite_nbhd', run: () => sel().eq('match_tier', 'suite_nbhd').eq('city_region', cityRegion).eq('bedrooms_total', 1) });
+  }
+  if (city) {
+    probes.push({ tier: 'suite_city', run: () => sel().eq('match_tier', 'suite_city').eq('city', city).eq('bedrooms_total', beds) });
+    if (beds !== 1) probes.push({ tier: 'suite_city', run: () => sel().eq('match_tier', 'suite_city').eq('city', city).eq('bedrooms_total', 1) });
+  }
+
+  for (const p of probes) {
+    const { data } = await p.run().maybeSingle();
+    const row = data as { avg_rent: number; p10_rent: number } | null;
+    if (row) {
+      return {
+        monthly_rent: row.avg_rent || 0,
+        monthly_rent_p10: row.p10_rent || 0,
+        has_data: (row.avg_rent || 0) > 0,
+        match_tier: p.tier,
+      };
+    }
+  }
+  return NO_SUITE;
 }
 
 export default fetchRentAVM;
