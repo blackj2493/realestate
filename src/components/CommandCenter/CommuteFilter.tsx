@@ -63,7 +63,10 @@ export default function CommuteFilter() {
     setSearching(true);
     geocodeTimer.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+        // poi=1: a commute destination is usually a NAMED PLACE, not a street number —
+        // "union station", "Oakville GO", an office tower. Without the flag the route
+        // answers those with Station Street and Goodson Crescent (see api/geocode).
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}&poi=1`);
         const data = await res.json();
         setResults(Array.isArray(data?.results) ? data.results : []);
       } catch {
