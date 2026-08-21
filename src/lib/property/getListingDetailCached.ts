@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getListingDetail, type ListingDetail } from "./getListingDetail";
+import { getListingDetail, DETAIL_SHAPE_VERSION, type ListingDetail } from "./getListingDetail";
 import { listingCacheTag } from "./listingCacheTag";
 import { isDemoListingKey, loadDemoListingDetail } from "@/lib/demo/demoListing";
 
@@ -23,13 +23,28 @@ import { isDemoListingKey, loadDemoListingDetail } from "@/lib/demo/demoListing"
  * TTL. The not-found UI triggers a quick-sync, and /api/sync busts THIS exact tag on
  * success, so a freshly-synced listing self-heals on the next load rather than waiting
  * out the 24h window.
+ *
+ * SHAPE VERSION in the key. Entries survive a deploy, so a release that ADDS a field to
+ * ListingDetail served hour-old entries that simply did not have it — the new field read
+ * `undefined` and every consumer silently fell back. It cost real debugging time when
+ * `compMonthlyRent` shipped: the code was correct end to end and the page still showed
+ * the old number. gateVowDerived already carries a note about this for `photoTeaser`,
+ * which works around it by re-deriving per request; that only works for a field
+ * computable from data already in hand. Versioning the key fixes the general case:
+ * change the shape, bump the constant, and stale-shaped entries can never be read.
  */
 export function getListingDetailCached(listingKey: string): Promise<ListingDetail | null> {
   // Synthetic demo listings (clip recording, dev-only — see demoListing.ts)
   // short-circuit to their fixture: no DB, no cache, impossible on Vercel.
   if (isDemoListingKey(listingKey)) return loadDemoListingDetail(listingKey);
-  return unstable_cache(() => getListingDetail(listingKey), ["listing-detail", listingKey], {
-    tags: [listingCacheTag(listingKey)],
-    revalidate: 3600,
-  })();
+  return unstable_cache(
+    () => getListingDetail(listingKey),
+    // DETAIL_SHAPE_VERSION participates in the key: a shape change makes every stale
+    // entry unreadable instead of serving a field-less object for up to an hour.
+    ["listing-detail", listingKey, DETAIL_SHAPE_VERSION],
+    {
+      tags: [listingCacheTag(listingKey)],
+      revalidate: 3600,
+    }
+  )();
 }
