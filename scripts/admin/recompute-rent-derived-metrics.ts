@@ -177,6 +177,7 @@ async function recompute(raw: any) {
         bedroomsBelowGrade: raw.BedroomsBelowGrade,
         bathroomsTotal: raw.BathroomsTotalInteger || 0,
         county: raw.CountyOrParish,
+        wholeHome: rentAVM,
       })),
     ]);
     // Same all-or-nothing rule as the transformer: suite income only on the main-unit

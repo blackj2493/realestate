@@ -185,17 +185,25 @@ export async function fetchMainUnitRent(params: {
   bedroomsBelowGrade?: number | null;
   bathroomsTotal?: number;
   county?: string | null;
+  /** The whole-home result already fetched for this listing. Returned unchanged when
+   *  there is no plus-room to strip — see below. */
+  wholeHome: RentAVMResult;
 }): Promise<RentAVMResult> {
   const split = bedSplit({
     BedroomsAboveGrade: params.bedroomsAboveGrade,
     BedroomsBelowGrade: params.bedroomsBelowGrade,
     BedroomsTotal: params.bedroomsTotal,
   });
-  // No split means no "+1" to strip, so the whole-home comp IS the main unit and a
-  // second lookup would return the same row.
-  if (!split || split.den === 0) {
-    return { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null, plus_room_aware: false };
-  }
+  // NO PLUS-ROOM MEANS NOTHING TO STRIP, so the whole-home comp already IS the main
+  // unit and a second lookup would return the same row.
+  //
+  // This used to return has_data:false here, which the callers' all-or-nothing rule
+  // read as "no main-unit cohort" and used to DROP the suite line entirely. It hit
+  // every home with a below-grade kitchen but no below-grade bedroom — N13698568 is
+  // 4+0 with KitchensBelowGrade=1 and a $1,700 suite comp sitting right there, and
+  // published no suite income at all. Guarding against a 6.6% double count by
+  // discarding 100% of the suite was the wrong trade.
+  if (!split || split.den === 0) return params.wholeHome;
   return fetchRentAVM({
     ...params,
     bedroomsTotal: split.above,

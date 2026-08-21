@@ -194,7 +194,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
  *
  * Changing a field's VALUE needs no bump; only its presence matters here.
  */
-export const DETAIL_SHAPE_VERSION = "v3-suite-rent";
+export const DETAIL_SHAPE_VERSION = "v4-main-unit-rent";
 
 export interface ListingDetail {
   listing_key: string;
@@ -384,13 +384,23 @@ export const getListingDetail = cache(
     )
       .then((r) => {
         const doc = r.listings[0];
+        // gross_yield_est is TOTAL revenue over price, and since 125 that total
+        // includes the measured suite rent. The sandbox shows the suite on its own
+        // line, so the rent field has to be the MAIN UNIT — subtract the suite back
+        // out or the two lines charge for the basement twice, which is the exact
+        // fault 125 set out to remove.
+        const totalMonthly = compMonthlyRentFrom(doc?.gross_yield_est, doc?.ListPrice);
+        const suite = doc?.suite_rent_est && doc.suite_rent_est > 0 ? doc.suite_rent_est : null;
         return {
           capRatePct: capRateOrNull(doc?.cap_rate_est),
-          compMonthlyRent: compMonthlyRentFrom(doc?.gross_yield_est, doc?.ListPrice),
+          compMonthlyRent:
+            totalMonthly != null && suite != null
+              ? Math.max(0, Math.round(totalMonthly - suite))
+              : totalMonthly,
           rentMatchTier: doc?.rent_match_tier ?? null,
           // Measured in-home suite rent (125). Present only where the feed OBSERVES a
           // suite; 0/absent everywhere else, and the two must stay indistinguishable.
-          suiteMonthlyRent: doc?.suite_rent_est && doc.suite_rent_est > 0 ? doc.suite_rent_est : null,
+          suiteMonthlyRent: suite,
         };
       })
       .catch((capErr) => {
