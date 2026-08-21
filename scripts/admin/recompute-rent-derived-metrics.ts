@@ -53,10 +53,10 @@
 
 import 'dotenv/config';
 import { Client } from 'pg';
-import { fetchRentAVM } from '../worker/services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent } from '../worker/services/rentAVM';
 import { resolveRatioPrice, fetchMillRate } from '../worker/services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from '../worker/services/financialMetrics';
-import { calculateMultiUnitPotential } from '../worker/services/multiUnitCalculator';
+import { hasObservedSuite } from '@/lib/listings/observedSuite';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const COLLECTION = 'properties';
@@ -125,10 +125,6 @@ async function millRateFor(cityRegion: string) {
 /** Rebuilds the exact input the transformer hands calculateFinancialMetrics. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function recompute(raw: any) {
-  const multiUnit = calculateMultiUnitPotential(raw);
-  const isSuiteCandidate = ['EXISTING_MULTI_UNIT', 'PRIME_CANDIDATE', 'MARGINAL_CANDIDATE']
-    .includes(multiUnit.multi_unit_status);
-
   const rentAVM = await withRetry(() => fetchRentAVM({
     city: raw.City || '',
     cityRegion: raw.CityRegion || raw.City || '',
@@ -138,8 +134,19 @@ async function recompute(raw: any) {
     bedroomsBelowGrade: raw.BedroomsBelowGrade,
     bathroomsTotal: raw.BathroomsTotalInteger || 0,
     county: raw.CountyOrParish,
-    isSuiteCandidate,
   }));
+
+  // Suite rent (125), only where the feed OBSERVES a suite — never from a score. Same
+  // gate the transformer applies, so a recomputed listing and a freshly-synced one
+  // cannot disagree.
+  let suiteRent = { monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null as string | null };
+  if (rentAVM.has_data && hasObservedSuite(raw)) {
+    suiteRent = await withRetry(() => fetchSuiteRent({
+      city: raw.City || '',
+      cityRegion: raw.CityRegion || raw.City || '',
+      bedroomsBelowGrade: raw.BedroomsBelowGrade,
+    }));
+  }
 
   // No comp ⇒ every rent-derived metric is the 0 sentinel regardless of the cost side,
   // so skip the two lookups entirely. That is most of the scan.
@@ -171,10 +178,17 @@ async function recompute(raw: any) {
     maintenanceExpense: raw.MaintenanceExpense ?? null,
     insuranceExpense: raw.InsuranceExpense ?? null,
     baseMillRate: millRate.base_mill_rate,
-    multiUnitStatus: multiUnit.multi_unit_status,
     isCondo: !!(raw.PropertyType?.includes('Condo') || raw.CondoCorpNumber),
+    suite_monthly_rent: suiteRent.has_data ? suiteRent.monthly_rent : 0,
+    suite_monthly_rent_p10: suiteRent.has_data ? suiteRent.monthly_rent_p10 : 0,
   });
-  return { metrics, hadComp: rentAVM.has_data, tier: rentAVM.has_data ? (rentAVM.match_tier ?? '') : '' };
+  return {
+    metrics,
+    hadComp: rentAVM.has_data,
+    tier: rentAVM.has_data ? (rentAVM.match_tier ?? '') : '',
+    suiteRent: suiteRent.has_data ? suiteRent.monthly_rent : 0,
+    suiteTier: suiteRent.has_data ? (suiteRent.match_tier ?? '') : '',
+  };
 }
 
 /** Run `worker` over `items` with a bounded number in flight. */

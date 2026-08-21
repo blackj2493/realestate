@@ -39,7 +39,8 @@ async function main() {
             full_payload->>'BedroomsAboveGrade'     AS bedrooms_above,
             full_payload->>'BedroomsBelowGrade'     AS bedrooms_below,
             full_payload->>'BathroomsTotalInteger'  AS bathrooms_total,
-            full_payload->>'CountyOrParish'          AS county
+            full_payload->>'CountyOrParish'          AS county,
+            full_payload->>'UnparsedAddress'         AS unparsed_address
        FROM listings
       WHERE lower(coalesce(full_payload->>'TransactionType', '')) ~ '(leas|rent)'`,
   );
@@ -61,6 +62,10 @@ async function main() {
       bathroomsTotal: /^[0-9]+$/.test(r.bathrooms_total ?? '') ? parseInt(r.bathrooms_total, 10) : null,
       // Parent geography for the `county` rung (124). 100% populated in the feed.
       county: r.county,
+      // In-home unit tell (125). 12.0% of this inventory is a basement / upper /
+      // main-floor unit wearing the whole house's sub-type. Without this column they
+      // land in the whole-home cohorts and drag the medians that become cap_rate_est.
+      unparsedAddress: r.unparsed_address,
     });
   }
 
@@ -74,7 +79,7 @@ async function main() {
     a[r.match_tier] = (a[r.match_tier] ?? 0) + 1;
     return a;
   }, {});
-  for (const t of ['nbhd', 'city_bath', 'city', 'city_family', 'county'] as const) {
+  for (const t of ['nbhd', 'city_bath', 'city', 'city_family', 'county', 'suite_nbhd', 'suite_city'] as const) {
     console.log(`  ${t.padEnd(12)} ${(byTier[t] ?? 0).toLocaleString().padStart(7)} cohorts`);
   }
   if (splitRows === 0) {

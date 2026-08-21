@@ -10,6 +10,7 @@
  */
 import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily } from '@/lib/listings/subTypeFamily';
+import { isPartialUnitRental } from '@/lib/listings/inHomeUnit';
 
 export const MIN_MONTHLY_RENT = 500;
 export const MAX_MONTHLY_RENT = 25000;
@@ -48,6 +49,20 @@ export const MIN_COHORT_SAMPLES = 3;
  */
 export type MatchTier = 'nbhd' | 'city_bath' | 'city' | 'city_family' | 'county';
 
+/**
+ * Suite rungs (125). Kept OUT of MatchTier deliberately: MatchTier is walked in order
+ * by fetchRentAVM and published as listings.rent_match_tier, and a suite rent must
+ * never surface as a whole-home comp. Separate type, separate walk, separate column.
+ */
+export type SuiteMatchTier = 'suite_nbhd' | 'suite_city';
+
+/** Family marker on suite rows, where property_sub_type is NULL. */
+export const IN_HOME_UNIT_FAMILY = 'in_home_unit';
+
+/** Suite bed columns collapse above this. A 4-bedroom basement is vanishingly rare,
+ *  and pooling it with 3 keeps the cohort honest rather than empty. */
+export const SUITE_BED_CAP = 3;
+
 export interface RawLeaseInput {
   status?: string | null;
   transactionType?: string | null;
@@ -66,6 +81,12 @@ export interface RawLeaseInput {
   bathroomsTotal?: number | null; // real bath count (BathroomsTotalInteger)
   /** CountyOrParish — the parent geography for the `county` rung (migration 124). */
   county?: string | null;
+  /** UnparsedAddress. THE contamination guard (125): 12.0% of the active for-lease
+   *  book is an in-home unit — a basement or upper unit listed under the whole
+   *  house's sub-type. Without this the lease lands in the Detached 3bd cohort and
+   *  drags a published median down by as much as 72%. Omit it and every lease is
+   *  treated as a whole home, which is exactly the pre-125 behaviour. */
+  unparsedAddress?: string | null;
 }
 
 const LEASE_STATUS = new Set(['leased', 'lease', 'for lease', 'rented', 'rental']);
@@ -95,14 +116,16 @@ export function percentile(sortedAsc: number[], p: number): number {
 }
 
 export interface RentalIndexRow {
-  match_tier: MatchTier;
+  /** Whole-home rungs and suite rungs share the table but never the walk (125). */
+  match_tier: MatchTier | SuiteMatchTier;
   city_region: string | null;
   city: string | null;
   /** CountyOrParish. Set only on `county` rows, where city is NULL. */
   county: string | null;
   /** NULL on rungs that pool sub-types, where sub_type_family carries the key instead. */
   property_sub_type: string | null;
-  /** Pooled family ('condo'|'freehold'). Set only on `city_family` rows. */
+  /** Pooled family: 'condo'|'freehold' on `city_family` rows, 'in_home_unit' on the
+   *  two suite rungs. NULL on every rung that keys on an exact sub-type. */
   sub_type_family: string | null;
   bedrooms_total: number;
   /** Whole bedrooms above grade. NULL marks a MERGED cohort keyed on bedrooms_total. */
@@ -140,6 +163,37 @@ export function createRentAccumulator() {
       const beds = r.bedroomsTotal;
       const bath = r.bathroomsTotal;
       if (!st || beds == null) return;
+
+      // ── In-home units (125) ───────────────────────────────────────────────────
+      // A basement / upper / main-floor unit is NOT a whole home. It carries the
+      // house's sub-type in the feed, so before this it was banked into the Detached
+      // 3bd cohort and pulled the published median down — 12.0% of the book, moving
+      // 410 house cohorts by >=1% and the worst by 72%.
+      //
+      // It returns EARLY: the lease feeds the suite rungs and nothing else. The two
+      // populations answer different questions and must never pool.
+      if (isPartialUnitRental(r.unparsedAddress, st)) {
+        const suiteBeds = Math.min(SUITE_BED_CAP, Math.max(0, beds));
+        const suiteMeta = {
+          property_sub_type: null,
+          sub_type_family: IN_HOME_UNIT_FAMILY,
+          county: null,
+          bedrooms_total: suiteBeds,
+          // A suite has no plus-room split and no reliable bath count of its own.
+          bedrooms_above: null,
+          den: null,
+          bathrooms: null,
+        };
+        if (cr) {
+          bump(`sn|${cr.toLowerCase()}|${suiteBeds}`,
+            { match_tier: 'suite_nbhd', city_region: cr, city: city || null, ...suiteMeta }, rent);
+        }
+        if (city) {
+          bump(`sc|${city.toLowerCase()}|${suiteBeds}`,
+            { match_tier: 'suite_city', city_region: null, city, ...suiteMeta }, rent);
+        }
+        return;
+      }
 
       const split = bedSplit({
         BedroomsAboveGrade: r.bedroomsAboveGrade,

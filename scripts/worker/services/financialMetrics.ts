@@ -34,8 +34,15 @@ export interface FinancialMetricsInput {
   maintenanceExpense: number | null;
   insuranceExpense: number | null;
   baseMillRate: number;
-  multiUnitStatus: string;
   isCondo: boolean;
+  /**
+   * MEASURED monthly rent for an observed in-home suite (125), or 0. The caller gates
+   * this on hasObservedSuite() — this engine never infers a suite from a score.
+   * Zero here means "no suite, or no comp for one", and both must produce the same
+   * result: no suite income at all.
+   */
+  suite_monthly_rent?: number;
+  suite_monthly_rent_p10?: number;
 }
 
 export interface FinancialMetrics {
@@ -68,7 +75,8 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
     calculation_price, is_price_discovery,
     propertySubType, listPrice, transactionType, taxAnnualAmount,
     associationFee, maintenanceExpense, insuranceExpense,
-    baseMillRate, multiUnitStatus, isCondo,
+    baseMillRate, isCondo,
+    suite_monthly_rent, suite_monthly_rent_p10,
   } = input;
 
   // === FOR-LEASE GUARD ===
@@ -117,11 +125,37 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   }
 
   const price = calculation_price;
-  const isSuiteCandidate = multiUnitStatus === 'EXISTING_MULTI_UNIT' || multiUnitStatus === 'PRIME_CANDIDATE';
 
   // === ANNUAL REVENUE ===
-  const annualRevenue = has_rent_data ? annual_rent : 0;
-  const annualRevenueP10 = has_rent_data ? annual_rent_p10 : annualRevenue * 0.85;
+  //
+  // Whole-home rent, plus a MEASURED suite rent where the feed observes a suite.
+  //
+  // What used to happen here: rentAVM multiplied annual_rent by 1.6 for anything the
+  // multi-unit scorer liked, and this file declared its own unused `isSuiteCandidate`
+  // on a DIFFERENT set of statuses (two, not three) — dead code that made the real
+  // rule look narrower than it was. Both are gone (125).
+  //
+  // The suite line is additive rather than a multiplier because the two rents come
+  // from different markets: whole homes and in-home units lease to different tenants
+  // at different prices, and pooling them is what contaminated the cohorts in the
+  // first place.
+  //
+  // NOTE ON THE BASIS. This adds suite rent to the WHOLE-HOME comp for the listing as
+  // described, which slightly overstates the main unit when the "+1" bedroom is the
+  // suite's own. The alternative — a second ladder walk for a (beds-above, den=0)
+  // cohort — costs another round trip per listing in the ETL and moves the median by
+  // less than the p10 band already allows. The sandbox does model both properly, and
+  // cap_rate_floor below carries the conservative reading.
+  const suiteMonthly = Math.max(0, suite_monthly_rent || 0);
+  const suiteMonthlyP10 = Math.max(0, suite_monthly_rent_p10 || suiteMonthly * 0.85);
+  const suiteAnnual = has_rent_data ? suiteMonthly * 12 : 0;
+  // The floor takes a harsher view than the headline: an existing suite may be vacant,
+  // unpermitted, or occupied by the seller's family, and none of those are visible in
+  // the feed. 0.7 on the p10 rent is the downside reading of "it exists".
+  const suiteAnnualFloor = has_rent_data ? suiteMonthlyP10 * 12 * 0.7 : 0;
+
+  const annualRevenue = has_rent_data ? annual_rent + suiteAnnual : 0;
+  const annualRevenueP10 = has_rent_data ? annual_rent_p10 + suiteAnnualFloor : annualRevenue * 0.85;
   const vacancyLoss = annualRevenue * 0.04;
   const vacancyLossFloor = annualRevenueP10 * 0.08;
   const grossRentNetVacancy = annualRevenue - vacancyLoss;

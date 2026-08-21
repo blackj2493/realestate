@@ -241,6 +241,9 @@ export interface ListingDocument {
   /** Rung of the rent ladder behind cap_rate_est / gross_yield_est — the confidence
    *  signal. Absent on documents not re-transformed since migration 124. */
   rent_match_tier?: string;
+  /** Measured monthly rent for an OBSERVED in-home suite (125). 0/absent = none. */
+  suite_rent_est?: number;
+  suite_rent_tier?: string;
   gross_yield_est?: number;
 
   // ─── Builder / Density / Zoning ──────────────────────────────────────
