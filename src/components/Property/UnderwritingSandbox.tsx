@@ -33,8 +33,10 @@ import type { GlossaryKey } from "@/lib/glossary";
 import {
   computeUnderwriting,
   seedAssumptions,
+  rentSeedBasis,
   type UnderwritingAssumptions,
 } from "@/lib/underwriting/computeUnderwriting";
+import { rentTierLabel, rentTierExplainer } from "@/lib/metrics/rentTier";
 import { useScenariosStore, type Scenario } from "@/lib/underwriting/useScenarios";
 import type { SharedDealInputs } from "@/lib/finance/dealInputs";
 
@@ -46,6 +48,10 @@ interface UnderwritingSandboxProps {
   annualTaxes: number;
   monthlyFees: number;
   hasSuitePotential?: boolean;
+  /** Comp-derived rent from the ladder. Seeds Monthly Rent; null uses the price rule. */
+  compMonthlyRent?: number | null;
+  /** Rung behind that rent, for the field's basis label. */
+  rentMatchTier?: string | null;
   /**
    * Whether rental-income metrics apply to this property. False for non-income
    * parcels (e.g. vacant land), where rent → cap rate / yield / cashflow would
@@ -108,13 +114,15 @@ export default function UnderwritingSandbox({
   annualTaxes,
   monthlyFees,
   hasSuitePotential = false,
+  compMonthlyRent = null,
+  rentMatchTier = null,
   incomeApplicable = true,
   controlledShared,
   onSharedChange,
   className,
 }: UnderwritingSandboxProps) {
   const [internalA, setInternalA] = useState<UnderwritingAssumptions>(() =>
-    seedAssumptions({ listPrice, annualTaxes, monthlyFees, hasSuitePotential })
+    seedAssumptions({ listPrice, annualTaxes, monthlyFees, hasSuitePotential, compMonthlyRent })
   );
   const [advanced, setAdvanced] = useState(false);
   const [scenarioName, setScenarioName] = useState("");
@@ -133,6 +141,17 @@ export default function UnderwritingSandbox({
   };
 
   const result = useMemo(() => computeUnderwriting(a), [a]);
+
+  // Where the Monthly Rent anchor came from. A comp and a rule of thumb deserve very
+  // different confidence — on X12909812 they were $2,300 and $1,516 — so the field says
+  // which one it is instead of calling both an "estimate".
+  const rentBasis = rentSeedBasis(compMonthlyRent);
+  const rentBasisLabel =
+    rentBasis === "comps" ? rentTierLabel(rentMatchTier) ?? "Comparable rents" : "Rule of thumb";
+  const rentBasisHint =
+    rentBasis === "comps"
+      ? rentTierExplainer(rentMatchTier) ?? undefined
+      : "No rental comparables nearby for this property type, so this starts from a share of the asking price. Adjust it.";
 
   // ── Saved scenarios (dual-path store) ──────────────────────────────────────
   const signedIn = useScenariosStore((s) => s.signedIn);
@@ -329,7 +348,17 @@ export default function UnderwritingSandbox({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
               <Label className="text-xs text-muted-foreground">Monthly Rent</Label>
-              <span className="text-[10px] text-amber-700 dark:text-amber-400/80">estimate — adjust</span>
+              <span
+                className={cn(
+                  "text-[10px]",
+                  rentBasis === "comps"
+                    ? "text-cyan-700 dark:text-cyan-400"
+                    : "text-amber-700 dark:text-amber-400/80"
+                )}
+                title={rentBasisHint}
+              >
+                {rentBasisLabel} — adjust
+              </span>
             </div>
             <Input
               type="number"

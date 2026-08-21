@@ -159,12 +159,42 @@ export interface SeedInput {
   annualTaxes?: number | null;
   monthlyFees?: number | null;
   hasSuitePotential?: boolean;
+  /** Rent from the comp ladder (src/lib/metrics/compRent.ts). Null when no comp exists. */
+  compMonthlyRent?: number | null;
 }
 
-/** Conservative, transparent rent anchor surfaced to the user as "estimate — adjust". */
-export function seedMonthlyRent(price: number): number {
+/** Which anchor the Monthly Rent field got — the UI must say, they differ a lot. */
+export type RentSeedBasis = "comps" | "rule-of-thumb";
+
+/**
+ * Rent anchor for the sandbox.
+ *
+ * PREFERS A REAL COMP. `compMonthlyRent` comes off the rent ladder (via the listing's
+ * gross_yield_est — see src/lib/metrics/compRent.ts), matched on municipality or
+ * neighbourhood, property sub-type, bed split and bath count.
+ *
+ * The price × 0.004 rule is the FALLBACK, for the listings with no comp at any rung —
+ * a township with no rental market at all. It is arithmetic on the ask, not a rent: it
+ * knows nothing about where the home is, how many bedrooms it has, or what it is. Its
+ * tell showed on every listing at once — Gross Yield printed exactly 4.80% everywhere,
+ * because 0.004 × 12 IS 4.8%, so the tile restated the constant instead of measuring.
+ *
+ * On X12909812 the rule said $1,516 and the comps said $2,300, and the page's own VOW
+ * lease grid agreed with the comps. Callers must label which one they got.
+ */
+export function seedMonthlyRent(price: number, compMonthlyRent?: number | null): number {
+  if (typeof compMonthlyRent === "number" && Number.isFinite(compMonthlyRent) && compMonthlyRent > 0) {
+    return Math.round(compMonthlyRent);
+  }
   const anchor = Math.round((price || 0) * RENT_SEED_FRACTION);
   return Math.min(RENT_SEED_MAX, Math.max(RENT_SEED_MIN, anchor || RENT_SEED_MIN));
+}
+
+/** Did this listing's rent seed come from comps, or from the price rule? */
+export function rentSeedBasis(compMonthlyRent?: number | null): RentSeedBasis {
+  return typeof compMonthlyRent === "number" && Number.isFinite(compMonthlyRent) && compMonthlyRent > 0
+    ? "comps"
+    : "rule-of-thumb";
 }
 
 /**
@@ -180,7 +210,7 @@ export function seedAssumptions(listing: SeedInput): UnderwritingAssumptions {
     amortYears: UW_DEFAULTS.amortYears,
     annualTaxes: Math.max(0, num(Number(listing.annualTaxes))),
     monthlyFees: Math.max(0, num(Number(listing.monthlyFees))),
-    monthlyRent: seedMonthlyRent(purchasePrice),
+    monthlyRent: seedMonthlyRent(purchasePrice, listing.compMonthlyRent),
     otherMonthlyIncome: listing.hasSuitePotential ? SUITE_INCOME_DEFAULT : UW_DEFAULTS.otherMonthlyIncome,
     vacancyPct: UW_DEFAULTS.vacancyPct,
     opexPct: UW_DEFAULTS.opexPct,

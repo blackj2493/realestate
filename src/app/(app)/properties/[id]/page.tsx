@@ -833,6 +833,12 @@ export default async function PropertyPage({
       annualTaxes={p.TaxAnnualAmount || 0}
       monthlyFees={p.AssociationFee || 0}
       hasSuitePotential={hasSuitePotential}
+      // The sandbox's Monthly Rent used to be list price x 0.004 — arithmetic on the
+      // ask, which is why Gross Yield read exactly 4.80% on every listing. These come
+      // off the rent ladder via the SAME Typesense doc the cap rate is already read
+      // from, so the calculator and the Deal Score cannot disagree about the rent.
+      compMonthlyRent={view.compMonthlyRent}
+      rentMatchTier={view.rentMatchTier}
       incomeApplicable={incomeApplicable}
       isToronto={isToronto}
       isOntario={isOntario}
