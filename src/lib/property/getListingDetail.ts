@@ -14,6 +14,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
 import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
+import { compMonthlyRentFrom } from "@/lib/metrics/compRent";
 import { calculateAVM } from "@/lib/avm/calculator";
 import { mapListingToAVMInput } from "@/lib/avm/mapListingToAVMInput";
 import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from "@/lib/avm/livingArea";
@@ -170,6 +171,8 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     status: gateListingStatus(detail.status, false),
     soldAccuracy: null,
     capRatePct: null,
+    compMonthlyRent: null,
+    rentMatchTier: null,
     // geoFlags (+ geoChecked/geoCheckedAt) are PUBLIC-records facts (flood/rail/
     // traffic), NOT TRREB VOW data — intentionally NOT nulled: {...detail} passes
     // them through for anon users too (Phase 2 plan §2/§4.1). Do not "fix" this by
@@ -215,6 +218,11 @@ export interface ListingDetail {
   soldAccuracy: SoldAccuracy | null;
   /** Extrapolated cap rate % (Typesense cap_rate_est, sanity-banded). null when absent. */
   capRatePct: number | null;
+  /** Comp-derived monthly rent (rent ladder, via gross_yield_est). Seeds the sandbox's
+   *  Monthly Rent; null falls back to the price rule. See src/lib/metrics/compRent.ts. */
+  compMonthlyRent: number | null;
+  /** Which rung produced that rent — drives how confidently the UI labels it. */
+  rentMatchTier: string | null;
   /**
    * Geo-joined public-records diligence flags (flood/rail/traffic), precomputed by
    * enrichGeoFlags.ts. Merged into Things to Know as `external`. PUBLIC data → not
@@ -344,15 +352,31 @@ export const getListingDetail = cache(
     // Real cap rate (Typesense doc; full_payload lacks the derived metric). Fire it
     // off here so it overlaps the AVM / fee / room fetches instead of serializing
     // onto TTFB. Best-effort: resolves null on miss/timeout, never rejects.
-    const capRatePromise: Promise<number | null> = withTimeout(
+    // Widened to carry the rent signals too. The Underwriting Sandbox used to seed its
+    // Monthly Rent from list price x 0.004 — arithmetic on the ask, not a rent, and the
+    // reason Gross Yield printed exactly 4.80% on every listing. gross_yield_est is
+    // rent-only by construction and already sits on this same document, so the comp rent
+    // costs no extra round trip and cannot disagree with the cap rate beside it.
+    const capRatePromise: Promise<{
+      capRatePct: number | null;
+      compMonthlyRent: number | null;
+      rentMatchTier: string | null;
+    }> = withTimeout(
       searchListings({ query: "*", rawFilterBy: `id:=\`${listingKey}\``, perPage: 1 }),
       4000,
       "CapRate"
     )
-      .then((r) => capRateOrNull(r.listings[0]?.cap_rate_est))
+      .then((r) => {
+        const doc = r.listings[0];
+        return {
+          capRatePct: capRateOrNull(doc?.cap_rate_est),
+          compMonthlyRent: compMonthlyRentFrom(doc?.gross_yield_est, doc?.ListPrice),
+          rentMatchTier: doc?.rent_match_tier ?? null,
+        };
+      })
       .catch((capErr) => {
         console.error(`[getListingDetail] cap_rate lookup failed for ${listingKey}:`, capErr);
-        return null;
+        return { capRatePct: null, compMonthlyRent: null, rentMatchTier: null };
       });
 
     // Resolve rooms before the AVM: room dimensions are the AVM's best square-
@@ -496,7 +520,7 @@ export const getListingDetail = cache(
       typeof payload["OriginalListPrice"] === "number"
         ? (payload["OriginalListPrice"] as number)
         : null;
-    const realCapRate = await capRatePromise;
+    const { capRatePct: realCapRate, compMonthlyRent, rentMatchTier } = await capRatePromise;
 
     const ratioSub =
       listing.property_sub_type ??
@@ -764,6 +788,8 @@ export const getListingDetail = cache(
       status,
       soldAccuracy,
       capRatePct: realCapRate,
+      compMonthlyRent,
+      rentMatchTier,
       geoFlags,
       geoChecked,
       geoCheckedAt,

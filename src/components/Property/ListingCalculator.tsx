@@ -44,6 +44,8 @@ export default function ListingCalculator({
   annualTaxes,
   monthlyFees,
   hasSuitePotential = false,
+  compMonthlyRent = null,
+  rentMatchTier = null,
   incomeApplicable = true,
   isToronto,
   isOntario,
@@ -57,6 +59,9 @@ export default function ListingCalculator({
   annualTaxes: number;
   monthlyFees: number;
   hasSuitePotential?: boolean;
+  /** Comp-derived rent + its rung, threaded to the sandbox's Monthly Rent seed. */
+  compMonthlyRent?: number | null;
+  rentMatchTier?: string | null;
   incomeApplicable?: boolean;
   isToronto: boolean;
   isOntario: boolean;
@@ -98,6 +103,8 @@ export default function ListingCalculator({
         annualTaxes={annualTaxes}
         monthlyFees={monthlyFees}
         hasSuitePotential={hasSuitePotential}
+        compMonthlyRent={compMonthlyRent}
+        rentMatchTier={rentMatchTier}
         incomeApplicable={false}
         className={className}
       />
@@ -168,6 +175,8 @@ export default function ListingCalculator({
           annualTaxes={annualTaxes}
           monthlyFees={monthlyFees}
           hasSuitePotential={hasSuitePotential}
+          compMonthlyRent={compMonthlyRent}
+          rentMatchTier={rentMatchTier}
           incomeApplicable={incomeApplicable}
           controlledShared={shared}
           onSharedChange={setShared}
