@@ -17,7 +17,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export type AmenityType = 'grocery' | 'recreation';
+export type AmenityType = 'grocery' | 'recreation' | 'transit';
 
 export interface AmenityRecord {
   id: string;
@@ -99,12 +99,17 @@ export function assignAmenities(
   for (const a of amenities) {
     if (Math.abs(a.lat - lat) > PREFILTER_DEG || Math.abs(a.lng - lng) > PREFILTER_DEG) continue;
     const dist = haversineKm(lat, lng, a.lat, a.lng);
+    // Match BOTH types explicitly. This was `if grocery … else …`, which made the
+    // recreation branch a catch-all: the moment gta-amenities.json gained transit rows,
+    // every GO station would have been scored as the nearest "recreation centre" and
+    // silently moved NearestRecCentreKm on ~100k listings. A new amenity type must be
+    // ignored here until someone opts it in.
     if (a.type === 'grocery') {
       if (dist < gKm) {
         gKm = dist;
         gName = a.name;
       }
-    } else if (dist < rKm) {
+    } else if (a.type === 'recreation' && dist < rKm) {
       rKm = dist;
       rName = a.name;
     }
