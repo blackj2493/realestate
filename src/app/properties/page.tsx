@@ -159,7 +159,6 @@ function CommandCenterContent() {
     minDealGrade,
     dealInputsById,
     totalCount,
-    setMapMode,
     colorMetricId,
     colorBand,
     drawPolygon,
@@ -375,11 +374,13 @@ function CommandCenterContent() {
     if (cam) setFlyTo({ lat: cam.lat, lng: cam.lng, zoom: cam.zoom });
   }, [location, hasCityParam, hasCenterParam, searchParams, setFlyTo]);
 
-  // Switching persona drops the map into that persona's default render mode
-  // (e.g. Cashflow/Builders → Heatmap). The user can re-toggle freely after.
-  useEffect(() => {
-    setMapMode(PERSONA_CONFIG[activePersona].defaultMapMode);
-  }, [activePersona, setMapMode]);
+  // NOTE: switching persona deliberately does NOT touch the map mode any more.
+  // It used to drop the map into a per-persona default (Cashflow/Builders →
+  // Heatmap), so tapping a lens replaced the pins — and with them every
+  // individual listing — with aggregated hexes nobody asked for, and overwrote
+  // the mode of anyone who had already chosen one. Mode is the reader's choice;
+  // persona is the lens. The heatmap still colours by the active persona's
+  // metric for whoever turns it on.
 
   // Runs the public-Typesense active-listings query (For Sale / For Rent) and
   // RETURNS the result — all the commute/school/draw/band/sort logic lives here,

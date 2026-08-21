@@ -237,6 +237,12 @@ export const ALPHA_GLOW_RANGE: [number, number, number][] = [
 // Persona definitions
 // ============================================================================
 
+/** How the map DRAWS. Deliberately not part of PersonaDef: a persona chooses what
+ *  the map measures (mapColor), never whether the reader can see individual
+ *  listings. There was a `defaultMapMode` here that forced Cashflow and Builders
+ *  into Heatmap on every lens tap; it replaced the pins with aggregated hexes and
+ *  overrode a mode the reader had picked on purpose. The store owns mapMode now
+ *  and starts every persona on "listings". */
 export type MapMode = "listings" | "heatmap" | "3d";
 
 export interface PersonaDef {
@@ -251,10 +257,6 @@ export interface PersonaDef {
   sortBy?: string;
   columns: ColumnDef[];
   mapColor: MapColorConfig;
-  // Which map view this persona drops into by default. Identification-focused
-  // personas (smart/flippers) start in Listings; spatial-analysis personas
-  // (cashflow/builders) start in Heatmap. Always user-toggleable at runtime.
-  defaultMapMode: MapMode;
 }
 
 const join = (parts: string[]) => parts.filter(Boolean).join(" && ");
@@ -383,7 +385,6 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
     mapColor: { metric: (d) => grossYieldOrNull(d.gross_yield_est) ?? 0, domain: [2, 8], range: GREEN_RANGE, legendLow: "Low Yield", legendHigh: "High Yield", sparse: true, label: "Gross Yield", format: (v) => `${v.toFixed(1)}%` },
-    defaultMapMode: "listings",
   },
 
   // ----- Cashflow Investor -----
@@ -402,7 +403,6 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
     mapColor: { metric: (d) => capRateOrNull(d.cap_rate_est) ?? 0, domain: [0, 10], range: GREEN_RANGE, legendLow: "Low Cap", legendHigh: "High Cap", sparse: true, label: "Cap Rate", format: (v) => `${v.toFixed(1)}%` },
-    defaultMapMode: "heatmap",
   },
 
   // ----- Flippers & Deal Hunters -----
@@ -421,7 +421,6 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
     mapColor: { metric: (d) => d.TrueDom ?? d.calculatedDOM ?? 0, domain: [0, 180], range: DOM_RANGE, legendLow: "Fresh", legendHigh: "Stale", label: "True DOM", format: (v) => `${Math.round(v)}d` },
-    defaultMapMode: "listings",
   },
 
   // ----- Builders & Developers -----
@@ -442,7 +441,6 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],
     mapColor: { metric: (d) => d.surplus_parking_count ?? 0, domain: [0, 6], range: DENSITY_RANGE, legendLow: "Fewer", legendHigh: "More", label: "Surplus Parking", format: (v) => v.toFixed(1) },
-    defaultMapMode: "heatmap",
   },
 };
 
