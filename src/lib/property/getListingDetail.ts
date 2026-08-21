@@ -183,6 +183,18 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
   };
 }
 
+/**
+ * Bump when a field is ADDED TO or REMOVED FROM ListingDetail.
+ *
+ * getListingDetailCached folds this into the cache key, so a shape change makes every
+ * pre-deploy entry unreadable rather than serving an object missing the new field for
+ * up to an hour. Without it, `compMonthlyRent` shipped correct end to end and the page
+ * still rendered the old value — the cached object simply had no such key.
+ *
+ * Changing a field's VALUE needs no bump; only its presence matters here.
+ */
+export const DETAIL_SHAPE_VERSION = "v2-comp-rent";
+
 export interface ListingDetail {
   listing_key: string;
   full_payload: Record<string, unknown>;
