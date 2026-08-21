@@ -47,6 +47,10 @@
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --resync-index
  *        # also repatch rows the Postgres-drift test skips. Use when the index has
  *        # diverged from Postgres — a Postgres-only comparison cannot see that.
+ *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --apply --force
+ *        # start even though a sync looks active. Only when you KNOW it has finished:
+ *        # an overlap does not error, it just leaves rows stale. See src/lib/etl/
+ *        # syncGuard.ts for the incident that made this a guard rather than a habit.
  * Env: DATABASE_URL (Session pooler — CLAUDE.md §12), SUPABASE_* for the AVM lookups,
  *      TYPESENSE_ADMIN_API_KEY for the partial update.
  */
@@ -57,6 +61,11 @@ import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent } from '../worker/servi
 import { resolveRatioPrice, fetchMillRate } from '../worker/services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from '../worker/services/financialMetrics';
 import { hasObservedSuite } from '@/lib/listings/observedSuite';
+import {
+  concurrentWriterReasons,
+  SYNC_STATUS_FRESH_HOURS,
+  LIVE_WRITE_WINDOW_MIN,
+} from '@/lib/etl/syncGuard';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const COLLECTION = 'properties';
@@ -302,10 +311,83 @@ async function pushTypesense(
   return { updated, absent, failed: errors.length, errors };
 }
 
+
+// ── Concurrency guard ────────────────────────────────────────────────────────────
+// The decision lives in src/lib/etl/syncGuard.ts, where it is pure and tested. This
+// only gathers the two signals it needs. See that file for the 2026-08-21 incident
+// that motivated it.
+async function assertNoConcurrentWriter(client: Client, force: boolean): Promise<void> {
+  const { rows: running } = await client.query<{ id: string; mins: string }>(
+    `SELECT id, round(EXTRACT(EPOCH FROM (now() - updated_at)) / 60)::text AS mins
+       FROM sync_state
+      WHERE status = 'running'
+        AND updated_at > now() - ($1 || ' hours')::interval
+      ORDER BY updated_at DESC`,
+    [String(SYNC_STATUS_FRESH_HOURS)]
+  );
+  const { rows: writes } = await client.query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM listings
+      WHERE updated_at > now() - ($1 || ' minutes')::interval`,
+    [String(LIVE_WRITE_WINDOW_MIN)]
+  );
+  const liveWrites = Number(writes[0]?.n ?? 0);
+  const reasons = concurrentWriterReasons({
+    running: running.map((r) => ({ id: r.id, minutesAgo: Number(r.mins) })),
+    liveWrites,
+  });
+
+  if (reasons.length === 0) {
+    console.log(
+      `🔒 No concurrent writer (sync_state idle · ${liveWrites} row(s) written in the last ${LIVE_WRITE_WINDOW_MIN}m)\n`
+    );
+    return;
+  }
+  console.error('\n🚫 A sync appears to be running. Refusing to start.');
+  for (const r of reasons) console.error(`   • ${r}`);
+  console.error(
+    '\n   Both jobs write the same rows, and whichever finishes last wins per row.\n' +
+    '   The overlap does not error — it just leaves some listings stale.\n' +
+    '   Wait for the sync to finish, then re-run. Use --force to override deliberately.'
+  );
+  if (!force) process.exit(2);
+  console.error('   --force given; continuing anyway.\n');
+}
+
+/**
+ * Re-read what we just wrote. The pre-flight check can only see a writer that has
+ * already started, so this is the net that catches one which began mid-run — and it
+ * needs no guess about who or why, only whether the values still hold.
+ */
+async function verifyWrites(client: Client, wrote: Drift[]): Promise<number> {
+  if (wrote.length === 0) return 0;
+  const { rows } = await client.query<{ listing_key: string; cap_rate_est: string | null }>(
+    `SELECT listing_key, cap_rate_est FROM listings WHERE listing_key = ANY($1::text[])`,
+    [wrote.map((d) => d.key)]
+  );
+  const stored = new Map(rows.map((r) => [r.listing_key, r.cap_rate_est == null ? 0 : Number(r.cap_rate_est)]));
+  const clobbered = wrote.filter((d) => {
+    const now = stored.get(d.key);
+    return now !== undefined && Math.abs(now - d.to) >= 0.005;
+  });
+  if (clobbered.length === 0) {
+    console.log(`🔎 Verified: all ${wrote.length.toLocaleString()} written row(s) still hold their new value.`);
+    return 0;
+  }
+  console.error(
+    `\n⚠️  ${clobbered.length.toLocaleString()} of ${wrote.length.toLocaleString()} row(s) were overwritten after this job wrote them.`
+  );
+  console.error('   Another writer (almost certainly the sync) is active. Re-run once it finishes.');
+  for (const d of clobbered.slice(0, 5)) {
+    console.error(`     ${d.key}  wrote ${d.to}%  now ${stored.get(d.key)}%`);
+  }
+  return clobbered.length;
+}
+
 async function main() {
   const apply = process.argv.includes('--apply');
   const all = process.argv.includes('--all');
   const resyncIndex = process.argv.includes('--resync-index');
+  const force = process.argv.includes('--force');
   const limitArg = process.argv.find((a) => a.startsWith('--limit='));
   const sampleArg = process.argv.find((a) => a.startsWith('--samples='));
   const limit = limitArg ? Number(limitArg.split('=')[1]) : null;
@@ -324,6 +406,10 @@ async function main() {
   const client = new Client({ connectionString: url });
   await client.connect();
   await client.query("SET statement_timeout TO '0'");
+
+  // Before the scan, not after it: a 127k-row walk that has to be thrown away is a
+  // waste, and starting one against a live sync is how rows go quietly stale.
+  if (apply) await assertNoConcurrentWriter(client, force);
 
   // Default scan is the population that can only improve: a stored value that is
   // negative (fabricated), zero (no comp at index time) or null (never computed).
@@ -499,6 +585,13 @@ async function main() {
   } else {
     console.log('   0 real failures.');
   }
+
+  // The pre-flight check can only see a writer that had already started. This catches
+  // one that began mid-run, which is exactly what happened on 2026-08-21 — and it asks
+  // the only question that matters: do the rows still hold what we wrote?
+  const clobbered = await verifyWrites(client, drifted);
+  await client.end();
+  if (clobbered > 0) process.exit(3);
 }
 
 main().catch((err) => {
