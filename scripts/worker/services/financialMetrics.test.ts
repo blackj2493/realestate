@@ -297,3 +297,60 @@ describe('calculateFinancialMetrics — insurance single-count (audit HIGH-8)', 
     expect(m.cashflow_floor).toBe(-1379);
   });
 });
+
+// ── Measured suite income (migration 125) ────────────────────────────────────────
+describe('suite income', () => {
+  const base = {
+    annual_rent: 36_000,          // $3,000/mo main unit
+    annual_rent_p10: 30_600,
+    has_rent_data: true,
+    calculation_price: 900_000,
+    is_price_discovery: false,
+    propertySubType: 'Detached',
+    listPrice: 900_000,
+    transactionType: 'For Sale',
+    taxAnnualAmount: 5_400,
+    associationFee: null,
+    maintenanceExpense: null,
+    insuranceExpense: null,
+    baseMillRate: 0.0095,
+    isCondo: false,
+  };
+
+  it('adds a measured suite rent to revenue', () => {
+    const without = calculateFinancialMetrics(base);
+    const with_ = calculateFinancialMetrics({ ...base, suite_monthly_rent: 1_500 });
+    expect(with_.annual_revenue).toBe(without.annual_revenue + 18_000);
+    expect(with_.cap_rate_est).toBeGreaterThan(without.cap_rate_est);
+  });
+
+  it('treats a zero suite rent exactly like no suite at all', () => {
+    // "No suite" and "no cohort for one" must be indistinguishable — an assumed suite
+    // is the bug this replaced.
+    expect(calculateFinancialMetrics({ ...base, suite_monthly_rent: 0 }))
+      .toEqual(calculateFinancialMetrics(base));
+  });
+
+  it('never lets a negative suite rent reduce revenue', () => {
+    expect(calculateFinancialMetrics({ ...base, suite_monthly_rent: -2_000 }).annual_revenue)
+      .toBe(calculateFinancialMetrics(base).annual_revenue);
+  });
+
+  it('haircuts the suite harder on the floor than on the headline', () => {
+    const m = calculateFinancialMetrics({
+      ...base, suite_monthly_rent: 2_000, suite_monthly_rent_p10: 2_000,
+    });
+    const plain = calculateFinancialMetrics(base);
+    // Headline takes the full $24,000; the floor takes 0.7 of it.
+    expect(m.annual_revenue - plain.annual_revenue).toBe(24_000);
+    expect(m.cap_rate_floor).toBeLessThan(m.cap_rate_est);
+  });
+
+  it('publishes no suite income when there is no rent comp at all', () => {
+    const m = calculateFinancialMetrics({
+      ...base, has_rent_data: false, annual_rent: 0, suite_monthly_rent: 1_500,
+    });
+    expect(m.annual_revenue).toBe(0);
+    expect(m.cap_rate_est).toBe(0);
+  });
+});

@@ -18,7 +18,7 @@ import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage
 import { detectDistress } from '@/lib/listings/distressSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
-import { fetchRentAVM, fetchSuiteRent, type RentAVMResult, type SuiteRentResult } from './services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, type RentAVMResult, type SuiteRentResult } from './services/rentAVM';
 import { hasObservedSuite } from '@/lib/listings/observedSuite';
 import { resolveRatioPrice, fetchMillRate } from './services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
@@ -908,16 +908,37 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   const observedSuite = hasObservedSuite(raw);
   if (observedSuite) {
     try {
-      suiteRent = await fetchSuiteRent({
-        city: raw.City || '',
-        cityRegion: raw.CityRegion || raw.City || '',
-        // How many bedrooms the suite has. The feed omits this when it is zero, and a
-        // kitchen-only basement still leases as a small unit, so fetchSuiteRent reads
-        // an absent value as a 1-bed rather than as no suite.
-        bedroomsBelowGrade: raw.BedroomsBelowGrade,
-      });
+      // Both halves of the split, together. The main-unit comp strips the "+1" that IS
+      // the basement, so the two lines cannot charge for the same space twice.
+      const [suite, mainUnit] = await Promise.all([
+        fetchSuiteRent({
+          city: raw.City || '',
+          cityRegion: raw.CityRegion || raw.City || '',
+          // How many bedrooms the suite has. The feed omits this when it is zero, and a
+          // kitchen-only basement still leases as a small unit, so fetchSuiteRent reads
+          // an absent value as a 1-bed rather than as no suite.
+          bedroomsBelowGrade: raw.BedroomsBelowGrade,
+        }),
+        fetchMainUnitRent({
+          city: raw.City || '',
+          cityRegion: raw.CityRegion || raw.City || '',
+          propertySubType: raw.PropertySubType || '',
+          bedroomsTotal: raw.BedroomsTotal || 0,
+          bedroomsAboveGrade: raw.BedroomsAboveGrade,
+          bedroomsBelowGrade: raw.BedroomsBelowGrade,
+          bathroomsTotal: raw.BathroomsTotalInteger || 0,
+          county: raw.CountyOrParish,
+        }),
+      ]);
+      // ALL OR NOTHING. Suite income is only legitimate on the main-unit basis. With
+      // no main-unit cohort we keep the whole-home comp and publish no suite line,
+      // rather than adding a suite to a rent that already contains it.
+      if (suite.has_data && mainUnit.has_data) {
+        suiteRent = suite;
+        rentAVM = mainUnit;
+      }
     } catch (err) {
-      console.warn('[Transformer] Suite rent lookup failed:', err);
+      console.warn('[Transformer] Suite/main-unit rent lookup failed:', err);
     }
   }
 

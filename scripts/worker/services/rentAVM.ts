@@ -162,6 +162,48 @@ export async function fetchRentAVM(params: {
   return { annual_rent: annualRent, annual_rent_p10: annualRentP10, has_data: true, match_tier: tier, plus_room_aware: plusRoomAware };
 }
 
+/**
+ * Rent for the MAIN UNIT of a home that has a suite — the same ladder, asked for the
+ * above-grade bedroom count with no plus-room.
+ *
+ * Why it exists: a "3+1" whole-home comp is a lease of the ENTIRE house to one tenant,
+ * and the "+1" is the basement bedroom. Adding a suite rent to that comp charges for
+ * the basement twice — measured at about 6.6% of gross income. The honest split is
+ * main unit + suite, which is also the strategy an investor buying a home with a
+ * second kitchen actually runs (it beats the whole-home lease on 94.5% of them, median
+ * +31.9%).
+ *
+ * Returns has_data:false when the main-unit cohort is too thin. The caller must then
+ * fall back to the whole-home comp WITHOUT a suite line, never to whole-home PLUS one.
+ */
+export async function fetchMainUnitRent(params: {
+  city: string;
+  cityRegion: string;
+  propertySubType: string;
+  bedroomsTotal: number;
+  bedroomsAboveGrade?: number | null;
+  bedroomsBelowGrade?: number | null;
+  bathroomsTotal?: number;
+  county?: string | null;
+}): Promise<RentAVMResult> {
+  const split = bedSplit({
+    BedroomsAboveGrade: params.bedroomsAboveGrade,
+    BedroomsBelowGrade: params.bedroomsBelowGrade,
+    BedroomsTotal: params.bedroomsTotal,
+  });
+  // No split means no "+1" to strip, so the whole-home comp IS the main unit and a
+  // second lookup would return the same row.
+  if (!split || split.den === 0) {
+    return { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null, plus_room_aware: false };
+  }
+  return fetchRentAVM({
+    ...params,
+    bedroomsTotal: split.above,
+    bedroomsAboveGrade: split.above,
+    bedroomsBelowGrade: 0,
+  });
+}
+
 // ── Suite rent (125) ─────────────────────────────────────────────────────────────
 
 export interface SuiteRentResult {

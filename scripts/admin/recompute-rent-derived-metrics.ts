@@ -53,7 +53,7 @@
 
 import 'dotenv/config';
 import { Client } from 'pg';
-import { fetchRentAVM, fetchSuiteRent } from '../worker/services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent } from '../worker/services/rentAVM';
 import { resolveRatioPrice, fetchMillRate } from '../worker/services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from '../worker/services/financialMetrics';
 import { hasObservedSuite } from '@/lib/listings/observedSuite';
@@ -144,12 +144,31 @@ async function recompute(raw: any) {
   // gate the transformer applies, so a recomputed listing and a freshly-synced one
   // cannot disagree.
   let suiteRent = { monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null as string | null };
+  let rent = rentAVM;
   if (rentAVM.has_data && hasObservedSuite(raw)) {
-    suiteRent = await withRetry(() => fetchSuiteRent({
-      city: raw.City || '',
-      cityRegion: raw.CityRegion || raw.City || '',
-      bedroomsBelowGrade: raw.BedroomsBelowGrade,
-    }));
+    const [suite, mainUnit] = await Promise.all([
+      withRetry(() => fetchSuiteRent({
+        city: raw.City || '',
+        cityRegion: raw.CityRegion || raw.City || '',
+        bedroomsBelowGrade: raw.BedroomsBelowGrade,
+      })),
+      withRetry(() => fetchMainUnitRent({
+        city: raw.City || '',
+        cityRegion: raw.CityRegion || raw.City || '',
+        propertySubType: raw.PropertySubType || '',
+        bedroomsTotal: raw.BedroomsTotal || 0,
+        bedroomsAboveGrade: raw.BedroomsAboveGrade,
+        bedroomsBelowGrade: raw.BedroomsBelowGrade,
+        bathroomsTotal: raw.BathroomsTotalInteger || 0,
+        county: raw.CountyOrParish,
+      })),
+    ]);
+    // Same all-or-nothing rule as the transformer: suite income only on the main-unit
+    // basis, never added to a whole-home comp that already contains the basement.
+    if (suite.has_data && mainUnit.has_data) {
+      suiteRent = suite;
+      rent = mainUnit;
+    }
   }
 
   // No comp ⇒ every rent-derived metric is the 0 sentinel regardless of the cost side,
@@ -169,9 +188,9 @@ async function recompute(raw: any) {
   }
 
   const metrics = calculateFinancialMetrics({
-    annual_rent: rentAVM.annual_rent,
-    annual_rent_p10: rentAVM.annual_rent_p10,
-    has_rent_data: rentAVM.has_data,
+    annual_rent: rent.annual_rent,
+    annual_rent_p10: rent.annual_rent_p10,
+    has_rent_data: rent.has_data,
     calculation_price: ratioPrice.calculation_price,
     is_price_discovery: ratioPrice.is_price_discovery,
     propertySubType: raw.PropertySubType || '',
@@ -188,8 +207,8 @@ async function recompute(raw: any) {
   });
   return {
     metrics,
-    hadComp: rentAVM.has_data,
-    tier: rentAVM.has_data ? (rentAVM.match_tier ?? '') : '',
+    hadComp: rent.has_data,
+    tier: rent.has_data ? (rent.match_tier ?? '') : '',
     suiteRent: suiteRent.has_data ? suiteRent.monthly_rent : 0,
     suiteTier: suiteRent.has_data ? (suiteRent.match_tier ?? '') : '',
   };
