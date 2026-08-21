@@ -16,6 +16,7 @@
  */
 
 import { calculateMonthlyMortgage } from "@/lib/typesense/ExtrapolatedCapRateEngine";
+import { CONVERSION_COSTS } from "@/lib/avm/valueAdd/moveCatalog";
 
 // ── Defaults (one place to tune) ─────────────────────────────────────────────
 export const UW_DEFAULTS = {
@@ -177,12 +178,16 @@ export function computeUnderwriting(input: UnderwritingAssumptions): Underwritin
 export type UnderwritingStrategy = "whole-home" | "split" | "add-suite";
 
 /**
- * Cost to build a legal secondary suite, from the value-add move catalog
- * (src/lib/avm/valueAdd/moveCatalog.ts — costLow 50k / costTyp 75k / costHigh 120k).
- * The sandbox seeds the TYPICAL figure and shows the range, because a point estimate
- * on a renovation is a fiction: $50k and $120k are different decisions.
+ * Fallback cost to build a legal secondary suite, when nothing more specific is known
+ * about the basement. Re-exported from the value-add catalog so the sandbox and the
+ * reno tool cannot price the same renovation differently.
+ *
+ * The sandbox PREFERS the per-listing band from suiteConversion(), which adds
+ * finishing and an entrance allowance when the basement needs them — a finished
+ * walk-out and an unfinished basement with no side door are not the same job. This
+ * bare band is what remains when the caller supplies no listing detail.
  */
-export const SUITE_CONVERSION_COST = { low: 50_000, typical: 75_000, high: 120_000 } as const;
+export const SUITE_CONVERSION_COST = CONVERSION_COSTS.legalSuite;
 
 export interface SeedInput {
   listPrice?: number | null;

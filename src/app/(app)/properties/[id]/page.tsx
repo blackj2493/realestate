@@ -40,6 +40,7 @@ import { classifyLeaseBasis, buildRentalGlance } from "@/lib/property/rentalSnap
 import ZoningCard from "@/components/Property/ZoningCard";
 import { buildListingOffer } from "@/lib/property/listingOffer";
 import { isIncomeProperty } from "@/lib/underwriting/computeUnderwriting";
+import { suiteConversion } from "@/lib/listings/suiteConversion";
 import RoomMap from "@/components/Property/RoomMap";
 import PropertyDataSheet from "@/components/Property/PropertyDataSheet";
 import { buildDatasheet } from "@/lib/property/datasheet";
@@ -538,16 +539,12 @@ export default async function PropertyPage({
   const nowMs = Date.now();
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
-  // Could the basement BECOME a suite? A separate entrance, walk-out or apartment-ready
-  // basement with no second kitchen yet — 21,462 active listings. This only unlocks the
-  // "Add a suite" scenario; it never adds income to anything on its own, because that
-  // income costs $50k-$120k and a permit to obtain (migration 125).
-  const suiteConvertible =
-    !hasSuitePotential &&
-    Array.isArray(p.Basement) &&
-    (p.Basement as string[]).some((b) =>
-      /separate entrance|walk-?out|walk-?up|apartment/i.test(String(b))
-    );
+  // Could the basement BECOME a suite, and what would that cost? Offered wherever a
+  // real basement exists — the COST carries the difficulty rather than the scenario
+  // being withheld. Requiring a described entrance hid it from 44,804 freehold
+  // listings whose only fault was that the feed never mentioned a side door. This
+  // only unlocks the scenario; it never adds income to anything on its own.
+  const conversion = suiteConversion(p as never);
   // C2 (UX audit 2026-06-13): vacant land has no rental income, so the income
   // side of the underwrite (rent → cap rate, gross yield, cashflow) is a
   // fabrication on these parcels. Gate it so the sandbox shows carrying cost
@@ -850,7 +847,8 @@ export default async function PropertyPage({
       compMonthlyRent={view.compMonthlyRent}
       rentMatchTier={view.rentMatchTier}
       suiteMonthlyRent={view.suiteMonthlyRent}
-      suiteConvertible={suiteConvertible}
+      areaSuiteMonthlyRent={view.areaSuiteMonthlyRent}
+      suiteConversion={conversion}
       incomeApplicable={incomeApplicable}
       isToronto={isToronto}
       isOntario={isOntario}
