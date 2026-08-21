@@ -15,6 +15,7 @@ import CompsPopover from "./CompsPopover";
 import type { SalePriceEstimate } from "@/lib/avm/salePrice";
 import type { ColumnDef } from "@/lib/personas/personaConfig";
 import { getAlphaFlag, ALPHA_FLAG_CLASS } from "@/lib/personas/getAlphaFlag";
+import { monthlyCashflow } from "@/lib/metrics/liveCashflow";
 import { dealScoreFromDocument, type DealInputs } from "@/lib/dealScore/fromListingDocument";
 import { DealScoreGradePill } from "@/components/Property/DealScoreCard";
 import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
@@ -95,6 +96,9 @@ function AlphaFlagBadge({ doc, isAuthed }: { doc: ListingDocument; isAuthed: boo
  * (address + alphaFlag are structural and handled by their own renderers.)
  */
 function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col: ColumnDef; isAuthed: boolean; ranker?: CohortRanker }) {
+  // The reader's own financing, so the cashflow cell answers for THEIR mortgage
+  // rather than the ETL's baked 80% LTV / 4.04% / 30yr.
+  const financing = useCommandCenterStore((s) => s.filters);
   switch (col.type) {
     case "trueDom": {
       // True DOM is relist-corrected (VOW-derived) — gated for anon (§6.2(f)).
@@ -144,6 +148,31 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
         <span className="text-cyan-700 dark:text-cyan-400">
           {v != null ? `${v.toFixed(1)}%` : "—"}
           {v != null && <PctTag p={ranker?.("yield", v)} />}
+        </span>
+      );
+    }
+    case "cashflow": {
+      // Derived per reader — see src/lib/metrics/liveCashflow.ts. Null means no rent
+      // comp, which is NOT zero: showing 0 would sort a listing we cannot underwrite
+      // between the ones that lose money and the ones that make it.
+      const v = monthlyCashflow({ listPrice: doc.ListPrice, capRatePct: doc.cap_rate_est }, financing);
+      if (v == null) return <span className="text-muted-foreground">—</span>;
+      const area = rentTierConfidence(doc.rent_match_tier) === "area";
+      return (
+        <span
+          className={cn(
+            "font-medium",
+            v >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400",
+            area && "opacity-70"
+          )}
+          title={
+            area
+              ? rentTierExplainer(doc.rent_match_tier) ?? undefined
+              : `At ${financing.downPaymentPct}% down, ${financing.interestRatePct}% over ${financing.amortYears} years`
+          }
+        >
+          {v >= 0 ? "+" : "−"}${Math.abs(v).toLocaleString()}
+          <span className="text-[9px] text-muted-foreground">/mo</span>
         </span>
       );
     }
