@@ -31,7 +31,7 @@ interface LedgerPanelProps {
 const LEDGER_SCROLL_KEY = "terminalLedgerScroll";
 
 export default function LedgerPanel({ className }: LedgerPanelProps) {
-  const { activePersona, searchResult, dealInputsById, setDealInputsById, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, commute, school, minDealGrade, setMinDealGrade } =
+  const { activePersona, searchResult, filters, dealInputsById, setDealInputsById, isLoading, error, totalCount, selectedProperty, location, hoveredId, setHoveredId, selectedIds, showSelectedOnly, setShowSelectedOnly, clearSelected, toggleSelected, activeLayers, soldWindowDays, mapBounds, drawPolygon, commute, school, minDealGrade, setMinDealGrade } =
     useCommandCenterStore();
 
   // Scope chip (fix #4): with no typed place and no custom area, the results are
@@ -141,9 +141,11 @@ export default function LedgerPanel({ className }: LedgerPanelProps) {
         : { type, dir: DEFAULT_SORT_DIR[type] ?? "desc" }
     );
 
+  // `filters` is in the deps because the cashflow column is derived from the reader's
+  // down payment and rate — move a slider and the order genuinely changes.
   const properties = useMemo(
-    () => (sort ? [...dealFiltered].sort(compareByColumn(sort.type, sort.dir)) : dealFiltered),
-    [dealFiltered, sort]
+    () => (sort ? [...dealFiltered].sort(compareByColumn(sort.type, sort.dir, filters)) : dealFiltered),
+    [dealFiltered, sort, filters]
   );
 
   // Back-navigation continuity. On mobile a row tap is a full route push to

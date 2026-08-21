@@ -27,6 +27,7 @@
 import { DollarSign, TrendingUp, Home, Hammer, type LucideIcon } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import { CAP_RATE_BAND, capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { breakEvenCapRate } from "@/lib/metrics/liveCashflow";
 import type { GlossaryKey } from "@/lib/glossary";
 
 export type PersonaType = "smart" | "cashflow" | "flippers" | "builders";
@@ -48,9 +49,23 @@ export interface TerminalFilterState {
   zoningPotential: boolean; // is_density_ready
   duplexCandidate: boolean; // SuiteStatus / multi_unit_status
   staleOnly: boolean; // IsStale
+
+  // ── The reader's own financing ────────────────────────────────────────────────
+  // Cashflow is NOT a property of the property: 20% down and 35% down give opposite
+  // signs on the same home. These live in the filter state (rather than beside the
+  // calculator) so buildClause can see them — the "positive only" filter is derived
+  // from them, and so is the ledger's cashflow column.
+  cashflowPositiveOnly: boolean;
+  downPaymentPct: number; // %
+  interestRatePct: number; // %
+  amortYears: number; // years
 }
 
 export const defaultTerminalFilters: TerminalFilterState = {
+  cashflowPositiveOnly: false,
+  downPaymentPct: 20,
+  interestRatePct: 5.5,
+  amortYears: 25,
   minCapRate: 0,
   maxCarryCost: 15000,
   maxCapitalBurn: 20000,
@@ -74,9 +89,11 @@ type NumericKey =
   | "minPriceDrop"
   | "minFrontage"
   | "minLotSqft"
-  | "minSurplusParking";
+  | "minSurplusParking"
+  | "downPaymentPct"
+  | "interestRatePct";
 
-type BoolKey = "zoningPotential" | "duplexCandidate" | "staleOnly";
+type BoolKey = "zoningPotential" | "duplexCandidate" | "staleOnly" | "cashflowPositiveOnly";
 
 // ============================================================================
 // Controls
@@ -159,6 +176,7 @@ export type ColumnType =
   | "capRate"
   | "yield"
   | "carryCost"
+  | "cashflow"
   | "priceDrop"
   | "suite"
   | "lotDims"
@@ -276,6 +294,50 @@ const join = (parts: string[]) => parts.filter(Boolean).join(" && ");
  *  a fabricated negative because the metric writes 0 revenue when no rent estimate
  *  exists. `minActive` publishes that floor to the chip, so a slider stop the query
  *  cannot honour snaps instead of quietly reading back as a stricter threshold. */
+/**
+ * CASHFLOW POSITIVE ONLY — the control the Cashflow Investor lens was missing.
+ *
+ * The lens showed Cap Rate, Yield and Carry Cost: an unlevered ratio and a cost with
+ * no rent in it. `net_monthly_cashflow` was computed by the ETL, stored, indexed and
+ * marked sortable, then displayed nowhere and filterable nowhere.
+ *
+ * This filters on cap rate rather than on that stored field, deliberately. The stored
+ * value is baked at 80% LTV / 4.04% / 30yr, which is not this reader's mortgage — at
+ * 5.5% over 25 years the break-even cap rate is 5.85%, not 4.59%, and the sign flips
+ * on thousands of listings between the two. Deriving the threshold from the reader's
+ * own down payment and rate is the only way the answer is theirs.
+ *
+ * The threshold is price-independent — a mortgage is linear in the loan and the loan
+ * is linear in the price, so price cancels out (see breakEvenCapRate). That is what
+ * makes this one clause instead of a per-listing scan.
+ *
+ * Measured 2026-08-21 across 48,969 GTA listings with a comp: 1,213 clear the bar at
+ * 4.04%/30yr, 454 at 5.50%/30yr, and 311 at 5.50%/25yr. The financing is not a detail.
+ */
+const C_CASHFLOW_POSITIVE: ControlDef = {
+  kind: "toggle", key: "cashflowPositiveOnly",
+  label: "Cashflow positive only", short: "Cashflow +ve", glossaryKey: "capRate",
+  buildClause: (f) =>
+    f.cashflowPositiveOnly
+      ? `cap_rate_est:>=${Math.max(breakEvenCapRate(f), CAP_RATE_BAND.min).toFixed(2)} && cap_rate_est:<=${CAP_RATE_BAND.max}`
+      : null,
+};
+
+/** Your down payment. Not a filter on its own — it sets what "positive" means, and
+ *  drives the ledger's cashflow column. */
+const C_DOWN_PAYMENT: ControlDef = {
+  kind: "slider", key: "downPaymentPct", label: "Your Down Payment", short: "Down Pmt", op: "≥",
+  min: 5, max: 100, step: 5, format: fmtPct,
+  buildClause: () => null,
+};
+
+/** Your mortgage rate. Same role as the down payment: an assumption, not a filter. */
+const C_INTEREST_RATE: ControlDef = {
+  kind: "slider", key: "interestRatePct", label: "Your Rate", short: "My Rate", op: "≤",
+  min: 2, max: 12, step: 0.25, format: (v) => `${v.toFixed(2)}%`,
+  buildClause: () => null,
+};
+
 const C_CAP_RATE: ControlDef = {
   kind: "slider", key: "minCapRate", label: "Min Cap Rate", short: "Cap Rate", op: "≥",
   min: 0, max: 12, step: 0.5, minActive: CAP_RATE_BAND.min,
@@ -342,6 +404,9 @@ const C_STALE: ControlDef = {
 
 /** Every investor signal, deduped. Persona `controls` reference these by object. */
 export const INVESTOR_CONTROLS: ControlDef[] = [
+  C_CASHFLOW_POSITIVE,
+  C_DOWN_PAYMENT,
+  C_INTEREST_RATE,
   C_CAP_RATE,
   C_TRUE_DOM,
   C_CARRY_COST,
@@ -393,12 +458,16 @@ export const PERSONA_CONFIG: Record<PersonaType, PersonaDef> = {
     label: "Cashflow Investor",
     short: "Cashflow",
     icon: DollarSign,
-    controls: [C_CAP_RATE, C_CARRY_COST, C_SURPLUS_PARKING, C_SUITE_DUPLEX],
+    controls: [C_CASHFLOW_POSITIVE, C_DOWN_PAYMENT, C_INTEREST_RATE, C_CAP_RATE, C_SUITE_DUPLEX],
     sortBy: "cap_rate_est",
     columns: [
       { type: "address", header: "Address", width: "flex-1 min-w-0", align: "left" },
+      // Cashflow leads: it is the number the lens is named after, and the only one
+      // here that answers "am I positive every month". Cap rate stays beside it as
+      // the unlevered comparison. Yield dropped — rent/price adds nothing once both
+      // of those are on screen, and the row was already four metrics wide.
+      { type: "cashflow", header: "Cashflow", width: "w-24", align: "right" },
       { type: "capRate", header: "Cap Rate", width: "w-16", align: "right" },
-      { type: "yield", header: "Yield", width: "w-16", align: "right" },
       { type: "carryCost", header: "Carry Cost", width: "w-24", align: "right" },
       { type: "alphaFlag", header: "Alpha Flag", width: "w-32", align: "right" },
     ],

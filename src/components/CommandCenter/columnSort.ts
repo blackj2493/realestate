@@ -11,6 +11,8 @@
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { ColumnType, ColumnDef } from "@/lib/personas/personaConfig";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
+import { monthlyCashflow } from "@/lib/metrics/liveCashflow";
+import type { SharedDealInputs } from "@/lib/finance/dealInputs";
 import { getAlphaFlag } from "@/lib/personas/getAlphaFlag";
 
 export type SortDir = "asc" | "desc";
@@ -93,6 +95,8 @@ export function columnHasValue(doc: ListingDocument, type: ColumnType, isAuthed:
     case "carryCost":
       return true;
     case "capRate":
+    case "cashflow":
+      // Cashflow is derived from the cap rate, so the two are present together.
       return capRateOrNull(doc.cap_rate_est) != null;
     case "yield":
       return grossYieldOrNull(doc.gross_yield_est) != null;
@@ -146,6 +150,7 @@ export const SORTABLE_COLUMN_TYPES: ReadonlySet<ColumnType> = new Set<ColumnType
   "address",
   "trueDom",
   "capRate",
+  "cashflow",
   "yield",
   "carryCost",
   "priceDrop",
@@ -165,7 +170,17 @@ export const DEFAULT_SORT_DIR: Partial<Record<ColumnType, SortDir>> = {
  * The comparable value for a column. Returns `null` for missing data so it can
  * be forced to the bottom regardless of direction.
  */
-export function columnSortValue(doc: ListingDocument, type: ColumnType): number | string | null {
+/**
+ * `financing` is required only by "cashflow", which is not a property of the property
+ * — it depends on the reader's down payment and rate. Passed explicitly rather than
+ * read from the store, so the caller's useMemo can depend on it and actually re-sort
+ * when the reader moves a slider.
+ */
+export function columnSortValue(
+  doc: ListingDocument,
+  type: ColumnType,
+  financing?: SharedDealInputs
+): number | string | null {
   switch (type) {
     case "address":
       return doc.UnparsedAddress ?? doc.City ?? "";
@@ -175,6 +190,8 @@ export function columnSortValue(doc: ListingDocument, type: ColumnType): number 
       return capRateOrNull(doc.cap_rate_est);
     case "yield":
       return grossYieldOrNull(doc.gross_yield_est);
+    case "cashflow":
+      return financing ? monthlyCashflow({ listPrice: doc.ListPrice, capRatePct: doc.cap_rate_est }, financing) : null;
     case "carryCost":
       return carryFor(doc);
     case "priceDrop":
@@ -196,11 +213,11 @@ export function columnSortValue(doc: ListingDocument, type: ColumnType): number 
  * Comparator factory for a column + direction. `null` values always sink to the
  * bottom; strings use locale compare, numbers subtract.
  */
-export function compareByColumn(type: ColumnType, dir: SortDir) {
+export function compareByColumn(type: ColumnType, dir: SortDir, financing?: SharedDealInputs) {
   const factor = dir === "asc" ? 1 : -1;
   return (a: ListingDocument, b: ListingDocument): number => {
-    const av = columnSortValue(a, type);
-    const bv = columnSortValue(b, type);
+    const av = columnSortValue(a, type, financing);
+    const bv = columnSortValue(b, type, financing);
     if (av === null && bv === null) return 0;
     if (av === null) return 1; // a missing → bottom
     if (bv === null) return -1; // b missing → bottom
