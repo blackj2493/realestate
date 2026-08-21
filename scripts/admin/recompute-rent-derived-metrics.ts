@@ -66,9 +66,25 @@ const READ_PAGE = 2_000;
 const CONCURRENCY = 8;
 
 // Same active/for-sale definition the terminal uses (priceFloorClause + closed statuses).
+/**
+ * Statuses this job skips. It MUST be a subset of what region_active_aggregates
+ * excludes, or a listing can be shut out of the repair while still feeding the metric.
+ *
+ * It was not. The aggregate (migration 121) excludes
+ *   sold, closed, closed sale, leased, terminated, expired, suspended
+ * while this list also held `sold conditional`, `sold conditional escape`,
+ * `deal fell through` and `deleted` — none of which the aggregate excludes. Measured
+ * 2026-08-21, right after the 125 recompute: 407 rows in the display band, median cap
+ * 3.20-3.86% against a corrected book median of 2.20%, all still carrying the retired
+ * 1.6x multiplier and all counted in their region's median. 0.46% of the 89,263 rows
+ * the aggregate reads — small, but stale by construction and permanently so, since
+ * nothing else would ever recompute them.
+ *
+ * A conditional sale is not a closed one. It can fall through and return to market,
+ * which is exactly why the aggregate counts it.
+ */
 const CLOSED_STATUSES = [
-  'sold', 'sold conditional', 'sold conditional escape',
-  'terminated', 'deleted', 'expired', 'deal fell through',
+  'sold', 'closed', 'closed sale', 'leased', 'terminated', 'expired', 'suspended',
 ];
 
 interface Row {
@@ -161,6 +177,7 @@ async function recompute(raw: any) {
         bedroomsBelowGrade: raw.BedroomsBelowGrade,
         bathroomsTotal: raw.BathroomsTotalInteger || 0,
         county: raw.CountyOrParish,
+        wholeHome: rentAVM,
       })),
     ]);
     // Same all-or-nothing rule as the transformer: suite income only on the main-unit

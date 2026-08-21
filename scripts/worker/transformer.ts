@@ -928,6 +928,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
           bedroomsBelowGrade: raw.BedroomsBelowGrade,
           bathroomsTotal: raw.BathroomsTotalInteger || 0,
           county: raw.CountyOrParish,
+          wholeHome: rentAVM,
         }),
       ]);
       // ALL OR NOTHING. Suite income is only legitimate on the main-unit basis. With
