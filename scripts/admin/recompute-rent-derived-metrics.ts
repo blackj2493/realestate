@@ -75,6 +75,7 @@ interface Row {
   listing_key: string;
   cap_rate_est: string | number | null;
   rent_match_tier: string | null;
+  suite_rent_est: string | number | null;
   full_payload: Record<string, unknown>;
 }
 
@@ -86,6 +87,9 @@ interface Drift {
   yieldTo: number;
   cashflowTo: number;
   tierTo: string;
+  /** Measured suite rent (125), monthly. 0 = no observed suite, or no cohort. */
+  suiteTo: number;
+  suiteTierTo: string;
   hadComp: boolean;
 }
 
@@ -231,6 +235,8 @@ async function pushTypesense(
       // Patched in the SAME document as the numbers it qualifies. Splitting them would
       // leave a repaired cap rate sitting next to a stale confidence signal.
       rent_match_tier: r.tierTo,
+      suite_rent_est: r.suiteTo,
+      suite_rent_tier: r.suiteTierTo,
     }))
     .join('\n');
   const res = await fetch(
@@ -302,7 +308,7 @@ async function main() {
 
   for (let offset = 0; offset < total; offset += READ_PAGE) {
     const { rows } = await client.query<Row>(
-      `SELECT listing_key, cap_rate_est, rent_match_tier, full_payload ${scopeSql}
+      `SELECT listing_key, cap_rate_est, rent_match_tier, suite_rent_est, full_payload ${scopeSql}
         ORDER BY listing_key LIMIT $2 OFFSET $3`,
       [CLOSED_STATUSES, Math.min(READ_PAGE, total - offset), offset]
     );
@@ -320,7 +326,7 @@ async function main() {
     for (const res of results) {
       if (!res) continue;
       scanned++;
-      const { r, metrics, hadComp, tier } = res;
+      const { r, metrics, hadComp, tier, suiteRent, suiteTier } = res;
       const stored = r.cap_rate_est == null ? null : Number(r.cap_rate_est);
       if (hadComp) gainedComp++;
       if (stored != null && stored < 0 && metrics.cap_rate_est >= 0) clearedNegative++;
@@ -331,6 +337,11 @@ async function main() {
       // whose stored rung is absent or stale would otherwise keep comp-grade
       // presentation forever — 124 introduced the column, so every row needs one pass.
       const tierSame = (r.rent_match_tier ?? '') === tier;
+      // Suite rent counts as drift on its own (125). A listing whose cap rate happens
+      // to land in the same place while its suite line changed would otherwise keep a
+      // stale suite figure — and the sandbox reads that figure directly.
+      const storedSuite = r.suite_rent_est == null ? 0 : Number(r.suite_rent_est);
+      const suiteSame = Math.abs(storedSuite - suiteRent) < 0.5;
       // The skip is keyed on POSTGRES, which assumes the index agrees with it. Measured
       // after the first full run, 1,422 residential for-sale documents still held a
       // fabricated negative: Postgres already read NULL (so "no drift", skipped) while
@@ -338,7 +349,7 @@ async function main() {
       // skip and patches the index for every scanned row, to reconcile a divergence a
       // Postgres-only comparison cannot see. Idempotence is the reason this is a flag
       // and not the default: without it a converged re-run writes nothing.
-      if (capSame && tierSame && !resyncIndex) continue;
+      if (capSame && tierSame && suiteSame && !resyncIndex) continue;
       drifted.push({
         key: r.listing_key,
         address: String((r.full_payload as { UnparsedAddress?: string }).UnparsedAddress ?? '(no address)'),
@@ -347,6 +358,8 @@ async function main() {
         yieldTo: metrics.gross_yield_est,
         cashflowTo: metrics.net_monthly_cashflow,
         tierTo: tier,
+        suiteTo: suiteRent,
+        suiteTierTo: suiteTier,
         hadComp,
       });
     }
@@ -400,9 +413,12 @@ async function main() {
   for (let i = 0; i < drifted.length; i += PG_CHUNK) {
     const chunk = drifted.slice(i, i + PG_CHUNK);
     const res = await client.query(
-      `UPDATE listings AS l SET cap_rate_est = v.cap, rent_match_tier = v.tier
+      `UPDATE listings AS l
+          SET cap_rate_est = v.cap, rent_match_tier = v.tier,
+              suite_rent_est = v.suite, suite_rent_tier = v.suite_tier
          FROM (SELECT unnest($1::text[]) AS key, unnest($2::numeric[]) AS cap,
-                      unnest($3::text[]) AS tier) AS v
+                      unnest($3::text[]) AS tier, unnest($4::numeric[]) AS suite,
+                      unnest($5::text[]) AS suite_tier) AS v
         WHERE l.listing_key = v.key`,
       // The transformer writes `metrics3.cap_rate_est || null` and a null tier when no
       // comp exists, so both must land as NULL here or this row would disagree with a
@@ -411,6 +427,8 @@ async function main() {
         chunk.map((d) => d.key),
         chunk.map((d) => (d.to === 0 ? null : d.to)),
         chunk.map((d) => d.tierTo || null),
+        chunk.map((d) => (d.suiteTo > 0 ? d.suiteTo : null)),
+        chunk.map((d) => d.suiteTierTo || null),
       ]
     );
     pgUpdated += res.rowCount ?? 0;
