@@ -34,8 +34,13 @@ import {
   computeUnderwriting,
   seedAssumptions,
   rentSeedBasis,
+  defaultStrategy,
+  suiteIncomeFor,
+  SUITE_CONVERSION_COST,
   type UnderwritingAssumptions,
+  type UnderwritingStrategy,
 } from "@/lib/underwriting/computeUnderwriting";
+import StrategyPicker, { type StrategyOption } from "./StrategyPicker";
 import { rentTierLabel, rentTierExplainer } from "@/lib/metrics/rentTier";
 import { useScenariosStore, type Scenario } from "@/lib/underwriting/useScenarios";
 import type { SharedDealInputs } from "@/lib/finance/dealInputs";
@@ -52,6 +57,19 @@ interface UnderwritingSandboxProps {
   compMonthlyRent?: number | null;
   /** Rung behind that rent, for the field's basis label. */
   rentMatchTier?: string | null;
+  /**
+   * Measured monthly rent for an OBSERVED in-home suite (migration 125) — a below-grade
+   * kitchen or a basement described as an Apartment, in a house that is not already a
+   * plex. Null when no suite exists or no suite cohort answered, and the two must stay
+   * indistinguishable: an assumed suite is the bug this replaced.
+   */
+  suiteMonthlyRent?: number | null;
+  /**
+   * True when the basement could BECOME a suite — a separate entrance, walk-out or
+   * apartment-ready basement with no second kitchen yet. Unlocks the "Add a suite"
+   * scenario, which is never a default.
+   */
+  suiteConvertible?: boolean;
   /**
    * Whether rental-income metrics apply to this property. False for non-income
    * parcels (e.g. vacant land), where rent → cap rate / yield / cashflow would
@@ -116,15 +134,49 @@ export default function UnderwritingSandbox({
   hasSuitePotential = false,
   compMonthlyRent = null,
   rentMatchTier = null,
+  suiteMonthlyRent = null,
+  suiteConvertible = false,
   incomeApplicable = true,
   controlledShared,
   onSharedChange,
   className,
 }: UnderwritingSandboxProps) {
+  // A home with a suite opens on the split; everything else on the whole home.
+  const [strategy, setStrategy] = useState<UnderwritingStrategy>(() => defaultStrategy(suiteMonthlyRent));
   const [internalA, setInternalA] = useState<UnderwritingAssumptions>(() =>
-    seedAssumptions({ listPrice, annualTaxes, monthlyFees, hasSuitePotential, compMonthlyRent })
+    seedAssumptions({
+      listPrice, annualTaxes, monthlyFees, hasSuitePotential, compMonthlyRent,
+      suiteMonthlyRent, strategy: defaultStrategy(suiteMonthlyRent),
+    })
   );
   const [advanced, setAdvanced] = useState(false);
+
+  /**
+   * Switching strategy rewrites ONLY the two lines the strategy owns — suite income
+   * and the conversion capex. Everything the reader has tuned (rent, rate, down
+   * payment, opex) survives the toggle, so comparing two strategies compares the
+   * strategies rather than resetting the work.
+   */
+  const pickStrategy = (next: UnderwritingStrategy) => {
+    setStrategy(next);
+    setInternalA((prev) => ({
+      ...prev,
+      otherMonthlyIncome: suiteIncomeFor(next, suiteMonthlyRent),
+      suiteCapex: next === "add-suite" ? SUITE_CONVERSION_COST.typical : 0,
+    }));
+  };
+
+  const strategyOptions: StrategyOption[] = suiteMonthlyRent
+    ? [
+        { id: "split", label: "Split", hint: "Main unit and the in-home suite leased separately, both from local comps" },
+        { id: "whole-home", label: "Whole home", hint: "One tenant, the entire house — no separate suite income" },
+      ]
+    : suiteConvertible
+      ? [
+          { id: "whole-home", label: "Whole home", hint: "One tenant, the entire house" },
+          { id: "add-suite", label: "Add a suite", hint: "What building a legal basement suite would earn, net of what it costs" },
+        ]
+      : [];
   const [scenarioName, setScenarioName] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -178,8 +230,15 @@ export default function UnderwritingSandbox({
 
   // Set only when the user is actually underwriting extra income, so the default view
   // stays clean and the qualifier means something when it does appear.
+  // Names the SOURCE, not just the amount. "$1,500/mo other income" told the reader a
+  // number without telling them it was invented; a measured comp has earned the right
+  // to say where it came from.
   const otherIncomeNote =
-    a.otherMonthlyIncome > 0 ? `incl. ${formatPrice(a.otherMonthlyIncome)}/mo other income` : null;
+    a.otherMonthlyIncome > 0
+      ? strategy === "add-suite"
+        ? `incl. ${formatPrice(a.otherMonthlyIncome)}/mo from a suite not yet built`
+        : `incl. ${formatPrice(a.otherMonthlyIncome)}/mo suite, from nearby leases`
+      : null;
 
   return (
     <div data-tour="listing-underwriting" className={cn("bg-card rounded-lg border border-border p-4", className)}>
@@ -193,6 +252,17 @@ export default function UnderwritingSandbox({
 
       {incomeApplicable ? (
         <>
+          {/* Which business the reader is underwriting. Above the hero, because it
+              changes every number below it. */}
+          {strategyOptions.length > 0 && (
+            <StrategyPicker
+              options={strategyOptions}
+              value={strategy}
+              onChange={pickStrategy}
+              className="mb-3"
+            />
+          )}
+
           {/* Hero: monthly cashflow */}
           <div
             className={cn(
@@ -367,7 +437,66 @@ export default function UnderwritingSandbox({
               onChange={(e) => set("monthlyRent", Math.max(0, Number(e.target.value)))}
               className="h-8 bg-muted border-border text-xs font-mono text-foreground"
             />
+            {strategy !== "whole-home" && (
+              <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+                Main unit only — the basement is priced separately below.
+              </p>
+            )}
           </div>
+
+          {/* Suite income. Sits in the open, beside the rent it belongs with, and only
+              on a strategy that actually earns it. It used to be a flat $1,500 hidden
+              behind "Advanced" and switched on without asking. */}
+          {strategy !== "whole-home" && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3 text-blue-700 dark:text-blue-400" />
+                  {strategy === "add-suite" ? "Suite rent (if built)" : "Suite rent"}
+                </Label>
+                <span
+                  className="text-[10px] text-cyan-700 dark:text-cyan-400"
+                  title="Median rent for basement and other in-home units leased nearby. Adjust it."
+                >
+                  Nearby suite leases — adjust
+                </span>
+              </div>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={a.otherMonthlyIncome}
+                onChange={(e) => set("otherMonthlyIncome", Math.max(0, Number(e.target.value)))}
+                className="h-8 bg-muted border-border text-xs font-mono text-foreground"
+              />
+              <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+                {strategy === "add-suite"
+                  ? "Assumes you build a legal second unit. It needs a building permit and your municipality's approval."
+                  : "Assumes the basement is leased separately. A second kitchen is not proof the unit is legal — check the permit and the fire code. Set this to 0 to underwrite the house as one home."}
+              </p>
+            </div>
+          )}
+
+          {/* Conversion cost. Enters cash invested, so cash-on-cash carries it — a
+              suite rent shown without its capex is the $1,500 constant one step on. */}
+          {strategy === "add-suite" && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-muted-foreground">Cost to build it</Label>
+                <span className="text-xs font-mono text-foreground">{formatPrice(a.suiteCapex ?? 0)}</span>
+              </div>
+              <Slider
+                value={[a.suiteCapex ?? 0]}
+                onValueChange={([v]) => set("suiteCapex", v)}
+                min={SUITE_CONVERSION_COST.low}
+                max={SUITE_CONVERSION_COST.high}
+                step={5000}
+              />
+              <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+                Typically {formatPrice(SUITE_CONVERSION_COST.low)}–{formatPrice(SUITE_CONVERSION_COST.high)} in
+                Ontario, permits and mechanical included. Counted as cash invested, so Cash-on-Cash reflects it.
+              </p>
+            </div>
+          )}
 
           {/* Vacancy */}
           <div className="mb-4">
@@ -419,23 +548,6 @@ export default function UnderwritingSandbox({
       </button>
       {advanced && (
         <div className="space-y-4 mb-2 border-l border-border pl-3">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <TrendingDown className="h-3 w-3 text-blue-700 dark:text-blue-400" /> Other / Suite Income
-              </Label>
-              <span className="text-xs font-mono text-blue-700 dark:text-blue-400">
-                {formatPrice(a.otherMonthlyIncome)}/mo
-              </span>
-            </div>
-            <Slider
-              value={[a.otherMonthlyIncome]}
-              onValueChange={([v]) => set("otherMonthlyIncome", v)}
-              min={0}
-              max={4000}
-              step={50}
-            />
-          </div>
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">Insurance ($/mo)</Label>
             <Input

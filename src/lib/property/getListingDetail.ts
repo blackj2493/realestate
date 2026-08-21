@@ -172,6 +172,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     soldAccuracy: null,
     capRatePct: null,
     compMonthlyRent: null,
+    suiteMonthlyRent: null,
     rentMatchTier: null,
     // geoFlags (+ geoChecked/geoCheckedAt) are PUBLIC-records facts (flood/rail/
     // traffic), NOT TRREB VOW data — intentionally NOT nulled: {...detail} passes
@@ -193,7 +194,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
  *
  * Changing a field's VALUE needs no bump; only its presence matters here.
  */
-export const DETAIL_SHAPE_VERSION = "v2-comp-rent";
+export const DETAIL_SHAPE_VERSION = "v3-suite-rent";
 
 export interface ListingDetail {
   listing_key: string;
@@ -233,6 +234,8 @@ export interface ListingDetail {
   /** Comp-derived monthly rent (rent ladder, via gross_yield_est). Seeds the sandbox's
    *  Monthly Rent; null falls back to the price rule. See src/lib/metrics/compRent.ts. */
   compMonthlyRent: number | null;
+  /** Measured monthly rent for an observed in-home suite (125), else null. */
+  suiteMonthlyRent: number | null;
   /** Which rung produced that rent — drives how confidently the UI labels it. */
   rentMatchTier: string | null;
   /**
@@ -373,6 +376,7 @@ export const getListingDetail = cache(
       capRatePct: number | null;
       compMonthlyRent: number | null;
       rentMatchTier: string | null;
+      suiteMonthlyRent: number | null;
     }> = withTimeout(
       searchListings({ query: "*", rawFilterBy: `id:=\`${listingKey}\``, perPage: 1 }),
       4000,
@@ -384,11 +388,14 @@ export const getListingDetail = cache(
           capRatePct: capRateOrNull(doc?.cap_rate_est),
           compMonthlyRent: compMonthlyRentFrom(doc?.gross_yield_est, doc?.ListPrice),
           rentMatchTier: doc?.rent_match_tier ?? null,
+          // Measured in-home suite rent (125). Present only where the feed OBSERVES a
+          // suite; 0/absent everywhere else, and the two must stay indistinguishable.
+          suiteMonthlyRent: doc?.suite_rent_est && doc.suite_rent_est > 0 ? doc.suite_rent_est : null,
         };
       })
       .catch((capErr) => {
         console.error(`[getListingDetail] cap_rate lookup failed for ${listingKey}:`, capErr);
-        return { capRatePct: null, compMonthlyRent: null, rentMatchTier: null };
+        return { capRatePct: null, compMonthlyRent: null, rentMatchTier: null, suiteMonthlyRent: null };
       });
 
     // Resolve rooms before the AVM: room dimensions are the AVM's best square-
@@ -532,7 +539,7 @@ export const getListingDetail = cache(
       typeof payload["OriginalListPrice"] === "number"
         ? (payload["OriginalListPrice"] as number)
         : null;
-    const { capRatePct: realCapRate, compMonthlyRent, rentMatchTier } = await capRatePromise;
+    const { capRatePct: realCapRate, compMonthlyRent, rentMatchTier, suiteMonthlyRent } = await capRatePromise;
 
     const ratioSub =
       listing.property_sub_type ??
@@ -801,6 +808,7 @@ export const getListingDetail = cache(
       soldAccuracy,
       capRatePct: realCapRate,
       compMonthlyRent,
+      suiteMonthlyRent,
       rentMatchTier,
       geoFlags,
       geoChecked,

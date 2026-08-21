@@ -140,12 +140,14 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   // at different prices, and pooling them is what contaminated the cohorts in the
   // first place.
   //
-  // NOTE ON THE BASIS. This adds suite rent to the WHOLE-HOME comp for the listing as
-  // described, which slightly overstates the main unit when the "+1" bedroom is the
-  // suite's own. The alternative — a second ladder walk for a (beds-above, den=0)
-  // cohort — costs another round trip per listing in the ETL and moves the median by
-  // less than the p10 band already allows. The sandbox does model both properly, and
-  // cap_rate_floor below carries the conservative reading.
+  // THE BASIS IS THE CALLER'S JOB. When suite income is present, `annual_rent` must
+  // already be the MAIN-UNIT comp (fetchMainUnitRent) — the same cohort with the "+1"
+  // stripped, because that "+1" IS the basement. Adding a suite to a whole-home 3+1
+  // comp charges for the same space twice, about 6.6% of gross income.
+  //
+  // Both callers enforce this all-or-nothing: no main-unit cohort means the whole-home
+  // comp stands and no suite line is published. This engine cannot check it, so the
+  // rule lives in one place at each call site and is asserted in the tests.
   const suiteMonthly = Math.max(0, suite_monthly_rent || 0);
   const suiteMonthlyP10 = Math.max(0, suite_monthly_rent_p10 || suiteMonthly * 0.85);
   const suiteAnnual = has_rent_data ? suiteMonthly * 12 : 0;

@@ -46,6 +46,8 @@ export default function ListingCalculator({
   hasSuitePotential = false,
   compMonthlyRent = null,
   rentMatchTier = null,
+  suiteMonthlyRent = null,
+  suiteConvertible = false,
   incomeApplicable = true,
   isToronto,
   isOntario,
@@ -62,6 +64,9 @@ export default function ListingCalculator({
   /** Comp-derived rent + its rung, threaded to the sandbox's Monthly Rent seed. */
   compMonthlyRent?: number | null;
   rentMatchTier?: string | null;
+  /** Measured in-home suite rent (125), and whether a suite could be built. */
+  suiteMonthlyRent?: number | null;
+  suiteConvertible?: boolean;
   incomeApplicable?: boolean;
   isToronto: boolean;
   isOntario: boolean;
@@ -105,6 +110,8 @@ export default function ListingCalculator({
         hasSuitePotential={hasSuitePotential}
         compMonthlyRent={compMonthlyRent}
         rentMatchTier={rentMatchTier}
+        suiteMonthlyRent={suiteMonthlyRent}
+        suiteConvertible={suiteConvertible}
         incomeApplicable={false}
         className={className}
       />
@@ -177,6 +184,8 @@ export default function ListingCalculator({
           hasSuitePotential={hasSuitePotential}
           compMonthlyRent={compMonthlyRent}
           rentMatchTier={rentMatchTier}
+          suiteMonthlyRent={suiteMonthlyRent}
+          suiteConvertible={suiteConvertible}
           incomeApplicable={incomeApplicable}
           controlledShared={shared}
           onSharedChange={setShared}

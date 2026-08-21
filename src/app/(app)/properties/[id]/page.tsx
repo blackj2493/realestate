@@ -538,6 +538,16 @@ export default async function PropertyPage({
   const nowMs = Date.now();
   const rooms = detail.rooms;
   const hasSuitePotential = (p.KitchensBelowGrade ?? 0) > 0;
+  // Could the basement BECOME a suite? A separate entrance, walk-out or apartment-ready
+  // basement with no second kitchen yet — 21,462 active listings. This only unlocks the
+  // "Add a suite" scenario; it never adds income to anything on its own, because that
+  // income costs $50k-$120k and a permit to obtain (migration 125).
+  const suiteConvertible =
+    !hasSuitePotential &&
+    Array.isArray(p.Basement) &&
+    (p.Basement as string[]).some((b) =>
+      /separate entrance|walk-?out|walk-?up|apartment/i.test(String(b))
+    );
   // C2 (UX audit 2026-06-13): vacant land has no rental income, so the income
   // side of the underwrite (rent → cap rate, gross yield, cashflow) is a
   // fabrication on these parcels. Gate it so the sandbox shows carrying cost
@@ -839,6 +849,8 @@ export default async function PropertyPage({
       // from, so the calculator and the Deal Score cannot disagree about the rent.
       compMonthlyRent={view.compMonthlyRent}
       rentMatchTier={view.rentMatchTier}
+      suiteMonthlyRent={view.suiteMonthlyRent}
+      suiteConvertible={suiteConvertible}
       incomeApplicable={incomeApplicable}
       isToronto={isToronto}
       isOntario={isOntario}
