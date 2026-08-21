@@ -94,3 +94,34 @@ describe("gateVowDerived — photos on closed records", () => {
     expect((gated.status as { closePrice: number | null }).closePrice).toBeNull();
   });
 });
+
+// ── Rent figures behind the VOW gate (migration 125 follow-up) ───────────────────
+describe("gateVowDerived — suite rent", () => {
+  const withSuite = {
+    ...detailWith(SOLD, PHOTOS),
+    capRatePct: 4.2,
+    compMonthlyRent: 3_000,
+    suiteMonthlyRent: 1_700,
+    areaSuiteMonthlyRent: 1_480,
+    rentMatchTier: "nbhd",
+  } as ListingDetail;
+
+  it("withholds every rent figure from an anon reader", () => {
+    const g = gateVowDerived(withSuite, false);
+    expect(g.capRatePct).toBeNull();
+    expect(g.compMonthlyRent).toBeNull();
+    expect(g.suiteMonthlyRent).toBeNull();
+    // Not VOW-sourced itself, but it would let an anon reader back the cap rate out
+    // of the income side. The sandbox hides "Add a suite" rather than showing a build
+    // cost with no rent beside it.
+    expect(g.areaSuiteMonthlyRent).toBeNull();
+    expect(g.rentMatchTier).toBeNull();
+  });
+
+  it("passes all of them through to a signed-in reader", () => {
+    const g = gateVowDerived(withSuite, true);
+    expect(g.suiteMonthlyRent).toBe(1_700);
+    expect(g.areaSuiteMonthlyRent).toBe(1_480);
+    expect(g.capRatePct).toBe(4.2);
+  });
+});

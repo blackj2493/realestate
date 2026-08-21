@@ -173,6 +173,12 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     capRatePct: null,
     compMonthlyRent: null,
     suiteMonthlyRent: null,
+    // Gated with the rest of the rent figures, not because the suite cohorts are VOW
+    // (they are built from active for-lease listings, same IDX source as the whole-home
+    // ladder) but because leaving it would let an anon reader back out the gated cap
+    // rate from the income side. The sandbox hides the "Add a suite" option entirely
+    // when this is null — a build cost with no income beside it is worse than nothing.
+    areaSuiteMonthlyRent: null,
     rentMatchTier: null,
     // geoFlags (+ geoChecked/geoCheckedAt) are PUBLIC-records facts (flood/rail/
     // traffic), NOT TRREB VOW data — intentionally NOT nulled: {...detail} passes
@@ -182,6 +188,53 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     geoChecked: detail.geoChecked,
     geoCheckedAt: detail.geoCheckedAt,
   };
+}
+
+
+/**
+ * Rent for an in-home suite in this area, for a home that does NOT have one.
+ *
+ * `suite_rent_est` on the document is only set where a suite is OBSERVED — that is
+ * deliberate, because it feeds a published cap rate and a scored suite is not a real
+ * one (migration 125). But the "Add a suite" scenario needs the same cohort for a home
+ * that has no suite yet, or it shows a $90k-$225k conversion cost against $0 of income
+ * and is worse than useless.
+ *
+ * So this reads the suite rungs directly. Neighbourhood first, then city, matching
+ * fetchSuiteRent's order — location sets a suite's rent, and there is no sub-type or
+ * bath count to relax. A one-bed is the assumption: it is the commonest basement unit
+ * and the reader can change the number.
+ *
+ * Returns null when no cohort answered, which the sandbox must render as "we don't
+ * know", never as zero.
+ */
+async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null): Promise<number | null> {
+  const region = (cityRegion ?? "").trim();
+  const municipality = (city ?? "").trim();
+  if (!region && !municipality) return null;
+  try {
+    const supabase = getServiceRoleClient();
+    const probe = async (tier: "suite_nbhd" | "suite_city", col: "city_region" | "city", value: string) => {
+      const { data } = await supabase
+        .from("rental_market_index")
+        .select("avg_rent")
+        .eq("match_tier", tier)
+        .eq(col, value)
+        .eq("bedrooms_total", 1)
+        .maybeSingle();
+      const rent = (data as { avg_rent: number } | null)?.avg_rent;
+      return typeof rent === "number" && rent > 0 ? rent : null;
+    };
+    if (region) {
+      const hit = await probe("suite_nbhd", "city_region", region);
+      if (hit != null) return hit;
+    }
+    if (municipality) return await probe("suite_city", "city", municipality);
+    return null;
+  } catch (err) {
+    console.error("[getListingDetail] area suite rent lookup failed:", err);
+    return null;
+  }
 }
 
 /**
@@ -194,7 +247,7 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
  *
  * Changing a field's VALUE needs no bump; only its presence matters here.
  */
-export const DETAIL_SHAPE_VERSION = "v4-main-unit-rent";
+export const DETAIL_SHAPE_VERSION = "v5-area-suite-rent";
 
 export interface ListingDetail {
   listing_key: string;
@@ -234,8 +287,12 @@ export interface ListingDetail {
   /** Comp-derived monthly rent (rent ladder, via gross_yield_est). Seeds the sandbox's
    *  Monthly Rent; null falls back to the price rule. See src/lib/metrics/compRent.ts. */
   compMonthlyRent: number | null;
-  /** Measured monthly rent for an observed in-home suite (125), else null. */
+  /** Measured monthly rent for an observed in-home suite (125), else null. Drives the
+   *  Split default and Split's income — never set from an area figure. */
   suiteMonthlyRent: number | null;
+  /** What a suite rents for in this AREA, whether or not this home has one. Feeds the
+   *  opt-in "Add a suite" scenario only, alongside its build cost. */
+  areaSuiteMonthlyRent: number | null;
   /** Which rung produced that rent — drives how confidently the UI labels it. */
   rentMatchTier: string | null;
   /**
@@ -549,7 +606,24 @@ export const getListingDetail = cache(
       typeof payload["OriginalListPrice"] === "number"
         ? (payload["OriginalListPrice"] as number)
         : null;
-    const { capRatePct: realCapRate, compMonthlyRent, rentMatchTier, suiteMonthlyRent } = await capRatePromise;
+    const { capRatePct: realCapRate, compMonthlyRent, rentMatchTier, suiteMonthlyRent: observedSuiteRent } = await capRatePromise;
+
+    // A home with no suite still needs the area's suite rent, or "Add a suite" prices
+    // the renovation and leaves the income side blank.
+    //
+    // KEPT SEPARATE FROM THE OBSERVED ONE, deliberately. suiteMonthlyRent is what a
+    // suite on THIS property earns, and it is what decides whether the sandbox opens
+    // on Split and what Split counts as income. Folding the area figure into it would
+    // open every basement-owning home on Split and add rent for a unit that does not
+    // exist — the fabrication migration 125 was written to remove. This one feeds a
+    // scenario the reader has to opt into, and it arrives with a build cost attached.
+    const suiteMonthlyRent = observedSuiteRent;
+    const areaSuiteMonthlyRent =
+      observedSuiteRent ??
+      (await fetchAreaSuiteRent(
+        (payload.CityRegion as string) ?? null,
+        (payload.City as string) ?? null
+      ));
 
     const ratioSub =
       listing.property_sub_type ??
@@ -819,6 +893,7 @@ export const getListingDetail = cache(
       capRatePct: realCapRate,
       compMonthlyRent,
       suiteMonthlyRent,
+      areaSuiteMonthlyRent,
       rentMatchTier,
       geoFlags,
       geoChecked,

@@ -123,3 +123,22 @@ export function isMoveFeasibleForType(
   if (!normalized) return true;
   return !move.infeasibleFor.includes(normalized as NormalizedType);
 }
+
+/**
+ * Conversion costs, re-exported as a named shape so the underwriting sandbox and the
+ * reno tool cannot describe the same renovation with different numbers.
+ *
+ * `legalSuite` and `finishBasement` mirror the MOVES array above verbatim — change
+ * them there and change them here, or the two surfaces drift.
+ *
+ * `entranceAllowance` has NO move behind it. It is a stated allowance for cutting,
+ * underpinning and waterproofing a below-grade entrance where the feed describes none,
+ * not a measured median. It exists because withholding the whole scenario from the
+ * 44,804 freehold listings with a basement and no described entrance is worse than
+ * showing them a wide, clearly-labelled range they can drag.
+ */
+export const CONVERSION_COSTS = {
+  legalSuite: { low: 50_000, typical: 75_000, high: 120_000 },
+  finishBasement: { low: 25_000, typical: 40_000, high: 65_000 },
+  entranceAllowance: { low: 15_000, typical: 25_000, high: 40_000 },
+} as const;

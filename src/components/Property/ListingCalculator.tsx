@@ -27,6 +27,7 @@ import UnderwritingSandbox from "./UnderwritingSandbox";
 import BuyerLens from "./BuyerLens";
 import { DEFAULT_DOWN_PCT, DEFAULT_AMORT_YEARS, type SharedDealInputs } from "@/lib/finance/dealInputs";
 import { cn } from "@/lib/utils";
+import type { SuiteConversion } from "@/lib/listings/suiteConversion";
 
 export type CalculatorLens = "buyer" | "investor";
 
@@ -47,7 +48,8 @@ export default function ListingCalculator({
   compMonthlyRent = null,
   rentMatchTier = null,
   suiteMonthlyRent = null,
-  suiteConvertible = false,
+  areaSuiteMonthlyRent = null,
+  suiteConversion = null,
   incomeApplicable = true,
   isToronto,
   isOntario,
@@ -64,9 +66,10 @@ export default function ListingCalculator({
   /** Comp-derived rent + its rung, threaded to the sandbox's Monthly Rent seed. */
   compMonthlyRent?: number | null;
   rentMatchTier?: string | null;
-  /** Measured in-home suite rent (125), and whether a suite could be built. */
+  /** Measured in-home suite rent (125), and the cost of building one where none exists. */
   suiteMonthlyRent?: number | null;
-  suiteConvertible?: boolean;
+  areaSuiteMonthlyRent?: number | null;
+  suiteConversion?: SuiteConversion | null;
   incomeApplicable?: boolean;
   isToronto: boolean;
   isOntario: boolean;
@@ -111,7 +114,8 @@ export default function ListingCalculator({
         compMonthlyRent={compMonthlyRent}
         rentMatchTier={rentMatchTier}
         suiteMonthlyRent={suiteMonthlyRent}
-        suiteConvertible={suiteConvertible}
+        areaSuiteMonthlyRent={areaSuiteMonthlyRent}
+        suiteConversion={suiteConversion}
         incomeApplicable={false}
         className={className}
       />
@@ -185,7 +189,8 @@ export default function ListingCalculator({
           compMonthlyRent={compMonthlyRent}
           rentMatchTier={rentMatchTier}
           suiteMonthlyRent={suiteMonthlyRent}
-          suiteConvertible={suiteConvertible}
+          areaSuiteMonthlyRent={areaSuiteMonthlyRent}
+          suiteConversion={suiteConversion}
           incomeApplicable={incomeApplicable}
           controlledShared={shared}
           onSharedChange={setShared}
