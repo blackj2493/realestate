@@ -29,6 +29,45 @@ export interface StrategyOption {
   hint: string;
 }
 
+/**
+ * Which two positions this listing gets, or none.
+ *
+ * Extracted from the sandbox so it can be tested: it is the rule that decides what the
+ * reader is even offered, and it was previously a nested ternary inside a 500-line
+ * component where nothing could reach it.
+ *
+ * Both suite paths demand a RENT and its counterpart together:
+ *   Split      needs an OBSERVED suite rent — a suite that exists on this property.
+ *   Add a suite needs an AREA suite rent AND a build cost. A cost with no rent beside
+ *              it is not a scenario, it is a bill; that is exactly how it renders for
+ *              an anon reader, whose rent figures are VOW-gated.
+ */
+export function strategyOptionsFor(input: {
+  suiteMonthlyRent?: number | null;
+  areaSuiteMonthlyRent?: number | null;
+  suiteConversion?: { low: number; high: number } | null;
+  formatMoney: (n: number) => string;
+}): StrategyOption[] {
+  const { suiteMonthlyRent, areaSuiteMonthlyRent, suiteConversion, formatMoney } = input;
+  if (suiteMonthlyRent) {
+    return [
+      { id: "split", label: "Split", hint: "Main unit and the in-home suite leased separately, both from local comps" },
+      { id: "whole-home", label: "Whole home", hint: "One tenant, the entire house — no separate suite income" },
+    ];
+  }
+  if (suiteConversion && areaSuiteMonthlyRent) {
+    return [
+      { id: "whole-home", label: "Whole home", hint: "One tenant, the entire house" },
+      {
+        id: "add-suite",
+        label: "Add a suite",
+        hint: `What a legal basement suite would earn, against ${formatMoney(suiteConversion.low)}–${formatMoney(suiteConversion.high)} to build it`,
+      },
+    ];
+  }
+  return [];
+}
+
 export default function StrategyPicker({
   options,
   value,

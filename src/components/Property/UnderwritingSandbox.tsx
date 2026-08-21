@@ -40,7 +40,8 @@ import {
   type UnderwritingAssumptions,
   type UnderwritingStrategy,
 } from "@/lib/underwriting/computeUnderwriting";
-import StrategyPicker, { type StrategyOption } from "./StrategyPicker";
+import StrategyPicker, { strategyOptionsFor } from "./StrategyPicker";
+import { suiteConversionNote, type SuiteConversion } from "@/lib/listings/suiteConversion";
 import { rentTierLabel, rentTierExplainer } from "@/lib/metrics/rentTier";
 import { useScenariosStore, type Scenario } from "@/lib/underwriting/useScenarios";
 import type { SharedDealInputs } from "@/lib/finance/dealInputs";
@@ -65,11 +66,18 @@ interface UnderwritingSandboxProps {
    */
   suiteMonthlyRent?: number | null;
   /**
-   * True when the basement could BECOME a suite — a separate entrance, walk-out or
-   * apartment-ready basement with no second kitchen yet. Unlocks the "Add a suite"
-   * scenario, which is never a default.
+   * What a suite rents for in this AREA, whether or not this home has one. Used ONLY
+   * by "Add a suite" — a scenario the reader opts into, with a build cost attached.
+   * Never by Split, which may only count a suite that exists.
    */
-  suiteConvertible?: boolean;
+  areaSuiteMonthlyRent?: number | null;
+  /**
+   * The cost of BUILDING a suite where none exists, or null when the home cannot take
+   * one (condo, no real basement, or it already has a suite — that one gets Split).
+   * Unlocks the "Add a suite" scenario, which is never a default: the income on the
+   * other side of it costs real money and a permit to obtain.
+   */
+  suiteConversion?: SuiteConversion | null;
   /**
    * Whether rental-income metrics apply to this property. False for non-income
    * parcels (e.g. vacant land), where rent → cap rate / yield / cashflow would
@@ -135,7 +143,8 @@ export default function UnderwritingSandbox({
   compMonthlyRent = null,
   rentMatchTier = null,
   suiteMonthlyRent = null,
-  suiteConvertible = false,
+  areaSuiteMonthlyRent = null,
+  suiteConversion = null,
   incomeApplicable = true,
   controlledShared,
   onSharedChange,
@@ -161,22 +170,17 @@ export default function UnderwritingSandbox({
     setStrategy(next);
     setInternalA((prev) => ({
       ...prev,
-      otherMonthlyIncome: suiteIncomeFor(next, suiteMonthlyRent),
-      suiteCapex: next === "add-suite" ? SUITE_CONVERSION_COST.typical : 0,
+      otherMonthlyIncome: suiteIncomeFor(next, next === "add-suite" ? areaSuiteMonthlyRent : suiteMonthlyRent),
+      suiteCapex: next === "add-suite" ? (suiteConversion?.typical ?? SUITE_CONVERSION_COST.typical) : 0,
     }));
   };
 
-  const strategyOptions: StrategyOption[] = suiteMonthlyRent
-    ? [
-        { id: "split", label: "Split", hint: "Main unit and the in-home suite leased separately, both from local comps" },
-        { id: "whole-home", label: "Whole home", hint: "One tenant, the entire house — no separate suite income" },
-      ]
-    : suiteConvertible
-      ? [
-          { id: "whole-home", label: "Whole home", hint: "One tenant, the entire house" },
-          { id: "add-suite", label: "Add a suite", hint: "What building a legal basement suite would earn, net of what it costs" },
-        ]
-      : [];
+  const strategyOptions = strategyOptionsFor({
+    suiteMonthlyRent,
+    areaSuiteMonthlyRent,
+    suiteConversion,
+    formatMoney: formatPrice,
+  });
   const [scenarioName, setScenarioName] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -478,22 +482,25 @@ export default function UnderwritingSandbox({
 
           {/* Conversion cost. Enters cash invested, so cash-on-cash carries it — a
               suite rent shown without its capex is the $1,500 constant one step on. */}
-          {strategy === "add-suite" && (
+          {strategy === "add-suite" && suiteConversion && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs text-muted-foreground">Cost to build it</Label>
                 <span className="text-xs font-mono text-foreground">{formatPrice(a.suiteCapex ?? 0)}</span>
               </div>
+              {/* Bounds come from THIS basement, not one Ontario-wide band. A finished
+                  walk-out and an unfinished basement with no side door are not the
+                  same renovation, and the slider should not pretend they are. */}
               <Slider
                 value={[a.suiteCapex ?? 0]}
                 onValueChange={([v]) => set("suiteCapex", v)}
-                min={SUITE_CONVERSION_COST.low}
-                max={SUITE_CONVERSION_COST.high}
+                min={suiteConversion.low}
+                max={suiteConversion.high}
                 step={5000}
               />
               <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
-                Typically {formatPrice(SUITE_CONVERSION_COST.low)}–{formatPrice(SUITE_CONVERSION_COST.high)} in
-                Ontario, permits and mechanical included. Counted as cash invested, so Cash-on-Cash reflects it.
+                {formatPrice(suiteConversion.low)}–{formatPrice(suiteConversion.high)} for this basement.{" "}
+                {suiteConversionNote(suiteConversion)} Counted as cash invested, so Cash-on-Cash reflects it.
               </p>
             </div>
           )}
