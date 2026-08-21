@@ -8,7 +8,13 @@
  *   • Buyer lens (default for the Homebuyer persona) — monthly payment, income to
  *     qualify, and cash to close.
  *   • Investor lens (default for the cashflow/flipper/builder personas) — the
- *     existing UnderwritingSandbox underwrite, opened via a quiet link.
+ *     UnderwritingSandbox underwrite: cashflow, cap rate, gross yield, DSCR.
+ *
+ * A persistent two-position toggle sits above both, so neither lens is more than one
+ * tap away and the reader can see that the other one exists. It also FOLLOWS the page
+ * persona lens (onLensChanged), one-way: persona → calculator. Not the reverse — the
+ * persona has four values and this toggle has two, so "Investor" cannot say which
+ * persona a reader meant, and guessing would move a score they did not ask to change.
  *
  * The rate seed comes from the live Bank-of-Canada-refreshed value (getMortgageRate).
  * Non-income properties (vacant land, commercial) skip the split and show the
@@ -17,12 +23,20 @@
 
 import React, { useEffect, useState } from "react";
 import { onLensChanged } from "@/lib/personas/lensPersistence";
-import { ArrowLeft } from "lucide-react";
 import UnderwritingSandbox from "./UnderwritingSandbox";
 import BuyerLens from "./BuyerLens";
 import { DEFAULT_DOWN_PCT, DEFAULT_AMORT_YEARS, type SharedDealInputs } from "@/lib/finance/dealInputs";
+import { cn } from "@/lib/utils";
 
 export type CalculatorLens = "buyer" | "investor";
+
+/** The toggle's two positions. `hint` becomes the tooltip — a two-word tab cannot say
+ *  what is behind it, and "Investor" alone does not tell a browsing homebuyer that this
+ *  is where cap rate, cashflow and DSCR live. */
+const LENS_TABS: Array<{ id: CalculatorLens; label: string; hint: string }> = [
+  { id: "buyer", label: "Buyer", hint: "Monthly payment, cash to close, income to qualify" },
+  { id: "investor", label: "Investor", hint: "Cashflow, cap rate, gross yield & DSCR" },
+];
 
 export default function ListingCalculator({
   listingId,
@@ -92,6 +106,43 @@ export default function ListingCalculator({
 
   return (
     <div data-tour="listing-calculator" className={className}>
+      {/* Both lenses are always one tap away.
+          Before this, the two directions were different controls in different places:
+          into the underwrite via a link at the BOTTOM of the buyer card, below every
+          slider, so you scrolled the whole calculator to find it — and back out via a
+          small "← Payment & cash to close" line above the sandbox. A reader who did not
+          scroll never learned the investor view existed.
+          radiogroup rather than ARIA tabs: the panels below are whole components with no
+          tabpanel semantics, and this matches the Deal Score lens switcher the same page
+          already ships. */}
+      <div
+        role="radiogroup"
+        aria-label="Calculator view"
+        className="mb-2 grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1"
+      >
+        {LENS_TABS.map((t) => {
+          const on = lens === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setLens(t.id)}
+              title={t.hint}
+              className={cn(
+                "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                on
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
       {lens === "buyer" ? (
         <BuyerLens
           listPrice={listPrice}
@@ -105,28 +156,22 @@ export default function ListingCalculator({
           firstTimeBuyer={firstTimeBuyer}
           onFirstTimeBuyerChange={setFirstTimeBuyer}
           rateAsOf={rateAsOf}
+          // Kept as a second route: on a long card the reader who has just finished the
+          // buyer numbers is at the bottom, and it names what they get ("cashflow, cap
+          // rate & DSCR") in a way a two-word tab cannot.
           onShowInvestor={() => setLens("investor")}
         />
       ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setLens("buyer")}
-            className="mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-3 w-3" /> Payment &amp; cash to close
-          </button>
-          <UnderwritingSandbox
-            listingId={listingId}
-            listPrice={listPrice}
-            annualTaxes={annualTaxes}
-            monthlyFees={monthlyFees}
-            hasSuitePotential={hasSuitePotential}
-            incomeApplicable={incomeApplicable}
-            controlledShared={shared}
-            onSharedChange={setShared}
-          />
-        </>
+        <UnderwritingSandbox
+          listingId={listingId}
+          listPrice={listPrice}
+          annualTaxes={annualTaxes}
+          monthlyFees={monthlyFees}
+          hasSuitePotential={hasSuitePotential}
+          incomeApplicable={incomeApplicable}
+          controlledShared={shared}
+          onSharedChange={setShared}
+        />
       )}
     </div>
   );
