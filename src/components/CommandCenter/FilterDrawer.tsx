@@ -18,10 +18,11 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import { moreFiltersForClass } from "@/lib/filters/filterRegistry";
-import type { ControlDef } from "@/lib/personas/personaConfig";
+import { isFinancingControl, type ControlDef } from "@/lib/personas/personaConfig";
 import type { FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import InvestorChip from "./InvestorChip";
+import FinancingGroup from "./FinancingGroup";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
@@ -88,10 +89,21 @@ export default function FilterDrawer({
   const matchesNeedle = (c: ControlDef) =>
     (c.short ?? c.label).toLowerCase().includes(needle) || c.label.toLowerCase().includes(needle);
   const propertyDefs = moreFiltersForClass(propertyClass).filter((d) => d.label.toLowerCase().includes(needle));
-  const investorMatches = showInvestor ? controls.filter(matchesNeedle) : [];
-  const moreInvestorMatches = showInvestor ? moreControls.filter(matchesNeedle) : [];
+  // The financing trio is pulled out of BOTH rows — which of the two it lands in depends
+  // on the active persona, and it must read the same either way.
+  const all = showInvestor ? [...controls, ...moreControls].filter(matchesNeedle) : [];
+  const financingMatches = all.filter(isFinancingControl);
+  const investorMatches = showInvestor
+    ? controls.filter(matchesNeedle).filter((c) => !isFinancingControl(c))
+    : [];
+  const moreInvestorMatches = showInvestor
+    ? moreControls.filter(matchesNeedle).filter((c) => !isFinancingControl(c))
+    : [];
   const empty =
-    propertyDefs.length === 0 && investorMatches.length === 0 && moreInvestorMatches.length === 0;
+    propertyDefs.length === 0 &&
+    investorMatches.length === 0 &&
+    moreInvestorMatches.length === 0 &&
+    financingMatches.length === 0;
 
   return (
     <div className="fixed inset-0 z-[60] hidden md:block" role="dialog" aria-modal="true" aria-label="All filters">
@@ -177,6 +189,8 @@ export default function FilterDrawer({
               </div>
             </section>
           )}
+
+          <FinancingGroup controls={financingMatches} />
 
           {empty && (
             <p className="px-1 py-8 text-center text-xs text-muted-foreground">No filters match “{q}”.</p>

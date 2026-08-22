@@ -18,8 +18,10 @@ import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import { moreFiltersForClass, cloneFilterValue } from "@/lib/filters/filterRegistry";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
+import { isFinancingControl } from "@/lib/personas/personaConfig";
 import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
+import FinancingGroup from "./FinancingGroup";
 import FundamentalToggle from "./FundamentalToggle";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
@@ -93,6 +95,12 @@ export default function MobileFilterSheet({
       document.body.style.overflow = prevOverflow;
     };
   }, [onClose]);
+
+  // The financing trio renders in its own explained box, never as loose chips. It can sit
+  // in EITHER incoming list depending on the persona, so both are stripped here.
+  const personaSignals = controls.filter((c) => !isFinancingControl(c));
+  const moreSignals = moreControls.filter((c) => !isFinancingControl(c));
+  const financingControls = [...controls, ...moreControls].filter(isFinancingControl);
 
   return (
     <div
@@ -170,27 +178,29 @@ export default function MobileFilterSheet({
             </section>
           )}
 
-          {showAdvanced && showInvestor && controls.length > 0 && (
+          {showAdvanced && showInvestor && personaSignals.length > 0 && (
             <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>Persona signals</span>
               <div className="flex flex-wrap gap-2">
-                {controls.map((c, i) => (
+                {personaSignals.map((c, i) => (
                   <InvestorChip key={i} control={c} />
                 ))}
               </div>
             </section>
           )}
 
-          {showAdvanced && showInvestor && moreControls.length > 0 && (
+          {showAdvanced && showInvestor && moreSignals.length > 0 && (
             <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>More investor signals</span>
               <div className="flex flex-wrap gap-2">
-                {moreControls.map((c, i) => (
+                {moreSignals.map((c, i) => (
                   <InvestorChip key={i} control={c} />
                 ))}
               </div>
             </section>
           )}
+
+          {showAdvanced && showInvestor && <FinancingGroup controls={financingControls} />}
         </div>
 
         {/* Footer — Clear + apply (count). Both are real 44px targets. */}
