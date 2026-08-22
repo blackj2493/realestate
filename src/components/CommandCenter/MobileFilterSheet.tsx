@@ -178,6 +178,8 @@ export default function MobileFilterSheet({
             </section>
           )}
 
+          {showAdvanced && showInvestor && <FinancingGroup controls={financingControls} />}
+
           {showAdvanced && showInvestor && personaSignals.length > 0 && (
             <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>Persona signals</span>
@@ -199,8 +201,6 @@ export default function MobileFilterSheet({
               </div>
             </section>
           )}
-
-          {showAdvanced && showInvestor && <FinancingGroup controls={financingControls} />}
         </div>
 
         {/* Footer — Clear + apply (count). Both are real 44px targets. */}
