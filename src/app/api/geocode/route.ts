@@ -15,7 +15,8 @@
  * answers the same queries with Union Station, Union Station GO and Oakville GO — one
  * call, coordinates included, on the SAME token this route already used.
  *
- * POI IS OPT-IN (`poi=1`). Only the commute box wants a station or a mall: RenoAddressField
+ * POI IS OPT-IN (`poi=1`). It also turns on the LOCAL station pass (see transitSearch) that
+ * runs ahead of Mapbox. Only the commute box wants a station or a mall: RenoAddressField
  * needs the address of a HOUSE, and geocodeClient feeds the address-profile ladder, where a
  * POI at the top of the list would send the map somewhere the user did not ask for. Callers
  * that omit the flag get the address/place types this route has always returned.
@@ -24,6 +25,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { mapSearchBoxFeatures } from "./mapSearchBox";
+import { searchTransit } from "@/lib/amenities/transitSearch";
 
 export type { GeocodeResult } from "./mapSearchBox";
 
@@ -76,7 +78,22 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await upstream.json();
-    return NextResponse.json({ results: mapSearchBoxFeatures(data?.features) });
+    const remote = mapSearchBoxFeatures(data?.features);
+    if (!wantPoi) return NextResponse.json({ results: remote });
+
+    // Local stations lead. Search Box finds Union Station and Oakville GO, but the exact
+    // phrase "Ajax GO Station" returns two short-term-rental listings that name the station
+    // and never the station itself — upstream recall, not a parameter we control. Every GO
+    // station sits in data/gta-amenities.json under its real name, so this answers those
+    // queries exactly; Mapbox still supplies everything that is not a station.
+    const local = searchTransit(q).map((t) => ({
+      label: t.address ? `${t.name} · ${t.address}` : t.name,
+      lat: t.lat,
+      lng: t.lng,
+    }));
+    const taken = new Set(local.map((r) => `${r.lat.toFixed(4)},${r.lng.toFixed(4)}`));
+    const merged = [...local, ...remote.filter((r) => !taken.has(`${r.lat.toFixed(4)},${r.lng.toFixed(4)}`))];
+    return NextResponse.json({ results: merged.slice(0, 6) });
   } catch (err) {
     console.error("[Geocode API]", err);
     return NextResponse.json(

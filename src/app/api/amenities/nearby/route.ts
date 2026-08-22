@@ -13,7 +13,8 @@ import { NextRequest, NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
 
-type AmenityType = "grocery" | "recreation";
+/** The file also holds `transit` rows; this route serves the walkable pair only. */
+type AmenityType = "grocery" | "recreation" | "transit";
 
 interface RawAmenity {
   id: string;
@@ -109,7 +110,10 @@ export async function GET(req: NextRequest) {
         distanceKm: Math.round(distanceKm * 100) / 100,
         address: a.address,
       };
-      (a.type === "grocery" ? grocery : recreation).push(row);
+      // Explicit, not a ternary fallthrough: the dataset also carries `transit` rows now,
+      // and `? grocery : recreation` would file every GO station under recreation.
+      if (a.type === "grocery") grocery.push(row);
+      else if (a.type === "recreation") recreation.push(row);
     }
 
     grocery.sort((x, y) => x.distanceKm - y.distanceKm);
