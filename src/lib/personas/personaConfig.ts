@@ -402,6 +402,32 @@ const C_STALE: ControlDef = {
   buildClause: (f) => (f.staleOnly ? `IsStale:=true` : null),
 };
 
+/**
+ * The three controls that describe THE READER'S FINANCING, not the property.
+ *
+ * They are one mechanism and must be presented as one. "Down Payment" and "Rate" filter
+ * nothing on their own — both `buildClause` return null. What they do is set the
+ * break-even cap rate that "Cashflow positive only" filters on, and drive the ledger's
+ * cashflow column. Listed beside a dozen property filters they read as three unrelated
+ * chips, and a reader who moves the rate slider sees no result change and concludes it is
+ * broken; a reader who never touches them gets a "positive" list computed at someone
+ * else's mortgage.
+ *
+ * Exported so the desktop drawer and the mobile sheet split them out of the chip rows
+ * from ONE list. Adding a fourth financing input (amortization is the obvious one) means
+ * adding its key here, not editing two components.
+ */
+export const FINANCING_CONTROL_KEYS: readonly string[] = [
+  "cashflowPositiveOnly",
+  "downPaymentPct",
+  "interestRatePct",
+];
+
+/** True when a control belongs in the financing group rather than a signal row. */
+export function isFinancingControl(c: ControlDef): boolean {
+  return c.kind !== "range" && FINANCING_CONTROL_KEYS.includes(c.key);
+}
+
 /** Every investor signal, deduped. Persona `controls` reference these by object. */
 export const INVESTOR_CONTROLS: ControlDef[] = [
   C_CASHFLOW_POSITIVE,
