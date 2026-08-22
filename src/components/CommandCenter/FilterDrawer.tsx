@@ -168,6 +168,8 @@ export default function FilterDrawer({
             </section>
           )}
 
+          <FinancingGroup controls={financingMatches} />
+
           {investorMatches.length > 0 && (
             <section className="space-y-2 border-t border-border/70 pt-4">
               <span className={LABEL}>Investor · Persona signals</span>
@@ -189,8 +191,6 @@ export default function FilterDrawer({
               </div>
             </section>
           )}
-
-          <FinancingGroup controls={financingMatches} />
 
           {empty && (
             <p className="px-1 py-8 text-center text-xs text-muted-foreground">No filters match “{q}”.</p>
