@@ -49,6 +49,7 @@ import { extractSoldListingData, upsertSoldListings } from './ingester';
 import { processBatch } from './sync';
 import { toSoldDocument, importSoldBatch, getSoldAdminClient } from './soldIndexer';
 import { buildIdDeleteFilters } from './staleSearchDocs';
+import { partitionGhosts } from './ghostPartition';
 import { getServiceRoleClient } from '../../src/lib/supabase/client';
 
 const API_BASE_URL = process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata';
@@ -307,6 +308,140 @@ async function stampLastSeenHeartbeat(activeKeys: string[], apply: boolean): Pro
   }
 }
 
+/** Keys per vault-marking UPDATE, and the per-chunk timeout. See markVaultOrphans. */
+const ORPHAN_CHUNK = 5000;
+const ORPHAN_CHUNK_TIMEOUT = '60s';
+
+/**
+ * VAULT MARKING — record the death in `listings`, not only in the search index.
+ *
+ * WHY THIS EXISTS
+ * ───────────────
+ * Step 6 deletes the ghost's Typesense doc and stops there, so the `listings` row
+ * survives frozen at its last Active payload. Nothing else ever writes it: Query A
+ * only fetches Active (a departed listing is never returned again), and Query B/C
+ * only write rows the feed hands back with a terminal status — which never happens
+ * for a listing the feed simply STOPS serving.
+ *
+ * That makes every cleared ghost re-creatable. reindex-from-vault reads the whole
+ * vault and gates each row on isActiveListing(full_payload); a frozen payload still
+ * says StandardStatus 'Active', so the reindex re-emits the doc as live inventory
+ * and the ghost is back. E13415990 (70 Silver Star Blvd #121, a Commercial Retail
+ * lease last served 2026-06-08) is the canonical case: cleared by the 2026-08-23
+ * reconcile, restored the same day by the stage-B reindex. By 2026-08-26 the index
+ * held 7,137 NOT_IN_FEED docs against 623 three days earlier, plus 2,335 the feed
+ * reports Closed — 9.5% of the index was dead inventory.
+ *
+ * WHAT IT WRITES
+ * ──────────────
+ * `listings.is_orphaned` — a boolean that has existed since migration 082 and has
+ * never been populated ("the orphan sweep is not populating it", 082's own note).
+ * Verified 2026-08-26 to have ZERO readers in the database: no function, no view.
+ * Populating it therefore cannot switch on a dormant gate — the failure mode that
+ * collapsed the active set to 2% on 2026-08-18. Its ONLY reader is the reindex.
+ *
+ * `orphan_confirmations` counts how many sweeps condemned the row, so a row that
+ * flickers is distinguishable from one dead for months.
+ *
+ * The flag means "verified dead inventory whose vault payload nobody rewrote" — the
+ * same `dead` set step 6 clears from the index. That deliberately includes
+ * Cancelled/Withdrawn/Delete, not just NOT_IN_FEED: the feed returns those with a
+ * terminal status but no path writes it into `listings`, so the frozen row still
+ * reads Active and the reindex resurrects it just the same.
+ *
+ * REVIVAL is symmetric and load-bearing: keys the feed returned as Active (or as
+ * Closed, whose payload the sold-repair path rewrites) are cleared back to false, so
+ * a snapshot-timing false positive heals on the next run instead of hiding a live
+ * listing forever.
+ *
+ * `updated_at` moves as a side effect (trigger update_listings_updated_at fires on
+ * every UPDATE). That is honest — the row WAS written — but anything that watches
+ * updated_at sees this sweep.
+ *
+ * Best-effort, exactly like the heartbeat: chunked, each chunk on its own, every
+ * failure logged and swallowed. It must never abort the reconcile — the 2026-08-09
+ * run died mid-way because the heartbeat threw, and the doc deletion never ran.
+ */
+async function markVaultOrphans(
+  deadKeys: string[],
+  seenKeys: string[],
+  apply: boolean
+): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    console.log('   ⏭️  DATABASE_URL not set — skipping vault orphan marking.');
+    return;
+  }
+  const pg = new PgClient({ connectionString: process.env.DATABASE_URL });
+  await pg.connect();
+  try {
+    if (!apply) {
+      // Report the DELTA, not the candidate count: rows already flagged by an earlier
+      // sweep would otherwise inflate a dry run into looking like fresh damage.
+      const r = await pg.query(
+        `SELECT count(*) AS n FROM listings
+          WHERE listing_key = ANY($1::text[]) AND is_orphaned IS DISTINCT FROM true`,
+        [deadKeys]
+      );
+      console.log(
+        `   (dry-run — would flag ${r.rows[0].n} vault row(s) orphaned, and clear the ` +
+          `flag on any of ${seenKeys.length} row(s) the feed still serves)`
+      );
+      return;
+    }
+
+    await pg.query(`SET statement_timeout TO '${ORPHAN_CHUNK_TIMEOUT}'`);
+
+    let flagged = 0;
+    let failed = 0;
+    for (let i = 0; i < deadKeys.length; i += ORPHAN_CHUNK) {
+      const chunk = deadKeys.slice(i, i + ORPHAN_CHUNK);
+      try {
+        const r = await pg.query(
+          `UPDATE listings
+              SET is_orphaned = true,
+                  orphan_confirmations = COALESCE(orphan_confirmations, 0) + 1
+            WHERE listing_key = ANY($1::text[])`,
+          [chunk]
+        );
+        flagged += r.rowCount ?? 0;
+      } catch (e) {
+        failed++;
+        console.warn(
+          `   ⚠️  orphan-mark chunk ${i}-${i + chunk.length} failed: ${e instanceof Error ? e.message : e}`
+        );
+      }
+    }
+
+    let revived = 0;
+    for (let i = 0; i < seenKeys.length; i += ORPHAN_CHUNK) {
+      const chunk = seenKeys.slice(i, i + ORPHAN_CHUNK);
+      try {
+        const r = await pg.query(
+          `UPDATE listings
+              SET is_orphaned = false, orphan_confirmations = 0
+            WHERE listing_key = ANY($1::text[]) AND is_orphaned IS TRUE`,
+          [chunk]
+        );
+        revived += r.rowCount ?? 0;
+      } catch (e) {
+        failed++;
+        console.warn(
+          `   ⚠️  orphan-clear chunk ${i}-${i + chunk.length} failed: ${e instanceof Error ? e.message : e}`
+        );
+      }
+    }
+
+    console.log(
+      `   ✅ vault: ${flagged} row(s) flagged orphaned, ${revived} cleared` +
+        (failed ? ` (${failed} chunk(s) failed — see above)` : '') + '.'
+    );
+  } catch (e) {
+    console.warn(`   ⚠️  vault orphan marking skipped: ${e instanceof Error ? e.message : e}`);
+  } finally {
+    await pg.end();
+  }
+}
+
 async function main() {
   if (!IDX_TOKEN || !VOW_TOKEN) throw new Error('PROPTX_IDX_TOKEN / PROPTX_VOW_TOKEN missing');
   const ts = tsClient();
@@ -338,29 +473,19 @@ async function main() {
   console.log('\n4️⃣  Verifying each candidate against the VOW feed…');
   const payloads = await fetchCurrentPayloads(ghosts);
 
-  // Partition by verified current status.
-  const closed: any[] = []; // → sold repair path
-  const dead: string[] = []; // → verified non-available: clear from For-Sale index
-  let keptActive = 0; // snapshot-timing false positives + conditionals: KEEP
-  const statusTally: Record<string, number> = {};
-  for (const key of ghosts) {
-    const raw = payloads.get(key);
-    const label = raw ? `${raw.StandardStatus}/${raw.MlsStatus}` : 'NOT_IN_FEED';
-    statusTally[label] = (statusTally[label] ?? 0) + 1;
-    if (!raw) {
-      dead.push(key); // absent from the feed entirely — cannot be available inventory
-    } else if (String(raw.StandardStatus).startsWith('Active')) {
-      keptActive++; // Active again, or Active Under Contract (conditionals stay visible)
-    } else if (raw.StandardStatus === 'Closed') {
-      closed.push(raw);
-    } else {
-      dead.push(key); // Cancelled / Withdrawn / Delete — verified off-market
-    }
-  }
+  // Partition by verified current status (pure — see ghostPartition.ts).
+  const { closed, dead, alive, keptActive, statusTally } = partitionGhosts(ghosts, payloads);
   console.log('\n   breakdown:');
   for (const [s, n] of Object.entries(statusTally).sort((a, b) => b[1] - a[1]))
     console.log(`     ${s}: ${n}`);
   console.log(`   → sold repair: ${closed.length} · clear from index: ${dead.length} · keep: ${keptActive}`);
+
+  // 4b. Mark the vault BEFORE touching the index. If the run then dies in sold repair
+  // (a 240-minute timeout is a real outcome on a large regression), the marks are
+  // already committed and the next reindex cannot resurrect these keys. The reverse
+  // order would clear the index and leave the vault primed to undo it.
+  console.log('\n4️⃣.5  Marking verified-dead rows in the vault…');
+  await markVaultOrphans(dead, alive, APPLY);
 
   if (!APPLY) {
     console.log('\nDRY RUN complete — re-run with --apply to reconcile.');

@@ -191,9 +191,17 @@ export function isSoldListing(raw: any): boolean {
   // Active statuses (not sold)
   const ACTIVE_STATUSES = ['new', 'active', 'price change', 'extension'];
   
-  // Closed/Sold statuses
-  const CLOSED_STATUSES = ['closed', 'sold', 'closed sale', 'terminated'];
-  
+  // Closed/Sold statuses.
+  //
+  // 'leased' is here for the MlsStatus side. A lease that closes normally carries
+  // StandardStatus 'Closed' — which is why raw_vow_sold already holds 269,662 lease
+  // closes — so the sale-shaped names alone have covered it in practice. But this
+  // predicate ORs the two fields, and without 'leased' a record whose StandardStatus
+  // is missing or unrecognized falls through to the safe default and is filed as
+  // still-available. Exact match, so the conditional statuses ('leased conditional',
+  // 'leased conditional escape') are untouched and stay visible by product policy.
+  const CLOSED_STATUSES = ['closed', 'sold', 'closed sale', 'leased', 'terminated'];
+
   // Check if it's a closed/sold status
   if (CLOSED_STATUSES.includes(standardStatus) || CLOSED_STATUSES.includes(mlStatus)) {
     return true;
