@@ -128,6 +128,17 @@ describe("resolveListingStatus — feed absence", () => {
     ).toMatchObject({ kind: "delisted", mlsStatus: "Terminated" });
   });
 
+  it("carries no date when the caller could not establish one", () => {
+    // getListingDetail passes null unless listings.last_seen_at has actually MOVED since
+    // insert. The column defaults to now() at insert, so on an unstamped row it is the
+    // creation date — and the page prints it as the day the board stopped serving the
+    // listing. 2,294 of 7,908 unavailable pages were in that position on 2026-08-27.
+    // No date beats a wrong one.
+    expect(
+      resolveListingStatus({ StandardStatus: "Active" }, null, { orphaned: true, lastSeen: null })
+    ).toEqual({ kind: "unavailable", lastSeen: null });
+  });
+
   it("strips the last-seen date for anon but keeps the badge", () => {
     expect(gateListingStatus({ kind: "unavailable", lastSeen: "2026-06-08" }, false)).toEqual({
       kind: "unavailable",

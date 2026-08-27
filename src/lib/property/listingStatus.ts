@@ -75,7 +75,13 @@ export type ListingStatus =
 export interface FeedAbsence {
   /** `listings.is_orphaned` — the feed no longer serves this key, verified per key. */
   orphaned: boolean;
-  /** `listings.last_seen_at`. */
+  /**
+   * Last date the feed was OBSERVED serving this listing — null unless that is actually
+   * known. Do NOT pass `listings.last_seen_at` straight in: the column defaults to now()
+   * at insert and only ghostReconcile's heartbeat ever moves it, so on an unstamped row it
+   * is the creation date, and the page renders it as the day the board stopped providing
+   * the listing. See the caller in getListingDetail for the stamped-vs-default test.
+   */
   lastSeen: string | null;
 }
 

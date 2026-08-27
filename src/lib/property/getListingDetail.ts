@@ -254,7 +254,7 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * be correct end to end and the page would keep printing "available" for another hour on
  * exactly the listings it was written to catch.
  */
-export const DETAIL_SHAPE_VERSION = "v6-feed-absence";
+export const DETAIL_SHAPE_VERSION = "v7-last-seen-honesty";
 
 export interface ListingDetail {
   listing_key: string;
@@ -667,9 +667,26 @@ export const getListingDetail = cache(
     // feed silently stopped serving has no terminal record ANYWHERE, so every branch
     // misses and the page renders "available" forever (E13415990, 79 days). See
     // ghostReconcile.markVaultOrphans for how the flag is verified and cleared.
+    //
+    // `last_seen_at` is only a last-seen date when something actually STAMPED it. The
+    // column DEFAULTS to now() at insert, and its only writer is ghostReconcile's weekly
+    // heartbeat — which first ran 2026-08-18 and stamps only rows present in that run's
+    // Active snapshot. A listing that died before then was never stamped, so the column
+    // still holds its CREATION date. Printing that under "the board stopped providing it
+    // on X" states something false: for a listing created in May and served until August,
+    // the page would name May. 2,294 of the 7,908 unavailable pages sit in exactly that
+    // position (measured 2026-08-27).
+    //
+    // So require positive evidence of a stamp — a value that MOVED since insert — and
+    // otherwise say nothing. The copy reads correctly without a date, and no date beats a
+    // wrong one.
+    const createdMs = Date.parse(String(listing.created_at ?? ""));
+    const seenMs = Date.parse(String(listing.last_seen_at ?? ""));
+    const heartbeatStamped =
+      Number.isFinite(createdMs) && Number.isFinite(seenMs) && seenMs - createdMs > 60_000;
     const absence: FeedAbsence = {
       orphaned: listing.is_orphaned === true,
-      lastSeen: typeof listing.last_seen_at === "string" ? listing.last_seen_at : null,
+      lastSeen: heartbeatStamped ? String(listing.last_seen_at) : null,
     };
     let status: ListingStatus = resolveListingStatus(payload, null, absence);
     if (status.kind === "active" || status.kind === "unavailable") {
