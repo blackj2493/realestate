@@ -100,6 +100,8 @@ interface ListingRecord {
   listing_key: string;
   full_payload: Record<string, unknown>;
   property_hash: string | null;
+  /** ghostReconcile's verdict: the feed no longer serves this listing. See fetchChunk. */
+  is_orphaned: boolean | null;
 }
 
 interface TransformResult {
@@ -221,7 +223,15 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
 
   // Active-only filter BEFORE the expensive transform — avoids running AVM
   // lookups on Sold/Closed rows we would discard anyway.
-  const active = records.filter(r => isActiveListing(r.full_payload));
+  //
+  // is_orphaned is re-checked here even though fetchChunk already excludes it. The
+  // payload gate cannot see a listing that merely STOPPED being served (its frozen
+  // payload still says Active), so this flag is the only thing standing between a
+  // reindex and a resurrected ghost — worth asserting at the point of use, not just
+  // in a query someone may later rewrite.
+  const active = records.filter(
+    (r) => r.is_orphaned !== true && isActiveListing(r.full_payload)
+  );
   result.skipped = records.length - active.length;
 
   if (active.length === 0) {
@@ -337,7 +347,23 @@ async function fetchChunk(lastId: string | null): Promise<FetchResult> {
   for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt++) {
     let query = supabase
       .from('listings')
-      .select('id, listing_key, full_payload, property_hash')
+      .select('id, listing_key, full_payload, property_hash, is_orphaned')
+      // NEVER resurrect a listing ghostReconcile already condemned.
+      //
+      // The active gate below is isActiveListing(full_payload), and that payload is
+      // FROZEN at whatever the feed last sent. When a listing simply stops being
+      // served — the normal end of a lease, and of plenty of sales — no query ever
+      // rewrites it, so it reads StandardStatus 'Active' forever and this reindex
+      // re-emits it as live inventory. That is how E13415990 (a Commercial Retail
+      // lease last served 2026-06-08) was cleared by the 2026-08-23 reconcile and
+      // was back in the index the same day, and how NOT_IN_FEED docs went 623 →
+      // 7,137 in three days. The payload cannot answer "is this still real"; only
+      // the reconcile's per-key feed verdict can, and it lands in is_orphaned.
+      //
+      // `not.is.true` rather than `eq.false` so a NULL (no verdict yet) is still
+      // indexed. Absence of evidence must never remove a listing — the same
+      // fail-toward-showing rule migration 082 applies to last_seen_at.
+      .not('is_orphaned', 'is', true)
       .order('id', { ascending: true })
       .limit(CHUNK_SIZE);
 
@@ -405,13 +431,29 @@ async function reindexFromVault(): Promise<void> {
   let totalRecords = 0;
   const { count, error: countError } = await supabase
     .from('listings')
-    .select('*', { count: 'estimated', head: true });
+    .select('*', { count: 'estimated', head: true })
+    .not('is_orphaned', 'is', true);
 
   if (countError) {
     console.warn(`   ⚠️  Count unavailable (non-fatal): ${countError.message || 'statement timeout'} — progress % disabled`);
   } else {
     totalRecords = count ?? 0;
     console.log(`   Estimated listings: ${totalRecords.toLocaleString()}`);
+  }
+
+  // State the exclusion out loud. A reindex that silently skipped tens of thousands of
+  // rows would read as "covered everything" in the log, and this run rewrites the whole
+  // search index — the one place a silent cap is most expensive.
+  const { count: orphanCount, error: orphanErr } = await supabase
+    .from('listings')
+    .select('*', { count: 'estimated', head: true })
+    .is('is_orphaned', true);
+  if (orphanErr) {
+    console.warn(`   ⚠️  Orphan count unavailable (non-fatal): ${orphanErr.message}`);
+  } else {
+    console.log(
+      `   Excluded as orphaned (ghostReconcile verdict: not in the feed): ${(orphanCount ?? 0).toLocaleString()}`
+    );
   }
   console.log('');
 
