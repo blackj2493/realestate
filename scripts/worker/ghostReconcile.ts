@@ -81,10 +81,10 @@ const MAX_VAULT_SWEEP = (() => {
   return a ? Number(a.split('=')[1]) : Infinity;
 })();
 /**
- * The vault-sweep candidate query walks ~294k rows extracting three jsonb keys. It has
- * no index to lean on, so it needs headroom well past the 60s the chunked writes use.
+ * The vault-sweep candidate query is a ~294k-row scan of two plain columns — 0.6s
+ * measured. The headroom is for a throttled instance, not for the query itself.
  */
-const VAULT_SWEEP_TIMEOUT = '300s';
+const VAULT_SWEEP_TIMEOUT = '120s';
 
 /** Feed page size ($top) and per-request or-chain size for keyed lookups. */
 const FETCH_CHUNK = 50;
@@ -519,20 +519,27 @@ async function sweepVaultForOrphans(activeKeys: Set<string>, apply: boolean): Pr
   const pg = new PgClient({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
   try {
-    // Mirror isActiveListing (reindex-from-vault) EXACTLY: Status → MlsStatus →
-    // StandardStatus precedence, first non-empty wins, compared against the shared
-    // NON_ACTIVE_STATUSES set. Reading the `standard_status` column instead would be
-    // cheaper and wrong — it ignores the first two fields the reindex prefers.
+    // Candidates = rows the reindex would emit. Its gate is isActiveListing(full_payload),
+    // which reads Status → MlsStatus → StandardStatus (first non-empty wins) against the
+    // shared NON_ACTIVE_STATUSES. Expressing that precedence in SQL means three jsonb
+    // extractions over ~294k rows with no index to lean on: measured 2026-08-26, it does
+    // not finish — cancelled at 20s, and it hung a 300s attempt.
+    //
+    // The `standard_status` column gives the same answer in 0.6s. That is only safe in ONE
+    // direction, so it was measured rather than assumed: the dangerous case is the column
+    // reading terminal (row skipped here) while the payload reads active (row emitted by
+    // the reindex). Counted 2026-08-26: **0 rows**, against 180,339 candidates the two
+    // agree on exactly. A closed listing always carries a terminal MlsStatus, so the
+    // precedence never rescues it.
+    //
+    // Re-measure with scripts/admin if the ingest ever starts writing Status/MlsStatus
+    // that disagree with standard_status.
     await pg.query(`SET statement_timeout TO '${VAULT_SWEEP_TIMEOUT}'`);
     const res = await pg.query(
       `SELECT listing_key
          FROM listings
         WHERE is_orphaned IS DISTINCT FROM true
-          AND lower(trim(coalesce(
-                nullif(full_payload->>'Status', ''),
-                nullif(full_payload->>'MlsStatus', ''),
-                nullif(full_payload->>'StandardStatus', ''),
-                ''))) <> ALL($1::text[])`,
+          AND lower(coalesce(standard_status, '')) <> ALL($1::text[])`,
       [[...NON_ACTIVE_STATUSES]]
     );
     candidates = res.rows.map((r: any) => r.listing_key);

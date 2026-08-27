@@ -40,7 +40,7 @@ export interface GhostPartition {
   dead: string[];
   /** ONLY keys the feed still reports Active → clear any stale orphan flag. */
   alive: string[];
-  /** Count of `alive` keys held back from `closed` because they are still Active. */
+  /** `alive.length`, named for the run log's "keep: N" column. */
   keptActive: number;
   /** `StandardStatus/MlsStatus` → count, for the run log. */
   statusTally: Record<string, number>;
