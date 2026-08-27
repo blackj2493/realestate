@@ -12,17 +12,23 @@
  *   Active*               → alive, kept. Snapshot-timing false positive, or a
  *                           conditional (Sold Conditional / Leased Conditional),
  *                           which stays visible by product policy.
- *   Closed                → closed + alive. A real sale or lease close; the caller
- *                           runs it through the Query-B repair path, which rewrites
- *                           the vault payload to a terminal status.
+ *   Closed                → closed. A real sale or lease close.
  *   anything else         → dead. Cancelled / Withdrawn / Delete / Expired.
  *
- * `alive` is NOT simply "the feed returned it". A Cancelled or Withdrawn record IS
- * returned, but no code path writes that status into `listings`, so the vault row
- * stays frozen reading Active and reindex-from-vault will resurrect it exactly like
- * a NOT_IN_FEED row. Those keys therefore belong in `dead`, and must never leak into
- * `alive` — the caller clears the orphan flag on everything in `alive`, so a key in
- * both lists would be condemned and then pardoned in the same run.
+ * `alive` means exactly one thing: THE FEED SAYS THIS IS STILL AVAILABLE INVENTORY.
+ * It is the set the caller PARDONS — it clears the vault's orphan flag on every key
+ * in it — so nothing that is off-market may appear there, for any reason:
+ *
+ *  - A Cancelled or Withdrawn record IS returned by the feed, but no code path writes
+ *    that status into `listings`. The vault row stays frozen reading Active and
+ *    reindex-from-vault resurrects it exactly like a NOT_IN_FEED row. Those keys are
+ *    `dead`, and a key must never appear in both lists — it would be condemned and
+ *    pardoned in the same run.
+ *  - `closed` is deliberately NOT pardoned either. On the index-driven path the sold
+ *    repair rewrites its vault payload to a terminal status, so the reindex skips it
+ *    regardless of the flag; on the vault-wide sweep no repair runs, so the caller
+ *    condemns it instead. Pardoning here would have made a stale-Active close
+ *    re-indexable every single week.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -32,7 +38,7 @@ export interface GhostPartition {
   closed: any[];
   /** Keys to clear from the For-Sale index AND flag orphaned in the vault. */
   dead: string[];
-  /** Keys the feed proves are still real inventory → clear any stale orphan flag. */
+  /** ONLY keys the feed still reports Active → clear any stale orphan flag. */
   alive: string[];
   /** Count of `alive` keys held back from `closed` because they are still Active. */
   keptActive: number;
@@ -62,7 +68,6 @@ export function partitionGhosts(
       alive.push(key);
     } else if (raw.StandardStatus === 'Closed') {
       closed.push(raw);
-      alive.push(key);
     } else {
       dead.push(key);
     }

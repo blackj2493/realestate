@@ -30,17 +30,28 @@
  *      • Still Active* (incl. Active Under Contract / Sold Conditional) → KEEP
  *        (conditionals stay visible by product policy — see NON_ACTIVE_STATUSES).
  *      • Terminated / Withdrawn / Deleted / absent from the feed → the doc is
- *        verified-dead inventory: delete it from `properties` (Query C owns the
- *        delisted_listings bookkeeping; here we only clear the search index).
+ *        verified-dead inventory: delete it from `properties` AND flag the vault
+ *        row `is_orphaned` (Query C owns the delisted_listings bookkeeping).
+ * 4. Sweep the VAULT the same way — every row reindex-from-vault would emit, minus
+ *    the ones the feed still serves, verified per key. Steps 1-3 start from the
+ *    index and so judge under a tenth of what a reindex publishes. See
+ *    sweepVaultForOrphans and markVaultOrphans for the numbers.
+ *
+ * Clearing the doc alone was never enough: `listings` keeps the row frozen at its
+ * last Active payload, and reindex-from-vault re-emits it. That is why E13415990 —
+ * a Commercial Retail lease the feed stopped serving on 2026-06-08 — was cleared on
+ * 2026-08-23 and back the same day. The vault flag is what makes a clearance stick.
  *
  * Idempotent and resumable: closed listings already present in raw_vow_sold are
- * only re-indexed/doc-deleted (cheap), and doc deletes are no-ops when absent.
+ * only re-indexed/doc-deleted (cheap), doc deletes are no-ops when absent, and the
+ * vault flag is re-cleared for any key the feed serves again.
  * Dry-run by default; --apply to write. Designed to run weekly (see
  * .github/workflows/ghost-reconcile.yml) with a notifyRun email summary — a
  * SPIKE in the ghost count is the early-warning that an upstream net regressed.
  *
  * Usage:
  *   npx tsx scripts/worker/ghostReconcile.ts [--apply] [--max-ghosts=N]
+ *                                            [--max-vault=N] [--skip-vault-sweep]
  */
 import 'dotenv/config';
 import Typesense, { Client } from 'typesense';
@@ -48,7 +59,7 @@ import { Client as PgClient } from 'pg';
 import { extractSoldListingData, upsertSoldListings } from './ingester';
 import { processBatch } from './sync';
 import { toSoldDocument, importSoldBatch, getSoldAdminClient } from './soldIndexer';
-import { buildIdDeleteFilters } from './staleSearchDocs';
+import { buildIdDeleteFilters, NON_ACTIVE_STATUSES } from './staleSearchDocs';
 import { partitionGhosts } from './ghostPartition';
 import { getServiceRoleClient } from '../../src/lib/supabase/client';
 
@@ -62,6 +73,18 @@ const MAX_GHOSTS = (() => {
   const a = process.argv.find((x) => x.startsWith('--max-ghosts='));
   return a ? Number(a.split('=')[1]) : Infinity;
 })();
+/** Escape hatch: run only the index-driven passes (steps 1-6). */
+const SKIP_VAULT_SWEEP = process.argv.includes('--skip-vault-sweep');
+/** Bound the vault sweep's per-key verification. Whatever is dropped is logged. */
+const MAX_VAULT_SWEEP = (() => {
+  const a = process.argv.find((x) => x.startsWith('--max-vault='));
+  return a ? Number(a.split('=')[1]) : Infinity;
+})();
+/**
+ * The vault-sweep candidate query walks ~294k rows extracting three jsonb keys. It has
+ * no index to lean on, so it needs headroom well past the 60s the chunked writes use.
+ */
+const VAULT_SWEEP_TIMEOUT = '300s';
 
 /** Feed page size ($top) and per-request or-chain size for keyed lookups. */
 const FETCH_CHUNK = 50;
@@ -349,10 +372,16 @@ const ORPHAN_CHUNK_TIMEOUT = '60s';
  * terminal status but no path writes it into `listings`, so the frozen row still
  * reads Active and the reindex resurrects it just the same.
  *
- * REVIVAL is symmetric and load-bearing: keys the feed returned as Active (or as
- * Closed, whose payload the sold-repair path rewrites) are cleared back to false, so
- * a snapshot-timing false positive heals on the next run instead of hiding a live
- * listing forever.
+ * REVIVAL is symmetric and load-bearing, and it runs over the WHOLE Active snapshot,
+ * not just this run's candidates. The vault sweep's candidate query skips rows that
+ * are already flagged — otherwise it would re-verify ~84,000 keys against the feed
+ * every week — so a flagged row can never be reconsidered by the sweep that flagged
+ * it. Without a snapshot-wide pardon a listing that comes BACK (a reactivation keeps
+ * its ListingKey) would carry is_orphaned=true forever: Query A re-indexes it, the
+ * index-driven pass sees it in the snapshot and never treats it as a candidate, and
+ * the next reindex silently drops a live listing. Presence in the Active snapshot is
+ * positive evidence of life and needs no per-key check — verification is the price of
+ * CONDEMNING a row, never of pardoning one.
  *
  * `updated_at` moves as a side effect (trigger update_listings_updated_at fires on
  * every UPDATE). That is honest — the row WAS written — but anything that watches
@@ -375,16 +404,20 @@ async function markVaultOrphans(
   await pg.connect();
   try {
     if (!apply) {
-      // Report the DELTA, not the candidate count: rows already flagged by an earlier
-      // sweep would otherwise inflate a dry run into looking like fresh damage.
+      // Report the DELTA, not the candidate counts: rows already flagged by an earlier
+      // sweep would otherwise inflate a dry run into looking like fresh damage, and a
+      // 95k-key pardon list would read as 95k pending writes when almost none match.
       const r = await pg.query(
-        `SELECT count(*) AS n FROM listings
-          WHERE listing_key = ANY($1::text[]) AND is_orphaned IS DISTINCT FROM true`,
-        [deadKeys]
+        `SELECT
+           (SELECT count(*) FROM listings
+             WHERE listing_key = ANY($1::text[]) AND is_orphaned IS DISTINCT FROM true) AS to_flag,
+           (SELECT count(*) FROM listings
+             WHERE listing_key = ANY($2::text[]) AND is_orphaned IS TRUE) AS to_clear`,
+        [deadKeys, seenKeys]
       );
       console.log(
-        `   (dry-run — would flag ${r.rows[0].n} vault row(s) orphaned, and clear the ` +
-          `flag on any of ${seenKeys.length} row(s) the feed still serves)`
+        `   (dry-run — would flag ${r.rows[0].to_flag} vault row(s) orphaned, ` +
+          `clear ${r.rows[0].to_clear})`
       );
       return;
     }
@@ -442,6 +475,119 @@ async function markVaultOrphans(
   }
 }
 
+/**
+ * VAULT-WIDE SWEEP — the same verdict, over the rows that have no doc yet.
+ *
+ * WHY THE INDEX-DRIVEN PASS IS NOT ENOUGH
+ * ───────────────────────────────────────
+ * Steps 3-6 start from `properties` doc ids, so they only ever judge listings that
+ * are ALREADY indexed. reindex-from-vault does not read the index — it reads the
+ * vault, and emits every row whose payload passes isActiveListing. Measured
+ * 2026-08-26: 179,176 vault rows carry a payload reading StandardStatus 'Active'
+ * against 95,136 actives in the feed. A full reindex therefore materialises ~84,000
+ * ghosts, and the index-driven pass had condemned only the 7,909 of them that
+ * happened to hold a doc that day — under a tenth. The index you had on 2026-08-24
+ * held 178,912 docs, which is what that looks like when it happens.
+ *
+ * So the candidate set for the VAULT flag cannot be the index. It has to be the
+ * vault: every row the reindex would emit, minus the ones the feed still serves.
+ *
+ * DISCIPLINE IS UNCHANGED
+ * ───────────────────────
+ * The snapshot diff only proposes; the VOW feed decides, per key, exactly as step 4
+ * does. This file has never trusted a diff on its own and does not start here — an
+ * 84,000-row write earns the same verification a 7,909-row one gets.
+ *
+ * WHAT IT DOES NOT DO
+ * ───────────────────
+ * It does not repair vault-only closes. A key the feed reports Closed that has no
+ * doc is real missing data — the close never reached `listings` — but repairing tens
+ * of thousands of them is a different job with a different runtime. They are
+ * condemned (so no reindex can publish them as available) and COUNTED in the log, so
+ * the number is visible rather than silently absorbed.
+ *
+ * COST: ~1,700 extra feed requests, +8-10 min on a 240-min budget. Best-effort: any
+ * failure logs and returns, exactly like the heartbeat. The reconcile must survive it.
+ */
+async function sweepVaultForOrphans(activeKeys: Set<string>, apply: boolean): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    console.log('   ⏭️  DATABASE_URL not set — skipping vault-wide sweep.');
+    return;
+  }
+
+  let candidates: string[] = [];
+  const pg = new PgClient({ connectionString: process.env.DATABASE_URL });
+  await pg.connect();
+  try {
+    // Mirror isActiveListing (reindex-from-vault) EXACTLY: Status → MlsStatus →
+    // StandardStatus precedence, first non-empty wins, compared against the shared
+    // NON_ACTIVE_STATUSES set. Reading the `standard_status` column instead would be
+    // cheaper and wrong — it ignores the first two fields the reindex prefers.
+    await pg.query(`SET statement_timeout TO '${VAULT_SWEEP_TIMEOUT}'`);
+    const res = await pg.query(
+      `SELECT listing_key
+         FROM listings
+        WHERE is_orphaned IS DISTINCT FROM true
+          AND lower(trim(coalesce(
+                nullif(full_payload->>'Status', ''),
+                nullif(full_payload->>'MlsStatus', ''),
+                nullif(full_payload->>'StandardStatus', ''),
+                ''))) <> ALL($1::text[])`,
+      [[...NON_ACTIVE_STATUSES]]
+    );
+    candidates = res.rows.map((r: any) => r.listing_key);
+  } catch (e) {
+    console.warn(`   ⚠️  vault sweep skipped: ${e instanceof Error ? e.message : e}`);
+    await pg.end();
+    return;
+  }
+  await pg.end();
+
+  const indexable = candidates.length;
+  let absent = candidates.filter((k) => !activeKeys.has(k));
+  console.log(
+    `   vault rows a reindex would emit: ${indexable} · feed actives: ${activeKeys.size} · absent: ${absent.length}`
+  );
+  if (absent.length > MAX_VAULT_SWEEP) {
+    console.log(
+      `   (bounded to first ${MAX_VAULT_SWEEP} by --max-vault; ${absent.length - MAX_VAULT_SWEEP} left for the next run)`
+    );
+    absent = absent.slice(0, MAX_VAULT_SWEEP);
+  }
+  if (!absent.length) {
+    console.log('   ✅ nothing absent — vault and feed agree.');
+    return;
+  }
+
+  console.log(`   verifying ${absent.length} key(s) against the VOW feed…`);
+  const payloads = await fetchCurrentPayloads(absent);
+  const { closed, dead, alive, keptActive, statusTally } = partitionGhosts(absent, payloads);
+
+  console.log('   breakdown:');
+  for (const [s, n] of Object.entries(statusTally).sort((a, b) => b[1] - a[1]))
+    console.log(`     ${s}: ${n}`);
+
+  // Condemn the closes too: nothing rewrites their vault payload on this path, so an
+  // unflagged one stays re-indexable as "available" forever. Counted, not repaired.
+  const condemn = [...dead, ...closed.map((r: any) => r.ListingKey)];
+  console.log(
+    `   → flag ${condemn.length} (${dead.length} off-market, ${closed.length} closed but never ` +
+      `recorded in the vault) · pardon ${keptActive} still-Active`
+  );
+
+  await markVaultOrphans(condemn, alive, apply);
+}
+
+/** One call site for the sweep, reached from both of main()'s exits. */
+async function maybeSweepVault(activeKeys: Set<string>, apply: boolean): Promise<void> {
+  if (SKIP_VAULT_SWEEP) {
+    console.log('\n4️⃣.6  Vault-wide sweep: SKIPPED (--skip-vault-sweep).');
+    return;
+  }
+  console.log('\n4️⃣.6  Vault-wide sweep: judging rows a reindex would emit…');
+  await sweepVaultForOrphans(activeKeys, apply);
+}
+
 async function main() {
   if (!IDX_TOKEN || !VOW_TOKEN) throw new Error('PROPTX_IDX_TOKEN / PROPTX_VOW_TOKEN missing');
   const ts = tsClient();
@@ -459,14 +605,28 @@ async function main() {
   console.log('\n2️⃣.5  Heartbeat: persisting last_seen_at from the snapshot…');
   await stampLastSeenHeartbeat([...active], APPLY);
 
+  // 2c. Pardon anything the feed serves again BEFORE condemning anything new. A
+  // reactivation keeps its ListingKey, and the vault sweep below skips already-flagged
+  // rows, so this is the only thing that can ever clear a flag. See markVaultOrphans.
+  console.log('\n2️⃣.6  Pardoning vault rows the feed serves again…');
+  await markVaultOrphans([], [...active], APPLY);
+
   let ghosts = [...propIds].filter((id) => !active.has(id));
   console.log(`\n3️⃣  Ghost candidates: ${ghosts.length}`);
   if (ghosts.length > MAX_GHOSTS) {
     console.log(`   (bounded to first ${MAX_GHOSTS} by --max-ghosts; re-run for the rest)`);
     ghosts = ghosts.slice(0, MAX_GHOSTS);
   }
+  // A clean index does NOT mean a clean vault — the two sets are independent, and the
+  // vault is the one the reindex reads. Run the sweep before returning.
   if (!ghosts.length) {
-    console.log('✅ nothing to reconcile');
+    console.log('✅ index is clean — nothing to reconcile');
+    if (SKIP_VAULT_SWEEP) {
+      console.log('\n4️⃣.6  Vault-wide sweep: SKIPPED (--skip-vault-sweep).');
+    } else {
+      console.log('\n4️⃣.6  Vault-wide sweep: judging rows a reindex would emit…');
+      await sweepVaultForOrphans(active, APPLY);
+    }
     return;
   }
 
@@ -486,6 +646,11 @@ async function main() {
   // order would clear the index and leave the vault primed to undo it.
   console.log('\n4️⃣.5  Marking verified-dead rows in the vault…');
   await markVaultOrphans(dead, alive, APPLY);
+
+  // 4c. The same verdict over the rows that have no doc yet — the set reindex-from-vault
+  // actually reads. See sweepVaultForOrphans: the index-driven pass above covers under a
+  // tenth of what a full reindex would publish.
+  await maybeSweepVault(active, APPLY);
 
   if (!APPLY) {
     console.log('\nDRY RUN complete — re-run with --apply to reconcile.');

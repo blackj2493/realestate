@@ -41,7 +41,6 @@ describe('partitionGhosts', () => {
     const leased = { ListingKey: 'L1', StandardStatus: 'Closed', MlsStatus: 'Leased' };
     const r = partitionGhosts(['L1'], feed([['L1', leased]]));
     expect(r.closed).toEqual([leased]);
-    expect(r.alive).toEqual(['L1']);
     expect(r.dead).toEqual([]);
   });
 
@@ -49,7 +48,22 @@ describe('partitionGhosts', () => {
     const sold = { ListingKey: 'S1', StandardStatus: 'Closed', MlsStatus: 'Sold' };
     const r = partitionGhosts(['S1'], feed([['S1', sold]]));
     expect(r.closed).toEqual([sold]);
-    expect(r.alive).toEqual(['S1']);
+  });
+
+  it('never pardons a close', () => {
+    // `alive` is the PARDON list — the caller clears the vault orphan flag on it. On the
+    // vault-wide sweep no sold repair runs, so a pardoned close keeps its stale Active
+    // payload and stays re-indexable as available every single week.
+    const r = partitionGhosts(
+      ['L1', 'S1'],
+      feed([
+        ['L1', { ListingKey: 'L1', StandardStatus: 'Closed', MlsStatus: 'Leased' }],
+        ['S1', { ListingKey: 'S1', StandardStatus: 'Closed', MlsStatus: 'Sold' }],
+      ])
+    );
+    expect(r.alive).toEqual([]);
+    expect(r.keptActive).toBe(0);
+    expect(r.closed).toHaveLength(2);
   });
 
   it('condemns Cancelled/Withdrawn/Expired and does NOT call them alive', () => {
@@ -70,20 +84,22 @@ describe('partitionGhosts', () => {
     expect(r.keptActive).toBe(0);
   });
 
-  it('never puts a key in both dead and alive', () => {
+  it('accounts for every candidate exactly once, and never in two buckets', () => {
     const r = partitionGhosts(
       ['A', 'B', 'C', 'D', 'E'],
       feed([
         ['A', { StandardStatus: 'Active', MlsStatus: 'New' }],
-        ['B', { StandardStatus: 'Closed', MlsStatus: 'Leased' }],
+        ['B', { ListingKey: 'B', StandardStatus: 'Closed', MlsStatus: 'Leased' }],
         ['C', { StandardStatus: 'Cancelled', MlsStatus: 'Terminated' }],
+        // D is absent from the feed.
         ['E', { StandardStatus: 'Active Under Contract', MlsStatus: 'Sold Conditional' }],
       ])
     );
-    const overlap = r.dead.filter((k) => r.alive.includes(k));
-    expect(overlap).toEqual([]);
-    // Every candidate is accounted for exactly once.
-    expect([...r.dead, ...r.alive].sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
+    const closedKeys = r.closed.map((x: { ListingKey: string }) => x.ListingKey);
+    expect(r.dead.filter((k) => r.alive.includes(k))).toEqual([]);
+    expect(r.dead.filter((k) => closedKeys.includes(k))).toEqual([]);
+    expect(r.alive.filter((k) => closedKeys.includes(k))).toEqual([]);
+    expect([...r.dead, ...r.alive, ...closedKeys].sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
   });
 
   it('tallies every candidate for the run log', () => {
