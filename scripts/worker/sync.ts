@@ -27,6 +27,7 @@ import { normalizeCampaign, type RawVowCampaign } from '@/lib/campaignHistory/no
 import {
   NON_ACTIVE_STATUSES,
   collectStaleSearchDocIds,
+  collectFellThroughKeys,
   buildIdDeleteFilters,
 } from './staleSearchDocs';
 
@@ -478,6 +479,25 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       // batch or backfill purge to retry — never fail the sync over cleanup.
       result.typesense.errors.push(`stale-doc delete failed: ${err.message}`);
       console.warn(`   ⚠️  Stale-doc delete failed (non-fatal): ${err?.message || err}`);
+    }
+  }
+
+  // Step 9: a COLLAPSED sale must lose its sale anchor. See collectFellThroughKeys —
+  // raw_vow_sold has no removal path of any kind, so without this every "Deal Fell
+  // Through" leaves a phantom close priced and dated in the AVM's training input, for
+  // good. Same non-fatal contract as step 8: cleanup must never fail a sync.
+  const fellThrough = collectFellThroughKeys(rawListings);
+  if (fellThrough.length > 0) {
+    try {
+      const { error, count } = await supabaseClient
+        .from('raw_vow_sold')
+        .delete({ count: 'exact' })
+        .in('listing_key', fellThrough);
+      if (error) throw new Error(error.message);
+      if (count) console.log(`   🧹 raw_vow_sold: ${count} fell-through anchor(s) purged`);
+    } catch (err: any) {
+      result.supabase.errors.push(`fell-through anchor purge failed: ${err.message}`);
+      console.warn(`   ⚠️  Fell-through anchor purge failed (non-fatal): ${err?.message || err}`);
     }
   }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   collectStaleSearchDocIds,
+  collectFellThroughKeys,
   buildIdDeleteFilters,
   NON_ACTIVE_STATUSES,
 } from './staleSearchDocs';
@@ -78,5 +79,50 @@ describe('NON_ACTIVE_STATUSES', () => {
       expect(NON_ACTIVE_STATUSES.has(s)).toBe(true);
     }
     expect(NON_ACTIVE_STATUSES.has('sold conditional')).toBe(false);
+  });
+});
+
+describe('collectFellThroughKeys', () => {
+  it('picks out only the collapsed sales', () => {
+    expect(
+      collectFellThroughKeys([
+        { ListingKey: 'A', MlsStatus: 'Deal Fell Through' },
+        { ListingKey: 'B', MlsStatus: 'Sold' },
+        { ListingKey: 'C', MlsStatus: 'New' },
+        { ListingKey: 'D', MlsStatus: 'deal fell through' },
+      ])
+    ).toEqual(['A', 'D']);
+  });
+
+  it('matches case-insensitively and trims', () => {
+    expect(collectFellThroughKeys([{ ListingKey: ' A ', MlsStatus: '  Deal Fell Through  ' }]))
+      .toEqual(['A']);
+  });
+
+  it('never touches a status that merely mentions a sale', () => {
+    // These are live inventory. Purging their anchor would delete a real close.
+    expect(
+      collectFellThroughKeys([
+        { ListingKey: 'A', MlsStatus: 'Sold Conditional' },
+        { ListingKey: 'B', MlsStatus: 'Sold Conditional Escape' },
+        { ListingKey: 'C', MlsStatus: 'Leased Conditional' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('skips rows with no usable key, and de-dupes', () => {
+    expect(
+      collectFellThroughKeys([
+        { MlsStatus: 'Deal Fell Through' },
+        { ListingKey: '', MlsStatus: 'Deal Fell Through' },
+        { ListingKey: 'A', MlsStatus: 'Deal Fell Through' },
+        { ListingKey: 'A', MlsStatus: 'Deal Fell Through' },
+      ])
+    ).toEqual(['A']);
+  });
+
+  it('returns nothing for an ordinary active batch', () => {
+    expect(collectFellThroughKeys([{ ListingKey: 'A', MlsStatus: 'New' }])).toEqual([]);
+    expect(collectFellThroughKeys([])).toEqual([]);
   });
 });
