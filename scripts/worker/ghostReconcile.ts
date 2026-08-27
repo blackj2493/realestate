@@ -509,7 +509,11 @@ async function markVaultOrphans(
  * COST: ~1,700 extra feed requests, +8-10 min on a 240-min budget. Best-effort: any
  * failure logs and returns, exactly like the heartbeat. The reconcile must survive it.
  */
-async function sweepVaultForOrphans(activeKeys: Set<string>, apply: boolean): Promise<void> {
+async function sweepVaultForOrphans(
+  activeKeys: Set<string>,
+  alreadyJudged: Set<string>,
+  apply: boolean
+): Promise<void> {
   if (!process.env.DATABASE_URL) {
     console.log('   ⏭️  DATABASE_URL not set — skipping vault-wide sweep.');
     return;
@@ -551,9 +555,16 @@ async function sweepVaultForOrphans(activeKeys: Set<string>, apply: boolean): Pr
   await pg.end();
 
   const indexable = candidates.length;
-  let absent = candidates.filter((k) => !activeKeys.has(k));
+  // Drop keys step 4 already ruled on. `dead` is gone from the query anyway (4.5 flagged
+  // it), but `closed` and `alive` are NOT: their vault rows still read live at this point,
+  // so without this the sweep re-verifies them and reports the SAME closes a second time —
+  // step 5 is about to repair them. On 2026-08-27 that made 2,389 repaired closes look like
+  // a separate body of 2,391 unrecorded ones. It also saves ~2,400 feed requests per run.
+  const judged = candidates.filter((k) => alreadyJudged.has(k)).length;
+  let absent = candidates.filter((k) => !activeKeys.has(k) && !alreadyJudged.has(k));
   console.log(
-    `   vault rows a reindex would emit: ${indexable} · feed actives: ${activeKeys.size} · absent: ${absent.length}`
+    `   vault rows a reindex would emit: ${indexable} · feed actives: ${activeKeys.size}` +
+      ` · already judged in step 4: ${judged} · absent: ${absent.length}`
   );
   if (absent.length > MAX_VAULT_SWEEP) {
     console.log(
@@ -578,21 +589,25 @@ async function sweepVaultForOrphans(activeKeys: Set<string>, apply: boolean): Pr
   // unflagged one stays re-indexable as "available" forever. Counted, not repaired.
   const condemn = [...dead, ...closed.map((r: any) => r.ListingKey)];
   console.log(
-    `   → flag ${condemn.length} (${dead.length} off-market, ${closed.length} closed but never ` +
-      `recorded in the vault) · pardon ${keptActive} still-Active`
+    `   → flag ${condemn.length} (${dead.length} off-market, ${closed.length} closed with a ` +
+      `stale vault status) · pardon ${keptActive} still-Active`
   );
 
   await markVaultOrphans(condemn, alive, apply);
 }
 
 /** One call site for the sweep, reached from both of main()'s exits. */
-async function maybeSweepVault(activeKeys: Set<string>, apply: boolean): Promise<void> {
+async function maybeSweepVault(
+  activeKeys: Set<string>,
+  alreadyJudged: Set<string>,
+  apply: boolean
+): Promise<void> {
   if (SKIP_VAULT_SWEEP) {
     console.log('\n4️⃣.6  Vault-wide sweep: SKIPPED (--skip-vault-sweep).');
     return;
   }
   console.log('\n4️⃣.6  Vault-wide sweep: judging rows a reindex would emit…');
-  await sweepVaultForOrphans(activeKeys, apply);
+  await sweepVaultForOrphans(activeKeys, alreadyJudged, apply);
 }
 
 async function main() {
@@ -632,7 +647,7 @@ async function main() {
       console.log('\n4️⃣.6  Vault-wide sweep: SKIPPED (--skip-vault-sweep).');
     } else {
       console.log('\n4️⃣.6  Vault-wide sweep: judging rows a reindex would emit…');
-      await sweepVaultForOrphans(active, APPLY);
+      await sweepVaultForOrphans(active, new Set(), APPLY);
     }
     return;
   }
@@ -657,7 +672,11 @@ async function main() {
   // 4c. The same verdict over the rows that have no doc yet — the set reindex-from-vault
   // actually reads. See sweepVaultForOrphans: the index-driven pass above covers under a
   // tenth of what a full reindex would publish.
-  await maybeSweepVault(active, APPLY);
+  await maybeSweepVault(
+    active,
+    new Set([...closed.map((r: { ListingKey: string }) => r.ListingKey), ...alive]),
+    APPLY
+  );
 
   if (!APPLY) {
     console.log('\nDRY RUN complete — re-run with --apply to reconcile.');
