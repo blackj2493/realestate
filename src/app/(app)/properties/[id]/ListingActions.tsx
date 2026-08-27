@@ -28,8 +28,9 @@ export default function ListingActions({
   city?: string;
   price?: number;
   thumb?: string;
-  /** Drives the CTA set: sold/delisted drop Schedule Viewing; delisted promotes Watchlist. */
-  statusKind?: "active" | "sold" | "delisted";
+  /** Drives the CTA set: only `active` keeps Schedule Viewing; the two off-market kinds
+   *  promote Watchlist instead, since a relist alert is the only useful action left. */
+  statusKind?: "active" | "sold" | "delisted" | "unavailable";
   /** Lease listing → the CTA ladder drops the buyer-only "2nd opinion on price" rung. */
   isLease?: boolean;
 }) {
@@ -67,7 +68,7 @@ export default function ListingActions({
         aria-pressed={watched}
         className={cn(
           "flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors",
-          statusKind === "delisted" && !watched
+          (statusKind === "delisted" || statusKind === "unavailable") && !watched
             ? "border-transparent bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
             : watched
               ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-700 hover:bg-cyan-500/25 dark:text-cyan-300"

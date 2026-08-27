@@ -17,7 +17,7 @@ import { Bell, Check, Loader2 } from "lucide-react";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-type StatusKind = "active" | "sold" | "delisted";
+type StatusKind = "active" | "sold" | "delisted" | "unavailable";
 
 /** Listing status → alert `kind` + on-card copy. */
 function copyFor(statusKind: StatusKind, city?: string) {
@@ -27,6 +27,14 @@ function copyFor(statusKind: StatusKind, city?: string) {
         kind: "relist",
         title: "Get a relist alert",
         sub: "It's off the market now — we'll email you the moment it's listed again.",
+        placeholderDone: "We'll watch for the relist.",
+      };
+    // Same alert, different claim: we know it is gone, not that it was withdrawn.
+    case "unavailable":
+      return {
+        kind: "relist",
+        title: "Get a relist alert",
+        sub: "It's no longer available — we'll email you the moment it's listed again.",
         placeholderDone: "We'll watch for the relist.",
       };
     case "sold":
