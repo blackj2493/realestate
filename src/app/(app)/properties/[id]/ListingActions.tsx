@@ -7,6 +7,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useWatchlistStore } from "@/lib/watchlist/useWatchlist";
 import ScheduleViewingForm from "@/components/Property/ScheduleViewingForm";
 import CtaLadder from "@/components/Property/CtaLadder";
+import type { ListingStatusKind } from "@/lib/property/listingStatus";
 
 /**
  * Right-rail actions for the full listing page. "Add to Comparison" feeds the same
@@ -28,9 +29,10 @@ export default function ListingActions({
   city?: string;
   price?: number;
   thumb?: string;
-  /** Drives the CTA set: only `active` keeps Schedule Viewing; the two off-market kinds
-   *  promote Watchlist instead, since a relist alert is the only useful action left. */
-  statusKind?: "active" | "sold" | "delisted" | "unavailable";
+  /** Drives the CTA set: on-market kinds keep Schedule Viewing; the two off-market kinds
+   *  promote Watchlist instead, since a relist alert is the only useful action left.
+   *  Typed off ListingStatus so a new status kind cannot be added without this compiling. */
+  statusKind?: ListingStatusKind;
   /** Lease listing → the CTA ladder drops the buyer-only "2nd opinion on price" rung. */
   isLease?: boolean;
 }) {
@@ -46,7 +48,7 @@ export default function ListingActions({
 
   return (
     <div className="space-y-2 pt-2">
-      {statusKind === "active" && (
+      {(statusKind === "active" || statusKind === "conditional") && (
         <>
           <CtaLadder listingKey={id} isLease={isLease} />
           {/* Shared form: rendered (event-only) so every ladder rung opens it inline. */}

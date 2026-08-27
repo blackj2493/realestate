@@ -17,7 +17,7 @@ import { Bell, Check, Loader2 } from "lucide-react";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-type StatusKind = "active" | "sold" | "delisted" | "unavailable";
+import type { ListingStatusKind as StatusKind } from "@/lib/property/listingStatus";
 
 /** Listing status → alert `kind` + on-card copy. */
 function copyFor(statusKind: StatusKind, city?: string) {
@@ -43,6 +43,15 @@ function copyFor(statusKind: StatusKind, city?: string) {
         title: "Get alerts for homes like this",
         sub: `We'll email you when similar homes${city ? ` in ${city}` : ""} hit the market.`,
         placeholderDone: "We'll watch for similar homes.",
+      };
+    // The single most valuable alert we offer: conditionals fall through often enough
+    // that "tell me if this comes back" is the whole reason to leave an email here.
+    case "conditional":
+      return {
+        kind: "price_status",
+        title: "Get an alert if this deal falls through",
+        sub: "The sale isn't firm yet — we'll email you the moment it's back on the market.",
+        placeholderDone: "We'll watch for it coming back.",
       };
     case "active":
     default:

@@ -16,6 +16,7 @@ import { cookies } from "next/headers";
 import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
+import { isOnMarket } from "@/lib/property/listingStatus";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
@@ -257,11 +258,13 @@ export async function generateMetadata({
   const statusSuffix =
     detail.status.kind === "sold"
       ? ` — ${detail.status.label}`
-      : detail.status.kind === "delisted"
-        ? " — Off Market"
-        : detail.status.kind === "unavailable"
-          ? " — No Longer Available"
-          : "";
+      : detail.status.kind === "conditional"
+        ? " — Sale Pending"
+        : detail.status.kind === "delisted"
+          ? " — Off Market"
+          : detail.status.kind === "unavailable"
+            ? " — No Longer Available"
+            : "";
   const title = `${address} — ${formatPrice(price)}${statusSuffix} | PureProperty`;
   // Commercial has no beds/baths — the residential fallback would fabricate
   // "0 bed, 0 bath Office" (commercial-gap Phase 0).
@@ -274,7 +277,7 @@ export async function generateMetadata({
   // Frozen-Active payloads (Terminated/Expired/Suspended) must noindex too — trust
   // the resolved status, not the stale payload field.
   const isActive =
-    detail.status.kind === "active" && (p.StandardStatus ?? "Active") === "Active";
+    isOnMarket(detail.status) && (p.StandardStatus ?? "Active") === "Active";
   // Metadata is built from the UNGATED detail (it has no viewer, and is shared by every
   // request), so a sold listing's lead photo would be republished in the og:image tag to
   // any scraper — around the gate the page itself now applies. Photos on a closed record
@@ -323,7 +326,7 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   // Structured data is public by definition — emitting a closed listing's photo URLs here
   // would hand crawlers exactly what the page now withholds from anonymous visitors. Only
   // ACTIVE (IDX) listings carry photos into JSON-LD. Same rule as og:image above.
-  const photos = detail.status.kind === "active" ? detail.media_urls.slice(0, 8) : [];
+  const photos = isOnMarket(detail.status) ? detail.media_urls.slice(0, 8) : [];
   // `unavailable` must NOT fall through to InStock. The whole point of the state is that
   // we no longer believe this is buyable, so telling a crawler otherwise is the same lie
   // the visible page used to tell.
@@ -332,7 +335,12 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
       ? "https://schema.org/SoldOut"
       : detail.status.kind === "delisted" || detail.status.kind === "unavailable"
         ? "https://schema.org/OutOfStock"
-        : "https://schema.org/InStock";
+        : // Under contract but not closed. schema.org has no "conditionally sold" node;
+          // LimitedAvailability is the closest honest one, and InStock — which is what a
+          // conditional used to emit — tells crawlers it is plainly for sale.
+          detail.status.kind === "conditional"
+          ? "https://schema.org/LimitedAvailability"
+          : "https://schema.org/InStock";
 
   // Listing brokerage (§6.3(c)) — surfaced in structured data as well as on-page.
   // RealEstateOrganization is the listing OFFICE (ListOfficeName), not an agent.
@@ -472,7 +480,11 @@ export default async function PropertyPage({
   // ungated VOW sold numbers (anon must never receive them).
   const status = view.status;
   const soldAccuracy = view.soldAccuracy;
-  const isActiveListing = status.kind === "active";
+  // isOnMarket, not `=== "active"`: a conditional sale is still listed inventory with a
+  // live ask, so it keeps True DOM, the estimate, the calculator and the CTAs. The hero
+  // badge above is what tells the truth about it — see isOnMarket for why this is the
+  // availability question and the bare `=== "active"` checks below are not.
+  const isActiveListing = isOnMarket(status);
   const soldPrice = status.kind === "sold" ? status.closePrice : null;
   const soldDate = status.kind === "sold" ? status.soldDate : null;
   const saleHistory = view.saleHistory;
@@ -980,6 +992,21 @@ export default async function PropertyPage({
                       {formatPrice(price)}
                     </span>
                   </>
+                ) : status.kind === "conditional" ? (
+                  <>
+                    {/* Under contract, conditions not waived. The ask stays in the
+                        emerald "live price" treatment because it IS still the asking
+                        price and backup offers are real — but the badge goes first so
+                        nobody reads this as an untouched listing. Deliberately no close
+                        price: there is no firm number, and inventing one on a deal that
+                        can still collapse would be worse than saying nothing. */}
+                    <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-700 dark:text-amber-400">
+                      {status.label}
+                    </span>
+                    <span className="font-mono text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+                      {formatPrice(price)}
+                    </span>
+                  </>
                 ) : (
                   <span className="font-mono text-3xl font-bold text-emerald-700 dark:text-emerald-400">
                     {formatPrice(price)}
@@ -1064,6 +1091,18 @@ export default async function PropertyPage({
                   )}
                   <span className="text-cyan-700 dark:text-cyan-400">Full analysis ↓</span>
                 </a>
+              )}
+              {status.kind === "conditional" && (
+                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
+                  {/* The board status verbatim, because "Escape Clause" is the whole story
+                      for a buyer: it means the seller can still take a better offer. A
+                      plain conditional means they cannot. Collapsing the two into one
+                      sentence would throw away the only part worth acting on. */}
+                  {status.mlsStatus ? `${status.mlsStatus} — ` : ""}
+                  an offer has been accepted but the conditions have not been waived, so
+                  this sale is not firm yet. Listings at this stage can and do come back on
+                  the market, and the seller may still be taking backup offers.
+                </p>
               )}
               {status.kind === "delisted" && (
                 <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">

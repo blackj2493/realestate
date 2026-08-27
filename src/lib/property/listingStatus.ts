@@ -8,8 +8,11 @@
  * the archive lookup is the ONLY truth source for the de-listed state.
  *
  * Deliberately IO-free and import-light (no getListingDetail import → no cycle;
- * unit-testable in the node-env vitest setup).
+ * unit-testable in the node-env vitest setup). The one import is the shared status
+ * vocabulary — the whole point of this change is that the detail page and the browse
+ * card can no longer disagree about what a board status string means.
  */
+import { classifyMlsStatus, isConditionalClass } from "@/lib/listings/mlsStatus";
 
 /** Slim projection of a raw_vow_delisted row (see scripts/worker/delistedIndexer.ts). */
 export interface DelistedRowLite {
@@ -41,6 +44,39 @@ export interface ActiveStatus {
 }
 
 /**
+ * Under contract, conditions NOT yet waived — the board's "Sold Conditional" /
+ * "Leased Conditional" (and their Escape Clause variants).
+ *
+ * These listings are StandardStatus=Active in the IDX feed (~2,424 live on
+ * 2026-06-03) and stay in the search index by product policy, so no sync net ever
+ * touches them: Query B only sees firm closes, Query C only sees terminal statuses,
+ * and ghostReconcile correctly does not call them ghosts because the feed really is
+ * still serving them as Active. The payload is current and right.
+ *
+ * It was the RESOLVER that lost the information. This branch used to not exist, so
+ * "Sold Conditional" missed `mls === "sold"` by one word and fell through to
+ * `{ kind: "active" }` — rendering a full For Sale page, live "Book a viewing" CTA
+ * and all, for a home that was already under contract. The browse card got this
+ * right the whole time via statusBadge(), which is why the same listing could say
+ * "Sold Cond." in search and For Sale one click later (N13642346, 11 Elizabeth St).
+ *
+ * Deliberately NOT `sold`: the deal is not firm, there is no close price to publish,
+ * and conditionals fall through often enough that calling one a sale would be wrong
+ * (that is the same "Deal Fell Through" population collectFellThroughKeys cleans up
+ * after). It stays on-market inventory — see isOnMarket — and simply says so.
+ */
+export interface ConditionalStatus {
+  kind: "conditional";
+  label: "SOLD CONDITIONAL" | "LEASED CONDITIONAL";
+  /**
+   * The board status verbatim, e.g. "Sold Conditional Escape Clause" — an escape
+   * clause is materially different news to a buyer than a plain conditional, so the
+   * distinction survives to the page. IDX-class, so NOT VOW-gated.
+   */
+  mlsStatus: string | null;
+}
+
+/**
  * The feed STOPPED SERVING this listing and never said why.
  *
  * Distinct from `delisted` on purpose. Terminated/Expired/Suspended are things TRREB
@@ -67,9 +103,32 @@ export interface UnavailableStatus {
 
 export type ListingStatus =
   | ActiveStatus
+  | ConditionalStatus
   | SoldStatus
   | DelistedStatus
   | UnavailableStatus;
+
+/**
+ * Is this listing still on-market inventory the page should render as available?
+ *
+ * True for plain Active AND for conditionals: a conditional sale is still listed,
+ * still has a live asking price, and agents actively want backup offers on it — so
+ * the metrics, the estimate and the CTAs all stay. The page tells the truth with a
+ * badge instead of by pretending the listing is untouched.
+ *
+ * Use this for every AVAILABILITY question, including the SEO surfaces (robots,
+ * og:image, JSON-LD photos). Conditionals are StandardStatus=Active on the IDX feed, so
+ * their photos are IDX-class and publishing them was always legitimate — narrowing those
+ * checks to plain-active would have quietly de-indexed ~2,400 live pages and stripped
+ * their social images as a side effect of a status-label fix. The JSON-LD availability
+ * node is the one place that does distinguish them (LimitedAvailability, not InStock):
+ * that is a claim about the deal, not about whether the page should exist.
+ */
+export type ListingStatusKind = ListingStatus["kind"];
+
+export function isOnMarket(status: ListingStatus): boolean {
+  return status.kind === "active" || status.kind === "conditional";
+}
 
 /** ghostReconcile's per-key verdict on a listing's absence from the feed. */
 export interface FeedAbsence {
@@ -119,10 +178,23 @@ export function resolveListingStatus(
     };
   }
 
-  // LAST, never first: a stated outcome always beats an inferred one. A listing can be
-  // both closed and absent from the feed, and "SOLD" is the better answer every time.
+  // Before conditionals, never after: a conditional is an ACTIVE-family status, so a
+  // payload carrying one freezes exactly the way a plain Active payload does. If the
+  // feed has since stopped serving this key, "Sold Conditional" is a months-old
+  // sentence about a listing we have not heard about since — the same staleness the
+  // `unavailable` state exists to stop us publishing.
   if (absence?.orphaned) {
     return { kind: "unavailable", lastSeen: absence.lastSeen ?? null };
+  }
+
+  const cls = classifyMlsStatus(String(payload["MlsStatus"] ?? ""));
+  if (isConditionalClass(cls)) {
+    const rawMls = payload["MlsStatus"];
+    return {
+      kind: "conditional",
+      label: cls === "lease-conditional" ? "LEASED CONDITIONAL" : "SOLD CONDITIONAL",
+      mlsStatus: typeof rawMls === "string" && rawMls.trim() ? rawMls.trim() : null,
+    };
   }
 
   return { kind: "active" };

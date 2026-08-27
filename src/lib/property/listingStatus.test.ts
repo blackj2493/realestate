@@ -4,6 +4,7 @@ import {
   fillClosePriceFromSaleHistory,
   pickSoldAccuracy,
   gateListingStatus,
+  isOnMarket,
   type DelistedRowLite,
 } from "./listingStatus";
 
@@ -13,6 +14,116 @@ const delistedRow = (over: Partial<DelistedRowLite> = {}): DelistedRowLite => ({
   days_on_market: 71,
   list_price: 949_900,
   ...over,
+});
+
+describe("resolveListingStatus — conditional sales (N13642346 regression)", () => {
+  // The bug: "sold conditional" missed `mls === "sold"` by one word, fell through every
+  // branch, and returned { kind: "active" } — so the detail page rendered a full For Sale
+  // listing, live "Book a viewing" CTA and all, for a home already under contract. The
+  // feed was right the whole time; only the resolver lost the information.
+  it("resolves Sold Conditional as conditional, NOT active", () => {
+    const s = resolveListingStatus(
+      { StandardStatus: "Active", MlsStatus: "Sold Conditional", ListPrice: 699_900 },
+      null
+    );
+    expect(s).toEqual({
+      kind: "conditional",
+      label: "SOLD CONDITIONAL",
+      mlsStatus: "Sold Conditional",
+    });
+  });
+
+  it("keeps the escape-clause wording verbatim — it is the part a buyer can act on", () => {
+    const s = resolveListingStatus(
+      { StandardStatus: "Active", MlsStatus: "Sold Conditional Escape Clause" },
+      null
+    );
+    expect(s).toMatchObject({ kind: "conditional", mlsStatus: "Sold Conditional Escape Clause" });
+  });
+
+  it("labels a conditional LEASE as such", () => {
+    expect(
+      resolveListingStatus({ StandardStatus: "Active", MlsStatus: "Leased Conditional" }, null)
+    ).toMatchObject({ kind: "conditional", label: "LEASED CONDITIONAL" });
+  });
+
+  it("never publishes a close price or date for a deal that is not firm", () => {
+    const s = resolveListingStatus(
+      {
+        StandardStatus: "Active",
+        MlsStatus: "Sold Conditional",
+        // Even if the feed leaks these onto a conditional, they are not a firm sale.
+        ClosePrice: 720_000,
+        PurchaseContractDate: "2026-08-19",
+      },
+      null
+    );
+    expect(s.kind).toBe("conditional");
+    expect(s).not.toHaveProperty("closePrice");
+    expect(s).not.toHaveProperty("soldDate");
+  });
+
+  it("is on-market inventory (keeps metrics and CTAs); sold/delisted/unavailable are not", () => {
+    expect(isOnMarket({ kind: "active" })).toBe(true);
+    expect(
+      isOnMarket({ kind: "conditional", label: "SOLD CONDITIONAL", mlsStatus: "Sold Conditional" })
+    ).toBe(true);
+    expect(isOnMarket({ kind: "sold", label: "SOLD", closePrice: 1, soldDate: null })).toBe(false);
+    expect(isOnMarket({ kind: "unavailable", lastSeen: null })).toBe(false);
+    expect(
+      isOnMarket({
+        kind: "delisted",
+        mlsStatus: null,
+        delistedDate: null,
+        daysOnMarket: null,
+        lastListPrice: null,
+      })
+    ).toBe(false);
+  });
+
+  // ── precedence: a conditional is an ACTIVE-family status, so its payload freezes the
+  // same way a plain Active payload does. Every stated or verified outcome outranks it.
+  it("a firm close outranks a stale conditional on the same payload", () => {
+    expect(
+      resolveListingStatus(
+        { StandardStatus: "Closed", MlsStatus: "Sold Conditional", ClosePrice: 720_000 },
+        null
+      ).kind
+    ).toBe("sold");
+  });
+
+  it("a de-list record outranks a frozen conditional payload", () => {
+    expect(
+      resolveListingStatus({ StandardStatus: "Active", MlsStatus: "Sold Conditional" }, delistedRow())
+        .kind
+    ).toBe("delisted");
+  });
+
+  it("a feed that stopped serving the key outranks a months-old conditional", () => {
+    // "Sold Conditional" from a listing we have not heard about since is exactly the
+    // staleness the `unavailable` state exists to stop us publishing.
+    expect(
+      resolveListingStatus({ StandardStatus: "Active", MlsStatus: "Sold Conditional" }, null, {
+        orphaned: true,
+        lastSeen: "2026-06-08",
+      }).kind
+    ).toBe("unavailable");
+  });
+
+  it("Deal Fell Through is back on the market, not conditional", () => {
+    expect(
+      resolveListingStatus({ StandardStatus: "Active", MlsStatus: "Deal Fell Through" }, null)
+    ).toEqual({ kind: "active" });
+  });
+
+  it("gating leaves a conditional untouched — it carries no VOW data to strip", () => {
+    const s = resolveListingStatus(
+      { StandardStatus: "Active", MlsStatus: "Sold Conditional" },
+      null
+    );
+    expect(gateListingStatus(s, false)).toEqual(s);
+    expect(gateListingStatus(s, true)).toEqual(s);
+  });
 });
 
 describe("resolveListingStatus", () => {
