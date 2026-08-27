@@ -259,7 +259,9 @@ export async function generateMetadata({
       ? ` — ${detail.status.label}`
       : detail.status.kind === "delisted"
         ? " — Off Market"
-        : "";
+        : detail.status.kind === "unavailable"
+          ? " — No Longer Available"
+          : "";
   const title = `${address} — ${formatPrice(price)}${statusSuffix} | PureProperty`;
   // Commercial has no beds/baths — the residential fallback would fabricate
   // "0 bed, 0 bath Office" (commercial-gap Phase 0).
@@ -322,10 +324,13 @@ function buildJsonLd(id: string, detail: Awaited<ReturnType<typeof getListingDet
   // would hand crawlers exactly what the page now withholds from anonymous visitors. Only
   // ACTIVE (IDX) listings carry photos into JSON-LD. Same rule as og:image above.
   const photos = detail.status.kind === "active" ? detail.media_urls.slice(0, 8) : [];
+  // `unavailable` must NOT fall through to InStock. The whole point of the state is that
+  // we no longer believe this is buyable, so telling a crawler otherwise is the same lie
+  // the visible page used to tell.
   const availability =
     detail.status.kind === "sold"
       ? "https://schema.org/SoldOut"
-      : detail.status.kind === "delisted"
+      : detail.status.kind === "delisted" || detail.status.kind === "unavailable"
         ? "https://schema.org/OutOfStock"
         : "https://schema.org/InStock";
 
@@ -962,10 +967,14 @@ export default async function PropertyPage({
                       </>
                     )}
                   </>
-                ) : status.kind === "delisted" ? (
+                ) : status.kind === "delisted" || status.kind === "unavailable" ? (
                   <>
+                    {/* Two different claims, deliberately worded differently. OFF MARKET
+                        means TRREB told us the campaign ended. NO LONGER AVAILABLE means
+                        the feed went silent and never said why — we know it is not for
+                        sale, and we do not know what became of it. */}
                     <span className="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-amber-700 dark:text-amber-400">
-                      OFF MARKET
+                      {status.kind === "delisted" ? "OFF MARKET" : "NO LONGER AVAILABLE"}
                     </span>
                     <span className="font-mono text-3xl font-bold text-muted-foreground">
                       {formatPrice(price)}
@@ -1067,6 +1076,17 @@ export default async function PropertyPage({
                         .filter(Boolean)
                         .join(" · ")
                     : "This listing is no longer on the market."}
+                </p>
+              )}
+              {status.kind === "unavailable" && (
+                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
+                  {/* Say exactly what we know and nothing more. The board stopped sending
+                      this listing; it never told us whether it sold, leased or expired.
+                      Naming an outcome here would publish a transaction we never received. */}
+                  This listing is no longer available. The listing board stopped providing
+                  it{status.lastSeen ? ` on ${fmtDate(status.lastSeen)}` : ""} without
+                  reporting an outcome, so we cannot confirm whether it sold, leased or was
+                  withdrawn.
                 </p>
               )}
               {p.ListOfficeName && (

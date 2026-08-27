@@ -93,6 +93,53 @@ describe("resolveListingStatus", () => {
   });
 });
 
+describe("resolveListingStatus — feed absence", () => {
+  const absent = { orphaned: true, lastSeen: "2026-06-08" };
+
+  it("stays active when the feed still serves the listing", () => {
+    expect(
+      resolveListingStatus({ StandardStatus: "Active" }, null, { orphaned: false, lastSeen: null })
+    ).toEqual({ kind: "active" });
+  });
+
+  it("stays active when no verdict has been recorded", () => {
+    // Absence of evidence must not remove a listing — same rule the reindex filter uses.
+    expect(resolveListingStatus({ StandardStatus: "Active" }, null, null)).toEqual({
+      kind: "active",
+    });
+    expect(resolveListingStatus({ StandardStatus: "Active" }, null)).toEqual({ kind: "active" });
+  });
+
+  it("reports unavailable when the feed stopped serving a frozen-Active row", () => {
+    // E13415990: last served 2026-06-08, no close record and no de-list record anywhere.
+    expect(resolveListingStatus({ StandardStatus: "Active", MlsStatus: "New" }, null, absent)).toEqual(
+      { kind: "unavailable", lastSeen: "2026-06-08" }
+    );
+  });
+
+  it("never claims an outcome it was not told — a stated status always wins", () => {
+    // The whole point: we know it is gone, NOT that it leased. Publishing a transaction
+    // the feed never sent is a compliance problem, not just a wrong label.
+    expect(
+      resolveListingStatus({ StandardStatus: "Closed", MlsStatus: "Leased" }, null, absent)
+    ).toMatchObject({ kind: "sold", label: "LEASED" });
+    expect(
+      resolveListingStatus({ StandardStatus: "Active" }, delistedRow(), absent)
+    ).toMatchObject({ kind: "delisted", mlsStatus: "Terminated" });
+  });
+
+  it("strips the last-seen date for anon but keeps the badge", () => {
+    expect(gateListingStatus({ kind: "unavailable", lastSeen: "2026-06-08" }, false)).toEqual({
+      kind: "unavailable",
+      lastSeen: null,
+    });
+    expect(gateListingStatus({ kind: "unavailable", lastSeen: "2026-06-08" }, true)).toEqual({
+      kind: "unavailable",
+      lastSeen: "2026-06-08",
+    });
+  });
+});
+
 describe("fillClosePriceFromSaleHistory", () => {
   const soldNoPrice = {
     kind: "sold",

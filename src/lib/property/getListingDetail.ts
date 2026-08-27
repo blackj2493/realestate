@@ -52,6 +52,7 @@ import {
   pickSoldAccuracy,
   gateListingStatus,
   type DelistedRowLite,
+  type FeedAbsence,
   type ListingStatus,
   type SoldAccuracy,
 } from "@/lib/property/listingStatus";
@@ -246,8 +247,14 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * still rendered the old value — the cached object simply had no such key.
  *
  * Changing a field's VALUE needs no bump; only its presence matters here.
+ *
+ * v6 bumps for a VALUE change, which is the documented exception, and deliberately.
+ * `status` gained an "unavailable" kind, so every entry cached before this deploy still
+ * resolves a feed-absent listing to `{ kind: "active" }`. Without the bump the fix would
+ * be correct end to end and the page would keep printing "available" for another hour on
+ * exactly the listings it was written to catch.
  */
-export const DETAIL_SHAPE_VERSION = "v5-area-suite-rent";
+export const DETAIL_SHAPE_VERSION = "v6-feed-absence";
 
 export interface ListingDetail {
   listing_key: string;
@@ -654,8 +661,18 @@ export const getListingDetail = cache(
     // Closed payload into `listings`); Terminated/Expired/Suspended live ONLY in
     // raw_vow_delisted (the listings row stays frozen-Active), so non-sold rows get
     // one indexed PK lookup there. Best-effort: a miss/timeout degrades to "active".
-    let status: ListingStatus = resolveListingStatus(payload, null);
-    if (status.kind === "active") {
+    //
+    // The absence verdict is the LAST resort and costs nothing extra — is_orphaned and
+    // last_seen_at already arrive on the `select("*")` above. Without it a listing the
+    // feed silently stopped serving has no terminal record ANYWHERE, so every branch
+    // misses and the page renders "available" forever (E13415990, 79 days). See
+    // ghostReconcile.markVaultOrphans for how the flag is verified and cleared.
+    const absence: FeedAbsence = {
+      orphaned: listing.is_orphaned === true,
+      lastSeen: typeof listing.last_seen_at === "string" ? listing.last_seen_at : null,
+    };
+    let status: ListingStatus = resolveListingStatus(payload, null, absence);
+    if (status.kind === "active" || status.kind === "unavailable") {
       try {
         const { data: dRow } = await withTimeout(
           supabase
@@ -666,7 +683,7 @@ export const getListingDetail = cache(
           4000,
           "Delisted lookup"
         );
-        if (dRow) status = resolveListingStatus(payload, dRow as DelistedRowLite);
+        if (dRow) status = resolveListingStatus(payload, dRow as DelistedRowLite, absence);
       } catch (dlErr) {
         console.error(`[getListingDetail] delisted lookup failed for ${listingKey}:`, dlErr);
       }

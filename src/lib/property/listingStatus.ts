@@ -40,11 +40,49 @@ export interface ActiveStatus {
   kind: "active";
 }
 
-export type ListingStatus = ActiveStatus | SoldStatus | DelistedStatus;
+/**
+ * The feed STOPPED SERVING this listing and never said why.
+ *
+ * Distinct from `delisted` on purpose. Terminated/Expired/Suspended are things TRREB
+ * TOLD us; this is the absence of any statement at all. Every sync query is a forward
+ * cursor that only reacts to a record the feed hands back, so a listing that quietly
+ * leaves produces no sold record, no de-list record and no status change — its
+ * `listings` row simply freezes reading Active forever.
+ *
+ * E13415990 (70 Silver Star Blvd #121, a Commercial Retail lease) is the case this was
+ * built for: last served 2026-06-08, and 79 days later the page still said "available",
+ * because "we have not heard about this in months" was not something the model could say.
+ *
+ * It deliberately does NOT claim the listing sold or leased. Checked 2026-08-27: we hold
+ * no close and no de-list record for it — none at that address at all. Printing "LEASED"
+ * would publish a transaction the feed never sent us, which on a VOW/IDX feed is a
+ * compliance problem, not merely a wrong label. Where the feed DID tell us, the `sold`
+ * and `delisted` branches already say so and they win.
+ */
+export interface UnavailableStatus {
+  kind: "unavailable";
+  /** Last date the feed served this listing as Active. VOW-gated (null for anon). */
+  lastSeen: string | null;
+}
+
+export type ListingStatus =
+  | ActiveStatus
+  | SoldStatus
+  | DelistedStatus
+  | UnavailableStatus;
+
+/** ghostReconcile's per-key verdict on a listing's absence from the feed. */
+export interface FeedAbsence {
+  /** `listings.is_orphaned` — the feed no longer serves this key, verified per key. */
+  orphaned: boolean;
+  /** `listings.last_seen_at`. */
+  lastSeen: string | null;
+}
 
 export function resolveListingStatus(
   payload: Record<string, unknown>,
-  delistedRow: DelistedRowLite | null
+  delistedRow: DelistedRowLite | null,
+  absence?: FeedAbsence | null
 ): ListingStatus {
   const std = String(payload["StandardStatus"] ?? "").toLowerCase().trim();
   const mls = String(payload["MlsStatus"] ?? "").toLowerCase().trim();
@@ -73,6 +111,12 @@ export function resolveListingStatus(
       daysOnMarket: delistedRow.days_on_market ?? null,
       lastListPrice: delistedRow.list_price ?? null,
     };
+  }
+
+  // LAST, never first: a stated outcome always beats an inferred one. A listing can be
+  // both closed and absent from the feed, and "SOLD" is the better answer every time.
+  if (absence?.orphaned) {
+    return { kind: "unavailable", lastSeen: absence.lastSeen ?? null };
   }
 
   return { kind: "active" };
@@ -166,5 +210,8 @@ export function gateListingStatus(status: ListingStatus, isAuthed: boolean): Lis
       daysOnMarket: null,
       lastListPrice: null,
     };
+  // The KIND is public (anon sees the badge), but lastSeen is a feed-derived date and
+  // dates are stripped for anon everywhere else in this function — keep it consistent.
+  if (status.kind === "unavailable") return { kind: "unavailable", lastSeen: null };
   return status;
 }
