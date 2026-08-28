@@ -69,6 +69,30 @@ jobs:
           set -o pipefail
           npx tsx scripts/worker/ghostReconcile.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
 
+      # The reconcile REPAIRS listings — a ghost becomes SOLD/LEASED with a close price and
+      # its photos — but the detail page is cached for an hour and nothing here purged it.
+      # So every repaired listing kept serving its pre-repair page. On 2026-08-27 that was
+      # 2,389 of them, and it is how the sold-photo "gap" came to be reported: the page read
+      # "No photos on this record" while 43 photos sat in the row it had just been given.
+      # The daily sync already runs this exact step; the weekly reconcile simply never did.
+      #
+      # revalidateListings selects on `synced_at`, which only the repair path writes, so this
+      # purges the ~2.4k genuinely-changed listings and NOT the ~82k whose orphan flag moved
+      # (those bump `updated_at` only). Additive polish, never load-bearing: continue-on-error,
+      # and the 1h TTL still refreshes everything on its own.
+      - name: Revalidate repaired listing pages
+        if: always()
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          # The reconcile itself is capped at 240 min; 6h covers a full run plus margin
+          # without reaching back into the previous day's daily-sync window.
+          REVALIDATE_SINCE_HOURS: '6'
+        run: npx tsx scripts/worker/revalidateListings.ts
+
       - name: Notify operator
         if: always()
         env:
