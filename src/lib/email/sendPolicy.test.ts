@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { canSendAlerts, canSendOnboarding, gapDaysForCadence, ONBOARDING_MIN_GAP_DAYS } from "./sendPolicy";
+import {
+  canSendAlerts,
+  canSendDataDrop,
+  canSendOnboarding,
+  gapDaysForCadence,
+  ONBOARDING_MIN_GAP_DAYS,
+} from "./sendPolicy";
 
 const NOW = 1_800_000_000_000; // fixed epoch ms
 const DAY = 86_400_000;
@@ -103,5 +109,58 @@ describe("canSendAlerts", () => {
 
   it("fails OPEN on an unparseable pause date rather than muting a requested alert", () => {
     expect(canSendAlerts({ now: NOW, prefs: { pause_until: "not-a-date" } })).toBe(true);
+  });
+});
+
+describe("canSendDataDrop", () => {
+  const WEEK = "data_drop:2026-W36";
+
+  it("allows a user with no prefs and no history", () => {
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW })).toBe(true);
+  });
+
+  it("blocks when master-unsubscribed", () => {
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, marketingOptOut: true })).toBe(false);
+  });
+
+  it("blocks when the weekly stream is switched off", () => {
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, prefs: { data_drop: false } })).toBe(false);
+  });
+
+  it("blocks during an active pause and allows after it lapses", () => {
+    expect(
+      canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, prefs: { pause_until: iso(NOW + DAY) } })
+    ).toBe(false);
+    expect(
+      canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, prefs: { pause_until: iso(NOW - DAY) } })
+    ).toBe(true);
+  });
+
+  // The mirror of the canSendAlerts cadence tests, and deliberately the opposite answer.
+  // "Fewer emails — at most one non-urgent email a week" describes THIS email exactly, so
+  // 'reduced' keeps it; "only the essentials" does not describe a weekly we send unprompted.
+  it("still sends at 'reduced' cadence, and never at 'minimal'", () => {
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, prefs: { cadence: "reduced" } })).toBe(true);
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, prefs: { cadence: "minimal" } })).toBe(false);
+  });
+
+  // The stamped id carries the chosen headline kind, but the kind is derived from board data
+  // that moves between a failed send and its retry. An exact-key check would let the same
+  // week go out twice under a different suffix.
+  it("matches the week by PREFIX, so a different headline kind cannot re-send it", () => {
+    const lifecycle = { sent: { "data_drop:2026-W36:leverage": iso(NOW - DAY) } };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(false);
+  });
+
+  it("allows the following week once the previous one is stamped", () => {
+    const lifecycle = { sent: { "data_drop:2026-W35:speed": iso(NOW - 7 * DAY) } };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(true);
+  });
+
+  // The onboarding frequency cap must not leak across: a drip sent two days ago is no reason
+  // to skip somebody's weekly market email.
+  it("is not gated by the onboarding frequency cap", () => {
+    const lifecycle = { sent: { onboarding_add_area: iso(NOW - DAY) }, last_sent_at: iso(NOW - DAY) };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(true);
   });
 });
