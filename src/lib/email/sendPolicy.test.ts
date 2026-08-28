@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canSendOnboarding, gapDaysForCadence, ONBOARDING_MIN_GAP_DAYS } from "./sendPolicy";
+import { canSendAlerts, canSendOnboarding, gapDaysForCadence, ONBOARDING_MIN_GAP_DAYS } from "./sendPolicy";
 
 const NOW = 1_800_000_000_000; // fixed epoch ms
 const DAY = 86_400_000;
@@ -68,5 +68,40 @@ describe("canSendOnboarding", () => {
         lifecycle: { last_sent_at: iso(NOW - 3 * DAY) },
       })
     ).toBe(false);
+  });
+});
+
+describe("canSendAlerts", () => {
+  it("allows a user with no preference row (missing row = all streams on)", () => {
+    expect(canSendAlerts({ now: NOW })).toBe(true);
+    expect(canSendAlerts({ now: NOW, prefs: null })).toBe(true);
+    expect(canSendAlerts({ now: NOW, prefs: {} })).toBe(true);
+  });
+
+  it("blocks when master-unsubscribed", () => {
+    expect(canSendAlerts({ now: NOW, marketingOptOut: true })).toBe(false);
+  });
+
+  it("blocks when the alerts stream is off", () => {
+    expect(canSendAlerts({ now: NOW, prefs: { alerts: false } })).toBe(false);
+    expect(canSendAlerts({ now: NOW, prefs: { alerts: true } })).toBe(true);
+  });
+
+  it("blocks during an active pause, allows once it has passed", () => {
+    expect(canSendAlerts({ now: NOW, prefs: { pause_until: iso(NOW + DAY) } })).toBe(false);
+    expect(canSendAlerts({ now: NOW, prefs: { pause_until: iso(NOW - DAY) } })).toBe(true);
+    expect(canSendAlerts({ now: NOW, prefs: { pause_until: null } })).toBe(true);
+  });
+
+  it("ignores cadence — both non-standard settings promise the digest survives", () => {
+    // "Only the essentials — just alerts you set and account messages" names the digest
+    // as a keeper, so 'minimal' must NOT suppress it (unlike the drip).
+    expect(canSendAlerts({ now: NOW, prefs: { cadence: "minimal" } })).toBe(true);
+    expect(canSendAlerts({ now: NOW, prefs: { cadence: "reduced" } })).toBe(true);
+    expect(canSendOnboarding({ messageId: "x", now: NOW, prefs: { cadence: "minimal" } })).toBe(false);
+  });
+
+  it("fails OPEN on an unparseable pause date rather than muting a requested alert", () => {
+    expect(canSendAlerts({ now: NOW, prefs: { pause_until: "not-a-date" } })).toBe(true);
   });
 });

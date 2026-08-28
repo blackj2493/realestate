@@ -7,6 +7,7 @@ import {
   checkEstimateFreshness,
   checkDrift,
   checkEmailFailures,
+  checkEmailSendVolume,
   checkMediaReconcile,
   checkDistressRate,
   checkSoldTransactionType,
@@ -370,6 +371,81 @@ describe("regression: silent email-send failure (the 2026-07 welcome-email incid
     ]);
     expect(p[0].detail).toContain("welcome×2");
     expect(p[0].detail).toContain("confirmation:listing-alerts×1");
+  });
+});
+
+describe("the nightly email run going quiet (the never-attempted send)", () => {
+  const NOW = Date.parse("2026-08-28T10:00:00Z");
+  const day = (offsetDays: number) =>
+    new Date(NOW - offsetDays * 86_400_000).toISOString().slice(0, 10);
+
+  it("stays silent on a genuinely quiet night — nobody had news", () => {
+    expect(
+      checkEmailSendVolume({
+        latest: { day: day(0), due: 0, sent: 0, suppressed: 0 },
+        staleDays: 2,
+        now: NOW,
+      })
+    ).toEqual([]);
+  });
+
+  it("stays silent when everyone with news is legitimately suppressed", () => {
+    // The consent gate working is not an outage: 4 users had changes, all 4 had turned the
+    // stream off or were paused.
+    expect(
+      checkEmailSendVolume({
+        latest: { day: day(0), due: 4, sent: 0, suppressed: 4 },
+        staleDays: 2,
+        now: NOW,
+      })
+    ).toEqual([]);
+  });
+
+  it("errors when users had news and nothing went out or was suppressed", () => {
+    const p = checkEmailSendVolume({
+      latest: { day: day(0), due: 12, sent: 0, suppressed: 0 },
+      staleDays: 2,
+      now: NOW,
+    });
+    expect(p.length).toBe(1);
+    expect(p[0].severity).toBe("error");
+    expect(p[0].check).toBe("email-volume");
+    expect(p[0].detail).toContain("12");
+  });
+
+  it("warns when some sends fall through between the gate and Resend", () => {
+    const p = checkEmailSendVolume({
+      latest: { day: day(0), due: 10, sent: 6, suppressed: 1 },
+      staleDays: 2,
+      now: NOW,
+    });
+    expect(p[0].severity).toBe("warn");
+    expect(p[0].detail).toContain("3 fell through");
+  });
+
+  it("tolerates one deferred night, warns once the run has really stopped", () => {
+    // GitHub deferred a cron 10h20m and then dropped it (2026-08-27) — a single late night
+    // must not page.
+    expect(
+      checkEmailSendVolume({
+        latest: { day: day(1), due: 3, sent: 3, suppressed: 0 },
+        staleDays: 2,
+        now: NOW,
+      })
+    ).toEqual([]);
+    const p = checkEmailSendVolume({
+      latest: { day: day(5), due: 3, sent: 3, suppressed: 0 },
+      staleDays: 2,
+      now: NOW,
+    });
+    expect(p[0].severity).toBe("warn");
+    expect(p[0].detail).toContain("Nightly Emails");
+  });
+
+  it("warns before any counter has ever been written", () => {
+    const p = checkEmailSendVolume({ latest: null, staleDays: 2, now: NOW });
+    expect(p[0].severity).toBe("warn");
+    expect(p[0].check).toBe("email-volume");
   });
 });
 

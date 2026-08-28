@@ -40,6 +40,7 @@ import {
 } from "@/lib/alerts/onboardingEmails";
 import { buildExampleAreaData, buildSaveHomeListings, EXAMPLE_REGION } from "@/lib/alerts/onboardingData";
 import { canSendOnboarding, type EmailPrefsRow, type LifecycleRow } from "@/lib/email/sendPolicy";
+import { EMAIL_METRICS, recordEmailSendMetrics } from "@/lib/ops/emailSendMetrics";
 
 const DAY = 86_400_000;
 // Timing gates (days). Kept modest for Phase 0; tune once activation data lands.
@@ -321,6 +322,14 @@ async function main(): Promise<void> {
         sent++;
       }
     }
+  }
+
+  // Durable counters (skipped on a dry run — it must leave no trace).
+  if (!DRY) {
+    await recordEmailSendMetrics(sb, {
+      [EMAIL_METRICS.dripConsidered]: considered,
+      [EMAIL_METRICS.dripSent]: sent,
+    });
   }
 
   console.log(`[onboarding] Done. considered=${considered}, sent=${sent}${DRY ? " (dry run)" : ""}.`);
