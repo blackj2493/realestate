@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import {
   getConfig,
   saveConfig,
@@ -64,6 +64,17 @@ export default function DashboardClient() {
   // The previous-visit cutoff for the action feed. Captured + re-stamped once on
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
+
+  // Exactly one section on the dashboard may open itself on a first visit
+  // (RegionDrilldown.autoOpenFirstRun). Bubbles lead the band and claim it when the user
+  // has any, so a city only takes the job once we KNOW there are none — gating on
+  // `bubblesLoaded` stops a city latching open in the beat before the store answers.
+  // Both selectors return primitives, so neither creates a new object per render.
+  const bubblesLoaded = useBubblesStore((s) => s.loaded);
+  const bubbleCount = useBubblesStore(
+    (s) => Object.values(s.items).filter((b) => b.area_type !== "city").length
+  );
+  const cityMayAutoOpen = bubblesLoaded && bubbleCount === 0;
 
   // Hydrate localStorage-first (instant paint), then reconcile with the server
   // copy (dashboard_prefs, migration 096) so the config follows the ACCOUNT, not
@@ -285,8 +296,21 @@ export default function DashboardClient() {
           enabledBoards={enabledBoards}
         />
 
+        {/* City sections used to run straight on from the bubbles with no band label of
+            their own, so a city read as one more saved bubble — while carrying none of a
+            bubble's chrome (no icon, no subtitle, no Terminal link, a different bell).
+            Its own rule says which object this is; the icon lines the rows up. */}
+        {hasRegions && (
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <h2 className="terminal-font flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
+              My Cities
+            </h2>
+          </div>
+        )}
+
         {hasRegions &&
-          config.regions.map((loc) => {
+          config.regions.map((loc, i) => {
             const area = regionArea(loc);
             return (
               // The bell mirrors the per-bubble alert toggle: city sections are
@@ -296,7 +320,16 @@ export default function DashboardClient() {
                 key={loc}
                 title={formatRegionLabel(loc)}
                 persistKey={`city:${loc}`}
+                autoOpenFirstRun={i === 0 && cityMayAutoOpen}
                 summary={sectionSummary(config.marketActivity, enabledBoards.length)}
+                icon={
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-600/15 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                }
+                mobileDetail={
+                  <CityAlertBell city={loc} lens={config.marketActivity} variant="detail" />
+                }
                 actions={<CityAlertBell city={loc} lens={config.marketActivity} />}
               >
                 <MarketActivityPanel area={area} lens={config.marketActivity} />

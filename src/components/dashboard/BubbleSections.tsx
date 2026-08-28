@@ -81,9 +81,12 @@ export default function BubbleSections({ lens, enabledBoards }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* QUIET ON PURPOSE. This label and the row titles below it used to share one type
+          style, so a row read as another heading and nobody pressed it. The band keeps
+          the bare rule and gives up the weight; the rows take it (RegionDrilldown). */}
       <div className="flex items-center justify-between border-b border-border pb-2">
-        <h2 className="terminal-font flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
-          <Bookmark className="h-4 w-4 text-cyan-700 dark:text-cyan-400" />
+        <h2 className="terminal-font flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          <Bookmark className="h-3.5 w-3.5 text-cyan-700 dark:text-cyan-400" />
           Market Bubbles
         </h2>
         <Link
@@ -113,13 +116,17 @@ export default function BubbleSections({ lens, enabledBoards }: Props) {
           </Link>
         </div>
       ) : (
-        bubbles.map((b) => (
+        bubbles.map((b, i) => (
           <BubbleMarketSection
             key={b.id}
             bubble={b}
             lens={lens}
             enabledBoards={enabledBoards}
             highlight={flashId === b.id}
+            // Bubbles lead band ③, so when the user has any, the first one is the section
+            // that demonstrates the open state. Cities take the job only when there are
+            // none — DashboardClient reads this same store to know.
+            autoOpenFirstRun={i === 0}
           />
         ))
       )}

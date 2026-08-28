@@ -51,6 +51,31 @@ export function isSectionExpanded(key: string | undefined): boolean {
 }
 
 /**
+ * True when this device has never recorded a section choice at all — the signal that
+ * lets exactly ONE section open itself on a first visit (RegionDrilldown's
+ * `autoOpenFirstRun`).
+ *
+ * WHY THIS EXISTS: every section starts collapsed, so a user who has never opened one
+ * has never seen the open state, and reads the closed row as a heading rather than a
+ * control. One auto-opened section costs one area's requests — not the five the
+ * collapse was introduced to avoid — and it is the only change that TEACHES the
+ * pattern rather than decorating it.
+ *
+ * The test is the absence of the key, NOT an empty set: a user who opened a section and
+ * closed it again leaves `[]` behind, and that is a choice we must not overrule.
+ */
+export function noSectionChoiceMade(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(KEY) === null;
+  } catch {
+    // A private window can't remember anything, so it would auto-open on every visit.
+    // Treat "cannot read" as "choice made" and leave every section collapsed.
+    return false;
+  }
+}
+
+/**
  * Record a toggle. Best-effort by design: a private window or a full quota must never
  * surface as an error on a panel the user just opened — the section still expands, it
  * simply will not be open again tomorrow.

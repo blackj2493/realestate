@@ -55,6 +55,8 @@ interface Props {
   enabledBoards: BoardDef[];
   /** Renders a brief flash when true (used for the ?bubble=<id> deep link). */
   highlight?: boolean;
+  /** Set on the FIRST bubble only — see RegionDrilldown.autoOpenFirstRun. */
+  autoOpenFirstRun?: boolean;
 }
 
 const AREA_ICON: Record<Bubble["area_type"], typeof MapPin> = {
@@ -80,6 +82,7 @@ function tagline(b: Bubble): string {
  * so the parent section stays declarative.
  */
 function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
+  const router = useRouter();
   const rename = useBubblesStore((s) => s.rename);
   const remove = useBubblesStore((s) => s.remove);
   const updateAlertFilters = useBubblesStore((s) => s.updateAlertFilters);
@@ -158,14 +161,26 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
         <button
           type="button"
           onClick={() => setMenuOpen((o) => !o)}
-          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground sm:h-8 sm:w-8"
           aria-label="Bubble actions"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
       )}
       {menuOpen && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-44 border border-border bg-card py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-20 mt-1 w-52 border border-border bg-card py-1 shadow-lg">
+          {/* Below `sm` this is the only place the Terminal link exists — the header row
+              carries one control, not four (see RegionDrilldown's MOBILE note). */}
+          <button
+            type="button"
+            onClick={() => {
+              setMenuOpen(false);
+              router.push(`/properties?bubble=${encodeURIComponent(bubble.id)}`);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-foreground hover:bg-muted sm:hidden"
+          >
+            <ExternalLink className="h-3 w-3" /> Open in Terminal
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -227,7 +242,19 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
  * Optimistic flip via the bubbles store; pre-034 rows lack the field and are
  * treated as ON, matching the column default.
  */
-function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
+function BubbleAlertToggle({
+  bubble,
+  variant = "row",
+}: {
+  bubble: Bubble;
+  /**
+   * "row" — the header pair: scope control (`lg` and up) plus the bell.
+   * "detail" — the scope control alone, full width, for the narrow body. At ~186px the
+   * segmented control is the widest thing in the action cluster, and on the header's
+   * flex line it squeezed the title to an ellipsis. It gets its own line instead.
+   */
+  variant?: "row" | "detail";
+}) {
   const setAlertsEnabled = useBubblesStore((s) => s.setAlertsEnabled);
   const setAlertScope = useBubblesStore((s) => s.setAlertScope);
   const enabled = bubble.alerts_enabled !== false;
@@ -238,15 +265,22 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
     bubble.filters && "universalFilters" in bubble.filters && bubble.filters.universalFilters
   );
   const scope: "all" | "filtered" = bubble.alert_scope === "filtered" ? "filtered" : "all";
+  const detail = variant === "detail";
   return (
     <>
       {/* Always visible while alerts are on (city bells excepted — whole-city by
           design). Hiding it on pre-095 bubbles made the feature undiscoverable
           (owner: "I don't see it") — now "My filters" renders DISABLED with the
-          re-save instruction instead of silently not existing. */}
+          re-save instruction instead of silently not existing.
+
+          Below `lg` it moves off the header row into `mobileDetail`, where it gets a
+          full line and 44px segments instead of crushing the title. */}
       {enabled && bubble.area_type !== "city" && (
         <div
-          className="terminal-font flex items-stretch border border-border text-[10px] uppercase tracking-wider"
+          className={cn(
+            "terminal-font items-stretch border border-border text-[10px] uppercase tracking-wider",
+            detail ? "flex w-full" : "hidden lg:flex"
+          )}
           role="group"
           aria-label="Alert scope"
           title="What the nightly email matches: every new listing in this area, or only ones matching the filters saved with this bubble"
@@ -279,7 +313,8 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
                   setAlertScope(bubble.id, value);
                 }}
                 className={cn(
-                  "px-2 py-1 transition-colors",
+                  "transition-colors",
+                  detail ? "min-h-[44px] flex-1 px-3" : "px-2 py-1",
                   locked
                     ? "cursor-not-allowed text-muted-foreground/50"
                     : scope === value
@@ -293,24 +328,28 @@ function BubbleAlertToggle({ bubble }: { bubble: Bubble }) {
           })}
         </div>
       )}
-      <button
-        type="button"
-        onClick={() => setAlertsEnabled(bubble.id, !enabled)}
-        aria-pressed={enabled}
-        title={
-          enabled
-            ? "New-listing alerts ON — click to mute this area"
-            : "New-listing alerts muted — click to enable"
-        }
-        className={cn(
-          "flex h-7 w-7 items-center justify-center border transition-colors",
-          enabled
-            ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
-            : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-        )}
-      >
-        {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-      </button>
+      {/* The bell stays on the header row at every width — muting an area is the one
+          alert action worth a tap on a phone. `detail` renders the scope pair only. */}
+      {!detail && (
+        <button
+          type="button"
+          onClick={() => setAlertsEnabled(bubble.id, !enabled)}
+          aria-pressed={enabled}
+          title={
+            enabled
+              ? "New-listing alerts ON — click to mute this area"
+              : "New-listing alerts muted — click to enable"
+          }
+          className={cn(
+            "flex h-11 w-11 items-center justify-center border transition-colors sm:h-7 sm:w-7",
+            enabled
+              ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
+              : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          )}
+        >
+          {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+        </button>
+      )}
     </>
   );
 }
@@ -320,6 +359,7 @@ export default function BubbleMarketSection({
   lens,
   enabledBoards,
   highlight,
+  autoOpenFirstRun,
 }: Props) {
   const router = useRouter();
   const area = useMemo(() => bubbleToArea(bubble), [bubble]);
@@ -333,6 +373,7 @@ export default function BubbleMarketSection({
       )}
       // Deep-linked bubble (?bubble=<id>) opens expanded so the flash lands on data.
       defaultExpanded={highlight}
+      autoOpenFirstRun={autoOpenFirstRun}
       persistKey={`bubble:${bubble.id}`}
       // Counts props already in hand — the peek costs no request, which is the whole
       // point of keeping the section collapsed until asked.
@@ -344,14 +385,19 @@ export default function BubbleMarketSection({
       }
       title={bubble.name}
       subtitle={tagline(bubble)}
+      mobileDetail={<BubbleAlertToggle bubble={bubble} variant="detail" />}
       actions={
         <>
+          {/* A GHOST, not a bordered button. It used to hold the top-right slot the eye
+              treats as "the button for this row", so it collected the presses meant for
+              the drill-down. It keeps its label on desktop and moves into the kebab on
+              a phone. */}
           <button
             type="button"
             onClick={() =>
               router.push(`/properties?bubble=${encodeURIComponent(bubble.id)}`)
             }
-            className="terminal-font flex items-center gap-1 border border-border px-2.5 py-1 text-[11px] uppercase tracking-wider text-foreground hover:border-cyan-600/60 hover:text-cyan-700 dark:hover:text-cyan-200"
+            className="terminal-font hidden items-center gap-1 px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-cyan-700 dark:hover:text-cyan-200 sm:flex"
           >
             <ExternalLink className="h-3 w-3" /> Open in Terminal
           </button>

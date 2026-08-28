@@ -31,12 +31,20 @@ import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 export default function CityAlertBell({
   city,
   lens,
+  variant = "row",
 }: {
   city: string;
   /** The dashboard's CURRENT Market Activity lens — when provided, an enabled
    *  city gains the All/My-filters scope pair; "My filters" captures this lens
    *  (fresh on every click) as the city's alert filter. */
   lens?: MarketActivityLens;
+  /**
+   * "row" — the header pair: scope control (`lg` and up) plus the bell.
+   * "detail" — the scope control alone, full width, for the narrow body. Mirrors
+   * BubbleAlertToggle: at ~186px the segmented control is the widest thing in the
+   * action cluster, and on the header's flex line it crushed the title.
+   */
+  variant?: "row" | "detail";
 }) {
   const init = useBubblesStore((s) => s.init);
   const items = useBubblesStore((s) => s.items);
@@ -85,14 +93,22 @@ export default function CityAlertBell({
     }
   };
 
+  const detail = variant === "detail";
+
   return (
-    <span className="flex items-center gap-1.5">
+    <span className={cn("flex items-center gap-1.5", detail && "w-full")}>
       {/* Scope pair — same control as saved bubbles. "My filters" captures the
           dashboard's CURRENT lens each time it's clicked (so re-clicking after
-          changing filters re-captures), and the email labels what it matched. */}
+          changing filters re-captures), and the email labels what it matched.
+
+          Below `lg` it moves off the header row into RegionDrilldown's `mobileDetail`,
+          where it gets a full line and 44px segments instead of crushing the title. */}
       {enabled && row && lens && (
         <span
-          className="terminal-font flex items-stretch border border-border text-[10px] uppercase tracking-wider"
+          className={cn(
+            "terminal-font items-stretch border border-border text-[10px] uppercase tracking-wider",
+            detail ? "flex w-full" : "hidden lg:flex"
+          )}
           role="group"
           aria-label={`Alert scope for ${cityLabel}`}
         >
@@ -105,7 +121,8 @@ export default function CityAlertBell({
             title={`Email every new listing in ${cityLabel}`}
             onClick={() => scope !== "all" && setAlertScope(row.id, "all")}
             className={cn(
-              "px-2 py-1 transition-colors",
+              "transition-colors",
+              detail ? "min-h-[44px] flex-1 px-3" : "px-2 py-1",
               scope === "all"
                 ? "bg-cyan-600/15 font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
                 : "text-muted-foreground hover:text-foreground"
@@ -119,7 +136,8 @@ export default function CityAlertBell({
             title={`Email only listings matching your dashboard filters (captured as of now — click again after changing filters to re-capture)`}
             onClick={() => void updateAlertFilters(row.id, { lens })}
             className={cn(
-              "px-2 py-1 transition-colors",
+              "transition-colors",
+              detail ? "min-h-[44px] flex-1 px-3" : "px-2 py-1",
               scope === "filtered"
                 ? "bg-cyan-600/15 font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
                 : "text-muted-foreground hover:text-foreground"
@@ -129,25 +147,29 @@ export default function CityAlertBell({
           </button>
         </span>
       )}
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={busy}
-        aria-pressed={enabled}
-        title={
-          enabled
-            ? `New-listing alerts ON for ${cityLabel} — click to mute`
-            : `Get nightly new-listing alerts for ${cityLabel}`
-        }
-        className={cn(
-          "flex h-7 w-7 items-center justify-center border transition-colors",
-          enabled
-            ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
-            : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-        )}
-      >
-        {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-      </button>
+      {/* The bell stays on the header row at every width — muting a city is the one alert
+          action worth a tap on a phone. `detail` renders the scope pair only. */}
+      {!detail && (
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={busy}
+          aria-pressed={enabled}
+          title={
+            enabled
+              ? `New-listing alerts ON for ${cityLabel} — click to mute`
+              : `Get nightly new-listing alerts for ${cityLabel}`
+          }
+          className={cn(
+            "flex h-11 w-11 items-center justify-center border transition-colors sm:h-7 sm:w-7",
+            enabled
+              ? "border-cyan-600/50 bg-cyan-600/10 text-cyan-700 hover:bg-cyan-600/20 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
+              : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          )}
+        >
+          {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+        </button>
+      )}
     </span>
   );
 }
