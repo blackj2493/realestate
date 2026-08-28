@@ -7,6 +7,7 @@
  */
 
 import {
+  BOARDS,
   type BoardId,
   DEFAULT_BOARD_ORDER,
   orderBoardsByObjectives,
@@ -283,13 +284,29 @@ export function saveConfig(c: DashboardConfig): void {
  * migration 096) onto the current DashboardConfig shape. Single normalizer so
  * server and local storage can never drift in how they degrade.
  */
+/**
+ * Drop board ids this build no longer defines (RETIRED_BOARD_IDS, and anything else a
+ * hand-edited or future config carries). A stored config keeps whatever it was saved
+ * with, and it round-trips through `dashboard_prefs`, so a retired id would otherwise
+ * outlive the board by years. The render path already ignores unknown ids —
+ * `.map(id => BOARDS[id]).filter(Boolean)` in DashboardClient — so this is about not
+ * PERSISTING a dead entry, not about avoiding a crash.
+ *
+ * Filtering everything away means the stored set is entirely retired: fall back to the
+ * defaults rather than leaving the user with a dashboard of no boards at all.
+ */
+function keepKnownBoards(stored: BoardId[]): BoardId[] {
+  const known = stored.filter((id) => id in BOARDS);
+  return known.length ? known : [...DEFAULT_BOARD_ORDER];
+}
+
 export function normalizeConfig(raw: unknown): DashboardConfig {
   const parsed = (raw ?? {}) as Partial<DashboardConfig>;
   return {
     regions: Array.isArray(parsed.regions) ? parsed.regions : [],
     boards:
       Array.isArray(parsed.boards) && parsed.boards.length
-        ? parsed.boards
+        ? keepKnownBoards(parsed.boards)
         : [...DEFAULT_BOARD_ORDER],
     marketActivity: mergeLens(parsed.marketActivity),
     persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
