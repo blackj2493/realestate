@@ -1,0 +1,241 @@
+name: Schedule Watchdog
+
+# Watches the SCHEDULER, which nothing else in this repo does. Two failure modes, both
+# completely silent today:
+#
+#   MISSED — GitHub never dispatches the trigger. daily-sync.yml's notify-failure job fires
+#            only when a run goes red, and a run that was never dispatched has no status to
+#            be red. On 2026-08-28 the 03:00 UTC sync trigger was dropped outright and the
+#            first anyone knew was a user's missing nightly email.
+#   LATE   — the run happens, but hours after its cron time, so a "nightly" job lands in the
+#            afternoon. On 2026-08-27 the sync started 13:19 UTC for a 03:00 cron and the
+#            watchlist digest went out at 12:26 PM Toronto instead of ~02:00 AM.
+#
+# LATE is why this measures more than staleness: a late run resets every age-based clock, so
+# an age-only check reports green on exactly the day the schedule breaks. freshness-check.yml
+# has that blind spot by design — it reads the DATA's age from sync_state, and at 01:54 UTC on
+# 2026-08-28 it passed on a cursor refreshed 9h earlier by a run that had started 10h20m late.
+#
+# Deliberately dependency-free — no checkout, no npm ci — so it stays a ~15s job and cannot
+# itself be delayed by an install. Runs 4x/day at :38; a watchdog on a 4-hourly cadence
+# survives GitHub dropping one of its own triggers, which a once-daily check would not.
+on:
+  schedule:
+    - cron: '38 */4 * * *'
+  workflow_dispatch:
+
+# actions:read to list workflow runs; issues:write to raise the alert issue.
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every scheduled workflow for a missed or late run
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // maxAgeHours ≈ 2x the cadence: GitHub routinely defers `schedule` by 20-45min
+            // even when healthy, so this fires on a MISSED run, not on ordinary drift.
+            // cronMinutesUtc lists the job's daily trigger slots as minutes-past-UTC-midnight
+            // and is what makes the LATE check possible; omit it for a workflow whose normal
+            // trigger is not a cron.
+            const WATCHED = [
+              { file: 'daily-sync.yml', label: 'Daily Real Estate Sync',
+                maxAgeHours: 26, cronMinutesUtc: [3 * 60 + 17], maxDelayHours: 4 },
+              // Normally triggered by workflow_run off the sync, so it has no cron time to be
+              // late against; its 06:47 cron is only a backstop. Age is the meaningful check.
+              { file: 'nightly-emails.yml', label: 'Nightly Emails',
+                maxAgeHours: 26 },
+              { file: 'data-health.yml', label: 'Data Health Canary',
+                maxAgeHours: 26, cronMinutesUtc: [10 * 60 + 41], maxDelayHours: 6 },
+              { file: 'content-data-snapshot.yml', label: 'Content Data Snapshot',
+                maxAgeHours: 26, cronMinutesUtc: [9 * 60 + 26], maxDelayHours: 6 },
+              { file: 'freshness-check.yml', label: 'Data Freshness Check',
+                maxAgeHours: 12, cronMinutesUtc: [28, 6 * 60 + 28, 12 * 60 + 28, 18 * 60 + 28],
+                maxDelayHours: 6 },
+            ];
+
+            const HOUR = 3600000;
+            const now = Date.now();
+
+            // Latest scheduled UTC instant at or before `at`, from daily minute-of-day slots.
+            // Looks back one day as well so a slot early in the UTC day still resolves.
+            const lastExpected = (at, minutes) => {
+              const d = new Date(at);
+              const midnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+              let best = -Infinity;
+              for (const dayOffset of [0, -1]) {
+                for (const m of minutes) {
+                  const t = midnight + dayOffset * 24 * HOUR + m * 60000;
+                  if (t <= at && t > best) best = t;
+                }
+              }
+              return best;
+            };
+
+            const latestRun = async (file, event) => {
+              const params = {
+                owner: context.repo.owner, repo: context.repo.repo,
+                workflow_id: file, per_page: 1,
+              };
+              if (event) params.event = event;
+              const res = await github.rest.actions.listWorkflowRuns(params);
+              return res.data.workflow_runs[0] || null;
+            };
+
+            const rows = [];
+            const problems = [];
+
+            for (const w of WATCHED) {
+              let latest;
+              try {
+                latest = await latestRun(w.file);
+              } catch (err) {
+                // A 404 means the file is not on the default branch yet — a freshly-merged
+                // workflow, not an outage. Report it, never alert on it.
+                rows.push({ label: w.label, state: 'unknown',
+                            detail: 'workflow not found (' + (err.status || 'error') + ')', reasons: [] });
+                continue;
+              }
+              if (!latest) {
+                // Same reasoning: no run history means nothing to be late for.
+                rows.push({ label: w.label, state: 'unknown', detail: 'no runs yet', reasons: [] });
+                continue;
+              }
+
+              const ageH = (now - new Date(latest.created_at).getTime()) / HOUR;
+              const reasons = [];
+              if (ageH > w.maxAgeHours) {
+                reasons.push('MISSED: no run for ' + ageH.toFixed(1) + 'h (limit ' + w.maxAgeHours + 'h)');
+              }
+
+              let delayH = null;
+              if (w.cronMinutesUtc) {
+                // Measure lateness against a run the SCHEDULER started. A manual dispatch or a
+                // workflow_run has no cron time to be late against and would fake a huge delay.
+                const sched = await latestRun(w.file, 'schedule');
+                if (sched) {
+                  const startedMs = new Date(sched.created_at).getTime();
+                  delayH = (startedMs - lastExpected(startedMs, w.cronMinutesUtc)) / HOUR;
+                  if (delayH > w.maxDelayHours) {
+                    reasons.push('LATE: last scheduled run started ' + delayH.toFixed(1) +
+                                 'h after its cron time (limit ' + w.maxDelayHours + 'h)');
+                  }
+                }
+              }
+
+              rows.push({
+                label: w.label,
+                state: reasons.length ? 'problem' : 'ok',
+                detail: 'last run ' + ageH.toFixed(1) + 'h ago (' + (latest.conclusion || latest.status) +
+                        ') at ' + latest.created_at +
+                        (delayH === null ? '' : '; cron delay ' + delayH.toFixed(1) + 'h'),
+                reasons,
+              });
+              if (reasons.length) problems.push(w.label);
+            }
+
+            const line = (r) =>
+              (r.state === 'problem' ? '[!] ' : r.state === 'unknown' ? '[?] ' : '[ok] ') +
+              r.label + ' — ' + r.detail +
+              (r.reasons.length ? '\n      ' + r.reasons.join('\n      ') : '');
+
+            const report = rows.map(line).join('\n');
+            console.log(report);
+            await core.summary.addHeading('Schedule Watchdog', 2).addCodeBlock(report).write();
+
+            core.setOutput('problem', problems.length ? 'true' : 'false');
+            core.setOutput('report', report);
+            core.setOutput('names', problems.join(', '));
+
+      # One open issue, commented on rather than re-opened — same anti-spam shape as
+      # daily-sync.yml's notify-failure job.
+      - name: Open / update schedule-drift issue
+        if: steps.check.outputs.problem == 'true'
+        uses: actions/github-script@v7
+        env:
+          REPORT: ${{ steps.check.outputs.report }}
+          NAMES: ${{ steps.check.outputs.names }}
+        with:
+          script: |
+            const label = 'schedule-drift';
+            const runUrl = context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo +
+                           '/actions/runs/' + context.runId;
+            const body = [
+              '⏰ **Schedule problem: ' + process.env.NAMES + '**',
+              '',
+              '```',
+              process.env.REPORT,
+              '```',
+              '',
+              'GitHub dispatches schedule triggers on a best-effort basis: it defers them under',
+              'load and drops them outright when the backlog is long enough. Re-run a missed job',
+              'now with "gh workflow run <file>". If this keeps recurring, move the affected cron',
+              'further off the top of the hour — see the WHY block in daily-sync.yml.',
+              '',
+              '- Watchdog run: ' + runUrl,
+              'cc @' + context.repo.owner,
+            ].join('\n');
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: label,
+            });
+            if (open.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: open.data[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: '⏰ Scheduled workflow missed or ran late', body, labels: [label],
+              });
+            }
+
+      # Direct email too — issue notifications are easy to miss, and the whole point of this
+      # watchdog is that the operator finds out BEFORE a user notices a missing email. Plain
+      # curl, matching notify-failure: this job has no checkout, so notifyRun.ts is not
+      # available here. No-ops cleanly when the secrets are unset; never fails the step.
+      - name: Email schedule alert
+        if: steps.check.outputs.problem == 'true'
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          REPORT: ${{ steps.check.outputs.report }}
+          NAMES: ${{ steps.check.outputs.names }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ] || [ -z "$SYNC_ALERT_EMAIL" ]; then
+            echo "(no email sent — set RESEND_API_KEY + SYNC_ALERT_EMAIL secrets)"; exit 0
+          fi
+          FROM="${ALERTS_FROM_EMAIL:-PureProperty Alerts <support@pureproperty.ca>}"
+          # jq --arg does the escaping; never interpolate these values into JSON by hand.
+          jq -n --arg from "$FROM" --arg to "$SYNC_ALERT_EMAIL" \
+                --arg subject "⏰ PureProperty · scheduled workflow missed or ran late" \
+                --arg names "$NAMES" --arg report "$REPORT" --arg url "$RUN_URL" \
+                '{from: $from, to: $to, subject: $subject,
+                  html: ("<p>⏰ Schedule problem: <b>" + $names + "</b></p><pre>" + $report
+                         + "</pre><p>GitHub defers and sometimes drops schedule triggers under load. <a href=\""
+                         + $url + "\">View the watchdog run</a>, then re-run a missed job with <code>gh workflow run &lt;file&gt;</code>.</p>")}' \
+            | curl -sS -X POST https://api.resend.com/emails \
+                -H "Authorization: Bearer $RESEND_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d @- \
+            && echo "" && echo "Emailed $SYNC_ALERT_EMAIL" \
+            || echo "email send failed (non-fatal)"
+
+      # Go red last, so the issue and the email are already out. The red run is a third,
+      # zero-config channel: GitHub mails the repo owner when a scheduled workflow fails.
+      - name: Fail the run when the schedule is broken
+        if: steps.check.outputs.problem == 'true'
+        env:
+          NAMES: ${{ steps.check.outputs.names }}
+        run: |
+          echo "Schedule problem: $NAMES"
+          exit 1

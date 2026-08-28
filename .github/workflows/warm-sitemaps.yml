@@ -9,7 +9,7 @@ name: Warm Sitemaps
 # response. Read-only; safe to run anytime.
 on:
   schedule:
-    - cron: '0 */6 * * *' # every 6 hours
+    - cron: '52 */6 * * *' # every 6 hours, off the top of the hour (GitHub defers :00 hardest)
   workflow_dispatch:
 
 permissions:

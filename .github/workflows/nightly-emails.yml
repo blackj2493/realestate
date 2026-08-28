@@ -1,0 +1,112 @@
+name: Nightly Emails
+
+# The nightly user-facing email run: the watchlist/bubble/address alerts digest and the
+# onboarding drip. Both used to be the last two steps of daily-sync.yml, which made the
+# SEND TIME an accident of how long the sync took — a 03:44 UTC start plus a ~2h sync put
+# the digest out at 05:52 UTC, and a delayed 13:19 UTC start on 2026-08-27 put it out at
+# 16:26 UTC (12:26 PM in Toronto). Splitting it out fixes both halves of that:
+#
+#   PRIMARY TRIGGER — `workflow_run` on the sync completing. The digest is compare-at-read
+#   against the live Typesense index (scripts/worker/alerts.ts), so it must run AFTER the
+#   sync, not on a guessed offset. This fires the moment the data is actually fresh,
+#   whatever time that turns out to be, and never waits on a step that is not its concern.
+#
+#   BACKSTOP — an independent 06:47 UTC cron (02:47 Toronto). If the sync's own schedule is
+#   dropped by GitHub (it was, on 2026-08-28) or the sync fails, subscribers still get
+#   their nightly email instead of silently missing a day. Safe to double-fire: every
+#   sender is watermark-based (watchlist.list_price, market_bubbles.notify_since,
+#   listing_alerts.last_notified_at, address_watches.last_listing_key) and advances the
+#   watermark only after a successful send, so a second run the same night finds nothing
+#   new and mails nobody twice.
+#
+# Minutes are deliberately off the top of the hour — GitHub defers `schedule` under load
+# and :00 is the most contended minute. See the WHY block in daily-sync.yml.
+on:
+  workflow_run:
+    workflows: ['Daily Real Estate Sync']
+    types: [completed]
+  schedule:
+    - cron: '47 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One send at a time. The workflow_run trigger and the backstop cron can collide on a very
+# late sync; queue the second rather than run two senders against the same watermarks.
+# Never cancel-in-progress — a cancelled sender can leave a batch sent with its watermark
+# unadvanced, which would re-send those rows tomorrow.
+concurrency:
+  group: nightly-emails
+  cancel-in-progress: false
+
+jobs:
+  send:
+    # `workflow_run` fires on EVERY completion, including failure and cancellation — only
+    # ride a sync that actually succeeded. The schedule/dispatch triggers carry no
+    # workflow_run payload, so the first arm lets them through unconditionally; that is
+    # what makes the backstop work when the sync fails outright.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: nightly-emails.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Price drops + status changes + relists (watchlist), new listings (saved market
+      # bubbles), anonymous listing alerts and address watches. Reads the Typesense index
+      # the sync just refreshed. No-ops cleanly if RESEND_API_KEY is unset.
+      - name: Send Watchlist Alerts
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/alerts.ts 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Onboarding drip — the milestone-gated welcome sequence (engagement plan WS1.2).
+      # Fail-closed: no-ops if RESEND_API_KEY is unset AND self-skips until migration 105
+      # (user_email_lifecycle) is applied, so it can't re-send without idempotency.
+      # Needs the search-only Typesense key for 2B's live example dashboard.
+      # `if: always()` so a broken alerts digest does not also swallow the drip — but NOT
+      # continue-on-error: an unsent email must turn this run red.
+      - name: Send Onboarding Sequence
+        if: always()
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY: ${{ secrets.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY }}
+        run: npx tsx scripts/worker/onboarding.ts 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Standard notifyRun.ts convention: tell the operator the job RAN, on success as well
+      # as failure, so a silently-rotting sender is visible. This is also the timestamped
+      # receipt for the exact problem that caused the split — it says when the digest
+      # actually went out.
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Nightly Emails
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts

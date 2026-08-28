@@ -26,7 +26,7 @@ name: Twice-Weekly Recompute + Sold Reconcile
 # finished; see docs/railway-cron-setup.md. Run only ONE scheduler to avoid double-write.)
 on:
   schedule:
-    - cron: '0 7 * * 0,3' # Sun & Wed 07:00 UTC, after the 03:00 daily sync refreshes anchors
+    - cron: '33 7 * * 0,3' # Sun & Wed 07:33 UTC, after the 03:17 daily sync refreshes anchors
   workflow_dispatch:
 
 # Least privilege: checkout needs contents:read; the failure notifier opens an issue.

@@ -7,10 +7,14 @@ name: Data Freshness Check
 # find out whether the sync FAILED, ran PARTIALLY, or never RAN at all.
 #
 # Runs every 6 hours → staleness is caught within ~6h of crossing 24h. The nightly sync is
-# 03:00 UTC (finishes by ~08:00), so a healthy cursor is always < ~25h old.
+# 03:17 UTC (finishes by ~08:00), so a healthy cursor is always < ~25h old.
+#
+# This measures the DATA's age, not the SCHEDULE's: a run that starts 10h late still leaves
+# a fresh cursor, so this reports green while the schedule is already broken (2026-08-28).
+# schedule-watchdog.yml is the guard for that half.
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '28 */6 * * *' # :28 not :00 — GitHub defers `schedule` hardest at the top of the hour
   workflow_dispatch:
 
 permissions:
