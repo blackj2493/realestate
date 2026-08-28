@@ -6,11 +6,14 @@
  * One gate per stream that actually sends today:
  *   • canSendOnboarding — the milestone drip   (scripts/worker/onboarding.ts)
  *   • canSendAlerts     — the nightly digest   (scripts/worker/alerts.ts)
+ *   • canSendDataDrop   — the weekly market email (scripts/worker/dataDrop.ts)
  *
- * Both read the same `email_prefs` row and both treat a MISSING row as "all streams on"
+ * All three read the same `email_prefs` row and all treat a MISSING row as "all streams on"
  * (migration 106's opt-out model, so existing users need no backfill). They differ in what
  * each preference MEANS for that stream — which is dictated by the words the user actually
- * read on /account/emails, not by the column name. See canSendAlerts.
+ * read on /account/emails, not by the column name. Compare canSendAlerts, where cadence
+ * deliberately does NOT gate, with canSendDataDrop, where it does — the two settings promise
+ * different things about a digest the user configured versus a weekly we send unprompted.
  *
  * Cross-stream collision (urgent alert vs drip) is a Phase-1 refinement; today the drip's
  * cap is enforced within its own stream via last_sent_at.
@@ -20,6 +23,8 @@ export interface EmailPrefsRow {
   onboarding?: boolean;
   /** "Saved home & area alerts" — the nightly digest stream. */
   alerts?: boolean;
+  /** "Weekly market update" — the Data Drop (WS2). */
+  data_drop?: boolean;
   cadence?: "standard" | "reduced" | "minimal";
   pause_until?: string | null;
 }
@@ -114,6 +119,60 @@ export function canSendAlerts(i: CanSendAlertsInput): boolean {
   const prefs = i.prefs ?? null; // missing row = all streams on (migration 106)
   if (prefs?.alerts === false) return false;
   if (prefs?.pause_until && Date.parse(prefs.pause_until) > i.now) return false;
+
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Weekly Data Drop (WS2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CanSendDataDropInput {
+  /** Stable per-week key PREFIX, e.g. "data_drop:2026-W36". See the note below. */
+  weekKeyPrefix: string;
+  /** epoch ms — passed in so this stays pure/testable. */
+  now: number;
+  /** profiles.marketing_opt_out — the RFC 8058 one-click master switch. */
+  marketingOptOut?: boolean;
+  prefs?: EmailPrefsRow | null;
+  lifecycle?: LifecycleRow | null;
+}
+
+/**
+ * May we send this user this week's Data Drop?
+ *
+ * Allowed only when ALL hold: not master-unsubscribed; the `data_drop` stream is on
+ * (missing row = on); no active pause; cadence is not 'minimal'; and this ISO week has not
+ * already been sent.
+ *
+ * CADENCE GATES HERE, AND DELIBERATELY DOES NOT IN canSendAlerts. The difference is what
+ * each label promised. "Fewer emails — at most one non-urgent email a week" describes this
+ * email exactly, so 'reduced' KEEPS it: excluding it would silently redefine the setting as
+ * "no weekly digest at all", and `data_drop` already has its own switch for anyone who wants
+ * that. "Only the essentials — just alerts you set and account messages" does not describe a
+ * weekly we send unprompted, so 'minimal' drops it — while the nightly digest, which the
+ * user configured, survives both settings. Same table, opposite answers, both from the
+ * words on the page.
+ *
+ * (Cross-stream collision — a 'reduced' user receiving BOTH the nightly digest and this in
+ * one week — remains the Phase-1 refinement this module already defers.)
+ *
+ * WHY A PREFIX, NOT AN EXACT KEY. The stamped id carries the chosen headline kind
+ * ("data_drop:2026-W36:leverage") so a rotation guard can read last week's lead with no
+ * schema change. But the kind is derived from board data that moves between a failed send
+ * and its retry, so an exact-key check could let the same week go out twice under a
+ * different suffix. Match the week, ignore the suffix.
+ */
+export function canSendDataDrop(i: CanSendDataDropInput): boolean {
+  if (i.marketingOptOut) return false;
+
+  const prefs = i.prefs ?? null; // missing row = all streams on (migration 106)
+  if (prefs?.data_drop === false) return false;
+  if (prefs?.pause_until && Date.parse(prefs.pause_until) > i.now) return false;
+  if (prefs?.cadence === "minimal") return false;
+
+  const sent = i.lifecycle?.sent ?? null;
+  if (sent && Object.keys(sent).some((k) => k.startsWith(i.weekKeyPrefix))) return false;
 
   return true;
 }
