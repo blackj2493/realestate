@@ -42,6 +42,7 @@ import {
   checkEstimateFreshness,
   checkDrift,
   checkEmailFailures,
+  checkEmailSendVolume,
   checkMediaReconcile,
   checkDistressRate,
   checkSoldTransactionType,
@@ -51,6 +52,7 @@ import {
   type Problem,
   type SnapshotEntry,
 } from '@/lib/data/healthChecks';
+import { EMAIL_METRICS, OPS_REGION } from '@/lib/ops/emailSendMetrics';
 import { searchListings } from '@/lib/typesense/client';
 import { UNPRICEABLE_EXACT, UNPRICEABLE_PATTERNS } from '@/lib/avm/normalizeType';
 import { buildAreaData, EXAMPLE_REGION } from '@/lib/alerts/onboardingData';
@@ -63,6 +65,10 @@ const CONDO_STALE_DAYS = Number(process.env.CONDO_STALE_DAYS) || 10;
 // Email failures are urgent (broken transactional email) — a short window keeps the alert
 // current without re-firing on a failure that was already investigated and resolved.
 const EMAIL_FAIL_LOOKBACK_HOURS = Number(process.env.EMAIL_FAIL_LOOKBACK_HOURS) || 48;
+// How long the nightly send counters may go missing before it reads as a stall. 2 days, not
+// 1: GitHub defers schedules under load and dropped one outright on 2026-08-27, so a single
+// late night is a known-normal event that must not page.
+const EMAIL_VOLUME_STALE_DAYS = Number(process.env.EMAIL_VOLUME_STALE_DAYS) || 2;
 // 48h (vs 36 for region_metrics): state only moves when the capture RUNS, but a single
 // missed night shouldn't page — two consecutive misses should.
 const PRICE_STATE_STALE_HOURS = Number(process.env.PRICE_STATE_STALE_HOURS) || 48;
@@ -306,6 +312,52 @@ async function checkEmailHealth(): Promise<void> {
   // Keep the table bounded — it is a monitoring signal, not an archive.
   const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
   await sb.from('email_send_failures').delete().lt('occurred_at', cutoff);
+
+  await checkEmailVolume(sb);
+}
+
+/**
+ * Did the nightly digest actually go out? Reads the `_ops` counters the senders record in
+ * metric_snapshots (src/lib/ops/emailSendMetrics.ts) — the half checkEmailFailures cannot
+ * see, because a send that is never attempted leaves no failure row.
+ *
+ * Reads the most recent day that HAS counters rather than today's, so one deferred night
+ * (GitHub drops schedules under load — see the 2026-08-27 incident) does not false-alarm;
+ * EMAIL_VOLUME_STALE_DAYS decides when silence stops being tolerable.
+ */
+async function checkEmailVolume(sb: ReturnType<typeof getServiceRoleClient>): Promise<void> {
+  const { data, error } = await sb
+    .from('metric_snapshots')
+    .select('captured_on, metric, value')
+    .eq('region', OPS_REGION)
+    .in('metric', [EMAIL_METRICS.digestDue, EMAIL_METRICS.digestSent, EMAIL_METRICS.digestSuppressed])
+    .order('captured_on', { ascending: false })
+    .limit(30);
+  if (error) {
+    problems.push({ severity: 'warn', check: 'email-volume', detail: `send counters unavailable (${error.message}) — is migration 090 applied?` });
+    return;
+  }
+
+  const rows = (data ?? []).map((r) => r as { captured_on: string; metric: string; value: string | number | null });
+  const day = rows[0]?.captured_on ?? null; // ordered desc, so the first row is the newest day
+  const valueOn = (metric: string): number => {
+    const hit = rows.find((r) => r.captured_on === day && r.metric === metric);
+    return hit?.value == null ? 0 : Number(hit.value);
+  };
+
+  problems.push(
+    ...checkEmailSendVolume({
+      latest: day
+        ? {
+            day,
+            due: valueOn(EMAIL_METRICS.digestDue),
+            sent: valueOn(EMAIL_METRICS.digestSent),
+            suppressed: valueOn(EMAIL_METRICS.digestSuppressed),
+          }
+        : null,
+      staleDays: EMAIL_VOLUME_STALE_DAYS,
+    })
+  );
 }
 
 /**

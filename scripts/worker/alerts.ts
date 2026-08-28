@@ -12,6 +12,14 @@
  * Cadence is DAILY — it piggybacks the once-a-day sync and matches the 24h data
  * freshness rule (CLAUDE.md §4). No realtime claims.
  *
+ * Consent: a digest is suppressed by profiles.marketing_opt_out (master), by the per-stream
+ * "Saved home & area alerts" toggle, or by an active "Pause all emails for 30 days" — all
+ * three via canSendAlerts (src/lib/email/sendPolicy.ts). Cadence deliberately does NOT
+ * suppress it; see that function for why. A suppressed user still has their baselines
+ * advanced, so re-subscribing never dumps a backlog. The anonymous listing-alert and
+ * address-watch phases are email-keyed leads with their own one-click unsubscribe and are
+ * outside email_prefs (which is keyed by user_id).
+ *
  * Compliance: deterministic comparisons only — no LLM touches listing data (§4).
  * Sold prices NEVER appear in email (the sold row is a tease linking to the
  * gated listing page); the listing brokerage is shown on every row. Relist rows
@@ -66,6 +74,8 @@ import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl } from '@/lib/alerts/unsubscribe';
 import { SENDERS } from '@/lib/alerts/senders';
+import { canSendAlerts, type EmailPrefsRow } from '@/lib/email/sendPolicy';
+import { EMAIL_METRICS, recordEmailSendMetrics } from '@/lib/ops/emailSendMetrics';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
@@ -1081,8 +1091,42 @@ async function main() {
     optedOut.set(userId, (profile as { marketing_opt_out?: boolean } | null)?.marketing_opt_out === true);
   }
 
+  // Per-stream preferences (migration 106). ONE batched read for tonight's affected users —
+  // the table is small and only these users can receive anything.
+  //
+  // Until this existed the digest honoured only marketing_opt_out, so switching off
+  // "Saved home & area alerts" or pressing "Pause all emails for 30 days" on
+  // /account/emails changed nothing. Absence of a row means all streams on, so an
+  // unreadable table degrades to today's behaviour rather than muting everyone.
+  const prefsByUser = new Map<string, EmailPrefsRow>();
+  if (userIds.size) {
+    try {
+      const { data, error } = await supabase
+        .from('email_prefs')
+        .select('user_id, alerts, cadence, pause_until')
+        .in('user_id', [...userIds]);
+      if (error) {
+        console.warn(`[alerts] email_prefs unavailable (${error.message}) — treating every stream as on`);
+      } else {
+        for (const row of data ?? []) {
+          const r = row as { user_id: string } & EmailPrefsRow;
+          prefsByUser.set(r.user_id, r);
+        }
+      }
+    } catch (e) {
+      // supabase-js REJECTS on a dropped fetch instead of returning { error } — a network
+      // blip here must not mute the whole night.
+      console.warn('[alerts] email_prefs read threw — treating every stream as on:', e instanceof Error ? e.message : e);
+    }
+  }
+
   const sentUsers = new Set<string>();
   let emailed = 0;
+  let suppressed = 0;
+  // Users who actually had a renderable digest tonight. Counted HERE, not as userIds.size,
+  // so the canary's invariant (sent + suppressed + fell-through = due) is exact: a user who
+  // reaches the map but renders to nothing was never owed an email.
+  let due = 0;
   for (const userId of userIds) {
     const payload: DigestPayload = {
       drops: dropsByUser.get(userId) ?? [],
@@ -1090,13 +1134,17 @@ async function main() {
       bubbles: buildBubbleSections(bubbleMatchesByUser.get(userId) ?? []),
     };
     if (!payload.drops.length && !payload.statusChanges.length && !payload.bubbles.length) continue;
+    due++;
 
     const email = emails.get(userId);
     if (!email) continue;
-    // One-click unsubscribe (marketing_opt_out): skip the send but still advance baselines
-    // (add to sentUsers below) so a resubscribe never dumps a backlog of missed changes.
-    if (optedOut.get(userId)) {
+    // Consent gate: one-click unsubscribe (marketing_opt_out), the per-stream "Saved home
+    // & area alerts" toggle, or an active "Pause all emails for 30 days". Skip the send but
+    // STILL advance baselines (add to sentUsers) so a resubscribe or the end of a pause
+    // never dumps a backlog of every change they missed.
+    if (!canSendAlerts({ now: runStartMs, marketingOptOut: optedOut.get(userId), prefs: prefsByUser.get(userId) })) {
       sentUsers.add(userId);
+      suppressed++;
       continue;
     }
 
@@ -1149,8 +1197,16 @@ async function main() {
   // ── Address-watch phase ("Track this address" leads) ───────────────────────
   const aw = await runAddressWatchPhase(ts, supabase, resend, {});
 
+  // Durable counters so "did the digest actually go out?" is a query, not a log grep.
+  await recordEmailSendMetrics(supabase, {
+    [EMAIL_METRICS.digestDue]: due,
+    [EMAIL_METRICS.digestSent]: emailed,
+    [EMAIL_METRICS.digestSuppressed]: suppressed,
+  });
+
   console.log(
-    `[alerts] Done. ${watch.length} watched, ${userIds.size} users with events, ${emailed} emails sent. ` +
+    `[alerts] Done. ${watch.length} watched, ${userIds.size} users with events, ${due} owed a digest, ` +
+      `${emailed} emails sent, ${suppressed} suppressed on consent. ` +
       `Listing-alerts: ${la.emailed} emailed, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
       `Address-watches: ${aw.emailed} emailed, ${aw.baselined} baselined.`
   );

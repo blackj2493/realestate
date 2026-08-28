@@ -470,6 +470,90 @@ export function checkEmailFailures(failures: { kind: string; reason: string }[])
   return [{ severity: "error", check: "email-delivery", detail }];
 }
 
+/**
+ * The nightly email run going quiet — the other half of the email failure surface.
+ *
+ * checkEmailFailures above catches a send that FAILED. It cannot catch a send that was
+ * never attempted, and that is the more common shape: a selector stops matching, a consent
+ * gate is drawn too wide, or the workflow simply does not run. The workers print their
+ * counts and notifyRun.ts quotes them into the operator email, but nothing asserts on them,
+ * so a silently-zero night reads exactly like a quiet one.
+ *
+ * The trap is the one checkMediaReconcile documents: "0 sent" is AMBIGUOUS. It is the
+ * correct answer on a night when no watched listing moved, and the signature of total
+ * failure on a night when many did. So neither number decides alone — the rule joins them,
+ * using the counters the senders now record in metric_snapshots under the `_ops` region:
+ *
+ *   no counter within staleDays        → warn: the run itself may have stopped
+ *   due > 0, sent = 0, suppressed = 0  → error: every send threw, or the loop never ran
+ *   due > 0, sent + suppressed < due   → warn: sends lost between the gate and Resend
+ *
+ * `due > 0, sent = 0, suppressed = due` is explicitly HEALTHY — everyone with news had
+ * asked not to hear it. That is the consent gate working, not an outage.
+ */
+export function checkEmailSendVolume(input: {
+  /** `_ops` counters for the most recent day that has any, or null when none exist yet. */
+  latest: { day: string; due: number; sent: number; suppressed: number } | null;
+  /** Days without a counter before the run is presumed stalled. */
+  staleDays: number;
+  now?: number;
+}): Problem[] {
+  const now = input.now ?? Date.now();
+
+  if (!input.latest) {
+    return [
+      {
+        severity: "warn",
+        check: "email-volume",
+        detail:
+          "no nightly email counters recorded yet — expected after the next Nightly Emails run; " +
+          "if it persists, that workflow is not reaching its senders",
+      },
+    ];
+  }
+
+  const { day, due, sent, suppressed } = input.latest;
+  const ageDays = Math.floor((now - Date.parse(`${day}T00:00:00Z`)) / 86_400_000);
+  if (Number.isFinite(ageDays) && ageDays > input.staleDays) {
+    // A stalled run makes the counts below meaningless, so report only this.
+    return [
+      {
+        severity: "warn",
+        check: "email-volume",
+        detail:
+          `the nightly email run has recorded nothing since ${day} (${ageDays}d ago) — ` +
+          "check the Nightly Emails workflow; GitHub defers schedules under load and can drop one",
+      },
+    ];
+  }
+
+  if (due > 0 && sent === 0 && suppressed === 0) {
+    return [
+      {
+        severity: "error",
+        check: "email-volume",
+        detail:
+          `${day}: ${due} user(s) had digest-worthy changes and NONE were emailed or suppressed — ` +
+          "every send failed, or the send loop never reached them",
+      },
+    ];
+  }
+
+  if (due > 0 && sent + suppressed < due) {
+    return [
+      {
+        severity: "warn",
+        check: "email-volume",
+        detail:
+          `${day}: ${due} user(s) had changes but ${sent} were emailed and ${suppressed} suppressed — ` +
+          `${due - sent - suppressed} fell through (no profile email on file, or Resend threw)`,
+      },
+    ];
+  }
+
+  return [];
+}
+
 /** Repo migration files not recorded as applied — the migration-082 failure mode. */
 export function checkMigrationLedger(files: string[], applied: string[]): Problem[] {
   const out: Problem[] = [];

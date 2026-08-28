@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LIVE_EMAIL_STREAMS } from "@/lib/email/streams";
 
 type Cadence = "standard" | "reduced" | "minimal";
 
@@ -24,13 +25,13 @@ interface Prefs {
   marketing_opt_out: boolean;
 }
 
-const STREAMS: { key: keyof Prefs; title: string; desc: string }[] = [
-  { key: "alerts", title: "Saved home & area alerts", desc: "New listings, price drops, and sales for the homes and areas you follow." },
-  { key: "onboarding", title: "Getting-started tips", desc: "A few short guides to help you set up and get the most out of PureProperty." },
-  { key: "data_drop", title: "Weekly market update", desc: "One email a week on what's moving in the markets you follow." },
-  { key: "home_value", title: "Your home's value", desc: "When the estimated value of a home you own moves — plus a monthly recap." },
-  { key: "product", title: "Product news", desc: "Occasional notes when we ship something new. No fluff." },
-];
+/**
+ * Only the streams a sender actually exists for — see src/lib/email/streams.ts for why
+ * three of migration 106's five columns are deliberately not shown. The columns and
+ * /api/email-prefs are untouched, so restoring one is a one-line change there on the day
+ * its sender ships.
+ */
+const STREAMS = LIVE_EMAIL_STREAMS;
 
 const CADENCES: { key: Cadence; title: string; desc: string }[] = [
   { key: "standard", title: "Standard", desc: "Send emails as they happen." },
