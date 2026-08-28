@@ -16,7 +16,8 @@
  *   npx tsx scripts/worker/dataDrop.ts --to=a@b.com       # TEST: send to one address only,
  *                                                         #  no lifecycle stamp, no gating
  *   npx tsx scripts/worker/dataDrop.ts --to=a@b.com --scope=province   # force the 70.6% shape
- *   npx tsx scripts/worker/dataDrop.ts                    # the real run
+ *   npx tsx scripts/worker/dataDrop.ts                    # real run, saved-market users
+ *   npx tsx scripts/worker/dataDrop.ts --segment=all      # real run, everyone
  *
  * Env: SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, RESEND_API_KEY,
  *      NEXT_PUBLIC_SITE_URL
@@ -42,6 +43,14 @@ const DRY = process.argv.includes("--dry");
 const TEST_TO = argOf("to");
 const FORCE_SCOPE = argOf("scope"); // 'province' | 'market'
 const FORCE_REGION = argOf("region");
+/**
+ * Who the real run mails. 'saved' is ramp step 1 (docs/strategy §7): the users who have a
+ * saved market and therefore get the personalised payload — the best first impression, and
+ * the most engaged cohort we can identify without any open history to sort by. 'all' is
+ * step 2. Defaults to 'saved', so a run started without thinking about it does the smaller,
+ * safer thing.
+ */
+const SEGMENT = argOf("segment") === "all" ? "all" : "saved";
 const MANAGE_URL = `${SITE}/account/emails`;
 
 /** Share of recipients skipped above which the run is a FAILURE, not a quiet no-op. */
@@ -237,6 +246,7 @@ async function main(): Promise<void> {
   let sent = 0;
   let skippedNoPayload = 0;
   let gated = 0;
+  let outOfSegment = 0;
   const kindCounts = new Map<string, number>();
 
   for (let offset = 0; ; offset += PAGE) {
@@ -272,6 +282,10 @@ async function main(): Promise<void> {
       }
 
       const regions = scopeRegions(await loadRegions(sb, raw.id));
+      if (SEGMENT === "saved" && regions.length === 0) {
+        outOfSegment++;
+        continue;
+      }
       const built = buildDataDropPayload({
         regions,
         rows: inputs.rows,
@@ -339,7 +353,8 @@ async function main(): Promise<void> {
     .map(([k, n]) => `${k}=${n}`)
     .join(" ");
   console.log(
-    `\n   considered=${considered} sent=${sent} gated=${gated} skipped(no payload)=${skippedNoPayload}`
+    `\n   segment=${SEGMENT} considered=${considered} sent=${sent} gated=${gated} ` +
+      `out-of-segment=${outOfSegment} skipped(no payload)=${skippedNoPayload}`
   );
   console.log(`   headline kinds: ${spread || "(none)"}`);
 

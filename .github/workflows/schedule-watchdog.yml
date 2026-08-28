@@ -58,13 +58,18 @@ jobs:
               { file: 'freshness-check.yml', label: 'Data Freshness Check',
                 maxAgeHours: 12, cronMinutesUtc: [28, 6 * 60 + 28, 12 * 60 + 28, 18 * 60 + 28],
                 maxDelayHours: 6 },
-              // WEEKLY, so maxAgeHours is 8 days rather than 2x the cadence: at 2x we would
-              // sit silent through two missed Thursdays before saying anything. The LATE
-              // check is the sharp one here — a weekly send that slips half a day lands in a
-              // different part of the reader's week, and a dropped weekly cron is a whole
-              // missing edition with nothing else to notice it.
-              { file: 'weekly-data-drop.yml', label: 'Weekly Data Drop',
-                maxAgeHours: 192, cronMinutesUtc: [11 * 60 + 40], maxDelayHours: 6 },
+              // COMMENTED OUT UNTIL THE CRON IS ARMED. weekly-data-drop.yml ships with its
+              // schedule off, so watching it would report a missed run every four hours
+              // forever — and an alert that is always firing is one nobody reads, which is
+              // the same reason the data-health canary went unnoticed while it was red.
+              // UNCOMMENT THIS in the same change that uncomments the cron.
+              //
+              // maxAgeHours is 8 days, not 2x the weekly cadence: at 2x we would sit silent
+              // through two missed Thursdays. The LATE check is the sharp one — a weekly
+              // send that slips half a day lands in a different part of the reader's week,
+              // and a dropped weekly cron is a whole missing edition.
+              // { file: 'weekly-data-drop.yml', label: 'Weekly Data Drop',
+              //   maxAgeHours: 192, cronMinutesUtc: [11 * 60 + 40], maxDelayHours: 6 },
             ];
 
             const HOUR = 3600000;

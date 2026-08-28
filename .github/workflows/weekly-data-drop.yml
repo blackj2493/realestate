@@ -29,9 +29,24 @@ name: Weekly Data Drop
 #
 # REGISTERED IN schedule-watchdog.yml. A dropped weekly cron is a whole missing week, and
 # GitHub dropped one outright on 2026-08-28.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# THE SCHEDULE IS DELIBERATELY OFF. Uncomment the two `schedule` lines below to arm it.
+#
+# GitHub runs `schedule` from the DEFAULT BRANCH, so the cron goes live the moment this
+# merges — it would mail the entire list on the next Thursday with nobody having pressed
+# anything. That is the wrong way for a first send to happen. Until it is armed, this
+# workflow runs only when someone dispatches it by hand, which is also how the ramp in
+# docs/strategy/2026-08-28-weekly-data-drop.md §7 is meant to run.
+#
+# ARM IT when all three are true:
+#   1. the send subdomain is verified in Resend and SENDERS.dataDrop points at it,
+#   2. a real send has gone out by hand and been read on a phone,
+#   3. the first ramp step (segment: saved) has been sent and looked at.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
-  schedule:
-    - cron: '40 11 * * 4'
+  # schedule:
+  #   - cron: '40 11 * * 4'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -42,6 +57,13 @@ on:
         description: 'Send only to this address (no gating, no lifecycle stamp)'
         type: string
         required: false
+      segment:
+        description: 'Who to send to'
+        type: choice
+        default: saved
+        options:
+          - saved   # only users with a saved market — ramp step 1 (127 people)
+          - all     # everyone not opted out — ramp step 2
 
 permissions:
   contents: read
@@ -85,6 +107,7 @@ jobs:
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry"; fi
           if [ -n "${{ inputs.test_to }}" ]; then ARGS="$ARGS --to=${{ inputs.test_to }}"; fi
+          if [ -n "${{ inputs.segment }}" ]; then ARGS="$ARGS --segment=${{ inputs.segment }}"; fi
           npx tsx scripts/worker/dataDrop.ts $ARGS 2>&1 | tee -a "$SUMMARY_FILE"
 
       # Standard notifyRun.ts convention: report on success as well as failure, so a sender
