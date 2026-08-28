@@ -161,7 +161,7 @@ function headlineBlock(p: DataDropPayload, now: number): string {
       ${esc(p.headline.figure)}<span class="dd-unit" style="font-size:30px;color:#475569;">${esc(p.headline.unit)}</span>
     </p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px;"><tr>
-      <td style="width:44px;height:3px;background:#0891b2;line-height:3px;font-size:0;">&nbsp;</td>
+      <td style="width:44px;height:3px;background:#0891b2;line-height:3px;font-size:0;">&#8203;</td>
     </tr></table>
     <p class="dd-lede" style="font-size:16px;line-height:1.55;color:#0f172a;margin:0 0 8px;">${p.headline.lede}</p>
     <p class="dd-because" style="font-size:14px;line-height:1.6;color:#475569;margin:0;">${p.headline.because}</p>`;
@@ -170,7 +170,7 @@ function headlineBlock(p: DataDropPayload, now: number): string {
 /** Section header with the brand's accent tick — same cyan as the header rule. */
 function secHd(title: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:26px 0 10px;"><tr>
-    <td style="width:12px;height:2px;background:#0891b2;line-height:2px;font-size:0;">&nbsp;</td>
+    <td style="width:12px;height:2px;background:#0891b2;line-height:2px;font-size:0;">&#8203;</td>
     <td style="padding-left:8px;"><span class="dd-sec" style="font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.10em;font-weight:700;">${title}</span></td>
   </tr></table>`;
 }
@@ -207,57 +207,77 @@ function sourcesBlock(p: DataDropPayload): string {
 }
 
 /**
- * The tension block — and the ONE place in this email a real visualization earns its keep.
+ * The tension block — the one place in this email a real visualization earns its keep.
  *
  * The three supporting rows are a share, a dollar amount and a day count: no shared scale,
- * so a bar beside each would encode magnitude against nothing. The spread is different. It
- * is a single measure (share of sales above asking) on a common 0-100 scale, and the whole
- * argument of this email is that the province average hides how wide that range is. Showing
- * the range does the persuading that the sentence can only assert.
+ * so a bar beside each would encode magnitude against nothing. This is different. It is a
+ * single measure (share of sales above asking) across named places on a common scale, and
+ * the whole argument of the province email is that the average hides how far apart those
+ * places are. Showing them does the persuading the sentence can only assert.
  *
- * One series, so no legend; both ends are directly labelled, so identity is never carried by
- * colour alone. The track is a neutral surface, the range is one brand hue, and every number
- * stays in ink — the mark carries the shape, the text carries the values.
+ * A RANKED BAR LIST, not a range strip. The first attempt drew one segment on a 0-100 track
+ * with "10% Hamilton" left-aligned and "37% Oshawa" right-aligned — so each label sat at the
+ * edge of the container while its mark sat somewhere in the middle, pointing at nothing, and
+ * two thirds of the track carried no information at all. Bars sorted high to low, each with
+ * its own name and value on its own line, fixes both: every label is anchored to its own
+ * mark, and the comparison the reader must make is now the length difference between
+ * adjacent rows.
  *
- * Built from nested percentage-width table cells because an email cannot use SVG reliably
- * and must never depend on a remote image.
+ * Scaled to the largest value rather than to 100, so the widest bar fills the track and no
+ * space is spent on emptiness. Every bar carries its absolute value, so nothing is implied
+ * by length alone. One measure, so no legend. Ontario is the REFERENCE row, not a peer, so
+ * it takes the neutral ink and the cities take the brand hue — and it is labelled, never
+ * distinguished by colour alone.
+ *
+ * Built from nested percentage-width table cells: email cannot rely on SVG and must never
+ * depend on a remote image.
  */
+function spreadChart(spread: NonNullable<DataDropPayload["spread"]>): string {
+  const points = [spread.high, ...(spread.mid ? [spread.mid] : []), spread.low];
+  const max = Math.max(...points.map((p) => p.pct)) || 1;
+
+  const row = (pt: { region: string; pct: number }, isRef: boolean) => {
+    const w = Math.max(3, Math.round((pt.pct / max) * 100));
+    const fill = isRef ? "#64748b" : "#0891b2";
+    return `
+      <tr>
+        <td width="30%" style="padding:4px 8px 4px 0;font-size:12px;color:${isRef ? "#334155" : "#475569"};${isRef ? "font-weight:700;" : ""}white-space:nowrap;">${esc(pt.region)}</td>
+        <td width="55%" style="padding:4px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td width="${w}%" style="background:${fill};height:11px;line-height:11px;font-size:0;border-radius:3px;">&#8203;</td>
+              <td width="${100 - w}%" style="font-size:0;line-height:11px;">&#8203;</td>
+            </tr>
+          </table>
+        </td>
+        <td width="15%" align="right" style="padding:4px 0 4px 8px;font-family:${MONO};font-size:12px;font-weight:700;color:#0a1828;">${pt.pct.toFixed(0)}%</td>
+      </tr>`;
+  };
+
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:14px 0 4px;border-collapse:collapse;">
+      ${points.map((pt) => row(pt, pt.region === spread.mid?.region)).join("")}
+    </table>
+    <p style="margin:6px 0 0;font-size:11px;color:#64748b;">Share of sales closing above the asking price, last month.</p>`;
+}
+
 function tensionBlock(p: DataDropPayload): string {
   if (!p.spread) return "";
-  const lo = p.spread.low.pct;
-  const hi = p.spread.high.pct;
-  const gap = Math.round(hi - lo);
-
-  // Scale 0-100 with a little breathing room, clamped so a wide range cannot overflow.
-  const pos = (v: number) => Math.max(0, Math.min(100, v));
-  const lead = pos(lo);
-  const span = Math.max(2, pos(hi) - pos(lo));
-  const trail = Math.max(0, 100 - lead - span);
-
-  const bar = `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:12px 0 6px;border-collapse:collapse;">
-      <tr>
-        <td width="${lead.toFixed(1)}%" style="height:10px;background:#e2e8f0;line-height:10px;font-size:0;border-radius:5px 0 0 5px;">&nbsp;</td>
-        <td width="${span.toFixed(1)}%" style="height:10px;background:#0891b2;line-height:10px;font-size:0;">&nbsp;</td>
-        <td width="${trail.toFixed(1)}%" style="height:10px;background:#e2e8f0;line-height:10px;font-size:0;border-radius:0 5px 5px 0;">&nbsp;</td>
-      </tr>
-    </table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;">
-      <tr>
-        <td align="left" style="font-family:${MONO};font-size:11px;color:#475569;">${lo.toFixed(0)}% ${esc(p.spread.low.region)}</td>
-        <td align="right" style="font-family:${MONO};font-size:11px;color:#475569;">${hi.toFixed(0)}% ${esc(p.spread.high.region)}</td>
-      </tr>
-    </table>`;
+  const { low, high, mid } = p.spread;
+  // Name the places in the sentence too. The chart shows the shape; the sentence has to
+  // survive an images-off client and a reader who only skims the bold line.
+  const claim = mid
+    ? `<b>But the province-wide number hides your city.</b> ${esc(high.region)} is at ${high.pct.toFixed(0)}%. ${esc(low.region)} is at ${low.pct.toFixed(0)}%. The ${mid.pct.toFixed(0)}% average describes neither one.`
+    : `<b>But the province-wide number hides your city.</b> ${esc(high.region)} is at ${high.pct.toFixed(0)}% and ${esc(low.region)} is at ${low.pct.toFixed(0)}%.`;
 
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:24px 0 0;">
       <tr>
-        <td style="width:3px;background:#0891b2;">&nbsp;</td>
+        <td style="width:3px;background:#0891b2;font-size:0;line-height:0;">&#8203;</td>
         <td class="dd-tension" style="background:#f8fafc;padding:15px 16px;font-size:14px;line-height:1.6;color:#334155;">
-          <b>But the province-wide number hides your city.</b>
-          The share of homes selling above asking runs ${gap} points wide.
-          ${bar}
-          <span style="display:block;margin-top:8px;">Pick your city below to see its own numbers.</span>
+          ${claim}
+          ${spreadChart(p.spread)}
+          <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#334155;">Pick your city below to see its own numbers.</p>
         </td>
       </tr>
     </table>`;
@@ -289,7 +309,7 @@ function chipsBlock(markets: string[], email: string, sig: string): string {
            </td>`
       )
       .join("");
-    const filler = pad > 0 ? `<td width="${(33.33 * pad).toFixed(2)}%">&nbsp;</td>` : "";
+    const filler = pad > 0 ? `<td width="${(33.33 * pad).toFixed(2)}%">&#8203;</td>` : "";
     rows.push(`<tr>${tds}${filler}</tr>`);
   }
   return `${secHd("Pick your market &mdash; one tap")}
@@ -359,14 +379,15 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
   t.push(`${p.headline.figure}${p.headline.unit} ${plain(p.headline.lede)}`, "");
   t.push(plain(p.headline.because), "");
   if (p.scope === "province" && p.spread) {
-    t.push(
-      `But the province-wide number hides your city. The share of homes selling above ` +
-        `asking runs from ${p.spread.low.pct.toFixed(0)}% in ${p.spread.low.region} to ` +
-        `${p.spread.high.pct.toFixed(0)}% in ${p.spread.high.region} — a ` +
-        `${Math.round(p.spread.high.pct - p.spread.low.pct)}-point spread. ` +
-        `Pick your city below to see its own numbers.`,
-      ""
-    );
+    t.push("But the province-wide number hides your city.", "");
+    t.push("  Share of sales closing above the asking price, last month:");
+    const pts = [p.spread.high, ...(p.spread.mid ? [p.spread.mid] : []), p.spread.low];
+    const mx = Math.max(...pts.map((x) => x.pct)) || 1;
+    for (const pt of pts) {
+      const bars = "#".repeat(Math.max(1, Math.round((pt.pct / mx) * 24)));
+      t.push(`    ${pt.region.padEnd(12)}${bars.padEnd(25)}${pt.pct.toFixed(0)}%`);
+    }
+    t.push("", "Pick your city below to see its own numbers.", "");
   }
   if (p.rows.length) {
     t.push("THE REST OF THE PICTURE", "");

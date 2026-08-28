@@ -65,9 +65,16 @@ export interface OtherMarket {
   value: string;
 }
 
+export interface SpreadPoint {
+  region: string;
+  pct: number;
+}
+
 export interface SpreadNote {
-  low: { region: string; pct: number };
-  high: { region: string; pct: number };
+  low: SpreadPoint;
+  high: SpreadPoint;
+  /** The province average, so the reader can see it sits between the two. */
+  mid: SpreadPoint | null;
 }
 
 export interface DataDropPayload {
@@ -654,7 +661,10 @@ export function buildDataDropPayload(i: BuildInput): BuildResult | null {
         now: i.now,
       }),
       others: [],
-      spread: computeSpread(i.competitionByCity),
+      spread: computeSpread(
+        i.competitionByCity,
+        i.province && isNum(i.province.pctOverAsk) ? i.province.pctOverAsk : null
+      ),
       trackers: TRACKERS,
       dataAsOf: i.dataAsOf,
     },
@@ -718,7 +728,10 @@ function syntheticProvinceRow(rows: MarketRow[]): MarketRow | null {
  * It turns "nice statistic" into "this number is useless to me until I choose", which is the
  * only honest reason to pick a city. Needs a real gap to be worth saying.
  */
-export function computeSpread(byCity: Map<string, CompetitionRow>): SpreadNote | null {
+export function computeSpread(
+  byCity: Map<string, CompetitionRow>,
+  provincePct: number | null
+): SpreadNote | null {
   const cells = [...byCity.values()].filter(
     (c) => isNum(c.pctOverAsk) && c.sampleCount >= MIN_SAMPLE_N
   );
@@ -733,5 +746,6 @@ export function computeSpread(byCity: Map<string, CompetitionRow>): SpreadNote |
   return {
     low: { region: low.city, pct: low.pctOverAsk },
     high: { region: high.city, pct: high.pctOverAsk },
+    mid: isNum(provincePct) ? { region: PROVINCE_REGION, pct: provincePct } : null,
   };
 }
