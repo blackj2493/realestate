@@ -50,6 +50,7 @@
  *   npx tsx --env-file=.env.local scripts/admin/backfillMedia.ts --apply --target active --limit 100  # write 100
  *   npx tsx --env-file=.env.local scripts/admin/backfillMedia.ts --apply --target both             # full run
  *   npx tsx --env-file=.env.local scripts/admin/backfillMedia.ts --apply --target sold --start-key W12345678
+ *   npx tsx --env-file=.env.local scripts/admin/backfillMedia.ts --apply --target both --keys W123,X456  # just these
  *
  * Env: DATABASE_URL (Session pooler conn string), PROPTX_IDX_TOKEN,
  *      PROPTX_VOW_TOKEN, TYPESENSE_ADMIN_API_KEY.
@@ -96,6 +97,22 @@ if (!['active', 'sold', 'both'].includes(TARGET)) {
 }
 const ROW_LIMIT = Number(arg('--limit') ?? Infinity);
 const START_KEY = arg('--start-key') ?? '';
+/**
+ * Restrict the run to an explicit comma-separated ListingKey list.
+ *
+ * Both sweeps already filter the READ down to rows that are actually missing media, so a
+ * full run is correct — it is just enormous. When the remainder is a handful of stragglers
+ * the scan is all cost and no yield: on 2026-08-27 exactly 6 pages in the whole book were
+ * both photo-less AND had photos still available upstream, and reaching them meant paging
+ * the entire sold table. This makes that surgical.
+ *
+ * It NARROWS, never widens: the missing-media predicates still apply, so naming a key that
+ * already has photos is a no-op rather than a re-fetch.
+ */
+const ONLY_KEYS = (arg('--keys') ?? '')
+  .split(',')
+  .map((k) => k.trim())
+  .filter(Boolean);
 const SKIP_TYPESENSE = process.argv.includes('--skip-typesense');
 
 // ── Token guards (target-aware so partial-target runs don't require both) ────
@@ -145,14 +162,17 @@ function tsClient(): TsClient | null {
  * (memory: supabase-io-budget).
  */
 async function readActivePage(pg: PgClient, cursor: string, pageSize: number): Promise<string[]> {
+  const keyFilter = ONLY_KEYS.length ? 'AND listing_key = ANY($3::text[])' : '';
   const sql = `
     SELECT listing_key
       FROM listings
      WHERE (media_urls IS NULL OR cardinality(media_urls) = 0)
        AND listing_key > $1
+       ${keyFilter}
      ORDER BY listing_key
      LIMIT $2`;
-  const res = await pg.query<{ listing_key: string }>(sql, [cursor, pageSize]);
+  const params: unknown[] = ONLY_KEYS.length ? [cursor, pageSize, ONLY_KEYS] : [cursor, pageSize];
+  const res = await pg.query<{ listing_key: string }>(sql, params);
   return res.rows.map((r) => r.listing_key);
 }
 
@@ -307,14 +327,17 @@ async function backfillActive(pg: PgClient, ts: TsClient | null): Promise<void> 
  * archive is the source of truth) but skip the Typesense write.
  */
 async function readSoldPage(pg: PgClient, cursor: string, pageSize: number): Promise<Array<{ listing_key: string; pcd_ms: number | null }>> {
+  const keyFilter = ONLY_KEYS.length ? 'AND listing_key = ANY($3::text[])' : '';
   const sql = `
     SELECT listing_key, purchase_contract_date
       FROM raw_vow_sold
      WHERE listing_key > $1
        AND (photos IS NULL OR jsonb_array_length(photos) = 0)
+       ${keyFilter}
      ORDER BY listing_key
      LIMIT $2`;
-  const res = await pg.query<{ listing_key: string; purchase_contract_date: string | null }>(sql, [cursor, pageSize]);
+  const params: unknown[] = ONLY_KEYS.length ? [cursor, pageSize, ONLY_KEYS] : [cursor, pageSize];
+  const res = await pg.query<{ listing_key: string; purchase_contract_date: string | null }>(sql, params);
   return res.rows.map((r) => {
     const ms = r.purchase_contract_date ? new Date(r.purchase_contract_date).getTime() : NaN;
     return { listing_key: r.listing_key, pcd_ms: Number.isFinite(ms) ? ms : null };
