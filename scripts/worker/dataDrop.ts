@@ -26,7 +26,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import { SENDERS } from "@/lib/alerts/senders";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import { SITE } from "@/lib/alerts/emailShell";
-import { marketingUnsubscribeUrl } from "@/lib/alerts/unsubscribe";
+import { marketingUnsubscribeUrl, signUnsubscribe } from "@/lib/alerts/unsubscribe";
 import { renderDataDropEmail } from "@/lib/alerts/dataDropEmail";
 import { BOARD_MARKETS } from "@/lib/data/marketBoard";
 import { buildDataDropPayload, isoWeekId, type LadderTrace } from "@/lib/dataDrop/payload";
@@ -200,6 +200,8 @@ async function main(): Promise<void> {
         unsubscribeUrl: marketingUnsubscribeUrl(TEST_TO, SITE),
         manageUrl: MANAGE_URL,
         ctaTarget: "terminal",
+        email: TEST_TO,
+        signature: signUnsubscribe(TEST_TO),
       },
       now
     );
@@ -306,6 +308,8 @@ async function main(): Promise<void> {
           unsubscribeUrl: uUrl,
           manageUrl: MANAGE_URL,
           ctaTarget: await chooseCta(sb, raw, now),
+          email,
+          signature: signUnsubscribe(email),
         },
         now
       );

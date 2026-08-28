@@ -22,6 +22,7 @@ import {
   sectionHeader,
 } from "./emailShell";
 import type { DataDropPayload } from "@/lib/dataDrop/payload";
+import { marketMapUrl } from "@/lib/dataDrop/cameras";
 
 export interface RenderInput {
   payload: DataDropPayload;
@@ -31,6 +32,9 @@ export interface RenderInput {
   manageUrl: string;
   /** Active reader -> the terminal. Dormant or never-unlocked -> the public tracker. */
   ctaTarget: "terminal" | "tracker";
+  /** Recipient address and its HMAC — the chips are signed per recipient. */
+  email: string;
+  signature: string;
 }
 
 export interface Rendered {
@@ -54,12 +58,16 @@ const plain = (s: string): string => s.replace(/<\/?b>/g, "");
 const trackerUrl = (slug: string) => `${SITE}/data/${slug}`;
 
 /**
- * Where a chip points. Unit 10 (`/api/email/follow-market`) will make this one tap that
- * actually saves the market; until it ships, the chip opens the terminal already scoped to
- * that city — `?city=` is a real seed (properties/page.tsx reads it), so every link in the
- * email works today rather than 404ing on a route that does not exist yet.
+ * Where a chip points: `/api/email/follow-market`, which SAVES the market to the account and
+ * then redirects to that city's camera.
+ *
+ * Both halves matter. A plain map link only moves the reader — it leaves them with no saved
+ * area, so next Thursday they get the province email again and the app still thinks they
+ * picked nothing. And the redirect is a CAMERA (`?lat=&lng=&z=`), never `?city=`: a text
+ * filter pins the map to that place and empties it the moment they pan past the boundary.
  */
-const chipUrl = (city: string) => `${SITE}/properties?city=${encodeURIComponent(city)}`;
+const chipUrl = (city: string, email: string, sig: string) =>
+  `${SITE}/api/email/follow-market?e=${encodeURIComponent(email)}&s=${encodeURIComponent(sig)}&city=${encodeURIComponent(city)}`;
 
 // ── Subject + preheader ───────────────────────────────────────────────────────
 
@@ -170,7 +178,7 @@ function tensionBlock(p: DataDropPayload): string {
  * breaks. (QUICK_PICK_MARKETS is NOT that set — it carries London, which has no board row,
  * and omits Milton/Oshawa/Whitby/Ajax/Pickering, which do.)
  */
-function chipsBlock(markets: string[]): string {
+function chipsBlock(markets: string[], email: string, sig: string): string {
   const PER_ROW = 5;
   const rows: string[] = [];
   for (let i = 0; i < markets.length; i += PER_ROW) {
@@ -180,7 +188,7 @@ function chipsBlock(markets: string[]): string {
       .map(
         (c) =>
           `<td width="20%" style="padding:3px;">
-             <a href="${chipUrl(c)}" style="display:block;text-align:center;text-decoration:none;padding:10px 4px;font-size:13px;font-weight:600;color:#0a1828;background:#ffffff;border:1px solid #cbd5e1;border-radius:5px;">${esc(c).replace(/ /g, "&nbsp;")}</a>
+             <a href="${chipUrl(c, email, sig)}" style="display:block;text-align:center;text-decoration:none;padding:10px 4px;font-size:13px;font-weight:600;color:#0a1828;background:#ffffff;border:1px solid #cbd5e1;border-radius:5px;">${esc(c).replace(/ /g, "&nbsp;")}</a>
            </td>`
       )
       .join("");
@@ -213,8 +221,9 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
   // seeds a filter that matches nothing. It goes to the public tracker, which is also the
   // right destination for a reader who has saved nothing and may not even be unlocked.
   const useTerminal = p.scope === "market" && i.ctaTarget === "terminal";
+  // Camera seed, never a city text filter — same reason as the chips.
   const ctaUrl = useTerminal
-    ? `${SITE}/properties?city=${encodeURIComponent(p.region)}`
+    ? marketMapUrl(SITE, p.region)
     : trackerUrl(p.trackers[0]?.slug ?? "price-cuts");
   const ctaLabel =
     p.scope === "province"
@@ -230,7 +239,7 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
     p.scope === "province" ? tensionBlock(p) : "",
     rowsBlock(p),
     sourcesBlock(p),
-    p.scope === "province" ? chipsBlock(i.chipMarkets) : "",
+    p.scope === "province" ? chipsBlock(i.chipMarkets, i.email, i.signature) : "",
     `<div style="margin:26px 0 0;">${button(`${ctaLabel} &rarr;`, ctaUrl)}</div>`,
     othersBlock(p),
     footer({
@@ -272,7 +281,7 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
   t.push("");
   if (p.scope === "province") {
     t.push("PICK YOUR MARKET - one tap:");
-    for (const m of i.chipMarkets) t.push(`  ${m.padEnd(16)}${chipUrl(m)}`);
+    for (const m of i.chipMarkets) t.push(`  ${m.padEnd(16)}${chipUrl(m, i.email, i.signature)}`);
     t.push("");
     t.push("Don't see yours? Reply and tell us - we add markets as the data covers them.", "");
   }
