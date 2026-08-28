@@ -16,10 +16,21 @@ import type { TransactionScope } from './config';
 export type BoardId =
   | 'cap_rate'
   | 'suite'
-  | 'fresh'
   | 'price_drop'
   | 'high_dom'
   | 'carry';
+
+/**
+ * Board ids that existed once and no longer do. A stored config keeps whatever it was
+ * saved with, so `normalizeConfig` needs to know which ids to drop rather than carry a
+ * dead entry around forever (see config.ts).
+ *
+ * 'fresh' — "Freshest Listings" (TrueDom ascending). The New column of
+ * MarketActivityPanel already leads every section with the same listings, sorted by
+ * EntryTimestamp. The two disagree only on relists, which is not a distinction worth a
+ * whole board directly under the column that contradicts it.
+ */
+export const RETIRED_BOARD_IDS: readonly string[] = ['fresh'];
 
 /** The lens-dependent face of a board — the fields that differ between sale and
  *  lease mode (title, headline metric, sort, filter). See `lease` on BoardDef and
@@ -125,26 +136,6 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     // Sale-only: a suite/conversion investor board, off-topic for renters.
     scopes: ['sale'],
   },
-  fresh: {
-    id: 'fresh',
-    title: 'Freshest Listings',
-    metricField: 'TrueDom',
-    metricLabel: 'TRUE DOM',
-    formatMetric: days,
-    sortBy: 'TrueDom',
-    sortOrder: 'asc',
-    rawFilterBy: 'TrueDom:>=0',
-    objectives: [],
-    scopes: ['sale', 'lease'],
-    lease: {
-      title: 'Freshest Rentals',
-      metricField: 'LeaseTrueDom',
-      metricLabel: 'RENTAL DOM',
-      sortBy: 'LeaseTrueDom',
-      sortOrder: 'asc',
-      rawFilterBy: 'LeaseTrueDom:>=0',
-    },
-  },
   price_drop: {
     id: 'price_drop',
     title: 'Biggest Price Drops',
@@ -174,7 +165,8 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     sortBy: 'TrueDom',
     sortOrder: 'desc',
     // Longest genuinely-on-market listings (True DOM stitches relists back together) —
-    // the motivated-seller / negotiation-leverage board. Mirror of `fresh` (asc).
+    // the motivated-seller / negotiation-leverage board. This is the only end of the
+    // TrueDom axis with its own reader: the fresh end duplicated the New column.
     rawFilterBy: 'TrueDom:>=0',
     objectives: ['Target distressed & off-market deals'],
     scopes: ['sale', 'lease'],
@@ -206,7 +198,6 @@ export const BOARDS: Record<BoardId, BoardDef> = {
 export const DEFAULT_BOARD_ORDER: BoardId[] = [
   'cap_rate',
   'suite',
-  'fresh',
   'price_drop',
   'high_dom',
   'carry',
