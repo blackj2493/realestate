@@ -10,11 +10,11 @@ name: Data Health Canary
 # (is data arriving?), this one watches the DERIVED metrics (is what we render correct?).
 # Different failure domains — a healthy feed can still produce broken metrics.
 #
-# Runs at 10:00 UTC: the nightly sync starts 03:00 and its region-metrics refresh step
+# Runs at 10:41 UTC: the nightly sync starts 03:17 and its region-metrics refresh step
 # finishes by ~08:00, so this reads a settled precompute with ~2h of margin.
 on:
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '41 10 * * *' # :41 not :00 — GitHub defers `schedule` hardest at the top of the hour
   workflow_dispatch:
 
 permissions:

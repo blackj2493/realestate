@@ -20,7 +20,7 @@ name: Content Data Snapshot
 # branch instead — either way the snapshot must land where the routine's checkout can read it.
 on:
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '26 9 * * *' # :26 not :00 — GitHub defers `schedule` hardest at the top of the hour
   workflow_dispatch:
 
 permissions:

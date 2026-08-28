@@ -1,15 +1,28 @@
 name: Daily Real Estate Sync
 
-# Scheduled daily sync (3:00 AM UTC). The earlier "premature close" failures were a
+# Scheduled daily sync (03:17 UTC). The earlier "premature close" failures were a
 # node-fetch bug — cross-fetch (→ node-fetch) choked on truncated REST response bodies on
 # GitHub Actions' egress to Supabase. Fixed at the root in src/lib/supabase/client.ts by
 # wrapping native fetch (undici), which tolerates that path — so this runs reliably on
 # GitHub Actions again and the schedule is restored. (A Railway-cron alternative was
 # started but never finished; see docs/railway-cron-setup.md. Run only ONE scheduler to
 # avoid double-sync.)
+#
+# WHY :17 AND NOT :00: GitHub runs `schedule` at LOWEST priority and defers it under load,
+# and the top of the hour is by far the most contended minute on the platform. This job sat
+# on '0 3 * * *' and drifted from ~40min late (Aug 16-26) to 10h20m late on 2026-08-27 —
+# the run started 13:19 UTC, so the watchlist digest that should land at ~02:00 Toronto
+# landed at 12:26 PM. On 2026-08-28 the 03:00 trigger was DROPPED outright. An odd minute
+# well off the hour is GitHub's own documented mitigation. The HOUR deliberately stays at
+# 03 so every "after the 03:00 daily sync" comment in the sibling workflows stays true.
+#
+# The sync no longer sends the nightly emails — they moved to nightly-emails.yml, which
+# this workflow triggers on completion via `workflow_run`. A 3h sync used to push a
+# 03:44 start to a 05:52 send; the emails now fire the moment the data is fresh, and still
+# go out on their own cron if this workflow never runs at all.
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '17 3 * * *'
   # Also allow manual triggering from the GitHub website / `gh workflow run`.
   workflow_dispatch:
 
@@ -333,36 +346,12 @@ jobs:
           VOW_ACTIVES_ENABLED: ${{ vars.VOW_ACTIVES_ENABLED }}
         run: npx tsx scripts/worker/vowActiveSync.ts
 
-      # Email each user a digest of price drops on their watched properties, using
-      # the freshly-synced Typesense index. Additive + must never break the core
-      # sync, so continue-on-error. No-ops cleanly if RESEND_API_KEY is unset.
-      - name: Send Watchlist Alerts
-        continue-on-error: true
-        timeout-minutes: 15
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
-          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-        run: npx tsx scripts/worker/alerts.ts
-
-      # Onboarding drip — the milestone-gated welcome sequence (engagement plan WS1.2).
-      # Additive + continue-on-error so it can never break the core sync. Fail-closed:
-      # no-ops if RESEND_API_KEY is unset AND self-skips until migration 105
-      # (user_email_lifecycle) is applied, so it can't re-send without idempotency.
-      # Needs the search-only Typesense key for 2B's live example dashboard.
-      - name: Send Onboarding Sequence
-        continue-on-error: true
-        timeout-minutes: 15
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-          NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY: ${{ secrets.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY }}
-        run: npx tsx scripts/worker/onboarding.ts
+      # NOTE: "Send Watchlist Alerts" and "Send Onboarding Sequence" used to run HERE, at the
+      # tail of a 2-3h job, so the send time was this workflow's start time plus its whole
+      # duration. They now live in nightly-emails.yml, which this workflow triggers on
+      # completion (`workflow_run`) — same freshly-synced Typesense index, same ordering,
+      # but the digest is no longer hostage to how long the sync takes or to whether this
+      # workflow's own schedule fired at all.
 
       # Refresh cached listing detail for everything synced today so nightly changes
       # appear immediately instead of within the page's 1h TTL. Additive — must never
