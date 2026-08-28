@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readExpandedSections, isSectionExpanded, setSectionExpanded } from './sectionState';
+import {
+  readExpandedSections,
+  isSectionExpanded,
+  noSectionChoiceMade,
+  setSectionExpanded,
+} from './sectionState';
 
 /**
  * vitest runs `environment: 'node'`, so there is no window. These install a minimal
@@ -116,5 +121,45 @@ describe('isSectionExpanded', () => {
     installStorage();
     setSectionExpanded('x'.repeat(201), true);
     expect(readExpandedSections().size).toBe(0);
+  });
+});
+
+/**
+ * The gate on the one section that opens itself on a first visit. Getting this wrong in
+ * either direction is costly: too eager and every visit re-fires an area's ~9 requests
+ * for a user who has already said no by closing it; too shy and nobody ever sees the
+ * open state, which is the whole reason the row reads as a heading.
+ */
+describe('noSectionChoiceMade', () => {
+  it('is false during SSR, so the server never renders a section pre-opened', () => {
+    expect(noSectionChoiceMade()).toBe(false);
+  });
+
+  it('is true when the key has never been written', () => {
+    installStorage();
+    expect(noSectionChoiceMade()).toBe(true);
+  });
+
+  it('is false once ANY section has been opened', () => {
+    installStorage();
+    setSectionExpanded('bubble:abc', true);
+    expect(noSectionChoiceMade()).toBe(false);
+  });
+
+  it('is false after an open-then-close — an empty list is still a choice', () => {
+    installStorage();
+    setSectionExpanded('bubble:abc', true);
+    setSectionExpanded('bubble:abc', false);
+    expect(readExpandedSections().size).toBe(0);
+    expect(noSectionChoiceMade()).toBe(false);
+  });
+
+  it('is false when storage throws — a private window cannot remember the auto-open', () => {
+    installStorage();
+    (globalThis as unknown as { window: { localStorage: { getItem: unknown } } }).window.localStorage.getItem =
+      () => {
+        throw new Error('SecurityError');
+      };
+    expect(noSectionChoiceMade()).toBe(false);
   });
 });
