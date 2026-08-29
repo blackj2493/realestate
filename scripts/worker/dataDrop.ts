@@ -32,7 +32,12 @@ import { renderDataDropEmail } from "@/lib/alerts/dataDropEmail";
 import { BOARD_MARKETS } from "@/lib/data/marketBoard";
 import { buildDataDropPayload, isoWeekId, type LadderTrace } from "@/lib/dataDrop/payload";
 import { loadDataDropInputs, scopeRegions, MAX_DATA_AGE_HOURS } from "@/lib/dataDrop/data";
-import { canSendDataDrop, type EmailPrefsRow, type LifecycleRow } from "@/lib/email/sendPolicy";
+import {
+  canSendDataDrop,
+  digestSentToday,
+  type EmailPrefsRow,
+  type LifecycleRow,
+} from "@/lib/email/sendPolicy";
 
 const argOf = (name: string): string | null => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -246,6 +251,8 @@ async function main(): Promise<void> {
   let sent = 0;
   let skippedNoPayload = 0;
   let gated = 0;
+  /** Skipped because the nightly digest already reached them today. */
+  let deferredSameDay = 0;
   let outOfSegment = 0;
   const kindCounts = new Map<string, number>();
 
@@ -277,7 +284,11 @@ async function main(): Promise<void> {
           lifecycle: lc,
         })
       ) {
-        gated++;
+        // Separate the two reasons in the receipt. A consent gate is permanent and
+        // expected; a same-day deferral is temporary and, if it ever dominates a run, means
+        // the weekly is quietly losing to the digest and the send hour needs moving.
+        if (digestSentToday(lc?.sent, now)) deferredSameDay++;
+        else gated++;
         continue;
       }
 
@@ -354,6 +365,7 @@ async function main(): Promise<void> {
     .join(" ");
   console.log(
     `\n   segment=${SEGMENT} considered=${considered} sent=${sent} gated=${gated} ` +
+      `deferred-same-day=${deferredSameDay} ` +
       `out-of-segment=${outOfSegment} skipped(no payload)=${skippedNoPayload}`
   );
   console.log(`   headline kinds: ${spread || "(none)"}`);
