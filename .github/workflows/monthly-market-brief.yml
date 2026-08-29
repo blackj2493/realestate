@@ -13,8 +13,11 @@ name: Monthly Market Brief
 # The brief itself is generated from the same boards the public /data trackers render, so it
 # can never disagree with the pages a journalist lands on.
 on:
-  schedule:
-    - cron: '30 12 3-5 * *'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 12:30 UTC on the 3rd, 4th and 5th of each month; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:
