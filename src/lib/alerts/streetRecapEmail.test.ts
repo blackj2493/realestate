@@ -126,6 +126,37 @@ describe("degrading gracefully", () => {
     expect(html).toContain("Homes sold");
   });
 
+  it("names property types the way a person would, not the way the feed does", () => {
+    const p = payload({
+      local: {
+        ...payload().local,
+        byType: [
+          { type: "Att/Row/Townhouse", sales: 40, medianDom: 14 },
+          { type: "Condo Apartment", sales: 20, medianDom: 40 },
+        ],
+      },
+    });
+    const { html } = render(p);
+    expect(html).toContain("A townhouse near you now sells in 14 days");
+    expect(html).toContain("A condo takes 40");
+    expect(html).not.toContain("Att/Row/Townhouse near you");
+  });
+
+  it("drops the contrast line when the two types are barely different", () => {
+    // Real August data: Patterson detached 23 days, townhouse 21. Two numbers beside each
+    // other is not an insight.
+    const p = payload({
+      local: {
+        ...payload().local,
+        byType: [
+          { type: "Detached", sales: 28, medianDom: 23 },
+          { type: "Att/Row/Townhouse", sales: 19, medianDom: 21 },
+        ],
+      },
+    });
+    expect(render(p).html).not.toContain("near you now sells in");
+  });
+
   it("renders a thin type list without inventing rows", () => {
     const p = payload({
       local: { ...payload().local, byType: [{ type: "Detached", sales: 100, medianDom: 17 }] },

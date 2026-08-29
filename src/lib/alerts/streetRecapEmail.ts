@@ -184,13 +184,42 @@ function rowsBlock(p: StreetRecapPayload): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${tr}</table>`;
 }
 
-/** A quiet month is a real answer, and saying so is what makes the loud months credible. */
-function quietNote(p: StreetRecapPayload): string {
+/**
+ * Feed sub-types read like database values, because they are. In a sentence they need to
+ * sound like the thing a person owns: "Att/Row/Townhouse" is a townhouse.
+ */
+const TYPE_WORD: Record<string, string> = {
+  Detached: "detached home",
+  "Semi-Detached": "semi",
+  "Att/Row/Townhouse": "townhouse",
+  "Condo Townhouse": "condo townhouse",
+  "Condo Apartment": "condo",
+  Link: "linked home",
+};
+
+const typeWord = (t: string): string => TYPE_WORD[t.trim()] ?? t.trim().toLowerCase();
+const article = (w: string): string => ("aeiou".includes(w[0]?.toLowerCase() ?? "") ? "An" : "A");
+
+/**
+ * The line a reader forwards to a neighbour — but only when there is a contrast worth
+ * forwarding.
+ *
+ * Real August data made the case: Patterson detached sold in 23 days and townhouses in 21.
+ * "A detached home sells in 23 days. A townhouse takes 21." is not an insight, it is two
+ * numbers next to each other. Below MIN_SPREAD the sentence is dropped entirely rather than
+ * padded — the email is already saying enough.
+ */
+const MIN_TYPE_SPREAD_DAYS = 5;
+
+function typeContrast(p: StreetRecapPayload): string {
   const types = printableTypes(p.local.byType);
   if (types.length < 2) return "";
   const [a, b] = types;
   if (a.medianDom == null || b.medianDom == null) return "";
-  return `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:14px 0 0;">A ${esc(a.type.toLowerCase())} near you now sells in ${a.medianDom} days. A ${esc(b.type.toLowerCase())} takes ${b.medianDom}.</p>`;
+  if (Math.abs(a.medianDom - b.medianDom) < MIN_TYPE_SPREAD_DAYS) return "";
+  const aw = typeWord(a.type);
+  const bw = typeWord(b.type);
+  return `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:14px 0 0;">${article(aw)} ${esc(aw)} near you now sells in ${a.medianDom} days. ${article(bw).toLowerCase() === "an" ? "An" : "A"} ${esc(bw)} takes ${b.medianDom}.</p>`;
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -207,7 +236,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
     headlineBlock(p),
     tensionBlock(p),
     rowsBlock(p),
-    quietNote(p),
+    typeContrast(p),
     `<div style="margin:26px 0 0;">${button("See what's for sale near you &rarr;", ctaUrl)}</div>`,
     footer({
       intro: `You get this because you asked us to watch ${esc(p.address)}.`,
