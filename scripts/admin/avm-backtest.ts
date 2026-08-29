@@ -276,6 +276,11 @@ async function loadMatricesForSnapshot(): Promise<Map<string, Matrix>> {
       // (subject routing via resolveModel AND this trend/offset snapshot) scores one model.
       .from(process.env.AVM_MATRIX_TABLE === 'avm_multiplier_matrix_staging' ? 'avm_multiplier_matrix_staging' : 'avm_multiplier_matrix')
       .select('id, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
+      // Pinned to the community rung. Migration 130 lets a cohort be keyed on a postal FSA
+      // or a whole city as well, and 67 city names collide with an existing city_region
+      // spelling — without this filter a city cohort's rows would silently mix into a
+      // community cohort's feature set. The ladder is opted into deliberately, not inherited.
+      .eq('cohort_rung', 'community')
       .gt('id', cursor)
       .order('id', { ascending: true })
       .limit(READ_PAGE);

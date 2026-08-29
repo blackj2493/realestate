@@ -259,7 +259,7 @@ async function verifyTables(): Promise<void> {
 
   const { data: sample } = await supabase
     .from('avm_multiplier_matrix')
-    .select('city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
+    .select('cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
     .limit(10);
 
   console.log('\n[VERIFY] Matrix sample:');

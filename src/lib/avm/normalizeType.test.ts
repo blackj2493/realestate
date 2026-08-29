@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isUnpriceableType, fsaOf } from './normalizeType';
+import { isUnpriceableType, fsaOf, cohortRungKeys } from './normalizeType';
 
 /**
  * Commercial-gap Phase 0: the dwelling comp AVM must return "unavailable" for
@@ -93,5 +93,47 @@ describe('fsaOf', () => {
     expect(fsaOf('')).toBe('');
     expect(fsaOf(null)).toBe('');
     expect(fsaOf(undefined)).toBe('');
+  });
+});
+
+describe('cohortRungKeys', () => {
+  it('orders community, then FSA, then city', () => {
+    expect(cohortRungKeys('Bedford Park-Nortown', 'M5M 1A1', 'Toronto C04')).toEqual([
+      { rung: 'community', key: 'Bedford Park-Nortown' },
+      { rung: 'fsa', key: 'M5M' },
+      { rung: 'city', key: 'Toronto C04' },
+    ]);
+  });
+
+  it('skips the community rung when the feed ships a blank CityRegion', () => {
+    // The Waterloo Region / Brantford shape: 10,681 sales dropped before 2026-08-29.
+    expect(cohortRungKeys('', 'N2H 5X8', 'Kitchener')).toEqual([
+      { rung: 'fsa', key: 'N2H' },
+      { rung: 'city', key: 'Kitchener' },
+    ]);
+  });
+
+  it('treats whitespace-only as blank', () => {
+    expect(cohortRungKeys('   ', '  n2h 5x8 ', ' Kitchener ')).toEqual([
+      { rung: 'fsa', key: 'N2H' },
+      { rung: 'city', key: 'Kitchener' },
+    ]);
+  });
+
+  it('drops a malformed postal code rather than inventing an FSA', () => {
+    expect(cohortRungKeys('', '12345', 'Kitchener')).toEqual([{ rung: 'city', key: 'Kitchener' }]);
+    expect(cohortRungKeys('', null, 'Kitchener')).toEqual([{ rung: 'city', key: 'Kitchener' }]);
+  });
+
+  it('returns nothing when every key is absent', () => {
+    expect(cohortRungKeys(null, null, null)).toEqual([]);
+    expect(cohortRungKeys('', '', '')).toEqual([]);
+  });
+
+  it('still offers the coarser rungs when a community IS present', () => {
+    // Chatham-Kent: CityRegion populated, but 200 sales over 26 communities means the
+    // community rung never trains. The FSA and city rungs must still be offered.
+    const keys = cohortRungKeys('Wallaceburg', 'N8A 1A1', 'Chatham-Kent');
+    expect(keys.map((k) => k.rung)).toEqual(['community', 'fsa', 'city']);
   });
 });
