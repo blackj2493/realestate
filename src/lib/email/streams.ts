@@ -48,7 +48,7 @@ export const EMAIL_STREAMS: EmailStream[] = [
     key: "data_drop",
     title: "Weekly market update",
     desc: "One email a week on what's moving in the markets you follow.",
-    sender: null, // WS2 — the weekly Data Drop
+    sender: "scripts/worker/dataDrop.ts",
   },
   {
     key: "home_value",

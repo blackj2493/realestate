@@ -29,4 +29,25 @@ export const SENDERS = {
     from: "Tanmay at PureProperty <tanmay@pureproperty.ca>",
     replyTo: "tanmay@pureproperty.ca",
   },
+  /**
+   * Weekly Data Drop — the editorial/marketing stream (WS2).
+   *
+   * LITERAL BY DESIGN: it must NOT read ALERTS_FROM_EMAIL. That variable currently resolves
+   * to `support@` and wins over every default that consults it, so a Data Drop that read it
+   * would silently revert to the support identity and nobody would notice for weeks.
+   *
+   * REPLY-TO IS DELIBERATE, not an oversight. A weekly market email draws real replies
+   * ("what about Guelph?"). Replies are among the strongest positive signals Gmail weighs,
+   * and they are the best engagement data this stream can produce. Do not make it
+   * unmonitored the way the automated alert stream is.
+   *
+   * TODO(Unit 1): move to `data@send.pureproperty.ca` once the send subdomain is verified in
+   * Resend, so recurring marketing volume stops riding the reputation that delivers sign-in
+   * codes (voice.md §11.7 item 2). The root domain is already Resend-verified, so this
+   * address works today and only the host changes.
+   */
+  dataDrop: {
+    from: "PureProperty Data <data@pureproperty.ca>",
+    replyTo: "support@pureproperty.ca",
+  },
 } satisfies Record<string, Sender>;
