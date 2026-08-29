@@ -321,3 +321,73 @@ describe('in-home unit routing', () => {
     expect(acc.finalize().some((r) => String(r.match_tier).startsWith('suite_'))).toBe(false);
   });
 });
+
+// ── Duplicate records must not become duplicate comps (2026-08-22) ───────────────
+describe('property dedupe', () => {
+  const lease = (over: Partial<RawLeaseInput> = {}): RawLeaseInput => ({
+    transactionType: 'For Lease',
+    listPrice: 8000,
+    city: 'Toronto',
+    cityRegion: 'Willowdale West',
+    propertySubType: 'Detached',
+    bedroomsTotal: 5,
+    bedroomsAboveGrade: 4,
+    bedroomsBelowGrade: 1,
+    bathroomsTotal: 6,
+    ...over,
+  });
+
+  /**
+   * 262 Senlac Road. Its cohort held $23,000, $23,000 and $8,000, and the two $23,000
+   * records are both 316 Churchill Avenue — filed once under city "Toronto" and once
+   * under "Toronto C07". The duplicate was the median AND the third sample, so the
+   * page published $23,008/mo for a home whose area rents in the $3-4k range.
+   */
+  it('does not let one property fill a cohort twice', () => {
+    const acc = createRentAccumulator();
+    acc.add(lease({ listPrice: 23_000, dedupeKey: 'hash-churchill' }));
+    acc.add(lease({ listPrice: 23_000, dedupeKey: 'hash-churchill', city: 'Toronto C07' }));
+    acc.add(lease({ listPrice: 8_000, dedupeKey: 'hash-parkhome' }));
+    // Two properties is below MIN_COHORT_SAMPLES, so nothing publishes — which is the
+    // whole point of having a floor.
+    expect(acc.finalize().filter((r) => r.match_tier === 'nbhd')).toHaveLength(0);
+  });
+
+  it('keeps the FIRST record for a property, and the caller orders newest-first', () => {
+    const acc = createRentAccumulator();
+    acc.add(lease({ listPrice: 9_000, dedupeKey: 'a' }));
+    acc.add(lease({ listPrice: 99_00, dedupeKey: 'a' })); // same home, stale price
+    acc.add(lease({ listPrice: 8_000, dedupeKey: 'b' }));
+    acc.add(lease({ listPrice: 7_000, dedupeKey: 'c' }));
+    const row = acc.finalize().find((r) => r.match_tier === 'nbhd' && r.bedrooms_above === 4);
+    expect(row?.sample_count).toBe(3);
+    expect(row?.avg_rent).toBe(8_000);
+  });
+
+  it('counts distinct properties normally', () => {
+    const acc = createRentAccumulator();
+    for (const [i, price] of [3_000, 4_000, 5_000].entries()) {
+      acc.add(lease({ listPrice: price, dedupeKey: `home-${i}` }));
+    }
+    const row = acc.finalize().find((r) => r.match_tier === 'nbhd' && r.bedrooms_above === 4);
+    expect(row?.sample_count).toBe(3);
+    expect(row?.avg_rent).toBe(4_000);
+  });
+
+  it('falls back to counting every record when no key is supplied', () => {
+    // Omitting the key must reproduce the pre-fix behaviour rather than silently
+    // dropping every lease after the first.
+    const acc = createRentAccumulator();
+    for (const price of [3_000, 4_000, 5_000]) acc.add(lease({ listPrice: price }));
+    const row = acc.finalize().find((r) => r.match_tier === 'nbhd' && r.bedrooms_above === 4);
+    expect(row?.sample_count).toBe(3);
+  });
+
+  it('dedupes suite cohorts too', () => {
+    const acc = createRentAccumulator();
+    for (let i = 0; i < 3; i++) {
+      acc.add(lease({ listPrice: 2_000, dedupeKey: 'same-basement', unparsedAddress: '1 Test Street Basement, Toronto, ON' }));
+    }
+    expect(acc.finalize().filter((r) => String(r.match_tier).startsWith('suite_'))).toHaveLength(0);
+  });
+});
