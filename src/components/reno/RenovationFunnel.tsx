@@ -39,6 +39,14 @@ const TYPICAL: Omit<HEFormState, 'city' | 'cityRegion' | 'propertySubType'> = {
   buildingAreaTotal: null,
 };
 
+/** What we keep from a resolved address, and post once a result has rendered. */
+type RenoLookup = {
+  label: string;
+  lat: number | null;
+  lng: number | null;
+  matched: boolean;
+};
+
 export default function RenovationFunnel({
   tree,
   initialCity,
@@ -66,6 +74,14 @@ export default function RenovationFunnel({
   const autoTried = useRef(false);
   const inputRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  /**
+   * The geocoded home the visitor actually named, kept so `submit` can record it.
+   *
+   * A ref rather than state on purpose: nothing renders from it, and `submit` is a
+   * dependency-free useCallback that the rehydrate effect depends on — putting this in
+   * state would re-create `submit` on every address change and re-run that effect.
+   */
+  const lookupRef = useRef<RenoLookup | null>(null);
 
   const community = tree[form.city]?.find((c) => c.cityRegion === form.cityRegion);
   const types = community?.types ?? [];
@@ -97,6 +113,27 @@ export default function RenovationFunnel({
         setError(json.error ?? 'Something went wrong. Please try again.');
         return;
       }
+
+      // Keep the home they just described. Fired only once an answer is on its way, so a
+      // half-typed address never lands in the table, and awaited by nobody — a failed
+      // capture must not cost the visitor their result. The server drops the address
+      // unless they are signed in (migration 129).
+      const loc = lookupRef.current;
+      void fetch('/api/reno/lookups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: loc?.label ?? null,
+          lat: loc?.lat ?? null,
+          lng: loc?.lng ?? null,
+          city: f.city,
+          cityRegion: f.cityRegion,
+          propertySubType: f.propertySubType,
+          matched: loc?.matched ?? false,
+        }),
+      }).catch(() => {
+        /* capture is best-effort */
+      });
       if (json.locked) {
         setResult({ locked: true, catalog: json.catalog ?? [] });
       } else {
@@ -129,11 +166,15 @@ export default function RenovationFunnel({
         const parsed = JSON.parse(raw) as {
           form?: HEFormState;
           coords?: { lat: number; lng: number } | null;
+          lookup?: RenoLookup | null;
         } & Partial<HEFormState>;
         const f = (parsed.form ?? (parsed as HEFormState));
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setForm(f);
         if (parsed.coords) setCoords(parsed.coords);
+        // Restore BEFORE the auto-submit, so the capture that follows carries the address
+        // they typed while signed out — now against the account they just signed into.
+        if (parsed.lookup) lookupRef.current = parsed.lookup;
         void submit(f);
       } catch {
         /* corrupt stash — ignore */
@@ -143,7 +184,9 @@ export default function RenovationFunnel({
 
   const onUnlock = useCallback(() => {
     try {
-      sessionStorage.setItem(STASH_KEY, JSON.stringify({ form, coords }));
+      // The lookup rides along. This is the one path where an anonymous visitor becomes a
+      // signed-in one with an address already typed — the best capture the funnel gets.
+      sessionStorage.setItem(STASH_KEY, JSON.stringify({ form, coords, lookup: lookupRef.current }));
     } catch {
       /* storage blocked — unlock still navigates */
     }
@@ -190,6 +233,8 @@ export default function RenovationFunnel({
             onResolve={(r) => {
               setResult(null);
               setCoords(r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null);
+              // `r.label` is the home they picked. It used to end here.
+              lookupRef.current = { label: r.label, lat: r.lat, lng: r.lng, matched: r.matched };
               setForm((f) => ({ ...f, city: r.city || f.city, cityRegion: r.cityRegion, propertySubType: '' }));
             }}
           />
