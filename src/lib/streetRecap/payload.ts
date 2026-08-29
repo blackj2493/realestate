@@ -76,18 +76,61 @@ export interface BuildInput {
   city: { scope: RecapScope; sold: SoldAgg };
   actives: ActiveAgg | null;
   dataAsOf: string | null;
-  now: number;
+  /** What the email calls the window, from previousMonthWindow(). */
+  monthLabel: string;
 }
 
 const pct = (n: number, d: number): number | null =>
   d > 0 ? Math.round((n / d) * 1000) / 10 : null;
 
-/** The month the window describes, in the reader's timezone. */
-export function monthLabel(now: number): string {
-  return new Date(now).toLocaleDateString("en-CA", {
-    month: "long",
+export interface RecapMonth {
+  /** Inclusive lower bound, "YYYY-MM-DD". */
+  from: string;
+  /** Exclusive upper bound, "YYYY-MM-DD". */
+  to: string;
+  /** "August" — what the email calls the window. */
+  label: string;
+  /** "2026-08" — the idempotency key's month part. */
+  key: string;
+}
+
+/**
+ * The previous calendar month, as CALENDAR DATES rather than instants.
+ *
+ * `raw_vow_sold.close_date` is a `date`, not a timestamp. Comparing a date against a
+ * timestamptz makes Postgres cast it to midnight in the SERVER's timezone: `date
+ * '2026-08-01'` becomes 04:00Z under EDT. A bound of 05:00Z — midnight Toronto in EST —
+ * therefore excludes August 1 entirely, and would silently drop the first day of every
+ * month for half the year. Dates on both sides removes the timezone from the comparison,
+ * which is right anyway: a closing is a calendar date, not a moment.
+ *
+ * The MONTH is still resolved in Toronto, because "last month" is the reader's month: run
+ * at 00:30 UTC on September 1 the server is already in September while Toronto is not.
+ */
+export function previousMonthWindow(now: number): RecapMonth {
+  const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Toronto",
-  });
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date(now));
+  const y = Number(parts.find((p) => p.type === "year")!.value);
+  const m = Number(parts.find((p) => p.type === "month")!.value); // 1-12
+
+  const py = m === 1 ? y - 1 : y;
+  const pm = m === 1 ? 12 : m - 1;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return {
+    from: `${py}-${pad(pm)}-01`,
+    to: `${y}-${pad(m)}-01`,
+    key: `${py}-${pad(pm)}`,
+    // Midday UTC on a day that exists in every month, formatted in UTC — no zone can shift
+    // it into a neighbouring month.
+    label: new Date(Date.UTC(py, pm - 1, 15, 12)).toLocaleDateString("en-CA", {
+      month: "long",
+      timeZone: "UTC",
+    }),
+  };
 }
 
 /**
@@ -115,7 +158,7 @@ export function buildStreetRecapPayload(i: BuildInput): StreetRecapPayload | nul
   return {
     scope: chosen.scope,
     address: i.address,
-    monthLabel: monthLabel(i.now),
+    monthLabel: i.monthLabel,
     local: chosen.sold,
     cityAgg,
     actives: i.actives && i.actives.active >= MIN_ACTIVES ? i.actives : null,

@@ -20,6 +20,13 @@
 --      reads stay cheap. That is also why FSA is unavailable for actives — the postal code
 --      lives only in the payload — and the caller falls back to the city for that line.
 --
+-- THE WINDOW IS AN EXPLICIT [p_from, p_to) RANGE OF DATES, not a rolling day count and not
+-- timestamps. Two reasons. A rolling 30 days run on the 2nd describes mostly August while
+-- calling itself September. And `close_date` is a `date`: compared against a timestamptz it
+-- is cast to midnight in the SERVER timezone, so a 05:00Z bound (midnight Toronto in EST)
+-- silently excludes the 1st of every month through EDT. Dates on both sides removes the
+-- timezone from the comparison, which is correct anyway — a closing is a calendar date.
+--
 -- The scope key is whatever the caller asked to group by, echoed back so a single call can
 -- serve many recipients at once: the worker collects every distinct neighbourhood across the
 -- whole audience and asks once.
@@ -31,7 +38,8 @@
 CREATE OR REPLACE FUNCTION public.street_recap_sold(
   p_scope text,
   p_keys  text[],
-  p_days  int DEFAULT 30
+  p_from  date,
+  p_to    date
 )
 RETURNS TABLE (
   scope_key    text,
@@ -55,7 +63,8 @@ AS $$
     round(percentile_cont(0.5) WITHIN GROUP (ORDER BY s.days_on_market)::numeric, 0) AS median_dom
   FROM raw_vow_sold s
   WHERE s.transaction_type = 'For Sale'          -- NOT 'Sale'; see trap 1
-    AND s.close_date >= now() - make_interval(days => p_days)
+    AND s.close_date >= p_from
+    AND s.close_date <  p_to
     AND s.close_price > 0
     AND s.list_price  > 0
     AND CASE p_scope
@@ -75,7 +84,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.street_recap_sold_types(
   p_scope text,
   p_keys  text[],
-  p_days  int DEFAULT 30
+  p_from  date,
+  p_to    date
 )
 RETURNS TABLE (
   scope_key         text,
@@ -97,7 +107,8 @@ AS $$
     round(percentile_cont(0.5) WITHIN GROUP (ORDER BY s.days_on_market)::numeric, 0) AS median_dom
   FROM raw_vow_sold s
   WHERE s.transaction_type = 'For Sale'
-    AND s.close_date >= now() - make_interval(days => p_days)
+    AND s.close_date >= p_from
+    AND s.close_date <  p_to
     AND s.close_price > 0
     AND s.list_price  > 0
     AND s.property_sub_type IS NOT NULL
@@ -144,7 +155,7 @@ AS $$
   GROUP BY 1;
 $$;
 
-COMMENT ON FUNCTION public.street_recap_sold(text, text[], int) IS
+COMMENT ON FUNCTION public.street_recap_sold(text, text[], date, date) IS
   'Monthly Street Recap: sold counts, above-asking counts and median DOM, grouped by neighbourhood / FSA / city. transaction_type = ''For Sale'' only.';
 COMMENT ON FUNCTION public.street_recap_actives(text, text[]) IS
   'Monthly Street Recap: standing inventory, price-cut share and median true DOM. Active = NOT in the terminal status set; no full_payload read, so FSA is unsupported here.';

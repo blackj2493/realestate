@@ -7,8 +7,9 @@
  *   • canSendOnboarding — the milestone drip   (scripts/worker/onboarding.ts)
  *   • canSendAlerts     — the nightly digest   (scripts/worker/alerts.ts)
  *   • canSendDataDrop   — the weekly market email (scripts/worker/dataDrop.ts)
+ *   • canSendStreetRecap — the monthly owner email (scripts/worker/streetRecap.ts)
  *
- * All three read the same `email_prefs` row and all treat a MISSING row as "all streams on"
+ * All of them read the same `email_prefs` row and all treat a MISSING row as "all streams on"
  * (migration 106's opt-out model, so existing users need no backfill). They differ in what
  * each preference MEANS for that stream — which is dictated by the words the user actually
  * read on /account/emails, not by the column name. Compare canSendAlerts, where cadence
@@ -25,6 +26,9 @@ export interface EmailPrefsRow {
   alerts?: boolean;
   /** "Weekly market update" — the Data Drop (WS2). */
   data_drop?: boolean;
+  /** "Your street, monthly" — the Street Recap. Migration 106 named the column for a
+   *  home-VALUE email that was never built; the recap is what finally sends on it. */
+  home_value?: boolean;
   cadence?: "standard" | "reduced" | "minimal";
   pause_until?: string | null;
 }
@@ -243,6 +247,89 @@ export function canSendDataDrop(i: CanSendDataDropInput): boolean {
   if (lastDrop !== null && digestSentToday(sent, i.now)) {
     const overdue = i.now - lastDrop >= DEFERRAL_RELEASE_DAYS * DAY_MS;
     if (!overdue) return false;
+  }
+
+  return true;
+}
+
+// ── The monthly Street Recap ──────────────────────────────────────────────────
+
+/**
+ * How long a recap may be deferred before it goes out despite a same-day digest.
+ *
+ * LONGER THAN THE DATA DROP'S, and it has to be. This email is monthly, so reusing the
+ * 21-day figure would release it every single month and the cap would never bind. 40 days
+ * means a deferral costs at most one month, and the month after is guaranteed.
+ */
+export const RECAP_DEFERRAL_RELEASE_DAYS = 40;
+
+/** When this user last received a recap, from the newest `street_recap:` stamp. */
+export function lastStreetRecapAt(
+  sent: Record<string, string> | null | undefined
+): number | null {
+  if (!sent) return null;
+  let newest: number | null = null;
+  for (const [k, v] of Object.entries(sent)) {
+    if (!k.startsWith("street_recap:")) continue;
+    const t = Date.parse(v);
+    if (Number.isFinite(t) && (newest === null || t > newest)) newest = t;
+  }
+  return newest;
+}
+
+export interface CanSendRecapInput {
+  /** "street_recap:2026-09" — matched as a prefix, like the Data Drop's week. */
+  monthKeyPrefix: string;
+  now: number;
+  marketingOptOut?: boolean;
+  prefs?: EmailPrefsRow | null;
+  lifecycle?: LifecycleRow | null;
+}
+
+/**
+ * May we send this person this month's Street Recap?
+ *
+ * Reads `home_value` — the column migration 106 created for a Phase 1 that never shipped,
+ * and which `streams.ts` has been hiding precisely because nothing sent it. Shipping the
+ * worker is what earns that toggle its place on /account/emails.
+ *
+ * CADENCE, and why 'reduced' keeps it. "Fewer emails — at most one non-urgent email a week"
+ * is a promise a MONTHLY email cannot break; excluding it would silently redefine the
+ * setting. 'minimal' — "just alerts you set and account messages" — does not describe an
+ * email we send unprompted, so it drops. Same reasoning as canSendDataDrop, same table,
+ * and both answers come from the words on the page rather than the column name.
+ *
+ * ANONYMOUS LEADS HAVE NO PREFS ROW, and that is correct rather than an oversight. An
+ * `address_watches` subscriber has no account, so migration 106's opt-out model applies:
+ * a missing row means every stream is on. Their consent lives in `address_watches.status`,
+ * which the one-click unsubscribe route flips — so an opted-out lead never reaches this
+ * function at all, because the audience query stops selecting them.
+ */
+export function canSendStreetRecap(i: CanSendRecapInput): boolean {
+  if (i.marketingOptOut) return false;
+
+  const prefs = i.prefs ?? null;
+  if (prefs?.home_value === false) return false;
+  if (prefs?.pause_until && Date.parse(prefs.pause_until) > i.now) return false;
+  if (prefs?.cadence === "minimal") return false;
+
+  const sent = i.lifecycle?.sent ?? null;
+  if (sent && Object.keys(sent).some((k) => k.startsWith(i.monthKeyPrefix))) return false;
+
+  // Same-day collision, with the DATA DROP counted as well as the digest. If the 2nd of a
+  // month lands on a Thursday the weekly goes out at 11:40 UTC and this at 12:10 — thirty
+  // minutes apart, and far worse than the digest overlap because both are unprompted. The
+  // weekly runs first, so it wins by simply having stamped already.
+  const lastDrop = lastDataDropAt(sent);
+  const collided =
+    digestSentToday(sent, i.now) ||
+    (lastDrop !== null && torontoDay(lastDrop) === torontoDay(i.now));
+
+  // The first recap is never deferred, and a deferral releases after
+  // RECAP_DEFERRAL_RELEASE_DAYS so it costs at most one month.
+  const last = lastStreetRecapAt(sent);
+  if (last !== null && collided) {
+    if (i.now - last < RECAP_DEFERRAL_RELEASE_DAYS * DAY_MS) return false;
   }
 
   return true;

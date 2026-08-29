@@ -3,7 +3,7 @@ import {
   buildStreetRecapPayload,
   printableTypes,
   domVerdict,
-  monthLabel,
+  previousMonthWindow,
   MIN_SALES,
   MIN_ACTIVES,
   type SoldAgg,
@@ -36,7 +36,7 @@ const input = (over: Partial<BuildInput> = {}): BuildInput => ({
   city: { scope: scope("city", "Vaughan"), sold: sold({ sales: 686, aboveAsking: 116, medianDom: 21 }) },
   actives: { active: 1482, cutPrice: 382, medianTrueDom: 63 },
   dataAsOf: "2026-09-15T04:00:00Z",
-  now: NOW,
+  monthLabel: "August",
   ...over,
 });
 
@@ -151,10 +151,30 @@ describe("domVerdict", () => {
   });
 });
 
-describe("monthLabel", () => {
-  it("names the month in the reader's timezone, not the server's", () => {
-    // 2026-09-01T02:00Z is still August 31 in Toronto.
-    expect(monthLabel(Date.parse("2026-09-01T02:00:00Z"))).toBe("August");
-    expect(monthLabel(NOW)).toBe("September");
+describe("previousMonthWindow", () => {
+  it("returns calendar DATES, not instants", () => {
+    const w = previousMonthWindow(NOW); // 2026-09-15
+    // close_date is a `date`; a timestamptz bound would be cast to midnight in the SERVER
+    // timezone and silently drop the 1st of the month through EDT.
+    expect(w.from).toBe("2026-08-01");
+    expect(w.to).toBe("2026-09-01");
+    expect(w.key).toBe("2026-08");
+    expect(w.label).toBe("August");
+  });
+
+  it("resolves the month in Toronto, not UTC", () => {
+    // 00:30 UTC on September 1 is still 20:30 on August 31 in Toronto, so the previous
+    // month is JULY for the reader even though the server has already rolled over.
+    const w = previousMonthWindow(Date.parse("2026-09-01T00:30:00Z"));
+    expect(w.label).toBe("July");
+    expect(w.from).toBe("2026-07-01");
+    expect(w.to).toBe("2026-08-01");
+  });
+
+  it("rolls the year back in January", () => {
+    const w = previousMonthWindow(Date.parse("2026-01-14T17:00:00Z"));
+    expect(w.from).toBe("2025-12-01");
+    expect(w.to).toBe("2026-01-01");
+    expect(w.label).toBe("December");
   });
 });

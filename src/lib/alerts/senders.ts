@@ -50,4 +50,22 @@ export const SENDERS = {
     from: "PureProperty Data <data@pureproperty.ca>",
     replyTo: "support@pureproperty.ca",
   },
+  /**
+   * Monthly Street Recap — the owner stream.
+   *
+   * LITERAL, for the same reason as dataDrop: reading ALERTS_FROM_EMAIL would silently
+   * revert this to the support identity and nobody would notice for weeks.
+   *
+   * A SEPARATE IDENTITY FROM dataDrop, deliberately. The two say different things about why
+   * the reader is hearing from us — one is the market, the other is their own street — and
+   * somebody subscribed to both should be able to tell them apart in a threaded inbox
+   * without opening either. It also makes the reply useful: a reply to this stream is about
+   * one address, not about a market.
+   *
+   * TODO(Unit 1): move to the send subdomain alongside dataDrop once it is verified.
+   */
+  streetRecap: {
+    from: "PureProperty <homes@pureproperty.ca>",
+    replyTo: "support@pureproperty.ca",
+  },
 } satisfies Record<string, Sender>;
