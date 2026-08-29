@@ -246,8 +246,13 @@ async function loadMatrix(): Promise<{ matrixByVerbatim: Map<string, Coefficient
   let cursor = 0;
   for (;;) {
     const { data, error } = await sb
+      // Pinned to the community rung. Migration 130 lets a cohort be keyed on a postal FSA
+      // or a whole city as well, and 67 city names collide with an existing city_region
+      // spelling — without this filter a city cohort's rows would silently mix into a
+      // community cohort's feature set. The ladder is opted into deliberately, not inherited.
       .from('avm_multiplier_matrix')
       .select('id, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
+      .eq('cohort_rung', 'community')
       .gt('id', cursor)
       .order('id', { ascending: true })
       .limit(READ_PAGE);
