@@ -18,8 +18,11 @@ name: Refresh Zoning
 # re-propagates the committed geojsons; re-harvest + commit locally when a municipality
 # updates its by-law, and the next run picks it up.
 on:
-  schedule:
-    - cron: '0 6 20 * *'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 06:00 UTC on the 20th of each month; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:

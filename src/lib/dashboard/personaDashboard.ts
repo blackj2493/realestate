@@ -47,7 +47,9 @@ export interface PersonaDashboardSpec {
 
 export const PERSONA_DASHBOARD: Record<PersonaType, PersonaDashboardSpec> = {
   smart: {
-    featuredBoards: ['fresh', 'cap_rate', 'suite'],
+    // 'fresh' led here until it was retired for duplicating the New column. Left at two
+    // leads rather than promoting a board this persona never asked for.
+    featuredBoards: ['cap_rate', 'suite'],
     headlineMetrics: ['medianPrice', 'medianCapRate', 'monthsSupply'],
   },
   cashflow: {
@@ -55,7 +57,7 @@ export const PERSONA_DASHBOARD: Record<PersonaType, PersonaDashboardSpec> = {
     headlineMetrics: ['medianCapRate', 'cashflowShare', 'soldToList'],
   },
   flippers: {
-    featuredBoards: ['price_drop', 'fresh', 'carry'],
+    featuredBoards: ['price_drop', 'carry'],
     headlineMetrics: ['pctStale', 'priceCutShare', 'soldToList'],
   },
   builders: {

@@ -12,8 +12,11 @@ name: Refresh Mortgage Rate
 # NOTE (new-workflow gotcha): scheduled triggers only start once this file is on
 # the DEFAULT branch. Until then, use the "Run workflow" button (workflow_dispatch).
 on:
-  schedule:
-    - cron: '0 11 1 * *'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 11:00 UTC on the 1st of each month; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:

@@ -33,4 +33,22 @@ describe("normalizeConfig (shared by localStorage + dashboard_prefs jsonb)", () 
     const c = normalizeConfig({ marketActivity: { basementFinished: true } });
     expect(c.marketActivity.basement).toBe("finished");
   });
+
+  // A retired board ('fresh') has to leave the stored config, not just the render —
+  // this object round-trips through dashboard_prefs and would carry the dead id for
+  // years otherwise.
+  it("drops a retired board id and keeps the user's remaining picks", () => {
+    const c = normalizeConfig({ boards: ["cap_rate", "fresh", "carry"] });
+    expect(c.boards).toEqual(["cap_rate", "carry"]);
+  });
+
+  it("falls back to the defaults when every stored board is retired", () => {
+    const c = normalizeConfig({ boards: ["fresh"] });
+    expect(c.boards).toEqual([...DEFAULT_BOARD_ORDER]);
+  });
+
+  it("leaves a valid board set untouched, order included", () => {
+    const c = normalizeConfig({ boards: ["carry", "cap_rate"] });
+    expect(c.boards).toEqual(["carry", "cap_rate"]);
+  });
 });

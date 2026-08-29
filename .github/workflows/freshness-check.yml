@@ -13,8 +13,11 @@ name: Data Freshness Check
 # a fresh cursor, so this reports green while the schedule is already broken (2026-08-28).
 # schedule-watchdog.yml is the guard for that half.
 on:
-  schedule:
-    - cron: '28 */6 * * *' # :28 not :00 — GitHub defers `schedule` hardest at the top of the hour
+  # NOT scheduled by GitHub. GitHub deferred this trigger by hours and dropped it
+  # outright for two days running (2026-08-27..29), and it never backfills a dropped
+  # run. Supabase pg_cron now POSTs a workflow_dispatch at 00:28, 06:28, 12:28 and 18:28 UTC —
+  # see supabase/migrations/127_pg_cron_workflow_dispatch.sql. To change the time,
+  # edit cron.job in the database, NOT this file.
   workflow_dispatch:
 
 permissions:

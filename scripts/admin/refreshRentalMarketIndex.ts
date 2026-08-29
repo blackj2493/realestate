@@ -29,8 +29,27 @@ async function main() {
 
   // One filtered pass over the active for-lease inventory (asking rents).
   // city is a scalar column; TransactionType/beds/baths live in full_payload.
+  //
+  // ONE ROW PER PROPERTY, not per record. The feed carries the same rental more than
+  // once — a relist, a corrected record, the same home filed under both "Toronto" and
+  // "Toronto C07" — and every copy used to count as an independent comp. Measured
+  // 2026-08-22: 5,284 of 91,159 lease records (5.8%) are duplicates, and 426 of the
+  // 5,867 published neighbourhood cohorts exist ONLY because duplicates lifted them
+  // over MIN_COHORT_SAMPLES.
+  //
+  // 262 Senlac Road is what that looks like on screen: its cohort held $23,000,
+  // $23,000 and $8,000, where the two $23,000 records are both 316 Churchill Avenue.
+  // The duplicate was the median AND the third sample, so the page published
+  // $23,008/mo as a neighbourhood comp for a home whose area rents in the $3-4k range.
+  // Deduped, that cohort is n=2, falls below the floor, and the lookup drops to a
+  // broader rung — which is the whole point of having a floor.
+  //
+  // Same key region_active_aggregates uses (migration 121). NOTE last_seen_at is a
+  // CREATION timestamp here, not a heartbeat, so DESC keeps the newest record for a
+  // property — the current asking rent.
   const { rows } = await client.query(
-    `SELECT list_price,
+    `SELECT DISTINCT ON (coalesce(nullif(property_hash,''), nullif(norm_address,''), listing_key))
+            list_price,
             city,
             city_region,
             property_sub_type,
@@ -40,9 +59,12 @@ async function main() {
             full_payload->>'BedroomsBelowGrade'     AS bedrooms_below,
             full_payload->>'BathroomsTotalInteger'  AS bathrooms_total,
             full_payload->>'CountyOrParish'          AS county,
-            full_payload->>'UnparsedAddress'         AS unparsed_address
+            full_payload->>'UnparsedAddress'         AS unparsed_address,
+            coalesce(nullif(property_hash,''), nullif(norm_address,''), listing_key) AS dedupe_key
        FROM listings
-      WHERE lower(coalesce(full_payload->>'TransactionType', '')) ~ '(leas|rent)'`,
+      WHERE lower(coalesce(full_payload->>'TransactionType', '')) ~ '(leas|rent)'
+      ORDER BY coalesce(nullif(property_hash,''), nullif(norm_address,''), listing_key),
+               last_seen_at DESC NULLS LAST, listing_key DESC`,
   );
   for (const r of rows) {
     acc.add({
@@ -66,6 +88,9 @@ async function main() {
       // main-floor unit wearing the whole house's sub-type. Without this column they
       // land in the whole-home cohorts and drag the medians that become cap_rate_est.
       unparsedAddress: r.unparsed_address,
+      // Belt and braces with the DISTINCT ON above: the model enforces it too, so a
+      // future caller that forgets the SQL cannot quietly reintroduce duplicate comps.
+      dedupeKey: r.dedupe_key,
     });
   }
 

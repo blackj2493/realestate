@@ -19,6 +19,16 @@
 import { getTypesenseClient } from "@/lib/typesense/client";
 import { bedSplit, bedKey, bedKeyOrder, BED_ABOVE_CAP, type BedCountsRaw } from "@/lib/listings/bedSplit";
 import { isPartialUnitRental, IN_HOME_UNIT_LABEL } from "@/lib/listings/inHomeUnit";
+import { MONTHLY_RENT_BAND } from "@/lib/metrics/sanityBand";
+
+/** Sub-types with no dwelling to rent — excluded from the lease queries. A land lease
+ *  is quoted per year or as a price, which is how $238,000/mo reached a rent tile. */
+const NON_DWELLING_SUBTYPES = [
+  "Vacant Land",
+  "Vacant Land Condo",
+  "Parking Space",
+  "Locker",
+] as const;
 
 export interface NearbyListing {
   id: string;
@@ -441,10 +451,23 @@ export async function getNearbyForSale(
   const radiusKm = opts.radiusKm ?? 2;
   const limit = Math.min(opts.limit ?? 12, 12);
   // Default is FOR SALE (the profile hero). Lease rents sit far below the sale floor, so the
-  // $100k sanity floor would drop nearly every rental — use a small floor for lease instead.
+  // $100k sanity floor would drop nearly every rental — use the dwelling rent band instead.
+  //
+  // THE CEILING IS NOT OPTIONAL. This had a floor and no ceiling, and on 2026-08-21 the
+  // Kearney address page published a median rent of $120,300/mo: the area holds exactly
+  // two for-lease records within 12km — a $2,600 detached and a $238,000 VACANT LAND
+  // listing carrying a sale price — and the median of two is their midpoint. The rent
+  // ladder has rejected records outside this band since it was written; only this path
+  // could not see the rule, because it lived in the worker.
   const isLease = opts.transactionType === "lease";
   const txnType = isLease ? "For Lease" : "For Sale";
-  const priceFloor = isLease ? 500 : 100000;
+  const priceFloor = isLease ? MONTHLY_RENT_BAND.min : 100000;
+  // A dwelling rent has an upper bound; a sale price does not.
+  const priceCeiling = isLease ? ` && ListPrice:<=${MONTHLY_RENT_BAND.max}` : "";
+  // Vacant land, parking and lockers have no "rent for a home" to contribute. They are
+  // also where the mispriced lease records cluster, since a land lease is quoted per
+  // year or as an outright price.
+  const dwellingOnly = isLease ? ` && PropertySubType:!=[${NON_DWELLING_SUBTYPES.map((t) => `\`${t}\``).join(",")}]` : "";
   try {
     // Fetch up to the 100 nearest (display cap, CLAUDE.md §4): first `limit` become
     // carousel cards; asking-price stats are computed over the whole page.
@@ -456,7 +479,7 @@ export async function getNearbyForSale(
         query_by: "City",
         // Exclude commercial so the "homes for sale/rent" rows are actually homes (mirrors the
         // city hubs' ACTIVE_FILTER — otherwise "Sale Of Business"/"Store-Office" bleed in).
-        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`${txnType}\` && ListPrice:>=${priceFloor} && PropertyType:!=Commercial`,
+        filter_by: `location:(${lat}, ${lng}, ${radiusKm} km) && TransactionType:=\`${txnType}\` && ListPrice:>=${priceFloor}${priceCeiling}${dwellingOnly} && PropertyType:!=Commercial`,
         sort_by: `location(${lat}, ${lng}):asc`,
         include_fields: FIELDS,
         per_page: 100,

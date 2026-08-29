@@ -44,6 +44,11 @@ jobs:
             // cronMinutesUtc lists the job's daily trigger slots as minutes-past-UTC-midnight
             // and is what makes the LATE check possible; omit it for a workflow whose normal
             // trigger is not a cron.
+            //
+            // Four of these are triggered by Supabase pg_cron now, not by GitHub's scheduler
+            // (supabase/migrations/127_pg_cron_workflow_dispatch.sql). cronMinutesUtc must keep
+            // matching cron.job in the database: retime a job there and retime it here too, or
+            // this measures the wrong slot and reports a job late while it is on time.
             const WATCHED = [
               { file: 'daily-sync.yml', label: 'Daily Real Estate Sync',
                 maxAgeHours: 26, cronMinutesUtc: [3 * 60 + 17], maxDelayHours: 4 },
@@ -90,6 +95,16 @@ jobs:
               return best;
             };
 
+            // The LATE check needs a window of runs, not just the newest one: an extra
+            // manual run must not be able to hide — or fake — a missed slot.
+            const recentRuns = async (file) => {
+              const res = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner, repo: context.repo.repo,
+                workflow_id: file, per_page: 20,
+              });
+              return res.data.workflow_runs;
+            };
+
             const latestRun = async (file, event) => {
               const params = {
                 owner: context.repo.owner, repo: context.repo.repo,
@@ -128,16 +143,31 @@ jobs:
 
               let delayH = null;
               if (w.cronMinutesUtc) {
-                // Measure lateness against a run the SCHEDULER started. A manual dispatch or a
-                // workflow_run has no cron time to be late against and would fake a huge delay.
-                const sched = await latestRun(w.file, 'schedule');
-                if (sched) {
-                  const startedMs = new Date(sched.created_at).getTime();
-                  delayH = (startedMs - lastExpected(startedMs, w.cronMinutesUtc)) / HOUR;
-                  if (delayH > w.maxDelayHours) {
-                    reasons.push('LATE: last scheduled run started ' + delayH.toFixed(1) +
-                                 'h after its cron time (limit ' + w.maxDelayHours + 'h)');
-                  }
+                // Lateness belongs to the SLOT, not to any one run: once a trigger time has
+                // passed, SOME run should have appeared within maxDelayHours of it.
+                //
+                // The previous version asked `latestRun(file, 'schedule')` instead. That broke
+                // the moment a job moved off GitHub's scheduler onto pg_cron: its last
+                // schedule-event run is frozen in history forever, so the same stale delay
+                // would be re-reported every 4 hours until someone muted the alert. Reading
+                // the slot instead is trigger-agnostic, and an extra manual run can no longer
+                // fake a delay, because one more run never removes the on-time one.
+                //
+                // Anchor on the newest slot whose deadline has already passed, so a job is
+                // never called late while it still has time to run.
+                const expected = lastExpected(now - w.maxDelayHours * HOUR, w.cronMinutesUtc);
+                const deadline = expected + w.maxDelayHours * HOUR;
+                const recent = await recentRuns(w.file);
+                const times = recent.map((r) => new Date(r.created_at).getTime());
+                const onTime = times.filter((t) => t >= expected && t <= deadline).sort((a, b) => a - b)[0];
+                if (onTime !== undefined) {
+                  delayH = (onTime - expected) / HOUR;
+                } else {
+                  const after = times.filter((t) => t > deadline).sort((a, b) => a - b)[0];
+                  delayH = ((after === undefined ? now : after) - expected) / HOUR;
+                  reasons.push('LATE: nothing ran within ' + w.maxDelayHours + 'h of the ' +
+                               new Date(expected).toISOString().slice(11, 16) + ' UTC slot (' +
+                               delayH.toFixed(1) + 'h' + (after === undefined ? ' and counting' : '') + ')');
                 }
               }
 

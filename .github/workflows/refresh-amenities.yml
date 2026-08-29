@@ -17,8 +17,11 @@ name: Refresh Walkability / Amenity Proximity
 #
 # CADENCE: quarterly (5th of Feb/May/Aug/Nov, 07:00 UTC — offset from the schools refresh).
 on:
-  schedule:
-    - cron: '0 7 5 2,5,8,11 *'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 07:00 UTC on the 5th of Feb, May, Aug and Nov; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:

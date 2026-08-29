@@ -16,8 +16,11 @@ name: Weekly Backfill Missing Actives
 # CADENCE: weekly (Wednesdays 09:00 UTC — offset from the Sunday ghost reconcile). Manual full
 # clears via workflow_dispatch (raise/remove --limit).
 on:
-  schedule:
-    - cron: '0 9 * * 3'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 09:00 UTC every Wednesday; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
     inputs:
       limit:
