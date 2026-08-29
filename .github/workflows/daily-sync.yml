@@ -21,8 +21,11 @@ name: Daily Real Estate Sync
 # 03:44 start to a 05:52 send; the emails now fire the moment the data is fresh, and still
 # go out on their own cron if this workflow never runs at all.
 on:
-  schedule:
-    - cron: '17 3 * * *'
+  # NOT scheduled by GitHub. GitHub deferred this trigger by hours and dropped it
+  # outright for two days running (2026-08-27..29), and it never backfills a dropped
+  # run. Supabase pg_cron now POSTs a workflow_dispatch at 03:17 UTC —
+  # see supabase/migrations/127_pg_cron_workflow_dispatch.sql. To change the time,
+  # edit cron.job in the database, NOT this file.
   # Also allow manual triggering from the GitHub website / `gh workflow run`.
   workflow_dispatch:
 
@@ -30,6 +33,13 @@ on:
 permissions:
   contents: read
   issues: write
+
+# Two syncs must never write the same rows at once. There was no guard here while the
+# GitHub cron was the only trigger; now that a manual run and a pg_cron dispatch can
+# both land, one is required. An overlap does not error — it leaves rows stale.
+concurrency:
+  group: daily-sync
+  cancel-in-progress: false
 
 jobs:
   run-ingester:

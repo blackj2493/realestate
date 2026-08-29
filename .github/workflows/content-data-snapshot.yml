@@ -19,8 +19,11 @@ name: Content Data Snapshot
 # Actions pushes, allow the github-actions bot to bypass, or point the routine at a data
 # branch instead — either way the snapshot must land where the routine's checkout can read it.
 on:
-  schedule:
-    - cron: '26 9 * * *' # :26 not :00 — GitHub defers `schedule` hardest at the top of the hour
+  # NOT scheduled by GitHub. GitHub deferred this trigger by hours and dropped it
+  # outright for two days running (2026-08-27..29), and it never backfills a dropped
+  # run. Supabase pg_cron now POSTs a workflow_dispatch at 09:26 UTC —
+  # see supabase/migrations/127_pg_cron_workflow_dispatch.sql. To change the time,
+  # edit cron.job in the database, NOT this file.
   workflow_dispatch:
 
 permissions:
