@@ -84,9 +84,20 @@ const whole = (n: number | null | undefined): string | null =>
  * the city comparison when it is big enough to be a claim, then the standing-inventory gap
  * (usually the strongest thing we know), then the above-asking share.
  */
+/**
+ * A place a reader would say out loud, or null.
+ *
+ * An FSA is a sorting code. "Homes in N7G sold in 23 days" tells someone in Strathroy
+ * nothing about Strathroy, and the postal area is not what they call where they live. When
+ * the cohort is an FSA the email says "near you" and lets the address in the lede do the
+ * locating — which is true regardless of how the feed files their town.
+ */
+const placeName = (p: StreetRecapPayload): string | null =>
+  p.scope.kind === "fsa" ? null : p.scope.label;
+
 function subjectFor(p: StreetRecapPayload): { subject: string; preheader: string } {
   const v = domVerdict(p);
-  const where = p.scope.label;
+  const where = placeName(p);
 
   const preheader =
     v && p.cityAgg?.medianDom != null
@@ -101,9 +112,19 @@ function subjectFor(p: StreetRecapPayload): { subject: string; preheader: string
           : `What changed near ${p.address} in ${p.monthLabel}.`;
 
   if (p.local.medianDom != null) {
-    return { subject: `Homes in ${where} sold in ${p.local.medianDom} days last month`, preheader };
+    return {
+      subject: where
+        ? `Homes in ${where} sold in ${p.local.medianDom} days last month`
+        : `Homes near you sold in ${p.local.medianDom} days last month`,
+      preheader,
+    };
   }
-  return { subject: `${p.local.sales} homes sold in ${where} last month`, preheader };
+  return {
+    subject: where
+      ? `${p.local.sales} homes sold in ${where} last month`
+      : `${p.local.sales} homes sold near you last month`,
+    preheader,
+  };
 }
 
 // ── Fragments ─────────────────────────────────────────────────────────────────
@@ -121,9 +142,10 @@ function headlineBlock(p: StreetRecapPayload): string {
     ? `is how long a home near <b>${esc(p.address)}</b> took to sell in ${p.monthLabel}.`
     : `homes changed hands near <b>${esc(p.address)}</b> in ${p.monthLabel}.`;
 
+  const where = placeName(p);
   const because = v
     ? `Across ${esc(p.scope.city)} as a whole it was <b>${p.cityAgg?.medianDom} days</b>. ` +
-      `${esc(p.scope.label)} is moving ${v.faster ? "faster" : "slower"} than the city around it.`
+      `${where ? esc(where) : "Your area"} is moving ${v.faster ? "faster" : "slower"} than the city around it.`
     : p.cityAgg?.medianDom != null
       ? `Across ${esc(p.scope.city)} it was <b>${p.cityAgg.medianDom} days</b> — about the same.`
       : `Measured across every sale we have on record for the month.`;
@@ -164,7 +186,7 @@ function rowsBlock(p: StreetRecapPayload): string {
     });
   }
   for (const t of printableTypes(p.local.byType)) {
-    rows.push({ k: t.type, v: `${t.medianDom} days`, note: `${t.sales} sold` });
+    rows.push({ k: typeLabel(t.type), v: `${t.medianDom} days`, note: `${t.sales} sold` });
   }
 
   const tr = rows
@@ -198,6 +220,16 @@ const TYPE_WORD: Record<string, string> = {
 };
 
 const typeWord = (t: string): string => TYPE_WORD[t.trim()] ?? t.trim().toLowerCase();
+
+/**
+ * The same names, capitalised for a table row. "Att/Row/Townhouse" is how the feed files a
+ * townhouse; it is not a word, and printing it in a row label makes the email look like a
+ * database export.
+ */
+const typeLabel = (t: string): string => {
+  const w = typeWord(t);
+  return w.charAt(0).toUpperCase() + w.slice(1);
+};
 const article = (w: string): string => ("aeiou".includes(w[0]?.toLowerCase() ?? "") ? "An" : "A");
 
 /**
@@ -254,7 +286,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
 
   // ── Plaintext part. Required, not optional (§11.7 item 6). ──────────────────
   const t: string[] = [];
-  t.push(`${p.scope.label.toUpperCase()} — ${p.monthLabel.toUpperCase()}`, "");
+  t.push(`${(placeName(p) ?? "NEAR YOU").toUpperCase()} — ${p.monthLabel.toUpperCase()}`, "");
   if (p.local.medianDom != null) {
     t.push(`${p.local.medianDom} days is how long a home near ${p.address} took to sell.`, "");
     if (p.cityAgg?.medianDom != null) t.push(`Across ${p.scope.city} it was ${p.cityAgg.medianDom} days.`, "");
@@ -263,7 +295,8 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   }
   if (p.actives?.medianTrueDom != null) {
     t.push(
-      `Still for sale: ${p.actives.active} homes, listed ${p.actives.medianTrueDom} days each` +
+      `Still for sale: ${p.actives.active.toLocaleString("en-CA")} homes, ` +
+        `listed ${p.actives.medianTrueDom} days each` +
         (p.cutPct != null ? `, ${whole(p.cutPct)}% of them already cut.` : "."),
       ""
     );
@@ -272,9 +305,20 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   t.push(`  ${"Homes sold".padEnd(24)}${p.local.sales}`);
   if (p.abovePct != null) t.push(`  ${"Sold above asking".padEnd(24)}${whole(p.abovePct)}%`);
   for (const ty of printableTypes(p.local.byType)) {
-    t.push(`  ${ty.type.padEnd(24)}${ty.medianDom} days (${ty.sales} sold)`);
+    t.push(`  ${typeLabel(ty.type).padEnd(24)}${ty.medianDom} days (${ty.sales} sold)`);
   }
   t.push("");
+  // Parity with the HTML part: the same sentence, under the same spread rule.
+  const tc = printableTypes(p.local.byType);
+  if (tc.length >= 2 && tc[0].medianDom != null && tc[1].medianDom != null &&
+      Math.abs(tc[0].medianDom - tc[1].medianDom) >= MIN_TYPE_SPREAD_DAYS) {
+    t.push(
+      `${article(typeWord(tc[0].type))} ${typeWord(tc[0].type)} near you now sells in ` +
+        `${tc[0].medianDom} days. ${article(typeWord(tc[1].type))} ${typeWord(tc[1].type)} ` +
+        `takes ${tc[1].medianDom}.`,
+      ""
+    );
+  }
   t.push("See what's for sale near you:", ctaUrl, "");
   t.push("--");
   t.push(`You get this because you asked us to watch ${p.address}.`);

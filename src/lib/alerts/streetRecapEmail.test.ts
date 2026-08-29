@@ -167,3 +167,35 @@ describe("degrading gracefully", () => {
     expect(html).not.toContain("takes");
   });
 });
+
+/**
+ * An FSA is a sorting code, not a place. "Homes in N7G sold in 23 days" tells someone in
+ * Strathroy nothing about Strathroy — and the first live dry run produced exactly that
+ * scope for all three real recipients, because the geocoder's city and the feed's never
+ * match. The email says "near you" and lets the address do the locating.
+ */
+describe("an FSA is never printed as a place", () => {
+  const fsaPayload = () =>
+    payload({
+      scope: { kind: "fsa", label: "M5A", city: "Toronto" },
+      address: "35 Parliament Street",
+      cityAgg: null,
+      cityAbovePct: null,
+    });
+
+  it("says 'near you' in the subject rather than the postal code", () => {
+    const { subject, html, text } = render(fsaPayload());
+    expect(subject).toBe("Homes near you sold in 18 days last month");
+    expect(subject).not.toContain("M5A");
+    expect(html).not.toContain("M5A");
+    expect(text).not.toContain("M5A");
+  });
+
+  it("still renders a complete email with no city comparison at all", () => {
+    const { html } = render(fsaPayload());
+    expect(html).toContain("35 Parliament Street");
+    expect(html).toContain("still for sale");
+    // No comparison to overclaim, so none is made.
+    expect(html).not.toContain("Across Toronto");
+  });
+});

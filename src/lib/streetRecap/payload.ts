@@ -72,8 +72,16 @@ export interface BuildInput {
   address: string;
   /** Tightest first. The builder walks down until one clears MIN_SALES. */
   candidates: { scope: RecapScope; sold: SoldAgg }[];
-  /** The city rollup, used as the comparison and as the last rung. */
-  city: { scope: RecapScope; sold: SoldAgg };
+  /**
+   * The city rollup, used as the comparison and as the last rung — when one exists.
+   *
+   * OPTIONAL, and that is load-bearing. `address_watches` stores the GEOCODER's city
+   * ("Strathroy", "Toronto") while the feed stores TRREB's ("Adelaide Metcalfe",
+   * "Toronto C01"), so the two match almost never. Requiring a city rollup skipped every
+   * real recipient on the first live dry run. A good FSA cohort is a complete email on its
+   * own; the comparison is a bonus, not a precondition.
+   */
+  city?: { scope: RecapScope; sold: SoldAgg } | null;
   actives: ActiveAgg | null;
   dataAsOf: string | null;
   /** What the email calls the window, from previousMonthWindow(). */
@@ -146,14 +154,15 @@ export function previousMonthWindow(now: number): RecapMonth {
  * should not have been printed.
  */
 export function buildStreetRecapPayload(i: BuildInput): StreetRecapPayload | null {
+  const city = i.city ?? null;
   const chosen =
     i.candidates.find((c) => c.sold.sales >= MIN_SALES) ??
-    (i.city.sold.sales >= MIN_SALES ? i.city : null);
+    (city && city.sold.sales >= MIN_SALES ? city : null);
 
   if (!chosen) return null;
 
   const isCity = chosen.scope.kind === "city";
-  const cityAgg = isCity ? null : i.city.sold;
+  const cityAgg = isCity ? null : (city?.sold ?? null);
 
   return {
     scope: chosen.scope,
