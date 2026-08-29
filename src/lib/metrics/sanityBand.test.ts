@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  CAP_RATE_BAND, GROSS_YIELD_BAND,
-  capRateOrNull, grossYieldOrNull, hasRentEstimate,
-} from "./sanityBand";
+import { CAP_RATE_BAND, GROSS_YIELD_BAND, capRateOrNull, grossYieldOrNull, hasRentEstimate, monthlyRentOrNull, MONTHLY_RENT_BAND } from "./sanityBand";
 
 describe("capRateOrNull", () => {
   it("passes in-band values", () => {
@@ -47,5 +44,44 @@ describe("hasRentEstimate", () => {
     expect(hasRentEstimate({})).toBe(false);
     expect(hasRentEstimate({ cap_rate_est: 0, gross_yield_est: 0 })).toBe(false);
     expect(hasRentEstimate({ cap_rate_est: null })).toBe(false);
+  });
+});
+
+// ── Monthly rent band (2026-08-21) ───────────────────────────────────────────────
+describe("monthlyRentOrNull", () => {
+  it("accepts an ordinary dwelling rent", () => {
+    expect(monthlyRentOrNull(2_600)).toBe(2_600);
+    expect(monthlyRentOrNull(500)).toBe(500);
+    expect(monthlyRentOrNull(25_000)).toBe(25_000);
+  });
+
+  /**
+   * The Kearney case. A $238,000 VACANT LAND record filed as "For Lease" sat in a
+   * 2-listing market and the address page published $120,300/mo as the median rent.
+   * A sale price is not a rent, and no dwelling rents for a quarter of a million.
+   */
+  it("rejects a sale price wearing a lease record's clothes", () => {
+    expect(monthlyRentOrNull(238_000)).toBeNull();
+    expect(monthlyRentOrNull(80_000)).toBeNull();
+  });
+
+  it("rejects a figure too small to be a home", () => {
+    expect(monthlyRentOrNull(499)).toBeNull();
+    expect(monthlyRentOrNull(1)).toBeNull();
+    expect(monthlyRentOrNull(0)).toBeNull();
+  });
+
+  it("rejects the non-numbers", () => {
+    expect(monthlyRentOrNull(null)).toBeNull();
+    expect(monthlyRentOrNull(undefined)).toBeNull();
+    expect(monthlyRentOrNull(Number.NaN)).toBeNull();
+    expect(monthlyRentOrNull(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it("matches the band the rent ladder has always enforced", () => {
+    // The two were the same rule in two places; only the worker could see it, which is
+    // why the web path had a floor and no ceiling at all.
+    expect(MONTHLY_RENT_BAND.min).toBe(500);
+    expect(MONTHLY_RENT_BAND.max).toBe(25_000);
   });
 });

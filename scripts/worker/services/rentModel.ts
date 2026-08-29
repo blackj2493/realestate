@@ -11,9 +11,12 @@
 import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily } from '@/lib/listings/subTypeFamily';
 import { isPartialUnitRental } from '@/lib/listings/inHomeUnit';
+import { MONTHLY_RENT_BAND } from '@/lib/metrics/sanityBand';
 
-export const MIN_MONTHLY_RENT = 500;
-export const MAX_MONTHLY_RENT = 25000;
+// One definition, shared with the web side. It used to live only here, which is why
+// the address page's "Median rent" tile had no ceiling and published $120,300/mo.
+export const MIN_MONTHLY_RENT = MONTHLY_RENT_BAND.min;
+export const MAX_MONTHLY_RENT = MONTHLY_RENT_BAND.max;
 /**
  * Minimum leases a cohort needs before it publishes a rent.
  *
