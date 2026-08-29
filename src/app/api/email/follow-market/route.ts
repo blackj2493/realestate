@@ -29,6 +29,7 @@ import { verifyUnsubscribe } from "@/lib/alerts/unsubscribe";
 import { recordActivation } from "@/lib/analytics/activation";
 import { BOARD_MARKETS } from "@/lib/data/marketBoard";
 import { marketMapUrl } from "@/lib/dataDrop/cameras";
+import { withUtm } from "@/lib/email/utm";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,16 @@ export async function GET(req: NextRequest) {
   const sig = url.searchParams.get("s") ?? "";
   const cityRaw = (url.searchParams.get("city") ?? "").trim();
 
+  // Which send this chip came from, for `utm_campaign`. Unsigned and cosmetic on purpose:
+  // it only ever labels analytics and never gates behaviour, so a missing or junk value
+  // degrades to a visible placeholder instead of rejecting a legitimate click.
+  const week = (url.searchParams.get("w") ?? "").trim();
+
+  // The chip URL itself is deliberately untagged — it is an API hop that analytics never
+  // sees. Tagging happens HERE, on the 302 target, which is the page the reader lands on.
+  const tagged = (href: string, content: string) =>
+    withUtm(href, { source: "data_drop", campaign: week || "unknown-week", content });
+
   // Validate the city by MEMBERSHIP in the offered set, never by pattern. Region labels are
   // free text elsewhere in this codebase and must not be regex-validated; membership is both
   // stricter and correct, and it guarantees the chip can only ever save something the weekly
@@ -51,9 +62,12 @@ export async function GET(req: NextRequest) {
 
   // A bad link should never dead-end the reader. Send them to the public hub, which needs no
   // account and is worth reading on its own.
-  if (!city) return NextResponse.redirect(`${SITE}/data`, 302);
+  if (!city) return NextResponse.redirect(tagged(`${SITE}/data`, "chip-unmatched"), 302);
 
-  const landing = `${marketMapUrl(SITE, city)}&followed=${encodeURIComponent(city)}`;
+  const landing = tagged(
+    `${marketMapUrl(SITE, city)}&followed=${encodeURIComponent(city)}`,
+    `chip-${city}`
+  );
 
   if (!email || !verifyUnsubscribe(email, sig)) {
     // Signature failure: still show them the city they asked for, just do not touch anyone's

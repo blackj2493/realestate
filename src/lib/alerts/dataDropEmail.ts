@@ -22,6 +22,7 @@ import {
 } from "./emailShell";
 import type { DataDropPayload } from "@/lib/dataDrop/payload";
 import { marketMapUrl } from "@/lib/dataDrop/cameras";
+import { utmTagger } from "@/lib/email/utm";
 
 export interface RenderInput {
   payload: DataDropPayload;
@@ -55,6 +56,12 @@ const weekOf = (now: number): string =>
 const plain = (s: string): string => s.replace(/<\/?b>/g, "");
 
 const trackerUrl = (slug: string) => `${SITE}/data/${slug}`;
+
+/** `utm_source` for every link in this email — see src/lib/email/utm.ts for the scheme. */
+const UTM_SOURCE = "data_drop";
+
+/** Tags one link for this send. Built per render, because the campaign is the week id. */
+type Tagger = (href: string, content: string) => string;
 
 /**
  * Mobile stylesheet. Two separate problems, one of which was self-inflicted.
@@ -95,9 +102,16 @@ const MOBILE_CSS = `
  * area, so next Thursday they get the province email again and the app still thinks they
  * picked nothing. And the redirect is a CAMERA (`?lat=&lng=&z=`), never `?city=`: a text
  * filter pins the map to that place and empties it the moment they pan past the boundary.
+ *
+ * DELIBERATELY NOT UTM-TAGGED HERE. This URL is an API hop, not a destination — analytics
+ * never sees it, only the 302 target. So the chip carries the week as a plain `w=` and the
+ * ROUTE tags the page the reader lands on (src/app/api/email/follow-market/route.ts). That
+ * also keeps the signed `s=` out of a URLSearchParams round trip, which is exactly the kind
+ * of quiet re-encoding that breaks an HMAC.
  */
-const chipUrl = (city: string, email: string, sig: string) =>
-  `${SITE}/api/email/follow-market?e=${encodeURIComponent(email)}&s=${encodeURIComponent(sig)}&city=${encodeURIComponent(city)}`;
+const chipUrl = (city: string, email: string, sig: string, weekId: string) =>
+  `${SITE}/api/email/follow-market?e=${encodeURIComponent(email)}&s=${encodeURIComponent(sig)}` +
+  `&city=${encodeURIComponent(city)}&w=${encodeURIComponent(weekId)}`;
 
 // ── Subject + preheader ───────────────────────────────────────────────────────
 
@@ -196,11 +210,11 @@ function rowsBlock(p: DataDropPayload): string {
 }
 
 /** The source line — a trust device before it is a link, and three public backlinks. */
-function sourcesBlock(p: DataDropPayload): string {
+function sourcesBlock(p: DataDropPayload, tag: Tagger): string {
   const links = p.trackers
     .map(
       (t) =>
-        `<a href="${trackerUrl(t.slug)}" style="color:#0e7490;text-decoration:none;font-weight:600;">${esc(t.label)}</a>`
+        `<a href="${tag(trackerUrl(t.slug), `tracker-${t.slug}`)}" style="color:#0e7490;text-decoration:none;font-weight:600;">${esc(t.label)}</a>`
     )
     .join(" &middot; ");
   return `<p class="dd-src" style="margin:14px 0 0;font-size:12px;line-height:1.7;color:#64748b;">Check the tables: ${links}</p>`;
@@ -291,7 +305,7 @@ function tensionBlock(p: DataDropPayload): string {
  * breaks. (QUICK_PICK_MARKETS is NOT that set — it carries London, which has no board row,
  * and omits Milton/Oshawa/Whitby/Ajax/Pickering, which do.)
  */
-function chipsBlock(markets: string[], email: string, sig: string): string {
+function chipsBlock(markets: string[], email: string, sig: string, weekId: string): string {
   // THREE, not five. At 20% of a ~390px phone a cell is 78px, which "Mississauga" and
   // "Richmond Hill" cannot fit — the table pushed past 600px and Gmail scaled the entire
   // document down to compensate, which is what made every other line look tiny. At 33% the
@@ -305,7 +319,7 @@ function chipsBlock(markets: string[], email: string, sig: string): string {
       .map(
         (c) =>
           `<td width="33.33%" style="padding:3px;">
-             <a class="dd-chip" href="${chipUrl(c, email, sig)}" style="display:block;text-align:center;text-decoration:none;padding:10px 4px;font-size:13px;font-weight:600;color:#0a1828;background:#ffffff;border:1px solid #cbd5e1;border-radius:5px;">${esc(c).replace(/ /g, "&nbsp;")}</a>
+             <a class="dd-chip" href="${chipUrl(c, email, sig, weekId)}" style="display:block;text-align:center;text-decoration:none;padding:10px 4px;font-size:13px;font-weight:600;color:#0a1828;background:#ffffff;border:1px solid #cbd5e1;border-radius:5px;">${esc(c).replace(/ /g, "&nbsp;")}</a>
            </td>`
       )
       .join("");
@@ -334,14 +348,21 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
   const p = i.payload;
   const { subject, preheader } = subjectFor(p);
 
+  // One tagger per send. The campaign is this week's id, so "did week 3 beat week 2" is a
+  // group-by rather than a string parse. The unsubscribe link is NEVER passed through it —
+  // see the warning in src/lib/email/utm.ts.
+  const tag: Tagger = utmTagger(UTM_SOURCE, p.weekId);
+  const manageUrl = tag(i.manageUrl, "manage");
+
   // A province send NEVER points at the terminal: "Ontario" is not a city, so `?city=Ontario`
   // seeds a filter that matches nothing. It goes to the public tracker, which is also the
   // right destination for a reader who has saved nothing and may not even be unlocked.
   const useTerminal = p.scope === "market" && i.ctaTarget === "terminal";
   // Camera seed, never a city text filter — same reason as the chips.
-  const ctaUrl = useTerminal
-    ? marketMapUrl(SITE, p.region)
-    : trackerUrl(p.trackers[0]?.slug ?? "price-cuts");
+  const ctaUrl = tag(
+    useTerminal ? marketMapUrl(SITE, p.region) : trackerUrl(p.trackers[0]?.slug ?? "price-cuts"),
+    "cta"
+  );
   const ctaLabel =
     p.scope === "province"
       ? "See every neighbourhood"
@@ -355,13 +376,13 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
     // Nothing may sit between the tension and the ask.
     p.scope === "province" ? tensionBlock(p) : "",
     rowsBlock(p),
-    sourcesBlock(p),
-    p.scope === "province" ? chipsBlock(i.chipMarkets, i.email, i.signature) : "",
+    sourcesBlock(p, tag),
+    p.scope === "province" ? chipsBlock(i.chipMarkets, i.email, i.signature, p.weekId) : "",
     `<div style="margin:26px 0 0;">${button(`${ctaLabel} &rarr;`, ctaUrl)}</div>`,
     othersBlock(p),
     footer({
       intro: "You get this because the weekly market update is on.",
-      manageUrl: i.manageUrl,
+      manageUrl,
       unsubscribeUrl: i.unsubscribeUrl,
     }).replace(
       "Data is deemed reliable",
@@ -395,11 +416,13 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
     t.push("");
   }
   t.push("Check the tables:");
-  for (const tr of p.trackers) t.push(`  ${tr.label.padEnd(18)}${trackerUrl(tr.slug)}`);
+  for (const tr of p.trackers)
+    t.push(`  ${tr.label.padEnd(18)}${tag(trackerUrl(tr.slug), `tracker-${tr.slug}`)}`);
   t.push("");
   if (p.scope === "province") {
     t.push("PICK YOUR MARKET - one tap:");
-    for (const m of i.chipMarkets) t.push(`  ${m.padEnd(16)}${chipUrl(m, i.email, i.signature)}`);
+    for (const m of i.chipMarkets)
+      t.push(`  ${m.padEnd(16)}${chipUrl(m, i.email, i.signature, p.weekId)}`);
     t.push("");
     t.push("Don't see yours? Reply and tell us - we add markets as the data covers them.", "");
   }
@@ -409,7 +432,7 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
   }
   t.push("--");
   t.push("You get this because the weekly market update is on.");
-  t.push(`Manage emails:  ${i.manageUrl}`);
+  t.push(`Manage emails:  ${manageUrl}`);
   t.push(`Unsubscribe:    ${i.unsubscribeUrl}`);
   t.push("");
   t.push(`Aggregate figures only. Data as of ${monthDay(p.dataAsOf)}.`);
