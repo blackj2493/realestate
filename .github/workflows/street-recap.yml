@@ -1,0 +1,99 @@
+name: Monthly Street Recap
+
+# The owner email (engagement plan Step 4, rebuilt without the valuation). Its own workflow,
+# on its own trigger.
+#
+# NO `schedule:` BLOCK, DELIBERATELY. Migrations 127 and 128 moved every scheduled job in
+# this repo off GitHub's `schedule` trigger onto Supabase pg_cron, which calls
+# `dispatch_github_workflow()`. A workflow that keeps its own cron AND gains a pg_cron entry
+# fires twice — migration 128 says so in as many words. So this file offers only
+# workflow_dispatch, and arming it is a pg_cron row in a later migration, not an uncommented
+# line here.
+#
+# UNTIL THEN it runs only by hand, which is also how its first sends should happen.
+#
+# ARM IT when all three are true:
+#   1. migration 130 (the aggregate RPCs) is applied,
+#   2. a real send has gone out by hand and been read on a phone,
+#   3. `reno_lookups` and `address_watches` between them hold enough addresses that a send
+#      is worth the reputation — the whole reason the capture shipped first.
+#
+# WHEN TO RUN IT: early in the month, because the recap reports the month BEFORE. The
+# worker computes that window itself (previousMonthWindow), so the label is true whenever
+# it runs — but sold data for a month keeps arriving for a few days after it ends, so the
+# 2nd is early enough to be timely and late enough to be near-complete.
+#
+# DO NOT REGISTER IN schedule-watchdog.yml UNTIL IT IS ARMED. A watchdog entry for a job
+# with no schedule is red forever, and a permanently-red canary is a canary nobody reads —
+# which is exactly how the 2026-08-14 metric break went unnoticed for two weeks.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Resolve the audience and report, without sending'
+        type: boolean
+        default: false
+      test_to:
+        description: 'Send only to this address (no gating, no lifecycle stamp)'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# One send at a time, and never cancel: a cancelled sender can leave a batch delivered with
+# its month unstamped, which would mail those people again on the next run.
+concurrency:
+  group: street-recap
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      SUMMARY_FILE: street-recap.log
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Resolves every address we hold (reno_lookups + address_watches), scopes each one to
+      # its neighbourhood, and sends one recap per person. Turns the run red if too many
+      # recipients resolve to nothing — a broken scope join and a quiet month look identical
+      # from the outside, and only the share tells them apart.
+      - name: Send Monthly Street Recap
+        timeout-minutes: 20
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          ALERTS_UNSUBSCRIBE_SECRET: ${{ secrets.ALERTS_UNSUBSCRIBE_SECRET }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry"; fi
+          if [ -n "${{ inputs.test_to }}" ]; then ARGS="$ARGS --to=${{ inputs.test_to }}"; fi
+          npx tsx scripts/worker/streetRecap.ts $ARGS 2>&1 | tee -a "$SUMMARY_FILE"
+
+      # Standard notifyRun.ts convention: report on success as well as failure, so a sender
+      # that silently stops mailing anybody is visible. The log it quotes carries the
+      # audience size, the scope spread and the skip count.
+      - name: Notify operator
+        if: always()
+        env:
+          JOB_NAME: Monthly Street Recap
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts

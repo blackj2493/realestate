@@ -9,6 +9,8 @@ import {
   DIGEST_MESSAGE_ID,
   DEFERRAL_RELEASE_DAYS,
   ONBOARDING_MIN_GAP_DAYS,
+  canSendStreetRecap,
+  RECAP_DEFERRAL_RELEASE_DAYS,
 } from "./sendPolicy";
 
 const NOW = 1_800_000_000_000; // fixed epoch ms
@@ -240,5 +242,66 @@ describe("lastDataDropAt", () => {
   it("is null when they have never had one", () => {
     expect(lastDataDropAt({ onboarding_add_area: iso(NOW) })).toBeNull();
     expect(lastDataDropAt(null)).toBeNull();
+  });
+});
+
+/**
+ * The monthly Street Recap. Same shape of gate as the Data Drop, one deliberate difference:
+ * the deferral release is far longer, because a monthly email deferred on the 21-day rule
+ * would release every single month and the cap would never bind.
+ */
+describe("canSendStreetRecap", () => {
+  const MONTH = "street_recap:2026-09";
+  const priorRecap = (at: number) => ({ "street_recap:2026-07": iso(at) });
+
+  it("allows a person with no prefs and no history", () => {
+    expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW })).toBe(true);
+  });
+
+  it("blocks when the stream is switched off", () => {
+    expect(
+      canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, prefs: { home_value: false } })
+    ).toBe(false);
+  });
+
+  it("blocks under master unsubscribe, an active pause, and 'minimal'", () => {
+    expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, marketingOptOut: true })).toBe(false);
+    expect(
+      canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, prefs: { pause_until: iso(NOW + DAY) } })
+    ).toBe(false);
+    expect(
+      canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, prefs: { cadence: "minimal" } })
+    ).toBe(false);
+  });
+
+  // "Fewer emails — at most one non-urgent email a week" is a promise a MONTHLY email
+  // cannot break, so 'reduced' keeps it.
+  it("survives the 'reduced' cadence", () => {
+    expect(
+      canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, prefs: { cadence: "reduced" } })
+    ).toBe(true);
+  });
+
+  it("sends once a month, matching on the month prefix", () => {
+    const lifecycle = { sent: { "street_recap:2026-09": iso(NOW - 2 * DAY) } };
+    expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, lifecycle })).toBe(false);
+    expect(
+      canSendStreetRecap({ monthKeyPrefix: "street_recap:2026-10", now: NOW, lifecycle })
+    ).toBe(true);
+  });
+
+  it("defers on a same-day digest, but never the first recap", () => {
+    const first = { sent: { [DIGEST_MESSAGE_ID]: iso(NOW) } };
+    expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, lifecycle: first })).toBe(true);
+
+    const repeat = { sent: { ...priorRecap(NOW - 30 * DAY), [DIGEST_MESSAGE_ID]: iso(NOW) } };
+    expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, lifecycle: repeat })).toBe(false);
+  });
+
+  it("releases after the longer monthly window, so a deferral costs one month at most", () => {
+    const stale = { sent: { ...priorRecap(NOW - 41 * DAY), [DIGEST_MESSAGE_ID]: iso(NOW) } };
+    expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, lifecycle: stale })).toBe(true);
+    // The Data Drop's 21 days would have released this one and defeated the cap entirely.
+    expect(RECAP_DEFERRAL_RELEASE_DAYS).toBeGreaterThan(DEFERRAL_RELEASE_DAYS);
   });
 });

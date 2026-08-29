@@ -71,6 +71,8 @@ export default function RenovationFunnel({
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  /** Whether to tell this visitor about the monthly recap, and what the panel is doing. */
+  const [recap, setRecap] = useState<'hidden' | 'on' | 'saving' | 'off'>('hidden');
   const autoTried = useRef(false);
   const inputRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -131,9 +133,17 @@ export default function RenovationFunnel({
           propertySubType: f.propertySubType,
           matched: loc?.matched ?? false,
         }),
-      }).catch(() => {
-        /* capture is best-effort */
-      });
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        // `stored` is true only when the server kept an address, which only happens for a
+        // signed-in visitor. It is the one signal that decides whether to tell them about
+        // the monthly recap they are now on.
+        .then((j) => {
+          if (j?.stored) setRecap('on');
+        })
+        .catch(() => {
+          /* capture is best-effort */
+        });
       if (json.locked) {
         setResult({ locked: true, catalog: json.catalog ?? [] });
       } else {
@@ -204,6 +214,32 @@ export default function RenovationFunnel({
   };
 
   const patch = (p: Partial<HEFormState>) => setForm((f) => ({ ...f, ...p }));
+
+  /**
+   * The first recap reports the month that is ending, and goes out early in the next one.
+   * Naming that month is the difference between "you are on a list" and "here is when the
+   * next thing arrives", which is what makes the panel a courtesy rather than a notice.
+   */
+  const firstRecapMonth = (() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() + 1, 1).toLocaleDateString('en-CA', {
+      month: 'long',
+    });
+  })();
+
+  const declineRecap = async () => {
+    setRecap('saving');
+    try {
+      await fetch('/api/email-prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_value: false }),
+      });
+    } catch {
+      /* the toggle on /account/emails is the fallback, and the panel says so */
+    }
+    setRecap('off');
+  };
 
   const numSel = (label: string, value: number, on: (n: number) => void) => (
     <div className="space-y-1.5">
@@ -382,6 +418,48 @@ export default function RenovationFunnel({
             lng={coords?.lng ?? null}
           />
         </div>
+      )}
+
+      {/* ── The monthly recap, once an address has actually been kept ──
+          Shown only when the server says it stored one, which only happens for a signed-in
+          visitor. An anonymous visitor already has the better call to action — signing in —
+          and a second one competing with it would cost the more valuable conversion.
+
+          IT TELLS, IT DOES NOT ASK. `email_prefs` is opt-out by design (migration 106), so
+          this person is already on the list; a subscribe button they do not need would be
+          theatre. What they are owed is to know, and one click out. */}
+      {recap !== 'hidden' && (
+        <Card className="p-4">
+          {recap === 'off' ? (
+            <p className="text-sm text-muted-foreground">
+              Turned off. You can switch it back on any time in{' '}
+              <a className="underline underline-offset-2" href="/account/emails">
+                email settings
+              </a>
+              .
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  We&apos;ll send you a monthly note about {communityDisplay ?? 'this area'}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  What sold nearby, how fast, and how many went above asking. No estimate of
+                  your home&apos;s value. The first arrives in early {firstRecapMonth}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void declineRecap()}
+                disabled={recap === 'saving'}
+                className="shrink-0 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-60"
+              >
+                {recap === 'saving' ? 'Saving…' : 'Not for me'}
+              </button>
+            </div>
+          )}
+        </Card>
       )}
     </div>
   );

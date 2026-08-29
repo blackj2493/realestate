@@ -60,6 +60,8 @@ describe("POST /api/reno/lookups", () => {
       matched: true,
     });
     expect(row().address_key).toBeTruthy();
+    // The funnel reads this to decide whether to tell them about the monthly recap.
+    expect(await res.json()).toMatchObject({ ok: true, stored: true });
   });
 
   it("drops every address field for an anonymous visitor, and keeps the community", async () => {
@@ -76,6 +78,13 @@ describe("POST /api/reno/lookups", () => {
     expect(r.city).toBe("Vaughan");
     expect(r.city_region).toBe("Maple");
     expect(r.property_sub_type).toBe("Detached");
+  });
+
+  it("reports stored=false for an anonymous visitor, so no recap panel is shown", () => {
+    getCurrentUser.mockResolvedValue(null);
+    return post(BODY)
+      .then((res) => res.json())
+      .then((j) => expect(j).toMatchObject({ ok: true, stored: false }));
   });
 
   it("records a lookup the cohort tree could not match", async () => {
