@@ -85,7 +85,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true });
+    // `stored` tells the funnel whether this person is now on the monthly recap: an address
+    // was kept, which only happens for a signed-in visitor. It saves the client a second
+    // round trip to re-establish what this handler already knows.
+    return NextResponse.json({ ok: true, stored: !!addressKey });
   } catch (e) {
     console.error("[reno/lookups] threw:", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false }, { status: 500 });
