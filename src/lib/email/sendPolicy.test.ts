@@ -4,6 +4,10 @@ import {
   canSendDataDrop,
   canSendOnboarding,
   gapDaysForCadence,
+  digestSentToday,
+  lastDataDropAt,
+  DIGEST_MESSAGE_ID,
+  DEFERRAL_RELEASE_DAYS,
   ONBOARDING_MIN_GAP_DAYS,
 } from "./sendPolicy";
 
@@ -162,5 +166,79 @@ describe("canSendDataDrop", () => {
   it("is not gated by the onboarding frequency cap", () => {
     const lifecycle = { sent: { onboarding_add_area: iso(NOW - DAY) }, last_sent_at: iso(NOW - DAY) };
     expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(true);
+  });
+});
+
+/**
+ * The same-day collision rule. On a Thursday the nightly digest lands at 06:47 UTC and the
+ * Data Drop at 11:40 UTC, and every ramp recipient has a saved market — so without this
+ * most of them get two emails inside five hours.
+ */
+describe("canSendDataDrop — the digest collision", () => {
+  const WEEK = "data_drop:2026-W36";
+  const priorDrop = (at: number) => ({ "data_drop:2026-W30:price": iso(at) });
+
+  it("stands down when the digest already reached them today", () => {
+    const lifecycle = {
+      sent: { ...priorDrop(NOW - 7 * DAY), [DIGEST_MESSAGE_ID]: iso(NOW) },
+    };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(false);
+  });
+
+  it("sends anyway when the digest was on a different day", () => {
+    const lifecycle = {
+      sent: { ...priorDrop(NOW - 7 * DAY), [DIGEST_MESSAGE_ID]: iso(NOW - 2 * DAY) },
+    };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(true);
+  });
+
+  // Ramp week 1 is 107 people who ALL have a saved market. A blanket rule could have cut
+  // that send to a fraction of itself, silently, and only shown up weeks later.
+  it("never defers a user's FIRST Data Drop", () => {
+    const lifecycle = { sent: { [DIGEST_MESSAGE_ID]: iso(NOW) } };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(true);
+  });
+
+  // Otherwise a user whose saved areas produce a digest most nights would be deferred every
+  // Thursday forever — the most engaged people would be the only ones never to see it.
+  it("releases once the user is overdue, digest or not", () => {
+    const stale = NOW - (DEFERRAL_RELEASE_DAYS + 1) * DAY;
+    const lifecycle = { sent: { ...priorDrop(stale), [DIGEST_MESSAGE_ID]: iso(NOW) } };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(true);
+  });
+
+  it("still defers just inside the release window", () => {
+    const recent = NOW - (DEFERRAL_RELEASE_DAYS - 1) * DAY;
+    const lifecycle = { sent: { ...priorDrop(recent), [DIGEST_MESSAGE_ID]: iso(NOW) } };
+    expect(canSendDataDrop({ weekKeyPrefix: WEEK, now: NOW, lifecycle })).toBe(false);
+  });
+});
+
+describe("digestSentToday", () => {
+  it("is false with no stamp, and true on the same day", () => {
+    expect(digestSentToday(null, NOW)).toBe(false);
+    expect(digestSentToday({}, NOW)).toBe(false);
+    expect(digestSentToday({ [DIGEST_MESSAGE_ID]: iso(NOW) }, NOW)).toBe(true);
+  });
+
+  it("does not throw on an unparseable stamp", () => {
+    expect(digestSentToday({ [DIGEST_MESSAGE_ID]: "not-a-date" }, NOW)).toBe(false);
+  });
+});
+
+describe("lastDataDropAt", () => {
+  it("takes the newest data_drop stamp and ignores every other stream", () => {
+    const sent = {
+      "data_drop:2026-W30:price": iso(NOW - 40 * DAY),
+      "data_drop:2026-W34:speed": iso(NOW - 12 * DAY),
+      onboarding_add_area: iso(NOW - DAY),
+      [DIGEST_MESSAGE_ID]: iso(NOW),
+    };
+    expect(lastDataDropAt(sent)).toBe(NOW - 12 * DAY);
+  });
+
+  it("is null when they have never had one", () => {
+    expect(lastDataDropAt({ onboarding_add_area: iso(NOW) })).toBeNull();
+    expect(lastDataDropAt(null)).toBeNull();
   });
 });

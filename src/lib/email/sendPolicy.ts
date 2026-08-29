@@ -139,6 +139,51 @@ export interface CanSendDataDropInput {
 }
 
 /**
+ * Key under `user_email_lifecycle.sent` holding the ISO time of the last nightly digest.
+ *
+ * A single OVERWRITTEN value, not a dated key per send. A dated key would add 365 entries
+ * per user per year to a JSONB column that is read on every send decision, to answer a
+ * question that only ever concerns the newest one.
+ */
+export const DIGEST_MESSAGE_ID = "alerts_digest";
+
+/** How long a user may be deferred before the weekly goes out despite a same-day digest. */
+export const DEFERRAL_RELEASE_DAYS = 21;
+
+/** Calendar day in the reader's timezone, not the server's — "same day" is a human claim. */
+const torontoDay = (ms: number): string =>
+  new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Toronto" });
+
+/** Did the nightly digest reach this user today? Exported so the worker can count it. */
+export function digestSentToday(
+  sent: Record<string, string> | null | undefined,
+  now: number
+): boolean {
+  const at = sent?.[DIGEST_MESSAGE_ID];
+  if (!at) return false;
+  const t = Date.parse(at);
+  return Number.isFinite(t) && torontoDay(t) === torontoDay(now);
+}
+
+/**
+ * When this user last received a Data Drop, from the newest `data_drop:` stamp — null if
+ * they never have. Reads the VALUE rather than parsing the week out of the key, because the
+ * value is already an exact ISO time and the key's week is only a coarse label.
+ */
+export function lastDataDropAt(
+  sent: Record<string, string> | null | undefined
+): number | null {
+  if (!sent) return null;
+  let newest: number | null = null;
+  for (const [k, v] of Object.entries(sent)) {
+    if (!k.startsWith("data_drop:")) continue;
+    const t = Date.parse(v);
+    if (Number.isFinite(t) && (newest === null || t > newest)) newest = t;
+  }
+  return newest;
+}
+
+/**
  * May we send this user this week's Data Drop?
  *
  * Allowed only when ALL hold: not master-unsubscribed; the `data_drop` stream is on
@@ -154,8 +199,26 @@ export interface CanSendDataDropInput {
  * user configured, survives both settings. Same table, opposite answers, both from the
  * words on the page.
  *
- * (Cross-stream collision — a 'reduced' user receiving BOTH the nightly digest and this in
- * one week — remains the Phase-1 refinement this module already defers.)
+ * CROSS-STREAM COLLISION IS NOW HANDLED HERE. On a Thursday the nightly digest lands at
+ * 06:47 UTC and this at 11:40 UTC, and every ramp-week recipient has a saved market — so
+ * most of them would receive two PureProperty emails inside five hours. Two in a morning is
+ * the fastest way to teach someone to filter you. The digest wins any same-day collision
+ * because the user configured it and it is time-sensitive; this one stands down.
+ *
+ * TWO ESCAPES, both load-bearing:
+ *
+ *   1. A user's FIRST Data Drop is never deferred. Every ramp-week-1 recipient has a saved
+ *      market, so a blanket rule could have cut the first send from 107 to a fraction of it
+ *      — silently, and only visible weeks later. One collision is a fair price for the send
+ *      that decides whether this program exists.
+ *   2. After DEFERRAL_RELEASE_DAYS since their last Data Drop, it goes out regardless.
+ *      Without this, a user whose saved areas generate a digest most nights would be
+ *      deferred every Thursday forever, and the most engaged people on the list would be
+ *      the only ones who never see the weekly.
+ *
+ * The digest stamp is written by scripts/worker/alerts.ts under DIGEST_MESSAGE_ID. It
+ * deliberately does NOT touch `last_sent_at` — that column drives the onboarding drip's
+ * two-day gap, and stamping it nightly would silently end the drip for anyone with alerts.
  *
  * WHY A PREFIX, NOT AN EXACT KEY. The stamped id carries the chosen headline kind
  * ("data_drop:2026-W36:leverage") so a rotation guard can read last week's lead with no
@@ -173,6 +236,14 @@ export function canSendDataDrop(i: CanSendDataDropInput): boolean {
 
   const sent = i.lifecycle?.sent ?? null;
   if (sent && Object.keys(sent).some((k) => k.startsWith(i.weekKeyPrefix))) return false;
+
+  // Same-day collision with the nightly digest. Skipped entirely on a first send, and
+  // released once the user is overdue — see the two escapes above.
+  const lastDrop = lastDataDropAt(sent);
+  if (lastDrop !== null && digestSentToday(sent, i.now)) {
+    const overdue = i.now - lastDrop >= DEFERRAL_RELEASE_DAYS * DAY_MS;
+    if (!overdue) return false;
+  }
 
   return true;
 }
