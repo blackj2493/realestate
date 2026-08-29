@@ -148,8 +148,19 @@ function subjectFor(p: DataDropPayload): { subject: string; preheader: string } 
         preheader: plain(p.headline.because).slice(0, 120),
       };
     default:
+      // The province figure is a MEDIAN OF THE MARKET MEDIANS. It describes a typical
+      // MARKET, not a typical HOME. `rungPrice` in payload.ts hedges its lede for exactly
+      // that reason — "the middle sold price across the markets we cover" — so the subject
+      // must not then make the stronger claim the lede deliberately refused. This is the
+      // most-read line in the email, on the path that reaches 70.6% of the base.
+      //
+      // A single market keeps the original wording: that median IS taken over that city's
+      // own sales, so "a typical Milton home" is supported.
       return {
-        subject: `A typical ${r} home sold for ${p.headline.figure} last month`,
+        subject:
+          p.scope === "province"
+            ? `The middle sold price across our markets is ${p.headline.figure}`
+            : `A typical ${r} home sold for ${p.headline.figure} last month`,
         preheader: plain(p.headline.because).slice(0, 120),
       };
   }

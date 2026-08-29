@@ -122,3 +122,34 @@ describe("Data Drop campaign tags", () => {
     expect(manage).toContain("utm_content=manage");
   });
 });
+
+/**
+ * The subject must never make a claim the lede refused to make. `rungPrice` hedges the
+ * province wording because the Ontario figure is a median OF THE MARKET MEDIANS — a typical
+ * market, not a typical home. The subject is the most-read text in the email, and while the
+ * ladder sits on rank 7 it reaches most of the base.
+ */
+describe("Data Drop subject lines", () => {
+  const priceHeadline = (figure: string) => ({
+    kind: "price" as const,
+    figure,
+    unit: "",
+    lede: "is the middle sold price across the markets we cover.",
+    because: "That is <b>down 5.4%</b> from a year ago.",
+  });
+
+  it("does not claim a typical HOME price for the province rollup", () => {
+    const p: DataDropPayload = { ...province, headline: priceHeadline("$870K") };
+    const { subject } = renderDataDropEmail({ payload: p, ...common });
+    expect(subject, "a median of medians cannot be stated as a typical home").not.toMatch(
+      /typical .*home/i
+    );
+    expect(subject).toContain("$870K");
+  });
+
+  it("keeps the typical-home wording for one market, where the median is of real sales", () => {
+    const p: DataDropPayload = { ...market, headline: priceHeadline("$1.04M") };
+    const { subject } = renderDataDropEmail({ payload: p, ...common });
+    expect(subject).toBe("A typical Milton home sold for $1.04M last month");
+  });
+});
