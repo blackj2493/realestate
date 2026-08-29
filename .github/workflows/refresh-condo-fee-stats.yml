@@ -16,8 +16,11 @@ name: Refresh Condo Fee Stats
 # Uses the Supabase service client (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY),
 # not raw pg — matches scripts/admin/refresh-condo-fee-stats.ts. --apply overwrites the table.
 on:
-  schedule:
-    - cron: '0 6 * * 1'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 06:00 UTC every Monday; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:

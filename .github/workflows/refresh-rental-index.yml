@@ -29,8 +29,11 @@ name: Refresh Rental Market Index
 # §12); step 2 also needs the Supabase and Typesense keys, since it re-runs the ETL's own
 # lookup path and patches the search index.
 on:
-  schedule:
-    - cron: '0 5 * * 1'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 05:00 UTC every Monday; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:

@@ -17,8 +17,11 @@ name: Refresh School Scores
 # bump SOURCE_URL in that script (and commit the regenerated data/ontario-schools.json) — the
 # next run then propagates the newer scores automatically. (Follow-up: CKAN auto-discovery.)
 on:
-  schedule:
-    - cron: '0 8 1 1,4,7,10 *'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 08:00 UTC on the 1st of Jan, Apr, Jul and Oct; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 # Least privilege: we only read the repo; all writes are to external services (Typesense/Resend).

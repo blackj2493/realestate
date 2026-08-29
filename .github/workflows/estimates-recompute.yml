@@ -25,8 +25,11 @@ name: Twice-Weekly Recompute + Sold Reconcile
 # (A Railway-cron alternative — npm run sync:recompute, unsharded — was started but never
 # finished; see docs/railway-cron-setup.md. Run only ONE scheduler to avoid double-write.)
 on:
-  schedule:
-    - cron: '33 7 * * 0,3' # Sun & Wed 07:33 UTC, after the 03:17 daily sync refreshes anchors
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 07:33 UTC every Sunday and Wednesday; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 # Least privilege: checkout needs contents:read; the failure notifier opens an issue.

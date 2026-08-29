@@ -17,8 +17,11 @@ name: Weekly Ghost Reconcile
 # few hundred ghosts (~30-45 min). The notify email reports the ghost count — a SPIKE is
 # the early warning that an upstream net (Query B/C) regressed again.
 on:
-  schedule:
-    - cron: '0 8 * * 0'
+  # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
+  # under load, hardest at minute :00 — which is where this job used to sit. Supabase
+  # pg_cron POSTs a workflow_dispatch at 08:00 UTC every Sunday; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
+  # NOT here.
   workflow_dispatch:
 
 permissions:
