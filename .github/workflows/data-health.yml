@@ -13,8 +13,11 @@ name: Data Health Canary
 # Runs at 10:41 UTC: the nightly sync starts 03:17 and its region-metrics refresh step
 # finishes by ~08:00, so this reads a settled precompute with ~2h of margin.
 on:
-  schedule:
-    - cron: '41 10 * * *' # :41 not :00 — GitHub defers `schedule` hardest at the top of the hour
+  # NOT scheduled by GitHub. GitHub deferred this trigger by hours and dropped it
+  # outright for two days running (2026-08-27..29), and it never backfills a dropped
+  # run. Supabase pg_cron now POSTs a workflow_dispatch at 10:41 UTC —
+  # see supabase/migrations/127_pg_cron_workflow_dispatch.sql. To change the time,
+  # edit cron.job in the database, NOT this file.
   workflow_dispatch:
 
 permissions:
