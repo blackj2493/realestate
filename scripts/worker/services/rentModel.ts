@@ -135,9 +135,55 @@ export function percentile(sortedAsc: number[], p: number): number {
   return sortedAsc[lo] + (sortedAsc[hi] - sortedAsc[lo]) * (idx - lo);
 }
 
+/**
+ * WHERE A COHORT'S RENT CAME FROM (133).
+ *
+ * Until this, every published cohort was an ASKING rent — `listings.list_price` on a
+ * for-lease record, which is what a landlord hopes to get, not what a tenant signed.
+ * The signed price was sitting unused the whole time: `raw_vow_sold` holds 271,287
+ * closed lease records, 234,100 of them inside 24 months and past the price band and
+ * the in-home-unit filter. The ETL read none of them — and it read 53,655 records that
+ * are ALREADY `leased` as though their now-stale ask were still the market.
+ *
+ * The two populations must never pool into one median: an ask is an offer, a close is
+ * a transaction. They are also not systematically apart — measured over 3,175 matched
+ * `city_bath` cohorts the median difference is 0.00% and the mean -$51 — so an ask in
+ * the RIGHT cohort is an honest comp, and the lookup keeps it as a same-rung fallback
+ * rather than throwing away the coverage it buys.
+ *
+ * Measured OUT OF TIME (index built only from closes older than 3 months, scored
+ * against 40,408 closes from the last 3 months, so the index cannot have seen them):
+ *
+ *   asking-only (the old ladder)   covered 95.6%   median err 6.52%   p90 20.7%
+ *   closed_12 > closed_24 > ask    covered 98.7%   median err 5.53%   p90 18.1%
+ *
+ * Accuracy and coverage improve together, which is why this is not a trade-off.
+ *
+ * The type, the preference order and the picker themselves live in
+ * `@/lib/metrics/rentTier` and are only re-exported here. They HAVE to sit on the web
+ * side of the wall: the worker can import from `@/lib`, the web app cannot import from
+ * `scripts/`, and four readers of rental_market_index span that wall. Restating the
+ * ranking on both sides is exactly how the grid and the ladder disagreed for a year.
+ */
+// Imported for use in this file's own types AND re-exported, so worker callers can keep
+// taking everything rent-model-shaped from one module.
+import type { RentBasis } from '@/lib/metrics/rentTier';
+export type { RentBasis };
+export { RENT_BASIS_PREFERENCE, pickPreferredBasis } from '@/lib/metrics/rentTier';
+
+/** `closed_24` is INCLUSIVE of `closed_12` — it is "the last 24 months", not "months
+ *  13-24". The 12-month row is preferred where it clears the floor; the 24-month row
+ *  exists to keep a thin cohort alive rather than to describe a different period. */
+export const CLOSED_WINDOW_MONTHS: Readonly<Record<'closed_12' | 'closed_24', number>> = {
+  closed_12: 12,
+  closed_24: 24,
+};
+
 export interface RentalIndexRow {
   /** Whole-home rungs and suite rungs share the table but never the walk (125). */
   match_tier: MatchTier | SuiteMatchTier;
+  /** Closed lease vs asking rent, and the window it was drawn over (133). */
+  basis: RentBasis;
   city_region: string | null;
   city: string | null;
   /** CountyOrParish. Set only on `county` rows, where city is NULL. */
@@ -158,9 +204,17 @@ export interface RentalIndexRow {
   sample_count: number;
 }
 
-type RowMeta = Omit<RentalIndexRow, 'avg_rent' | 'p10_rent' | 'sample_count'>;
+/** `basis` is a property of the whole PASS, not of an individual cohort, so it is
+ *  stamped once in finalize() rather than carried on every group. */
+type RowMeta = Omit<RentalIndexRow, 'avg_rent' | 'p10_rent' | 'sample_count' | 'basis'>;
 
-export function createRentAccumulator() {
+/**
+ * @param basis which population this accumulator is being fed. One accumulator per
+ *   population — feeding closes and asks into the same one would pool an offer with a
+ *   transaction inside a single median, which is the thing 133 exists to prevent.
+ *   Defaults to 'asking' so every pre-133 caller keeps its exact behaviour.
+ */
+export function createRentAccumulator(basis: RentBasis = 'asking') {
   const groups = new Map<string, { meta: RowMeta; rents: number[] }>();
   /** Properties already counted, so a duplicate record cannot become a second comp. */
   const seen = new Set<string>();
@@ -280,15 +334,15 @@ export function createRentAccumulator() {
       for (const g of groups.values()) {
         if (g.rents.length < MIN_COHORT_SAMPLES) continue;
         const sorted = [...g.rents].sort((a, b) => a - b);
-        rows.push({ ...g.meta, avg_rent: Math.round(percentile(sorted, 0.5)), p10_rent: Math.round(percentile(sorted, 0.10)), sample_count: sorted.length });
+        rows.push({ ...g.meta, basis, avg_rent: Math.round(percentile(sorted, 0.5)), p10_rent: Math.round(percentile(sorted, 0.10)), sample_count: sorted.length });
       }
       return rows;
     },
   };
 }
 
-export function buildRentalIndexRows(records: RawLeaseInput[]): RentalIndexRow[] {
-  const acc = createRentAccumulator();
+export function buildRentalIndexRows(records: RawLeaseInput[], basis: RentBasis = 'asking'): RentalIndexRow[] {
+  const acc = createRentAccumulator(basis);
   for (const r of records) acc.add(r);
   return acc.finalize();
 }

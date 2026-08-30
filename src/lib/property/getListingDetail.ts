@@ -15,6 +15,7 @@ import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
 import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
 import { compMonthlyRentFrom } from "@/lib/metrics/compRent";
+import { pickPreferredBasis } from "@/lib/metrics/rentTier";
 import { calculateAVM } from "@/lib/avm/calculator";
 import { mapListingToAVMInput } from "@/lib/avm/mapListingToAVMInput";
 import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from "@/lib/avm/livingArea";
@@ -216,14 +217,18 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
   try {
     const supabase = getServiceRoleClient();
     const probe = async (tier: "suite_nbhd" | "suite_city", col: "city_region" | "city", value: string) => {
+      // NOT maybeSingle(): since 133 one cohort key holds a row per basis (signed
+      // leases over 12mo and 24mo, plus current asks), and maybeSingle() ERRORS on
+      // more than one row. pickPreferredBasis is the SAME ranking the worker's ladder
+      // walks — imported rather than restated, so this page cannot drift from the
+      // number rendered beside it.
       const { data } = await supabase
         .from("rental_market_index")
-        .select("avg_rent")
+        .select("avg_rent, basis")
         .eq("match_tier", tier)
         .eq(col, value)
-        .eq("bedrooms_total", 1)
-        .maybeSingle();
-      const rent = (data as { avg_rent: number } | null)?.avg_rent;
+        .eq("bedrooms_total", 1);
+      const rent = pickPreferredBasis((data ?? []) as Array<{ avg_rent: number; basis: string }>)?.avg_rent;
       return typeof rent === "number" && rent > 0 ? rent : null;
     };
     if (region) {
