@@ -70,6 +70,11 @@ export async function fetchSiblingModel(
     .from('avm_audit_report')
     .select('city_region, model_accuracy_score, total_sales_analyzed')
     .in('city_region', cityRegions)
+    // Community rung only. Migration 130 added FSA and city cohorts to avm_audit_report as
+    // well as the matrix, and 96 (city_region, sub-type) pairs now exist at BOTH a community
+    // and a city rung — "Aylmer" the community and "Aylmer" the city. Without this the
+    // lookup returns two rows for the same key and picks between them arbitrarily.
+    .eq('cohort_rung', 'community')
     .ilike('property_sub_type', propertySubType.toLowerCase().trim());
   const best = pickSibling(auditRes.data ?? []);
   if (!best) return null;

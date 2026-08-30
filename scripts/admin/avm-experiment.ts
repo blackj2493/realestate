@@ -290,6 +290,8 @@ async function loadAudit(): Promise<Map<string, AuditInfo>> {
     const { data, error } = await sb
       .from('avm_audit_report')
       .select('id, city_region, property_sub_type, model_accuracy_score, average_error_margin, total_sales_analyzed, base_price')
+      // Community rung only — matches the matrix load above and the live path.
+      .eq('cohort_rung', 'community')
       .gt('id', cursor)
       .order('id', { ascending: true })
       .limit(READ_PAGE);
