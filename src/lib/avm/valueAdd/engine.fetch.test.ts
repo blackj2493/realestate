@@ -16,7 +16,10 @@ describe('fetchValueAddReport', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('assembles market data via the AVM services and returns a report', async () => {
-    vi.spyOn(matrixService, 'fetchCoefficients').mockResolvedValue(BRAMPTON_WEST_DETACHED.coefficients);
+    vi.spyOn(matrixService, 'fetchCoefficients').mockResolvedValue({
+      rows: BRAMPTON_WEST_DETACHED.coefficients,
+      rung: 'community',
+    });
     vi.spyOn(auditService, 'fetchAuditInfo').mockResolvedValue({
       r2: BRAMPTON_WEST_DETACHED.r2, basePrice: BRAMPTON_WEST_DETACHED.basePrice, n: BRAMPTON_WEST_DETACHED.n ?? 117,
     });
@@ -34,7 +37,10 @@ describe('fetchValueAddReport', () => {
   });
 
   it('skips the anchor/comps query when predSD is supplied, and still prices moves', async () => {
-    vi.spyOn(matrixService, 'fetchCoefficients').mockResolvedValue(BRAMPTON_WEST_DETACHED.coefficients);
+    vi.spyOn(matrixService, 'fetchCoefficients').mockResolvedValue({
+      rows: BRAMPTON_WEST_DETACHED.coefficients,
+      rung: 'community',
+    });
     vi.spyOn(auditService, 'fetchAuditInfo').mockResolvedValue({
       r2: BRAMPTON_WEST_DETACHED.r2, basePrice: BRAMPTON_WEST_DETACHED.basePrice, n: BRAMPTON_WEST_DETACHED.n ?? 117,
     });

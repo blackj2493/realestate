@@ -80,7 +80,9 @@ export async function fetchSiblingModel(
   if (!best) return null;
 
   // 3. Pull the sibling's coefficients.
-  const coefficients = await fetchCoefficients(supabase, best.city_region, propertySubType);
+  // Community rung only: best.city_region is a specific trained community picked from the
+  // audit table above, so there is nothing coarser to fall back to here.
+  const { rows: coefficients } = await fetchCoefficients(supabase, best.city_region, propertySubType);
   if (coefficients.length === 0) return null;
 
   return { coefficients, r2: best.r2, n: best.n, siblingCityRegion: best.city_region };

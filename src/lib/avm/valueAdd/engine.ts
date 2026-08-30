@@ -266,10 +266,13 @@ export async function fetchValueAddReport(
   input: AVMInput,
   opts?: FetchValueAddOpts
 ): Promise<ValueAddReport> {
-  const [coefficients, audit] = await Promise.all([
+  // No ladder here on purpose: the value-add engine's behaviour is unchanged by the cohort
+  // ladder, and widening it is a separate change with its own evidence.
+  const [matrix, audit] = await Promise.all([
     fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
     fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
   ]);
+  const coefficients = matrix.rows;
   const anchor =
     opts?.predSD !== undefined && Number.isFinite(opts.predSD)
       ? { anchorLevel: 0, predSD: opts.predSD, nEff: 0, comps: 0, basis: 'none' as const }
