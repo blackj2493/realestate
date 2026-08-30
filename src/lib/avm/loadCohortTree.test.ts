@@ -5,18 +5,34 @@ vi.mock('@/lib/supabase/client', () => ({
   getServiceRoleClient: vi.fn(),
 }));
 
-// Chainable query stub: every builder method returns itself; awaiting it
-// resolves to the given payload (minimal then-only thenable; supabase-js
-// builders are awaited, never .catch()-chained here).
+/**
+ * Chainable query stub: ANY builder method returns the stub; awaiting it resolves to
+ * the given payload (a minimal then-only thenable — supabase-js builders are awaited,
+ * never .catch()-chained here).
+ *
+ * THE METHOD LIST USED TO BE HARD-CODED, and that is what broke this file. #450 added
+ * `.eq('cohort_rung', 'community')` to fetchAllAudit; `eq` was not in the list, so the
+ * chain returned undefined and every test here failed with
+ * "supabase.from(...).select(...).eq is not a function" — a red main, in a file whose
+ * subject (does a timeout degrade gracefully?) had not changed at all.
+ *
+ * A stub that enumerates the methods it supports asserts something nobody meant to
+ * assert: that production code will never call a different one. So it proxies instead,
+ * and memoises a vi.fn() per name so call assertions still work.
+ */
 function queryResolving(payload: { data: unknown; error: unknown }) {
-  const q: Record<string, unknown> = {};
-  // 'eq' joined the chain when the audit reads were pinned to the community rung
-  // (migration 130 / PR #450). A stub missing a builder method fails as a TypeError
-  // deep inside the module, which reads like a logic bug rather than a stub gap.
-  for (const m of ['from', 'select', 'eq', 'order', 'range', 'rpc']) {
-    q[m] = vi.fn(() => q);
-  }
-  q.then = (resolve: (v: unknown) => unknown) => Promise.resolve(resolve(payload));
+  const spies: Record<string, ReturnType<typeof vi.fn>> = {};
+  const base: Record<string, unknown> = {
+    then: (resolve: (v: unknown) => unknown) => Promise.resolve(resolve(payload)),
+  };
+  const q: Record<string, unknown> = new Proxy(base, {
+    get(target, prop) {
+      if (typeof prop === 'symbol') return Reflect.get(target, prop);
+      if (prop in target) return target[prop];
+      spies[prop] ??= vi.fn(() => q);
+      return spies[prop];
+    },
+  });
   return q;
 }
 

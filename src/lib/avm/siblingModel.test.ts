@@ -24,15 +24,27 @@ function makeSupabaseStub(dataset: { city_region: string }[]) {
     Promise.resolve({ data: dataset, error: null })
   );
 
+  // `.in` stays an EXPLICIT spy — the assertion below reads its arguments, and that
+  // is the whole point of this test.
   const auditInCall = vi.fn(() => emptyChain);
-  const emptyChain: Record<string, unknown> = {};
-  // "eq" joined the chain when the audit read was pinned to the community rung (#450).
-  for (const m of ["select", "eq", "ilike", "order", "range"]) {
-    emptyChain[m] = vi.fn(() => emptyChain);
-  }
-  emptyChain.in = auditInCall;
-  emptyChain.then = (resolve: (v: unknown) => unknown) =>
-    Promise.resolve(resolve({ data: [], error: null }));
+  const spies: Record<string, ReturnType<typeof vi.fn>> = {};
+  // Every OTHER builder method is proxied rather than enumerated. The list used to be
+  // ["select", "ilike", "order", "range"], and #450 added `.eq('cohort_rung',
+  // 'community')` to fetchSiblingModel — so the chain returned undefined and this test
+  // failed on a line it does not test. A stub that lists its methods quietly asserts
+  // that production will never call a different one.
+  const base: Record<string, unknown> = {
+    in: auditInCall,
+    then: (resolve: (v: unknown) => unknown) => Promise.resolve(resolve({ data: [], error: null })),
+  };
+  const emptyChain: Record<string, unknown> = new Proxy(base, {
+    get(target, prop) {
+      if (typeof prop === "symbol") return Reflect.get(target, prop);
+      if (prop in target) return target[prop];
+      spies[prop] ??= vi.fn(() => emptyChain);
+      return spies[prop];
+    },
+  });
 
   const fromCall = vi.fn((_table: string) => emptyChain);
   const stub = { rpc: rpcCall, from: fromCall };
