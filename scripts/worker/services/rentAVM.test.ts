@@ -11,7 +11,7 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
-import { fetchMainUnitRent } from './rentAVM';
+import { fetchMainUnitRent, fetchRentAVM } from './rentAVM';
 
 const wholeHome = {
   annual_rent: 63_000, // $5,250/mo
@@ -78,5 +78,44 @@ describe('fetchMainUnitRent', () => {
     await expect(
       fetchMainUnitRent({ ...base, bedroomsTotal: 4, bedroomsAboveGrade: 3, bedroomsBelowGrade: 1 })
     ).rejects.toThrow('must not query on this path');
+  });
+});
+
+describe('fetchRentAVM — nothing to rent, so no rent', () => {
+  const base = {
+    city: 'Kawartha Lakes',
+    cityRegion: 'Rural',
+    bedroomsTotal: 0,
+    bathroomsTotal: 0,
+    county: 'Kawartha Lakes',
+  };
+
+  // The Supabase stub above THROWS on .from(). Any of these reaching a query fails the
+  // test, which is the point: the gate is a fact about the property, so it must answer
+  // before the ladder starts.
+  it.each([
+    'Vacant Land',
+    'Vacant Land Condo',
+    'Land',
+    'Farm',
+    'Parking Space',
+    'Sale Of Business',
+    'Office',
+    'Industrial',
+    'Commercial Retail',
+    'Store W Apt/Office',
+  ])('refuses a rent comp for %s without querying', async (propertySubType) => {
+    const r = await fetchRentAVM({ ...base, propertySubType });
+    expect(r.has_data).toBe(false);
+    expect(r.annual_rent).toBe(0);
+    expect(r.match_tier).toBeNull();
+  });
+
+  it('is why 60 non-dwellings published an in-band cap rate', async () => {
+    // subTypeFamily has always known these have no dwelling, but only the city_family
+    // rung consulted it — the exact-sub-type rungs built and served a "Vacant Land"
+    // cohort. 409 non-dwelling listings carried a rent comp on 2026-08-30, and 60 sat
+    // INSIDE the 1-15% band, so CAP_RATE_BAND never hid them.
+    expect((await fetchRentAVM({ ...base, propertySubType: 'Vacant Land' })).has_data).toBe(false);
   });
 });
